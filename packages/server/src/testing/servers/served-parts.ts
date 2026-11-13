@@ -1,7 +1,7 @@
 import { RunMeter, type Meter } from '@on.auto/definitions';
 import type { LicensedFeatures } from '@on.auto/meter';
 import { Ledger } from '@on.auto/operations';
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import type { LanguageModel } from '@on.auto/reasoning';
 import { Context, Layer } from 'effect';
 
@@ -56,13 +56,13 @@ function composedWithTheMeter(options: ComposedServerOptions, meter: Meter): Com
   };
 }
 
-function composedKeepingPayloadsOutside(options: ComposedServerOptions): ComposedServerOptions {
+function composedWithPayloadOffloading(options: ComposedServerOptions): ComposedServerOptions {
   return {
     ...options,
     composed: async (settings, telemetry, shippedFiles) => {
       const composed = await options.composed(settings, telemetry, shippedFiles);
       const services = Layer.flatMap(composed.services, (served) =>
-        Layer.succeedContext(Context.add(served, PayloadsOutside, true)),
+        Layer.succeedContext(Context.add(served, PayloadOffloading, true)),
       );
       return { ...composed, services };
     },
@@ -83,6 +83,6 @@ export function composedWithTheParts(
   const shipped =
     shippedFilesOver === undefined ? options : { ...options, shippedFiles: shippedFilesOver(options.shippedFiles) };
   const metered = meter === undefined ? shipped : composedWithTheMeter(shipped, meter);
-  const keeping = keptOutside === undefined ? metered : composedKeepingPayloadsOutside(metered);
+  const keeping = keptOutside === undefined ? metered : composedWithPayloadOffloading(metered);
   return ledgerOver === undefined ? keeping : composedWithTheLedgerOver(keeping, ledgerOver);
 }

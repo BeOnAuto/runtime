@@ -12,8 +12,8 @@ export const ThisFormatOrNewerSchema = StateFormatSchema.check(
 
 export const FormatsEightToElevenSchema = Schema.Literals([8, 9, 10, 11]);
 
-export function formatWritten(reached: number | null, keepsPayloadsOutside: boolean): number {
-  return Math.max(reached ?? stateFormat, keepsPayloadsOutside ? stateFormatKeepingPayloads : stateFormat);
+export function formatWritten(reached: number | null, payloadOffloading: boolean): number {
+  return Math.max(reached ?? stateFormat, payloadOffloading ? stateFormatKeepingPayloads : stateFormat);
 }
 
 export interface OlderFormat {

@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { PlaybookContext } from '../caller/playbook-context.ts';
-import { PayloadsOutside } from '../payloads/payload-texts.ts';
+import { PayloadOffloading } from '../payloads/payload-texts.ts';
 import { PayloadsShared, sharedPayloadsWithin } from '../payloads/shared-payloads.ts';
 import { memoryLedger } from '../testing/memory-ledger.ts';
 import { playbookLedgerOf } from './playbook-ledger.ts';
@@ -23,7 +23,7 @@ async function heldAfterAPut(outside: boolean): Promise<string | undefined> {
       Effect.provideContext(playbookLedgerOf(service, alpha)),
       Effect.provideService(PlaybookContext, alpha),
       Effect.provideService(PayloadsShared, shared),
-      Effect.provideService(PayloadsOutside, outside),
+      Effect.provideService(PayloadOffloading, outside),
     ),
   );
   return shared.cache.textOf(alpha, toKeep.sha256);

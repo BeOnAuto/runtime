@@ -17,7 +17,7 @@ export interface Keeping {
 
 interface Decided {
   readonly outputs: readonly PerformedOutput[];
-  readonly keepsPayloadsOutside: boolean;
+  readonly payloadOffloading: boolean;
 }
 
 interface PayloadTable {
@@ -73,8 +73,8 @@ function keptBefore(before: RunState): ReadonlySet<string> {
   return new Set(Object.values(before.machine.values).flatMap((held) => (isKept(held) ? [held.sha256] : [])));
 }
 
-export function keepingOf(before: RunState, after: RunState, { outputs, keepsPayloadsOutside }: Decided): Keeping {
-  if (!keepsPayloadsOutside) {
+export function keepingOf(before: RunState, after: RunState, { outputs, payloadOffloading }: Decided): Keeping {
+  if (!payloadOffloading) {
     return { state: after, outputs, kept: [], payloads: [] };
   }
   const table = payloadTable();

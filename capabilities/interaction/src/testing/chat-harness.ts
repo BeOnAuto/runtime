@@ -32,7 +32,7 @@ export interface ChatHarnessOptions {
   readonly inTheChat?: Parameters<typeof fakeTools>[1];
   readonly postsAs?: string;
   readonly conversations?: HarnessOptions['conversations'];
-  readonly keepsPayloadsOutside?: boolean;
+  readonly payloadOffloading?: boolean;
 }
 
 export const answererId = 'U024BE7LH';
@@ -47,7 +47,7 @@ export async function chatHarness(options: ChatHarnessOptions = {}): Promise<Cha
     tools: chat,
     others: options.others ?? [],
     ...(options.conversations === undefined ? {} : { conversations: options.conversations }),
-    ...(options.keepsPayloadsOutside === undefined ? {} : { keepsPayloadsOutside: options.keepsPayloadsOutside }),
+    ...(options.payloadOffloading === undefined ? {} : { payloadOffloading: options.payloadOffloading }),
   });
   const record = options.recording?.(playbook.record) ?? playbook.record;
   const reads = conversationsDue({ ledger: ledger.service, tools: chat, record });

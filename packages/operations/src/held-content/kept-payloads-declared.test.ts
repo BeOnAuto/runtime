@@ -14,7 +14,7 @@ const NotedSchema = withPayloads(
 
 const ContentSchema = Schema.Struct({ content: NotedSchema, by: Schema.String });
 
-describe('a fact whose schema may keep a payload outside it', () => {
+describe('a fact whose schema may offload a payload', () => {
   it('is held where it declares each payload its schema may keep, at the top or within a member', () => {
     const declared = contentHoldersOf([
       factOf('noted', NotedSchema, ActedContextSchema, {
@@ -63,7 +63,7 @@ describe('a fact whose schema may keep a payload outside it', () => {
   });
 });
 
-describe('a fact whose schema may keep a payload outside it, however its schema was built', () => {
+describe('a fact whose schema may offload a payload, however its schema was built', () => {
   it('is refused undeclared where its schema was given a check after its payloads, or has payload fields alone', () => {
     const CheckedAfterSchema = NotedSchema.check(Schema.makeFilter(() => true));
     const FieldsAloneSchema = Schema.Struct({ ...payloadFields('text', Schema.String) });

@@ -1,4 +1,4 @@
-import { PayloadsOutside, mostInlinePayloadBytes } from '@on.auto/operations/payloads';
+import { PayloadOffloading, mostInlinePayloadBytes } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -76,7 +76,7 @@ async function cancelledLate({ readable }: { readonly readable: boolean }) {
         operations.createDefinition,
         toAlpha(acmeAdmin, { type: 'system-call', name: 'post', source: longPost }),
       )
-      .pipe(Effect.provideService(PayloadsOutside, true)),
+      .pipe(Effect.provideService(PayloadOffloading, true)),
   );
   await definitions.run(
     Effect.orDie(

@@ -1,5 +1,5 @@
 import { messageIdOf } from '@on.auto/operations';
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Context } from 'effect';
 import { expect, it } from 'vitest';
 
@@ -25,7 +25,7 @@ async function unreadableBefore(settingsOf: SettingsOf, keptOutside: boolean): P
   const reacting = await reactingHost({
     settings: await settingsOf(),
     clock,
-    context: Context.make(PayloadsOutside, keptOutside),
+    context: Context.make(PayloadOffloading, keptOutside),
   });
   const { store } = reacting.database;
   await definitionRecorded(store, {
@@ -87,7 +87,7 @@ function passedWhenItsTypeIsUnknown(settingsOf: SettingsOf) {
     const reacting = await reactingHost({
       settings: await settingsOf(),
       clock,
-      context: Context.make(PayloadsOutside, true),
+      context: Context.make(PayloadOffloading, true),
     });
     const holding: Holding = { reacting, clock };
     const { store } = reacting.database;

@@ -42,7 +42,7 @@ export function eventOf(
   receipt: InputReceipt,
   atHand: RunAtHand,
 ): DecidedEvent {
-  const format = formatWritten(atHand.format, atHand.keepsPayloadsOutside);
+  const format = formatWritten(atHand.format, atHand.payloadOffloading);
   const decided = { type: 'input_applied', receipt, steps: result.steps, resumed: result.resumed } as const;
   const outputs = withoutUndone(result.outputs);
   if (format === stateFormat) {
@@ -52,7 +52,7 @@ export function eventOf(
     );
     return { event, payloads: [] };
   }
-  const keeping = keepingOf(state, result.state, { outputs, keepsPayloadsOutside: atHand.keepsPayloadsOutside });
+  const keeping = keepingOf(state, result.state, { outputs, payloadOffloading: atHand.payloadOffloading });
   const event = {
     ...decided,
     format,

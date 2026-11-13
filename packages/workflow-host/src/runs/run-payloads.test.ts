@@ -50,8 +50,8 @@ describe('the store of payloads the host composes for its engine', () => {
     ]);
   });
 
-  it('keeps payloads outside exactly as the switch it is given says', () => {
-    expect([storeOn(true).payloads.keepsPayloadsOutside, storeOn(false).payloads.keepsPayloadsOutside]).toEqual([
+  it('offloads payloads exactly as the switch it is given says', () => {
+    expect([storeOn(true).payloads.payloadOffloading, storeOn(false).payloads.payloadOffloading]).toEqual([
       true,
       false,
     ]);
@@ -101,7 +101,7 @@ describe('the store of payloads the host composes, when the store fails or answe
     const { content } = storeOn();
     const payloads = hostRunPayloadsOf({
       content,
-      keepsPayloadsOutside: true,
+      payloadOffloading: true,
       shared: sharedPayloadsWithin(0),
       note: notesKept().note,
       readerOf: (source) => erasing(payloadReaderOf(source)),

@@ -1,4 +1,4 @@
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Context, Effect, Random } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -210,8 +210,8 @@ describe('the hold of a playbook a later release held for a reason this release 
 describe('a fact the follower cannot read', () => {
   it('holds the playbook where payloads are kept outside, and nowhere else', () => {
     expect([
-      holdsUnreadableIn({ context: Context.make(PayloadsOutside, true) }),
-      holdsUnreadableIn({ context: Context.make(PayloadsOutside, false) }),
+      holdsUnreadableIn({ context: Context.make(PayloadOffloading, true) }),
+      holdsUnreadableIn({ context: Context.make(PayloadOffloading, false) }),
       holdsUnreadableIn({}),
     ]).toEqual([true, false, false]);
   });

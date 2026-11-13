@@ -2,7 +2,7 @@ import { sha256Of } from '@on.auto/content';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { PayloadsOutside, jsonPayloadText, payloadChosen, textBytesOf, textPayloadText } from './payload-texts.ts';
+import { PayloadOffloading, jsonPayloadText, payloadChosen, textBytesOf, textPayloadText } from './payload-texts.ts';
 
 const atTheLimit = 'x'.repeat(16_384);
 
@@ -61,10 +61,10 @@ describe('the arm a payload is recorded in', () => {
 
   it('is decided by a switch that is off unless the shell turns it on', () => {
     const switchedOn = Effect.gen(function* () {
-      return yield* PayloadsOutside;
+      return yield* PayloadOffloading;
     });
 
     expect(Effect.runSync(switchedOn)).toBe(false);
-    expect(Effect.runSync(Effect.provideService(switchedOn, PayloadsOutside, true))).toBe(true);
+    expect(Effect.runSync(Effect.provideService(switchedOn, PayloadOffloading, true))).toBe(true);
   });
 });

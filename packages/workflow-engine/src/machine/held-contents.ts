@@ -15,11 +15,11 @@ export type HeldContents = ReadonlyMap<string, HeldContent>;
 export interface RunAtHand {
   readonly contents: HeldContents;
   readonly format: number | null;
-  readonly keepsPayloadsOutside: boolean;
+  readonly payloadOffloading: boolean;
 }
 
 export function nothingAtHand(): RunAtHand {
-  return { contents: new Map(), format: null, keepsPayloadsOutside: false };
+  return { contents: new Map(), format: null, payloadOffloading: false };
 }
 
 export interface LostContent {

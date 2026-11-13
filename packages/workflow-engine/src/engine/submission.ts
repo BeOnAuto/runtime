@@ -27,7 +27,7 @@ export function submissionWithDeclined(
     return Effect.succeed(submission);
   }
   const { state, contents, format } = decision.loaded;
-  const atHand = { contents, format, keepsPayloadsOutside: false };
+  const atHand = { contents, format, payloadOffloading: false };
   return Effect.map(options.sandbox.reserve, () => {
     const declined = declinedOfferOf(options, input, { state, atHand });
     return declined === undefined ? submission : { ...submission, declined };

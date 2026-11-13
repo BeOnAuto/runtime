@@ -84,7 +84,7 @@ describe('the ending a decision gives a run', () => {
 
   it('ends a run whose every value is kept and lost, reading none, in an event of the format the run reached', () => {
     const endings = inputs.map((input) =>
-      deciding(testMachine, { contents: allMissing, format: 12, keepsPayloadsOutside: false }, (options) =>
+      deciding(testMachine, { contents: allMissing, format: 12, payloadOffloading: false }, (options) =>
         decided(options, input, keptEverywhere),
       ),
     );

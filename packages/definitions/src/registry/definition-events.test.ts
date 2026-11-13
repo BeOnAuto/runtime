@@ -181,7 +181,7 @@ function writtenBack(text: string): string {
 }
 
 describe('a definition fact as a release recorded it', () => {
-  it('is written back as the same text, member for member, so a schema that keeps a payload outside leaves the inline shape as it was', () => {
+  it('is written back as the same text, member for member, so a schema that offloads a payload leaves the inline shape as it was', () => {
     const recorded = fixturesAsRecorded();
 
     expect(recorded.map(({ path, text }) => ({ path, text: writtenBack(text) }))).toEqual(recorded);

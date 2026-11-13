@@ -1,5 +1,5 @@
 import type { PlaybookRequest } from '@on.auto/operations';
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -36,7 +36,7 @@ async function greeting() {
 
 function keepingOutside(definitions: Harness, request: PlaybookRequest, at?: string) {
   return definitions.run(
-    definitions.dispatch(runDefinition, request).pipe(Effect.provideService(PayloadsOutside, true)),
+    definitions.dispatch(runDefinition, request).pipe(Effect.provideService(PayloadOffloading, true)),
     at,
   );
 }

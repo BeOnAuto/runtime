@@ -19,7 +19,7 @@ export {
   type PayloadMembers,
 } from './payload-fields.ts';
 export {
-  PayloadsOutside,
+  PayloadOffloading,
   jsonPayloadText,
   payloadChosen,
   textBytesOf,

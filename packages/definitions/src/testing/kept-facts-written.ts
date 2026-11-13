@@ -1,4 +1,4 @@
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Effect, Schema } from 'effect';
 
 import { RunEventSchema } from '../runs/run-events.ts';
@@ -33,7 +33,7 @@ async function startedAndSucceeded(): Promise<readonly RecordedRunFact[]> {
     run_id: runId,
   });
   await definitions.run(
-    definitions.dispatch(runDefinition, request).pipe(Effect.provideService(PayloadsOutside, true)),
+    definitions.dispatch(runDefinition, request).pipe(Effect.provideService(PayloadOffloading, true)),
   );
   const { records } = await Effect.runPromise(
     definitions.ledger.service.readRecorded(alpha, { kind: 'run', run: runId }, { order: 'asc', limit: 10 }),
@@ -50,7 +50,7 @@ export async function keptFactsWritten(): Promise<readonly RecordedRunFact[]> {
     answering({ approved: true, notes: 'a'.repeat(17_000) }, 'request-1'),
     askedLineage,
   );
-  await run(Effect.orDie(answered.pipe(Effect.provideService(PayloadsOutside, true))));
+  await run(Effect.orDie(answered.pipe(Effect.provideService(PayloadOffloading, true))));
   const answers = (await recorded())
     .filter(({ type }) => type === 'request_answered')
     .map(({ type, data, context }) => recordedRunFactOf({ type, data, context }));

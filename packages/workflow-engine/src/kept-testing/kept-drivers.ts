@@ -25,7 +25,7 @@ export function waitingOnItsPause(): MemoryDriver {
   const driver = memoryDriver({
     sandbox: testSandbox,
     respond: () => ({ after: 10, result: { status: 'succeeded', output: largeAnswer } }),
-    keepsPayloadsOutside: true,
+    payloadOffloading: true,
   });
   driver.start({ runId: drivenRunId, document: askingThenPausing });
   driver.clock.advance();

@@ -62,20 +62,16 @@ describe('the store of payloads the tests use', () => {
 describe('the switch of the store of payloads the tests use', () => {
   it('keeps new values outside or not as it is switched, as a ring’s switch would', () => {
     const store = memoryPayloads();
-    const switchedOn = store.keepsPayloadsOutside;
+    const switchedOn = store.payloadOffloading;
     store.switchTo(true);
 
-    expect([switchedOn, store.keepsPayloadsOutside, memoryPayloads(true).keepsPayloadsOutside]).toEqual([
-      false,
-      true,
-      true,
-    ]);
+    expect([switchedOn, store.payloadOffloading, memoryPayloads(true).payloadOffloading]).toEqual([false, true, true]);
   });
 });
 
 describe('the store of an engine composed with none', () => {
   it('keeps nothing outside, and dies if asked to read or keep, since no run of that engine names a payload', () => {
-    expect(noPayloadStore.keepsPayloadsOutside).toBe(false);
+    expect(noPayloadStore.payloadOffloading).toBe(false);
     expect(Effect.runSyncExit(noPayloadStore.read(runId, [asked]))).toEqual(Exit.die(new NoPayloadStore({ runId })));
     expect(Effect.runSyncExit(noPayloadStore.keep(runId, [payload]))).toEqual(Exit.die(new NoPayloadStore({ runId })));
   });

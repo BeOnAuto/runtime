@@ -146,7 +146,8 @@ describe('a connection under the organization’s own OAuth client whose client 
 
     expect(refused).toEqual({
       because: 'connection_unavailable',
-      detail: 'The credential of the connection files cannot be read now: The secret manager did not answer',
+      detail:
+        'The credential of the connection files cannot be read now. It stays connected: ask again later, and if it still cannot be read, whoever runs the runtime finds the cause in its log',
     });
     expect((await h.facts()).map(({ type }) => type)).not.toContain('connection_broken');
   });

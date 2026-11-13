@@ -1,5 +1,5 @@
 import { PlaybookContext, playbookLedgerOf } from '@on.auto/operations';
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Logger, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -14,7 +14,7 @@ const large = { leads: ['lead-1'], notes: 'n'.repeat(17_000) };
 const kept = keptArmOf(large);
 
 function outside<A, E>(effect: Effect.Effect<A, E>, keepsOutside = true) {
-  return Effect.runPromise(effect.pipe(Effect.provideService(PayloadsOutside, keepsOutside)));
+  return Effect.runPromise(effect.pipe(Effect.provideService(PayloadOffloading, keepsOutside)));
 }
 
 describe('a value written as a payload', () => {

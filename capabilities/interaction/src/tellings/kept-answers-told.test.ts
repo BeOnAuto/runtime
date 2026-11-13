@@ -1,7 +1,7 @@
 import type { RecordWork } from '@on.auto/definitions';
 import { onTheStandingClock } from '@on.auto/definitions/testing';
 import type { Ledger } from '@on.auto/operations';
-import { PayloadsOutside, mostInlinePayloadBytes } from '@on.auto/operations/payloads';
+import { PayloadOffloading, mostInlinePayloadBytes } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -57,7 +57,7 @@ function ledgerOverABucket(trouble: ReadonlySet<BucketTrouble>): HarnessLedger {
 
 function keepingOutside(record: RecordWork): RecordWork {
   return (run, work, lineage, rule) =>
-    record(run, work, lineage, rule).pipe(Effect.provideService(PayloadsOutside, true));
+    record(run, work, lineage, rule).pipe(Effect.provideService(PayloadOffloading, true));
 }
 
 interface Asking {
@@ -77,7 +77,7 @@ async function asked({ ledger, rule }: Asking = {}): Promise<{
   const playbook = await chatHarness({
     conversations: chatConversations,
     document,
-    keepsPayloadsOutside: true,
+    payloadOffloading: true,
     recording: keepingOutside,
     ...(ledger === undefined ? {} : { ledger }),
   });
@@ -99,7 +99,7 @@ function performedWith(offloading: boolean, playbook: ChatHarness, now: number):
                 onFailure: ({ kind = 'none' }: { readonly kind?: string }) => kind,
                 onSuccess: () => 'performed',
               }),
-              Effect.provideService(PayloadsOutside, offloading),
+              Effect.provideService(PayloadOffloading, offloading),
             ),
           ),
         ),

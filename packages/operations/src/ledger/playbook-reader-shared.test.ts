@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { PlaybookContext } from '../caller/playbook-context.ts';
-import { PayloadsOutside } from '../payloads/payload-texts.ts';
+import { PayloadOffloading } from '../payloads/payload-texts.ts';
 import { PayloadsShared, sharedPayloadsWithin } from '../payloads/shared-payloads.ts';
 import { memoryLedger } from '../testing/memory-ledger.ts';
 import { playbookLedgerOf } from './playbook-ledger.ts';
@@ -51,9 +51,9 @@ const shared = (twice: CountedStore['readTwice']) =>
 describe('the reader of the payloads of the playbook of a call, given the payloads its process shares', () => {
   it('keeps what it read in the shared cache whatever the switch, which decides only whether new payloads are kept outside, and reads the store each time where its process shares none', async () => {
     const reads = [
-      await readsOf(false, (twice) => shared(twice).pipe(Effect.provideService(PayloadsOutside, false))),
-      await readsOf(false, (twice) => shared(twice).pipe(Effect.provideService(PayloadsOutside, true))),
-      await readsOf(false, (twice) => twice.pipe(Effect.provideService(PayloadsOutside, true))),
+      await readsOf(false, (twice) => shared(twice).pipe(Effect.provideService(PayloadOffloading, false))),
+      await readsOf(false, (twice) => shared(twice).pipe(Effect.provideService(PayloadOffloading, true))),
+      await readsOf(false, (twice) => twice.pipe(Effect.provideService(PayloadOffloading, true))),
     ];
 
     expect(reads).toEqual([1, 1, 2]);
@@ -61,9 +61,9 @@ describe('the reader of the payloads of the playbook of a call, given the payloa
 
   it('holds the store back through the shared gate once it failed, whatever the switch, and asks it each time where its process shares none', async () => {
     const reads = [
-      await readsOf(true, (twice) => shared(twice).pipe(Effect.provideService(PayloadsOutside, false))),
-      await readsOf(true, (twice) => shared(twice).pipe(Effect.provideService(PayloadsOutside, true))),
-      await readsOf(true, (twice) => twice.pipe(Effect.provideService(PayloadsOutside, false))),
+      await readsOf(true, (twice) => shared(twice).pipe(Effect.provideService(PayloadOffloading, false))),
+      await readsOf(true, (twice) => shared(twice).pipe(Effect.provideService(PayloadOffloading, true))),
+      await readsOf(true, (twice) => twice.pipe(Effect.provideService(PayloadOffloading, false))),
     ];
 
     expect(reads).toEqual([1, 1, 2]);

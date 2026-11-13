@@ -18,7 +18,7 @@ do:
 
 describe('a run the engine keeps between its inputs, whose large value is kept outside', () => {
   it('keeps the text it kept across its snapshot, so no input after the snapshot reads it back', () => {
-    const driver = testDriverOf({ keepsPayloadsOutside: true });
+    const driver = testDriverOf({ payloadOffloading: true });
     driver.start({ runId: drivenRunId, document: holdingMuch });
 
     driver.runUntilEnded(drivenRunId);

@@ -1,7 +1,7 @@
 import type { ContentOwner, RecordedContent } from '@on.auto/content';
 import { playbookPayloadKept, type PlaybookContext, type PlaybookWriter, type Unavailable } from '@on.auto/operations';
 import {
-  PayloadsOutside,
+  PayloadOffloading,
   jsonPayloadText,
   payloadChosen,
   payloadKept,
@@ -51,7 +51,7 @@ function writtenKeeping<Value, Services>(
 ): Effect.Effect<WrittenAs<Value>, never, Services> {
   return Effect.gen(function* () {
     const inline: WrittenAs<Value> = { payload: { inline: value }, inHand: new Map() };
-    if (!(yield* PayloadsOutside)) {
+    if (!(yield* PayloadOffloading)) {
       return inline;
     }
     const { payload, toKeep } = payloadChosen(value, textOf(value), true);

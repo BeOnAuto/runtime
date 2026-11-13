@@ -1,6 +1,6 @@
 import { sha256Of } from '@on.auto/content';
 import { PlaybookContext, playbookLedgerOf } from '@on.auto/operations';
-import { PayloadsOutside, textBytesOf } from '@on.auto/operations/payloads';
+import { PayloadOffloading, textBytesOf } from '@on.auto/operations/payloads';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -23,7 +23,7 @@ describe('the texts of a definition written for its fact', () => {
       textsWritten({ source: long, overview: long, diagram: 'none' }).pipe(
         Effect.provideContext(playbookLedgerOf(service, alpha)),
         Effect.provideService(PlaybookContext, alpha),
-        Effect.provideService(PayloadsOutside, true),
+        Effect.provideService(PayloadOffloading, true),
       ),
     );
 

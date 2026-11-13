@@ -10,8 +10,8 @@ do:
   - pause: { wait: PT1M }
 `);
 
-function eventsOf(keepsPayloadsOutside: boolean) {
-  return drivenRun(holding, { keepsPayloadsOutside }).events.map(({ event }) => event);
+function eventsOf(payloadOffloading: boolean) {
+  return drivenRun(holding, { payloadOffloading }).events.map(({ event }) => event);
 }
 
 describe('the frozen schemas of format 11, the event and state schemas of the release before', () => {

@@ -60,7 +60,8 @@ describe('a connection whose credential is sealed under a key in KMS that is dis
       body: {
         kind: 'tool_not_offered',
         because: 'connection_unavailable',
-        detail: `The credential of the connection crm cannot be read now: The custodian of the key ${keyId} refused to unwrap a data key: DisabledException: key/${keyId} is disabled.`,
+        detail:
+          'The credential of the connection crm cannot be read now. It stays connected: ask again later, and if it still cannot be read, whoever runs the runtime finds the cause in its log',
       },
     });
     expect(read.body).toMatchObject({ status: 'connected' });

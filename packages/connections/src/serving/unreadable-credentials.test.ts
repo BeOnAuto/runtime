@@ -59,30 +59,31 @@ async function refusalOf(source: ConnectionSource, id: string): Promise<Connecti
 
 const searched = { server: 'graph', tool: 'search', arguments: { query: 'acme' } };
 
-function unreadableNow(detail: string): string {
+const unreadableNow =
+  'The credential of the connection graph cannot be read now. It stays connected: ask again later, and if it still cannot be read, whoever runs the runtime finds the cause in its log';
+
+function loggedCause(detail: string): string {
   return `The credential of the connection graph cannot be read now: ${detail}`;
 }
 
 function refusedBy(custodian: RecordingCustodian): string {
-  return unreadableNow(`The custodian of the key ${custodian.kid} refused to unwrap a data key: ${custodianRefusal}`);
+  return loggedCause(`The custodian of the key ${custodian.kid} refused to unwrap a data key: ${custodianRefusal}`);
 }
 
-function refusedCallBy(custodian: RecordingCustodian) {
-  return {
-    status: 'rejected',
-    reason: 'unavailable',
-    kind: 'tool_not_offered',
-    because: 'connection_unavailable',
-    detail: refusedBy(custodian),
-  };
-}
+const refusedCall = {
+  status: 'rejected',
+  reason: 'unavailable',
+  kind: 'tool_not_offered',
+  because: 'connection_unavailable',
+  detail: unreadableNow,
+};
 
 function warningsIn(lines: readonly string[]): readonly string[] {
   return lines.filter((line) => line.includes('"level":"WARN"'));
 }
 
 describe('a connection whose credential the secret store cannot read now', () => {
-  it('fails a tool call in the words of the store, records nothing and stays connected, logs the cause once, and is called once the custodian answers again', async () => {
+  it('fails a tool call in words that name no key and no cause, records nothing and stays connected, logs the cause once, and is called once the custodian answers again', async () => {
     const fake = await fakeServerAt();
     const h = harness({ policy: loopbackPolicy });
     const { custodian, store } = sealedIn(memoryRows({ now }));
@@ -103,7 +104,7 @@ describe('a connection whose credential the secret store cannot read now', () =>
     custodian.answer();
     const answered = await calls.call('execute_connection', searched);
 
-    expect(refused).toEqual([refusedCallBy(custodian), refusedCallBy(custodian)]);
+    expect(refused).toEqual([refusedCall, refusedCall]);
     expect(listedWhileRefused).toBe('connected');
     expect((await connectionOf(source, pending.id)).state.status).toBe('unready');
     expect(answered).toMatchObject({ status: 'succeeded' });
@@ -144,17 +145,14 @@ describe('the log of a credential that cannot be read now', () => {
     custodian.refuse();
     refusals.push(await refusalOf(source, id));
 
-    const keyUnknown = unreadableNow(
+    const keyUnknown = loggedCause(
       `The secret is sealed under the key ${other.custodian.kid}, which is neither the current key nor the previous one`,
     );
-    const unopened = unreadableNow(
+    const unopened = loggedCause(
       `The custodian of the key ${custodian.kid} refused to unwrap a data key: its wrapped key does not open under this key`,
     );
-    expect(refusals).toEqual(
-      [refusedBy(custodian), refusedBy(custodian), unopened, keyUnknown, keyUnknown, refusedBy(custodian)].map(
-        (detail) => ({ because: 'connection_unavailable', detail }),
-      ),
-    );
+    expect(refusals).toEqual(refusals.map(() => ({ because: 'connection_unavailable', detail: unreadableNow })));
+    expect(refusals).toHaveLength(6);
     expect(warningsIn(lines).map((line) => [line.includes(keyUnknown), line.includes(unopened)])).toEqual([
       [false, false],
       [true, false],
@@ -183,7 +181,7 @@ describe('a connection whose custodian does not answer', () => {
 
     expect(refused).toEqual({
       because: 'connection_unavailable',
-      detail: unreadableNow('The keeper of the secret, or the custodian of its key, did not answer within 10 seconds'),
+      detail: unreadableNow,
     });
     expect((await h.facts()).map(({ type }) => type)).not.toContain('connection_broken');
   });

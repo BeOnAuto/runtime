@@ -1,4 +1,4 @@
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -21,7 +21,7 @@ async function settledKeeping(keepsOutside: boolean) {
   const handed = await withHandOn();
   await handed.running();
   const settle = runSettlerKeepingOutputs(handed.ledger.service)(relayed, scored);
-  await handed.run(Effect.orDie(settle.pipe(Effect.provideService(PayloadsOutside, keepsOutside))), settledAt);
+  await handed.run(Effect.orDie(settle.pipe(Effect.provideService(PayloadOffloading, keepsOutside))), settledAt);
   const { records } = await Effect.runPromise(
     handed.ledger.service.readRecorded(relayed, { kind: 'run', run: relayedId }, { order: 'asc', limit: 10 }),
   );

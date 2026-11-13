@@ -1,4 +1,4 @@
-import { mostInlinePayloadBytes, PayloadsOutside } from '@on.auto/operations/payloads';
+import { mostInlinePayloadBytes, PayloadOffloading } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
 import { runDecider } from '../runs/run-decider.ts';
@@ -23,7 +23,7 @@ async function leftWithItsDocumentKept() {
     operations.createDefinition,
     toAlpha(acmeAdmin, { type: 'resumer', name: 'step', source: longerThanAFactHolds }),
   );
-  await definitions.run(defined.pipe(Effect.provideService(PayloadsOutside, true)));
+  await definitions.run(defined.pipe(Effect.provideService(PayloadOffloading, true)));
   await definitions.run(Effect.orDie(definitions.ledger.service.execute(stream, runDecider, startOfTheStep)));
   const asked = { type: 'resumer', name: 'step', input: {}, run_id: acted.runId };
   const asking = (attemptDied?: true) =>

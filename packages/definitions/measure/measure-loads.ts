@@ -129,7 +129,7 @@ function overviewBytesOf(data: string): number {
   const content = Predicate.hasProperty(parsed, 'content') ? parsed.content : undefined;
   if (Predicate.hasProperty(content, 'overview_sha256')) {
     throw new Error(
-      'A stored version keeps its overview outside its fact, by its digest, and this measure counts the bytes of an overview its fact holds: run it with PayloadsOutside off',
+      'A stored version keeps its overview outside its fact, by its digest, and this measure counts the bytes of an overview its fact holds: run it with PayloadOffloading off',
     );
   }
   const overview = Predicate.hasProperty(content, 'overview') ? content.overview : undefined;

@@ -73,7 +73,7 @@ function erasing(position: number, data: Schema.JsonObject) {
 }
 
 function measuredInItsMetadata(entry: LedgerEntry): void {
-  it('names in the metadata of a fact that keeps payloads outside the bytes they hold, and in no other, in the shape recorded', async () => {
+  it('names the bytes they hold in the metadata of a fact that offloads payloads, and in no other, in the shape recorded', async () => {
     const database = await entry.aDatabase();
     const ledger = await aLedgerHolding(entry, noteHolders, database);
     const sha256 = await keptIn(ledger, '{"note":"the first"}');

@@ -1,5 +1,5 @@
 import { PlaybookContext, playbookLedgerOf } from '@on.auto/operations';
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -17,7 +17,7 @@ const kept = keptArmOf(answer);
 const keptAnswer = { answer_sha256: kept.sha256, answer_bytes: kept.bytes };
 
 function keepingOutside<A, E>(effect: Effect.Effect<A, E>) {
-  return attempted(effect.pipe(Effect.provideService(PayloadsOutside, true)));
+  return attempted(effect.pipe(Effect.provideService(PayloadOffloading, true)));
 }
 
 describe('the answer to a request, where its playbook keeps large values outside its runs', () => {

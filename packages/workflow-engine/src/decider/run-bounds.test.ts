@@ -42,7 +42,7 @@ describe('a run ends, raised, in one small event, when an input would make an ev
   });
 });
 
-function holdingAcross(pause: string, length: number, keepsPayloadsOutside = false): DrivenRun {
+function holdingAcross(pause: string, length: number, payloadOffloading = false): DrivenRun {
   return drivenRun(
     workflow(`
 do:
@@ -50,13 +50,13 @@ do:
   - pause: ${pause}
   - measure: { set: '\${ ({ length: $data.s.length }) }' }
 `),
-    { keepsPayloadsOutside },
+    { payloadOffloading },
   );
 }
 
-function longestHeldAcross(pause: string, keepsPayloadsOutside = false): number {
+function longestHeldAcross(pause: string, payloadOffloading = false): number {
   const near = mostEventBytes - 4096;
-  const [first = 0] = holdingAcross(pause, near, keepsPayloadsOutside).events.map(({ event }) => eventBytesOf(event));
+  const [first = 0] = holdingAcross(pause, near, payloadOffloading).events.map(({ event }) => eventBytesOf(event));
   return near + mostEventBytes - first;
 }
 

@@ -1,5 +1,5 @@
 import type { RecordWork } from '@on.auto/definitions';
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -15,7 +15,7 @@ const note = `the second point is wrong ${'é'.repeat(1500)}`;
 
 function keepingOutside(record: RecordWork): RecordWork {
   return (run, work, lineage, rule) =>
-    record(run, work, lineage, rule).pipe(Effect.provideService(PayloadsOutside, true));
+    record(run, work, lineage, rule).pipe(Effect.provideService(PayloadOffloading, true));
 }
 
 describe('a long reply, where its playbook keeps large values outside its runs', () => {

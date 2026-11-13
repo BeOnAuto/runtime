@@ -16,7 +16,7 @@ export interface DriverOptions {
   readonly respond?: Responder;
   readonly startedAt?: number;
   readonly mostSteps?: number;
-  readonly keepsPayloadsOutside?: boolean;
+  readonly payloadOffloading?: boolean;
 }
 
 export interface MemoryDriver extends RunWatch {
@@ -42,7 +42,7 @@ export function memoryDriver(options: DriverOptions): MemoryDriver {
       submit(input);
     },
     options.respond ?? succeedWithNull,
-    options.keepsPayloadsOutside,
+    options.payloadOffloading,
   );
   const engine = engineOfFrozenRuns(ports, testMachineOf(options.sandbox, options.machine));
   const given: RunInput[] = [];

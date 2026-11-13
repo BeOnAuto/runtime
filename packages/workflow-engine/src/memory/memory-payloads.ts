@@ -16,7 +16,7 @@ export interface MemoryPayloads extends RunPayloads<ContentUnavailable> {
   readonly keeps: () => readonly (readonly string[])[];
   readonly failNext: (call: PayloadCall) => void;
   readonly lose: (sha256: string, as: LostAs) => void;
-  readonly switchTo: (keepsPayloadsOutside: boolean) => void;
+  readonly switchTo: (payloadOffloading: boolean) => void;
 }
 
 function unavailable(call: PayloadCall): ContentUnavailable {
@@ -43,8 +43,8 @@ function contentIn({ texts, lost }: KeptTexts, sha256: string): HeldContent {
   return text === undefined ? { kind: 'missing' } : { kind: 'read', text };
 }
 
-export function memoryPayloads(keepsPayloadsOutside = false): MemoryPayloads {
-  const switched = { keepsPayloadsOutside };
+export function memoryPayloads(payloadOffloading = false): MemoryPayloads {
+  const switched = { payloadOffloading };
   const texts = new Map<string, string>();
   const lost = new Map<string, LostAs>();
   const kept: KeptTexts = { texts, lost };
@@ -52,8 +52,8 @@ export function memoryPayloads(keepsPayloadsOutside = false): MemoryPayloads {
   const reads: (readonly string[])[] = [];
   const keeps: (readonly string[])[] = [];
   return {
-    get keepsPayloadsOutside() {
-      return switched.keepsPayloadsOutside;
+    get payloadOffloading() {
+      return switched.payloadOffloading;
     },
     read: (_runId, asked) =>
       Effect.suspend(() => {
@@ -85,7 +85,7 @@ export function memoryPayloads(keepsPayloadsOutside = false): MemoryPayloads {
       lost.set(sha256, as);
     },
     switchTo: (keeping) => {
-      switched.keepsPayloadsOutside = keeping;
+      switched.payloadOffloading = keeping;
     },
   };
 }

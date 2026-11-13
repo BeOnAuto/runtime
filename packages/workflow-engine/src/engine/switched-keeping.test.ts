@@ -18,10 +18,10 @@ do:
   - rest: { wait: PT1M }
 `);
 
-function startedThenSwitched(keepsPayloadsOutside: boolean): MemoryDriver {
-  const driver = memoryDriver({ sandbox: testSandbox, keepsPayloadsOutside });
+function startedThenSwitched(payloadOffloading: boolean): MemoryDriver {
+  const driver = memoryDriver({ sandbox: testSandbox, payloadOffloading });
   driver.start({ runId: drivenRunId, document: twice });
-  driver.ports.payloads.switchTo(!keepsPayloadsOutside);
+  driver.ports.payloads.switchTo(!payloadOffloading);
   return driver;
 }
 

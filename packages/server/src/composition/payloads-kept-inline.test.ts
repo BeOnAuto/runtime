@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Effect, ManagedRuntime } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -11,7 +11,7 @@ import { applicationLayer } from './application-layer.ts';
 
 const runtimeFolder = fileURLToPath(new URL('../../../../', import.meta.url));
 
-const provision = /(?:provide\w*|Layer\.\w+|Context\.(?:add|make))\([^;]*?\bPayloadsOutside\b/u;
+const provision = /(?:provide\w*|Layer\.\w+|Context\.(?:add|make))\([^;]*?\bPayloadOffloading\b/u;
 
 function isComposed(path: string): boolean {
   return path.endsWith('.ts') && !path.endsWith('.test.ts') && !/testing/u.test(path);
@@ -33,7 +33,7 @@ function provisionsIn(folders: readonly string[]): readonly string[] {
 }
 
 const keptOutside = Effect.gen(function* () {
-  return yield* PayloadsOutside;
+  return yield* PayloadOffloading;
 });
 
 describe('the payloads of facts, in the server', () => {
@@ -56,14 +56,14 @@ describe('the payloads of facts, in the server', () => {
 
   it('would find a source that turns it on, by a layer, a service provided or a context', () => {
     const turningOn = [
-      'Layer.succeed(PayloadsOutside, true)',
-      'Effect.provideService(PayloadsOutside, true)',
-      'Effect.provideService(work, PayloadsOutside, true)',
-      'Context.add(PayloadsOutside, true)',
-      'Context.make(\n  PayloadsOutside,\n  true,\n)',
+      'Layer.succeed(PayloadOffloading, true)',
+      'Effect.provideService(PayloadOffloading, true)',
+      'Effect.provideService(work, PayloadOffloading, true)',
+      'Context.add(PayloadOffloading, true)',
+      'Context.make(\n  PayloadOffloading,\n  true,\n)',
     ];
 
     expect(turningOn.filter((source) => !provision.test(source))).toEqual([]);
-    expect(provision.test('const outside = yield* PayloadsOutside;')).toBe(false);
+    expect(provision.test('const outside = yield* PayloadOffloading;')).toBe(false);
   });
 });

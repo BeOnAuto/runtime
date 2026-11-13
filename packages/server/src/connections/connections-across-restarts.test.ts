@@ -1,4 +1,3 @@
-import { sha256Of } from '@on.auto/content';
 import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
@@ -13,7 +12,8 @@ const crmKey = 'crm-api-key-6e2b9d41';
 
 const anotherKey = Buffer.alloc(32, 9);
 
-const unreadableNow = `The credential of the connection crm cannot be read now: The secret is sealed under the key ${sha256Of(anotherKey).slice(0, 16)}, which is neither the current key nor the previous one`;
+const unreadableNow =
+  'The credential of the connection crm cannot be read now. It stays connected: ask again later, and if it still cannot be read, whoever runs the runtime finds the cause in its log';
 
 let ledger: TemporaryLedger | undefined;
 

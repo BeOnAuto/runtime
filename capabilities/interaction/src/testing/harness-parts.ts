@@ -1,7 +1,7 @@
 import { noStrippedForms, type Capability, type PlaybookOperation } from '@on.auto/definitions';
 import { onTheStandingClock } from '@on.auto/definitions/testing';
 import type { Outcome } from '@on.auto/operations';
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Effect, Layer, Schema } from 'effect';
 
 import { listInteractions } from '../requests/list-interactions.ts';
@@ -54,7 +54,7 @@ export function performedEach(times: readonly number[], perform: (now: number) =
 }
 
 export function payloadOffloadingOf(on: boolean): Layer.Layer<never> {
-  return Layer.succeed(PayloadsOutside, on);
+  return Layer.succeed(PayloadOffloading, on);
 }
 
 export function conversationsDeclared(declared: ConversationTools | undefined): ConversationsOf {

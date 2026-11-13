@@ -42,7 +42,7 @@ function heldIn(entry: LedgerEntry, database: string): Promise<typeof HeldRows.T
 
 export function measuredRiddenAppendsBehaviour(entry: LedgerEntry): void {
   describe("an append of the connection, a workflow run log's among them", () => {
-    it('measures each fact as every append does, so a fact that keeps a payload outside, which nothing on this path holds, is refused, and the same fact inline is appended', async () => {
+    it('measures each fact as every append does, so a fact that offloads a payload, which nothing on this path holds, is refused, and the same fact inline is appended', async () => {
       const opened = entry.openedOn(await entry.aDatabase());
       onTestFinished(() => opened.store.close());
       await opened.store.migrate();

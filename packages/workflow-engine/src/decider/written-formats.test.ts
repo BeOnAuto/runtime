@@ -91,8 +91,8 @@ do:
   },
 ];
 
-function driven({ source, options = {} }: Case, keepsPayloadsOutside: boolean) {
-  return drivenRun(workflow(source), { respond: echoing, ...options, keepsPayloadsOutside });
+function driven({ source, options = {} }: Case, payloadOffloading: boolean) {
+  return drivenRun(workflow(source), { respond: echoing, ...options, payloadOffloading });
 }
 
 function addedIn(events: readonly PositionedEvent[]): readonly (readonly string[])[] {

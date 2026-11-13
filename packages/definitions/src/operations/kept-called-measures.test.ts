@@ -1,4 +1,4 @@
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -61,7 +61,7 @@ async function measuredWhere({ readable }: { readonly readable: boolean }) {
     definitions.run(
       definitions
         .dispatch(operations.createDefinition, toAlpha(acmeAdmin, { type, name, source }))
-        .pipe(Effect.provideService(PayloadsOutside, true)),
+        .pipe(Effect.provideService(PayloadOffloading, true)),
     );
   await saved('posting', 'post', longPost);
   await saved('measuring', 'calls', 'Measures the post it calls');

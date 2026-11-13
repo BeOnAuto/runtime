@@ -1,6 +1,6 @@
 import { statement } from '@on.auto/ledger';
 import { contentHoldersOf } from '@on.auto/operations';
-import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { RunLogRecordSchema, mostInlineHeldValueBytes, stateFormatKeepingPayloads } from '@on.auto/workflow-engine';
 import { Context, Effect, Schema } from 'effect';
 import { Client } from 'pg';
@@ -75,7 +75,7 @@ async function heldOn(settings: DatabaseSettings) {
 }
 
 async function startedKeeping(settings: DatabaseSettings): Promise<void> {
-  const hosted = await hostedOn(settings, { context: Context.make(PayloadsOutside, true) });
+  const hosted = await hostedOn(settings, { context: Context.make(PayloadOffloading, true) });
   await Effect.runPromise(hosted.host.start(run, startOf(holding)));
 }
 

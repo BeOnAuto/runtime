@@ -135,7 +135,7 @@ function readPastTheHour(feed: ReturnType<typeof harness>, ledger: Ledger['Servi
   );
 }
 
-describe('one event of a fact that keeps a payload outside it, read whole', () => {
+describe('one event of a fact that offloads a payload, read whole', () => {
   it('reads the payload through the reader of payloads, and shows one missing from the content as the fact holds it', async () => {
     const feed = aFeed();
     await notedIn(feed, 1, 'n'.repeat(3000));
@@ -178,7 +178,7 @@ describe('one event of a fact that keeps a payload outside it, read whole', () =
   });
 });
 
-describe('one event of a fact that keeps a payload outside it, read whole by a presenter that shows none', () => {
+describe('one event of a fact that offloads a payload, read whole by a presenter that shows none', () => {
   it('reads no payload, so it answers while the content cannot be reached', async () => {
     const feed = aFeed();
     await notedIn(feed, 1, 'n'.repeat(3000));

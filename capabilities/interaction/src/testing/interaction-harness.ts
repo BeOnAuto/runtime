@@ -69,7 +69,7 @@ export interface HarnessOptions {
   readonly mostOpenRequests?: number;
   readonly others?: readonly Capability[];
   readonly conversations?: Parameters<typeof conversationsDeclared>[0];
-  readonly keepsPayloadsOutside?: boolean;
+  readonly payloadOffloading?: boolean;
 }
 
 interface PlaybookRoute {
@@ -117,10 +117,10 @@ function callingIn(services: Layer.Layer<DispatcherServices>): Calling {
   return call;
 }
 
-function servicesOf(ledger: HarnessLedger, keepsPayloadsOutside: boolean): Layer.Layer<DispatcherServices> {
+function servicesOf(ledger: HarnessLedger, payloadOffloading: boolean): Layer.Layer<DispatcherServices> {
   return Layer.mergeAll(
     ledger.layer,
-    payloadOffloadingOf(keepsPayloadsOutside),
+    payloadOffloadingOf(payloadOffloading),
     memoryPlaybookRegistry([alpha]),
     recordingReporter().layer,
     Layer.succeed(Clock.Clock, standingClock),
@@ -147,7 +147,7 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
     mostOpenRequests: options.mostOpenRequests ?? 10_000,
     conversationsOf: conversationsDeclared(options.conversations),
   });
-  const call = callingIn(servicesOf(ledger, options.keepsPayloadsOutside ?? false));
+  const call = callingIn(servicesOf(ledger, options.payloadOffloading ?? false));
   const capabilities = [capability, ...(options.others ?? [])];
   const facts = runFactsOf(declaredFactsOf(capabilities));
   const dueOver = (over: RequestLedger): RequestsDue =>

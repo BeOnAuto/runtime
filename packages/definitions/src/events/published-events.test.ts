@@ -51,7 +51,7 @@ function spelled(time: string) {
 }
 
 describe('the fact of a published event', () => {
-  it('keeps no payload outside it, since the event is delivered whole to every trigger, listener and view that takes it', () => {
+  it('offloads no payload, since the event is delivered whole to every trigger, listener and view that takes it', () => {
     expect(contentHoldersOf([EventPublishedSchema]).has('event_published')).toBe(false);
   });
 });

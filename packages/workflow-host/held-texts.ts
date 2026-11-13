@@ -74,7 +74,7 @@ const { content, close } = await contentOf();
 const store = (cacheBytes: number) =>
   hostRunPayloadsOf({
     content,
-    keepsPayloadsOutside: true,
+    payloadOffloading: true,
     shared: sharedPayloadsWithin(cacheBytes),
     note: () => Effect.void,
   });

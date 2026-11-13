@@ -43,7 +43,7 @@ describe('a decision of a run whose held value is kept outside', () => {
 
 describe('a decision that keeps a new value outside', () => {
   it('fails as unavailable when the value cannot be kept, appending nothing, and is made when asked again', () => {
-    const driver = memoryDriver({ sandbox: testSandbox, keepsPayloadsOutside: true });
+    const driver = memoryDriver({ sandbox: testSandbox, payloadOffloading: true });
     driver.ports.payloads.failNext('keep');
     const started = {
       kind: 'started',

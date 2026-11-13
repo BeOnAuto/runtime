@@ -3,7 +3,7 @@ import {
   payloadKept,
   payloadReaderOf,
   payloadReadsAtOnce,
-  PayloadsOutside,
+  PayloadOffloading,
   PayloadsShared,
   type PayloadNotRead,
   type PayloadReader,
@@ -25,7 +25,7 @@ export const hostPayloadCacheBytes = 64 * 1_048_576;
 
 interface HostPayloadParts {
   readonly content: PayloadSource['content'] & Parameters<typeof payloadKept>[0];
-  readonly keepsPayloadsOutside: boolean;
+  readonly payloadOffloading: boolean;
   readonly shared: SharedPayloads;
   readonly note: (note: Extract<HostNote, { readonly kind: 'payloads_read' }>) => Effect.Effect<void>;
   readonly readerOf?: (source: PayloadSource) => PayloadReader;
@@ -81,7 +81,7 @@ function textBytesRead(contents: ReadonlyMap<string, HeldContent>, kept: readonl
 
 export function hostRunPayloadsOf({
   content,
-  keepsPayloadsOutside,
+  payloadOffloading,
   shared,
   note,
   readerOf = payloadReaderOf,
@@ -94,7 +94,7 @@ export function hostRunPayloadsOf({
       contentOf(readerOf({ owner, content, cache, gate }).text(kept)),
     );
   return {
-    keepsPayloadsOutside,
+    payloadOffloading,
     read: (runKey, kept) => {
       const owner = ownerOf(runKey);
       return Effect.forEach(kept, (each) => Effect.map(readOne(owner, each), (read) => [each.sha256, read] as const), {
@@ -139,10 +139,10 @@ export interface HostPayloads {
 }
 
 export function hostPayloadsOf({ content, context = Context.empty(), note }: ComposedPayloads): HostPayloads {
-  const keepsPayloadsOutside = Context.get(context, PayloadsOutside);
+  const payloadOffloading = Context.get(context, PayloadOffloading);
   const shared = Context.get(context, PayloadsShared);
   return {
-    runs: hostRunPayloadsOf({ content, keepsPayloadsOutside, shared, note }),
+    runs: hostRunPayloadsOf({ content, payloadOffloading, shared, note }),
     factsOf: factPayloadsIn(content, shared),
   };
 }

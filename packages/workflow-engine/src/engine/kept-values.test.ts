@@ -28,11 +28,11 @@ const callArguments = { to: large, subject: 'hello' };
 
 const textOf = (value: unknown): string => JSON.stringify(value);
 
-function asked(keepsPayloadsOutside: boolean): DrivenRun {
+function asked(payloadOffloading: boolean): DrivenRun {
   return drivenRun(asking, {
     input: { to: large },
     respond: () => ({ after: 10, result: { status: 'succeeded', output: answer } }),
-    keepsPayloadsOutside,
+    payloadOffloading,
   });
 }
 

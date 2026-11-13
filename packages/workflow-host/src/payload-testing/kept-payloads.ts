@@ -61,7 +61,7 @@ export interface StoreOfPayloads {
 const refused = () => Effect.die(new Error('connect ECONNREFUSED'));
 
 export function storeOn(
-  keepsPayloadsOutside = true,
+  payloadOffloading = true,
   shared: SharedPayloads = sharedPayloadsWithin(hostPayloadCacheBytes),
 ): StoreOfPayloads {
   const { content: kept } = memoryLedger().service;
@@ -83,7 +83,7 @@ export function storeOn(
       }),
   };
   return {
-    payloads: hostRunPayloadsOf({ content, keepsPayloadsOutside, shared, note }),
+    payloads: hostRunPayloadsOf({ content, payloadOffloading, shared, note }),
     content,
     gets: () => gets,
     notes,
@@ -133,7 +133,7 @@ export function streamedIn(toKeep: PayloadToKeep, size: number): Streamed {
   };
   const payloads = hostRunPayloadsOf({
     content,
-    keepsPayloadsOutside: true,
+    payloadOffloading: true,
     shared: sharedPayloadsWithin(0),
     note: () => Effect.void,
   });

@@ -11,7 +11,7 @@ import { keepingOf } from './kept-payloads.ts';
 
 function holding(length: number) {
   return drivenRun(workflow(`do:\n  - make: { set: '\${ "x".repeat(${length}) }' }\n  - pause: { wait: PT1M }`), {
-    keepsPayloadsOutside: true,
+    payloadOffloading: true,
   });
 }
 
@@ -34,7 +34,7 @@ describe('the arm a held value takes', () => {
   it('is chosen only for a value that reaches the event: one made and let go of within the input is never hashed or kept', () => {
     const run = drivenRun(
       workflow(`do:\n  - make: { set: '\${ "x".repeat(1000000) }' }\n  - measure: { set: '\${ $data.length }' }`),
-      { keepsPayloadsOutside: true },
+      { payloadOffloading: true },
     );
 
     expect(run.outcome).toEqual({ kind: 'completed', output: 1_000_000 });
@@ -51,7 +51,7 @@ do:
   - again: { set: '\${ [$data, "x".repeat(20000)][1] }' }
   - rest: { wait: PT1M }
 `),
-      { keepsPayloadsOutside: true },
+      { payloadOffloading: true },
     );
     const digest = sha256Of(JSON.stringify('x'.repeat(20_000)));
 
@@ -66,7 +66,7 @@ describe('a start whose arguments pass the threshold', () => {
     const call = { kind: 'start_call', key: openCall, function: 'notify', arguments: given, longestMs: 1000 } as const;
     const digest = sha256Of(JSON.stringify(given));
 
-    const keeping = keepingOf(runningState, runningState, { outputs: [call], keepsPayloadsOutside: true });
+    const keeping = keepingOf(runningState, runningState, { outputs: [call], payloadOffloading: true });
 
     expect(keeping.kept).toEqual([]);
     expect(keeping.outputs).toEqual([

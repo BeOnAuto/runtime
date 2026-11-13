@@ -5,7 +5,7 @@ import { Data, Effect } from 'effect';
 import type { HeldContents } from '../machine/held-contents.ts';
 
 export interface RunPayloads<Unavailable> {
-  readonly keepsPayloadsOutside: boolean;
+  readonly payloadOffloading: boolean;
   readonly read: (runId: string, kept: readonly Digested[]) => Effect.Effect<HeldContents, Unavailable>;
   readonly keep: (runId: string, payloads: readonly PayloadToKeep[]) => Effect.Effect<void, Unavailable>;
 }
@@ -13,7 +13,7 @@ export interface RunPayloads<Unavailable> {
 export class NoPayloadStore extends Data.TaggedError('no_payload_store')<{ readonly runId: string }> {}
 
 export const noPayloadStore: RunPayloads<never> = {
-  keepsPayloadsOutside: false,
+  payloadOffloading: false,
   read: (runId) => Effect.die(new NoPayloadStore({ runId })),
   keep: (runId) => Effect.die(new NoPayloadStore({ runId })),
 };

@@ -20,8 +20,8 @@ do:
   - measure: { set: '\${ ({ length: $data.text.length }) }' }
 `);
 
-export function waitingForItsAnswer(keepsPayloadsOutside: boolean): MemoryDriver {
-  const driver = memoryDriver({ sandbox: testSandbox, respond: () => 'never', keepsPayloadsOutside });
+export function waitingForItsAnswer(payloadOffloading: boolean): MemoryDriver {
+  const driver = memoryDriver({ sandbox: testSandbox, respond: () => 'never', payloadOffloading });
   const toKeep = { ...keptOutput, text: answeredOutput, mediaType: 'application/json' };
   Effect.runSync(driver.ports.payloads.keep('elsewhere', [toKeep]));
   driver.start({ runId: drivenRunId, document: asking });

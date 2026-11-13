@@ -7,8 +7,10 @@ const reconnects = 'the person who added it reconnects it';
 export const servingWords = {
   pending: (name: string) =>
     `Nobody has approved the connection ${name} yet; the person who added it opens its link, or reconnects it for a new link`,
-  unreadableNow: (name: string, detail: string) =>
-    `The credential of the connection ${name} cannot be read now: ${detail}`,
+  unreadableNow: (name: string) =>
+    `The credential of the connection ${name} cannot be read now. It stays connected: ask again later, and if it still cannot be read, whoever runs the runtime finds the cause in its log`,
+  unreadableBecause: (name: string, cause: string) =>
+    `The credential of the connection ${name} cannot be read now: ${cause}`,
   gone: (name: string) => `The credential of the connection ${name} is no longer in the secret store, so ${reconnects}`,
   unset: variableUnset,
   unrecorded: (name: string) =>

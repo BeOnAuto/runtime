@@ -33,7 +33,7 @@ const CorpusSchema = Schema.toCodecJson(
 
 const PayloadsSchema = Schema.toCodecJson(
   Schema.Struct({
-    next: Schema.Struct({ input: RunInputSchema, keepsPayloadsOutside: Schema.Boolean }),
+    next: Schema.Struct({ input: RunInputSchema, payloadOffloading: Schema.Boolean }),
     texts: Schema.Record(Schema.String, Schema.String),
   }),
 );
@@ -139,7 +139,7 @@ describe.each(['format-12', 'format-11-to-12', 'format-12-switched-off'])('the n
     const decided = machine.decision(next.input, atSnapshot.state, {
       contents,
       format: atSnapshot.format,
-      keepsPayloadsOutside: next.keepsPayloadsOutside,
+      payloadOffloading: next.payloadOffloading,
     });
 
     expect(keptValuesReached(atSnapshot.state).every(({ sha256 }) => contents.has(sha256))).toBe(true);
@@ -149,7 +149,7 @@ describe.each(['format-12', 'format-11-to-12', 'format-12-switched-off'])('the n
 
   it('is not decided without those texts: a decision given none of them dies rather than guess', () => {
     const nothing = new Map<string, HeldContent>();
-    const given = { contents: nothing, format: atSnapshot.format, keepsPayloadsOutside: next.keepsPayloadsOutside };
+    const given = { contents: nothing, format: atSnapshot.format, payloadOffloading: next.payloadOffloading };
 
     expect(keptValuesReached(atSnapshot.state).length).toBeGreaterThan(0);
     expect(() => machine.decision(next.input, atSnapshot.state, given)).toThrow(HeldContentNotGiven);

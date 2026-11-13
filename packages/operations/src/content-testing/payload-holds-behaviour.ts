@@ -86,7 +86,7 @@ function refusedUnheld(entry: UnheldContentEntry): void {
     expect(await versionOf(ledger, writingsOfTheOrg)).toBe(1);
   });
 
-  it('refuses, and records nothing, a fact that keeps a payload outside where the ledger was opened without its declaration, which would hold none of it; the same fact inline is recorded', async () => {
+  it('refuses, and records nothing, a fact that offloads a payload where the ledger was opened without its declaration, which would hold none of it; the same fact inline is recorded', async () => {
     const ledger = await entry.aLedger(withoutWrittenNotes);
     const sha256 = await keptIn(ledger, alpha, note, keptAt);
 
@@ -102,7 +102,7 @@ function refusedUnheld(entry: UnheldContentEntry): void {
 }
 
 export function payloadHoldsBehaviour(entry: UnheldContentEntry): void {
-  describe('the facts that keep payloads outside, measured whole and held only where the content is kept', () => {
+  describe('the facts that offload payloads, measured whole and held only where the content is kept', () => {
     measuredByTheirPayloads(entry);
     refusedUnheld(entry);
   });

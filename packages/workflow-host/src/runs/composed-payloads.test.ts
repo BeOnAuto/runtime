@@ -1,4 +1,4 @@
-import { PayloadsOutside, PayloadsShared, sharedPayloadsWithin } from '@on.auto/operations/payloads';
+import { PayloadOffloading, PayloadsShared, sharedPayloadsWithin } from '@on.auto/operations/payloads';
 import { Context, Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -20,11 +20,11 @@ async function keptAndReadBy(outside: boolean) {
   await Effect.runPromise(store.payloads.keep(alphaRun, [answer]));
   const payloads = hostPayloadsOf({
     content: store.content,
-    context: Context.make(PayloadsOutside, outside).pipe(Context.add(PayloadsShared, shared)),
+    context: Context.make(PayloadOffloading, outside).pipe(Context.add(PayloadsShared, shared)),
     note: notesKept().note,
   });
   const read = await Effect.runPromise(payloads.factsOf(alpha).json({ sha256: answer.sha256, bytes: answer.bytes }));
-  return { outside: payloads.runs.keepsPayloadsOutside, read, gets: store.gets() };
+  return { outside: payloads.runs.payloadOffloading, read, gets: store.gets() };
 }
 
 describe('the payloads the host composes from the context of its runtime', () => {

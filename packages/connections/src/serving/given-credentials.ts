@@ -122,11 +122,13 @@ function unavailableNow(
   const { id, name } = kept.connection;
   const unready: ConnectionUnready = {
     because: 'connection_unavailable',
-    detail: servingWords.unreadableNow(name, failure.detail),
+    detail: servingWords.unreadableNow(name),
   };
   const loggedOnce = Effect.suspend(() =>
     unreadable.isNew(id, causeOf(failure))
-      ? Effect.logWarning(unready.detail).pipe(Effect.annotateLogs({ org, connection: id }))
+      ? Effect.logWarning(servingWords.unreadableBecause(name, failure.detail)).pipe(
+          Effect.annotateLogs({ org, connection: id }),
+        )
       : Effect.void,
   );
   return Effect.andThen(loggedOnce, Effect.fail(unready));

@@ -33,13 +33,13 @@ export function memoryPorts(
   clock: VirtualClock,
   submit: Submit,
   responder: Responder,
-  keepsPayloadsOutside = false,
+  payloadOffloading = false,
 ): MemoryPorts {
   const faults = faultsOf(clock);
   const runStore = memoryRunStore();
   return {
     runStore,
-    payloads: memoryPayloads(keepsPayloadsOutside),
+    payloads: memoryPayloads(payloadOffloading),
     watermark: memoryWatermark(runStore),
     timers: memoryTimers(clock, submit, faults),
     executor: memoryExecutor(clock, submit, responder, faults),

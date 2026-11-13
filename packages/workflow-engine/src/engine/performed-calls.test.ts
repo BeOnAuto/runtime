@@ -26,7 +26,7 @@ do:
 `);
 
 function startNotPerformed(): MemoryDriver {
-  const driver = memoryDriver({ sandbox: testSandbox, respond: () => 'never', keepsPayloadsOutside: true });
+  const driver = memoryDriver({ sandbox: testSandbox, respond: () => 'never', payloadOffloading: true });
   driver.ports.faults.failNext('start_call');
   driver.start({ runId: drivenRunId, document: asking });
   return driver;
@@ -101,7 +101,7 @@ describe('a start dispatched again by a wake of the engine that decided it', () 
 
 describe('two starts of one dispatch whose arguments are one kept text', () => {
   it('read it once, and are both performed with it', () => {
-    const driver = memoryDriver({ sandbox: testSandbox, respond: () => 'never', keepsPayloadsOutside: true });
+    const driver = memoryDriver({ sandbox: testSandbox, respond: () => 'never', payloadOffloading: true });
     driver.ports.faults.failNext('start_call');
     driver.start({ runId: drivenRunId, document: askingTwice });
 

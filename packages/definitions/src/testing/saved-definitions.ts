@@ -1,5 +1,5 @@
 import type { Outcome } from '@on.auto/operations';
-import { PayloadsOutside, mostInlinePayloadBytes } from '@on.auto/operations/payloads';
+import { PayloadOffloading, mostInlinePayloadBytes } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
@@ -97,7 +97,7 @@ export function askingAbout(definitions: Harness, type: string, name: string, ke
     definitions.run(
       definitions
         .dispatch(operation, toAlpha(acmeAdmin, { type, name, ...input }))
-        .pipe(Effect.provideService(PayloadsOutside, keepsOutside)),
+        .pipe(Effect.provideService(PayloadOffloading, keepsOutside)),
     );
 }
 

@@ -1,5 +1,5 @@
 import type { RecordedEvent } from '@on.auto/operations';
-import { mostTryAgainMs, PayloadsOutside, tryAgainAfter } from '@on.auto/operations/payloads';
+import { mostTryAgainMs, PayloadOffloading, tryAgainAfter } from '@on.auto/operations/payloads';
 import { Context, Effect, Random } from 'effect';
 
 import {
@@ -74,7 +74,7 @@ export interface HoldParts {
 }
 
 export function holdsUnreadableIn({ context }: { readonly context?: HostContext }): boolean {
-  return Context.get(context ?? Context.empty(), PayloadsOutside);
+  return Context.get(context ?? Context.empty(), PayloadOffloading);
 }
 
 export function isHeldAt({ hold }: Pick<FollowedPlaybook, 'hold'>, now: number): boolean {

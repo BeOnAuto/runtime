@@ -19,7 +19,7 @@ export interface ChosenPayload<Value> {
   readonly toKeep?: PayloadToKeep;
 }
 
-export const PayloadsOutside = Context.Reference<boolean>('@on.auto/operations/PayloadsOutside', {
+export const PayloadOffloading = Context.Reference<boolean>('@on.auto/operations/PayloadOffloading', {
   defaultValue: () => false,
 });
 

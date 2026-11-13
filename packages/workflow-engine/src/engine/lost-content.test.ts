@@ -14,7 +14,7 @@ function endingOf(state: RunState, content: { readonly kind: 'missing' | 'erased
   return testWorkflowMachine.decision(pauseEnded(state), state, {
     contents: new Map([[keptAnswer, content]]),
     format: 12,
-    keepsPayloadsOutside: true,
+    payloadOffloading: true,
   }).events;
 }
 
