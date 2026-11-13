@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 
 import { additionIssuesOf, readAddition, type AdditionInput } from '../entries/entry-checks.ts';
 import { credentialFieldIssuesOf, placesNoValue } from '../registry/credential.ts';
+import { ada, harness, operationNamed } from '../testing/harness.ts';
 
 const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
 
@@ -42,6 +43,12 @@ const clientId = 'a client id of the connection';
 
 const DocumentSchema = Schema.Struct({
   paths: Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown)),
+});
+
+const ListedWaysSchema = Schema.Struct({
+  output: Schema.Struct({
+    providers: Schema.Array(Schema.Struct({ credentials: Schema.Array(Schema.Record(Schema.String, Schema.Unknown)) })),
+  }),
 });
 
 type Given = Readonly<Record<string, string>>;
@@ -145,6 +152,12 @@ function hostsOf({ name, entry, credential }: ProviderAddition) {
   return [name, entry.url ?? entry.base_url, credential.authorization_endpoint, credential.token_endpoint];
 }
 
+async function waysListedWith(gateways: boolean): Promise<readonly Readonly<Record<string, unknown>>[]> {
+  const h = harness({ providers: shipped, consenting: { gateways } });
+  const answer = await h.call(operationNamed(h.operations, 'list_providers'), ada);
+  return Schema.decodeUnknownSync(ListedWaysSchema)(answer).output.providers.flatMap(({ credentials }) => credentials);
+}
+
 function namedProvider(name: string): Provider {
   return Option.getOrThrow(Option.fromNullishOr(shipped.providers.find(({ entry }) => entry.name === name)));
 }
@@ -214,6 +227,15 @@ describe('every way of every shipped provider, resolved with the examples of its
     });
 
     expect(headersOf(settingsOf(Result.getOrThrow(withoutAnAccount)))).toEqual({ 'Amazon-Ads-ClientId': clientId });
+  });
+});
+
+describe('the listing of the shipped providers', () => {
+  it('says of no way what a connection made through it acts as, with gateways switched on or off, since no shipped entry declares it', async () => {
+    const listed = [await waysListedWith(false), await waysListedWith(true)];
+
+    expect(listed.map((ways) => ways.filter((way) => Object.hasOwn(way, 'permissions')))).toEqual([[], []]);
+    expect(listed.map((ways) => ways.length > 0)).toEqual([true, true]);
   });
 });
 

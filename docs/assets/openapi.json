@@ -12064,6 +12064,14 @@
                               "issuer": {
                                 "type": "string"
                               },
+                              "permissions": {
+                                "type": "string",
+                                "enum": [
+                                  "application",
+                                  "delegated"
+                                ],
+                                "description": "For authorization, whether a connection made this way acts as the app, application, or as the person who connects, delegated; delegated where it is left out"
+                              },
                               "oauth_client": {
                                 "type": "string",
                                 "enum": [

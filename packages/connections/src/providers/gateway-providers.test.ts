@@ -17,6 +17,7 @@ const listedWay = {
   in: 'security',
   name: 'connection_key',
   issuer: 'https://messages.example.com',
+  permissions: 'application',
   scopes: [
     { name: 'messages:read', says: 'Read the messages of the workspace.' },
     { name: 'messages:write', says: 'Post messages in the workspace.' },
@@ -44,7 +45,7 @@ function offeredWith(gateways: boolean) {
 }
 
 describe('a provider that connects through a gateway', () => {
-  it('is offered with the gateway as the source of its client where gateways are switched on, and never under the organization’s own OAuth client', async () => {
+  it('is offered with the gateway as the source of its client where gateways are switched on, acting as the app as its entry declares, and never under the organization’s own OAuth client', async () => {
     expect(await listingWith(true)).toMatchObject({
       output: {
         providers: [{ name: 'messages', credentials: [{ ...listedWay, offered: true, client_source: 'gateway' }] }],

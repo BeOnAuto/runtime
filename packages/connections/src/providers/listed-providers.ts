@@ -21,6 +21,7 @@ const ListedWaySchema = Schema.Struct({
   name: Schema.optionalKey(wayFields.name),
   scheme: Schema.optionalKey(wayFields.scheme),
   issuer: Schema.optionalKey(wayFields.issuer),
+  permissions: Schema.optionalKey(wayFields.permissions),
   oauth_client: Schema.optionalKey(
     OAuthClientChoiceSchema.annotate({
       description:

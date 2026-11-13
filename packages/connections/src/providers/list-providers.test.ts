@@ -1,5 +1,5 @@
 import type { CallerIdentity, Outcome } from '@on.auto/operations';
-import { providerListOf, providerOf, providersOf, regions, tracker } from '@on.auto/providers/testing';
+import { drive, providerListOf, providerOf, providersOf, regions, tracker } from '@on.auto/providers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -37,6 +37,16 @@ const ListedSchema = Schema.Struct({
 });
 
 const listedOf = Schema.decodeUnknownSync(ListedSchema);
+
+const waysOf = Schema.decodeUnknownSync(
+  Schema.Struct({
+    output: Schema.Struct({
+      providers: Schema.Array(
+        Schema.Struct({ credentials: Schema.Array(Schema.Record(Schema.String, Schema.Unknown)) }),
+      ),
+    }),
+  }),
+);
 
 const ledgersListed = {
   name: 'ledgers',
@@ -119,6 +129,11 @@ async function namesListedUnder(policy: ConnectionPolicyFields): Promise<readonl
   return listedOf(answer).output.providers.map(({ name }) => name);
 }
 
+async function waysListedOf(entry: unknown) {
+  const answer = await listing({ providers: providerListOf(providerOf(entry)) });
+  return waysOf(answer).output.providers.flatMap(({ credentials }) => credentials);
+}
+
 async function offeringsOf(name: string, options: HarnessOptions) {
   const { providers } = listedOf(await listing(options)).output;
   return providers
@@ -160,6 +175,19 @@ describe('the providers listed', () => {
       ],
       [{ offered: true, because: undefined }],
     ]);
+  });
+
+  it('say of a way what a connection made through it acts as exactly where its entry declares it, and nothing where it declares nothing', async () => {
+    const actingAsThePerson = {
+      ...drive,
+      credentials: drive.credentials.map((way) => ({ ...way, permissions: 'delegated' })),
+    };
+    const [declared] = await waysListedOf(actingAsThePerson);
+    const [undeclared] = await waysListedOf(drive);
+
+    expect(declared).toMatchObject({ kind: 'authorization', permissions: 'delegated' });
+    expect(undeclared).toMatchObject({ kind: 'authorization' });
+    expect(undeclared).not.toHaveProperty('permissions');
   });
 });
 
