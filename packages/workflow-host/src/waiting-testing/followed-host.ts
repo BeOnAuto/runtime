@@ -1,9 +1,11 @@
-import { recordedReaderOf, statement } from '@on.auto/ledger';
-import type { Settlement } from '@on.auto/operations';
+import { statement } from '@on.auto/ledger';
+import type { RecordedEvent, RecordedPage, Settlement } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import type { HostDatabase } from '../database/host-database.ts';
+import { oneRowOf, type HostDatabase } from '../database/host-database.ts';
+import { noRecordTypes, playbookRecordsOf } from '../follower/playbook-records.ts';
 import { alpha, playbookCreated } from '../reaction-testing/playbook-writes.ts';
+import { followedPlaybookOf } from '../sweeps/wakes.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { hostedOn, type HostedOptions, type HostedRuns } from '../testing/host-runs.ts';
 import { until } from '../testing/until.ts';
@@ -42,23 +44,27 @@ export async function followedHost(options: HostedOptions = {}): Promise<Followe
   };
 }
 
-const Places = Schema.Array(Schema.Struct({ cursor: Schema.NullOr(Schema.String) }));
+const Place = Schema.Struct({ cursor: Schema.NullOr(Schema.String) });
 
-export async function followedThroughTheLatest(database: HostDatabase): Promise<void> {
-  const { records } = await Effect.runPromise(
-    recordedReaderOf(database.store)(
-      { org: 'acme', playbook: 'alpha' },
-      { kind: 'everything' },
-      { order: 'desc', limit: 1 },
+function recordsAfterThePlaceOf(database: HostDatabase): Promise<RecordedPage> {
+  const place = oneRowOf(
+    Place,
+    database.read(statement`SELECT cursor FROM workflow_followed_playbooks WHERE playbook_key = ${alpha}`),
+  );
+  return Effect.runPromise(
+    Effect.flatMap(place, ({ cursor }) =>
+      playbookRecordsOf(database.store).after({ org: 'acme', playbook: 'alpha' }, cursor, noRecordTypes),
     ),
   );
+}
+
+function wakesTheFollower({ stream }: RecordedEvent): boolean {
+  return followedPlaybookOf(stream) !== undefined;
+}
+
+export async function followedThroughTheLatest(database: HostDatabase): Promise<void> {
   await until(
-    async () =>
-      Schema.decodeUnknownSync(Places)(
-        await Effect.runPromise(
-          database.read(statement`SELECT cursor FROM workflow_followed_playbooks WHERE playbook_key = ${alpha}`),
-        ),
-      ),
-    (places) => places[0]?.cursor === records[0]?.cursor,
+    () => recordsAfterThePlaceOf(database),
+    ({ records, hasMore }) => !hasMore && !records.some((record) => wakesTheFollower(record)),
   );
 }

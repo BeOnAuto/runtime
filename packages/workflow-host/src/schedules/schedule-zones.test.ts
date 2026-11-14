@@ -105,7 +105,10 @@ async function aRoundWithSchedulesThatCannotBeComputed() {
     started: started.map(({ workflow }) => workflow).toSorted(),
     refused: refused.toSorted((first, second) => first.workflow.localeCompare(second.workflow)),
     nextDues: rows.map(({ workflow, next_due: nextDue }) => [workflow, nextDue]),
-    notes: reacting.notes().filter(({ kind }) => kind === 'schedule_stopped'),
+    notes: reacting
+      .notes()
+      .filter((note) => note.kind === 'schedule_stopped')
+      .toSorted((first, second) => first.workflow.localeCompare(second.workflow)),
   };
 }
 

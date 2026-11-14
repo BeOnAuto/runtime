@@ -1,4 +1,5 @@
-import { Effect } from 'effect';
+import { recordingTracer, type RecordedSpan } from '@on.auto/operations/testing';
+import { Context, Effect, Tracer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { alpha, definitionRecorded, eventTrigger, published, recorded } from '../reaction-testing/playbook-writes.ts';
@@ -6,13 +7,18 @@ import { reactingHost } from '../reaction-testing/reacting-host.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { until } from '../testing/until.ts';
 import { followedThroughTheLatest } from '../waiting-testing/followed-host.ts';
-import { recordedWaiting, resultOfEnding } from '../waiting-testing/recorded-waiting.ts';
 import { parentId, waitingParent } from '../waiting-testing/waiting-parent.ts';
 import { followedPlaybooksOn } from './followed-playbooks.ts';
 
 const waiting = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const child = '0199a3c4-7d2e-7c1a-9b3f-0000000000c1';
+
+const childStream = `${alpha}runs/${child}`;
+
+function handedTheChildsEnding({ name, attributes, ending }: RecordedSpan): boolean {
+  return name === 'follow run_succeeded' && attributes['auto.on.stream'] === childStream && ending === 'succeeded';
+}
 
 const ofTheChild = {
   by: 'playbook:alpha',
@@ -77,28 +83,21 @@ describe('a record the follower delivers twice, as a pass that goes on from the 
 
 describe('a run ending the follower delivers twice', () => {
   it('answers the call that waits for it once', async () => {
-    const mapped: string[] = [];
-    const recordedOptions = recordedWaiting().options;
+    const recording = recordingTracer();
     const { database, settled, answeredCalls, hosted } = await waitingParent(child, {
-      waiting: {
-        ...recordedOptions,
-        resultOf: (ending) => {
-          mapped.push(ending.type);
-          return resultOfEnding(ending);
-        },
-      },
+      context: Context.make(Tracer.Tracer, recording.tracer),
     });
+    const handings = () => recording.spans().filter((span) => handedTheChildsEnding(span)).length;
     await recorded(
       database.store,
-      `${alpha}runs/${child}`,
+      childStream,
       { type: 'run_succeeded', data: { output: 'checked', record: {} } },
       ofTheChild,
     );
     await settled(parentId);
 
-    await deliveredAgain(database, () => mapped.length > 1);
+    await deliveredAgain(database, () => handings() > 1);
 
-    expect(new Set(mapped)).toEqual(new Set(['run_succeeded']));
     expect(await answeredCalls()).toEqual([{ state: 'answered', delivered: 1 }]);
     expect(hosted.settlements().get(parentId)).toEqual({ status: 'succeeded', output: 'checked' });
     expect(hosted.troubles()).toEqual([]);
