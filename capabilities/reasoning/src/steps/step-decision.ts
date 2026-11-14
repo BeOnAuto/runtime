@@ -5,7 +5,14 @@ import type { ExitBehavior } from '../definition/front-matter-schema.ts';
 import { finalStepMessages } from '../tools/final-step.ts';
 import type { LimitReached, ToolsStoppedBecause } from '../tools/tool-endings.ts';
 import { leavesNoNextTurn, roomOfEachAnswer, type TurnLimits } from '../tools/turn-meter.ts';
-import { isAnswered, resultsMessage, unsent, type AdmittedCall, type Asking } from './asked-calls.ts';
+import {
+  isAnswered,
+  onlyReadsWithoutAnAnswer,
+  resultsMessage,
+  unsent,
+  type AdmittedCall,
+  type Asking,
+} from './asked-calls.ts';
 import { openModelCallOf, type FactData } from './attempt-facts.ts';
 import { promptMessages, type StepMessages } from './step-messages.ts';
 import { withItsAdmission, type StepEnding, type StepState } from './step-state.ts';
@@ -67,7 +74,7 @@ function endingOf(ending: Extract<StepEnding, { readonly type: 'failed' }>): Nex
     : { type: 'stopped', because: 'run_bound', detail: ending.data.detail };
 }
 
-type Stop = Extract<NextStep, { readonly type: 'stopped' }> | LimitReached;
+type Stop = Extract<NextStep, { readonly type: 'stopped' | 'outcome_unknown' }> | LimitReached;
 
 function limitReached(state: StepState, { limits, exitBehavior }: StepBounds): LimitReached | undefined {
   if (exitBehavior === 'continue' || state.asking.asked.length === 0) {
@@ -82,6 +89,9 @@ function limitReached(state: StepState, { limits, exitBehavior }: StepBounds): L
 }
 
 function stoppedBy(state: StepState, { bounds, elapsedMs, provider }: Deciding): Stop | undefined {
+  if (!onlyReadsWithoutAnAnswer(state.asking)) {
+    return { type: 'outcome_unknown' };
+  }
   if (state.asking.final && state.asking.asked.length > 0) {
     const detail = `${provider} kept calling tools in the step that withheld them, instead of answering`;
     return { type: 'stopped', because: 'no_answer', detail };
@@ -94,10 +104,8 @@ function stoppedBy(state: StepState, { bounds, elapsedMs, provider }: Deciding):
     : { type: 'stopped', because: 'server_failed', detail: 'Its tool servers failed too often' };
 }
 
-function toolCallsOf(state: StepState, asking: Asking, bounds: StepBounds): NextStep {
-  return asking.open.every(({ readOnly }) => readOnly)
-    ? { type: 'tool_calls', calls: unsent(asking), room: roomOfEachAnswer(state.meter, bounds.limits) }
-    : { type: 'outcome_unknown' };
+function toolCallsOf(state: StepState, asking: Asking, bounds: StepBounds): ToolCallsNext {
+  return { type: 'tool_calls', calls: unsent(asking), room: roomOfEachAnswer(state.meter, bounds.limits) };
 }
 
 function isFinal(state: StepState, { limits, exitBehavior }: StepBounds): boolean {

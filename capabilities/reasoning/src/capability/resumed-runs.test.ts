@@ -48,6 +48,69 @@ describe('a run that goes on after a call of a tool that may change something wa
   });
 });
 
+async function afterAnInterruptedEnd(laterEntry: Parameters<typeof graphAccessTo>[1] = {}) {
+  const fake = await aGraph();
+  const tools = graphAccessTo(fake.url);
+  const { calls, first } = await recordedBy(withGraphTools, { tools }, echoing, answers(textResult('Echoed.')));
+  const cut = upToTheFirst(calls, 'tool_call_started');
+  const ending = reasoningOf({ tools, attempt: attemptOf(cut), content: first.content });
+  const ended = await ending.running(withGraphTools);
+  const sentBefore = fake.received().length;
+  const again = reasoningOf({
+    tools: graphAccessTo(fake.url, laterEntry),
+    attempt: attemptOf([...cut, ...ending.journal.calls()]),
+    content: first.content,
+  });
+  return {
+    ended,
+    again: await again.running(withGraphTools),
+    interruptedEnds: ending.journal.calls().map(({ type }) => type),
+    sentAgain: fake.received().length - sentBefore,
+    modelCalls: again.requests(),
+  };
+}
+
+const theOutcomeUnknown: unknown = Exit.fail(
+  expect.objectContaining({ kind: 'effect_unknown', because: 'call_outcome_unknown' }),
+);
+
+describe('a run that goes on after an attempt ended such a call as interrupted and stopped before the run ended', () => {
+  it('is the same conflict, sending the call no second time', async () => {
+    const ran = await afterAnInterruptedEnd();
+
+    expect([ran.again, ran.ended]).toEqual([ran.ended, theOutcomeUnknown]);
+    expect([ran.interruptedEnds, ran.sentAgain, ran.modelCalls]).toEqual([['tool_call_failed'], 0, []]);
+  });
+
+  it('is the same conflict when the run no longer offers the tool, calling neither the model nor a tool', async () => {
+    const ran = await afterAnInterruptedEnd({ allowed: ['search'] });
+
+    expect([ran.again, ran.ended]).toEqual([ran.ended, theOutcomeUnknown]);
+    expect([ran.interruptedEnds, ran.sentAgain, ran.modelCalls]).toEqual([['tool_call_failed'], 0, []]);
+  });
+
+  it('sends a call of a tool marked reads again, and goes on to its answer', async () => {
+    const fake = await aGraph();
+    const tools = graphAccessTo(fake.url);
+    const searching = answers(toolCallsResult([['graph__search', { query: 'acme' }]]));
+    const { calls, first } = await recordedBy(withGraphTools, { tools }, searching, answers(textResult('Found.')));
+    const cut = upToTheFirst(calls, 'tool_call_started');
+    const stopped = reasoningOf({ tools, attempt: attemptOf(cut), content: first.content, cancelledAfter: 1 });
+    await stopped.running(withGraphTools);
+    const sentBefore = fake.received().length;
+    const again = reasoningOf(
+      { tools, attempt: attemptOf([...cut, ...stopped.journal.calls()]), content: first.content },
+      answers(textResult('Found.')),
+    );
+
+    expect(await again.running(withGraphTools)).toEqual(Exit.succeed(expect.objectContaining({ output: 'Found.' })));
+    expect([stopped.journal.calls().map(({ type }) => type), fake.received().length - sentBefore]).toEqual([
+      ['tool_call_failed'],
+      1,
+    ]);
+  });
+});
+
 describe('a run that goes on after its server stopped offering a tool the model asked for', () => {
   it('tells the model the tool is no longer offered and goes on to its answer, sending nothing', async () => {
     const fake = await aGraph();

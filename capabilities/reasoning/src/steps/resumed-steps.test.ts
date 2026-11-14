@@ -265,6 +265,21 @@ describe('a run that goes on from its facts once its bound passed while one of i
     });
     expect(again.journal.recorded()).toMatchObject([{ type: 'tool_call_failed', data: { because: 'interrupted' } }]);
   });
+
+  it('ends with the outcome of that call unknown, not at its bound, when its tool may change something', async () => {
+    const echoing = answers(toolCallsResult([['graph__echo', { said: 'acme' }]]));
+    const attempts = await firstAttempt({ tools: [echo], replies: [echoing, answering] });
+    const anHourAgo = new Date(Date.parse(attempts.startedAt) - 3_600_000).toISOString();
+    const cut = upTo(attempts.calls, 'tool_call_started');
+    const again = resumed({ ...attempts, startedAt: anHourAgo }, cut, { tools: [echo] });
+
+    expect(await Effect.runPromise(again.stepping)).toMatchObject({ ending: { type: 'outcome_unknown' } });
+    expect([typesOf(again.journal.recorded()), again.sends(), again.requests()]).toEqual([
+      ['tool_call_failed'],
+      [],
+      [],
+    ]);
+  });
 });
 
 describe('a run that goes on from its facts, whose cancel another server recorded', () => {

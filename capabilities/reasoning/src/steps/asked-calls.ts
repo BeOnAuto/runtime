@@ -63,7 +63,6 @@ interface OpenCall {
   readonly number: number;
   readonly call: AskedCall;
   readonly server: string;
-  readonly readOnly: boolean;
 }
 
 export interface Asking {
@@ -123,6 +122,12 @@ export function resultPart({ callId, tool }: AskedCall, { text, isError }: ToolR
   };
 }
 
+export function onlyReadsWithoutAnAnswer({ started, results, refused }: Asking): boolean {
+  return [...started].every(
+    ([callId, onlyRead]: readonly [string, boolean]) => onlyRead || (results.has(callId) && !refused.has(callId)),
+  );
+}
+
 export function isAnswered({ asked, results }: Asking): boolean {
   return asked.every(({ callId }) => results.has(callId));
 }
@@ -140,9 +145,7 @@ export function unsent({ admitted, results }: Asking): readonly AdmittedCall[] {
 
 export function startedIn(asking: Asking, started: FactData<'tool_call_started'>): Asking {
   const { number, call_id: callId, server, read_only: readOnly } = started;
-  const opened = asking.asked
-    .filter((call) => call.callId === callId)
-    .map((call) => ({ number, call, server, readOnly: readOnly === true }));
+  const opened = asking.asked.filter((call) => call.callId === callId).map((call) => ({ number, call, server }));
   const marked = asking.asked
     .filter((call) => call.callId === callId)
     .map((call): readonly [string, boolean] => [
