@@ -113,7 +113,7 @@ const invalidDocuments: readonly (readonly [string, string, string])[] = [
   [
     'with an unknown key',
     '---\nmodel: openai/gpt-5\nprompt: hi\n---\nHi',
-    'Line 3, /prompt: prompt is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools, exit_behavior',
+    'Line 3, /prompt: prompt is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools, max_tool_calls, exit_behavior',
   ],
   [
     'with a model not written provider/model',
@@ -124,6 +124,16 @@ const invalidDocuments: readonly (readonly [string, string, string])[] = [
     'with settings out of range',
     '---\nmodel: openai/gpt-5\nconfig: {max_output_tokens: 100000}\n---\nHi',
     'Line 3, /config/max_output_tokens: Expected at most 64000',
+  ],
+  [
+    'with a count of tool calls of 0',
+    '---\nmodel: openai/gpt-5\ntools: [graph/search]\nmax_tool_calls: 0\n---\nHi',
+    'Line 4, /max_tool_calls: Expected a whole number from 1 to 1000. To let the function call no tools, leave out tools',
+  ],
+  [
+    'with a count of tool calls past 1000',
+    '---\nmodel: openai/gpt-5\ntools: [graph/search]\nmax_tool_calls: 1001\n---\nHi',
+    'Line 4, /max_tool_calls: Expected at most 1000. Left out, a run counts only its calls of tools not marked reads, to 25, and its time and its input tokens bound the rest',
   ],
   [
     'with an input schema that is not an object',

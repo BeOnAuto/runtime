@@ -17,6 +17,10 @@ function searches(count: number, from = 0): readonly ScriptedCall[] {
   return Array.from({ length: count }, (_, call): ScriptedCall => ['graph__search', { query: `acme ${from + call}` }]);
 }
 
+function echoes(count: number, from = 0): readonly ScriptedCall[] {
+  return Array.from({ length: count }, (_, call): ScriptedCall => ['graph__echo', { said: `acme ${from + call}` }]);
+}
+
 function asking(calls: readonly ScriptedCall[], read = {}): ScriptedReply {
   return answers(toolCallsResult(calls, read));
 }
@@ -68,11 +72,26 @@ describe('a run performed again after its server stopped once a step had asked p
       source: withGraphTools,
       reasoning: {},
       cut: (calls) => upToTheLast(calls, 'model_call_answered'),
-      first: [asking(searches(26))],
+      first: [asking(echoes(26))],
     });
 
     expect(ran.again).toEqual(ran.first);
     expect(ran.again).toEqual(Exit.fail(expect.objectContaining({ kind: 'unworkable', because: 'max_tool_calls' })));
+    expect([ran.modelCalls, ran.sentAgain]).toEqual([[], 0]);
+  });
+
+  it('reaches the count of the calls of tools not marked reads its facts record, and ends where the first attempt did', async () => {
+    const ran = await resumedAfter({
+      source: withGraphTools,
+      reasoning: {},
+      cut: (calls) => upToTheLast(calls, 'model_call_answered'),
+      first: [asking([...echoes(20), ...searches(10)]), asking([...searches(5, 10), ...echoes(6, 20)])],
+    });
+
+    expect(ran.again).toEqual(ran.first);
+    expect(ran.again).toEqual(
+      Exit.fail(expect.objectContaining({ kind: 'effect_unknown', because: 'max_tool_calls' })),
+    );
     expect([ran.modelCalls, ran.sentAgain]).toEqual([[], 0]);
   });
 
@@ -96,7 +115,7 @@ describe('a run whose function says continue, performed again after its server s
       source: answeringAtItsLimit,
       reasoning: {},
       cut: (calls) => calls,
-      first: [asking(searches(26)), stopping],
+      first: [asking(echoes(26)), stopping],
       again: [answers(textResult('Acme has 2 rows.'))],
     });
 

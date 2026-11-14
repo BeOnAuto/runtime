@@ -25,13 +25,13 @@ const objectStoreNotice =
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-const calls = toolBounds.callsInRun;
+const calls = 25;
 
 const keptOfAToolCall = ['its arguments', 'its answer'];
 
 const keptOfAModelCall = ['the messages it sent', 'its response'];
 
-const modelCallsOfTheRun = ['the first, which asks for every call', 'the last, which tells the conversation again'];
+const modelCallsOfTheRun = ['the first, which asks for every call', 'the last, which reads every answer'];
 
 const kibibytesOf = (call: number): number => 1000 + call;
 
@@ -39,6 +39,7 @@ const reading = [
   '---',
   'model: anthropic/claude-sonnet-4-5',
   'tools: [graph/large]',
+  `max_tool_calls: ${calls}`,
   'exit_behavior: continue',
   '---',
   'Read it all.',

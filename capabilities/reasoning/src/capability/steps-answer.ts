@@ -17,13 +17,16 @@ const cutOffAtItsLength: IncompleteDetails = { reason: 'max_output_tokens' };
 
 type Answered = Extract<Stepped['ending'], { readonly type: 'answered' }>;
 
+type TurnLimits = Parameters<typeof answeredAtALimit>[1];
+
 function incompleteDetailsOf(
-  { lastFinal, tally }: Stepped['state'],
+  state: Stepped['state'],
   { data }: Answered,
   { output }: ReasoningFunctionDefinitionDocument,
+  limits: TurnLimits,
 ): IncompleteDetails | undefined {
-  if (lastFinal) {
-    return answeredAtALimit(tally);
+  if (state.lastFinal) {
+    return answeredAtALimit(state, limits);
   }
   return data.finish_reason === 'length' && output.type === 'text' ? cutOffAtItsLength : undefined;
 }
@@ -36,6 +39,7 @@ export function stepsAnswerOf(
   definition: ReasoningFunctionDefinitionDocument,
   { state, ending }: Stepped,
   tools: readonly ToolDefinition[],
+  limits: TurnLimits,
 ): Effect.Effect<AnsweredRun, DefinitionRejection> {
   const { use, spent } = afterTheFacts(state.facts, state.serversEnded);
   const context: RejectionContext = {
@@ -49,7 +53,7 @@ export function stepsAnswerOf(
     return Result.match(
       answerOfTheSteps(state, ending, { model: definition.model, output: definition.output, tools }),
       {
-        onSuccess: (answer) => Effect.succeed(markedBy(answer, incompleteDetailsOf(state, ending, definition))),
+        onSuccess: (answer) => Effect.succeed(markedBy(answer, incompleteDetailsOf(state, ending, definition, limits))),
         onFailure: (failed) => recordedRejection(failed, context),
       },
     );

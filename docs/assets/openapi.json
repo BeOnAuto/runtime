@@ -18500,7 +18500,7 @@
                                 "org_deleted",
                                 "org_purged"
                               ],
-                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than it may make, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
+                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than its count allows, 25 calls of tools not marked reads or the max_tool_calls its function sets for all its calls, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
                             },
                             "cause": {
                               "$ref": "#/$defs/RejectionCause"
@@ -18776,7 +18776,7 @@
                             "max_input_tokens",
                             "max_output_tokens"
                           ],
-                          "description": "The limit it reached: max_tool_calls when it had made all the tool calls it may make, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
+                          "description": "The limit it reached: max_tool_calls when a step asked for a call past its count, 25 calls of tools not marked reads or the max_tool_calls its function sets for all its calls, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
                         }
                       },
                       "required": [
@@ -19156,7 +19156,7 @@
                                 "org_deleted",
                                 "org_purged"
                               ],
-                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than it may make, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
+                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than its count allows, 25 calls of tools not marked reads or the max_tool_calls its function sets for all its calls, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
                             },
                             "cause": {
                               "$ref": "#/$defs/RejectionCause"
@@ -19443,7 +19443,7 @@
                             "max_input_tokens",
                             "max_output_tokens"
                           ],
-                          "description": "The limit it reached: max_tool_calls when it had made all the tool calls it may make, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
+                          "description": "The limit it reached: max_tool_calls when a step asked for a call past its count, 25 calls of tools not marked reads or the max_tool_calls its function sets for all its calls, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
                         }
                       },
                       "required": [
@@ -19838,7 +19838,7 @@
                                 "org_deleted",
                                 "org_purged"
                               ],
-                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than it may make, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
+                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than its count allows, 25 calls of tools not marked reads or the max_tool_calls its function sets for all its calls, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
                             },
                             "cause": {
                               "$ref": "#/$defs/RejectionCause"
@@ -20106,7 +20106,7 @@
                             "max_input_tokens",
                             "max_output_tokens"
                           ],
-                          "description": "The limit it reached: max_tool_calls when it had made all the tool calls it may make, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
+                          "description": "The limit it reached: max_tool_calls when a step asked for a call past its count, 25 calls of tools not marked reads or the max_tool_calls its function sets for all its calls, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
                         }
                       },
                       "required": [
@@ -20324,7 +20324,7 @@
                             "max_input_tokens",
                             "max_output_tokens"
                           ],
-                          "description": "The limit it reached: max_tool_calls when it had made all the tool calls it may make, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
+                          "description": "The limit it reached: max_tool_calls when a step asked for a call past its count, 25 calls of tools not marked reads or the max_tool_calls its function sets for all its calls, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
                         }
                       },
                       "required": [

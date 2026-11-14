@@ -1,4 +1,4 @@
-import { admission } from '../bounds/call-bounds.ts';
+import { actingCallsCount, admission } from '../bounds/call-bounds.ts';
 import { answerOf, onlyReads } from '../bounds/tool-results.ts';
 import { imageCallOf, imagesKeptOutOf, imagesOfTheCall } from '../images/answered-images.ts';
 import { shownFormat, type CallAnswered, type CallEnded, type CallFailed, type CallStarted } from './call-facts.ts';
@@ -199,7 +199,8 @@ export function caller(
     if (signals.signal.aborted) {
       return notSent;
     }
-    const admitted = admission(state.tally(), { tool: offered.name, callId, input });
+    const readOnly = onlyReads(offered.tool);
+    const admitted = admission(state.tally(), { tool: offered.name, callId, input, reads: readOnly }, actingCallsCount);
     state.tallied(admitted.tally);
     if (!admitted.admitted) {
       return unsentReply(admitted.refusal);
@@ -207,7 +208,7 @@ export function caller(
     const forwarding = { slot, tool: offered.tool.name, input, meta: context.meta, signal: signals.signal };
     const journalling: CallJournalling = {
       callId,
-      readOnly: onlyReads(offered.tool),
+      readOnly,
       started: async (fact) => {
         const number = await parts.run(context.journal.started(fact));
         if (number !== undefined) {

@@ -132,3 +132,37 @@ describe('how a run of a definition ends at a limit', () => {
     expect(parsed(documentOf('model: openai/gpt-5')).exit_behavior).toBe('error');
   });
 });
+
+const withTools = (line: string) => documentOf(`model: openai/gpt-5\ntools: [graph/search]\n${line}`);
+
+describe('the count of tool calls a definition sets', () => {
+  it('takes a whole number from 1 to 1000, and is left out unless the function sets one', () => {
+    expect([
+      parsed(withTools('max_tool_calls: 1')).max_tool_calls,
+      parsed(withTools('max_tool_calls: 1000')).max_tool_calls,
+      'max_tool_calls' in parsed(withTools('exit_behavior: error')),
+    ]).toEqual([1, 1000, false]);
+  });
+
+  it('refuses 0, a number past 1000 and one that is not whole, saying what to write instead', () => {
+    expect([
+      ...issuesIn(withTools('max_tool_calls: 0')),
+      ...issuesIn(withTools('max_tool_calls: 1001')),
+      ...issuesIn(withTools('max_tool_calls: 2.5')),
+      ...issuesIn(withTools('max_tool_calls: -3')),
+      ...issuesIn(withTools('max_tool_calls: sixty')),
+    ]).toEqual([
+      'Line 4, /max_tool_calls: Expected a whole number from 1 to 1000. To let the function call no tools, leave out tools',
+      'Line 4, /max_tool_calls: Expected at most 1000. Left out, a run counts only its calls of tools not marked reads, to 25, and its time and its input tokens bound the rest',
+      'Line 4, /max_tool_calls: Expected a whole number from 1 to 1000',
+      'Line 4, /max_tool_calls: Expected a whole number from 1 to 1000',
+      'Line 4, /max_tool_calls: Expected number',
+    ]);
+  });
+
+  it('is refused on a function that names no tools, which makes no tool call to count', () => {
+    expect(issuesIn(documentOf('model: openai/gpt-5\nmax_tool_calls: 60'))).toEqual([
+      'Line 3, /max_tool_calls: max_tool_calls sets how many tool calls a run may make, which only a function that names tools makes; leave it out',
+    ]);
+  });
+});

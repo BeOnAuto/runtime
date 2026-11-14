@@ -1,5 +1,5 @@
 import { issueAt, type DocumentIssue, type SourceLines } from '@on.auto/definitions/document';
-import { toolReferenceOf, toolReferenceShape, type ToolReference } from '@on.auto/tool-servers/policy';
+import { toolBounds, toolReferenceOf, toolReferenceShape, type ToolReference } from '@on.auto/tool-servers/policy';
 import { JsonPointer, Option, Result, type Schema } from 'effect';
 
 import { parseModelReference } from '../model/model-reference.ts';
@@ -15,6 +15,17 @@ const defaultOutputTokens = 1024;
 export const mostOutputTokens = 64_000;
 
 const stoppedAtALimit: ExitBehavior = 'error';
+
+export const mostToolCalls = 1000;
+
+const toolCallsRange = `Expected a whole number from 1 to ${mostToolCalls}`;
+
+const noToolCalls = `${toolCallsRange}. To let the function call no tools, leave out tools`;
+
+const pastMostToolCalls = `Expected at most ${mostToolCalls}. Left out, a run counts only its calls of tools not marked reads, to ${toolBounds.actingCallsInRun}, and its time and its input tokens bound the rest`;
+
+const maxToolCallsWithoutTools =
+  'max_tool_calls sets how many tool calls a run may make, which only a function that names tools makes; leave it out';
 
 const exitBehaviorWithoutTools =
   'exit_behavior sets how a run ends at its limit of tool calls or of input tokens across its steps, which only a function that names tools has; leave it out';
@@ -109,4 +120,26 @@ export function exitBehaviorOf(
   return namesTools
     ? Result.succeed(written)
     : Result.fail([issueAt(lines, '/exit_behavior', exitBehaviorWithoutTools)]);
+}
+
+function toolCallsIssue(written: number): string | undefined {
+  if (written === 0) {
+    return noToolCalls;
+  }
+  if (!Number.isSafeInteger(written) || written < 1) {
+    return toolCallsRange;
+  }
+  return written > mostToolCalls ? pastMostToolCalls : undefined;
+}
+
+export function maxToolCallsOf(
+  written: number | undefined,
+  namesTools: boolean,
+  lines: SourceLines,
+): Result.Result<number | undefined, readonly DocumentIssue[]> {
+  if (written === undefined) {
+    return Result.succeed(written);
+  }
+  const detail = namesTools ? toolCallsIssue(written) : maxToolCallsWithoutTools;
+  return detail === undefined ? Result.succeed(written) : Result.fail([issueAt(lines, '/max_tool_calls', detail)]);
 }

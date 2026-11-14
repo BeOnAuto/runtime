@@ -1,4 +1,4 @@
-import { callsEnded, toolBounds } from '@on.auto/tool-servers/policy';
+import { askedPastTheCount, type CallCount } from '@on.auto/tool-servers/policy';
 import type { Schema } from 'effect';
 
 import type { ExitBehavior } from '../definition/front-matter-schema.ts';
@@ -8,11 +8,12 @@ import { leavesNoNextTurn, roomOfEachAnswer, type TurnLimits } from '../tools/tu
 import { isAnswered, resultsMessage, unsent, type AdmittedCall, type Asking } from './asked-calls.ts';
 import { openModelCallOf, type FactData } from './attempt-facts.ts';
 import { promptMessages, type StepMessages } from './step-messages.ts';
-import type { StepEnding, StepState } from './step-state.ts';
+import { withItsAdmission, type StepEnding, type StepState } from './step-state.ts';
 
 export interface StepBounds {
   readonly runBoundMs: number;
   readonly limits: TurnLimits;
+  readonly count: CallCount;
   readonly exitBehavior: ExitBehavior;
 }
 
@@ -72,8 +73,8 @@ function limitReached(state: StepState, { limits, exitBehavior }: StepBounds): L
   if (exitBehavior === 'continue' || state.asking.asked.length === 0) {
     return undefined;
   }
-  if (state.tally.calls > toolBounds.callsInRun) {
-    return { type: 'limit_reached', because: 'max_tool_calls', limit: toolBounds.callsInRun };
+  if (askedPastTheCount(state.tally, state.count)) {
+    return { type: 'limit_reached', because: 'max_tool_calls', count: state.count };
   }
   return leavesNoNextTurn(state.meterBeforeLastCall, limits)
     ? { type: 'limit_reached', because: 'max_input_tokens', limit: limits.mostInputTokens }
@@ -100,7 +101,10 @@ function toolCallsOf(state: StepState, asking: Asking, bounds: StepBounds): Next
 }
 
 function isFinal(state: StepState, { limits, exitBehavior }: StepBounds): boolean {
-  return exitBehavior === 'continue' && (callsEnded(state.tally) || leavesNoNextTurn(state.meter, limits));
+  return (
+    exitBehavior === 'continue' &&
+    (askedPastTheCount(state.tally, state.count) || leavesNoNextTurn(state.meter, limits))
+  );
 }
 
 function nextModelCall(state: StepState, { bounds, fence }: Deciding): ModelCallNext {
@@ -126,7 +130,8 @@ function nextModelCall(state: StepState, { bounds, fence }: Deciding): ModelCall
     : { type: 'model_call', sent: { kind: 'results', messages }, final, remade: null };
 }
 
-export function nextStep(state: StepState, deciding: Deciding): NextStep {
+export function nextStep(folded: StepState, deciding: Deciding): NextStep {
+  const state = withItsAdmission(folded);
   if (state.ending?.type === 'answered') {
     return state.ending;
   }

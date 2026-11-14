@@ -5,7 +5,7 @@ import { cutWhereValid } from './structural-cut.ts';
 import { bytesOf, canonicalJson, cutAtCodePoint } from './text-bytes.ts';
 
 export const toolBounds = {
-  callsInRun: 25,
+  actingCallsInRun: 25,
   argumentBytes: 262_144,
   sameCallsInRun: 2,
   failuresInRun: 5,
@@ -45,8 +45,19 @@ export function requestBoundsOf(given: Partial<RequestBounds>): RequestBounds {
   };
 }
 
+export interface CallCount {
+  readonly most: number;
+  readonly countsReads: boolean;
+}
+
+export const actingCallsCount: CallCount = { most: toolBounds.actingCallsInRun, countsReads: false };
+
+export function callCountOf(mostToolCalls?: number): CallCount {
+  return mostToolCalls === undefined ? actingCallsCount : { most: mostToolCalls, countsReads: true };
+}
+
 export interface CallTally {
-  readonly calls: number;
+  readonly counted: number;
   readonly failures: number;
   readonly sameCalls: ReadonlyMap<string, readonly string[]>;
 }
@@ -55,6 +66,7 @@ export interface CallAsked {
   readonly tool: string;
   readonly callId: string;
   readonly input: Readonly<Record<string, unknown>>;
+  readonly reads: boolean;
 }
 
 export type Admission =
@@ -66,9 +78,13 @@ export interface ShownResult {
   readonly shownBytes?: number;
 }
 
-export const noCalls: CallTally = { calls: 0, failures: 0, sameCalls: new Map() };
+export const noCalls: CallTally = { counted: 0, failures: 0, sameCalls: new Map() };
 
-const allCallsMade = `This run has made all the ${toolBounds.callsInRun} tool calls it may; answer from what you have.`;
+function allCallsMade({ most, countsReads }: CallCount): string {
+  return countsReads
+    ? `This run has made all the ${most} tool calls it may; answer from what you have.`
+    : `This run has made all the ${most} calls it may make of tools that can change things; answer from what you have.`;
+}
 
 function argumentsTooLarge(bytes: number): string {
   return `The arguments of this call take ${bytes} bytes, more than the ${toolBounds.argumentBytes} a call may send; send less in one call, in parts where the tool takes them.`;
@@ -78,24 +94,48 @@ function repeated(earlier: readonly string[]): string {
   return `This call repeats, with the same arguments, a call this run already made ${toolBounds.sameCallsInRun} times; use the answer to the call ${String(earlier.at(-1))} instead.`;
 }
 
-function refusalOf(tally: CallTally, argumentBytes: number, earlier: readonly string[]): string | undefined {
-  if (tally.calls > toolBounds.callsInRun) {
-    return allCallsMade;
-  }
+function refusalOf(argumentBytes: number, earlier: readonly string[]): string | undefined {
   if (argumentBytes > toolBounds.argumentBytes) {
     return argumentsTooLarge(argumentBytes);
   }
   return earlier.length >= toolBounds.sameCallsInRun ? repeated(earlier) : undefined;
 }
 
-export function admission(tally: CallTally, { tool, callId, input }: CallAsked): Admission {
-  const counted = { ...tally, calls: tally.calls + 1 };
-  const key = sha256Of(`${tool}\u0000${canonicalJson(input)}`);
+function countsAgainst({ countsReads }: CallCount, { reads }: Pick<CallAsked, 'reads'>): boolean {
+  return countsReads || !reads;
+}
+
+function sameCallKeyOf({ tool, input }: Pick<CallAsked, 'tool' | 'input'>): string {
+  return sha256Of(`${tool}\u0000${canonicalJson(input)}`);
+}
+
+function sentIn(tally: CallTally, key: string, callId: string): CallTally {
+  return { ...tally, sameCalls: new Map([...tally.sameCalls, [key, [...(tally.sameCalls.get(key) ?? []), callId]]]) };
+}
+
+export function admission(tally: CallTally, call: CallAsked, count: CallCount): Admission {
+  const itCounts = countsAgainst(count, call);
+  const pastTheCount = itCounts && tally.counted >= count.most;
+  const key = sameCallKeyOf(call);
   const earlier = tally.sameCalls.get(key) ?? [];
-  const refusal = refusalOf(counted, bytesOf(JSON.stringify(input)), earlier);
+  const refusal = pastTheCount ? allCallsMade(count) : refusalOf(bytesOf(JSON.stringify(call.input)), earlier);
+  const isCounted = itCounts && (count.countsReads || pastTheCount || refusal === undefined);
+  const counted = isCounted ? { ...tally, counted: tally.counted + 1 } : tally;
   return refusal === undefined
-    ? { admitted: true, tally: { ...counted, sameCalls: new Map([...tally.sameCalls, [key, [...earlier, callId]]]) } }
+    ? { admitted: true, tally: sentIn(counted, key, call.callId) }
     : { admitted: false, tally: counted, refusal };
+}
+
+export function countedAsSent(tally: CallTally, call: Pick<CallAsked, 'reads'>, count: CallCount): CallTally {
+  return countsAgainst(count, call) ? { ...tally, counted: tally.counted + 1 } : tally;
+}
+
+export function admittedAsSent(tally: CallTally, call: CallAsked, count: CallCount): CallTally {
+  return sentIn(countedAsSent(tally, call, count), sameCallKeyOf(call), call.callId);
+}
+
+export function askedPastTheCount({ counted }: CallTally, { most }: CallCount): boolean {
+  return counted > most;
 }
 
 const counts = new Intl.NumberFormat('en');
@@ -142,10 +182,6 @@ export function failedOnce(tally: CallTally): CallTally {
 
 export function failuresEnded({ failures }: CallTally): boolean {
   return failures >= toolBounds.failuresInRun;
-}
-
-export function callsEnded({ calls }: CallTally): boolean {
-  return calls >= toolBounds.callsInRun;
 }
 
 export function runBoundMs(stepDeadlineMs: number): number {

@@ -7,7 +7,7 @@ export type IncompleteReason = typeof IncompleteReasonSchema.Type;
 export const IncompleteDetailsSchema = Schema.Struct({
   reason: IncompleteReasonSchema.annotate({
     description:
-      'The limit it reached: max_tool_calls when it had made all the tool calls it may make, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens',
+      'The limit it reached: max_tool_calls when a step asked for a call past its count, 25 calls of tools not marked reads or the max_tool_calls its function sets for all its calls, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens',
   }),
 }).annotate({
   identifier: 'IncompleteDetails',

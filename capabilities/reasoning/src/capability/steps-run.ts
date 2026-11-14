@@ -30,6 +30,6 @@ export function steppedWith(answering: Answering, stepping: Stepping, tools: Run
     const recording = yield* stepRecordingOf(answering, stepping, tools);
     const steps = { ...recording, perform: answering.perform(tools?.offered ?? []) };
     const stepped = yield* answeredByTheSteps(steps, stepping.prompt, stepping.run.journal.attempt);
-    return yield* stepsAnswerOf(stepping.definition, stepped, recording.tools.definitions);
+    return yield* stepsAnswerOf(stepping.definition, stepped, recording.tools.definitions, recording.bounds.limits);
   });
 }

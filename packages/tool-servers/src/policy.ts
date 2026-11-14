@@ -1,6 +1,10 @@
 export {
+  actingCallsCount,
   admission,
-  callsEnded,
+  admittedAsSent,
+  askedPastTheCount,
+  callCountOf,
+  countedAsSent,
   countsAgainstTheRun,
   failedOnce,
   failingBecause,
@@ -8,6 +12,7 @@ export {
   noCalls,
   runBoundMs,
   toolBounds,
+  type CallCount,
   type CallTally,
 } from './bounds/call-bounds.ts';
 export { failureReply, keptReply } from './calls/recorded-replies.ts';

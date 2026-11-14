@@ -115,7 +115,7 @@ describe('preparing a reasoning function definition that is not valid', () => {
             {
               pointer: '',
               detail:
-                'Line 3, /seed: seed is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools, exit_behavior',
+                'Line 3, /seed: seed is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools, max_tool_calls, exit_behavior',
             },
           ],
         }),

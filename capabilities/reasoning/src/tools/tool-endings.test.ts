@@ -33,7 +33,7 @@ async function graphServer(): Promise<FakeMcpServer> {
 const source = documentOf('model: anthropic/claude-sonnet-4-5\ntools: [graph/*]', 'Summarize acme.');
 
 const answeringAtItsLimit = documentOf(
-  'model: anthropic/claude-sonnet-4-5\ntools: [graph/*]\nexit_behavior: continue',
+  'model: anthropic/claude-sonnet-4-5\ntools: [graph/*]\nmax_tool_calls: 24\nexit_behavior: continue',
   'Summarize acme.',
 );
 

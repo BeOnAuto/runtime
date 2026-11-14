@@ -98,16 +98,56 @@ describe('a reasoning run that reaches its input tokens and asks for more, over 
   });
 });
 
-describe('a reasoning run whose step asks for more tool calls than a run may make, over HTTP', () => {
-  it('is a conflict that names the limit, 409, sending none of that step’s calls', async () => {
-    const many = Array.from({ length: 26 }, (_, call): ScriptedCall => ['graph__search', { query: `acme ${call}` }]);
-    const { server, sent } = await serving(stoppingAtALimit, [answers(toolCallsResult(many))]);
+function callsOf(tool: string, count: number): readonly ScriptedCall[] {
+  return Array.from({ length: count }, (_, call): ScriptedCall => [`graph__${tool}`, { query: `acme ${call}` }]);
+}
+
+const countingAll = (most: number) =>
+  ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [graph/*]', `max_tool_calls: ${most}`, '---', 'Plan.'].join(
+    '\n',
+  );
+
+const pastTheActingCalls: unknown = expect.stringMatching(
+  /^The run needed more than the 25 calls a run may make of tools not marked reads\./u,
+);
+
+describe('a reasoning run whose step asks for more tool calls than its count, over HTTP', () => {
+  it('is a conflict that names the limit, 409, sending none of that step’s calls, past 25 of tools not marked reads', async () => {
+    const { server, sent } = await serving(stoppingAtALimit, [answers(toolCallsResult(callsOf('echo', 26)))]);
 
     const ran = await ranUnder(server);
 
     expect([ran.status, ran.body, sent()]).toEqual([
       409,
-      expect.objectContaining({ reason: 'conflict', kind: 'unworkable', because: 'max_tool_calls' }),
+      expect.objectContaining({
+        reason: 'conflict',
+        kind: 'unworkable',
+        because: 'max_tool_calls',
+        detail: pastTheActingCalls,
+      }),
+      0,
+    ]);
+  });
+
+  it('makes and answers past 25 calls of a tool marked reads, which the default count leaves out', async () => {
+    const { server, sent } = await serving(stoppingAtALimit, [
+      answers(toolCallsResult(callsOf('search', 30))),
+      answered,
+    ]);
+
+    const ran = await ranUnder(server);
+
+    expect([ran.status, ran.body, sent()]).toEqual([200, expect.objectContaining({ output: 'Acme has 2 rows.' }), 30]);
+  });
+
+  it('counts reads too under the function’s own max_tool_calls', async () => {
+    const { server, sent } = await serving(countingAll(3), [answers(toolCallsResult(callsOf('search', 4)))]);
+
+    const ran = await ranUnder(server);
+
+    expect([ran.status, ran.body, sent()]).toEqual([
+      409,
+      expect.objectContaining({ kind: 'unworkable', because: 'max_tool_calls' }),
       0,
     ]);
   });

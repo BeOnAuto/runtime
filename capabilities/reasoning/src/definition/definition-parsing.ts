@@ -10,7 +10,14 @@ import { Option, Result, type Schema } from 'effect';
 
 import type { CompiledTemplate } from '../template/compiled-template.ts';
 import { inputContractOf, outputContractOf } from './definition-schemas.ts';
-import { exitBehaviorOf, modelOf, providerOptionsOf, settingsOf, toolsOf } from './definition-settings.ts';
+import {
+  exitBehaviorOf,
+  maxToolCallsOf,
+  modelOf,
+  providerOptionsOf,
+  settingsOf,
+  toolsOf,
+} from './definition-settings.ts';
 import { templateOf } from './definition-template.ts';
 import { decodeSection, frontMatterIn } from './front-matter-schema.ts';
 import type { ReasoningFunctionDefinitionDocument } from './reasoning-function-definition.ts';
@@ -40,6 +47,7 @@ function variablesOf(
 
 interface ToolUse {
   readonly tools: ReasoningFunctionDefinitionDocument['tools'];
+  readonly maxToolCalls: ReasoningFunctionDefinitionDocument['max_tool_calls'];
   readonly exitBehavior: ReasoningFunctionDefinitionDocument['exit_behavior'];
 }
 
@@ -48,15 +56,21 @@ function toolUseOf({ root, lines }: Pick<ReadFrontMatter, 'root' | 'lines'>): Ch
     () => decodeSection.tools(root['tools']),
     (written) => toolsOf(written, lines),
   );
+  const namesTools = Result.isFailure(tools) || tools.success.length > 0;
+  const maxToolCalls = checkedSection(
+    () => decodeSection.max_tool_calls(root['max_tool_calls']),
+    (written) => maxToolCallsOf(written, namesTools, lines),
+  );
   const exitBehavior = checkedSection(
     () => decodeSection.exit_behavior(root['exit_behavior']),
-    (written) => exitBehaviorOf(written, Result.isFailure(tools) || tools.success.length > 0, lines),
+    (written) => exitBehaviorOf(written, namesTools, lines),
   );
   const found = issuesOf(
     () => tools,
+    () => maxToolCalls,
     () => exitBehavior,
   );
-  return found.length > 0 ? Result.fail(found) : Result.all({ tools, exitBehavior });
+  return found.length > 0 ? Result.fail(found) : Result.all({ tools, maxToolCalls, exitBehavior });
 }
 
 function definitionFrom({ root, lines, issues }: ReadFrontMatter, template: () => Checked<CompiledTemplate>) {
@@ -116,6 +130,7 @@ function definitionOf(parts: DocumentParts): Checked<ReasoningFunctionDefinition
       output: definition.output.output,
       ...(definition.providerOptions === undefined ? {} : { provider_options: definition.providerOptions }),
       tools: definition.toolUse.tools,
+      ...(definition.toolUse.maxToolCalls === undefined ? {} : { max_tool_calls: definition.toolUse.maxToolCalls }),
       exit_behavior: definition.toolUse.exitBehavior,
       template: definition.template,
       warnings: definition.output.warnings,

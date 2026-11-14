@@ -47,6 +47,14 @@ export function toolAnswered(meter: Meter, text: string): Meter {
   return { ...meter, answeredBytes: meter.answeredBytes + utf8.encode(text).byteLength };
 }
 
+function bytesOf(texts: readonly string[]): number {
+  return texts.reduce((bytes, text) => bytes + utf8.encode(text).byteLength, 0);
+}
+
+export function refusalsRetold(meter: Meter, withdrawn: readonly string[], given: readonly string[]): Meter {
+  return { ...meter, answeredBytes: meter.answeredBytes - bytesOf(withdrawn) + bytesOf(given) };
+}
+
 export function roomOfEachAnswer(meter: Meter, { contextWindow, mostInputTokens }: TurnLimits): number | undefined {
   const turn = meter.last;
   if (turn === null || contextWindow === undefined) {

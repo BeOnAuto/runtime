@@ -4,7 +4,7 @@ import { templateLimits } from '@on.auto/definitions/template';
 import { toolBounds } from '@on.auto/tool-servers';
 import { describe, expect, it } from 'vitest';
 
-import { mostOutputTokens } from '../definition/definition-settings.ts';
+import { mostOutputTokens, mostToolCalls } from '../definition/definition-settings.ts';
 import { defaultMostInputTokens } from './definition-request.ts';
 
 const page = readFileSync(new URL('../../../../docs/reference/reasoning-format.md', import.meta.url), 'utf8');
@@ -37,9 +37,9 @@ describe('the bounds on the public reference page of reasoning functions', () =>
   });
 
   it('give the bounds of the tool calls of a run the code holds it to', () => {
-    expect(page).toContain(`A run makes at most ${toolBounds.callsInRun} calls.`);
-    expect(page).toContain(
-      `what a run does at its ${toolBounds.callsInRun} calls or at the most input tokens it may read`,
+    expect(page).toContain(`It makes at most ${toolBounds.actingCallsInRun} calls of tools not marked \`reads\``);
+    expect(rowOf('`max_tool_calls`')).toContain(
+      `from 1 to ${counted.format(mostToolCalls)}: a count of all a run's tool calls, in place of ${toolBounds.actingCallsInRun} calls of tools not marked \`reads\``,
     );
     expect(page).toContain(
       `at most the input tokens the operator sets with \`REASONING_MAX_INPUT_TOKENS\`, ${counted.format(defaultMostInputTokens)} by default`,

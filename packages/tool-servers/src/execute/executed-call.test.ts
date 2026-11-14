@@ -16,7 +16,6 @@ function runToolsOffering(offered: readonly OfferedTool[]): RunTools {
     keepsContent: true,
     argumentsDigest: () => 'a'.repeat(64),
     scrubJson: (json) => json,
-    callsEnded: () => false,
     ended: new AbortController().signal,
     ending: noEnding,
     calledAny: () => false,

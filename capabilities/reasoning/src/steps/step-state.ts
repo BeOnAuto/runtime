@@ -1,11 +1,10 @@
 import type { CallsEndedBecause } from '@on.auto/tool-servers';
-import { noCalls, type CallTally, type ToolReply } from '@on.auto/tool-servers/policy';
+import { noCalls, type CallCount, type CallTally, type ToolReply } from '@on.auto/tool-servers/policy';
 import type { Schema } from 'effect';
 
 import type { ModelMessage } from '../model/model-request.ts';
-import { noTurns, toolAnswered, turnAnswered, type Meter } from '../tools/turn-meter.ts';
+import { noTurns, refusalsRetold, toolAnswered, turnAnswered, type Meter } from '../tools/turn-meter.ts';
 import {
-  admittedFrom,
   answeredIn,
   assistantMessages,
   failedIn,
@@ -26,6 +25,7 @@ import {
   type FactData,
   type StepFact,
 } from './attempt-facts.ts';
+import { admittedAgain, admittedFrom, countedAsItsFact } from './call-admission.ts';
 import type { Prompt, StepMessages } from './step-messages.ts';
 
 type ToolFact = Extract<StepFact, { readonly type: 'tool_call_started' | 'tool_call_answered' | 'tool_call_failed' }>;
@@ -56,6 +56,7 @@ export interface StepState {
   readonly asking: Asking;
   readonly meter: Meter;
   readonly meterBeforeLastCall: Meter;
+  readonly count: CallCount;
   readonly tally: CallTally;
   readonly serversEnded: CallsEndedBecause | null;
   readonly answeredBytes: number;
@@ -63,7 +64,11 @@ export interface StepState {
   readonly unreadable: boolean;
 }
 
-export function firstState(prompt: Prompt, offered: Offer['offered'], modelCallsBefore: number): StepState {
+export function firstState(
+  prompt: Prompt,
+  { offered, count }: Pick<Offer, 'offered' | 'count'>,
+  modelCallsBefore: number,
+): StepState {
   return {
     offered,
     prompt,
@@ -76,6 +81,7 @@ export function firstState(prompt: Prompt, offered: Offer['offered'], modelCalls
     asking: noAsking,
     meter: noTurns,
     meterBeforeLastCall: noTurns,
+    count,
     tally: noCalls,
     serversEnded: null,
     answeredBytes: 0,
@@ -129,8 +135,9 @@ function modelCallAnswered(
   const admitted = admittedFrom(response, state.tally, {
     final: state.lastFinal || state.offered.size === 0,
     offered: state.offered,
+    count: state.count,
   });
-  const meterOfRefusals = admitted.refusals.reduce((now, text) => toolAnswered(now, text), meter);
+  const meterOfRefusals = refusalsRetold(meter, [], [...admitted.asking.refused.values()]);
   return {
     ...answered,
     meter: meterOfRefusals,
@@ -144,8 +151,9 @@ function modelCallFailed(state: StepState, data: FactData<'model_call_failed'>):
   return data.because === 'interrupted' ? { ...state, remaking: true } : { ...state, ending: { type: 'failed', data } };
 }
 
-function endedIn(state: StepState, { asking, replies }: Ended): StepState {
-  return { ...state, asking, meter: replies.reduce((meter, { text }) => toolAnswered(meter, text), state.meter) };
+function endedIn(state: StepState, { asking, replies, withdrawn }: Ended): StepState {
+  const meter = refusalsRetold(state.meter, withdrawn, []);
+  return { ...state, asking, meter: replies.reduce((now, { text }) => toolAnswered(now, text), meter) };
 }
 
 function toolCallAnswered(
@@ -167,9 +175,27 @@ function toolCallFailed(state: StepState, data: FactData<'tool_call_failed'>, re
   return endedIn(counted, failedIn(state.asking, data, reply));
 }
 
+function toolCallStarted(state: StepState, data: FactData<'tool_call_started'>): StepState {
+  const outdated = state.asking.outdated || !countedAsItsFact(state.asking, data);
+  return { ...state, asking: { ...startedIn(state.asking, data), outdated } };
+}
+
+export function withItsAdmission(state: StepState): StepState {
+  if (!state.asking.outdated) {
+    return state;
+  }
+  const again = admittedAgain(state.asking, { offered: state.offered, count: state.count });
+  return {
+    ...state,
+    asking: again.asking,
+    tally: { ...again.tally, failures: state.tally.failures },
+    meter: refusalsRetold(state.meter, [...state.asking.refused.values()], [...again.asking.refused.values()]),
+  };
+}
+
 function toolFact(state: StepState, fact: ToolFact, reply: ToolReply | undefined): StepState {
   if (fact.type === 'tool_call_started') {
-    return { ...state, asking: startedIn(state.asking, fact.data) };
+    return toolCallStarted(state, fact.data);
   }
   return fact.type === 'tool_call_answered'
     ? toolCallAnswered(state, fact.data, reply)
@@ -183,7 +209,7 @@ export function providerIn({ facts }: StepState, model: string): string {
 export function evolve(before: StepState, fact: StepFact, { sent, response, reply }: StepContent): StepState {
   const state = { ...before, facts: factsAfter(before.facts, fact) };
   if (fact.type === 'model_call_started') {
-    return modelCallStarted(state, fact.data, sent);
+    return modelCallStarted(withItsAdmission(state), fact.data, sent);
   }
   if (fact.type === 'model_call_answered') {
     return modelCallAnswered(state, fact.data, response);

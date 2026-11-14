@@ -1,7 +1,7 @@
 import type { RecordedContent } from '@on.auto/content';
 import { memoryRecordedContent } from '@on.auto/content/testing';
-import type { CallFact, RunAttempt } from '@on.auto/definitions';
 import { cancelledAfter, recordingJournal, type RecordingJournal } from '@on.auto/definitions/testing';
+import { actingCallsCount } from '@on.auto/tool-servers/policy';
 import { Effect } from 'effect';
 
 import type { ToolCallAnswer, ToolCallJob } from '../jobs/jobs.ts';
@@ -11,6 +11,8 @@ import { answeredByTheSteps } from '../steps/run-steps.ts';
 import { scriptedLanguageModel, type ScriptedLanguageModel, type ScriptedReply } from './scripted-language-model.ts';
 
 type SteppedRun = Parameters<typeof answeredByTheSteps>[0];
+
+type Journalling = Parameters<typeof recordingJournal>;
 
 type StepTool = SteppedRun['tools']['offered'][number];
 
@@ -61,6 +63,7 @@ export function toolOf(server: string, tool: string, readOnly = true): StepTool 
 export const defaultBounds: SteppedRun['bounds'] = {
   runBoundMs: 600_000,
   limits: { contextWindow: undefined, mostInputTokens: 2_000_000 },
+  count: actingCallsCount,
   exitBehavior: 'error',
 };
 
@@ -74,9 +77,9 @@ export interface StepsOptions {
   readonly send?: (job: ToolCallJob) => Effect.Effect<ToolCallAnswer>;
   readonly bounds?: SteppedRun['bounds'];
   readonly keepsContent?: boolean;
-  readonly before?: RunAttempt;
+  readonly before?: NonNullable<Journalling[1]>;
   readonly content?: RecordedContent;
-  readonly refusing?: (fact: CallFact) => boolean;
+  readonly refusing?: Journalling[0];
   readonly cancelledAfter?: number;
   readonly journal?: RecordingJournal;
 }

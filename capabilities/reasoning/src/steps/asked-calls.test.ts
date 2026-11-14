@@ -12,6 +12,8 @@ import { notAnObject } from './asked-calls.ts';
 
 const search = toolOf('graph', 'search');
 
+const echo = toolOf('graph', 'echo', false);
+
 function firstThen(reply: object, last: object): Responder {
   return (_request, attempt) => jsonResponse(attempt === 1 ? reply : last);
 }
@@ -106,11 +108,11 @@ describe('a call whose arguments are not an object', () => {
 });
 
 describe('the calls a run may make', () => {
-  it('are refused past the twenty-fifth when its function says continue, and once the same arguments were sent twice, in words and unsent', async () => {
-    const many = Array.from({ length: 26 }, (_, call): ScriptedCall => ['graph__search', { query: `acme ${call}` }]);
+  it('are refused past the twenty-fifth of a tool not marked reads when its function says continue, and once the same arguments were sent twice, in words and unsent', async () => {
+    const many = Array.from({ length: 26 }, (_, call): ScriptedCall => ['graph__echo', { query: `acme ${call}` }]);
     const repeated: readonly ScriptedCall[] = [1, 2, 3].map(() => ['graph__search', { query: 'acme' }]);
     const tooMany = stepsOf({
-      tools: [search],
+      tools: [search, echo],
       replies: [answers(toolCallsResult(many)), answers(textResult('Done.'))],
       bounds: { ...defaultBounds, exitBehavior: 'continue' },
     });
@@ -121,7 +123,9 @@ describe('the calls a run may make', () => {
     await Effect.runPromise(Effect.all([tooMany.stepping, again.stepping]));
 
     expect([tooMany.sends().length, again.sends().length]).toEqual([25, 2]);
-    expect(JSON.stringify(tooMany.requests().at(-1))).toContain('This run has made all the 25 tool calls it may');
+    expect(JSON.stringify(tooMany.requests().at(-1))).toContain(
+      'This run has made all the 25 calls it may make of tools that can change things',
+    );
     expect(JSON.stringify(again.requests().at(-1))).toContain('use the answer to the call call-2 instead');
   });
 

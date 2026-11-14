@@ -135,8 +135,8 @@ describe('the calls a run may make', () => {
     expect(new Set(journal.facts().map(({ number }) => number))).toEqual(new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]));
   });
 
-  it('refuses the call after the twenty-fifth without sending or recording it', async () => {
-    const { call, fake, journal, tools } = await runWith(['echo']);
+  it('refuses the twenty-sixth call of a tool not marked reads without sending or recording it', async () => {
+    const { call, fake, journal } = await runWith(['echo']);
 
     await inTurn(
       Array.from({ length: 25 }, (_, index) => index),
@@ -144,21 +144,31 @@ describe('the calls a run may make', () => {
     );
     const refused = await call('echo', { number: 26 });
 
-    expect(tools.callsEnded()).toBe(true);
     expect(refused).toMatchObject({
-      text: 'This run has made all the 25 tool calls it may; answer from what you have.',
+      text: 'This run has made all the 25 calls it may make of tools that can change things; answer from what you have.',
       isError: true,
     });
     expect(fake.received()).toHaveLength(25);
     expect(journal.facts()).toHaveLength(50);
   });
 
+  it('never counts a call of a tool marked reads, so a run reads past twenty-five calls', async () => {
+    const { call, fake } = await runWith(['search']);
+
+    const replies = await inTurn(
+      Array.from({ length: 30 }, (_, index) => index),
+      (number) => call('search', { query: `acme ${number}` }),
+    );
+
+    expect(replies).toMatchObject(Array.from({ length: 30 }, () => ({ isError: false })));
+    expect(fake.received()).toHaveLength(30);
+  });
+
   it('reads answers that add up past 256 KiB whole, since the tokens of the run bound what it reads', async () => {
-    const { call, tools } = await runWith(['large']);
+    const { call } = await runWith(['large']);
 
     const replies = await inTurn([1, 2, 3, 4, 5], (page) => call('large', { kib: 64, page }));
 
-    expect(tools.callsEnded()).toBe(false);
     expect(replies.map(({ text }) => Buffer.byteLength(text))).toEqual([65_536, 65_536, 65_536, 65_536, 65_536]);
   });
 });

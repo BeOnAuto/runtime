@@ -1,5 +1,5 @@
 import type { RunContext } from '@on.auto/definitions';
-import { runBoundMs } from '@on.auto/tool-servers/policy';
+import { callCountOf, runBoundMs } from '@on.auto/tool-servers/policy';
 import { Effect } from 'effect';
 
 import { mostOutputTokens } from '../definition/definition-settings.ts';
@@ -44,17 +44,24 @@ export const unknownWindows: ModelReading = {
 const unbounded = Number.POSITIVE_INFINITY;
 
 export function boundsFor(
-  { settings, model, exit_behavior: exitBehavior }: ReasoningFunctionDefinitionDocument,
+  { settings, model, max_tool_calls: maxToolCalls, exit_behavior: exitBehavior }: ReasoningFunctionDefinitionDocument,
   { mostInputTokens, contextWindowOf }: ModelReading,
   offersTools: boolean,
 ): Effect.Effect<StepBounds> {
+  const count = callCountOf(maxToolCalls);
   return offersTools
     ? Effect.map(contextWindowOf(model), (contextWindow) => ({
         runBoundMs: runBoundMs(timeoutFor(settings.max_output_tokens)),
         limits: { contextWindow, mostInputTokens },
+        count,
         exitBehavior,
       }))
-    : Effect.succeed({ runBoundMs: unbounded, limits: { contextWindow: undefined, mostInputTokens }, exitBehavior });
+    : Effect.succeed({
+        runBoundMs: unbounded,
+        limits: { contextWindow: undefined, mostInputTokens },
+        count,
+        exitBehavior,
+      });
 }
 
 export function requestBaseOf(

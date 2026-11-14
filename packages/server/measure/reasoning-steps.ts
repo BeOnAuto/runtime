@@ -89,12 +89,12 @@ const scenarios: readonly Scenario[] = [
   { name: 'one tool call', tools: true, answer: callingUntil(1, 1) },
   { name: 'three tool calls in one step', tools: true, answer: callingUntil(3, 3) },
   { name: 'five tool calls, one a step', tools: true, answer: callingUntil(5, 1) },
-  { name: 'every call a run may make, then the final step', tools: true, answer: callingUntil(25, 25) },
+  { name: 'every call a run may make, then the final step', tools: true, answer: callingUntil(26, 26) },
   {
     name: 'a final step that still calls tools',
     tools: true,
     answer: ({ results, offersTools, tool }) =>
-      offersTools && results < 25 ? searches(25, results, tool) : searches(1, 25, tool),
+      offersTools && results < 26 ? searches(26, results, tool) : searches(1, 26, tool),
   },
 ];
 
@@ -163,7 +163,15 @@ async function fakeProvider(): Promise<FakeProvider> {
   };
 }
 
-const withTools = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [graph/search]', '---', 'Read the rows.'];
+const withTools = [
+  '---',
+  'model: anthropic/claude-sonnet-4-5',
+  'tools: [graph/search]',
+  'max_tool_calls: 25',
+  'exit_behavior: continue',
+  '---',
+  'Read the rows.',
+];
 
 const withoutTools = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Answer.'];
 

@@ -66,7 +66,7 @@ export const RunRejectionSchema = Schema.Union([
     because: Schema.optionalKey(
       RejectionBecauseSchema.annotate({
         description:
-          "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than it may make, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on",
+          "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than its count allows, 25 calls of tools not marked reads or the max_tool_calls its function sets for all its calls, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on",
       }),
     ),
     ...endedByAStep,

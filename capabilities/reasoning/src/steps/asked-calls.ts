@@ -1,11 +1,12 @@
 import type { CallFailed, CallsEndedBecause, OfferedTool } from '@on.auto/tool-servers';
 import {
-  admission,
   countsAgainstTheRun,
   failureReply,
   failedOnce,
   failingBecause,
   failuresEnded,
+  noCalls,
+  type CallCount,
   type CallTally,
   type ToolReply,
 } from '@on.auto/tool-servers/policy';
@@ -19,11 +20,12 @@ export function noLongerOffered(tool: string): string {
   return `The run no longer offers the tool ${tool}, since its server changed while the run was stopped, so this call was not sent.`;
 }
 
-type StartingTool = Pick<OfferedTool, 'reference' | 'start'>;
+type StartingTool = Pick<OfferedTool, 'reference' | 'readOnly' | 'start'>;
 
 export interface Offer {
   readonly final: boolean;
   readonly offered: ReadonlyMap<string, StartingTool>;
+  readonly count: CallCount;
 }
 
 const ToolCallPartSchema = Schema.Struct({
@@ -45,8 +47,6 @@ const isAssistantMessage = Schema.is(
 
 const isToolMessage = Schema.is(Schema.Struct({ role: Schema.Literal('tool'), content: Schema.Array(Schema.Unknown) }));
 
-const isArguments = Schema.is(Schema.Record(Schema.String, Schema.Unknown));
-
 export interface AskedCall {
   readonly callId: string;
   readonly tool: string;
@@ -56,6 +56,7 @@ export interface AskedCall {
 export interface AdmittedCall extends AskedCall {
   readonly input: Readonly<Record<string, unknown>>;
   readonly offer: StartingTool;
+  readonly reads: boolean;
 }
 
 interface OpenCall {
@@ -67,20 +68,29 @@ interface OpenCall {
 
 export interface Asking {
   readonly asked: readonly AskedCall[];
+  readonly before: CallTally;
+  readonly started: ReadonlyMap<string, boolean>;
   readonly admitted: readonly AdmittedCall[];
+  readonly refused: ReadonlyMap<string, string>;
   readonly results: ReadonlyMap<string, Schema.JsonObject>;
   readonly open: readonly OpenCall[];
   readonly unread: readonly string[];
   readonly final: boolean;
+  readonly outdated: boolean;
 }
 
-export const noAsking: Asking = { asked: [], admitted: [], results: new Map(), open: [], unread: [], final: false };
-
-export interface Admitted {
-  readonly asking: Asking;
-  readonly tally: CallTally;
-  readonly refusals: readonly string[];
-}
+export const noAsking: Asking = {
+  asked: [],
+  before: noCalls,
+  started: new Map(),
+  admitted: [],
+  refused: new Map(),
+  results: new Map(),
+  open: [],
+  unread: [],
+  final: false,
+  outdated: false,
+};
 
 function partsOf(messages: readonly Schema.JsonObject[], isOfRole: typeof isToolMessage): readonly unknown[] {
   return messages.flatMap((message) => (isOfRole(message) ? message.content : []));
@@ -96,7 +106,7 @@ export function assistantMessages(response: readonly Schema.JsonObject[]): reado
   return response.filter((message) => isAssistantMessage(message));
 }
 
-function libraryResults(response: readonly Schema.JsonObject[]): ReadonlyMap<string, Schema.JsonObject> {
+export function libraryResults(response: readonly Schema.JsonObject[]): ReadonlyMap<string, Schema.JsonObject> {
   return new Map(
     partsOf(response, isToolMessage)
       .filter((part) => isToolResultPart(part))
@@ -104,58 +114,13 @@ function libraryResults(response: readonly Schema.JsonObject[]): ReadonlyMap<str
   );
 }
 
-function resultPart({ callId, tool }: AskedCall, { text, isError }: ToolReply): Schema.JsonObject {
+export function resultPart({ callId, tool }: AskedCall, { text, isError }: ToolReply): Schema.JsonObject {
   return {
     type: 'tool-result',
     toolCallId: callId,
     toolName: tool,
     output: isError ? { type: 'error-text', value: text } : { type: 'text', value: text },
   };
-}
-
-function admittedOne(admitted: Admitted, call: AskedCall, offered: Offer['offered']): Admitted {
-  const { asking, tally, refusals } = admitted;
-  const refused = (text: string): Admitted => ({
-    asking: {
-      ...asking,
-      results: new Map([...asking.results, [call.callId, resultPart(call, { text, isError: true })]]),
-    },
-    tally,
-    refusals: [...refusals, text],
-  });
-  if (asking.results.has(call.callId)) {
-    return admitted;
-  }
-  const offer = offered.get(call.tool);
-  if (offer === undefined) {
-    return refused(noLongerOffered(call.tool));
-  }
-  if (!isArguments(call.input)) {
-    return refused(notAnObject);
-  }
-  const input = call.input;
-  const admitting = admission(tally, { tool: call.tool, callId: call.callId, input });
-  return admitting.admitted
-    ? {
-        asking: { ...asking, admitted: [...asking.admitted, { ...call, input, offer }] },
-        tally: admitting.tally,
-        refusals,
-      }
-    : { ...refused(admitting.refusal), tally: admitting.tally };
-}
-
-export function admittedFrom(
-  response: readonly Schema.JsonObject[],
-  tally: CallTally,
-  { final, offered }: Offer,
-): Admitted {
-  const asked = askedIn(response);
-  const asking: Asking = { asked, admitted: [], results: libraryResults(response), open: [], unread: [], final };
-  return asked.reduce<Admitted>((admitted, call) => admittedOne(admitted, call, offered), {
-    asking,
-    tally,
-    refusals: [],
-  });
 }
 
 export function isAnswered({ asked, results }: Asking): boolean {
@@ -178,12 +143,19 @@ export function startedIn(asking: Asking, started: FactData<'tool_call_started'>
   const opened = asking.asked
     .filter((call) => call.callId === callId)
     .map((call) => ({ number, call, server, readOnly: readOnly === true }));
-  return { ...asking, open: [...asking.open, ...opened] };
+  const marked = asking.asked
+    .filter((call) => call.callId === callId)
+    .map((call): readonly [string, boolean] => [
+      call.callId,
+      asking.started.get(callId) !== false && readOnly === true,
+    ]);
+  return { ...asking, started: new Map([...asking.started, ...marked]), open: [...asking.open, ...opened] };
 }
 
 export interface Ended {
   readonly asking: Asking;
   readonly replies: readonly ToolReply[];
+  readonly withdrawn: readonly string[];
 }
 
 interface EndedCall {
@@ -199,13 +171,18 @@ function endedIn(asking: Asking, number: number, replyOf: (open: OpenCall) => To
     open.call.callId,
     resultPart(open.call, reply),
   ]);
+  const endedIds = new Set(ended.map(({ open }) => open.call.callId));
   return {
     asking: {
       ...asking,
       open: asking.open.filter((open) => open.number !== number),
+      refused: new Map([...asking.refused].filter(([callId]: readonly [string, string]) => !endedIds.has(callId))),
       results: new Map([...asking.results, ...answered]),
     },
     replies: ended.map(({ reply }) => reply),
+    withdrawn: [...asking.refused]
+      .filter(([callId]: readonly [string, string]) => endedIds.has(callId))
+      .map(([, text]: readonly [string, string]) => text),
   };
 }
 

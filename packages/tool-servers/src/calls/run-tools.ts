@@ -1,5 +1,5 @@
 import type { CallsEndedBecause } from '../access/tool-server-failed.ts';
-import { callsEnded, noCalls } from '../bounds/call-bounds.ts';
+import { noCalls } from '../bounds/call-bounds.ts';
 import { onlyReads } from '../bounds/tool-results.ts';
 import { modelFacingNames } from '../names/model-facing-names.ts';
 import { toolsInWords } from '../names/tool-words.ts';
@@ -16,7 +16,6 @@ export interface RunTools {
   readonly keepsContent: boolean;
   readonly argumentsDigest: (input: unknown) => string;
   readonly scrubJson: (json: string) => string;
-  readonly callsEnded: () => boolean;
   readonly ended: Readonly<AbortSignal>;
   readonly ending: () => ToolsEnding | undefined;
   readonly calledAny: () => boolean;
@@ -54,7 +53,6 @@ export function runTools(parts: RunToolsParts): RunTools {
     keepsContent: parts.offered.every(({ slot }) => slot.settings.record_content),
     argumentsDigest: (input) => argumentsDigestOf(input, parts.secrets),
     scrubJson: (json) => scrubbedJsonOf(json, parts),
-    callsEnded: () => callsEnded(tally),
     ended: stop.signal,
     ending: () => ending,
     calledAny: () => used.length > 0,

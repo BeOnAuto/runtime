@@ -16,7 +16,9 @@ function searches(count: number, from = 0): readonly ScriptedCall[] {
   return Array.from({ length: count }, (_, call): ScriptedCall => ['graph__search', { query: `acme ${from + call}` }]);
 }
 
-const echoed: ScriptedCall = ['graph__echo', { said: 'acme' }];
+function echoes(count: number, from = 0): readonly ScriptedCall[] {
+  return Array.from({ length: count }, (_, call): ScriptedCall => ['graph__echo', { said: `acme ${from + call}` }]);
+}
 
 const sixThousandRead = {
   usage: {
@@ -35,89 +37,158 @@ const answered = answers(textResult('Acme has 2 rows.'));
 
 const anyLimit: unknown = expect.anything();
 
+function countingAll(most: number, exitBehavior = 'error'): string {
+  return documentOf(
+    `model: anthropic/claude-sonnet-4-5\ntools: [graph/*]\nmax_tool_calls: ${most}\nexit_behavior: ${exitBehavior}`,
+    'Summarize acme.',
+  );
+}
+
 async function ranWith(source: string, reasoning: Omit<Reasoning, 'tools'>, ...replies: readonly ScriptedReply[]) {
   const fake = await aGraph();
   const run = reasoningOf({ ...reasoning, tools: graphAccessTo(fake.url) }, ...replies);
   const exit = await run.running(source);
   const offered = run.requests().map(({ tools = [] }) => tools.length > 0);
-  return { exit, sent: fake.received().length, offered };
+  return { exit, sent: fake.received().length, offered, lastRequest: JSON.stringify(run.requests().at(-1)) };
 }
 
-function stoppedAt(because: string, kind: string, detail: string) {
+function stoppedAt(because: string, kind: string, detail: unknown) {
   return Exit.fail(expect.objectContaining({ _tag: 'conflict', kind, because, detail }));
 }
 
-const splitTheCalls =
-  'Run the function once for each item from a workflow, so each run makes the calls of one item; to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
+const answerFromWhatItHas =
+  'to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
 
-const askForLess =
-  'Ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
+const ownCount = `Set max_tool_calls in the reasoning function definition to give the run a count of its own, of all its calls, to at most 1,000, or run the function once for each item from a workflow; ${answerFromWhatItHas}`;
 
-describe('a run whose step asks for more tool calls than the 25 a run may make, by default', () => {
+const askForLess = `Ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; ${answerFromWhatItHas}`;
+
+const pastTheActingCalls = 'The run needed more than the 25 calls a run may make of tools not marked reads';
+
+describe('a run whose step asks for a twenty-sixth call of a tool not marked reads, by default', () => {
   it('sends none of that step’s calls and is unworkable when it had called no tool, with no further model call', async () => {
-    expect(await ranWith(withGraphTools, {}, asking(searches(26)))).toEqual({
-      exit: stoppedAt(
-        'max_tool_calls',
-        'unworkable',
-        `The run needed more than the 25 tool calls a run may make. ${splitTheCalls}`,
-      ),
+    expect(await ranWith(withGraphTools, {}, asking(echoes(26)))).toMatchObject({
+      exit: stoppedAt('max_tool_calls', 'unworkable', `${pastTheActingCalls}. ${ownCount}`),
       sent: 0,
       offered: [true],
     });
   });
 
-  it('is unworkable after it called only tools marked reads, sending none of the calls past the 25', async () => {
-    expect(await ranWith(withGraphTools, {}, asking(searches(20)), asking(searches(6, 20)))).toMatchObject({
+  it('is unworkable after it called only tools marked reads, however many', async () => {
+    expect(await ranWith(withGraphTools, {}, asking(searches(30)), asking(echoes(26)))).toMatchObject({
       exit: stoppedAt(
         'max_tool_calls',
         'unworkable',
-        `The run needed more than the 25 tool calls a run may make, after the run called the search tool of graph. ${splitTheCalls}`,
+        `${pastTheActingCalls}, after the run called the search tool of graph. ${ownCount}`,
       ),
-      sent: 20,
+      sent: 30,
     });
   });
 
-  it('is effect_unknown after it called a tool that declares nothing, which counts as one that may change something', async () => {
-    expect(await ranWith(withGraphTools, {}, asking([...searches(24), echoed]), asking(searches(1, 24)))).toMatchObject(
-      {
-        exit: stoppedAt(
-          'max_tool_calls',
-          'effect_unknown',
-          `The run needed more than the 25 tool calls a run may make, after the run called the search and echo tools of graph. ${splitTheCalls}`,
-        ),
-        sent: 25,
-      },
-    );
+  it('is effect_unknown after it called a tool that declares nothing, sending none of the reads of that step', async () => {
+    expect(
+      await ranWith(withGraphTools, {}, asking(echoes(25)), asking([...searches(2), ...echoes(1, 25)])),
+    ).toMatchObject({
+      exit: stoppedAt(
+        'max_tool_calls',
+        'effect_unknown',
+        `${pastTheActingCalls}, after the run called the echo tool of graph. ${ownCount}`,
+      ),
+      sent: 25,
+    });
   });
+});
 
-  it('answers as any run does when its 25th call is its last, its next step still offered the tools', async () => {
-    const ran = await ranWith(withGraphTools, {}, asking(searches(25)), answered);
+describe('a run that sets no max_tool_calls and asks for no call past its count', () => {
+  it('answers as any run does when its twenty-fifth call of a tool not marked reads is its last, its next step still offered the tools', async () => {
+    const ran = await ranWith(withGraphTools, {}, asking(echoes(25)), answered);
 
-    expect(ran).toEqual({
+    expect(ran).toMatchObject({
       exit: Exit.succeed(expect.objectContaining({ output: 'Acme has 2 rows.' })),
       sent: 25,
       offered: [true, true],
     });
     expect(ran.exit).not.toMatchObject(Exit.succeed({ incomplete_details: anyLimit }));
   });
+
+  it('counts no call of a tool marked reads', async () => {
+    const ran = await ranWith(withGraphTools, {}, asking(searches(30)), asking(searches(10, 30)), answered);
+
+    expect(ran).toMatchObject({
+      exit: Exit.succeed(expect.objectContaining({ output: 'Acme has 2 rows.' })),
+      sent: 40,
+    });
+    expect(ran.exit).not.toMatchObject(Exit.succeed({ incomplete_details: anyLimit }));
+  });
 });
 
-describe('a run whose step asks for more tool calls than the 25, when its function says continue', () => {
-  it('sends the 25, refuses the rest, answers from what it has without tools, and is marked max_tool_calls', async () => {
-    expect(await ranWith(answeringAtItsLimit, {}, asking(searches(26)), answered)).toEqual({
+describe('a run whose step asks past its count, when its function says continue', () => {
+  it('sends the 25 and the reads, refuses the rest, answers from what it has without tools, and is marked max_tool_calls', async () => {
+    const ran = await ranWith(answeringAtItsLimit, {}, asking([...echoes(26), ...searches(2)]), answered);
+
+    expect(ran).toMatchObject({
       exit: Exit.succeed(
         expect.objectContaining({ output: 'Acme has 2 rows.', incomplete_details: { reason: 'max_tool_calls' } }),
       ),
-      sent: 25,
+      sent: 27,
       offered: [true, false],
+    });
+    expect(ran.lastRequest).toContain(
+      'This run has made all the 25 calls it may make of tools that can change things; answer from what you have.',
+    );
+  });
+
+  it('answers unmarked when its twenty-fifth such call was its last, its next step still offered the tools', async () => {
+    const ran = await ranWith(answeringAtItsLimit, {}, asking(echoes(25)), answered);
+
+    expect(ran).toMatchObject({ exit: Exit.succeed(expect.anything()), offered: [true, true] });
+    expect(ran.exit).not.toMatchObject(Exit.succeed({ incomplete_details: anyLimit }));
+  });
+});
+
+describe('a run whose function sets max_tool_calls', () => {
+  it('counts reads too, and ends at the step that asks past it, sending none of its calls', async () => {
+    expect(await ranWith(countingAll(3), {}, asking(searches(4)))).toMatchObject({
+      exit: stoppedAt(
+        'max_tool_calls',
+        'unworkable',
+        `The run needed more than the 3 tool calls its function's max_tool_calls lets a run make. Raise max_tool_calls in the reasoning function definition, to at most 1,000, or run the function once for each item from a workflow; ${answerFromWhatItHas}`,
+      ),
+      sent: 0,
     });
   });
 
-  it('is marked too when its 25th call was its last and it was then made to answer without tools', async () => {
-    expect(await ranWith(answeringAtItsLimit, {}, asking(searches(25)), answered)).toMatchObject({
-      exit: Exit.succeed({ incomplete_details: { reason: 'max_tool_calls' } }),
+  it('is effect_unknown after it called a tool not marked reads', async () => {
+    expect(await ranWith(countingAll(3), {}, asking(echoes(1)), asking(searches(3)))).toMatchObject({
+      exit: stoppedAt(
+        'max_tool_calls',
+        'effect_unknown',
+        expect.stringContaining('after the run called the echo tool'),
+      ),
+      sent: 1,
+    });
+  });
+
+  it('at a thousand, says only to run the function once for each item', async () => {
+    expect(await ranWith(countingAll(1000), {}, asking(searches(1001)))).toMatchObject({
+      exit: stoppedAt(
+        'max_tool_calls',
+        'unworkable',
+        `The run needed more than the 1,000 tool calls its function's max_tool_calls lets a run make. Run the function once for each item from a workflow, so each run makes the calls of one item; ${answerFromWhatItHas}`,
+      ),
+      sent: 0,
+    });
+  });
+
+  it('under continue, sends the calls within it, refuses the rest, and is marked max_tool_calls', async () => {
+    const ran = await ranWith(countingAll(3, 'continue'), {}, asking(searches(4)), answered);
+
+    expect(ran).toMatchObject({
+      exit: Exit.succeed(expect.objectContaining({ incomplete_details: { reason: 'max_tool_calls' } })),
+      sent: 3,
       offered: [true, false],
     });
+    expect(ran.lastRequest).toContain('This run has made all the 3 tool calls it may; answer from what you have.');
   });
 });
 
@@ -127,7 +198,7 @@ describe('a run whose last step its input tokens cover asks for a tool, by defau
   it('makes that step with the tools, sends none of its calls, and is unworkable when it called only tools marked reads', async () => {
     expect(
       await ranWith(withGraphTools, tenThousand, asking(searches(1), sixThousandRead), asking(searches(1, 1))),
-    ).toEqual({
+    ).toMatchObject({
       exit: stoppedAt(
         'max_input_tokens',
         'unworkable',
@@ -140,7 +211,7 @@ describe('a run whose last step its input tokens cover asks for a tool, by defau
 
   it('is effect_unknown when it had called a tool that declares nothing', async () => {
     expect(
-      await ranWith(withGraphTools, tenThousand, asking([echoed], sixThousandRead), asking(searches(1))),
+      await ranWith(withGraphTools, tenThousand, asking(echoes(1), sixThousandRead), asking(searches(1))),
     ).toMatchObject({
       exit: stoppedAt(
         'max_input_tokens',
@@ -154,7 +225,7 @@ describe('a run whose last step its input tokens cover asks for a tool, by defau
   it('succeeds, unmarked, when that step answers', async () => {
     const ran = await ranWith(withGraphTools, tenThousand, asking(searches(1), sixThousandRead), answered);
 
-    expect(ran).toEqual({
+    expect(ran).toMatchObject({
       exit: Exit.succeed(expect.objectContaining({ output: 'Acme has 2 rows.' })),
       sent: 1,
       offered: [true, true],
@@ -165,7 +236,9 @@ describe('a run whose last step its input tokens cover asks for a tool, by defau
 
 describe('a run whose input tokens would not cover a step after the next, when its function says continue', () => {
   it('makes the next step without tools, and is marked max_input_tokens', async () => {
-    expect(await ranWith(answeringAtItsLimit, tenThousand, asking(searches(1), sixThousandRead), answered)).toEqual({
+    expect(
+      await ranWith(answeringAtItsLimit, tenThousand, asking(searches(1), sixThousandRead), answered),
+    ).toMatchObject({
       exit: Exit.succeed(
         expect.objectContaining({ output: 'Acme has 2 rows.', incomplete_details: { reason: 'max_input_tokens' } }),
       ),
