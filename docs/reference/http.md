@@ -20,12 +20,12 @@ Send requests to the server's address, such as `https://auto.example.com`, the `
 
 Each API key belongs to one org and has permissions for a set of playbooks:
 
-| Permission       | Lets the caller                                                                                                                                                                                 |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `org:read`       | Read the org's playbooks and connections, list models and providers, search the org's tool servers, read the org's activity and mark it seen, and make, read and resolve the org's own comments |
-| `org:write`      | Create, update and retire playbooks, add, reconnect and remove connections, and set which playbooks may use one                                                                                 |
-| `playbook:read`  | Read definitions, runs, history, events, requests and analytics, search and read tools, make, read and resolve comments, and transcribe a recording                                             |
-| `playbook:write` | Create, change, retire or run a function or workflow, cancel a run, send or publish an event, answer a request and call a tool                                                                  |
+| Permission       | Lets the caller                                                                                                                                                                                                            |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `org:read`       | Read the org's playbooks and connections, list models and providers, search the org's tool servers, read the org's activity and mark it seen, make, read and resolve the org's own comments, and list who holds which role |
+| `org:write`      | Create, update and retire playbooks, add, reconnect and remove connections, set which playbooks may use one, and, for a person whose role lets them, give or take away a role                                              |
+| `playbook:read`  | Read definitions, runs, history, events, requests and analytics, search and read tools, make, read and resolve comments, and transcribe a recording                                                                        |
+| `playbook:write` | Create, change, retire or run a function or workflow, cancel a run, send or publish an event, answer a request and call a tool                                                                                             |
 
 Each route table below names the permission a route needs.
 
@@ -48,7 +48,7 @@ These five need no key, and neither does [content at a signed address](#content-
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
 - Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`, and `make_comment_in_org`, `list_comments_in_org`, `resolve_comment_in_org` and `reopen_comment_in_org` for the org's own comments. Its summary is its title. Its tag names the resource it acts on.
-- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the six routes of Studio's connection page, `read_link`, `approve`, `give_credential`, `give_client`, `start` and `finish`; `get_connection`, `set_connection_playbooks`, `set_connection_signing_secret`, `remove_connection_signing_secret` and `list_providers`; `get_run_history`, `get_playbook_analytics`, `render_page`, `render_playbook_page` and `validate`; `make_comment` and `make_comment_in_org`, and `reopen_comment` and `reopen_comment_in_org`; `list_org_changes`, `list_playbook_changes`, `list_activity` and `mark_activity_seen`; `transcribe` and `get_voice`; `get_content`, the route of [content at a signed address](#content-at-a-signed-address); and `get_license`, `activate_allocation` and `report_allocation`.
+- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the six routes of Studio's connection page, `read_link`, `approve`, `give_credential`, `give_client`, `start` and `finish`; `get_connection`, `set_connection_playbooks`, `set_connection_signing_secret`, `remove_connection_signing_secret` and `list_providers`; `get_run_history`, `get_playbook_analytics`, `render_page`, `render_playbook_page` and `validate`; `make_comment` and `make_comment_in_org`, and `reopen_comment` and `reopen_comment_in_org`; `list_org_changes`, `list_playbook_changes`, `list_activity` and `mark_activity_seen`; `list_role_assignments`, `assign_role` and `unassign_role`; `transcribe` and `get_voice`; `get_content`, the route of [content at a signed address](#content-at-a-signed-address); and `get_license`, `activate_allocation` and `report_allocation`.
 - Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
@@ -1496,6 +1496,56 @@ A request with several faults is refused for the first, the fields in the order 
 | A `mark_activity_seen` with neither `items` nor `through`, or with an empty `items` and no `through`                                                                        | `invalid_input` at `/items`                                                                                                                 |
 | More than 200 `items`                                                                                                                                                       | `invalid_input` at `/items`                                                                                                                 |
 | An item whose `address` is not of a form above or whose `at` is not a time                                                                                                  | `invalid_input` at the item, such as `/items/2`                                                                                             |
+
+## Roles
+
+A person of the org holds a role there: `admin`, who manages the members; `editor`, who builds, runs and changes playbooks; or `viewer`, who views and comments. The runtime records each role given and taken away as a fact, `role_assigned` and `role_unassigned`, on the org's own stream of its role assignments, and keeps who holds what as they are recorded. In this release the roles are recorded and listed alone: what a caller may do is still decided by the permissions of their credential, as [Requests and access](#requests-and-access) sets out.
+
+| Operation               | Method and route                           | Permission  | Input                                 |
+| ----------------------- | ------------------------------------------ | ----------- | ------------------------------------- |
+| `list_role_assignments` | `GET /role-assignments`                    | `org:read`  | Optional `limit` and `cursor`         |
+| `assign_role`           | `PUT /role-assignments/{person}/{role}`    | `org:write` | The person's id and the role, in path |
+| `unassign_role`         | `DELETE /role-assignments/{person}/{role}` | `org:write` | The person's id and the role, in path |
+
+A role assignment holds ids alone:
+
+| Field         | What it holds                                                                                                                                                                                                                     |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `principal`   | Who holds the role: `type`, `person`, and `id`, the person's id as their sign-in names them                                                                                                                                       |
+| `role`        | `type`, `built_in`, a role every release ships, and `id`, `admin`, `editor` or `viewer`                                                                                                                                           |
+| `scope`       | Where it holds: `type`, `org`, and `id`, the org's id                                                                                                                                                                             |
+| `source`      | How it was given: `manual`, by a person; `invitation`; `enrolment`, by joining from a claimed domain; `import`, from the roles people held when roles were first kept; `command`, by the runtime's command; or `identity_service` |
+| `assigned_at` | When it was given, in ISO 8601                                                                                                                                                                                                    |
+| `assigned_by` | The id of the caller who gave it                                                                                                                                                                                                  |
+
+`list_role_assignments` answers `role_assignments`, by person and then by where each holds, with `has_more` and `next_cursor`, as the other lists page. `assign_role` and `unassign_role` answer the person's `principal`, the `scope` and the `roles` they hold there after the change.
+
+- A person holds one role in the org. `assign_role` gives the role in place of the one they held: it records the role they held taken away and the new one given, together. A role they hold already, or one taken away that they do not hold, records nothing and answers as it stands.
+- Only a person signed in to Studio, whose role lets them give roles, gives or takes one away, and never a role that lets its holder do more than their own role does. Today that is an admin.
+- The org always keeps an admin: a change that would leave it without one is refused, even when two are asked at the same moment.
+- `assign_role` gives a role only to a person of the org.
+
+| Case                                                                                                     | Response                        |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| A `role` that is not `admin`, `editor` or `viewer`, or a `person` that is empty or longer than 256 bytes | `invalid_input`                 |
+| A `cursor` that is no `next_cursor` of `list_role_assignments`                                           | `invalid_input` at `/cursor`    |
+| A caller who is not a person signed in to Studio, such as a key or an agent                              | `forbidden`                     |
+| A person whose role does not let them give roles, or a role beyond their own                             | `forbidden`                     |
+| An `assign_role` for someone who is not a person of the org                                              | `not_found`                     |
+| A change that would leave the org without an admin                                                       | `conflict` of kind `unworkable` |
+
+```http
+PUT /v1/orgs/acme/role-assignments/user_7kLm2/viewer
+Authorization: Bearer <token>
+```
+
+```json
+{
+  "principal": { "type": "person", "id": "user_7kLm2" },
+  "scope": { "type": "org", "id": "acme" },
+  "roles": [{ "type": "built_in", "id": "viewer" }]
+}
+```
 
 ## Analytics
 

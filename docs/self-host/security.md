@@ -89,9 +89,25 @@ The [Sign-in and token reference](../reference/authentication.md) sets out the t
 
 ## Policies in report-only mode
 
-Every call is checked as this page sets out, and that check decides. The server also asks a second check about each call, a policy decision point, which decides from policies the release ships, written for [Cedar](https://www.cedarpolicy.com), an open-source policy engine that runs inside the server. Until roles can be given to people, it takes every signed-in person to hold the role Editor, which allows what their token grants.
+Every call is checked as this page sets out, and that check decides. The server also asks a second check about each call, a policy decision point, which decides from policies the release ships, written for [Cedar](https://www.cedarpolicy.com), an open-source policy engine that runs inside the server. It does not yet read the roles the runtime records: it takes every signed-in person to hold the role Editor, which allows what their token grants.
 
 It is in report-only mode: it decides nothing. Where it and the check answer a call differently, the server logs a warning, `The policy decision point, in report-only mode, decided a call otherwise than the check that decides it`, with the operation, the org, the playbook, the caller's id and the two answers, and nothing of the call's input or of the person's name. The decision point loads on the first call and logs once which engine and how many policies and operations it loaded. If it cannot load, it logs why once as an error, and the calls still answer as the check decides. [Plan memory](production.md#plan-memory) has what it adds.
+
+### The roles
+
+The policies hold three roles. The runtime records who holds which ([Roles](../reference/http.md#roles)), but in this release neither the check nor the policies read those records: every signed-in person is taken to be an Editor, as above.
+
+| Role   | What a person with it may do                                                      |
+| ------ | --------------------------------------------------------------------------------- |
+| Admin  | Manages members, billing and settings. Can do everything an editor can.           |
+| Editor | Builds, runs and changes playbooks, and connects accounts.                        |
+| Viewer | Views playbooks, runs and results, and can comment. Can't run or change anything. |
+
+A role applies wherever the person uses Auto, including their connected agents.
+
+What a Viewer may do follows from what each operation declares about itself, never from its name: a Viewer may call an operation that a read permission, `org:read` or `playbook:read`, permits. Those are the operations that read, and the few changes anyone who may read makes: a comment, resolving or reopening one, marking activity as seen, and writing out a comment spoken aloud. A Viewer cannot run a function or a workflow, stop a run or send it an event, answer a request in Studio or through an agent, publish an event, create, change, pause, retire or restore anything, or add, change, remove or use a connection. Their connected agents, and Auto answering them in a conversation, are held to the same, whatever the agent was approved to do.
+
+A workflow run keeps acting as the person who started it, with the permissions they had when it started, for as long as it runs ([What happens when access is revoked](../reference/authentication.md#what-happens-when-access-is-revoked)), so making that person a Viewer does not stop a run they already started. A signed-in person who holds no role may do nothing. A person who is not a member of the org may still answer a request a playbook sent them, where it reached them: they make no call to the runtime, and their answer reaches the run through the connection the request went out by.
 
 ## API keys
 

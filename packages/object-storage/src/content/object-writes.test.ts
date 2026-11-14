@@ -1,12 +1,15 @@
 import { PutObjectCommand, S3ServiceException } from '@aws-sdk/client-s3';
 import { sha256Of, textToKeep } from '@on.auto/content';
 import { alpha, generated, octets, resultOf } from '@on.auto/content/testing';
+import { streamPrefixOfPlaybook } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { objectKeysOf } from '../location/object-keys.ts';
 import { bucketOnS3, uploadPartBytes } from '../s3/s3-bucket.ts';
 import { fakeContentStore, type FakeContentStore } from '../testing/fake-bucket.ts';
+
+const alphaPlace = streamPrefixOfPlaybook(alpha);
 
 const location = { bucket: 'content', prefix: 'playbooks' };
 
@@ -34,7 +37,7 @@ describe('a put on object storage', () => {
 
     expect(kept).toEqual({ sha256: sha256Of('{"a":1}'), bytes: 7, mediaType: 'application/json' });
     expect(store.bucket.asked()).toEqual(['PutObject', 'HeadObject']);
-    expect(store.bucket.keys()).toEqual([keys.kept(alpha, kept.sha256)]);
+    expect(store.bucket.keys()).toEqual([keys.kept(alphaPlace, kept.sha256)]);
   });
 
   it('uploads a larger content under an upload of its own, copies it under its digest and deletes the upload, or deletes the upload alone when its ledger holds its head and its object is there', async () => {
@@ -52,7 +55,7 @@ describe('a put on object storage', () => {
       'HeadObject',
       'DeleteObjects',
     ]);
-    expect(store.bucket.keys()).toEqual([keys.kept(alpha, sha256)]);
+    expect(store.bucket.keys()).toEqual([keys.kept(alphaPlace, sha256)]);
   });
 });
 
@@ -82,8 +85,8 @@ describe('a put on object storage that another put of its digest raced', () => {
   it('writes under its digest only where no object stands, leaving the one another put placed first, and answers the head its ledger keeps', async () => {
     const store = fakeContentStore(location);
     const { sha256, content } = await generated(2_500_000);
-    writtenBefore(store, 'PutObjectCommand', keys.kept(alpha, sha256Of('small')), 'text/csv');
-    writtenBefore(store, 'CopyObjectCommand', keys.kept(alpha, sha256), 'text/csv');
+    writtenBefore(store, 'PutObjectCommand', keys.kept(alphaPlace, sha256Of('small')), 'text/csv');
+    writtenBefore(store, 'CopyObjectCommand', keys.kept(alphaPlace, sha256), 'text/csv');
 
     const kept = [
       await resultOf(store.content.put(alpha, textToKeep('small', octets))),
@@ -96,19 +99,21 @@ describe('a put on object storage that another put of its digest raced', () => {
       { sha256, bytes: 2_500_000, mediaType: octets },
     ]);
     expect([
-      await bucket.head(keys.kept(alpha, sha256Of('small'))),
-      await bucket.head(keys.kept(alpha, sha256)),
+      await bucket.head(keys.kept(alphaPlace, sha256Of('small'))),
+      await bucket.head(keys.kept(alphaPlace, sha256)),
     ]).toEqual([
       { bytes: 1, mediaType: 'text/csv' },
       { bytes: 1, mediaType: 'text/csv' },
     ]);
-    expect(store.bucket.keys()).toEqual([keys.kept(alpha, sha256Of('small')), keys.kept(alpha, sha256)].toSorted());
+    expect(store.bucket.keys()).toEqual(
+      [keys.kept(alphaPlace, sha256Of('small')), keys.kept(alphaPlace, sha256)].toSorted(),
+    );
   });
 
   it('answers what it kept where the store copies over the put that wrote first', async () => {
     const store = fakeContentStore(location, { honoursConditionalCopy: false });
     const { sha256, content } = await generated(2_500_000);
-    writtenBefore(store, 'CopyObjectCommand', keys.kept(alpha, sha256));
+    writtenBefore(store, 'CopyObjectCommand', keys.kept(alphaPlace, sha256));
 
     const kept = await resultOf(store.content.put(alpha, content()));
 
@@ -160,6 +165,6 @@ describe('a put on object storage whose conditional write meets a conflicting on
     expect(writing.bucket.asked()).toEqual(['PutObject', 'PutObject']);
     await expect(copied).rejects.toThrow('A conflicting conditional operation is in progress');
     expect(copying.bucket.asked().filter((asked) => asked === 'CopyObject')).toHaveLength(3);
-    expect(copying.bucket.keys()).not.toContain(keys.kept(alpha, sha256));
+    expect(copying.bucket.keys()).not.toContain(keys.kept(alphaPlace, sha256));
   });
 });

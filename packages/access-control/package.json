@@ -5,7 +5,9 @@
   "license": "Elastic-2.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./role-assignment-facts": "./src/assignments/role-assignment-facts.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
     "lint": "oxlint -c ../../.oxlintrc.json",
@@ -20,6 +22,7 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@on.auto/ledger": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   }

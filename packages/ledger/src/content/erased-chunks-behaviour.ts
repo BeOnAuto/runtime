@@ -23,6 +23,8 @@ import { anErasingLedger, anErasingLedgerOutside, type LedgerEntry } from '../te
 import { ownExpiredErasedOn, unnamedChunksLastMs, unnamedChunksSwept } from './content-sweep.ts';
 import { keptShelf } from './content-tables.ts';
 
+const alphaPlace = streamPrefixOfPlaybook(alpha);
+
 const CountRows = Schema.Array(Schema.Struct({ count: Schema.Number }));
 
 const keptAt = Date.parse('2026-11-01T09:00:00.000Z');
@@ -145,7 +147,7 @@ function erasedWhereverKept(entry: LedgerEntry): void {
     await at(keptAt + 1, outside.ledger.content.put(alpha, { ...content.content(), expiresAt: keptAt + aDay }));
     const held = async () => [
       await chunksHeldIn(entry, database, alpha, content.sha256),
-      await resultOf(store.holds(alpha, content.sha256)),
+      await resultOf(store.holds(alphaPlace, content.sha256)),
     ];
 
     const beforeTheErasure = await held();

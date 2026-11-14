@@ -47,13 +47,11 @@ export function objectContentOn(bucket: Bucket, location: ContentLocation): Cont
   const placing: Placing = { bucket, keys: objectKeysOf(location) };
   const { keys } = placing;
   return {
-    stage: (playbook, content) => stagedOn(placing, playbook, content),
-    holds: (playbook, sha256) =>
-      Effect.promise(async () => (await bucket.head(keys.kept(playbook, sha256))) !== undefined),
-    read: (playbook, sha256) => Effect.promise(() => verifiedAt(bucket, keys.kept(playbook, sha256), sha256)),
-    readPart: (playbook, sha256, asked) =>
-      Effect.promise(() => partAt(bucket, keys.kept(playbook, sha256), sha256, asked)),
-    delete: (playbook, sha256) => Effect.promise(() => bucket.delete([keys.kept(playbook, sha256)])),
+    stage: (place, content) => stagedOn(placing, place, content),
+    holds: (place, sha256) => Effect.promise(async () => (await bucket.head(keys.kept(place, sha256))) !== undefined),
+    read: (place, sha256) => Effect.promise(() => verifiedAt(bucket, keys.kept(place, sha256), sha256)),
+    readPart: (place, sha256, asked) => Effect.promise(() => partAt(bucket, keys.kept(place, sha256), sha256, asked)),
+    delete: (place, sha256) => Effect.promise(() => bucket.delete([keys.kept(place, sha256)])),
     sweepContent: (before) => sweptUploads(bucket, keys.uploads, before),
   };
 }

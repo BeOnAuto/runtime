@@ -2,7 +2,7 @@ import { once } from 'node:events';
 import { createServer } from 'node:http';
 
 import { sha256Of } from '@on.auto/content';
-import { alpha, generated, refusalOf } from '@on.auto/content/testing';
+import { generated, refusalOf } from '@on.auto/content/testing';
 import { Effect, Function, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -10,6 +10,8 @@ import { objectContentOn } from '../content/object-content.ts';
 import { objectStoreReached } from '../s3/object-store-reached.ts';
 import { bucketOnS3 } from '../s3/s3-bucket.ts';
 import { storageClientOf, storageWaits } from './storage-client.ts';
+
+const alphaPlace = 'playbook/acme/alpha/';
 
 const decodeAddress = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
 
@@ -79,9 +81,9 @@ describe('the client of an object store that stops answering', () => {
     const started = performance.now();
 
     const refused = await refusalOf(objectStoreReached(() => client, location));
-    const read = Effect.runPromise(objects.read(alpha, sha256Of('stalled')));
+    const read = Effect.runPromise(objects.read(alphaPlace, sha256Of('stalled')));
     await expect(read).rejects.toThrow('requestTimeout');
-    const put = Effect.runPromise(objects.stage(alpha, (await generated(2_500_000)).content()));
+    const put = Effect.runPromise(objects.stage(alphaPlace, (await generated(2_500_000)).content()));
     await expect(put).rejects.toThrow('requestTimeout');
 
     expect(refused.answer).toMatch(/^TimeoutError/u);

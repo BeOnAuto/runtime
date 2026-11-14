@@ -203,10 +203,10 @@ function markTakenOverWhileDeleting(entry: InterleavedErasureEntry): void {
     };
     const keeping = await entry.aKeeping({
       ...store,
-      delete: (playbook, sha256) =>
+      delete: (place, sha256) =>
         Effect.andThen(
           Effect.promise(() => overtaking.during()),
-          store.delete(playbook, sha256),
+          store.delete(place, sha256),
         ),
     });
     const { sha256 } = await at(keptAt, keeping.content.put(alpha, { ...textToKeep(note, json), expiresAt: markedAt }));
@@ -224,7 +224,7 @@ function markTakenOverWhileDeleting(entry: InterleavedErasureEntry): void {
 function bytesGoneBeforeTheRecord(entry: InterleavedErasureEntry): void {
   it('reads nothing of a content past its expiry whose bytes are gone with its erasure not recorded, as after a stop between the two, and the erasure after it records it', async () => {
     const { paused, keeping, sha256 } = await keptUntil(entry, keptAt + aDay);
-    await resultOf(paused.store.delete(alpha, sha256));
+    await resultOf(paused.store.delete(entry.placeOf(alpha), sha256));
 
     const read = await resultOf(keeping.content.get(alpha, sha256));
     const head = await headOf(keeping, alpha, sha256);

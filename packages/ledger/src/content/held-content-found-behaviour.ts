@@ -7,6 +7,9 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { HeldContentUnchecked } from '../references/held-heads.ts';
 import { anErasingLedger, anErasingLedgerOutside, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { openChoresWith, type OpenChores } from '../testing/open-ledger.ts';
+import { placeOfNewBytesOf } from './external-heads.ts';
+
+const alphaPlace = placeOfNewBytesOf(alpha);
 
 const notes = 'playbook/acme/alpha/notes/n1';
 
@@ -98,7 +101,7 @@ function missingFromItsStore(entry: LedgerEntry): void {
     const database = await entry.aDatabase();
     const store = memoryContentStore();
     await heldIn(await holdingOutside(entry, database, store), texts);
-    await Effect.runPromise(store.delete(alpha, sha256Of(first)));
+    await Effect.runPromise(store.delete(alphaPlace, sha256Of(first)));
 
     const emptied = await holdingOutside(entry, database, store);
     const another = await holdingOutside(entry, database, memoryContentStore());

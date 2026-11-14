@@ -43,6 +43,41 @@ function namedInPolicy(policy: string): readonly Referenced[] {
   return read.type === 'success' ? entitiesNamedIn(read.json) : [{ type: 'unreadable', id: policy }];
 }
 
+function attributeReadOf(value: unknown): readonly string[] | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+  if (Reflect.get(value, 'Var') === 'context') {
+    return [];
+  }
+  const access: unknown = Reflect.get(value, '.');
+  if (typeof access !== 'object' || access === null) {
+    return undefined;
+  }
+  const attribute: unknown = Reflect.get(access, 'attr');
+  const above = attributeReadOf(Reflect.get(access, 'left'));
+  return above === undefined || typeof attribute !== 'string' ? undefined : [...above, attribute];
+}
+
+function contextReadIn(value: unknown): readonly string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item: unknown) => contextReadIn(item));
+  }
+  if (typeof value !== 'object' || value === null) {
+    return [];
+  }
+  const read = attributeReadOf(value);
+  if (read !== undefined) {
+    return [read.join('.')];
+  }
+  return Object.values(value).flatMap((inner: unknown) => contextReadIn(inner));
+}
+
+function contextReadByPolicy(policy: string): readonly string[] {
+  const read = cedar.policyToJson(policy);
+  return read.type === 'success' ? contextReadIn(read.json) : [`unreadable: ${policy}`];
+}
+
 function typesNamed(named: readonly Referenced[]): ReadonlySet<string> {
   return new Set(named.map(({ type }) => type));
 }
@@ -83,6 +118,7 @@ describe('the built-in policies', () => {
       'key',
       'local-developer',
       'playbook-itself',
+      'run-as-started',
       'own-org',
       'within-granted-permissions',
       'within-granted-playbooks',
@@ -98,6 +134,23 @@ describe('the built-in policies', () => {
   });
 });
 
+describe('what the built-in policies read of a request', () => {
+  it('is how it arrived, what its credential grants and, of what its operation declares about itself, only whether it targets a playbook, beside the permissions its action is in', () => {
+    const read = Object.values(policiesById(cedar, texts.policies)).flatMap((policy) => contextReadByPolicy(policy));
+
+    expect(new Set(read)).toEqual(
+      new Set([
+        'via',
+        'granted.org',
+        'granted.permissions',
+        'granted.all_playbooks',
+        'granted.playbooks',
+        'operation.targets_playbook',
+      ]),
+    );
+  });
+});
+
 describe('policies made ready for the engine', () => {
   it('are read in under names that follow from their text alone, the same for the same text and never one for each org', () => {
     const prepared = preparedPolicies(cedar, texts);
@@ -110,7 +163,7 @@ describe('policies made ready for the engine', () => {
     expect([again.schemaName, again.policySetId, again.policies]).toEqual([
       prepared.schemaName,
       prepared.policySetId,
-      9,
+      10,
     ]);
     expect(other.schemaName).toBe(prepared.schemaName);
     expect(other.policySetId).not.toBe(prepared.policySetId);

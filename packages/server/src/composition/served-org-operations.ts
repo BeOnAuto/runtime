@@ -1,7 +1,6 @@
+import { roleAssignmentOperations } from '@on.auto/access-control';
 import { activityOperationsOf, commentChanges, orgCommentOperations } from '@on.auto/activity';
-import type { AppRuntime } from '@on.auto/api';
 import { connectionChanges } from '@on.auto/connections';
-import type { DispatcherServices } from '@on.auto/operations';
 import { defineListOrgChanges, playbookChanges, playbookOperationsOf } from '@on.auto/playbooks';
 
 import { playbookGoalsServedBy } from '../goals/reads/served-playbook-goals.ts';
@@ -12,8 +11,10 @@ import type { ServedReasoning } from './served-reasoning.ts';
 
 const orgChanges = defineListOrgChanges([playbookChanges, connectionChanges, commentChanges]);
 
+type ServingRuntime = Parameters<typeof importOperationsOf>[0];
+
 function orgOperationsOfPlaybooks(
-  runtime: AppRuntime<DispatcherServices>,
+  runtime: ServingRuntime,
   served: ServedPages & Pick<ServedGoals, 'goals' | 'messages'>,
 ) {
   const goals = served.goals ? playbookGoalsServedBy(runtime, served.pages, served.messages) : undefined;
@@ -22,13 +23,14 @@ function orgOperationsOfPlaybooks(
     orgChanges,
     ...activityOperationsOf(goals),
     ...orgCommentOperations,
+    ...roleAssignmentOperations,
   ];
 }
 
 type ImportsServed = Parameters<typeof importOperationsOf>[1];
 
 export function orgPartsServedBy<Operation>(
-  runtime: AppRuntime<DispatcherServices>,
+  runtime: ServingRuntime,
   served: ImportsServed & ServedReasoning,
   inOrg: readonly Operation[],
 ) {

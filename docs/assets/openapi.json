@@ -28,6 +28,9 @@
       "description": "What people say in Studio about the things of a playbook or of the organization, each at the address of what it is about and where on it the comment was dropped, until it is resolved"
     },
     {
+      "name": "role-assignments"
+    },
+    {
       "name": "models",
       "description": "The models this server can call, which a reasoning function names, and those a generation function may name"
     },
@@ -3131,6 +3134,573 @@
           {
             "openIdConnect": [
               "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/role-assignments": {
+      "get": {
+        "operationId": "list_role_assignments",
+        "summary": "List role assignments",
+        "description": "Lists who holds which role in the org, each person’s role where it holds, how it was given, when and by whom, a page at a time, by ids alone.",
+        "tags": [
+          "role-assignments"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "The most items to answer with, from 1 to 100; 20 when left out"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "The next_cursor of the page before, to read on after it"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/list_role_assignments/output",
+                  "type": "object",
+                  "properties": {
+                    "role_assignments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "principal": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "person"
+                                ],
+                                "description": "person, a person signed in"
+                              },
+                              "id": {
+                                "type": "string",
+                                "description": "The person’s id, as their sign-in names them"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Who holds the role"
+                          },
+                          "role": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "built_in"
+                                ],
+                                "description": "built_in, a role every release of Auto ships"
+                              },
+                              "id": {
+                                "type": "string",
+                                "description": "admin, editor or viewer"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The role"
+                          },
+                          "scope": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "org",
+                                  "playbook"
+                                ],
+                                "description": "org, the whole org, or playbook, one playbook"
+                              },
+                              "id": {
+                                "type": "string",
+                                "description": "The id of the org or of the playbook"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id"
+                            ],
+                            "additionalProperties": false,
+                            "description": "Where the role holds"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "manual",
+                              "invitation",
+                              "enrolment",
+                              "import",
+                              "command",
+                              "identity_service"
+                            ],
+                            "description": "How it was given: manual, by a person; invitation; enrolment, by joining from a claimed domain; import, from the roles people held when roles were first kept; command, by the runtime’s command; or identity_service"
+                          },
+                          "assigned_at": {
+                            "type": "string",
+                            "description": "When it was given, in ISO 8601"
+                          },
+                          "assigned_by": {
+                            "type": "string",
+                            "description": "The id of the caller who gave it"
+                          }
+                        },
+                        "required": [
+                          "principal",
+                          "role",
+                          "scope",
+                          "source",
+                          "assigned_at",
+                          "assigned_by"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The role assignments of the page, by person and then by where each holds"
+                    },
+                    "has_more": {
+                      "type": "boolean",
+                      "description": "Whether more remains to read after this page"
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The cursor that reads the page after this one, null when nothing remains"
+                    }
+                  },
+                  "required": [
+                    "role_assignments",
+                    "has_more",
+                    "next_cursor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/role-assignments/{person}/{role}": {
+      "put": {
+        "operationId": "assign_role",
+        "summary": "Assign role",
+        "description": "Gives a person of the org a role, admin, editor or viewer, in place of the role they held, and answers the roles they hold after it. A person signed in to Studio whose role lets them give roles gives it, never a role beyond their own, and never leaving the org without an admin.",
+        "tags": [
+          "role-assignments"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "person",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The person’s id, as their sign-in names them and list_role_assignments answers it"
+            }
+          },
+          {
+            "name": "role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "editor",
+                "viewer"
+              ],
+              "description": "admin, who manages the members; editor, who builds, runs and changes playbooks; or viewer, who views and comments"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/assign_role/output",
+                  "type": "object",
+                  "properties": {
+                    "principal": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "person"
+                          ],
+                          "description": "person, a person signed in"
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "The person’s id, as their sign-in names them"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "id"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Who holds the role"
+                    },
+                    "scope": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "org",
+                            "playbook"
+                          ],
+                          "description": "org, the whole org, or playbook, one playbook"
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the org or of the playbook"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "id"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Where the role holds"
+                    },
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "built_in"
+                            ],
+                            "description": "built_in, a role every release of Auto ships"
+                          },
+                          "id": {
+                            "type": "string",
+                            "description": "admin, editor or viewer"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "id"
+                        ],
+                        "additionalProperties": false,
+                        "description": "The role"
+                      },
+                      "description": "The roles the person holds there now, none or one"
+                    }
+                  },
+                  "required": [
+                    "principal",
+                    "scope",
+                    "roles"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "unassign_role",
+        "summary": "Unassign role",
+        "description": "Takes a role in the org away from a person, and answers the roles they hold after it, none where it was their one role. A person signed in to Studio whose role lets them give roles takes it away, never a role beyond their own, and never the org’s last admin.",
+        "tags": [
+          "role-assignments"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "person",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The person’s id, as their sign-in names them and list_role_assignments answers it"
+            }
+          },
+          {
+            "name": "role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "editor",
+                "viewer"
+              ],
+              "description": "admin, who manages the members; editor, who builds, runs and changes playbooks; or viewer, who views and comments"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/unassign_role/output",
+                  "type": "object",
+                  "properties": {
+                    "principal": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "person"
+                          ],
+                          "description": "person, a person signed in"
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "The person’s id, as their sign-in names them"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "id"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Who holds the role"
+                    },
+                    "scope": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "org",
+                            "playbook"
+                          ],
+                          "description": "org, the whole org, or playbook, one playbook"
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the org or of the playbook"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "id"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Where the role holds"
+                    },
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "built_in"
+                            ],
+                            "description": "built_in, a role every release of Auto ships"
+                          },
+                          "id": {
+                            "type": "string",
+                            "description": "admin, editor or viewer"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "id"
+                        ],
+                        "additionalProperties": false,
+                        "description": "The role"
+                      },
+                      "description": "The roles the person holds there now, none or one"
+                    }
+                  },
+                  "required": [
+                    "principal",
+                    "scope",
+                    "roles"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
             ]
           }
         ]

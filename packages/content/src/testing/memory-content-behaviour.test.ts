@@ -25,7 +25,7 @@ const expiringInMemory: ExpiringContentEntry = {
     return Promise.resolve({
       ...keeping,
       elsewhere: keeping,
-      bytesHeld: (playbook, sha256) => resultOf(store.holds(playbook, sha256)),
+      bytesHeld: (playbook, sha256) => resultOf(store.holds(memoryContentHeads().placeOfNewBytes(playbook), sha256)),
     });
   },
 };
@@ -36,6 +36,7 @@ const erasedInMemory: InterleavedErasureEntry = {
     const keeping = keptOutside(memoryContentHeads(), store);
     return Promise.resolve({ ...keeping, elsewhere: keeping });
   },
+  placeOf: memoryContentHeads().placeOfNewBytes,
 };
 
 describe('The content kept in memory', () => {

@@ -25,7 +25,7 @@ import { anErasingLedger, anErasingLedgerOutside, type LedgerEntry } from '../te
 import type { OpenChores } from '../testing/open-ledger.ts';
 import { ownExpiredRead } from './content-sweep.ts';
 import { chunksHeldIn, erasedChunksBehaviour } from './erased-chunks-behaviour.ts';
-import { expiredRead } from './external-heads.ts';
+import { expiredRead, placeOfNewBytesOf } from './external-heads.ts';
 
 function erasingOf({ ledger, eraseExpired }: OpenChores): ErasingLedger {
   return { ledger, eraseExpired };
@@ -60,7 +60,7 @@ function outsideExpiringEntry(entry: LedgerEntry): ExpiringContentEntry {
       return {
         ...keepingOf(here),
         elsewhere: keepingOf(elsewhere),
-        bytesHeld: (playbook, sha256) => resultOf(store.holds(playbook, sha256)),
+        bytesHeld: (playbook, sha256) => resultOf(store.holds(placeOfNewBytesOf(playbook), sha256)),
       };
     },
   };
@@ -159,6 +159,7 @@ export function expiredHeadsBehaviour(entry: LedgerEntry): void {
         const elsewhere = await anErasingLedgerOutside(entry, noteHolders, store, database);
         return { ...keepingOf(here), elsewhere: keepingOf(elsewhere) };
       },
+      placeOf: placeOfNewBytesOf,
     });
   });
   describe('the heads of the content that expires', () => {

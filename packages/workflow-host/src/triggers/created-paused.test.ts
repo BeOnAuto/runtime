@@ -2,7 +2,13 @@ import type { Trigger } from '@on.auto/definitions';
 import type { LedgerStreams } from '@on.auto/ledger';
 import { describe, expect, it } from 'vitest';
 
-import { pausesOf, startsReaching, triggerRowsOf, untilPaused } from '../reaction-testing/kept-triggers.ts';
+import {
+  pausesOf,
+  startsReaching,
+  triggerRowsOf,
+  untilPaused,
+  untilTriggersAt,
+} from '../reaction-testing/kept-triggers.ts';
 import { movedClock } from '../reaction-testing/moved-clock.ts';
 import {
   alpha,
@@ -62,7 +68,7 @@ async function scheduledBesideAWitness(trigger: Trigger) {
 describe('a workflow created paused with an every schedule', () => {
   it('has its trigger kept with no next due time from the moment it is created, and starts nothing at the times due', async () => {
     const { reacting, clock, witnessed } = await scheduledBesideAWitness(everyTrigger(aMinute));
-    const rows = await triggerRowsOf(reacting.database);
+    const rows = await untilTriggersAt(reacting.database, 'imported', 1);
     clock.moveTo(createdAt + aMinute);
     const atTheFirst = await witnessed(1);
     clock.moveTo(createdAt + 2 * aMinute);

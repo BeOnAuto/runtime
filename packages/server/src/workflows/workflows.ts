@@ -15,7 +15,8 @@ import {
   type ServedGoals,
   type ServedPages,
 } from '../composition/playbook-operations.ts';
-import { decisionPointServing } from '../composition/served-access-control.ts';
+import { runtimeLedger } from '../composition/runtime-ledger.ts';
+import { decisionPointServing, rolesServedFrom } from '../composition/served-access-control.ts';
 import { routesFor, type ServedCatalog } from '../composition/served-routes.ts';
 import type { Served } from '../server-options/server-options.ts';
 import { openedHost, type HostParts, type HostRuntime } from './host-dependencies.ts';
@@ -103,7 +104,8 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     parts.importsOver(capabilities),
   );
   const dispatched = { catalogs: [catalog, directoryCatalog], host: hostOperations };
-  const dispatcher = makeDispatcher([], { reportOnly: decisionPointServing(dispatched, shippedFiles) });
+  const roles = rolesServedFrom(runtimeLedger(runtime));
+  const dispatcher = makeDispatcher([], { reportOnly: decisionPointServing(dispatched, shippedFiles, roles) });
   const host = await openedHost(
     runtime,
     hostDispatchesOf(dispatcher, hostOperations),

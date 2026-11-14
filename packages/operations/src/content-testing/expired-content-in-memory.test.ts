@@ -6,6 +6,7 @@ import {
 } from '@on.auto/content/testing';
 import { describe } from 'vitest';
 
+import { streamPrefixOfPlaybook } from '../ledger/bound-ports.ts';
 import { memoryLedger } from '../testing/memory-ledger.ts';
 import { erasedContentBehaviour } from './erased-content-behaviour.ts';
 import { noteHolders } from './held-notes.ts';
@@ -25,7 +26,7 @@ describe('the in-memory ledger whose content expires', () => {
       return Promise.resolve({
         ...keeping,
         elsewhere: keeping,
-        bytesHeld: (playbook, sha256) => resultOf(store.holds(playbook, sha256)),
+        bytesHeld: (playbook, sha256) => resultOf(store.holds(streamPrefixOfPlaybook(playbook), sha256)),
       });
     },
   });
@@ -36,5 +37,6 @@ describe('the in-memory ledger whose content expires', () => {
       const keeping = { content: service.content, eraseExpired };
       return Promise.resolve({ ...keeping, elsewhere: keeping });
     },
+    placeOf: streamPrefixOfPlaybook,
   });
 });

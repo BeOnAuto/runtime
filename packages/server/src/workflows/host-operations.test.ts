@@ -1,4 +1,4 @@
-import { loadedMessage } from '@on.auto/access-control';
+import { editorRoleForEveryPerson, loadedMessage } from '@on.auto/access-control';
 import { echo } from '@on.auto/definitions/testing';
 import { makeDispatcher, playbookCallerOf, reportedDifferenceMessage, type PlaybookRequest } from '@on.auto/operations';
 import { capturedLogs, memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
@@ -37,7 +37,11 @@ describe('the operations the workflow host is handed', () => {
   it('are each declared to the decision point the server composes, so each dispatch the host is handed is decided as the check decides it', async () => {
     const host = hostOperationsOf([echo]);
     const reporting = makeDispatcher([], {
-      reportOnly: decisionPointServing({ catalogs: [], host }, shippedFilesOnDisk(shippedRoots)),
+      reportOnly: decisionPointServing(
+        { catalogs: [], host },
+        shippedFilesOnDisk(shippedRoots),
+        editorRoleForEveryPerson,
+      ),
     });
     const logs = capturedLogs();
 

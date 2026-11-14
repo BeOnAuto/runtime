@@ -43,6 +43,14 @@ function keyOf({ org, playbook }: ContentOwner, sha256: string): string {
   return JSON.stringify([org, playbook, sha256]);
 }
 
+function placeOf({ org, playbook }: ContentOwner): string {
+  return `playbook/${org}/${playbook}/`;
+}
+
+function keyAt(place: string, sha256: string): string {
+  return JSON.stringify([place, sha256]);
+}
+
 function readFrom(kept: KeptBytes | undefined): StreamedContent | undefined {
   return kept === undefined
     ? undefined
@@ -70,7 +78,7 @@ function stagedIn(kept: Map<string, KeptBytes>, key: string, chunks: Blob): Omit
 export function memoryContentStore(): ContentStore {
   const kept = new Map<string, KeptBytes>();
   return {
-    stage: (playbook, { stream, expected }) =>
+    stage: (place, { stream, expected }) =>
       Effect.gen(function* () {
         const chunks: Readonly<Uint8Array<ArrayBuffer>>[] = [];
         const taken = yield* takenInChunks(stream, mostContentChunkBytes, (chunk) =>
@@ -79,14 +87,14 @@ export function memoryContentStore(): ContentStore {
           }),
         );
         yield* requireExpected(expected, taken);
-        return { taken, ...stagedIn(kept, keyOf(playbook, taken.sha256), new Blob(chunks)) };
+        return { taken, ...stagedIn(kept, keyAt(place, taken.sha256), new Blob(chunks)) };
       }),
-    holds: (playbook, sha256) => Effect.sync(() => kept.has(keyOf(playbook, sha256))),
-    read: (playbook, sha256) => Effect.sync(() => readFrom(kept.get(keyOf(playbook, sha256)))),
-    readPart: (playbook, sha256, asked) => Effect.sync(() => partFrom(kept.get(keyOf(playbook, sha256)), asked)),
-    delete: (playbook, sha256) =>
+    holds: (place, sha256) => Effect.sync(() => kept.has(keyAt(place, sha256))),
+    read: (place, sha256) => Effect.sync(() => readFrom(kept.get(keyAt(place, sha256)))),
+    readPart: (place, sha256, asked) => Effect.sync(() => partFrom(kept.get(keyAt(place, sha256)), asked)),
+    delete: (place, sha256) =>
       Effect.sync(() => {
-        kept.delete(keyOf(playbook, sha256));
+        kept.delete(keyAt(place, sha256));
       }),
     sweepContent: () => Promise.resolve(),
   };
@@ -255,6 +263,9 @@ export function memoryContentHeads(heldIn: HeldIn = nothingHeld): ContentHeads {
     expired: (times, most) => Effect.sync(() => expiredIn(heads, times, most)),
     erasing: (playbook, sha256, times) => Effect.sync(() => erasingIn(heads, keyOf(playbook, sha256), times)),
     erased: (playbook, sha256, since) => Effect.sync(() => erasedIn(heads, keyOf(playbook, sha256), since)),
+    placeOfNewBytes: placeOf,
+    placesOf: (playbook) => Effect.succeed([placeOf(playbook)]),
+    placed: () => Effect.void,
   };
 }
 

@@ -26,6 +26,8 @@ import {
   type GenerationHarness,
 } from '../testing/index.ts';
 
+const alphaPlace = streamPrefixOfPlaybook(alpha);
+
 async function withAPicture(answering: GatewayAnswering = answeredByKind()): Promise<GenerationHarness> {
   const playbook = numberedHarness({ answering });
   await playbook.define('picture', imageSource);
@@ -149,7 +151,7 @@ describe('a reference to an asset the model cannot take', () => {
   it('is refused where the content of the asset is no longer kept', async () => {
     const playbook = await withAPicture();
     const row = await playbook.rowOf(assetIdOf(1));
-    await Effect.runPromise(playbook.store.delete(alpha, String(row?.sha256)));
+    await Effect.runPromise(playbook.store.delete(alphaPlace, String(row?.sha256)));
 
     expect(await issuesAt(playbook, { photo: assetIdOf(1) })).toEqual([
       { pointer: '/input/photo', detail: `The content of the asset ${assetIdOf(1)} is no longer kept` },

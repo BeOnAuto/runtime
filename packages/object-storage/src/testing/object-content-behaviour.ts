@@ -18,7 +18,7 @@ import {
   refusalOf,
   resultOf,
 } from '@on.auto/content/testing';
-import { randomUUIDv7 } from '@on.auto/operations';
+import { randomUUIDv7, streamPrefixOfPlaybook } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { objectContentOn } from '../content/object-content.ts';
@@ -27,6 +27,8 @@ import { objectStoreReached, ObjectStoreUnreachable } from '../s3/object-store-r
 import { bucketOnS3 } from '../s3/s3-bucket.ts';
 import type { ObjectStoreEntry, ObjectStoreUnderTest } from './object-store-entry.ts';
 import { keysIn, multipartUploadBegun, openUploadsIn, uploadWritten } from './test-object-store.ts';
+
+const alphaPlace = streamPrefixOfPlaybook(alpha);
 
 const longAgo = '00000000-0000-7000-8000-000000000001';
 
@@ -46,7 +48,7 @@ function keptOnObjects(entry: ObjectStoreEntry): void {
 
     await resultOf(contentOn(store).put(alpha, { ...generatedContent(), mediaType: json }));
     const kept = await keysIn(store.bucket, store.location.prefix);
-    const held = await bucketOnS3(store.bucket).head(keys.kept(alpha, sha256));
+    const held = await bucketOnS3(store.bucket).head(keys.kept(alphaPlace, sha256));
 
     expect(kept).toEqual([`${store.location.prefix}/playbook/acme/alpha/${sha256}`]);
     expect(held).toEqual({ bytes: 2_500_000, mediaType: json });
@@ -68,7 +70,7 @@ function keptOnObjects(entry: ObjectStoreEntry): void {
       const kept = await resultOf(content.put(alpha, { ...generatedContent(), mediaType: octets }));
 
       expect(kept).toEqual({ sha256, bytes, mediaType: json });
-      expect(await bucketOnS3(store.bucket).head(objectKeysOf(store.location).kept(alpha, sha256))).toEqual({
+      expect(await bucketOnS3(store.bucket).head(objectKeysOf(store.location).kept(alphaPlace, sha256))).toEqual({
         bytes,
         mediaType: json,
       });
@@ -82,10 +84,10 @@ function removedFromObjects(entry: ObjectStoreEntry): void {
     const objects = objectsOf(store);
     const { sha256 } = await resultOf(contentOn(store, objects).put(alpha, (await generated(2_500_000)).content()));
 
-    await resultOf(objects.delete(alpha, sha256));
+    await resultOf(objects.delete(alphaPlace, sha256));
 
     expect(await keysIn(store.bucket, store.location.prefix)).toEqual([]);
-    expect(await resultOf(objects.holds(alpha, sha256))).toBe(false);
+    expect(await resultOf(objects.holds(alphaPlace, sha256))).toBe(false);
   });
 }
 
@@ -97,7 +99,7 @@ function misfiledRead(entry: ObjectStoreEntry): void {
     const keys = objectKeysOf(store.location);
     const { sha256 } = await resultOf(content.put(alpha, (await generated(2_500_000)).content()));
     const misfiled = sha256Of('another content');
-    await bucket.put(keys.kept(alpha, misfiled), { copyOf: keys.kept(alpha, sha256), mediaType: octets });
+    await bucket.put(keys.kept(alphaPlace, misfiled), { copyOf: keys.kept(alphaPlace, sha256), mediaType: octets });
 
     const delivered = await deliveredBeforeFailing((await present(content.get(alpha, misfiled))).stream);
 

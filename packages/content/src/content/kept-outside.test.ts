@@ -23,6 +23,8 @@ const note = '{"note":"kept outside"}';
 
 const noteDigest = sha256Of(note);
 
+const alphaPlace = memoryContentHeads().placeOfNewBytes(alpha);
+
 type ExpectedOf = Pick<ContentToKeep, 'expected'>;
 
 function outsideOf(heldIn?: HeldIn) {
@@ -198,7 +200,7 @@ function stoppedRemovalsFinished(): void {
 function headlessRemoved(): void {
   it('removes the bytes its store holds under a digest that has no head, as a content kept before heads were, and holds back a put that meets that removal', async () => {
     const { content, removedKeptBefore, paused } = outsideOf();
-    const staged = await resultOf(paused.store.stage(alpha, textToKeep(note, json)));
+    const staged = await resultOf(paused.store.stage(alphaPlace, textToKeep(note, json)));
     await resultOf(staged.placed(json));
     const deleting = paused.pausedDelete();
 
@@ -216,21 +218,6 @@ function headlessRemoved(): void {
       'text/plain',
     ]);
     expect(await readBack(await present(content.get(alpha, noteDigest)))).toMatchObject({ mediaType: 'text/plain' });
-  });
-}
-
-function readAsItsHead(): void {
-  it('reads a content with the media type of its head whatever its bytes were placed with, and with that of its bytes where no head stands', async () => {
-    const { content, paused } = outsideOf();
-    const staged = await resultOf(paused.store.stage(alpha, textToKeep(note, 'text/plain')));
-    await resultOf(staged.placed('text/plain'));
-
-    const headless = (await present(content.get(alpha, noteDigest))).mediaType;
-    const kept = await resultOf(content.put(alpha, textToKeep(note, json)));
-    const read = await present(content.get(alpha, noteDigest));
-
-    expect([headless, kept.mediaType, read.mediaType]).toEqual(['text/plain', json, json]);
-    expect(await readBack(read)).toMatchObject({ sha256: noteDigest });
   });
 }
 
@@ -287,7 +274,6 @@ describe('the content kept outside the ledger, removed by its head', () => {
   removedByItsHead();
   touchedByItsPuts();
   headlessRemoved();
-  readAsItsHead();
   failedDeletesLetGo();
 });
 

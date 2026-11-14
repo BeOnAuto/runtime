@@ -28,6 +28,10 @@ permit (principal is LocalDeveloper, action, resource);
 @id("playbook-itself")
 permit (principal is Playbook, action, resource);
 
+@id("run-as-started")
+permit (principal is Person, action, resource)
+when { context.via == "run" };
+
 @id("own-org")
 forbid (principal, action, resource)
 unless { resource in context.granted.org };

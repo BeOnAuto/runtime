@@ -1,5 +1,11 @@
-import { cedarDecisionPoint, cedarModuleIn, editorRoleForEveryPerson } from '@on.auto/access-control';
-import type { Catalog, PolicyDecisionPoint, RouteRegistration } from '@on.auto/operations';
+import {
+  cedarDecisionPoint,
+  cedarModuleIn,
+  roleAssignmentsFrom,
+  type RoleAssignments,
+  type RoleSource,
+} from '@on.auto/access-control';
+import type { Catalog, PolicyDecisionPoint, ProjectionReader, RouteRegistration } from '@on.auto/operations';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 
 import { hostRegistrationsOf, type HostOperations } from '../workflows/host-operations.ts';
@@ -13,11 +19,21 @@ function operationsDispatched({ catalogs, host }: Dispatched): readonly RouteReg
   return [...catalogs.flatMap(({ operations }) => operations), ...hostRegistrationsOf(host)];
 }
 
-export function decisionPointServing(dispatched: Dispatched, shippedFiles: ShippedFiles): PolicyDecisionPoint {
+export const servedRoleSource: RoleSource = 'every_person_an_editor';
+
+export function rolesServedFrom(ledger: Pick<ProjectionReader, 'readProjectedRows'>): RoleAssignments {
+  return roleAssignmentsFrom(servedRoleSource, ledger);
+}
+
+export function decisionPointServing(
+  dispatched: Dispatched,
+  shippedFiles: ShippedFiles,
+  roles: RoleAssignments,
+): PolicyDecisionPoint {
   return cedarDecisionPoint({
     module: cedarModuleIn(shippedFiles),
     files: shippedFiles,
     operations: operationsDispatched(dispatched),
-    roles: editorRoleForEveryPerson,
+    roles,
   });
 }

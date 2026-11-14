@@ -11,7 +11,7 @@ import { spansIn, type ExportedSpan } from '../testing/telemetry/otlp-exports.ts
 import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
 import { startTelemetry } from './start-telemetry.ts';
 
-const alpha = { org: 'acme', playbook: 'alpha' };
+const alphaPlace = 'playbook/acme/alpha/';
 
 const decodeAddress = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
 
@@ -65,7 +65,7 @@ async function spansOfAReadOfNothing(): Promise<readonly ExportedSpan[]> {
   const telemetry = startTelemetry(readSettingsOf(environment).telemetry);
   const { reached, store } = await composedOn(environment);
   await Effect.runPromise(reached);
-  await Effect.runPromise(store.read(alpha, sha256Of('{"kept":false}')));
+  await Effect.runPromise(store.read(alphaPlace, sha256Of('{"kept":false}')));
   await telemetry.shutdown();
   return spansIn(receiver.received());
 }

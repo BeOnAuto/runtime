@@ -5,6 +5,9 @@ import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { aLedgerHolding, aLedgerOutside, type LedgerEntry } from '../testing/ledger-entry.ts';
+import { placeOfNewBytesOf } from './external-heads.ts';
+
+const alphaPlace = placeOfNewBytesOf(alpha);
 
 const keptAt = Date.parse('2026-11-01T09:00:00.000Z');
 
@@ -65,7 +68,7 @@ function outToAStore(entry: LedgerEntry): void {
     const removed = await at(keptAt + anHourAndMore, outside.removeUnheld(alpha, sha256Of(first)));
 
     expect([unread, keptAgain, removed]).toEqual([undefined, first, 'removed']);
-    expect(await resultOf(store.read(alpha, sha256Of(first)))).toBeUndefined();
+    expect(await resultOf(store.read(alphaPlace, sha256Of(first)))).toBeUndefined();
     expect(await headsOf(entry, database, first)).toEqual([]);
   });
 }

@@ -16,6 +16,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import type { ContentHolders } from '../held-content/content-declaration.ts';
+import { streamPrefixOfPlaybook } from '../ledger/bound-ports.ts';
 import type { LedgerPorts } from '../ledger/ledger.ts';
 import { anHour, firstNotes, kept, keptAt, noteHolders, noted } from './held-notes.ts';
 
@@ -147,7 +148,7 @@ function headlessRemoved(entry: InterleavedRemovalEntry): void {
   it('removes the bytes its store holds under a digest without a head, as a content kept before heads were, and holds back a put that meets that removal', async () => {
     const { ledger, paused } = await interleavedOn(entry);
     const large = await generated(2_500_000);
-    const staged = await resultOf(paused.store.stage(alpha, large.content()));
+    const staged = await resultOf(paused.store.stage(streamPrefixOfPlaybook(alpha), large.content()));
     await resultOf(staged.placed(octets));
     const deleting = paused.pausedDelete();
 

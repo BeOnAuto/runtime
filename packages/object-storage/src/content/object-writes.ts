@@ -2,7 +2,6 @@ import {
   mostContentChunkBytes,
   requireExpected,
   takenInChunks,
-  type ContentOwner,
   type ContentRefused,
   type ContentToKeep,
   type StagedContent,
@@ -44,7 +43,7 @@ function discardedFrom({ bucket, upload, writing }: Staged): Effect.Effect<void>
 
 export function stagedOn(
   { bucket, keys }: Placing,
-  playbook: ContentOwner,
+  place: string,
   { stream, mediaType, expected }: ContentToKeep,
 ): Effect.Effect<StagedContent, ContentRefused> {
   return Effect.suspend(() => {
@@ -54,7 +53,7 @@ export function stagedOn(
       const taken = yield* takenInChunks(stream, mostContentChunkBytes, writing.take);
       yield* writing.finished();
       yield* requireExpected(expected, taken);
-      const staged: Staged = { bucket, kept: keys.kept(playbook, taken.sha256), upload, writing };
+      const staged: Staged = { bucket, kept: keys.kept(place, taken.sha256), upload, writing };
       return {
         taken,
         placed: (placedAs: string) => placedFrom(staged, placedAs),

@@ -5,10 +5,13 @@ import { noteHolders } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { placeOfNewBytesOf } from './content/external-heads.ts';
 import { ledgerLayer } from './sqlite3.ts';
 import { openChoresWith } from './testing/open-ledger.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
+
+const alphaPlace = placeOfNewBytesOf(alpha);
 
 describe('a ledger given a content store of its own', () => {
   it('keeps its content there, reads it back from there, and sweeps that store when its chore is called', async () => {
@@ -29,7 +32,7 @@ describe('a ledger given a content store of its own', () => {
     onTestFinished(dispose);
 
     const kept = await Effect.runPromise(ledger.content.put(alpha, textToKeep('{}', 'application/json')));
-    const held = await Effect.runPromise(store.read(alpha, kept.sha256));
+    const held = await Effect.runPromise(store.read(alphaPlace, kept.sha256));
 
     expect(held).toMatchObject({ bytes: 2, mediaType: 'application/json' });
     expect(await Effect.runPromise(ledger.content.get(alpha, kept.sha256))).toMatchObject({ bytes: 2 });
@@ -49,6 +52,6 @@ describe('a ledger given a content store of its own', () => {
     const removed = await at(keptAt + keptContentGraceMs + 1, ledger.removeUnheld(alpha, sha256));
 
     expect(removed).toBe('removed');
-    expect(await Effect.runPromise(store.read(alpha, sha256))).toBeUndefined();
+    expect(await Effect.runPromise(store.read(alphaPlace, sha256))).toBeUndefined();
   });
 });

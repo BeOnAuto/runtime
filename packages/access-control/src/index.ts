@@ -1,11 +1,17 @@
+export { rolesImported } from './assignments/imported-role-assignments.ts';
+export { RoleAssignmentEventSchema } from './assignments/role-assignment-facts.ts';
+export { roleAssignmentRows } from './assignments/role-assignment-rows.ts';
 export {
   cedarDecisionPoint,
   loadedMessage,
   type CedarDecisionPointParts,
 } from './decision-point/cedar-decision-point.ts';
+export { cedarModuleBundled } from './engine/cedar-module-bundled.ts';
 export { cedarModuleIn } from './engine/cedar-module.ts';
 export type { CedarModuleSource } from './engine/cedar.ts';
 export { accessControlShippedRoots, cedarNoticeFiles } from './files/access-control-files.ts';
+export { roleAssignmentOperations } from './operations/role-assignment-operations.ts';
+export { roleAssignmentsFrom, type RoleSource } from './roles/recorded-role-assignments.ts';
 export {
   editorRoleForEveryPerson,
   type RoleAssignment,

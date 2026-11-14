@@ -2,6 +2,7 @@ import { Readable } from 'node:stream';
 
 import { textToKeep } from '@on.auto/content';
 import { alpha, deliveredBeforeFailing, octets, present, resultOf } from '@on.auto/content/testing';
+import { streamPrefixOfPlaybook } from '@on.auto/operations';
 import { sdkStreamMixin } from '@smithy/core/serde';
 import { Function } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -9,6 +10,8 @@ import { describe, expect, it } from 'vitest';
 import { storageWaits } from '../client/storage-client.ts';
 import { objectKeysOf } from '../location/object-keys.ts';
 import { fakeContentStore } from '../testing/fake-bucket.ts';
+
+const alphaPlace = streamPrefixOfPlaybook(alpha);
 
 const location = { bucket: 'content', prefix: 'playbooks' };
 
@@ -28,7 +31,7 @@ describe('a read on object storage whose store stops sending', () => {
     expect(delivered).toEqual({
       bytes: 0,
       failure: new Error(
-        `The object store sent no piece of ${objectKeysOf(location).kept(alpha, kept.sha256)} for 100 ms`,
+        `The object store sent no piece of ${objectKeysOf(location).kept(alphaPlace, kept.sha256)} for 100 ms`,
       ),
     });
     expect(silent.destroyed).toBe(true);

@@ -39,15 +39,11 @@ export interface StagedContent {
 }
 
 export interface ContentStore {
-  readonly stage: (playbook: ContentOwner, content: ContentToKeep) => Effect.Effect<StagedContent, ContentRefused>;
-  readonly holds: (playbook: ContentOwner, sha256: string) => Effect.Effect<boolean>;
-  readonly read: (playbook: ContentOwner, sha256: string) => Effect.Effect<StreamedContent | undefined>;
-  readonly readPart: (
-    playbook: ContentOwner,
-    sha256: string,
-    asked: AskedRange,
-  ) => Effect.Effect<ContentPart | undefined>;
-  readonly delete: (playbook: ContentOwner, sha256: string) => Effect.Effect<void>;
+  readonly stage: (place: string, content: ContentToKeep) => Effect.Effect<StagedContent, ContentRefused>;
+  readonly holds: (place: string, sha256: string) => Effect.Effect<boolean>;
+  readonly read: (place: string, sha256: string) => Effect.Effect<StreamedContent | undefined>;
+  readonly readPart: (place: string, sha256: string, asked: AskedRange) => Effect.Effect<ContentPart | undefined>;
+  readonly delete: (place: string, sha256: string) => Effect.Effect<void>;
   readonly sweepContent: (before: number) => Promise<void>;
 }
 
@@ -110,4 +106,7 @@ export interface ContentHeads {
   readonly expired: (times: ErasureTimes, most: number) => Effect.Effect<readonly ExpiredContent[]>;
   readonly erasing: (playbook: ContentOwner, sha256: string, times: ErasureTimes) => Effect.Effect<number | undefined>;
   readonly erased: (playbook: ContentOwner, sha256: string, since: number) => Effect.Effect<boolean>;
+  readonly placeOfNewBytes: (playbook: ContentOwner) => string;
+  readonly placesOf: (playbook: ContentOwner, sha256: string) => Effect.Effect<readonly string[]>;
+  readonly placed: (playbook: ContentOwner, sha256: string, place: string) => Effect.Effect<void>;
 }

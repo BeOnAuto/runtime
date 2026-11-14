@@ -71,12 +71,12 @@ export function pausableStore(store: ContentStore): PausableStore {
   return {
     store: {
       ...store,
-      stage: (playbook, content) =>
-        Effect.map(store.stage(playbook, content), (staged) => ({
+      stage: (place, content) =>
+        Effect.map(store.stage(place, content), (staged) => ({
           ...staged,
           placed: (mediaType: string) => places.through(staged.placed(mediaType)),
         })),
-      delete: (playbook, sha256) => deletes.through(store.delete(playbook, sha256)),
+      delete: (place, sha256) => deletes.through(store.delete(place, sha256)),
     },
     pausedDelete: deletes.next,
     pausedPlace: places.next,

@@ -354,6 +354,10 @@
       "sql": "CREATE INDEX recorded_content_heads_expiring ON recorded_content_heads (expires_at) WHERE expires_at IS NOT NULL"
     },
     {
+      "name": "role_assignments_1",
+      "sql": "CREATE TABLE role_assignments_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, child_key TEXT NOT NULL, principal_type TEXT, principal_id TEXT, role_type TEXT, role_id TEXT, scope_type TEXT, scope_id TEXT, source TEXT, assigned_at TEXT, assigned_by TEXT, PRIMARY KEY (playbook_key, row_key, child_key))"
+    },
+    {
       "name": "run_outcomes_5",
       "sql": "CREATE TABLE run_outcomes_5 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, started_day TEXT, started_at TEXT, last_started_at TEXT, definition_type TEXT, name TEXT, status TEXT, duration_ms INTEGER, input_tokens INTEGER, output_tokens INTEGER, cached_tokens INTEGER, cost_micro_usd INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },

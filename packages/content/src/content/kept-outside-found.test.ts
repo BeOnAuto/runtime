@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { alpha, at, json, resultOf } from '../testing/content-samples.ts';
+import { alpha, at, json, present, readBack, resultOf } from '../testing/content-samples.ts';
 import { keptTextOf } from '../testing/kept-text.ts';
 import { memoryContentHeads, memoryContentStore } from '../testing/memory-content.ts';
 import { sha256Of } from './content-digest.ts';
@@ -15,15 +15,17 @@ const note = '{"note":"found where a read finds it"}';
 
 const noteDigest = sha256Of(note);
 
+const alphaPlace = memoryContentHeads().placeOfNewBytes(alpha);
+
 function counted(store: ContentStore): { readonly store: ContentStore; readonly asked: () => number } {
   let asked = 0;
   return {
     store: {
       ...store,
-      holds: (playbook, sha256) =>
+      holds: (place, sha256) =>
         Effect.suspend(() => {
           asked += 1;
-          return store.holds(playbook, sha256);
+          return store.holds(place, sha256);
         }),
     },
     asked: () => asked,
@@ -34,7 +36,7 @@ describe('a content kept outside the ledger, as it is found', () => {
   it('is found where its store holds its bytes, whatever head stands, as a read reads it, and is not found where the store holds none', async () => {
     const store = memoryContentStore();
     const outside = keptOutside(memoryContentHeads(), store);
-    const staged = await resultOf(store.stage(alpha, textToKeep(note, json)));
+    const staged = await resultOf(store.stage(alphaPlace, textToKeep(note, json)));
     await resultOf(staged.placed(json));
 
     const headless = await resultOf(outside.found(alpha, noteDigest));
@@ -56,5 +58,19 @@ describe('a content kept outside the ledger, as it is found', () => {
 
     expect([found, asked() - before]).toEqual([true, 0]);
     expect(await keptTextOf(outside.content, alpha, noteDigest)).toBeUndefined();
+  });
+
+  it('reads a content with the media type of its head whatever its bytes were placed with, and with that of its bytes where no head stands', async () => {
+    const store = memoryContentStore();
+    const { content } = keptOutside(memoryContentHeads(), store);
+    const staged = await resultOf(store.stage(alphaPlace, textToKeep(note, 'text/plain')));
+    await resultOf(staged.placed('text/plain'));
+
+    const headless = (await present(content.get(alpha, noteDigest))).mediaType;
+    const kept = await resultOf(content.put(alpha, textToKeep(note, json)));
+    const read = await present(content.get(alpha, noteDigest));
+
+    expect([headless, kept.mediaType, read.mediaType]).toEqual(['text/plain', json, json]);
+    expect(await readBack(read)).toMatchObject({ sha256: noteDigest });
   });
 });

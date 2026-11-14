@@ -1,6 +1,12 @@
 import { sha256Of, type ContentOwner, type ContentStore, type Digested, type RecordedContent } from '@on.auto/content';
 import { memoryContentStore } from '@on.auto/content/testing';
-import type { Context, Decider, Lineage, StreamWriter } from '@on.auto/operations';
+import {
+  streamPrefixOfPlaybook,
+  type Context,
+  type Decider,
+  type Lineage,
+  type StreamWriter,
+} from '@on.auto/operations';
 import {
   PayloadErased,
   jsonPayloadText,
@@ -56,7 +62,7 @@ export function keptLongBeforeAndLost(
 ): Effect.Effect<Digested> {
   return TestClock.setTime(longBefore).pipe(
     Effect.andThen(keptIn(content, owner, value)),
-    Effect.tap(({ sha256 }) => store.delete(owner, sha256)),
+    Effect.tap(({ sha256 }) => store.delete(streamPrefixOfPlaybook(owner), sha256)),
     Effect.provide(TestClock.layer()),
   );
 }
@@ -74,21 +80,21 @@ const noAnswer = Effect.die(new Error('The bucket did not answer'));
 export function watchedStore(): WatchedStore {
   const store = memoryContentStore();
   const watched = { reads: 0, failing: false, failingPuts: false, lost: false };
-  const readOf: ContentStore['read'] = (owner, sha256) => {
+  const readOf: ContentStore['read'] = (place, sha256) => {
     if (watched.failing) {
       return noAnswer;
     }
-    return watched.lost ? Effect.undefined : store.read(owner, sha256);
+    return watched.lost ? Effect.undefined : store.read(place, sha256);
   };
   return {
     store: {
       ...store,
-      read: (owner, sha256) =>
+      read: (place, sha256) =>
         Effect.suspend(() => {
           watched.reads += 1;
-          return readOf(owner, sha256);
+          return readOf(place, sha256);
         }),
-      stage: (owner, content) => Effect.suspend(() => (watched.failingPuts ? noAnswer : store.stage(owner, content))),
+      stage: (place, content) => Effect.suspend(() => (watched.failingPuts ? noAnswer : store.stage(place, content))),
     },
     reads: () => watched.reads,
     fail: () => {

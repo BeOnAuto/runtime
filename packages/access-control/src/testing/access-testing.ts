@@ -41,7 +41,7 @@ function declared(
   };
 }
 
-const listConnections = declared('org', 'query', 'list_connections', { permissions: ['org:read'] });
+export const listConnections = declared('org', 'query', 'list_connections', { permissions: ['org:read'] });
 
 export const listPlaybooks = declared('org', 'query', 'list_playbooks', { permissions: ['org:read', 'playbook:read'] });
 

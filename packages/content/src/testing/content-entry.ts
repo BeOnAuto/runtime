@@ -32,4 +32,5 @@ export interface ExpiringContentEntry {
 export interface InterleavedErasureEntry {
   readonly aStore: () => Promise<ContentStore>;
   readonly aKeeping: (store: ContentStore) => Promise<ErasingContentTwice>;
+  readonly placeOf: (owner: ContentOwner) => string;
 }

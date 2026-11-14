@@ -66,6 +66,8 @@ const headColumns = SQL.plain(
 
 const takenOverColumns = ['bytes', 'chunks', 'media_type', 'kept_in'];
 
+export const placeOfNewBytesOf: (playbook: ContentOwner) => string = streamPrefixOfPlaybook;
+
 function theDigest(playbook: ContentOwner, sha256: string): SQL {
   return SQL`playbook_key = ${streamPrefixOfPlaybook(playbook)} AND sha256 = ${sha256}`;
 }
@@ -284,5 +286,8 @@ export function externalHeadsOn(execute: ReturningExecutor, unlessHeld: UnlessHe
     expired: (times, most) => expiredBy(execute, times, most),
     erasing: (playbook, sha256, times) => erasingBy(execute, theDigest(playbook, sha256), times),
     erased: (playbook, sha256, since) => erasedBy(execute, playbook, sha256, since),
+    placeOfNewBytes: placeOfNewBytesOf,
+    placesOf: (playbook) => Effect.succeed([placeOfNewBytesOf(playbook)]),
+    placed: () => Effect.void,
   };
 }

@@ -6,6 +6,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { sha256Of, textOfContent, textToKeep } from '@on.auto/content';
 import { alpha, generated, octets, present, resultOf } from '@on.auto/content/testing';
+import { streamPrefixOfPlaybook } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -13,6 +14,8 @@ import { objectKeysOf } from '../location/object-keys.ts';
 import { bucketOnS3, uploadPartBytes } from '../s3/s3-bucket.ts';
 import { fakeContentStore, type FakeContentStore } from '../testing/fake-bucket.ts';
 import { openUploadsIn } from '../testing/test-object-store.ts';
+
+const alphaPlace = streamPrefixOfPlaybook(alpha);
 
 const location = { bucket: 'content', prefix: 'playbooks' };
 
@@ -39,7 +42,7 @@ function objectWritten(store: FakeContentStore, key: string, body?: string): Pro
 describe('a read on object storage', () => {
   it('answers nothing for a digest the playbook does not hold, and the default media type for an object kept without one', async () => {
     const store = fakeContentStore(location);
-    await objectWritten(store, keys.kept(alpha, sha256Of('bare')), 'bare');
+    await objectWritten(store, keys.kept(alphaPlace, sha256Of('bare')), 'bare');
 
     const read = await present(store.content.get(alpha, sha256Of('bare')));
 
@@ -52,7 +55,7 @@ describe('a read on object storage', () => {
     const kept = await resultOf(store.content.put(alpha, textToKeep('kept', octets)));
     const removal = new DeleteObjectsCommand({
       Bucket: location.bucket,
-      Delete: { Objects: [{ Key: keys.kept(alpha, kept.sha256) }] },
+      Delete: { Objects: [{ Key: keys.kept(alphaPlace, kept.sha256) }] },
     });
     store.bucket.intercepting('GetObjectCommand', async (asked) => {
       await store.client().send(removal);
@@ -65,7 +68,7 @@ describe('a read on object storage', () => {
   it('fails as a defect when the store answers an object without its body or its size', async () => {
     const store = fakeContentStore(location);
     const kept = await resultOf(store.content.put(alpha, textToKeep('kept', octets)));
-    const key = keys.kept(alpha, kept.sha256);
+    const key = keys.kept(alphaPlace, kept.sha256);
     answeredWithout(store, 'GetObjectCommand', 'Body');
     answeredWithout(store, 'GetObjectCommand', 'ContentLength');
     answeredWithout(store, 'HeadObjectCommand', 'ContentLength');

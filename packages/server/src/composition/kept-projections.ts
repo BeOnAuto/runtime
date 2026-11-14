@@ -1,11 +1,12 @@
+import { roleAssignmentRows } from '@on.auto/access-control';
 import { activityProjections } from '@on.auto/activity';
 import { definitionsReadModel } from '@on.auto/definitions';
 import { assets, assetTotals, generationsWaiting } from '@on.auto/generation';
 import { goalsLedger } from '@on.auto/goals';
 import { conversations, openRequests, readings, tellings } from '@on.auto/interaction';
-import type { KeyedProjection, StreamProjection } from '@on.auto/operations';
+import type { KeptProjection, StreamProjection } from '@on.auto/operations';
 
-export const keptProjections: readonly KeyedProjection[] = [
+export const keptProjections: readonly KeptProjection[] = [
   openRequests,
   conversations,
   readings,
@@ -15,6 +16,7 @@ export const keptProjections: readonly KeyedProjection[] = [
   assetTotals,
   generationsWaiting,
   ...goalsLedger.projections,
+  roleAssignmentRows,
 ];
 
 export const keptStreamProjections: readonly StreamProjection[] = [definitionsReadModel];
