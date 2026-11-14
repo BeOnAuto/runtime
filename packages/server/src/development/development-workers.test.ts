@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { developmentFiles, startDevelopment, untilListening } from '../testing/processes/development-process.ts';
 import { request, type TestResponse } from '../testing/servers/http-client.ts';
+import { givenGoals } from '../testing/settings/goals-kept.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const meetings = '/v1/orgs/local/playbooks/meetings';
@@ -50,7 +51,7 @@ describe('the functions pnpm dev serves in worker threads', () => {
     const call = (method: string, path: string, body?: unknown): Promise<TestResponse> =>
       request(port, method, path, { body });
 
-    await call('POST', '/v1/orgs/local/playbooks', { playbook: 'meetings', name: 'Meetings' });
+    await call('POST', '/v1/orgs/local/playbooks', { playbook: 'meetings', name: 'Meetings', goals: givenGoals });
     await call('POST', `${meetings}/definitions/computation`, { name: 'echo', source: echo, diagram: 'none' });
     const echoed = await call('POST', `${meetings}/definitions/computation/echo/run`, { input: { said: 'hello' } });
     expect(echoed.body).toMatchObject({ status: 'succeeded', output: { said: 'hello' } });

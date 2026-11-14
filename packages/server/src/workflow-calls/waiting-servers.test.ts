@@ -7,7 +7,7 @@ import { requestTo, settledOver, workflowProcess, type Answer } from '../testing
 import { readOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { workflows } from '../testing/servers/workflow-calls.ts';
-import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
+import { runIdIn, workflowSource, contributing, givenGoals } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const Listed = Schema.Struct({ runs: Schema.Array(Schema.Struct({ run_id: Schema.String })) });
@@ -27,9 +27,15 @@ function sourceOf(name: string): string {
 }
 
 async function definedOn(port: number): Promise<void> {
-  await requestTo(port, 'POST', '', { playbook: 'beta', name: 'Beta' });
-  await requestTo(port, 'POST', '/beta/definitions/workflow', { name: 'pending', source: sourceOf('pending') });
-  await requestTo(port, 'POST', '/beta/definitions/workflow', { name: 'waiting', source: sourceOf('waiting') });
+  await requestTo(port, 'POST', '', { playbook: 'beta', name: 'Beta', goals: givenGoals });
+  await requestTo(port, 'POST', '/beta/definitions/workflow', {
+    name: 'pending',
+    source: contributing(sourceOf('pending')),
+  });
+  await requestTo(port, 'POST', '/beta/definitions/workflow', {
+    name: 'waiting',
+    source: contributing(sourceOf('waiting')),
+  });
 }
 
 function callStatesIn(file: string): () => Promise<readonly unknown[]> {

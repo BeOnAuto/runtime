@@ -52,9 +52,9 @@ runtime_start "$container" "" DO_NOT_TRACK=1 API_KEYS DATABASE_URL SECRETS_KEY
 wait_for_health
 test "$(answered created.json --max-time 10 \
   --header "authorization: Bearer $key" --header 'content-type: application/json' \
-  --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
+  --data "$smoke_playbook" http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
 read_playbook before-restart.json
-test "$(jq --compact-output 'del(.studio)' created.json)" = "$(jq --compact-output . before-restart.json)"
+test "$(jq --compact-output 'del(.studio, .before_building)' created.json)" = "$(jq --compact-output . before-restart.json)"
 runtime_stop "$container"
 if [ "$smoke_backend" = docker ]; then
   docker start "$container"

@@ -33,11 +33,11 @@ runtime_volume "$volume"
 start_server "$first"
 test "$(answered created.json \
   --header "authorization: Bearer $key" --header 'content-type: application/json' \
-  --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
+  --data "$smoke_playbook" http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
 read_playbook before-restart.json
 grep --quiet '"id":"smoke"' before-restart.json
-test "$(jq --compact-output 'del(.studio)' created.json)" = "$(jq --compact-output . before-restart.json)"
-test "$(jq --raw-output .studio created.json)" = "https://studio.on.auto/?server=http%3A%2F%2F127.0.0.1%3A$port&src=agent&playbook=smoke"
+test "$(jq --compact-output 'del(.studio, .before_building)' created.json)" = "$(jq --compact-output . before-restart.json)"
+test "$(jq --raw-output .studio created.json)" = "https://studio.on.auto/?server=http%3A%2F%2F127.0.0.1%3A$port&src=agent&playbook=smoke&goal=kept-going"
 stop_server "$first"
 start_server "$second"
 read_playbook after-restart.json

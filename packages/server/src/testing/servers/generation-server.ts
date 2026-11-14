@@ -11,10 +11,10 @@ import {
 } from '@on.auto/generation/testing';
 import { onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../../composition/composition-root.ts';
 import { tcpPort } from '../../lifecycle/http-server.ts';
 import { startServer } from '../../lifecycle/lifecycle.ts';
 import type { TemporaryLedger } from '../records/temporary-ledger.ts';
+import { compositionRootWithoutGoals } from './composition-without-goals.ts';
 import { request, type RequestOptions, type TestResponse } from './http-client.ts';
 import { loopbackSettingsOver } from './reasoning-server.ts';
 
@@ -117,7 +117,7 @@ export async function servingGeneration(
 ): Promise<GenerationServer> {
   const server = await startServer(
     { ...loopbackSettingsOver(ledger), MODEL_GATEWAYS: gateway.gateways },
-    compositionRoot,
+    compositionRootWithoutGoals,
   );
   return {
     origin: `http://127.0.0.1:${server.port}`,

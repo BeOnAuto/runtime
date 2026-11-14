@@ -7,7 +7,7 @@ import { shutdownTimeoutMs } from '../lifecycle/shutdown.ts';
 import { gatewayThatHangsAfterATool } from '../testing/processes/tool-gateway.ts';
 import { requestTo, settledOver, workflowProcess } from '../testing/processes/workflow-process.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
+import { runIdIn, workflowSource, contributing, givenGoals } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const ledger = temporaryLedger();
@@ -34,7 +34,10 @@ const decodeHistory = Schema.decodeUnknownSync(
 type Starting = (port: number, playbook: string) => Promise<string>;
 
 const throughAWorkflow: Starting = async (port, playbook) => {
-  await requestTo(port, 'POST', `/${playbook}/definitions/workflow`, { name: 'summarizing', source: summarizing });
+  await requestTo(port, 'POST', `/${playbook}/definitions/workflow`, {
+    name: 'summarizing',
+    source: contributing(summarizing),
+  });
   const started = await requestTo(port, 'POST', `/${playbook}/definitions/workflow/summarizing/run`, { input: {} });
   return runIdIn(started.body);
 };
@@ -65,7 +68,7 @@ async function killedWhileItCalledItsModel(playbook: string, recordContent: bool
   };
   const first = workflowProcess(ledger.fileName, environment);
   const port = await first.port;
-  await requestTo(port, 'POST', '', { playbook, name: 'Resuming' });
+  await requestTo(port, 'POST', '', { playbook, name: 'Resuming', goals: givenGoals });
   await requestTo(port, 'POST', `/${playbook}/definitions/reasoning`, {
     name: 'summary',
     source: summary,
@@ -160,7 +163,7 @@ describe('a reasoning run whose server stops while the run calls a tool', () => 
     };
     const first = workflowProcess(ledger.fileName, environment);
     const port = await first.port;
-    await requestTo(port, 'POST', '', { playbook: 'delta', name: 'Stopping' });
+    await requestTo(port, 'POST', '', { playbook: 'delta', name: 'Stopping', goals: givenGoals });
     await requestTo(port, 'POST', '/delta/definitions/reasoning', {
       name: 'waiting',
       source: sleeping,

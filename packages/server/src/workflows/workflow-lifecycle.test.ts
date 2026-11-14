@@ -12,6 +12,7 @@ import {
 } from '../testing/processes/workflow-process.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
+import { contributing, givenGoals } from '../testing/settings/goals-kept.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const ledger = temporaryLedger();
@@ -84,10 +85,16 @@ describe('a server started again on the ledger of its workflows', () => {
   it('goes on with a run that waits for an event, and with ones whose timers went off while it was stopped, the fire of each caused by the record that armed it', async () => {
     const first = workflowProcess(ledger.fileName);
     const firstPort = await first.port;
-    await requestTo(firstPort, 'POST', '', { playbook: 'gamma', name: 'Gamma' });
-    await requestTo(firstPort, 'POST', '/gamma/definitions/workflow', { name: 'approval', source: approval });
-    await requestTo(firstPort, 'POST', '/gamma/definitions/workflow', { name: 'pausing', source: pausing });
-    await requestTo(firstPort, 'POST', '/gamma/definitions/workflow', { name: 'timing', source: timing });
+    await requestTo(firstPort, 'POST', '', { playbook: 'gamma', name: 'Gamma', goals: givenGoals });
+    await requestTo(firstPort, 'POST', '/gamma/definitions/workflow', {
+      name: 'approval',
+      source: contributing(approval),
+    });
+    await requestTo(firstPort, 'POST', '/gamma/definitions/workflow', {
+      name: 'pausing',
+      source: contributing(pausing),
+    });
+    await requestTo(firstPort, 'POST', '/gamma/definitions/workflow', { name: 'timing', source: contributing(timing) });
     const waiting = await requestTo(firstPort, 'POST', '/gamma/definitions/workflow/approval/run', { input: {} });
     const paused = await requestTo(firstPort, 'POST', '/gamma/definitions/workflow/pausing/run', { input: {} });
     const timed = await requestTo(firstPort, 'POST', '/gamma/definitions/workflow/timing/run', { input: {} });

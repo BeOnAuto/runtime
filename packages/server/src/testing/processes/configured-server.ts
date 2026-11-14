@@ -7,6 +7,7 @@ import { onTestFinished } from 'vitest';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
 import { request, type TestResponse } from '../servers/http-client.ts';
 import { alpha } from '../servers/reasoning-server.ts';
+import { givenGoals } from '../settings/goals-kept.ts';
 import { spawnServer, type SpawnedServer } from './spawned-server.ts';
 
 const mainModule = fileURLToPath(new URL('../../main.ts', import.meta.url));
@@ -50,7 +51,10 @@ export function configuredServer(
 
 export async function rejectedRun(port: number, key?: string): Promise<TestResponse> {
   const caller = key === undefined ? {} : { key };
-  await request(port, 'POST', '/v1/orgs/acme/playbooks', { ...caller, body: { playbook: 'alpha', name: 'Alpha' } });
+  await request(port, 'POST', '/v1/orgs/acme/playbooks', {
+    ...caller,
+    body: { playbook: 'alpha', name: 'Alpha', goals: givenGoals },
+  });
   await request(port, 'POST', `${alpha}/definitions/reasoning`, {
     ...caller,
     body: { name: 'verdict', source: verdict, diagram: 'none' },

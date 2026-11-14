@@ -1,7 +1,13 @@
 import { Schema } from 'effect';
 
 import { shownEndpoints, type ShownEndpoint } from '../../debug/agent-surface.ts';
-import { instructionsActingAs, instructionsFor, type ActingAs, type ServedTools } from '../../mcp/instructions.ts';
+import {
+  instructionsActingAs,
+  instructionsFor,
+  type ActingAs,
+  type InstructionsKept,
+  type ServedTools,
+} from '../../mcp/instructions.ts';
 import { plainTextIn, textOf, withMcpSession, type McpSession } from '../mcp-clients.ts';
 import { guideToolName } from '../tool-listing.ts';
 
@@ -17,6 +23,7 @@ export interface Reading {
   readonly playbook: string;
   readonly actingAs: ActingAs;
   readonly firstCalls: readonly FirstCall[];
+  readonly kept?: InstructionsKept;
 }
 
 interface PromptArgument {
@@ -129,12 +136,12 @@ function instructionsShownOf(
   served: string | undefined,
   { endpoint, path }: ShownEndpoint,
   tools: readonly ServedTool[],
-  actingAs: ActingAs,
+  { actingAs, kept = {} }: Pick<Reading, 'actingAs' | 'kept'>,
 ): string {
-  if (served !== instructionsActingAs(actingAs, endpoint, servedToolsOf(tools))) {
+  if (served !== instructionsActingAs(actingAs, endpoint, servedToolsOf(tools), kept)) {
     throw new Error(`The instructions served on ${path} are not the ones /debug shows with the caller's sentence`);
   }
-  return instructionsFor(endpoint, servedToolsOf(tools));
+  return instructionsFor(endpoint, servedToolsOf(tools), kept);
 }
 
 function placeholdersFor(listed: ListedPrompt): Readonly<Record<string, string>> {
@@ -181,7 +188,7 @@ function connectionRead(reading: Reading, shown: ShownEndpoint): Promise<ServedC
     return {
       endpoint: shown.endpoint,
       path: shown.path,
-      instructions: instructionsShownOf(session.instructions, shown, tools, reading.actingAs),
+      instructions: instructionsShownOf(session.instructions, shown, tools, reading),
       listing,
       tools,
       prompts: await promptsOf(session),

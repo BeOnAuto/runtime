@@ -10,7 +10,7 @@ import {
   welcomingStarted,
 } from '../testing/processes/workflow-process.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
+import { runIdIn, workflowSource, contributing, givenGoals } from '../testing/servers/workflow-server.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 import { longerThanTheTestMs } from '../testing/waiting/until.ts';
 import { startServer } from './lifecycle.ts';
@@ -35,8 +35,11 @@ function composedWithALongShutdown(environment: Readonly<Record<string, string>>
 describe('the composition of main, started in the process with a shutdown timeout longer than the test', () => {
   it('stops after a workflow ran, closing the keep-alive connection left idle, without waiting for the timeout', async () => {
     const server = await composedWithALongShutdown();
-    await requestTo(server.port, 'POST', '', { playbook: 'alpha', name: 'Alpha' });
-    await requestTo(server.port, 'POST', '/alpha/definitions/workflow', { name: 'greeting', source: greeting });
+    await requestTo(server.port, 'POST', '', { playbook: 'alpha', name: 'Alpha', goals: givenGoals });
+    await requestTo(server.port, 'POST', '/alpha/definitions/workflow', {
+      name: 'greeting',
+      source: contributing(greeting),
+    });
     const started = await requestTo(server.port, 'POST', '/alpha/definitions/workflow/greeting/run', {
       input: { name: 'Ada' },
     });

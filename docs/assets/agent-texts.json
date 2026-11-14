@@ -23,7 +23,7 @@
       ]
     },
     {
-      "sha256": "e140672a446193af8d44fcbfffde68f81d136e64678473321784a9c80392575a",
+      "sha256": "7840ed1e77ad1262f627a5434f9766b3753bdbf935706a32a8d00148acf5f2ab",
       "tier": 1,
       "received": [
         {
@@ -35,7 +35,7 @@
         }
       ],
       "lines": [
-        "Before you build or change anything, read the guide start with get_guide: it says which function type each part of a job takes. Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order. A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. The org is the caller's own: list_playbooks shows its playbooks and create_playbook makes one. A tool that cannot do what was asked says why and what to change."
+        "Before you build or change anything, read the guide start with get_guide: it says which function type each part of a job takes. Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order. A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. The org is the caller's own: list_playbooks shows its playbooks and create_playbook makes one. Ask the person each question through your client's question tool where it has one. A tool that cannot do what was asked says why and what to change."
       ]
     },
     {
@@ -56,7 +56,7 @@
       ]
     },
     {
-      "sha256": "176fdb81bb9578ee6d6c546b29957a3558866261934b55caf3235fb9a2d55ce9",
+      "sha256": "d6e211ccc5e59758d3402de3867e2ed8fd16a320dbf0cea72715322b4b3b6871",
       "tier": 1,
       "received": [
         {
@@ -69,7 +69,7 @@
         }
       ],
       "lines": [
-        "Creates a playbook for one business responsibility, and returns it empty. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. Each job it does again and again is a workflow, and each part of a job a function of the type that part needs. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words."
+        "First ask the person what this playbook should achieve for them and how they will know it worked (a number, a target, their words for a pass and a fail). Say the goals back and send them as `goals` only after their yes, as the goals guide says; without goals it is refused with the question to ask. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words. It starts empty: show the person the `studio` link it answers and change the goals with update_playbook until they say yes to them as saved; build nothing before that yes."
       ]
     },
     {
@@ -172,6 +172,31 @@
       ]
     },
     {
+      "sha256": "287f96097011792627d978fba7404915155b74bf271c2c813c17d62e79a0331c",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool create_playbook: argument goals",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/mcp",
+            "/directory"
+          ]
+        },
+        {
+          "as": "tool update_playbook: argument goals",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The whole list of the playbook's goals as YAML text, as the goals guide says, in the person's words: what it should achieve and how success is judged"
+      ]
+    },
+    {
       "sha256": "77a53a2530b8236e77e4132d5ea71d56e56464a080008d0658248ddcaf0645c4",
       "tier": 1,
       "received": [
@@ -189,7 +214,7 @@
       ]
     },
     {
-      "sha256": "ceafd8de3c40a54b904d6cfd47be902aba3a6537e7a54a80f29a592212299b4d",
+      "sha256": "00d3cbc54cabac6e3663283f5ee732544a24def251748e26921c0af8056210b4",
       "tier": 1,
       "received": [
         {
@@ -202,7 +227,7 @@
         }
       ],
       "lines": [
-        "Use it when the person speaks of their playbooks, or wants something done that one of them may cover. Lists the playbooks of the org that the caller may access, sorted by id. Each holds every field of the playbook, such as its name, what it is for and whether it is active."
+        "Before you make anything for the person, ask what it should achieve for them and how they will know it worked, as the goals guide says. Use it when the person speaks of their playbooks, or wants something done that one of them may cover. Lists the playbooks of the org that the caller may access, sorted by id. Each holds every field of the playbook, such as its name, what it is for and whether it is active."
       ]
     },
     {
@@ -240,7 +265,7 @@
       ]
     },
     {
-      "sha256": "783a35853b82ec1d6263251e314a232da5169e82e5c9a173767732e1d5c7f953",
+      "sha256": "bfb2fbaabf9ddf21d4980673a8e5c4337ecc1e1fa1a6296b95d6d9331dedfb43",
       "tier": 1,
       "received": [
         {
@@ -253,7 +278,7 @@
         }
       ],
       "lines": [
-        "Reads one playbook by its id, active or retired, with the source of its page. Use it to read the playbook's page, or a playbook whose id is known; list_playbooks finds the others. `playbook` is its id."
+        "Reads one playbook by its id, active or retired, with its goals, what they still lack and the source of its page. Use it to read the playbook's goals or page, or a playbook whose id is known; list_playbooks finds the others. `goals.gaps` says what to ask the person or put right, and a playbook with no goals needs them before a workflow is saved in it. `playbook` is its id."
       ]
     },
     {
@@ -274,7 +299,7 @@
       ]
     },
     {
-      "sha256": "1f0cbdd952af3e4d43098cb600fd3d567c507f25b983c986f9242da416f19b61",
+      "sha256": "db9f81dce12e660a608d2f6db04c14d5f75da09ae5f3514ac0cf4bcec3c6f29d",
       "tier": 1,
       "received": [
         {
@@ -287,7 +312,7 @@
         }
       ],
       "lines": [
-        "Changes the name, the description or the page of an active playbook and returns it. Use it when the person renames a playbook, changes what it is for or gives it a dashboard. What is left out stays as saved."
+        "Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack. Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says. Once the person has said yes to the saved goals, change them only after their yes to the change, and never change how success is judged to suit what you built. Use it too when the person renames a playbook, changes what it is for or gives it a dashboard. An argument you leave out keeps its saved value. `goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`."
       ]
     },
     {
@@ -1674,7 +1699,7 @@
       ]
     },
     {
-      "sha256": "7f6386c0a6e62389b96205efe76acd938c9bd3d268b65f2f274943d077fd9c36",
+      "sha256": "16b7deb422b1aa8d155202d3be0b4811de4ef8d7fa87e18508ec895eaf06665f",
       "tier": 1,
       "received": [
         {
@@ -1687,7 +1712,7 @@
         }
       ],
       "lines": [
-        "Saves a new function or workflow from its document, without running it. update_definition changes one saved, and a name is never reused. Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it. A workflow owns one job the business does again and again, and a check, a test or a setup is not one. `source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business. A function needs `diagram`; a workflow takes none. The document's `page` shows the person its runs; write it as the page guide says. A document that does not fit its format is refused with the line and what is wrong."
+        "Saves a new function or workflow from its document, without running it; a workflow needs a `contributes` list, as the goals guide says. update_definition changes one saved, and a name is never reused. Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it. A workflow owns one job the business does again and again, and a check, a test or a setup is not one. `source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business. A function needs `diagram`, a workflow none; the `page` shows the person its runs, as the page guide says. A document that does not fit its format is refused with the line and what is wrong."
       ]
     },
     {
@@ -1787,6 +1812,13 @@
         },
         {
           "as": "tool get_event: argument playbook",
+          "on": [
+            "/mcp",
+            "/directory"
+          ]
+        },
+        {
+          "as": "tool agree_playbook_goals: argument playbook",
           "on": [
             "/mcp",
             "/directory"
@@ -2852,6 +2884,74 @@
       ]
     },
     {
+      "sha256": "9336676fea2ae4b15e868dfbcec012c960f502393543801f5ae5d6eec74cdbca",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool agree_playbook_goals: title",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "Agree playbook goals"
+      ]
+    },
+    {
+      "sha256": "491dc701aa0add9692ebbf5b6be1003a7572c17463e450dcdbb867498c61af2a",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool agree_playbook_goals: description",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "Records the person's yes to the playbook's saved goals. Call it only after the person says yes in the conversation, and send the goals `version` they saw. Without `ids` it covers every goal that is not retired. A goal saved again with a change needs a new yes: show it, ask again, then call this again."
+      ]
+    },
+    {
+      "sha256": "4a8a89355f4c9dd672ead790edadec990e84af87bd3bcecb203dae1df9f71151",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool agree_playbook_goals: argument version",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The goals version the person saw, as create_playbook, update_playbook or get_playbook answered it"
+      ]
+    },
+    {
+      "sha256": "cf86dda6e4aebd250b4c8f59d1a5d67e788bf14b606e011f4f1357088db4a214",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool agree_playbook_goals: argument ids",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The ids of the goals the person said yes to; leave it out for every goal that is not retired"
+      ]
+    },
+    {
       "sha256": "175ef3753919205c7fde76cbcc1b74aaa584dd9f3cd9d1200dbfe5a756dfb4e0",
       "tier": 1,
       "received": [
@@ -3670,7 +3770,7 @@
       ]
     },
     {
-      "sha256": "c76328c39ac9b79354f94287f6eed05862b47bbbc6fb808be9144af03833806c",
+      "sha256": "865740722de8a361c0f1e68898c408ae83e840dc602fbfebb36f634eaa05e3be",
       "tier": 1,
       "received": [
         {
@@ -3682,7 +3782,7 @@
         }
       ],
       "lines": [
-        "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes first-playbook, connect-a-service, give-tools, schedule and keep, which the tools listed here can follow."
+        "Read the start guide before anything else, and the goals guide before you make anything: here a playbook is made only with goals learned from the person. Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes first-playbook, connect-a-service, give-tools, schedule and keep, which the tools listed here can follow."
       ]
     },
     {
@@ -3720,7 +3820,7 @@
       ]
     },
     {
-      "sha256": "1dccaae14513c889fe74201a5a17989c9264bd4efb7f2ff64477979d55ba61fe",
+      "sha256": "bad93e80e2365963dac85ba0f7a7df9abda552273e6cd0c51b4a88a8e0eb5f83",
       "tier": 2,
       "received": [
         {
@@ -3732,11 +3832,11 @@
         }
       ],
       "lines": [
-        "Creates a first playbook with one function, runs it on a made-up example and links the run in Studio."
+        "Creates a first playbook from its goal, shows the goal in Studio, then gives it one function and runs it on a made-up example."
       ]
     },
     {
-      "sha256": "591b06960134ca0c955bea6bcd428ebc276ab7f4865e97fbea0e6e1fab6814f1",
+      "sha256": "004f6be8a691edfc3c5291e99d85aa56a2638413b6a029d2bea4092b0f26dae7",
       "tier": 2,
       "received": [
         {
@@ -3748,7 +3848,7 @@
         }
       ],
       "lines": [
-        "Create a playbook in Auto with one function and run it on a made-up example. Ask me what the playbook is for and anything else you need first, then give me a link to the run in Studio."
+        "Create a playbook in Auto. First ask me what it should achieve and how I'll know it worked, then show me the goal in Studio. Once I say yes, give it one function and run it on a made-up example."
       ]
     },
     {
@@ -3784,7 +3884,7 @@
       ]
     },
     {
-      "sha256": "5427f59f3999ff5d6d502f687ddba3a94c3aef97770f93f38f2114b6aea747e9",
+      "sha256": "1a211b268ef72e46210fa77935e984ba5e951a0e605718a653c396317b91bda5",
       "tier": 2,
       "received": [
         {
@@ -3812,7 +3912,7 @@
         "   - it makes an image or audio: a generation function",
         "",
         "   The order of the parts, the branches, the waits and what happens when a part fails belong to the workflow, never to a prompt. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. Agree the parts and their types with the person before you write anything.",
-        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it.",
+        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
         "5. Write each function in the format of its type's guide, in the order the job uses them, each with its `page` in the same document. A reasoning function takes the facts it judges as its input, which the workflow hands it. For a part that reads from a service or acts on one, follow the give-tools recipe. It makes a read a lookup function and an act an interaction function. A reasoning function names tools in `tools` only where its model must choose among them. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a part would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a part that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
         "6. Once they agree, save each with create_definition, with its `type`. A function needs `diagram`: Mermaid source of how it works, or the word none. A workflow takes none. `overview` is optional: Markdown that tells the person what it does and why it is needed. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
         "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of an interaction function held for you (`deliver: agent`) waits for its answer. list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs. Run it only once the person agrees. A prediction function answers once the playbook has history.",
@@ -5175,7 +5275,7 @@
       ]
     },
     {
-      "sha256": "d4fa83cd0771cf66bfaf08e54b8e23e8c193d56e4a16f7c8e109fc2af65ce1be",
+      "sha256": "f2b8e084cc37f37c7f36a3237cd6a2c7f86a87c1a9cad77089fb8ba056f135aa",
       "tier": 2,
       "received": [
         {
@@ -5210,6 +5310,7 @@
         "## Where to go",
         "",
         "- What the words of a playbook mean: the guide terminology.",
+        "- What a playbook's goals are, and how to learn them with the person before you make anything: the goals guide.",
         "- To build a playbook from nothing: the recipe first-playbook, which names the guides its steps need.",
         "- To write a function or a workflow: the guide of its type, one of reasoning-function, lookup-function, interaction-function, prediction-function, computation-function, generation-function, and workflow. Each says how its document is written, with its examples and bounds, and how its page shows the person its results.",
         "- To connect a service and set it up for the playbook's runs: the recipe connect-a-service.",
@@ -5229,6 +5330,12 @@
         "What the person wants kept is the output of a run, read back with a lookup of that definition's runs. A reasoning function names a model that list_models lists. A workflow puts the playbook's functions to work in steps: it waits for input, it can start on a schedule or event, and run_definition runs it.",
         "",
         "Every workflow and function takes a page that shows the person its results, run by run and over time.",
+        "",
+        "## Its goals",
+        "",
+        "A goal is what the playbook is for, in the person's own words: what it should achieve for them and how they will know it worked. A playbook here cannot be made without its goals: create_playbook refuses one that has none, and a workflow saved in a playbook that has none is refused too.",
+        "",
+        "So your first step, before you make anything, is to ask the person, through your client's question tool where it has one: What should this playbook achieve for you, and how will you know it worked? Say their answer back in their words, learn the rest as the goals guide says, and send it as the goals argument of create_playbook, or of update_playbook for a playbook that has no goals yet. Then show them the saved goals at the `studio` link the answer holds, and wait for their yes before you make anything else. Every workflow you save then says what it does for a goal.",
         "",
         "## What a workflow owns",
         "",
@@ -5266,7 +5373,7 @@
       ]
     },
     {
-      "sha256": "4f55ae8d4af7d23a195f56a1db2fb83bdbd7ebd5b5ba0b2a74c0662550a84717",
+      "sha256": "ba06289ae9562ead4bd6c2f3ab0e8fcf29b356126efa27776ea6862d4c7e33e9",
       "tier": 3,
       "received": [
         {
@@ -5394,6 +5501,317 @@
         "- Comment rail: Studio's list of comments, with where each is, from which a comment opens at its place.",
         "- Resolved: A comment closed by a person or an agent: acted once what it asked is done, or dismissed without acting. A resolved comment leaves the activity and stays readable as history. A comment is never edited: a person resolves it and comments again.",
         "- Dream: A planned, optional process that would revisit a playbook's history and suggest inspirations, such as a pattern worth investigating or a change to a method. An inspiration would be a candidate idea for a reasoning function to weigh, not a fact or an improvement. Dream would present its findings for review, or change only what the playbook has authority to change. It is not a function type.",
+        "",
+        "Goals:",
+        "",
+        "- Goal: What a playbook is for, in the person's own words, with how they will know it worked. A playbook owns its goals, and the first one leads.",
+        "- Milestone: One of the three to seven points of a goal that matter, where the person acts or where Auto collects something. Each is one segment of the goal's ring, and a workflow marks one through its contribution.",
+        "- Measure: The one number a goal is judged by, with its label and its target.",
+        "- Contribution: What a workflow does for a goal, written under contributes in its document: its purpose in the person's words, the milestone it marks and the measure it reports.",
+        "- Verdict: Where one judging of a goal stands: open, passed or failed. The goal gives its own words for passed and failed.",
+        ""
+      ]
+    },
+    {
+      "sha256": "6c45ae976cd104ac0d58bf4ed9bd1e7bdf9787eae8441f9f54f6668a5555eb7f",
+      "tier": 3,
+      "received": [
+        {
+          "as": "guide goals",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "# Goals",
+        "",
+        "The goals of a playbook say what it should achieve for the person and how they will know it worked. A playbook here needs its goals before anything else is made in it. You learn them from the person, you send them as the goals argument of create_playbook or update_playbook, you record the person's yes to them as saved with agree_playbook_goals, and every workflow you save then says what it does for them.",
+        "",
+        "Auto does not send messages about goals here yet. Whenever the person asks to be told about results, say that first, and that their results are in Studio, before you ask or offer anything about telling them. Say it even when a post in their channel is part of the work they ask for.",
+        "",
+        "This guide is in the order you need it: the conversation first, then the format.",
+        "",
+        "## Before you build anything, learn the goals with the person",
+        "",
+        "Ask the person and wait for each answer. Use plain words and the person's own terms. Do not create the playbook, a function or a workflow until you have every answer below and the person has said yes to what you will save.",
+        "",
+        "A person who says little at first gets one question at a time. A person who says much of it at once is not asked it again: say back what you heard, in their words, ask only what is still missing, and wait for their yes.",
+        "",
+        "When your client has a tool for asking the person a question, ask through it, one question at a time. In Claude Code, for example, that tool is AskUserQuestion, and in Codex it is request_user_input; other clients name theirs differently. Offer the two to four answers you would suggest, drawn from what the person has said about their business, and leave room for an answer in their own words. A question with no likely answers, such as what the business is called, may be asked in text, and so may every question when your client has no such tool.",
+        "",
+        "Before the create, say all of it back in one message: the goal and its name, and the number and target that judge it with the words for a pass and a fail.",
+        "",
+        "Create the playbook only after their yes to that message, and never earlier just to reach another tool. That yes allows the create and nothing else; the Studio link and connections aren't needed before it. Once the playbook is created, stop: say back the goals as saved, give the person the `studio` link its answer holds, ask whether the saved goals are what they want, and wait for their yes. Then record that yes with agree_playbook_goals, giving the `version` of the goals they saw, before you make any function or workflow. After that yes, put any change to the saved goals to the person first, save it only after their yes, and record that yes with a new call of agree_playbook_goals and the new version. Never change a goal to suit how you built something.",
+        "",
+        "1. **What the playbook should achieve for them.** Ask what change they want from it. Then say it back in their words, in one sentence, and ask whether that is right. Their yes to that sentence is the goal's statement. A statement that only repeats the playbook's name or description is refused.",
+        "2. **What to call it.** Suggest a short name for the goal, two to four words from their own, such as \"Catering replies\" or \"Daily controls\", and ask whether it fits. That is the goal's `name`, the title the person sees it under. Ask it even when the person has said everything else.",
+        "3. **How they will know it worked.** Ask what would convince them. That is one number and a target, such as at least one paying customer from each experiment, or no failing control in a day. When they have no number in mind, suggest one that fits what they said, and ask whether it would convince them. Ask too what to call a pass and a fail in their words, such as \"Brought a customer\" and \"Brought no customer\". When it is judged day by day and the work happens on some days only, such as working days, ask which days.",
+        "",
+        "Auto does not send messages about goals here yet. Do not ask the person whether, when or where they want to be told about results, and do not offer it. Leave `notify` out of the goals and make no notification function. They see their results in Studio. If they ask to be told, or say when they do or don't want to hear about it, first say that Auto doesn't send messages about goals yet and that their results are in Studio. Only then may you offer to build the post into the playbook as ordinary work, and build it only after they say yes to that. Ask which time zone they mean when a day or a week matters.",
+        "",
+        "Two more questions shape the goal when the work comes as a stream of things:",
+        "",
+        "- **Is it judged thing by thing?** Experiments, invoices, tickets and orders are each judged on their own. Ask what one of them is called. That word is the goal's `per`.",
+        "- **What has to happen to one of them, start to finish, and which of those steps are theirs?** These are the goal's milestones, three to seven of them: the points where the person acts and the points where Auto collects something. Each one is a segment of the goal's ring in Studio.",
+        "",
+        "For example, a compliance owner says: \"Tell me at once when a daily check fails, and nothing when they pass.\" Say first that Auto doesn't send messages about goals yet and that the results will be in Studio. Then learn the goal behind the wish: every control passes its daily check, judged by the day, with at most zero failing controls. The statement says what should be achieved, never how they hear about it. Two things are still missing, so ask them: which time zone their days are in, and whether \"Daily controls\" is the name they want for it. If they still want a post in their channel, offer to build it into the playbook, and build it only after their yes.",
+        "",
+        "## Never invent a goal",
+        "",
+        "Save only what the person said or agreed to. Do not fill in a statement, a name, a target or verdict words because the format asks for it. A measure, a word or a time you suggested counts only once they say yes to it.",
+        "",
+        "When the runtime refuses or answers with words that begin \"Ask the person:\", the rest is a question for the person. Put it to them, in your words if theirs would be clearer, through your client's question tool where it has one, as above, and send what they answer. It is not a puzzle to solve alone, and guessing an answer saves a goal the person never had.",
+        "",
+        "create_playbook without goals is refused this way: \"Ask the person: What should this playbook achieve for you, and how will you know it worked?\" A goal that is still missing something only the person knows comes back the same way, each missing thing its own question.",
+        "",
+        "Never record a yes the person did not give. agree_playbook_goals is their answer in the conversation, not a step you take to get past a refusal or a gap.",
+        "",
+        "## After the create, show the saved goals and record the yes",
+        "",
+        "The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with their `version`. Say the saved goals back to the person in their words, give them the link, and ask whether that is what they want. When you ask through a question tool, put the link in the question itself or in a message just before it: the person needs it to see the saved goals.",
+        "",
+        "Change the goals with update_playbook until they say yes. A save that changes them answers with a new `version`, and update_playbook's answer carries no `studio` link, so say the changed goals back in their words. The yes before the create allows the create and nothing more; the yes you record is the one to the goals as saved.",
+        "",
+        "Once they say yes, call agree_playbook_goals with the `version` they saw, before you make anything else. It records their yes to every goal that is not retired; name goals by id in `ids` only when they said yes to some and not the others. Build nothing before that call: no function and no workflow.",
+        "",
+        "A yes holds only for the goals as the person saw them. A save that changes a goal, its name included, drops the yes to that goal. So after the yes, put a change to the person first, save it as they agreed it, and call agree_playbook_goals again with the new version before you build on it. When the call answers that the goals changed since the version you gave, show the person the saved goals again and ask before you record a yes.",
+        "",
+        "The answers of create_playbook, update_playbook and get_playbook carry `goals`: the text as saved, its version and its gaps. A gap is not a refusal. It says what the goals still lack before they can be judged, such as a measure that no workflow reports yet. Most gaps close as you save the workflows. [Gaps, and who fixes each](#gaps-and-who-fixes-each) lists them.",
+        "",
+        "The same holds when you plan the work after the yes. If the person asked to be told about results, your first words about it are that Auto doesn't send messages about goals yet and that their results are in Studio. Only then ask whether they want a post built into the playbook, and where. Never ask it if they didn't ask to be told.",
+        "",
+        "## The goals argument",
+        "",
+        "The goals argument is text: the list of goals alone, with no key around it, written the way a workflow document is written. Send the whole list every time. update_playbook replaces the list with the one you send.",
+        "",
+        "- At most 8 goals and 16,384 bytes. One goal is often enough. The first is the lead goal: it orders the person's cards and leads the link.",
+        "- A goal that has been judged cannot be left out. Stop it with `retired: true`, which keeps its id and record and can be undone. A goal that was never judged may simply be left out.",
+        "- A goal's `per`, the kind of its window, a calendar window's unit and time zone, and `settles` cannot change once saved under that id. A different shape is a new goal with a new id. Anything else may change, and a change applies to judgings that open afterward.",
+        "",
+        "| Key               | Required               | What it holds                                                                                                                                     |",
+        "| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |",
+        "| `id`              | Yes                    | A lowercase letter, then 2 to 47 lowercase letters, digits and hyphens; unique in the playbook. Make it from the name, such as `catering-replies` |",
+        "| `name`            | No; always ask for one | The goal's short name in the person's words, two to four words, 2 to 40 characters                                                                |",
+        "| `statement`       | Yes                    | The person's words for what it should achieve, 12 to two hundred characters                                                                       |",
+        "| `per`             | No                     | What one thing is called, a singular noun of 2 to 40 characters; the goal is then judged thing by thing                                           |",
+        "| `window`          | No                     | The stretch of time one judging covers: `after` with `for`, or `calendar`; see below                                                              |",
+        "| `success.label`   | Yes                    | The words for the number, 2 to two hundred characters                                                                                             |",
+        "| `success.settles` | Yes                    | `on_crossing` or `at_close`; see [Choosing settles](#choosing-settles)                                                                            |",
+        "| `success.target`  | Yes                    | Exactly one of `at_least` and `at_most`, a finite number                                                                                          |",
+        "| `success.passed`  | Yes                    | The person's word for a pass, 2 to 40 characters                                                                                                  |",
+        "| `success.failed`  | Yes                    | The person's word for a fail, 2 to 40 characters                                                                                                  |",
+        "| `milestones`      | No                     | None, or 3 to 7, each `id`, `label` (2 to 80 characters) and `by`, `person` or `auto`                                                             |",
+        "| `retired`         | No                     | `true` stops the goal and ends its open judgings without a verdict                                                                                |",
+        "",
+        "The window:",
+        "",
+        "- `after` names a milestone. The window starts when that milestone is first marked for the thing, and closes `for` later.",
+        "- `calendar` is `day`, `week` or `month`, in `time_zone` (UTC by default; the same time zone names a workflow's `cron` takes). A week starts on Monday. A calendar window is not allowed together with `per`.",
+        "- `days` lists the days of the week a `calendar: day` window is judged on, such as `[monday, tuesday, wednesday, thursday, friday]`. The other days have no window, so nothing is judged or missed on them. Leave it out to judge every day.",
+        "- `grace` is how long after the close a final measurement may still arrive. It is one hour, `PT1H`, by default. Its verdict can come that much later, so put any grace you choose to the person with the window, as you would a target.",
+        "- `for` and `grace` are exact lengths of weeks, days, hours and minutes, from `PT1M` to `P90D`, such as `P7D` or `PT8H`.",
+        "- A goal with no window is judged only when a measurement crosses its target, and never becomes overdue.",
+        "",
+        "### A goal judged thing by thing, with milestones",
+        "",
+        "An owner runs experiments to win customers. Each experiment is judged on its own, over the seven days after it goes live, and passes as soon as it brings one paying customer.",
+        "",
+        "```",
+        "- id: paying-customers",
+        "  name: Paying customers",
+        "  statement: Bring in paying customers through my experiments.",
+        "  per: experiment",
+        "  window:",
+        "    after: live",
+        "    for: P7D",
+        "    grace: P1D",
+        "  success:",
+        "    label: New paying customers traced to the experiment",
+        "    settles: on_crossing",
+        "    target: { at_least: 1 }",
+        "    passed: Brought a customer",
+        "    failed: Brought no customer",
+        "  milestones:",
+        "    - { id: chosen, label: Idea chosen, by: person }",
+        "    - { id: prepared, label: Package prepared, by: auto }",
+        "    - { id: live, label: Taken live, by: person }",
+        "    - { id: measured, label: Measured, by: auto }",
+        "    - { id: concluded, label: Lesson kept, by: person }",
+        "```",
+        "",
+        "### A goal judged on a calendar",
+        "",
+        "The compliance owner from the start of this guide. Each day is judged on its own and fails as soon as a control fails. A day becomes overdue when its check never reported everything.",
+        "",
+        "```",
+        "- id: daily-controls",
+        "  name: Daily controls",
+        "  statement: Every control passes its daily check.",
+        "  window: { calendar: day, grace: PT1H }",
+        "  success:",
+        "    label: Failing controls",
+        "    settles: on_crossing",
+        "    target: { at_most: 0 }",
+        "    passed: All controls held",
+        "    failed: A control failed",
+        "```",
+        "",
+        "This one is in UTC. Ask for the person's time zone before you save it and give it as the window's `time_zone`. A calendar window's time zone cannot change once the goal is saved, so a different one needs a new goal id.",
+        "",
+        "### Choosing settles",
+        "",
+        "A running total, or a \"never above\", is `on_crossing`: it passes or fails as soon as a measurement crosses the target. A ratio, an average, or \"by the end of the week\" is `at_close`: it is judged once, at the close, from the final measurement. `at_close` needs a window.",
+        "",
+        "How a judging ends:",
+        "",
+        "- With `on_crossing` and `at_least`, a measurement at or above the target while the window is open passes immediately. With `at_most`, a measurement above it fails immediately.",
+        "- At the close plus its grace, the latest final measurement decides, for both kinds of `settles`.",
+        "- When no final measurement has arrived by then, the judging becomes overdue. A final measurement that arrives later still decides it, but only when its `as_of` lies at or before the window's close. A measurement with no `as_of` is true as of when its run ended, so one from a run that ended after the close does not decide it. One that is still overdue one more window later fails: its deadline passed with nothing that counts, so it is a miss with no number. A late measurement is still recorded, but it never turns the miss into a pass.",
+        "- A verdict is final. Later measurements change nothing, though milestones are still marked.",
+        "",
+        "## What a workflow contributes",
+        "",
+        "Once a playbook has goals, every workflow you save says what it does for them, in a top-level `contributes` list beside `document`, `schedule` and `do`. A workflow without it is refused, and so is one that names a goal or a milestone the playbook does not have.",
+        "",
+        "Each entry reads the run's output when the run ends. Pointers start with a slash and name a field of the output, such as /failed for the field failed.",
+        "",
+        "| Key        | Required                | What it holds                                                                                                                  |",
+        "| ---------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |",
+        "| `goal`     | Yes                     | The id of a goal of the playbook that is not retired                                                                           |",
+        "| `purpose`  | Yes                     | One sentence, in the person's words, of what this workflow does for the goal                                                   |",
+        "| `each`     | No                      | A pointer to a list in the output: each item is one thing, and the other pointers and `when` read the item. Only with `per`    |",
+        "| `per_id`   | When the goal has `per` | A pointer to the id of the thing: text or a number                                                                             |",
+        "| `title`    | No                      | A pointer to the thing's title                                                                                                 |",
+        "| `link`     | No                      | A pointer to a link to the thing                                                                                               |",
+        "| `when`     | No                      | One `${ }` expression over `$data`; the entry counts only when it is true                                                      |",
+        "| `marks`    | No                      | The id of the milestone this run marks                                                                                         |",
+        "| `measures` | No                      | A pointer to the measurement the goal is judged by                                                                             |",
+        "| `final`    | No                      | A pointer to true or false, or `true`: this measurement will not change any more for its window. Needs `measures` and a window |",
+        "| `as_of`    | No                      | A pointer to the instant the measurement is true through, with its offset; when the run ended, if left out. Needs `measures`   |",
+        "| `says`     | No                      | A pointer to one sentence of evidence the person reads, at most two hundred characters                                         |",
+        "",
+        "- At most 8 entries. One workflow may serve several goals, or one goal several ways.",
+        "- An entry whose `when` is false, whose `each` is empty, or whose `per_id` finds nothing, records nothing, silently.",
+        "- `each` takes at most a hundred items, and names each thing once.",
+        "- Every milestone of a goal, and its measure, need a workflow that marks or reports them. Until one does, the goal shows a gap.",
+        "",
+        "### final and as_of",
+        "",
+        "`final` says the measurement will not change any more for its window. The day's one complete check is final. A count taken while the window is still open is not, and neither is a check in which something did not report. A goal whose window closes with no final measurement becomes overdue, so give the workflow that knows the measurement is complete a `final`.",
+        "",
+        "`as_of` is the instant the measurement is true through. A window holds the measurements whose `as_of` lies after it opens and at or before it closes, so a total measured through the close belongs to the window it closes. A window that starts `after` a milestone also counts the measurement reported by the run that first marks that milestone, whatever its `as_of`: one workflow may mark the milestone and report the first number in the same run, even when its `as_of` is the moment it read its source. A measurement reported by an earlier run is progress and decides nothing. Leave `as_of` out when the run measures the moment it runs. Give it when a run on Monday reports last week.",
+        "",
+        "### The contributions for the experiments",
+        "",
+        "Two workflows serve the experiments goal. The first starts every Monday, asks the owner which idea to try next and prepares its package. Its output holds the chosen idea's `issue_id`, `title` and `issue_url`, `chosen` once the owner has answered, and `prepared` once the package is ready.",
+        "",
+        "```",
+        "schedule:",
+        "  cron: '0 9 * * 1'",
+        "contributes:",
+        "  - goal: paying-customers",
+        "    purpose: Asks which idea to try next.",
+        "    per_id: /issue_id",
+        "    title: /title",
+        "    link: /issue_url",
+        "    when: ${ $data.chosen === true }",
+        "    marks: chosen",
+        "  - goal: paying-customers",
+        "    purpose: Prepares the package for the chosen idea.",
+        "    per_id: /issue_id",
+        "    when: ${ $data.prepared === true }",
+        "    marks: prepared",
+        "```",
+        "",
+        "The second starts every hour and reads the tracker; choose a schedule from how often the source changes and how soon the person needs to know. Its output holds `experiments`, one item for each experiment, with its `id`, `title`, `url`, `live`, `customers`, `closed`, `measured_through`, `evidence` and `lesson_kept`.",
+        "",
+        "```",
+        "schedule:",
+        "  every: PT1H",
+        "contributes:",
+        "  - goal: paying-customers",
+        "    purpose: Sees when an experiment is taken live.",
+        "    each: /experiments",
+        "    per_id: /id",
+        "    when: ${ $data.live === true }",
+        "    marks: live",
+        "  - goal: paying-customers",
+        "    purpose: Counts the customers each experiment brought in.",
+        "    each: /experiments",
+        "    per_id: /id",
+        "    title: /title",
+        "    link: /url",
+        "    measures: /customers",
+        "    final: /closed",
+        "    as_of: /measured_through",
+        "    says: /evidence",
+        "  - goal: paying-customers",
+        "    purpose: Marks an experiment measured once its window has closed.",
+        "    each: /experiments",
+        "    per_id: /id",
+        "    when: ${ $data.closed === true }",
+        "    marks: measured",
+        "  - goal: paying-customers",
+        "    purpose: Sees when the owner has written down the lesson.",
+        "    each: /experiments",
+        "    per_id: /id",
+        "    when: ${ $data.lesson_kept === true }",
+        "    marks: concluded",
+        "```",
+        "",
+        "### The contribution for the daily checks",
+        "",
+        "One workflow serves the controls goal. It starts at 09:00 every day and checks every control. Its output holds `failed`, the number of failing controls, `all_reported`, true when every control answered, and `summary`, one sentence.",
+        "",
+        "```",
+        "schedule:",
+        "  cron: '0 9 * * *'",
+        "contributes:",
+        "  - goal: daily-controls",
+        "    purpose: Checks every control once a day.",
+        "    measures: /failed",
+        "    final: /all_reported",
+        "    says: /summary",
+        "```",
+        "",
+        "## Older playbooks",
+        "",
+        "A playbook made before goals keeps running as it is. The next time you save one of its workflows, create_definition or update_definition refuses it with \"Ask the person: What should this playbook achieve for you, and how will you know it worked?\" Then:",
+        "",
+        "1. Learn the goals with the person, as above.",
+        "2. Send the goals with update_playbook, tell the person in their words what you saved, and change the goals until they say yes. Its answer carries no `studio` link. Record their yes with agree_playbook_goals and the version saved.",
+        "3. Save the workflow again, with its `contributes`.",
+        "",
+        "Its other workflows keep running, and each shows as a gap until you next save it with a contribution.",
+        "",
+        "## Which runs count",
+        "",
+        "A run counts as evidence only when its chain began with a schedule or with a call made with an API key: a workflow's `cron` or `every`, or a run started or an event published with an API key, and the runs, events and requests that follow from those.",
+        "",
+        "A run that a signed-in person began counts for nothing. A run you start with run_definition while signed in as the person, one the person starts in Studio, a workflow such a run calls or triggers, and an event you publish while signed in as the person never open a judging. A run you start or an event you publish with an API key does count: it can open a judging, so never test a goal's workflow with an API key. You cannot test a goal by running its workflow: tell the person the first judging opens when the schedule next runs, and show them the `studio` link to watch for it. On a laptop runtime in local mode only schedules count.",
+        "",
+        "A person's own milestone is marked when they answer a request inside a run that a schedule or an API key began. The run waits for their answer, its output then carries what they said, and the contribution's `marks` and `when` read it. That is how the experiments workflow above marks `chosen`. A milestone can also be marked when a scheduled run sees what the person did, as the hourly workflow sees an experiment taken live.",
+        "",
+        "## Gaps, and who fixes each",
+        "",
+        "Each gap carries `kind`, `detail` and `fixed_by`. Where `fixed_by` is `person`, it also carries `ask`: put that question to the person. Where it is `agent`, the detail says what to change, and you change it.",
+        "",
+        "| Kind                            | Who    | What to do                                                                           |",
+        "| ------------------------------- | ------ | ------------------------------------------------------------------------------------ |",
+        "| `no_goal`                       | Person | Learn the goals with the person, send them with update_playbook and record their yes |",
+        "| `no_milestones`                 | Person | Ask what has to happen to one thing, start to finish, and which steps are theirs     |",
+        "| `measure_unreported`            | Agent  | Give a workflow a contribution with `measures`                                       |",
+        "| `measure_paused`                | Agent  | Resume a paused workflow that reports it, or let an active one report it             |",
+        "| `measure_never_final`           | Agent  | Give the workflow that knows the measurement is complete a `final`                   |",
+        "| `milestone_unmarked`            | Agent  | Give a workflow a contribution that `marks` the milestone                            |",
+        "| `window_never_starts`           | Agent  | Mark the milestone the window starts `after`                                         |",
+        "| `workflow_without_contribution` | Agent  | Save the workflow again with `contributes`                                           |",
+        "| `contribution_orphaned`         | Agent  | Save the workflow again, naming a goal and milestones the playbook still has         |",
+        "| `observation_refused`           | Agent  | Read the detail, and fix the workflow's output or its contribution                   |",
         ""
       ]
     },
@@ -9409,7 +9827,7 @@
       ]
     },
     {
-      "sha256": "da5107ac1b8473e1437dcfd6c99c2344f5b2e2f4cb053ff4e5af10c5479e523f",
+      "sha256": "85b179a7a4554dec29c771fe78252403ba611f7ce246ce5595ea926190f14bcb",
       "tier": 2,
       "received": [
         {
@@ -9437,7 +9855,7 @@
         "   - it makes an image or audio: a generation function",
         "",
         "   The order of the parts, the branches, the waits and what happens when a part fails belong to the workflow, never to a prompt. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. Agree the parts and their types with the person before you write anything.",
-        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it.",
+        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
         "5. Write each function in the format of its type's guide, in the order the job uses them, each with its `page` in the same document. A reasoning function takes the facts it judges as its input, which the workflow hands it. For a part that reads from a service or acts on one, follow the give-tools recipe. It makes a read a lookup function and an act an interaction function. A reasoning function names tools in `tools` only where its model must choose among them. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a part would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a part that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
         "6. Once they agree, save each with create_definition, with its `type`. A function needs `diagram`: Mermaid source of how it works, or the word none. A workflow takes none. `overview` is optional: Markdown that tells the person what it does and why it is needed. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
         "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of an interaction function held for you (`deliver: agent`) waits for its answer. list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs. Run it only once the person agrees. A prediction function answers once the playbook has history.",
@@ -9588,7 +10006,7 @@
       ]
     },
     {
-      "sha256": "94cfe3f40d8a13765c6a824cfbbc354f5e310875b51d6f6da448601353ce8af6",
+      "sha256": "da2c224d048e8797ff127d13c2089ec2f08ebaae77bfcfdfd0ef84cb5a85fb1d",
       "tier": 1,
       "received": [
         {
@@ -9599,11 +10017,11 @@
         }
       ],
       "lines": [
-        "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown."
+        "Read the start guide before anything else, and the goals guide before you make anything: here a playbook is made only with goals learned from the person. Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown."
       ]
     },
     {
-      "sha256": "847602917eb469964f5705bf39a969424ceaeacde811702c4e9a9b370df181bf",
+      "sha256": "ceb561518e01a32a01be3ce17c27f23bef87f3318bbd96a2792167be18111008",
       "tier": 1,
       "received": [
         {
@@ -9614,7 +10032,7 @@
         }
       ],
       "lines": [
-        "Before you build or change anything, read the guide start with get_guide: it says which function type each part of a job takes. Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order. A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. This connection acts inside one playbook. A tool that cannot do what was asked says why and what to change."
+        "Before you build or change anything, read the guide start with get_guide: it says which function type each part of a job takes. Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order. A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. This connection acts inside one playbook. Ask the person each question through your client's question tool where it has one. A tool that cannot do what was asked says why and what to change."
       ]
     },
     {
@@ -9663,7 +10081,7 @@
       ]
     },
     {
-      "sha256": "abc98eae2ad4a88961f1a1c6849d6d852817091a63e13149d87d4064c10d2abf",
+      "sha256": "2c1e23d64fd26203f248099e9ad8289551e93b43750a93c56f759daf259f0d18",
       "tier": 1,
       "received": [
         {
@@ -9674,7 +10092,7 @@
         }
       ],
       "lines": [
-        "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes give-tools, schedule and keep, which the tools listed here can follow."
+        "Read the start guide before anything else, and the goals guide before you make anything: here a playbook is made only with goals learned from the person. Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes give-tools, schedule and keep, which the tools listed here can follow."
       ]
     },
     {
@@ -9693,7 +10111,7 @@
       ]
     },
     {
-      "sha256": "f23703528491251ce86f5046d3111a10d4bee0aa231f001206e2f85f832addb3",
+      "sha256": "667bd7c4f037fcd1c69acfa1672fbce8369719d6af52b7c8c650980b1d555029",
       "tier": 2,
       "received": [
         {
@@ -9720,7 +10138,7 @@
         "   - it calculates or transforms data exactly: a computation function",
         "",
         "   The order of the parts, the branches, the waits and what happens when a part fails belong to the workflow, never to a prompt. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. Agree the parts and their types with the person before you write anything.",
-        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it.",
+        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
         "5. Write each function in the format of its type's guide, in the order the job uses them, each with its `page` in the same document. A reasoning function takes the facts it judges as its input, which the workflow hands it. For a part that reads from a service or acts on one, follow the give-tools recipe. It makes a read a lookup function and an act an interaction function. A reasoning function names tools in `tools` only where its model must choose among them. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a part would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a part that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
         "6. Once they agree, save each with create_definition, with its `type`. A function needs `diagram`: Mermaid source of how it works, or the word none. A workflow takes none. `overview` is optional: Markdown that tells the person what it does and why it is needed. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
         "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of an interaction function held for you (`deliver: agent`) waits for its answer. list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs. Run it only once the person agrees. A prediction function answers once the playbook has history.",
@@ -9733,7 +10151,7 @@
       ]
     },
     {
-      "sha256": "cd861934997ecce70d84d220c9f36e687413d1d53b263911770842e2a6fd7cd6",
+      "sha256": "8a9598f8528f1bff8f432ab1bad38275cd863f1cbe15f4c213f0b521d926c2d2",
       "tier": 2,
       "received": [
         {
@@ -9765,6 +10183,7 @@
         "## Where to go",
         "",
         "- What the words of a playbook mean: the guide terminology.",
+        "- What a playbook's goals are, and how to learn them with the person before you make anything: the goals guide.",
         "- To build a playbook from nothing: the recipe first-playbook, which names the guides its steps need.",
         "- To write a function or a workflow: the guide of its type, one of reasoning-function, lookup-function, interaction-function, prediction-function, computation-function, and workflow. Each says how its document is written, with its examples and bounds, and how its page shows the person its results.",
         "- To connect a service and set it up for the playbook's runs: the recipe connect-a-service.",
@@ -9784,6 +10203,12 @@
         "What the person wants kept is the output of a run, read back with a lookup of that definition's runs. A reasoning function names a model that list_models lists. A workflow puts the playbook's functions to work in steps: it waits for input, it can start on a schedule or event, and run_definition runs it.",
         "",
         "Every workflow and function takes a page that shows the person its results, run by run and over time.",
+        "",
+        "## Its goals",
+        "",
+        "A goal is what the playbook is for, in the person's own words: what it should achieve for them and how they will know it worked. A playbook here cannot be made without its goals: create_playbook refuses one that has none, and a workflow saved in a playbook that has none is refused too.",
+        "",
+        "So your first step, before you make anything, is to ask the person, through your client's question tool where it has one: What should this playbook achieve for you, and how will you know it worked? Say their answer back in their words, learn the rest as the goals guide says, and send it as the goals argument of create_playbook, or of update_playbook for a playbook that has no goals yet. Then show them the saved goals at the `studio` link the answer holds, and wait for their yes before you make anything else. Every workflow you save then says what it does for a goal.",
         "",
         "## What a workflow owns",
         "",
@@ -9821,7 +10246,7 @@
       ]
     },
     {
-      "sha256": "75cccab2b3817c9c7e5285bcb5ee8c2616c22bafaf6ec7442e3ab19abe80b60a",
+      "sha256": "b45cb3554fdb829608ce876e215414f374413e2eda49659520e5bef5c2cfbaa9",
       "tier": 3,
       "received": [
         {
@@ -9944,11 +10369,19 @@
         "- Comment rail: Studio's list of comments, with where each is, from which a comment opens at its place.",
         "- Resolved: A comment closed by a person or an agent: acted once what it asked is done, or dismissed without acting. A resolved comment leaves the activity and stays readable as history. A comment is never edited: a person resolves it and comments again.",
         "- Dream: A planned, optional process that would revisit a playbook's history and suggest inspirations, such as a pattern worth investigating or a change to a method. An inspiration would be a candidate idea for a reasoning function to weigh, not a fact or an improvement. Dream would present its findings for review, or change only what the playbook has authority to change. It is not a function type.",
+        "",
+        "Goals:",
+        "",
+        "- Goal: What a playbook is for, in the person's own words, with how they will know it worked. A playbook owns its goals, and the first one leads.",
+        "- Milestone: One of the three to seven points of a goal that matter, where the person acts or where Auto collects something. Each is one segment of the goal's ring, and a workflow marks one through its contribution.",
+        "- Measure: The one number a goal is judged by, with its label and its target.",
+        "- Contribution: What a workflow does for a goal, written under contributes in its document: its purpose in the person's words, the milestone it marks and the measure it reports.",
+        "- Verdict: Where one judging of a goal stands: open, passed or failed. The goal gives its own words for passed and failed.",
         ""
       ]
     },
     {
-      "sha256": "53601b484acb3239b433dad9ed232469441c64e4f477d8ae3f2593a74507e418",
+      "sha256": "622414c2ad31afe7245525be1450341003d29ab8cd9c75d78068c5390b6ff282",
       "tier": 2,
       "received": [
         {
@@ -9973,7 +10406,7 @@
         "   - it calculates or transforms data exactly: a computation function",
         "",
         "   The order of the parts, the branches, the waits and what happens when a part fails belong to the workflow, never to a prompt. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. Agree the parts and their types with the person before you write anything.",
-        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it.",
+        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
         "5. Write each function in the format of its type's guide, in the order the job uses them, each with its `page` in the same document. A reasoning function takes the facts it judges as its input, which the workflow hands it. For a part that reads from a service or acts on one, follow the give-tools recipe. It makes a read a lookup function and an act an interaction function. A reasoning function names tools in `tools` only where its model must choose among them. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a part would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a part that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
         "6. Once they agree, save each with create_definition, with its `type`. A function needs `diagram`: Mermaid source of how it works, or the word none. A workflow takes none. `overview` is optional: Markdown that tells the person what it does and why it is needed. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
         "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of an interaction function held for you (`deliver: agent`) waits for its answer. list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs. Run it only once the person agrees. A prediction function answers once the playbook has history.",

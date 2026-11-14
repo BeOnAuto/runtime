@@ -71,6 +71,10 @@
       "description": "The events published to a playbook, and its history of events"
     },
     {
+      "name": "goals",
+      "description": "What a playbook is for: its goals as written, what they still lack, what its workflows do for each, and how each is being judged"
+    },
+    {
       "name": "interactions",
       "description": "The requests runs wait on, and their answers"
     },
@@ -92,7 +96,7 @@
       "post": {
         "operationId": "create_playbook",
         "summary": "Create playbook",
-        "description": "Creates a playbook for one business responsibility, and returns it empty. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. Each job it does again and again is a workflow, and each part of a job a function of the type that part needs. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words.",
+        "description": "First ask the person what this playbook should achieve for them and how they will know it worked (a number, a target, their words for a pass and a fail). Say the goals back and send them as `goals` only after their yes, as the goals guide says; without goals it is refused with the question to ask. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words. It starts empty: show the person the `studio` link it answers and change the goals with update_playbook until they say yes to them as saved; build nothing before that yes.",
         "tags": [
           "playbooks"
         ],
@@ -126,6 +130,11 @@
                     "type": "string",
                     "maxLength": 2000,
                     "description": "What the playbook is for: up to 2000 characters, or empty"
+                  },
+                  "goals": {
+                    "type": "string",
+                    "maxLength": 16384,
+                    "description": "The whole list of the playbook's goals as YAML text, as the goals guide says, in the person's words: what it should achieve and how success is judged"
                   }
                 },
                 "required": [
@@ -212,6 +221,13 @@
                       "additionalProperties": false,
                       "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
                     },
+                    "goals": {
+                      "$ref": "#/$defs/PlaybookGoals"
+                    },
+                    "before_building": {
+                      "type": "string",
+                      "description": "What you must do before you build anything more, in words; present only when there is something to do"
+                    },
                     "studio": {
                       "type": "string",
                       "description": "The page in Studio of what was made"
@@ -224,10 +240,94 @@
                     "status",
                     "created_at",
                     "created_by",
-                    "updated_at"
+                    "updated_at",
+                    "goals"
                   ],
                   "additionalProperties": false,
-                  "description": "A playbook just created, with its page in Studio"
+                  "description": "A playbook just created, with its goals and its page in Studio",
+                  "$defs": {
+                    "GoalGap": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "no_goal",
+                            "no_milestones",
+                            "measure_unreported",
+                            "measure_paused",
+                            "measure_never_final",
+                            "milestone_unmarked",
+                            "window_never_starts",
+                            "workflow_without_contribution",
+                            "contribution_orphaned",
+                            "notice_function_missing",
+                            "notice_not_started",
+                            "notice_undelivered",
+                            "observation_refused"
+                          ],
+                          "description": "What the goals still lack"
+                        },
+                        "goal": {
+                          "type": "string",
+                          "description": "The id of the goal it is about"
+                        },
+                        "workflow": {
+                          "type": "string",
+                          "description": "The name of the workflow it is about"
+                        },
+                        "detail": {
+                          "type": "string",
+                          "description": "What is missing, in words"
+                        },
+                        "fixed_by": {
+                          "type": "string",
+                          "enum": [
+                            "person",
+                            "agent"
+                          ],
+                          "description": "person when only the person can answer it, agent when the agent can put it right"
+                        },
+                        "ask": {
+                          "type": "string",
+                          "description": "The question to ask the person"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "detail",
+                        "fixed_by"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Something the goals still lack before they can be judged or told"
+                    },
+                    "PlaybookGoals": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "The goals as they were saved"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "The version of the goals, from 1"
+                        },
+                        "gaps": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/GoalGap"
+                          },
+                          "description": "What the playbook and its goals still lack"
+                        }
+                      },
+                      "required": [
+                        "gaps"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The playbook's goals, where it has them, and what they still lack"
+                    }
+                  }
                 }
               }
             }
@@ -280,7 +380,7 @@
       "get": {
         "operationId": "list_playbooks",
         "summary": "List playbooks",
-        "description": "Use it when the person speaks of their playbooks, or wants something done that one of them may cover. Lists the playbooks of the org that the caller may access, sorted by id. Each holds every field of the playbook, such as its name, what it is for and whether it is active.",
+        "description": "Before you make anything for the person, ask what it should achieve for them and how they will know it worked, as the goals guide says. Use it when the person speaks of their playbooks, or wants something done that one of them may cover. Lists the playbooks of the org that the caller may access, sorted by id. Each holds every field of the playbook, such as its name, what it is for and whether it is active.",
         "tags": [
           "playbooks"
         ],
@@ -463,7 +563,7 @@
       "get": {
         "operationId": "get_playbook",
         "summary": "Get playbook",
-        "description": "Reads one playbook by its id, active or retired, with the source of its page. Use it to read the playbook's page, or a playbook whose id is known; list_playbooks finds the others. `playbook` is its id.",
+        "description": "Reads one playbook by its id, active or retired, with its goals, what they still lack and the source of its page. Use it to read the playbook's goals or page, or a playbook whose id is known; list_playbooks finds the others. `goals.gaps` says what to ask the person or put right, and a playbook with no goals needs them before a workflow is saved in it. `playbook` is its id.",
         "tags": [
           "playbooks"
         ],
@@ -557,6 +657,13 @@
                       ],
                       "additionalProperties": false,
                       "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+                    },
+                    "goals": {
+                      "$ref": "#/$defs/PlaybookGoals"
+                    },
+                    "before_building": {
+                      "type": "string",
+                      "description": "What you must do before you build anything more, in words; present only when there is something to do"
                     }
                   },
                   "required": [
@@ -566,10 +673,94 @@
                     "status",
                     "created_at",
                     "created_by",
-                    "updated_at"
+                    "updated_at",
+                    "goals"
                   ],
                   "additionalProperties": false,
-                  "description": "A playbook of the org"
+                  "description": "A playbook of the org, with its goals",
+                  "$defs": {
+                    "GoalGap": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "no_goal",
+                            "no_milestones",
+                            "measure_unreported",
+                            "measure_paused",
+                            "measure_never_final",
+                            "milestone_unmarked",
+                            "window_never_starts",
+                            "workflow_without_contribution",
+                            "contribution_orphaned",
+                            "notice_function_missing",
+                            "notice_not_started",
+                            "notice_undelivered",
+                            "observation_refused"
+                          ],
+                          "description": "What the goals still lack"
+                        },
+                        "goal": {
+                          "type": "string",
+                          "description": "The id of the goal it is about"
+                        },
+                        "workflow": {
+                          "type": "string",
+                          "description": "The name of the workflow it is about"
+                        },
+                        "detail": {
+                          "type": "string",
+                          "description": "What is missing, in words"
+                        },
+                        "fixed_by": {
+                          "type": "string",
+                          "enum": [
+                            "person",
+                            "agent"
+                          ],
+                          "description": "person when only the person can answer it, agent when the agent can put it right"
+                        },
+                        "ask": {
+                          "type": "string",
+                          "description": "The question to ask the person"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "detail",
+                        "fixed_by"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Something the goals still lack before they can be judged or told"
+                    },
+                    "PlaybookGoals": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "The goals as they were saved"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "The version of the goals, from 1"
+                        },
+                        "gaps": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/GoalGap"
+                          },
+                          "description": "What the playbook and its goals still lack"
+                        }
+                      },
+                      "required": [
+                        "gaps"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The playbook's goals, where it has them, and what they still lack"
+                    }
+                  }
                 }
               }
             }
@@ -619,7 +810,7 @@
       "put": {
         "operationId": "update_playbook",
         "summary": "Update playbook",
-        "description": "Changes the name, the description or the page of an active playbook and returns it. Use it when the person renames a playbook, changes what it is for or gives it a dashboard. What is left out stays as saved.",
+        "description": "Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack. Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says. Once the person has said yes to the saved goals, change them only after their yes to the change, and never change how success is judged to suit what you built. Use it too when the person renames a playbook, changes what it is for or gives it a dashboard. An argument you leave out keeps its saved value. `goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`.",
         "tags": [
           "playbooks"
         ],
@@ -670,6 +861,11 @@
                       }
                     ],
                     "description": "Its page as YAML, data and runs, as the page guide says; null removes it"
+                  },
+                  "goals": {
+                    "type": "string",
+                    "maxLength": 16384,
+                    "description": "The whole list of the playbook's goals as YAML text, as the goals guide says, in the person's words: what it should achieve and how success is judged"
                   }
                 }
               }
@@ -751,6 +947,13 @@
                       ],
                       "additionalProperties": false,
                       "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+                    },
+                    "goals": {
+                      "$ref": "#/$defs/PlaybookGoals"
+                    },
+                    "before_building": {
+                      "type": "string",
+                      "description": "What you must do before you build anything more, in words; present only when there is something to do"
                     }
                   },
                   "required": [
@@ -760,10 +963,94 @@
                     "status",
                     "created_at",
                     "created_by",
-                    "updated_at"
+                    "updated_at",
+                    "goals"
                   ],
                   "additionalProperties": false,
-                  "description": "A playbook of the org"
+                  "description": "A playbook of the org, with its goals",
+                  "$defs": {
+                    "GoalGap": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "no_goal",
+                            "no_milestones",
+                            "measure_unreported",
+                            "measure_paused",
+                            "measure_never_final",
+                            "milestone_unmarked",
+                            "window_never_starts",
+                            "workflow_without_contribution",
+                            "contribution_orphaned",
+                            "notice_function_missing",
+                            "notice_not_started",
+                            "notice_undelivered",
+                            "observation_refused"
+                          ],
+                          "description": "What the goals still lack"
+                        },
+                        "goal": {
+                          "type": "string",
+                          "description": "The id of the goal it is about"
+                        },
+                        "workflow": {
+                          "type": "string",
+                          "description": "The name of the workflow it is about"
+                        },
+                        "detail": {
+                          "type": "string",
+                          "description": "What is missing, in words"
+                        },
+                        "fixed_by": {
+                          "type": "string",
+                          "enum": [
+                            "person",
+                            "agent"
+                          ],
+                          "description": "person when only the person can answer it, agent when the agent can put it right"
+                        },
+                        "ask": {
+                          "type": "string",
+                          "description": "The question to ask the person"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "detail",
+                        "fixed_by"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Something the goals still lack before they can be judged or told"
+                    },
+                    "PlaybookGoals": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "The goals as they were saved"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "The version of the goals, from 1"
+                        },
+                        "gaps": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/GoalGap"
+                          },
+                          "description": "What the playbook and its goals still lack"
+                        }
+                      },
+                      "required": [
+                        "gaps"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The playbook's goals, where it has them, and what they still lack"
+                    }
+                  }
                 }
               }
             }
@@ -1354,7 +1641,7 @@
       "get": {
         "operationId": "list_activity",
         "summary": "List activity",
-        "description": "Lists the activity of the playbooks of the org the caller may access, newest first: the requests that wait on an answer, the definitions whose latest run broke, the runs, definitions and playbooks that are new, the playbooks from the newest 100 changes of the org's register, and the open comments people made on them and, for a caller who may access every playbook, on the organization's own things. Each new and comment row says whether the caller has seen it, and the answer counts what waits on the caller and where they marked everything seen.",
+        "description": "Lists the activity of the playbooks of the org the caller may access, newest first: the requests that wait on an answer, the definitions whose latest run broke, the runs, definitions and playbooks that are new, the playbooks from the newest 100 changes of the org's register, the verdicts of goals and the overdues their owner asked to be told of, now or in a summary, and the open comments people made on them and, for a caller who may access every playbook, on the organization's own things. Each new, comment and goal row says whether the caller has seen it, and the answer counts what waits on the caller and where they marked everything seen.",
         "tags": [
           "activity"
         ],
@@ -1368,7 +1655,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "One kind, needs_you, broken, new or comment, or several separated by commas: keep the rows of those kinds"
+              "description": "One kind, needs_you, broken, new, comment, goal or goal_overdue, or several separated by commas: keep the rows of those kinds"
             }
           },
           {
@@ -1439,7 +1726,7 @@
                       "items": {
                         "$ref": "#/$defs/ActivityRow"
                       },
-                      "description": "The rows of the page, newest first by at"
+                      "description": "The rows of the page, newest first by at, and rows of the same at newest first by result_at"
                     },
                     "has_more": {
                       "type": "boolean",
@@ -1474,13 +1761,18 @@
                         "comments": {
                           "type": "integer",
                           "description": "The open comments others made or reopened that the caller has not seen"
+                        },
+                        "goals": {
+                          "type": "integer",
+                          "description": "The verdicts of goals the caller has not seen and the overdues of goals still open"
                         }
                       },
                       "required": [
                         "needs_you",
                         "broken",
                         "new",
-                        "comments"
+                        "comments",
+                        "goals"
                       ],
                       "additionalProperties": false,
                       "description": "What the caller has to look at, over every playbook the caller may access"
@@ -1530,9 +1822,11 @@
                             "needs_you",
                             "broken",
                             "new",
-                            "comment"
+                            "comment",
+                            "goal",
+                            "goal_overdue"
                           ],
-                          "description": "needs_you, broken, new or comment"
+                          "description": "needs_you, broken, new, comment, goal or goal_overdue"
                         },
                         "address": {
                           "type": "string",
@@ -1559,7 +1853,7 @@
                         },
                         "by": {
                           "type": "string",
-                          "description": "The id of the caller who started the run, saved the version or changed the playbook; for a request, who started the run that asked; for a comment, who made it"
+                          "description": "The id of the caller who started the run, saved the version or changed the playbook; for a request, who started the run that asked; for a comment, who made it; for goal, who judged it, and for goal_overdue, the playbook"
                         },
                         "by_name": {
                           "anyOf": [
@@ -1751,7 +2045,78 @@
                               "type": "null"
                             }
                           ],
-                          "description": "For new and comment, whether the caller has seen it; null for the other kinds"
+                          "description": "For new, comment and goal, whether the caller has seen it; null for the other kinds"
+                        },
+                        "goal": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For goal and goal_overdue, the id of the goal the assessment judges; otherwise null"
+                        },
+                        "outcome": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "passed",
+                                "failed",
+                                "overdue"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For goal, passed or failed, and for goal_overdue, overdue; otherwise null"
+                        },
+                        "word": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For goal, the goal's own words for its verdict, as its goals say them now; otherwise null"
+                        },
+                        "title": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For goal and goal_overdue, the title of the thing the assessment judges, where an observation gave one; otherwise null"
+                        },
+                        "says": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For goal and goal_overdue, the latest sentence of evidence an observation gave before the verdict; otherwise null"
+                        },
+                        "result_at": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For goal, the time its verdict names, which can come before at, when the verdict was recorded; for goal_overdue, the time it became overdue, as at; in ISO 8601 UTC; otherwise null"
                         }
                       },
                       "required": [
@@ -1774,7 +2139,13 @@
                         "waits_on",
                         "expires_at",
                         "about",
-                        "seen"
+                        "seen",
+                        "goal",
+                        "outcome",
+                        "word",
+                        "title",
+                        "says",
+                        "result_at"
                       ],
                       "additionalProperties": false,
                       "description": "An item of the activity of the org"
@@ -1836,7 +2207,7 @@
       "post": {
         "operationId": "mark_activity_seen",
         "summary": "Mark activity seen",
-        "description": "Records that the caller has seen new and comment rows of the activity, by their address and at, everything through a cursor of a read, or both. It changes what the caller has seen alone, and answers the caller's counts and through after it.",
+        "description": "Records that the caller has seen new, comment and goal rows of the activity, by their address and at, everything through a cursor of a read, or both. It changes what the caller has seen alone, and answers the caller's counts and through after it.",
         "tags": [
           "activity"
         ],
@@ -1876,7 +2247,7 @@
                       "additionalProperties": false
                     },
                     "maxItems": 200,
-                    "description": "The new and comment rows the caller has seen, each its address and its at, at most 200"
+                    "description": "The new, comment and goal rows the caller has seen, each its address and its at, at most 200; a goal row is marked by the address of its assessment"
                   },
                   "through": {
                     "type": "string",
@@ -1917,13 +2288,18 @@
                         "comments": {
                           "type": "integer",
                           "description": "The open comments others made or reopened that the caller has not seen"
+                        },
+                        "goals": {
+                          "type": "integer",
+                          "description": "The verdicts of goals the caller has not seen and the overdues of goals still open"
                         }
                       },
                       "required": [
                         "needs_you",
                         "broken",
                         "new",
-                        "comments"
+                        "comments",
+                        "goals"
                       ],
                       "additionalProperties": false,
                       "description": "What the caller has to look at, over every playbook the caller may access"
@@ -14137,6 +14513,359 @@
         ]
       }
     },
+    "/orgs/{org}/playbooks/import": {
+      "post": {
+        "operationId": "import_playbook",
+        "summary": "Import playbook",
+        "description": "Makes a new playbook from a package, such as one an export answered: its goals, its page and its definitions, every definition paused, so nothing runs until its owner resumes it. Everything is checked before anything is written: the goals, the page, every definition as a save checks it, that this runtime serves each type, and that the org has every connection the definitions name. A package that fails any check writes nothing, and the issues say what is missing. Sending the same import_id with the same id and package again goes on where it stopped; another package under the same import_id, or an id that is taken, is refused.",
+        "tags": [
+          "playbooks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/import_playbook/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "playbook": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{2,47}$",
+                    "description": "The id of the playbook: 3 to 48 lowercase letters, digits and hyphens, starting with a letter"
+                  },
+                  "import_id": {
+                    "type": "string",
+                    "description": "The id of this import, chosen by the caller, such as a UUID: sending it again with the same package goes on where the import stopped",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "description": "The display name of the playbook: 1 to 100 characters, not all whitespace"
+                  },
+                  "package": {
+                    "type": "object",
+                    "properties": {
+                      "format": {
+                        "type": "integer",
+                        "description": "The format of the package, 1"
+                      },
+                      "page": {
+                        "type": "string",
+                        "description": "The playbook's page"
+                      },
+                      "goals": {
+                        "type": "string",
+                        "description": "The playbook's goals, which an import requires"
+                      },
+                      "definitions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "description": "The type of the definition"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the definition"
+                            },
+                            "source": {
+                              "type": "string",
+                              "description": "The definition document"
+                            },
+                            "overview": {
+                              "type": "string",
+                              "description": "Its overview"
+                            },
+                            "diagram": {
+                              "type": "string",
+                              "description": "Its diagram"
+                            },
+                            "paused": {
+                              "type": "boolean",
+                              "description": "Whether it was paused where it was exported; every definition is imported paused"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "name",
+                            "source",
+                            "paused"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "description": "The definitions, in an order that can be created front to back, at most 100"
+                      }
+                    },
+                    "required": [
+                      "format",
+                      "definitions"
+                    ],
+                    "additionalProperties": false,
+                    "description": "A package as an export answers it, at most 1 MB"
+                  }
+                },
+                "required": [
+                  "playbook",
+                  "import_id",
+                  "package"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/import_playbook/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9-]{2,47}$",
+                      "description": "The id of the playbook, unique within its org"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The display name of the playbook"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "What the playbook is for, or empty"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "retired"
+                      ],
+                      "description": "active, or retired until restore_playbook restores it"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "description": "When the playbook was created, in ISO 8601 UTC"
+                    },
+                    "created_by": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the playbook, by id and name"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "description": "When the playbook last changed, in ISO 8601 UTC"
+                    },
+                    "retired_at": {
+                      "type": "string",
+                      "description": "When the playbook was retired, in ISO 8601 UTC"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "The page as it was saved, YAML of its data and runs"
+                        }
+                      },
+                      "required": [
+                        "source"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+                    },
+                    "goals": {
+                      "$ref": "#/$defs/PlaybookGoals"
+                    },
+                    "before_building": {
+                      "type": "string",
+                      "description": "What you must do before you build anything more, in words; present only when there is something to do"
+                    },
+                    "studio": {
+                      "type": "string",
+                      "description": "The page in Studio of what was made"
+                    },
+                    "models_not_offered": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The models its definitions name that this runtime does not offer, which they cannot run on here"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "status",
+                    "created_at",
+                    "created_by",
+                    "updated_at",
+                    "goals",
+                    "models_not_offered"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A playbook made from a package, every definition paused, with its goals and its page in Studio",
+                  "$defs": {
+                    "GoalGap": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "no_goal",
+                            "no_milestones",
+                            "measure_unreported",
+                            "measure_paused",
+                            "measure_never_final",
+                            "milestone_unmarked",
+                            "window_never_starts",
+                            "workflow_without_contribution",
+                            "contribution_orphaned",
+                            "notice_function_missing",
+                            "notice_not_started",
+                            "notice_undelivered",
+                            "observation_refused"
+                          ],
+                          "description": "What the goals still lack"
+                        },
+                        "goal": {
+                          "type": "string",
+                          "description": "The id of the goal it is about"
+                        },
+                        "workflow": {
+                          "type": "string",
+                          "description": "The name of the workflow it is about"
+                        },
+                        "detail": {
+                          "type": "string",
+                          "description": "What is missing, in words"
+                        },
+                        "fixed_by": {
+                          "type": "string",
+                          "enum": [
+                            "person",
+                            "agent"
+                          ],
+                          "description": "person when only the person can answer it, agent when the agent can put it right"
+                        },
+                        "ask": {
+                          "type": "string",
+                          "description": "The question to ask the person"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "detail",
+                        "fixed_by"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Something the goals still lack before they can be judged or told"
+                    },
+                    "PlaybookGoals": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "The goals as they were saved"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "The version of the goals, from 1"
+                        },
+                        "gaps": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/GoalGap"
+                          },
+                          "description": "What the playbook and its goals still lack"
+                        }
+                      },
+                      "required": [
+                        "gaps"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The playbook's goals, where it has them, and what they still lack"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          }
+        ]
+      }
+    },
     "/orgs/{org}/generation-models": {
       "get": {
         "operationId": "list_generation_models",
@@ -14371,7 +15100,7 @@
       "post": {
         "operationId": "create_definition",
         "summary": "Create definition",
-        "description": "Saves a new function or workflow from its document, without running it. update_definition changes one saved, and a name is never reused. Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it. A workflow owns one job the business does again and again, and a check, a test or a setup is not one. `source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business. A function needs `diagram`; a workflow takes none. The document's `page` shows the person its runs; write it as the page guide says. A document that does not fit its format is refused with the line and what is wrong.",
+        "description": "Saves a new function or workflow from its document, without running it; a workflow needs a `contributes` list, as the goals guide says. update_definition changes one saved, and a name is never reused. Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it. A workflow owns one job the business does again and again, and a check, a test or a setup is not one. `source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business. A function needs `diagram`, a workflow none; the `page` shows the person its runs, as the page guide says. A document that does not fit its format is refused with the line and what is wrong.",
         "tags": [
           "definitions"
         ],
@@ -14506,6 +15235,67 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "contributes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "goal": {
+                                "type": "string"
+                              },
+                              "purpose": {
+                                "type": "string"
+                              },
+                              "each": {
+                                "type": "string"
+                              },
+                              "per_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "link": {
+                                "type": "string"
+                              },
+                              "when": {
+                                "type": "string"
+                              },
+                              "marks": {
+                                "type": "string"
+                              },
+                              "measures": {
+                                "type": "string"
+                              },
+                              "final": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "boolean",
+                                    "enum": [
+                                      true
+                                    ]
+                                  }
+                                ]
+                              },
+                              "as_of": {
+                                "type": "string"
+                              },
+                              "says": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "goal",
+                              "purpose"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 8,
+                          "description": "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it"
                         }
                       },
                       "additionalProperties": false,
@@ -14993,6 +15783,67 @@
                             "shape": {
                               "type": "string",
                               "description": "The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
+                            },
+                            "contributes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "goal": {
+                                    "type": "string"
+                                  },
+                                  "purpose": {
+                                    "type": "string"
+                                  },
+                                  "each": {
+                                    "type": "string"
+                                  },
+                                  "per_id": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "link": {
+                                    "type": "string"
+                                  },
+                                  "when": {
+                                    "type": "string"
+                                  },
+                                  "marks": {
+                                    "type": "string"
+                                  },
+                                  "measures": {
+                                    "type": "string"
+                                  },
+                                  "final": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "boolean",
+                                        "enum": [
+                                          true
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "as_of": {
+                                    "type": "string"
+                                  },
+                                  "says": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "goal",
+                                  "purpose"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "maxItems": 8,
+                              "description": "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it"
                             }
                           },
                           "additionalProperties": false,
@@ -15353,6 +16204,67 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "contributes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "goal": {
+                                "type": "string"
+                              },
+                              "purpose": {
+                                "type": "string"
+                              },
+                              "each": {
+                                "type": "string"
+                              },
+                              "per_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "link": {
+                                "type": "string"
+                              },
+                              "when": {
+                                "type": "string"
+                              },
+                              "marks": {
+                                "type": "string"
+                              },
+                              "measures": {
+                                "type": "string"
+                              },
+                              "final": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "boolean",
+                                    "enum": [
+                                      true
+                                    ]
+                                  }
+                                ]
+                              },
+                              "as_of": {
+                                "type": "string"
+                              },
+                              "says": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "goal",
+                              "purpose"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 8,
+                          "description": "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it"
                         }
                       },
                       "additionalProperties": false,
@@ -15856,6 +16768,67 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "contributes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "goal": {
+                                "type": "string"
+                              },
+                              "purpose": {
+                                "type": "string"
+                              },
+                              "each": {
+                                "type": "string"
+                              },
+                              "per_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "link": {
+                                "type": "string"
+                              },
+                              "when": {
+                                "type": "string"
+                              },
+                              "marks": {
+                                "type": "string"
+                              },
+                              "measures": {
+                                "type": "string"
+                              },
+                              "final": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "boolean",
+                                    "enum": [
+                                      true
+                                    ]
+                                  }
+                                ]
+                              },
+                              "as_of": {
+                                "type": "string"
+                              },
+                              "says": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "goal",
+                              "purpose"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 8,
+                          "description": "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it"
                         }
                       },
                       "additionalProperties": false,
@@ -16355,6 +17328,67 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "contributes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "goal": {
+                                "type": "string"
+                              },
+                              "purpose": {
+                                "type": "string"
+                              },
+                              "each": {
+                                "type": "string"
+                              },
+                              "per_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "link": {
+                                "type": "string"
+                              },
+                              "when": {
+                                "type": "string"
+                              },
+                              "marks": {
+                                "type": "string"
+                              },
+                              "measures": {
+                                "type": "string"
+                              },
+                              "final": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "boolean",
+                                    "enum": [
+                                      true
+                                    ]
+                                  }
+                                ]
+                              },
+                              "as_of": {
+                                "type": "string"
+                              },
+                              "says": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "goal",
+                              "purpose"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 8,
+                          "description": "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it"
                         }
                       },
                       "additionalProperties": false,
@@ -16959,6 +17993,67 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "contributes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "goal": {
+                                "type": "string"
+                              },
+                              "purpose": {
+                                "type": "string"
+                              },
+                              "each": {
+                                "type": "string"
+                              },
+                              "per_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "link": {
+                                "type": "string"
+                              },
+                              "when": {
+                                "type": "string"
+                              },
+                              "marks": {
+                                "type": "string"
+                              },
+                              "measures": {
+                                "type": "string"
+                              },
+                              "final": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "boolean",
+                                    "enum": [
+                                      true
+                                    ]
+                                  }
+                                ]
+                              },
+                              "as_of": {
+                                "type": "string"
+                              },
+                              "says": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "goal",
+                              "purpose"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 8,
+                          "description": "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it"
                         }
                       },
                       "additionalProperties": false,
@@ -17444,6 +18539,67 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "contributes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "goal": {
+                                "type": "string"
+                              },
+                              "purpose": {
+                                "type": "string"
+                              },
+                              "each": {
+                                "type": "string"
+                              },
+                              "per_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "link": {
+                                "type": "string"
+                              },
+                              "when": {
+                                "type": "string"
+                              },
+                              "marks": {
+                                "type": "string"
+                              },
+                              "measures": {
+                                "type": "string"
+                              },
+                              "final": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "boolean",
+                                    "enum": [
+                                      true
+                                    ]
+                                  }
+                                ]
+                              },
+                              "as_of": {
+                                "type": "string"
+                              },
+                              "says": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "goal",
+                              "purpose"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 8,
+                          "description": "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it"
                         }
                       },
                       "additionalProperties": false,
@@ -17929,6 +19085,67 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "contributes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "goal": {
+                                "type": "string"
+                              },
+                              "purpose": {
+                                "type": "string"
+                              },
+                              "each": {
+                                "type": "string"
+                              },
+                              "per_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "link": {
+                                "type": "string"
+                              },
+                              "when": {
+                                "type": "string"
+                              },
+                              "marks": {
+                                "type": "string"
+                              },
+                              "measures": {
+                                "type": "string"
+                              },
+                              "final": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "boolean",
+                                    "enum": [
+                                      true
+                                    ]
+                                  }
+                                ]
+                              },
+                              "as_of": {
+                                "type": "string"
+                              },
+                              "says": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "goal",
+                              "purpose"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 8,
+                          "description": "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it"
                         }
                       },
                       "additionalProperties": false,
@@ -18414,6 +19631,67 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "contributes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "goal": {
+                                "type": "string"
+                              },
+                              "purpose": {
+                                "type": "string"
+                              },
+                              "each": {
+                                "type": "string"
+                              },
+                              "per_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "link": {
+                                "type": "string"
+                              },
+                              "when": {
+                                "type": "string"
+                              },
+                              "marks": {
+                                "type": "string"
+                              },
+                              "measures": {
+                                "type": "string"
+                              },
+                              "final": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "boolean",
+                                    "enum": [
+                                      true
+                                    ]
+                                  }
+                                ]
+                              },
+                              "as_of": {
+                                "type": "string"
+                              },
+                              "says": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "goal",
+                              "purpose"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 8,
+                          "description": "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it"
                         }
                       },
                       "additionalProperties": false,
@@ -22111,6 +23389,280 @@
         ]
       }
     },
+    "/orgs/{org}/playbooks/{playbook}/export": {
+      "get": {
+        "operationId": "export_playbook",
+        "summary": "Export playbook",
+        "description": "Reads the playbook's method as a package a copy is made from: its page and its goals as saved, every active and paused definition in an order a copy can create them in, whether each is paused, the connections, types and models they need, and the values a fixed scan finds that may be private to the org, with the digest of the package. No run, record, credential or key is in it, and the title and description of the playbook stay with the org.",
+        "tags": [
+          "playbooks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/export_playbook/output",
+                  "type": "object",
+                  "properties": {
+                    "format": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ],
+                      "description": "The format of the package, 1"
+                    },
+                    "digest": {
+                      "type": "string",
+                      "description": "The digest of the package: its format, page, goals and definitions, hashed whole"
+                    },
+                    "page": {
+                      "type": "string",
+                      "description": "The playbook's page as saved; left out when it has none"
+                    },
+                    "goals": {
+                      "type": "string",
+                      "description": "The playbook's goals as saved; left out when it has none"
+                    },
+                    "definitions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "The type of the definition"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "The name of the definition"
+                          },
+                          "source": {
+                            "type": "string",
+                            "description": "The definition document, as saved"
+                          },
+                          "overview": {
+                            "type": "string",
+                            "description": "Its overview, as saved"
+                          },
+                          "diagram": {
+                            "type": "string",
+                            "description": "Its diagram, as saved"
+                          },
+                          "paused": {
+                            "type": "boolean",
+                            "description": "Whether the definition is paused in this playbook"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "name",
+                          "source",
+                          "paused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A definition of the playbook, active or paused"
+                      },
+                      "description": "Every active and paused definition, functions first and then workflows, each in the order it was created, so a copy can create them front to back"
+                    },
+                    "needs": {
+                      "type": "object",
+                      "properties": {
+                        "connections": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "server": {
+                                "type": "string",
+                                "description": "The name of a tool server the definitions call"
+                              },
+                              "used_by": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "The definitions that name it, each as its type and name joined by a slash"
+                              }
+                            },
+                            "required": [
+                              "server",
+                              "used_by"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A connection a copy of the playbook needs"
+                          },
+                          "description": "The tool servers the definitions name, by name"
+                        },
+                        "types": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The types of the definitions"
+                        },
+                        "models": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The models the definitions name"
+                        }
+                      },
+                      "required": [
+                        "connections",
+                        "types",
+                        "models"
+                      ],
+                      "additionalProperties": false,
+                      "description": "What a runtime needs before a copy of the playbook can run"
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "The id of the finding, the same wherever the value occurs"
+                          },
+                          "class": {
+                            "type": "string",
+                            "enum": [
+                              "secret",
+                              "address",
+                              "id",
+                              "handle"
+                            ],
+                            "description": "secret, a token, a key or an address that carries a credential; address, an email address, an address on the web or its host; id, a channel or user id or another opaque id; handle, a channel name or an @name"
+                          },
+                          "value": {
+                            "type": "string",
+                            "description": "The value as it is written"
+                          },
+                          "occurrences": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "part": {
+                                  "type": "string",
+                                  "enum": [
+                                    "goals",
+                                    "page",
+                                    "definition"
+                                  ],
+                                  "description": "Where the value occurs"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "For a definition, its type and name joined by a slash"
+                                },
+                                "field": {
+                                  "type": "string",
+                                  "enum": [
+                                    "source",
+                                    "overview",
+                                    "diagram"
+                                  ],
+                                  "description": "For a definition, which of its texts holds the value"
+                                },
+                                "line": {
+                                  "type": "integer",
+                                  "description": "The line it occurs on, counted from 1"
+                                }
+                              },
+                              "required": [
+                                "part",
+                                "line"
+                              ],
+                              "additionalProperties": false,
+                              "description": "One place a value occurs"
+                            },
+                            "description": "Every place the value occurs"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "class",
+                          "value",
+                          "occurrences"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A value that may be private to the org, found in the texts of the playbook"
+                      },
+                      "description": "The values a fixed scan of the goals, the page and every source, overview and diagram finds that may be private to the org"
+                    }
+                  },
+                  "required": [
+                    "format",
+                    "digest",
+                    "definitions",
+                    "needs",
+                    "findings"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The playbook's method, as a package a copy is made from"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
     "/orgs/{org}/playbooks/{playbook}/events": {
       "get": {
         "operationId": "list_playbook_events",
@@ -22681,7 +24233,7 @@
       "get": {
         "operationId": "list_playbook_changes",
         "summary": "List playbook changes",
-        "description": "Answers which runs, interactions, definitions, playbooks, events, and comments of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.",
+        "description": "Answers which runs, interactions, definitions, playbooks, events, comments, and goals of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.",
         "tags": [
           "changes"
         ],
@@ -22864,6 +24416,23 @@
                             ],
                             "additionalProperties": false,
                             "description": "A comment made, resolved or reopened"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "goal"
+                                ],
+                                "description": "The kind of the resource that changed"
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The goals of the playbook, or how one of them is judged"
                           }
                         ]
                       },
@@ -23178,6 +24747,1161 @@
           {
             "openIdConnect": [
               "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/goals": {
+      "get": {
+        "operationId": "get_playbook_goals",
+        "summary": "Get playbook goals",
+        "description": "Reads the playbook's goals as written, what the playbook and each goal still lack, what each workflow that is not retired does for each goal, and how each goal is being judged. A playbook with no goals answers none, and says so among its gaps.",
+        "tags": [
+          "goals"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/get_playbook_goals/output",
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "The version of the goals, 0 when the playbook has none"
+                    },
+                    "gaps": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/GoalGap"
+                      },
+                      "description": "What the playbook itself still lacks"
+                    },
+                    "goals": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/GoalRead"
+                      },
+                      "description": "The goals, in the order they were written"
+                    },
+                    "results": {
+                      "type": "boolean",
+                      "description": "true where the runtime judges the goals, false where it keeps them and judges nothing yet"
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "gaps",
+                    "goals"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The goals of the playbook and how each is being judged",
+                  "$defs": {
+                    "GoalGap": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "no_goal",
+                            "no_milestones",
+                            "measure_unreported",
+                            "measure_paused",
+                            "measure_never_final",
+                            "milestone_unmarked",
+                            "window_never_starts",
+                            "workflow_without_contribution",
+                            "contribution_orphaned",
+                            "notice_function_missing",
+                            "notice_not_started",
+                            "notice_undelivered",
+                            "observation_refused"
+                          ],
+                          "description": "What the goals still lack"
+                        },
+                        "goal": {
+                          "type": "string",
+                          "description": "The id of the goal it is about"
+                        },
+                        "workflow": {
+                          "type": "string",
+                          "description": "The name of the workflow it is about"
+                        },
+                        "detail": {
+                          "type": "string",
+                          "description": "What is missing, in words"
+                        },
+                        "fixed_by": {
+                          "type": "string",
+                          "enum": [
+                            "person",
+                            "agent"
+                          ],
+                          "description": "person when only the person can answer it, agent when the agent can put it right"
+                        },
+                        "ask": {
+                          "type": "string",
+                          "description": "The question to ask the person"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "detail",
+                        "fixed_by"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Something the goals still lack before they can be judged or told"
+                    },
+                    "GoalAssessment": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the assessment"
+                        },
+                        "per": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the thing it is judged for"
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "The title of the thing"
+                            },
+                            "link": {
+                              "type": "string",
+                              "description": "An address of the thing"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The one thing an assessment judges"
+                        },
+                        "window": {
+                          "type": "object",
+                          "properties": {
+                            "opens": {
+                              "type": "string",
+                              "description": "When the window opens"
+                            },
+                            "closes": {
+                              "type": "string",
+                              "description": "When the window closes"
+                            },
+                            "due": {
+                              "type": "string",
+                              "description": "When the window is judged: its close plus the grace"
+                            }
+                          },
+                          "required": [
+                            "opens",
+                            "closes",
+                            "due"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The window an assessment judges"
+                        },
+                        "rule": {
+                          "type": "object",
+                          "properties": {
+                            "settles": {
+                              "type": "string",
+                              "enum": [
+                                "on_crossing",
+                                "at_close"
+                              ],
+                              "description": "on_crossing, judged the moment a measurement crosses the target; at_close, judged at the end"
+                            },
+                            "target": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "at_least": {
+                                      "type": "number",
+                                      "description": "Passed at this number or more"
+                                    }
+                                  },
+                                  "required": [
+                                    "at_least"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "at_most": {
+                                      "type": "number",
+                                      "description": "Passed at this number or less"
+                                    }
+                                  },
+                                  "required": [
+                                    "at_most"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ],
+                              "description": "The number the measure is judged against"
+                            }
+                          },
+                          "required": [
+                            "settles",
+                            "target"
+                          ],
+                          "additionalProperties": false,
+                          "description": "How it is judged, as pinned when it opened"
+                        },
+                        "milestones": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "The id of the milestone"
+                              },
+                              "label": {
+                                "type": "string",
+                                "description": "The words for the milestone"
+                              },
+                              "by": {
+                                "type": "string",
+                                "enum": [
+                                  "person",
+                                  "auto"
+                                ],
+                                "description": "Who marks it: the person or Auto"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label",
+                              "by"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A moment that matters on the way"
+                          },
+                          "description": "The milestones pinned when it opened"
+                        },
+                        "marks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "milestone": {
+                                "type": "string",
+                                "description": "The id of the milestone marked"
+                              },
+                              "at": {
+                                "type": "string",
+                                "description": "When it was first marked"
+                              },
+                              "run": {
+                                "type": "string",
+                                "description": "The id of the run that marked it"
+                              },
+                              "says": {
+                                "type": "string",
+                                "description": "One sentence of evidence"
+                              }
+                            },
+                            "required": [
+                              "milestone",
+                              "at",
+                              "run"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The first mark of a milestone"
+                          },
+                          "description": "The milestones marked so far"
+                        },
+                        "next": {
+                          "type": "string",
+                          "description": "The first milestone not yet marked"
+                        },
+                        "measurement": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "number",
+                              "description": "The number"
+                            },
+                            "final": {
+                              "type": "boolean",
+                              "description": "Whether the number will not change any more for its window"
+                            },
+                            "as_of": {
+                              "type": "string",
+                              "description": "The moment the number is true through"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When the run that reported it ended"
+                            },
+                            "run": {
+                              "type": "string",
+                              "description": "The id of the run that reported it"
+                            },
+                            "says": {
+                              "type": "string",
+                              "description": "One sentence of evidence"
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "final",
+                            "as_of",
+                            "at",
+                            "run"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The standing measurement, the one with the latest as_of"
+                        },
+                        "final_measurement": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "number",
+                              "description": "The number"
+                            },
+                            "as_of": {
+                              "type": "string",
+                              "description": "The moment the number is true through"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When the run that reported it ended"
+                            },
+                            "run": {
+                              "type": "string",
+                              "description": "The id of the run that reported it"
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "as_of",
+                            "at",
+                            "run"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The latest final measurement"
+                        },
+                        "verdict": {
+                          "type": "string",
+                          "enum": [
+                            "open",
+                            "passed",
+                            "failed"
+                          ],
+                          "description": "open until it is judged"
+                        },
+                        "verdict_at": {
+                          "type": "string",
+                          "description": "When it was judged"
+                        },
+                        "verdict_by": {
+                          "type": "string",
+                          "enum": [
+                            "crossing",
+                            "final",
+                            "deadline"
+                          ],
+                          "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided; deadline, the deadline passed with no final measurement that counts, so it failed with no number"
+                        },
+                        "overdue_since": {
+                          "type": "string",
+                          "description": "Since when it is overdue: its deadline passed with no final measurement that counts"
+                        },
+                        "goals_version": {
+                          "type": "integer",
+                          "description": "The version of the goals it opened under"
+                        },
+                        "notices": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "change": {
+                                "type": "string",
+                                "enum": [
+                                  "passed",
+                                  "failed",
+                                  "overdue"
+                                ],
+                                "description": "What the notice told"
+                              },
+                              "at": {
+                                "type": "string",
+                                "description": "When the notice started"
+                              },
+                              "run": {
+                                "type": "string",
+                                "description": "The id of the run that sends it"
+                              },
+                              "delivered": {
+                                "type": "boolean",
+                                "description": "Whether it was delivered; left out while it is still going"
+                              }
+                            },
+                            "required": [
+                              "change",
+                              "at",
+                              "run"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A notice sent of this assessment"
+                          },
+                          "description": "The notices sent of it"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "rule",
+                        "milestones",
+                        "marks",
+                        "verdict",
+                        "goals_version",
+                        "notices"
+                      ],
+                      "additionalProperties": false,
+                      "description": "One judgement of a goal"
+                    },
+                    "GoalRead": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the goal"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The goal's short name, in the owner's words"
+                        },
+                        "statement": {
+                          "type": "string",
+                          "description": "The goal in the owner's words"
+                        },
+                        "per": {
+                          "type": "string",
+                          "description": "What it is judged per"
+                        },
+                        "window": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "after": {
+                                  "type": "string",
+                                  "description": "The milestone whose first mark starts the window"
+                                },
+                                "for": {
+                                  "type": "string",
+                                  "description": "How long after its start the window closes"
+                                },
+                                "grace": {
+                                  "type": "string",
+                                  "description": "How long after the close a final measurement may still arrive"
+                                }
+                              },
+                              "required": [
+                                "after",
+                                "for"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A window that starts when a milestone is first marked"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "calendar": {
+                                  "type": "string",
+                                  "enum": [
+                                    "day",
+                                    "week",
+                                    "month"
+                                  ],
+                                  "description": "The unit of the calendar"
+                                },
+                                "time_zone": {
+                                  "type": "string",
+                                  "description": "The time zone of the calendar"
+                                },
+                                "grace": {
+                                  "type": "string",
+                                  "description": "How long after the close a final measurement may still arrive"
+                                },
+                                "days": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "monday",
+                                      "tuesday",
+                                      "wednesday",
+                                      "thursday",
+                                      "friday",
+                                      "saturday",
+                                      "sunday"
+                                    ]
+                                  },
+                                  "description": "The days of the week a daily window is judged on, every day when left out"
+                                }
+                              },
+                              "required": [
+                                "calendar"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A window of the calendar"
+                            }
+                          ],
+                          "description": "The window it is judged in"
+                        },
+                        "success": {
+                          "type": "object",
+                          "properties": {
+                            "label": {
+                              "type": "string",
+                              "description": "The words for the number"
+                            },
+                            "settles": {
+                              "type": "string",
+                              "enum": [
+                                "on_crossing",
+                                "at_close"
+                              ],
+                              "description": "on_crossing, judged the moment a measurement crosses the target; at_close, judged at the end"
+                            },
+                            "target": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "at_least": {
+                                      "type": "number",
+                                      "description": "Passed at this number or more"
+                                    }
+                                  },
+                                  "required": [
+                                    "at_least"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "at_most": {
+                                      "type": "number",
+                                      "description": "Passed at this number or less"
+                                    }
+                                  },
+                                  "required": [
+                                    "at_most"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ],
+                              "description": "The number the measure is judged against"
+                            },
+                            "passed": {
+                              "type": "string",
+                              "description": "The words for a pass"
+                            },
+                            "failed": {
+                              "type": "string",
+                              "description": "The words for a fail"
+                            }
+                          },
+                          "required": [
+                            "label",
+                            "settles",
+                            "target",
+                            "passed",
+                            "failed"
+                          ],
+                          "additionalProperties": false,
+                          "description": "What counts as success"
+                        },
+                        "milestones": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "The id of the milestone"
+                              },
+                              "label": {
+                                "type": "string",
+                                "description": "The words for the milestone"
+                              },
+                              "by": {
+                                "type": "string",
+                                "enum": [
+                                  "person",
+                                  "auto"
+                                ],
+                                "description": "Who marks it: the person or Auto"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "label",
+                              "by"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A moment that matters on the way"
+                          },
+                          "description": "The moments that matter, in order"
+                        },
+                        "notify": {
+                          "type": "object",
+                          "properties": {
+                            "passed": {
+                              "type": "string",
+                              "enum": [
+                                "now",
+                                "summary",
+                                "quiet"
+                              ],
+                              "description": "now, at once; summary, in the summary; quiet, not at all"
+                            },
+                            "failed": {
+                              "type": "string",
+                              "enum": [
+                                "now",
+                                "summary",
+                                "quiet"
+                              ],
+                              "description": "now, at once; summary, in the summary; quiet, not at all"
+                            },
+                            "overdue": {
+                              "type": "string",
+                              "enum": [
+                                "now",
+                                "summary",
+                                "quiet"
+                              ],
+                              "description": "now, at once; summary, in the summary; quiet, not at all"
+                            },
+                            "through": {
+                              "type": "string",
+                              "description": "The notification function that tells"
+                            },
+                            "summary": {
+                              "type": "object",
+                              "properties": {
+                                "cron": {
+                                  "type": "string",
+                                  "description": "When the summary comes"
+                                },
+                                "time_zone": {
+                                  "type": "string",
+                                  "description": "The time zone of its schedule"
+                                },
+                                "through": {
+                                  "type": "string",
+                                  "description": "The notification function that sends it"
+                                }
+                              },
+                              "required": [
+                                "cron"
+                              ],
+                              "additionalProperties": false,
+                              "description": "The summary and when it comes"
+                            }
+                          },
+                          "required": [
+                            "passed",
+                            "failed"
+                          ],
+                          "additionalProperties": false,
+                          "description": "How the owner asked to be told, absent when they chose nothing, so nothing is owed"
+                        },
+                        "retired": {
+                          "type": "boolean",
+                          "description": "true when the goal is stopped"
+                        },
+                        "agreed": {
+                          "type": "object",
+                          "properties": {
+                            "at": {
+                              "type": "string",
+                              "description": "When the yes was recorded"
+                            },
+                            "by": {
+                              "type": "string",
+                              "description": "The id of the caller that recorded it"
+                            },
+                            "version": {
+                              "type": "integer",
+                              "description": "The version of the goals the person said yes to"
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "by",
+                            "version"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The person's yes to the goal as it is saved now; left out until they say yes, and again once the goal changes"
+                        },
+                        "gaps": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/GoalGap"
+                          },
+                          "description": "What the goal still lacks"
+                        },
+                        "contributions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "workflow": {
+                                "type": "string",
+                                "description": "The name of the workflow"
+                              },
+                              "purpose": {
+                                "type": "string",
+                                "description": "What it does for the goal, in the owner's words"
+                              },
+                              "marks": {
+                                "type": "string",
+                                "description": "The milestone it marks"
+                              },
+                              "measures": {
+                                "type": "boolean",
+                                "description": "Whether it reports the measure"
+                              }
+                            },
+                            "required": [
+                              "workflow",
+                              "purpose",
+                              "measures"
+                            ],
+                            "additionalProperties": false,
+                            "description": "What one workflow does for the goal"
+                          },
+                          "description": "What the workflows that are not retired do for it"
+                        },
+                        "assessments": {
+                          "type": "object",
+                          "properties": {
+                            "current": {
+                              "anyOf": [
+                                {
+                                  "$ref": "#/$defs/GoalAssessment"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The newest open assessment that has an observation, else the newest closed, else the newest open; null when there is none"
+                            },
+                            "open_count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "How many assessments are open"
+                            },
+                            "in_flight": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/$defs/GoalAssessment"
+                              },
+                              "description": "The open assessments, at most 12: overdue first, then by due, then newest"
+                            },
+                            "by_milestone": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "How many"
+                              },
+                              "description": "For each milestone, how many open assessments have it marked"
+                            },
+                            "waiting": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "How many"
+                              },
+                              "description": "For each milestone, how many open assessments wait on it next"
+                            },
+                            "closed": {
+                              "type": "object",
+                              "properties": {
+                                "total": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "description": "How many assessments ended"
+                                },
+                                "passed": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "description": "How many passed"
+                                },
+                                "failed": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "description": "How many failed"
+                                },
+                                "no_result": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "description": "How many ended with no result"
+                                },
+                                "latest": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "description": "The id of the assessment"
+                                      },
+                                      "outcome": {
+                                        "type": "string",
+                                        "enum": [
+                                          "passed",
+                                          "failed",
+                                          "no_result"
+                                        ],
+                                        "description": "How it ended; no_result only for what an earlier release ended with no result"
+                                      },
+                                      "by": {
+                                        "type": "string",
+                                        "enum": [
+                                          "crossing",
+                                          "final",
+                                          "deadline"
+                                        ],
+                                        "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided; deadline, the deadline passed with no final measurement that counts, so it failed with no number"
+                                      },
+                                      "at": {
+                                        "type": "string",
+                                        "description": "When it ended"
+                                      },
+                                      "per": {
+                                        "type": "object",
+                                        "properties": {
+                                          "id": {
+                                            "type": "string",
+                                            "description": "The id of the thing it is judged for"
+                                          },
+                                          "title": {
+                                            "type": "string",
+                                            "description": "The title of the thing"
+                                          },
+                                          "link": {
+                                            "type": "string",
+                                            "description": "An address of the thing"
+                                          }
+                                        },
+                                        "required": [
+                                          "id"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "The one thing an assessment judges"
+                                      },
+                                      "window": {
+                                        "type": "object",
+                                        "properties": {
+                                          "opens": {
+                                            "type": "string",
+                                            "description": "When the window opens"
+                                          },
+                                          "closes": {
+                                            "type": "string",
+                                            "description": "When the window closes"
+                                          },
+                                          "due": {
+                                            "type": "string",
+                                            "description": "When the window is judged: its close plus the grace"
+                                          }
+                                        },
+                                        "required": [
+                                          "opens",
+                                          "closes",
+                                          "due"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "The window an assessment judges"
+                                      },
+                                      "value": {
+                                        "type": "number",
+                                        "description": "The number it was judged on"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "outcome",
+                                      "at"
+                                    ],
+                                    "additionalProperties": false,
+                                    "description": "An assessment that ended"
+                                  },
+                                  "description": "The latest that ended, at most 60"
+                                }
+                              },
+                              "required": [
+                                "total",
+                                "passed",
+                                "failed",
+                                "no_result",
+                                "latest"
+                              ],
+                              "additionalProperties": false,
+                              "description": "The assessments that ended"
+                            }
+                          },
+                          "required": [
+                            "current",
+                            "open_count",
+                            "in_flight",
+                            "by_milestone",
+                            "waiting",
+                            "closed"
+                          ],
+                          "additionalProperties": false,
+                          "description": "How the goal is being judged"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "statement",
+                        "success",
+                        "milestones",
+                        "gaps",
+                        "contributions",
+                        "assessments"
+                      ],
+                      "additionalProperties": false,
+                      "description": "A goal as written, what it lacks, what serves it and how it is judged"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/goals/agreed": {
+      "post": {
+        "operationId": "agree_playbook_goals",
+        "summary": "Agree playbook goals",
+        "description": "Records the person's yes to the playbook's saved goals. Call it only after the person says yes in the conversation, and send the goals `version` they saw. Without `ids` it covers every goal that is not retired. A goal saved again with a change needs a new yes: show it, ask again, then call this again.",
+        "tags": [
+          "goals"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/agree_playbook_goals/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "The goals version the person saw, as create_playbook, update_playbook or get_playbook answered it"
+                  },
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "description": "The ids of the goals the person said yes to; leave it out for every goal that is not retired"
+                  }
+                },
+                "required": [
+                  "version"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/agree_playbook_goals/output",
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "integer",
+                      "description": "The version of the goals now"
+                    },
+                    "goals": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "The id of the goal"
+                          },
+                          "agreed": {
+                            "type": "object",
+                            "properties": {
+                              "at": {
+                                "type": "string",
+                                "description": "When the yes was recorded"
+                              },
+                              "by": {
+                                "type": "string",
+                                "description": "The id of the caller that recorded it"
+                              },
+                              "version": {
+                                "type": "integer",
+                                "description": "The version of the goals the person said yes to"
+                              }
+                            },
+                            "required": [
+                              "at",
+                              "by",
+                              "version"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The person's yes to the goal as it is saved now"
+                          }
+                        },
+                        "required": [
+                          "id"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The goals that are not retired, in order; one with no agreed still needs a yes"
+                    },
+                    "before_building": {
+                      "type": "string",
+                      "description": "What you must do before you build anything more, in words; present only when there is something to do"
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "goals"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The goals and the yes recorded to each"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:write"
             ]
           }
         ]
@@ -26511,12 +29235,13 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: start, terminology, a definition format, a card format, or a recipe for a common task; one of start (Start here), terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), render-slack (Cards for Slack), prediction-function (Prediction function format), computation-function (Computation function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), triggers (Triggers), events (Events), page (Page format), glance (Glance format), first-playbook (Create your first playbook), connect-a-service (Connect a service), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule), keep (Keep something for later)",
+            "description": "The guide to read: start, terminology, a definition format, a card format, or a recipe for a common task; one of start (Start here), terminology (Terminology), goals (Goals), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), render-slack (Cards for Slack), prediction-function (Prediction function format), computation-function (Computation function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), triggers (Triggers), events (Events), page (Page format), glance (Glance format), first-playbook (Create your first playbook), connect-a-service (Connect a service), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule), keep (Keep something for later)",
             "schema": {
               "type": "string",
               "enum": [
                 "start",
                 "terminology",
+                "goals",
                 "reasoning-function",
                 "lookup-function",
                 "interaction-function",

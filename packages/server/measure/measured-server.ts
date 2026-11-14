@@ -1,8 +1,8 @@
 import { Schema } from 'effect';
 
-import { compositionRoot } from '../src/composition/composition-root.ts';
 import { startServer } from '../src/lifecycle/lifecycle.ts';
 import type { RunningServer } from '../src/server-options/server-options.ts';
+import { compositionRootWithoutGoals } from '../src/testing/servers/composition-without-goals.ts';
 
 export const playbook = '/v1/orgs/local/playbooks/measure';
 
@@ -25,7 +25,7 @@ async function called(server: RunningServer, method: string, path: string, body:
 export async function measuredServer(ledger: Readonly<Record<string, string>>): Promise<MeasuredServer> {
   const server = await startServer(
     { HOST: '127.0.0.1', PORT: '0', INTERACTION_OPEN_REQUESTS: '20000', ...ledger },
-    compositionRoot,
+    compositionRootWithoutGoals,
   );
   return {
     call: (method, path, body) => called(server, method, path, body),

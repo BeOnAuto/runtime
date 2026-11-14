@@ -53,7 +53,14 @@ export const rolesImported = Effect.fnUntraced(function* (
   const declared = members.flatMap((member) => assignmentOf(member));
   const imported = yield* Effect.reduce(inAppendsOfEight(declared), noneYet, (count: number, assignments) =>
     writer
-      .execute(roleAssignmentsStreamOf(scope), roleAssignmentDecider, { kind: 'import', scope, assignments, at, by })
+      .execute(roleAssignmentsStreamOf(scope), roleAssignmentDecider, {
+        kind: 'provision',
+        source: 'import',
+        scope,
+        assignments,
+        at,
+        by,
+      })
       .pipe(
         Effect.map(
           ({ state, decidedOn }) => count + HashMap.size(state.byPrincipal) - HashMap.size(decidedOn.byPrincipal),

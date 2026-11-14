@@ -8,6 +8,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { tcpPort } from '../lifecycle/http-server.ts';
 import { developmentFiles, startDevelopment, untilListening } from '../testing/processes/development-process.ts';
+import { contributing, givenGoals } from '../testing/settings/goals-kept.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const playbook = 'support';
@@ -127,7 +128,8 @@ function settled(session: McpSession, runId: unknown): Promise<Readonly<Record<s
 
 async function stored(session: McpSession, type: string, name: string, source: string): Promise<unknown> {
   const diagram = type === 'workflow' ? {} : { diagram: 'none' };
-  return structured(await session.callTool('create_definition', { playbook, type, name, source, ...diagram }));
+  const saved = type === 'workflow' ? contributing(source) : source;
+  return structured(await session.callTool('create_definition', { playbook, type, name, source: saved, ...diagram }));
 }
 
 async function ran(session: McpSession, name: string, input: object, type = 'reasoning'): Promise<unknown> {
@@ -138,7 +140,7 @@ async function ran(session: McpSession, name: string, input: object, type = 'rea
 describe('the requests the quick start suggests, made over /mcp as an assistant would', () => {
   it('creates a playbook, stores a reasoning function that classifies tickets, runs it, reads its record and runs a new version', async () => {
     const steps = await onPnpmDev(async (session) => ({
-      playbook: structured(await session.callTool('create_playbook', { playbook, name: 'Support' })),
+      playbook: structured(await session.callTool('create_playbook', { playbook, name: 'Support', goals: givenGoals })),
       stored: await stored(session, 'reasoning', 'classify-ticket', classifyingPrompt('Answer as JSON.')),
       first: await ran(session, 'classify-ticket', { ticket: charged }),
       updated: structured(
@@ -170,7 +172,7 @@ describe('the requests the quick start suggests, made over /mcp as an assistant 
 describe('the workflow requests of the quick start, over /mcp', () => {
   it('builds a workflow that drafts an escalation note only for an urgent ticket, and runs it on two', async () => {
     const outputs = await onPnpmDev(async (session) => {
-      await session.callTool('create_playbook', { playbook, name: 'Support' });
+      await session.callTool('create_playbook', { playbook, name: 'Support', goals: givenGoals });
       await stored(session, 'reasoning', 'classify-ticket', classifyingPrompt('Answer as JSON.'));
       await stored(session, 'reasoning', 'escalation-note', escalationNote);
       await stored(session, 'workflow', 'triage-ticket', triage);
@@ -188,7 +190,7 @@ describe('the workflow requests of the quick start, over /mcp', () => {
 
   it('starts a workflow that waits for an approval, sends the approval, and sees it finish', async () => {
     const ending = await onPnpmDev(async (session) => {
-      await session.callTool('create_playbook', { playbook, name: 'Support' });
+      await session.callTool('create_playbook', { playbook, name: 'Support', goals: givenGoals });
       await stored(session, 'workflow', 'refund-approval', approval);
       const started = structured(
         await session.callTool('run_definition', {
@@ -245,6 +247,7 @@ describe('the first-playbook prompt of the quick start, over /mcp', () => {
             playbook,
             name: 'Support',
             description: 'Classifies support tickets',
+            goals: givenGoals,
           }),
         ),
         stored: await stored(session, 'reasoning', 'classify-ticket', classifyingPrompt('Answer as JSON.')),

@@ -16,7 +16,8 @@ const priya: AssignedPrincipal = { type: 'person', id: 'user_priya' };
 const every: ProjectedRowsQuery = { where: [], orderBy: [], order: 'asc', limit: 10 };
 
 const imported: RoleAssignmentCommand = {
-  kind: 'import',
+  kind: 'provision',
+  source: 'import',
   scope: acme,
   assignments: [
     { principal: ada, role: { type: 'built_in', id: 'admin' } },

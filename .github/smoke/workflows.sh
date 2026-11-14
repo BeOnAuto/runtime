@@ -39,14 +39,14 @@ settled() {
   done
   return 1
 }
-greet="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: greet, version: '1.0.0' }" 'do:' \
+greet="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: greet, version: '1.0.0' }" "$smoke_contributes" 'do:' \
   "  - greet: { set: { greeting: '\${ \"Hello, \" + \$data.name }' } }")"
-approval="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: approval, version: '1.0.0' }" 'do:' \
+approval="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: approval, version: '1.0.0' }" "$smoke_contributes" 'do:' \
   '  - decide: { listen: { to: { one: { with: { type: com.example.approval.decided } } } } }')"
 runtime_volume "$volume"
 start_server "$first"
 test "$(runtime_logs "$first" 2>&1 | grep --count '"message":"Workflows run in this server: ')" = 1
-test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
+test "$(call playbook.json --data "$smoke_playbook" http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
 for name in greet approval; do
   definition="$(jq --null-input --arg name "$name" --arg source "${!name}" '{name: $name, source: $source}')"
   test "$(call created.json --data "$definition" "$playbook/definitions/workflow")" = 201

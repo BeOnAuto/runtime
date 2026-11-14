@@ -2,6 +2,7 @@
 set -e
 repository="${1:?the repository the package was packed in}"
 port="${2:?the port the packed runtime listens on}"
+. "$(dirname "${BASH_SOURCE[0]}")/runtime.sh"
 stop_signal=TERM
 kept_on_failure=(runtime.log playbook.json created.json totalled.json greeting.json greeted.json)
 redacted() {
@@ -66,7 +67,7 @@ call() {
   curl --silent --max-time 30 --output "$1" --write-out '%{http_code}' --header 'content-type: application/json' "${@:2}"
 }
 playbook=http://127.0.0.1:$port/v1/orgs/local/playbooks/smoke
-test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:$port/v1/orgs/local/playbooks)" = 201
+test "$(call playbook.json --data "$smoke_playbook" http://127.0.0.1:$port/v1/orgs/local/playbooks)" = 201
 total="$(printf '%s\n' '---' 'language: typescript' 'input:' '  schema: {type: object, required: [rows]}' '---' \
   'export default function (input: any): Output {' \
   '  const total_cents = input.rows.reduce((sum: number, row: any) => sum + row.cost_cents, 0);' \
@@ -76,7 +77,7 @@ test "$(call created.json --data "$(jq --null-input --arg source "$total" '{name
 test "$(call totalled.json --data '{"input":{"rows":[{"cost_cents":1050},{"cost_cents":2075}]}}' \
   "$playbook/definitions/computation/total/run")" = 200
 test "$(jq --compact-output '[.status, .output]' totalled.json)" = '["succeeded",{"total_cents":3125,"rows":2}]'
-greet="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: greet, version: '1.0.0' }" 'do:' \
+greet="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: greet, version: '1.0.0' }" "$smoke_contributes" 'do:' \
   "  - greet: { set: { greeting: '\${ \"Hello, \" + \$data.name }' } }")"
 test "$(call created.json --data "$(jq --null-input --arg source "$greet" '{name: "greet", source: $source}')" \
   "$playbook/definitions/workflow")" = 201

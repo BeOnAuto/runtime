@@ -178,4 +178,4 @@ export function compositionRootWith(
   });
 }
 
-export const compositionRoot = compositionRootWith(loggedModelAccess);
+export const compositionRoot = compositionRootWith(loggedModelAccess, { goals: true, goalsResults: true });

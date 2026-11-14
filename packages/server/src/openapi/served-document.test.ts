@@ -21,7 +21,7 @@ let document: unknown;
 const keptDocument = new URL('../../../../docs/assets/openapi.json', import.meta.url);
 
 beforeAll(async () => {
-  server = await servingReasoning([]);
+  server = await servingReasoning([], undefined, undefined, { goals: true, goalsResults: true });
   text = await (await fetch(`${server.origin}/v1/openapi.json`)).text();
   document = JSON.parse(text);
 });
@@ -54,8 +54,8 @@ describe('the OpenAPI document of the server', () => {
     expect(unresolvedSchemasIn(document)).toEqual([]);
   });
 
-  it('describes the 77 operations of the catalog, the content and the guides, under the tags of their resources', () => {
-    expect(operationsIn(document)).toHaveLength(77);
+  it('describes the 81 operations of the catalog, the content and the guides, under the tags of their resources', () => {
+    expect(operationsIn(document)).toHaveLength(81);
     expect(Schema.decodeUnknownSync(TagsSchema)(document).tags.map(({ name }) => name)).toEqual([
       'playbooks',
       'changes',
@@ -72,6 +72,7 @@ describe('the OpenAPI document of the server', () => {
       'runs',
       'analytics',
       'events',
+      'goals',
       'interactions',
       'assets',
       'content',
@@ -213,7 +214,7 @@ describe('the guides over HTTP', () => {
       ),
     );
 
-    expect(resources).toHaveLength(20);
+    expect(resources).toHaveLength(21);
     expect(overHttp).toEqual(resources);
   });
 });

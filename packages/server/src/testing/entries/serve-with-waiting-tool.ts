@@ -1,21 +1,21 @@
 import type { DispatcherServices } from '@on.auto/operations';
 
-import { compositionRoot } from '../../composition/composition-root.ts';
 import { routesServing } from '../../composition/served-routes.ts';
 import { exitOnStartupFailure, runServer } from '../../lifecycle/run-server.ts';
 import { stopInsistedBy, stopRequestedBy } from '../../lifecycle/stop-request.ts';
 import { keyInHandOf } from '../../secrets/secrets-keys.ts';
 import { servedBy } from '../../server-options/server-options.ts';
 import { shortShutdownTimeoutMs } from '../processes/shutdown-timeouts.ts';
+import { compositionRootWithoutGoals } from '../servers/composition-without-goals.ts';
 import { playbookOperations } from '../servers/pageless-playbooks.ts';
 import { waitForeverAnnouncedIn } from './calls-in-flight.ts';
 
 await runServer<DispatcherServices>(
   process,
   {
-    ...compositionRoot,
+    ...compositionRootWithoutGoals,
     composed: async (settings, telemetry, shippedFiles) => ({
-      ...(await compositionRoot.composed(settings, telemetry, shippedFiles)),
+      ...(await compositionRootWithoutGoals.composed(settings, telemetry, shippedFiles)),
       serve: async (runtime) =>
         servedBy(
           await routesServing([...playbookOperations, waitForeverAnnouncedIn(process.env)], {

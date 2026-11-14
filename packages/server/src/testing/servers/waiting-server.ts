@@ -1,12 +1,12 @@
 import { waitForeverAnnouncing } from '@on.auto/api/testing';
 import type { DispatcherServices } from '@on.auto/operations';
 
-import { compositionRoot } from '../../composition/composition-root.ts';
 import { routesServing } from '../../composition/served-routes.ts';
 import { startServer } from '../../lifecycle/lifecycle.ts';
 import { keyInHandOf } from '../../secrets/secrets-keys.ts';
 import { servedBy } from '../../server-options/server-options.ts';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
+import { compositionRootWithoutGoals } from './composition-without-goals.ts';
 import { playbookOperations } from './pageless-playbooks.ts';
 import { loopbackSettingsOver } from './reasoning-server.ts';
 
@@ -22,9 +22,9 @@ export async function servingAToolThatWaits(): Promise<WaitingServer> {
   const ledger = temporaryLedger();
   const calling = Promise.withResolvers<void>();
   const server = await startServer<DispatcherServices>(loopbackSettingsOver(ledger), {
-    ...compositionRoot,
+    ...compositionRootWithoutGoals,
     composed: async (settings, telemetry, shippedFiles) => ({
-      ...(await compositionRoot.composed(settings, telemetry, shippedFiles)),
+      ...(await compositionRootWithoutGoals.composed(settings, telemetry, shippedFiles)),
       serve: async (runtime) =>
         servedBy(
           await routesServing([...playbookOperations, waitForeverAnnouncing(calling.resolve)], {

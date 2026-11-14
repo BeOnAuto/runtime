@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { logLinesOf, requestTo, workflowProcess } from '../testing/processes/workflow-process.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { workflowSource } from '../testing/servers/workflow-server.ts';
+import { contributing, givenGoals, workflowSource } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
 import { rolesServedFrom, servedRoleSource } from './served-access-control.ts';
 
@@ -28,7 +28,7 @@ describe('the server', () => {
     const port = await child.port;
     const atStart = logLinesOf(child).map(({ message }) => message);
 
-    const created = await requestTo(port, 'POST', '', { playbook: 'gamma', name: 'Gamma' });
+    const created = await requestTo(port, 'POST', '', { playbook: 'gamma', name: 'Gamma', goals: givenGoals });
     const listed = await requestTo(port, 'GET', '');
     const read = await requestTo(port, 'GET', '/gamma');
     child.signal('SIGTERM');
@@ -48,8 +48,11 @@ describe('the server', () => {
     const child = workflowProcess(ledger.fileName);
     const port = await child.port;
 
-    await requestTo(port, 'POST', '', { playbook: 'delta', name: 'Delta' });
-    await requestTo(port, 'POST', '/delta/definitions/workflow', { name: 'close-the-month', source: closing });
+    await requestTo(port, 'POST', '', { playbook: 'delta', name: 'Delta', goals: givenGoals });
+    await requestTo(port, 'POST', '/delta/definitions/workflow', {
+      name: 'close-the-month',
+      source: contributing(closing),
+    });
     await requestTo(port, 'POST', '/delta/events', {
       event: { source: '/ledger', type: 'com.acme.ledger.closed', data: { month: 'october' } },
     });

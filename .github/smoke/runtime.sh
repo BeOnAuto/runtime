@@ -84,3 +84,9 @@ runtime_cleanup() {
   for pid in "${smoke_pids[@]}"; do kill -TERM "$pid" 2>/dev/null || true; done
   for pid in "${smoke_pids[@]}"; do wait "$pid" 2>/dev/null || true; done
 }
+smoke_goals="$(printf '%s\n' '- id: kept-going' '  statement: The playbook keeps doing its work.' '  success:' \
+  '    label: Runs that ended' '    settles: on_crossing' '    target: { at_least: 0 }' '    passed: Kept going' \
+  '    failed: Stopped' '  notify: { passed: quiet, failed: quiet }')"
+smoke_playbook="$(jq --null-input --compact-output --arg goals "$smoke_goals" \
+  '{playbook: "smoke", name: "Smoke test", goals: $goals}')"
+smoke_contributes="$(printf '%s\n' 'contributes:' '  - goal: kept-going' '    purpose: Does the work the smoke asks of it.')"

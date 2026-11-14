@@ -7,7 +7,7 @@ import { Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { tcpPort } from '../../lifecycle/http-server.ts';
-import { runIdIn, isStarted, workflowSource } from '../servers/workflow-server.ts';
+import { runIdIn, isStarted, workflowSource, contributing, givenGoals } from '../servers/workflow-server.ts';
 import { until } from '../waiting/until.ts';
 import { spawnServer, type SpawnedServer } from './spawned-server.ts';
 
@@ -121,13 +121,16 @@ export async function gatewayThatHangsFirst(): Promise<StubGateway> {
 }
 
 export async function welcomingStarted(port: number, playbook: string): Promise<string> {
-  await requestTo(port, 'POST', '', { playbook, name: 'Welcoming' });
+  await requestTo(port, 'POST', '', { playbook, name: 'Welcoming', goals: givenGoals });
   await requestTo(port, 'POST', `/${playbook}/definitions/reasoning`, {
     name: 'welcome',
     source: welcome,
     diagram: 'none',
   });
-  await requestTo(port, 'POST', `/${playbook}/definitions/workflow`, { name: 'welcoming', source: welcoming });
+  await requestTo(port, 'POST', `/${playbook}/definitions/workflow`, {
+    name: 'welcoming',
+    source: contributing(welcoming),
+  });
   const started = await requestTo(port, 'POST', `/${playbook}/definitions/workflow/welcoming/run`, {
     input: { name: 'Ada' },
   });

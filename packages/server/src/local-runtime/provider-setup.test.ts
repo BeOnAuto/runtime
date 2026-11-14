@@ -1,10 +1,10 @@
 import { plainTextIn, withMcpSession } from '@on.auto/api/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { compositionRootWithoutGoals } from '../testing/servers/composition-without-goals.ts';
 import { request } from '../testing/servers/http-client.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
@@ -26,7 +26,7 @@ beforeEach(async () => {
       LEDGER_FILE: ledger.fileName,
       ...noConsentThroughAuto,
     },
-    { ...compositionRoot, localServingIn: () => ({ providerSetup: setup }) },
+    { ...compositionRootWithoutGoals, localServingIn: () => ({ providerSetup: setup }) },
   );
 });
 

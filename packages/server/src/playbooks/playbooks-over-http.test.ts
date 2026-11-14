@@ -6,6 +6,7 @@ import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { request, type TestResponse } from '../testing/servers/http-client.ts';
+import { goalsText } from '../testing/settings/goals-kept.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 
 const playbooks = '/v1/orgs/acme/playbooks';
@@ -31,8 +32,8 @@ afterEach(async () => {
   ledger.remove();
 });
 
-function create(body: unknown): Promise<TestResponse> {
-  return request(server.port, 'POST', playbooks, { body });
+function create(body: Readonly<Record<string, unknown>>): Promise<TestResponse> {
+  return request(server.port, 'POST', playbooks, { body: { goals: goalsText, ...body } });
 }
 
 function cacheControlOf(response: TestResponse): string | null {

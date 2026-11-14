@@ -119,7 +119,7 @@ export async function assessing({ ledger, goals, watching = '', ...switches }: S
       return Object.fromEntries(rows.map(({ key, row }) => [key, row]));
     },
     ranAMinuteOn: () => {
-      clock.moveTo(clock.now() + aMinuteAndASecond);
+      clock.moveTo(Math.max(clock.now(), Date.now()) + aMinuteAndASecond);
     },
   };
 }

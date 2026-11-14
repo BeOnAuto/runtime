@@ -36,6 +36,7 @@ export async function servedByAThrowawayServer(): Promise<ServedToAnAgent> {
         playbook: 'alpha',
         actingAs: { caller: localDeveloper, org: localDeveloper.org },
         firstCalls: firstCallsOnANewOrg,
+        kept: { goals: true },
       });
       return { surface, page: await (await fetch(`${origin}${debugPath}`)).text() };
     } finally {

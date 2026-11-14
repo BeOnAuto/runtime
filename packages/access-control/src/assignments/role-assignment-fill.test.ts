@@ -19,7 +19,8 @@ const people = ['user_ada', 'user_priya', 'user_dana', 'user_lee'];
 
 const commands: readonly RoleAssignmentCommand[] = [
   {
-    kind: 'import',
+    kind: 'provision',
+    source: 'import',
     scope: acme,
     assignments: people.map((id, at) => ({
       principal: { type: 'person', id },

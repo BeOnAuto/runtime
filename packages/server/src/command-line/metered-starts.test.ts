@@ -7,6 +7,7 @@ import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { homeOfTheTest, spawnRuntimeCommand } from '../testing/processes/runtime-command.ts';
 import { namesIn, readOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
+import { contributing, givenGoals } from '../testing/settings/goals-kept.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const tally = workflowSource('tally', 'do:\n  - count:\n      set: { counted: true }\n');
@@ -45,8 +46,8 @@ describe('a runtime the auto-runtime command started', () => {
     const port = await aPortNothingListensOn();
     const runtime = spawnRuntimeCommand(command, { home, port });
     await until(() => isAcceptingConnections(port), Boolean);
-    await posted(port, playbooks, { playbook: 'alpha', name: 'Alpha' });
-    await posted(port, `${playbooks}/alpha/definitions/workflow`, { name: 'tally', source: tally });
+    await posted(port, playbooks, { playbook: 'alpha', name: 'Alpha', goals: givenGoals });
+    await posted(port, `${playbooks}/alpha/definitions/workflow`, { name: 'tally', source: contributing(tally) });
     const run = runIdIn(await posted(port, `${playbooks}/alpha/definitions/workflow/tally/run`, { input: {} }));
     runtime.interrupt();
     await runtime.exited;

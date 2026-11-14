@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { configuredServer } from '../testing/processes/configured-server.ts';
 import { request } from '../testing/servers/http-client.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
+import { givenGoals } from '../testing/settings/goals-kept.ts';
 
 const billingDocument = JSON.stringify({
   openapi: '3.1.0',
@@ -31,7 +32,9 @@ describe('the document of an openapi server', () => {
     );
     const document = join(dirname(configFile), 'billing.json');
     const port = await child.port;
-    await request(port, 'POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+    await request(port, 'POST', '/v1/orgs/acme/playbooks', {
+      body: { playbook: 'alpha', name: 'Alpha', goals: givenGoals },
+    });
 
     const missing = await request(port, 'GET', search);
     writeFileSync(document, billingDocument);

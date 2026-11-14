@@ -21,7 +21,7 @@ call() {
 playbook=http://127.0.0.1:$port/v1/orgs/demo/playbooks/smoke
 source="$(printf '%s\n' '---' 'model: anthropic/claude-sonnet-4-5' '---' 'Say hello to {{ input.name }}.')"
 definition="$(jq --null-input --arg source "$source" '{name: "hello", source: $source, diagram: "none"}')"
-test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
+test "$(call playbook.json --data "$smoke_playbook" http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
 test "$(call created.json --data "$definition" "$playbook/definitions/reasoning")" = 201
 test "$(call read.json "$playbook/definitions/reasoning/hello")" = 200
 test "$(jq --raw-output .source read.json)" = "$source"

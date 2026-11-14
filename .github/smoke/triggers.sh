@@ -30,9 +30,9 @@ ended_runs() {
   return 1
 }
 closing="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: closing, version: '1.0.0' }" \
-  'schedule: { on: { one: { with: { type: com.example.ledger.closed } } }, every: PT1M }' 'do:' \
+  'schedule: { on: { one: { with: { type: com.example.ledger.closed } } }, every: PT1M }' "$smoke_contributes" 'do:' \
   "  - total: { set: { input: '\${ \$data }' } }")"
-test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
+test "$(call playbook.json --data "$smoke_playbook" http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
 definition="$(jq --null-input --arg source "$closing" '{name: "closing", source: $source}')"
 test "$(call created.json --data "$definition" "$playbook/definitions/workflow")" = 201
 test "$(jq --compact-output '[.triggers[] | [.kind, .reference]]' created.json)" = \

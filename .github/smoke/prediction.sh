@@ -28,7 +28,7 @@ source="$(printf '%s\n' '---' 'predicts:' '  target: visits' '  period: day' '  
   '  unit: visits' 'data:' '  events:' '    - type: visit.made' '  time: event' '  series: /store' \
   '  target: { of: /visits, as: sum }' '  window: 24' '---')"
 definition="$(jq --null-input --arg source "$source" '{name: "daily-visits", source: $source, diagram: "none"}')"
-test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
+test "$(call playbook.json --data "$smoke_playbook" http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
 test "$(call created.json --data "$definition" "$playbook/definitions/prediction")" = 201
 published=0
 for store in north east; do

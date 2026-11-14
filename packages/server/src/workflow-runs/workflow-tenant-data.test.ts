@@ -7,6 +7,7 @@ import type { SpawnedServer } from '../testing/processes/spawned-server.ts';
 import { requestTo, settledOver, workflowProcess } from '../testing/processes/workflow-process.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { workflowSource } from '../testing/servers/workflow-server.ts';
+import { contributing, givenGoals } from '../testing/settings/goals-kept.ts';
 
 const marker = 'marker-7d1c9e';
 
@@ -86,14 +87,14 @@ async function createdInTurn(port: number, remaining: readonly Definition[]): Pr
   if (first !== undefined) {
     await requestTo(port, 'POST', '/alpha/definitions/workflow', {
       name: first.name,
-      source: workflowSource(first.name, first.steps),
+      source: contributing(workflowSource(first.name, first.steps)),
     });
     await createdInTurn(port, rest);
   }
 }
 
 async function startedEach(port: number): Promise<ReadonlyMap<string, string>> {
-  await requestTo(port, 'POST', '', { playbook: 'alpha', name: 'Alpha' });
+  await requestTo(port, 'POST', '', { playbook: 'alpha', name: 'Alpha', goals: givenGoals });
   await createdInTurn(port, definitions);
   return new Map(await Promise.all(definitions.map(({ name }) => started(port, name))));
 }

@@ -26,7 +26,7 @@ total="$(printf '%s\n' '---' 'language: typescript' 'input:' '  schema: {type: o
   '  return { total_cents, rows: input.rows.length };' '}')"
 raising="$(printf '%s\n' '---' 'language: typescript' '---' 'export default function (input: Input): Output {' \
   "  throw new Error('no rows');" '}')"
-test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
+test "$(call playbook.json --data "$smoke_playbook" http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
 for name in total raising; do
   definition="$(jq --null-input --arg name "$name" --arg source "${!name}" '{name: $name, source: $source, diagram: "none"}')"
   test "$(call created.json --data "$definition" "$playbook/definitions/computation")" = 201

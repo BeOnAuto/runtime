@@ -52,12 +52,23 @@ export interface RoleTaken extends Asked, HeldAssignment {
   readonly actor: PrincipalReference;
 }
 
-interface RolesImported extends Asked {
-  readonly kind: 'import';
+export type ProvisioningSource = Exclude<AssignmentSource, 'manual'>;
+
+export interface RolesProvisioned extends Asked {
+  readonly kind: 'provision';
+  readonly source: ProvisioningSource;
   readonly assignments: readonly HeldAssignment[];
 }
 
-export type RoleAssignmentCommand = RoleGiven | RoleTaken | RolesImported;
+export type DeprovisioningSource = Extract<AssignmentSource, 'manual' | 'identity_service'>;
+
+export interface RolesDeprovisioned extends Asked {
+  readonly kind: 'deprovision';
+  readonly source: DeprovisioningSource;
+  readonly principal: AssignedPrincipal;
+}
+
+export type RoleAssignmentCommand = RoleGiven | RoleTaken | RolesProvisioned | RolesDeprovisioned;
 
 type RoleAssignmentRefusal = 'forbidden' | 'conflict';
 
@@ -175,25 +186,65 @@ function decidedTaking(table: RoleTable, command: RoleTaken, state: HeldAssignme
   return keepingAnAssigner(table, state, held ? [unassignedOf(command, command.scope, 'manual')] : []);
 }
 
-function decidedImport({ assignments, scope }: RolesImported, state: HeldAssignments): Decision {
+function firstOfEachPrincipal(assignments: readonly HeldAssignment[]): readonly HeldAssignment[] {
   const firstAt = new Map<string, number>(
     assignments.map(({ principal }, at): readonly [string, number] => [principalKeyOf(principal), at]).toReversed(),
   );
+  return assignments.filter(({ principal }, at) => firstAt.get(principalKeyOf(principal)) === at);
+}
+
+interface Provisioning {
+  readonly table: RoleTable;
+  readonly command: RolesProvisioned;
+  readonly state: HeldAssignments;
+  readonly withoutAnAssigner: boolean;
+}
+
+function provisionedTo(
+  { table, command: { scope, source }, state, withoutAnAssigner }: Provisioning,
+  assignment: HeldAssignment,
+): readonly RoleAssignmentEvent[] {
+  const held = rolesHeldBy(state, assignment.principal);
+  if (held.length === 0) {
+    return [assignedOf(assignment, scope, source)];
+  }
+  return withoutAnAssigner && table[assignment.role.id].assignsRoles
+    ? [
+        ...held.map((role) => unassignedOf({ principal: assignment.principal, role }, scope, source)),
+        assignedOf(assignment, scope, source),
+      ]
+    : [];
+}
+
+function decidedProvisioning(table: RoleTable, command: RolesProvisioned, state: HeldAssignments): Decision {
+  const provisioning: Provisioning = { table, command, state, withoutAnAssigner: !holdsAnAssigner(table, state) };
   return Result.succeed(
-    assignments
-      .filter(
-        ({ principal }, at) =>
-          firstAt.get(principalKeyOf(principal)) === at && rolesHeldBy(state, principal).length === 0,
-      )
-      .map((each) => assignedOf(each, scope, 'import')),
+    firstOfEachPrincipal(command.assignments).flatMap((assignment) => provisionedTo(provisioning, assignment)),
   );
+}
+
+const membershipEndedAlready: Readonly<Record<DeprovisioningSource, boolean>> = {
+  manual: false,
+  identity_service: true,
+};
+
+function decidedDeprovisioning(table: RoleTable, command: RolesDeprovisioned, state: HeldAssignments): Decision {
+  const ended = rolesHeldBy(state, command.principal).map((role) =>
+    unassignedOf({ principal: command.principal, role }, command.scope, command.source),
+  );
+  return membershipEndedAlready[command.source] ? Result.succeed(ended) : keepingAnAssigner(table, state, ended);
 }
 
 function decided(table: RoleTable, command: RoleAssignmentCommand, state: HeldAssignments): Decision {
   if (command.kind === 'assign') {
     return decidedGiving(table, command, state);
   }
-  return command.kind === 'unassign' ? decidedTaking(table, command, state) : decidedImport(command, state);
+  if (command.kind === 'unassign') {
+    return decidedTaking(table, command, state);
+  }
+  return command.kind === 'provision'
+    ? decidedProvisioning(table, command, state)
+    : decidedDeprovisioning(table, command, state);
 }
 
 export function roleAssignmentDeciderOver(table: RoleTable): RoleAssignmentDecider {

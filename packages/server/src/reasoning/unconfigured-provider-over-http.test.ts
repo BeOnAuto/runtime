@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { compositionRootWithoutGoals } from '../testing/servers/composition-without-goals.ts';
 import { request, type TestResponse } from '../testing/servers/http-client.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
@@ -43,7 +43,7 @@ async function executedVerdict(models: Readonly<Record<string, string>>): Promis
       ...noConsentThroughAuto,
       ...models,
     },
-    compositionRoot,
+    compositionRootWithoutGoals,
   );
   await calling('POST', '/v1/orgs/acme/playbooks', { playbook: 'alpha', name: 'Alpha' });
   await calling('POST', `${alpha}/definitions/reasoning`, { name: 'verdict', source: verdict, diagram: 'none' });

@@ -65,7 +65,8 @@ export function roleAssignmentCalls(isAMember: Membership = everyoneIsAMember) {
     imported: (...held: readonly (readonly [string, BuiltInRoleId])[]) =>
       Effect.runPromise(
         ledger.service.execute(stream, roleAssignmentDecider, {
-          kind: 'import',
+          kind: 'provision',
+          source: 'import',
           scope: { type: 'org', id: 'acme' },
           assignments: held.map(([id, role]): HeldAssignment => ({
             principal: { type: 'person', id },

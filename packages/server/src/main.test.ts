@@ -8,6 +8,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { spawnServer } from './testing/processes/spawned-server.ts';
 import { messagesOf, modelLinesOf } from './testing/processes/stderr-lines.ts';
 import { temporaryLedger } from './testing/records/temporary-ledger.ts';
+import { givenGoals } from './testing/settings/goals-kept.ts';
 
 const mainModule = fileURLToPath(new URL('main.ts', import.meta.url));
 
@@ -254,7 +255,7 @@ describe('main over MCP', () => {
       'current revision',
       { url: `http://127.0.0.1:${port}/orgs/demo/mcp`, headers: {} },
       async (session) => {
-        await session.callTool('create_playbook', { playbook: 'support', name: 'Support' });
+        await session.callTool('create_playbook', { playbook: 'support', name: 'Support', goals: givenGoals });
         return session.callTool('list_playbooks', {});
       },
     );

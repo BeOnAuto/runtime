@@ -9,6 +9,7 @@ import {
 } from '../testing/processes/workflow-process.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
+import { contributing, givenGoals } from '../testing/settings/goals-kept.ts';
 
 const ledger = temporaryLedger();
 
@@ -22,8 +23,8 @@ describe('a server that ran workflows, told to stop', () => {
   it('exits 0, holding nothing open', async () => {
     const child = workflowProcess(ledger.fileName);
     const port = await child.port;
-    await requestTo(port, 'POST', '', { playbook: 'alpha', name: 'Alpha' });
-    await requestTo(port, 'POST', '/alpha/definitions/workflow', { name: 'greeting', source: greeting });
+    await requestTo(port, 'POST', '', { playbook: 'alpha', name: 'Alpha', goals: givenGoals });
+    await requestTo(port, 'POST', '/alpha/definitions/workflow', { name: 'greeting', source: contributing(greeting) });
     const started = await requestTo(port, 'POST', '/alpha/definitions/workflow/greeting/run', {
       input: { name: 'Ada' },
     });

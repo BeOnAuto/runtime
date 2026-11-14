@@ -8,6 +8,8 @@ import { until } from '../waiting/until.ts';
 import { type RequestOptions, type TestResponse } from './http-client.ts';
 import { servingReasoning, type ReasoningServer } from './reasoning-server.ts';
 
+export { contributing, givenGoals } from '../settings/goals-kept.ts';
+
 const statusOf = Schema.decodeUnknownOption(Schema.Struct({ status: Schema.String }));
 
 const runOf = Schema.decodeUnknownSync(Schema.Struct({ run_id: Schema.String }));

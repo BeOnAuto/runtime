@@ -24,7 +24,7 @@ source="$(printf '%s\n' '---' "to: '{{ input.owner }}'" 'expires: P1D' 'deliver:
   '  schema: {type: object, required: [choice], properties: {choice: {type: string, enum: [approve, reject]}}}' \
   '---' 'Approve the brief for {{ input.campaign }}?')"
 definition="$(jq --null-input --arg source "$source" '{name: "approve-brief", source: $source, diagram: "none"}')"
-test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
+test "$(call playbook.json --data "$smoke_playbook" http://127.0.0.1:$port/v1/orgs/demo/playbooks)" = 201
 test "$(call created.json --data "$definition" "$playbook/definitions/interaction")" = 201
 test "$(call asked.json --data '{"input":{"owner":"ada","campaign":"Spring"}}' \
   "$playbook/definitions/interaction/approve-brief/run")" = 200

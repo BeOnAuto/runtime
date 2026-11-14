@@ -1,88 +1,30 @@
-import { decisionLoop, VersionConflict, type DecidedPlace } from '@on.auto/ledger';
-import { Conflict, Forbidden, recordingOf, type PrincipalReference } from '@on.auto/operations';
+import { decisionLoop } from '@on.auto/ledger';
+import { Conflict, Forbidden } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { builtInRoles, type BuiltInRoleId } from '../roles/built-in-roles.ts';
+import { builtInRoles } from '../roles/built-in-roles.ts';
+import {
+  aStreamAnotherWriterAppendsTo,
+  acted,
+  ada,
+  change,
+  dana,
+  given,
+  held,
+  pairsIn,
+  priya,
+  recordedNow,
+  stateOf,
+  taken,
+} from '../testing/role-assignment-states.ts';
 import {
   beyondYourRole,
   lastAssigner,
   noRoleThatAssigns,
   roleAssignmentDecider,
   roleAssignmentDeciderOver,
-  heldAssignmentsIn,
-  type HeldAssignment,
-  type HeldAssignments,
-  type RoleGiven,
-  type RoleTaken,
 } from './role-assignment-decider.ts';
-import {
-  RoleAssignmentEventSchema,
-  type AssignedPrincipal,
-  type AssignmentScope,
-  type RecordedRoleAssignmentEvent,
-  type RoleAssignmentEvent,
-} from './role-assignment-facts.ts';
-
-const acme: AssignmentScope = { type: 'org', id: 'acme' };
-
-const acted = { at: '2026-11-14T15:20:00.000Z', by: 'person:user_ada' };
-
-function person(id: string): AssignedPrincipal {
-  return { type: 'person', id };
-}
-
-const ada = person('user_ada');
-const priya = person('user_priya');
-const dana = person('user_dana');
-
-function actor({ id }: AssignedPrincipal): PrincipalReference {
-  return { type: 'person', id };
-}
-
-function role(id: BuiltInRoleId) {
-  return { type: 'built_in', id } as const;
-}
-
-type Pair = readonly [AssignedPrincipal, BuiltInRoleId];
-
-function assignmentsOf(...pairs: readonly Pair[]): readonly HeldAssignment[] {
-  return pairs.map(([principal, id]) => ({ principal, role: role(id) }));
-}
-
-function held(...pairs: readonly Pair[]): HeldAssignments {
-  return assignmentsOf(...pairs).reduce(
-    (state, assignment) =>
-      roleAssignmentDecider.evolve(state, {
-        type: 'role_assigned',
-        data: { ...assignment, scope: acme, source: 'import' },
-        context: acted,
-      }),
-    roleAssignmentDecider.initialState,
-  );
-}
-
-function pairsIn(state: HeldAssignments): readonly (readonly [string, string])[] {
-  return heldAssignmentsIn(state)
-    .map(({ principal, role: { id } }): readonly [string, string] => [principal.id, id])
-    .toSorted(([left], [right]) => left.localeCompare(right));
-}
-
-function given(by: AssignedPrincipal, to: AssignedPrincipal, id: BuiltInRoleId): RoleGiven {
-  return { kind: 'assign', actor: actor(by), principal: to, role: role(id), scope: acme, ...acted };
-}
-
-function taken(by: AssignedPrincipal, from: AssignedPrincipal, id: BuiltInRoleId): RoleTaken {
-  return { kind: 'unassign', actor: actor(by), principal: from, role: role(id), scope: acme, ...acted };
-}
-
-function change(
-  type: RoleAssignmentEvent['type'],
-  principal: AssignedPrincipal,
-  id: BuiltInRoleId,
-): RoleAssignmentEvent {
-  return { type, data: { principal, role: role(id), scope: acme, source: 'manual' } };
-}
 
 const decide = roleAssignmentDecider.decide;
 
@@ -173,58 +115,6 @@ describe('a role beyond the giver’s own', () => {
   });
 });
 
-describe('the roles imported', () => {
-  it('are each a role assigned, from the import, to a person who holds no role there, once each, and never refused', () => {
-    const imported = decide(
-      {
-        kind: 'import',
-        scope: acme,
-        assignments: assignmentsOf([ada, 'editor'], [priya, 'admin'], [dana, 'viewer'], [dana, 'admin']),
-        ...acted,
-      },
-      held([ada, 'admin']),
-    );
-
-    expect(imported).toEqual(
-      Result.succeed([
-        { type: 'role_assigned', data: { principal: priya, role: role('admin'), scope: acme, source: 'import' } },
-        { type: 'role_assigned', data: { principal: dana, role: role('viewer'), scope: acme, source: 'import' } },
-      ]),
-    );
-  });
-});
-
-const recordedAs = recordingOf(RoleAssignmentEventSchema);
-
-function recordedNow(...events: readonly RoleAssignmentEvent[]): readonly RecordedRoleAssignmentEvent[] {
-  return events.map((event) => recordedAs(event, acted));
-}
-
-function stateOf(facts: readonly RecordedRoleAssignmentEvent[]): HeldAssignments {
-  return facts.reduce((state, fact) => roleAssignmentDecider.evolve(state, fact), roleAssignmentDecider.initialState);
-}
-
-function aStreamAnotherWriterAppendsTo(first: readonly RecordedRoleAssignmentEvent[]) {
-  const recorded = [...first];
-  const meanwhile: RoleAssignmentEvent[] = [];
-  return {
-    landsFirst: (events: readonly RoleAssignmentEvent[]) => {
-      meanwhile.push(...events);
-    },
-    state: () => stateOf(recorded),
-    load: () => Effect.sync(() => ({ state: stateOf(recorded), version: recorded.length })),
-    append: (_stream: string, events: readonly RoleAssignmentEvent[], place: DecidedPlace) =>
-      Effect.suspend(() => {
-        recorded.push(...meanwhile.splice(0).map((event) => recordedAs(event, place.context)));
-        if (place.expectedVersion !== recorded.length) {
-          return Effect.fail(new VersionConflict());
-        }
-        recorded.push(...events.map((event) => recordedAs(event, place.context)));
-        return Effect.void;
-      }),
-  };
-}
-
 describe('the state the decider folds', () => {
   it('holds each assignment given and not since taken away, and the context of a decision is who asked and when', () => {
     const folded = stateOf(
@@ -257,6 +147,22 @@ describe('two changes made at once', () => {
     expect(adas).toEqual(Result.fail(new Conflict({ detail: lastAssigner, kind: 'unworkable' })));
     expect(pairsIn(stream.state())).toEqual([
       ['user_ada', 'admin'],
+      ['user_priya', 'editor'],
+    ]);
+  });
+
+  it('are both recorded where the second still holds once decided again on what the first wrote', async () => {
+    const stream = aStreamAnotherWriterAppendsTo(
+      recordedNow(change('role_assigned', ada, 'admin'), change('role_assigned', priya, 'admin')),
+    );
+    stream.landsFirst(Result.getOrThrow(decide(given(priya, dana, 'viewer'), stream.state())));
+    const loop = decisionLoop(stream.load, stream.append, roleAssignmentDecider);
+
+    await Effect.runPromise(loop('role-assignments/acme', given(ada, priya, 'editor')));
+
+    expect(pairsIn(stream.state())).toEqual([
+      ['user_ada', 'admin'],
+      ['user_dana', 'viewer'],
       ['user_priya', 'editor'],
     ]);
   });

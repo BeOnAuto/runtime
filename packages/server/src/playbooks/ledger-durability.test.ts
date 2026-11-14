@@ -1,5 +1,3 @@
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -8,8 +6,9 @@ import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { spawnServer } from '../testing/processes/spawned-server.ts';
 import { appendMalformedPlaybookEvent } from '../testing/records/malformed-playbook-event.ts';
-import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { aPathUnderAFile, temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { request, withoutStudioLink } from '../testing/servers/http-client.ts';
+import { goalsText } from '../testing/settings/goals-kept.ts';
 
 const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
 
@@ -33,16 +32,12 @@ function onLoopback(fileName: string): Readonly<Record<string, string>> {
   };
 }
 
-function aPathUnderAFile(): string {
-  const aFile = join(ledger.directory, 'a-file');
-  writeFileSync(aFile, '');
-  return join(aFile, 'ledger.db');
-}
-
 describe('playbooks in the ledger file', () => {
   it('are still there when the server starts again on the same file', async () => {
     const first = await startServer(onLoopback(ledger.fileName), compositionRoot);
-    await request(first.port, 'POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+    await request(first.port, 'POST', '/v1/orgs/acme/playbooks', {
+      body: { playbook: 'alpha', name: 'Alpha', goals: goalsText },
+    });
     await first.stop();
 
     const second = await startServer(onLoopback(ledger.fileName), compositionRoot);
@@ -55,7 +50,7 @@ describe('playbooks in the ledger file', () => {
   it('are kept by a process that exits 0 on SIGTERM, and read by the next process', async () => {
     const first = spawnServer(mainModule, onLoopback(ledger.fileName));
     const created = await request(await first.port, 'POST', '/v1/orgs/acme/playbooks', {
-      body: { playbook: 'alpha', name: 'Alpha' },
+      body: { playbook: 'alpha', name: 'Alpha', goals: goalsText },
     });
     first.signal('SIGTERM');
     const firstExit = await first.exited;
@@ -70,19 +65,20 @@ describe('playbooks in the ledger file', () => {
       read: 200,
       secondExit: 0,
     });
-    expect(read.body).toEqual(withoutStudioLink(created.body));
+    const { before_building: _beforeBuilding, ...asRead } = withoutStudioLink(created.body);
+    expect(read.body).toEqual(asRead);
   });
 });
 
 describe('a ledger that cannot be opened', () => {
   it('stops start-up with a named error', async () => {
-    await expect(startServer(onLoopback(aPathUnderAFile()), compositionRoot)).rejects.toMatchObject({
+    await expect(startServer(onLoopback(aPathUnderAFile(ledger)), compositionRoot)).rejects.toMatchObject({
       name: 'StartupError',
     });
   });
 
   it('stops the process with the error on stderr, a non-zero exit and nothing on stdout', async () => {
-    const child = spawnServer(mainModule, onLoopback(aPathUnderAFile()));
+    const child = spawnServer(mainModule, onLoopback(aPathUnderAFile(ledger)));
 
     expect(await child.exited).toBe(1);
     expect(child.output().stdout).toBe('');
@@ -102,7 +98,7 @@ describe('an error in the ledger', () => {
     await appendMalformedPlaybookEvent(ledger.fileName, 'acme');
 
     const response = await request(port, 'POST', '/v1/orgs/acme/playbooks', {
-      body: { playbook: 'alpha', name: 'a name only the caller knows' },
+      body: { playbook: 'alpha', name: 'a name only the caller knows', goals: goalsText },
     });
     child.signal('SIGTERM');
     await child.exited;

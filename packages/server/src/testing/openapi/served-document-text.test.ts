@@ -7,7 +7,10 @@ let server: ReasoningServer;
 let throwaway: string;
 
 beforeAll(async () => {
-  [server, throwaway] = await Promise.all([servingReasoning([]), servedDocumentText()]);
+  [server, throwaway] = await Promise.all([
+    servingReasoning([], undefined, undefined, { goals: true, goalsResults: true }),
+    servedDocumentText(),
+  ]);
 });
 
 afterAll(async () => {
