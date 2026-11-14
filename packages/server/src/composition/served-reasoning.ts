@@ -97,7 +97,7 @@ export async function reasoningServedBy(
       tools,
       ...keptByRuns(runtime, settings),
       telemetry,
-      reading: { mostInputTokens, contextWindowOf: catalog.contextWindowOf },
+      reading: { defaultInputTokens: mostInputTokens, mostInputTokens, contextWindowOf: catalog.contextWindowOf },
       providerSetup: settings.providerSetup,
     }),
     listModels: defineListModels(catalog, settings.providerSetup),

@@ -5,7 +5,8 @@ import { outputDocumentOf } from '../jobs/compiled-request.ts';
 import { keptIn } from '../steps/kept-content.ts';
 import { answeredByTheSteps } from '../steps/run-steps.ts';
 import { stepToolsOf, type StepRecording } from '../steps/step-run.ts';
-import { boundsFor, requestBaseOf, unknownWindows } from './definition-request.ts';
+import { requestBaseOf } from './definition-request.ts';
+import { boundsFor, unknownWindows } from './run-bounds.ts';
 import type { Answering, Stepping } from './run-services.ts';
 import { stepsAnswerOf } from './steps-answer.ts';
 

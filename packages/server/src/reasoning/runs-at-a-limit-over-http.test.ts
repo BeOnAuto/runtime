@@ -44,11 +44,11 @@ const askedForMore = answers(toolCallsResult([['graph__search', { query: 'acme 2
 
 const answered = answers(textResult('Acme has 2 rows.'));
 
-async function serving(source: string, replies: readonly ScriptedReplies[]) {
+async function serving(source: string, replies: readonly ScriptedReplies[], operators = '10000') {
   const fake = await serveFakeMcp();
   onTestFinished(fake.close);
   const server = await servingReasoning(replies, {
-    REASONING_MAX_INPUT_TOKENS: '10000',
+    REASONING_MAX_INPUT_TOKENS: operators,
     TOOL_SERVERS: JSON.stringify({ graph: { url: fake.url, org: 'acme' } }),
   });
   onTestFinished(server.stop);
@@ -64,6 +64,9 @@ function ranUnder(server: ReasoningServer) {
 const advice =
   'Ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
 
+const raisingItTo20000 =
+  'Raise max_input_tokens in the reasoning function definition, to at most 20,000, ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
+
 describe('a reasoning run that reaches its input tokens and asks for more, over HTTP', () => {
   it('is a conflict that names the limit, 409, recorded so, sending nothing more, and tools_called under its id', async () => {
     const { server, sent } = await serving(stoppingAtALimit, [readingThenAsking(searched, askedForMore)]);
@@ -76,7 +79,7 @@ describe('a reasoning run that reaches its input tokens and asks for more, over 
       reason: 'conflict',
       kind: 'unworkable',
       because: 'max_input_tokens',
-      detail: `The run needed more than the 10,000 input tokens a run may read, after the run called the search tool of graph. ${advice}`,
+      detail: `The run needed more than the 10,000 input tokens this runtime lets a run read (REASONING_MAX_INPUT_TOKENS), after the run called the search tool of graph. ${advice}`,
     };
     expect([first.status, first.body]).toEqual([409, expect.objectContaining(stopped)]);
     expect(read.body).toMatchObject({ status: 'rejected', rejection: stopped });
@@ -94,6 +97,34 @@ describe('a reasoning run that reaches its input tokens and asks for more, over 
       reason: 'conflict',
       kind: 'effect_unknown',
       because: 'max_input_tokens',
+    });
+  });
+});
+
+const ownBudgetOf = (tokens: number) =>
+  ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [graph/*]', `max_input_tokens: ${tokens}`, '---', 'Plan.'].join(
+    '\n',
+  );
+
+describe('a reasoning run whose function sets its own max_input_tokens, over HTTP', () => {
+  it('stops at its own number below the operator’s, which it may raise to the operator’s', async () => {
+    const { server, sent } = await serving(ownBudgetOf(10_000), [readingThenAsking(searched, askedForMore)], '20000');
+
+    expect([(await ranUnder(server)).body, sent()]).toEqual([
+      expect.objectContaining({
+        because: 'max_input_tokens',
+        detail: `The run needed more than the 10,000 input tokens its function's max_input_tokens lets a run read, after the run called the search tool of graph. ${raisingItTo20000}`,
+      }),
+      1,
+    ]);
+  });
+
+  it('reads only what the operator allows where it asks for more, saying both numbers', async () => {
+    const { server } = await serving(ownBudgetOf(50_000), [readingThenAsking(searched, askedForMore)]);
+
+    expect((await ranUnder(server)).body).toMatchObject({
+      because: 'max_input_tokens',
+      detail: `The run needed more than the 10,000 input tokens this runtime lets a run read (REASONING_MAX_INPUT_TOKENS), less than the 50,000 its function's max_input_tokens asks for, after the run called the search tool of graph. ${advice}`,
     });
   });
 });

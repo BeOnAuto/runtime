@@ -1,11 +1,9 @@
 import type { RunContext } from '@on.auto/definitions';
-import { callCountOf, runBoundMs } from '@on.auto/tool-servers/policy';
-import { Effect } from 'effect';
+import { runBoundMs } from '@on.auto/tool-servers/policy';
 
 import { mostOutputTokens } from '../definition/definition-settings.ts';
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
 import type { ModelRequest } from '../model/model-request.ts';
-import type { StepBounds } from '../steps/step-decision.ts';
 import type { RequestBase } from '../steps/step-facts.ts';
 import { promptMessages, type Prompt } from '../steps/step-messages.ts';
 import type { RenderedPrompt } from '../template/compiled-template.ts';
@@ -27,41 +25,6 @@ export function longestRunMsOf({ settings, tools }: ReasoningFunctionDefinitionD
 
 export function resumesAfterMsOf({ settings }: ReasoningFunctionDefinitionDocument, callMs: number): number {
   return timeoutFor(settings.max_output_tokens) + callMs;
-}
-
-export const defaultMostInputTokens = 2_000_000;
-
-export interface ModelReading {
-  readonly mostInputTokens: number;
-  readonly contextWindowOf: (model: string) => Effect.Effect<number | undefined>;
-}
-
-export const unknownWindows: ModelReading = {
-  mostInputTokens: defaultMostInputTokens,
-  contextWindowOf: () => Effect.undefined,
-};
-
-const unbounded = Number.POSITIVE_INFINITY;
-
-export function boundsFor(
-  { settings, model, max_tool_calls: maxToolCalls, exit_behavior: exitBehavior }: ReasoningFunctionDefinitionDocument,
-  { mostInputTokens, contextWindowOf }: ModelReading,
-  offersTools: boolean,
-): Effect.Effect<StepBounds> {
-  const count = callCountOf(maxToolCalls);
-  return offersTools
-    ? Effect.map(contextWindowOf(model), (contextWindow) => ({
-        runBoundMs: runBoundMs(timeoutFor(settings.max_output_tokens)),
-        limits: { contextWindow, mostInputTokens },
-        count,
-        exitBehavior,
-      }))
-    : Effect.succeed({
-        runBoundMs: unbounded,
-        limits: { contextWindow: undefined, mostInputTokens },
-        count,
-        exitBehavior,
-      });
 }
 
 export function requestBaseOf(

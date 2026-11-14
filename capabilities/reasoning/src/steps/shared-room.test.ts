@@ -5,6 +5,7 @@ import { anthropicMessage } from '../provider-testing/provider-replies.ts';
 import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
 import { anthropicToolCall } from '../provider-testing/tool-call-replies.ts';
 import { accessFor, promptText } from '../testing/adapter-harness.ts';
+import { budgetOf } from '../testing/input-budgets.ts';
 import { defaultBounds, stepsOf } from '../testing/step-runs.ts';
 import type { StepTool } from './step-run.ts';
 
@@ -31,7 +32,7 @@ async function roomsGiven(contextWindow: number | undefined, reply: object) {
     languageModel,
     tools: [search],
     prompt: { kind: 'prompt', instructions: 'Answer briefly', message: promptText },
-    bounds: { ...defaultBounds, limits: { contextWindow, mostInputTokens: 2_000_000 } },
+    bounds: { ...defaultBounds, limits: { contextWindow, budget: budgetOf(2_000_000) } },
   });
   await Effect.runPromise(steps.stepping);
   return steps.sends().map(({ room }) => room);

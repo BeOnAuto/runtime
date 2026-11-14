@@ -1,7 +1,8 @@
-import { Effect, Exit } from 'effect';
+import { Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { documentOf } from '../testing/definition-documents.ts';
+import { readingUpTo } from '../testing/input-budgets.ts';
 import { textResult, toolCallsResult, type ScriptedCall } from '../testing/model-results.ts';
 import { reasoningOf, type Reasoning } from '../testing/reasoning-runs.ts';
 import { aGraph, graphAccessTo, withGraphTools } from '../testing/resumed-attempts.ts';
@@ -64,6 +65,9 @@ const ownCount = `Set max_tool_calls in the reasoning function definition to giv
 const askForLess = `Ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; ${answerFromWhatItHas}`;
 
 const pastTheActingCalls = 'The run needed more than the 25 calls a run may make of tools not marked reads';
+
+const pastTheRuntimes =
+  'The run needed more than the 10,000 input tokens this runtime lets a run read (REASONING_MAX_INPUT_TOKENS), after the run called';
 
 describe('a run whose step asks for a twenty-sixth call of a tool not marked reads, by default', () => {
   it('sends none of that step’s calls and is unworkable when it had called no tool, with no further model call', async () => {
@@ -192,18 +196,14 @@ describe('a run whose function sets max_tool_calls', () => {
   });
 });
 
-const tenThousand = { reading: { mostInputTokens: 10_000, contextWindowOf: () => Effect.undefined } };
+const tenThousand = { reading: readingUpTo(10_000) };
 
 describe('a run whose last step its input tokens cover asks for a tool, by default', () => {
   it('makes that step with the tools, sends none of its calls, and is unworkable when it called only tools marked reads', async () => {
     expect(
       await ranWith(withGraphTools, tenThousand, asking(searches(1), sixThousandRead), asking(searches(1, 1))),
     ).toMatchObject({
-      exit: stoppedAt(
-        'max_input_tokens',
-        'unworkable',
-        `The run needed more than the 10,000 input tokens a run may read, after the run called the search tool of graph. ${askForLess}`,
-      ),
+      exit: stoppedAt('max_input_tokens', 'unworkable', `${pastTheRuntimes} the search tool of graph. ${askForLess}`),
       sent: 1,
       offered: [true, true],
     });
@@ -213,11 +213,7 @@ describe('a run whose last step its input tokens cover asks for a tool, by defau
     expect(
       await ranWith(withGraphTools, tenThousand, asking(echoes(1), sixThousandRead), asking(searches(1))),
     ).toMatchObject({
-      exit: stoppedAt(
-        'max_input_tokens',
-        'effect_unknown',
-        `The run needed more than the 10,000 input tokens a run may read, after the run called the echo tool of graph. ${askForLess}`,
-      ),
+      exit: stoppedAt('max_input_tokens', 'effect_unknown', `${pastTheRuntimes} the echo tool of graph. ${askForLess}`),
       sent: 1,
     });
   });

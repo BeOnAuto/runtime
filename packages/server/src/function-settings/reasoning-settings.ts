@@ -3,6 +3,8 @@ import { dirname } from 'node:path';
 import type { Environment, FileUse } from '@on.auto/config';
 import {
   defaultMostInputTokens,
+  inputTokensRange,
+  inputTokensSetting,
   modelVariables,
   ModelSettingsInvalid,
   providerStatus,
@@ -34,12 +36,7 @@ export interface ReasoningSettings {
 }
 
 const bounds = {
-  mostInputTokens: {
-    setting: 'REASONING_MAX_INPUT_TOKENS',
-    least: 10_000,
-    most: 9_999_999,
-    example: defaultMostInputTokens,
-  },
+  mostInputTokens: { setting: inputTokensSetting, ...inputTokensRange, example: defaultMostInputTokens },
 };
 
 export const reasoningVariables: readonly string[] = [

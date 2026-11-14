@@ -1,6 +1,12 @@
+export interface InputBudget {
+  readonly allowed: number;
+  readonly asked: number | undefined;
+  readonly most: number;
+}
+
 export interface TurnLimits {
   readonly contextWindow: number | undefined;
-  readonly mostInputTokens: number;
+  readonly budget: InputBudget;
 }
 
 export interface TurnAnswered {
@@ -55,20 +61,24 @@ export function refusalsRetold(meter: Meter, withdrawn: readonly string[], given
   return { ...meter, answeredBytes: meter.answeredBytes - bytesOf(withdrawn) + bytesOf(given) };
 }
 
-export function roomOfEachAnswer(meter: Meter, { contextWindow, mostInputTokens }: TurnLimits): number | undefined {
+function inputTokensLeft(meter: Meter, { budget }: TurnLimits): number {
+  return budget.allowed - meter.spentInputTokens;
+}
+
+export function roomOfEachAnswer(meter: Meter, limits: TurnLimits): number | undefined {
   const turn = meter.last;
-  if (turn === null || contextWindow === undefined) {
+  if (turn === null || limits.contextWindow === undefined) {
     return undefined;
   }
-  const roomTokens = Math.min(contextWindow, mostInputTokens - meter.spentInputTokens) - turn.inputTokens;
+  const roomTokens = Math.min(limits.contextWindow, inputTokensLeft(meter, limits)) - turn.inputTokens;
   return Math.max(0, Math.floor(((roomTokens - turn.outputTokens) * turn.bytesPerToken) / Math.max(1, turn.calls)));
 }
 
-export function leavesNoNextTurn(meter: Meter, { mostInputTokens }: TurnLimits): boolean {
+export function leavesNoNextTurn(meter: Meter, limits: TurnLimits): boolean {
   const turn = meter.last;
   if (turn === null) {
     return false;
   }
   const projected = turn.inputTokens + turn.outputTokens + meter.answeredBytes / turn.bytesPerToken;
-  return mostInputTokens - meter.spentInputTokens - projected < projected;
+  return inputTokensLeft(meter, limits) - projected < projected;
 }

@@ -8,7 +8,7 @@ import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetc
 import { accessFor } from '../testing/adapter-harness.ts';
 import { documentOf } from '../testing/definition-documents.ts';
 import { reasoningAdapter, runContextWith } from '../testing/reasoning-runs.ts';
-import type { ModelReading } from './definition-request.ts';
+import type { ModelReading } from './run-bounds.ts';
 
 const withoutStructuredOutputs = {
   MODEL_GATEWAYS: JSON.stringify([{ name: 'internal', base_url: 'https://llm.internal.example/v1' }]),
@@ -59,7 +59,7 @@ describe('a run whose model answers JSON that misses its schema, and then JSON t
 
 describe('a run with too few input tokens left to ask its model again', () => {
   it('is refused with the issues of the answer, saying no correction was attempted, and records why', async () => {
-    const reading = { mostInputTokens: 30, contextWindowOf: () => Effect.undefined };
+    const reading = { defaultInputTokens: 30, mostInputTokens: 30, contextWindowOf: () => Effect.undefined };
 
     const { exit, facts, requests } = await runAnswered(['{"verdict":true}', '{"verdict":"approve"}'], reading);
 

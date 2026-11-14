@@ -90,6 +90,7 @@ describe('the reading of a reasoning function that names tools', () => {
       languageModel: scripted.languageModel,
       tools: accessTo(await graphServer()),
       reading: {
+        defaultInputTokens: 500_000,
         mostInputTokens: 500_000,
         contextWindowOf: (model) => {
           asked.push(model);

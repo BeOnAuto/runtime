@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { documentOf, reasoningExample } from '../testing/definition-documents.ts';
 import { answers, scriptedLanguageModel, textResult } from '../testing/index.ts';
+import { readingOf } from '../testing/input-budgets.ts';
 import { reasoningAdapter, runContext, reasoningWith } from '../testing/reasoning-runs.ts';
 import { onThisServer } from './on-this-server.ts';
 
@@ -61,8 +62,23 @@ describe('the guide to the reasoning function document', () => {
   it('is reasoning-function, ending with what this server offers', () => {
     expect(capability.guide).toEqual({
       name: 'reasoning-function',
-      onThisServer: onThisServer({ providers: ['anthropic'], aliases: [] }, false),
+      onThisServer: onThisServer({
+        offered: { providers: ['anthropic'], aliases: [] },
+        toolsConfigured: false,
+        reading: { defaultInputTokens: 2_000_000, mostInputTokens: 2_000_000 },
+      }),
     });
+  });
+
+  it('gives the input tokens its host lets a run read', () => {
+    const hosted = reasoningAdapter({
+      languageModel: scriptedLanguageModel().languageModel,
+      reading: readingOf(500_000, 9_999_999),
+    });
+
+    expect(hosted.guide.onThisServer).toContain(
+      "a run reads at most 500,000 input tokens, or its function's max_input_tokens, up to 9,999,999.",
+    );
   });
 });
 
@@ -115,7 +131,7 @@ describe('preparing a reasoning function definition that is not valid', () => {
             {
               pointer: '',
               detail:
-                'Line 3, /seed: seed is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools, max_tool_calls, exit_behavior',
+                'Line 3, /seed: seed is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools, max_input_tokens, max_tool_calls, exit_behavior',
             },
           ],
         }),

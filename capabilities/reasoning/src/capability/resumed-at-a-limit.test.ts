@@ -1,8 +1,9 @@
 import type { RecordedCall } from '@on.auto/definitions';
-import { Effect, Exit } from 'effect';
+import { Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { documentOf } from '../testing/definition-documents.ts';
+import { readingOf, readingUpTo } from '../testing/input-budgets.ts';
 import { textResult, toolCallsResult, type ScriptedCall } from '../testing/model-results.ts';
 import { reasoningOf, type Reasoning } from '../testing/reasoning-runs.ts';
 import { aGraph, attemptOf, graphAccessTo, recordedBy, stopping, withGraphTools } from '../testing/resumed-attempts.ts';
@@ -10,6 +11,11 @@ import { answers, type ScriptedReply } from '../testing/scripted-language-model.
 
 const answeringAtItsLimit = documentOf(
   'model: anthropic/claude-sonnet-4-5\ntools: [graph/*]\nexit_behavior: continue',
+  'Summarize acme.',
+);
+
+const ownBudgetAnsweringAtItsLimit = documentOf(
+  'model: anthropic/claude-sonnet-4-5\ntools: [graph/*]\nmax_input_tokens: 10000\nexit_behavior: continue',
   'Summarize acme.',
 );
 
@@ -34,7 +40,7 @@ const sixThousandRead = {
   request_bytes: 24_000,
 };
 
-const tenThousand = { mostInputTokens: 10_000, contextWindowOf: () => Effect.undefined };
+const tenThousand = readingUpTo(10_000);
 
 function upToTheLast(calls: readonly RecordedCall[], type: RecordedCall['type']): readonly RecordedCall[] {
   return calls.slice(0, calls.findLastIndex((call) => call.type === type) + 1);
@@ -46,15 +52,22 @@ interface Resuming {
   readonly cut: (calls: readonly RecordedCall[]) => readonly RecordedCall[];
   readonly first: readonly ScriptedReply[];
   readonly again?: readonly ScriptedReply[];
+  readonly readingAgain?: Reasoning['reading'];
 }
 
-async function resumedAfter({ source, reasoning, cut, first, again = [] }: Resuming) {
+async function resumedAfter({ source, reasoning, cut, first, again = [], readingAgain = reasoning.reading }: Resuming) {
   const fake = await aGraph();
   const tools = graphAccessTo(fake.url);
   const recorded = await recordedBy(source, { ...reasoning, tools }, ...first);
   const sentBefore = fake.received().length;
   const resumed = reasoningOf(
-    { ...reasoning, tools, attempt: attemptOf(cut(recorded.calls)), content: recorded.first.content },
+    {
+      ...reasoning,
+      ...(readingAgain === undefined ? {} : { reading: readingAgain }),
+      tools,
+      attempt: attemptOf(cut(recorded.calls)),
+      content: recorded.first.content,
+    },
     ...again,
   );
   const exit = await resumed.running(source);
@@ -131,6 +144,20 @@ describe('a run whose function says continue, performed again after its server s
     const ran = await resumedAfter({
       source: answeringAtItsLimit,
       reasoning: { reading: tenThousand },
+      cut: (calls) => calls,
+      first: [asking(searches(1), sixThousandRead), stopping],
+      again: [answers(textResult('Acme has 2 rows.'))],
+    });
+
+    expect(ran.again).toMatchObject(Exit.succeed({ incomplete_details: { reason: 'max_input_tokens' } }));
+    expect(ran.modelCalls).toEqual([false]);
+  });
+
+  it('is marked max_input_tokens by its function’s own max_input_tokens, though the runtime’s default changed between its attempts', async () => {
+    const ran = await resumedAfter({
+      source: ownBudgetAnsweringAtItsLimit,
+      reasoning: { reading: readingOf(500_000, 9_999_999) },
+      readingAgain: readingOf(20_000, 9_999_999),
       cut: (calls) => calls,
       first: [asking(searches(1), sixThousandRead), stopping],
       again: [answers(textResult('Acme has 2 rows.'))],

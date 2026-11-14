@@ -19,6 +19,7 @@ export interface ReasoningFunctionDefinitionDocument {
   readonly output: OutputRequest;
   readonly provider_options?: ProviderOptions;
   readonly tools: readonly ToolReference[];
+  readonly max_input_tokens?: number;
   readonly max_tool_calls?: number;
   readonly exit_behavior: ExitBehavior;
   readonly template: CompiledTemplate;

@@ -16,8 +16,8 @@ function answered(inputTokens: number | null, outputTokens: number | null, calls
   return turnAnswered(meter, { sentBytes, inputTokens, outputTokens, calls });
 }
 
-function within(contextWindow: number | undefined, mostInputTokens: number): TurnLimits {
-  return { contextWindow, mostInputTokens };
+function within(contextWindow: number | undefined, allowed: number): TurnLimits {
+  return { contextWindow, budget: { allowed, asked: undefined, most: allowed } };
 }
 
 describe('the room of the answers of a turn', () => {

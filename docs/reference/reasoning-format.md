@@ -95,6 +95,7 @@ A function document contains instructions, never model credentials. Each change 
 | `output.shape`             | No          | The name of an [output shape](output-shapes.md), `series`, `categories`, `table` or `text`: the answer is JSON of that shape. Not allowed beside `output.schema` or with `text` |
 | `provider_options`         | No          | Options for one provider, under its namespace; see [Provider options](#provider-options)                                                                                        |
 | `tools`                    | No          | The tools a run may call, each `server/tool` or `server/*`; see [Tools](#tools)                                                                                                 |
+| `max_input_tokens`         | No          | A whole number from 10,000 to 9,999,999: the input tokens a run may read; see [Limits on calls](#limits-on-calls)                                                               |
 | `max_tool_calls`           | No          | A whole number from 1 to 1,000: a count of all a run's tool calls, in place of 25 calls of tools not marked `reads`; see [Limits on calls](#limits-on-calls). Only with `tools` |
 | `exit_behavior`            | No          | `error`, the default, or `continue`: how a run ends at its limit of tool calls or of input tokens; see [At a limit](#at-a-limit). Only with `tools`                             |
 | `page`                     | No          | The [page](page-format.md) that presents its runs                                                                                                                               |
@@ -275,7 +276,7 @@ A run checks its tools after it confirms that its model is offered, and before i
 
 The runtime checks each call before it sends it:
 
-- A run makes as many calls as it needs within its time, ten minutes, and the input tokens it reads. It makes at most 25 calls of tools not marked `reads`, a tool that declares nothing among them, counted from its history: each `tool_call_started` without `read_only: true`. Calls of tools marked `reads` are not counted. A function that sets `max_tool_calls` gives the run a count of its own, which bounds all its calls: every call the model asks for, reads and refused repeats included. A step that asks for a call past the count ends the run, or has the calls past it refused; see [At a limit](#at-a-limit). A tool's [mark](http.md#the-mark-of-a-tool) is the one its server or its connection's entry declares.
+- A run makes as many calls as it needs within its time, ten minutes, and the input tokens it reads. It makes at most 25 calls of tools not marked `reads`, a tool that declares nothing among them, counted from its history: each `tool_call_started` without `read_only: true`. A function that sets `max_tool_calls` gives the run a count of its own, which bounds all its calls: every call the model asks for, reads and refused repeats included. A step that asks for a call past the count ends the run, or has the calls past it refused; see [At a limit](#at-a-limit). A tool's [mark](http.md#the-mark-of-a-tool) is the one its server or its connection's entry declares.
 - A call that sends more than 256 KiB of arguments as JSON is refused, the most a run may take as its input. The model reads how large its arguments were, and is told to send less in one call, in parts where the tool takes them.
 - A third call of the same tool with the same arguments is refused, and the model is pointed to the result of the earlier call.
 
@@ -283,7 +284,7 @@ A refused call is not sent and not recorded, and the model is told why. A tool s
 
 A model writes a call's arguments as output tokens, so `config.max_output_tokens` limits them first. A token is about 3 to 4 bytes of English prose, and fewer of code or of text full of quotes and line breaks. At the default of 1,024 tokens, a model writes about 3 to 4 KiB of arguments. To let it write a large argument, such as a whole document, raise `config.max_output_tokens` to about one token for every 3 bytes: about 22,000 for a document of 64 KiB. At the most it allows, 64,000, a model writes roughly 200 KiB.
 
-When the model reaches `config.max_output_tokens` while it writes a call, a call whose arguments were cut so that they no longer parse is not sent: the model reads that they did not parse, as any call it cannot make, and the run goes on. A call whose arguments still parse is sent as written, though the model may have been cut off before it finished them. In a function that answers in JSON, the run ends as `conflict`, kind `unworkable`, as a JSON answer cut off at `max_output_tokens` does. Set `config.max_output_tokens` above what the largest argument needs. Every later step of the run reads those arguments again as input, so a run that writes several large documents uses its input tokens quickly; [Write a large document to a service](../guides/tools.md#write-a-large-document-to-a-service) shows a workflow that writes one document a run.
+When the model reaches `config.max_output_tokens` while it writes a call, a call whose arguments were cut so that they no longer parse is not sent: the model reads that they did not parse, as any call it cannot make, and the run goes on. A call whose arguments still parse is sent as written, though the model may have been cut off before it finished them. In a function that answers in JSON, the run ends as `conflict`, kind `unworkable`, as a JSON answer cut off at `max_output_tokens` does. Every later step of the run reads those arguments again as input, so a run that writes several large documents uses its input tokens quickly; [Write a large document to a service](../guides/tools.md#write-a-large-document-to-a-service) shows a workflow that writes one document a run.
 
 The model reads each tool result in full. A result is cut, with a note of how much was left out, only when it would not fit in the room left for the step that called it:
 
@@ -292,9 +293,9 @@ The model reads each tool result in full. A result is cut, with a note of how mu
 - A cut result stays valid JSON, with a note asking for fewer rows, fields or depth.
 - When the catalog does not know the window, or the provider reports no token counts, each result is read in full.
 
-A run's model calls use at most the input tokens the operator sets with `REASONING_MAX_INPUT_TOKENS`, 2,000,000 by default. Before each step, the runtime estimates that step's input from the step before. When the remaining budget would not cover another step after it, that step is the last the budget covers.
+A run's budget of input tokens is its function's `max_input_tokens`, or else the server's default, never past the server's most; on a runtime of one's own, `REASONING_MAX_INPUT_TOKENS` is both, 2,000,000 unless set. Before each step, the runtime estimates that step's input from the step before. When the remaining budget would not cover another step after it, that step is the last the budget covers.
 
-A run that calls tools costs more. Every step resends the conversation so far, so a long run can use its whole budget, 2,000,000 input tokens by default. Ask a tool for one page of its data when the whole would be more than the model should read. A function whose work grows with what it is given, such as a list to check item by item, runs once for each item, from a workflow's `for`, so each run has its own calls and its own budget.
+A run that calls tools costs more. Every step resends the conversation so far, so a long run can use its whole budget. Ask a tool for one page of its data when the whole would be more than the model should read. A function whose work grows with what it is given, such as a list to check item by item, runs once for each item, from a workflow's `for`, so each run has its own calls and its own budget. Raise `max_input_tokens` only for one item that needs more, and tell the person the cost first.
 
 #### At a limit
 
@@ -357,7 +358,7 @@ The same run id never runs that work again. [Retrying under a run id](http.md#re
 - `run_definition` with the `run_id` of a tool-calling run that ended without succeeding returns `conflict` with the kind `tools_called`. When every tool it called is marked `reads`, the rejection also has `because: "only_read"`, and its words say nothing was changed.
 - A run that is still `started` is not started again: it goes on from what it recorded, and calls again only a tool marked `reads` whose call has no answer; see [A run performed again](#a-run-performed-again).
 
-A caller that disconnects before the run returns does not stop the run: it goes on to its end and records it, and a request with its `run_id` is given what it recorded. Only the server stopping cuts a run off, and that leaves it to be performed again from what it recorded; see [A run performed again](#a-run-performed-again).
+A caller that disconnects before the run returns does not stop the run; see [A run performed again](#a-run-performed-again).
 
 Inspect its history and any external effects before deliberately starting a new run with a new id. Retrying a successful run returns its recorded result without calling tools again.
 

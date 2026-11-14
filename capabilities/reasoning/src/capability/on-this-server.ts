@@ -2,6 +2,7 @@ import { listed } from '@on.auto/phrasing';
 
 import { aliasPatternOf, isWildcardAlias } from '../model/model-alias.ts';
 import type { OfferedModels } from '../model/offered-models.ts';
+import { unknownWindows, type InputTokensAllowed } from './run-bounds.ts';
 
 const noProvider =
   'no model provider is configured yet, so a reasoning function cannot run until whoever runs the server configures one';
@@ -33,10 +34,32 @@ function toolsOf(toolsConfigured: boolean): string {
     : 'no tool server is configured, so it may name no tools';
 }
 
+const counted = new Intl.NumberFormat('en');
+
+function budgetInWords({ defaultInputTokens, mostInputTokens }: InputTokensAllowed): string {
+  const most = counted.format(mostInputTokens);
+  return defaultInputTokens < mostInputTokens
+    ? `a run reads at most ${counted.format(defaultInputTokens)} input tokens, or its function's max_input_tokens, up to ${most}`
+    : `a run reads at most ${most} input tokens, which max_input_tokens may only lower`;
+}
+
 function setupOf({ providers, aliases }: OfferedModels, providerSetup: string | undefined): string {
   return providers.length === 0 && aliases.length === 0 && providerSetup !== undefined ? ` ${providerSetup}` : '';
 }
 
-export function onThisServer(offered: OfferedModels, toolsConfigured: boolean, providerSetup?: string): string {
-  return `On this server, ${modelsOf(offered)}; ${toolsOf(toolsConfigured)}.${setupOf(offered, providerSetup)}`;
+interface ServerOffer {
+  readonly offered: OfferedModels;
+  readonly toolsConfigured: boolean;
+  readonly reading?: InputTokensAllowed | undefined;
+  readonly providerSetup?: string | undefined;
+}
+
+export function onThisServer({
+  offered,
+  toolsConfigured,
+  reading = unknownWindows,
+  providerSetup,
+}: ServerOffer): string {
+  const offer = [modelsOf(offered), toolsOf(toolsConfigured), budgetInWords(reading)].join('; ');
+  return `On this server, ${offer}.${setupOf(offered, providerSetup)}`;
 }

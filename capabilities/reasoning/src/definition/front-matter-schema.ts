@@ -52,6 +52,7 @@ const FrontMatterSchema = Schema.Struct({
   output: Schema.optionalKey(OutputSectionSchema),
   provider_options: Schema.optionalKey(ProviderOptionsSchema),
   tools: Schema.optionalKey(Schema.Array(Schema.String)),
+  max_input_tokens: Schema.optionalKey(Schema.Number),
   max_tool_calls: Schema.optionalKey(Schema.Number),
   exit_behavior: Schema.optionalKey(ExitBehaviorSchema),
 });
@@ -70,6 +71,7 @@ export const decodeSection = {
   output: Schema.decodeUnknownOption(Schema.UndefinedOr(OutputSectionSchema)),
   provider_options: Schema.decodeUnknownOption(Schema.UndefinedOr(ProviderOptionsSchema)),
   tools: Schema.decodeUnknownOption(Schema.UndefinedOr(Schema.Array(Schema.String))),
+  max_input_tokens: Schema.decodeUnknownOption(Schema.UndefinedOr(Schema.Number)),
   max_tool_calls: Schema.decodeUnknownOption(Schema.UndefinedOr(Schema.Number)),
   exit_behavior: Schema.decodeUnknownOption(Schema.UndefinedOr(ExitBehaviorSchema)),
 };

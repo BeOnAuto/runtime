@@ -62,7 +62,7 @@ export function toolOf(server: string, tool: string, readOnly = true): StepTool 
 
 export const defaultBounds: SteppedRun['bounds'] = {
   runBoundMs: 600_000,
-  limits: { contextWindow: undefined, mostInputTokens: 2_000_000 },
+  limits: { contextWindow: undefined, budget: { allowed: 2_000_000, asked: undefined, most: 2_000_000 } },
   count: actingCallsCount,
   exitBehavior: 'error',
 };

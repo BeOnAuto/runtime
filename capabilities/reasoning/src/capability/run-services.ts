@@ -8,7 +8,7 @@ import type { ToolCallTelemetry } from '../jobs/performed-in-process.ts';
 import type { LanguageModel } from '../model/language-model.ts';
 import type { ContentStore, KeepRunImage } from '../steps/kept-content.ts';
 import type { Prompt } from '../steps/step-messages.ts';
-import type { ModelReading } from './definition-request.ts';
+import type { ModelReading } from './run-bounds.ts';
 
 type PerformJobs = (offered: readonly OfferedTool[]) => PerformJob;
 

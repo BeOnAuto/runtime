@@ -11,7 +11,7 @@ describe('the keys of the front matter', () => {
         ),
       ),
     ).toEqual([
-      'Line 3, /prompt: prompt is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools, max_tool_calls, exit_behavior',
+      'Line 3, /prompt: prompt is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools, max_input_tokens, max_tool_calls, exit_behavior',
       'Line 5, /config/top_k: top_k is not a key of config; it takes max_output_tokens, temperature, top_p, seed, stop_sequences, reasoning',
       'Line 7, /input/example: example is not a key of input; it takes schema, default',
       'Line 9, /output/strict: strict is not a key of output; it takes format, schema, shape',

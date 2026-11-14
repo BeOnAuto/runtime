@@ -179,14 +179,10 @@ describe('a run that goes on from facts that ended it', () => {
     const attempts = await firstAttempt({
       tools: [search],
       replies: [() => Effect.never],
-      bounds: { ...defaultBounds, runBoundMs: 10, limits: { contextWindow: undefined, mostInputTokens: 2_000_000 } },
+      bounds: { ...defaultBounds, runBoundMs: 10 },
     });
     const again = resumed(attempts, attempts.calls, {
-      bounds: {
-        ...defaultBounds,
-        runBoundMs: 600_000,
-        limits: { contextWindow: undefined, mostInputTokens: 2_000_000 },
-      },
+      bounds: { ...defaultBounds, runBoundMs: 600_000 },
     });
 
     expect(await Effect.runPromise(again.stepping)).toMatchObject({

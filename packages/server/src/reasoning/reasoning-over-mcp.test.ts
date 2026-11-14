@@ -106,7 +106,7 @@ describe('the definition tools an agent sees on the endpoint of a playbook', () 
     );
 
     expect(textOf(guide)).toMatch(
-      /On this server, a reasoning function names its model through gateway, written gateway\/<model id>, or one of the models its operator named: anthropic\/\*, where a name that ends in \* stands for any model id, so anthropic\/<model id> runs; it may name the tools of the tool servers that search finds\.\n$/u,
+      /On this server, a reasoning function names its model through gateway, written gateway\/<model id>, or one of the models its operator named: anthropic\/\*, where a name that ends in \* stands for any model id, so anthropic\/<model id> runs; it may name the tools of the tool servers that search finds; a run reads at most 2,000,000 input tokens, which max_input_tokens may only lower\.\n$/u,
     );
   });
 

@@ -30,7 +30,7 @@ The options of `makeModelAccess` (`ModelAccessOptions`, `src/providers/model-acc
 | `scrubProviderText`     | `(text: string) => string`: the composer's own scrub of what a provider says, after the secrets of the settings; see [Scrubbing](#scrubbing)                              |
 | `telemetry`             | `{ integrations, recordContent }`: the AI SDK telemetry integrations, and whether they record inputs and outputs                                                          |
 
-The server builds it in `packages/server/src/composition/served-reasoning.ts` (`loggedModelAccess`), logs `status` with `logModelProviders`, and hands `languageModel`, `offered` and `catalog.contextWindowOf` to `makeReasoningFunctionAdapter`.
+The server builds it in `packages/server/src/composition/served-reasoning.ts` (`loggedModelAccess`), logs `status` with `logModelProviders`, and hands `languageModel`, `offered` and its `reading` to `makeReasoningFunctionAdapter`: `catalog.contextWindowOf`, and `REASONING_MAX_INPUT_TOKENS` as both the default and the most input tokens of a run (`defaultInputTokens`, `mostInputTokens`).
 
 ## Reports
 

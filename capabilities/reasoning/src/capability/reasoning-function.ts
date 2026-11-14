@@ -29,7 +29,12 @@ export function makeReasoningFunctionAdapter(options: ReasoningFunctionAdapterOp
     title: functionCategoryLabels.reasoning,
     guide: {
       name: 'reasoning-function',
-      onThisServer: onThisServer(options.offered, options.tools.configured, options.providerSetup),
+      onThisServer: onThisServer({
+        offered: options.offered,
+        toolsConfigured: options.tools.configured,
+        reading: options.reading,
+        providerSetup: options.providerSetup,
+      }),
     },
     noun: { one: functionResourceLabels.reasoning.singular, other: functionResourceLabels.reasoning.plural },
     describeOutput: outputInWords('answer'),

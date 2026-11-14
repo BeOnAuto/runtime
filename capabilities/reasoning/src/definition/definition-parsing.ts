@@ -12,6 +12,7 @@ import type { CompiledTemplate } from '../template/compiled-template.ts';
 import { inputContractOf, outputContractOf } from './definition-schemas.ts';
 import {
   exitBehaviorOf,
+  maxInputTokensOf,
   maxToolCallsOf,
   modelOf,
   providerOptionsOf,
@@ -45,13 +46,15 @@ function variablesOf(
     : [];
 }
 
+type FrontMatterRoot = Pick<ReadFrontMatter, 'root' | 'lines'>;
+
 interface ToolUse {
   readonly tools: ReasoningFunctionDefinitionDocument['tools'];
   readonly maxToolCalls: ReasoningFunctionDefinitionDocument['max_tool_calls'];
   readonly exitBehavior: ReasoningFunctionDefinitionDocument['exit_behavior'];
 }
 
-function toolUseOf({ root, lines }: Pick<ReadFrontMatter, 'root' | 'lines'>): Checked<ToolUse> {
+function toolUseOf({ root, lines }: FrontMatterRoot): Checked<ToolUse> {
   const tools = checkedSection(
     () => decodeSection.tools(root['tools']),
     (written) => toolsOf(written, lines),
@@ -73,28 +76,44 @@ function toolUseOf({ root, lines }: Pick<ReadFrontMatter, 'root' | 'lines'>): Ch
   return found.length > 0 ? Result.fail(found) : Result.all({ tools, maxToolCalls, exitBehavior });
 }
 
+function contractsOf({ root, lines }: FrontMatterRoot) {
+  return {
+    input: checkedSection(
+      () => decodeSection.input(root['input']),
+      (section) => inputContractOf(section, lines),
+    ),
+    output: checkedSection(
+      () => decodeSection.output(root['output']),
+      (section) => outputContractOf(section, lines),
+    ),
+  };
+}
+
+function modelUseOf({ root, lines }: FrontMatterRoot) {
+  return {
+    model: checkedSection(
+      () => decodeSection.model(root['model']),
+      (reference) => modelOf(reference, lines),
+    ),
+    settings: checkedSection(
+      () => decodeSection.config(root['config']),
+      (config) => settingsOf(config, lines),
+    ),
+    providerOptions: checkedSection(
+      () => decodeSection.provider_options(root['provider_options']),
+      (options) => providerOptionsOf(options, lines),
+    ),
+    maxInputTokens: checkedSection(
+      () => decodeSection.max_input_tokens(root['max_input_tokens']),
+      (written) => maxInputTokensOf(written, lines),
+    ),
+  };
+}
+
 function definitionFrom({ root, lines, issues }: ReadFrontMatter, template: () => Checked<CompiledTemplate>) {
-  const model = checkedSection(
-    () => decodeSection.model(root['model']),
-    (reference) => modelOf(reference, lines),
-  );
-  const settings = checkedSection(
-    () => decodeSection.config(root['config']),
-    (config) => settingsOf(config, lines),
-  );
-  const input = checkedSection(
-    () => decodeSection.input(root['input']),
-    (section) => inputContractOf(section, lines),
-  );
-  const output = checkedSection(
-    () => decodeSection.output(root['output']),
-    (section) => outputContractOf(section, lines),
-  );
+  const { model, settings, providerOptions, maxInputTokens } = modelUseOf({ root, lines });
+  const { input, output } = contractsOf({ root, lines });
   const description = checkedSection(() => decodeSection.description(root['description']), Result.succeed);
-  const providerOptions = checkedSection(
-    () => decodeSection.provider_options(root['provider_options']),
-    (options) => providerOptionsOf(options, lines),
-  );
   const toolUse = toolUseOf({ root, lines });
   const found = [
     ...issues,
@@ -104,6 +123,7 @@ function definitionFrom({ root, lines, issues }: ReadFrontMatter, template: () =
       () => input,
       () => output,
       () => providerOptions,
+      () => maxInputTokens,
       () => toolUse,
       () => template(),
     ),
@@ -111,7 +131,17 @@ function definitionFrom({ root, lines, issues }: ReadFrontMatter, template: () =
   ];
   return found.length > 0
     ? Result.fail(found)
-    : Result.all({ model, settings, input, output, template: template(), description, providerOptions, toolUse });
+    : Result.all({
+        model,
+        settings,
+        input,
+        output,
+        template: template(),
+        description,
+        providerOptions,
+        maxInputTokens,
+        toolUse,
+      });
 }
 
 function definitionOf(parts: DocumentParts): Checked<ReasoningFunctionDefinitionDocument> {
@@ -130,6 +160,7 @@ function definitionOf(parts: DocumentParts): Checked<ReasoningFunctionDefinition
       output: definition.output.output,
       ...(definition.providerOptions === undefined ? {} : { provider_options: definition.providerOptions }),
       tools: definition.toolUse.tools,
+      ...(definition.maxInputTokens === undefined ? {} : { max_input_tokens: definition.maxInputTokens }),
       ...(definition.toolUse.maxToolCalls === undefined ? {} : { max_tool_calls: definition.toolUse.maxToolCalls }),
       exit_behavior: definition.toolUse.exitBehavior,
       template: definition.template,

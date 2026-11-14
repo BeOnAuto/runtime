@@ -166,3 +166,30 @@ describe('the count of tool calls a definition sets', () => {
     ]);
   });
 });
+
+describe('the input tokens a definition lets a run read', () => {
+  it('take a whole number from 10000 to 9999999, with tools or without, and are left out unless the function sets them', () => {
+    expect([
+      parsed(withTools('max_input_tokens: 10000')).max_input_tokens,
+      parsed(withTools('max_input_tokens: 9999999')).max_input_tokens,
+      parsed(documentOf('model: openai/gpt-5\nmax_input_tokens: 3000000')).max_input_tokens,
+      'max_input_tokens' in parsed(withTools('exit_behavior: error')),
+    ]).toEqual([10_000, 9_999_999, 3_000_000, false]);
+  });
+
+  it('refuse a number below 10000, past 9999999, one that is not whole, and anything but a number', () => {
+    expect([
+      ...issuesIn(withTools('max_input_tokens: 9999')),
+      ...issuesIn(withTools('max_input_tokens: 10000000')),
+      ...issuesIn(withTools('max_input_tokens: 500000.5')),
+      ...issuesIn(withTools('max_input_tokens: 0')),
+      ...issuesIn(withTools('max_input_tokens: a million')),
+    ]).toEqual([
+      'Line 4, /max_input_tokens: Expected a whole number from 10000 to 9999999',
+      'Line 4, /max_input_tokens: Expected a whole number from 10000 to 9999999',
+      'Line 4, /max_input_tokens: Expected a whole number from 10000 to 9999999',
+      'Line 4, /max_input_tokens: Expected a whole number from 10000 to 9999999',
+      'Line 4, /max_input_tokens: Expected number',
+    ]);
+  });
+});

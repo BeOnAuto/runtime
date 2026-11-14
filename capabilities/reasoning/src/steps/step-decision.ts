@@ -84,7 +84,7 @@ function limitReached(state: StepState, { limits, exitBehavior }: StepBounds): L
     return { type: 'limit_reached', because: 'max_tool_calls', count: state.count };
   }
   return leavesNoNextTurn(state.meterBeforeLastCall, limits)
-    ? { type: 'limit_reached', because: 'max_input_tokens', limit: limits.mostInputTokens }
+    ? { type: 'limit_reached', because: 'max_input_tokens', budget: limits.budget }
     : undefined;
 }
 

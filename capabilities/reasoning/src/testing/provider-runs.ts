@@ -5,6 +5,7 @@ import { recordingFetch, type Responder } from '../provider-testing/recording-fe
 import type { ModelAccessOptions } from '../providers/model-access-options.ts';
 import type { Environment } from '../settings/setting-values.ts';
 import { accessFor } from './adapter-harness.ts';
+import { readingUpTo } from './input-budgets.ts';
 import { reasoningAdapter, runContext, type Run } from './reasoning-runs.ts';
 
 export const fakeGraphKey = 'graph-api-key-4f1d9a7c2b';
@@ -39,14 +40,7 @@ export async function providerRun({ setup, respond, fake, source, reading }: Pro
     languageModel,
     offered: { providers: [setup.provider], aliases: [] },
     tools: access,
-    ...(reading === undefined
-      ? {}
-      : {
-          reading: {
-            mostInputTokens: reading.mostInputTokens,
-            contextWindowOf: () => Effect.succeed(reading.contextWindow),
-          },
-        }),
+    ...(reading === undefined ? {} : { reading: readingUpTo(reading.mostInputTokens, reading.contextWindow) }),
   });
   const prepared = Effect.runSync(capability.prepare(source));
   const exit = await Effect.runPromiseExit(prepared.run({}, runContext()));

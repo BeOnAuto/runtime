@@ -35,7 +35,11 @@ const asking = answers(toolCallsResult([['graph__read_file', {}]], { usage: coun
 
 const answering = answers(textResult('Ship on Friday.'));
 
-const aSmallWindow: Reasoning['reading'] = { mostInputTokens: 2_000_000, contextWindowOf: () => Effect.succeed(160) };
+const aSmallWindow: Reasoning['reading'] = {
+  defaultInputTokens: 2_000_000,
+  mostInputTokens: 2_000_000,
+  contextWindowOf: () => Effect.succeed(160),
+};
 
 const shownInFormatOne = 'Read notes.md at 3f2a1c.\n[resource content, not shown]';
 

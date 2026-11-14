@@ -6,6 +6,7 @@ import { parseModelReference } from '../model/model-reference.ts';
 import type { GenerationSettings } from '../model/model-request.ts';
 import { optionCheckFor, providerNamespaces } from '../model/offered-provider-options.ts';
 import { requestIssues } from '../model/request-checks.ts';
+import { inputTokensRange } from '../settings/input-token-settings.ts';
 import type { ConfigSection, ExitBehavior } from './front-matter-schema.ts';
 
 type ProviderOptions = Readonly<Record<string, Schema.JsonObject>>;
@@ -15,6 +16,8 @@ const defaultOutputTokens = 1024;
 export const mostOutputTokens = 64_000;
 
 const stoppedAtALimit: ExitBehavior = 'error';
+
+const inputTokensExpected = `Expected a whole number from ${inputTokensRange.least} to ${inputTokensRange.most}`;
 
 export const mostToolCalls = 1000;
 
@@ -107,6 +110,19 @@ export function toolsOf(
   return issues.length > 0
     ? Result.fail(issues)
     : Result.succeed(listed.flatMap((each) => [toolReferenceOf(each)].filter((reference) => reference !== undefined)));
+}
+
+function isWithinTheInputTokensRange(written: number): boolean {
+  return Number.isSafeInteger(written) && written >= inputTokensRange.least && written <= inputTokensRange.most;
+}
+
+export function maxInputTokensOf(
+  written: number | undefined,
+  lines: SourceLines,
+): Result.Result<number | undefined, readonly DocumentIssue[]> {
+  return written === undefined || isWithinTheInputTokensRange(written)
+    ? Result.succeed(written)
+    : Result.fail([issueAt(lines, '/max_input_tokens', inputTokensExpected)]);
 }
 
 export function exitBehaviorOf(

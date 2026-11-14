@@ -4,7 +4,8 @@ import { askedPastTheCount, type CallCount, type CallTally } from '@on.auto/tool
 import { Effect, type Schema } from 'effect';
 
 import { mostToolCalls } from '../definition/definition-settings.ts';
-import { leavesNoNextTurn, type Meter, type TurnLimits } from './turn-meter.ts';
+import { inputTokensSetting } from '../settings/input-token-settings.ts';
+import { leavesNoNextTurn, type InputBudget, type Meter, type TurnLimits } from './turn-meter.ts';
 
 type UnfinishedBecause = Extract<
   RejectionBecause,
@@ -26,7 +27,7 @@ export type ToolsStoppedBecause = 'server_failed' | 'run_bound' | 'no_answer';
 
 export type LimitReached =
   | { readonly type: 'limit_reached'; readonly because: 'max_tool_calls'; readonly count: CallCount }
-  | { readonly type: 'limit_reached'; readonly because: 'max_input_tokens'; readonly limit: number };
+  | { readonly type: 'limit_reached'; readonly because: 'max_input_tokens'; readonly budget: InputBudget };
 
 export interface ToolUse {
   readonly calledAny: boolean;
@@ -118,6 +119,24 @@ const askForLess =
 const answerFromWhatItHas =
   'to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
 
+const readByThisRuntime = `this runtime lets a run read (${inputTokensSetting})`;
+
+function moreInputTokensThanItsBudget({ allowed, asked, most }: InputBudget): string {
+  const needed = `The run needed more than the ${counted.format(allowed)} input tokens`;
+  if (asked === undefined) {
+    return allowed < most ? `${needed} a run may read by default` : `${needed} ${readByThisRuntime}`;
+  }
+  return asked > most
+    ? `${needed} ${readByThisRuntime}, less than the ${counted.format(asked)} its function's max_input_tokens asks for`
+    : `${needed} its function's max_input_tokens lets a run read`;
+}
+
+function inputTokensToChange({ allowed, most }: InputBudget): string {
+  return allowed < most
+    ? `Raise max_input_tokens in the reasoning function definition, to at most ${counted.format(most)}, ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow`
+    : askForLess;
+}
+
 function calledIn({ calledAny, inWords }: ToolUse): string {
   return calledAny ? `, after the run called ${inWords}` : '';
 }
@@ -125,10 +144,7 @@ function calledIn({ calledAny, inWords }: ToolUse): string {
 function limitInWords(reached: LimitReached): { readonly needed: string; readonly change: string } {
   return reached.because === 'max_tool_calls'
     ? { needed: moreCallsThanItsCount(reached.count), change: toolCallsToChange(reached.count) }
-    : {
-        needed: `The run needed more than the ${counted.format(reached.limit)} input tokens a run may read`,
-        change: askForLess,
-      };
+    : { needed: moreInputTokensThanItsBudget(reached.budget), change: inputTokensToChange(reached.budget) };
 }
 
 export function limitEnding(use: ToolUse, reached: LimitReached, spent: Spent): Effect.Effect<never, Conflict> {

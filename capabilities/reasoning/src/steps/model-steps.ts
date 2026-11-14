@@ -82,7 +82,7 @@ function roomOf({ bounds, startedAt }: StepRecording, { meter }: StepState) {
   const { limits, runBoundMs } = bounds;
   const endsAt = startedAt + runBoundMs;
   return {
-    input_tokens: Math.max(0, limits.mostInputTokens - meter.spentInputTokens),
+    input_tokens: Math.max(0, limits.budget.allowed - meter.spentInputTokens),
     ...(limits.contextWindow === undefined ? {} : { context_window: limits.contextWindow }),
     ...(Number.isFinite(endsAt) ? { ends_at: endsAt } : {}),
   };

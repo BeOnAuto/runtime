@@ -279,7 +279,7 @@ The fetch of a call is `FetchOfACall` of `@on.auto/operations`, a fetch that tak
 
 One call's arguments may take what a run may take as its input, so an input a run takes, sent on as it is, is arguments a call may send. `@on.auto/definitions` depends on this package, so the number is written here as `toolBounds.argumentBytes`, and a test of that package, beside the arguments a call block renders, holds it equal to its `mostInputBytes`. A run keeps of each call it admits the SHA-256 of its tool and arguments, never the arguments, to know the same call again.
 
-A run's reading is bounded beside these by the reasoning capability, in the input tokens its model calls add up to, `REASONING_MAX_INPUT_TOKENS`; past it, as past the calls of a run, the model answers from what it has. What a call keeps is not bounded beyond the transport: the arguments and the answer go whole, scrubbed, into the playbook's recorded content, which the ledger keeps in chunks beside the facts.
+A run's reading is bounded beside these by the reasoning capability, in the input tokens its model calls add up to: its function's `max_input_tokens` or its host's default, never past its host's most, `REASONING_MAX_INPUT_TOKENS` for both on a runtime of one's own; past it, as past the calls of a run, the run stops, or answers from what it has where its function says `exit_behavior: continue`. What a call keeps is not bounded beyond the transport: the arguments and the answer go whole, scrubbed, into the playbook's recorded content, which the ledger keeps in chunks beside the facts.
 
 ## What is recorded
 
