@@ -4,7 +4,7 @@ import { Effect, Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import { definitionWordsFor } from '../plain-language/definition-words.ts';
-import { DefinitionSchema } from '../registry/definition.ts';
+import { definitionSchemaOf } from '../registry/definition.ts';
 import { DefinitionNameField } from './definition-fields.ts';
 import { answeredDefinition } from './definition-reading.ts';
 import { recordInRegistry } from './registry-access.ts';
@@ -15,7 +15,7 @@ const description = [
   '`type` and `name` say which definition; restoring one that is not retired changes nothing.',
 ].join(' ');
 
-export function defineRestoreDefinition(capabilities: readonly Capability[]) {
+export function defineRestoreDefinition(capabilities: readonly Capability[], goals = false) {
   const known = knownCapabilities(capabilities);
   const words = definitionWordsFor(capabilities);
   return known.publish(
@@ -26,13 +26,13 @@ export function defineRestoreDefinition(capabilities: readonly Capability[]) {
       repeatable: true,
       route: { method: 'POST', path: '/definitions/{type}/{name}/restore' },
       inputSchema: Schema.Struct({ type: known.field, name: DefinitionNameField }),
-      outputSchema: DefinitionSchema,
+      outputSchema: definitionSchemaOf(goals),
       reasons: ['not_found', 'conflict', 'unavailable'],
       handle: Effect.fnUntraced(function* ({ type, name }) {
         const capability = yield* known.capabilityOfType(type);
         const restoredBy = recordedCallerOf(yield* Caller);
         const restored = yield* recordInRegistry(capability, { type: 'restore', name, restored_by: restoredBy });
-        return yield* answeredDefinition(capability, known.types, restored, { change: 'restored' });
+        return yield* answeredDefinition(capability, known.types, restored, { change: 'restored', goals });
       }),
       plainLanguage: {
         task: `restore a ${words.kinds}`,

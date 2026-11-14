@@ -4,11 +4,11 @@ import { defineRestoreDefinition } from './restore-definition.ts';
 import { defineResumeDefinition } from './resume-definition.ts';
 import { defineRetireDefinition } from './retire-definition.ts';
 
-export function standingChangesOf(capabilities: readonly Capability[]) {
+export function standingChangesOf(capabilities: readonly Capability[], goals: boolean) {
   return [
-    definePauseDefinition(capabilities),
-    defineResumeDefinition(capabilities),
-    defineRetireDefinition(capabilities),
-    defineRestoreDefinition(capabilities),
+    definePauseDefinition(capabilities, goals),
+    defineResumeDefinition(capabilities, goals),
+    defineRetireDefinition(capabilities, goals),
+    defineRestoreDefinition(capabilities, goals),
   ];
 }

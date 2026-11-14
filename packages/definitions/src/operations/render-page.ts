@@ -4,7 +4,7 @@ import { Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
-import { DefinitionSchema } from '../registry/definition.ts';
+import { definitionSchemaOf } from '../registry/definition.ts';
 import { DefinitionNameField, RunIdInputField, SampleOutputField } from './definition-fields.ts';
 import { definitionRead, type PageMissing } from './definition-read.ts';
 import { defineRenderPlaybookPage } from './render-playbook-page.ts';
@@ -20,9 +20,9 @@ function noPage({ label, name }: PageMissing): NotFound {
   return new NotFound({ detail: `The ${label} ${name} has no page; save one with update_definition` });
 }
 
-export function defineRenderPage(capabilities: readonly Capability[], pages: SubjectPages) {
+export function defineRenderPage(capabilities: readonly Capability[], pages: SubjectPages, goals = false) {
   const known = knownCapabilities(capabilities);
-  const read = definitionRead(capabilities, pages, noPage);
+  const read = definitionRead(capabilities, pages, noPage, goals);
   return known.publish(
     defineHttpOperation('playbook', 'query', {
       name: 'render_page',
@@ -36,13 +36,13 @@ export function defineRenderPage(capabilities: readonly Capability[], pages: Sub
         sample_output: Schema.optionalKey(SampleOutputField),
         run_id: Schema.optionalKey(RunIdInputField),
       }),
-      outputSchema: DefinitionSchema,
+      outputSchema: definitionSchemaOf(goals),
       reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
       handle: (asked) => read({ ...asked, render: true }),
     }),
   );
 }
 
-export function pageRenderings(capabilities: readonly Capability[], pages: SubjectPages) {
-  return [defineRenderPage(capabilities, pages), defineRenderPlaybookPage(pages)];
+export function pageRenderings(capabilities: readonly Capability[], pages: SubjectPages, goals = false) {
+  return [defineRenderPage(capabilities, pages, goals), defineRenderPlaybookPage(pages)];
 }

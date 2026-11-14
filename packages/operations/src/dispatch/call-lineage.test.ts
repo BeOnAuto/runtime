@@ -7,6 +7,7 @@ import {
   CallLineage,
   defineCommand,
   factOf,
+  TriggerKindSchema,
   messageIdOf,
   type Decider,
 } from '../index.ts';
@@ -34,9 +35,7 @@ const note = defineCommand('playbook', {
     depth: Schema.Int,
     callDepth: Schema.Int,
     calledBy: Schema.NullOr(Schema.Struct({ run_id: Schema.String, reference: Schema.String, run: Schema.Int })),
-    trigger: Schema.NullOr(
-      Schema.Struct({ kind: Schema.Literals(['event', 'cron', 'every']), reference: Schema.String }),
-    ),
+    trigger: Schema.NullOr(Schema.Struct({ kind: TriggerKindSchema, reference: Schema.String })),
     actsFor: Schema.NullOr(Schema.String),
     attemptDied: Schema.Boolean,
   }),

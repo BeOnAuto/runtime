@@ -1,0 +1,11 @@
+{
+  "type": "goal_observation_refused",
+  "data": {
+    "run": "6a1e2b3c-4d5e-4f60-8a71-92b3c4d5e6f7",
+    "detail": "The output at /customers_attributed is no finite number"
+  },
+  "context": {
+    "at": "2026-11-09T18:00:00.000Z",
+    "by": "playbook:alpha"
+  }
+}

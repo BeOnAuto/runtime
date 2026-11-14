@@ -79,7 +79,12 @@ export {
   type FoldedBeforeRuns,
   type FoldWaitBounds,
 } from './catching-up/folded-before-runs.ts';
-export { followerWakeUp, type FollowedParts, type FollowingParts } from './reactions/host-reactions.ts';
+export {
+  followerWakeUp,
+  type FollowedParts,
+  type FollowerConsumers,
+  type FollowingParts,
+} from './reactions/host-reactions.ts';
 export { comparePoints, isAfter, pointIn, pointText, type Point } from './pages/history-points.ts';
 export { pageFolding, pageViewsBounds, pageViewsFolder } from './views/page-views.ts';
 export { replayBounds, viewsAsOfOn, type ViewAsOf, type ViewsAsOf } from './pages/view-replay.ts';
@@ -98,14 +103,25 @@ export { runLogContextOf } from './runs/run-log-context.ts';
 export { recordIdOf } from './runs/run-lineage.ts';
 export {
   StartRefused,
+  functionStartAnswered,
   startAnswered,
+  type FunctionStart,
+  type GoalTrigger,
   type ReactionOptions,
   type ReactionStart,
+  type StartFunction,
   type StartReaction,
 } from './reactions/reaction-options.ts';
 export { StartRejected } from './reactions/start-rejected.ts';
-export { cronRejectionOf } from './schedules/schedule-times.ts';
-export { isKnownTimeZone } from './schedules/zone-clock.ts';
+export {
+  cronRejectionOf,
+  dueTimesOf,
+  firstDueOf,
+  type DueMoments,
+  type DueTimes,
+  type ScheduleTiming,
+} from './schedules/schedule-times.ts';
+export { isKnownTimeZone, zoneClockOf, type InZone, type ZoneClock } from './schedules/zone-clock.ts';
 export { mostListenersInAPlaybook } from './listeners/sql-listeners.ts';
 export { mostReactionDepth } from './reactions/subscription-starts.ts';
 export { mostDeferredStarts, mostStartsAMinute } from './reactions/start-rates.ts';

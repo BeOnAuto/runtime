@@ -8,21 +8,19 @@ import {
   type RunDefinition,
 } from '@on.auto/coordination';
 import {
-  defineRunDefinition,
   deferredCanceller,
   runCanceller,
   runSettlerKeepingOutputs,
-  type PlaybookOperation,
   type PlaybookOwnNames,
   type Capability,
   type SettleRun,
 } from '@on.auto/definitions';
-import { LedgerChores } from '@on.auto/ledger';
-import { Ledger, type Dispatcher, type DispatcherServices } from '@on.auto/operations';
+import { Ledger, type DispatcherServices } from '@on.auto/operations';
 import type { Evaluations } from '@on.auto/workflow-engine';
-import { choreWork, type DueWork, type HostOptions, type WaitingOptions } from '@on.auto/workflow-host';
+import type { HostOptions, WaitingOptions } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
+import type { HostDispatch, HostDispatches } from './host-operations.ts';
 import { inRuntime } from './in-runtime.ts';
 import { reactionsOf } from './reaction-dependencies.ts';
 
@@ -30,18 +28,13 @@ export type HostWork = Pick<HostOptions, 'machine' | 'perform' | 'settle' | 'rea
 
 export interface WorkParts {
   readonly capabilities: readonly Capability[];
-  readonly startVersion: PlaybookOperation;
   readonly evaluations: Evaluations;
   readonly names: PlaybookOwnNames;
 }
 
 type RunInProcess = (run: Omit<DefinitionRunRequest, 'longestMs' | 'resumesAfterMs'>) => ReturnType<RunDefinition>;
 
-function nestedRuns(
-  runtime: AppRuntime<DispatcherServices>,
-  dispatcher: Dispatcher,
-  runDefinition: PlaybookOperation,
-): RunInProcess {
+function nestedRuns(runtime: AppRuntime<DispatcherServices>, runDefinition: HostDispatch): RunInProcess {
   return ({
     org,
     playbook,
@@ -59,7 +52,7 @@ function nestedRuns(
   }) =>
     inRuntime(
       runtime,
-      dispatcher.dispatchToPlaybook(runDefinition.registration, {
+      runDefinition({
         caller,
         org,
         playbook,
@@ -103,19 +96,14 @@ function waitingOf(runtime: AppRuntime<DispatcherServices>, capabilities: readon
 
 export function hostWorkOf(
   runtime: AppRuntime<DispatcherServices>,
-  dispatcher: Dispatcher,
-  { capabilities, startVersion, evaluations, names }: WorkParts,
+  dispatches: HostDispatches,
+  { capabilities, evaluations, names }: WorkParts,
 ): HostWork {
   return {
     machine: workflowMachineOptionsOf(evaluations.machine, names),
-    perform: definitionCalls(nestedRuns(runtime, dispatcher, defineRunDefinition(capabilities))),
+    perform: definitionCalls(nestedRuns(runtime, dispatches.runDefinition)),
     settle: settlements(runtime),
-    reactions: { ...reactionsOf(runtime, dispatcher, { startVersion, names }), filters: evaluations.filters },
+    reactions: { ...reactionsOf(runtime, dispatches.startVersion, names), filters: evaluations.filters },
     waiting: waitingOf(runtime, capabilities),
   };
-}
-
-export async function orphansSweptIn(runtime: AppRuntime<LedgerChores>): Promise<DueWork> {
-  const { sweepOrphans } = await Effect.runPromise(inRuntime(runtime, Effect.service(LedgerChores)));
-  return choreWork({ name: 'orphaned content', perform: sweepOrphans });
 }

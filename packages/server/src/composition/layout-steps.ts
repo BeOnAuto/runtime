@@ -1,6 +1,7 @@
 import { definitionTypeOrder } from '@on.auto/definitions';
 import { definitionNamesOf } from '@on.auto/definitions/identity';
 import { generationLayoutSteps } from '@on.auto/generation';
+import { goalsLedger } from '@on.auto/goals';
 import { definitionNamesFilledBy, ledgerLayoutSteps, type LayoutStep } from '@on.auto/ledger';
 import { predictionLayoutSteps } from '@on.auto/prediction';
 import { hostLayoutSteps } from '@on.auto/workflow-host';
@@ -13,4 +14,5 @@ export const layoutSteps: readonly LayoutStep[] = [
   ...hostLayoutSteps,
   ...predictionLayoutSteps,
   ...generationLayoutSteps,
+  ...goalsLedger.layoutSteps,
 ].toSorted((one, other) => one.layout - other.layout);

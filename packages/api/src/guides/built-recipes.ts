@@ -20,6 +20,16 @@ export const everyDocumentCarriesItsPage =
 export const modelsOfAServer =
   'A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.';
 
+export const goalsInsertedAfter = 'or use the playbook they name when list_playbooks shows it.';
+
+const goalsAsked =
+  'Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked?';
+
+const toldAsked = 'Learn too what they want to be told when it passes, fails or becomes overdue, and where.';
+
+const goalsSavedAndAgreed =
+  'Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.';
+
 export function sentences(...given: readonly (readonly string[])[]): string {
   return given.flat().join(' ');
 }
@@ -244,13 +254,22 @@ function whatComesNext(carried: Carried): readonly string[] {
   );
 }
 
+function creatingThePlaybook(carried: Carried): string {
+  return sentences(
+    [`Create the playbook with create_playbook, with the person's words on what it is for, ${goalsInsertedAfter}`],
+    where(carried.goals === true, goalsAsked),
+    where(carried.goals === true && carried.messages === true, toldAsked),
+    where(carried.goals === true, goalsSavedAndAgreed),
+  );
+}
+
 function firstPlaybookText(carried: Carried): string {
   const workflows = serves(carried, 'workflow');
   const steps = [
     listingTheModels(carried),
     askingForTheJob(carried),
     partsAndTheirTypes(carried),
-    "Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it.",
+    creatingThePlaybook(carried),
     writingEachFunction(carried),
     savingEach(carried),
     testingEach(carried),

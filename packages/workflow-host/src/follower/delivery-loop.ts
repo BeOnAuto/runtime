@@ -23,13 +23,8 @@ function resumptionOf(consumers: readonly BoundConsumer[], delivered: string | n
     return { first: 0, after: undefined };
   }
   const [consumer, key] = Schema.decodeUnknownSync(MarkerSchema)(delivered);
-  return {
-    first: Math.max(
-      0,
-      consumers.findIndex(({ name }) => name === consumer),
-    ),
-    after: key,
-  };
+  const first = consumers.findIndex(({ name }) => name === consumer);
+  return first === -1 ? { first: 0, after: undefined } : { first, after: key };
 }
 
 function textOf(consumer: string, key: string): string {

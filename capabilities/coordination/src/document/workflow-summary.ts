@@ -4,6 +4,7 @@ import {
   type CallingStep,
   type DefinitionSummary,
 } from '@on.auto/definitions';
+import type { Contributes } from '@on.auto/definitions/goals';
 import {
   allTaskEntries,
   field,
@@ -46,9 +47,12 @@ function callsOf(document: JsonObject): readonly CalledDefinition[] {
     }));
 }
 
-function detailsOf(document: JsonObject): JsonObject {
+function detailsOf(document: JsonObject, contributes: Contributes | undefined): JsonObject {
   const calls = callsOf(document);
-  return calls.length === 0 ? {} : { calls };
+  return {
+    ...(calls.length === 0 ? {} : { calls }),
+    ...(contributes === undefined ? {} : { contributes }),
+  };
 }
 
 function descriptionOf(document: JsonObject): string | undefined {
@@ -56,7 +60,7 @@ function descriptionOf(document: JsonObject): string | undefined {
   return textField(header, 'summary') ?? textField(header, 'title');
 }
 
-export function summaryOf(document: JsonObject): DefinitionSummary {
+export function summaryOf(document: JsonObject, contributes?: Contributes): DefinitionSummary {
   const description = descriptionOf(document);
   const inputSchema = inlineSchemaOf(document, 'input');
   const triggers = triggersOfDocument(document);
@@ -66,7 +70,7 @@ export function summaryOf(document: JsonObject): DefinitionSummary {
     ...publishedOutputOf({
       schema: inlineSchemaOf(document, 'output'),
       shape: outputShapeOf(document),
-      details: detailsOf(document),
+      details: detailsOf(document, contributes),
     }),
     ...(triggers.length === 0 ? {} : { triggers }),
   };

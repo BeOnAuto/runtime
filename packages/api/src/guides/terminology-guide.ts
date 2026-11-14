@@ -109,7 +109,43 @@ function termLinesOf(sections: readonly Section[], served: readonly string[]): r
     );
 }
 
-export function terminologyGuideOf(page: string, served: readonly string[]): Guide {
+const goalTerm = {
+  told: "- Goal: What a playbook is for, in the person's own words, with how they will know it worked and what they want to be told about, and where. A playbook owns its goals, and the first one leads.",
+  untold:
+    "- Goal: What a playbook is for, in the person's own words, with how they will know it worked. A playbook owns its goals, and the first one leads.",
+};
+
+const goalsTerms: readonly string[] = [
+  "- Milestone: One of the three to seven points of a goal that matter, where the person acts or where Auto collects something. Each is one segment of the goal's ring, and a workflow marks one through its contribution.",
+  '- Measure: The one number a goal is judged by, with its label and its target.',
+  "- Contribution: What a workflow does for a goal, written under contributes in its document: its purpose in the person's words, the milestone it marks and the measure it reports.",
+  '- Verdict: Where one judging of a goal stands: open, passed or failed. The goal gives its own words for passed and failed.',
+];
+
+const messageTerms: readonly string[] = [
+  '- Message: What Auto sends the person when a judging of a goal passes, fails or becomes overdue, through the notification function the goal names. The runtime calls it a notice, as in the gap kinds that begin notice_.',
+  "- Summary: What Auto sends the person on the goal's own schedule, summing up its judgings.",
+];
+
+function goalsTermsOf(goals: boolean, messages: boolean): readonly string[] {
+  if (!goals) {
+    return [];
+  }
+  return [
+    '',
+    'Goals:',
+    '',
+    messages ? goalTerm.told : goalTerm.untold,
+    ...goalsTerms,
+    ...(messages ? messageTerms : []),
+  ];
+}
+
+export function terminologyGuideOf(
+  page: string,
+  served: readonly string[],
+  { goals = false, messages = false }: { readonly goals?: boolean; readonly messages?: boolean } = {},
+): Guide {
   const sections = sectionsOf(page);
   return {
     name: 'terminology',
@@ -124,6 +160,7 @@ export function terminologyGuideOf(page: string, served: readonly string[]): Gui
       '',
       ...capabilityLinesOf(sections, served),
       ...termLinesOf(sections, served),
+      ...goalsTermsOf(goals, messages),
       '',
     ].join('\n'),
   };

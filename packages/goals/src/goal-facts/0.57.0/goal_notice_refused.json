@@ -1,0 +1,13 @@
+{
+  "type": "goal_notice_refused",
+  "data": {
+    "change": "passed",
+    "attempt": 2,
+    "detail": "The function tell-owner could not be started now",
+    "retry_at": "2026-11-09T09:04:00.000Z"
+  },
+  "context": {
+    "at": "2026-11-09T18:00:00.000Z",
+    "by": "playbook:alpha"
+  }
+}

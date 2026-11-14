@@ -2,7 +2,7 @@ import { recordedDecoder, type KeyedProjection, type ProjectedRow } from '@on.au
 import { Option, Schema } from 'effect';
 
 import { ActivitySeenSchema, activityStreamKind, type SeenItem, type SeenThrough } from '../facts/activity-seen.ts';
-import { itemOfAddress, positionOfItem } from '../positions/activity-addresses.ts';
+import { itemOfAnyAddress, positionOfItem } from '../positions/activity-addresses.ts';
 import { isAfter, newestFirst, type ActivityPosition } from '../positions/activity-position.ts';
 
 export const seenName = 'activity_seen';
@@ -54,7 +54,7 @@ export function seenOf(row?: ProjectedRow): Seen {
 }
 
 function placed(mark: Mark): readonly Placed[] {
-  const item = itemOfAddress(mark.address);
+  const item = itemOfAnyAddress(mark.address);
   return item === undefined || !Number.isSafeInteger(mark.at)
     ? []
     : [{ mark, position: positionOfItem(item, mark.at) }];

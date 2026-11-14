@@ -1,0 +1,30 @@
+import { playbookGoalsIn } from '@on.auto/definitions/goals';
+import { playbookLedgerOf, type PlaybookAddress, type PlaybookProjectedRow } from '@on.auto/operations';
+import { Effect } from 'effect';
+
+import { judgingDueOf } from '../assessments/assessment-dues.ts';
+import type { Instant } from '../goal-rules/goal-rule.ts';
+import { assessmentsName } from '../goal-tables/assessment-rows.ts';
+import { judgedAt, playbookRetiredIn, type ClockPorts } from './clock-judging.ts';
+import { retiredDayHeld } from './retired-day.ts';
+
+function laterThan(now: Instant, due: Instant | undefined): Instant | null {
+  return due !== undefined && due > now ? due : null;
+}
+
+export function judgingRowPerformed(ports: ClockPorts, kept: PlaybookProjectedRow, now: Instant) {
+  return Effect.gen(function* () {
+    const address: PlaybookAddress = { org: kept.org, playbook: kept.playbook };
+    const playbookRetired = yield* playbookRetiredIn(ports, address);
+    const { goals } = yield* Effect.provideContext(playbookGoalsIn, playbookLedgerOf(ports.ledger, address));
+    const goal = goals.find(({ id }) => id === kept.row['goal']);
+    const state = yield* judgedAt(ports, { address, now }, kept.key, { goal, now, playbookRetired });
+    yield* ports.ledger.advanceRow(assessmentsName, address, kept.key, {
+      set: { judging_due_at: laterThan(now, judgingDueOf(state)) },
+      when: [{ column: 'judging_due_at', equals: Number(kept.row['judging_due_at']) }],
+    });
+    if (playbookRetired) {
+      yield* retiredDayHeld(ports, address, now);
+    }
+  });
+}

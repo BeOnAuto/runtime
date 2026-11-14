@@ -16,6 +16,8 @@ const descriptionsOfTags: Readonly<Record<string, string>> = {
   runs: "A playbook's runs: read, listed, cancelled, their history, and events sent to a waiting run",
   events: 'The events published to a playbook, and its history of events',
   analytics: 'How the runs of a playbook went, counted by day',
+  goals:
+    'What a playbook is for: its goals as written, what they still lack, what its workflows do for each, and how each is being judged',
   interactions: 'The requests runs wait on, and their answers',
   comments:
     'What people say in Studio about the things of a playbook or of the organization, each at the address of what it is about and where on it the comment was dropped, until it is resolved',
@@ -33,6 +35,7 @@ const descriptionsOfTags: Readonly<Record<string, string>> = {
 
 const resourcesOfOperations: Readonly<Record<string, string>> = {
   answer_interaction: 'interactions',
+  export_playbook: 'playbooks',
   list_generation_models: 'models',
   render_playbook_page: 'playbooks',
 };

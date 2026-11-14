@@ -55,11 +55,12 @@ export function readDefinition(
   capability: Capability,
   types: readonly string[],
   name: string,
+  goals = false,
 ): Effect.Effect<ReadDefinition, NotFound | Unavailable | Conflict, PlaybookReader | PlaybookContext> {
   return Effect.gen(function* () {
     const registry = yield* loadRegistry(capability.type);
     const stored = yield* findDefinition(registry, capability.type, name);
     const users = usersToday(types, registry, { type: capability.type, name: stored.name });
-    return { stored, ...(yield* answeredWithItsUsers(capability, stored, users)) };
+    return { stored, ...(yield* answeredWithItsUsers(capability, stored, users, { goals })) };
   });
 }

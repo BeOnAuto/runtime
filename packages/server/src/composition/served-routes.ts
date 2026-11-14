@@ -37,6 +37,8 @@ export interface ServedCatalog {
   readonly dispatcher: Dispatcher;
   readonly capabilities: readonly Capability[];
   readonly pages: boolean;
+  readonly goals: boolean;
+  readonly messages: boolean;
   readonly identityIssuer: string;
   readonly retryStateKeys: RetryStateKeys;
   readonly contentAddressKey: ContentAddressKey;
@@ -52,6 +54,8 @@ export async function routesFor(
     dispatcher,
     capabilities,
     pages,
+    goals,
+    messages,
     identityIssuer,
     retryStateKeys,
     contentAddressKey,
@@ -59,11 +63,9 @@ export async function routesFor(
     shippedFiles,
   }: ServedCatalog,
 ): Promise<readonly RegisterRoutes[]> {
-  const shelf = await guideShelfFrom(shippedFiles, capabilities, { pages, companions: renderCompanionGuides });
-  const directoryShelf = await guideShelfFrom(shippedFiles, inTheDirectoryListing(capabilities), {
-    pages,
-    companions: renderCompanionGuides,
-  });
+  const shelving = { pages, goals, messages, companions: renderCompanionGuides };
+  const shelf = await guideShelfFrom(shippedFiles, capabilities, shelving);
+  const directoryShelf = await guideShelfFrom(shippedFiles, inTheDirectoryListing(capabilities), shelving);
   const directoryListing = { catalog: directoryCatalog, shelf: directoryShelf };
   const debugStyle = await readDebugStyle(shippedFiles);
   return [
@@ -105,6 +107,8 @@ export function routesServing(
     dispatcher: makeDispatcher([]),
     capabilities: [],
     pages: false,
+    goals: false,
+    messages: false,
     identityIssuer,
     retryStateKeys,
     contentAddressKey,

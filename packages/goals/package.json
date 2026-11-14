@@ -1,0 +1,31 @@
+{
+  "name": "@on.auto/goals",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@on.auto/activity": "workspace:*",
+    "@on.auto/definitions": "workspace:*",
+    "@on.auto/ledger": "workspace:*",
+    "@on.auto/operations": "workspace:*",
+    "@on.auto/playbooks": "workspace:*",
+    "@on.auto/workflow-engine": "workspace:*",
+    "@on.auto/workflow-host": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@on.auto/content": "workspace:*",
+    "@on.auto/shipped-files": "workspace:*",
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  }
+}

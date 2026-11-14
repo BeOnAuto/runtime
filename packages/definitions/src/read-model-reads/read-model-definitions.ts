@@ -23,7 +23,7 @@ export const definitionFromTheReadModel = Effect.fnUntraced(function* (
   capability: Capability,
   types: readonly string[],
   name: string,
-  { change, inHand = new Map() }: Answering = {},
+  { change, inHand = new Map(), goals = false }: Answering = {},
 ) {
   const found = yield* storedFromTheReadModel(capability.type, name);
   const { stored, savedBy } = found;
@@ -31,7 +31,7 @@ export const definitionFromTheReadModel = Effect.fnUntraced(function* (
   const opened = { savedBy, document: texts.source, saved: stored.warnings ?? [] };
   const warnings = yield* warningsAtAnOpen(capability, opened);
   const users = yield* usersFromTheReadModel(types, { type: capability.type, name });
-  const definition = withUsers({ ...listedWith(capability, stored, warnings), ...texts }, users);
+  const definition = withUsers({ ...listedWith(capability, stored, warnings, goals), ...texts }, users);
   const read: ReadFromTheReadModel = { ...found, definition, inHand: textsByDigestOf(stored, texts) };
   return read;
 });

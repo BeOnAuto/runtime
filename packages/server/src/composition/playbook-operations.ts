@@ -7,6 +7,7 @@ import {
   type Capability,
 } from '@on.auto/definitions';
 import type { SubjectPages } from '@on.auto/definitions/page';
+import { goalChangeNamings, goalsOperationsServed } from '@on.auto/goals';
 import type { RouteRegistration } from '@on.auto/operations';
 import { defineGetEvent, defineListPlaybookChanges, defineListPlaybookEvents } from '@on.auto/playbooks';
 
@@ -17,33 +18,46 @@ export interface ServedPages {
   readonly pages: SubjectPages;
 }
 
+export interface ServedGoals {
+  readonly goals: boolean;
+  readonly results: boolean;
+  readonly messages: boolean;
+}
+
 interface PlaybookOperation {
   readonly registration: RouteRegistration<'playbook'>;
 }
 
 export function playbookOperationsServing(
   capabilities: readonly Capability[],
-  { facts, names, pages }: Pick<ComposedFacts, 'facts' | 'names'> & ServedPages,
+  { facts, names, pages, goals, results, messages }: Pick<ComposedFacts, 'facts' | 'names'> & ServedPages & ServedGoals,
 ): readonly PlaybookOperation[] {
   const presenters = makeDefinitionPresenters(capabilities, facts);
   const { holders } = factsKnownWith(facts.onRuns);
   return [
-    ...makeDefinitionOperations(capabilities, pages, { facts, presenters, holders }),
+    ...makeDefinitionOperations(capabilities, pages, { facts, presenters, holders }, { goals, messages }),
     defineListPlaybookEvents(presenters, holders),
-    defineListPlaybookChanges(presenters, [commentChanges]),
+    defineListPlaybookChanges(presenters, [commentChanges, ...goalChangeNamings(goals)]),
     defineGetEvent(presenters, holders),
+    ...goalsOperationsServed(goals, results, messages),
     definePublishEvent(names),
     ...commentOperations,
   ];
 }
 
-interface DeclaredAndServed extends ServedPages {
+interface DeclaredAndServed extends ServedPages, ServedGoals {
   readonly capabilities: readonly Capability[];
 }
 
 export function directoryOperationsServing(
   capabilities: readonly Capability[],
-  { capabilities: declared, pages }: DeclaredAndServed,
+  { capabilities: declared, pages, goals, results, messages }: DeclaredAndServed,
 ): readonly PlaybookOperation[] {
-  return playbookOperationsServing(inTheDirectoryListing(capabilities), { ...directoryFactsOf(declared), pages });
+  return playbookOperationsServing(inTheDirectoryListing(capabilities), {
+    ...directoryFactsOf(declared),
+    pages,
+    goals,
+    results,
+    messages,
+  });
 }

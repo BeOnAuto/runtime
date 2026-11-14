@@ -1,4 +1,4 @@
-import { playbookOwnNamesOf, defineStartVersion } from '@on.auto/definitions';
+import { playbookOwnNamesOf } from '@on.auto/definitions';
 import { echo } from '@on.auto/definitions/testing';
 import { makeDispatcher } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
@@ -15,6 +15,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
+import { hostDispatchesOf, hostOperationsOf } from './host-operations.ts';
 import { hostWorkOf } from './host-work.ts';
 
 const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
@@ -34,9 +35,8 @@ describe('the machine the workflow host decides runs with', () => {
       workers: 1,
       heapMegabytes: 64,
     });
-    const { machine } = hostWorkOf(runtime, makeDispatcher([]), {
+    const { machine } = hostWorkOf(runtime, hostDispatchesOf(makeDispatcher([]), hostOperationsOf([echo])), {
       capabilities: [echo],
-      startVersion: defineStartVersion([echo]),
       names: playbookOwnNamesOf([echo]),
       evaluations: pool.evaluations,
     });
@@ -51,9 +51,8 @@ describe('the machine the workflow host decides runs with', () => {
 describe('the cancels the workflow host hands to the runtime of the server', () => {
   it('settle nothing for a run the ledger does not have, and record the cancel of a run that has not started yet', async () => {
     const runtime = await memoryRuntime();
-    const { waiting } = hostWorkOf(runtime, makeDispatcher([]), {
+    const { waiting } = hostWorkOf(runtime, hostDispatchesOf(makeDispatcher([]), hostOperationsOf([echo])), {
       capabilities: [echo],
-      startVersion: defineStartVersion([echo]),
       names: playbookOwnNamesOf([echo]),
       evaluations: {
         machine: machineSandboxOf(freshInstances(sandboxModule)),

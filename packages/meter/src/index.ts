@@ -1,5 +1,6 @@
 export { type AdmissionAuthority, type AuthorityAnswer } from './admission/authority.ts';
 export { ledgerMeterAdmittedBy, meterOver } from './admission/ledger-meter.ts';
+export { isGoalNotice } from './admission/goal-notice.ts';
 export { type MeteredLedger } from './admission/admitting.ts';
 export { meterDefaults, type MeterOptions } from './admission/metering.ts';
 export {

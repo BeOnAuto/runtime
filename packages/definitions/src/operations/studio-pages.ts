@@ -7,16 +7,29 @@ import {
 } from '@on.auto/operations';
 import { Schema, type Effect } from 'effect';
 
-import { DefinitionSchema, type Definition } from '../registry/definition.ts';
+import { DefinitionSchema, DefinitionWithGoalsSchema, type Definition } from '../registry/definition.ts';
 import { RunDetailSchema, type RunDetail } from '../runs/run.ts';
 
-export const SavedDefinitionSchema = Schema.Struct({
-  ...DefinitionSchema.fields,
-  studio: studioLinkField('saved'),
-}).annotate({
+const savedAnnotations = {
   identifier: 'SavedDefinition',
   description: 'A definition just saved, with its document and its page in Studio',
-});
+};
+
+const SavedDefinitionSchema = Schema.Struct({
+  ...DefinitionSchema.fields,
+  studio: studioLinkField('saved'),
+}).annotate(savedAnnotations);
+
+const SavedDefinitionWithGoalsSchema = Schema.Struct({
+  ...DefinitionWithGoalsSchema.fields,
+  studio: studioLinkField('saved'),
+}).annotate(savedAnnotations);
+
+export function savedDefinitionSchemaOf(
+  goals: boolean,
+): typeof SavedDefinitionSchema | typeof SavedDefinitionWithGoalsSchema {
+  return goals ? SavedDefinitionWithGoalsSchema : SavedDefinitionSchema;
+}
 
 export const RequestedRunSchema = Schema.Struct({
   ...RunDetailSchema.fields,

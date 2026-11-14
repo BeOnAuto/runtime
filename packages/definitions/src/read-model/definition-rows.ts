@@ -47,7 +47,13 @@ function pausedBy(caller: RecordedCaller | null): ProjectedRow {
 
 const notPaused: ProjectedRow = { paused_at: null, ...pausedBy(null), reason: null };
 
-function createdRow(fact: Extract<RecordedDefinitionEvent, { type: 'definition_created' }>, position: number) {
+type DefinitionCreated = Extract<RecordedDefinitionEvent, { type: 'definition_created' }>;
+
+function pausedAtCreation({ created_by: createdBy, paused }: DefinitionCreated['data'], at: string): ProjectedRow {
+  return paused === undefined ? notPaused : { paused_at: at, ...pausedBy(createdBy), reason: paused.reason ?? null };
+}
+
+function createdRow(fact: DefinitionCreated, position: number) {
   const { at, definitionType, definitionName, definitionVersion } = fact.context;
   const { content, created_by: createdBy } = fact.data;
   return {
@@ -55,13 +61,13 @@ function createdRow(fact: Extract<RecordedDefinitionEvent, { type: 'definition_c
     name: definitionName,
     definition_id: fact.data.definition_id ?? null,
     version: definitionVersion,
-    status: 'active',
+    status: fact.data.paused === undefined ? 'active' : 'paused',
     ...contentColumns(content),
     created_at: at,
     created_by_id: createdBy.id,
     created_by_name: createdBy.name,
     updated_at: at,
-    ...notPaused,
+    ...pausedAtCreation(fact.data, at),
     retired_at: null,
     saved_position: position,
   };

@@ -1,8 +1,9 @@
 import { OrgReader, type ProjectedCondition } from '@on.auto/operations';
 import { Effect } from 'effect';
 
+import { goalVerdictTable } from '../goal-activity/goal-tables.ts';
 import {
-  itemOfAddress,
+  itemOfAnyAddress,
   ofTheOrg,
   orgSegment,
   type ActivityItem,
@@ -24,7 +25,7 @@ import { isSeenBy, type Viewer } from './activity-viewer.ts';
 
 const localDeveloper = 'local';
 
-interface ActivityCounts {
+export interface ActivityCounts {
   readonly needs_you: number;
   readonly broken: number;
   readonly new: number;
@@ -37,6 +38,7 @@ const tablesOfForms: Readonly<Partial<Record<ItemForm, ActivityTable>>> = {
   result: newTable,
   version: newTable,
   comment: commentTable,
+  assessment: goalVerdictTable,
 };
 
 function openIn(table: ActivityTable): ProjectedCondition {
@@ -63,7 +65,7 @@ function isOwnedBy(item: ActivityItem, owner: string): boolean {
 
 function isCountedMark(viewer: Viewer, table: ActivityTable, playbook: string, mark: Mark) {
   return Effect.gen(function* () {
-    const item = itemOfAddress(mark.address);
+    const item = itemOfAnyAddress(mark.address);
     if (item === undefined || !isOwnedBy(item, playbook) || tablesOfForms[item.form] !== table) {
       return false;
     }
@@ -95,7 +97,7 @@ function unseenTiedIn(viewer: Viewer, table: ActivityTable, playbook: string) {
   });
 }
 
-function unseenIn(viewer: Viewer, table: ActivityTable, playbook: string) {
+export function unseenIn(viewer: Viewer, table: ActivityTable, playbook: string) {
   return Effect.gen(function* () {
     const after: ProjectedCondition = { column: table.atColumn, after: viewer.through.at };
     const all = yield* rowsCountedOf(playbook, table.projection, [openIn(table), after]);

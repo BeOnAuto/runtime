@@ -13,6 +13,6 @@ export function serveGuides(server: GuideRegistry, shelf: GuideShelf, served: Se
   const recipes = recipesFollowedWith(served, shelf.recipes);
   serveGuideTool(server, shelf, recipes);
   serveGuideResources(server, shelf);
-  serveStartingPrompts(server, served);
+  serveStartingPrompts(server, served, shelf);
   serveRecipePrompts(server, recipes);
 }

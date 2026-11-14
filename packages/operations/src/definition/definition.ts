@@ -62,6 +62,7 @@ export interface Definition<
   readonly readsOnly?: boolean;
   readonly irreversible?: boolean;
   readonly repeatable?: boolean;
+  readonly whileRetired?: boolean;
   readonly permittedBy?: readonly Permission[];
   readonly inputSchema: In;
   readonly outputSchema: Out;
@@ -101,6 +102,7 @@ interface HttpFields<
   readonly body: B;
   readonly successStatus?: SuccessStatusByKind[K];
   readonly repeatable?: boolean;
+  readonly whileRetired?: boolean;
   readonly permittedBy?: readonly Permission[];
   readonly inputSchema: In;
   readonly reasons: readonly R[];

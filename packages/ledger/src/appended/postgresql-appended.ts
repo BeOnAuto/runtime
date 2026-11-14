@@ -7,7 +7,7 @@ import type {
   ReadLatestAppends,
   RecordedPoint,
   RecordedStore,
-  StreamAgesStore,
+  KeptStreamAges,
   StreamVersionsStore,
   LastMessagesStore,
 } from '../event-store.ts';
@@ -79,7 +79,7 @@ function appendedOf(horizon: string, groups: readonly Group[], most: number): La
 export function postgresqlAppended(
   query: Query,
   listeners: AppendListeners = {},
-): Pick<RecordedStore, 'readAppended'> & StreamAgesStore & StreamVersionsStore & LastMessagesStore & AppendWaitsStore {
+): Pick<RecordedStore, 'readAppended'> & KeptStreamAges & StreamVersionsStore & LastMessagesStore & AppendWaitsStore {
   const readAppended = appendedAfter(query);
   return {
     readAppended,

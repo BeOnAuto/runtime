@@ -11,7 +11,7 @@ import {
   whatItDoes,
   type OfferedDefinition,
 } from '../plain-language/definition-words.ts';
-import { DefinitionSchema } from '../registry/definition.ts';
+import { definitionSchemaOf } from '../registry/definition.ts';
 import { DefinitionNameField, RenderField, SampleOutputField } from './definition-fields.ts';
 import { definitionRead, type PageMissing } from './definition-read.ts';
 
@@ -32,7 +32,7 @@ function noPageToRender({ label, name }: PageMissing): InvalidInput {
   return new InvalidInput({ detail, issues: [{ pointer: '/render', detail }] });
 }
 
-export function defineGetDefinition(capabilities: readonly Capability[], pages: SubjectPages) {
+export function defineGetDefinition(capabilities: readonly Capability[], pages: SubjectPages, goals = false) {
   const known = knownCapabilities(capabilities);
   const words = definitionWordsFor(capabilities);
   return known.publish(
@@ -47,9 +47,9 @@ export function defineGetDefinition(capabilities: readonly Capability[], pages: 
         render: Schema.optionalKey(RenderField),
         sample_output: Schema.optionalKey(SampleOutputField),
       }),
-      outputSchema: DefinitionSchema,
+      outputSchema: definitionSchemaOf(goals),
       reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
-      handle: definitionRead(capabilities, pages, noPageToRender),
+      handle: definitionRead(capabilities, pages, noPageToRender, goals),
       plainLanguage: {
         task: `look up a ${words.kinds}`,
         attempt: (asked) => `${readingVerbOf(asked)} ${words.named(asked.type, asked.name)}`,

@@ -5,6 +5,7 @@ import { Option, Schema } from 'effect';
 
 export interface ActivityPosition {
   readonly at: number;
+  readonly resultAt?: number;
   readonly playbook: string;
   readonly key: string;
 }
@@ -15,11 +16,12 @@ const PositionSchema = Schema.Struct({
   at: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   playbook: Schema.Union([PlaybookIdSchema, Schema.Literal('')]),
   key: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(mostKeyCharacters)),
+  result_at: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
 });
 
 const positionIn = Schema.decodeUnknownOption(Schema.fromJsonString(PositionSchema));
 
-function textOrder(left: string, right: string): number {
+function order<Value extends string | number>(left: Value, right: Value): number {
   if (left === right) {
     return 0;
   }
@@ -27,10 +29,13 @@ function textOrder(left: string, right: string): number {
 }
 
 export function positionOrder(left: ActivityPosition, right: ActivityPosition): number {
-  if (left.at !== right.at) {
-    return left.at < right.at ? -1 : 1;
-  }
-  return left.playbook === right.playbook ? textOrder(left.key, right.key) : textOrder(left.playbook, right.playbook);
+  const orders = [
+    order(left.at, right.at),
+    order(left.resultAt ?? left.at, right.resultAt ?? right.at),
+    order(left.playbook, right.playbook),
+    order(left.key, right.key),
+  ];
+  return orders.find((each) => each !== 0) ?? 0;
 }
 
 export function isAfter(position: ActivityPosition, other: ActivityPosition): boolean {
@@ -41,10 +46,15 @@ export function newestFirst(left: ActivityPosition, right: ActivityPosition): nu
   return positionOrder(right, left);
 }
 
-export function cursorOf({ at, playbook, key }: ActivityPosition): string {
-  return Buffer.from(JSON.stringify({ at, playbook, key }), 'utf8').toString('base64url');
+export function cursorOf({ at, resultAt, playbook, key }: ActivityPosition): string {
+  const placed = resultAt === undefined ? { at, playbook, key } : { at, playbook, key, result_at: resultAt };
+  return Buffer.from(JSON.stringify(placed), 'utf8').toString('base64url');
 }
 
 export function positionOfCursor(cursor: string): ActivityPosition | undefined {
-  return Option.getOrUndefined(positionIn(Buffer.from(cursor, 'base64url').toString('utf8')));
+  return Option.getOrUndefined(
+    Option.map(positionIn(Buffer.from(cursor, 'base64url').toString('utf8')), ({ at, playbook, key, result_at }) =>
+      result_at === undefined ? { at, playbook, key } : { at, resultAt: result_at, playbook, key },
+    ),
+  );
 }

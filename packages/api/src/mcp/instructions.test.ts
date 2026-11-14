@@ -175,3 +175,20 @@ describe('the instructions of every endpoint', () => {
     expect([servedOnAnOrg.length, servedOnAPlaybook.length, servedOnMcp.length]).toEqual([764, 626, 679]);
   });
 });
+
+describe('the instructions of a server that keeps goals', () => {
+  const asking = "Ask the person each question through your client's question tool where it has one.";
+
+  it('say to ask the person through the client’s question tool before the closing, under the 800 characters of the org endpoint, except on the org endpoint, which has no room', () => {
+    const kept = everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, { goals: true }));
+    const directory = instructionsFor('directory', withConnections(ownOrg), { goals: true });
+
+    expect(kept.map((text) => text.includes(`${asking} ${closing}`))).toEqual([false, true, true]);
+    expect(kept[0]).toBe(instructionsFor('org', withConnections(orgEndpoint)));
+    expect(directory).toBe(`${servedOnMcp.replace(closing, '')}${asking} ${closing}`);
+    expect([...kept, directory].map(({ length }) => length)).toEqual([764, 709, 762, 762]);
+    expect(instructionsActingAs({ caller: signedInAda, org: 'acme' }, 'own org', ownOrg, { goals: true })).toContain(
+      `${asking} ${closing}`,
+    );
+  });
+});

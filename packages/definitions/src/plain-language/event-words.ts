@@ -41,6 +41,7 @@ const triggerNames: Readonly<Record<StartingTrigger['kind'], string>> = {
   event: 'event trigger',
   cron: 'cron schedule',
   every: 'every schedule',
+  goal: 'goal',
 };
 
 export function triggerNamed(kind: StartingTrigger['kind']): string {
@@ -54,8 +55,11 @@ export function scheduleNamed(schedule: ScheduleTrigger): string {
 }
 
 export function runStarted(words: DefinitionWords, type: string, name: string, trigger?: StartingTrigger): string {
-  return trigger === undefined
-    ? `A run of ${words.named(type, name)} started.`
+  if (trigger === undefined) {
+    return `A run of ${words.named(type, name)} started.`;
+  }
+  return trigger.kind === 'goal'
+    ? `A run of ${words.named(type, name)} started to send a goal's message or summary.`
     : `A run of ${words.named(type, name)} was started by its ${triggerNamed(trigger.kind)}.`;
 }
 

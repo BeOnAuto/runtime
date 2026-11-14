@@ -1,0 +1,11 @@
+{
+  "src/goal-facts/0.57.0/goal_assessed.json": "13aca4b2641e8ea624bac525d01d2fc6ac631cb45fdcc5422c2c23bb21f45b30",
+  "src/goal-facts/0.57.0/goal_assessment_ended.json": "53622c2ab4071265768fd3db9cf45ac261b00b12cbbcace0c51a20660dcda1b4",
+  "src/goal-facts/0.57.0/goal_assessment_opened.json": "bf6a95d18c10b5aedc0afe9c693ee42a7ccd3c8b66c3ca5c09e677a975cf2ccf",
+  "src/goal-facts/0.57.0/goal_notice_refused.json": "4b1fa2a2cf81dd291b296212b2b56c7ce7289dcf8ce0f3a30fa3ff223122b9d6",
+  "src/goal-facts/0.57.0/goal_notice_started.json": "13ed7544196405a3ff44a762d6a80b7ea9ac46450f75cfab542f0c8e332ab524",
+  "src/goal-facts/0.57.0/goal_observation_refused.json": "9796a4ed8843c42d8d6804e7af98fa0393e83f405e9b1df6d206a460bda61de1",
+  "src/goal-facts/0.57.0/goal_observed.json": "96d4b3822898953b1f142940cab79d127a1c02eb277b5ac329eee56eef7fa8d5",
+  "src/goal-facts/0.57.0/goal_overdue.json": "4cf0da07d2fd1bdf8bc5736e43551cc301149e9d1459045e9648ae436fc11988",
+  "src/goal-facts/0.57.0/goal_summary_started.json": "e1583f1793bd92a7a81e6685d4b99f37601a2b50f6c17f6a6926951b4d5d3578"
+}

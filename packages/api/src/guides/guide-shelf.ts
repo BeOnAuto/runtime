@@ -1,7 +1,7 @@
 import {
   mostGuideBytes,
   mostGuidesBeyondTheRecipes,
-  mostRecipeBytes,
+  mostRecipeBytesWhere,
   mostRecipes,
   requireBytesWithin,
   requireWithin,
@@ -40,11 +40,19 @@ export interface ShelvedRecipe extends Recipe {
 
 export const pageGuideName = 'page';
 
+export interface ShelfKept {
+  readonly goals?: boolean;
+  readonly messages?: boolean;
+}
+
 export const eventsGuideName = 'events';
+
+export const goalsGuideName = 'goals';
 
 export interface GuideShelf {
   readonly definitionTypes: readonly DefinitionType[];
   readonly pages: boolean;
+  readonly messages: boolean;
   readonly guides: readonly Guide[];
   readonly recipes: readonly ShelvedRecipe[];
   readonly everyGuide: readonly Guide[];
@@ -70,6 +78,7 @@ export function guideShelfOf(
   guides: readonly Guide[],
   recipes: readonly Recipe[],
   definitionTypes: readonly DefinitionType[],
+  { goals = false, messages = false }: ShelfKept = {},
 ): GuideShelf {
   const everyGuide = [...guides, ...recipes];
   const names = everyGuide.map(({ name }) => name);
@@ -85,7 +94,7 @@ export function guideShelfOf(
   requireWithin(
     'The guides of the server',
     guides.length,
-    mostGuidesBeyondTheRecipes(definitionTypes.length),
+    mostGuidesBeyondTheRecipes(definitionTypes.length, goals),
     'guides',
   );
   requireWithin('The recipes of the server', recipes.length, mostRecipes, 'recipes');
@@ -93,11 +102,12 @@ export function guideShelfOf(
     requireBytesWithin(`The guide ${name}`, text, mostGuideBytes);
   }
   for (const { name, text } of recipes) {
-    requireBytesWithin(`The recipe ${name}`, text, mostRecipeBytes);
+    requireBytesWithin(`The recipe ${name}`, text, mostRecipeBytesWhere(goals));
   }
   return {
     definitionTypes,
     pages: guides.some(({ name }) => name === pageGuideName),
+    messages: goals && messages,
     guides,
     recipes: shelved,
     everyGuide,

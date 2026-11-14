@@ -100,11 +100,13 @@ jobs:
               - secrets
             services: false
           - packages:
+              - access-control
               - computation
               - config
               - connections
               - content
               - documents
+              - goals
               - json-schema
               - lookup
               - outbound

@@ -20,9 +20,16 @@ import {
 import { Effect, Result } from 'effect';
 
 import { dslProblems } from '../dsl/dsl-validation.ts';
-import type { Problem } from '../dsl/schema-problems.ts';
+import {
+  contributesOf,
+  contributionProblems,
+  withoutContributions,
+  type Contributes,
+} from './workflow-contributions.ts';
 import { workflowPolicyOf, type WorkflowPolicy } from './workflow-functions.ts';
 import { outputShapeRejections } from './workflow-output.ts';
+
+type Problem = Pick<Rejection, 'pointer' | 'detail'>;
 
 const thirtyDays = 2_592_000_000;
 
@@ -30,6 +37,7 @@ export type WorkflowDefinitionDocument = JsonObject;
 
 export interface ReadWorkflow {
   readonly document: WorkflowDefinitionDocument;
+  readonly contributes?: Contributes;
   readonly inputSchema?: CompiledSchema;
   readonly locate: (pointer: string) => Position;
 }
@@ -81,7 +89,7 @@ function refusedIn(locate: ReadWorkflow['locate']) {
 function readWorkflowDocument(
   source: string,
   policy: WorkflowPolicy,
-  mostDuration = thirtyDays,
+  { mostDuration = thirtyDays, goals }: { readonly mostDuration?: number | undefined; readonly goals: boolean },
 ): Effect.Effect<ReadWorkflow, InvalidInput> {
   return Effect.suspend(() => {
     const reading = readYaml(source, workflowYaml);
@@ -89,21 +97,26 @@ function readWorkflowDocument(
       return Effect.fail(invalidDocument('The workflow document is not YAML this runtime reads', reading.problems));
     }
     const { value, locate } = reading.document;
-    const rejections = policy(value);
+    const { written, document } = withoutContributions(value);
+    const rejections = policy(document);
     const unreadable =
       nestingRejections(value).length > 0 || rejections.some(({ pointer }) => pointer === '/document/dsl');
-    return Effect.flatMap(unreadable ? Effect.succeed([]) : dslProblemsBeside(value, rejections), (dsl) => {
-      const found: readonly Problem[] = [
+    return Effect.flatMap(unreadable ? Effect.succeed([]) : dslProblemsBeside(document, rejections), (dsl) => {
+      const others: readonly Problem[] = [
         ...dsl,
         ...rejections,
-        ...(unreadable ? [] : durationLimitRejections(value, mostDuration)),
-        ...outputShapeRejections(value),
+        ...(unreadable ? [] : durationLimitRejections(document, mostDuration)),
+        ...outputShapeRejections(document),
       ];
       const refused = refusedIn(locate);
-      return Result.match(compiledInputOf(value, rejections), {
-        onFailure: (issues) => refused([...found, ...issues]),
-        onSuccess: (input) =>
-          found.length === 0 ? Effect.succeed({ document: value, ...input, locate }) : refused(found),
+      return Result.match(compiledInputOf(document, rejections), {
+        onFailure: (issues) => refused([...others, ...issues, ...contributionProblems(written, goals, issues)]),
+        onSuccess: (input) => {
+          const found = [...others, ...contributionProblems(written, goals, others)];
+          return found.length === 0
+            ? Effect.succeed({ document, ...contributesOf(written), ...input, locate })
+            : refused(found);
+        },
       });
     });
   });
@@ -118,9 +131,10 @@ function dslProblemsBeside(document: JsonObject, rejections: readonly Rejection[
 
 export function workflowReaderOf(
   names: PlaybookOwnNames,
+  goals: boolean,
 ): (source: string, mostDuration?: number) => Effect.Effect<ReadWorkflow, InvalidInput> {
   const policy = workflowPolicyOf(names);
-  return (source, mostDuration) => readWorkflowDocument(source, policy, mostDuration);
+  return (source, mostDuration) => readWorkflowDocument(source, policy, { mostDuration, goals });
 }
 
 export function parseWorkflowDocument(
@@ -128,7 +142,7 @@ export function parseWorkflowDocument(
   policy: WorkflowPolicy,
   mostDuration = thirtyDays,
 ): Effect.Effect<WorkflowDefinitionDocument, InvalidInput> {
-  return Effect.map(readWorkflowDocument(source, policy, mostDuration), ({ document }) => document);
+  return Effect.map(readWorkflowDocument(source, policy, { mostDuration, goals: true }), ({ document }) => document);
 }
 
 function isShadowed({ pointer }: Problem, rejections: readonly Rejection[]): boolean {

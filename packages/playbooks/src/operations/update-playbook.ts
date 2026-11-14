@@ -14,20 +14,20 @@ const nothingGiven = new InvalidInput({
   issues: [{ pointer: '', detail: 'Give name, description or page, at least one, to update the playbook' }],
 });
 
-function retiredAlready(playbook: string): Conflict {
+export function retiredAlready(playbook: string): Conflict {
   return new Conflict({
     detail: `The playbook ${playbook} is retired and cannot change until it is restored`,
     kind: 'retired',
   });
 }
 
-interface Changed {
+export interface Changed {
   readonly name?: string;
   readonly description?: string;
   readonly page?: string | null;
 }
 
-function renamedOrRedescribed(existing: Playbook, { name, description }: Changed) {
+export function renamedOrRedescribed(existing: Playbook, { name, description }: Changed) {
   return name === undefined && description === undefined
     ? Effect.succeed(existing)
     : recordInRegistry({
@@ -37,6 +37,41 @@ function renamedOrRedescribed(existing: Playbook, { name, description }: Changed
         description: description ?? existing.description,
       });
 }
+
+export const updatePlaybookFields = {
+  playbook: PlaybookIdField,
+  name: Schema.optionalKey(PlaybookNameField),
+  description: Schema.optionalKey(PlaybookDescriptionField),
+  page: Schema.optionalKey(PlaybookPageField),
+};
+
+interface Updating extends Changed {
+  readonly playbook: string;
+}
+
+function playbookUpdated(pages: PlaybookPages, { playbook, ...changed }: Updating) {
+  return Effect.gen(function* () {
+    if (changed.name === undefined && changed.description === undefined && changed.page === undefined) {
+      return yield* nothingGiven;
+    }
+    const existing = yield* foundPlaybook(playbook);
+    if (existing.status === 'retired') {
+      return yield* retiredAlready(playbook);
+    }
+    if (changed.page !== undefined) {
+      const { org } = yield* OrgContext;
+      yield* pages.save({ org, playbook }, changed.page);
+    }
+    return yield* renamedOrRedescribed(existing, changed);
+  });
+}
+
+export const updatePlaybookWords = {
+  task: 'update a playbook',
+  attempt: ({ playbook }: { readonly playbook: string }) => `update the playbook ${quoted(playbook)}`,
+  outcome: (playbook: Pick<Playbook, 'name' | 'description'>) =>
+    `Updated ${playbookNamed(playbook)}.${purposeOf(playbook, ' It has no description now.')}`,
+};
 
 export function defineUpdatePlaybook(pages: PlaybookPages) {
   return defineCommand('org', {
@@ -49,32 +84,10 @@ export function defineUpdatePlaybook(pages: PlaybookPages) {
     ].join(' '),
     repeatable: true,
     route: { method: 'PUT', path: '/playbooks/{playbook}' },
-    inputSchema: Schema.Struct({
-      playbook: PlaybookIdField,
-      name: Schema.optionalKey(PlaybookNameField),
-      description: Schema.optionalKey(PlaybookDescriptionField),
-      page: Schema.optionalKey(PlaybookPageField),
-    }),
+    inputSchema: Schema.Struct(updatePlaybookFields),
     outputSchema: PlaybookSchema,
     reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
-    handle: Effect.fnUntraced(function* ({ playbook, ...changed }) {
-      if (changed.name === undefined && changed.description === undefined && changed.page === undefined) {
-        return yield* nothingGiven;
-      }
-      const existing = yield* foundPlaybook(playbook);
-      if (existing.status === 'retired') {
-        return yield* retiredAlready(playbook);
-      }
-      if (changed.page !== undefined) {
-        const { org } = yield* OrgContext;
-        yield* pages.save({ org, playbook }, changed.page);
-      }
-      return yield* withItsPage(pages, yield* renamedOrRedescribed(existing, changed));
-    }),
-    plainLanguage: {
-      task: 'update a playbook',
-      attempt: ({ playbook }) => `update the playbook ${quoted(playbook)}`,
-      outcome: (playbook) => `Updated ${playbookNamed(playbook)}.${purposeOf(playbook, ' It has no description now.')}`,
-    },
+    handle: (input) => Effect.flatMap(playbookUpdated(pages, input), (updated) => withItsPage(pages, updated)),
+    plainLanguage: updatePlaybookWords,
   });
 }

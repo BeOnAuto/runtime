@@ -1,4 +1,4 @@
-import type { Context } from '@on.auto/operations';
+import { TriggerKindSchema, type Context } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 const RunLogAttributesSchema = Schema.Struct({
@@ -8,9 +8,7 @@ const RunLogAttributesSchema = Schema.Struct({
   depth: Schema.optionalKey(Schema.Int),
   call_depth: Schema.optionalKey(Schema.Int),
   called_by: Schema.optionalKey(Schema.Struct({ run_id: Schema.String, reference: Schema.String, run: Schema.Int })),
-  trigger: Schema.optionalKey(
-    Schema.Struct({ kind: Schema.Literals(['event', 'cron', 'every']), reference: Schema.String }),
-  ),
+  trigger: Schema.optionalKey(Schema.Struct({ kind: TriggerKindSchema, reference: Schema.String })),
   acts_for: Schema.optionalKey(Schema.String),
 });
 

@@ -214,3 +214,17 @@ describe('the plain words of search for the whole org', () => {
     ]);
   });
 });
+
+describe('the words of the search of an org given words to lead with', () => {
+  it('say those words first where it found no tool, then what the search found', () => {
+    const led = defineSearchInOrg(listing, () => Effect.void, undefined, 'Ask the person first. ').registration
+      .plainLanguage;
+
+    expect(led?.outcome({ servers: [], tools: [], scopes: [] }, {})).toBe(
+      'Ask the person first. No tool server serves this org, so the functions of its playbooks can call no tools until whoever runs this server sets one up; the give-tools guide says how.',
+    );
+    expect(
+      led?.outcome({ servers: [], tools: [tool('graph', 'search')], scopes: [] }, { terms: 'search' }),
+    ).not.toContain('Ask the person first.');
+  });
+});

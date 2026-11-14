@@ -3,7 +3,6 @@ import { Effect, Predicate } from 'effect';
 
 import type { CallerIdentity } from '../caller/caller.ts';
 import { isPlaybookId, isOrgId } from '../caller/identifiers.ts';
-import type { OperationKind } from '../caller/operation-scope.ts';
 import { canAccessPlaybook } from '../caller/playbook-access.ts';
 import type { Runnable } from '../definition/registration.ts';
 import type { PlaybookRequest, OrgRequest } from '../dispatch/request.ts';
@@ -44,7 +43,7 @@ function rejectionOfPlaybookId(playbook: string): Rejected | undefined {
   return isPlaybookId(playbook) ? undefined : rejected('not_found', 'There is no such playbook in this org');
 }
 
-function playbookFieldOf(input: unknown): unknown {
+export function playbookFieldOf(input: unknown): unknown {
   return Predicate.hasProperty(input, 'playbook') ? input.playbook : undefined;
 }
 
@@ -76,13 +75,13 @@ export function confirmOrgExists({ org }: OrgRequest): Effect.Effect<void, Rejec
 
 function rejectionOfPlaybookStatus(
   status: PlaybookStatus,
-  kind: OperationKind,
+  { kind, whileRetired }: Pick<Runnable<'playbook'>, 'kind' | 'whileRetired'>,
   playbook: string,
 ): Rejected | undefined {
   if (status === 'unknown') {
     return rejected('not_found', `There is no playbook ${playbook} in this org`);
   }
-  return status === 'retired' && kind === 'command'
+  return status === 'retired' && kind === 'command' && whileRetired !== true
     ? rejected(
         'conflict',
         `The playbook ${playbook} is retired and cannot change until it is restored`,
@@ -93,12 +92,12 @@ function rejectionOfPlaybookStatus(
 }
 
 export const confirmPlaybookTakesCall = Effect.fnUntraced(function* (
-  { kind }: Runnable<'playbook'>,
+  registration: Runnable<'playbook'>,
   { org, playbook }: PlaybookRequest,
 ) {
   yield* failWith(rejectionOfOrgId(org) ?? rejectionOfPlaybookId(playbook));
   const status = yield* (yield* PlaybookRegistry).status({ org, playbook });
-  yield* failWith(rejectionOfPlaybookStatus(status, kind, playbook));
+  yield* failWith(rejectionOfPlaybookStatus(status, registration, playbook));
   const live: LivePlaybookStatus = status === 'retired' ? 'retired' : 'active';
   return live;
 });

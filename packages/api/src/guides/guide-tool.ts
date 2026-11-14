@@ -22,6 +22,9 @@ function inTurn(items: readonly string[]): string {
   return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${String(items.at(-1))}`;
 }
 
+export const goalsFirstGuideWords =
+  'Read the start guide before anything else, and the goals guide before you make anything: here a playbook is made only with goals learned from the person.';
+
 function descriptionFollowing(recipes: Followed): string {
   const names = recipes.map(({ name }) => name);
   if (names.length === 0) {
@@ -29,6 +32,11 @@ function descriptionFollowing(recipes: Followed): string {
   }
   const held = names.length === 1 ? 'the recipe' : 'the recipes';
   return `${guideToolDescription} It holds ${held} ${inTurn(names)}, which the tools listed here can follow.`;
+}
+
+function descriptionOf(everyGuide: readonly Pick<Guide, 'name'>[], recipes: Followed): string {
+  const following = descriptionFollowing(recipes);
+  return everyGuide.some(({ name }) => name === 'goals') ? `${goalsFirstGuideWords} ${following}` : following;
 }
 
 const guideToolTitle = 'Get guide';
@@ -43,7 +51,7 @@ const failureOf = SchemaIssue.makeFormatterStandardSchemaV1();
 export function guideToolDefinitionOf({ everyGuide }: GuideShelf, followed: Followed): ToolDefinition {
   return {
     title: guideToolTitle,
-    description: descriptionFollowing(followed),
+    description: descriptionOf(everyGuide, followed),
     inputSchema: advertisedSchema({
       $schema: 'https://json-schema.org/draft/2020-12/schema',
       type: 'object',

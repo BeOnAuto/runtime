@@ -4,7 +4,7 @@ import { Schema } from 'effect';
 
 import type { ActivityPosition } from './activity-position.ts';
 
-export type ItemForm = 'request' | 'broken' | 'result' | 'version' | 'playbook' | 'comment';
+export type ItemForm = 'request' | 'broken' | 'result' | 'version' | 'playbook' | 'comment' | 'assessment';
 
 export interface ActivityItem {
   readonly form: ItemForm;
@@ -23,6 +23,8 @@ export const runsSegment = 'runs';
 export const definitionsSegment = 'definitions';
 
 const commentsSegment = 'comments';
+
+const assessmentsSegment = 'assessments';
 
 export const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 
@@ -52,6 +54,10 @@ export function resultKeyOf(runId: string): string {
 
 export function versionKeyOf(type: string, name: string, version: number): string {
   return `${definitionsSegment}/${type}/${name}/${version}`;
+}
+
+export function assessmentKeyOf(id: string): string {
+  return `${assessmentsSegment}/${id}`;
 }
 
 export function commentKeyOf(id: string): string {
@@ -100,14 +106,31 @@ const formTests: readonly (readonly [ItemForm, FormTest])[] = [
   ],
 ];
 
-function playbookItemOf([playbook = '', ...rest]: readonly string[]): ActivityItem | undefined {
-  const form = isPlaybookId(playbook) ? formTests.find(([, holds]) => holds(rest))?.[0] : undefined;
+const formTestsWithGoals: readonly (readonly [ItemForm, FormTest])[] = [
+  ...formTests,
+  [
+    'assessment',
+    ([assessments, id = '', ...rest]) =>
+      rest.length === 0 && assessments === assessmentsSegment && uuidPattern.test(id),
+  ],
+];
+
+function playbookItemOf(
+  [playbook = '', ...rest]: readonly string[],
+  tests: readonly (readonly [ItemForm, FormTest])[],
+): ActivityItem | undefined {
+  const form = isPlaybookId(playbook) ? tests.find(([, holds]) => holds(rest))?.[0] : undefined;
   return form === undefined ? undefined : { form, playbook, key: rest.join('/') };
 }
 
 export function itemOfAddress(address: string): ActivityItem | undefined {
   const segments = address.split('/');
-  return playbookChangeOf(segments) ?? playbookItemOf(segments);
+  return playbookChangeOf(segments) ?? playbookItemOf(segments, formTests);
+}
+
+export function itemOfAnyAddress(address: string): ActivityItem | undefined {
+  const segments = address.split('/');
+  return playbookChangeOf(segments) ?? playbookItemOf(segments, formTestsWithGoals);
 }
 
 export function positionOfItem(item: ActivityItem, at: number): ActivityPosition {

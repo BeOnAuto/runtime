@@ -7,28 +7,43 @@ import type { SubjectPages } from '../page/subject-pages-port.ts';
 import { definitionWordsFor, pageWords, whatItDoes } from '../plain-language/definition-words.ts';
 import { DefinitionNameField, DiagramField, OverviewField, SourceField } from './definition-fields.ts';
 import { answeredDefinition } from './definition-reading.ts';
-import { savedFrom } from './saved-content.ts';
-import { SavedDefinitionSchema, withDefinitionPageInStudio } from './studio-pages.ts';
+import { noGoalsKept, savedFrom } from './saved-content.ts';
+import { savedDefinitionSchemaOf, withDefinitionPageInStudio } from './studio-pages.ts';
 
-const description = [
-  'Saves a new function or workflow from its document, without running it.',
-  'update_definition changes one saved, and a name is never reused.',
-  'Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it.',
-  'A workflow owns one job the business does again and again, and a check, a test or a setup is not one.',
-  "`source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business.",
+const savesWithoutRunning = 'Saves a new function or workflow from its document, without running it.';
+
+const savesWithItsContribution =
+  'Saves a new function or workflow from its document, without running it; a workflow needs a `contributes` list, as the goals guide says.';
+
+const diagramAndPage = [
   'A function needs `diagram`; a workflow takes none.',
   "The document's `page` shows the person its runs; write it as the page guide says.",
-  'A document that does not fit its format is refused with the line and what is wrong.',
-].join(' ');
+];
 
-export function defineCreateDefinition(capabilities: readonly Capability[], pages: SubjectPages) {
+const diagramAndPageInOne =
+  'A function needs `diagram`, a workflow none; the `page` shows the person its runs, as the page guide says.';
+
+function descriptionOf(contributing: boolean): string {
+  return [
+    contributing ? savesWithItsContribution : savesWithoutRunning,
+    'update_definition changes one saved, and a name is never reused.',
+    'Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it.',
+    'A workflow owns one job the business does again and again, and a check, a test or a setup is not one.',
+    "`source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business.",
+    ...(contributing ? [diagramAndPageInOne] : diagramAndPage),
+    'A document that does not fit its format is refused with the line and what is wrong.',
+  ].join(' ');
+}
+
+export function defineCreateDefinition(capabilities: readonly Capability[], pages: SubjectPages, kept = noGoalsKept) {
+  const { goals, messages } = kept;
   const known = knownCapabilities(capabilities);
   const words = definitionWordsFor(capabilities);
   return known.publish(
     defineCommand('playbook', {
       name: 'create_definition',
       title: 'Create definition',
-      description,
+      description: descriptionOf(goals && known.types.includes('workflow')),
       route: { method: 'POST', path: '/definitions/{type}' },
       reachesOutside: known.reachesOutside,
       successStatus: 201,
@@ -39,21 +54,23 @@ export function defineCreateDefinition(capabilities: readonly Capability[], page
         overview: Schema.optionalKey(OverviewField),
         diagram: Schema.optionalKey(DiagramField),
       }),
-      outputSchema: SavedDefinitionSchema,
+      outputSchema: savedDefinitionSchemaOf(goals),
       reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
       handle: Effect.fnUntraced(function* ({ type, name, ...written }) {
         const capability = yield* known.capabilityOfType(type);
         const createdBy = recordedCallerOf(yield* Caller);
         const definitionId = yield* Effect.sync(randomUUIDv7);
-        const created = yield* savedFrom({ capability, pages, written }, (content) => ({
+        const created = yield* savedFrom({ capability, pages, written, goals, messages }, (content) => ({
           type: 'create',
           name,
           content,
           created_by: createdBy,
+          blanksRefused: goals,
           definition_id: definitionId,
         }));
+        const answered = { change: 'created', inHand: created.inHand, goals } as const;
         return yield* withDefinitionPageInStudio(
-          yield* answeredDefinition(capability, known.types, created, { change: 'created', inHand: created.inHand }),
+          yield* answeredDefinition(capability, known.types, created, answered),
           'created',
         );
       }),

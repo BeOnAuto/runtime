@@ -12,7 +12,7 @@ import {
   type LastMessagesStore,
   type OwnContentStore,
   type RecordedStore,
-  type StreamAgesStore,
+  type KeptStreamAges,
   type StreamVersionsStore,
   type TransactionalPool,
 } from '../event-store.ts';
@@ -176,7 +176,7 @@ export function sqliteRecordedStore(
   listeners: AppendListeners = {},
 ): RecordedStore &
   DefinitionStreamsStore &
-  StreamAgesStore &
+  KeptStreamAges &
   StreamVersionsStore &
   LastMessagesStore &
   AppendWaitsStore {
@@ -201,7 +201,7 @@ export function sqliteRecordedStoreOn(
   listeners: AppendListeners,
 ): RecordedStore &
   DefinitionStreamsStore &
-  StreamAgesStore &
+  KeptStreamAges &
   StreamVersionsStore &
   LastMessagesStore &
   AppendWaitsStore &

@@ -627,6 +627,31 @@ importers:
         specifier: 4.14.1
         version: 4.14.1(supports-color@8.1.1)
 
+  packages/access-control:
+    dependencies:
+      '@cedar-policy/cedar-wasm':
+        specifier: 4.14.0
+        version: 4.14.0
+      '@on.auto/content':
+        specifier: workspace:*
+        version: link:../content
+      '@on.auto/operations':
+        specifier: workspace:*
+        version: link:../operations
+      '@on.auto/shipped-files':
+        specifier: workspace:*
+        version: link:../shipped-files
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(vitest@5.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
+
   packages/activity:
     dependencies:
       '@on.auto/definitions':
@@ -861,6 +886,46 @@ importers:
       '@on.auto/operations':
         specifier: workspace:*
         version: link:../operations
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(vitest@5.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
+
+  packages/goals:
+    dependencies:
+      '@on.auto/activity':
+        specifier: workspace:*
+        version: link:../activity
+      '@on.auto/definitions':
+        specifier: workspace:*
+        version: link:../definitions
+      '@on.auto/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      '@on.auto/operations':
+        specifier: workspace:*
+        version: link:../operations
+      '@on.auto/playbooks':
+        specifier: workspace:*
+        version: link:../playbooks
+      '@on.auto/workflow-engine':
+        specifier: workspace:*
+        version: link:../workflow-engine
+      '@on.auto/workflow-host':
+        specifier: workspace:*
+        version: link:../workflow-host
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0
+    devDependencies:
+      '@on.auto/content':
+        specifier: workspace:*
+        version: link:../content
+      '@on.auto/shipped-files':
+        specifier: workspace:*
+        version: link:../shipped-files
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 5.0.3(vitest@5.0.3)
@@ -1177,6 +1242,9 @@ importers:
       '@modelcontextprotocol/server':
         specifier: 2.3.1
         version: 2.3.1
+      '@on.auto/access-control':
+        specifier: workspace:*
+        version: link:../access-control
       '@on.auto/activity':
         specifier: workspace:*
         version: link:../activity
@@ -1207,6 +1275,9 @@ importers:
       '@on.auto/generation':
         specifier: workspace:*
         version: link:../../capabilities/generation
+      '@on.auto/goals':
+        specifier: workspace:*
+        version: link:../goals
       '@on.auto/identity':
         specifier: workspace:*
         version: link:../identity
@@ -1833,6 +1904,9 @@ packages:
   '@bcoe/v8-coverage@1.0.2':
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
+
+  '@cedar-policy/cedar-wasm@4.14.0':
+    resolution: {integrity: sha512-TPyz3zMl5r7W5iSHq51IgG+NTILGoXB0VPrEcXnzCEpPUqL/7b+AtMPVVHB/UoJWuXA8YORjLuWxKHUW33ePAA==}
 
   '@chat-adapter/catalog@4.44.0':
     resolution: {integrity: sha512-UtpW5mMgIjYBRDIgxJKh+tfnlFe0GjLsFG5MPPUDA5b/PggSOAt00TFr0xF6UIXXh1SaK3V1u3FiXyM2sdnaJQ==}
@@ -6839,6 +6913,8 @@ snapshots:
       '@babel/helper-validator-identifier': 7.29.7
 
   '@bcoe/v8-coverage@1.0.2': {}
+
+  '@cedar-policy/cedar-wasm@4.14.0': {}
 
   '@chat-adapter/catalog@4.44.0': {}
 

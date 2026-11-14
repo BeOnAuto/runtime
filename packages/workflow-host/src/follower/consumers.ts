@@ -39,6 +39,8 @@ export interface RecordConsumer<Followed = FollowedRecord> {
 
 export interface Consumer extends RecordConsumer {
   readonly types: readonly string[];
+  readonly wants?: (playbookKey: string) => Effect.Effect<boolean>;
+  readonly wantedWith?: string;
 }
 
 export interface BoundConsumer {

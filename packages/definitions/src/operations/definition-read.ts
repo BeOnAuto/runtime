@@ -132,12 +132,13 @@ export function definitionRead(
   capabilities: readonly Capability[],
   pages: SubjectPages,
   refusedWithoutAPage: MissingPageRefusal,
+  goals = false,
 ) {
   const known = knownCapabilities(capabilities);
   return Effect.fnUntraced(function* (asked: DefinitionAsked) {
     yield* askedRightly(asked);
     const capability = yield* known.capabilityOfType(asked.type);
-    const read = yield* stagedDefinitionRead(capability, known.types, asked.name);
+    const read = yield* stagedDefinitionRead(capability, known.types, asked.name, goals);
     return yield* withTheTextsRead(read, readOn(capability, read, { pages, asked, refusedWithoutAPage }));
   });
 }

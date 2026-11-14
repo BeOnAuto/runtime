@@ -94,7 +94,7 @@ describe('the presenter of a cancel request', () => {
   });
 });
 
-function startedBy(kind: 'event' | 'cron' | 'every', reference: string) {
+function startedBy(kind: 'event' | 'cron' | 'every' | 'goal', reference: string) {
   return presented(
     { type: 'run_started', data: { started_by: recordedAdmin, input: [] } },
     { ...ofGreet, trigger: { kind, reference } },
@@ -108,11 +108,13 @@ describe('the presenter of the start of a run a trigger started', () => {
         startedBy('event', '/schedule/on'),
         startedBy('cron', '/schedule/cron'),
         startedBy('every', '/schedule/every'),
+        startedBy('goal', 'goals/paying-customers/assessments/a1'),
       ].map((event) => event?.summary),
     ).toEqual([
       'A run of the greeting “greet” was started by its event trigger.',
       'A run of the greeting “greet” was started by its cron schedule.',
       'A run of the greeting “greet” was started by its every schedule.',
+      "A run of the greeting “greet” started to send a goal's message or summary.",
     ]);
     expect(startedBy('every', '/schedule/every')).toMatchObject({
       data: { input: [] },

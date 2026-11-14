@@ -8,7 +8,7 @@ import { meterDefaults, type MeterOptions } from '../admission/metering.ts';
 import { heldFeaturesOf, LicensedFeatures, type LicensedFeaturesPorts } from '../standing/licensed-features.ts';
 import type { KeyInHand, Licensing } from './licensing.ts';
 import { licensePortsOf, RuntimeLicense, unlicensed, type LicenseGiven, type LicensePorts } from './runtime-license.ts';
-import { admittedSelfHosted } from './self-hosted-admission.ts';
+import { admittedSelfHostedFreeingNotices } from './self-hosted-notices.ts';
 
 export interface SelfHostedMeter {
   readonly meter: Meter;
@@ -36,7 +36,7 @@ export function selfHostedMeterOver(
       keyInHand: Effect.map(Ref.get(inForce), (held) => held?.key),
       keyHeld: (held) => Ref.update(inForce, (current) => (current?.key === held ? current : activatedKey(held))),
     };
-    const meter = meterAdmitting(ledgered, (run) => admittedSelfHosted(licensing, run));
+    const meter = meterAdmitting(ledgered, (run) => admittedSelfHostedFreeingNotices(licensing, run));
     return { meter, license: licensePortsOf(licensing), features: heldFeaturesOf(licensing) };
   });
 }

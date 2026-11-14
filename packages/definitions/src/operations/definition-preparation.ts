@@ -23,9 +23,15 @@ const runnableDefinition = Effect.fnUntraced(function* (type: string, name: stri
   return status === 'active' ? definition : yield* refusalsToRun[status](definitionResourceLabel(type), name);
 });
 
-export const pausedRefusalOf = Effect.fnUntraced(function* (type: string, name: string) {
+export const activeVersionOf = Effect.fnUntraced(function* (type: string, name: string) {
+  const { version } = yield* definitionToStart(type, name);
+  return version;
+});
+
+export const stoppedRefusalOf = Effect.fnUntraced(function* (type: string, name: string, active: boolean) {
   const { status } = yield* definitionToStart(type, name);
-  return status === 'paused' ? refusalsToRun.paused(definitionResourceLabel(type), name) : undefined;
+  const stopping = status === 'paused' || (active && status === 'retired') ? status : undefined;
+  return stopping === undefined ? undefined : refusalsToRun[stopping](definitionResourceLabel(type), name);
 });
 
 function unparseable(

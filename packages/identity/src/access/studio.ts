@@ -58,6 +58,9 @@ function pageParametersOf(page: StudioPage | undefined): Parameter[] {
   if (page.kind === 'comment') {
     return [playbook, ...placeParametersOf(page.on), ['comment', page.comment]];
   }
+  if (page.kind === 'goal') {
+    return [playbook, ['goal', page.goal], ...namedIf('per', page.per)];
+  }
   return page.kind === 'run' ? [playbook, ...chosenInTheLedger(page.run)] : [playbook];
 }
 

@@ -1,6 +1,7 @@
 import { Schema } from 'effect';
 
 import type { CallerIdentity } from '../caller/caller.ts';
+import { TriggerKindSchema } from './trigger-kinds.ts';
 
 const forbiddenCharacter = /[\p{Cc}\p{Cs}\p{Noncharacter_Code_Point}]/u;
 
@@ -41,8 +42,6 @@ const Counted = Schema.Int.check(Schema.isGreaterThanOrEqualTo(leastCount));
 export const CalledBySchema = Schema.Struct({ runId: ContextText, reference: ContextReference, run: Counted });
 
 export type CalledBy = typeof CalledBySchema.Type;
-
-const TriggerKindSchema = Schema.Literals(['event', 'cron', 'every']);
 
 export const StartingTriggerSchema = Schema.Struct({ kind: TriggerKindSchema, reference: ContextReference });
 

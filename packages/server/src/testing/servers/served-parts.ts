@@ -26,6 +26,12 @@ export interface ServedParts {
   readonly installed?: NonNullable<CompositionParts['installed']>;
   readonly features?: Layer.Layer<LicensedFeatures>;
   readonly shippedFilesOver?: ShippedFilesOver;
+  readonly goals?: boolean;
+  readonly goalsResults?: boolean;
+  readonly goalsMessages?: boolean;
+  readonly startingWork?: NonNullable<CompositionParts['startingWork']>;
+  readonly consumersOf?: NonNullable<CompositionParts['consumersOf']>;
+  readonly goalsPortsOver?: NonNullable<CompositionParts['goalsPortsOver']>;
   readonly keptOutside?: boolean;
 }
 

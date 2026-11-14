@@ -22,7 +22,7 @@ function recording(event: PlaybookEvent): Decision {
   return Result.succeed([event]);
 }
 
-function takenBy({ id, status }: Playbook): Conflict {
+export function takenBy({ id, status }: Playbook): Conflict {
   return new Conflict({
     detail:
       status === 'active'

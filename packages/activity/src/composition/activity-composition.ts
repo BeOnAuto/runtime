@@ -1,5 +1,7 @@
 import type { KeyedProjection } from '@on.auto/operations';
 
+import { activityOperationsKeepingGoals } from '../goal-activity/goal-operations.ts';
+import type { GoalsRead } from '../goal-activity/goal-words.ts';
 import { listActivity } from '../operations/list-activity.ts';
 import { markActivitySeen } from '../operations/mark-activity-seen.ts';
 import { activityRows } from '../projections/activity-rows.ts';
@@ -16,4 +18,7 @@ export const activityProjections: readonly KeyedProjection[] = [
   commentRows,
 ];
 
-export const activityOperations = [listActivity, markActivitySeen];
+export function activityOperationsOf(goals?: GoalsRead) {
+  const served = goals === undefined ? { listActivity, markActivitySeen } : activityOperationsKeepingGoals(goals);
+  return [served.listActivity, served.markActivitySeen];
+}

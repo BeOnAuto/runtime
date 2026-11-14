@@ -2,7 +2,7 @@ import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { recipesFollowedWith } from '../mcp/instructions.ts';
-import { testGuides, testRecipes, testShelf } from '../testing/guides.ts';
+import { testGuides, testRecipes, testShelf, testShelfWithGoals } from '../testing/guides.ts';
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
 import {
   mcpClientKinds,
@@ -15,7 +15,7 @@ import {
 import { acmeAdmin, acmeReader, operationServer, type OperationServer } from '../testing/operation-server.ts';
 import { playbookEndpoint, recipes } from '../testing/served-instructions.ts';
 import { guideToolName, listedTools } from '../testing/tool-listing.ts';
-import { guideToolDefinitionOf, guideToolDescription } from './guide-tool.ts';
+import { goalsFirstGuideWords, guideToolDefinitionOf, guideToolDescription } from './guide-tool.ts';
 
 let server: OperationServer;
 let listening: Listening;
@@ -105,6 +105,15 @@ describe('what the guide tool says of the recipes', () => {
   it('names in turn the recipes a playbook endpoint can follow', () => {
     expect(guideToolDefinitionOf(testShelf, recipesFollowedWith(playbookEndpoint, recipes)).description).toBe(
       `${guideToolDescription} It holds the recipes give-tools, schedule and keep, which the tools listed here can follow.`,
+    );
+  });
+
+  it('leads with reading the start and the goals guides where the shelf holds the guide goals', () => {
+    expect(guideToolDefinitionOf(testShelfWithGoals, []).description).toBe(
+      `${goalsFirstGuideWords} ${guideToolDescription}`,
+    );
+    expect(goalsFirstGuideWords).toBe(
+      'Read the start guide before anything else, and the goals guide before you make anything: here a playbook is made only with goals learned from the person.',
     );
   });
 });

@@ -1,11 +1,12 @@
-import { playbookOwnNamesOf, defineStartVersion } from '@on.auto/definitions';
+import { playbookOwnNamesOf } from '@on.auto/definitions';
 import { echo } from '@on.auto/definitions/testing';
-import type { PlaybookRequest, Dispatcher, Outcome } from '@on.auto/operations';
+import type { PlaybookRequest, Outcome } from '@on.auto/operations';
 import { StartRefused, StartRejected } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
+import type { HostDispatch } from './host-operations.ts';
 import { reactionsOf } from './reaction-dependencies.ts';
 
 const start = {
@@ -24,16 +25,12 @@ async function reactingWith(answers: readonly Outcome[]) {
   const runtime = await memoryRuntime();
   onTestFinished(() => runtime.dispose());
   const requests: PlaybookRequest[] = [];
-  const dispatcher: Dispatcher = {
-    dispatchToOrg: () => Effect.die(new Error('The reactions dispatch to no org')),
-    dispatchToPlaybook: (_registration, request) =>
-      Effect.sync(() => {
-        requests.push(request);
-        return answers[requests.length - 1] ?? { status: 'succeeded', output: {} };
-      }),
-  };
-  const reacting = { startVersion: defineStartVersion([echo]), names: playbookOwnNamesOf([echo]) };
-  return { reactions: reactionsOf(runtime, dispatcher, reacting), requests };
+  const startVersion: HostDispatch = (request) =>
+    Effect.sync(() => {
+      requests.push(request);
+      return answers[requests.length - 1] ?? { status: 'succeeded', output: {} };
+    });
+  return { reactions: reactionsOf(runtime, startVersion, playbookOwnNamesOf([echo])), requests };
 }
 
 describe('a start of a workflow its trigger matched', () => {

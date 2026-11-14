@@ -1,0 +1,11 @@
+{
+  "type": "playbook_imported",
+  "data": {
+    "import_id": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "digest": "5b496d32c3126262e44ef63452e0bb023027054e10572bc244160d1b53af3345"
+  },
+  "context": {
+    "at": "2026-11-09T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "type": "goal_notice_started",
+  "data": {
+    "change": "passed",
+    "run": "9c8b7a6d-5e4f-5a3b-8c2d-1e0f9a8b7c6d"
+  },
+  "context": {
+    "at": "2026-11-09T18:00:00.000Z",
+    "by": "playbook:alpha"
+  }
+}

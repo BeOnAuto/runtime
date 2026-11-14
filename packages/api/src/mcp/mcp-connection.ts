@@ -82,7 +82,9 @@ export function serverOf(
     { ...connection.serving.serverInfo, title: serverTitle },
     {
       capabilities: { tools: noChangesAnnounced, resources: noChangesAnnounced, prompts: noChangesAnnounced },
-      instructions: instructionsActingAs(actingAs, endpoint, served),
+      instructions: instructionsActingAs(actingAs, endpoint, served, {
+        goals: connection.shelf.named('goals') !== undefined,
+      }),
       requestState: states,
     },
   );

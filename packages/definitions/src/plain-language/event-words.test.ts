@@ -1,7 +1,8 @@
+import { triggerKinds } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { scheduleNamed } from '../index.ts';
-import { runFinishedAt, runRejected } from './event-words.ts';
+import { runFinishedAt, runRejected, triggerNamed } from './event-words.ts';
 
 describe('the words of a schedule', () => {
   it('say the time zone of a cron schedule, UTC where it names none, and no zone for an every schedule', () => {
@@ -15,6 +16,17 @@ describe('the words of a schedule', () => {
       scheduleNamed({ kind: 'cron', reference: '/schedule/cron', expression: '0 6 * * *' }),
       scheduleNamed({ kind: 'every', reference: '/schedule/every', milliseconds: 60_000 }),
     ]).toEqual(['cron schedule in America/New_York', 'cron schedule in UTC', 'every schedule']);
+  });
+});
+
+describe('the words of every kind of trigger', () => {
+  it('name each kind once', () => {
+    expect(triggerKinds.map((kind) => triggerNamed(kind))).toEqual([
+      'event trigger',
+      'cron schedule',
+      'every schedule',
+      'goal',
+    ]);
   });
 });
 

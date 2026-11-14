@@ -59,11 +59,8 @@ export { type ProjectedStream, type ProjectedValue, type ProjectionAdvancer } fr
 export { type ProjectionDeclaration, type RowAdvance, type ProjectionReader } from './projections/keyed-projection.ts';
 export { type StreamScope } from './projections/keyed-projection.ts';
 export { playbookRowsOf, type PlaybookProjectedRow } from './projections/playbook-rows.ts';
-export {
-  comparedColumnOf,
-  type ProjectedComparison,
-  type ProjectedCondition,
-} from './projections/projected-conditions.ts';
+export { comparedColumnOf } from './projections/projected-conditions.ts';
+export type { ProjectedComparison, ProjectedCondition } from './projections/projected-conditions.ts';
 export {
   isKindWithType,
   kindsWithTypes,
@@ -125,8 +122,17 @@ export {
   type RunContext,
   type StartingTrigger,
 } from './ledger/context.ts';
+export { TriggerKindSchema, triggerKinds, triggerKindsInWords, type TriggerKind } from './ledger/trigger-kinds.ts';
 export type { DispatcherServices } from './dispatch/dispatcher-services.ts';
 export { makeDispatcher, type Dispatcher, type PipelineStep } from './dispatch/dispatcher.ts';
+export { reportedDifferenceMessage } from './access-control/report-only.ts';
+export { deniedFor, type AccessContext, type AccessDecision } from './access-control/policy-decision-point.ts';
+export type { AccessRequest, ActionReference, ArrivedVia } from './access-control/policy-decision-point.ts';
+export type {
+  PolicyDecisionPoint,
+  PrincipalReference,
+  ResourceReference,
+} from './access-control/policy-decision-point.ts';
 export { cursorOfParts, cursorWithin, partsOfCursor, type CursorPart } from './reading/cursor-parts.ts';
 export { eventsPageOf, type EventPaging, type EventsPage } from './reading/event-paging.ts';
 export { eventMetadataOf } from './reading/event-metadata.ts';

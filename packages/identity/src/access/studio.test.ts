@@ -72,6 +72,18 @@ describe('the link that opens Studio on the runtime at a page', () => {
     ]);
   });
 
+  it('names the playbook and the goal of a goal page, as Studio opens one goal', () => {
+    expect(atPage(elsewhere, { kind: 'goal', playbook: 'alpha', goal: 'paying-customers' })).toBe(
+      `${atAlpha}&goal=paying-customers`,
+    );
+  });
+
+  it('names the one thing of a goal page that shows one, as a notice of it opens Studio', () => {
+    expect(atPage(elsewhere, { kind: 'goal', playbook: 'alpha', goal: 'paying-customers', per: 'MAR 41' })).toBe(
+      `${atAlpha}&goal=paying-customers&per=MAR+41`,
+    );
+  });
+
   it('names a reasoning function by its type, as every definition is named', () => {
     expect(
       atPage(

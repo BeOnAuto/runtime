@@ -23,6 +23,8 @@ export const CallerIdentitySchema = Schema.Struct({
   client: Schema.optionalKey(CallingClientSchema),
 });
 
+export const playbookCallerPrefix = 'playbook:';
+
 export function playbookCallerOf({
   org,
   playbook,
@@ -31,7 +33,7 @@ export function playbookCallerOf({
   readonly playbook: string;
 }): CallerIdentity {
   return {
-    id: `playbook:${playbook}`,
+    id: `${playbookCallerPrefix}${playbook}`,
     name: playbook,
     org,
     permissions: ['playbook:read', 'playbook:write'],

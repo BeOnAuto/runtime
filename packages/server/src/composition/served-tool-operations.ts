@@ -1,4 +1,4 @@
-import { foundPlaybook } from '@on.auto/playbooks';
+import { foundPlaybook, searchLeadWhereGoalsAreKeptOf } from '@on.auto/playbooks';
 import {
   defineDryRun,
   defineExecuteConnection,
@@ -14,11 +14,14 @@ import {
 
 export interface ProvidersOffered {
   readonly offering: ProviderOffering;
+  readonly goals?: boolean | undefined;
+  readonly messages?: boolean | undefined;
 }
 
-export function toolOperationsOf(tools: ToolAccess, { offering }: ProvidersOffered) {
+export function toolOperationsOf(tools: ToolAccess, { offering, goals, messages }: ProvidersOffered) {
+  const searchLead = goals === true ? searchLeadWhereGoalsAreKeptOf(messages === true) : '';
   return {
-    inOrg: [defineSearchInOrg(tools, foundPlaybook, offering), defineListConnectionTools(tools)],
+    inOrg: [defineSearchInOrg(tools, foundPlaybook, offering, searchLead), defineListConnectionTools(tools)],
     inPlaybook: [
       defineSearch(tools),
       defineIntrospect(tools),

@@ -148,9 +148,11 @@ function describe(claim: Claim): string {
     const wording = wordings[claim.keyword] ?? (() => `It breaks the rule ${claim.keyword} the DSL sets here`);
     return wording(claim.rule);
   }
-  return claim.kind === 'missing'
-    ? `It needs ${claim.property}`
-    : `It has ${claim.property}, which the DSL does not know here`;
+  return claim.kind === 'missing' ? `It needs ${claim.property}` : unknownPropertyWords(claim.property);
+}
+
+export function unknownPropertyWords(property: string): string {
+  return `It has ${property}, which the DSL does not know here`;
 }
 
 function isShown(claim: Claim, task: boolean): boolean {

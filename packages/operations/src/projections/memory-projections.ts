@@ -6,6 +6,7 @@ import { streamChecksOf } from '../stream-projections/memory-checks.ts';
 import { inlineTablesOf, isStreamProjection, type StreamProjection } from '../stream-projections/stream-projection.ts';
 import {
   addressedStreamOf,
+  advancedColumnsLeftBy,
   advancedColumnsOf,
   keepsChildRows,
   requireAdvancedColumns,
@@ -73,6 +74,12 @@ function keyedMessages(projection: KeptProjection, named: AddressedStream, messa
     });
 }
 
+function leftStandingIn(projection: KeyedProjection, row: ProjectedRow | undefined, type: string): ProjectedRow {
+  return row === undefined
+    ? {}
+    : Object.fromEntries(advancedColumnsLeftBy(projection, type).map((column) => [column, row[column] ?? null]));
+}
+
 function stagedRows(
   { projection, rows }: TableOf<KeyedProjection>,
   named: AddressedStream,
@@ -84,7 +91,7 @@ function stagedRows(
     const row = (changed.get(stored) ?? rows.get(stored))?.row;
     const next = projection.rowAfter(row, message);
     if (next !== undefined) {
-      changed.set(stored, keyedRowOf(named, key, next));
+      changed.set(stored, keyedRowOf(named, key, { ...next, ...leftStandingIn(projection, row, message.type) }));
     }
   }
   return [...changed].map(([stored, kept]: readonly [string, ProjectedKeyedRow]): Staged => () => {

@@ -3,6 +3,7 @@ import { Result } from 'effect';
 
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import { earlierDefinitionIdOf } from '../identity/definition-ids.ts';
+import { blankRefusalWhere } from '../imports/blank-refusals.ts';
 import type {
   CommandMetadata,
   DefinitionCommand,
@@ -28,17 +29,26 @@ function recording(event: DefinitionEvent): Decision {
 
 function decideCreation(
   { address }: DefinitionsOf,
-  { content, created_by, definition_id }: DefinitionCreation & CommandMetadata,
+  { content, created_by, definition_id, paused, blanksRefused }: DefinitionCreation & CommandMetadata,
 ): Decision {
-  return recording({
-    type: 'definition_created',
-    data: { content, created_by, definition_id, playbook: address.playbook },
-  });
+  const blanked = blankRefusalWhere(blanksRefused === true && paused === undefined, content, 'create');
+  return blanked === undefined
+    ? recording({
+        type: 'definition_created',
+        data: {
+          content,
+          created_by,
+          definition_id,
+          playbook: address.playbook,
+          ...(paused === undefined ? {} : { paused }),
+        },
+      })
+    : Result.fail(blanked);
 }
 
 function decideUpdate(
   type: string,
-  { name, content: given }: DefinitionUpdate & CommandMetadata,
+  { name, content: given, blanksRefused }: DefinitionUpdate & CommandMetadata,
   existing: StoredDefinition | undefined,
 ): Decision {
   if (existing === undefined) {
@@ -51,6 +61,10 @@ function decideUpdate(
         kind: 'retired',
       }),
     );
+  }
+  const blanked = blankRefusalWhere(blanksRefused === true && existing.status === 'active', given, 'update');
+  if (blanked !== undefined) {
+    return Result.fail(blanked);
   }
   const content = withTheSavedOverview(given, existing);
   return isAsSaved(content, existing) ? nothingToRecord : recording({ type: 'definition_updated', data: { content } });
@@ -97,13 +111,21 @@ function decidePause(
   );
 }
 
+function resumedUnlessBlanked(existing: StoredDefinition, blanksRefused: boolean | undefined): Decision {
+  if (existing.status !== 'paused') {
+    return nothingToRecord;
+  }
+  const blanked = blankRefusalWhere(blanksRefused, existing, 'resume');
+  return blanked === undefined ? recording({ type: 'definition_resumed', data: {} }) : Result.fail(blanked);
+}
+
 function decideResumption(
   type: string,
-  { name }: DefinitionResumption,
+  { name, blanksRefused }: DefinitionResumption,
   existing: StoredDefinition | undefined,
 ): Decision {
-  return Result.flatMap(standingToChange(type, name, existing), ({ status }) =>
-    status === 'paused' ? recording({ type: 'definition_resumed', data: {} }) : nothingToRecord,
+  return Result.flatMap(standingToChange(type, name, existing), (standing) =>
+    resumedUnlessBlanked(standing, blanksRefused),
   );
 }
 

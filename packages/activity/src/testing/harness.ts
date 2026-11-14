@@ -4,6 +4,7 @@ import {
   allPermissions,
   makeDispatcher,
   type CallerIdentity,
+  type KeyedProjection,
   type OrgRequest,
   type PlaybookRequest,
   type Outcome,
@@ -23,8 +24,8 @@ import { DateTime, Effect, Layer, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 
 import { activityProjections } from '../composition/activity-composition.ts';
-import { listActivity } from '../operations/list-activity.ts';
-import { markActivitySeen } from '../operations/mark-activity-seen.ts';
+import { listActivity as listedToday } from '../operations/list-activity.ts';
+import { markActivitySeen as markedToday } from '../operations/mark-activity-seen.ts';
 import { recorded, type RecordedFact } from './recorded-facts.ts';
 
 const now = '2026-11-01T18:00:00.000Z';
@@ -117,8 +118,17 @@ export type LedgerReads = (ledger: Ledger['Service']) => Ledger['Service'];
 
 const asItReads: LedgerReads = (ledger) => ledger;
 
-export function activityHarness(reads: LedgerReads = asItReads) {
-  const ledger = memoryLedger(undefined, activityProjections);
+export interface ActivityServed {
+  readonly listActivity: OrgOperation;
+  readonly markActivitySeen: OrgOperation;
+  readonly projections: readonly KeyedProjection[];
+}
+
+const servedToday: ActivityServed = { listActivity: listedToday, markActivitySeen: markedToday, projections: [] };
+
+export function activityHarness(reads: LedgerReads = asItReads, served: ActivityServed = servedToday) {
+  const ledger = memoryLedger(undefined, [...activityProjections, ...served.projections]);
+  const { listActivity, markActivitySeen } = served;
   const services = Layer.mergeAll(
     Layer.succeed(Ledger, reads(ledger.service)),
     Layer.provide(ledgerPlaybookRegistry, ledger.layer),

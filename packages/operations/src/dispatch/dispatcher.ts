@@ -1,11 +1,6 @@
 import { Effect } from 'effect';
 
-import {
-  authorizePlaybookCall,
-  authorizeOrgCall,
-  confirmPlaybookTakesCall,
-  confirmOrgExists,
-} from '../authorization/authorization.ts';
+import { admittedOrgCall, admittedPlaybookCall, type DispatcherOptions } from '../authorization/admitted-calls.ts';
 import type { Registration, Runnable } from '../definition/registration.ts';
 import { Ledger } from '../ledger/ledger.ts';
 import type { Outcome, Rejected, Succeeded } from '../outcome/outcome.ts';
@@ -36,7 +31,7 @@ export interface Dispatcher {
   ): Effect.Effect<Outcome, never, DispatcherServices>;
 }
 
-export function makeDispatcher(steps: readonly PipelineStep[]): Dispatcher {
+export function makeDispatcher(steps: readonly PipelineStep[], options: DispatcherOptions = {}): Dispatcher {
   const passSteps = (registration: Runnable, request: OrgRequest | PlaybookRequest) =>
     Effect.forEach(steps, (step) => step(registration, request), { discard: true });
   return {
@@ -45,8 +40,7 @@ export function makeDispatcher(steps: readonly PipelineStep[]): Dispatcher {
         registration,
         request,
         Effect.gen(function* () {
-          yield* authorizeOrgCall(registration, request);
-          yield* confirmOrgExists(request);
+          yield* admittedOrgCall(options, registration, request);
           yield* passSteps(registration, request);
           const ledger = yield* Ledger;
           return yield* runInOrg(registration, request, ledger).pipe(withoutDispatcherServices);
@@ -57,8 +51,7 @@ export function makeDispatcher(steps: readonly PipelineStep[]): Dispatcher {
         registration,
         request,
         Effect.gen(function* () {
-          yield* authorizePlaybookCall(registration, request);
-          const status = yield* confirmPlaybookTakesCall(registration, request);
+          const status = yield* admittedPlaybookCall(options, registration, request);
           yield* passSteps(registration, request);
           const ledger = yield* Ledger;
           return yield* runInPlaybook(registration, request, { ledger, lifecycle: { status } }).pipe(

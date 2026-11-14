@@ -2,10 +2,16 @@ import { defineCommand } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import {
+  servedWithEverything,
+  servedWithEverythingAndGoals,
+  servedWithEverythingAndGoalsUntold,
+} from '../testing/guide-shelves.ts';
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
 import { mcpClientKinds, withMcpSession, type McpClientKind, type McpSession } from '../testing/mcp-clients.ts';
 import { notebookOperations } from '../testing/notebook.ts';
 import { acmeAdmin, acmeReader, operationServer, type OperationServer } from '../testing/operation-server.ts';
+import { startingAnswerOf, startingPromptsFollowedWith } from './starting-prompts.ts';
 
 const making = {
   title: 'Make',
@@ -127,5 +133,39 @@ describe('the starting prompt of a connection', () => {
     await expect(onMcp(every, '/orgs/acme/mcp', (session) => session.getPrompt('get-started'))).rejects.toThrow(
       /Prompt get-started not found/u,
     );
+  });
+});
+
+describe('the starting prompt of a server that keeps goals', () => {
+  const tools = { orgTools: ['create_playbook'], playbookTools: ['create_definition', 'run_definition'] };
+
+  it('asks for the goal first and shows it in Studio, and a server without goals keeps the prompt it has', () => {
+    const [kept] = startingPromptsFollowedWith(tools, servedWithEverythingAndGoals);
+    const [without] = startingPromptsFollowedWith(tools, servedWithEverything);
+
+    expect([kept?.name, kept?.description, without?.description]).toEqual([
+      'get-started',
+      'Creates a first playbook from its goal, shows the goal in Studio, then gives it one function and runs it on a made-up example.',
+      'Creates a first playbook with one function, runs it on a made-up example and links the run in Studio.',
+    ]);
+    expect(
+      startingPromptsFollowedWith(tools, servedWithEverythingAndGoals).map((prompt) => startingAnswerOf(prompt)({})),
+    ).toEqual([
+      askOf(
+        "Create a playbook in Auto. First ask me what it should achieve, how I'll know it worked, and what I want to be told about and where, then show me the goal in Studio. Once I say yes, give it one function and run it on a made-up example.",
+      ),
+    ]);
+  });
+
+  it('asks nothing about being told where messages are off', () => {
+    expect(
+      startingPromptsFollowedWith(tools, servedWithEverythingAndGoalsUntold).map((prompt) =>
+        startingAnswerOf(prompt)({}),
+      ),
+    ).toEqual([
+      askOf(
+        "Create a playbook in Auto. First ask me what it should achieve and how I'll know it worked, then show me the goal in Studio. Once I say yes, give it one function and run it on a made-up example.",
+      ),
+    ]);
   });
 });

@@ -24,6 +24,16 @@ const whilePaused = ['paused_at', 'paused_by', 'reason'] as const;
 
 const keptAcrossVersions = ['definition_id', 'status', 'created_at', 'created_by', ...whilePaused] as const;
 
+type StandingAtCreation = Pick<StoredDefinition, 'status' | (typeof whilePaused)[number]>;
+
+function standingAtCreation({ created_by, paused }: DefinitionCreated['data'], at: string): StandingAtCreation {
+  if (paused === undefined) {
+    return { status: 'active' };
+  }
+  const { reason } = paused;
+  return { status: 'paused', paused_at: at, paused_by: created_by, ...(reason === undefined ? {} : { reason }) };
+}
+
 export function storedContentOf(content: DefinitionContent) {
   const {
     source: _source,
@@ -47,7 +57,7 @@ function createdDefinition(address: PlaybookAddress, { data, context }: Definiti
     name,
     definition_id: given ?? earlierDefinitionIdOf({ ...address, type, name }),
     version,
-    status: 'active',
+    ...standingAtCreation(data, at),
     ...storedContentOf(content),
     created_at: at,
     created_by,

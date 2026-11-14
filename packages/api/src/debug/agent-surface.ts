@@ -99,7 +99,7 @@ function shownPromptOf(prompt: Promptable, answer: (words: RecipeWords) => GetPr
 
 function promptsOf(shelf: GuideShelf, { served }: EveryTool): readonly ShownPrompt[] {
   return [
-    ...startingPromptsFollowedWith(served).map((prompt) => shownPromptOf(prompt, startingAnswerOf(prompt))),
+    ...startingPromptsFollowedWith(served, shelf).map((prompt) => shownPromptOf(prompt, startingAnswerOf(prompt))),
     ...recipesFollowedWith(served, shelf.recipes).map((recipe) => shownPromptOf(recipe, recipeAnswerOf(recipe))),
   ];
 }
@@ -108,7 +108,7 @@ function connectionOf({ endpoint, ...named }: ShownEndpoint, shelf: GuideShelf, 
   const tools = connectionListingOf(shelf, every).map((tool) => shownToolOf(tool));
   return {
     ...named,
-    instructions: instructionsFor(endpoint, every.served),
+    instructions: instructionsFor(endpoint, every.served, { goals: shelf.named('goals') !== undefined }),
     toolCount: tools.length,
     groups: toolGroupsOf(tools),
     guides: shelf.everyGuide,

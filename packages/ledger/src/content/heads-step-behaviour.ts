@@ -3,8 +3,9 @@ import { alpha, json, resultOf } from '@on.auto/content/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { carryingOnToTheLayoutKept } from '../layout/carrying-on-behaviour.ts';
 import { layoutIn } from '../layout/ledger-layout-behaviour.ts';
-import { ledgerLayout, ledgerLayoutFloor } from '../layout/ledger-layout.ts';
+import { ledgerLayoutFloor } from '../layout/ledger-layout.ts';
 import { ledgerLayoutSteps } from '../layout/ledger-steps.ts';
 import { structureIn } from '../structure/database-structure-behaviour.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
@@ -28,8 +29,6 @@ const theIndexOfTheExpiry = 'recorded_content_heads_expiring';
 const everyHead = 'SELECT * FROM recorded_content_heads';
 
 const carryingToTheExpiry = { kept: theLayoutOfTheExpiry, floor: ledgerLayoutFloor, steps: ledgerLayoutSteps };
-
-const carryingOnToTheLayoutKept = { kept: ledgerLayout, floor: ledgerLayoutFloor, steps: ledgerLayoutSteps };
 
 async function headsKeptIn(entry: LedgerEntry, database: string): Promise<void> {
   const ledger = await aLedger(entry, database);

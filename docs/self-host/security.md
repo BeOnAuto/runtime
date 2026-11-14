@@ -87,6 +87,12 @@ When the identity service stops issuing tokens to a person, the runtime refuses 
 
 The [Sign-in and token reference](../reference/authentication.md) sets out the token forms, what a token must hold, [how scopes grant permissions](../reference/authentication.md#how-scopes-grant-permissions) and [the name recorded for a signed-in person](../reference/authentication.md#the-name-recorded-for-a-signed-in-person).
 
+## Policies in report-only mode
+
+Every call is checked as this page sets out, and that check decides. The server also asks a second check about each call, a policy decision point, which decides from policies the release ships, written for [Cedar](https://www.cedarpolicy.com), an open-source policy engine that runs inside the server. Until roles can be given to people, it takes every signed-in person to hold the role Editor, which allows what their token grants.
+
+It is in report-only mode: it decides nothing. Where it and the check answer a call differently, the server logs a warning, `The policy decision point, in report-only mode, decided a call otherwise than the check that decides it`, with the operation, the org, the playbook, the caller's id and the two answers, and nothing of the call's input or of the person's name. The decision point loads on the first call and logs once which engine and how many policies and operations it loaded. If it cannot load, it logs why once as an error, and the calls still answer as the check decides. [Plan memory](production.md#plan-memory) has what it adds.
+
 ## API keys
 
 Give each machine, pipeline or agent that does not sign in its own key. Use a key, too, for a grant narrower than a signed-in person's, such as reading one playbook. Each key belongs to one org and carries its permissions and the playbooks it may access. Give each key only what it needs, so you can revoke one without disturbing the others.

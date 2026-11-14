@@ -12,6 +12,7 @@ import {
   type OrgRequest,
   type Outcome,
   type PipelineStep,
+  type PolicyDecisionPoint,
   type RunOutcomeMapping,
   type KeyedProjection,
   type Settled,
@@ -27,6 +28,7 @@ export interface HarnessOptions {
   readonly retiredPlaybooks?: readonly PlaybookAddress[];
   readonly runOutcomes?: RunOutcomeMapping;
   readonly projections?: readonly KeyedProjection[];
+  readonly reportOnly?: PolicyDecisionPoint;
 }
 
 export interface Harness {
@@ -53,6 +55,7 @@ export function harness({
   retiredPlaybooks = [],
   runOutcomes,
   projections = [],
+  reportOnly,
 }: HarnessOptions = {}): Harness {
   const ledger = memoryLedger(runOutcomes, projections);
   const recording = recordingReporter();
@@ -64,7 +67,7 @@ export function harness({
   const run = <A>(calls: Effect.Effect<A, never, DispatcherServices>) =>
     Effect.runPromise(calls.pipe(Effect.provide(services)));
   return {
-    dispatcher: makeDispatcher(steps),
+    dispatcher: makeDispatcher(steps, reportOnly === undefined ? {} : { reportOnly }),
     ledger,
     reported: recording.reported,
     run,

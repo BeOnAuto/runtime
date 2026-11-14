@@ -19,6 +19,9 @@ import type { LogPorts } from './log/ledger-log.ts';
 import type { MultiStreamAppends } from './multi-stream/multi-stream-appends.ts';
 import type { HeldHeads } from './references/held-heads.ts';
 import type { StreamSignal } from './signal/append-signal.ts';
+import type { KeptStreamAges, StreamAgesStore } from './stream-ages/stream-ages-store.ts';
+
+export type { KeptStreamAges } from './stream-ages/stream-ages-store.ts';
 
 export interface EncodedEvent {
   readonly type: string;
@@ -184,10 +187,6 @@ export interface DefinitionStreamsStore {
   readonly definitionStreams: (definitionType: string) => Promise<readonly DefinitionStream[]>;
 }
 
-export interface StreamAgesStore {
-  readonly ageOfLastAppend: (stream: string) => Promise<number>;
-}
-
 export interface StreamVersionsStore {
   readonly versionOf: (stream: string) => Promise<number>;
 }
@@ -273,6 +272,7 @@ export interface LedgerStore
   readonly unlessHeld: UnlessHeld;
   readonly heldHeads: HeldHeads;
   readonly log: LogPorts;
+  readonly lastPositionOf: KeptStreamAges['lastPositionOf'];
 }
 
 export interface StatementExecutor {

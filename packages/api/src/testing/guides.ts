@@ -46,3 +46,12 @@ export const testRecipes: readonly Recipe[] = [noteRecipe];
 export const testDefinitionTypes: readonly DefinitionType[] = [{ type: 'notes', noun: 'note', guide: 'notebook' }];
 
 export const testShelf = guideShelfOf(testGuides, testRecipes, testDefinitionTypes);
+
+const testGoalsGuide: Guide = {
+  name: 'goals',
+  title: 'Goals',
+  description: 'What a note is for.',
+  text: '# Goals\n\nA note is kept for a reason.\n',
+};
+
+export const testShelfWithGoals = guideShelfOf([...testGuides, testGoalsGuide], testRecipes, testDefinitionTypes);

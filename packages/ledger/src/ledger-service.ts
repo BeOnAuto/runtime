@@ -22,7 +22,7 @@ import type { LedgerContent, LedgerStore, StreamMessagesStore, Streams } from '.
 import { foldEvents } from './fold-events.ts';
 import { runOutcomesReaderOf } from './outcomes/run-outcomes-reader.ts';
 import { recordedEventReaderOf, recordedReaderOf } from './recorded/recorded-reader.ts';
-import { factReaderOf, streamReaderOf } from './stream-reader.ts';
+import { factReaderOf, streamReaderOf, type LastPositionOf } from './stream-reader.ts';
 import { retriedOnVersionConflict, type VersionConflict } from './version-conflict.ts';
 
 export type StreamLoad<Loaded> = (stream: string) => Effect.Effect<Loaded>;
@@ -88,8 +88,11 @@ export function decisionLoop<
     retriedOnVersionConflict(attempt(stream, command)).pipe(Effect.flatMap(Effect.fromResult));
 }
 
-export function streamPortsOf(streams: Streams & StreamMessagesStore): StreamReader & StreamWriter {
-  const load = streamReaderOf(streams);
+export function streamPortsOf(
+  streams: Streams & StreamMessagesStore,
+  lastPositionOf?: LastPositionOf,
+): StreamReader & StreamWriter {
+  const load = streamReaderOf(streams, lastPositionOf);
   return {
     load,
     factAt: factReaderOf(streams),
@@ -121,7 +124,7 @@ export function ownContentOf(store: LedgerStore): LedgerContent {
 
 export function makeLedger(store: LedgerStore, kept: LedgerContent = ownContentOf(store)): Ledger['Service'] {
   return Ledger.of({
-    ...streamPortsOf(store),
+    ...streamPortsOf(store, store.lastPositionOf),
     scrubFact: store.scrubFact,
     ageOfLastAppend: (stream) => Effect.promise(() => store.ageOfLastAppend(stream)),
     readRecorded: recordedReaderOf(store),

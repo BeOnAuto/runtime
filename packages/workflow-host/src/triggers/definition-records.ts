@@ -1,4 +1,4 @@
-import { definitionChangeOf } from '@on.auto/definitions';
+import { definitionChangeOf, type DefinitionChange } from '@on.auto/definitions';
 import type { RecordedStream } from '@on.auto/ledger';
 import type { RecordedEvent } from '@on.auto/operations';
 import { Effect } from 'effect';
@@ -20,19 +20,25 @@ type DefinitionApplied = 'applied' | 'unreadable';
 
 export type ApplyDefinitionRecord = (playbookKey: string, record: DefinitionRecord) => Effect.Effect<DefinitionApplied>;
 
+type Activation = Extract<DefinitionChange, { readonly triggers: unknown }>;
+
+function isActivation(change: DefinitionChange): change is Activation {
+  return 'triggers' in change;
+}
+
 export function definitionRecordsOn(database: HostDatabase, stops: FilterStops, inZone: InZone): ApplyDefinitionRecord {
   return (playbookKey, record) => {
     const { id } = record;
     const change = definitionChangeOf(record);
-    if (change.kind === 'activated' || change.kind === 'restored') {
+    if (isActivation(change)) {
       const { name: workflow, version, triggers, at } = change;
       const activation = { workflow, version, triggers, activatedBy: id, activatedAt: Date.parse(at) };
       stops.activated(playbookKey, workflow, version);
       const activated = triggersActivated(database, playbookKey, activation, inZone);
       return Effect.as(
-        change.kind === 'restored'
-          ? Effect.andThen(triggersPaused(database, playbookKey, workflow), activated)
-          : activated,
+        change.kind === 'activated'
+          ? activated
+          : Effect.andThen(triggersPaused(database, playbookKey, workflow), activated),
         'applied',
       );
     }

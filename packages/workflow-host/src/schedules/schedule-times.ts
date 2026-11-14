@@ -1,4 +1,4 @@
-import { timeZoneOf, type CronTrigger, type ScheduleTrigger } from '@on.auto/definitions';
+import type { CronTrigger, ScheduleTrigger } from '@on.auto/definitions';
 import { Cron } from 'croner';
 import { Result } from 'effect';
 
@@ -7,6 +7,12 @@ import type { InZone, ZoneClock } from './zone-clock.ts';
 const fieldsOfACron = 5;
 
 const aSecond = 1000;
+
+const universalTime = 'UTC';
+
+type EveryTrigger = Exclude<ScheduleTrigger, CronTrigger>;
+
+export type ScheduleTiming = Omit<CronTrigger, 'reference'> | Omit<EveryTrigger, 'reference'>;
 
 export interface DueMoments {
   readonly anchor: number;
@@ -51,10 +57,10 @@ export function cronRejectionOf(expression: string): string | undefined {
   }
 }
 
-function zonedCronOf(trigger: CronTrigger, inZone: InZone): ZonedCron {
-  const cron = cronOf(trigger.expression);
+function zonedCronOf(timing: Omit<CronTrigger, 'reference'>, inZone: InZone): ZonedCron {
+  const cron = cronOf(timing.expression);
   return {
-    clock: inZone(timeZoneOf(trigger)),
+    clock: inZone(timing.time_zone ?? universalTime),
     wallClockAfter: (wallClock) => cron.nextRun(new Date(wallClock))?.getTime(),
     wallClocksBy: (wallClock) => cron.previousRuns(1, new Date(wallClock + aSecond)).map((run) => run.getTime()),
   };
@@ -89,7 +95,7 @@ function computed<Value>(compute: () => Value): Result.Result<Value, string> {
 }
 
 export function firstDueOf(
-  timing: ScheduleTrigger,
+  timing: ScheduleTiming,
   anchor: number,
   inZone: InZone,
   after = anchor,
@@ -102,7 +108,7 @@ export function firstDueOf(
 }
 
 export function dueTimesOf(
-  timing: ScheduleTrigger,
+  timing: ScheduleTiming,
   moments: DueMoments,
   inZone: InZone,
 ): Result.Result<DueTimes, string> {

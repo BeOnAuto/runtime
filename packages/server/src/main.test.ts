@@ -75,6 +75,8 @@ const keptIn: readonly unknown[] = [
 
 const extensionsLoaded = 'Extensions loaded, in their order of precedence: none';
 
+const decisionPointLoaded = 'The policy decision point loaded its engine and its policies';
+
 function startInLocalMode(...after: readonly string[]): readonly unknown[] {
   return [
     expect.stringMatching(/^Local mode is on: /u),
@@ -173,7 +175,7 @@ describe('main when it is told to stop', () => {
 });
 
 describe('main with settings', () => {
-  it('requires an API key on protected paths once keys are configured, and says nothing about access', async () => {
+  it('requires an API key on protected paths once keys are configured, and logs no warning about access', async () => {
     const { key, entry } = createApiKey({ id: 'ci-1', org: 'demo', permissions: ['org:read'], playbooks: '*' });
     const child = spawnServer(mainModule, { ...loopback, API_KEYS: JSON.stringify([entry]) });
     const port = await child.port;
@@ -188,7 +190,13 @@ describe('main with settings', () => {
     expect({ withoutKey: withoutKey.status, withKey: withKey.status }).toEqual({ withoutKey: 401, withKey: 200 });
     expect(withoutKey.headers.get('www-authenticate')).toBe('Bearer');
     expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
-    expect(messagesOf(child.output().stderr)).toEqual([...keptIn, extensionsLoaded, noModelProvider, ...functionsRun]);
+    expect(messagesOf(child.output().stderr)).toEqual([
+      ...keptIn,
+      extensionsLoaded,
+      noModelProvider,
+      ...functionsRun,
+      decisionPointLoaded,
+    ]);
   });
 
   it.each(invalidSettings)(
@@ -259,7 +267,7 @@ describe('main over MCP', () => {
       exitCode: 0,
     });
     expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
-    expect(messagesOf(child.output().stderr)).toEqual(startInLocalMode());
+    expect(messagesOf(child.output().stderr)).toEqual(startInLocalMode(decisionPointLoaded));
   });
 
   it('logs what the MCP layer reports as a warning on stderr, answering with its JSON-RPC error', async () => {

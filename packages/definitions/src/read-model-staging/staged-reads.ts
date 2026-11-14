@@ -36,8 +36,8 @@ export function triggersSinceCompared(type: string, savedBy: string, since: stri
   return Effect.ignore(Effect.exit(loggedComparison({ read: 'triggers_since', definitionType: type }, comparison)));
 }
 
-export function readToday(capability: Capability, types: readonly string[], name: string) {
-  return Effect.map(readDefinition(capability, types, name), (read): DefinitionReadAt => ({
+export function readToday(capability: Capability, types: readonly string[], name: string, goals = false) {
+  return Effect.map(readDefinition(capability, types, name, goals), (read): DefinitionReadAt => ({
     ...read,
     triggersSince: () => triggersSince(capability.type, read.stored),
     triggersSinceAnswered: () => Effect.void,
@@ -58,14 +58,15 @@ export function stagedDefinitionRead(
   capability: Capability,
   types: readonly string[],
   name: string,
+  goals = false,
 ): Reading<DefinitionReadAt, NotFound | Unavailable | Conflict> {
   return stagedRead({
     read: 'get_definition',
     reading: 'answers',
     definitionType: capability.type,
     involved: [capability.type, ...types],
-    today: readToday(capability, types, name),
-    fromTheReadModel: definitionFromTheReadModel(capability, types, name),
+    today: readToday(capability, types, name, goals),
+    fromTheReadModel: definitionFromTheReadModel(capability, types, name, { goals }),
     answerOf: readFromTheReadModel,
     compared: (today, candidate) => readsCompared(capability, today, candidate),
     answerCompared: (today, { savedBy }) => ({

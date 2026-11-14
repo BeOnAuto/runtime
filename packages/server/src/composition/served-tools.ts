@@ -1,6 +1,6 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
-import type { ConnectionSource, Timing } from '@on.auto/tool-servers';
+import type { ConnectionSource, Timing, ToolAccess } from '@on.auto/tool-servers';
 
 import type { CapabilityRegistry } from '../capability-registry/capability-registry.ts';
 import type { Settings } from '../settings/settings.ts';
@@ -21,12 +21,13 @@ export interface ServedToolUsers {
   readonly lookup: ServedLookup;
   readonly interaction: ServedInteraction;
   readonly toolOperations: ServedToolOperations;
+  readonly listServers: ToolAccess['listServers'];
 }
 
 export async function toolUsersServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: Settings,
-  { registry, connections, offering, toolTiming }: ToolUsersWiring,
+  { registry, connections, offering, goals, messages, toolTiming }: ToolUsersWiring,
 ): Promise<ServedToolUsers> {
   const tools = toolAccessOf(registry.tools, settings, connections, toolTiming);
   return {
@@ -36,6 +37,7 @@ export async function toolUsersServedBy(
     }),
     lookup: lookupServedBy(runtime, tools),
     interaction: interactionServedBy(runtime, settings, tools),
-    toolOperations: toolOperationsOf(tools, { offering }),
+    toolOperations: toolOperationsOf(tools, { offering, goals, messages }),
+    listServers: tools.listServers,
   };
 }

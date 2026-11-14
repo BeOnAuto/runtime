@@ -1,4 +1,4 @@
-import { CallerIdentitySchema } from '@on.auto/operations';
+import { CallerIdentitySchema, TriggerKindSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 const RunAttributesSchema = Schema.Struct({
@@ -10,9 +10,7 @@ const RunAttributesSchema = Schema.Struct({
   depth: Schema.optionalKey(Schema.Int),
   call_depth: Schema.optionalKey(Schema.Int),
   called_by: Schema.optionalKey(Schema.Struct({ run_id: Schema.String, reference: Schema.String, run: Schema.Int })),
-  trigger: Schema.optionalKey(
-    Schema.Struct({ kind: Schema.Literals(['event', 'cron', 'every']), reference: Schema.String }),
-  ),
+  trigger: Schema.optionalKey(Schema.Struct({ kind: TriggerKindSchema, reference: Schema.String })),
   acts_for: Schema.optionalKey(Schema.String),
   lineage: Schema.optionalKey(Schema.Struct({ start: Schema.String, correlation: Schema.String })),
   resumes_after_ms_by_task: Schema.optionalKey(Schema.Record(Schema.String, Schema.Int)),

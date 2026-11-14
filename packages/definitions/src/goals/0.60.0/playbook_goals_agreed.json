@@ -1,0 +1,74 @@
+{
+  "type": "playbook_goals_agreed",
+  "data": {
+    "agreements": [
+      {
+        "goal": "paying-customers",
+        "version": 1,
+        "at": "2026-11-13T10:00:00.000Z",
+        "by": "person:user_2ada",
+        "content": {
+          "id": "paying-customers",
+          "statement": "Bring in paying customers through my experiments.",
+          "per": "experiment",
+          "window": {
+            "after": "live",
+            "for": "P7D",
+            "grace": "P1D"
+          },
+          "success": {
+            "label": "New paying customers traced to the experiment",
+            "settles": "on_crossing",
+            "target": {
+              "at_least": 1
+            },
+            "passed": "Brought a customer",
+            "failed": "Brought no customer"
+          },
+          "milestones": [
+            {
+              "id": "chosen",
+              "label": "Idea chosen",
+              "by": "person"
+            },
+            {
+              "id": "prepared",
+              "label": "Package prepared",
+              "by": "auto"
+            },
+            {
+              "id": "live",
+              "label": "Taken live",
+              "by": "person"
+            },
+            {
+              "id": "measured",
+              "label": "Measured",
+              "by": "auto"
+            },
+            {
+              "id": "concluded",
+              "label": "Lesson kept",
+              "by": "person"
+            }
+          ],
+          "notify": {
+            "passed": "now",
+            "failed": "now",
+            "overdue": "now",
+            "through": "tell-owner",
+            "summary": {
+              "cron": "0 9 * * 5",
+              "time_zone": "America/Los_Angeles",
+              "through": "weekly-note"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "context": {
+    "at": "2026-11-13T10:00:00.000Z",
+    "by": "person:user_2ada"
+  }
+}

@@ -136,6 +136,21 @@ const restored: readonly (typeof DefinitionEventSchema.Type)[] = [
   },
 ];
 
+const createdPaused: readonly (typeof DefinitionEventSchema.Type)[] = [
+  {
+    type: 'definition_created',
+    data: {
+      content: {
+        source: 'document:\n  dsl: 1.0.3\nschedule:\n  every:\n    hours: 1\ndo: []\n',
+        triggers: [{ kind: 'every', reference: '/schedule/every', milliseconds: 3_600_000 }],
+      },
+      created_by: { id: 'person:user_2ada', name: 'Ada Lovelace' },
+      paused: { reason: 'Imported, waiting for its owner' },
+    },
+    context: { ...ofTheWorkflow, at: '2026-11-09T08:30:00.000Z', definitionName: 'post-the-orders' },
+  },
+];
+
 const writtenBeforeIds = await definitionFactsWrittenKeepingTheirTexts();
 
 function asRecordedBeforeIds(fact: (typeof writtenBeforeIds)[number]): (typeof writtenBeforeIds)[number] {
@@ -204,6 +219,7 @@ describe('the facts of the definitions of a playbook', () => {
       '0.57.0': restored,
       '0.58.0': keptOutsideTheFacts,
       '0.59.0': identified,
+      '0.60.0': createdPaused,
     },
   });
 });
@@ -241,7 +257,7 @@ describe('a definition fact as a release recorded it', () => {
     const recorded = fixturesAsRecorded();
 
     expect(recorded.map(({ path, text }) => ({ path, text: writtenBack(text) }))).toEqual(recorded);
-    expect(recorded).toHaveLength(19);
+    expect(recorded).toHaveLength(20);
   });
 });
 

@@ -1,0 +1,47 @@
+{
+  "type": "goal_assessment_opened",
+  "data": {
+    "goal": "paying-customers",
+    "goals_version": 1,
+    "per": {
+      "id": "experiment-7"
+    },
+    "window": {
+      "opens": "2026-11-02T17:00:00.000Z",
+      "closes": "2026-11-09T17:00:00.000Z",
+      "due": "2026-11-10T17:00:00.000Z"
+    },
+    "rule": {
+      "settles": "on_crossing",
+      "target": {
+        "at_least": 1
+      },
+      "window": {
+        "after": "live",
+        "for": "P7D",
+        "grace": "P1D"
+      }
+    },
+    "milestones": [
+      {
+        "id": "chosen",
+        "label": "Idea chosen",
+        "by": "person"
+      },
+      {
+        "id": "live",
+        "label": "Taken live",
+        "by": "person"
+      },
+      {
+        "id": "measured",
+        "label": "Measured",
+        "by": "auto"
+      }
+    ]
+  },
+  "context": {
+    "at": "2026-11-09T18:00:00.000Z",
+    "by": "playbook:alpha"
+  }
+}

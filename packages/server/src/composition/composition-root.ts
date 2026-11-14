@@ -9,7 +9,7 @@ import {
 import { serverOptionsComposing, type ComposedServerOptions } from '../server-options/composed-options.ts';
 import { serveWorkflows, type WorkflowParts } from '../workflows/workflows.ts';
 import { applicationLayer, withLiveAttemptsClosedFirst } from './application-layer.ts';
-import { functionWiringOf, type FunctionWiring } from './function-wiring.ts';
+import { functionWiringOf, type FunctionWiring, type ServedWiring } from './function-wiring.ts';
 import { ledgerLayerFor } from './ledger-store.ts';
 import { functionsServedBy } from './served-functions.ts';
 import { loggedModelAccess, type ModelAccessOf } from './served-reasoning.ts';
@@ -21,6 +21,12 @@ export interface CompositionParts {
   readonly signers?: NonNullable<Parameters<typeof applicationLayer>[1]>['signers'];
   readonly features?: NonNullable<Parameters<typeof applicationLayer>[1]>['features'];
   readonly installed?: NonNullable<StartWiring['installed']>;
+  readonly goals?: boolean;
+  readonly goalsResults?: boolean;
+  readonly goalsMessages?: boolean;
+  readonly startingWork?: WorkflowParts['startingWork'];
+  readonly consumersOf?: WorkflowParts['consumersOf'];
+  readonly goalsPortsOver?: NonNullable<ServedWiring['goalsPortsOver']>;
 }
 
 type Composing = Parameters<ComposedServerOptions['composed']>;
@@ -34,10 +40,44 @@ interface Serving {
   readonly shippedFiles: Composing[2];
   readonly database: Awaited<ReturnType<typeof ledgerDatabaseOf>>;
   readonly made: MadeAtStart;
+  readonly goals: boolean;
+  readonly results: boolean;
+  readonly messages: boolean;
+  readonly startingWork?: WorkflowParts['startingWork'];
+  readonly consumersOf?: WorkflowParts['consumersOf'];
+  readonly goalsPortsOver?: ServedWiring['goalsPortsOver'];
+}
+
+function optionalPartsOf({
+  clock,
+  startingWork,
+  consumersOf,
+}: Pick<Serving, 'clock' | 'startingWork' | 'consumersOf'>) {
+  return {
+    ...(clock === undefined ? {} : { clock }),
+    ...(startingWork === undefined ? {} : { startingWork }),
+    ...(consumersOf === undefined ? {} : { consumersOf }),
+  };
+}
+
+function goalsWiringOf({ goals, results, messages, goalsPortsOver }: Serving) {
+  return { goals, results, messages, goalsPortsOver };
+}
+
+function meterOf(
+  settings: Composing[0],
+  { signers, features }: Pick<CompositionParts, 'signers' | 'features'>,
+): NonNullable<Parameters<typeof applicationLayer>[1]> {
+  return {
+    studio: settings.studio.origin,
+    ...settings.license,
+    ...(signers === undefined ? {} : { signers }),
+    ...(features === undefined ? {} : { features }),
+  };
 }
 
 function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'] {
-  const { modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, made } = serving;
+  const { modelAccessOf, wiring, settings, telemetry, shippedFiles, database, made } = serving;
   return async (runtime, ownOrigin) => {
     const { ledger, workflows, identityIssuer } = settings;
     const { stores, consent, connections, source, offering, clientMetadata, license, ...ownKeys } =
@@ -58,6 +98,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       computation: made.computation,
       prediction: made.prediction,
       generation: { shippedFiles, contentAddressKey: ownKeys.contentAddressKey, ownOrigin },
+      ...goalsWiringOf(serving),
     });
     made.bounds.keptFrom(functions.parts.capabilities);
     const parts = {
@@ -70,7 +111,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       ...functions.parts,
       orgOperations: [...functions.parts.orgOperations, ...connections, ...license.operations],
       dueWork: [...functions.parts.dueWork, ...license.dueWork],
-      ...(clock === undefined ? {} : { clock }),
+      ...optionalPartsOf(serving),
     };
     const served = stores.withSecretsClosed(
       registry.processes.withDocumentsClosed(await serveWorkflows(runtime, parts)),
@@ -83,9 +124,28 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
   };
 }
 
+function goalsSwitchesOf(
+  goals: boolean,
+  results = false,
+  messages = false,
+): Pick<Serving, 'goals' | 'results' | 'messages'> {
+  return { goals, results: goals && results, messages: goals && results && messages };
+}
+
 export function compositionRootWith(
   modelAccessOf: ModelAccessOf,
-  { programPoolOf, clock, toolTiming, signers, features, installed }: CompositionParts = {},
+  {
+    programPoolOf,
+    clock,
+    toolTiming,
+    signers,
+    features,
+    installed,
+    goals = false,
+    goalsResults,
+    goalsMessages,
+    ...goalsParts
+  }: CompositionParts = {},
 ): ComposedServerOptions {
   const wiring = functionWiringOf(programPoolOf, toolTiming, clock?.now);
   return serverOptionsComposing(async (settings, telemetry, shippedFiles) => {
@@ -99,16 +159,21 @@ export function compositionRootWith(
       }),
       settings,
     );
-    const meter = {
-      studio: settings.studio.origin,
-      ...settings.license,
-      ...(signers === undefined ? {} : { signers }),
-      ...(features === undefined ? {} : { features }),
-    };
-    const services = applicationLayer(ledgerLayer, meter, settings.payloads);
+    const services = applicationLayer(ledgerLayer, meterOf(settings, { signers, features }), settings.payloads);
     return {
       services: made.computation.closedLastOf(made.registry.closedFirstOf(services)),
-      serve: servedWith({ modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, made }),
+      serve: servedWith({
+        modelAccessOf,
+        wiring,
+        clock,
+        settings,
+        telemetry,
+        shippedFiles,
+        database,
+        made,
+        ...goalsSwitchesOf(goals, goalsResults, goalsMessages),
+        ...goalsParts,
+      }),
     };
   });
 }

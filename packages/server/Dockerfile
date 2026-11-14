@@ -8,6 +8,7 @@ RUN npm install --global --no-fund --no-audit pnpm@12.11.2
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches patches/
 COPY packages/server/package.json packages/server/
+COPY packages/access-control/package.json packages/access-control/
 COPY packages/activity/package.json packages/activity/
 COPY packages/api/package.json packages/api/
 COPY packages/playbooks/package.json packages/playbooks/
@@ -16,6 +17,7 @@ COPY packages/connections/package.json packages/connections/
 COPY packages/content/package.json packages/content/
 COPY packages/definitions/package.json packages/definitions/
 COPY packages/documents/package.json packages/documents/
+COPY packages/goals/package.json packages/goals/
 COPY packages/identity/package.json packages/identity/
 COPY packages/json-schema/package.json packages/json-schema/
 COPY packages/ledger/package.json packages/ledger/
@@ -63,6 +65,7 @@ COPY LICENSE ./
 COPY packages/server/container.vex.json packages/server/
 COPY docs/concepts/terminology.md docs/concepts/
 COPY docs/reference/*-format.md docs/reference/render-*.md docs/reference/template.md docs/reference/triggers.md docs/reference/events.md docs/reference/
+COPY packages/access-control/src packages/access-control/src
 COPY packages/activity/src packages/activity/src
 COPY packages/api/src packages/api/src
 COPY packages/playbooks/src packages/playbooks/src
@@ -72,6 +75,7 @@ COPY packages/content/src packages/content/src
 COPY packages/definitions/src packages/definitions/src
 COPY packages/definitions/lib packages/definitions/lib
 COPY packages/documents/src packages/documents/src
+COPY packages/goals/src packages/goals/src
 COPY packages/identity/src packages/identity/src
 COPY packages/json-schema/src packages/json-schema/src
 COPY packages/ledger/src packages/ledger/src

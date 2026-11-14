@@ -44,6 +44,7 @@ export function defineSearchInOrg(
   tools: Pick<ToolAccess, 'listServersInOrg' | 'takesConnections'>,
   lookUpPlaybook: PlaybookLookup,
   offering: ProviderOffering = offersNoProvider,
+  leading = '',
 ) {
   return defineQuery('org', {
     name: 'search',
@@ -80,7 +81,7 @@ export function defineSearchInOrg(
       task: searchTask,
       attempt: (asked) => orgSearchAttempted(asked),
       outcome: (answer, asked) =>
-        orgSearched(answer, asked, { takesConnections: tools.takesConnections, where: 'org' }),
+        `${answer.tools.length === 0 ? leading : ''}${orgSearched(answer, asked, { takesConnections: tools.takesConnections, where: 'org' })}`,
     },
   });
 }

@@ -1,0 +1,741 @@
+[
+  {
+    "scope": "org",
+    "kind": "command",
+    "name": "create_playbook",
+    "title": "Create playbook",
+    "description": "Creates a playbook for one business responsibility, and returns it empty. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. Each job it does again and again is a workflow, and each part of a job a function of the type that part needs. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words.",
+    "route": {
+      "method": "POST",
+      "path": "/playbooks"
+    },
+    "pathParameters": [],
+    "targetsPlaybook": true,
+    "successStatus": 201,
+    "reachesOutside": false,
+    "mayChangeOutside": false,
+    "readsOnly": false,
+    "irreversible": false,
+    "repeatable": false,
+    "permissions": ["org:write"],
+    "reasons": ["conflict"],
+    "input": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "playbook": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,47}$",
+            "description": "The id of the playbook: 3 to 48 lowercase letters, digits and hyphens, starting with a letter"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "The display name of the playbook: 1 to 100 characters, not all whitespace"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "What the playbook is for: up to 2000 characters, or empty"
+          }
+        },
+        "required": ["playbook", "name"],
+        "additionalProperties": false
+      },
+      "definitions": {}
+    },
+    "refusesEmptyBody": true,
+    "output": {
+      "schema": {
+        "type": "object",
+        "$ref": "#/$defs/CreatedPlaybook"
+      },
+      "definitions": {
+        "CreatedPlaybook": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,47}$",
+              "description": "The id of the playbook, unique within its org"
+            },
+            "name": {
+              "type": "string",
+              "description": "The display name of the playbook"
+            },
+            "description": {
+              "type": "string",
+              "description": "What the playbook is for, or empty"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["active", "retired"],
+              "description": "active, or retired until restore_playbook restores it"
+            },
+            "created_at": {
+              "type": "string",
+              "description": "When the playbook was created, in ISO 8601 UTC"
+            },
+            "created_by": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id of the caller"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                }
+              },
+              "required": ["id", "name"],
+              "additionalProperties": false,
+              "description": "The caller who created the playbook, by id and name"
+            },
+            "updated_at": {
+              "type": "string",
+              "description": "When the playbook last changed, in ISO 8601 UTC"
+            },
+            "retired_at": {
+              "type": "string",
+              "description": "When the playbook was retired, in ISO 8601 UTC"
+            },
+            "page": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "The page as it was saved, YAML of its data and runs"
+                }
+              },
+              "required": ["source"],
+              "additionalProperties": false,
+              "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+            },
+            "studio": {
+              "type": "string",
+              "description": "The page in Studio of what was made"
+            }
+          },
+          "required": ["id", "name", "description", "status", "created_at", "created_by", "updated_at"],
+          "additionalProperties": false,
+          "description": "A playbook just created, with its page in Studio"
+        }
+      }
+    },
+    "plainLanguage": {
+      "remedies": {},
+      "explanations": {}
+    }
+  },
+  {
+    "scope": "org",
+    "kind": "query",
+    "name": "list_playbooks",
+    "title": "List playbooks",
+    "description": "Use it when the person speaks of their playbooks, or wants something done that one of them may cover. Lists the playbooks of the org that the caller may access, sorted by id. Each holds every field of the playbook, such as its name, what it is for and whether it is active.",
+    "route": {
+      "method": "GET",
+      "path": "/playbooks"
+    },
+    "pathParameters": [],
+    "targetsPlaybook": false,
+    "successStatus": 200,
+    "reachesOutside": false,
+    "mayChangeOutside": false,
+    "readsOnly": false,
+    "irreversible": false,
+    "repeatable": false,
+    "permissions": ["org:read", "playbook:read"],
+    "reasons": [],
+    "input": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "include_retired": {
+            "type": "boolean",
+            "description": "Whether to list retired playbooks as well; false when left out"
+          }
+        },
+        "additionalProperties": false
+      },
+      "definitions": {}
+    },
+    "refusesEmptyBody": false,
+    "output": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "playbooks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/Playbook"
+            }
+          },
+          "welcome": {
+            "type": "string",
+            "description": "Where the org has no playbook yet and the caller may make one there, words the agent relays to the person: what a playbook is, three ways to start, and what Studio shows, with Studio's link where the runtime knows its address"
+          }
+        },
+        "required": ["playbooks"],
+        "additionalProperties": false
+      },
+      "definitions": {
+        "Playbook": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,47}$",
+              "description": "The id of the playbook, unique within its org"
+            },
+            "name": {
+              "type": "string",
+              "description": "The display name of the playbook"
+            },
+            "description": {
+              "type": "string",
+              "description": "What the playbook is for, or empty"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["active", "retired"],
+              "description": "active, or retired until restore_playbook restores it"
+            },
+            "created_at": {
+              "type": "string",
+              "description": "When the playbook was created, in ISO 8601 UTC"
+            },
+            "created_by": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id of the caller"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                }
+              },
+              "required": ["id", "name"],
+              "additionalProperties": false,
+              "description": "The caller who created the playbook, by id and name"
+            },
+            "updated_at": {
+              "type": "string",
+              "description": "When the playbook last changed, in ISO 8601 UTC"
+            },
+            "retired_at": {
+              "type": "string",
+              "description": "When the playbook was retired, in ISO 8601 UTC"
+            },
+            "page": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "The page as it was saved, YAML of its data and runs"
+                }
+              },
+              "required": ["source"],
+              "additionalProperties": false,
+              "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+            }
+          },
+          "required": ["id", "name", "description", "status", "created_at", "created_by", "updated_at"],
+          "additionalProperties": false,
+          "description": "A playbook of the org"
+        }
+      }
+    },
+    "plainLanguage": {
+      "remedies": {},
+      "explanations": {}
+    }
+  },
+  {
+    "scope": "org",
+    "kind": "query",
+    "name": "get_playbook",
+    "title": "Get playbook",
+    "description": "Reads one playbook by its id, active or retired, with the source of its page. Use it to read the playbook's page, or a playbook whose id is known; list_playbooks finds the others. `playbook` is its id.",
+    "route": {
+      "method": "GET",
+      "path": "/playbooks/{playbook}"
+    },
+    "pathParameters": ["playbook"],
+    "targetsPlaybook": true,
+    "successStatus": 200,
+    "reachesOutside": false,
+    "mayChangeOutside": false,
+    "readsOnly": false,
+    "irreversible": false,
+    "repeatable": false,
+    "permissions": ["org:read"],
+    "reasons": ["not_found"],
+    "input": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "playbook": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,47}$",
+            "description": "The id of the playbook: 3 to 48 lowercase letters, digits and hyphens, starting with a letter"
+          }
+        },
+        "required": ["playbook"],
+        "additionalProperties": false
+      },
+      "definitions": {}
+    },
+    "refusesEmptyBody": false,
+    "output": {
+      "schema": {
+        "type": "object",
+        "$ref": "#/$defs/Playbook"
+      },
+      "definitions": {
+        "Playbook": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,47}$",
+              "description": "The id of the playbook, unique within its org"
+            },
+            "name": {
+              "type": "string",
+              "description": "The display name of the playbook"
+            },
+            "description": {
+              "type": "string",
+              "description": "What the playbook is for, or empty"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["active", "retired"],
+              "description": "active, or retired until restore_playbook restores it"
+            },
+            "created_at": {
+              "type": "string",
+              "description": "When the playbook was created, in ISO 8601 UTC"
+            },
+            "created_by": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id of the caller"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                }
+              },
+              "required": ["id", "name"],
+              "additionalProperties": false,
+              "description": "The caller who created the playbook, by id and name"
+            },
+            "updated_at": {
+              "type": "string",
+              "description": "When the playbook last changed, in ISO 8601 UTC"
+            },
+            "retired_at": {
+              "type": "string",
+              "description": "When the playbook was retired, in ISO 8601 UTC"
+            },
+            "page": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "The page as it was saved, YAML of its data and runs"
+                }
+              },
+              "required": ["source"],
+              "additionalProperties": false,
+              "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+            }
+          },
+          "required": ["id", "name", "description", "status", "created_at", "created_by", "updated_at"],
+          "additionalProperties": false,
+          "description": "A playbook of the org"
+        }
+      }
+    },
+    "plainLanguage": {
+      "remedies": {},
+      "explanations": {}
+    }
+  },
+  {
+    "scope": "org",
+    "kind": "command",
+    "name": "update_playbook",
+    "title": "Update playbook",
+    "description": "Changes the name, the description or the page of an active playbook and returns it. Use it when the person renames a playbook, changes what it is for or gives it a dashboard. What is left out stays as saved.",
+    "route": {
+      "method": "PUT",
+      "path": "/playbooks/{playbook}"
+    },
+    "pathParameters": ["playbook"],
+    "targetsPlaybook": true,
+    "successStatus": 200,
+    "reachesOutside": false,
+    "mayChangeOutside": false,
+    "readsOnly": false,
+    "irreversible": false,
+    "repeatable": true,
+    "permissions": ["org:write"],
+    "reasons": ["not_found", "invalid_input", "conflict", "unavailable"],
+    "input": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "playbook": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,47}$",
+            "description": "The id of the playbook: 3 to 48 lowercase letters, digits and hyphens, starting with a letter"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "The display name of the playbook: 1 to 100 characters, not all whitespace"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "What the playbook is for: up to 2000 characters, or empty"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 65536
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its page as YAML, data and runs, as the page guide says; null removes it"
+          }
+        },
+        "required": ["playbook"],
+        "additionalProperties": false
+      },
+      "definitions": {}
+    },
+    "refusesEmptyBody": false,
+    "output": {
+      "schema": {
+        "type": "object",
+        "$ref": "#/$defs/Playbook"
+      },
+      "definitions": {
+        "Playbook": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,47}$",
+              "description": "The id of the playbook, unique within its org"
+            },
+            "name": {
+              "type": "string",
+              "description": "The display name of the playbook"
+            },
+            "description": {
+              "type": "string",
+              "description": "What the playbook is for, or empty"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["active", "retired"],
+              "description": "active, or retired until restore_playbook restores it"
+            },
+            "created_at": {
+              "type": "string",
+              "description": "When the playbook was created, in ISO 8601 UTC"
+            },
+            "created_by": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id of the caller"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                }
+              },
+              "required": ["id", "name"],
+              "additionalProperties": false,
+              "description": "The caller who created the playbook, by id and name"
+            },
+            "updated_at": {
+              "type": "string",
+              "description": "When the playbook last changed, in ISO 8601 UTC"
+            },
+            "retired_at": {
+              "type": "string",
+              "description": "When the playbook was retired, in ISO 8601 UTC"
+            },
+            "page": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "The page as it was saved, YAML of its data and runs"
+                }
+              },
+              "required": ["source"],
+              "additionalProperties": false,
+              "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+            }
+          },
+          "required": ["id", "name", "description", "status", "created_at", "created_by", "updated_at"],
+          "additionalProperties": false,
+          "description": "A playbook of the org"
+        }
+      }
+    },
+    "plainLanguage": {
+      "remedies": {},
+      "explanations": {}
+    }
+  },
+  {
+    "scope": "org",
+    "kind": "command",
+    "name": "retire_playbook",
+    "title": "Retire playbook",
+    "description": "Retires a playbook and returns it: it stays readable with its history, takes no changes or runs, and keeps its id, so no other playbook takes it. restore_playbook brings it back. Use retire_playbook when the person asks to retire that playbook; update_playbook changes its name or description. Retiring a retired playbook changes nothing.",
+    "route": {
+      "method": "POST",
+      "path": "/playbooks/{playbook}/retire"
+    },
+    "pathParameters": ["playbook"],
+    "targetsPlaybook": true,
+    "successStatus": 200,
+    "reachesOutside": false,
+    "mayChangeOutside": false,
+    "readsOnly": false,
+    "irreversible": false,
+    "repeatable": true,
+    "permissions": ["org:write"],
+    "reasons": ["not_found", "conflict"],
+    "input": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "playbook": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,47}$",
+            "description": "The id of the playbook: 3 to 48 lowercase letters, digits and hyphens, starting with a letter"
+          }
+        },
+        "required": ["playbook"],
+        "additionalProperties": false
+      },
+      "definitions": {}
+    },
+    "refusesEmptyBody": false,
+    "output": {
+      "schema": {
+        "type": "object",
+        "$ref": "#/$defs/Playbook"
+      },
+      "definitions": {
+        "Playbook": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,47}$",
+              "description": "The id of the playbook, unique within its org"
+            },
+            "name": {
+              "type": "string",
+              "description": "The display name of the playbook"
+            },
+            "description": {
+              "type": "string",
+              "description": "What the playbook is for, or empty"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["active", "retired"],
+              "description": "active, or retired until restore_playbook restores it"
+            },
+            "created_at": {
+              "type": "string",
+              "description": "When the playbook was created, in ISO 8601 UTC"
+            },
+            "created_by": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id of the caller"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                }
+              },
+              "required": ["id", "name"],
+              "additionalProperties": false,
+              "description": "The caller who created the playbook, by id and name"
+            },
+            "updated_at": {
+              "type": "string",
+              "description": "When the playbook last changed, in ISO 8601 UTC"
+            },
+            "retired_at": {
+              "type": "string",
+              "description": "When the playbook was retired, in ISO 8601 UTC"
+            },
+            "page": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "The page as it was saved, YAML of its data and runs"
+                }
+              },
+              "required": ["source"],
+              "additionalProperties": false,
+              "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+            }
+          },
+          "required": ["id", "name", "description", "status", "created_at", "created_by", "updated_at"],
+          "additionalProperties": false,
+          "description": "A playbook of the org"
+        }
+      }
+    },
+    "plainLanguage": {
+      "remedies": {},
+      "explanations": {}
+    }
+  },
+  {
+    "scope": "org",
+    "kind": "command",
+    "name": "restore_playbook",
+    "title": "Restore playbook",
+    "description": "Restores a retired playbook and returns it, active again under its own id, with its functions, workflows, page and history as they were when it was retired. Use it when the person asks to bring back a retired playbook; list_playbooks with include_retired lists the retired ones. Restoring a playbook that is not retired changes nothing.",
+    "route": {
+      "method": "POST",
+      "path": "/playbooks/{playbook}/restore"
+    },
+    "pathParameters": ["playbook"],
+    "targetsPlaybook": true,
+    "successStatus": 200,
+    "reachesOutside": false,
+    "mayChangeOutside": false,
+    "readsOnly": false,
+    "irreversible": false,
+    "repeatable": true,
+    "permissions": ["org:write"],
+    "reasons": ["not_found", "conflict"],
+    "input": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "playbook": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,47}$",
+            "description": "The id of the playbook: 3 to 48 lowercase letters, digits and hyphens, starting with a letter"
+          }
+        },
+        "required": ["playbook"],
+        "additionalProperties": false
+      },
+      "definitions": {}
+    },
+    "refusesEmptyBody": false,
+    "output": {
+      "schema": {
+        "type": "object",
+        "$ref": "#/$defs/Playbook"
+      },
+      "definitions": {
+        "Playbook": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,47}$",
+              "description": "The id of the playbook, unique within its org"
+            },
+            "name": {
+              "type": "string",
+              "description": "The display name of the playbook"
+            },
+            "description": {
+              "type": "string",
+              "description": "What the playbook is for, or empty"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["active", "retired"],
+              "description": "active, or retired until restore_playbook restores it"
+            },
+            "created_at": {
+              "type": "string",
+              "description": "When the playbook was created, in ISO 8601 UTC"
+            },
+            "created_by": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The id of the caller"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                }
+              },
+              "required": ["id", "name"],
+              "additionalProperties": false,
+              "description": "The caller who created the playbook, by id and name"
+            },
+            "updated_at": {
+              "type": "string",
+              "description": "When the playbook last changed, in ISO 8601 UTC"
+            },
+            "retired_at": {
+              "type": "string",
+              "description": "When the playbook was retired, in ISO 8601 UTC"
+            },
+            "page": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "description": "The page as it was saved, YAML of its data and runs"
+                }
+              },
+              "required": ["source"],
+              "additionalProperties": false,
+              "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+            }
+          },
+          "required": ["id", "name", "description", "status", "created_at", "created_by", "updated_at"],
+          "additionalProperties": false,
+          "description": "A playbook of the org"
+        }
+      }
+    },
+    "plainLanguage": {
+      "remedies": {},
+      "explanations": {}
+    }
+  }
+]

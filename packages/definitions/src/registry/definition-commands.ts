@@ -2,15 +2,24 @@ import type { RecordedCaller } from '@on.auto/operations';
 
 import type { DefinitionContent } from './definition-events.ts';
 
-export interface DefinitionCreation {
+interface BlankRule {
+  readonly blanksRefused?: boolean;
+}
+
+interface CreatedPaused {
+  readonly reason?: string;
+}
+
+export interface DefinitionCreation extends BlankRule {
   readonly type: 'create';
   readonly name: string;
   readonly content: DefinitionContent;
   readonly created_by: RecordedCaller;
+  readonly paused?: CreatedPaused;
   readonly definition_id: string;
 }
 
-export interface DefinitionUpdate {
+export interface DefinitionUpdate extends BlankRule {
   readonly type: 'update';
   readonly name: string;
   readonly content: DefinitionContent;
@@ -28,7 +37,7 @@ export interface DefinitionPause {
   readonly reason?: string;
 }
 
-export interface DefinitionResumption {
+export interface DefinitionResumption extends BlankRule {
   readonly type: 'resume';
   readonly name: string;
 }

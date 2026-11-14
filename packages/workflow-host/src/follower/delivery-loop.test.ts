@@ -124,6 +124,25 @@ describe('the deliveries of one record', () => {
   });
 });
 
+describe('the deliveries of a record whose consumers changed between two passes', () => {
+  it('go on from the first consumer, from its first key, when the consumer the last pass stopped at is no longer among them', async () => {
+    const listeners = counted('listeners', 120);
+    const starts = counted('starts', 30);
+    const endings = counted('endings', 3);
+
+    const first = await Effect.runPromise(deliveredAll(boundAll(listeners.consumer, starts.consumer), fresh, 'signal'));
+    const second = await Effect.runPromise(
+      deliveredAll(boundAll(endings.consumer, starts.consumer), first.progress, 'signal'),
+    );
+
+    expect([first.end, first.progress.delivered, second.end]).toEqual(['more', '["listeners","0099"]', undefined]);
+    expect([endings.delivered(), starts.delivered().length]).toEqual([
+      ['endings 0000', 'endings 0001', 'endings 0002'],
+      30,
+    ]);
+  });
+});
+
 describe('the deliveries of one record while the content store does not answer', () => {
   it('hold a delivery that fails for the content store at its record through any number of sweeps, never counting it nor skipping it', async () => {
     const starts = counted('starts', 3, { failing: new Set(['0001']), held: new Set(['0001']) });

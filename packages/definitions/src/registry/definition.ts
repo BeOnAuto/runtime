@@ -3,9 +3,31 @@ import { Schema } from 'effect';
 
 import { functionTypeOrder } from '../capability/function-terminology.ts';
 import type { StrippedForms } from '../capability/stripped-forms.ts';
+import { ContributesSchema } from '../goals/goals-document.ts';
 import type { TextsAsRecorded } from '../payloads/definition-texts.ts';
 import { DefinitionUserSchema } from '../used-by/user-relations.ts';
 import { TriggerSchema } from './definition-triggers.ts';
+
+const shapeField = Schema.optionalKey(
+  Schema.String.annotate({
+    description:
+      'The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws',
+  }),
+);
+
+const detailsDescription = 'What the runtime declares of the definition beside its schemas';
+
+const DetailsSchema = Schema.Struct({ shape: shapeField }).annotate({ description: detailsDescription });
+
+const DetailsWithGoalsSchema = Schema.Struct({
+  shape: shapeField,
+  contributes: Schema.optionalKey(
+    ContributesSchema.annotate({
+      description:
+        "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it",
+    }),
+  ),
+}).annotate({ description: detailsDescription });
 
 const listedDefinitionFields = {
   type: Schema.String.annotate({
@@ -44,16 +66,7 @@ const listedDefinitionFields = {
         'What the parser finds in the document that may not work as written, such as an answer schema whose answers cannot be enforced while a model writes them, found again whenever the definition is read; the definition was accepted with them',
     }),
   ),
-  details: Schema.optionalKey(
-    Schema.Struct({
-      shape: Schema.optionalKey(
-        Schema.String.annotate({
-          description:
-            'The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws',
-        }),
-      ),
-    }).annotate({ description: 'What the runtime declares of the definition beside its schemas' }),
-  ),
+  details: Schema.optionalKey(DetailsSchema),
   triggers: Schema.optionalKey(
     Schema.Array(TriggerSchema).annotate({
       description:
@@ -86,6 +99,11 @@ const listedDefinitionFields = {
   ),
 };
 
+const listedDefinitionWithGoalsFields = {
+  ...listedDefinitionFields,
+  details: Schema.optionalKey(DetailsWithGoalsSchema),
+};
+
 const StandingField = Schema.JsonObject.annotate({
   description:
     'How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function',
@@ -116,13 +134,15 @@ const DefinitionPageSchema = Schema.Struct({
   ),
 }).annotate({ description: 'What the page of the definition, the page key of its document, shows when it is read' });
 
-export const ListedDefinitionSchema = Schema.Struct(listedDefinitionFields).annotate({
-  identifier: 'ListedDefinition',
-  description: 'A saved definition, without its document',
-});
+const listedAnnotations = { identifier: 'ListedDefinition', description: 'A saved definition, without its document' };
 
-export const DefinitionSchema = Schema.Struct({
-  ...listedDefinitionFields,
+export const ListedDefinitionSchema = Schema.Struct(listedDefinitionFields).annotate(listedAnnotations);
+
+export const ListedDefinitionWithGoalsSchema = Schema.Struct(listedDefinitionWithGoalsFields).annotate(
+  listedAnnotations,
+);
+
+const documentFields = {
   source: Schema.String.annotate({ description: 'The definition document' }),
   overview: Schema.optionalKey(
     Schema.String.annotate({
@@ -150,9 +170,30 @@ export const DefinitionSchema = Schema.Struct({
         'The definitions of the playbook, active or paused, that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, and a lookup function that reads its runs',
     }),
   ),
-}).annotate({ identifier: 'Definition', description: 'A saved definition, with its document' });
+};
 
-export type Definition = typeof DefinitionSchema.Type;
+const definitionAnnotations = { identifier: 'Definition', description: 'A saved definition, with its document' };
+
+export const DefinitionSchema = Schema.Struct({ ...listedDefinitionFields, ...documentFields }).annotate(
+  definitionAnnotations,
+);
+
+export const DefinitionWithGoalsSchema = Schema.Struct({
+  ...listedDefinitionWithGoalsFields,
+  ...documentFields,
+}).annotate(definitionAnnotations);
+
+export type Definition = typeof DefinitionWithGoalsSchema.Type;
+
+export function definitionSchemaOf(goals: boolean): typeof DefinitionSchema | typeof DefinitionWithGoalsSchema {
+  return goals ? DefinitionWithGoalsSchema : DefinitionSchema;
+}
+
+export function listedDefinitionSchemaOf(
+  goals: boolean,
+): typeof ListedDefinitionSchema | typeof ListedDefinitionWithGoalsSchema {
+  return goals ? ListedDefinitionWithGoalsSchema : ListedDefinitionSchema;
+}
 
 export type ReasoningFunctionDefinition = Definition & { readonly type: 'reasoning' };
 
@@ -190,7 +231,7 @@ export function isWorkflowDefinition(definition: Definition): definition is Work
   return definition.type === 'workflow';
 }
 
-export type ListedDefinition = typeof ListedDefinitionSchema.Type;
+export type ListedDefinition = typeof ListedDefinitionWithGoalsSchema.Type;
 
 export function isRetired({ status }: Pick<ListedDefinition, 'status'>): boolean {
   return status === 'retired';

@@ -1,0 +1,29 @@
+{
+  "type": "definition_created",
+  "data": {
+    "content": {
+      "source": "document:\n  dsl: 1.0.3\nschedule:\n  every:\n    hours: 1\ndo: []\n",
+      "triggers": [
+        {
+          "kind": "every",
+          "reference": "/schedule/every",
+          "milliseconds": 3600000
+        }
+      ]
+    },
+    "created_by": {
+      "id": "person:user_2ada",
+      "name": "Ada Lovelace"
+    },
+    "paused": {
+      "reason": "Imported, waiting for its owner"
+    }
+  },
+  "context": {
+    "at": "2026-11-09T08:30:00.000Z",
+    "by": "key_7f3a",
+    "definitionType": "workflow",
+    "definitionName": "post-the-orders",
+    "definitionVersion": 1
+  }
+}

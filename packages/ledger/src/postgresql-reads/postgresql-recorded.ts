@@ -10,7 +10,7 @@ import {
   type LastMessagesStore,
   type OwnContentStore,
   type RecordedStore,
-  type StreamAgesStore,
+  type KeptStreamAges,
   type StreamVersionsStore,
 } from '../event-store.ts';
 import { dataAsJsonText } from '../postgresql/json-text.ts';
@@ -246,7 +246,7 @@ export function postgresqlRecordedStore(
   listeners: AppendListeners = {},
 ): RecordedStore &
   DefinitionStreamsStore &
-  StreamAgesStore &
+  KeptStreamAges &
   StreamVersionsStore &
   LastMessagesStore &
   AppendWaitsStore {
@@ -272,7 +272,7 @@ export function postgresqlRecordedStoreOn(
   listeners: AppendListeners,
 ): RecordedStore &
   DefinitionStreamsStore &
-  StreamAgesStore &
+  KeptStreamAges &
   StreamVersionsStore &
   LastMessagesStore &
   AppendWaitsStore &

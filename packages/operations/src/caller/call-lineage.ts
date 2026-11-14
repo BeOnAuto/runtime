@@ -1,14 +1,13 @@
 import { Context } from 'effect';
 
 import type { Lineage } from '../ledger/message-lineage.ts';
+import type { TriggerKind } from '../ledger/trigger-kinds.ts';
 
 export interface CallLink {
   readonly run_id: string;
   readonly reference: string;
   readonly run: number;
 }
-
-type TriggerKind = 'event' | 'cron' | 'every';
 
 export interface TriggerLink {
   readonly kind: TriggerKind;

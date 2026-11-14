@@ -19,6 +19,7 @@ export interface Fold<State, Event extends Recorded> {
   readonly initialState: State;
   readonly evolve: (state: State, recorded: Event) => State;
   readonly eventSchema: Schema.ConstraintCodec<Event, unknown>;
+  readonly lastFactAlone?: true;
 }
 
 export interface Decider<State, Command, Event extends Recorded, R extends DeclarableReason = never> extends Fold<

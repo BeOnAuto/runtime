@@ -55,6 +55,17 @@ export const servedForReasoning = await guideShelfFrom(guideFiles, [reasoning], 
 
 export const servedWithEverything = await guideShelfFrom(guideFiles, [...everyType, interaction], { pages: true });
 
+export const servedWithEverythingAndGoals = await guideShelfFrom(guideFiles, [...everyType, interaction], {
+  pages: true,
+  goals: true,
+  messages: true,
+});
+
+export const servedWithEverythingAndGoalsUntold = await guideShelfFrom(guideFiles, [...everyType, interaction], {
+  pages: true,
+  goals: true,
+});
+
 const lookup = capabilityOf('lookup', 'lookup function', { name: 'lookup-function' });
 
 export const servedWithLookupAndPages = await guideShelfFrom(guideFiles, [reasoning, lookup, workflow], {

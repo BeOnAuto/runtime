@@ -1,12 +1,28 @@
-import { Caller, NotFound, PlaybookIdSchema, canAccessPlaybook, defineHttpOperation } from '@on.auto/operations';
+import {
+  Caller,
+  NotFound,
+  PlaybookIdSchema,
+  canAccessPlaybook,
+  defineHttpOperation,
+  type OrgReader,
+} from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { cursorOf } from '../positions/activity-position.ts';
-import { countsFor } from './activity-counts.ts';
+import { countsFor, type ActivityCounts, type CountedActivity } from './activity-counts.ts';
 import { cursorField, kindsOf, mostRowsInAPage, positionAt, rowsInAPage } from './activity-input.ts';
 import { pageOf } from './activity-page.ts';
-import { ActivityRowSchema, seenKinds, servedRow } from './activity-row.ts';
-import { isSeenBy, throughOf, viewerOf } from './activity-viewer.ts';
+import {
+  ActivityRowSchema,
+  activityKinds,
+  seenKinds,
+  servedRow,
+  type ActivityKind,
+  type ActivityRow,
+  type ServedActivityRow,
+} from './activity-row.ts';
+import { activityTables, type ActivityTable } from './activity-tables.ts';
+import { isSeenBy, throughOf, viewerOf, type Viewer } from './activity-viewer.ts';
 import { loadPlaybookRegister, mostPlaybookChanges, type PlaybookRegister } from './playbook-register.ts';
 
 export const ActivityCountsSchema = Schema.Struct({
@@ -25,7 +41,7 @@ export const ThroughSchema = Schema.NullOr(
   }),
 ).annotate({ description: 'Where the caller marked everything seen, or null before they first did' });
 
-const ListActivityInputSchema = Schema.Struct({
+export const ListActivityInputSchema = Schema.Struct({
   kind: Schema.optionalKey(
     Schema.String.annotate({
       description:
@@ -48,7 +64,7 @@ const ListActivityInputSchema = Schema.Struct({
   cursor: Schema.optionalKey(cursorField('The next_cursor of the page before')),
 });
 
-type ListActivityInput = typeof ListActivityInputSchema.Type;
+export type ListActivityInput = typeof ListActivityInputSchema.Type;
 
 const ListActivityOutputSchema = Schema.Struct({
   rows: Schema.Array(ActivityRowSchema).annotate({ description: 'The rows of the page, newest first by at' }),
@@ -66,34 +82,60 @@ function playbookAsked(register: PlaybookRegister, playbook: string | undefined)
     : Effect.fail(new NotFound({ detail: `There is no playbook ${playbook} in this org` }));
 }
 
-const listed = Effect.fnUntraced(function* (input: ListActivityInput) {
-  const caller = yield* Caller;
-  const register = yield* loadPlaybookRegister;
-  const playbook = yield* playbookAsked(register, input.playbook);
-  const kinds = yield* kindsOf(input.kind);
-  const since = yield* positionAt('since', input.since, register);
-  const cursor = yield* positionAt('cursor', input.cursor, register);
-  const readable = [...register.active].filter((each) => canAccessPlaybook(caller.playbooks, each)).toSorted();
-  const viewer = yield* viewerOf(caller.id);
-  const withTheOrg = caller.playbooks === '*';
-  const page = yield* pageOf(register, {
-    kinds,
-    playbooks: playbook === undefined ? readable : readable.filter((each) => each === playbook),
-    withTheOrg: withTheOrg && playbook === undefined,
-    mine: input.mine === true ? caller.id : undefined,
-    limit: input.limit ?? rowsInAPage,
-    cursor,
-    since,
+export interface ActivityServing<Row, Counts, R> {
+  readonly kinds: readonly ActivityKind[];
+  readonly tables: readonly ActivityTable[];
+  readonly rowsServed: (rows: readonly ActivityRow[], viewer: Viewer) => Effect.Effect<readonly Row[], never, R>;
+  readonly countsOf: (counted: CountedActivity) => Effect.Effect<Counts, never, OrgReader>;
+}
+
+export function listedBy<Row, Counts, R>({
+  kinds: known,
+  tables,
+  rowsServed,
+  countsOf,
+}: ActivityServing<Row, Counts, R>) {
+  return Effect.fnUntraced(function* (input: ListActivityInput) {
+    const caller = yield* Caller;
+    const register = yield* loadPlaybookRegister;
+    const playbook = yield* playbookAsked(register, input.playbook);
+    const kinds = yield* kindsOf(input.kind, known);
+    const since = yield* positionAt('since', input.since, register);
+    const cursor = yield* positionAt('cursor', input.cursor, register);
+    const readable = [...register.active].filter((each) => canAccessPlaybook(caller.playbooks, each)).toSorted();
+    const viewer = yield* viewerOf(caller.id);
+    const withTheOrg = caller.playbooks === '*';
+    const page = yield* pageOf(
+      register,
+      {
+        kinds,
+        playbooks: playbook === undefined ? readable : readable.filter((each) => each === playbook),
+        withTheOrg: withTheOrg && playbook === undefined,
+        mine: input.mine === true ? caller.id : undefined,
+        limit: input.limit ?? rowsInAPage,
+        cursor,
+        since,
+      },
+      tables,
+    );
+    const last = page.rows.at(-1);
+    return {
+      rows: yield* rowsServed(page.rows, viewer),
+      has_more: page.hasMore,
+      next_cursor: page.hasMore && last !== undefined ? cursorOf(last.position) : null,
+      counts: yield* countsOf({ viewer, readable, withTheOrg, changes: register.changes }),
+      through: throughOf(viewer.seen),
+    };
   });
-  const last = page.rows.at(-1);
-  return {
-    rows: page.rows.map((row) => servedRow(row, seenKinds.has(row.kind) ? isSeenBy(viewer, row) : null)),
-    has_more: page.hasMore,
-    next_cursor: page.hasMore && last !== undefined ? cursorOf(last.position) : null,
-    counts: yield* countsFor({ viewer, readable, withTheOrg, changes: register.changes }),
-    through: throughOf(viewer.seen),
-  };
-});
+}
+
+const servedToday: ActivityServing<ServedActivityRow, ActivityCounts, never> = {
+  kinds: activityKinds,
+  tables: activityTables,
+  rowsServed: (rows, viewer) =>
+    Effect.succeed(rows.map((row) => servedRow(row, seenKinds.has(row.kind) ? isSeenBy(viewer, row) : null))),
+  countsOf: countsFor,
+};
 
 export const listActivity = defineHttpOperation('org', 'query', {
   name: 'list_activity',
@@ -111,5 +153,5 @@ export const listActivity = defineHttpOperation('org', 'query', {
   inputSchema: ListActivityInputSchema,
   outputSchema: ListActivityOutputSchema,
   reasons: ['invalid_input', 'not_found'],
-  handle: listed,
+  handle: listedBy(servedToday),
 });

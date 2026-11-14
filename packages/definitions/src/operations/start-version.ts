@@ -10,7 +10,7 @@ import { RunIdInputField, InputField, DefinitionNameField } from './definition-f
 import { startVersionOnce } from './start-once.ts';
 
 const description = [
-  'Starts a run of one version of a definition under a run id, once: when the playbook has a run under that id,',
+  'Starts a run of one version of a definition under a run id, once, or of its active version when no version is named: when the playbook has a run under that id,',
   'it answers that run as it stands and starts nothing, and a paused definition starts none. The workflow host calls it in the process for the runs',
   'that triggers start, as the playbook itself, with their reaction depth, lineage and trigger in the request; no transport serves it.',
 ].join(' ');
@@ -28,7 +28,7 @@ export function defineStartVersion(capabilities: readonly Capability[]) {
       inputSchema: Schema.Struct({
         type: known.field,
         name: DefinitionNameField,
-        version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
+        version: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))),
         input: InputField,
         run_id: RunIdInputField,
       }),

@@ -1,5 +1,5 @@
 {
-  "layout": 23,
+  "layout": 24,
   "catalog": [
     {
       "name": "activity_1",
@@ -20,6 +20,26 @@
     {
       "name": "activity_broken_1_open",
       "sql": "CREATE INDEX activity_broken_1_open ON activity_broken_1 (playbook_key, open, at, row_key)"
+    },
+    {
+      "name": "activity_goal_overdues_1",
+      "sql": "CREATE TABLE activity_goal_overdues_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, open INTEGER, at INTEGER, goal TEXT, outcome TEXT, title TEXT, says TEXT, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "activity_goal_overdues_1_open",
+      "sql": "CREATE INDEX activity_goal_overdues_1_open ON activity_goal_overdues_1 (playbook_key, open, at, row_key)"
+    },
+    {
+      "name": "activity_goals_3",
+      "sql": "CREATE TABLE activity_goals_3 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, listed INTEGER, by TEXT, at INTEGER, goal TEXT, outcome TEXT, title TEXT, says TEXT, result_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "activity_goals_3_listed",
+      "sql": "CREATE INDEX activity_goals_3_listed ON activity_goals_3 (playbook_key, listed, at, row_key)"
+    },
+    {
+      "name": "activity_goals_3_listed_by",
+      "sql": "CREATE INDEX activity_goals_3_listed_by ON activity_goals_3 (playbook_key, listed, by, at, row_key)"
     },
     {
       "name": "activity_requests_5",
@@ -144,6 +164,86 @@
     {
       "name": "generations_due_1_polls_due",
       "sql": "CREATE INDEX generations_due_1_polls_due ON generations_due_1 (poll_due_at) WHERE poll_due_at IS NOT NULL"
+    },
+    {
+      "name": "goal_assessments_2",
+      "sql": "CREATE TABLE goal_assessments_2 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, goal TEXT, goals_version INTEGER, per_id TEXT, window_opens INTEGER, window_closes INTEGER, window_due INTEGER, title TEXT, link TEXT, next_milestone TEXT, mark_1 TEXT, mark_2 TEXT, mark_3 TEXT, mark_4 TEXT, mark_5 TEXT, mark_6 TEXT, mark_7 TEXT, verdict TEXT, verdict_at INTEGER, verdict_told TEXT, overdue INTEGER, overdue_since INTEGER, overdue_told TEXT, outcome TEXT, open INTEGER, opened_at INTEGER, observed_at INTEGER, closed_at INTEGER, closed_recorded_at INTEGER, overdue_recorded_at INTEGER, judging_due_at INTEGER, no_result_at INTEGER, notice_due_at INTEGER, notices TEXT, noticed_at INTEGER, notice_refusals TEXT, notice_refused_at INTEGER, state TEXT, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "goal_assessments_2_closed",
+      "sql": "CREATE INDEX goal_assessments_2_closed ON goal_assessments_2 (playbook_key, goal, open, closed_at, row_key)"
+    },
+    {
+      "name": "goal_assessments_2_closed_recorded",
+      "sql": "CREATE INDEX goal_assessments_2_closed_recorded ON goal_assessments_2 (playbook_key, goal, open, closed_recorded_at, row_key)"
+    },
+    {
+      "name": "goal_assessments_2_in_flight",
+      "sql": "CREATE INDEX goal_assessments_2_in_flight ON goal_assessments_2 (playbook_key, goal, open, overdue, window_due, row_key)"
+    },
+    {
+      "name": "goal_assessments_2_judging_due",
+      "sql": "CREATE INDEX goal_assessments_2_judging_due ON goal_assessments_2 (judging_due_at) WHERE judging_due_at IS NOT NULL"
+    },
+    {
+      "name": "goal_assessments_2_newest",
+      "sql": "CREATE INDEX goal_assessments_2_newest ON goal_assessments_2 (playbook_key, goal, open, opened_at, row_key)"
+    },
+    {
+      "name": "goal_assessments_2_notice_due",
+      "sql": "CREATE INDEX goal_assessments_2_notice_due ON goal_assessments_2 (notice_due_at) WHERE notice_due_at IS NOT NULL"
+    },
+    {
+      "name": "goal_assessments_2_noticed",
+      "sql": "CREATE INDEX goal_assessments_2_noticed ON goal_assessments_2 (playbook_key, goal, noticed_at, row_key)"
+    },
+    {
+      "name": "goal_assessments_2_outcomes",
+      "sql": "CREATE INDEX goal_assessments_2_outcomes ON goal_assessments_2 (playbook_key, goal, outcome, row_key)"
+    },
+    {
+      "name": "goal_assessments_2_overdue_recorded",
+      "sql": "CREATE INDEX goal_assessments_2_overdue_recorded ON goal_assessments_2 (playbook_key, goal, open, overdue, overdue_recorded_at, row_key)"
+    },
+    {
+      "name": "goal_assessments_2_refused_notices",
+      "sql": "CREATE INDEX goal_assessments_2_refused_notices ON goal_assessments_2 (playbook_key, goal, notice_refused_at, row_key)"
+    },
+    {
+      "name": "goal_assessments_2_waiting",
+      "sql": "CREATE INDEX goal_assessments_2_waiting ON goal_assessments_2 (playbook_key, goal, open, next_milestone, row_key)"
+    },
+    {
+      "name": "goal_clocks_1",
+      "sql": "CREATE TABLE goal_clocks_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, goals_version INTEGER, goals TEXT, opens_at INTEGER, summary_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "goal_clocks_1_opens_due",
+      "sql": "CREATE INDEX goal_clocks_1_opens_due ON goal_clocks_1 (opens_at) WHERE opens_at IS NOT NULL"
+    },
+    {
+      "name": "goal_clocks_1_summary_due",
+      "sql": "CREATE INDEX goal_clocks_1_summary_due ON goal_clocks_1 (summary_at) WHERE summary_at IS NOT NULL"
+    },
+    {
+      "name": "goal_notice_days_1",
+      "sql": "CREATE TABLE goal_notice_days_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, started INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "goal_observations_1",
+      "sql": "CREATE TABLE goal_observations_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, workflow TEXT, version INTEGER, entry INTEGER, observed_at INTEGER, run TEXT, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "goal_refusals_1",
+      "sql": "CREATE TABLE goal_refusals_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, run TEXT, detail TEXT, at INTEGER, refusals INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "goal_summaries_1",
+      "sql": "CREATE TABLE goal_summaries_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, last_due INTEGER, last_run TEXT, started_at INTEGER, refused_at INTEGER, attempt INTEGER, detail TEXT, retry_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "goal_summaries_1_retry_due",
+      "sql": "CREATE INDEX goal_summaries_1_retry_due ON goal_summaries_1 (retry_at) WHERE retry_at IS NOT NULL"
     },
     {
       "name": "kept_secrets",

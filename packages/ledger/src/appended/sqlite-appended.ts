@@ -7,7 +7,7 @@ import type {
   LatestAppends,
   ReadLatestAppends,
   RecordedStore,
-  StreamAgesStore,
+  KeptStreamAges,
   StreamVersionsStore,
   LastMessagesStore,
 } from '../event-store.ts';
@@ -34,7 +34,7 @@ async function newestPoint(execute: SQLExecutor): Promise<LatestAppends> {
 export function sqliteAppended(
   execute: SQLExecutor,
   listeners: AppendListeners = {},
-): Pick<RecordedStore, 'readAppended'> & StreamAgesStore & StreamVersionsStore & LastMessagesStore & AppendWaitsStore {
+): Pick<RecordedStore, 'readAppended'> & KeptStreamAges & StreamVersionsStore & LastMessagesStore & AppendWaitsStore {
   const readAppended = appendedAfter(execute);
   return {
     readAppended,

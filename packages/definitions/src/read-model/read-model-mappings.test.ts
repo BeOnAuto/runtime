@@ -38,6 +38,25 @@ describe('the mappings of the read model of the current definitions', () => {
     ]).toEqual([undefined, undefined, undefined, undefined]);
   });
 
+  it('fold a definition created paused as paused, by its creator, with the reason it was created with', () => {
+    const creation = { content: { source: 'steps: []' }, created_by: { id: 'person_reader', name: 'A reader' } };
+    const created = message('definition_created', {
+      ...creation,
+      paused: { reason: 'Imported, waiting for its owner' },
+    });
+
+    expect(definitionRows.rowAfter(undefined, created)).toMatchObject({
+      status: 'paused',
+      paused_at: context.at,
+      paused_by_id: 'person_reader',
+      paused_by_name: 'A reader',
+      reason: 'Imported, waiting for its owner',
+    });
+    expect(
+      definitionRows.rowAfter(undefined, message('definition_created', { ...creation, paused: {} })),
+    ).toMatchObject({ status: 'paused', reason: null });
+  });
+
   it('change no row of a definition it holds none of, and no version or reference by a pause', () => {
     expect([
       definitionRows.rowAfter(undefined, paused),

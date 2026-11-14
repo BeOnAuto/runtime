@@ -83,16 +83,38 @@ function whomTheConnectionActsAs({ caller, org }: ActingAs): string {
   return `This connection acts as ${callerInWords(caller)} in the org ${org}.`;
 }
 
+export interface InstructionsKept {
+  readonly goals?: boolean;
+}
+
+const howToAskThePerson = "Ask the person each question through your client's question tool where it has one.";
+
+const endpointsThatSayHowToAsk: ReadonlySet<McpEndpoint> = new Set(['own org', 'directory', 'playbook']);
+
+function askingWhereGoalsAreKept(endpoint: McpEndpoint, { goals = false }: InstructionsKept): readonly string[] {
+  return goals && endpointsThatSayHowToAsk.has(endpoint) ? [howToAskThePerson] : [];
+}
+
 function sentencesFor(endpoint: McpEndpoint, tools: ServedTools): readonly string[] {
   const names = namesOf(tools);
   const serving: Serving = { endpoint, listed: (name) => names.includes(name) };
   return [whereToBegin, buildFromTheJob, ...whatThisServerIsFor, whatTheConnectionDoes[endpoint](serving)];
 }
 
-export function instructionsFor(endpoint: McpEndpoint, tools: ServedTools): string {
-  return [...sentencesFor(endpoint, tools), whenAToolCannot].join(' ');
+export function instructionsFor(endpoint: McpEndpoint, tools: ServedTools, kept: InstructionsKept = {}): string {
+  return [...sentencesFor(endpoint, tools), ...askingWhereGoalsAreKept(endpoint, kept), whenAToolCannot].join(' ');
 }
 
-export function instructionsActingAs(actingAs: ActingAs, endpoint: McpEndpoint, tools: ServedTools): string {
-  return [...sentencesFor(endpoint, tools), whomTheConnectionActsAs(actingAs), whenAToolCannot].join(' ');
+export function instructionsActingAs(
+  actingAs: ActingAs,
+  endpoint: McpEndpoint,
+  tools: ServedTools,
+  kept: InstructionsKept = {},
+): string {
+  return [
+    ...sentencesFor(endpoint, tools),
+    whomTheConnectionActsAs(actingAs),
+    ...askingWhereGoalsAreKept(endpoint, kept),
+    whenAToolCannot,
+  ].join(' ');
 }

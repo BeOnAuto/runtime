@@ -1,0 +1,29 @@
+entity Org;
+entity Role;
+entity Person in [Role];
+entity Key;
+entity LocalDeveloper;
+entity Playbook in [Org];
+entity Definition in [Playbook];
+
+type Grant = {
+  org: Org,
+  permissions: Set<Action>,
+  playbooks: Set<Playbook>,
+  all_playbooks: Bool,
+};
+
+type Declaration = {
+  kind: String,
+  targets_playbook: Bool,
+  reads_only: Bool,
+  reaches_outside: Bool,
+  may_change_outside: Bool,
+  irreversible: Bool,
+};
+
+type RequestContext = {
+  via: String,
+  granted: Grant,
+  operation: Declaration,
+};

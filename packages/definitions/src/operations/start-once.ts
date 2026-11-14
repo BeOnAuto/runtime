@@ -6,11 +6,11 @@ import { comparedWithItsRecordedInput, takesAStartOnce } from '../runs/run-claim
 import type { RunRequest } from '../runs/run-commands.ts';
 import { isTaken } from '../runs/run-decisions.ts';
 import { runAnswered } from '../runs/run-lookup.ts';
-import { pausedRefusalOf, preparedVersion } from './definition-preparation.ts';
+import { activeVersionOf, preparedVersion, stoppedRefusalOf } from './definition-preparation.ts';
 import { runPrepared } from './prepared-run.ts';
 import { loadRun, loadStartedRun } from './run-access.ts';
 
-const answeredWhilePaused = Effect.fnUntraced(function* (id: string, request: RunRequest) {
+const answeredWhileStopped = Effect.fnUntraced(function* (id: string, request: RunRequest) {
   const { recorded, run } = yield* loadStartedRun(id);
   const taken = yield* Effect.fromResult(takesAStartOnce(run, yield* comparedWithItsRecordedInput(recorded, request)));
   return taken ? yield* runAnswered(id, recorded) : undefined;
@@ -25,15 +25,16 @@ const lineageActingFor = Effect.fnUntraced(function* (putInPlaceBy: string) {
 export const startVersionOnce = Effect.fnUntraced(function* (
   capabilities: readonly Capability[],
   capability: Capability,
-  request: RunRequest & { readonly version: number },
+  request: RunRequest & { readonly version?: number | undefined },
   id: string,
 ) {
   const { version, ...asked } = request;
-  const run = yield* preparedVersion(capability, asked.name, version);
-  const paused = yield* pausedRefusalOf(capability.type, asked.name);
-  if (paused !== undefined) {
-    const answered = yield* answeredWhilePaused(id, asked);
-    return answered ?? (yield* paused);
+  const toRun = version ?? (yield* activeVersionOf(capability.type, asked.name));
+  const run = yield* preparedVersion(capability, asked.name, toRun);
+  const stopped = yield* stoppedRefusalOf(capability.type, asked.name, version === undefined);
+  if (stopped !== undefined) {
+    const answered = yield* answeredWhileStopped(id, asked);
+    return answered ?? (yield* stopped);
   }
   const lineage = yield* lineageActingFor(run.definition.putInPlaceBy);
   return yield* runPrepared(capabilities, id, asked, { ...run, createOnly: true }).pipe(

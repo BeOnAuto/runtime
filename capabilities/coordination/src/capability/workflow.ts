@@ -11,7 +11,7 @@ import type { InvalidInput } from '@on.auto/operations';
 import type { Noun } from '@on.auto/phrasing';
 import { Effect, type Schema } from 'effect';
 
-import { checkedExpressions, type ExpressionCheck } from '../document/expression-check.ts';
+import { checkedExpressions, checkedWithoutGoals, type ExpressionCheck } from '../document/expression-check.ts';
 import { runnableDocument, workflowReaderOf, type ReadWorkflow } from '../document/workflow-document.ts';
 import { summaryOf } from '../document/workflow-summary.ts';
 import { runPresenter } from '../presenting/run-presenter.ts';
@@ -20,6 +20,7 @@ import { started, type WorkflowStarts } from '../runs/run-start.ts';
 export interface WorkflowAdapterDependencies extends WorkflowStarts {
   readonly check: ExpressionCheck;
   readonly names: PlaybookOwnNames;
+  readonly goals?: boolean;
 }
 
 export const workflowFacts: DeclaringCapability = { type: 'workflow', facts: { onRuns: [], streams: [runPresenter] } };
@@ -35,7 +36,8 @@ function admittedInput(
 }
 
 export function makeWorkflowAdapter(dependencies: WorkflowAdapterDependencies): Capability {
-  const readWorkflowDocument = workflowReaderOf(dependencies.names);
+  const goals = dependencies.goals ?? false;
+  const readWorkflowDocument = workflowReaderOf(dependencies.names, goals);
   return defineCapability({
     type: workflowFacts.type,
     title: 'Workflow',
@@ -45,8 +47,8 @@ export function makeWorkflowAdapter(dependencies: WorkflowAdapterDependencies): 
     mediaType: 'application/yaml',
     parse: (source: string): Effect.Effect<ReadWorkflow, InvalidInput> =>
       readWorkflowDocument(source, dependencies.mostDurationMs),
-    check: checkedExpressions(dependencies.check),
-    summarize: ({ document }) => summaryOf(document),
+    check: goals ? checkedExpressions(dependencies.check) : checkedWithoutGoals(dependencies.check),
+    summarize: ({ document, contributes }) => summaryOf(document, contributes),
     run: (read, input, run, stripped) =>
       Effect.flatMap(admittedInput(read, input, run), (admitted) =>
         started(dependencies, runnableDocument(read.document, stripped), admitted, run),

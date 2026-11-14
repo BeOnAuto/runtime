@@ -2,37 +2,8 @@ import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { describe } from 'vitest';
 
 import { keptFactsWritten, recordHoldingItsPrompt } from '../testing/kept-facts-written.ts';
+import { acted, caller, onTheRun, calledByAWorkflow, usage, toolCall, modelCall } from '../testing/run-contexts.ts';
 import { RunEventSchema } from './run-events.ts';
-
-const acted = { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' };
-
-const caller = { id: 'key_7f3a', name: 'key_7f3a' };
-
-const onTheRun = {
-  ...acted,
-  runId: '019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
-  definitionType: 'reasoning',
-  definitionName: 'qualify-lead',
-  definitionVersion: 2,
-};
-
-const calledByAWorkflow = {
-  ...onTheRun,
-  calledBy: { runId: '019a3c4e-1111-7c1a-9b3f-2f1e0d9c8b7a', reference: '/do/0/qualify', run: 1 },
-  callDepth: 1,
-  depth: 1,
-  trigger: { kind: 'event', reference: '/schedule/on' },
-} as const;
-
-const usage = {
-  input: { total: 1200, uncached: 200, cache_read: 1000, cache_write: 0 },
-  output: { total: 300, text: 250, reasoning: 50 },
-  total: 1500,
-};
-
-const toolCall = { number: 1, call_id: 'call-1', server: 'crm', tool: 'find_contact' };
-
-const modelCall = { number: 2 };
 
 const ofTheAnswer = { result_bytes: 512, result_sha256: 'd4e5f6', shown_bytes: 256, duration_ms: 140 };
 
@@ -180,6 +151,31 @@ const actingForAPerson: readonly (typeof RunEventSchema.Type)[] = [
   },
 ];
 
+const startedByAGoal: readonly (typeof RunEventSchema.Type)[] = [
+  {
+    type: 'run_started',
+    data: {
+      input: { notice: { goal: 'weekly-stock-health' } },
+      started_by: { id: 'playbook:sales', name: 'sales' },
+      finishes_later: true,
+    },
+    context: {
+      at: '2026-11-02T09:00:00.214Z',
+      by: 'playbook:sales',
+      runId: '019a4b2c-1d3e-7f40-8a51-6b7c8d9e0f1a',
+      definitionType: 'interaction',
+      definitionName: 'tell-the-owner',
+      definitionVersion: 4,
+      depth: 1,
+      trigger: {
+        kind: 'goal',
+        reference: 'goals/weekly-stock-health/assessments/019a4b2c-1d3e-7f40-8a51-6b7c8d9e0f1b',
+      },
+      actsFor: 'person:user_7kLm2',
+    },
+  },
+];
+
 const approvalAsked = {
   request: 'approval-1',
   tool: 'browser_click',
@@ -293,6 +289,7 @@ const releases: Readonly<Record<string, readonly (typeof RunEventSchema.Type)[]>
     { type: 'run_succeeded', data: { output: { score: 0.6 }, record: {}, ...answeredAtALimit }, context: onTheRun },
     { type: 'run_rejected', data: { rejection: { ...stoppedAtALimit, because: 'max_tool_calls' } }, context: onTheRun },
   ],
+  '0.60.0': startedByAGoal,
 };
 
 describe('the facts a playbook records on the stream of a run', () => {

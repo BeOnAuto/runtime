@@ -24,7 +24,9 @@ const StartedSchema = Schema.Struct({ output: Schema.Struct({ status: Schema.Lit
 
 const isStarted = Schema.is(StartedSchema);
 
-export async function workflowPlaybook(): Promise<WorkflowPlaybook> {
+export async function workflowPlaybook({
+  goals = false,
+}: { readonly goals?: boolean } = {}): Promise<WorkflowPlaybook> {
   const ledger = memoryLedger();
   const nested = playbookOn(ledger, [echo]);
   const host = await testHost(nested);
@@ -35,6 +37,7 @@ export async function workflowPlaybook(): Promise<WorkflowPlaybook> {
       mostDurationMs,
       longestCallMs: 660_000,
       names: testPlaybookNames,
+      goals,
     }),
     echo,
   ]);

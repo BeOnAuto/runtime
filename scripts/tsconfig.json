@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["node", "vitest/config"]
   },
-  "include": ["*.ts", "behavioural-check/*.ts"]
+  "include": ["*.ts", "behavioural-check/*.ts", "cedar-notices/*.ts"]
 }

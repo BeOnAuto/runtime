@@ -60,6 +60,7 @@ type RegisteredDefinition<K extends OperationKind> = Pick<
   | 'readsOnly'
   | 'irreversible'
   | 'repeatable'
+  | 'whileRetired'
   | 'permittedBy'
   | 'inputSchema'
   | 'reasons'
@@ -92,6 +93,7 @@ export function registeredFieldsOf<S extends OperationScope, K extends Operation
     readsOnly: definition.readsOnly ?? false,
     irreversible: definition.irreversible ?? false,
     repeatable: definition.repeatable ?? false,
+    ...(definition.whileRetired === true ? { whileRetired: true } : {}),
     permissions,
     reasons: [...new Set(definition.reasons)],
     input: jsonSchemaDocumentOf(definition.inputSchema),

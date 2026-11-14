@@ -38,6 +38,7 @@ export const DefinitionEventSchema = Schema.Union([
     Schema.Struct({
       ...SavedSchema.fields,
       created_by: RecordedCallerSchema,
+      paused: Schema.optionalKey(Schema.Struct({ reason: Schema.optionalKey(Schema.String) })),
       definition_id: Schema.optionalKey(Schema.String),
       playbook: Schema.optionalKey(Schema.String),
     }),

@@ -21,9 +21,25 @@ export interface ReactionStart {
   readonly trace?: SpanReference;
 }
 
+export interface GoalTrigger extends StartingTrigger {
+  readonly kind: 'goal';
+}
+
+export interface FunctionStart {
+  readonly org: string;
+  readonly playbook: string;
+  readonly type: 'interaction';
+  readonly name: string;
+  readonly runId: string;
+  readonly input: Schema.Json;
+  readonly trigger: GoalTrigger;
+}
+
 export class StartRefused extends Data.TaggedError('start_refused')<FailureDetail> {}
 
 export type StartReaction = (start: ReactionStart) => Effect.Effect<void, StartRefused | StartRejected>;
+
+export type StartFunction = (start: FunctionStart) => Effect.Effect<void, StartRefused | StartRejected>;
 
 export function startAnswered(outcome: Outcome): Effect.Effect<void, StartRefused | StartRejected> {
   if (outcome.status === 'succeeded') {
@@ -36,6 +52,14 @@ export function startAnswered(outcome: Outcome): Effect.Effect<void, StartRefuse
   return outcome.reason === 'unavailable'
     ? Effect.fail(new StartRefused(refusal))
     : Effect.fail(new StartRejected(refusal));
+}
+
+const endingsOfARunThatStands: ReadonlySet<string> = new Set(['unanswered', 'cancelled']);
+
+export function functionStartAnswered(outcome: Outcome): Effect.Effect<void, StartRefused | StartRejected> {
+  return outcome.status === 'rejected' && endingsOfARunThatStands.has(outcome.reason)
+    ? Effect.void
+    : startAnswered(outcome);
 }
 
 export interface ReactionOptions {

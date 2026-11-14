@@ -5,10 +5,10 @@ import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import { definitionsListed, definitionWordsFor } from '../plain-language/definition-words.ts';
 import { stagedList } from '../read-model-staging/staged-lists.ts';
-import { ListedDefinitionSchema } from '../registry/definition.ts';
+import { listedDefinitionSchemaOf } from '../registry/definition.ts';
 import { IncludeRetiredField } from './definition-fields.ts';
 
-export function defineListDefinitions(capabilities: readonly Capability[]) {
+export function defineListDefinitions(capabilities: readonly Capability[], goals = false) {
   const known = knownCapabilities(capabilities);
   const words = definitionWordsFor(capabilities);
   return known.publish(
@@ -25,11 +25,11 @@ export function defineListDefinitions(capabilities: readonly Capability[]) {
         type: known.field,
         include_retired: Schema.optionalKey(IncludeRetiredField),
       }),
-      outputSchema: Schema.Struct({ definitions: Schema.Array(ListedDefinitionSchema) }),
+      outputSchema: Schema.Struct({ definitions: Schema.Array(listedDefinitionSchemaOf(goals)) }),
       reasons: ['not_found'],
       handle: Effect.fnUntraced(function* ({ type, include_retired: includeRetired = false }) {
         const capability = yield* known.capabilityOfType(type);
-        const listed = yield* stagedList(capability, includeRetired);
+        const listed = yield* stagedList(capability, includeRetired, goals);
         return { definitions: listed.map((entry) => entry.listed) };
       }),
       plainLanguage: {

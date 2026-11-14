@@ -6,6 +6,7 @@ import type {
   ProjectedRow,
   ProjectedStream,
   RunContext,
+  TriggerKind,
 } from '@on.auto/operations';
 
 import { resultKeyOf, versionKeyOf } from '../positions/activity-addresses.ts';
@@ -20,6 +21,8 @@ import {
 } from './activity-facts.ts';
 
 export const activityName = 'activity';
+
+const noticeTriggerKind: TriggerKind = 'goal';
 
 type RunStarted = Extract<RecordedRunEvent, { readonly type: 'run_started' }>;
 
@@ -46,14 +49,18 @@ function runOf(context: RunContext, by: string): ProjectedRow {
   };
 }
 
+function isResult(context: RunContext): boolean {
+  return isTopLevel(context) && context.trigger?.kind !== noticeTriggerKind;
+}
+
 function started({ data, context }: RunStarted): ProjectedRow | undefined {
-  return isTopLevel(context)
+  return isResult(context)
     ? { ...runOf(context, data.started_by.id), output_shape: data.output_shape ?? null }
     : undefined;
 }
 
 function succeeded(row: ProjectedRow | undefined, context: RunContext): ProjectedRow | undefined {
-  return isTopLevel(context)
+  return isResult(context)
     ? { ...(row ?? runOf(context, context.by)), listed: true, at: millisecondsOf(context.at) }
     : undefined;
 }

@@ -4,6 +4,7 @@ export type DefinitionSaved = 'created' | 'updated';
 
 export type StudioPage =
   | { readonly kind: 'playbook'; readonly playbook: string }
+  | { readonly kind: 'goal'; readonly playbook: string; readonly goal: string; readonly per?: string }
   | {
       readonly kind: 'definition';
       readonly playbook: string;

@@ -3,7 +3,14 @@ import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 import { everyDocumentCarriesItsPage, firstPlaybook, type Built } from './built-recipes.ts';
 import { giveTools } from './give-tools-recipe.ts';
 import { recipesFolder } from './guide-files.ts';
-import { eventsGuideName, pageGuideName, type DefinitionType, type Guide, type Recipe } from './guide-shelf.ts';
+import {
+  eventsGuideName,
+  goalsGuideName,
+  pageGuideName,
+  type DefinitionType,
+  type Guide,
+  type Recipe,
+} from './guide-shelf.ts';
 import { outlines, type RecipeOutline } from './recipe-outlines.ts';
 import type { Carried } from './start-guide.ts';
 
@@ -126,12 +133,15 @@ export function recipesFor(
   shippedFiles: ShippedFiles,
   guides: readonly Guide[],
   definitionTypes: readonly DefinitionType[],
+  { messages = false }: { readonly messages?: boolean } = {},
 ): Promise<readonly Recipe[]> {
   const carried = new Set(guides.map(({ name }) => name));
   const served: Carried = {
     definitionTypes,
     pages: carried.has(pageGuideName),
     events: carried.has(eventsGuideName),
+    goals: carried.has(goalsGuideName),
+    messages,
     recipes: [],
   };
   const offered = offeredWith(carried, served);

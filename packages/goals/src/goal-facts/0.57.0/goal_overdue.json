@@ -1,0 +1,11 @@
+{
+  "type": "goal_overdue",
+  "data": {
+    "since": "2026-11-10T17:00:00.000Z",
+    "told": "summary"
+  },
+  "context": {
+    "at": "2026-11-09T18:00:00.000Z",
+    "by": "playbook:alpha"
+  }
+}

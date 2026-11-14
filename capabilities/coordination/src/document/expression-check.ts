@@ -5,6 +5,7 @@ import { workflowExpressionsOf, type PlacedExpression } from '@on.auto/workflow-
 import type { CheckIssue, CheckJob } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
 
+import { contributesUnknown, contributionExpressionsOf } from './workflow-contributions.ts';
 import { invalidDocument, notRunnable, placeOf, type LocatedIssue, type ReadWorkflow } from './workflow-document.ts';
 
 export type ExpressionCheck = (job: CheckJob) => Effect.Effect<CheckedDocument, InvalidInput | Unavailable>;
@@ -29,7 +30,7 @@ export function checkedExpressions(
   check: ExpressionCheck,
 ): (read: ReadWorkflow) => Effect.Effect<StrippedForms, InvalidInput | Unavailable> {
   return (read) => {
-    const expressions = workflowExpressionsOf(read.document);
+    const expressions = [...workflowExpressionsOf(read.document), ...contributionExpressionsOf(read.contributes)];
     if (expressions.length === 0) {
       return Effect.succeed(noStrippedForms);
     }
@@ -42,4 +43,18 @@ export function checkedExpressions(
       ),
     );
   };
+}
+
+export function checkedWithoutGoals(
+  check: ExpressionCheck,
+): (read: ReadWorkflow) => Effect.Effect<StrippedForms, InvalidInput | Unavailable> {
+  const checked = checkedExpressions(check);
+  return (read) =>
+    read.contributes === undefined
+      ? checked(read)
+      : Effect.fail(
+          invalidDocument(notRunnable, [
+            { position: read.locate(contributesUnknown.pointer), detail: contributesUnknown.detail },
+          ]),
+        );
 }

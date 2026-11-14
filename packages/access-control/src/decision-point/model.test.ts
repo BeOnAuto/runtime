@@ -1,0 +1,131 @@
+import type { AccessDecision, AccessRequest, PrincipalReference, ResourceReference } from '@on.auto/operations';
+import { shippedFilesInMemory } from '@on.auto/shipped-files/testing';
+import { Effect } from 'effect';
+import { beforeAll, describe, expect, it } from 'vitest';
+
+import { accessSchemaFile, builtInPoliciesFile } from '../files/access-control-files.ts';
+import type { RoleAssignments, ScopeReference } from '../roles/role-assignments.ts';
+import {
+  builtIn,
+  cedarOnDisk,
+  createPlaybook,
+  decidedBy,
+  declaredOperations,
+  filesOnDisk,
+  getDefinition,
+  requestOf,
+  rolesHeld,
+  runDefinition,
+  type TestOperation,
+} from '../testing/access-testing.ts';
+import { cedarDecisionPoint } from './cedar-decision-point.ts';
+
+const texts = { schema: '', policies: '' };
+
+beforeAll(async () => {
+  texts.schema = await filesOnDisk.text(accessSchemaFile);
+  texts.policies = await filesOnDisk.text(builtInPoliciesFile);
+});
+
+const acme: ScopeReference = { type: 'org', id: 'acme' };
+
+const ada: PrincipalReference = { type: 'person', id: 'ada' };
+
+const theOrg: ResourceReference = { type: 'org', id: 'acme' };
+
+function inAlpha(definition: string): ResourceReference {
+  return { type: 'definition', id: definition, playbook: 'alpha', org: 'acme' };
+}
+
+function playbook(id: string): ResourceReference {
+  return { type: 'playbook', id, org: 'acme' };
+}
+
+const onlyAdminsUndoNothing =
+  '@id("only-admins-undo-nothing")\nforbid (principal, action, resource) when { context.operation.irreversible } unless { principal in Role::"admin" };';
+
+function answered(
+  decide: (request: AccessRequest) => Promise<AccessDecision>,
+): (request: AccessRequest) => Promise<string> {
+  return async (request) => {
+    const { decision, determiningPolicies } = await decide(request);
+    return `${decision} by ${determiningPolicies.join(', ')}`;
+  };
+}
+
+function withPolicy(policy: string, roles: RoleAssignments): (request: AccessRequest) => Promise<string> {
+  const decisionPoint = cedarDecisionPoint({
+    module: cedarOnDisk,
+    files: shippedFilesInMemory({
+      '@on.auto/access-control': {
+        [accessSchemaFile.path]: texts.schema,
+        [builtInPoliciesFile.path]: `${texts.policies}\n${policy}`,
+      },
+    }),
+    operations: declaredOperations,
+    roles,
+  });
+  return answered((request) => Effect.runPromise(decisionPoint.decide(request)));
+}
+
+function asAdaHolding(
+  roles: RoleAssignments,
+): (operation: TestOperation, resource: ResourceReference) => Promise<string> {
+  const decide = answered(decidedBy(roles));
+  return (operation, resource) => decide(requestOf({ principal: ada, operation, resource }));
+}
+
+function retiringAs(id: string, irreversible: boolean): Promise<string> {
+  const decide = withPolicy(
+    onlyAdminsUndoNothing,
+    rolesHeld({ ada: [builtIn('editor', acme)], grace: [builtIn('admin', acme)] }),
+  );
+  return decide(
+    requestOf({
+      principal: { type: 'person', id },
+      operation: runDefinition,
+      resource: playbook('alpha'),
+      irreversible,
+    }),
+  );
+}
+
+describe('a built-in role held at one playbook or one definition, with the policies as shipped and no change to the question', () => {
+  it('lets a Viewer of the org made Editor of one playbook change that playbook and what is in it, and nothing else', async () => {
+    const asked = asAdaHolding(
+      rolesHeld({ ada: [builtIn('viewer', acme), builtIn('editor', { type: 'playbook', id: 'alpha' })] }),
+    );
+
+    expect(
+      await Promise.all([
+        asked(runDefinition, playbook('alpha')),
+        asked(runDefinition, inAlpha('d-02')),
+        asked(runDefinition, playbook('beta')),
+        asked(createPlaybook, theOrg),
+        asked(getDefinition, playbook('beta')),
+      ]),
+    ).toEqual(['allow by editor', 'allow by editor', 'deny by ', 'deny by ', 'allow by viewer']);
+  });
+
+  it('lets an Editor of one definition inside a playbook change that definition alone', async () => {
+    const asked = asAdaHolding(rolesHeld({ ada: [builtIn('editor', { type: 'definition', id: 'd-02' })] }));
+
+    expect(
+      await Promise.all([
+        asked(runDefinition, inAlpha('d-02')),
+        asked(runDefinition, inAlpha('d-03')),
+        asked(runDefinition, playbook('alpha')),
+      ]),
+    ).toEqual(['allow by editor', 'deny by ', 'deny by ']);
+  });
+});
+
+describe('the model, extended by one more policy and no change to the question', () => {
+  it('keeps everyone but an Admin from what cannot be undone with one forbid on what an operation declares', async () => {
+    expect(await Promise.all([retiringAs('ada', true), retiringAs('grace', true), retiringAs('ada', false)])).toEqual([
+      'deny by only-admins-undo-nothing',
+      'allow by admin',
+      'allow by editor',
+    ]);
+  });
+});

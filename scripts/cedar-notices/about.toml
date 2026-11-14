@@ -1,0 +1,40 @@
+accepted = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "0BSD",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+]
+ignore-build-dependencies = false
+ignore-dev-dependencies = true
+
+[chrono.clarify]
+license = "MIT OR Apache-2.0"
+
+[[chrono.clarify.files]]
+path = "LICENSE.txt"
+checksum = "946c9835d8034d24404f8cfec5f4654cee5dad17e944afc3d06d742cf2882831"
+
+[linked_hash_set.clarify]
+license = "Apache-2.0"
+
+[[linked_hash_set.clarify.files]]
+path = "LICENSE"
+checksum = "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9"
+
+[tsify.clarify]
+license = "MIT OR Apache-2.0"
+
+[[tsify.clarify.files]]
+path = "LICENSE_MIT"
+license = "MIT"
+checksum = "23b988ff99c59aba4e37e7709d3d2102096203bb83a077cbc1aad04dd7a77244"
+
+[[tsify.clarify.files]]
+path = "LICENSE_APACHE"
+license = "Apache-2.0"
+checksum = "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"

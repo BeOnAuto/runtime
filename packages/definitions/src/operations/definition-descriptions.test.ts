@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { defineCapability, makeDefinitionOperations } from '../index.ts';
 import { echo, echoDeclaration } from '../testing/capabilities/echo.ts';
+import { echoingWorkflow } from '../testing/capabilities/paged.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { runContentHolders } from '../testing/harness.ts';
 import { uncheckedPages } from '../testing/page-ports.ts';
@@ -30,6 +31,39 @@ describe('the description of create_definition', () => {
     expect(described('create_definition')).toContain(
       'update_definition changes one saved, and a name is never reused. Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it. A workflow owns one job',
     );
+  });
+});
+
+function createDefinitionDescribed(capabilities: Parameters<typeof makeDefinitionOperations>[0], goals: boolean) {
+  return String(
+    makeDefinitionOperations(
+      capabilities,
+      uncheckedPages,
+      { holders: runContentHolders },
+      { goals, messages: false },
+    ).find(({ registration }) => registration.name === 'create_definition')?.registration.description,
+  );
+}
+
+describe('the description of create_definition where goals are kept', () => {
+  it('says first that a workflow needs its contributes list, and keeps every other sentence in under 800 characters', () => {
+    const kept = createDefinitionDescribed([echo, echoingWorkflow], true);
+
+    expect(kept.split(/(?<=[.!?])\s+(?=\S)/u)).toEqual([
+      'Saves a new function or workflow from its document, without running it; a workflow needs a `contributes` list, as the goals guide says.',
+      'update_definition changes one saved, and a name is never reused.',
+      'Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it.',
+      'A workflow owns one job the business does again and again, and a check, a test or a setup is not one.',
+      "`source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business.",
+      'A function needs `diagram`, a workflow none; the `page` shows the person its runs, as the page guide says.',
+      'A document that does not fit its format is refused with the line and what is wrong.',
+    ]);
+    expect(kept.length).toBeLessThan(800);
+  });
+
+  it('is the description without goals where no workflow is served, and where goals are not kept', () => {
+    expect(createDefinitionDescribed([echo, probe().capability], true)).toBe(described('create_definition'));
+    expect(createDefinitionDescribed([echo, echoingWorkflow], false)).toBe(described('create_definition'));
   });
 });
 

@@ -1606,7 +1606,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "For a run a trigger started, its kind, event, cron or every, and its reference; otherwise null"
+                          "description": "For a run a trigger started, its kind, event, cron, every or goal, and its reference; otherwise null"
                         },
                         "definition": {
                           "anyOf": [
@@ -21001,7 +21001,7 @@
                               "properties": {
                                 "kind": {
                                   "type": "string",
-                                  "description": "event, cron or every"
+                                  "description": "event, cron, every or goal"
                                 },
                                 "reference": {
                                   "type": "string",
@@ -21833,7 +21833,7 @@
                               "properties": {
                                 "kind": {
                                   "type": "string",
-                                  "description": "event, cron or every"
+                                  "description": "event, cron, every or goal"
                                 },
                                 "reference": {
                                   "type": "string",
@@ -22517,7 +22517,7 @@
                           "properties": {
                             "kind": {
                               "type": "string",
-                              "description": "event, cron or every"
+                              "description": "event, cron, every or goal"
                             },
                             "reference": {
                               "type": "string",

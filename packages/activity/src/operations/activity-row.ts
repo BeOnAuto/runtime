@@ -1,13 +1,22 @@
+import { triggerKindsInWords } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { addressOf, ofTheOrg, type ItemForm } from '../positions/activity-addresses.ts';
 import { cursorOf, type ActivityPosition } from '../positions/activity-position.ts';
 
-export type ActivityKind = 'needs_you' | 'broken' | 'new' | 'comment';
+export type ActivityKind = 'needs_you' | 'broken' | 'new' | 'comment' | 'goal' | 'goal_overdue';
 
 export const activityKinds: readonly ActivityKind[] = ['needs_you', 'broken', 'new', 'comment'];
 
 export const seenKinds: ReadonlySet<ActivityKind> = new Set(['new', 'comment']);
+
+export interface GoalShown {
+  readonly goal: string;
+  readonly outcome: 'passed' | 'failed' | 'overdue';
+  readonly title: string | null;
+  readonly says: string | null;
+  readonly resultAt: number;
+}
 
 export interface ActivityRow {
   readonly kind: ActivityKind;
@@ -28,6 +37,7 @@ export interface ActivityRow {
   readonly expires_at: number | null;
   readonly about: string | null;
   readonly reopenedBy?: string;
+  readonly goal?: GoalShown;
 }
 
 const NullableText = (description: string) => Schema.NullOr(Schema.String).annotate({ description });
@@ -51,7 +61,7 @@ export const ActivityRowSchema = Schema.Struct({
     description: 'For a version or a playbook, created or updated; otherwise null',
   }),
   trigger: Schema.NullOr(Schema.Struct({ kind: Schema.String, reference: Schema.String })).annotate({
-    description: 'For a run a trigger started, its kind, event, cron or every, and its reference; otherwise null',
+    description: `For a run a trigger started, its kind, ${triggerKindsInWords}, and its reference; otherwise null`,
   }),
   definition: Schema.NullOr(Schema.Struct({ type: Schema.String, name: Schema.String, version: Schema.Int })).annotate({
     description:

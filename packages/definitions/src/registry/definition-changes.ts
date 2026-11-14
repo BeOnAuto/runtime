@@ -24,7 +24,7 @@ export type DefinitionChange =
   | { readonly kind: 'paused'; readonly name: string }
   | { readonly kind: 'resumed'; readonly name: string; readonly at: string }
   | {
-      readonly kind: 'restored';
+      readonly kind: 'restored' | 'created_paused';
       readonly name: string;
       readonly version: number;
       readonly triggers: readonly Trigger[];
@@ -64,6 +64,9 @@ function runnableTriggersOf({ triggers = [], stripped = noStrippedForms }: Defin
 function savedChangeOf(event: DefinitionSaved): DefinitionChange {
   const { at, definitionName: name, definitionVersion: version } = event.context;
   const triggers = runnableTriggersOf(event.data.content);
+  if (event.type === 'definition_created' && event.data.paused !== undefined) {
+    return { kind: 'created_paused', name, version, triggers, at };
+  }
   if (triggers.length > 0) {
     return { kind: 'activated', name, version, triggers, at };
   }

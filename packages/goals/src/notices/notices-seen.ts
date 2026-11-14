@@ -1,0 +1,126 @@
+import type { RecordedEvent } from '@on.auto/operations';
+import { DeliveryFailed, type Consumer, type FollowedRecord } from '@on.auto/workflow-host';
+import { Effect, Function } from 'effect';
+
+import { noticeRunIdOf, type NoticeChange } from '../assessments/assessment-identity.ts';
+import { goalsWantedIn, goalsWantedWith } from '../assessor/assessor.ts';
+import { summarySeenIn, summarySeenRecorded, type SeenSummary } from '../summaries/summary-ledger.ts';
+import { actingOf, noticeRecorded, type NoticeLedger } from './notice-ledger.ts';
+
+const noticesSeenName = 'goal notices seen';
+
+const noticesSeenSweeps = 20;
+
+const changes: readonly NoticeChange[] = ['passed', 'failed', 'overdue'];
+
+const runStream = /(?:^|\/)runs\/([^/]+)$/u;
+
+const goalReference = /^goals\/[^/]+\/assessments\/([0-9a-f-]{36})$/u;
+
+interface Seen {
+  readonly assessment: string;
+  readonly change: NoticeChange;
+  readonly run: string;
+}
+
+export function noticeSeenIn({ stream, context }: RecordedEvent): Seen | undefined {
+  const { trigger } = context;
+  const assessment = trigger?.kind === 'goal' ? goalReference.exec(trigger.reference)?.[1] : undefined;
+  const run = runStream.exec(stream)?.[1];
+  if (assessment === undefined || run === undefined) {
+    return undefined;
+  }
+  const change = changes.find((asked) => noticeRunIdOf(assessment, asked) === run);
+  return change === undefined ? undefined : { assessment, change, run };
+}
+
+interface NoticeDelivery {
+  readonly key: string;
+  readonly workflow: string;
+  readonly deliver: Effect.Effect<void, DeliveryFailed>;
+  readonly skipped: () => Effect.Effect<void>;
+}
+
+function deliveryOf(
+  ledger: NoticeLedger,
+  { playbook, record }: Pick<FollowedRecord, 'playbook' | 'record'>,
+  seen: Seen,
+  now: () => number,
+): NoticeDelivery {
+  return {
+    key: record.id,
+    workflow: record.context.definitionName ?? noticesSeenName,
+    deliver: Effect.suspend(() =>
+      noticeRecorded(ledger, playbook, seen.assessment, {
+        kind: 'seen',
+        change: seen.change,
+        run: seen.run,
+        ...actingOf(playbook, now()),
+      }),
+    ).pipe(
+      Effect.mapError(
+        () => new DeliveryFailed({ detail: `The start of the notice ${seen.run} could not be recorded now` }),
+      ),
+    ),
+    skipped: Function.constant(Effect.void),
+  };
+}
+
+type Followed = Pick<FollowedRecord, 'playbook' | 'record'>;
+
+function summaryDeliveryOf(
+  ledger: NoticeLedger,
+  { playbook, record }: Followed,
+  seen: SeenSummary,
+  now: () => number,
+): NoticeDelivery {
+  return {
+    key: record.id,
+    workflow: record.context.definitionName ?? noticesSeenName,
+    deliver: Effect.suspend(() => summarySeenRecorded(ledger, playbook, seen, now())).pipe(
+      Effect.mapError(
+        () => new DeliveryFailed({ detail: `The start of the summary ${seen.run} could not be recorded now` }),
+      ),
+    ),
+    skipped: Function.constant(Effect.void),
+  };
+}
+
+function seenDeliveryOf(ledger: NoticeLedger, followed: Followed, now: () => number): NoticeDelivery | undefined {
+  const notice = noticeSeenIn(followed.record);
+  if (notice !== undefined) {
+    return deliveryOf(ledger, followed, notice, now);
+  }
+  const summary = summarySeenIn(followed.record);
+  return summary === undefined ? undefined : summaryDeliveryOf(ledger, followed, summary, now);
+}
+
+interface Batch {
+  readonly deliveries: readonly NoticeDelivery[];
+  readonly through: string | undefined;
+  readonly more: boolean;
+}
+
+export interface NoticesSeen extends Consumer {
+  readonly batchOf: (followed: Followed, after?: string) => Effect.Effect<Batch>;
+  readonly wants: (playbookKey: string) => Effect.Effect<boolean>;
+  readonly wantedWith: string;
+}
+
+export function noticesSeenOf(ledger: NoticeLedger, now: () => number): NoticesSeen {
+  return {
+    name: noticesSeenName,
+    types: ['run_started'],
+    skippedAfterSweeps: noticesSeenSweeps,
+    wants: (playbookKey) => goalsWantedIn(ledger, playbookKey),
+    wantedWith: goalsWantedWith,
+    batchOf: (followed, after) => {
+      const delivery = after === undefined ? seenDeliveryOf(ledger, followed, now) : undefined;
+      return Effect.succeed({
+        deliveries: delivery === undefined ? [] : [delivery],
+        through: delivery === undefined ? undefined : followed.record.id,
+        more: false,
+      });
+    },
+  };
+}

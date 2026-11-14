@@ -8,8 +8,15 @@ import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
 
-const { createDefinition, updateDefinition, retireDefinition, restoreDefinition, resumeDefinition, getRun } =
-  definitionOperationsFor([echo]);
+const {
+  createDefinition,
+  updateDefinition,
+  retireDefinition,
+  restoreDefinition,
+  resumeDefinition,
+  pauseDefinition,
+  getRun,
+} = definitionOperationsFor([echo]);
 
 const startVersion = defineStartVersion([echo]);
 
@@ -114,5 +121,86 @@ describe('the person a run a trigger starts acts for, after the version was put 
     expect(started).toMatchObject({ status: 'succeeded', output: { definition_version: 1 } });
     expect(started).not.toHaveProperty('output.acts_for');
     expect(before).toMatchObject({ status: 'succeeded', output: { acts_for: 'person:user_2ada' } });
+  });
+});
+
+const goal = { kind: 'goal' as const, reference: 'goals/weekly-revenue/assessments/a-1' };
+
+function startingTheActive(input: object = {}, name = 'greet') {
+  return { ...toAlpha(thePlaybook, { type: 'echo', name, input, run_id: runId }), trigger: goal };
+}
+
+describe('a start that names no version', () => {
+  it('runs the active version under the id the host chose, as the playbook, with its trigger', async () => {
+    const definitions = await savedByAdaThenByAKey();
+
+    const started = await definitions.call(startVersion, startingTheActive());
+    const { records } = await runRecordsOf(definitions, runId);
+
+    expect(started).toMatchObject({
+      status: 'succeeded',
+      output: { run_id: runId, definition_version: 2, started_by: { id: 'playbook:alpha' } },
+    });
+    expect(records.map(({ type, context }) => [type, context.trigger])).toEqual([
+      ['run_started', goal],
+      ['run_succeeded', goal],
+    ]);
+  });
+
+  it('starts once: a second start under the id answers the first run as it stands and runs nothing', async () => {
+    const definitions = await savedByAdaThenByAKey();
+
+    const first = await definitions.call(startVersion, startingTheActive({ n: 1 }));
+    const second = await definitions.call(startVersion, startingTheActive({ n: 2 }));
+    const { records } = await runRecordsOf(definitions, runId);
+
+    expect(second).toEqual(first);
+    expect(records).toHaveLength(2);
+  });
+});
+
+describe('a start that names no version, of a definition that cannot start', () => {
+  it('is not_found for a missing definition, and refuses a paused one and a retired one with what it is', async () => {
+    const definitions = await savedByAdaThenByAKey();
+
+    const missing = await definitions.call(startVersion, startingTheActive({}, 'nobody'));
+    await definitions.call(pauseDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet' }));
+    const paused = await definitions.call(startVersion, startingTheActive());
+    await definitions.call(retireDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet' }));
+    const retired = await definitions.call(startVersion, startingTheActive());
+    const { records } = await runRecordsOf(definitions, runId);
+
+    expect([missing, paused, retired]).toMatchObject([
+      { status: 'rejected', reason: 'not_found' },
+      { status: 'rejected', reason: 'conflict', kind: 'paused' },
+      { status: 'rejected', reason: 'conflict', kind: 'retired' },
+    ]);
+    expect(records).toEqual([]);
+  });
+
+  it('answers a run already under the id as it stands while the definition is paused', async () => {
+    const definitions = await savedByAdaThenByAKey();
+    const first = await definitions.call(startVersion, startingTheActive());
+    await definitions.call(pauseDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet' }));
+
+    const again = await definitions.call(startVersion, startingTheActive());
+
+    expect(again).toEqual(first);
+  });
+
+  it('answers a run already under the id as it stands once the definition is retired, and starts none under a new id', async () => {
+    const definitions = await savedByAdaThenByAKey();
+    const first = await definitions.call(startVersion, startingTheActive());
+    await definitions.call(retireDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet' }));
+
+    const again = await definitions.call(startVersion, startingTheActive());
+    const another = await definitions.call(startVersion, {
+      ...toAlpha(thePlaybook, { type: 'echo', name: 'greet', input: {}, run_id: secondRunId }),
+      trigger: goal,
+    });
+
+    expect(again).toEqual(first);
+    expect(another).toMatchObject({ status: 'rejected', reason: 'conflict', kind: 'retired' });
+    expect((await runRecordsOf(definitions, secondRunId)).records).toEqual([]);
   });
 });

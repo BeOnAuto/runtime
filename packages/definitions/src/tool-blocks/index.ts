@@ -3,7 +3,7 @@ export { CallBlockSchema, ToolUseSchema, type CallBlock } from './call-block-sch
 export { callRunOf, longestCallRunMs, type CallPorts } from './call-run.ts';
 export { callOutputInWords } from './call-words.ts';
 export { compiledCallBlock, nameIssues, placeOf, pointerIssues, type DocumentReading } from './compiled-call-block.ts';
-export { textAt, valueAt } from './json-pointers.ts';
+export { isJsonPointer, textAt, valueAt } from './json-pointers.ts';
 export { unrenderableFor, unworkable } from './render-refusals.ts';
 export {
   argumentsFailureWords,

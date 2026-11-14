@@ -1,7 +1,7 @@
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineQuery, permissionRefusalOf, type CallerIdentity } from '../index.ts';
+import { defineCommand, defineQuery, permissionRefusalOf, type CallerIdentity } from '../index.ts';
 import { acmeAdmin, acmeAlphaReader } from '../testing/callers.ts';
 import { harness, toPlaybook, toOrg } from '../testing/harness.ts';
 import { addNote, getNote } from '../testing/notes.ts';
@@ -172,6 +172,36 @@ describe('a retired playbook', () => {
       kind: 'retired',
     });
     expect(ledger.streamNames()).toEqual([]);
+  });
+});
+
+describe('a command a retired playbook still takes', () => {
+  const retiredPlaybooks = [{ org: 'acme', playbook: 'omega' }];
+  const toOmega = toPlaybook('acme', 'omega');
+
+  it('takes a command that declares it is taken while retired, from a caller with the same right as before', async () => {
+    const { dispatcher: calls, run } = harness({ retiredPlaybooks });
+    const takenDown = defineCommand('playbook', {
+      name: 'take_down',
+      title: 'Take down',
+      description: 'Takes something the playbook shared down.',
+      route: { method: 'DELETE', path: '/shared' },
+      whileRetired: true,
+      inputSchema: Schema.Record(Schema.String, Schema.Never),
+      outputSchema: Schema.Struct({ taken: Schema.Boolean }),
+      reasons: [],
+      handle: () => Effect.succeed({ taken: true }),
+    });
+
+    expect(takenDown.registration.whileRetired).toBe(true);
+    expect(addNote.registration).not.toHaveProperty('whileRetired');
+    expect(await run(calls.dispatchToPlaybook(takenDown.registration, toOmega(acmeAdmin)))).toMatchObject({
+      status: 'succeeded',
+      output: { taken: true },
+    });
+    expect(
+      await run(calls.dispatchToPlaybook(takenDown.registration, toOmega(holding('playbook:read')))),
+    ).toMatchObject({ reason: 'forbidden', detail: 'The caller lacks the playbook:write permission' });
   });
 });
 

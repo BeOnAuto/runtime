@@ -26,11 +26,11 @@ interface EntryCompared {
 
 export const ignoredMessage = 'A list entry of the read model answered the warnings its save recorded';
 
-function listedToday(capability: Capability, includeRetired: boolean): Reading<readonly ListedToday[]> {
+function listedToday(capability: Capability, includeRetired: boolean, goals: boolean): Reading<readonly ListedToday[]> {
   return Effect.flatMap(loadRegistry(capability.type), (registry) => {
     const definitions = [...registry.values()].filter((definition) => includeRetired || !isRetired(definition));
     return Effect.forEach(definitions.toSorted(byName), (definition) =>
-      Effect.map(listedDefinitionOf(capability, definition), (listed): ListedToday => ({
+      Effect.map(listedDefinitionOf(capability, definition, undefined, goals), (listed): ListedToday => ({
         listed,
         saved: definition.warnings ?? [],
       })),
@@ -94,13 +94,17 @@ export function listsCompared(
   );
 }
 
-export function stagedList(capability: Capability, includeRetired: boolean): Reading<readonly ListedToday[]> {
+export function stagedList(
+  capability: Capability,
+  includeRetired: boolean,
+  goals = false,
+): Reading<readonly ListedToday[]> {
   return stagedRead({
     read: 'list_definitions',
     reading: 'answers',
     definitionType: capability.type,
     involved: [capability.type],
-    today: listedToday(capability, includeRetired),
+    today: listedToday(capability, includeRetired, goals),
     fromTheReadModel: listedRowsFromTheReadModel(capability, includeRetired),
     answerOf: (candidate) => candidate.map(({ listed }): ListedToday => ({ listed, saved: [] })),
     compared: (today, candidate) => listsCompared(capability.type, today, candidate),

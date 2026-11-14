@@ -1,5 +1,7 @@
 import { Schema } from 'effect';
 
+import { triggerKindsInWords } from '../ledger/trigger-kinds.ts';
+
 export const mostPublicEventDataBytes = 4096;
 
 export const mostShownFieldBytes = 2048;
@@ -25,7 +27,7 @@ const EventCalledBySchema = Schema.Struct({
 }).annotate({ description: 'The call this run answers' });
 
 const EventTriggerSchema = Schema.Struct({
-  kind: Schema.String.annotate({ description: 'event, cron or every' }),
+  kind: Schema.String.annotate({ description: triggerKindsInWords }),
   reference: Schema.String.annotate({ description: 'Where in the definition the trigger is' }),
 }).annotate({ description: 'The trigger that started the run' });
 

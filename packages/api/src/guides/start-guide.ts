@@ -1,7 +1,8 @@
-import type { FunctionType } from '@on.auto/definitions';
 import { articled, capitalized, listed as listedInWords } from '@on.auto/phrasing';
 
+import { itsGoals, type GoalsCarried } from './goals/start-guide-goals.ts';
 import type { DefinitionType, Guide } from './guide-shelf.ts';
+import { whatEachPartDoes } from './start-guide-parts.ts';
 
 export const startGuideName = 'start';
 
@@ -11,7 +12,7 @@ const whatTheStartGuideSays =
 const whatTheStartGuideIsFor =
   'Where an agent begins: what a playbook is made of, what a workflow owns, what the agent does itself, and which guide each task needs.';
 
-export interface Carried {
+export interface Carried extends GoalsCarried {
   readonly definitionTypes: readonly DefinitionType[];
   readonly pages: boolean;
   readonly events: boolean;
@@ -21,15 +22,6 @@ export interface Carried {
 export type StartCarried = Carried & { readonly cards: boolean };
 
 type Lines = (carried: StartCarried) => readonly string[];
-
-const whatEachPartDoes: Readonly<Record<string, string>> = {
-  reasoning: 'it interprets, judges or writes',
-  lookup: 'it reads what a connected service holds, or what earlier runs of the playbook produced',
-  interaction: 'it asks a person and takes their answer, or has a service act',
-  prediction: "it forecasts a quantity from the playbook's own history",
-  computation: 'it calculates or transforms data exactly',
-  generation: 'it makes an image or audio',
-} satisfies Record<FunctionType, string>;
 
 export function serves({ definitionTypes }: Carried, type: string): boolean {
   return definitionTypes.some((served) => served.type === type);
@@ -167,6 +159,10 @@ const whereToGo: Lines = (carried) => [
   '',
   '- What the words of a playbook mean: the guide terminology.',
   ...where(
+    carried.goals === true,
+    "- What a playbook's goals are, and how to learn them with the person before you make anything: the goals guide.",
+  ),
+  ...where(
     follows(carried, 'first-playbook'),
     '- To build a playbook from nothing: the recipe first-playbook, which names the guides its steps need.',
   ),
@@ -283,6 +279,7 @@ const sections: readonly Lines[] = [
   buildFromTheJob,
   whereToGo,
   whatAPlaybookIsMadeOf,
+  itsGoals,
   whatAWorkflowOwns,
   whatYouDoYourself,
   connectingAService,

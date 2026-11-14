@@ -14,6 +14,7 @@ import {
   type ModelCatalog,
   type ModelSettings,
   type ModelTelemetry,
+  type OfferedModels,
 } from '@on.auto/reasoning';
 import { installedPackages, loadEntraIdentity } from '@on.auto/reasoning/installed-packages';
 import type { ToolAccess } from '@on.auto/tool-servers';
@@ -42,6 +43,7 @@ export interface ServedReasoning {
   readonly listModels: ReturnType<typeof defineListModels>;
   readonly getVoice: ReturnType<typeof defineGetVoice>;
   readonly transcribe: ReturnType<typeof defineTranscribe>;
+  readonly offered: OfferedModels;
 }
 
 type ReasoningSettings = Pick<Settings, 'models' | 'proxy' | 'reasoning' | 'providerSetup' | 'generation'>;
@@ -90,10 +92,11 @@ export async function reasoningServedBy(
   const { mostInputTokens } = settings.reasoning;
   await runtime.run(logReasoning(mostInputTokens));
   const catalog = catalogOf(models);
+  const offered = offeredModels(status.configured, settings.models.aliases, settings.models.allowed);
   return {
     capability: makeReasoningFunctionAdapter({
       languageModel: languageModelOf(models),
-      offered: offeredModels(status.configured, settings.models.aliases, settings.models.allowed),
+      offered,
       tools,
       ...keptByRuns(runtime, settings),
       telemetry,
@@ -103,5 +106,6 @@ export async function reasoningServedBy(
     listModels: defineListModels(catalog, settings.providerSetup),
     getVoice: defineGetVoice(settings.models.voice?.reference ?? null),
     transcribe: defineTranscribe(Effect.map(models, ({ voice }) => voice)),
+    offered,
   };
 }

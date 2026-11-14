@@ -100,19 +100,27 @@ interface OwnedTable {
   readonly table: ActivityTable;
 }
 
-function tablesRead(asked: PageAsked): readonly OwnedTable[] {
-  const tables = activityTables.filter(({ kind }) => asked.kinds.has(kind));
+function tablesRead(asked: PageAsked, served: readonly ActivityTable[]): readonly OwnedTable[] {
+  const tables = served.filter(({ kind }) => asked.kinds.has(kind));
   const ofPlaybooks = asked.playbooks.flatMap((owner) => tables.map((table) => ({ owner, table })));
   return asked.withTheOrg && asked.kinds.has(commentTable.kind)
     ? [...ofPlaybooks, { owner: ofTheOrg, table: commentTable }]
     : ofPlaybooks;
 }
 
-export function pageOf(register: PlaybookRegister, asked: PageAsked) {
+export function pageOf(
+  register: PlaybookRegister,
+  asked: PageAsked,
+  served: readonly ActivityTable[] = activityTables,
+) {
   return Effect.gen(function* () {
-    const read = yield* Effect.forEach(tablesRead(asked), ({ owner, table }) => rowsOfTable(owner, table, asked), {
-      concurrency: readsAtOnce,
-    });
+    const read = yield* Effect.forEach(
+      tablesRead(asked, served),
+      ({ owner, table }) => rowsOfTable(owner, table, asked),
+      {
+        concurrency: readsAtOnce,
+      },
+    );
     const merged = [...read.flat(), ...changesShown(register, asked)].toSorted((left, right) =>
       newestFirst(left.position, right.position),
     );

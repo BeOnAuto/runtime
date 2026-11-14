@@ -11,19 +11,17 @@ import {
   type Guide,
   type GuideShelf,
 } from './guide-shelf.ts';
+import { leadingGuidesOf } from './leading-guides.ts';
 import { withLinksResolved } from './page-links.ts';
 import { recipesFor } from './recipes.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
 import { startGuideOf } from './start-guide.ts';
-import { terminologyGuideOf } from './terminology-guide.ts';
 
 export interface ServedType {
   readonly type: string;
   readonly noun: Noun;
   readonly guide: CapabilityGuide;
 }
-
-const terminologyPage = 'concepts/terminology.md';
 
 const templatesPage = 'reference/template.md';
 
@@ -81,6 +79,8 @@ interface CompanionGuide {
 
 interface ServedOptions {
   readonly pages: boolean;
+  readonly goals?: boolean;
+  readonly messages?: boolean;
   readonly companions?: readonly CompanionGuide[];
 }
 
@@ -121,8 +121,9 @@ async function typeGuideOf(
 export async function guideShelfFrom(
   shippedFiles: ShippedFiles,
   served: readonly ServedType[],
-  { pages, companions = [] }: ServedOptions,
+  { pages, goals = false, messages: messagesAsked = false, companions = [] }: ServedOptions,
 ): Promise<GuideShelf> {
+  const messages = goals && messagesAsked;
   const types = inDefinitionTypeOrder(served);
   const companionsOf = (type: string): readonly CompanionGuide[] =>
     companions.filter((companion) => companion.type === type);
@@ -134,10 +135,11 @@ export async function guideShelfFrom(
   const workflows = types.some(({ type }) => type === 'workflow');
   const events = pages || types.some(({ type }) => typesTakingEvents.has(type));
   const pageGuides = [
-    terminologyGuideOf(
-      await pageText(shippedFiles, terminologyPage),
+    ...(await leadingGuidesOf(
+      shippedFiles,
       definitionTypes.map(({ noun }) => noun),
-    ),
+      { goals, messages },
+    )),
     ...(
       await Promise.all(
         types.map(({ type, noun, guide }) => typeGuideOf(shippedFiles, { noun, guide }, companionsOf(type))),
@@ -150,8 +152,9 @@ export async function guideShelfFrom(
       ? [await pageGuideOf(shippedFiles, pagePage, pageAbout), await pageGuideOf(shippedFiles, glancePage, glanceAbout)]
       : []),
   ];
-  const recipes = await recipesFor(shippedFiles, pageGuides, definitionTypes);
+  const recipes = await recipesFor(shippedFiles, pageGuides, definitionTypes, { messages });
   const cards = types.some(({ type }) => companionsOf(type).length > 0);
-  const start = startGuideOf({ definitionTypes, pages, events, cards, recipes: recipes.map(({ name }) => name) });
-  return guideShelfOf([start, ...pageGuides], recipes, definitionTypes);
+  const recipeNames = recipes.map(({ name }) => name);
+  const start = startGuideOf({ definitionTypes, pages, events, cards, goals, messages, recipes: recipeNames });
+  return guideShelfOf([start, ...pageGuides], recipes, definitionTypes, { goals, messages });
 }

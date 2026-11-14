@@ -122,3 +122,21 @@ describe('the versions among the new items of the activity', () => {
     expect(activityRows.rowAfter(undefined, messageOf(runFailed(closeTheWeek, at(1))))).toBeUndefined();
   });
 });
+
+const notice: RunOf = {
+  runId: '019a4012-7c3e-7d10-9b2a-00000000000a',
+  type: 'interaction',
+  name: 'tell-owner',
+  version: 1,
+  trigger: { kind: 'goal', reference: 'goals/paying-customers/assessments/6f1c7a2e-3b4d-5e6f-8a9b-0c1d2e3f4a5b' },
+};
+
+describe('a notice among the new items of the activity', () => {
+  it('keeps no row: a run a goal started is told to its owner, never a new result', async () => {
+    const { record, rows } = projected(activityRows);
+    await record(runStream(notice.runId), runStarted(notice, at(0), 'playbook:finance'));
+    await record(runStream(notice.runId), runSucceeded(notice, at(1)));
+
+    expect(await rows()).toEqual({});
+  });
+});

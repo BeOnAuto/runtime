@@ -1,0 +1,158 @@
+import type { DueWork } from '@on.auto/workflow-host';
+import { Effect } from 'effect';
+import { describe, expect, it } from 'vitest';
+
+import { assessmentIdOf } from '../assessments/assessment-identity.ts';
+import { assessmentsName } from '../goal-tables/assessment-rows.ts';
+import { goalNoticesOf } from '../notices/goal-notices.ts';
+import {
+  experiments,
+  monday,
+  noticeBookOf,
+  sales,
+  startsAnswering,
+  type NoticeBook,
+} from '../notices/notice-samples.ts';
+import { noticesOwedOf } from '../notices/notice-starts.ts';
+import { noticedPlaybookIn } from '../notices/noticed-playbooks.ts';
+import { dayLimitDetail, mostNoticesADay } from './notice-day-limit.ts';
+
+const minute = 60_000;
+
+const atOnce = 16;
+
+const told = { ...experiments, notify: { ...experiments.notify, failed: 'now', summary: { cron: '0 9 * * 1' } } };
+
+async function judgedAll(book: NoticeBook, count: number, playbook = 'sales'): Promise<void> {
+  const things = Array.from({ length: count }, (_, index) => `experiment-${String(index)}`);
+  await Effect.runPromise(
+    Effect.forEach(
+      things,
+      (per) =>
+        Effect.promise(async () => {
+          const stream = `playbook/acme/${playbook}/assessments/${assessmentIdOf({ goal: told.id, per })}`;
+          const opened = {
+            goal: told.id,
+            goals_version: 1,
+            per: { id: per },
+            rule: { settles: 'on_crossing', target: { at_least: 1 } },
+            milestones: told.milestones,
+          };
+          const context = { at: new Date(monday - minute).toISOString(), by: `playbook:${playbook}` };
+          await book.appendAt(stream, 'goal_assessment_opened', opened, context);
+          const verdict = { verdict: 'failed', at: context.at, by: 'crossing', told: 'now' };
+          await book.appendAt(stream, 'goal_assessed', verdict, context);
+        }),
+      { concurrency: atOnce },
+    ),
+  );
+}
+
+async function performedTogether(works: readonly DueWork[], now: number): Promise<void> {
+  const batches = await Effect.runPromise(Effect.forEach(works, (work) => work.due(now, 256, false)));
+  const items = batches.flat();
+  await Effect.runPromise(Effect.forEach(items, ({ perform }) => perform(now), { concurrency: atOnce }));
+}
+
+async function refusedFor(book: NoticeBook, detail: string): Promise<number> {
+  const rows = await Effect.runPromise(
+    book.ledger.readProjectedRows(assessmentsName, sales, { where: [], orderBy: [], order: 'asc', limit: 1000 }),
+  );
+  return rows.filter(({ row }) => String(row['notice_refusals']).includes(detail)).length;
+}
+
+async function burstOf(count: number) {
+  const book = noticeBookOf();
+  await book.playbookCreated();
+  await book.goalsSaved([told]);
+  await judgedAll(book, count);
+  return { book, seen: startsAnswering(() => 'started') };
+}
+
+describe('a burst of notices owed at one moment, none of whose starts is seen yet', () => {
+  it('starts at most the most a day, counting each start as it is made, and refuses the rest', async () => {
+    const { book, seen } = await burstOf(250);
+    const work = noticesOwedOf({ ledger: book.ledger, start: seen.start, playbookOf: noticedPlaybookIn(book.ledger) });
+    await performedTogether([work], monday);
+    await performedTogether([work], monday + 2 * minute);
+
+    expect(new Set(seen.starts.map(({ runId }) => runId)).size).toBe(mostNoticesADay);
+    expect(await refusedFor(book, dayLimitDetail(sales, monday))).toBe(250 - mostNoticesADay);
+  });
+
+  it('counts the starts of notices and summaries of one playbook together', async () => {
+    const { book, seen } = await burstOf(mostNoticesADay);
+    const parts = goalNoticesOf({
+      ledger: book.ledger,
+      start: seen.start,
+      playbookOf: noticedPlaybookIn(book.ledger),
+      now: () => monday,
+    });
+    await performedTogether(parts.dueWork, monday);
+
+    expect(seen.starts).toHaveLength(mostNoticesADay);
+    expect(seen.starts.some(({ trigger }) => trigger.reference.includes('/summaries/'))).toBe(false);
+    expect(await book.factsOf(`goal-summaries/${told.id}`)).toEqual(['goal_notice_refused']);
+  });
+});
+
+async function seenEarlier(book: NoticeBook, count: number): Promise<void> {
+  const at = new Date(monday - 60 * minute).toISOString();
+  await Promise.all(
+    Array.from({ length: count }, (_, index) =>
+      book.append(
+        `goal-summaries/earlier-${String(index)}`,
+        'goal_notice_started',
+        { due: at, run: `earlier-${String(index)}` },
+        { at, by: 'playbook:sales' },
+      ),
+    ),
+  );
+}
+
+describe('a burst owed after a restart, with starts already seen that day', () => {
+  it('counts the starts seen and the starts made since, so 150 seen and 250 owed start 50', async () => {
+    const { book, seen } = await burstOf(250);
+    await seenEarlier(book, 150);
+    const restarted = noticesOwedOf({
+      ledger: book.ledger,
+      start: seen.start,
+      playbookOf: noticedPlaybookIn(book.ledger),
+    });
+    await performedTogether([restarted], monday);
+    await performedTogether([restarted], monday + 2 * minute);
+
+    expect(new Set(seen.starts.map(({ runId }) => runId)).size).toBe(mostNoticesADay - 150);
+    expect(await refusedFor(book, dayLimitDetail(sales, monday))).toBe(250 - (mostNoticesADay - 150));
+  });
+});
+
+describe('the notices of two playbooks in one host', () => {
+  it('keeps the count of each playbook apart, so two playbooks in one host owing 200 each start 200 each', async () => {
+    const { book, seen } = await burstOf(mostNoticesADay);
+    await book.playbookFact('playbook_created', {
+      playbook: 'north',
+      name: 'North',
+      description: 'North',
+      created_by: { id: 'person:ada', name: 'Ada' },
+    });
+    await book.appendAt('playbook/acme/north/goals/playbook', 'playbook_goals_saved', {
+      source: 'goals',
+      goals: [told],
+      version: 1,
+    });
+    await judgedAll(book, mostNoticesADay, 'north');
+    const parts = goalNoticesOf({
+      ledger: book.ledger,
+      start: seen.start,
+      playbookOf: noticedPlaybookIn(book.ledger),
+      now: () => monday,
+    });
+    await performedTogether(parts.dueWork.slice(0, 1), monday);
+    await performedTogether(parts.dueWork.slice(0, 1), monday);
+
+    expect(
+      ['sales', 'north'].map((playbook) => seen.starts.filter((start) => start.playbook === playbook).length),
+    ).toEqual([mostNoticesADay, mostNoticesADay]);
+  });
+});

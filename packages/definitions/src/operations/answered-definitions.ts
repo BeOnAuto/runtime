@@ -7,8 +7,8 @@ import type { DefinitionTexts } from '../payloads/definition-texts.ts';
 import { TextsInHand, textsByDigestOf, type TextsByDigest } from '../payloads/kept-texts.ts';
 import type { DefinitionContent } from '../registry/definition-events.ts';
 import type { Definition, ListedDefinition, StoredDefinition } from '../registry/definition.ts';
-import { shapeNameIn } from '../shapes/published-output.ts';
 import { sourceToPrepare } from './definition-views.ts';
+import { publishedDetails } from './published-details.ts';
 import { textsToAnswer, type Change } from './unread-texts.ts';
 
 export const byName = Order.mapInput(Order.String, ({ name }: StoredDefinition) => name);
@@ -68,20 +68,20 @@ function warningsOf(
   });
 }
 
-function publishedDetails({ details }: StoredDefinition): Pick<Definition, 'details'> {
-  const shape = shapeNameIn(details);
-  return shape === undefined ? {} : { details: { shape } };
-}
-
 const answeredApart = ['details', 'stripped', 'page', 'warnings', 'source', 'overview', 'diagram'] as const;
 
-export function listedWith(capability: Capability, stored: Kept, warnings: readonly string[]): ListedDefinition {
+export function listedWith(
+  capability: Capability,
+  stored: Kept,
+  warnings: readonly string[],
+  goals = false,
+): ListedDefinition {
   return {
     type: capability.type,
     media_type: capability.mediaType,
     ...Struct.omit(stored, answeredApart),
     ...(warnings.length === 0 ? {} : { warnings }),
-    ...publishedDetails(stored),
+    ...publishedDetails(stored, goals),
   };
 }
 
@@ -89,21 +89,29 @@ export function listedDefinitionOf(
   capability: Capability,
   stored: Kept,
   source?: string,
+  goals = false,
 ): Effect.Effect<ListedDefinition> {
-  return Effect.map(warningsOf(capability, stored, source), (warnings) => listedWith(capability, stored, warnings));
+  return Effect.map(warningsOf(capability, stored, source), (warnings) =>
+    listedWith(capability, stored, warnings, goals),
+  );
 }
 
 export function definitionOf(
   capability: Capability,
   stored: Kept,
   texts: DefinitionTexts<string>,
+  goals = false,
 ): Effect.Effect<Definition> {
-  return Effect.map(listedDefinitionOf(capability, stored, texts.source), (listed) => ({ ...listed, ...texts }));
+  return Effect.map(listedDefinitionOf(capability, stored, texts.source, goals), (listed) => ({
+    ...listed,
+    ...texts,
+  }));
 }
 
 export interface Answering {
   readonly change?: Change;
   readonly inHand?: TextsByDigest;
+  readonly goals?: boolean;
 }
 
 export interface DefinitionAnswered {
@@ -119,11 +127,11 @@ export function withTheTextsInHand(inHand: TextsByDigest) {
 export function definitionAnswered(
   capability: Capability,
   stored: Kept,
-  { change, inHand = new Map() }: Answering = {},
+  { change, inHand = new Map(), goals = false }: Answering = {},
 ) {
   return textsToAnswer(capability.type, stored, change).pipe(
     Effect.flatMap((texts) =>
-      Effect.map(definitionOf(capability, stored, texts), (definition): DefinitionAnswered => ({
+      Effect.map(definitionOf(capability, stored, texts, goals), (definition): DefinitionAnswered => ({
         definition,
         inHand: textsByDigestOf(stored, texts),
       })),

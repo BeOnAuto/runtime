@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { namesFound } from '../content/content-tables.ts';
 import { structureIn } from '../structure/database-structure-behaviour.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
+import { carryingOnToTheLayoutKept, theLayoutOfTheLastLedgerStep } from './carrying-on-behaviour.ts';
 import { layoutWritten } from './layout-kept.ts';
 import { layoutIn } from './ledger-layout-behaviour.ts';
-import { ledgerLayout, ledgerLayoutFloor } from './ledger-layout.ts';
+import { ledgerLayoutFloor } from './ledger-layout.ts';
 import { ledgerLayoutSteps } from './ledger-steps.ts';
 
 const theLayoutThatDropsTheTableOfMemories = 15;
@@ -59,14 +60,19 @@ function theOrgsIndexesBehaviour(entry: LedgerEntry): void {
       await aLedger(entry, made);
       await aDatabaseOfTheLayoutBeforeTheOrgsIndexes(entry, database);
 
-      await entry.carriedOn(database, { kept: ledgerLayout, floor: ledgerLayoutFloor, steps: ledgerLayoutSteps });
+      await entry.carriedOn(database, {
+        kept: theLayoutOfTheLastLedgerStep,
+        floor: ledgerLayoutFloor,
+        steps: ledgerLayoutSteps,
+      });
       const carried = {
         layout: (await layoutIn(entry, database)).layout,
         indexes: Object.keys((await structureIn(entry, database)).indexes),
       };
+      await entry.carriedOn(database, carryingOnToTheLayoutKept);
       await aLedger(entry, database);
 
-      expect(carried.layout).toBe(ledgerLayout);
+      expect(carried.layout).toBe(theLayoutOfTheLastLedgerStep);
       expect(carried.indexes.filter((index) => theIndexesOfEither.has(index))).toEqual([]);
       expect(await structureIn(entry, database)).toEqual(await structureIn(entry, made));
     });

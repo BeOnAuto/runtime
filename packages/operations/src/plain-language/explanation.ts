@@ -259,7 +259,13 @@ function rejectionWords(
 ): string {
   const { why, remedy, mayHaveChanged } = explanationOf(rejection, remedies, explanations);
   const unchanged = operationKind === 'command' && mayHaveChanged === undefined ? ' Nothing was changed.' : '';
-  return `Could not ${attempt}: ${why}.${unchanged} ${remedy}`;
+  return `${questionFirst(rejection)}Could not ${attempt}: ${why}.${unchanged} ${remedy}`;
+}
+
+const askedOfThePerson = 'Ask the person: ';
+
+function questionFirst({ detail }: Rejected): string {
+  return detail.startsWith(askedOfThePerson) ? `${detail} ` : '';
 }
 
 function failureWords(attempt: string, { incident }: Failed): string {

@@ -4,6 +4,7 @@ import { Effect, type Schema } from 'effect';
 import { eventCodecOf } from './event-codec.ts';
 import type { RecordedMessage, StreamMessagesStore, Streams } from './event-store.ts';
 import { foldEvents } from './fold-events.ts';
+import type { StreamAgesStore } from './stream-ages/stream-ages-store.ts';
 
 function decodedOf<Event extends Recorded>(
   message: RecordedMessage | undefined,
@@ -28,10 +29,22 @@ export function factReaderOf(store: StreamMessagesStore): StreamReader['factAt']
     );
 }
 
-export function streamReaderOf(store: Streams): StreamReader['load'] {
+export type LastPositionOf = NonNullable<StreamAgesStore['lastPositionOf']>;
+
+function readAfter(lastPositionOf: LastPositionOf | undefined, stream: string, lastFactAlone: boolean) {
+  return lastPositionOf === undefined || !lastFactAlone
+    ? Effect.succeed(0)
+    : Effect.map(
+        Effect.promise(() => lastPositionOf(stream)),
+        (last) => Math.max(0, last - 1),
+      );
+}
+
+export function streamReaderOf(store: Streams, lastPositionOf?: LastPositionOf): StreamReader['load'] {
   return (stream, fold) =>
     Effect.gen(function* () {
-      const recorded = yield* Effect.promise(() => store.read(stream));
+      const after = yield* readAfter(lastPositionOf, stream, fold.lastFactAlone === true);
+      const recorded = yield* Effect.promise(() => store.read(stream, after));
       const events = yield* Effect.forEach(recorded.messages, eventCodecOf(fold.eventSchema).decode);
       return { state: foldEvents(fold.evolve, fold.initialState, events), version: recorded.version };
     });

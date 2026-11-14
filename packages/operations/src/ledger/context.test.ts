@@ -9,6 +9,7 @@ import {
   EmittedContextSchema,
   RecordedCallerSchema,
   RunContextSchema,
+  StartingTriggerSchema,
   bytesOfReference,
   checkedContext,
   contextOf,
@@ -19,6 +20,7 @@ import {
   type Context,
 } from './context.ts';
 import { factOf, recordingOf } from './decider.ts';
+import { triggerKinds, triggerKindsInWords } from './trigger-kinds.ts';
 
 const ofACall: Context = {
   at: '2026-10-09T12:43:51.435Z',
@@ -151,5 +153,20 @@ describe('a fact as a decider records it', () => {
     expect(() => recorded({ type: 'noted', data: { note: 'kept' } }, { at: ofACall.at, by: ofACall.by })).toThrow(
       'Missing key',
     );
+  });
+});
+
+describe('the kinds of trigger that start a run', () => {
+  it('are listed once, and the schema and the words are read from the list', () => {
+    expect(triggerKinds).toEqual(['event', 'cron', 'every', 'goal']);
+    expect(triggerKindsInWords).toBe('event, cron, every or goal');
+    expect(
+      triggerKinds.map((kind) =>
+        Result.isSuccess(Schema.decodeUnknownResult(StartingTriggerSchema)({ kind, reference: '/a' })),
+      ),
+    ).toEqual([true, true, true, true]);
+    expect(
+      Result.isFailure(Schema.decodeUnknownResult(StartingTriggerSchema)({ kind: 'client', reference: '/a' })),
+    ).toBe(true);
   });
 });

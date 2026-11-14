@@ -25,6 +25,7 @@ export interface StoresAndConnections extends OwnKeysRead {
   readonly offering: ReturnType<typeof makeProviderOffering>;
   readonly clientMetadata: RegisterRoutes;
   readonly license: ServedLicense;
+  readonly studioAddress: { readonly studio: Settings['studio']; readonly runtime: () => string };
 }
 
 type ServingSettings = Pick<
@@ -114,5 +115,6 @@ export async function storesAndConnectionsOf(
     offering: makeProviderOffering(services),
     clientMetadata: clientMetadataRoutes(servedClientMetadataDocumentOf(settings, pages)),
     license: await licenseServedBy(runtime, settings.license, stores.secrets),
+    studioAddress: pages,
   };
 }

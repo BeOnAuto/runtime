@@ -9,14 +9,19 @@ import { defineRunDefinition } from './run-definition.ts';
 import { standingChangesOf } from './standing-changes.ts';
 import { defineUpdateDefinition } from './update-definition.ts';
 
-export function operationsOnDefinitions(capabilities: readonly Capability[], pages: SubjectPages) {
+export function operationsOnDefinitions(
+  capabilities: readonly Capability[],
+  pages: SubjectPages,
+  kept: NonNullable<Parameters<typeof defineCreateDefinition>[2]>,
+) {
+  const { goals } = kept;
   return [
-    defineCreateDefinition(capabilities, pages),
-    defineListDefinitions(capabilities),
-    defineGetDefinition(capabilities, pages),
-    ...pageRenderings(capabilities, pages),
-    defineUpdateDefinition(capabilities, pages),
-    ...standingChangesOf(capabilities),
+    defineCreateDefinition(capabilities, pages, kept),
+    defineListDefinitions(capabilities, goals),
+    defineGetDefinition(capabilities, pages, goals),
+    ...pageRenderings(capabilities, pages, goals),
+    defineUpdateDefinition(capabilities, pages, kept),
+    ...standingChangesOf(capabilities, goals),
     defineRunDefinition(capabilities),
     defineGetRun(capabilities, pages),
   ];

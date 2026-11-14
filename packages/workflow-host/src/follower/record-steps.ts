@@ -49,6 +49,7 @@ export interface Stepping {
   readonly gate: RunGate;
   readonly mode: Mode;
   readonly delivered: () => ReadonlySet<string>;
+  readonly registered?: () => readonly Consumer[];
   readonly pageRead: (delivered: ReadonlySet<string>) => void;
   readonly readWithData: (type: string) => boolean;
   readonly delivers: (type: string) => Effect.Effect<boolean>;
@@ -142,7 +143,7 @@ function followedReadingsOf(parts: StepParts, stepping: Stepping, relative: Reco
     return Effect.succeed({ readings: ['unreadable'], content: 'read' });
   }
   const followed = { playbook: playbookOfKey(playbookKey), playbookKey, record: relative, event };
-  const wanting = parts.registered.filter(({ types }) => types.includes(event.event.type));
+  const wanting = (stepping.registered?.() ?? parts.registered).filter(({ types }) => types.includes(event.event.type));
   return Effect.flatMap(stepping.reactsTo(event.event.type), (reacting) => {
     const consumers = [...(reacting ? parts.consumers : []), ...wanting];
     return consumers.length === 0 ? Effect.succeed(nothingFollowed) : boundToTheRead(stepping, followed, consumers);

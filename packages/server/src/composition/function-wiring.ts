@@ -1,4 +1,5 @@
 import type { ProvidedOnceServed } from '../capability-registry/served-ports.ts';
+import type { GoalsPortsOver } from '../goals/goals-engine-lists.ts';
 import { workerPool, type ProgramPoolOf, type ServedComputation } from './served-computation.ts';
 import type { GenerationWiring } from './served-generation.ts';
 import { projectionWiring, type ProjectionWiring } from './served-projections.ts';
@@ -14,6 +15,10 @@ export interface ServedWiring extends Omit<FunctionWiring, 'programPoolOf'>, Too
   readonly computation: ServedComputation;
   readonly prediction: ProvidedOnceServed;
   readonly generation: GenerationWiring;
+  readonly goals: boolean;
+  readonly results: boolean;
+  readonly messages: boolean;
+  readonly goalsPortsOver?: GoalsPortsOver | undefined;
 }
 
 export function functionWiringOf(
