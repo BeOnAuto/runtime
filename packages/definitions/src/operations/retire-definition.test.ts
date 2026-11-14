@@ -7,6 +7,8 @@ import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
+const anId: unknown = expect.any(String);
+
 const { createDefinition, runDefinition, retireDefinition } = definitionOperationsFor([echo, probe().capability]);
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -20,6 +22,7 @@ const retiringPlain = toAlpha(acmeAdmin, { type: 'probe', name: 'plain' });
 const retiredPlain = {
   type: 'probe',
   name: 'plain',
+  definition_id: anId,
   version: 1,
   status: 'retired',
   media_type: 'text/plain',

@@ -6,6 +6,8 @@ import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { asQueryString, firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
+const anId: unknown = expect.any(String);
+
 const { createDefinition, getDefinition, retireDefinition } = definitionOperationsFor([echo, probe().capability]);
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -46,6 +48,7 @@ describe('get_definition', () => {
       output: {
         type: 'probe',
         name: 'plain',
+        definition_id: anId,
         version: 1,
         status: 'active',
         media_type: 'text/plain',

@@ -35,7 +35,12 @@ const SavedSchema = Schema.Struct({ content: DefinitionContentSchema });
 export const DefinitionEventSchema = Schema.Union([
   factOf(
     'definition_created',
-    Schema.Struct({ ...SavedSchema.fields, created_by: RecordedCallerSchema }),
+    Schema.Struct({
+      ...SavedSchema.fields,
+      created_by: RecordedCallerSchema,
+      definition_id: Schema.optionalKey(Schema.String),
+      playbook: Schema.optionalKey(Schema.String),
+    }),
     DefinitionContextSchema,
     keepsItsTexts,
   ),

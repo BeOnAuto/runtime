@@ -9,6 +9,7 @@ import {
   type AppendSignal,
   type ConnectionPorts,
   type FactSchemaRead,
+  type DefinitionNames,
   type LayoutStep,
   type LedgerServices,
   type ReceivedWebhooks,
@@ -27,6 +28,7 @@ interface KeptByTheLedger {
   readonly projections?: readonly KeyedProjection[];
   readonly streamProjections?: readonly StreamProjection[];
   readonly holders?: ContentHolders;
+  readonly definitionNames?: DefinitionNames;
   readonly layoutSteps?: readonly LayoutStep[];
   readonly factSchemas?: readonly FactSchemaRead[];
   readonly appends?: AppendSignal;

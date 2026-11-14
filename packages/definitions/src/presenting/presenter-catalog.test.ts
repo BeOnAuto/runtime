@@ -26,7 +26,7 @@ const runStream = `runs/${runId}`;
 
 const definitionStream = definitionTypeStreamOf(longestType);
 
-const definitionsOfTheLongestType = definitionsDecider(longestType);
+const definitionsOfTheLongestType = definitionsDecider(longestType, { org: 'acme', playbook: 'alpha' });
 
 const eventStream = publishedEventStreamOf('/ledger/eu', 'm-1');
 

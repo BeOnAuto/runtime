@@ -13889,6 +13889,10 @@
                       "type": "string",
                       "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
                     },
+                    "definition_id": {
+                      "type": "string",
+                      "description": "The id of the definition, given when it was created and never changed"
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": 1,
@@ -14237,6 +14241,7 @@
                   "required": [
                     "type",
                     "name",
+                    "definition_id",
                     "version",
                     "status",
                     "media_type",
@@ -14370,6 +14375,10 @@
                         "name": {
                           "type": "string",
                           "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                        },
+                        "definition_id": {
+                          "type": "string",
+                          "description": "The id of the definition, given when it was created and never changed"
                         },
                         "version": {
                           "type": "integer",
@@ -14589,6 +14598,7 @@
                       "required": [
                         "type",
                         "name",
+                        "definition_id",
                         "version",
                         "status",
                         "media_type",
@@ -14725,6 +14735,10 @@
                     "name": {
                       "type": "string",
                       "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                    },
+                    "definition_id": {
+                      "type": "string",
+                      "description": "The id of the definition, given when it was created and never changed"
                     },
                     "version": {
                       "type": "integer",
@@ -15070,6 +15084,7 @@
                   "required": [
                     "type",
                     "name",
+                    "definition_id",
                     "version",
                     "status",
                     "media_type",
@@ -15223,6 +15238,10 @@
                     "name": {
                       "type": "string",
                       "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                    },
+                    "definition_id": {
+                      "type": "string",
+                      "description": "The id of the definition, given when it was created and never changed"
                     },
                     "version": {
                       "type": "integer",
@@ -15572,6 +15591,7 @@
                   "required": [
                     "type",
                     "name",
+                    "definition_id",
                     "version",
                     "status",
                     "media_type",
@@ -15717,6 +15737,10 @@
                     "name": {
                       "type": "string",
                       "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                    },
+                    "definition_id": {
+                      "type": "string",
+                      "description": "The id of the definition, given when it was created and never changed"
                     },
                     "version": {
                       "type": "integer",
@@ -16062,6 +16086,7 @@
                   "required": [
                     "type",
                     "name",
+                    "definition_id",
                     "version",
                     "status",
                     "media_type",
@@ -16317,6 +16342,10 @@
                       "type": "string",
                       "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
                     },
+                    "definition_id": {
+                      "type": "string",
+                      "description": "The id of the definition, given when it was created and never changed"
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": 1,
@@ -16661,6 +16690,7 @@
                   "required": [
                     "type",
                     "name",
+                    "definition_id",
                     "version",
                     "status",
                     "media_type",
@@ -16797,6 +16827,10 @@
                       "type": "string",
                       "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
                     },
+                    "definition_id": {
+                      "type": "string",
+                      "description": "The id of the definition, given when it was created and never changed"
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": 1,
@@ -17141,6 +17175,7 @@
                   "required": [
                     "type",
                     "name",
+                    "definition_id",
                     "version",
                     "status",
                     "media_type",
@@ -17277,6 +17312,10 @@
                       "type": "string",
                       "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
                     },
+                    "definition_id": {
+                      "type": "string",
+                      "description": "The id of the definition, given when it was created and never changed"
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": 1,
@@ -17621,6 +17660,7 @@
                   "required": [
                     "type",
                     "name",
+                    "definition_id",
                     "version",
                     "status",
                     "media_type",
@@ -17757,6 +17797,10 @@
                       "type": "string",
                       "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
                     },
+                    "definition_id": {
+                      "type": "string",
+                      "description": "The id of the definition, given when it was created and never changed"
+                    },
                     "version": {
                       "type": "integer",
                       "minimum": 1,
@@ -18101,6 +18145,7 @@
                   "required": [
                     "type",
                     "name",
+                    "definition_id",
                     "version",
                     "status",
                     "media_type",

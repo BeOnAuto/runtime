@@ -101,8 +101,9 @@ export function harness(
   meter: Layer.Layer<RunMeter> | Layer.Layer<never> = admittingMeter,
   store?: Parameters<typeof memoryLedger>[3],
   readModel?: ReadModelStaged,
+  definitionNames?: Parameters<typeof stagedLedgerOf>[3],
 ): Harness {
-  const { ledger, staged, logged } = stagedLedgerOf(playbookContentHolders, store, readModel);
+  const { ledger, staged, logged } = stagedLedgerOf(playbookContentHolders, store, readModel, definitionNames);
   const read = ledgerReadsOf(ledger);
   const recording = recordingReporter();
   const services = Layer.mergeAll(

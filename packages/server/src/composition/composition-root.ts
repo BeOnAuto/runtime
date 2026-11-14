@@ -59,6 +59,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       prediction: made.prediction,
       generation: { shippedFiles, contentAddressKey: ownKeys.contentAddressKey, ownOrigin },
     });
+    made.bounds.keptFrom(functions.parts.capabilities);
     const parts = {
       ledger,
       workflows,
@@ -94,6 +95,7 @@ export function compositionRootWith(
       ledgerLayerFor(settings, database, {
         declared: made.prediction.provided.capability.facts.onRuns,
         appends: wiring.projections.appends,
+        mostActiveOf: made.bounds.mostActiveOf,
       }),
       settings,
     );

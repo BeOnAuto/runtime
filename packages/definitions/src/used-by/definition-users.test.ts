@@ -10,6 +10,7 @@ const at = '2026-10-01T09:00:00.000Z';
 function saved(name: string, details?: Schema.JsonObject, status: 'active' | 'retired' = 'active'): StoredDefinition {
   return {
     name,
+    definition_id: `id-of-${name}`,
     version: 1,
     status,
     source: { inline: '' },

@@ -12,6 +12,7 @@ import { readsCompared, triggersSinceCompared } from './staged-reads.ts';
 
 const stored: RegisteredDefinition = {
   name: 'greet',
+  definition_id: 'id-of-greet',
   version: 1,
   status: 'active',
   source: { inline: 'x' },

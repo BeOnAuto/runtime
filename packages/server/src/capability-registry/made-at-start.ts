@@ -1,3 +1,4 @@
+import { definitionBoundsHeld, type DefinitionBounds } from '@on.auto/definitions/identity';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import { pageFiltersOn } from '@on.auto/workflow-engine';
 import { projectorBounds } from '@on.auto/workflow-host';
@@ -11,6 +12,7 @@ import { providedOnceServed, type ProvidedOnceServed } from './served-ports.ts';
 
 export interface MadeAtStart {
   readonly registry: HeldRegistry;
+  readonly bounds: DefinitionBounds;
   readonly extensions: ServedExtensions;
   readonly computation: ServedComputation;
   readonly prediction: ProvidedOnceServed;
@@ -36,5 +38,5 @@ export async function madeAtStart(
       triesBeforeStall: projectorBounds.triesBeforeStall,
     }),
   );
-  return { registry: capabilityRegistryHeld(), extensions, computation, prediction };
+  return { registry: capabilityRegistryHeld(), bounds: definitionBoundsHeld(), extensions, computation, prediction };
 }

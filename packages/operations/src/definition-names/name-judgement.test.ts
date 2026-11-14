@@ -69,6 +69,7 @@ function nameAfter(before: DefinitionName | undefined, { type, data }: Pick<Name
 
 const names: DefinitionNames = {
   types: ['made', 'renamed', 'paused', 'set_aside', 'forgotten'],
+  holdsNames: (stream) => !stream.startsWith('runs/'),
   definitionKeyOf: ({ data }) => {
     const { definition } = dataOf(data);
     return definition === undefined ? undefined : `definition/acme/${definition}/`;
@@ -128,10 +129,11 @@ function judged(
 }
 
 describe('the names of an append, judged at once', () => {
-  it('groups the facts of an append by the definition the declaration names, in the order of their keys, the stream of each its last', () => {
+  it('groups the facts of an append by the definition the declaration names, in the order of their keys, the stream of each its last, and none of a stream that holds no names', () => {
     const grouped = definitionsInTheAppend(names, [
       message('made', { definition: 'b', name: 'one' }),
       message('remarked', {}),
+      message('made', { definition: 'c', name: 'four' }, 'runs/r1'),
       message('made', { definition: 'a', name: 'two' }),
       message('renamed', { definition: 'b', name: 'three' }, 'elsewhere'),
     ]);

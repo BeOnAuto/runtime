@@ -47,6 +47,7 @@ const alpha = 'playbook/acme/alpha/';
 
 const sharingOneStream: DefinitionNames = {
   types: ['claimed'],
+  holdsNames: () => true,
   definitionKeyOf: ({ data }) => `definition/acme/${claimedBy(data).definition}/`,
   nameAfter: (_held, { data }) => ({
     playbookKey: alpha,

@@ -28,8 +28,9 @@ export interface NameBound {
 
 export interface DefinitionNames {
   readonly types: readonly string[];
+  readonly holdsNames: (stream: string) => boolean;
   readonly definitionKeyOf: (message: NamedMessage) => string | undefined;
-  readonly nameAfter: (held: DefinitionName | undefined, message: ProjectedMessage) => NameAfter;
+  readonly nameAfter: (held: DefinitionName | undefined, message: NamedMessage) => NameAfter;
   readonly takenBy: (claimed: DefinitionName, holder: DefinitionName) => Conflict;
   readonly bounds?: readonly NameBound[];
 }
@@ -76,7 +77,7 @@ export function definitionsInTheAppend(
 ): readonly DefinitionInTheAppend[] {
   const byKey = new Map<string, DefinitionInTheAppend>();
   for (const message of messages) {
-    const definitionKey = names.definitionKeyOf(message);
+    const definitionKey = names.holdsNames(message.stream) ? names.definitionKeyOf(message) : undefined;
     if (definitionKey !== undefined) {
       const before = byKey.get(definitionKey)?.messages ?? [];
       byKey.set(definitionKey, { definitionKey, stream: message.stream, messages: [...before, message] });

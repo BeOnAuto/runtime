@@ -1,0 +1,22 @@
+{
+  "type": "definition_created",
+  "data": {
+    "content": {
+      "source": "document:\n  dsl: 1.0.3\ndo: []\n"
+    },
+    "created_by": {
+      "id": "person:user_2ada",
+      "name": "Ada Lovelace"
+    },
+    "definition_id": "019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a",
+    "playbook": "finance"
+  },
+  "context": {
+    "at": "2026-11-13T12:00:00.000Z",
+    "by": "person:user_2ada",
+    "definitionType": "workflow",
+    "definitionName": "close-the-week",
+    "definitionVersion": 1,
+    "definitionId": "019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a"
+  }
+}

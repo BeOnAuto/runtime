@@ -66,6 +66,7 @@ const failingRows: KeyedProjection = {
 
 const madeNames: DefinitionNames = {
   types: ['made'],
+  holdsNames: () => true,
   definitionKeyOf: () => 'definition/acme/a/',
   nameAfter: () => ({
     playbookKey: 'playbook/acme/alpha/',

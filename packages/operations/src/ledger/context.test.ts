@@ -108,6 +108,18 @@ describe('the context a fact carries', () => {
     expect(Schema.decodeUnknownSync(EmittedContextSchema)(ofACall)).toEqual(ofACall);
   });
 
+  it("holds the definition's id where a context gives it, on a definition's fact and on a run's", () => {
+    const identified = { ...ofACall, definitionId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' };
+
+    expect(Schema.decodeUnknownSync(DefinitionContextSchema)(identified)).toEqual({
+      ...acted,
+      ...ofTheDefinition,
+      definitionId: identified.definitionId,
+    });
+    expect(Schema.decodeUnknownSync(RunContextSchema)(identified)).toEqual(identified);
+    expect(contextOf(identified)).toEqual(identified);
+  });
+
   it('refuses a run context without its definition, a definition context without its version, and an emitted one without its depth', () => {
     const { depth, ...withoutDepth } = ofACall;
     const { definitionVersion, ...withoutVersion } = ofACall;

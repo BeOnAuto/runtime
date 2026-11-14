@@ -62,6 +62,7 @@ function definitionKeyOfTheStream(stream: string): string {
 
 const names: DefinitionNames = {
   types: ['named'],
+  holdsNames: () => true,
   definitionKeyOf: ({ stream }) => definitionKeyOfTheStream(stream),
   nameAfter: (_held, message) => claimOf(message),
   takenBy: (claimed) => new Conflict({ detail: `${claimed.name} is held by another definition`, kind: 'taken' }),

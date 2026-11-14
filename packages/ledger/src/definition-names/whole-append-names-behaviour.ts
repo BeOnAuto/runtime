@@ -16,6 +16,7 @@ const claimedIn = Schema.decodeUnknownSync(Claimed);
 
 const counted: DefinitionNames = {
   types: ['claimed'],
+  holdsNames: () => true,
   definitionKeyOf: ({ stream }) => `${stream.split('/').slice(0, 3).join('/')}/`,
   nameAfter: (_held, { data }) => {
     const { name, starts } = claimedIn(data);

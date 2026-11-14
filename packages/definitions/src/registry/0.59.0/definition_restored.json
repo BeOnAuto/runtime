@@ -1,0 +1,20 @@
+{
+  "type": "definition_restored",
+  "data": {
+    "content": {
+      "source": "document:\n  dsl: 1.0.3\ndo: []\n"
+    },
+    "restored_by": {
+      "id": "person:user_2ada",
+      "name": "Ada Lovelace"
+    }
+  },
+  "context": {
+    "at": "2026-11-13T12:05:00.000Z",
+    "by": "person:user_2ada",
+    "definitionType": "workflow",
+    "definitionName": "close-the-week",
+    "definitionVersion": 2,
+    "definitionId": "019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a"
+  }
+}

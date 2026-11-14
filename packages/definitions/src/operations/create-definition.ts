@@ -1,4 +1,4 @@
-import { Caller, defineCommand, recordedCallerOf } from '@on.auto/operations';
+import { Caller, defineCommand, randomUUIDv7, recordedCallerOf } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
@@ -44,11 +44,13 @@ export function defineCreateDefinition(capabilities: readonly Capability[], page
       handle: Effect.fnUntraced(function* ({ type, name, ...written }) {
         const capability = yield* known.capabilityOfType(type);
         const createdBy = recordedCallerOf(yield* Caller);
+        const definitionId = yield* Effect.sync(randomUUIDv7);
         const created = yield* savedFrom({ capability, pages, written }, (content) => ({
           type: 'create',
           name,
           content,
           created_by: createdBy,
+          definition_id: definitionId,
         }));
         return yield* withDefinitionPageInStudio(
           yield* answeredDefinition(capability, known.types, created, { change: 'created', inHand: created.inHand }),

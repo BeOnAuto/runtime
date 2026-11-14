@@ -1,6 +1,7 @@
-import type { DefinitionContext } from '@on.auto/operations';
+import type { DefinitionContext, PlaybookAddress } from '@on.auto/operations';
 import { Struct } from 'effect';
 
+import { earlierDefinitionIdOf } from '../identity/definition-ids.ts';
 import type { PageContent } from '../page/page-facts.ts';
 import { isTheSameText, textMemberNames, textMembersOf, textsOf } from '../payloads/definition-texts.ts';
 import type {
@@ -21,7 +22,7 @@ export const initialRegistry: DefinitionRegistry = new Map();
 
 const whilePaused = ['paused_at', 'paused_by', 'reason'] as const;
 
-const keptAcrossVersions = ['status', 'created_at', 'created_by', ...whilePaused] as const;
+const keptAcrossVersions = ['definition_id', 'status', 'created_at', 'created_by', ...whilePaused] as const;
 
 export function storedContentOf(content: DefinitionContent) {
   const {
@@ -39,10 +40,19 @@ export function storedContentOf(content: DefinitionContent) {
   return { ...apartFromItsTexts, ...textsOf(content) };
 }
 
-function createdDefinition({ data, context }: DefinitionCreated): RegisteredDefinition {
-  const { at, definitionName: name, definitionVersion: version } = context;
-  const { content, created_by } = data;
-  return { name, version, status: 'active', ...storedContentOf(content), created_at: at, created_by, updated_at: at };
+function createdDefinition(address: PlaybookAddress, { data, context }: DefinitionCreated): RegisteredDefinition {
+  const { at, definitionType: type, definitionName: name, definitionVersion: version } = context;
+  const { content, created_by, definition_id: given } = data;
+  return {
+    name,
+    definition_id: given ?? earlierDefinitionIdOf({ ...address, type, name }),
+    version,
+    status: 'active',
+    ...storedContentOf(content),
+    created_at: at,
+    created_by,
+    updated_at: at,
+  };
 }
 
 function updatedDefinition(
@@ -108,12 +118,16 @@ function withDefinition(registry: DefinitionRegistry, definition: RegisteredDefi
   return new Map(registry).set(definition.name, definition);
 }
 
-export function evolveRegistry(registry: DefinitionRegistry, event: RecordedDefinitionEvent): DefinitionRegistry {
-  if (event.type === 'definition_created') {
-    return withDefinition(registry, createdDefinition(event));
-  }
-  const definition = registry.get(event.context.definitionName);
-  return definition === undefined ? registry : withDefinition(registry, evolvedDefinition(definition, event));
+export function registryEvolvedIn(
+  address: PlaybookAddress,
+): (registry: DefinitionRegistry, event: RecordedDefinitionEvent) => DefinitionRegistry {
+  return (registry, event) => {
+    if (event.type === 'definition_created') {
+      return withDefinition(registry, createdDefinition(address, event));
+    }
+    const definition = registry.get(event.context.definitionName);
+    return definition === undefined ? registry : withDefinition(registry, evolvedDefinition(definition, event));
+  };
 }
 
 export function withTheSavedOverview(content: DefinitionContent, saved: StoredDefinition): DefinitionContent {

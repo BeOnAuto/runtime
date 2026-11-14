@@ -1,9 +1,9 @@
-import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
+import type { MemoryLedger } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { inThePlaybook } from '../read-model-testing/in-the-playbook.ts';
 import { aReader, createdIn, createdInTurn, executedIn } from '../read-model-testing/read-model-histories.ts';
-import { definitionsReadModelOf } from '../read-model/definitions-read-model.ts';
+import { readModelLedgerOf } from '../read-model-testing/read-model-ledger.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { definitionFromTheReadModel } from './read-model-definitions.ts';
 import { listFromTheReadModel } from './read-model-lists.ts';
@@ -11,7 +11,7 @@ import { referencesTo } from './read-model-rows.ts';
 import { versionFromTheReadModel } from './read-model-versions.ts';
 
 function aLedger(): MemoryLedger {
-  return memoryLedger(undefined, [definitionsReadModelOf(['echo', 'workflow', 'probe'])]);
+  return readModelLedgerOf(['echo', 'workflow', 'probe']);
 }
 
 const usingTheTarget = {
@@ -28,6 +28,7 @@ async function usedByFour(ledger: MemoryLedger): Promise<void> {
         name: 'user',
         content: { source: '{}', details: usingTheTarget },
         created_by: aReader,
+        definition_id: 'id-of-it',
       }),
     ),
   );

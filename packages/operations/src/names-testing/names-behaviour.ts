@@ -70,6 +70,7 @@ function nameAfter(
 
 const unbounded: DefinitionNames = {
   types: ['made', 'renamed', 'set_aside', 'forgotten', 'remarked'],
+  holdsNames: () => true,
   definitionKeyOf: ({ data }) => {
     const { definition } = detailOf(data);
     return definition === undefined ? undefined : `definition/acme/${definition}/`;

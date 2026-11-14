@@ -1,20 +1,23 @@
-import type { Decider } from '@on.auto/operations';
+import type { Decider, Fold, PlaybookAddress } from '@on.auto/operations';
 
 import type { DefinitionCommand } from './definition-commands.ts';
 import { DefinitionEventSchema, type RecordedDefinitionEvent } from './definition-events.ts';
-import { evolveRegistry, initialRegistry, type DefinitionRegistry } from './definition-registry.ts';
-import { decideOnDefinitions, definitionContextOf } from './registry-decisions.ts';
+import { initialRegistry, registryEvolvedIn, type DefinitionRegistry } from './definition-registry.ts';
+import { decideOnDefinition, definitionContextOf } from './registry-decisions.ts';
+
+export function definitionsFoldIn(address: PlaybookAddress): Fold<DefinitionRegistry, RecordedDefinitionEvent> {
+  return { initialState: initialRegistry, evolve: registryEvolvedIn(address), eventSchema: DefinitionEventSchema };
+}
 
 export function definitionsDecider(
   type: string,
-  mostActive = Number.POSITIVE_INFINITY,
+  address: PlaybookAddress,
 ): Decider<DefinitionRegistry, DefinitionCommand, RecordedDefinitionEvent, 'not_found' | 'conflict'> {
+  const of = { type, address };
   return {
-    initialState: initialRegistry,
-    evolve: evolveRegistry,
-    decide: (command, registry) => decideOnDefinitions({ type, mostActive }, command, registry),
-    context: (command, registry) => definitionContextOf(type, command, registry),
-    eventSchema: DefinitionEventSchema,
+    ...definitionsFoldIn(address),
+    decide: (command, registry) => decideOnDefinition(of, command, registry.get(command.name)),
+    context: (command, registry) => definitionContextOf(of, command, registry.get(command.name)),
   };
 }
 

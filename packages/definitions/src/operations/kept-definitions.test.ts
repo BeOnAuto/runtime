@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { definitionNamesOf } from '../identity/definition-names.ts';
 import { defineCapability, type Capability, type StandingRequest } from '../index.ts';
 import { definitionsDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { acmeAdmin } from '../testing/callers.ts';
@@ -32,8 +33,21 @@ function keeper(mostActive: number): Capability {
   });
 }
 
-function keepersOf(capability: Capability) {
-  const definitions = harness();
+interface Bound {
+  most: number;
+}
+
+function boundOf({ mostActive }: Capability): Bound {
+  return { most: mostActive ?? Number.POSITIVE_INFINITY };
+}
+
+function keepersOf(capability: Capability, bound: Readonly<Bound> = boundOf(capability)) {
+  const definitions = harness(
+    undefined,
+    undefined,
+    undefined,
+    definitionNamesOf(['keeper', 'probe'], (type) => (type === 'keeper' ? bound.most : Number.POSITIVE_INFINITY)),
+  );
   const { createDefinition, getDefinition, listDefinitions, updateDefinition, retireDefinition } =
     definitionOperationsFor([capability, probe().capability]);
   const create = (name: string) =>
@@ -51,7 +65,7 @@ describe('what a definition keeps for its runtime adapter', () => {
     const { state } = await Effect.runPromise(
       definitions.ledger.service.load(
         `playbook/acme/alpha/${definitionTypeStreamOf('keeper')}`,
-        definitionsDecider('keeper'),
+        definitionsDecider('keeper', { org: 'acme', playbook: 'alpha' }),
       ),
     );
 
@@ -117,7 +131,8 @@ describe('the active definitions of a type a playbook may keep', () => {
   });
 
   it('let a definition at the bound be updated, but refuse every save once the bound is lowered below them', async () => {
-    const before = keepersOf(keeper(2));
+    const bound: Bound = { most: 2 };
+    const before = keepersOf(keeper(2), bound);
     await before.create('first');
     await before.create('second');
     const updated = await before.definitions.call(
@@ -125,6 +140,7 @@ describe('the active definitions of a type a playbook may keep', () => {
       toAlpha(acmeAdmin, { type: 'keeper', name: 'first', source: 'changed' }),
     );
     const lowered = definitionOperationsFor([keeper(1)]);
+    bound.most = 1;
 
     const refused = await before.definitions.call(
       lowered.updateDefinition,

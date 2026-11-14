@@ -8,6 +8,7 @@ import { streamPortsOf } from '../ledger-service.ts';
 import { happenings, noted, stamped } from '../testing/happenings.ts';
 import type { LedgerEntry } from '../testing/ledger-entry.ts';
 import type { DefinitionNames } from './definition-names.ts';
+import { namesStepBehaviour } from './names-step-behaviour.ts';
 
 export interface DefinitionNamesEntry extends LedgerEntry {
   readonly storeKeepingNames: (database: string, names: DefinitionNames) => LedgerStore;
@@ -17,6 +18,7 @@ const Named = Schema.Struct({ detail: Schema.Struct({ name: Schema.String }) });
 
 const names: DefinitionNames = {
   types: ['named'],
+  holdsNames: () => true,
   definitionKeyOf: ({ stream }) => `${stream.split('/').slice(0, 3).join('/')}/`,
   nameAfter: (_held, { data }) => ({
     playbookKey: 'playbook/acme/alpha/',
@@ -43,6 +45,7 @@ function claimedOn(store: LedgerStore, stream: string): Promise<unknown> {
 }
 
 export function storeOnlyNamesBehaviour(entry: DefinitionNamesEntry): void {
+  namesStepBehaviour(entry);
   describe('the names of definitions, as only a store keeps them', () => {
     it('takes a refusal met by an append outside a decision, which has no one to answer, as a defect', async () => {
       const store = await opened(entry.storeKeepingNames(await entry.aDatabase(), names));

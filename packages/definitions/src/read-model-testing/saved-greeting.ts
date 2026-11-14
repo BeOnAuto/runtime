@@ -1,13 +1,13 @@
-import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
+import type { MemoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 
 import { definitionFromTheReadModel, type ReadFromTheReadModel } from '../read-model-reads/read-model-definitions.ts';
 import { listedRowsFromTheReadModel, type ListedRow } from '../read-model-reads/read-model-lists.ts';
 import { readToday, type DefinitionReadAt } from '../read-model-staging/staged-reads.ts';
-import { definitionsReadModelOf } from '../read-model/definitions-read-model.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { inThePlaybook } from './in-the-playbook.ts';
 import { createdWith } from './read-model-histories.ts';
+import { readModelLedgerOf } from './read-model-ledger.ts';
 
 export const savedWarnings = ['The greeting is never checked'];
 
@@ -26,7 +26,7 @@ export interface SavedGreeting {
 }
 
 export async function aSavedGreeting(): Promise<SavedGreeting> {
-  const ledger = memoryLedger(undefined, [definitionsReadModelOf(['echo'])]);
+  const ledger = readModelLedgerOf(['echo']);
   const source = JSON.stringify({ greeting: 'Hello', warnings: savedWarnings, triggers: [everyMonday] });
   await createdWith(ledger.service, 'greet', { source, warnings: savedWarnings, triggers: [everyMonday] });
   const [today, candidate, listed] = await inThePlaybook(

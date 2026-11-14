@@ -13,13 +13,12 @@ import type { DefinitionCommandData } from '../registry/definition-commands.ts';
 import type { DefinitionRegistry } from '../registry/definition-registry.ts';
 import { definitionVersionFold, type RecordedVersion } from '../registry/definition-versions.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
-import { definitionsDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
+import { definitionsDecider, definitionsFoldIn, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { findDefinition } from '../registry/registry-lookup.ts';
 import { commandMetadata } from './command-metadata.ts';
 
 interface RegistryKind {
   readonly type: string;
-  readonly mostActive: number;
 }
 
 export interface DefinitionInRegistry {
@@ -27,10 +26,10 @@ export interface DefinitionInRegistry {
   readonly stored: StoredDefinition;
 }
 
-export function loadRegistry(type: string): Effect.Effect<DefinitionRegistry, never, PlaybookReader> {
-  return PlaybookReader.use((reader) => reader.load(definitionTypeStreamOf(type), definitionsDecider(type))).pipe(
-    Effect.map(({ state }) => state),
-  );
+export function loadRegistry(type: string): Effect.Effect<DefinitionRegistry, never, PlaybookReader | PlaybookContext> {
+  return Effect.flatMap(PlaybookContext, (address) =>
+    PlaybookReader.use((reader) => reader.load(definitionTypeStreamOf(type), definitionsFoldIn(address))),
+  ).pipe(Effect.map(({ state }) => state));
 }
 
 function recordedVersionOf(
@@ -68,14 +67,11 @@ export function versionOf(type: string, name: string, version: number) {
   }));
 }
 
-export const recordInRegistry = Effect.fnUntraced(function* (
-  { type, mostActive }: RegistryKind,
-  data: DefinitionCommandData,
-) {
+export const recordInRegistry = Effect.fnUntraced(function* ({ type }: RegistryKind, data: DefinitionCommandData) {
   const metadata = yield* commandMetadata;
   const { state, decidedOn } = yield* (yield* PlaybookWriter).execute(
     definitionTypeStreamOf(type),
-    definitionsDecider(type, mostActive),
+    definitionsDecider(type, yield* PlaybookContext),
     {
       ...data,
       ...metadata,

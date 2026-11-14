@@ -66,7 +66,12 @@ const acted = { at: ContextText, by: ContextText };
 
 const onTheRun = { runId: ContextText };
 
-const ofTheDefinition = { definitionType: ContextText, definitionName: ContextText, definitionVersion: Counted };
+const ofTheDefinition = {
+  definitionType: ContextText,
+  definitionName: ContextText,
+  definitionVersion: Counted,
+  definitionId: Schema.optionalKey(ContextText),
+};
 
 const chain = {
   calledBy: Schema.optionalKey(CalledBySchema),
@@ -82,6 +87,7 @@ export const ContextSchema = Schema.Struct({
   definitionType: Schema.optionalKey(ofTheDefinition.definitionType),
   definitionName: Schema.optionalKey(ofTheDefinition.definitionName),
   definitionVersion: Schema.optionalKey(ofTheDefinition.definitionVersion),
+  definitionId: ofTheDefinition.definitionId,
   ...chain,
 });
 

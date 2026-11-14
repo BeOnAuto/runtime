@@ -5,7 +5,7 @@ import type { DefinitionCommand, DefinitionCommandData } from '../registry/defin
 import type { DefinitionContent } from '../registry/definition-events.ts';
 import type { DefinitionRegistry, RegisteredDefinition } from '../registry/definition-registry.ts';
 import { definitionVersionIn, type DefinitionVersionAddress } from '../registry/definition-versions.ts';
-import { definitionsDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
+import { definitionsDecider, definitionsFoldIn, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 
 interface TypedCommand {
   readonly type: string;
@@ -72,7 +72,13 @@ function contentOf(pick: Pick, step: number, uses: Uses): DefinitionContent {
 function commandOf(pick: Pick, step: number, uses: Uses) {
   const { name } = pick(uses);
   const commands: readonly [DefinitionCommandData, ...DefinitionCommandData[]] = [
-    { type: 'create', name, content: contentOf(pick, step, uses), created_by: someone },
+    {
+      type: 'create',
+      name,
+      content: contentOf(pick, step, uses),
+      created_by: someone,
+      definition_id: `made-at-step-${step}`,
+    },
     { type: 'update', name, content: contentOf(pick, step, uses) },
     { type: 'update', name, content: contentOf(pick, step, uses) },
     { type: 'pause', name, paused_by: someone, ...pick([{}, { reason: `paused at ${step}` }]) },
@@ -106,11 +112,15 @@ function generatedCommands(
   });
 }
 
+const alpha = { org: 'acme', playbook: 'alpha' };
+
 function appliedTo(ledger: Ledger['Service'], prefix: string, commands: readonly TypedCommand[]): Effect.Effect<void> {
   return Effect.forEach(
     commands,
     ({ type, command }) =>
-      Effect.ignore(ledger.execute(`${prefix}${definitionTypeStreamOf(type)}`, definitionsDecider(type), command)),
+      Effect.ignore(
+        ledger.execute(`${prefix}${definitionTypeStreamOf(type)}`, definitionsDecider(type, alpha), command),
+      ),
     { discard: true },
   );
 }
@@ -127,7 +137,7 @@ export function registriesIn(
   return Effect.map(
     Effect.forEach(types, (type) =>
       Effect.map(
-        ledger.load(`${prefix}${definitionTypeStreamOf(type)}`, definitionsDecider(type)),
+        ledger.load(`${prefix}${definitionTypeStreamOf(type)}`, definitionsFoldIn(alpha)),
         ({ state }): readonly [string, DefinitionRegistry] => [type, state],
       ),
     ),
@@ -205,11 +215,15 @@ export function executedIn(
 ): Promise<void> {
   return Effect.runPromise(
     Effect.ignore(
-      ledger.execute(`playbook/acme/${playbook}/${definitionTypeStreamOf(type)}`, definitionsDecider(type), {
-        ...command,
-        by: someone.id,
-        at: savedAt,
-      }),
+      ledger.execute(
+        `playbook/acme/${playbook}/${definitionTypeStreamOf(type)}`,
+        definitionsDecider(type, { org: 'acme', playbook }),
+        {
+          ...command,
+          by: someone.id,
+          at: savedAt,
+        },
+      ),
     ),
   );
 }
@@ -220,7 +234,12 @@ export function createdWith(
   content: DefinitionContent,
   playbook = 'alpha',
 ): Promise<void> {
-  return executedIn(ledger, 'echo', { type: 'create', name, content, created_by: someone }, playbook);
+  return executedIn(
+    ledger,
+    'echo',
+    { type: 'create', name, content, created_by: someone, definition_id: nextIdOf(playbook, name) },
+    playbook,
+  );
 }
 
 export function createdInTurn(
@@ -241,6 +260,13 @@ export function createdInTurn(
       { discard: true },
     ),
   );
+}
+
+const created = { count: 0 };
+
+function nextIdOf(playbook: string, name: string): string {
+  created.count += 1;
+  return `${playbook}-${name}-${String(created.count)}`;
 }
 
 export function createdIn(ledger: Ledger['Service'], name: string, playbook = 'alpha'): Promise<void> {

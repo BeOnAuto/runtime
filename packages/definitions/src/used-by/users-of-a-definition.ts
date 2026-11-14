@@ -10,7 +10,7 @@ import type { NamedDefinition } from './called-definitions.ts';
 import { usersOf, type PlaybookRegistries } from './definition-users.ts';
 import type { DefinitionUser } from './user-relations.ts';
 
-type UsersToday = Effect.Effect<readonly DefinitionUser[], never, PlaybookReader>;
+type UsersToday = Effect.Effect<readonly DefinitionUser[], never, PlaybookReader | PlaybookContext>;
 
 type Users = Effect.Effect<readonly DefinitionUser[], never, PlaybookReader | PlaybookContext>;
 
@@ -18,7 +18,7 @@ function registriesWith(
   types: readonly string[],
   type: string,
   registry: DefinitionRegistry,
-): Effect.Effect<PlaybookRegistries, never, PlaybookReader> {
+): Effect.Effect<PlaybookRegistries, never, PlaybookReader | PlaybookContext> {
   return Effect.map(
     Effect.forEach(
       types.filter((other) => other !== type),
@@ -39,7 +39,7 @@ export function usersCompared(today: readonly DefinitionUser[], candidate: reado
 function stagedUsers(
   types: readonly string[],
   used: NamedDefinition,
-  today: Effect.Effect<readonly DefinitionUser[], never, PlaybookReader>,
+  today: Effect.Effect<readonly DefinitionUser[], never, PlaybookReader | PlaybookContext>,
 ): Users {
   return stagedRead({
     read: 'used_by',

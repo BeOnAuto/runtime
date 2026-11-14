@@ -136,7 +136,62 @@ const restored: readonly (typeof DefinitionEventSchema.Type)[] = [
   },
 ];
 
-const keptOutsideTheFacts = await definitionFactsWrittenKeepingTheirTexts();
+const writtenBeforeIds = await definitionFactsWrittenKeepingTheirTexts();
+
+function asRecordedBeforeIds(fact: (typeof writtenBeforeIds)[number]): (typeof writtenBeforeIds)[number] {
+  const { definitionId: _id, ...context } = fact.context;
+  if (fact.type !== 'definition_created') {
+    return { ...fact, context };
+  }
+  const { definition_id: _definition, playbook: _playbook, ...data } = fact.data;
+  return { ...fact, data, context };
+}
+
+const keptOutsideTheFacts = writtenBeforeIds.map((fact) => asRecordedBeforeIds(fact));
+
+const closing = {
+  by: 'person:user_2ada',
+  definitionType: 'workflow',
+  definitionName: 'close-the-week',
+  definitionId: '019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a',
+};
+
+const ada = { id: 'person:user_2ada', name: 'Ada Lovelace' };
+
+const closingContent = { source: 'document:\n  dsl: 1.0.3\ndo: []\n' };
+
+const identified: readonly (typeof DefinitionEventSchema.Type)[] = [
+  {
+    type: 'definition_created',
+    data: { content: closingContent, created_by: ada, definition_id: closing.definitionId, playbook: 'finance' },
+    context: { ...closing, at: '2026-11-13T12:00:00.000Z', definitionVersion: 1 },
+  },
+  {
+    type: 'definition_updated',
+    data: { content: closingContent },
+    context: { ...closing, at: '2026-11-13T12:01:00.000Z', definitionVersion: 2 },
+  },
+  {
+    type: 'definition_paused',
+    data: { paused_by: ada },
+    context: { ...closing, at: '2026-11-13T12:02:00.000Z', definitionVersion: 2 },
+  },
+  {
+    type: 'definition_resumed',
+    data: {},
+    context: { ...closing, at: '2026-11-13T12:03:00.000Z', definitionVersion: 2 },
+  },
+  {
+    type: 'definition_retired',
+    data: {},
+    context: { ...closing, at: '2026-11-13T12:04:00.000Z', definitionVersion: 2 },
+  },
+  {
+    type: 'definition_restored',
+    data: { content: closingContent, restored_by: ada },
+    context: { ...closing, at: '2026-11-13T12:05:00.000Z', definitionVersion: 2 },
+  },
+];
 
 describe('the facts of the definitions of a playbook', () => {
   recordedFactsBehaviour({
@@ -148,6 +203,7 @@ describe('the facts of the definitions of a playbook', () => {
       '0.56.0': [...paged, ...paused],
       '0.57.0': restored,
       '0.58.0': keptOutsideTheFacts,
+      '0.59.0': identified,
     },
   });
 });
@@ -185,7 +241,7 @@ describe('a definition fact as a release recorded it', () => {
     const recorded = fixturesAsRecorded();
 
     expect(recorded.map(({ path, text }) => ({ path, text: writtenBack(text) }))).toEqual(recorded);
-    expect(recorded).toHaveLength(13);
+    expect(recorded).toHaveLength(19);
   });
 });
 

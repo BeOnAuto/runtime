@@ -1,6 +1,7 @@
 import type { ContentStore } from '@on.auto/content';
 import {
   defineCommand,
+  randomUUIDv7,
   type Caller,
   type Conflict,
   type InvalidInput,
@@ -47,12 +48,22 @@ export function playbookAsked(store?: ContentStore) {
     playbook.call(askingOf(asked), toAlpha(acmeAdmin, {}), at);
   const record = (type: string, command: DefinitionCommandData) =>
     Effect.runPromise(
-      playbook.ledger.service.execute(`playbook/acme/alpha/${definitionTypeStreamOf(type)}`, definitionsDecider(type), {
-        ...command,
-        ...savedAt,
-      }),
+      playbook.ledger.service.execute(
+        `playbook/acme/alpha/${definitionTypeStreamOf(type)}`,
+        definitionsDecider(type, { org: 'acme', playbook: 'alpha' }),
+        {
+          ...command,
+          ...savedAt,
+        },
+      ),
     );
   const created = (type: string, name: string, source: string, more: Omit<DefinitionContent, 'source'> = {}) =>
-    record(type, { type: 'create', name, content: { source, ...more }, created_by: recordedAdmin });
+    record(type, {
+      type: 'create',
+      name,
+      content: { source, ...more },
+      created_by: recordedAdmin,
+      definition_id: randomUUIDv7(),
+    });
   return { playbook, ask, record, created };
 }

@@ -9,6 +9,7 @@ import {
 } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
+import { earlierDefinitionIdOf } from '../identity/definition-ids.ts';
 import { DefinitionEventSchema, isDefinitionSaved, type DefinitionSaved } from '../registry/definition-events.ts';
 import { definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { oncePerOpening, refusedWhenItsChecksFailed, type ReadModelRefused } from './read-model-refused.ts';
@@ -18,6 +19,7 @@ const rowsInAPage = 100;
 const DefinitionRowSchema = Schema.Struct({
   definition_type: Schema.String,
   name: Schema.String,
+  definition_id: Schema.optionalKey(Schema.NullOr(Schema.String)),
   version: Schema.Number,
   status: Schema.Literals(['active', 'paused', 'retired']),
   description: Schema.NullOr(Schema.String),
@@ -38,7 +40,7 @@ const DefinitionRowSchema = Schema.Struct({
   saved_position: Schema.Number,
 });
 
-export type DefinitionRow = typeof DefinitionRowSchema.Type;
+export type DefinitionRow = Omit<typeof DefinitionRowSchema.Type, 'definition_id'> & { readonly definition_id: string };
 
 const VersionRowSchema = Schema.Struct({
   definition_type: Schema.String,
@@ -62,6 +64,12 @@ const ReferenceRowSchema = Schema.Struct({
 export type ReferenceRow = typeof ReferenceRowSchema.Type;
 
 const decodeDefinitionRow = Schema.decodeUnknownSync(DefinitionRowSchema);
+
+function definitionRowIn(playbook: PlaybookAddress, stored: unknown): DefinitionRow {
+  const row = decodeDefinitionRow(stored);
+  const { definition_type: type, name } = row;
+  return { ...row, definition_id: row.definition_id ?? earlierDefinitionIdOf({ ...playbook, type, name }) };
+}
 
 const decodeVersionRow = Schema.decodeUnknownSync(VersionRowSchema);
 
@@ -123,14 +131,14 @@ function everyRowOf(
 
 function definitionRowOf(reader: ReadModelReader, type: string, name: string): Read<DefinitionRow | undefined> {
   return Effect.map(rowsOf(reader, 'definitions', [{ column: 'row_key', equals: `${type}/${name}` }], 1), ([found]) =>
-    found === undefined ? undefined : decodeDefinitionRow(found.row),
+    found === undefined ? undefined : definitionRowIn(reader.playbook, found.row),
   );
 }
 
 export function definitionRowsOfType(type: string): ReadInThePlaybook<readonly DefinitionRow[]> {
   return inThePlaybookOf((reader) =>
     Effect.map(everyRowOf(reader, 'definitions', [{ column: 'definition_type', equals: type }]), (rows) =>
-      rows.map(({ row }) => decodeDefinitionRow(row)),
+      rows.map(({ row }) => definitionRowIn(reader.playbook, row)),
     ),
   );
 }

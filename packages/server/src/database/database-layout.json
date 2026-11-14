@@ -1,5 +1,5 @@
 {
-  "layout": 22,
+  "layout": 23,
   "catalog": [
     {
       "name": "activity_1",
@@ -110,28 +110,28 @@
       "sql": "CREATE UNIQUE INDEX definition_names_1_by_definition ON definition_names_1 (definition_key)"
     },
     {
-      "name": "definition_references_1",
-      "sql": "CREATE TABLE definition_references_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, child_key TEXT NOT NULL, user_type TEXT, user_name TEXT, used_type TEXT, used_name TEXT, relation TEXT, places TEXT, PRIMARY KEY (playbook_key, row_key, child_key))"
+      "name": "definition_references_2",
+      "sql": "CREATE TABLE definition_references_2 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, child_key TEXT NOT NULL, user_type TEXT, user_name TEXT, used_type TEXT, used_name TEXT, relation TEXT, places TEXT, PRIMARY KEY (playbook_key, row_key, child_key))"
     },
     {
-      "name": "definition_references_1_by_used",
-      "sql": "CREATE INDEX definition_references_1_by_used ON definition_references_1 (playbook_key, used_type, used_name, row_key, child_key)"
+      "name": "definition_references_2_by_used",
+      "sql": "CREATE INDEX definition_references_2_by_used ON definition_references_2 (playbook_key, used_type, used_name, row_key, child_key)"
     },
     {
-      "name": "definition_versions_1",
-      "sql": "CREATE TABLE definition_versions_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, definition_type TEXT, name TEXT, version INTEGER, position INTEGER, put_in_place_by TEXT, PRIMARY KEY (playbook_key, row_key))"
+      "name": "definition_versions_2",
+      "sql": "CREATE TABLE definition_versions_2 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, definition_type TEXT, name TEXT, version INTEGER, position INTEGER, put_in_place_by TEXT, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "definitions_1",
-      "sql": "CREATE TABLE definitions_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, definition_type TEXT, name TEXT, version INTEGER, status TEXT, description TEXT, input_schema TEXT, output_schema TEXT, warnings TEXT, shape TEXT, triggers TEXT, created_at TEXT, created_by_id TEXT, created_by_name TEXT, updated_at TEXT, paused_at TEXT, paused_by_id TEXT, paused_by_name TEXT, reason TEXT, retired_at TEXT, saved_position INTEGER, PRIMARY KEY (playbook_key, row_key))"
+      "name": "definitions_2",
+      "sql": "CREATE TABLE definitions_2 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, definition_type TEXT, name TEXT, definition_id TEXT, version INTEGER, status TEXT, description TEXT, input_schema TEXT, output_schema TEXT, warnings TEXT, shape TEXT, triggers TEXT, created_at TEXT, created_by_id TEXT, created_by_name TEXT, updated_at TEXT, paused_at TEXT, paused_by_id TEXT, paused_by_name TEXT, reason TEXT, retired_at TEXT, saved_position INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "definitions_1_by_type",
-      "sql": "CREATE INDEX definitions_1_by_type ON definitions_1 (playbook_key, definition_type, row_key)"
+      "name": "definitions_2_by_type",
+      "sql": "CREATE INDEX definitions_2_by_type ON definitions_2 (playbook_key, definition_type, row_key)"
     },
     {
-      "name": "definitions_checkpoints_1",
-      "sql": "CREATE TABLE definitions_checkpoints_1 (playbook_key TEXT NOT NULL, stream TEXT NOT NULL, folded_through INTEGER NOT NULL, PRIMARY KEY (playbook_key, stream))"
+      "name": "definitions_checkpoints_2",
+      "sql": "CREATE TABLE definitions_checkpoints_2 (playbook_key TEXT NOT NULL, stream TEXT NOT NULL, folded_through INTEGER NOT NULL, PRIMARY KEY (playbook_key, stream))"
     },
     {
       "name": "generations_due_1",

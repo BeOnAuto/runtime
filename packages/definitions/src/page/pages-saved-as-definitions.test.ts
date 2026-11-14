@@ -104,6 +104,8 @@ describe('a page saved as a definition of its own', () => {
   });
 });
 
+const createdByTheAdmin = { created_by: { id: 'acme-admin', name: 'acme-admin' }, definition_id: 'id-of-it' };
+
 describe('a page saved as a definition of its own that gives way', () => {
   it('gives way to the page key of its subject, and to an empty one, which means no page', async () => {
     const asked = await withPagesOfTheirOwn();
@@ -112,7 +114,7 @@ describe('a page saved as a definition of its own that gives way', () => {
       type: 'create',
       name: 'evening-posts',
       content: { source: savedAsADefinition('workflow/evening'), details: details('workflow/evening') },
-      created_by: { id: 'acme-admin', name: 'acme-admin' },
+      ...createdByTheAdmin,
     });
     await asked.record('workflow', {
       type: 'update',
@@ -170,6 +172,7 @@ describe('a page saved as a definition of its own whose document a fact keeps ou
       name: 'noon-posts',
       content: { source_sha256: kept.sha256, source_bytes: kept.bytes, details: details('workflow/noon') },
       created_by: recordedAdmin,
+      definition_id: 'id-of-it',
     });
 
     expect(await asked.ask(Effect.map(carriedPagesIn, (carried) => [...carried.keys()]))).toMatchObject({

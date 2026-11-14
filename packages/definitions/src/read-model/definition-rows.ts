@@ -53,6 +53,7 @@ function createdRow(fact: Extract<RecordedDefinitionEvent, { type: 'definition_c
   return {
     definition_type: definitionType,
     name: definitionName,
+    definition_id: fact.data.definition_id ?? null,
     version: definitionVersion,
     status: 'active',
     ...contentColumns(content),
@@ -106,7 +107,7 @@ function definitionRowAfter(row: ProjectedRow | undefined, message: ProjectedMes
 
 export const definitionRows: KeyedProjection = {
   name: 'definitions',
-  version: 1,
+  version: 2,
   kinds: ['definitions'],
   types: [
     'definition_created',
@@ -119,6 +120,7 @@ export const definitionRows: KeyedProjection = {
   columns: [
     { name: 'definition_type', kind: 'text' },
     { name: 'name', kind: 'text' },
+    { name: 'definition_id', kind: 'text' },
     { name: 'version', kind: 'integer' },
     { name: 'status', kind: 'text' },
     { name: 'description', kind: 'text' },

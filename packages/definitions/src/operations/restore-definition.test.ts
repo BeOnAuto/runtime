@@ -6,6 +6,8 @@ import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook, type Harness } from '../testing/harness.ts';
 
+const anId: unknown = expect.any(String);
+
 const { createDefinition, restoreDefinition, resumeDefinition, retireDefinition, runDefinition, updateDefinition } =
   definitionOperationsFor([probe().capability]);
 
@@ -20,6 +22,7 @@ const plain = { type: 'probe', name: 'plain' };
 const restoredPlain = {
   type: 'probe',
   name: 'plain',
+  definition_id: anId,
   version: 1,
   status: 'paused',
   media_type: 'text/plain',
@@ -127,9 +130,9 @@ describe('restore_definition repeated', () => {
 
 describe('the plain language of restore_definition', () => {
   it('says the definition is back, paused, and to resume it when it is ready', () => {
-    expect(restoreDefinition.registration.plainLanguage?.outcome(restoredPlain, plain)).toBe(
-      'Restored the probe “plain”. It is paused: resume it when it is ready to run.',
-    );
+    expect(
+      restoreDefinition.registration.plainLanguage?.outcome({ ...restoredPlain, definition_id: 'id-of-plain' }, plain),
+    ).toBe('Restored the probe “plain”. It is paused: resume it when it is ready to run.');
   });
 
   it('names the definition it tried to restore', () => {

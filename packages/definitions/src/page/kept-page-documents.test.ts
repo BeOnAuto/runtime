@@ -56,6 +56,7 @@ async function morningKeptOutside() {
     name: 'morning',
     content: { ...texts, ...(page === undefined ? {} : { page }) },
     created_by: recordedAdmin,
+    definition_id: 'id-of-it',
   });
   return { asked, watched };
 }

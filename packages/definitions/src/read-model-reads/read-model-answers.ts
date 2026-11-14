@@ -38,6 +38,7 @@ function standingOf(row: DefinitionRow) {
 export function storedOf({ row, saved }: RowAndSave): RegisteredDefinition {
   return {
     name: row.name,
+    definition_id: row.definition_id,
     version: row.version,
     status: row.status,
     ...storedContentOf(saved.data.content),
@@ -63,6 +64,7 @@ export function listedOfTheRow(capability: Capability, row: DefinitionRow, saved
     type: capability.type,
     media_type: capability.mediaType,
     name: row.name,
+    definition_id: row.definition_id,
     version: row.version,
     status: row.status,
     ...(row.description === null ? {} : { description: row.description }),

@@ -1,3 +1,4 @@
+import { randomUUIDv7 } from '@on.auto/operations';
 import type { DefinitionContext } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
@@ -78,13 +79,14 @@ describe('a read of one version of a definition of a playbook', () => {
     const ledger = memoryLedger().service;
     const at = { by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
     const stream = 'playbook/acme/alpha/definitions/echo';
-    const decider = definitionsDecider('echo');
+    const decider = definitionsDecider('echo', { org: 'acme', playbook: 'alpha' });
     await Effect.runPromise(
       ledger.execute(stream, decider, {
         type: 'create',
         name: 'greet',
         content: { source: 'one' },
         created_by: recordedAdmin,
+        definition_id: randomUUIDv7(),
         ...at,
       }),
     );

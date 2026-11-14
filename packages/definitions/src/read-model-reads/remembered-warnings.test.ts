@@ -1,10 +1,10 @@
-import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
+import type { MemoryLedger } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { defineCapability, type Capability } from '../capability/capability.ts';
 import { inThePlaybook } from '../read-model-testing/in-the-playbook.ts';
 import { aReader, createdWith, executedIn } from '../read-model-testing/read-model-histories.ts';
-import { definitionsReadModelOf } from '../read-model/definitions-read-model.ts';
+import { readModelLedgerOf } from '../read-model-testing/read-model-ledger.ts';
 import { echoDeclaration } from '../testing/capabilities/echo.ts';
 import { definitionFromTheReadModel } from './read-model-definitions.ts';
 import { listFromTheReadModel } from './read-model-lists.ts';
@@ -16,7 +16,7 @@ function aProcess(): Capability {
 }
 
 async function aDefinitionSavedWith(warnings: readonly string[]): Promise<MemoryLedger> {
-  const ledger = memoryLedger(undefined, [definitionsReadModelOf(['echo'])]);
+  const ledger = readModelLedgerOf(['echo']);
   await createdWith(ledger.service, 'greeter', { source: foundToday, warnings });
   return ledger;
 }

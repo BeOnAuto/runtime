@@ -7,6 +7,8 @@ import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
+const anId: unknown = expect.any(String);
+
 const { createDefinition, retireDefinition, updateDefinition } = definitionOperationsFor([echo, probe().capability]);
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -49,6 +51,7 @@ describe('create_definition', () => {
       output: {
         type: 'echo',
         name: 'greet',
+        definition_id: anId,
         version: 1,
         status: 'active',
         media_type: 'application/json',
@@ -113,6 +116,7 @@ describe('the definition create_definition records', () => {
       output: {
         type: 'probe',
         name: 'plain',
+        definition_id: anId,
         version: 1,
         status: 'active',
         media_type: 'text/plain',

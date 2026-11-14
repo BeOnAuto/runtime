@@ -1,4 +1,5 @@
 import { statement } from '../connection/statement.ts';
+import { byDefinitionIndex, definitionNamesTable } from '../definition-names/definition-names-table.ts';
 import type { LayoutStep } from './layout-steps.ts';
 
 const headsBeforeLayout21 = statement`CREATE TABLE IF NOT EXISTS recorded_content_heads (
@@ -60,6 +61,17 @@ export const ledgerLayoutSteps: readonly LayoutStep[] = [
     statements: [
       statement`DROP INDEX IF EXISTS ledger_messages_by_playbook_and_correlation`,
       statement`DROP INDEX IF EXISTS ledger_messages_by_id`,
+    ],
+  },
+  {
+    layout: 23,
+    statements: [
+      {
+        inCode: async (execute) => {
+          await execute.command(definitionNamesTable.create());
+          await execute.command(byDefinitionIndex.create());
+        },
+      },
     ],
   },
 ];

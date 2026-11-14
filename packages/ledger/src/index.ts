@@ -30,6 +30,7 @@ export type {
   NameBound,
   NamedMessage,
 } from './definition-names/definition-names.ts';
+export { definitionNamesFilledBy } from './definition-names/names-filled.ts';
 export type { RecordedKeys } from './keys/recorded-keys.ts';
 export { LedgerLog, samePoint, type LoggedEvent, type LogPage, type LogPorts } from './log/ledger-log.ts';
 export { UnreadableEvent } from './log/unreadable-event.ts';

@@ -226,7 +226,6 @@ export {
   type ReactionRefused,
   type RecordedReactionRefused,
 } from './events/reaction-refusals.ts';
-export { mostReactingDefinitions } from './registry/registry-decisions.ts';
 export { definitionChangeOf, type DefinitionChange } from './registry/definition-changes.ts';
 export {
   EventTriggerSchema,

@@ -1,4 +1,4 @@
-import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
+import type { MemoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -9,13 +9,13 @@ import {
   foldedVersionIn,
   savedVersionsIn,
 } from '../read-model-testing/read-model-histories.ts';
-import { definitionsReadModelOf } from '../read-model/definitions-read-model.ts';
+import { readModelLedgerOf } from '../read-model-testing/read-model-ledger.ts';
 import { versionFromTheReadModel } from './read-model-versions.ts';
 
 const types: readonly [string, ...string[]] = ['echo', 'workflow', 'lookup'];
 
 async function aLedgerOf(seed: number): Promise<MemoryLedger> {
-  const ledger = memoryLedger(undefined, [definitionsReadModelOf(types)]);
+  const ledger = readModelLedgerOf(types);
   await aGeneratedHistory(ledger.service, seed, types);
   return ledger;
 }

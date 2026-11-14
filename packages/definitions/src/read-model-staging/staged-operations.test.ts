@@ -19,12 +19,16 @@ const workflow: Capability = defineCapability({
   run: () => Effect.succeed({ output: null, record: {} }),
 });
 
+function withIdsAside(answers: unknown): string {
+  return JSON.stringify(answers).replaceAll(/"definition_id":"[^"]+"/gu, '"definition_id":"made at its creation"');
+}
+
 describe('the operations of the definitions, with the read model of the definitions composed', () => {
   it('answer byte for byte as today while the stage is off, and compare nothing', async () => {
     const today = await answeredBy(harness(), workflow);
     const off = await staged('off', workflow);
 
-    expect(JSON.stringify(off.answers)).toBe(JSON.stringify(today));
+    expect(withIdsAside(off.answers)).toBe(withIdsAside(today));
     expect(off.compared).toEqual([]);
   });
 
@@ -32,7 +36,7 @@ describe('the operations of the definitions, with the read model of the definiti
     const today = await answeredBy(harness(), workflow);
     const shadow = await staged('shadow', workflow);
 
-    expect(JSON.stringify(shadow.answers)).toBe(JSON.stringify(today));
+    expect(withIdsAside(shadow.answers)).toBe(withIdsAside(today));
     expect(new Set(shadow.compared.map(([read]) => read))).toEqual(
       new Set(['used_by', 'get_definition', 'triggers_since', 'list_definitions', 'definition_page', 'run_start']),
     );
@@ -43,7 +47,7 @@ describe('the operations of the definitions, with the read model of the definiti
     const today = await answeredBy(harness(), workflow);
     const [reads, on] = [await staged('reads', workflow), await staged('on', workflow)];
 
-    expect([reads.answers, on.answers]).toEqual([today, today]);
+    expect([withIdsAside(reads.answers), withIdsAside(on.answers)]).toEqual([withIdsAside(today), withIdsAside(today)]);
     expect([
       new Set(reads.compared.map(([read, outcome]) => `${String(read)} ${String(outcome)}`)),
       on.compared,

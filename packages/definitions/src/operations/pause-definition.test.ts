@@ -10,6 +10,8 @@ import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook, type Harness } from '../testing/harness.ts';
 import { relayedId, settledAt, withHandOn } from '../testing/relaying.ts';
 
+const anId: unknown = expect.any(String);
+
 const operations = definitionOperationsFor([echo, probe().capability]);
 
 const { createDefinition, getDefinition, listDefinitions, pauseDefinition, retireDefinition, runDefinition } =
@@ -30,6 +32,7 @@ const pausingPlain = toAlpha(adaOfAcme, { ...plain, reason: 'The quarter is bein
 const pausedPlain = {
   type: 'probe',
   name: 'plain',
+  definition_id: anId,
   version: 1,
   status: 'paused',
   media_type: 'text/plain',

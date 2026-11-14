@@ -56,6 +56,7 @@ function attemptOf(name: string, input: unknown): string | undefined {
 const greet = {
   type: 'echo',
   name: 'greet',
+  definition_id: 'id-of-greet',
   version: 1,
   status: 'active',
   media_type: 'application/json',

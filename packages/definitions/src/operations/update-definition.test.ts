@@ -7,6 +7,8 @@ import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
+const anId: unknown = expect.any(String);
+
 const { createDefinition, getDefinition, retireDefinition, updateDefinition } = definitionOperationsFor([
   echo,
   probe().capability,
@@ -59,6 +61,7 @@ describe('update_definition', () => {
       output: {
         type: 'echo',
         name: 'greet',
+        definition_id: anId,
         version: 2,
         status: 'active',
         media_type: 'application/json',

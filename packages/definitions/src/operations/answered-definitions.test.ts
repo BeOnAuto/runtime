@@ -40,6 +40,7 @@ async function savedWithAWarning() {
 function storedWith(source: string): StoredDefinition {
   return {
     name: 'greeter',
+    definition_id: 'id-of-greeter',
     version: 1,
     status: 'active',
     source: { inline: source },

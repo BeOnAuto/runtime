@@ -2,12 +2,21 @@ import { Conflict, NotFound, type Context, type DefinitionContext } from '@on.au
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { earlierDefinitionIdOf } from '../identity/definition-ids.ts';
 import { recordedAdmin } from '../testing/callers.ts';
 import type { DefinitionCommand } from './definition-commands.ts';
 import type { DefinitionContent, RecordedDefinitionEvent } from './definition-events.ts';
 import { definitionsDecider, definitionTypeStreamOf } from './definitions-decider.ts';
 
-const echoDefinitions = definitionsDecider('echo');
+const alpha = { org: 'acme', playbook: 'alpha' };
+
+const echoDefinitions = definitionsDecider('echo', alpha);
+
+const greetId = earlierDefinitionIdOf({ ...alpha, type: 'echo', name: 'greet' });
+
+function identified(context: Context): Context {
+  return { ...context, definitionId: greetId };
+}
 
 const creation = { by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
 
@@ -62,7 +71,13 @@ function contextOf(command: DefinitionCommand, ...history: readonly RecordedDefi
 
 const asTheAdmin = { ...creation, created_by: recordedAdmin };
 
-const creatingGreet: DefinitionCommand = { type: 'create', name: 'greet', content: hello, ...asTheAdmin };
+const creatingGreet: DefinitionCommand = {
+  type: 'create',
+  name: 'greet',
+  content: hello,
+  definition_id: greetId,
+  ...asTheAdmin,
+};
 
 function updatingGreet(content: DefinitionContent): DefinitionCommand {
   return { type: 'update', name: 'greet', content, ...change };
@@ -71,28 +86,20 @@ function updatingGreet(content: DefinitionContent): DefinitionCommand {
 const retiringGreet: DefinitionCommand = { type: 'retire', name: 'greet', ...change };
 
 describe('creating a definition', () => {
-  it('records its content, with the definition at version 1, who created it and when as its context', () => {
+  it('records its content, the id it is given and its playbook, with the definition at version 1, who created it and when as its context', () => {
     expect(decided(creatingGreet)).toStrictEqual(
-      Result.succeed([{ type: 'definition_created', data: { content: hello, created_by: recordedAdmin } }]),
+      Result.succeed([
+        {
+          type: 'definition_created',
+          data: { content: hello, created_by: recordedAdmin, definition_id: greetId, playbook: 'alpha' },
+        },
+      ]),
     );
-    expect(contextOf(creatingGreet)).toStrictEqual(greetCreated.context);
+    expect(contextOf(creatingGreet)).toStrictEqual(identified(greetCreated.context));
   });
 
-  it('is rejected while an active definition holds the name', () => {
-    expect(decided(creatingGreet, greetCreated)).toEqual(
-      Result.fail(new Conflict({ detail: 'The playbook already has the echo definition greet', kind: 'taken' })),
-    );
-  });
-
-  it('is rejected for the name of a retired definition, which keeps its name', () => {
-    expect(decided(creatingGreet, greetCreated, greetRetired)).toEqual(
-      Result.fail(
-        new Conflict({
-          detail: 'The echo definition greet was retired and keeps its name; restore_definition brings it back',
-          kind: 'taken',
-        }),
-      ),
-    );
+  it('leaves to the names of definitions whether its name is free', () => {
+    expect(decided(creatingGreet, greetCreated)).toStrictEqual(decided(creatingGreet));
   });
 });
 
@@ -106,9 +113,9 @@ describe('updating a definition', () => {
       contextOf(updatingGreet(hello), greetCreated, greetUpdated),
       contextOf(updatingGreet(hello)),
     ]).toStrictEqual([
-      greetUpdated.context,
-      ofTheDefinition('greet', change, 3),
-      { ...change, definitionType: 'echo', definitionName: 'greet' },
+      identified(greetUpdated.context),
+      identified(ofTheDefinition('greet', change, 3)),
+      identified({ ...change, definitionType: 'echo', definitionName: 'greet' }),
     ]);
   });
 
@@ -163,7 +170,7 @@ describe('retiring a definition', () => {
     expect(decided(retiringGreet, greetCreated)).toStrictEqual(
       Result.succeed([{ type: 'definition_retired', data: {} }]),
     );
-    expect(contextOf(retiringGreet, greetCreated)).toStrictEqual(greetRetired.context);
+    expect(contextOf(retiringGreet, greetCreated)).toStrictEqual(identified(greetRetired.context));
   });
 
   it('records nothing for a definition that is already retired', () => {
@@ -194,6 +201,7 @@ describe('the definitions of a capability', () => {
     expect([...registry.values()]).toStrictEqual([
       {
         name: 'greet',
+        definition_id: greetId,
         version: 2,
         status: 'retired',
         source: { inline: '{"greeting": "Howdy"}' },
@@ -205,6 +213,7 @@ describe('the definitions of a capability', () => {
       },
       {
         name: 'wave',
+        definition_id: earlierDefinitionIdOf({ ...alpha, type: 'echo', name: 'wave' }),
         version: 1,
         status: 'active',
         source: { inline: '{"greeting": "Howdy"}' },
@@ -236,63 +245,5 @@ describe('the definitions of a capability, from what their facts say', () => {
     echoDefinitions.evolve(before, greetRetired);
 
     expect(before.get('greet')?.status).toBe('active');
-  });
-});
-
-const threeTriggers: DefinitionContent['triggers'] = [
-  { kind: 'event', reference: '/schedule/on', filters: [{ reference: '/schedule/on/one', type: 'x', attributes: {} }] },
-  { kind: 'cron', reference: '/schedule/cron', expression: '0 9 * * *' },
-  { kind: 'every', reference: '/schedule/every', milliseconds: 60_000 },
-];
-
-const reacting: DefinitionContent = {
-  source: '{"greeting": "Hello", "triggers": "three"}',
-  triggers: threeTriggers,
-};
-
-function reactingDefinitions(count: number): readonly RecordedDefinition[] {
-  return Array.from({ length: count }, (_, index) => created(`reacting-${index}`, reacting));
-}
-
-const beyondTheBound = new Conflict({
-  detail:
-    'The playbook already has 1024 echo definitions that start on their own, the most a playbook holds; retire one, or save this one without its schedule',
-});
-
-describe('the definitions of a playbook that start on their own', () => {
-  it('are 1,024 at most, however many triggers each has: one more is refused, created or made so by an update', () => {
-    const full = reactingDefinitions(1024);
-
-    expect([
-      decided({ ...creatingGreet, content: reacting }, ...full),
-      decided(updatingGreet(reacting), greetCreated, ...full),
-      decided({ ...creatingGreet, content: hello }, ...full),
-    ]).toEqual([
-      Result.fail(beyondTheBound),
-      Result.fail(beyondTheBound),
-      Result.succeed([{ type: 'definition_created', data: { content: hello, created_by: recordedAdmin } }]),
-    ]);
-  });
-
-  it('are counted after a version replaces another, and without the retired ones', () => {
-    const almost = reactingDefinitions(1023);
-    const reactingGreet = created('greet', reacting);
-
-    expect([
-      Result.isSuccess(
-        decided(
-          updatingGreet({ ...reacting, source: '{"greeting": "Hi", "triggers": "three"}' }),
-          reactingGreet,
-          ...almost,
-        ),
-      ),
-      Result.isSuccess(
-        decided(
-          { ...creatingGreet, name: 'other', content: reacting },
-          ...reactingDefinitions(1024),
-          retired('reacting-0'),
-        ),
-      ),
-    ]).toEqual([true, true]);
   });
 });

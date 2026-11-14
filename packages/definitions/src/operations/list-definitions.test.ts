@@ -21,10 +21,13 @@ const retiredToo = {
   },
 };
 
+const anId: unknown = expect.any(String);
+
 function listed(name: string) {
   return {
     type: 'probe',
     name,
+    definition_id: anId,
     version: 1,
     status: 'active',
     media_type: 'text/plain',

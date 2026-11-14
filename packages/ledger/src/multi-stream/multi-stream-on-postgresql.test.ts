@@ -189,6 +189,7 @@ function definitionKeyOfTheStream(stream: string): string | undefined {
 
 const names: DefinitionNames = {
   types: ['named'],
+  holdsNames: () => true,
   definitionKeyOf: ({ stream }) => definitionKeyOfTheStream(stream),
   nameAfter: (_held, { data }: ProjectedMessage) => ({
     playbookKey: alpha,

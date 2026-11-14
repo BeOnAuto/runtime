@@ -59,21 +59,16 @@ function theOrgsIndexesBehaviour(entry: LedgerEntry): void {
       await aLedger(entry, made);
       await aDatabaseOfTheLayoutBeforeTheOrgsIndexes(entry, database);
 
-      await entry.carriedOn(database, {
-        kept: theLayoutThatLeadsTheTreeAndTheIdByTheOrg,
-        floor: ledgerLayoutFloor,
-        steps: ledgerLayoutSteps,
-      });
+      await entry.carriedOn(database, { kept: ledgerLayout, floor: ledgerLayoutFloor, steps: ledgerLayoutSteps });
       const carried = {
         layout: (await layoutIn(entry, database)).layout,
         indexes: Object.keys((await structureIn(entry, database)).indexes),
       };
       await aLedger(entry, database);
 
-      expect(carried.layout).toBe(theLayoutThatLeadsTheTreeAndTheIdByTheOrg);
+      expect(carried.layout).toBe(ledgerLayout);
       expect(carried.indexes.filter((index) => theIndexesOfEither.has(index))).toEqual([]);
       expect(await structureIn(entry, database)).toEqual(await structureIn(entry, made));
-      expect(theLayoutThatLeadsTheTreeAndTheIdByTheOrg).toBe(ledgerLayout);
     });
   });
 }

@@ -31,6 +31,7 @@ function readingOnce(): { readonly capability: Capability; readonly reads: () =>
 
 const stored: StoredDefinition = {
   name: 'greeter',
+  definition_id: 'id-of-greeter',
   version: 1,
   status: 'active',
   source: { kept: keptArmOfText(document) },

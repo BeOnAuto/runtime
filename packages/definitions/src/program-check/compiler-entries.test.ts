@@ -28,6 +28,7 @@ describe('the compiler', () => {
       'check.ts',
       checkHandler,
       'document.ts',
+      'identity/definition-names.ts',
       'page.ts',
       'template.ts',
       'testing/index.ts',

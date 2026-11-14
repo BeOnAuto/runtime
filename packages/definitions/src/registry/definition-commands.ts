@@ -7,6 +7,7 @@ export interface DefinitionCreation {
   readonly name: string;
   readonly content: DefinitionContent;
   readonly created_by: RecordedCaller;
+  readonly definition_id: string;
 }
 
 export interface DefinitionUpdate {

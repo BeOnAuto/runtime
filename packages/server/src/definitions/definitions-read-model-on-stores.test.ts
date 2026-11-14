@@ -1,3 +1,4 @@
+import { definitionNamesOf } from '@on.auto/definitions/identity';
 import { aGeneratedHistory, definitionsReadModelOf } from '@on.auto/definitions/testing';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
@@ -21,7 +22,10 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 
 const tables = ['definitions', 'definition_versions', 'definition_references'];
 
+const definitionNames = definitionNamesOf(types, () => Number.POSITIVE_INFINITY);
+
 interface Kept {
+  readonly definitionNames: typeof definitionNames;
   readonly streamProjections: readonly StreamProjection[];
   readonly mostBytesFilledAtOnce?: number;
 }
@@ -69,15 +73,16 @@ function rowsOf(ledger: Ledger['Service']) {
 
 async function foldedInline(aPlace: () => Promise<Opening>, seed: number) {
   const ledgerOn = await aPlace();
-  const ledger = await opened(ledgerOn({ streamProjections: [readModel] }));
+  const ledger = await opened(ledgerOn({ definitionNames, streamProjections: [readModel] }));
   await aGeneratedHistory(ledger, seed, types);
   return rowsOf(ledger);
 }
 
 async function caughtUp(aPlace: () => Promise<Opening>, seed: number, mostBytesFilledAtOnce?: number) {
   const ledgerOn = await aPlace();
-  await aGeneratedHistory(await opened(ledgerOn({ streamProjections: [] })), seed, types);
+  await aGeneratedHistory(await opened(ledgerOn({ definitionNames, streamProjections: [] })), seed, types);
   const reopened = ledgerOn({
+    definitionNames,
     streamProjections: [readModel],
     ...(mostBytesFilledAtOnce === undefined ? {} : { mostBytesFilledAtOnce }),
   });

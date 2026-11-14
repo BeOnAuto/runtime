@@ -6,6 +6,8 @@ import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook, type Harness } from '../testing/harness.ts';
 
+const anId: unknown = expect.any(String);
+
 const { createDefinition, pauseDefinition, resumeDefinition, retireDefinition, runDefinition } =
   definitionOperationsFor([probe().capability]);
 
@@ -20,6 +22,7 @@ const plain = { type: 'probe', name: 'plain' };
 const resumedPlain = {
   type: 'probe',
   name: 'plain',
+  definition_id: anId,
   version: 1,
   status: 'active',
   media_type: 'text/plain',
@@ -125,14 +128,15 @@ describe('a paused definition that is retired', () => {
 
 describe('the plain language of pause_definition and resume_definition', () => {
   it('says the definition starts no runs until it is resumed, and that it can run again once it is', () => {
+    const resumedAsAnswered = { ...resumedPlain, definition_id: 'id-of-plain' };
     const triggered = {
-      ...resumedPlain,
+      ...resumedAsAnswered,
       triggers: [{ kind: 'every', reference: '/schedule/every', milliseconds: 60_000 }],
     };
 
     expect([
-      pauseDefinition.registration.plainLanguage?.outcome({ ...resumedPlain, status: 'paused' }, plain),
-      resumeDefinition.registration.plainLanguage?.outcome(resumedPlain, plain),
+      pauseDefinition.registration.plainLanguage?.outcome({ ...resumedAsAnswered, status: 'paused' }, plain),
+      resumeDefinition.registration.plainLanguage?.outcome(resumedAsAnswered, plain),
       resumeDefinition.registration.plainLanguage?.outcome(triggered, plain),
     ]).toEqual([
       'Paused the probe “plain”. It starts no runs until it is resumed, and the runs already going finish.',

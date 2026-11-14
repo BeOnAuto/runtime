@@ -11,7 +11,7 @@ export const definitionNames = SQL.identifier(definitionNamesTableName);
 
 const byDefinitionIndexName = `${definitionNamesTableName}_by_definition`;
 
-const definitionNamesTable: PlaybookIndex = {
+export const definitionNamesTable: PlaybookIndex = {
   name: definitionNamesTableName,
   create: () => SQL`CREATE TABLE IF NOT EXISTS ${definitionNames} (
     playbook_key TEXT NOT NULL,
@@ -24,7 +24,7 @@ const definitionNamesTable: PlaybookIndex = {
   )`,
 };
 
-const byDefinitionIndex: PlaybookIndex = {
+export const byDefinitionIndex: PlaybookIndex = {
   name: byDefinitionIndexName,
   create: () =>
     SQL`CREATE UNIQUE INDEX IF NOT EXISTS ${SQL.identifier(byDefinitionIndexName)} ON ${definitionNames} (definition_key)`,

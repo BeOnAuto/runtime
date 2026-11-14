@@ -29,7 +29,7 @@ function versionRowAfter(row: ProjectedRow | undefined, message: ProjectedMessag
 
 export const definitionVersionRows: KeyedProjection = {
   name: 'definition_versions',
-  version: 1,
+  version: 2,
   kinds: ['definitions'],
   types: ['definition_created', 'definition_updated', 'definition_restored'],
   columns: [

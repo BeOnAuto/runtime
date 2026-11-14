@@ -1,9 +1,9 @@
 import { Ledger, type ProjectedKeyedRow } from '@on.auto/operations';
-import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
+import type { MemoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 
-import { definitionsReadModelOf } from '../read-model/definitions-read-model.ts';
 import { aReader, createdIn, executedIn } from './read-model-histories.ts';
+import { readModelLedgerOf } from './read-model-ledger.ts';
 
 function pointingAtThePause(rows: readonly ProjectedKeyedRow[]): readonly ProjectedKeyedRow[] {
   return rows.map((kept) => ({ ...kept, row: { ...kept.row, saved_position: 2 } }));
@@ -15,7 +15,7 @@ interface AlwaysWrong {
 }
 
 export async function aPausedGreeterAlwaysWrong(playbook = 'alpha'): Promise<AlwaysWrong> {
-  const ledger = memoryLedger(undefined, [definitionsReadModelOf(['echo'])]);
+  const ledger = readModelLedgerOf(['echo']);
   await createdIn(ledger.service, 'greeter', playbook);
   await executedIn(ledger.service, 'echo', { type: 'pause', name: 'greeter', paused_by: aReader }, playbook);
   let resets = 0;

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "rows": {
     "definitions": [
       {
@@ -7,6 +7,7 @@
         "row": {
           "definition_type": "workflow",
           "name": "follow-up-leads",
+          "definition_id": null,
           "version": 2,
           "status": "retired",
           "description": "Follows up the leads of the day",
@@ -32,6 +33,7 @@
         "row": {
           "definition_type": "computation",
           "name": "check-totals",
+          "definition_id": null,
           "version": 2,
           "status": "active",
           "description": null,
@@ -57,6 +59,7 @@
         "row": {
           "definition_type": "workflow",
           "name": "close-the-month",
+          "definition_id": null,
           "version": 2,
           "status": "paused",
           "description": null,
@@ -82,6 +85,7 @@
         "row": {
           "definition_type": "reasoning",
           "name": "greet-reasoning",
+          "definition_id": null,
           "version": 2,
           "status": "paused",
           "description": "Greets each guest",
@@ -100,6 +104,32 @@
           "reason": null,
           "retired_at": null,
           "saved_position": 13
+        }
+      },
+      {
+        "key": "workflow/close-the-week",
+        "row": {
+          "definition_type": "workflow",
+          "name": "close-the-week",
+          "definition_id": "019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a",
+          "version": 2,
+          "status": "retired",
+          "description": null,
+          "input_schema": null,
+          "output_schema": null,
+          "warnings": null,
+          "shape": null,
+          "triggers": null,
+          "created_at": "2026-11-13T12:00:00.000Z",
+          "created_by_id": "person:user_2ada",
+          "created_by_name": "Ada Lovelace",
+          "updated_at": "2026-11-13T12:01:00.000Z",
+          "paused_at": null,
+          "paused_by_id": null,
+          "paused_by_name": null,
+          "reason": null,
+          "retired_at": null,
+          "saved_position": 19
         }
       }
     ],
@@ -183,6 +213,26 @@
           "position": 13,
           "put_in_place_by": "acme-admin"
         }
+      },
+      {
+        "key": "workflow/close-the-week/1",
+        "row": {
+          "definition_type": "workflow",
+          "name": "close-the-week",
+          "version": 1,
+          "position": 14,
+          "put_in_place_by": "person:user_2ada"
+        }
+      },
+      {
+        "key": "workflow/close-the-week/2",
+        "row": {
+          "definition_type": "workflow",
+          "name": "close-the-week",
+          "version": 2,
+          "position": 19,
+          "put_in_place_by": "person:user_2ada"
+        }
       }
     ],
     "definition_references": [
@@ -200,6 +250,10 @@
       },
       {
         "key": "reasoning/greet-reasoning",
+        "rows": []
+      },
+      {
+        "key": "workflow/close-the-week",
         "rows": []
       }
     ]

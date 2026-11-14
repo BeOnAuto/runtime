@@ -21,6 +21,7 @@ const ran = {
 
 const subject: StoredDefinition = {
   name: 'morning-social-content',
+  definition_id: 'id-of-morning-social-content',
   version: 3,
   status: 'active',
   source: { inline: '{}' },

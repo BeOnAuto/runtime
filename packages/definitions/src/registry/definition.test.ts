@@ -11,6 +11,7 @@ import {
 const reasoningFunction: Definition = {
   type: 'reasoning',
   name: 'review-campaign',
+  definition_id: 'id-of-review-campaign',
   version: 3,
   status: 'active',
   media_type: 'text/markdown',
