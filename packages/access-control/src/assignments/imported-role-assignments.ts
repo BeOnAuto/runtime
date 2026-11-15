@@ -1,14 +1,8 @@
 import { OrgWriter } from '@on.auto/operations';
 import { Effect, HashMap } from 'effect';
 
-import type { BuiltInRoleId } from '../roles/built-in-roles.ts';
-import { roleAssignmentDecider, type HeldAssignment } from './role-assignment-decider.ts';
-import { roleAssignmentsStreamOf, type AssignmentScope } from './role-assignment-facts.ts';
-
-export const roleOfIdentityServiceKey: ReadonlyMap<string, BuiltInRoleId> = new Map([
-  ['org:admin', 'admin'],
-  ['org:member', 'editor'],
-]);
+import { roleAssignmentDecider, type HeldAssignment, type ProvisioningSource } from './role-assignment-decider.ts';
+import { roleAssignmentsStreamOf, roleOfIdentityServiceKey, type AssignmentScope } from './role-assignment-facts.ts';
 
 export const mostImportedInOneAppend = 8;
 
@@ -25,7 +19,7 @@ interface ImportedRoles {
   readonly undeclaredKeys: readonly string[];
 }
 
-interface ImportedAs {
+interface ProvisionedAs {
   readonly at: string;
   readonly by: string;
 }
@@ -43,21 +37,21 @@ function inAppendsOfEight(assignments: readonly HeldAssignment[]): readonly (rea
   );
 }
 
-export const rolesImported = Effect.fnUntraced(function* (
+export const rolesProvisioned = Effect.fnUntraced(function* (
   org: string,
-  members: readonly DeclaredMember[],
-  { at, by }: ImportedAs,
+  source: ProvisioningSource,
+  assignments: readonly HeldAssignment[],
+  { at, by }: ProvisionedAs,
 ) {
   const writer = yield* OrgWriter;
   const scope: AssignmentScope = { type: 'org', id: org };
-  const declared = members.flatMap((member) => assignmentOf(member));
-  const imported = yield* Effect.reduce(inAppendsOfEight(declared), noneYet, (count: number, assignments) =>
+  return yield* Effect.reduce(inAppendsOfEight(assignments), noneYet, (count: number, inOneAppend) =>
     writer
       .execute(roleAssignmentsStreamOf(scope), roleAssignmentDecider, {
         kind: 'provision',
-        source: 'import',
+        source,
         scope,
-        assignments,
+        assignments: inOneAppend,
         at,
         by,
       })
@@ -67,6 +61,15 @@ export const rolesImported = Effect.fnUntraced(function* (
         ),
       ),
   );
+});
+
+export const rolesImported = Effect.fnUntraced(function* (
+  org: string,
+  members: readonly DeclaredMember[],
+  importedAs: ProvisionedAs,
+) {
+  const declared = members.flatMap((member) => assignmentOf(member));
+  const imported = yield* rolesProvisioned(org, 'import', declared, importedAs);
   const undeclared = members.filter(({ roleKey }) => !roleOfIdentityServiceKey.has(roleKey));
   const result: ImportedRoles = {
     imported,

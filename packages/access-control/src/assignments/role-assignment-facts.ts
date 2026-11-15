@@ -9,7 +9,7 @@ import {
 } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import { builtInRoleIds } from '../roles/built-in-roles.ts';
+import { builtInRoleIds, type BuiltInRoleId } from '../roles/built-in-roles.ts';
 
 export const roleAssignmentsKind = 'role-assignments';
 
@@ -22,12 +22,23 @@ const AssignedPrincipalSchema = Schema.Struct({
 
 export type AssignedPrincipal = typeof AssignedPrincipalSchema.Type;
 
-const AssignedRoleSchema = Schema.Struct({
+export const AssignedRoleSchema = Schema.Struct({
   type: Schema.Literal('built_in'),
   id: Schema.Literals(builtInRoleIds),
 });
 
 export type AssignedRole = typeof AssignedRoleSchema.Type;
+
+export const roleOfIdentityServiceKey: ReadonlyMap<string, BuiltInRoleId> = new Map([
+  ['org:admin', 'admin'],
+  ['org:member', 'editor'],
+]);
+
+export const identityServiceKeyOfRole: Readonly<Record<BuiltInRoleId, string>> = {
+  admin: 'org:admin',
+  editor: 'org:member',
+  viewer: 'org:member',
+};
 
 const AssignmentScopeSchema = Schema.Union([
   Schema.Struct({ type: Schema.Literal('org'), id: OrgIdSchema }),

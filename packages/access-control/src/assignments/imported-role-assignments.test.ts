@@ -5,17 +5,25 @@ import { describe, expect, it } from 'vitest';
 
 import {
   mostImportedInOneAppend,
-  roleOfIdentityServiceKey,
   rolesImported,
+  rolesProvisioned,
   type DeclaredMember,
 } from './imported-role-assignments.ts';
-import { heldAssignmentsIn, roleAssignmentDecider, type HeldAssignments } from './role-assignment-decider.ts';
-import { roleAssignmentsStreamOf } from './role-assignment-facts.ts';
+import {
+  heldAssignmentsIn,
+  roleAssignmentDecider,
+  type HeldAssignment,
+  type HeldAssignments,
+  type ProvisioningSource,
+} from './role-assignment-decider.ts';
+import { roleAssignmentsStreamOf, roleOfIdentityServiceKey } from './role-assignment-facts.ts';
 import { roleAssignmentRows } from './role-assignment-rows.ts';
 
 const importedAs = { at: '2026-11-14T09:00:00.000Z', by: 'runtime' };
 
 const acmeStream = roleAssignmentsStreamOf({ type: 'org', id: 'acme' });
+
+const noSources: readonly string[] = [];
 
 function importing() {
   const ledger = memoryLedger(undefined, [roleAssignmentRows]);
@@ -31,6 +39,19 @@ function importing() {
   return {
     appends,
     imported: (members: readonly DeclaredMember[]) => run(rolesImported('acme', members, importedAs)),
+    provisioned: (source: ProvisioningSource, assignments: readonly HeldAssignment[]) =>
+      run(rolesProvisioned('acme', source, assignments, importedAs)),
+    sources: () =>
+      Effect.runPromise(
+        Effect.map(
+          ledger.service.load(`${streamPrefixOfOrg({ org: 'acme' })}${acmeStream}`, {
+            initialState: noSources,
+            evolve: (sources: readonly string[], { data }) => [...sources, `${data.principal.id} ${data.source}`],
+            eventSchema: roleAssignmentDecider.eventSchema,
+          }),
+          ({ state }) => state,
+        ),
+      ),
     held: () =>
       Effect.runPromise(
         Effect.map(
@@ -101,5 +122,22 @@ describe('the roles imported on ship day', () => {
 
     expect([outcome.imported, appends.made]).toEqual([19, 3]);
     expect(heldAssignmentsIn(await held())).toHaveLength(19);
+  });
+});
+
+function editorOf(id: string): HeldAssignment {
+  return { principal: { type: 'person', id }, role: { type: 'built_in', id: 'editor' } };
+}
+
+describe('the roles provisioned from a source', () => {
+  it('are recorded with the source named, given only to those who hold none, in appends of at most eight', async () => {
+    const { provisioned, appends, sources } = importing();
+    const joined = Array.from({ length: mostImportedInOneAppend + 1 }, (_each, at) => editorOf(`user_${at}`));
+
+    const given = await provisioned('invitation', joined);
+    const again = await provisioned('identity_service', [editorOf('user_0'), editorOf('user_new')]);
+
+    expect([given, again, appends.made]).toEqual([9, 1, 3]);
+    expect((await sources()).slice(-2)).toEqual(['user_8 invitation', 'user_new identity_service']);
   });
 });

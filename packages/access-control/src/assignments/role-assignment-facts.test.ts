@@ -2,10 +2,13 @@ import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { builtInRoleIds, type BuiltInRoleId } from '../roles/built-in-roles.ts';
 import {
   RoleAssignmentEventSchema,
+  identityServiceKeyOfRole,
   principalKeyOf,
   roleAssignmentsStreamOf,
+  roleOfIdentityServiceKey,
   type RecordedRoleAssignmentEvent,
 } from './role-assignment-facts.ts';
 
@@ -98,5 +101,27 @@ describe('the stream of a scope’s role assignments', () => {
 
   it('keys a principal by its type and id together', () => {
     expect(principalKeyOf(priya)).toBe('person:user_7kLm2');
+  });
+});
+
+function roleOfKey(key: string): BuiltInRoleId {
+  const role = roleOfIdentityServiceKey.get(key);
+  if (role === undefined) {
+    throw new Error(`The table names no role of ${key}`);
+  }
+  return role;
+}
+
+describe('the identity service’s role keys, both ways', () => {
+  it('give each built-in role the key the identity service marks it by, and read each key back as the role it names', () => {
+    expect(builtInRoleIds.map((role) => [role, identityServiceKeyOfRole[role]])).toEqual([
+      ['admin', 'org:admin'],
+      ['editor', 'org:member'],
+      ['viewer', 'org:member'],
+    ]);
+    expect([...roleOfIdentityServiceKey.keys()].map((key) => identityServiceKeyOfRole[roleOfKey(key)])).toEqual([
+      'org:admin',
+      'org:member',
+    ]);
   });
 });
