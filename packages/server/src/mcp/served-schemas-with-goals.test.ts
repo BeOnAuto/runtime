@@ -41,9 +41,9 @@ async function listingOnTheWire(path: string): Promise<{ status: number; bytes: 
 }
 
 const endpoints = [
-  { path: '/mcp', tools: 42, bytes: 67_157, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 40, bytes: 64_728, mostBytes: mostListingBytes.directory },
-  { path: '/orgs/local/mcp', tools: 18, bytes: 26_109, mostBytes: mostListingBytes.org },
+  { path: '/mcp', tools: 42, bytes: 67_131, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 40, bytes: 64_702, mostBytes: mostListingBytes.directory },
+  { path: '/orgs/local/mcp', tools: 18, bytes: 26_083, mostBytes: mostListingBytes.org },
   { path: '/orgs/local/playbooks/alpha/mcp', tools: 28, bytes: 43_636, mostBytes: mostListingBytes.playbook },
 ] as const;
 

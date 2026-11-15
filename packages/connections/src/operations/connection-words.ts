@@ -177,6 +177,19 @@ export function reconnectedWordsOf(
   );
 }
 
+function addedAgainFromWordsOf(named: string, provider: string, group: ScopeGroup | undefined): string {
+  const again = `Added ${named} again from the provider ${quoted(provider)}, under its name and for the same playbooks; it is now the caller's to finish, and the connection before is removed and its credential forgotten.`;
+  return group === undefined
+    ? again
+    : `${again} Its link asks the person to allow ${quoted(group.name)} as well: ${group.for}`;
+}
+
+export function addedAgainWordsOf(added: AddedConnection, providers: ProviderList, more: string | undefined): string {
+  const group = groupAskedOf(added, providers, more);
+  const provider = Option.getOrThrow(Option.fromNullishOr(added.provider));
+  return linkedWordsOf((named) => addedAgainFromWordsOf(named, provider, group), added, providers);
+}
+
 function linkToOpenOf({ connect, ...connection }: AddedConnection): LinkToOpen | undefined {
   return connect === undefined
     ? undefined

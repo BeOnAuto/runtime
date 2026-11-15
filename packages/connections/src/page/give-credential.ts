@@ -10,7 +10,7 @@ import {
   recordChangeInRegistry,
   recordedCaller,
 } from '../operations/registry-access.ts';
-import { providingOf } from '../providers/provider-additions.ts';
+import { providingOf } from '../providers/provider-providing.ts';
 import { connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
 import { forgottenCredentialOf } from './forgotten-credentials.ts';

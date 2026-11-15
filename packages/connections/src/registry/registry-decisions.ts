@@ -9,6 +9,7 @@ import type {
   ConnectionCommand,
   ConnectionReconnection,
   ConnectionRemoval,
+  ConnectionReplacement,
   CredentialGiving,
 } from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
@@ -203,14 +204,57 @@ function decideReconnection(command: ConnectionReconnection & CommandMetadata, r
   });
 }
 
+function standingRefusalOf({ connection }: KeptConnection, whilePending: boolean): Conflict | undefined {
+  const { name, status } = connection;
+  if (status === 'removed') {
+    return new Conflict({ detail: `The connection ${name} is removed, so it is added again rather than reconnected` });
+  }
+  return whilePending && status !== 'pending'
+    ? new Conflict({
+        detail: `The connection ${name} is ${status} now, so it is not added again: the person who added it connected it meanwhile`,
+      })
+    : undefined;
+}
+
+function replacementRefusalOf(
+  kept: KeptConnection,
+  { bindsPerson, byAnAdmin, whilePending, by }: ConnectionReplacement & CommandMetadata,
+): Rejection<RegistryRefusal> | undefined {
+  const binding = byAnAdmin ? undefined : bindingRefusalOf(kept, bindsPerson, by);
+  return binding ?? standingRefusalOf(kept, whilePending);
+}
+
+function decideReplacement(command: ConnectionReplacement & CommandMetadata, registry: Registry): Decision {
+  return Result.flatMap(keptConnectionOf(registry, command.connection), (kept): Decision => {
+    const refusal = replacementRefusalOf(kept, command);
+    if (refusal !== undefined) {
+      return Result.fail(refusal);
+    }
+    const { link, ...added } = command.addition;
+    return Result.succeed([
+      { type: 'connection_removed', data: { connection: command.connection } },
+      { type: 'connection_added', data: addedData(added) },
+      { type: 'connection_link_issued', data: { connection: added.connection, ...link } },
+    ]);
+  });
+}
+
 export function registryContextOf({ by, at }: CommandMetadata): Context {
   return { at, by };
 }
 
-function decidedWithoutSigning(command: CommandWithoutSigning, registry: Registry): Decision {
-  if (command.type === 'add') {
-    return decideAddition(command, registry);
-  }
+type ThroughTheLink = Extract<
+  CommandWithoutSigning,
+  { readonly type: 'approve' | 'give' | 'give_client' | 'start' | 'finish' }
+>;
+
+const kindsThroughTheLink: ReadonlySet<string> = new Set(['approve', 'give', 'give_client', 'start', 'finish']);
+
+function isThroughTheLink(command: CommandWithoutSigning): command is ThroughTheLink {
+  return kindsThroughTheLink.has(command.type);
+}
+
+function decidedThroughTheLink(command: ThroughTheLink, registry: Registry): Decision {
   if (command.type === 'approve') {
     return decideApproval(command, registry);
   }
@@ -220,14 +264,21 @@ function decidedWithoutSigning(command: CommandWithoutSigning, registry: Registr
   if (command.type === 'give_client') {
     return decideClientGiving(command, registry);
   }
-  if (command.type === 'start') {
-    return decideStart(command, registry);
+  return command.type === 'start' ? decideStart(command, registry) : decideFinish(command, registry);
+}
+
+function decidedWithoutSigning(command: CommandWithoutSigning, registry: Registry): Decision {
+  if (isThroughTheLink(command)) {
+    return decidedThroughTheLink(command, registry);
   }
-  if (command.type === 'finish') {
-    return decideFinish(command, registry);
+  if (command.type === 'add') {
+    return decideAddition(command, registry);
   }
   if (command.type === 'reconnect') {
     return decideReconnection(command, registry);
+  }
+  if (command.type === 'replace') {
+    return decideReplacement(command, registry);
   }
   if (command.type === 'set_playbooks') {
     return decidePlaybooks(command, registry);

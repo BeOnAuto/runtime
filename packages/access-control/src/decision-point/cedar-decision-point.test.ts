@@ -95,7 +95,7 @@ describe('the policy decision point', () => {
       {
         message: loadedMessage,
         level: 'INFO',
-        annotations: { engine: 'Cedar 4.14.0', policies: 10, operations: declaredOperations.length },
+        annotations: { engine: 'Cedar 4.14.0', policies: 11, operations: declaredOperations.length },
       },
     ]);
   });

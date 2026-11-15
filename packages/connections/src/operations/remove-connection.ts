@@ -1,10 +1,10 @@
 import { defineCommand, OrgContext } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { keyEndedBeforeRemoval, newerKeyEndedOf } from '../page/connection-gateways.ts';
-import { forgottenClientsOf, forgottenCredentialOf } from '../page/forgotten-credentials.ts';
+import { keyEndedBeforeRemoval } from '../page/connection-gateways.ts';
+import { forgottenOnRemoval } from '../page/forgotten-credentials.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
-import { signingSecretsHeldBy } from '../registry/kept-signing.ts';
+import type { KeptConnection } from '../registry/registry.ts';
 import { ConnectionIdField } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { connectionNamed, removalAttempted } from './connection-words.ts';
@@ -12,23 +12,25 @@ import { foundConnection, recordInRegistry } from './registry-access.ts';
 
 type RemovalServices = Pick<ConnectionServices, 'secrets' | 'consent' | 'policy' | 'pages' | 'providers' | 'resolve'>;
 
-const removedConnection = Effect.fnUntraced(function* (id: string, services: RemovalServices) {
-  const { secrets } = services;
-  const found = yield* foundConnection(id);
+export const removedAround = Effect.fnUntraced(function* <Recorded extends { readonly removed: KeptConnection }, E, R>(
+  found: KeptConnection,
+  recording: Effect.Effect<Recorded, E, R>,
+  services: RemovalServices,
+) {
   yield* keyEndedBeforeRemoval(found, services);
-  const kept = yield* recordInRegistry({ type: 'remove', connection: id }).pipe(
+  const recorded = yield* recording;
+  yield* forgottenOnRemoval(found, recorded.removed, services);
+  return recorded;
+});
+
+const removedConnection = Effect.fnUntraced(function* (id: string, services: RemovalServices) {
+  const found = yield* foundConnection(id);
+  const recording = recordInRegistry({ type: 'remove', connection: id }).pipe(
     Effect.catchTags({ forbidden: Effect.die, invalid_input: Effect.die }),
+    Effect.map((removed) => ({ removed })),
   );
-  yield* newerKeyEndedOf(found, kept, services);
-  yield* forgottenCredentialOf(kept, services);
-  yield* forgottenClientsOf(kept, services);
-  yield* Effect.forEach(signingSecretsHeldBy(kept.signing), (secretId) => secrets.forget(secretId), {
-    discard: true,
-  });
-  if (kept.consent !== undefined) {
-    yield* secrets.forget(kept.consent.verifier_secret_id);
-  }
-  return connectionShown(kept.connection, null);
+  const { removed } = yield* removedAround(found, recording, services);
+  return connectionShown(removed.connection, null);
 });
 
 export function defineRemoveConnection(services: RemovalServices) {

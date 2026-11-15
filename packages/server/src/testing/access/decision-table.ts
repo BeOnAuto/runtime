@@ -1,4 +1,4 @@
-import { cedarDecisionPoint, cedarModuleIn, type DeclaredAction, type RoleAssignments } from '@on.auto/access-control';
+import { cedarDecisionPoint, cedarModuleIn, type RoleAssignments } from '@on.auto/access-control';
 import {
   allPermissions,
   enforcedDecisionOf,
@@ -13,7 +13,7 @@ import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Effect } from 'effect';
 
 import { shippedRoots } from '../../server-options/shipped-roots.ts';
-import { actionOf } from '../openapi/declared-operations.ts';
+import { actionOf, type ServedDeclaration } from '../openapi/declared-operations.ts';
 
 interface CallerKind {
   readonly caller: string;
@@ -82,7 +82,7 @@ const roles: RoleAssignments = {
     ),
 };
 
-type Unsaid = Omit<AccessContext['operation'], 'targetsPlaybook'>;
+type Unsaid = Omit<AccessContext['operation'], 'targetsPlaybook' | 'permissionsManagement'>;
 
 const whatTheDocumentDoesNotSay: readonly Unsaid[] = [
   {
@@ -91,7 +91,6 @@ const whatTheDocumentDoesNotSay: readonly Unsaid[] = [
     reachesOutside: false,
     mayChangeOutside: false,
     irreversible: false,
-    permissionsManagement: false,
   },
   {
     kind: 'command',
@@ -99,11 +98,10 @@ const whatTheDocumentDoesNotSay: readonly Unsaid[] = [
     reachesOutside: true,
     mayChangeOutside: true,
     irreversible: true,
-    permissionsManagement: true,
   },
 ];
 
-function requestOf(kind: CallerKind, operation: DeclaredAction, unsaid: Unsaid): AccessRequest {
+function requestOf(kind: CallerKind, operation: ServedDeclaration, unsaid: Unsaid): AccessRequest {
   return {
     principal: kind.principal,
     action: { scope: operation.scope, name: operation.name },
@@ -116,7 +114,11 @@ function requestOf(kind: CallerKind, operation: DeclaredAction, unsaid: Unsaid):
         permissions: kind.permissions ?? allPermissions,
         playbooks: kind.playbooks ?? '*',
       },
-      operation: { ...unsaid, targetsPlaybook: operation.targetsPlaybook },
+      operation: {
+        ...unsaid,
+        targetsPlaybook: operation.targetsPlaybook,
+        permissionsManagement: operation.permissionsManagement,
+      },
     },
   };
 }
@@ -148,7 +150,7 @@ function isRefusedForTheRole(enforced: Enforced): boolean {
 
 const files = shippedFilesOnDisk(shippedRoots);
 
-async function rowOf(operations: readonly DeclaredAction[], kind: CallerKind): Promise<DecisionRow> {
+async function rowOf(operations: readonly ServedDeclaration[], kind: CallerKind): Promise<DecisionRow> {
   const decisionPoint = cedarDecisionPoint({ module: cedarModuleIn(files), files, operations, roles });
   const decided = await Promise.all(
     operations.map(async (operation): Promise<Decided> => {
@@ -186,6 +188,6 @@ async function rowOf(operations: readonly DeclaredAction[], kind: CallerKind): P
   };
 }
 
-export function decisionTableOf(operations: readonly DeclaredAction[]): Promise<readonly DecisionRow[]> {
+export function decisionTableOf(operations: readonly ServedDeclaration[]): Promise<readonly DecisionRow[]> {
   return Promise.all(callerKinds.map((kind) => rowOf(operations, kind)));
 }

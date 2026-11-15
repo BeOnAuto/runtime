@@ -2,11 +2,31 @@ import { Caller, defineHttpOperation, type Runnable } from '@on.auto/operations'
 import { Effect, Schema } from 'effect';
 
 import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
-import { ProvidersSchema } from './listed-providers.ts';
+import { startOf, type ConnectionStart, type StartsOfConnections } from '../policy/connection-starts.ts';
+import { ProvidersSchema, type ListedProvider } from './listed-providers.ts';
 import { listedProviders } from './provider-listing.ts';
 import { addingRefusedTo, type OfferingServices } from './provider-offering.ts';
 
-export function defineListProviders(listing: OfferingServices, adding: Runnable<'org'>) {
+type Reconnecting = Pick<ListedProvider, 'may_reconnect' | 'reconnect_refusal'>;
+
+function reconnectingOf(start: ConnectionStart): Reconnecting {
+  if (start === 'anyone') {
+    return {};
+  }
+  return start === 'an admin' ? { may_reconnect: true } : { may_reconnect: false, reconnect_refusal: start.refused };
+}
+
+function withWhoReconnects(services: StartsOfConnections) {
+  return (provider: ListedProvider): Effect.Effect<ListedProvider> =>
+    provider.replaces === undefined
+      ? Effect.succeed(provider)
+      : startOf(services, provider.name).pipe(
+          Effect.map((start) => ({ ...provider, ...reconnectingOf(start) })),
+          Effect.orElseSucceed(() => provider),
+        );
+}
+
+export function defineListProviders(listing: OfferingServices & StartsOfConnections, adding: Runnable<'org'>) {
   return defineHttpOperation('org', 'query', {
     name: 'list_providers',
     title: 'List providers',
@@ -25,7 +45,7 @@ export function defineListProviders(listing: OfferingServices, adding: Runnable<
       const refusal = yield* addingRefusedTo(listing, adding, yield* Caller);
       const consent = yield* listing.consent.hadSources(studioBaseFor(listing.pages));
       return {
-        providers: listedProviders({ ...listing, consent }),
+        providers: yield* Effect.forEach(listedProviders({ ...listing, consent }), withWhoReconnects(listing)),
         may_add: refusal === null,
         refusal,
         return_address: returnAddressOf(listing.pages),

@@ -1,13 +1,11 @@
-import { Caller, OrgContext, defineCommand } from '@on.auto/operations';
+import { Caller, defineCommand } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { connectOf, studioBaseFor } from '../links/connect-page.ts';
 import { adderRefusalOf } from '../policy/policy-rules.ts';
-import { admittedAdditionOf } from './admitted-additions.ts';
-import { AddedSchema, AdditionSchema, rendersFieldOf } from './connection-fields.ts';
+import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { addedWordsOf, additionAttempted, linkOffering } from './connection-words.ts';
-import { additionLinkIssuedFor } from './more-asked.ts';
+import { admittedWithItsLink, answeredWithItsLink } from './linked-additions.ts';
 import { recordedAdditionOf } from './recorded-additions.ts';
 
 const description = [
@@ -20,14 +18,8 @@ const description = [
   'Nothing is granted by this call and no credential passes through it.',
 ].join(' ');
 
-export function defineAddConnection({
-  policy,
-  fileEntries,
-  modelProviders,
-  pages,
-  access,
-  ...serving
-}: ConnectionServices) {
+export function defineAddConnection(services: ConnectionServices) {
+  const { access, providers, secrets } = services;
   return defineCommand('org', {
     name: 'add_connection',
     title: 'Add connection',
@@ -42,31 +34,15 @@ export function defineAddConnection({
       if (adderRefusal !== undefined) {
         return yield* Effect.fail(adderRefusal);
       }
-      const { org } = yield* OrgContext;
-      const studioBase = studioBaseFor(pages);
-      const given = yield* admittedAdditionOf(input, {
-        ...serving,
-        org,
-        modelProviders,
-        policy,
-        fileEntries,
-        studioBase,
-      });
-      const { token, ...link } = yield* additionLinkIssuedFor(given, input.more, { ...serving, pages });
-      const kept = yield* recordedAdditionOf(given, link);
-      const connect = connectOf(pages, { org, connection: kept.connection.id, token }, link.expires_at);
-      return {
-        ...kept.connection,
-        credential_ends_with: null,
-        ...rendersFieldOf(serving.providers, kept.connection.provider),
-        connect,
-      };
+      const admitted = yield* admittedWithItsLink(input, input.more, services);
+      const kept = yield* recordedAdditionOf(admitted.described, admitted.link);
+      return yield* answeredWithItsLink(kept, admitted, services);
     }),
     plainLanguage: {
       task: 'add a connection',
       attempt: additionAttempted,
-      outcome: (added, { more }) => addedWordsOf(added, serving.providers, more),
+      outcome: (added, { more }) => addedWordsOf(added, providers, more),
     },
-    ...linkOffering(serving.secrets),
+    ...linkOffering(secrets),
   });
 }

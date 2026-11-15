@@ -1,9 +1,7 @@
 import { isFilledAround, placeholdersIn, textsAroundPlaceholders } from '@on.auto/config';
 import { reservedHostKindOf } from '@on.auto/outbound';
-import { listed } from '@on.auto/phrasing';
 import {
   hostAlternativesOf,
-  operatorVariablesOf,
   scopesIn,
   type CredentialWay,
   type Placeholder,
@@ -20,9 +18,9 @@ import {
   listedWayOf,
   type ListedPlaceholder,
   type ListedProvider,
-  type ListedWay,
   type OAuthClientChoice,
 } from './listed-providers.ts';
+import { offeringOf, type Offering } from './way-offerings.ts';
 
 export interface Listing {
   readonly providers: ProviderList;
@@ -30,8 +28,6 @@ export interface Listing {
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
   readonly consent: HadSources;
 }
-
-type Offering = Pick<ListedWay, 'offered' | 'because'>;
 
 const placedHostCharacters = /^[a-z0-9-]+$/u;
 
@@ -73,16 +69,6 @@ function isListed(
     (credentialKinds === null || credentialKinds.includes(way.kind)) &&
     hostAlternativesOf(provider, way).some((hosts) => hosts.every((host) => couldReach(allowedHosts, host)))
   );
-}
-
-function offeringOf({ entry }: Provider, providerValues: ReadonlyMap<string, Redacted.Redacted>): Offering {
-  const unset = operatorVariablesOf(entry).filter((variable) => !providerValues.has(variable));
-  return unset.length === 0
-    ? { offered: true }
-    : {
-        offered: false,
-        because: `Whoever runs the runtime sets this up first: it sends ${listed(unset)}, which this runtime does not set`,
-      };
 }
 
 function listedPlaceholderOf([name, placeholder]: readonly [string, Placeholder]): ListedPlaceholder {
@@ -171,7 +157,7 @@ export function gatewayUnofferedOf(provider: Provider, listing: Listing): string
 export function isOfferedWay(provider: Provider, way: CredentialWay, listing: Listing): boolean {
   return (
     isListed(provider, way, listing.policy) &&
-    offeringOf(provider, listing.providerValues).offered &&
+    offeringOf(provider, listing).offered &&
     (way.gateway === undefined || !('because' in consentOfferedOf(provider.entry.name, way, listing.consent)))
   );
 }
@@ -208,8 +194,8 @@ function moreSaidBy({ more = [] }: CredentialWay) {
 }
 
 function listedProviderOf(provider: Provider, listing: Listing): readonly ListedProvider[] {
-  const { name, title, description, website, type } = provider.entry;
-  const offering = offeringOf(provider, listing.providerValues);
+  const { name, title, description, website, type, replaces } = provider.entry;
+  const offering = offeringOf(provider, listing);
   const ways = waysInOrderOf(provider, listing)
     .filter((way) => isListed(provider, way, listing.policy))
     .map((way) =>
@@ -222,7 +208,18 @@ function listedProviderOf(provider: Provider, listing: Listing): readonly Listed
     );
   return ways.length === 0
     ? []
-    : [{ name, title, description, website, type, credentials: ways, placeholders: placeholdersOf(provider) }];
+    : [
+        {
+          name,
+          title,
+          description,
+          website,
+          type,
+          credentials: ways,
+          placeholders: placeholdersOf(provider),
+          ...(replaces === undefined ? {} : { replaces }),
+        },
+      ];
 }
 
 export function listedProviders(listing: Listing): readonly ListedProvider[] {

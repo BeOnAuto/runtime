@@ -29,7 +29,11 @@ export interface PlaybookRequest extends OrgRequest {
   readonly attemptDied?: true;
 }
 
-export function callSummaryOf(operation: string, { org, caller }: OrgRequest, playbook?: string): CallSummary {
+export function callSummaryOf(
+  operation: string,
+  { org, caller }: Pick<OrgRequest, 'org' | 'caller'>,
+  playbook?: string,
+): CallSummary {
   return playbook === undefined
     ? { operation, org, caller: caller.id }
     : { operation, org, playbook, caller: caller.id };

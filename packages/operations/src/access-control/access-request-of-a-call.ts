@@ -1,4 +1,4 @@
-import { Predicate } from 'effect';
+import { Context, Predicate } from 'effect';
 
 import { playbookFieldOf } from '../authorization/authorization.ts';
 import { localDeveloperId, playbookCallerPrefix, signedInPersonPrefix, type CallerIdentity } from '../caller/caller.ts';
@@ -12,6 +12,24 @@ import type {
   PrincipalReference,
   ResourceReference,
 } from './policy-decision-point.ts';
+
+export type OperationDeclaration = Pick<
+  Runnable,
+  | 'scope'
+  | 'name'
+  | 'kind'
+  | 'permissions'
+  | 'targetsPlaybook'
+  | 'readsOnly'
+  | 'reachesOutside'
+  | 'mayChangeOutside'
+  | 'irreversible'
+  | 'permissionsManagement'
+>;
+
+export const InAConversation = Context.Reference<boolean>('@on.auto/operations/InAConversation', {
+  defaultValue: () => false,
+});
 
 const keyIdsTakeNo = ':';
 
@@ -44,41 +62,50 @@ const viaOfPrincipal: Readonly<Record<Exclude<PrincipalReference['type'], 'perso
   local_developer: 'local',
 };
 
-function viaOf(principal: PrincipalReference, request: OrgRequest | PlaybookRequest): ArrivedVia {
+function viaOf(
+  principal: PrincipalReference,
+  request: OrgRequest | PlaybookRequest,
+  inAConversation: boolean,
+): ArrivedVia {
   if (isMadeByARun(request)) {
     return 'run';
   }
   if (principal.type !== 'person') {
     return viaOfPrincipal[principal.type];
   }
+  if (inAConversation) {
+    return 'conversation';
+  }
   return request.caller.client === undefined ? 'studio' : 'agent';
 }
 
 function contextOf(
-  registration: Runnable,
+  declaration: OperationDeclaration,
   request: OrgRequest | PlaybookRequest,
   principal: PrincipalReference,
+  inAConversation: boolean,
 ): AccessContext {
   const { org, permissions, playbooks } = request.caller;
   return {
-    via: viaOf(principal, request),
+    via: viaOf(principal, request, inAConversation),
     granted: { org, permissions, playbooks },
     operation: {
-      kind: registration.kind,
-      targetsPlaybook: registration.targetsPlaybook,
-      readsOnly: registration.readsOnly,
-      reachesOutside: registration.reachesOutside,
-      mayChangeOutside: registration.mayChangeOutside,
-      irreversible: registration.irreversible,
-      permissionsManagement: registration.permissionsManagement,
+      kind: declaration.kind,
+      targetsPlaybook: declaration.targetsPlaybook,
+      readsOnly: declaration.readsOnly,
+      reachesOutside: declaration.reachesOutside,
+      mayChangeOutside: declaration.mayChangeOutside,
+      irreversible: declaration.irreversible,
+      permissionsManagement: declaration.permissionsManagement,
     },
   };
 }
 
 function requestOn(
-  registration: Runnable,
+  declaration: OperationDeclaration,
   request: OrgRequest | PlaybookRequest,
   resource: ResourceReference,
+  inAConversation: boolean,
 ): AccessRequest | undefined {
   const principal = principalOf(request.caller);
   if (principal === undefined) {
@@ -86,9 +113,9 @@ function requestOn(
   }
   return {
     principal,
-    action: { scope: registration.scope, name: registration.name },
+    action: { scope: declaration.scope, name: declaration.name },
     resource,
-    context: contextOf(registration, request, principal),
+    context: contextOf(declaration, request, principal, inAConversation),
   };
 }
 
@@ -104,15 +131,25 @@ function resourceOfOrgCall(registration: Runnable<'org'>, request: OrgRequest): 
     : { type: 'playbook', id: playbook, org: request.org };
 }
 
-export function accessRequestOfOrgCall(registration: Runnable<'org'>, request: OrgRequest): AccessRequest | undefined {
-  return requestOn(registration, request, resourceOfOrgCall(registration, request));
+export function accessRequestOfOrgCall(
+  registration: Runnable<'org'>,
+  request: OrgRequest,
+  inAConversation: boolean,
+): AccessRequest | undefined {
+  return requestOn(registration, request, resourceOfOrgCall(registration, request), inAConversation);
 }
 
 export function accessRequestOfPlaybookCall(
   registration: Runnable<'playbook'>,
   request: PlaybookRequest,
+  inAConversation: boolean,
 ): AccessRequest | undefined {
-  return requestOn(registration, request, { type: 'playbook', id: request.playbook, org: request.org });
+  return requestOn(
+    registration,
+    request,
+    { type: 'playbook', id: request.playbook, org: request.org },
+    inAConversation,
+  );
 }
 
 export interface AskedOfACaller {
@@ -123,21 +160,28 @@ export interface AskedOfACaller {
 
 const whicheverPlaybookItNames: PlaybookAccess = '*';
 
-function takesAPlaybook(registration: Runnable): boolean {
-  return registration.scope === 'playbook' || registration.targetsPlaybook;
+function takesAPlaybook(declaration: OperationDeclaration): boolean {
+  return declaration.scope === 'playbook' || declaration.targetsPlaybook;
 }
 
 export function accessRequestOfAsking(
-  registration: Runnable,
+  declaration: OperationDeclaration,
   { caller, org, playbook }: AskedOfACaller,
+  inAConversation: boolean,
 ): AccessRequest | undefined {
-  if (playbook === undefined || !takesAPlaybook(registration)) {
+  if (playbook === undefined || !takesAPlaybook(declaration)) {
     const listing = { ...caller, playbooks: whicheverPlaybookItNames };
-    return requestOn(registration, { caller: listing, org, input: {}, encoding: 'json' }, { type: 'org', id: org });
+    return requestOn(
+      declaration,
+      { caller: listing, org, input: {}, encoding: 'json' },
+      { type: 'org', id: org },
+      inAConversation,
+    );
   }
   return requestOn(
-    registration,
+    declaration,
     { caller, org, input: { playbook }, encoding: 'json' },
     { type: 'playbook', id: playbook, org },
+    inAConversation,
   );
 }

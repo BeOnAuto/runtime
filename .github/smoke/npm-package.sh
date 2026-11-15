@@ -53,9 +53,9 @@ test "$(runtime --version)" = "$(jq --raw-output .version "$repository/package.j
 test "$(runtime key --org demo | grep --count --extended-regexp '^API key, shown only this once: abk_[0-9a-f]{8}_[A-Za-z0-9_-]{43}$')" = 1
 runtime > runtime.log 2>&1 &
 started=$!
-for attempt in $(seq 1 60); do
+for attempt in $(seq 1 300); do
   curl --silent --fail http://127.0.0.1:$port/health > /dev/null && break
-  sleep 1
+  sleep 0.2
 done
 test "$(curl --silent --fail http://127.0.0.1:$port/health)" = '{"status":"ok"}'
 for attempt in $(seq 1 10); do

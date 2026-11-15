@@ -95,7 +95,7 @@ A workflow that fails for a reason of its tenant, an uncaught error, a rejected 
 
 What a server spends on workflows is bounded by limits a tenant cannot raise:
 
-- **Data a run holds at once**, at most 4 MiB, counted by the machine (`heldBytes`); a value held across a wait or a yield is bounded by the 1,572,864 bytes one event holds. A run that would hold more ends with a `runtime` error.
+- **Data a run holds at once**, at most 4 MiB, counted by the machine (`heldBytes`); a value held inline across a wait or a yield is bounded by the 1,572,864 bytes one event holds, and one payload offloading keeps by those 4 MiB, since its event holds only its digest and size. A run that would hold more ends with a `runtime` error.
 - **Events** (`send_run_event`): each at most 256 KiB as JSON, its `type` and `id` at most 256 characters and its `source` and `subject` at most 1024. A run holds at most 64 events it has not consumed, and 1 MiB of them; it takes at most 1024 events, or 4 MiB of them as JSON, over its life. One more ends the run with a `runtime` error at once, whatever it is doing; the run settles `rejected`, and later events are rejected as `not_found`.
 - **Loaded runs**: the engine keeps at most 1,024 runs and 64 MiB of the data they hold between their inputs, letting go of the run used longest ago; a run it let go of is loaded again from its latest snapshot, at most about 5.3 MiB, and the events after it.
 - **Compiled expressions** are kept in one cache for the process, holding at most 262,144 characters of expression source and letting go of the expression used longest ago. A compiled expression measured 22 to 34 bytes of heap for each character of its source, so the cache holds at most about 9 MiB; compiling one again took 10 to 150 µs.

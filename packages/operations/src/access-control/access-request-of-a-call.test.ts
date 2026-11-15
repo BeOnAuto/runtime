@@ -2,6 +2,7 @@ import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  InAConversation,
   PlaybookIdSchema,
   allPermissions,
   defineCommand,
@@ -101,10 +102,10 @@ const shareNotes = defineCommand('playbook', {
 
 type Dispatched = (dispatcher: Dispatcher) => Effect.Effect<Outcome, never, DispatcherServices>;
 
-async function askedFor(dispatched: Dispatched): Promise<readonly AccessRequest[]> {
+async function askedFor(dispatched: Dispatched, inAConversation = false): Promise<readonly AccessRequest[]> {
   const recording = recordingDecisionPoint(() => allowedByTheTest);
   const { dispatcher, run } = harness({ reportOnly: recording.decisionPoint });
-  await run(dispatched(dispatcher));
+  await run(Effect.provideService(dispatched(dispatcher), InAConversation, inAConversation));
   return recording.asked();
 }
 
@@ -217,6 +218,35 @@ describe('how the question says a call arrived, and what it asks about', () => {
       { resource: { type: 'org', id: 'acme' }, targetsPlaybook: true },
       { resource: { type: 'org', id: 'acme' }, targetsPlaybook: false },
     ]);
+  });
+});
+
+describe('a call made within a turn of a conversation', () => {
+  it('says a person’s call made within a turn of a conversation arrived through the conversation, whatever their credential, and a key’s and a run’s as ever', async () => {
+    const byItsRun: PlaybookRequest = {
+      ...onAlpha(ada, { name: 'anvil' }),
+      lineage: { causationId: null, correlationId: 'run-2' },
+    };
+    const asked = await Promise.all(
+      [
+        onAlpha(ada, { name: 'anvil' }),
+        onAlpha(adasAgent, { name: 'anvil' }),
+        onAlpha(acmeAlphaReader, {}),
+        byItsRun,
+      ].map(async (request) => {
+        const [question] = await askedFor(
+          (dispatcher) => dispatcher.dispatchToPlaybook(getNote.registration, request),
+          true,
+        );
+        return question?.context.via;
+      }),
+    );
+    const [ofTheOrg] = await askedFor(
+      (dispatcher) => dispatcher.dispatchToOrg(listPlaybookLabels.registration, toOrg('acme')(adasAgent, {})),
+      true,
+    );
+
+    expect([...asked, ofTheOrg?.context.via]).toEqual(['conversation', 'conversation', 'key', 'run', 'conversation']);
   });
 });
 

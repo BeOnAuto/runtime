@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { addsAKeptValue } from '../kept-testing/kept-events.ts';
 import { mostEventBytes, mostHeldBytes, mostHistoryBytes, mostInputs } from '../machine/limits.ts';
 import type { RunOutcome } from '../machine/run-state.ts';
-import { eventBytesOf } from '../run-log/run-event.ts';
+import { eventBytesOf, type RunLogEvent } from '../run-log/run-event.ts';
 import { drivenRun, type DrivenRun } from '../testing/run-history.ts';
 import { afterTheWaits, startedStateOf } from '../testing/stored-runs.ts';
 import { workflow } from '../testing/workflows.ts';
@@ -12,8 +12,34 @@ const megabyte = 1_048_576;
 
 const pausing = workflow('do:\n  - pause: { wait: PT1H }');
 
+const keepLess = 'keep less across a wait, and start calls with large inputs one after another';
+
+const keepLessOrOffload =
+  'keep less across a wait, start calls with large inputs one after another, or turn on payload offloading';
+
+function tooMuchAtOnce(bytes: number, whatToDo: string): string {
+  return `The run would record ${bytes} bytes at once, more than the ${mostEventBytes} it may record at once; ${whatToDo}`;
+}
+
+const heldTooMuch = new RegExp(
+  `^The workflow would hold about \\d+ bytes of data at once, more than the ${mostHeldBytes} a workflow may hold$`,
+  'u',
+);
+
 function titleOf(outcome: RunOutcome | null): string {
   return outcome?.kind === 'raised' ? (outcome.error.title ?? '') : JSON.stringify(outcome);
+}
+
+function writtenBytesOf(event: RunLogEvent): number {
+  return new TextEncoder().encode(JSON.stringify(event)).byteLength;
+}
+
+function eventAt(run: DrivenRun, index: number): RunLogEvent {
+  const positioned = run.events[index];
+  if (positioned === undefined) {
+    throw new RangeError(`The run recorded no event ${index + 1}`);
+  }
+  return positioned.event;
 }
 
 describe('a run ends, raised, in one small event, when an input would make an event larger than one event holds, in words that say what to do', () => {
@@ -24,7 +50,7 @@ describe('a run ends, raised, in one small event, when an input would make an ev
 
     expect(titleOf(run.outcome)).toMatch(
       new RegExp(
-        `^The run would record \\d+ bytes at once, more than the ${mostEventBytes} it may record at once; keep less across a wait, and start calls with large inputs one after another$`,
+        `^The run would record \\d+ bytes at once, more than the ${mostEventBytes} it may record at once; ${keepLessOrOffload}$`,
         'u',
       ),
     );
@@ -42,7 +68,12 @@ describe('a run ends, raised, in one small event, when an input would make an ev
   });
 });
 
-function holdingAcross(pause: string, length: number, payloadOffloading = false): DrivenRun {
+interface Keeping {
+  readonly payloadOffloading?: boolean;
+  readonly payloadSizeThreshold?: number;
+}
+
+function holdingAcross(pause: string, length: number, keeping: Keeping = {}): DrivenRun {
   return drivenRun(
     workflow(`
 do:
@@ -50,47 +81,46 @@ do:
   - pause: ${pause}
   - measure: { set: '\${ ({ length: $data.s.length }) }' }
 `),
-    { payloadOffloading },
+    keeping,
   );
 }
 
-function longestHeldAcross(pause: string, payloadOffloading = false): number {
+function longestHeldAcross(pause: string, keeping: Keeping = {}): number {
   const near = mostEventBytes - 4096;
-  const [first = 0] = holdingAcross(pause, near, payloadOffloading).events.map(({ event }) => eventBytesOf(event));
+  const [first = 0] = holdingAcross(pause, near, keeping).events.map(({ event }) => eventBytesOf(event));
   return near + mostEventBytes - first;
 }
 
+const pauses = [
+  ['a wait', '{ wait: PT1S }'],
+  ['a yield', "{ for: { in: '${ Array.from({ length: 120 }, (_, index) => index) }' }, do: [] }"],
+] as const;
+
 describe('a value a run holds across a wait or a yield', () => {
-  it.each([
-    ['a wait', '{ wait: PT1S }'],
-    ['a yield', "{ for: { in: '${ Array.from({ length: 120 }, (_, index) => index) }' }, do: [] }"],
-  ])(
-    'is kept when the event of the input that made it holds it, and ends the run when it is one byte larger: across %s',
+  it.each(pauses)(
+    'is held in the event of the input that made it where payload offloading is off, and ends the run when it is one byte larger, in words that say to turn payload offloading on: across %s',
     (_across, pause) => {
       const longest = longestHeldAcross(pause);
 
       expect(longest).toBeGreaterThan(mostEventBytes - 4096);
       expect(holdingAcross(pause, longest).outcome).toEqual({ kind: 'completed', output: { length: longest } });
       expect(titleOf(holdingAcross(pause, longest + 1).outcome)).toBe(
-        `The run would record ${mostEventBytes + 1} bytes at once, more than the ${mostEventBytes} it may record at once; keep less across a wait, and start calls with large inputs one after another`,
+        tooMuchAtOnce(mostEventBytes + 1, keepLessOrOffload),
       );
     },
   );
 
-  it.each([
-    ['a wait', '{ wait: PT1S }'],
-    ['a yield', "{ for: { in: '${ Array.from({ length: 120 }, (_, index) => index) }' }, do: [] }"],
-  ])(
-    'is bounded by one event as much when it is kept outside, its event counting its bytes, less the bytes that name it: across %s',
+  it.each(pauses)(
+    'is held in its event where its size is under the threshold of payload offloading, and bounded there by one event, in words that leave offloading out, as it is on: across %s',
     (_across, pause) => {
-      const longest = longestHeldAcross(pause, true);
-      const kept = holdingAcross(pause, longest, true);
+      const inline = { payloadOffloading: true, payloadSizeThreshold: 2 * mostEventBytes };
+      const longest = longestHeldAcross(pause, inline);
+      const held = holdingAcross(pause, longest, inline);
 
-      expect(longestHeldAcross(pause) - longest).toBeLessThan(256);
-      expect(kept.events.map(({ event }) => addsAKeptValue(event)).at(0)).toBe(true);
-      expect(kept.outcome).toEqual({ kind: 'completed', output: { length: longest } });
-      expect(titleOf(holdingAcross(pause, longest + 1, true).outcome)).toBe(
-        `The run would record ${mostEventBytes + 1} bytes at once, more than the ${mostEventBytes} it may record at once; keep less across a wait, and start calls with large inputs one after another`,
+      expect(held.events.some(({ event }) => addsAKeptValue(event))).toBe(false);
+      expect(held.outcome).toEqual({ kind: 'completed', output: { length: longest } });
+      expect(titleOf(holdingAcross(pause, longest + 1, inline).outcome)).toBe(
+        tooMuchAtOnce(mostEventBytes + 1, keepLess),
       );
     },
   );
@@ -99,6 +129,74 @@ describe('a value a run holds across a wait or a yield', () => {
     const run = holdingAcross('{ set: { s: done } }', 2 * mostEventBytes);
 
     expect(run.outcome).toEqual({ kind: 'completed', output: { length: 4 } });
+  });
+});
+
+describe('a value payload offloading keeps across a wait or a yield', () => {
+  it.each(pauses)(
+    'is named in its event by its digest and size, so the data a run holds bounds it rather than one event, and its history counts its bytes: across %s',
+    (_across, pause) => {
+      const length = 2 * mostEventBytes;
+      const kept = holdingAcross(pause, length, { payloadOffloading: true });
+      const made = eventAt(kept, 0);
+
+      expect(kept.outcome).toEqual({ kind: 'completed', output: { length } });
+      expect([addsAKeptValue(made), writtenBytesOf(made) < 4096, eventBytesOf(made) > length]).toEqual([
+        true,
+        true,
+        true,
+      ]);
+      expect(titleOf(holdingAcross(pause, mostHeldBytes, { payloadOffloading: true }).outcome)).toMatch(heldTooMuch);
+    },
+  );
+});
+
+function startingAtOnce(calls: number, pageBytes: number, payloadOffloading: boolean): DrivenRun {
+  const branches = Array.from(
+    { length: calls },
+    (_, index) => `          - b${index}: { call: notify, with: { to: b${index}, page: '\${ $data.page }' } }`,
+  );
+  return drivenRun(
+    workflow(`
+do:
+  - first: { wait: PT1S }
+  - make: { set: { page: '\${ "x".repeat(${pageBytes}) }' } }
+  - write:
+      fork:
+        branches:
+${branches.join('\n')}
+  - done: { set: { written: ${calls} } }
+`),
+    { payloadOffloading },
+  );
+}
+
+describe('calls a step starts at once', () => {
+  it('with inputs payload offloading keeps, are started in one change that names each input by its digest and size, whatever those inputs take together, and the run goes on', () => {
+    const run = startingAtOnce(3, 250_000, true);
+    const started = eventAt(run, 1);
+
+    expect(run.outcome).toEqual({ kind: 'completed', output: { written: 3 } });
+    expect([writtenBytesOf(started) < 8192, eventBytesOf(started) > mostEventBytes]).toEqual([true, true]);
+  });
+
+  it('with inputs held in the change where payload offloading is off, end the run when that change passes one event, before any call, in words that say to start them one after another or turn payload offloading on', () => {
+    const run = startingAtOnce(3, 250_000, false);
+
+    expect(titleOf(run.outcome)).toMatch(
+      new RegExp(
+        `^The run would record \\d+ bytes at once, more than the ${mostEventBytes} it may record at once; ${keepLessOrOffload}$`,
+        'u',
+      ),
+    );
+    expect(run.driver.ports.faults.dispatched().some(({ output }) => output.kind === 'start_call')).toBe(false);
+  });
+
+  it('with inputs payload offloading keeps, end the run, before any call, when the data the run holds would pass the most a workflow may hold', () => {
+    const run = startingAtOnce(17, 250_000, true);
+
+    expect(titleOf(run.outcome)).toMatch(heldTooMuch);
+    expect(run.driver.ports.faults.dispatched().some(({ output }) => output.kind === 'start_call')).toBe(false);
   });
 });
 
@@ -120,12 +218,7 @@ do:
       respond: (call) => ({ after: call.key.reference.length, result: { status: 'succeeded', output } }),
     });
 
-    expect(titleOf(run.outcome)).toMatch(
-      new RegExp(
-        `^The workflow would hold about \\d+ bytes of data at once, more than the ${mostHeldBytes} a workflow may hold$`,
-        'u',
-      ),
-    );
+    expect(titleOf(run.outcome)).toMatch(heldTooMuch);
   });
 
   it('when the input would take its history past the most a run keeps', () => {

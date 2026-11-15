@@ -1,7 +1,14 @@
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { RunLogEventSchema, eventBytesOf, stateFormat, stateFormatKeepingPayloads } from '../index.ts';
+import {
+  RunLogEventSchema,
+  eventBytesOf,
+  fitsInOneEvent,
+  mostEventBytes,
+  stateFormat,
+  stateFormatKeepingPayloads,
+} from '../index.ts';
 import { at, openCall } from '../testing/runs.ts';
 
 const decodeEvent = Schema.decodeUnknownResult(Schema.toCodecJson(RunLogEventSchema));
@@ -97,5 +104,17 @@ describe('an event of format 12', () => {
     });
 
     expect(measured).toEqual([20_000, 40_000]);
+  });
+
+  it('fits in one event by its own JSON, the digest and size of each payload included, whatever those payloads take, which its history still counts', () => {
+    const naming = Result.getOrThrow(
+      decodeEvent(
+        eventOf(stateFormatKeepingPayloads, [{ ...keptStart, arguments_bytes: mostEventBytes }], {
+          kept: [{ sha256: digest, bytes: mostEventBytes }],
+        }),
+      ),
+    );
+
+    expect([fitsInOneEvent(naming), eventBytesOf(naming) > 2 * mostEventBytes]).toEqual([true, true]);
   });
 });

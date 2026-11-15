@@ -6,9 +6,10 @@ import {
 } from '@on.auto/tool-servers';
 import { Effect, Option } from 'effect';
 
-import { providingOf } from '../providers/provider-additions.ts';
+import { providingOf } from '../providers/provider-providing.ts';
 import { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { newestFirst } from '../registry/registry.ts';
+import { replacedConnectionWords, replacedOf } from '../replacements/replaced-providers.ts';
 import { connectedAtOf, loggedCauses } from './given-credentials.ts';
 import { preparedServer } from './prepared-servers.ts';
 import type { Serving, ServingServices } from './serving-services.ts';
@@ -32,6 +33,16 @@ function orgConnectionOf(serving: Serving): OrgConnection {
   const { connection } = serving.kept;
   const { id, name, status } = connection;
   const serves = { id, serving: servingOf(serving) };
+  const replaced = replacedOf(serving.services.providers, connection.provider);
+  if (replaced !== undefined) {
+    return {
+      ...serves,
+      state: {
+        status: 'unready',
+        unready: { because: 'connection_broken', detail: replacedConnectionWords(name, replaced) },
+      },
+    };
+  }
   if (status === 'pending') {
     return {
       ...serves,

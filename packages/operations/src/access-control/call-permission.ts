@@ -1,13 +1,19 @@
 import { Context, Effect } from 'effect';
 
 import { permissionRefusalOf } from '../authorization/authorization.ts';
-import type { Runnable } from '../definition/registration.ts';
-import { accessRequestOfAsking, type AskedOfACaller } from './access-request-of-a-call.ts';
+import { callSummaryOf } from '../dispatch/request.ts';
+import {
+  InAConversation,
+  accessRequestOfAsking,
+  type AskedOfACaller,
+  type OperationDeclaration,
+} from './access-request-of-a-call.ts';
 import { enforcedDecisionOf } from './enforcement.ts';
 import type { PolicyDecisionPoint } from './policy-decision-point.ts';
+import { reportedBeside } from './report-only.ts';
 
 export interface CallAsked extends AskedOfACaller {
-  readonly operation: Runnable;
+  readonly operation: OperationDeclaration;
 }
 
 type MayCall = (asked: CallAsked) => Effect.Effect<boolean>;
@@ -22,9 +28,28 @@ export const CallPermission = Context.Reference<MayCall>('@on.auto/operations/Ca
 
 export function callPermissionDecidedBy(decisionPoint: PolicyDecisionPoint): MayCall {
   return (asked) =>
-    Effect.map(
-      enforcedDecisionOf(decisionPoint, accessRequestOfAsking(asked.operation, asked)),
-      ({ decision }) => decision === 'allow',
+    InAConversation.use((inAConversation) =>
+      Effect.map(
+        enforcedDecisionOf(decisionPoint, accessRequestOfAsking(asked.operation, asked, inAConversation)),
+        ({ decision }) => decision === 'allow',
+      ),
+    );
+}
+
+export function callPermissionReportedTo(decisionPoint: PolicyDecisionPoint): MayCall {
+  return (asked) =>
+    InAConversation.use((inAConversation) =>
+      Effect.tap(grantedByTheCredential(asked), (granted) =>
+        reportedBeside(
+          decisionPoint,
+          {
+            registration: asked.operation,
+            summary: callSummaryOf(asked.operation.name, asked, asked.playbook),
+            request: accessRequestOfAsking(asked.operation, asked, inAConversation),
+          },
+          granted,
+        ),
+      ),
     );
 }
 

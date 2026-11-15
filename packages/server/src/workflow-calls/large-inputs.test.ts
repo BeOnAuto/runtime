@@ -22,8 +22,20 @@ ${pages.map((name) => `          - ${writing(name)}\n`).join('')}`;
 
 const inTurn = `do:\n${pages.map((name) => `  - ${writing(name)}\n`).join('')}`;
 
-async function writtenBy(steps: string): Promise<{ readonly server: SystemServer; readonly started: unknown }> {
-  const server = await askingASystem();
+type Environment = Readonly<Record<string, string>>;
+
+const offloadingOff: Environment = { PAYLOAD_OFFLOADING: 'false' };
+
+const bothWays: readonly (readonly [string, Environment])[] = [
+  ['on', {}],
+  ['off', offloadingOff],
+];
+
+async function writtenBy(
+  steps: string,
+  environment: Environment = {},
+): Promise<{ readonly server: SystemServer; readonly started: unknown }> {
+  const server = await askingASystem({ environment });
   await server.define('write-page', {
     tool: 'echo',
     read: '/path',
@@ -40,13 +52,27 @@ async function writtenBy(steps: string): Promise<{ readonly server: SystemServer
   return { server, started: started.body };
 }
 
+function pagesWrittenBy(server: SystemServer): readonly unknown[] {
+  return server.fake
+    .received()
+    .map(({ arguments: written }) => written)
+    .toSorted((first, second) => JSON.stringify(first).localeCompare(JSON.stringify(second)));
+}
+
 const tooMuchAtOnce: unknown = expect.stringMatching(
-  /^The run would record \d+ bytes at once, more than the 1572864 it may record at once; keep less across a wait, and start calls with large inputs one after another\.$/u,
+  /^The run would record \d+ bytes at once, more than the 1572864 it may record at once; keep less across a wait, start calls with large inputs one after another, or turn on payload offloading\.$/u,
 );
 
 describe('a workflow that writes three pages of 250,000 bytes through a function', () => {
-  it('is rejected at its start, before any call, in words that say to start them one after another, when one step starts all three at once', async () => {
-    const { server, started } = await writtenBy(atOnce);
+  it('writes each page whole when one step starts all three at once, payload offloading keeping each input by its digest and size', async () => {
+    const { server } = await writtenBy(atOnce);
+
+    expect(await server.settled(runId)).toMatchObject({ status: 'succeeded' });
+    expect(pagesWrittenBy(server)).toEqual(pages.map((name) => ({ path: `${name}.md`, content: page })));
+  });
+
+  it('is rejected at its start, before any call, in words that say to start them one after another or to turn on payload offloading, when one step starts all three at once and payload offloading is off', async () => {
+    const { server, started } = await writtenBy(atOnce, offloadingOff);
     const read = await server.call('GET', `${alpha}/runs/${runId}`);
 
     expect(started).toMatchObject({ reason: 'unavailable', detail: tooMuchAtOnce });
@@ -57,12 +83,15 @@ describe('a workflow that writes three pages of 250,000 bytes through a function
     expect(server.fake.received()).toEqual([]);
   });
 
-  it('writes each page whole when its steps start the calls one after another', async () => {
-    const { server } = await writtenBy(inTurn);
+  it.each(bothWays)(
+    'writes each page whole when its steps start the calls one after another, payload offloading %s',
+    async (_offloading: string, environment: Environment) => {
+      const { server } = await writtenBy(inTurn, environment);
 
-    expect(await server.settled(runId)).toMatchObject({ status: 'succeeded', output: 'c.md' });
-    expect(server.fake.received().map(({ arguments: written }) => written)).toEqual(
-      pages.map((name) => ({ path: `${name}.md`, content: page })),
-    );
-  });
+      expect(await server.settled(runId)).toMatchObject({ status: 'succeeded', output: 'c.md' });
+      expect(server.fake.received().map(({ arguments: written }) => written)).toEqual(
+        pages.map((name) => ({ path: `${name}.md`, content: page })),
+      );
+    },
+  );
 });

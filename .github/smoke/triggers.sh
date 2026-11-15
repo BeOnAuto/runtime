@@ -10,6 +10,7 @@ key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: 
 echo "::add-mask::$key"
 API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
 export API_KEYS
+runtime_entry="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/clock-ahead.ts"
 runtime_start "$container" "" DO_NOT_TRACK=1 API_KEYS
 for attempt in $(seq 1 30); do
   curl --silent --fail --max-time 5 http://127.0.0.1:$port/health > /dev/null && break
@@ -41,7 +42,7 @@ test "$(jq --compact-output '[.triggers[] | [.kind, .reference]]' created.json)"
 test "$(call published.json \
   --data '{"event":{"source":"/ledger","type":"com.example.ledger.closed","data":{"month":"september"}}}' \
   "$playbook/events")" = 200
-ended_runs closing 2 150
+ended_runs closing 2 30
 test "$(jq --compact-output '[.runs[] | [.status, .started_by]]' runs.json)" = \
   '[["succeeded",{"id":"playbook:smoke","name":"smoke"}],["succeeded",{"id":"playbook:smoke","name":"smoke"}]]'
 for run in $(jq --raw-output '.runs[].run_id' runs.json); do
@@ -49,8 +50,11 @@ for run in $(jq --raw-output '.runs[].run_id' runs.json); do
   test "$(call "run-$run.json" "$playbook/runs/$run")" = 200
   case "$(jq --raw-output '.events[0].metadata.trigger.kind' "history-$run.json")" in
     event) test "$(jq --raw-output '.output.input[0].data.month' "run-$run.json")" = september ;;
-    every) jq --exit-status '.output.input.schedule.due | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T")' \
-      "run-$run.json" > /dev/null ;;
+    every)
+      due="$(jq --raw-output '.output.input.schedule.due' "run-$run.json")"
+      created="$(jq --raw-output '.created_at' created.json)"
+      test "$(($(date --date="$due" +%s%3N) - $(date --date="$created" +%s%3N)))" = 60000
+      ;;
   esac
 done
 test "$(jq --slurp --compact-output 'map(.events[0] | [.metadata.trigger.kind, .summary]) | sort' history-*.json)" = \

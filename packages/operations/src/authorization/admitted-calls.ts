@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 
 import {
+  InAConversation,
   accessRequestOfOrgCall,
   accessRequestOfPlaybookCall,
   playbookNamedBy,
@@ -25,13 +26,15 @@ export type DispatcherOptions =
 
 function admittedAs(
   { reportOnly, decidedBy }: DispatcherOptions,
-  call: () => AskedCall,
+  call: (inAConversation: boolean) => AskedCall,
   check: Effect.Effect<void, Rejected>,
 ): Effect.Effect<void, Rejected> {
   if (decidedBy !== undefined) {
-    return enforcedBy(decidedBy, call(), check);
+    return InAConversation.use((inAConversation) => enforcedBy(decidedBy, call(inAConversation), check));
   }
-  return reportOnly === undefined ? check : checkedReportingTo(reportOnly, call(), check);
+  return reportOnly === undefined
+    ? check
+    : InAConversation.use((inAConversation) => checkedReportingTo(reportOnly, call(inAConversation), check));
 }
 
 function authorizedOrgCall(
@@ -41,10 +44,10 @@ function authorizedOrgCall(
 ): Effect.Effect<void, Rejected> {
   return admittedAs(
     options,
-    () => ({
+    (inAConversation) => ({
       registration,
       summary: callSummaryOf(registration.name, request, playbookNamedBy(registration, request)),
-      request: accessRequestOfOrgCall(registration, request),
+      request: accessRequestOfOrgCall(registration, request, inAConversation),
     }),
     authorizeOrgCall(registration, request),
   );
@@ -57,10 +60,10 @@ function authorizedPlaybookCall(
 ): Effect.Effect<void, Rejected> {
   return admittedAs(
     options,
-    () => ({
+    (inAConversation) => ({
       registration,
       summary: callSummaryOf(registration.name, request, request.playbook),
-      request: accessRequestOfPlaybookCall(registration, request),
+      request: accessRequestOfPlaybookCall(registration, request, inAConversation),
     }),
     authorizePlaybookCall(registration, request),
   );

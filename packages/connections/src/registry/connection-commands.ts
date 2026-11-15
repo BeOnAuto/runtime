@@ -102,6 +102,15 @@ export interface ConnectionReconnection {
   readonly variablesSet: ReadonlySet<string>;
 }
 
+export interface ConnectionReplacement {
+  readonly type: 'replace';
+  readonly connection: string;
+  readonly bindsPerson: boolean;
+  readonly byAnAdmin: boolean;
+  readonly whilePending: boolean;
+  readonly addition: ConnectionAddition;
+}
+
 export interface SigningSecretSetting {
   readonly type: 'set_signing_secret';
   readonly connection: string;
@@ -126,7 +135,8 @@ export type ConnectionCommandData =
   | ConnectionRemoval
   | PlaybooksSetting
   | ConnectionBreaking
-  | ConnectionReconnection;
+  | ConnectionReconnection
+  | ConnectionReplacement;
 
 export interface CommandMetadata {
   readonly by: string;

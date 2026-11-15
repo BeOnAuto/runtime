@@ -1,26 +1,36 @@
 import { raised } from '../dsl/raised-error.ts';
 import type { DslError } from '../machine/dsl-error.ts';
-import { lostContentOf, type HeldContents, type LostContent } from '../machine/held-contents.ts';
+import { lostContentOf, type HeldContents, type LostContent, type RunAtHand } from '../machine/held-contents.ts';
 import { mostEventBytes, mostHeldBytes, mostHistoryBytes, mostInputs } from '../machine/limits.ts';
 import type { RunState } from '../machine/run-state.ts';
-import { eventBytesOf, type RunLogEvent } from '../run-log/run-event.ts';
+import { eventBytesOf, writtenBytesOf, type RunLogEvent } from '../run-log/run-event.ts';
 import type { SessionResult } from '../runner/session.ts';
 
 function boundError(title: string): DslError {
   return raised('runtime', 500, title, '/').error;
 }
 
-export function brokenBound(state: RunState, event: RunLogEvent, result: SessionResult): DslError | undefined {
-  const bytes = eventBytesOf(event);
-  if (bytes > mostEventBytes) {
+function whatToDoAt({ payloadOffloading }: RunAtHand): string {
+  return payloadOffloading
+    ? 'keep less across a wait, and start calls with large inputs one after another'
+    : 'keep less across a wait, start calls with large inputs one after another, or turn on payload offloading';
+}
+
+export function brokenBound(
+  state: RunState,
+  event: RunLogEvent,
+  result: SessionResult,
+  atHand: RunAtHand,
+): DslError | undefined {
+  const written = writtenBytesOf(event);
+  if (written > mostEventBytes) {
     return boundError(
-      `The run would record ${bytes} bytes at once, more than the ${mostEventBytes} it may record at once; keep less across a wait, and start calls with large inputs one after another`,
+      `The run would record ${written} bytes at once, more than the ${mostEventBytes} it may record at once; ${whatToDoAt(atHand)}`,
     );
   }
-  if (state.historyBytes + bytes > mostHistoryBytes) {
-    return boundError(
-      `The run's history would take ${state.historyBytes + bytes} bytes, more than the ${mostHistoryBytes} a run keeps`,
-    );
+  const history = state.historyBytes + eventBytesOf(event);
+  if (history > mostHistoryBytes) {
+    return boundError(`The run's history would take ${history} bytes, more than the ${mostHistoryBytes} a run keeps`);
   }
   const held = result.state.heldBytes;
   return held > mostHeldBytes
@@ -31,7 +41,7 @@ export function brokenBound(state: RunState, event: RunLogEvent, result: Session
 }
 
 export function fitsInOneEvent(event: RunLogEvent): boolean {
-  return eventBytesOf(event) <= mostEventBytes;
+  return writtenBytesOf(event) <= mostEventBytes;
 }
 
 export function lostKeptBound(what: string, { sha256, kind }: LostContent): DslError {

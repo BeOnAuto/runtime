@@ -8,6 +8,7 @@ import { CredentialWaySchema } from './credential-ways.ts';
 import { placementIssuesOf } from './entry-placeholders.ts';
 import { isADocumentBesideTheEntries, writtenIssuesOf } from './entry-values.ts';
 import { PlaceholdersSchema } from './placeholders.ts';
+import { ReplacesSchema, replacedIssuesOf } from './replaced-providers.ts';
 
 const { type, url, document, base_url, headers, query_params, request_id, marks, failure_codes } =
   ServerEntrySchema.fields;
@@ -78,6 +79,7 @@ const ProviderEntryFieldsSchema = Schema.Struct({
     description:
       'The ways a credential reaches the server, in the order a person is offered them, the first the default, each of its own kind: secret, client_credentials, none or authorization; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it',
   }),
+  replaces: Schema.optionalKey(ReplacesSchema),
 });
 
 export const entryProse: readonly string[] = ['title', 'description', 'says', 'for', 'instructions', 'example'];
@@ -146,6 +148,7 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...eventIssuesOf(entry),
     ...placementIssuesOf(entry),
     ...writtenIssuesOf(entry),
+    ...replacedIssuesOf(entry),
   ]),
 );
 

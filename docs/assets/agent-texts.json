@@ -1515,7 +1515,7 @@
       ]
     },
     {
-      "sha256": "b9c5c4d9b7ef50e4e8c8a8cf7a14d00720cf6fda95688a657b55b13bf5ab9408",
+      "sha256": "fe2aff7a2045a98a8a84cdfc63fe2a939cf0b15bb1182838e30607add44e0113",
       "tier": 1,
       "received": [
         {
@@ -1528,7 +1528,7 @@
         }
       ],
       "lines": [
-        "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; the link before stops working, and nothing else changes. Use it where list_connections or search says a connection is broken and its reason says to reconnect it. With more, a group list_connections offers, the link asks its scopes beside those the connection holds. It answers the connection with the link, which the person who added it opens within 24 hours, or, where a broken connection sends a variable of the runtime that is set, connected again at once."
+        "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; the link before stops working. Use it where list_connections or search says a connection is broken and its reason says to reconnect it. With more, a group list_connections offers, the link asks its scopes beside those the connection holds. It answers the connection with the link, which the person who added it opens within 24 hours, or, where a broken connection sends a variable of the runtime that is set, connected again at once."
       ]
     },
     {
@@ -4189,7 +4189,7 @@
       ]
     },
     {
-      "sha256": "19a9a13434e0af7265dac7bd612068eacb7fb306aad43a0d9cde289cb9768f9a",
+      "sha256": "065f52a8e36b9da7c85b302499e5b2d025eccc1c3c7f3cb947b8bfba603f8279",
       "tier": 3,
       "received": [
         {
@@ -4875,7 +4875,7 @@
         "What happens at a limit:",
         "",
         "- Some limits end the run at once, rejected as `unavailable` with a `runtime` error of status 500. They are the limits on held data, on a value kept across a wait, on tasks without waiting, on inputs and on history.",
-        "- Calls a step starts at once, such as the branches of a `fork`, record each call's input twice in the one change that starts them, beside the workflow's input when they start the run. With [payload offloading](https://on.auto/docs/self-host/configuration#payload-offloading) on, as it is by default and on Auto Cloud, a value or an input larger than its threshold, 16,384 bytes by default, counts there as its digest and size. Where it is off, three calls with inputs near 250 KiB started together pass the 1.5 MiB that change may hold, and the run is rejected before any of them is made; the same calls in steps one after another succeed. Start calls with large inputs one after another wherever offloading may be off.",
+        "- Calls a step starts at once, such as the branches of a `fork`, record each call's input twice in the one change that starts them, beside the workflow's input when they start the run. With [payload offloading](https://on.auto/docs/self-host/configuration#payload-offloading) on, as it is by default and on Auto Cloud, a value or an input larger than its threshold, 16,384 bytes by default, counts there as its digest and size, and what bounds it is the 4 MiB a run holds, so calls whose inputs take up to about 4 MiB together may start at once: fifteen of 250,000 bytes, where the run holds little else. Where it is off, three calls with inputs near 250 KiB started together pass the 1.5 MiB that change may hold, and the run is rejected before any of them is made, in words that say to start them one after another or turn on payload offloading; the same calls in steps one after another succeed. Start calls with large inputs one after another wherever offloading may be off.",
         "- One event more than the event limits allow ends the run at once, rejected, and later events to it are refused with `not_found`.",
         "- An emit beyond the limit on emitted events fails its task with a `runtime` error of status 500, which the workflow's `try` can catch. An emitted event larger than 240 KiB fails it with a `validation` error of status 400.",
         "",
@@ -5816,7 +5816,7 @@
       ]
     },
     {
-      "sha256": "7cd71453402ea7c16cf3b28139376a029a25887b6c393cabb67e2dd464d6ee7a",
+      "sha256": "e8f8a16391d4476d37d76de4ad9e0dc7a64a547a47450263159ef20f1fc288da",
       "tier": 3,
       "received": [
         {
@@ -6077,7 +6077,7 @@
         "| `tool_not_offered` | `tool_not_allowed` | The tool is outside the server's `allowed` |",
         "| `tool_not_offered` | `tool_not_listed` | The server does not list the tool |",
         "| `tool_not_offered` | `connection_pending` | The server is a connection nobody has approved yet |",
-        "| `tool_not_offered` | `connection_broken` | The server is a connection whose server refused its credential, whose credential is gone from the secret store or is not the tokens of a consent, whose consent was revoked or has ended, or whose client is no longer registered; reconnect it |",
+        "| `tool_not_offered` | `connection_broken` | The server is a connection whose server refused its credential, whose credential is gone from the secret store or is not the tokens of a consent, whose consent was revoked or has ended, whose client is no longer registered, or whose provider is replaced here; reconnect it |",
         "| `tool_not_offered` | `connection_not_allowed` | The server is a connection a rule of the operator no longer allows |",
         "| `tool_not_offered` | `connection_unavailable` | The server is a connection whose credential cannot be read just now; try again later |",
         "| `tool_server_failed` | `unreachable` | The server cannot be reached, or does not respond in time |",

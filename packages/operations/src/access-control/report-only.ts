@@ -1,8 +1,8 @@
 import { Cause, Effect, Exit, Predicate } from 'effect';
 
-import type { Runnable } from '../definition/registration.ts';
 import type { CallSummary } from '../dispatch/incident-reporter.ts';
 import type { Rejected } from '../outcome/outcome.ts';
+import type { OperationDeclaration } from './access-request-of-a-call.ts';
 import { askedInTime } from './asked-in-time.ts';
 import {
   deniedFor,
@@ -17,7 +17,7 @@ export const reportedDifferenceMessage =
 const unnamedPrincipal = 'The caller names no kind of principal';
 
 export interface AskedCall {
-  readonly registration: Runnable;
+  readonly registration: Pick<OperationDeclaration, 'scope'>;
   readonly summary: CallSummary;
   readonly request: AccessRequest | undefined;
 }
@@ -46,13 +46,17 @@ function loggedDifference(
   );
 }
 
-function reported(decisionPoint: PolicyDecisionPoint, call: AskedCall, checkAllowed: boolean): Effect.Effect<void> {
+export function reportedBeside(
+  decisionPoint: PolicyDecisionPoint,
+  call: AskedCall,
+  checkAllowed: boolean,
+): Effect.Effect<void> {
   return Effect.gen(function* () {
     const decided = yield* askedOf(decisionPoint, call.request);
     if ((decided.decision === 'allow') !== checkAllowed) {
       yield* loggedDifference(call, checkAllowed, decided);
     }
-  });
+  }).pipe(Effect.catchCauseIf(Predicate.not(Cause.hasInterruptsOnly), () => Effect.void));
 }
 
 export function checkedReportingTo(
@@ -62,9 +66,7 @@ export function checkedReportingTo(
 ): Effect.Effect<void, Rejected> {
   return Effect.gen(function* () {
     const checked = yield* Effect.exit(check);
-    yield* reported(decisionPoint, call, Exit.isSuccess(checked)).pipe(
-      Effect.catchCauseIf(Predicate.not(Cause.hasInterruptsOnly), () => Effect.void),
-    );
+    yield* reportedBeside(decisionPoint, call, Exit.isSuccess(checked));
     return yield* checked;
   });
 }

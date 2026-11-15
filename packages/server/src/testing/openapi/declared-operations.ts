@@ -1,4 +1,4 @@
-import type { DeclaredAction } from '@on.auto/access-control';
+import { roleAssignmentOperations, type DeclaredAction } from '@on.auto/access-control';
 import type { DocumentedOperation } from '@on.auto/api/testing';
 import { echo } from '@on.auto/definitions/testing';
 import { Predicate } from 'effect';
@@ -43,30 +43,50 @@ function namesAPlaybook(described: DocumentedOperation): boolean {
   return named.includes('playbook');
 }
 
-function declaredBy(described: DocumentedOperation, inPlaybooks: ReadonlySet<string>): DeclaredAction {
-  const { operationId } = described.operation;
-  if (isInAPlaybook(described)) {
-    return { scope: 'playbook', name: operationId, permissions: permissionsOf(described), targetsPlaybook: false };
-  }
-  const name = operationId.endsWith(inOrgSuffix) ? operationId.slice(0, -inOrgSuffix.length) : operationId;
-  return {
-    scope: 'org',
-    name: inPlaybooks.has(name) ? name : operationId,
-    permissions: permissionsOf(described),
-    targetsPlaybook: namesAPlaybook(described),
-  };
+export interface ServedDeclaration extends DeclaredAction {
+  readonly permissionsManagement: boolean;
 }
 
 export function actionOf({ scope, name }: Pick<DeclaredAction, 'scope' | 'name'>): string {
   return `${scope}/${name}`;
 }
 
-export function declarationLineOf(operation: DeclaredAction): string {
-  const named = operation.targetsPlaybook ? ' (names a playbook)' : '';
-  return `${actionOf(operation)}: ${operation.permissions.join(',')}${named}`;
+const managingPermissions: ReadonlySet<string> = new Set(
+  roleAssignmentOperations
+    .filter(({ registration }) => registration.permissionsManagement)
+    .map(({ registration }) => actionOf(registration)),
+);
+
+function withWhatItManages(declared: DeclaredAction): ServedDeclaration {
+  return { ...declared, permissionsManagement: managingPermissions.has(actionOf(declared)) };
 }
 
-export function declaredIn(documented: readonly DocumentedOperation[]): readonly DeclaredAction[] {
+function declaredBy(described: DocumentedOperation, inPlaybooks: ReadonlySet<string>): ServedDeclaration {
+  const { operationId } = described.operation;
+  if (isInAPlaybook(described)) {
+    return withWhatItManages({
+      scope: 'playbook',
+      name: operationId,
+      permissions: permissionsOf(described),
+      targetsPlaybook: false,
+    });
+  }
+  const name = operationId.endsWith(inOrgSuffix) ? operationId.slice(0, -inOrgSuffix.length) : operationId;
+  return withWhatItManages({
+    scope: 'org',
+    name: inPlaybooks.has(name) ? name : operationId,
+    permissions: permissionsOf(described),
+    targetsPlaybook: namesAPlaybook(described),
+  });
+}
+
+export function declarationLineOf(operation: ServedDeclaration): string {
+  const named = operation.targetsPlaybook ? ' (names a playbook)' : '';
+  const managing = operation.permissionsManagement ? ' (manages permissions)' : '';
+  return `${actionOf(operation)}: ${operation.permissions.join(',')}${named}${managing}`;
+}
+
+export function declaredIn(documented: readonly DocumentedOperation[]): readonly ServedDeclaration[] {
   const asked = documented.filter((described) => permissionsOf(described).length > 0);
   const inPlaybooks = new Set(
     asked.filter((described) => isInAPlaybook(described)).map(({ operation }) => operation.operationId),

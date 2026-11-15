@@ -1,0 +1,2053 @@
+{
+  "format": 12,
+  "stream": [
+    {
+      "version": 1,
+      "event": {
+        "type": "input_applied",
+        "format": 12,
+        "receipt": {
+          "kind": "started",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+          "at": 1790845200000
+        },
+        "steps": [
+          {
+            "reference": "/do/0/first",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "first",
+            "times": 1,
+            "caused_by": "input",
+            "waits_for": "timer"
+          }
+        ],
+        "resumed": null,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/runId",
+            "value": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a"
+          },
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "running"
+          },
+          {
+            "op": "replace",
+            "path": "/workflow",
+            "value": {
+              "document": {
+                "document": {
+                  "dsl": "1.0.3",
+                  "namespace": "acme",
+                  "name": "test",
+                  "version": "1.0.0"
+                },
+                "do": [
+                  {
+                    "first": {
+                      "wait": "PT1S"
+                    }
+                  },
+                  {
+                    "make": {
+                      "set": {
+                        "page": "${ \"x\".repeat(250000) }"
+                      }
+                    }
+                  },
+                  {
+                    "write": {
+                      "fork": {
+                        "branches": [
+                          {
+                            "a": {
+                              "call": "notify",
+                              "with": {
+                                "to": "a",
+                                "page": "${ $data.page }"
+                              }
+                            }
+                          },
+                          {
+                            "b": {
+                              "call": "notify",
+                              "with": {
+                                "to": "b",
+                                "page": "${ $data.page }"
+                              }
+                            }
+                          },
+                          {
+                            "c": {
+                              "call": "notify",
+                              "with": {
+                                "to": "c",
+                                "page": "${ $data.page }"
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "done": {
+                      "set": {
+                        "written": 3
+                      }
+                    }
+                  }
+                ]
+              },
+              "input": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/limits/mostDurationMs",
+            "value": 2592000000
+          },
+          {
+            "op": "replace",
+            "path": "/limits/longestCallMs",
+            "value": 600000
+          },
+          {
+            "op": "replace",
+            "path": "/startedAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/random/seed",
+            "value": 7
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1first",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 3
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/1",
+            "value": {
+              "purpose": "deadline",
+              "reference": "/",
+              "armedAt": 1790845200000,
+              "dueAt": 1793437200000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/2",
+            "value": {
+              "purpose": "wait",
+              "reference": "/do/0/first",
+              "armedAt": 1790845200000,
+              "dueAt": 1790845201000
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 8628
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/1",
+            "value": {
+              "value": {},
+              "bytes": 2
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": {
+              "reference": "/",
+              "run": 1,
+              "startedAt": 1790845200000,
+              "context": 0,
+              "rawInput": 1,
+              "input": 1,
+              "variables": {},
+              "timeout": null,
+              "body": {
+                "kind": "list",
+                "list": {
+                  "pointer": "/do",
+                  "position": 0,
+                  "data": 1,
+                  "variables": {},
+                  "current": {
+                    "kind": "running",
+                    "task": {
+                      "reference": "/do/0/first",
+                      "run": 1,
+                      "startedAt": 1790845200000,
+                      "context": 0,
+                      "rawInput": 1,
+                      "input": 1,
+                      "variables": {},
+                      "timeout": null,
+                      "body": {
+                        "kind": "wait",
+                        "timer": "2"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 2638
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "1",
+            "dueAt": 1793437200000,
+            "purpose": "deadline",
+            "label": "the most the workflow may run"
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "2",
+            "dueAt": 1790845201000,
+            "purpose": "wait",
+            "label": "/do/0/first"
+          }
+        ],
+        "kept": []
+      }
+    },
+    {
+      "version": 2,
+      "event": {
+        "type": "input_applied",
+        "format": 12,
+        "receipt": {
+          "kind": "timer_fired",
+          "key": "2",
+          "at": 1790845201000
+        },
+        "steps": [
+          {
+            "reference": "/do/0/first",
+            "run": 1,
+            "outcome": "completed",
+            "name": "first",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/first",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/1/make",
+            "run": 1,
+            "outcome": "completed",
+            "name": "make",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/first",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/2/write",
+            "run": 1,
+            "outcome": "started",
+            "name": "write",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/1/make",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/2/write/fork/branches/0/a",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "a",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/write",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            },
+            "waits_for": "call",
+            "child": "notify at /do/2/write/fork/branches/0/a #1"
+          },
+          {
+            "reference": "/do/2/write/fork/branches/1/b",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "b",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/write",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            },
+            "waits_for": "call",
+            "child": "notify at /do/2/write/fork/branches/1/b #1"
+          },
+          {
+            "reference": "/do/2/write/fork/branches/2/c",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "c",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/write",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            },
+            "waits_for": "call",
+            "child": "notify at /do/2/write/fork/branches/2/c #1"
+          }
+        ],
+        "resumed": {
+          "reference": "/do/0/first",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845201000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 2
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~11~1make",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~12~1write",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~12~1write~1fork~1branches~10~1a",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~12~1write~1fork~1branches~11~1b",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~12~1write~1fork~1branches~12~1c",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 6
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/2"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/3",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/2/write/fork/branches/0/a",
+              "armedAt": 1790845201000,
+              "dueAt": 1790845801000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/4",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/2/write/fork/branches/1/b",
+              "armedAt": 1790845201000,
+              "dueAt": 1790845801000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/5",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/2/write/fork/branches/2/c",
+              "armedAt": 1790845201000,
+              "dueAt": 1790845801000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~10~1a\",1]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/2/write/fork/branches/0/a",
+              "run": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~11~1b\",1]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/2/write/fork/branches/1/b",
+              "run": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~12~1c\",1]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/2/write/fork/branches/2/c",
+              "run": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 1020987
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/2",
+            "value": {
+              "sha256": "125969691e8b89c600dd9737a4a7451e60f8d72beaa4ccde4413d11df3912602",
+              "bytes": 250011
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/3",
+            "value": {
+              "sha256": "927d1e8652f26a09388565621c64be0378655065b4060fe80fbc5b428712cf8c",
+              "bytes": 250020
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/4",
+            "value": {
+              "sha256": "bad6ecb0b4e42e6b315053ceaeb45a971da6e9aaa817ce06dfb64e61a05f7b81",
+              "bytes": 250020
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/5",
+            "value": {
+              "sha256": "c3783031a31b6762ef9bf40b2ac2b1778a471ae4eede7850f9443aed1040408b",
+              "bytes": 250020
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 6
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/position",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/data",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/reference",
+            "value": "/do/2/write"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/startedAt",
+            "value": 1790845201000
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/rawInput",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/input",
+            "value": 2
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/timer"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/kind",
+            "value": "fork"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/compete",
+            "value": false
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches",
+            "value": [
+              {
+                "state": "running",
+                "task": {
+                  "reference": "/do/2/write/fork/branches/0/a",
+                  "run": 1,
+                  "startedAt": 1790845201000,
+                  "context": 0,
+                  "rawInput": 2,
+                  "input": 2,
+                  "variables": {},
+                  "timeout": null,
+                  "body": {
+                    "kind": "call",
+                    "key": {
+                      "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                      "reference": "/do/2/write/fork/branches/0/a",
+                      "run": 1
+                    },
+                    "function": "notify",
+                    "arguments": 3,
+                    "label": "the function notify",
+                    "deadline": "3"
+                  }
+                }
+              },
+              {
+                "state": "running",
+                "task": {
+                  "reference": "/do/2/write/fork/branches/1/b",
+                  "run": 1,
+                  "startedAt": 1790845201000,
+                  "context": 0,
+                  "rawInput": 2,
+                  "input": 2,
+                  "variables": {},
+                  "timeout": null,
+                  "body": {
+                    "kind": "call",
+                    "key": {
+                      "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                      "reference": "/do/2/write/fork/branches/1/b",
+                      "run": 1
+                    },
+                    "function": "notify",
+                    "arguments": 4,
+                    "label": "the function notify",
+                    "deadline": "4"
+                  }
+                }
+              },
+              {
+                "state": "running",
+                "task": {
+                  "reference": "/do/2/write/fork/branches/2/c",
+                  "run": 1,
+                  "startedAt": 1790845201000,
+                  "context": 0,
+                  "rawInput": 2,
+                  "input": 2,
+                  "variables": {},
+                  "timeout": null,
+                  "body": {
+                    "kind": "call",
+                    "key": {
+                      "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                      "reference": "/do/2/write/fork/branches/2/c",
+                      "run": 1
+                    },
+                    "function": "notify",
+                    "arguments": 5,
+                    "label": "the function notify",
+                    "deadline": "5"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 1760302
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/2/write/fork/branches/0/a",
+              "run": 1
+            },
+            "function": "notify",
+            "arguments_sha256": "927d1e8652f26a09388565621c64be0378655065b4060fe80fbc5b428712cf8c",
+            "arguments_bytes": 250020,
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "3",
+            "dueAt": 1790845801000,
+            "purpose": "call_deadline",
+            "label": "/do/2/write/fork/branches/0/a deadline"
+          },
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/2/write/fork/branches/1/b",
+              "run": 1
+            },
+            "function": "notify",
+            "arguments_sha256": "bad6ecb0b4e42e6b315053ceaeb45a971da6e9aaa817ce06dfb64e61a05f7b81",
+            "arguments_bytes": 250020,
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "4",
+            "dueAt": 1790845801000,
+            "purpose": "call_deadline",
+            "label": "/do/2/write/fork/branches/1/b deadline"
+          },
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/2/write/fork/branches/2/c",
+              "run": 1
+            },
+            "function": "notify",
+            "arguments_sha256": "c3783031a31b6762ef9bf40b2ac2b1778a471ae4eede7850f9443aed1040408b",
+            "arguments_bytes": 250020,
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "5",
+            "dueAt": 1790845801000,
+            "purpose": "call_deadline",
+            "label": "/do/2/write/fork/branches/2/c deadline"
+          }
+        ],
+        "kept": [
+          {
+            "sha256": "125969691e8b89c600dd9737a4a7451e60f8d72beaa4ccde4413d11df3912602",
+            "bytes": 250011
+          },
+          {
+            "sha256": "927d1e8652f26a09388565621c64be0378655065b4060fe80fbc5b428712cf8c",
+            "bytes": 250020
+          },
+          {
+            "sha256": "bad6ecb0b4e42e6b315053ceaeb45a971da6e9aaa817ce06dfb64e61a05f7b81",
+            "bytes": 250020
+          },
+          {
+            "sha256": "c3783031a31b6762ef9bf40b2ac2b1778a471ae4eede7850f9443aed1040408b",
+            "bytes": 250020
+          }
+        ]
+      }
+    },
+    {
+      "version": 3,
+      "event": {
+        "type": "input_applied",
+        "format": 12,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/2/write/fork/branches/0/a\",1]",
+          "at": 1790845201000,
+          "status": "succeeded"
+        },
+        "steps": [
+          {
+            "reference": "/do/2/write/fork/branches/0/a",
+            "run": 1,
+            "outcome": "completed",
+            "name": "a",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/write/fork/branches/0/a",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            }
+          }
+        ],
+        "resumed": {
+          "reference": "/do/2/write/fork/branches/0/a",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 3
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/3"
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~10~1a\",1]"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 766912
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/3"
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/6",
+            "value": {
+              "value": {
+                "wrote": "/do/2/write/fork/branches/0/a"
+              },
+              "bytes": 41
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 7
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/branches/0/state",
+            "value": "finished"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/0/output",
+            "value": 6
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/0/flow",
+            "value": "continue"
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 1761792
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "3"
+          }
+        ],
+        "kept": []
+      }
+    },
+    {
+      "version": 4,
+      "event": {
+        "type": "input_applied",
+        "format": 12,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/2/write/fork/branches/1/b\",1]",
+          "at": 1790845201000,
+          "status": "succeeded"
+        },
+        "steps": [
+          {
+            "reference": "/do/2/write/fork/branches/1/b",
+            "run": 1,
+            "outcome": "completed",
+            "name": "b",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/write/fork/branches/1/b",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            }
+          }
+        ],
+        "resumed": {
+          "reference": "/do/2/write/fork/branches/1/b",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 4
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/4"
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~11~1b\",1]"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 512837
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/4"
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/7",
+            "value": {
+              "value": {
+                "wrote": "/do/2/write/fork/branches/1/b"
+              },
+              "bytes": 41
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 8
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/branches/1/task"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/branches/1/state",
+            "value": "finished"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/1/output",
+            "value": 7
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/1/flow",
+            "value": "continue"
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 1763282
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "4"
+          }
+        ],
+        "kept": []
+      }
+    },
+    {
+      "version": 5,
+      "event": {
+        "type": "input_applied",
+        "format": 12,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/2/write/fork/branches/2/c\",1]",
+          "at": 1790845201000,
+          "status": "succeeded"
+        },
+        "steps": [
+          {
+            "reference": "/do/2/write/fork/branches/2/c",
+            "run": 1,
+            "outcome": "completed",
+            "name": "c",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/write/fork/branches/2/c",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/2/write",
+            "run": 1,
+            "outcome": "completed",
+            "name": "write",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/write",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/3/done",
+            "run": 1,
+            "outcome": "completed",
+            "name": "done",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/write",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            }
+          }
+        ],
+        "resumed": {
+          "reference": "/do/2/write/fork/branches/2/c",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "ended"
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 5
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~13~1done",
+            "value": 1
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/1"
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/5"
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~12~1c\",1]"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 436
+          },
+          {
+            "op": "replace",
+            "path": "/stepsWithoutWaiting",
+            "value": 1
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/2"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/5"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/6"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/7"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 11
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": null
+          },
+          {
+            "op": "replace",
+            "path": "/outcome",
+            "value": {
+              "kind": "completed",
+              "output": {
+                "written": 3
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 1765281
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "5"
+          },
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "1"
+          },
+          {
+            "kind": "settle",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "settlement": {
+              "status": "succeeded",
+              "output": {
+                "written": 3
+              }
+            }
+          }
+        ],
+        "kept": []
+      }
+    }
+  ],
+  "snapshot": {
+    "chunks": [
+      "{\"format\":12,\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"version\":1,\"historyBytes\":2638,\"state\":{\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"status\":\"running\",\"workflow\":{\"document\":{\"document\":{\"dsl\":\"1.0.3\",\"namespace\":\"acme\",\"name\":\"test\",\"version\":\"1.0.0\"},\"do\":[{\"first\":{\"wait\":\"PT1S\"}},{\"make\":{\"set\":{\"page\":\"${ \\\"x\\\".repeat(250000) }\"}}},{\"write\":{\"fork\":{\"branches\":[{\"a\":{\"call\":\"notify\",\"with\":{\"to\":\"a\",\"page\":\"${ $data.page }\"}}},{\"b\":{\"call\":\"notify\",\"with\":{\"to\":\"b\",\"page\":\"${ $data.page }\"}}},{\"c\":{\"call\":\"notify\",\"with\":{\"to\":\"c\",\"page\":\"${ $data.page }\"}}}]}}},{\"done\":{\"set\":{\"written\":3}}}]},\"input\":1},\"attributes\":{},\"limits\":{\"mostDurationMs\":2592000000,\"longestCallMs\":600000},\"startedAt\":1790845200000,\"lastInputAt\":1790845200000,\"inputs\":1,\"random\":{\"seed\":7,\"draws\":0},\"runs\":{\"/do/0/first\":1},\"timers\":{\"next\":3,\"armed\":{\"1\":{\"purpose\":\"deadline\",\"reference\":\"/\",\"armedAt\":1790845200000,\"dueAt\":1793437200000},\"2\":{\"purpose\":\"wait\",\"reference\":\"/do/0/first\",\"armedAt\":1790845200000,\"dueAt\":1790845201000}}},\"calls\":{},\"listeners\":{},\"emitted\":{\"count\":0,\"bytes\":0},\"inbox\":{\"waiting\":[],\"waitingBytes\":0,\"receivedIds\":[],\"offeredIds\":[],\"received\":0,\"receivedBytes\":0},\"heldBytes\":8628,\"historyBytes\":2638,\"stepsWithoutWaiting\":0,\"cancelRequested\":false,\"machine\":{\"values\":{\"0\":{\"value\":{},\"bytes\":2},\"1\":{\"value\":{},\"bytes\":2}},\"nextValue\":2,\"context\":0,\"root\":{\"reference\":\"/\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"list\",\"list\":{\"pointer\":\"/do\",\"position\":0,\"data\":1,\"variables\":{},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/0/first\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"wait\",\"timer\":\"2\"}}}}}}},\"outcome\":null}}"
+    ],
+    "bytes": 1819,
+    "tail": [
+      {
+        "version": 2,
+        "event": {
+          "type": "input_applied",
+          "format": 12,
+          "receipt": {
+            "kind": "timer_fired",
+            "key": "2",
+            "at": 1790845201000
+          },
+          "steps": [
+            {
+              "reference": "/do/0/first",
+              "run": 1,
+              "outcome": "completed",
+              "name": "first",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/0/first",
+                "run": 1,
+                "outcome": "waiting",
+                "times": 1
+              }
+            },
+            {
+              "reference": "/do/1/make",
+              "run": 1,
+              "outcome": "completed",
+              "name": "make",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/0/first",
+                "run": 1,
+                "outcome": "completed",
+                "times": 1
+              }
+            },
+            {
+              "reference": "/do/2/write",
+              "run": 1,
+              "outcome": "started",
+              "name": "write",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/1/make",
+                "run": 1,
+                "outcome": "completed",
+                "times": 1
+              }
+            },
+            {
+              "reference": "/do/2/write/fork/branches/0/a",
+              "run": 1,
+              "outcome": "waiting",
+              "name": "a",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/2/write",
+                "run": 1,
+                "outcome": "started",
+                "times": 1
+              },
+              "waits_for": "call",
+              "child": "notify at /do/2/write/fork/branches/0/a #1"
+            },
+            {
+              "reference": "/do/2/write/fork/branches/1/b",
+              "run": 1,
+              "outcome": "waiting",
+              "name": "b",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/2/write",
+                "run": 1,
+                "outcome": "started",
+                "times": 1
+              },
+              "waits_for": "call",
+              "child": "notify at /do/2/write/fork/branches/1/b #1"
+            },
+            {
+              "reference": "/do/2/write/fork/branches/2/c",
+              "run": 1,
+              "outcome": "waiting",
+              "name": "c",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/2/write",
+                "run": 1,
+                "outcome": "started",
+                "times": 1
+              },
+              "waits_for": "call",
+              "child": "notify at /do/2/write/fork/branches/2/c #1"
+            }
+          ],
+          "resumed": {
+            "reference": "/do/0/first",
+            "run": 1,
+            "times": 1
+          },
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/lastInputAt",
+              "value": 1790845201000
+            },
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 2
+            },
+            {
+              "op": "add",
+              "path": "/runs/~1do~11~1make",
+              "value": 1
+            },
+            {
+              "op": "add",
+              "path": "/runs/~1do~12~1write",
+              "value": 1
+            },
+            {
+              "op": "add",
+              "path": "/runs/~1do~12~1write~1fork~1branches~10~1a",
+              "value": 1
+            },
+            {
+              "op": "add",
+              "path": "/runs/~1do~12~1write~1fork~1branches~11~1b",
+              "value": 1
+            },
+            {
+              "op": "add",
+              "path": "/runs/~1do~12~1write~1fork~1branches~12~1c",
+              "value": 1
+            },
+            {
+              "op": "replace",
+              "path": "/timers/next",
+              "value": 6
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/2"
+            },
+            {
+              "op": "add",
+              "path": "/timers/armed/3",
+              "value": {
+                "purpose": "call_deadline",
+                "reference": "/do/2/write/fork/branches/0/a",
+                "armedAt": 1790845201000,
+                "dueAt": 1790845801000
+              }
+            },
+            {
+              "op": "add",
+              "path": "/timers/armed/4",
+              "value": {
+                "purpose": "call_deadline",
+                "reference": "/do/2/write/fork/branches/1/b",
+                "armedAt": 1790845201000,
+                "dueAt": 1790845801000
+              }
+            },
+            {
+              "op": "add",
+              "path": "/timers/armed/5",
+              "value": {
+                "purpose": "call_deadline",
+                "reference": "/do/2/write/fork/branches/2/c",
+                "armedAt": 1790845201000,
+                "dueAt": 1790845801000
+              }
+            },
+            {
+              "op": "add",
+              "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~10~1a\",1]",
+              "value": {
+                "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                "reference": "/do/2/write/fork/branches/0/a",
+                "run": 1
+              }
+            },
+            {
+              "op": "add",
+              "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~11~1b\",1]",
+              "value": {
+                "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                "reference": "/do/2/write/fork/branches/1/b",
+                "run": 1
+              }
+            },
+            {
+              "op": "add",
+              "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~12~1c\",1]",
+              "value": {
+                "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                "reference": "/do/2/write/fork/branches/2/c",
+                "run": 1
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/heldBytes",
+              "value": 1020987
+            },
+            {
+              "op": "add",
+              "path": "/machine/values/2",
+              "value": {
+                "sha256": "125969691e8b89c600dd9737a4a7451e60f8d72beaa4ccde4413d11df3912602",
+                "bytes": 250011
+              }
+            },
+            {
+              "op": "add",
+              "path": "/machine/values/3",
+              "value": {
+                "sha256": "927d1e8652f26a09388565621c64be0378655065b4060fe80fbc5b428712cf8c",
+                "bytes": 250020
+              }
+            },
+            {
+              "op": "add",
+              "path": "/machine/values/4",
+              "value": {
+                "sha256": "bad6ecb0b4e42e6b315053ceaeb45a971da6e9aaa817ce06dfb64e61a05f7b81",
+                "bytes": 250020
+              }
+            },
+            {
+              "op": "add",
+              "path": "/machine/values/5",
+              "value": {
+                "sha256": "c3783031a31b6762ef9bf40b2ac2b1778a471ae4eede7850f9443aed1040408b",
+                "bytes": 250020
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/machine/nextValue",
+              "value": 6
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/position",
+              "value": 2
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/data",
+              "value": 2
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/reference",
+              "value": "/do/2/write"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/startedAt",
+              "value": 1790845201000
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/rawInput",
+              "value": 2
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/input",
+              "value": 2
+            },
+            {
+              "op": "remove",
+              "path": "/machine/root/body/list/current/task/body/timer"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/body/kind",
+              "value": "fork"
+            },
+            {
+              "op": "add",
+              "path": "/machine/root/body/list/current/task/body/compete",
+              "value": false
+            },
+            {
+              "op": "add",
+              "path": "/machine/root/body/list/current/task/body/branches",
+              "value": [
+                {
+                  "state": "running",
+                  "task": {
+                    "reference": "/do/2/write/fork/branches/0/a",
+                    "run": 1,
+                    "startedAt": 1790845201000,
+                    "context": 0,
+                    "rawInput": 2,
+                    "input": 2,
+                    "variables": {},
+                    "timeout": null,
+                    "body": {
+                      "kind": "call",
+                      "key": {
+                        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                        "reference": "/do/2/write/fork/branches/0/a",
+                        "run": 1
+                      },
+                      "function": "notify",
+                      "arguments": 3,
+                      "label": "the function notify",
+                      "deadline": "3"
+                    }
+                  }
+                },
+                {
+                  "state": "running",
+                  "task": {
+                    "reference": "/do/2/write/fork/branches/1/b",
+                    "run": 1,
+                    "startedAt": 1790845201000,
+                    "context": 0,
+                    "rawInput": 2,
+                    "input": 2,
+                    "variables": {},
+                    "timeout": null,
+                    "body": {
+                      "kind": "call",
+                      "key": {
+                        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                        "reference": "/do/2/write/fork/branches/1/b",
+                        "run": 1
+                      },
+                      "function": "notify",
+                      "arguments": 4,
+                      "label": "the function notify",
+                      "deadline": "4"
+                    }
+                  }
+                },
+                {
+                  "state": "running",
+                  "task": {
+                    "reference": "/do/2/write/fork/branches/2/c",
+                    "run": 1,
+                    "startedAt": 1790845201000,
+                    "context": 0,
+                    "rawInput": 2,
+                    "input": 2,
+                    "variables": {},
+                    "timeout": null,
+                    "body": {
+                      "kind": "call",
+                      "key": {
+                        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                        "reference": "/do/2/write/fork/branches/2/c",
+                        "run": 1
+                      },
+                      "function": "notify",
+                      "arguments": 5,
+                      "label": "the function notify",
+                      "deadline": "5"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 1760302
+            }
+          ],
+          "outputs": [
+            {
+              "kind": "start_call",
+              "key": {
+                "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                "reference": "/do/2/write/fork/branches/0/a",
+                "run": 1
+              },
+              "function": "notify",
+              "arguments_sha256": "927d1e8652f26a09388565621c64be0378655065b4060fe80fbc5b428712cf8c",
+              "arguments_bytes": 250020,
+              "longestMs": 600000
+            },
+            {
+              "kind": "arm_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "3",
+              "dueAt": 1790845801000,
+              "purpose": "call_deadline",
+              "label": "/do/2/write/fork/branches/0/a deadline"
+            },
+            {
+              "kind": "start_call",
+              "key": {
+                "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                "reference": "/do/2/write/fork/branches/1/b",
+                "run": 1
+              },
+              "function": "notify",
+              "arguments_sha256": "bad6ecb0b4e42e6b315053ceaeb45a971da6e9aaa817ce06dfb64e61a05f7b81",
+              "arguments_bytes": 250020,
+              "longestMs": 600000
+            },
+            {
+              "kind": "arm_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "4",
+              "dueAt": 1790845801000,
+              "purpose": "call_deadline",
+              "label": "/do/2/write/fork/branches/1/b deadline"
+            },
+            {
+              "kind": "start_call",
+              "key": {
+                "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                "reference": "/do/2/write/fork/branches/2/c",
+                "run": 1
+              },
+              "function": "notify",
+              "arguments_sha256": "c3783031a31b6762ef9bf40b2ac2b1778a471ae4eede7850f9443aed1040408b",
+              "arguments_bytes": 250020,
+              "longestMs": 600000
+            },
+            {
+              "kind": "arm_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "5",
+              "dueAt": 1790845801000,
+              "purpose": "call_deadline",
+              "label": "/do/2/write/fork/branches/2/c deadline"
+            }
+          ],
+          "kept": [
+            {
+              "sha256": "125969691e8b89c600dd9737a4a7451e60f8d72beaa4ccde4413d11df3912602",
+              "bytes": 250011
+            },
+            {
+              "sha256": "927d1e8652f26a09388565621c64be0378655065b4060fe80fbc5b428712cf8c",
+              "bytes": 250020
+            },
+            {
+              "sha256": "bad6ecb0b4e42e6b315053ceaeb45a971da6e9aaa817ce06dfb64e61a05f7b81",
+              "bytes": 250020
+            },
+            {
+              "sha256": "c3783031a31b6762ef9bf40b2ac2b1778a471ae4eede7850f9443aed1040408b",
+              "bytes": 250020
+            }
+          ]
+        }
+      },
+      {
+        "version": 3,
+        "event": {
+          "type": "input_applied",
+          "format": 12,
+          "receipt": {
+            "kind": "call_answered",
+            "key": "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/2/write/fork/branches/0/a\",1]",
+            "at": 1790845201000,
+            "status": "succeeded"
+          },
+          "steps": [
+            {
+              "reference": "/do/2/write/fork/branches/0/a",
+              "run": 1,
+              "outcome": "completed",
+              "name": "a",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/2/write/fork/branches/0/a",
+                "run": 1,
+                "outcome": "waiting",
+                "times": 1
+              }
+            }
+          ],
+          "resumed": {
+            "reference": "/do/2/write/fork/branches/0/a",
+            "run": 1,
+            "times": 1
+          },
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 3
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/3"
+            },
+            {
+              "op": "remove",
+              "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~10~1a\",1]"
+            },
+            {
+              "op": "replace",
+              "path": "/heldBytes",
+              "value": 766912
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/3"
+            },
+            {
+              "op": "add",
+              "path": "/machine/values/6",
+              "value": {
+                "value": {
+                  "wrote": "/do/2/write/fork/branches/0/a"
+                },
+                "bytes": 41
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/machine/nextValue",
+              "value": 7
+            },
+            {
+              "op": "remove",
+              "path": "/machine/root/body/list/current/task/body/branches/0/task"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/body/branches/0/state",
+              "value": "finished"
+            },
+            {
+              "op": "add",
+              "path": "/machine/root/body/list/current/task/body/branches/0/output",
+              "value": 6
+            },
+            {
+              "op": "add",
+              "path": "/machine/root/body/list/current/task/body/branches/0/flow",
+              "value": "continue"
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 1761792
+            }
+          ],
+          "outputs": [
+            {
+              "kind": "cancel_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "3"
+            }
+          ],
+          "kept": []
+        }
+      },
+      {
+        "version": 4,
+        "event": {
+          "type": "input_applied",
+          "format": 12,
+          "receipt": {
+            "kind": "call_answered",
+            "key": "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/2/write/fork/branches/1/b\",1]",
+            "at": 1790845201000,
+            "status": "succeeded"
+          },
+          "steps": [
+            {
+              "reference": "/do/2/write/fork/branches/1/b",
+              "run": 1,
+              "outcome": "completed",
+              "name": "b",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/2/write/fork/branches/1/b",
+                "run": 1,
+                "outcome": "waiting",
+                "times": 1
+              }
+            }
+          ],
+          "resumed": {
+            "reference": "/do/2/write/fork/branches/1/b",
+            "run": 1,
+            "times": 1
+          },
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 4
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/4"
+            },
+            {
+              "op": "remove",
+              "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~11~1b\",1]"
+            },
+            {
+              "op": "replace",
+              "path": "/heldBytes",
+              "value": 512837
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/4"
+            },
+            {
+              "op": "add",
+              "path": "/machine/values/7",
+              "value": {
+                "value": {
+                  "wrote": "/do/2/write/fork/branches/1/b"
+                },
+                "bytes": 41
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/machine/nextValue",
+              "value": 8
+            },
+            {
+              "op": "remove",
+              "path": "/machine/root/body/list/current/task/body/branches/1/task"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/body/branches/1/state",
+              "value": "finished"
+            },
+            {
+              "op": "add",
+              "path": "/machine/root/body/list/current/task/body/branches/1/output",
+              "value": 7
+            },
+            {
+              "op": "add",
+              "path": "/machine/root/body/list/current/task/body/branches/1/flow",
+              "value": "continue"
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 1763282
+            }
+          ],
+          "outputs": [
+            {
+              "kind": "cancel_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "4"
+            }
+          ],
+          "kept": []
+        }
+      },
+      {
+        "version": 5,
+        "event": {
+          "type": "input_applied",
+          "format": 12,
+          "receipt": {
+            "kind": "call_answered",
+            "key": "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/2/write/fork/branches/2/c\",1]",
+            "at": 1790845201000,
+            "status": "succeeded"
+          },
+          "steps": [
+            {
+              "reference": "/do/2/write/fork/branches/2/c",
+              "run": 1,
+              "outcome": "completed",
+              "name": "c",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/2/write/fork/branches/2/c",
+                "run": 1,
+                "outcome": "waiting",
+                "times": 1
+              }
+            },
+            {
+              "reference": "/do/2/write",
+              "run": 1,
+              "outcome": "completed",
+              "name": "write",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/2/write",
+                "run": 1,
+                "outcome": "started",
+                "times": 1
+              }
+            },
+            {
+              "reference": "/do/3/done",
+              "run": 1,
+              "outcome": "completed",
+              "name": "done",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/2/write",
+                "run": 1,
+                "outcome": "completed",
+                "times": 1
+              }
+            }
+          ],
+          "resumed": {
+            "reference": "/do/2/write/fork/branches/2/c",
+            "run": 1,
+            "times": 1
+          },
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/status",
+              "value": "ended"
+            },
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 5
+            },
+            {
+              "op": "add",
+              "path": "/runs/~1do~13~1done",
+              "value": 1
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/1"
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/5"
+            },
+            {
+              "op": "remove",
+              "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~12~1write~1fork~1branches~12~1c\",1]"
+            },
+            {
+              "op": "replace",
+              "path": "/heldBytes",
+              "value": 436
+            },
+            {
+              "op": "replace",
+              "path": "/stepsWithoutWaiting",
+              "value": 1
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/2"
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/5"
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/6"
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/7"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/nextValue",
+              "value": 11
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root",
+              "value": null
+            },
+            {
+              "op": "replace",
+              "path": "/outcome",
+              "value": {
+                "kind": "completed",
+                "output": {
+                  "written": 3
+                }
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 1765281
+            }
+          ],
+          "outputs": [
+            {
+              "kind": "cancel_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "5"
+            },
+            {
+              "kind": "cancel_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "1"
+            },
+            {
+              "kind": "settle",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "settlement": {
+                "status": "succeeded",
+                "output": {
+                  "written": 3
+                }
+              }
+            }
+          ],
+          "kept": []
+        }
+      }
+    ]
+  },
+  "state": {
+    "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "status": "ended",
+    "workflow": {
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "first": {
+              "wait": "PT1S"
+            }
+          },
+          {
+            "make": {
+              "set": {
+                "page": "${ \"x\".repeat(250000) }"
+              }
+            }
+          },
+          {
+            "write": {
+              "fork": {
+                "branches": [
+                  {
+                    "a": {
+                      "call": "notify",
+                      "with": {
+                        "to": "a",
+                        "page": "${ $data.page }"
+                      }
+                    }
+                  },
+                  {
+                    "b": {
+                      "call": "notify",
+                      "with": {
+                        "to": "b",
+                        "page": "${ $data.page }"
+                      }
+                    }
+                  },
+                  {
+                    "c": {
+                      "call": "notify",
+                      "with": {
+                        "to": "c",
+                        "page": "${ $data.page }"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "done": {
+              "set": {
+                "written": 3
+              }
+            }
+          }
+        ]
+      },
+      "input": 1
+    },
+    "attributes": {},
+    "limits": {
+      "mostDurationMs": 2592000000,
+      "longestCallMs": 600000
+    },
+    "startedAt": 1790845200000,
+    "lastInputAt": 1790845201000,
+    "inputs": 5,
+    "random": {
+      "seed": 7,
+      "draws": 0
+    },
+    "runs": {
+      "/do/0/first": 1,
+      "/do/1/make": 1,
+      "/do/2/write": 1,
+      "/do/2/write/fork/branches/0/a": 1,
+      "/do/2/write/fork/branches/1/b": 1,
+      "/do/2/write/fork/branches/2/c": 1,
+      "/do/3/done": 1
+    },
+    "timers": {
+      "next": 6,
+      "armed": {}
+    },
+    "calls": {},
+    "listeners": {},
+    "emitted": {
+      "count": 0,
+      "bytes": 0
+    },
+    "inbox": {
+      "waiting": [],
+      "waitingBytes": 0,
+      "receivedIds": [],
+      "offeredIds": [],
+      "received": 0,
+      "receivedBytes": 0
+    },
+    "heldBytes": 436,
+    "historyBytes": 1765281,
+    "stepsWithoutWaiting": 1,
+    "cancelRequested": false,
+    "machine": {
+      "values": {
+        "0": {
+          "value": {},
+          "bytes": 2
+        },
+        "1": {
+          "value": {},
+          "bytes": 2
+        }
+      },
+      "nextValue": 11,
+      "context": 0,
+      "root": null
+    },
+    "outcome": {
+      "kind": "completed",
+      "output": {
+        "written": 3
+      }
+    }
+  }
+}

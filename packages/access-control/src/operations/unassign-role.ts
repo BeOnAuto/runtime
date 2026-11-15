@@ -44,6 +44,7 @@ export const unassignRole = defineHttpOperation('org', 'command', {
   route: { method: 'DELETE', path: '/role-assignments/{person}/{role}' },
   body: { kind: 'none' },
   permittedBy: ['org:write'],
+  permissionsManagement: true,
   inputSchema: UnassignRoleInputSchema,
   outputSchema: HeldRolesSchema,
   reasons: ['forbidden', 'conflict'],

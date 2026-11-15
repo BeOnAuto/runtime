@@ -1,0 +1,12 @@
+{
+  "next": {
+    "input": {
+      "kind": "timer_fired",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+      "at": 1790845201000,
+      "timerId": "2"
+    },
+    "payloadOffloading": true
+  },
+  "texts": {}
+}

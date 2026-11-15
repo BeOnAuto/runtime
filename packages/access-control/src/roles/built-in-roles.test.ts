@@ -2,6 +2,7 @@ import { allPermissions, type Permission, type ResourceReference } from '@on.aut
 import { describe, expect, it } from 'vitest';
 
 import {
+  assignARole,
   builtIn,
   createPlaybook,
   decidedBy,
@@ -53,6 +54,22 @@ describe('the built-in roles the decider reads', () => {
         allPermissions.map((permission) => [role, permission, builtInRoles[role].permits.includes(permission)]),
       ),
     );
+  });
+
+  it('manage permissions, signed in to Studio, exactly where the table says they give roles, so the decider and the policies never disagree', async () => {
+    const decide = decidedBy(
+      rolesHeld(Object.fromEntries(builtInRoleIds.map((role) => [`user_${role}`, [builtIn(role, acme)]]))),
+    );
+    const managing = await Promise.all(
+      builtInRoleIds.map(async (role) => {
+        const { decision } = await decide(
+          requestOf({ principal: { type: 'person', id: `user_${role}` }, operation: assignARole, resource: acme }),
+        );
+        return [role, decision === 'allow'] as const;
+      }),
+    );
+
+    expect(managing).toEqual(builtInRoleIds.map((role) => [role, builtInRoles[role].assignsRoles]));
   });
 
   it('let an admin alone give a role, and an admin give any of them', () => {

@@ -11,6 +11,7 @@ export {
   type ConnectionPolicy,
   type ConnectionsSetting,
 } from './policy/connection-policy.ts';
+export type { ConnectionStart, ConnectionStarts } from './policy/connection-starts.ts';
 export { receiveEventsSetting, receivesOver, type ReceivingWay } from './policy/receiving-ways.ts';
 export { registeredClientSecrets } from './registered-clients/registered-clients.ts';
 export type { RuntimeAccess } from './policy/policy-rules.ts';

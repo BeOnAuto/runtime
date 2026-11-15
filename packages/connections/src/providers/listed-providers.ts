@@ -86,6 +86,21 @@ const ProviderSchema = Schema.Struct({
   type: ConnectionTypeSchema,
   credentials: Schema.Array(ListedWaySchema),
   placeholders: Schema.Array(ListedPlaceholderSchema),
+  replaces: Schema.optionalKey(
+    Schema.Array(Schema.String).annotate({
+      description:
+        'The providers this one replaces, by name: where one is listed, none of its ways is offered, and reconnecting a connection made from it adds it again from this one under its name',
+    }),
+  ),
+  may_reconnect: Schema.optionalKey(
+    Schema.Boolean.annotate({
+      description:
+        'Beside replaces, where only an admin of the organization connects this provider here: whether this caller may reconnect a connection made from a provider it replaces, whoever added it; left out where the person who added such a connection reconnects it, or where the runtime cannot say just now',
+    }),
+  ),
+  reconnect_refusal: Schema.optionalKey(
+    Schema.String.annotate({ description: 'Why this caller may not, where may_reconnect is false' }),
+  ),
 }).annotate({ identifier: 'Provider', description: 'A service a person may connect, by its name' });
 
 export type ListedProvider = typeof ProviderSchema.Type;

@@ -11,10 +11,11 @@ permissions: {}
 
 env:
   CI: '1'
+  UNCACHED: ${{ github.event_name != 'pull_request' && github.event_name != 'merge_group' }}
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+  group: ci-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
@@ -44,8 +45,13 @@ jobs:
       - run: |
           pnpm install --frozen-lockfile
           node scripts/cache-platform.ts
-      - name: Check the format, the lint rules and the types, and run knip and sherif
-        run: pnpm exec turbo run format:check lint typecheck knip sherif
+      - name: Check the format, the lint rules and the types, and run knip and sherif, from no cache outside a pull request
+        run: |
+          uncached=()
+          if [ "$UNCACHED" = true ]; then
+            uncached=(--force)
+          fi
+          pnpm exec turbo run format:check lint typecheck knip sherif "${uncached[@]}"
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
@@ -161,13 +167,16 @@ jobs:
             sleep 1
           done
           curl --fail --silent http://127.0.0.1:9000/health
-      - name: Run the tests of the group's packages two at a time, each with 100% coverage per file, or the shard's tests into a blob report the coverage job merges and checks
+      - name: Run the tests of the group's packages two at a time, each with 100% coverage per file, or the shard's tests into a blob report the coverage job merges and checks, from no cache outside a pull request
         run: |
           node scripts/cache-platform.ts
           filters=()
           for name in $PACKAGES; do
             filters+=("--filter=@on.auto/$name")
           done
+          if [ "$UNCACHED" = true ]; then
+            filters+=(--force)
+          fi
           pnpm exec turbo run "$TASK" --concurrency=2 "${filters[@]}"
         env:
           PACKAGES: ${{ join(matrix.packages, ' ') }}
@@ -610,3 +619,29 @@ jobs:
           done
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
+
+  alert:
+    name: Alert on main
+    needs: ci-ok
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Open or add to the issue that says CI fails on main, and post to the alert webhook, or close that issue once CI passes again
+        run: .github/alert/main.sh
+        env:
+          OUTCOME: ${{ needs.ci-ok.result }}
+          WORKFLOW: CI
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ASSIGNEES: ${{ vars.CI_ALERT_ASSIGNEES }}
+          ALERT_WEBHOOK_URL: ${{ secrets.CI_ALERT_WEBHOOK_URL }}

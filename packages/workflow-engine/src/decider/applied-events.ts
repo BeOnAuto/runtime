@@ -21,6 +21,6 @@ export function appliedEvents(state: RunState, options: DecidingOptions, input: 
     return nothingDecided;
   }
   const made = eventOf(state, result, receiptOf(input, at), options.atHand);
-  const broken = brokenBound(state, made.event, result);
+  const broken = brokenBound(state, made.event, result, options.atHand);
   return oneEvent(broken === undefined ? made : endingEvent(state, options, input, broken));
 }

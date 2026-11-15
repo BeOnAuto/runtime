@@ -111,18 +111,21 @@ describe('the built-in policies', () => {
   });
 
   it('each have an id of their own, which names them in every answer', () => {
-    expect(Object.keys(policiesById(cedar, texts.policies))).toEqual([
-      'viewer',
-      'editor',
-      'admin',
-      'key',
-      'local-developer',
-      'playbook-itself',
-      'run-as-started',
-      'own-org',
-      'within-granted-permissions',
-      'within-granted-playbooks',
-    ]);
+    expect(Object.keys(policiesById(cedar, texts.policies)).toSorted()).toEqual(
+      [
+        'viewer',
+        'editor',
+        'admin',
+        'key',
+        'local-developer',
+        'playbook-itself',
+        'run-as-started',
+        'own-org',
+        'within-granted-permissions',
+        'within-granted-playbooks',
+        'permissions-managed-by-admins-in-studio',
+      ].toSorted(),
+    );
   });
 
   it('name no operation, person, key, org or playbook: only built-in roles and the permissions operations declare', () => {
@@ -135,7 +138,7 @@ describe('the built-in policies', () => {
 });
 
 describe('what the built-in policies read of a request', () => {
-  it('is how it arrived, what its credential grants and, of what its operation declares about itself, only whether it targets a playbook, beside the permissions its action is in', () => {
+  it('is how it arrived, what its credential grants and, of what its operation declares about itself, only whether it targets a playbook and whether it manages permissions, beside the permissions its action is in', () => {
     const read = Object.values(policiesById(cedar, texts.policies)).flatMap((policy) => contextReadByPolicy(policy));
 
     expect(new Set(read)).toEqual(
@@ -146,6 +149,7 @@ describe('what the built-in policies read of a request', () => {
         'granted.all_playbooks',
         'granted.playbooks',
         'operation.targets_playbook',
+        'operation.permissions_management',
       ]),
     );
   });
@@ -163,7 +167,7 @@ describe('policies made ready for the engine', () => {
     expect([again.schemaName, again.policySetId, again.policies]).toEqual([
       prepared.schemaName,
       prepared.policySetId,
-      10,
+      11,
     ]);
     expect(other.schemaName).toBe(prepared.schemaName);
     expect(other.policySetId).not.toBe(prepared.policySetId);

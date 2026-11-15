@@ -17,6 +17,7 @@ import type {
   ClientGiving,
   ConnectionAddition,
   ConnectionCommandData,
+  ConnectionReplacement,
   ConsentFinish,
   ConsentStart,
   CredentialGiving,
@@ -132,5 +133,13 @@ export const recordChangeInRegistry = Effect.fnUntraced(function* (data: Replaci
   return {
     before: yield* Effect.orDie(findConnection(decidedOn, data.connection)),
     after: yield* Effect.orDie(findConnection(state, data.connection)),
+  };
+});
+
+export const recordReplacementInRegistry = Effect.fnUntraced(function* (data: ConnectionReplacement) {
+  const { state } = yield* executedInRegistry(data);
+  return {
+    removed: yield* Effect.orDie(findConnection(state, data.connection)),
+    added: yield* Effect.orDie(findConnection(state, data.addition.connection)),
   };
 });

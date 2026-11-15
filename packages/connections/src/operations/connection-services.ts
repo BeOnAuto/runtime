@@ -12,6 +12,7 @@ import type { Effect, Redacted } from 'effect';
 
 import type { ConnectPages } from '../links/connect-page.ts';
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
+import type { StartsOfConnections } from '../policy/connection-starts.ts';
 import type { RuntimeAccess } from '../policy/policy-rules.ts';
 
 export interface SecretKeeping {
@@ -27,7 +28,7 @@ export interface SecretKeeping {
   readonly forget: (id: string) => Effect.Effect<void>;
 }
 
-export interface ConnectionServices {
+export interface ConnectionServices extends StartsOfConnections {
   readonly secrets: SecretKeeping;
   readonly policy: ConnectionPolicy;
   readonly fileEntries: readonly string[];

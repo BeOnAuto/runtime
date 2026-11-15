@@ -3,6 +3,7 @@ import type { ConsentRefusal, SecretKeepingFailure } from '@on.auto/tool-servers
 import { Effect } from 'effect';
 
 import type { KeptConnection } from '../registry/registry.ts';
+import { replacedConsent, replacedOf } from '../replacements/replaced-providers.ts';
 import {
   consentAskedForASignIn,
   namedOf,
@@ -134,6 +135,10 @@ export function askedForASignIn(
   services: ConsentServices,
   scope: string | undefined,
 ): Effect.Effect<ConsentAsked, ConsentRefused> {
+  const replaced = replacedOf(services.providers, kept.connection.provider);
+  if (replaced !== undefined) {
+    return Effect.fail(replacedConsent(kept.connection.name, replaced));
+  }
   return consentAskedForASignIn(kept, services, scope).pipe(
     Effect.mapError((unheld) => ownClientRefusalOf(namedOf(kept.connection), unheld)),
   );

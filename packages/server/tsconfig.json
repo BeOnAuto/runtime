@@ -1,4 +1,4 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["*.ts", "measure", "npm", "src"]
+  "include": ["*.ts", "measure", "npm", "src", "../../.github/smoke/clock-ahead.ts"]
 }

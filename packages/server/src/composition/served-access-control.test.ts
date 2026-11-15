@@ -39,7 +39,7 @@ describe('the server', () => {
     expect([created.status, listed.status, read.status]).toEqual([201, 200, 200]);
     expect(atStart).not.toContain(loadedMessage);
     expect(loadedAgain).toEqual([]);
-    expect(loaded).toMatchObject({ level: 'INFO', annotations: { engine: 'Cedar 4.14.0', policies: 10 } });
+    expect(loaded).toMatchObject({ level: 'INFO', annotations: { engine: 'Cedar 4.14.0', policies: 11 } });
     expect(loaded?.annotations['operations']).toBeGreaterThan(60);
     expect(lines.filter(({ message }) => message === reportedDifferenceMessage)).toEqual([]);
   });

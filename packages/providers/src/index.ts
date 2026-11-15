@@ -28,6 +28,7 @@ export {
   joinedProviders,
   providerNamed,
   rendersOf,
+  replacementOf,
   type Provider,
   type ProviderList,
 } from './reading/provider-list.ts';

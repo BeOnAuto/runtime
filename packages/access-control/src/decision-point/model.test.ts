@@ -52,12 +52,6 @@ function playbook(id: string): ResourceReference {
 const onlyAdminsUndoNothing =
   '@id("only-admins-undo-nothing")\nforbid (principal, action, resource) when { context.operation.irreversible } unless { principal in Role::"admin" };';
 
-const permissionsManagedByAdminsInStudio = [
-  '@id("permissions-managed-by-admins-in-studio")',
-  'forbid (principal, action, resource) when { context.operation.permissions_management }',
-  'unless { principal in Role::"admin" && context.via == "studio" };',
-].join('\n');
-
 function answered(
   decide: (request: AccessRequest) => Promise<AccessDecision>,
 ): (request: AccessRequest) => Promise<string> {
@@ -134,16 +128,6 @@ describe('a built-in role held at one playbook or one definition, with the polic
   });
 });
 
-function managingAs(principal: PrincipalReference, via: ArrivedVia, permissionsManagement: boolean): Promise<string> {
-  const decide = withPolicy(
-    permissionsManagedByAdminsInStudio,
-    rolesHeld({ ada: [builtIn('editor', acme)], grace: [builtIn('admin', acme)] }),
-  );
-  return decide(requestOf({ principal, operation: createPlaybook, resource: theOrg, via, permissionsManagement }));
-}
-
-const grace: PrincipalReference = { type: 'person', id: 'grace' };
-
 describe('the model, extended by one more policy and no change to the question', () => {
   it('keeps everyone but an Admin from what cannot be undone with one forbid on what an operation declares', async () => {
     expect(await Promise.all([retiringAs('ada', true), retiringAs('grace', true), retiringAs('ada', false)])).toEqual([
@@ -152,18 +136,33 @@ describe('the model, extended by one more policy and no change to the question',
       'allow by editor',
     ]);
   });
+});
 
-  it('keeps everyone but an Admin in Studio from what manages permissions with one forbid on what an operation declares', async () => {
+const grace: PrincipalReference = { type: 'person', id: 'grace' };
+
+function managingAs(principal: PrincipalReference, via: ArrivedVia, permissionsManagement: boolean): Promise<string> {
+  const decide = answered(decidedBy(rolesHeld({ ada: [builtIn('editor', acme)], grace: [builtIn('admin', acme)] })));
+  return decide(requestOf({ principal, operation: createPlaybook, resource: theOrg, via, permissionsManagement }));
+}
+
+describe('what manages permissions, with the policies as shipped', () => {
+  it('is done by an Admin signed in to Studio alone, by one forbid on what an operation declares, however else the call arrives', async () => {
     expect(
       await Promise.all([
         managingAs(grace, 'studio', true),
         managingAs(grace, 'agent', true),
+        managingAs(grace, 'conversation', true),
+        managingAs(grace, 'run', true),
         managingAs(ada, 'studio', true),
         managingAs({ type: 'key', id: 'ci-key' }, 'key', true),
+        managingAs({ type: 'local_developer', id: 'local' }, 'local', true),
         managingAs(ada, 'studio', false),
       ]),
     ).toEqual([
       'allow by admin',
+      'deny by permissions-managed-by-admins-in-studio',
+      'deny by permissions-managed-by-admins-in-studio',
+      'deny by permissions-managed-by-admins-in-studio',
       'deny by permissions-managed-by-admins-in-studio',
       'deny by permissions-managed-by-admins-in-studio',
       'deny by permissions-managed-by-admins-in-studio',

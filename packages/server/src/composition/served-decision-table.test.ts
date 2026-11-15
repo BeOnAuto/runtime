@@ -1,14 +1,18 @@
-import type { DeclaredAction } from '@on.auto/access-control';
 import { operationsIn, type DocumentedOperation } from '@on.auto/api/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { decisionTableOf, type DecisionRow } from '../testing/access/decision-table.ts';
-import { declarationLineOf, declaredIn, permissionsOf } from '../testing/openapi/declared-operations.ts';
+import {
+  declarationLineOf,
+  declaredIn,
+  permissionsOf,
+  type ServedDeclaration,
+} from '../testing/openapi/declared-operations.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
 let server: ReasoningServer;
 let documented: readonly DocumentedOperation[];
-let operations: readonly DeclaredAction[];
+let operations: readonly ServedDeclaration[];
 let table: readonly DecisionRow[];
 
 beforeAll(async () => {
@@ -27,7 +31,7 @@ const declared = [
   'org/activate_license: org:write',
   'org/add_connection: org:write',
   'org/approve: org:write',
-  'org/assign_role: org:write',
+  'org/assign_role: org:write (manages permissions)',
   'org/create_playbook: org:write (names a playbook)',
   'org/finish: org:write',
   'org/get_connection: org:read',
@@ -62,7 +66,7 @@ const declared = [
   'org/set_connection_signing_secret: org:write',
   'org/start: org:write',
   'org/transcribe: playbook:read',
-  'org/unassign_role: org:write',
+  'org/unassign_role: org:write (manages permissions)',
   'org/update_playbook: org:write (names a playbook)',
   'playbook/answer_interaction: playbook:write',
   'playbook/cancel_run: playbook:write',
@@ -185,6 +189,12 @@ const whatOnlyWritingPermits = [
 
 const everything = [...whatReadingPermits, ...whatOnlyWritingPermits].toSorted();
 
+const whatManagesPermissions = ['org/assign_role', 'org/unassign_role'];
+
+const everythingButWhatManagesPermissions = everything.filter(
+  (operation) => !whatManagesPermissions.includes(operation),
+);
+
 const whatPlaybookAlphaMayDoAsItself = [
   ...everything.filter((operation) => operation.startsWith('playbook/')),
   'org/get_license',
@@ -201,21 +211,21 @@ const whatPlaybookAlphaMayDoAsItself = [
 
 const pinned = [
   { caller: 'Admin, in Studio', allowed: everything },
-  { caller: 'Admin, through their connected agent', allowed: everything },
-  { caller: 'Admin, asking @Auto in Slack', allowed: everything },
-  { caller: 'Admin, in a run they started', allowed: everything },
-  { caller: 'Editor, in Studio', allowed: everything },
-  { caller: 'Editor, through their connected agent', allowed: everything },
-  { caller: 'Editor, asking @Auto in Slack', allowed: everything },
-  { caller: 'Editor, in a run they started', allowed: everything },
+  { caller: 'Admin, through their connected agent', allowed: everythingButWhatManagesPermissions },
+  { caller: 'Admin, asking @Auto in Slack', allowed: everythingButWhatManagesPermissions },
+  { caller: 'Admin, in a run they started', allowed: everythingButWhatManagesPermissions },
+  { caller: 'Editor, in Studio', allowed: everythingButWhatManagesPermissions },
+  { caller: 'Editor, through their connected agent', allowed: everythingButWhatManagesPermissions },
+  { caller: 'Editor, asking @Auto in Slack', allowed: everythingButWhatManagesPermissions },
+  { caller: 'Editor, in a run they started', allowed: everythingButWhatManagesPermissions },
   { caller: 'Editor, through an agent they approved to read', allowed: whatReadingPermits },
   { caller: 'Viewer, in Studio', allowed: whatReadingPermits },
   { caller: 'Viewer, through their connected agent', allowed: whatReadingPermits },
   { caller: 'Viewer, asking @Auto in Slack', allowed: whatReadingPermits },
-  { caller: 'Viewer, in a run they started', allowed: everything },
+  { caller: 'Viewer, in a run they started', allowed: everythingButWhatManagesPermissions },
   { caller: 'A person with no role, in Studio', allowed: [] },
   { caller: 'An Editor of another org, in Studio', allowed: [] },
-  { caller: 'An API key', allowed: everything },
+  { caller: 'An API key', allowed: everythingButWhatManagesPermissions },
   { caller: 'An API key that reads', allowed: whatReadingPermits },
   { caller: 'Playbook alpha, in a run a trigger or a schedule started', allowed: whatPlaybookAlphaMayDoAsItself },
 ];
@@ -236,22 +246,22 @@ describe('every operation the server serves, as its API document declares it', (
 
 const refusedForTheRole = [
   { caller: 'Admin, in Studio', refused: [] },
-  { caller: 'Admin, through their connected agent', refused: [] },
-  { caller: 'Admin, asking @Auto in Slack', refused: [] },
+  { caller: 'Admin, through their connected agent', refused: whatManagesPermissions },
+  { caller: 'Admin, asking @Auto in Slack', refused: whatManagesPermissions },
   { caller: 'Admin, in a run they started', refused: [] },
-  { caller: 'Editor, in Studio', refused: [] },
-  { caller: 'Editor, through their connected agent', refused: [] },
-  { caller: 'Editor, asking @Auto in Slack', refused: [] },
+  { caller: 'Editor, in Studio', refused: whatManagesPermissions },
+  { caller: 'Editor, through their connected agent', refused: whatManagesPermissions },
+  { caller: 'Editor, asking @Auto in Slack', refused: whatManagesPermissions },
   { caller: 'Editor, in a run they started', refused: [] },
-  { caller: 'Editor, through an agent they approved to read', refused: [] },
+  { caller: 'Editor, through an agent they approved to read', refused: whatManagesPermissions },
   { caller: 'Viewer, in Studio', refused: whatOnlyWritingPermits },
   { caller: 'Viewer, through their connected agent', refused: whatOnlyWritingPermits },
   { caller: 'Viewer, asking @Auto in Slack', refused: whatOnlyWritingPermits },
   { caller: 'Viewer, in a run they started', refused: [] },
   { caller: 'A person with no role, in Studio', refused: everything },
   { caller: 'An Editor of another org, in Studio', refused: everything },
-  { caller: 'An API key', refused: [] },
-  { caller: 'An API key that reads', refused: [] },
+  { caller: 'An API key', refused: whatManagesPermissions },
+  { caller: 'An API key that reads', refused: whatManagesPermissions },
   { caller: 'Playbook alpha, in a run a trigger or a schedule started', refused: [] },
 ];
 
@@ -260,7 +270,7 @@ describe('every operation the server serves, decided for each role and each kind
     expect(table.map(({ caller, allowed }) => ({ caller, allowed }))).toEqual(pinned);
   });
 
-  it('is decided alike whatever else it declares about itself, which its API document does not say', () => {
+  it('is decided alike whatever else it declares about itself, which its API document does not say, but for whether it manages permissions, which its registration says', () => {
     expect(table.flatMap(({ decidedOtherwise }) => decidedOtherwise)).toEqual([]);
   });
 });

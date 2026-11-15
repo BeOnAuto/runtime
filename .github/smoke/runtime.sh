@@ -37,11 +37,18 @@ runtime_start() {
     for value in "${settings[@]}"; do options+=(--env "$value"); done
     [ -z "$volume" ] || options+=(--volume "$volume:/data")
     [ -z "${runtime_network:-}" ] || options+=(--network "$runtime_network")
-    docker run --label "onauto.smoke=${SMOKE_PREFIX:-}" --detach --name "$name" --publish "$port:5555" "${options[@]}" "$image"
+    [ -z "${runtime_entry:-}" ] || options+=(--volume "$runtime_entry:/app/.github/smoke/${runtime_entry##*/}:ro")
+    docker run --label "onauto.smoke=${SMOKE_PREFIX:-}" --detach --name "$name" --publish "$port:5555" "${options[@]}" "$image" \
+      ${runtime_entry:+node ".github/smoke/${runtime_entry##*/}"}
   else
     local instance="$SMOKE_STATE/processes/$name" data="$SMOKE_STATE/volumes/${volume:-$name}"
     mkdir -p "$instance"
-    node "$smoke_helper" "$SMOKE_APP" "$instance/app" "$data" "$port" "${settings[@]}" >> "$instance/output.log" 2>&1 &
+    if [ -n "${runtime_entry:-}" ]; then
+      mkdir -p "$instance/app/.github/smoke"
+      cp "$runtime_entry" "$instance/app/.github/smoke/"
+    fi
+    node "$smoke_helper" "$SMOKE_APP" "$instance/app" "$data" "$port" "${settings[@]}" \
+      ${runtime_entry:+-- node ".github/smoke/${runtime_entry##*/}"} >> "$instance/output.log" 2>&1 &
     local pid=$!
     smoke_pids+=("$pid")
     printf '%s\n' "$pid" > "$instance/pid"

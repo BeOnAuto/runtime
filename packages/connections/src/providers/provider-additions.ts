@@ -1,13 +1,6 @@
 import type { Conflict, Forbidden, InvalidInput, Issue } from '@on.auto/operations';
-import {
-  additionOfProvider,
-  documentServerOf,
-  providerNamed,
-  type Provider,
-  type ProviderList,
-} from '@on.auto/providers';
-import { failureCodesOf } from '@on.auto/tool-servers';
-import { Effect, Option, Result, type Redacted } from 'effect';
+import { additionOfProvider, providerNamed, type Provider, type ProviderList } from '@on.auto/providers';
+import { Effect, Option, Result } from 'effect';
 
 import {
   additionIssuesOf,
@@ -20,9 +13,8 @@ import type { AdditionGiven } from '../operations/connection-fields.ts';
 import { gatewayRefusalOf, policyRefusalOf } from '../policy/policy-rules.ts';
 import { credentialFieldIssuesOf } from '../registry/credential.ts';
 import type { Credential } from '../registry/credential.ts';
-import type { Providing } from '../serving/placed-credentials.ts';
+import { replacedOf, replacedWayWords } from '../replacements/replaced-providers.ts';
 import {
-  declaredGatewayOf,
   gatewayOriginsOf,
   gatewayUnofferedOf,
   isOfferedWay,
@@ -30,6 +22,7 @@ import {
   waysInOrderOf,
   type Listing,
 } from './provider-listing.ts';
+import { providingOf, type ProviderServices } from './provider-providing.ts';
 
 export interface GivenAddition extends AdditionInput {
   readonly placeholders: Readonly<Record<string, string>> | null;
@@ -70,13 +63,21 @@ function unofferedGatewayOf(named: Provider, addition: GivenAddition, listing: L
   return because === undefined ? [] : [{ pointer: theProvider, detail: because }];
 }
 
+function unreplaced(named: Provider, { providers }: Listing): Result.Result<Provider, readonly Issue[]> {
+  const replaced = replacedOf(providers, named.entry.name);
+  return replaced === undefined
+    ? Result.succeed(named)
+    : Result.fail([{ pointer: theProvider, detail: replacedWayWords(replaced) }]);
+}
+
 function givenToProvider(
   provider: string,
   given: AdditionGiven,
   listing: Listing,
 ): Result.Result<GivenAddition, readonly Issue[]> {
   const { name, placeholders, entry = {}, credential } = given;
-  return Result.flatMap(namedHere(listing.providers, provider), (named) =>
+  const offeredHere = Result.flatMap(namedHere(listing.providers, provider), (named) => unreplaced(named, listing));
+  return Result.flatMap(offeredHere, (named) =>
     Result.flatMap(
       additionOfProvider(
         { ...named.entry, credentials: waysInOrderOf(named, listing) },
@@ -99,11 +100,6 @@ function givenToProvider(
   );
 }
 
-export interface ProviderServices {
-  readonly providers: ProviderList;
-  readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
-}
-
 type AdditionServices = ProviderServices & Listing;
 
 type Consent = Listing['consent'];
@@ -115,40 +111,6 @@ interface ClientListing {
 type ListingServices = Omit<AdditionServices, 'consent'> & { readonly consent: ClientListing } & {
   readonly studioBase: string;
 };
-
-const handlingMoney: Pick<Providing, 'handles_money'> = { handles_money: true };
-
-function gatewayProvidedBy(provider: Provider): Pick<Providing, 'gateway'> {
-  const gateway = declaredGatewayOf(provider);
-  return gateway === undefined ? {} : { gateway };
-}
-
-function providedBy(provider: Provider): Omit<Providing, 'documents' | 'values'> {
-  const { entry } = provider;
-  const consenting = entry.credentials.find(({ kind }) => kind === 'authorization');
-  return {
-    ...gatewayProvidedBy(provider),
-    documentServer: documentServerOf(provider),
-    type: entry.type,
-    marks: entry.marks,
-    ...failureCodesOf(entry.failure_codes),
-    ...(consenting?.ending_codes === undefined ? {} : { ending_codes: consenting.ending_codes }),
-    ...(entry.handles_money === true ? handlingMoney : {}),
-    ...(entry.renders === undefined ? {} : { renders: entry.renders }),
-  };
-}
-
-export function providingOf(
-  { provider }: Pick<AdditionInput, 'provider'>,
-  { providers, providerValues }: ProviderServices,
-): Providing | undefined {
-  if (provider === null) {
-    return undefined;
-  }
-  const named = Result.getOrUndefined(providerNamed(providers, provider));
-  const given = { documents: providers.documents, values: providerValues };
-  return named === undefined ? { ...given, documentServer: undefined } : { ...given, ...providedBy(named) };
-}
 
 function isWrittenBy(pointer: string, written: string): boolean {
   return pointer === written || pointer.startsWith(`${written}/`);

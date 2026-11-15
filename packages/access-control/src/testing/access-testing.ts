@@ -24,20 +24,23 @@ export const cedarOnDisk = cedarModuleIn(filesOnDisk);
 
 export interface TestOperation extends DeclaredAction {
   readonly kind: OperationKind;
+  readonly permissionsManagement: boolean;
 }
 
-function declared(
-  scope: TestOperation['scope'],
-  kind: OperationKind,
-  name: string,
-  permittedBy: { readonly permissions: readonly Permission[]; readonly targetsPlaybook?: boolean },
-): TestOperation {
+interface Declared {
+  readonly permissions: readonly Permission[];
+  readonly targetsPlaybook?: boolean;
+  readonly permissionsManagement?: boolean;
+}
+
+function declared(scope: TestOperation['scope'], kind: OperationKind, name: string, said: Declared): TestOperation {
   return {
     scope,
     kind,
     name,
-    permissions: permittedBy.permissions,
-    targetsPlaybook: permittedBy.targetsPlaybook ?? false,
+    permissions: said.permissions,
+    targetsPlaybook: said.targetsPlaybook ?? false,
+    permissionsManagement: said.permissionsManagement ?? false,
   };
 }
 
@@ -60,6 +63,11 @@ export const runDefinition = declared('playbook', 'command', 'run_definition', {
 
 const makeComment = declared('playbook', 'command', 'make_comment', { permissions: ['playbook:read'] });
 
+export const assignARole = declared('org', 'command', 'assign_role', {
+  permissions: ['org:write'],
+  permissionsManagement: true,
+});
+
 export const declaredOperations: readonly TestOperation[] = [
   listConnections,
   listPlaybooks,
@@ -69,6 +77,7 @@ export const declaredOperations: readonly TestOperation[] = [
   getDefinition,
   runDefinition,
   makeComment,
+  assignARole,
 ];
 
 export function builtIn(role: string, scope: RoleAssignment['scope']): RoleAssignment {
@@ -100,7 +109,7 @@ export function requestOf({
   permissions = allPermissions,
   playbooks = '*',
   irreversible = false,
-  permissionsManagement = false,
+  permissionsManagement = operation.permissionsManagement,
 }: Asked): AccessRequest {
   return {
     principal,

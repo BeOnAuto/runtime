@@ -12,4 +12,14 @@ describe('the operations of role assignments', () => {
       ['unassign_role', { kind: 'none' }],
     ]);
   });
+
+  it('declare that they manage permissions where they give or take a role away, which only an admin may, and not where they list', () => {
+    expect(
+      roleAssignmentOperations.map(({ registration }) => [registration.name, registration.permissionsManagement]),
+    ).toEqual([
+      ['list_role_assignments', false],
+      ['assign_role', true],
+      ['unassign_role', true],
+    ]);
+  });
 });

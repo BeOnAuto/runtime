@@ -87,8 +87,12 @@ function keptBytesOf(event: RunLogEvent): number {
   return held + startedBytesOf(event);
 }
 
+export function writtenBytesOf(event: RunLogEvent): number {
+  return utf8.encode(JSON.stringify(asWritten(event))).byteLength;
+}
+
 export function eventBytesOf(event: RunLogEvent): number {
-  return utf8.encode(JSON.stringify(asWritten(event))).byteLength + keptBytesOf(event);
+  return writtenBytesOf(event) + keptBytesOf(event);
 }
 
 function withHistoryBytesOf(event: RunLogEvent, historyBytes: number): RunLogEvent {

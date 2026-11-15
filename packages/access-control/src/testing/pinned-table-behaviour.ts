@@ -128,6 +128,8 @@ const everything = [
   'make_comment on alpha, beta, d-02',
 ];
 
+const everythingAnAdminInStudioDoes = [...everything, 'assign_role on org'];
+
 const reads = [
   'list_connections on org',
   'list_playbooks on org',
@@ -137,7 +139,7 @@ const reads = [
 ];
 
 const pinned = [
-  { caller: 'Admin, in Studio', allowed: everything },
+  { caller: 'Admin, in Studio', allowed: everythingAnAdminInStudioDoes },
   { caller: 'Admin, through an agent', allowed: everything },
   { caller: 'Admin, through an agent approved to read', allowed: reads },
   { caller: 'Admin, asking @Auto in a conversation', allowed: everything },

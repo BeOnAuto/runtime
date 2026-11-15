@@ -41,9 +41,44 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+  checked:
+    name: CI passed on the release commit
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      actions: read
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - name: Wait for the CI run of this commit, and publish nothing unless it passed
+        run: |
+          deadline=$(($(date +%s) + 45 * 60))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            if gh run list --repo "$GH_REPO" --commit "$GITHUB_SHA" --workflow ci.yml --event push --limit 1 --json status,conclusion,url > "$RUNNER_TEMP/ci.json" &&
+              [ "$(jq --raw-output '.[0].status // empty' "$RUNNER_TEMP/ci.json")" = completed ]; then
+              conclusion="$(jq --raw-output '.[0].conclusion' "$RUNNER_TEMP/ci.json")"
+              address="$(jq --raw-output '.[0].url' "$RUNNER_TEMP/ci.json")"
+              if [ "$conclusion" = success ]; then
+                echo "CI passed on $GITHUB_SHA: $address"
+                exit 0
+              fi
+              echo "::error::CI ended $conclusion on $GITHUB_SHA, so nothing is published. Once CI passes on this commit, re-run the failed jobs of this run: $address"
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "::error::No run of CI on $GITHUB_SHA finished within 45 minutes, so nothing is published."
+          exit 1
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
   platform-image:
     name: Build image (linux/${{ matrix.architecture }})
-    needs: release-please
+    needs: [release-please, checked]
     if: needs.release-please.outputs.release_created == 'true'
     strategy:
       matrix:
@@ -147,7 +182,7 @@ jobs:
 
   package:
     name: Publish npm package
-    needs: release-please
+    needs: [release-please, checked]
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -176,3 +211,29 @@ jobs:
           fi
         env:
           VERSION: ${{ needs.release-please.outputs.version }}
+
+  alert:
+    name: Alert on main
+    needs: [release-please, checked, platform-image, image, package]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Open or add to the issue that says the release fails on main, and post to the alert webhook, or close that issue once a release run passes again
+        run: .github/alert/main.sh
+        env:
+          OUTCOME: ${{ (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) && 'failure' || 'success' }}
+          WORKFLOW: Release
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ASSIGNEES: ${{ vars.CI_ALERT_ASSIGNEES }}
+          ALERT_WEBHOOK_URL: ${{ secrets.CI_ALERT_WEBHOOK_URL }}

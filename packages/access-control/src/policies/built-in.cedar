@@ -47,3 +47,8 @@ unless {
   resource in context.granted.playbooks ||
   (resource is Org && !context.operation.targets_playbook)
 };
+
+@id("permissions-managed-by-admins-in-studio")
+forbid (principal, action, resource)
+when { context.operation.permissions_management }
+unless { principal in Role::"admin" && context.via == "studio" };

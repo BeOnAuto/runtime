@@ -3,22 +3,26 @@ import { describe, expect, it } from 'vitest';
 
 import {
   Caller,
+  InAConversation,
   PlaybookContext,
   callPermissionDecidedBy,
+  callPermissionReportedTo,
   defineQuery,
   mayCall,
   type AccessDecision,
   type AccessRequest,
   type CallAsked,
   type CallerIdentity,
+  type OperationDeclaration,
   type PolicyDecisionPoint,
 } from '../index.ts';
 import { acmeAlphaReader } from '../testing/callers.ts';
+import { capturedLogs } from '../testing/captured-logs.ts';
 import { allowedByTheTest, deniedByTheTest, recordingDecisionPoint } from '../testing/decision-points.ts';
 import { harness } from '../testing/harness.ts';
 import { addNote, getNote } from '../testing/notes.ts';
 import { labelPlaybook, listPlaybookLabels } from '../testing/playbook-labels.ts';
-import { ada, answering, onAlpha } from '../testing/report-only-calls.ts';
+import { ada, answering, differenceOf, dying, onAlpha, throwing } from '../testing/report-only-calls.ts';
 
 const adaReading: CallerIdentity = { ...ada, permissions: ['org:read', 'playbook:read'] };
 
@@ -88,15 +92,98 @@ describe('whether a caller may call an operation, where a decision point decides
     ]);
   });
 
-  it('asks as the caller arrives, through Studio or an agent, never as a run', async () => {
+  it('asks as the caller arrives, through Studio, an agent or a conversation, never as a run', async () => {
     const asking = recordingDecisionPoint(() => allowedByTheTest);
     const adasAgent: CallerIdentity = { ...ada, client: { id: 'client-7', name: 'An agent', domain: null } };
+    const decided = callPermissionDecidedBy(asking.decisionPoint);
 
     await Effect.runPromise(
-      Effect.forEach([ada, adasAgent], (caller) => callPermissionDecidedBy(asking.decisionPoint)(askedOf(caller))),
+      Effect.forEach([ada, adasAgent], (caller) => decided(askedOf(caller))).pipe(
+        Effect.andThen(Effect.provideService(decided(askedOf(adasAgent)), InAConversation, true)),
+      ),
     );
 
-    expect(asking.asked().map(({ context }) => context.via)).toEqual(['studio', 'agent']);
+    expect(asking.asked().map(({ context }) => context.via)).toEqual(['studio', 'agent', 'conversation']);
+  });
+});
+
+const askAuto: OperationDeclaration = {
+  scope: 'org',
+  name: 'ask_auto',
+  kind: 'command',
+  permissions: ['playbook:write'],
+  targetsPlaybook: false,
+  readsOnly: false,
+  reachesOutside: true,
+  mayChangeOutside: false,
+  irreversible: false,
+  permissionsManagement: false,
+};
+
+async function reportedOf(decision: AccessDecision, asked: readonly CallAsked[]) {
+  const asking = recordingDecisionPoint(() => decision);
+  const logs = capturedLogs();
+  const reported = callPermissionReportedTo(asking.decisionPoint);
+  const answers = await Effect.runPromise(
+    Effect.forEach(asked, (each) => reported(each)).pipe(
+      Effect.provideService(InAConversation, true),
+      Effect.provide(logs.layer),
+    ),
+  );
+  return { answers, asked: asking.asked(), logged: logs.logged() };
+}
+
+const allowedByTheCheckDeniedForAda = { caller: 'person:user_ada', check: 'allow', decision: 'deny', errors: 0 };
+
+const differencesOfAda = [
+  differenceOf({
+    operation: 'ask_auto',
+    org: 'acme',
+    ...allowedByTheCheckDeniedForAda,
+    scope: 'org',
+    determining_policies: 'test-deny',
+  }),
+  differenceOf({
+    operation: 'get_note',
+    org: 'acme',
+    playbook: 'alpha',
+    ...allowedByTheCheckDeniedForAda,
+    scope: 'playbook',
+    determining_policies: 'test-deny',
+  }),
+];
+
+describe('whether a caller may call an operation, where a decision point is asked in report-only mode', () => {
+  it('is what the credential grants, the decision point asked beside it about a declaration that need not be served, a difference logged with ids alone', async () => {
+    const { answers, asked, logged } = await reportedOf(deniedByTheTest, [
+      { operation: askAuto, caller: ada, org: 'acme' },
+      { operation: askAuto, caller: adaReading, org: 'acme' },
+      { operation: getNote.registration, caller: ada, org: 'acme', playbook: 'alpha' },
+    ]);
+
+    expect(answers).toEqual([true, false, true]);
+    expect(asked.map(({ action, resource, context }) => [action.name, resource.type, context.via])).toEqual([
+      ['ask_auto', 'org', 'conversation'],
+      ['ask_auto', 'org', 'conversation'],
+      ['get_note', 'playbook', 'conversation'],
+    ]);
+    expect(logged).toEqual(differencesOfAda);
+  });
+
+  it('logs nothing where the decision point answers as the credential does', async () => {
+    const { answers, logged } = await reportedOf(allowedByTheTest, [{ operation: askAuto, caller: ada, org: 'acme' }]);
+
+    expect([answers, logged]).toEqual([[true], []]);
+  });
+
+  it('answers as the credential does whatever the decision point does, dying or throwing among it', async () => {
+    const answers = await Effect.runPromise(
+      Effect.forEach([dying, throwing], (decisionPoint) =>
+        callPermissionReportedTo(decisionPoint)({ operation: askAuto, caller: ada, org: 'acme' }),
+      ).pipe(Effect.provide(capturedLogs().layer)),
+    );
+
+    expect(answers).toEqual([true, true]);
   });
 });
 

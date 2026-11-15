@@ -4669,7 +4669,7 @@
                                   "connection_not_allowed",
                                   "connection_unavailable"
                                 ],
-                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; scope_lacking when it asks for a scope the credential lacks, which the words name, so asking again will not help until a credential is granted it; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its server answered 401 or a code its provider's failure_codes names for a refused credential, its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, in words that say what mends it, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work"
+                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; scope_lacking when it asks for a scope the credential lacks, which the words name, so asking again will not help until a credential is granted it; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its server answered 401 or a code its provider's failure_codes names for a refused credential, its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, its client is no longer registered, or the provider it was made from is replaced here, in words that say what mends it, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work"
                               }
                             },
                             "required": [
@@ -7754,7 +7754,7 @@
       "post": {
         "operationId": "reconnect_connection",
         "summary": "Reconnect connection",
-        "description": "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; the link before stops working, and nothing else changes. Use it where list_connections or search says a connection is broken and its reason says to reconnect it. With more, a group list_connections offers, the link asks its scopes beside those the connection holds. It answers the connection with the link, which the person who added it opens within 24 hours, or, where a broken connection sends a variable of the runtime that is set, connected again at once.",
+        "description": "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; the link before stops working. Use it where list_connections or search says a connection is broken and its reason says to reconnect it. With more, a group list_connections offers, the link asks its scopes beside those the connection holds. It answers the connection with the link, which the person who added it opens within 24 hours, or, where a broken connection sends a variable of the runtime that is set, connected again at once.",
         "tags": [
           "connections"
         ],
@@ -13212,6 +13212,21 @@
                             "additionalProperties": false,
                             "description": "A value that differs per connection, which the person gives when they connect"
                           }
+                        },
+                        "replaces": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The providers this one replaces, by name: where one is listed, none of its ways is offered, and reconnecting a connection made from it adds it again from this one under its name"
+                        },
+                        "may_reconnect": {
+                          "type": "boolean",
+                          "description": "Beside replaces, where only an admin of the organization connects this provider here: whether this caller may reconnect a connection made from a provider it replaces, whoever added it; left out where the person who added such a connection reconnects it, or where the runtime cannot say just now"
+                        },
+                        "reconnect_refusal": {
+                          "type": "string",
+                          "description": "Why this caller may not, where may_reconnect is false"
                         }
                       },
                       "required": [
@@ -27203,7 +27218,7 @@
                                   "connection_not_allowed",
                                   "connection_unavailable"
                                 ],
-                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; scope_lacking when it asks for a scope the credential lacks, which the words name, so asking again will not help until a credential is granted it; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its server answered 401 or a code its provider's failure_codes names for a refused credential, its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, or its client is no longer registered, in words that say what mends it, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work"
+                                "description": "key_refused when the server did not accept the key this server gives it, which only whoever runs this server can put right; scope_lacking when it asks for a scope the credential lacks, which the words name, so asking again will not help until a credential is granted it; failing, rate_limited or unreachable when asking again later may work; connection_pending when nobody has approved the connection yet, connection_broken when its server answered 401 or a code its provider's failure_codes names for a refused credential, its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, its client is no longer registered, or the provider it was made from is replaced here, in words that say what mends it, connection_not_allowed when a rule of whoever runs this server no longer allows it, and connection_unavailable when its credential cannot be read just now, so asking again later may work"
                               }
                             },
                             "required": [

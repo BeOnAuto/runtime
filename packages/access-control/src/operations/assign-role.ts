@@ -57,6 +57,7 @@ export const assignRole = defineHttpOperation('org', 'command', {
   route: { method: 'PUT', path: '/role-assignments/{person}/{role}' },
   body: { kind: 'none' },
   permittedBy: ['org:write'],
+  permissionsManagement: true,
   inputSchema: AssignRoleInputSchema,
   outputSchema: HeldRolesSchema,
   reasons: ['forbidden', 'not_found', 'conflict'],

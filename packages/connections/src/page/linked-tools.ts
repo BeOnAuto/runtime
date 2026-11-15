@@ -4,7 +4,7 @@ import { Effect, Schema } from 'effect';
 
 import { toolsOfTheDocument, type DocumentTool } from '../documents/document-tools.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
-import { providingOf } from '../providers/provider-additions.ts';
+import { providingOf } from '../providers/provider-providing.ts';
 import type { RecordedConnection } from '../registry/connection.ts';
 
 export type LinkReading = Pick<
