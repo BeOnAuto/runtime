@@ -1,9 +1,12 @@
 import { recordingOf, type ActedContext } from '@on.auto/operations';
+import { providerListOf } from '@on.auto/providers/testing';
 import { describe, expect, it } from 'vitest';
 
 import type { ConnectionEvent } from './connection-events.ts';
-import { registryDecider } from './registry-decider.ts';
+import { registryDeciderOf } from './registry-decider.ts';
 import { newestFirst, type Registry } from './registry.ts';
+
+const registryDecider = registryDeciderOf(providerListOf());
 
 const recorded = recordingOf(registryDecider.eventSchema);
 

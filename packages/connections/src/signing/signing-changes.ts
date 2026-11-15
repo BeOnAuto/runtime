@@ -1,6 +1,6 @@
 import { Effect, Schema } from 'effect';
 
-import type { SecretKeeping } from '../operations/connection-services.ts';
+import type { ConnectionServices } from '../operations/connection-services.ts';
 import { recordChangeInRegistry } from '../operations/registry-access.ts';
 import type { SigningSecretRemoval, SigningSecretSetting } from '../registry/connection-commands.ts';
 import { ConnectionSchema } from '../registry/connection.ts';
@@ -17,10 +17,11 @@ export const ConnectionSigningSchema = Schema.Struct({
 });
 
 export const signingChanged = Effect.fnUntraced(function* (
-  secrets: Pick<SecretKeeping, 'forget'>,
+  services: Pick<ConnectionServices, 'secrets' | 'providers'>,
   change: SigningChange,
 ) {
-  const { before, after } = yield* recordChangeInRegistry(change).pipe(
+  const { secrets } = services;
+  const { before, after } = yield* recordChangeInRegistry(services, change).pipe(
     Effect.catchTags({ forbidden: Effect.die, invalid_input: Effect.die }),
   );
   yield* Effect.forEach(signingSecretsReleasedOf(before.signing, after.signing), (id) => secrets.forget(id), {

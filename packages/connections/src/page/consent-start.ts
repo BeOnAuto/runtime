@@ -55,7 +55,7 @@ export function defineStartConsent(services: ConsentServices) {
     handle: Effect.fnUntraced(function* ({ id, token, ...choice }) {
       yield* allowedToChoose(choice.playbooks);
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
-      const kept = yield* Effect.fromResult(startableConnectionOf(yield* loadRegistry, use, yield* actedNow));
+      const kept = yield* Effect.fromResult(startableConnectionOf(yield* loadRegistry(services), use, yield* actedNow));
       const sources = yield* sourcesFor(kept.connection, services);
       const { scope, says } = yield* Effect.fromResult(askedOfTheLink(kept, services.providers, sources));
       const asked = yield* askedForASignIn(kept, services, scope);
@@ -68,7 +68,7 @@ export function defineStartConsent(services: ConsentServices) {
         .keep(started.verifier)
         .pipe(Effect.mapError(({ detail }) => verifierUnkeptOf(named, detail)));
       const expiresAt = yield* tenMinutesOn;
-      const { before } = yield* recordChangeInRegistry({
+      const { before } = yield* recordChangeInRegistry(services, {
         type: 'start',
         ...use,
         state_sha256: tokenSha256Of(started.state),

@@ -20,15 +20,20 @@ export {
   type ProviderEntry,
 } from './entry/provider-entry.ts';
 export { isPinnableTemplate, pinnedTemplateShape } from './entry/entry-values.ts';
+export { aliasesTakenIn, providerNamesOf, type AliasTaken } from './entry/provider-names.ts';
 export { ConversationsSchema, conversationTemplates, type Conversations } from './entry/conversation-parts.ts';
 export {
+  asNamedIn,
   conversationsOf,
   eventDestinationOf,
   documentServerOf,
   joinedProviders,
+  providerFoundBy,
   providerNamed,
   rendersOf,
+  replacedNamesOf,
   replacementOf,
+  type NamedAs,
   type Provider,
   type ProviderList,
 } from './reading/provider-list.ts';

@@ -46,7 +46,7 @@ export function defineListConnections(reading: Reading) {
     outputSchema: Schema.Struct({ connections: Schema.Array(ListedConnectionSchema) }),
     reasons: [],
     handle: Effect.fnUntraced(function* ({ include_removed: includeRemoved = false }) {
-      const listed = newestFirst(yield* loadRegistry).filter(
+      const listed = newestFirst(yield* loadRegistry(reading)).filter(
         ({ connection }) => includeRemoved || connection.status !== 'removed',
       );
       return { connections: yield* listedOf(listed, reading) };
@@ -74,7 +74,7 @@ export function defineGetConnection(reading: Reading) {
     outputSchema: ListedConnectionSchema,
     reasons: ['not_found'],
     handle: Effect.fnUntraced(function* ({ id }) {
-      const [listed] = yield* listedOf([yield* foundConnection(id)], reading);
+      const [listed] = yield* listedOf([yield* foundConnection(reading, id)], reading);
       return yield* Effect.orDie(Effect.fromNullishOr(listed));
     }),
   });

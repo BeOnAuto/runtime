@@ -48,7 +48,7 @@ export const linkIssuedFor = Effect.fnUntraced(function* (id: string, more: stri
   if (more === undefined) {
     return yield* issuedLink;
   }
-  const { connection } = yield* foundConnection(id);
+  const { connection } = yield* foundConnection(services, id);
   yield* askableMore(connection, more, services, 'reconnected');
   return { ...(yield* issuedLink), more };
 });

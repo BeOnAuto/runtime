@@ -19,12 +19,13 @@ export async function connectionsOnSQLite(fileName: string) {
   );
   const registry = await runtime.runPromise(Effect.service(Ledger));
   const secrets = keptSecrets({});
+  const providers = providerListOf();
   const operations = makeConnectionOperations({
     secrets,
     policy: connectionPolicyOf({}),
     fileEntries: [],
     modelProviders: [],
-    providers: providerListOf(),
+    providers,
     providerValues: new Map(),
     variables: new Map(),
     pages: harnessPages,
@@ -35,6 +36,7 @@ export async function connectionsOnSQLite(fileName: string) {
   });
   return {
     registry,
+    providers,
     runtime,
     dispatched: (name: string, input: object) =>
       dispatcher.dispatchToOrg(operationNamed(operations, name).registration, {

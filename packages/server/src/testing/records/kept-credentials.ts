@@ -1,14 +1,17 @@
 import { connectionsStreamOfOrg } from '@on.auto/connections';
-import { connectionsFold } from '@on.auto/connections/testing';
+import { connectionsFoldOf } from '@on.auto/connections/testing';
 import { ledgerLayer, sqliteLedgerFile } from '@on.auto/ledger/sqlite3';
 import { secretRowsOfItsOpenLedger } from '@on.auto/ledger/testing';
 import { Ledger } from '@on.auto/operations';
+import { providerListOf } from '@on.auto/providers/testing';
 import { localCustodian, sealedSecretStoreOn, type SecretRows, type SecretStore } from '@on.auto/secrets';
 import { Effect, ManagedRuntime, Redacted } from 'effect';
 
 import { ownKeysDecider, ownKeysStream, type OwnKeyEvent } from '../../secrets/own-keys.ts';
 
 export const secretsKey = Buffer.alloc(32, 7);
+
+const connectionsFold = connectionsFoldOf(providerListOf());
 
 export function secretRowsInFile(fileName: string): Promise<SecretRows> {
   return Effect.runPromise(secretRowsOfItsOpenLedger(sqliteLedgerFile(fileName)));

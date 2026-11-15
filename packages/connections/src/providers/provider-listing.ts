@@ -2,6 +2,7 @@ import { isFilledAround, placeholdersIn, textsAroundPlaceholders } from '@on.aut
 import { reservedHostKindOf } from '@on.auto/outbound';
 import {
   hostAlternativesOf,
+  replacedNamesOf,
   scopesIn,
   type CredentialWay,
   type Placeholder,
@@ -195,6 +196,7 @@ function moreSaidBy({ more = [] }: CredentialWay) {
 
 function listedProviderOf(provider: Provider, listing: Listing): readonly ListedProvider[] {
   const { name, title, description, website, type, replaces } = provider.entry;
+  const replaced = replaces === undefined ? {} : { replaces: replacedNamesOf(listing.providers, provider.entry) };
   const offering = offeringOf(provider, listing);
   const ways = waysInOrderOf(provider, listing)
     .filter((way) => isListed(provider, way, listing.policy))
@@ -217,7 +219,7 @@ function listedProviderOf(provider: Provider, listing: Listing): readonly Listed
           type,
           credentials: ways,
           placeholders: placeholdersOf(provider),
-          ...(replaces === undefined ? {} : { replaces }),
+          ...replaced,
         },
       ];
 }

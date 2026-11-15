@@ -7,7 +7,7 @@ import {
 import { Effect, Option } from 'effect';
 
 import { providingOf } from '../providers/provider-providing.ts';
-import { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
+import { connectionsFoldOf, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { newestFirst } from '../registry/registry.ts';
 import { replacedConnectionWords, replacedOf } from '../replacements/replaced-providers.ts';
 import { connectedAtOf, loggedCauses } from './given-credentials.ts';
@@ -68,6 +68,7 @@ function orgConnectionOf(serving: Serving): OrgConnection {
 
 export function makeConnectionSource(services: ServingServices): ConnectionSource {
   const unreadable = loggedCauses();
+  const connectionsFold = connectionsFoldOf(services.providers);
   return {
     takesConnections: services.policy.peopleMayAdd,
     connectionsOf: (org) =>

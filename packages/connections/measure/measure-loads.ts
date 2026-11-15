@@ -7,7 +7,7 @@ import { Effect, Option, Schema } from 'effect';
 
 import { documentFold, documentStreamOfOrg, keptTextOf } from '../src/documents/document-streams.ts';
 import { mostDocumentTextBytes } from '../src/registry/connection-entry.ts';
-import { connectionsFold, connectionsStreamOfOrg } from '../src/registry/registry-decider.ts';
+import { connectionsFoldOf, connectionsStreamOfOrg } from '../src/registry/registry-decider.ts';
 import { mostConnectionsOfAnOrg } from '../src/registry/registry-decisions.ts';
 import { connectionsOnSQLite } from './connections-on-sqlite.ts';
 
@@ -142,13 +142,18 @@ function grownTo(dispatched: Connections['dispatched'], removed: number) {
   });
 }
 
-function timedOn(dispatched: Connections['dispatched'], registry: Connections['registry'], removed: number) {
+function timedOn(
+  dispatched: Connections['dispatched'],
+  registry: Connections['registry'],
+  providers: Connections['providers'],
+  removed: number,
+) {
   return Effect.gen(function* () {
     const removedNow = yield* grownTo(dispatched, removed);
     const live = documentStreamOfOrg('acme', keptTextOf(documentOf(removedNow, mostDocumentTextBytes)).sha256);
     return {
       removedNow,
-      fold: yield* sampled(registry.load(connectionsStreamOfOrg('acme'), connectionsFold)),
+      fold: yield* sampled(registry.load(connectionsStreamOfOrg('acme'), connectionsFoldOf(providers))),
       list: yield* sampled(dispatched('list_connections', {})),
       document: yield* sampled(registry.load(live, documentFold)),
     };
@@ -164,7 +169,9 @@ async function measuredWith(removed: number): Promise<void> {
   const fileName = join(directory, 'ledger.db');
   const measured = await connectionsOnSQLite(fileName);
   try {
-    const taken = await measured.runtime.runPromise(timedOn(measured.dispatched, measured.registry, removed));
+    const taken = await measured.runtime.runPromise(
+      timedOn(measured.dispatched, measured.registry, measured.providers, removed),
+    );
     write(
       `${mostConnectionsOfAnOrg} connections live and ${taken.removedNow} removed, each given its own document of ${mostDocumentTextBytes} bytes, on SQLite`,
     );

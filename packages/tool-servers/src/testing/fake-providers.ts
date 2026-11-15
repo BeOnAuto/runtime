@@ -36,6 +36,7 @@ export function fakeProviders(
       return 'refused' in resolved
         ? Result.fail(resolved.refused)
         : Result.succeed({
+            provider: asked.provider,
             written: resolved,
             placedValues: placedValuesOf(asked),
             documents,

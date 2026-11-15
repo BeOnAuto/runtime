@@ -159,7 +159,7 @@ export function defineReadLink(reading: LinkReading) {
     outputSchema: LinkedSchema,
     reasons: ['not_found', 'conflict'],
     handle: Effect.fnUntraced(function* ({ id, token }) {
-      const registry = yield* loadRegistry;
+      const registry = yield* loadRegistry(reading);
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson: false };
       const acted = yield* actedNow;
       const kept = yield* Effect.fromResult(linkedConnectionOf(registry, use, acted)).pipe(
@@ -188,7 +188,11 @@ export function defineReadLink(reading: LinkReading) {
   });
 }
 
-export function defineApprove({ bindsPerson }: { readonly bindsPerson: boolean }) {
+export function defineApprove(services: {
+  readonly bindsPerson: boolean;
+  readonly providers: LinkReading['providers'];
+}) {
+  const { bindsPerson } = services;
   return defineHttpOperation('org', 'command', {
     name: 'approve',
     title: 'Approve connection',
@@ -206,7 +210,7 @@ export function defineApprove({ bindsPerson }: { readonly bindsPerson: boolean }
     handle: Effect.fnUntraced(function* ({ id, token, ...choice }) {
       yield* allowedToChoose(choice.playbooks);
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
-      const { connection } = yield* recordInRegistry({
+      const { connection } = yield* recordInRegistry(services, {
         type: 'approve',
         ...use,
         connected_by: yield* recordedCaller,

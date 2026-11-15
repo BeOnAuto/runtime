@@ -1,11 +1,14 @@
 import { recordingOf } from '@on.auto/operations';
+import { providerListOf } from '@on.auto/providers/testing';
 import { Option, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { ConnectionCommand } from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
-import { registryDecider } from './registry-decider.ts';
+import { registryDeciderOf } from './registry-decider.ts';
 import { clientSecretsReleasedOf, signingInClientOf, type KeptConnection } from './registry.ts';
+
+const registryDecider = registryDeciderOf(providerListOf());
 
 const recorded = recordingOf(registryDecider.eventSchema);
 

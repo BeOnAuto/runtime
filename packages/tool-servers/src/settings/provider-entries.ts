@@ -28,6 +28,7 @@ export interface ProviderNamed {
 }
 
 export interface ProviderResolved {
+  readonly provider: string;
   readonly written: ServerEntryFields;
   readonly placedValues: ReadonlyMap<string, string>;
   readonly documents: DocumentsPlace;
@@ -215,7 +216,7 @@ function resolvedEntry(
       written: { ...resolved.written, ...perConnectionOf(written) },
       placedValues: resolved.placedValues,
       documents: resolved.documents,
-      provider,
+      provider: resolved.provider,
       placed: placedIn(name, (pointer) => writtenPointer(resolved.writtenAt(pointer))),
     }),
   });

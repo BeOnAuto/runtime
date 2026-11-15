@@ -132,6 +132,29 @@ describe('the sweep of the uploads on object storage', () => {
   });
 });
 
+describe('the sweep of the uploads on object storage, over a listing that goes on after its deletes', () => {
+  it('deletes each page it lists before it lists the next, so the listing it continues after a delete skips none', async () => {
+    const store = fakeContentStore(location);
+    const begun = Array.from({ length: 2500 }, (_, at) => keys.upload(uploadIdAt(at + 1)));
+    const fresh = keys.upload(uploadIdAt(5000));
+    await Promise.all([...begun, fresh].map((key) => objectWritten(store, key)));
+    const before = store.bucket.asked().length;
+
+    await store.sweepContent(4000);
+
+    expect(store.bucket.asked().slice(before)).toEqual([
+      'ListObjectsV2',
+      'DeleteObjects',
+      'ListObjectsV2',
+      'DeleteObjects',
+      'ListObjectsV2',
+      'DeleteObjects',
+      'ListMultipartUploads',
+    ]);
+    expect(store.bucket.keys()).toEqual([fresh]);
+  });
+});
+
 describe('the deletes of the sweep on object storage', () => {
   it('deletes what it removes a thousand objects at a time', async () => {
     const store = fakeContentStore(location, { pageSize: 600 });

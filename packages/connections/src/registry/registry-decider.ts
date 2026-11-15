@@ -1,7 +1,9 @@
 import { streamPrefixOfOrg, type Decider, type Fold } from '@on.auto/operations';
+import type { ProviderList } from '@on.auto/providers';
 
 import type { ConnectionCommand } from './connection-commands.ts';
 import { ConnectionEventSchema, type RecordedConnectionEvent } from './connection-events.ts';
+import { factsAsNamedIn } from './facts-as-named.ts';
 import { decideOnRegistry, registryContextOf, type RegistryRefusal } from './registry-decisions.ts';
 import { evolveRegistry, initialRegistry, type Registry } from './registry.ts';
 
@@ -13,16 +15,17 @@ export function connectionsStreamOfOrg(org: string): string {
   return `${streamPrefixOfOrg({ org })}${connectionsStream}`;
 }
 
-export const registryDecider: Decider<Registry, ConnectionCommand, RecordedConnectionEvent, RegistryRefusal> = {
-  initialState: initialRegistry,
-  evolve: evolveRegistry,
-  decide: decideOnRegistry,
-  context: registryContextOf,
-  eventSchema: ConnectionEventSchema,
-};
+type RegistryDecider = Decider<Registry, ConnectionCommand, RecordedConnectionEvent, RegistryRefusal>;
 
-export const connectionsFold: Fold<Registry, RecordedConnectionEvent> = {
-  initialState: initialRegistry,
-  evolve: evolveRegistry,
-  eventSchema: ConnectionEventSchema,
-};
+export function connectionsFoldOf(providers: ProviderList): Fold<Registry, RecordedConnectionEvent> {
+  const asNamed = factsAsNamedIn(providers);
+  return {
+    initialState: initialRegistry,
+    evolve: (registry, fact) => evolveRegistry(registry, asNamed(fact)),
+    eventSchema: ConnectionEventSchema,
+  };
+}
+
+export function registryDeciderOf(providers: ProviderList): RegistryDecider {
+  return { ...connectionsFoldOf(providers), decide: decideOnRegistry, context: registryContextOf };
+}

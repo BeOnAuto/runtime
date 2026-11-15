@@ -1,4 +1,4 @@
-import { AddedProviderEntrySchema, type ProviderEntry } from '@on.auto/providers';
+import { AddedProviderEntrySchema, aliasesTakenIn, type ProviderEntry } from '@on.auto/providers';
 import { Schema } from 'effect';
 
 import { credentialIssuesOf } from '../entries/credential-checks.ts';
@@ -14,6 +14,10 @@ function nameIssuesOf(entries: readonly ProviderEntry[]): readonly EntryIssue[] 
   );
 }
 
+function aliasIssuesOf(entries: readonly ProviderEntry[]): readonly EntryIssue[] {
+  return aliasesTakenIn(entries).map(({ entry, at, detail }) => ({ path: [entry, 'aliases', at], issue: detail }));
+}
+
 function wayIssuesOf(entry: ProviderEntry, index: number): readonly EntryIssue[] {
   return entry.credentials.flatMap((way, at) =>
     credentialIssuesOf(way, entry.type, entry).map(({ pointer, detail }) => ({
@@ -27,12 +31,13 @@ export const AddedProvidersSchema = Schema.Array(AddedProviderEntrySchema)
   .check(
     Schema.makeFilter((entries: readonly ProviderEntry[]) => [
       ...nameIssuesOf(entries),
+      ...aliasIssuesOf(entries),
       ...entries.flatMap((entry, index) => wayIssuesOf(entry, index)),
     ]),
   )
   .annotate({
     description:
-      'Providers of your own, which a person connects as they connect those the runtime ships, each an entry of a provider; one named as a provider the runtime ships takes its place. None when left out',
+      'Providers of your own, which a person connects as they connect those the runtime ships, each an entry of a provider; one found by a name of a provider the runtime ships takes its place. None when left out',
   });
 
 export type AddedProviders = typeof AddedProvidersSchema.Type;

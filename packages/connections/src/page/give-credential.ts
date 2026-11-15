@@ -44,7 +44,7 @@ export function defineGiveCredential(services: GivingServices) {
     handle: Effect.fnUntraced(function* ({ playbooks, ...giving }) {
       yield* allowedToChoose(playbooks);
       const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token), bindsPerson };
-      const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry, use, yield* actedNow));
+      const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(services), use, yield* actedNow));
       const { org } = yield* OrgContext;
       const providing = providingOf(kept.connection, { providers, providerValues });
       const checking = { org, modelProviders, providing };
@@ -55,7 +55,7 @@ export function defineGiveCredential(services: GivingServices) {
         .pipe(Effect.mapError((failure) => unkeptRefusalOf(kept.connection.name, given.pointer, failure)));
       const algorithm = given.algorithm === undefined ? {} : { algorithm: given.algorithm };
       const client = given.clientId === undefined ? {} : { client_id: given.clientId };
-      const { before, after } = yield* recordChangeInRegistry({
+      const { before, after } = yield* recordChangeInRegistry(services, {
         type: 'give',
         ...use,
         connected_by: yield* recordedCaller,

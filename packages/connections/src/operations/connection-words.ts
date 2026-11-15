@@ -199,12 +199,15 @@ function linkToOpenOf({ connect, ...connection }: AddedConnection): LinkToOpen |
       };
 }
 
-export function linkOffering(secrets: Pick<SecretKeeping, 'endingsOf'>) {
+export function linkOffering(offering: {
+  readonly secrets: Pick<SecretKeeping, 'endingsOf'>;
+  readonly providers: ProviderList;
+}) {
   return {
     linkToOpen: linkToOpenOf,
     answerAfterTheLink: {
       idOf: ({ id }: AddedConnection) => id,
-      read: (offered: OfferedLink) => standingAfterTheLink(secrets, offered),
+      read: (offered: OfferedLink) => standingAfterTheLink(offering, offered),
       linkLastsMs,
     },
   };

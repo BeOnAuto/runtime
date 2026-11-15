@@ -26,7 +26,10 @@ function refusedSigner(access: ConnectionServices['access']): Effect.Effect<void
   });
 }
 
-export function defineSetConnectionSigningSecret({ secrets, access }: Pick<ConnectionServices, 'secrets' | 'access'>) {
+export function defineSetConnectionSigningSecret(
+  services: Pick<ConnectionServices, 'secrets' | 'access' | 'providers'>,
+) {
+  const { secrets, access } = services;
   return defineHttpOperation('org', 'command', {
     name: 'set_connection_signing_secret',
     title: 'Set connection signing secret',
@@ -44,13 +47,13 @@ export function defineSetConnectionSigningSecret({ secrets, access }: Pick<Conne
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* ({ id, secret }) {
       yield* refusedSigner(access);
-      const { connection } = yield* foundConnection(id);
+      const { connection } = yield* foundConnection(services, id);
       const value = yield* secretToKeep(secret);
       const secretId = yield* secrets
         .keep(value)
         .pipe(Effect.mapError((failure) => unkeptOf(connection.name, failure)));
       const change = { type: 'set_signing_secret', connection: id, secret_id: secretId } as const;
-      const shown = yield* signingChanged(secrets, change).pipe(Effect.onError(() => secrets.forget(secretId)));
+      const shown = yield* signingChanged(services, change).pipe(Effect.onError(() => secrets.forget(secretId)));
       return secret === undefined ? { ...shown, secret: Redacted.value(value) } : shown;
     }),
   });

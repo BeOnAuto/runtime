@@ -24,8 +24,8 @@ export const removedAround = Effect.fnUntraced(function* <Recorded extends { rea
 });
 
 const removedConnection = Effect.fnUntraced(function* (id: string, services: RemovalServices) {
-  const found = yield* foundConnection(id);
-  const recording = recordInRegistry({ type: 'remove', connection: id }).pipe(
+  const found = yield* foundConnection(services, id);
+  const recording = recordInRegistry(services, { type: 'remove', connection: id }).pipe(
     Effect.catchTags({ forbidden: Effect.die, invalid_input: Effect.die }),
     Effect.map((removed) => ({ removed })),
   );

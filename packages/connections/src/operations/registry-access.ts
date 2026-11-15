@@ -24,19 +24,23 @@ import type {
   SigningSecretRemoval,
   SigningSecretSetting,
 } from '../registry/connection-commands.ts';
-import { connectionsStream, registryDecider } from '../registry/registry-decider.ts';
+import { connectionsStream, registryDeciderOf } from '../registry/registry-decider.ts';
 import { findConnection } from '../registry/registry-lookup.ts';
 import type { KeptConnection, OpenLink, Registry } from '../registry/registry.ts';
-import type { SecretKeeping } from './connection-services.ts';
+import type { ConnectionServices, SecretKeeping } from './connection-services.ts';
 import { shownConnection } from './shown-connections.ts';
 
-export const loadRegistry: Effect.Effect<Registry, never, OrgReader> = Effect.gen(function* () {
-  const { state } = yield* (yield* OrgReader).load(connectionsStream, registryDecider);
-  return state;
-});
+type Named = Pick<ConnectionServices, 'providers'>;
 
-export function foundConnection(id: string): Effect.Effect<KeptConnection, NotFound, OrgReader> {
-  return loadRegistry.pipe(Effect.flatMap((registry) => findConnection(registry, id)));
+export function loadRegistry({ providers }: Named): Effect.Effect<Registry, never, OrgReader> {
+  return Effect.gen(function* () {
+    const { state } = yield* (yield* OrgReader).load(connectionsStream, registryDeciderOf(providers));
+    return state;
+  });
+}
+
+export function foundConnection(named: Named, id: string): Effect.Effect<KeptConnection, NotFound, OrgReader> {
+  return loadRegistry(named).pipe(Effect.flatMap((registry) => findConnection(registry, id)));
 }
 
 export const recordedCaller = Effect.map(Effect.service(Caller), recordedCallerOf);
@@ -76,10 +80,10 @@ function standingOfTheOffer({ link, replacedLinks }: KeptConnection, url: string
 }
 
 export const standingAfterTheLink = Effect.fnUntraced(function* (
-  secrets: Pick<SecretKeeping, 'endingsOf'>,
+  { secrets, providers }: Named & { readonly secrets: Pick<SecretKeeping, 'endingsOf'> },
   { id, url }: OfferedLink,
 ) {
-  const kept = yield* Effect.orDie(foundConnection(id));
+  const kept = yield* Effect.orDie(foundConnection({ providers }, id));
   const connection = yield* shownConnection(secrets, kept);
   return { ...connection, ...standingOfTheOffer(kept, url, DateTime.formatIso(yield* DateTime.now)) };
 });
@@ -110,13 +114,13 @@ export function additionOf(
   };
 }
 
-const executedInRegistry = Effect.fnUntraced(function* (data: ConnectionCommandData) {
+const executedInRegistry = Effect.fnUntraced(function* ({ providers }: Named, data: ConnectionCommandData) {
   const acted = yield* actedNow;
-  return yield* (yield* OrgWriter).execute(connectionsStream, registryDecider, { ...data, ...acted });
+  return yield* (yield* OrgWriter).execute(connectionsStream, registryDeciderOf(providers), { ...data, ...acted });
 });
 
-export const recordInRegistry = Effect.fnUntraced(function* (data: ConnectionCommandData) {
-  const { state } = yield* executedInRegistry(data);
+export const recordInRegistry = Effect.fnUntraced(function* (named: Named, data: ConnectionCommandData) {
+  const { state } = yield* executedInRegistry(named, data);
   return yield* Effect.orDie(findConnection(state, data.connection));
 });
 
@@ -128,16 +132,16 @@ type Replacing =
   | SigningSecretSetting
   | SigningSecretRemoval;
 
-export const recordChangeInRegistry = Effect.fnUntraced(function* (data: Replacing) {
-  const { state, decidedOn } = yield* executedInRegistry(data);
+export const recordChangeInRegistry = Effect.fnUntraced(function* (named: Named, data: Replacing) {
+  const { state, decidedOn } = yield* executedInRegistry(named, data);
   return {
     before: yield* Effect.orDie(findConnection(decidedOn, data.connection)),
     after: yield* Effect.orDie(findConnection(state, data.connection)),
   };
 });
 
-export const recordReplacementInRegistry = Effect.fnUntraced(function* (data: ConnectionReplacement) {
-  const { state } = yield* executedInRegistry(data);
+export const recordReplacementInRegistry = Effect.fnUntraced(function* (named: Named, data: ConnectionReplacement) {
+  const { state } = yield* executedInRegistry(named, data);
   return {
     removed: yield* Effect.orDie(findConnection(state, data.connection)),
     added: yield* Effect.orDie(findConnection(state, data.addition.connection)),

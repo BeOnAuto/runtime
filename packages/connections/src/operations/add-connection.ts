@@ -19,7 +19,7 @@ const description = [
 ].join(' ');
 
 export function defineAddConnection(services: ConnectionServices) {
-  const { access, providers, secrets } = services;
+  const { access, providers } = services;
   return defineCommand('org', {
     name: 'add_connection',
     title: 'Add connection',
@@ -35,7 +35,7 @@ export function defineAddConnection(services: ConnectionServices) {
         return yield* Effect.fail(adderRefusal);
       }
       const admitted = yield* admittedWithItsLink(input, input.more, services);
-      const kept = yield* recordedAdditionOf(admitted.described, admitted.link);
+      const kept = yield* recordedAdditionOf(services, admitted.described, admitted.link);
       return yield* answeredWithItsLink(kept, admitted, services);
     }),
     plainLanguage: {
@@ -43,6 +43,6 @@ export function defineAddConnection(services: ConnectionServices) {
       attempt: additionAttempted,
       outcome: (added, { more }) => addedWordsOf(added, providers, more),
     },
-    ...linkOffering(secrets),
+    ...linkOffering(services),
   });
 }

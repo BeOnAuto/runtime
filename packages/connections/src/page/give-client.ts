@@ -9,7 +9,7 @@ import { clientGivenConnectionOf } from '../registry/oauth-client-decisions.ts';
 import { nextClientOf, releasedClientsForgottenOf } from './consent-asking.ts';
 import { ClientGivenSchema, GivingTheClientSchema, clientUnkeptOf } from './given-fields.ts';
 
-type ClientGiving = Pick<ConnectionServices, 'secrets'> & { readonly bindsPerson: boolean };
+type ClientGiving = Pick<ConnectionServices, 'secrets' | 'providers'> & { readonly bindsPerson: boolean };
 
 export function defineGiveClient(services: ClientGiving) {
   const { secrets, bindsPerson } = services;
@@ -31,11 +31,13 @@ export function defineGiveClient(services: ClientGiving) {
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* (giving) {
       const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token), bindsPerson };
-      const kept = yield* Effect.fromResult(clientGivenConnectionOf(yield* loadRegistry, use, yield* actedNow));
+      const kept = yield* Effect.fromResult(
+        clientGivenConnectionOf(yield* loadRegistry(services), use, yield* actedNow),
+      );
       const secretId = yield* secrets
         .keep(Redacted.make(giving.client_secret))
         .pipe(Effect.mapError((failure) => clientUnkeptOf(kept.connection.name, failure)));
-      const { before, after } = yield* recordChangeInRegistry({
+      const { before, after } = yield* recordChangeInRegistry(services, {
         type: 'give_client',
         ...use,
         client_id: giving.client_id,

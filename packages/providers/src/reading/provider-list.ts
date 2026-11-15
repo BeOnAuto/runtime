@@ -3,7 +3,9 @@ import type { ClientSource, ShippedDocument } from '@on.auto/tool-servers';
 import { Option, Order, Result } from 'effect';
 
 import type { Conversations } from '../entry/conversation-parts.ts';
+import { isADocumentBesideTheEntries } from '../entry/entry-values.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
+import { providerNamesOf } from '../entry/provider-names.ts';
 import { isAddress } from '../entry/templates.ts';
 import type { Destination as EventDestination } from '../events/destination-fields.ts';
 
@@ -33,17 +35,42 @@ export function documentServerOf({ entry, address }: Provider): string | undefin
 export const byName: Order.Order<Provider> = Order.mapInput(Order.String, ({ entry }: Provider) => entry.name);
 
 export function joinedProviders({ providers, documents }: ProviderList, added: readonly ProviderEntry[]): ProviderList {
-  const named = new Set(added.map(({ name }) => name));
+  const named = new Set(added.flatMap((entry) => providerNamesOf(entry)));
   const ofWhoeverRunsIt = added.map((entry): Provider => ({ entry, address: addressOf(entry) }));
-  const shipped = providers.filter(({ entry }) => !named.has(entry.name));
+  const shipped = providers.filter(({ entry }) => !providerNamesOf(entry).some((name) => named.has(name)));
   return { providers: [...ofWhoeverRunsIt, ...shipped].toSorted(byName), documents };
 }
 
-export function providerNamed({ providers }: ProviderList, name: string): Result.Result<Provider, readonly Issue[]> {
-  const found = providers.find(({ entry }) => entry.name === name);
+export function providerFoundBy({ providers }: ProviderList, name: string | null): Provider | undefined {
+  return name === null
+    ? undefined
+    : (providers.find(({ entry }) => entry.name === name) ??
+        providers.find(({ entry }) => entry.aliases?.includes(name) === true));
+}
+
+export function providerNamed(list: ProviderList, name: string): Result.Result<Provider, readonly Issue[]> {
+  const found = providerFoundBy(list, name);
   return found === undefined
     ? Result.fail([{ pointer: '/provider', detail: `There is no provider named ${name} here` }])
     : Result.succeed(found);
+}
+
+export interface NamedAs {
+  readonly provider: string;
+  readonly document: string | undefined;
+}
+
+function documentNamedNow(written: string | undefined, now: string | undefined): string | undefined {
+  return isADocumentBesideTheEntries(written) && isADocumentBesideTheEntries(now) ? now : written;
+}
+
+export function asNamedIn(list: ProviderList, named: NamedAs): NamedAs {
+  const found = providerFoundBy(list, named.provider);
+  if (found === undefined || found.entry.name === named.provider) {
+    return named;
+  }
+  const { name, document } = found.entry;
+  return { provider: name, document: documentNamedNow(named.document, document) };
 }
 
 function limitedFor(conversations: Conversations, signedInThrough: ClientSource | undefined): Conversations {
@@ -55,27 +82,42 @@ function limitedFor(conversations: Conversations, signedInThrough: ClientSource 
 }
 
 export function conversationsOf(
-  { providers }: ProviderList,
+  list: ProviderList,
   provider: string | null,
   signedInThrough?: ClientSource,
 ): Conversations | undefined {
-  const conversations = providers.find(({ entry }) => entry.name === provider)?.entry.conversations;
+  const conversations = providerFoundBy(list, provider)?.entry.conversations;
   return conversations === undefined ? undefined : limitedFor(conversations, signedInThrough);
 }
 
-export function replacementOf({ providers }: ProviderList, provider: string | null): Provider | undefined {
-  return provider === null ? undefined : providers.find(({ entry }) => entry.replaces?.includes(provider) === true);
+function nameNowIn(list: ProviderList, name: string): string {
+  return providerFoundBy(list, name)?.entry.name ?? name;
 }
 
-export function rendersOf({ providers }: ProviderList, provider: string | null): string | undefined {
-  return providers.find(({ entry }) => entry.name === provider)?.entry.renders;
+export function replacedNamesOf(
+  list: ProviderList,
+  { replaces = [] }: Pick<ProviderEntry, 'replaces'>,
+): readonly string[] {
+  return [...new Set(replaces.map((name) => nameNowIn(list, name)))];
+}
+
+export function replacementOf(list: ProviderList, provider: string | null): Provider | undefined {
+  if (provider === null) {
+    return undefined;
+  }
+  const replaced = nameNowIn(list, provider);
+  return list.providers.find(({ entry }) => replacedNamesOf(list, entry).includes(replaced));
+}
+
+export function rendersOf(list: ProviderList, provider: string | null): string | undefined {
+  return providerFoundBy(list, provider)?.entry.renders;
 }
 
 export function eventDestinationOf(
-  { providers }: ProviderList,
+  list: ProviderList,
   provider: string | null,
   type: EventDestination['type'],
 ): EventDestination | undefined {
-  const events = providers.find(({ entry }) => entry.name === provider)?.entry.events;
+  const events = providerFoundBy(list, provider)?.entry.events;
   return events?.destinations.find((destination) => destination.type === type);
 }

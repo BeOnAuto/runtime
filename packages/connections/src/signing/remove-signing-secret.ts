@@ -6,7 +6,7 @@ import type { ConnectionServices } from '../operations/connection-services.ts';
 import { previousSigningSecretLastsHours } from '../registry/signing-decisions.ts';
 import { ConnectionSigningSchema, signingChanged } from './signing-changes.ts';
 
-export function defineRemoveConnectionSigningSecret({ secrets }: Pick<ConnectionServices, 'secrets'>) {
+export function defineRemoveConnectionSigningSecret(services: Pick<ConnectionServices, 'secrets' | 'providers'>) {
   return defineHttpOperation('org', 'command', {
     name: 'remove_connection_signing_secret',
     title: 'Remove connection signing secret',
@@ -29,7 +29,7 @@ export function defineRemoveConnectionSigningSecret({ secrets }: Pick<Connection
     outputSchema: ConnectionSigningSchema,
     reasons: ['not_found'],
     handle: ({ id, previous = false }) =>
-      signingChanged(secrets, {
+      signingChanged(services, {
         type: 'remove_signing_secret',
         connection: id,
         which: previous ? 'previous' : 'all',

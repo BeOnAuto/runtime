@@ -16,7 +16,7 @@ export const linkedAgain = Effect.fnUntraced(function* (
   const { secrets, pages, access, variables } = services;
   const { org } = yield* OrgContext;
   const { token, ...link } = yield* linkIssuedFor(id, more, services);
-  const kept = yield* recordInRegistry({
+  const kept = yield* recordInRegistry(services, {
     type: 'reconnect',
     connection: id,
     bindsPerson: bindsPerson(access),

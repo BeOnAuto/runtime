@@ -106,6 +106,45 @@ describe('a folder of entries the runtime refuses', () => {
   });
 });
 
+function aliased(text: string, ...aliases: readonly string[]): string {
+  return text.replace(
+    'credentials:',
+    ['aliases:', ...aliases.map((alias) => `  - ${alias}`), 'credentials:'].join('\n'),
+  );
+}
+
+function taken(alias: string, another: string): string {
+  return `Expected a name no other provider is found by: the provider ${another} is found by ${alias}`;
+}
+
+const remoteNotes = notes.replace('documents/notes.openapi.json', 'https://notes.example.com/openapi.json');
+
+describe('the other names of the entries of a folder', () => {
+  it('are refused where one is another entry’s name or other name, at each entry that declares it', async () => {
+    expect(
+      (
+        await entryFolderWith({
+          'notes.yaml': aliased(remoteNotes, 'jottings', 'tracker'),
+          'tracker.yaml': aliased(tracker, 'issues', 'jottings'),
+        }).read()
+      ).split('; '),
+    ).toEqual([
+      `${invalid}<entries>/notes.yaml:8:5 aliases[0]: ${taken('jottings', 'tracker')}`,
+      `<entries>/notes.yaml:9:5 aliases[1]: ${taken('tracker', 'tracker')}`,
+      `<entries>/tracker.yaml:9:5 aliases[1]: ${taken('jottings', 'notes')}`,
+    ]);
+  });
+
+  it('are read where each finds its entry alone', async () => {
+    expect(
+      await entryFolderWith({
+        'notes.yaml': aliased(remoteNotes, 'jottings'),
+        'tracker.yaml': aliased(tracker, 'issues'),
+      }).read(),
+    ).toBe('notes https://notes.example.com/openapi.json; tracker https://tracker.example.com/mcp');
+  });
+});
+
 describe('the server of a document beside the entries', () => {
   it('is refused where the document names none, unless the entry gives base_url', async () => {
     const based = `${notes}base_url: https://api.notes.example.com\n`;

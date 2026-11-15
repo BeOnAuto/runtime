@@ -18,7 +18,7 @@ const description = [
 ].join(' ');
 
 export function defineReconnectConnection(services: ConnectionServices) {
-  const { secrets, providers, access } = services;
+  const { providers, access } = services;
   return defineCommand('org', {
     name: 'reconnect_connection',
     title: 'Reconnect connection',
@@ -39,7 +39,7 @@ export function defineReconnectConnection(services: ConnectionServices) {
       if (adderRefusal !== undefined) {
         return yield* Effect.fail(adderRefusal);
       }
-      const found = yield* foundConnection(id);
+      const found = yield* foundConnection(services, id);
       const again = yield* addedAgainOf(found, services);
       return yield* again === undefined
         ? linkedAgain(id, more, services)
@@ -53,6 +53,6 @@ export function defineReconnectConnection(services: ConnectionServices) {
           ? reconnectedWordsOf(reconnected, providers, more)
           : addedAgainWordsOf(reconnected, providers, more),
     },
-    ...linkOffering(secrets),
+    ...linkOffering(services),
   });
 }

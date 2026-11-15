@@ -14,7 +14,7 @@ import { DateTime, Effect, Option, type Context } from 'effect';
 import { consentAskedUnderItsClient, type ClientUnheld, type ConsentAsked } from '../page/consent-asking.ts';
 import { connectsThroughItsGateway } from '../registry/connection.ts';
 import { placesNoValue, type Credential } from '../registry/credential.ts';
-import { byTheRuntime, connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
+import { byTheRuntime, connectionsStreamOfOrg, registryDeciderOf } from '../registry/registry-decider.ts';
 import type { KeptConnection } from '../registry/registry.ts';
 import type { GivenValue, Providing } from './placed-credentials.ts';
 import type { LoggedCauses, Serving } from './serving-services.ts';
@@ -52,7 +52,7 @@ function recordedBreak({ org, kept, services }: Serving, kind: BrokenKind, reaso
       by: byTheRuntime,
       at,
     } as const;
-    yield* services.registry.execute(connectionsStreamOfOrg(org), registryDecider, breaking).pipe(
+    yield* services.registry.execute(connectionsStreamOfOrg(org), registryDeciderOf(services.providers), breaking).pipe(
       Effect.orDie,
       Effect.catchCause((cause) => Effect.logError(servingWords.unrecorded(name), cause)),
     );

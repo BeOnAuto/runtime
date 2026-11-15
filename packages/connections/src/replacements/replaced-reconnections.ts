@@ -31,7 +31,7 @@ export const addedAgainFrom = Effect.fnUntraced(function* (
     return yield* Effect.fail(binding);
   }
   const admitted = yield* admittedWithItsLink(givenAgainFrom(from, found), more, services);
-  const recording = recordReplacementInRegistry({
+  const recording = recordReplacementInRegistry(services, {
     type: 'replace',
     connection: found.connection.id,
     bindsPerson,

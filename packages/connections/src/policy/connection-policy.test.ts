@@ -138,6 +138,14 @@ describe('the providers of CONNECTIONS', () => {
       'The connection settings are invalid. CONNECTIONS: /providers/2/name: Expected a name no other provider of the setting has; CONNECTIONS: /providers/1/credentials/0/name: The entry sends this header already, so the credential cannot go in it',
     );
   });
+
+  it('stop the start at another name of a provider that another provider of the setting is found by', () => {
+    const notebook = { ...notes, name: 'notebook', aliases: ['notes', 'jottings'] };
+
+    expect(refusalOf(JSON.stringify({ providers: [notes, notebook] }))).toBe(
+      'The connection settings are invalid. CONNECTIONS: /providers/1/aliases/0: Expected a name no other provider is found by: the provider notes is found by notes',
+    );
+  });
 });
 
 describe('the registered clients of CONNECTIONS', () => {

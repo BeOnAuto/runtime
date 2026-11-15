@@ -1,1 +1,1 @@
-export { connectionsFold } from '../registry/registry-decider.ts';
+export { connectionsFoldOf } from '../registry/registry-decider.ts';

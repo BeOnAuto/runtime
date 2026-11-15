@@ -8,7 +8,7 @@ import { CredentialWaySchema } from './credential-ways.ts';
 import { placementIssuesOf } from './entry-placeholders.ts';
 import { isADocumentBesideTheEntries, writtenIssuesOf } from './entry-values.ts';
 import { PlaceholdersSchema } from './placeholders.ts';
-import { ReplacesSchema, replacedIssuesOf } from './replaced-providers.ts';
+import { aliasIssuesOf, AliasesSchema, ReplacesSchema, replacedIssuesOf } from './provider-names.ts';
 
 const { type, url, document, base_url, headers, query_params, request_id, marks, failure_codes } =
   ServerEntrySchema.fields;
@@ -29,6 +29,7 @@ const ProviderEntryFieldsSchema = Schema.Struct({
     description:
       'The name of the provider and of a connection to it by default: 1 to 32 lowercase letters, digits and hyphens, starting with a letter',
   }),
+  aliases: Schema.optionalKey(AliasesSchema),
   title: NamedSchema.annotate({ description: 'What a person reads as its name' }),
   description: NamedSchema.check(Schema.isMaxLength(mostDescriptionCharacters)).annotate({
     description: 'What a function may do through it, in one or two sentences of at most 300 characters',
@@ -139,6 +140,7 @@ function wayIssuesOf({ credentials }: ProviderEntry): readonly EntryIssue[] {
 export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
   Schema.makeFilter((entry: ProviderEntry) => [
     ...nameIssuesOf(entry),
+    ...aliasIssuesOf(entry),
     ...websiteIssuesOf(entry),
     ...typeIssuesOf(entry),
     ...wayIssuesOf(entry),

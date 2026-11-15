@@ -1,5 +1,6 @@
 import { signingKeyOf, webhookSignatureOf, type SigningKey } from '@on.auto/identity';
 import type { Outcome } from '@on.auto/operations';
+import { fixtureProviders } from '@on.auto/providers/testing';
 import type { SecretReadingFailure } from '@on.auto/tool-servers';
 import { DateTime, Effect, Logger, Redacted, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -40,7 +41,7 @@ function signatureBy(key: SigningKey): string {
 }
 
 function readingIn(h: Harness, secrets: SigningReading['secrets'] = h.secrets): SigningReading {
-  return { ledger: h.ledger.service, secrets };
+  return { ledger: h.ledger.service, secrets, providers: fixtureProviders };
 }
 
 async function readAt(reading: SigningReading, name: string, at: string) {

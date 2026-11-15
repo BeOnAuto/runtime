@@ -7,7 +7,8 @@ import type { ConnectionServices } from './connection-services.ts';
 import { mayChoosePlaybooks, recordInRegistry } from './registry-access.ts';
 import { shownConnection } from './shown-connections.ts';
 
-export function defineSetConnectionPlaybooks({ secrets }: Pick<ConnectionServices, 'secrets'>) {
+export function defineSetConnectionPlaybooks(services: Pick<ConnectionServices, 'secrets' | 'providers'>) {
+  const { secrets } = services;
   return defineHttpOperation('org', 'command', {
     name: 'set_connection_playbooks',
     title: 'Set connection playbooks',
@@ -25,7 +26,7 @@ export function defineSetConnectionPlaybooks({ secrets }: Pick<ConnectionService
     reasons: ['not_found', 'forbidden', 'conflict'],
     handle: Effect.fnUntraced(function* ({ id, playbooks }) {
       yield* mayChoosePlaybooks;
-      const kept = yield* recordInRegistry({ type: 'set_playbooks', connection: id, playbooks }).pipe(
+      const kept = yield* recordInRegistry(services, { type: 'set_playbooks', connection: id, playbooks }).pipe(
         Effect.catchTags({ forbidden: Effect.die, invalid_input: Effect.die }),
       );
       return yield* shownConnection(secrets, kept);

@@ -18,6 +18,7 @@ import { isPinnableUrl, shippedDocumentOf, type ShippedDocument } from '@on.auto
 import { Data, Option, Result, Schema, SchemaIssue, type StandardSchema } from 'effect';
 
 import { ProviderEntrySchema, type ProviderEntry } from '../entry/provider-entry.ts';
+import { aliasesTakenIn } from '../entry/provider-names.ts';
 import { isAddress } from '../entry/templates.ts';
 import { addressOf, byName, type Provider, type ProviderList } from './provider-list.ts';
 
@@ -204,7 +205,11 @@ async function providerOf(entry: ProviderEntry, file: string, entries: Entries):
   }));
 }
 
-async function readProvider(entries: Entries, file: string): Promise<Result.Result<ProviderRead, readonly Located[]>> {
+interface LocatedRead extends ProviderRead {
+  readonly located: (problem: Problem) => Located;
+}
+
+async function readProvider(entries: Entries, file: string): Promise<Result.Result<LocatedRead, readonly Located[]>> {
   const at = shippedFileIn(entries.folder, file);
   const name = shippedFileName(at);
   const reading = readYaml(await entries.shippedFiles.text(at), entryYaml);
@@ -222,12 +227,34 @@ async function readProvider(entries: Entries, file: string): Promise<Result.Resu
     const position: Position = document.locate(pointer);
     return { place: placeIn(name, position, pointer), detail };
   };
-  return Result.mapError(read, (problems) => problems.map((problem) => located(problem)));
+  return Result.mapBoth(read, {
+    onFailure: (problems) => problems.map((problem) => located(problem)),
+    onSuccess: (provider): LocatedRead => ({ ...provider, located }),
+  });
+}
+
+function aliasesTakenOf(read: readonly LocatedRead[]): readonly Located[] {
+  const taken = aliasesTakenIn(read.map(({ provider }) => provider.entry));
+  return read.flatMap(({ located }, index) =>
+    taken
+      .filter(({ entry }) => entry === index)
+      .map(({ at, detail }) => located({ pointer: `/aliases/${String(at)}`, detail })),
+  );
 }
 
 function invalid(located: readonly Located[]): ProvidersInvalid {
   const listed = located.map(({ place, detail }) => `${place}: ${detail}`).join('; ');
   return new ProvidersInvalid({ message: `The entries of the providers are invalid: ${listed}` });
+}
+
+function listOf(read: readonly LocatedRead[]): Result.Result<ProviderList, ProvidersInvalid> {
+  const taken = aliasesTakenOf(read);
+  return taken.length > 0
+    ? Result.fail(invalid(taken))
+    : Result.succeed({
+        providers: read.map(({ provider }) => provider).toSorted(byName),
+        documents: new Map(read.flatMap(({ shipped }) => (shipped === undefined ? [] : [shipped]))),
+      });
 }
 
 export async function readProviders(
@@ -243,10 +270,6 @@ export async function readProviders(
   }
   return Result.match(Result.all(read), {
     onFailure: () => Result.fail(invalid(located)),
-    onSuccess: (providers: readonly ProviderRead[]) =>
-      Result.succeed({
-        providers: providers.map(({ provider }) => provider).toSorted(byName),
-        documents: new Map(providers.flatMap(({ shipped }) => (shipped === undefined ? [] : [shipped]))),
-      }),
+    onSuccess: listOf,
   });
 }

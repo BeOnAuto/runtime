@@ -1,15 +1,17 @@
 import { signingKeyOf, type SigningKey } from '@on.auto/identity';
 import type { StreamReader } from '@on.auto/operations';
+import type { ProviderList } from '@on.auto/providers';
 import { DateTime, Effect, Redacted } from 'effect';
 
 import type { SecretKeeping } from '../operations/connection-services.ts';
 import { signingSecretsVerifyingAt, type KeptSigning } from '../registry/kept-signing.ts';
-import { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
+import { connectionsFoldOf, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import type { KeptConnection, Registry } from '../registry/registry.ts';
 
 export interface SigningReading {
   readonly ledger: StreamReader;
   readonly secrets: Pick<SecretKeeping, 'read'>;
+  readonly providers: ProviderList;
 }
 
 export interface SigningKeys {
@@ -91,9 +93,9 @@ function keysAlone({ connection, keys }: NamedSigningKeys): SigningKeys {
   return { connection, keys: keys.map(({ key }) => key) };
 }
 
-function registryAt({ ledger }: SigningReading, org: string) {
+function registryAt({ ledger, providers }: SigningReading, org: string) {
   return Effect.all({
-    registry: Effect.map(ledger.load(connectionsStreamOfOrg(org), connectionsFold), ({ state }) => state),
+    registry: Effect.map(ledger.load(connectionsStreamOfOrg(org), connectionsFoldOf(providers)), ({ state }) => state),
     at: Effect.map(DateTime.now, DateTime.formatIso),
   });
 }

@@ -88,11 +88,12 @@ const recordedWith = Effect.fnUntraced(function* (
   finished: FinishedConsent,
   secretId: string,
   { use, stateSha256 }: Recording,
+  services: ConsentServices,
 ) {
   const { client_id: clientId, client_source: clientSource } = finished.client;
   const granted = finished.scope === undefined ? {} : { scope: finished.scope };
   const named = finished.account === undefined ? {} : { account: finished.account };
-  return yield* recordChangeInRegistry({
+  return yield* recordChangeInRegistry(services, {
     type: 'finish',
     ...use,
     connected_by: yield* recordedCaller,
@@ -105,13 +106,14 @@ const recordedWith = Effect.fnUntraced(function* (
   });
 });
 
-function connectedWith(finished: FinishedConsent, recording: Recording, { secrets }: ConsentServices) {
+function connectedWith(finished: FinishedConsent, recording: Recording, services: ConsentServices) {
+  const { secrets } = services;
   const named = namedOf(recording.kept.connection);
   return Effect.gen(function* () {
     const secretId = yield* Effect.mapError(secrets.keep(finished.tokens), (failure) => tokensUnkeptOf(named, failure));
     return yield* Effect.andThen(
       secrets.forget(recording.kept.consent.verifier_secret_id),
-      recordedWith(finished, secretId, recording),
+      recordedWith(finished, secretId, recording, services),
     ).pipe(Effect.onError(() => secrets.forget(secretId)));
   }).pipe(Effect.onError(() => finished.revoked));
 }
@@ -120,7 +122,7 @@ const finishedConnection = Effect.fnUntraced(function* (finishing: Finishing, se
   const { bindsPerson } = services;
   const use = { connection: finishing.id, token_sha256: tokenSha256Of(finishing.token), bindsPerson };
   const acted = yield* actedNow;
-  const linked = yield* Effect.fromResult(finishedConnectionOf(yield* loadRegistry, use, acted));
+  const linked = yield* Effect.fromResult(finishedConnectionOf(yield* loadRegistry(services), use, acted));
   const stateSha256 = tokenSha256Of(finishing.state);
   const kept = yield* openConsentOf(linked, { at: acted.at, stateSha256 }, services);
   const began = kept.consent.client_source === 'auto' || kept.consent.client_source === 'gateway' ? 'handle' : 'code';

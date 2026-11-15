@@ -103,6 +103,7 @@ function resolvedOf(
 ) {
   const placing = placedReference({ provider: addition.provider, entry: addition.entry, credential }, reference);
   const resolved: ProviderResolved = {
+    provider: entry.name,
     written: {
       ...placing.written,
       ...marksOf(entry.marks),

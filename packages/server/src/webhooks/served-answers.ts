@@ -2,6 +2,7 @@ import { signedAnswerRoutes, type AppRuntime, type HeardDelivery, type RegisterR
 import { signingKeysOf } from '@on.auto/connections';
 import type { ReceivedWebhooks } from '@on.auto/ledger';
 import { rejected, type DispatcherServices, type Settled } from '@on.auto/operations';
+import type { ProviderList } from '@on.auto/providers';
 import type { SecretStore } from '@on.auto/secrets';
 import { Effect } from 'effect';
 
@@ -11,6 +12,7 @@ import { holderUnlessStopped, keysUnlessStopped } from './stopping-runtime.ts';
 export interface AnswerStores {
   readonly secrets: Pick<SecretStore, 'read'>;
   readonly received: Pick<ReceivedWebhooks, 'taken'>;
+  readonly providers: ProviderList;
 }
 
 const noRequestAsked: Settled = rejected(
@@ -34,9 +36,9 @@ function deliveryLogged({ address, outcome, status, webhookId, bytes }: HeardDel
 
 export function answersServedBy(
   runtime: AppRuntime<DispatcherServices>,
-  { secrets, received }: AnswerStores,
+  { secrets, received, providers }: AnswerStores,
 ): RegisterRoutes {
-  const keysOf = signingKeysOf({ ledger: runtimeLedger(runtime), secrets });
+  const keysOf = signingKeysOf({ ledger: runtimeLedger(runtime), secrets, providers });
   return signedAnswerRoutes({
     signingKeys: async (org, connection) => keysUnlessStopped(await runtime.run(keysOf(org, connection))),
     taken: async (webhook) => holderUnlessStopped(await runtime.run(received.taken(webhook))),

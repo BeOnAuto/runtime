@@ -499,6 +499,14 @@
                 "type": "string",
                 "description": "The name of the provider and of a connection to it by default: 1 to 32 lowercase letters, digits and hyphens, starting with a letter"
               },
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "description": "Other names the provider is found by, such as a name it had before: a connection added under one is read as made from this provider, and none is listed"
+              },
               "title": {
                 "type": "string",
                 "minLength": 1,
