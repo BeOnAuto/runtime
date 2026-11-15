@@ -71,9 +71,10 @@ function endingAfter(
   definition: VersionToRun,
 ) {
   const lineage = { startId: read.lastMessageId, correlationId };
+  const { fencingToken } = run;
   return Effect.map(
-    contextOf(id, { definition }, given, { lineage, attempt: read.attempt }),
-    (context): AttemptToEnd => ({ id, context, number: run.attempt }),
+    contextOf(id, { definition }, given, { lineage, attempt: read.attempt, fencingToken }),
+    (context): AttemptToEnd => ({ id, context, fencingToken }),
   );
 }
 
@@ -117,14 +118,14 @@ export const resumedAttemptOf = Effect.fnUntraced(function* (
 
 const claimedAfter = Effect.fnUntraced(function* (id: string, run: Resumed, dead: DeadAttempt, toRun: Prepared) {
   const { given, read, correlationId } = dead;
-  const number = run.attempt + 1;
-  const startId = yield* claimedAttempt(
+  const { startId, fencingToken } = yield* claimedAttempt(
     id,
-    { readAt: read.readAt, attempt: number },
+    { readAt: read.readAt, attempt: run.attempt + 1 },
     { causationId: read.lastMessageId, correlationId },
   );
-  const context = yield* contextOf(id, toRun, given, { lineage: { startId, correlationId }, attempt: read.attempt });
-  const claimed: AttemptWithoutItsInput = { id, run: toRun, context, number };
+  const lineage = { startId, correlationId };
+  const context = yield* contextOf(id, toRun, given, { lineage, attempt: read.attempt, fencingToken });
+  const claimed: AttemptWithoutItsInput = { id, run: toRun, context, fencingToken };
   return claimed;
 });
 

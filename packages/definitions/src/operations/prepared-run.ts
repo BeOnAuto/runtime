@@ -12,7 +12,7 @@ import { Effect, type Schema } from 'effect';
 import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import { admittedByTheMeter, type MeteredRun } from '../metering/run-meter.ts';
 import { payloadWritten, type PayloadWritten } from '../payloads/payload-writing.ts';
-import { firstAttempt, type RunRequest, type RunStart } from '../runs/run-commands.ts';
+import type { RunRequest, RunStart } from '../runs/run-commands.ts';
 import { shapeNameIn } from '../shapes/published-output.ts';
 import { answeredAttempt } from './attempt-endings.ts';
 import { contextOf, type Called, type Prepared } from './run-contexts.ts';
@@ -100,7 +100,7 @@ export const runPrepared = Effect.fnUntraced(function* (
   yield* admittedByTheMeter(yield* meteredRunOf({ id, request, run, given, correlationId, startedBy }));
   return yield* Effect.uninterruptibleMask((restore) =>
     Effect.gen(function* () {
-      const { messageId, startedAt, modelCallsBefore } = yield* startRecorded(
+      const { messageId, startedAt, modelCallsBefore, fencingToken } = yield* startRecorded(
         id,
         startOf(written, run, given, startedBy),
         {
@@ -112,8 +112,9 @@ export const runPrepared = Effect.fnUntraced(function* (
       const context = yield* contextOf(id, run, given, {
         lineage,
         attempt: { startedAt, modelCallsBefore, calls: [] },
+        fencingToken,
       });
-      return yield* answeredAttempt({ id, run, input: request.input, context, number: firstAttempt }, restore);
+      return yield* answeredAttempt({ id, run, input: request.input, context, fencingToken }, restore);
     }),
   );
 });

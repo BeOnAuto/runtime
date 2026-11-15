@@ -23,6 +23,7 @@ export interface JournalledRun extends RunContext {
 export interface StartedAttempt {
   readonly lineage: RunLineage;
   readonly attempt: RunAttempt;
+  readonly fencingToken: number;
 }
 
 type MeasureOf = (prepared: PreparedDefinition) => number;
@@ -56,10 +57,10 @@ export const contextOf = Effect.fnUntraced(function* (
   id: string,
   { definition }: Pick<Prepared, 'definition'>,
   given: Called,
-  { lineage, attempt: before }: StartedAttempt,
+  { lineage, attempt: before, fencingToken }: StartedAttempt,
 ) {
   const { org, playbook } = yield* PlaybookContext;
-  const journal = yield* runJournal(id, lineage, before);
+  const journal = yield* runJournal(id, lineage, before, fencingToken);
   const called = yield* calledDefinitionsIn(given.capabilities);
   const context: JournalledRun = {
     id,

@@ -3,6 +3,7 @@ import { Effect } from 'effect';
 
 import { runJournal, type LedgerJournal } from '../journal/run-journal.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { fencingTokenOf, startedRunOf } from '../runs/run-state.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import type { Harness } from '../testing/harness.ts';
 import { testRunId } from '../testing/run-facts.ts';
@@ -47,7 +48,7 @@ export async function endingIn(definitions: Harness): Promise<unknown> {
 
 export function journalled<A>(definitions: Harness, use: (journal: LedgerJournal) => Effect.Effect<A>): Promise<A> {
   const recording = Effect.gen(function* () {
-    yield* definitions.ledger.service.execute(stream, runDecider, {
+    const { state } = yield* definitions.ledger.service.execute(stream, runDecider, {
       type: 'start',
       definition_type: 'tool-user',
       name: 'caller',
@@ -64,6 +65,7 @@ export function journalled<A>(definitions: Harness, use: (journal: LedgerJournal
         testRunId,
         { startId: idAt(1), correlationId: testRunId },
         { startedAt: '2026-10-01T09:00:00.000Z', modelCallsBefore: 0, calls: [] },
+        fencingTokenOf(startedRunOf(state)),
       ),
     );
   }).pipe(

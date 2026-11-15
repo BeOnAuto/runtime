@@ -1,16 +1,25 @@
 import {
   IncidentReporter,
+  playbookCallerOf,
   randomUUIDv7,
+  streamPrefixOfPlaybook,
   type Conflict,
   type InvalidInput,
+  type Lineage,
   type NotFound,
+  PlaybookContext,
   type PlaybookAddress,
   type RunCancelled,
   type RunUnanswered,
+  type StreamWriter,
   type Unavailable,
 } from '@on.auto/operations';
-import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Scope } from 'effect';
+import { Cause, Context, DateTime, Deferred, Effect, Exit, Fiber, Layer, Option, Scope } from 'effect';
 
+import type { RunCommand } from '../runs/run-commands.ts';
+import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { isOutlivingItsCall, isTaken } from '../runs/run-decisions.ts';
+import type { RunStreamAddress } from '../runs/run-settler.ts';
 import type { RunDetail } from '../runs/run.ts';
 
 export interface Attempts<A, E> {
@@ -18,6 +27,7 @@ export interface Attempts<A, E> {
   readonly outliving: <R>(key: string, run: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
   readonly interrupt: (key: string) => Effect.Effect<void>;
   readonly close: Effect.Effect<void>;
+  readonly acquired: (key: string, fencingToken: number) => Effect.Effect<void>;
 }
 
 interface Going {
@@ -112,6 +122,7 @@ export function liveAttemptsOf<A, E>(): Effect.Effect<Attempts<A, E>, never, Sco
         process.stopping = true;
         return Scope.close(own, Exit.void);
       }),
+      acquired: () => Effect.void,
     };
   });
 }
@@ -127,7 +138,45 @@ export const liveAttemptsLayer: Layer.Layer<LiveAttempts, never, IncidentReporte
   liveAttemptsOf(),
 );
 
+export const acquiredHere = Effect.fnUntraced(function* (id: string, fencingToken: number) {
+  const live = yield* Effect.serviceOption(LiveAttempts);
+  if (Option.isSome(live)) {
+    yield* live.value.acquired(attemptKeyOf(yield* PlaybookContext, id), fencingToken);
+  }
+});
+
 export const liveAttemptsClosed: Effect.Effect<void> = Effect.flatMap(
   Effect.serviceOption(LiveAttempts),
   Option.match({ onNone: () => Effect.void, onSome: ({ close }) => close }),
 );
+
+interface AttemptThatDied {
+  readonly run: RunStreamAddress;
+  readonly lineage: Lineage;
+  readonly fencingToken: number;
+}
+
+type DeadAttemptReceipt = 'ended' | 'not_running' | 'outlives_its_call';
+
+type EndDeadAttempt = (attempt: AttemptThatDied) => Effect.Effect<DeadAttemptReceipt>;
+
+export function deadAttemptEnder(ledger: StreamWriter): EndDeadAttempt {
+  return ({ run, lineage, fencingToken }) =>
+    Effect.gen(function* () {
+      const stream = `${streamPrefixOfPlaybook(run)}${runStreamNameOf(run.id)}`;
+      const at = DateTime.formatIso(yield* DateTime.now);
+      const command: RunCommand = {
+        type: 'attempt_died',
+        fencingToken,
+        runId: run.id,
+        by: playbookCallerOf(run).id,
+        at,
+      };
+      return yield* ledger.execute(stream, runDecider, command, lineage).pipe(
+        Effect.as<DeadAttemptReceipt>('ended'),
+        Effect.catchIf(isOutlivingItsCall, () => Effect.succeed<DeadAttemptReceipt>('outlives_its_call')),
+        Effect.catchIf(isTaken, () => Effect.succeed<DeadAttemptReceipt>('not_running')),
+        Effect.orDie,
+      );
+    });
+}

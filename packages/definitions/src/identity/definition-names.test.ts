@@ -42,6 +42,23 @@ function create(name: string, content = plain, definitionId = `id-of-${name}`): 
   return { type: 'create', name, content, created_by: recordedAdmin, definition_id: definitionId };
 }
 
+const decidedOnItsOwn = definitionsDecider('echo', alpha);
+
+const decidedWithoutTheOthers = {
+  ...decidedOnItsOwn,
+  evolve: (registry: typeof decidedOnItsOwn.initialState) => registry,
+};
+
+function createdUnderNewNames(ledger: Ledger, creations: readonly DefinitionCreation[]): Promise<void> {
+  return Effect.runPromise(
+    Effect.forEach(
+      creations,
+      (command) => ledger.service.execute(stream, decidedWithoutTheOthers, { ...command, ...at }),
+      { discard: true },
+    ),
+  );
+}
+
 describe('the names of definitions, as the definitions declare them', () => {
   it('refuse a name another definition holds, in the words of an active holder or a retired one', async () => {
     const ledger = ledgerKeeping(unbounded());
@@ -135,12 +152,9 @@ describe('a bound lowered below what a playbook keeps', () => {
 
   it(`refuse one more definition that starts on its own than ${mostReactingDefinitions}, whatever the type allows`, async () => {
     const ledger = ledgerKeeping(unbounded());
-    await Effect.runPromise(
-      Effect.forEach(
-        Array.from({ length: mostReactingDefinitions }, (_, index) => create(`clock-${index}`, onItsOwn)),
-        (command) => ledger.service.execute(stream, definitionsDecider('echo', alpha), { ...command, ...at }),
-        { discard: true },
-      ),
+    await createdUnderNewNames(
+      ledger,
+      Array.from({ length: mostReactingDefinitions }, (_, index) => create(`clock-${index}`, onItsOwn)),
     );
 
     expect([await answerOf(ledger, create('one-more', onItsOwn)), await answerOf(ledger, create('quiet'))]).toEqual([
@@ -155,12 +169,9 @@ describe('a bound lowered below what a playbook keeps', () => {
 describe('a restore beyond the definitions that start on their own', () => {
   it(`refuse to restore a definition that starts on its own while the playbook has ${mostReactingDefinitions} that do`, async () => {
     const ledger = ledgerKeeping(unbounded());
-    await Effect.runPromise(
-      Effect.forEach(
-        Array.from({ length: mostReactingDefinitions }, (_, index) => create(`clock-${index}`, onItsOwn)),
-        (command) => ledger.service.execute(stream, definitionsDecider('echo', alpha), { ...command, ...at }),
-        { discard: true },
-      ),
+    await createdUnderNewNames(
+      ledger,
+      Array.from({ length: mostReactingDefinitions }, (_, index) => create(`clock-${index}`, onItsOwn)),
     );
     await answerOf(ledger, { type: 'retire', name: 'clock-0' });
     await answerOf(ledger, create('in-its-place', onItsOwn));

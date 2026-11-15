@@ -60,7 +60,12 @@ const changedMeanwhile = new Conflict({
 
 const isChangedWhileRecorded = Schema.is(Schema.Struct({ kind: Schema.Literal('concurrent_change') }));
 
-export const runJournal = Effect.fnUntraced(function* (id: string, lineage: RunLineage, attempt: RunAttempt) {
+export const runJournal = Effect.fnUntraced(function* (
+  id: string,
+  lineage: RunLineage,
+  attempt: RunAttempt,
+  fencingToken: number,
+) {
   const writer = yield* PlaybookWriter;
   const stream = `${streamPrefixOfPlaybook(yield* PlaybookContext)}${runStreamNameOf(id)}`;
   const { id: by } = yield* Caller;
@@ -75,7 +80,7 @@ export const runJournal = Effect.fnUntraced(function* (id: string, lineage: RunL
           .execute(
             runStreamNameOf(id),
             runDecider,
-            { type: 'call', fact, runId: id, by, at },
+            { type: 'call', fact, fencingToken, runId: id, by, at },
             { causationId: causeOf(fact, known), correlationId: lineage.correlationId },
           )
           .pipe(

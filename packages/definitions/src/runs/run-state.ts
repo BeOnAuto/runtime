@@ -1,11 +1,18 @@
 import type { CalledBy, RecordedCaller, RunContext, StartingTrigger } from '@on.auto/operations';
-import { answerPayloadOf, inputPayloadOf, outputPayloadOf, type Payload } from '@on.auto/operations/payloads';
+import { answerPayloadOf, inputPayloadOf, type Payload } from '@on.auto/operations/payloads';
 import type { Schema } from 'effect';
 
-import { numberingAfter, numberingFrom, type CallNumbering } from '../journal/call-numbering.ts';
-import { firstAttempt, type RunResult } from './run-commands.ts';
-import type { CancelRequestKind, RecordedRunEvent, RecordedRunFact, ReplyIdentity } from './run-events.ts';
-import type { RunRecord } from './run.ts';
+import { isCallStart, numberingAfter, numberingFrom, type CallNumbering } from '../journal/call-numbering.ts';
+import { finishedRecord, recordOf, resultOf, type RecordedFinish } from './finished-runs.ts';
+import { firstAttempt, type RunCall, type RunOutcome, type RunResult } from './run-commands.ts';
+import type {
+  CancelRequestKind,
+  RecordedCallFact,
+  RecordedRunEvent,
+  RecordedRunFact,
+  ReplyIdentity,
+} from './run-events.ts';
+import type { RunRecord, RunRejection } from './run.ts';
 
 export interface AskedCancel {
   readonly kind: CancelRequestKind;
@@ -29,6 +36,8 @@ export interface RecordedWork {
 
 export interface RecordedRunState extends CallNumbering {
   readonly attempt: number;
+  readonly fencingToken: number;
+  readonly holderStartedACall: boolean;
   readonly input: Payload<Schema.Json>;
   readonly run: RunRecord;
   readonly finishesLater: boolean;
@@ -37,6 +46,7 @@ export interface RecordedRunState extends CallNumbering {
   readonly resumes: boolean;
   readonly mayHaveChanged: boolean;
   readonly calledOnlyReadOnly: boolean;
+  readonly openActingCalls: ReadonlySet<number>;
   readonly answer: RecordedAnswer | null;
   readonly work: readonly RecordedWork[];
   readonly cancel?: AskedCancel;
@@ -64,15 +74,17 @@ export function cancelBeforeStartOf(state: RunStreamState): AskedCancel | undefi
   return state !== undefined && 'cancelledBeforeStart' in state ? state.cancelledBeforeStart : undefined;
 }
 
-type CallsBefore = CallNumbering & Pick<RecordedRunState, 'mayHaveChanged' | 'calledOnlyReadOnly'>;
+type CallsBefore = CallNumbering & Pick<RecordedRunState, 'mayHaveChanged' | 'calledOnlyReadOnly' | 'openActingCalls'>;
 
 function callsBefore(earlier: RunState): CallsBefore {
+  const openActingCalls = new Set<number>();
   return earlier === undefined
-    ? { ...numberingFrom(0, 0), mayHaveChanged: false, calledOnlyReadOnly: true }
+    ? { ...numberingFrom(0, 0), mayHaveChanged: false, calledOnlyReadOnly: true, openActingCalls }
     : {
         ...numberingFrom(earlier.lastCall, earlier.lastModelCall),
         mayHaveChanged: earlier.mayHaveChanged,
         calledOnlyReadOnly: earlier.calledOnlyReadOnly,
+        openActingCalls,
       };
 }
 
@@ -80,14 +92,14 @@ function definitionOf({ definitionType, definitionName, definitionVersion }: Run
   return { type: definitionType, name: definitionName, definition_version: definitionVersion };
 }
 
-type RecordedFinish = RecordedRunFact<'run_succeeded' | 'run_rejected' | 'run_failed'>;
-
 function startedRun(started: RecordedRunFact<'run_started'>, earlier: RunState): RecordedRunState {
   const { data, context } = started;
   const { started_by, calls_tools, finishes_later, resumes, output_shape } = data;
   const { at, depth = 0, callDepth = 0, calledBy, trigger, actsFor } = context;
   return {
     attempt: firstAttempt,
+    fencingToken: (earlier?.fencingToken ?? 0) + 1,
+    holderStartedACall: false,
     input: inputPayloadOf(started),
     run: {
       ...definitionOf(context),
@@ -109,50 +121,6 @@ function startedRun(started: RecordedRunFact<'run_started'>, earlier: RunState):
     ...(calledBy === undefined ? {} : { calledBy }),
     ...(trigger === undefined ? {} : { trigger }),
   };
-}
-
-function resultOf(event: RecordedFinish): RunResult {
-  if (event.type === 'run_rejected') {
-    return { type: event.type, data: { rejection: event.data.rejection } };
-  }
-  if (event.type === 'run_succeeded') {
-    return { type: event.type, data: event.data };
-  }
-  return { type: event.type, data: event.data };
-}
-
-function finishedRecord(
-  { type, name, definition_version, output_shape, started_at, started_by, acts_for }: RunRecord,
-  result: RunResult,
-  at: string,
-): RunRecord {
-  const attempt = {
-    type,
-    name,
-    definition_version,
-    ...(output_shape === undefined ? {} : { output_shape }),
-    started_at,
-    started_by,
-    ...(acts_for === undefined ? {} : { acts_for }),
-    finished_at: at,
-  };
-  if (result.type === 'run_succeeded') {
-    const { incomplete_details: incomplete } = result.data;
-    return {
-      ...attempt,
-      status: 'succeeded',
-      output: outputPayloadOf(result),
-      ...(incomplete === undefined ? {} : { incomplete_details: incomplete }),
-    };
-  }
-  if (result.type === 'run_rejected') {
-    return { ...attempt, status: 'rejected', rejection: result.data.rejection };
-  }
-  return { ...attempt, status: 'failed' };
-}
-
-function recordOf(event: RecordedFinish): Schema.JsonObject | undefined {
-  return event.type === 'run_failed' ? undefined : event.data.record;
 }
 
 function finishedRun(state: RecordedRunState, event: RecordedFinish): RecordedRunState {
@@ -192,6 +160,15 @@ type RecordedWorkFact = Exclude<
   >
 >;
 
+function actingCallsAfter(open: ReadonlySet<number>, { type, data }: RecordedCallFact): ReadonlySet<number> {
+  if (type === 'tool_call_started') {
+    return data.read_only === true ? open : new Set([...open, data.number]);
+  }
+  return type === 'tool_call_answered' || type === 'tool_call_failed'
+    ? new Set([...open].filter((number) => number !== data.number))
+    : open;
+}
+
 function evolveWork(state: RecordedRunState, event: RecordedWorkFact): RecordedRunState {
   if (event.type === 'request_answered') {
     return { ...state, answer: recordedAnswerOf(event) };
@@ -199,7 +176,12 @@ function evolveWork(state: RecordedRunState, event: RecordedWorkFact): RecordedR
   if (event.type === 'work') {
     return { ...state, work: [...state.work, workOf(event)] };
   }
-  const numbered = { ...state, ...numberingAfter(state, event) };
+  const numbered = {
+    ...state,
+    ...numberingAfter(state, event),
+    openActingCalls: actingCallsAfter(state.openActingCalls, event),
+    holderStartedACall: state.holderStartedACall || isCallStart(event),
+  };
   return event.type === 'tool_call_started'
     ? {
         ...numbered,
@@ -218,7 +200,7 @@ function evolveStarted(state: RecordedRunState, event: RecordedAfterTheStart): R
     return { ...state, deferred: true, record: event.data.record };
   }
   if (event.type === 'attempt_resumed') {
-    return { ...state, attempt: event.data.attempt };
+    return { ...state, attempt: event.data.attempt, fencingToken: state.fencingToken + 1, holderStartedACall: false };
   }
   return event.type === 'run_succeeded' || event.type === 'run_rejected' || event.type === 'run_failed'
     ? finishedRun(state, event)
@@ -240,9 +222,20 @@ export function evolveRun(state: RunStreamState, event: RecordedRunEvent): RunSt
   return state;
 }
 
+const finalReasons: ReadonlySet<RunRejection['reason']> = new Set(['invalid_input', 'cancelled', 'unanswered']);
+
+function isFinalRejection(rejection: RunRejection | undefined): boolean {
+  return rejection !== undefined && finalReasons.has(rejection.reason);
+}
+
 export function hasFinalResult({ run }: RecordedRunState): boolean {
-  const reason = run.rejection?.reason;
-  return run.status === 'succeeded' || reason === 'invalid_input' || reason === 'cancelled' || reason === 'unanswered';
+  return run.status === 'succeeded' || isFinalRejection(run.rejection);
+}
+
+export function isFinalResult(outcome: RunOutcome): boolean {
+  return (
+    outcome.type === 'run_succeeded' || (outcome.type === 'run_rejected' && isFinalRejection(outcome.data.rejection))
+  );
 }
 
 export function awaitsSettlement({ run, deferred }: RecordedRunState): boolean {
@@ -267,6 +260,18 @@ export function lastCallOf(state: RunState): number {
 
 export function lastModelCallOf(state: RunState): number {
   return state?.lastModelCall ?? 0;
+}
+
+export function fencingTokenOf(state: RunState): number {
+  return state?.fencingToken ?? 0;
+}
+
+export function holdsTheRun(fencingToken: number | undefined, state: RecordedRunState): boolean {
+  return fencingToken === undefined || fencingToken === state.fencingToken;
+}
+
+export function startedByAnotherAttempt({ fact, fencingToken }: RunCall, state: RunState): boolean {
+  return state !== undefined && isRunning(state) && isCallStart(fact) && !holdsTheRun(fencingToken, state);
 }
 
 export function mayHaveChangedSomething({ mayHaveChanged }: RecordedRunState): boolean {

@@ -19,6 +19,8 @@ const asStarted = {
 
 const everything = { kind: 'everything' } as const;
 
+const aMinuteAfterItStarted = '2026-10-01T09:01:00.000Z';
+
 describe('cancel_run', () => {
   it('records the request on a run that finishes later, with its caller and reason, and answers the run as it stands', async () => {
     const { cancelling, running, history } = await withHandOn();
@@ -94,8 +96,8 @@ describe('a cancel request on a run', () => {
     });
   });
 
-  it('is a conflict for a run that has ended, and for one that runs within its call', async () => {
-    const { call, cancelling, runDefinition, running, prober, settling } = await withHandOn();
+  it('is a conflict for a run that has ended, and for one that runs within its call while its attempt may be live', async () => {
+    const { call, cancelling, cancelRun, runDefinition, running, prober, settling } = await withHandOn();
     await running();
     await settling({ status: 'succeeded', output: 'handed on', record: {} });
     const plain = '0199a3c4-7d2e-7c1a-9b3f-000000000001';
@@ -103,7 +105,10 @@ describe('a cancel request on a run', () => {
     void call(runDefinition, toPlaybook('acme', 'alpha')(acmeAdmin, { type: 'probe', name: 'plain', run_id: plain }));
     await prober.stalled;
 
-    expect([await cancelling(), await cancelling({}, plain)]).toEqual([
+    expect([
+      await cancelling(),
+      await call(cancelRun, toPlaybook('acme', 'alpha')(acmeAdmin, { run_id: plain }), aMinuteAfterItStarted),
+    ]).toEqual([
       {
         status: 'rejected',
         reason: 'conflict',

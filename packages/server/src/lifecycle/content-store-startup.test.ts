@@ -77,7 +77,12 @@ describe('a content store whose bucket cannot be reached', () => {
 describe('a content store without a region', () => {
   it('stops start-up, saying the region is missing, on a custom endpoint or on the endpoint of a region', async () => {
     const { endpoint, host } = await aClosedEndpoint();
-    withCredentials({ AWS_REGION: undefined, AWS_PROFILE: undefined, AWS_CONFIG_FILE: '/nonexistent/aws-config' });
+    withCredentials({
+      AWS_REGION: undefined,
+      AWS_PROFILE: undefined,
+      AWS_CONFIG_FILE: '/nonexistent/aws-config',
+      AWS_EC2_METADATA_DISABLED: 'true',
+    });
     const { AWS_ENDPOINT_URL: _endpoint, ...withoutEndpoint } = storedIn(endpoint);
 
     const failures = [await failureToStart(storedIn(endpoint)), await failureToStart(withoutEndpoint)];

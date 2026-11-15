@@ -45,7 +45,7 @@ export {
   type CapabilityOperations,
 } from './capability/directory-listing.ts';
 export type { JournalRefusal, RunAttempt, RunContext, RunJournal, RunLineage } from './capability/run-context.ts';
-export { LiveAttempts, liveAttemptsClosed, liveAttemptsLayer } from './attempts/live-attempts.ts';
+export { LiveAttempts, liveAttemptsClosed, liveAttemptsLayer, deadAttemptEnder } from './attempts/live-attempts.ts';
 export { RunMeter, type Meter, type MeteredRun } from './metering/run-meter.ts';
 export { nextAttemptOf, nextAttemptRefused } from './operations/next-attempts.ts';
 export type { AttemptRefusal, NextAttempt } from './operations/attempt-inputs.ts';

@@ -104,10 +104,15 @@ export interface InterruptedAttempt {
 
 export const firstAttempt = 1;
 
+export interface FinishingAttempt {
+  readonly fencingToken: number;
+  readonly version: number;
+}
+
 export interface RunFinish {
   readonly type: 'finish';
   readonly result: RunOutcome | InterruptedAttempt;
-  readonly attempt?: number;
+  readonly attempt?: FinishingAttempt;
 }
 
 export interface RunResume {
@@ -118,6 +123,7 @@ export interface RunResume {
 export interface RunCall {
   readonly type: 'call';
   readonly fact: CallFact;
+  readonly fencingToken?: number;
 }
 
 export interface RunWork {
@@ -128,6 +134,11 @@ export interface RunWork {
 export interface RunAnswer extends ComparedWithWhatWasRead {
   readonly type: 'answer';
   readonly answer: AnswerFact;
+}
+
+export interface RunAttemptDied {
+  readonly type: 'attempt_died';
+  readonly fencingToken: number;
 }
 
 interface CommandMetadata {
@@ -150,6 +161,6 @@ export interface RunCancel extends CommandMetadata {
 }
 
 export type RunCommand =
-  | ((RunStart | RunFinish | RunResume | RunCall | RunWork | RunAnswer) & CommandMetadata)
+  | ((RunStart | RunFinish | RunResume | RunCall | RunWork | RunAnswer | RunAttemptDied) & CommandMetadata)
   | RunSettlement
   | RunCancel;

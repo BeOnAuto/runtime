@@ -1,11 +1,14 @@
 import { Conflict, NotFound, type Rejection } from '@on.auto/operations';
 import { Result } from 'effect';
 
-import { endingOfADeadAttempt } from '../cancellation/dead-attempt-endings.ts';
-import { decideAnswer, decideCall, decideWork, type AdmitsFact } from '../run-work/work-decisions.ts';
+import { endingOfADeadAttempt, endingOfAnAttemptThatDied } from '../cancellation/dead-attempt-endings.ts';
+import { decideAnswer, decideCall, decideWork, runEnded, type AdmitsFact } from '../run-work/work-decisions.ts';
 import { cancelledBeforeItsStart, claimOf, needsNoRun, takesAStartOnce } from './run-claims.ts';
 import { askedOf, startedEvent } from './run-commands.ts';
 import type {
+  FinishingAttempt,
+  RunAttemptDied,
+  RunCall,
   RunCancel,
   RunCommand,
   RunFinish,
@@ -19,7 +22,10 @@ import type { RunEvent } from './run-events.ts';
 import {
   cancelBeforeStartOf,
   endsWithinItsCall,
+  holdsTheRun,
+  isFinalResult,
   isRunning,
+  startedByAnotherAttempt,
   startedRunOf,
   takesSettlement,
   type RunState,
@@ -108,26 +114,30 @@ function outcomeOfAttempt(result: RunOutcome | InterruptedAttempt, { cancel }: R
   };
 }
 
-function isDeferralAfterItsResult(result: RunOutcome, state: RecordedRunState): boolean {
-  return result.type === 'run_deferred' && state.result !== undefined;
-}
-
 function leftToResume(result: RunOutcome | InterruptedAttempt, { cancel }: RecordedRunState): boolean {
   return result.type === 'run_interrupted' && result.resumes === true && cancel === undefined;
 }
 
+function agreesWithTheHolder({ version }: FinishingAttempt, { run, holderStartedACall }: RecordedRunState): boolean {
+  return version === run.definition_version && !holderStartedACall;
+}
+
+function mayRecordItsResult(attempt: FinishingAttempt | undefined, state: RecordedRunState): boolean {
+  return attempt === undefined || holdsTheRun(attempt.fencingToken, state) || agreesWithTheHolder(attempt, state);
+}
+
 function decideFinish({ result, attempt }: RunFinish, state: RunState): Decision {
-  if (state === undefined) {
-    return nothingToRecord;
-  }
-  if (attempt !== undefined && attempt !== state.attempt) {
-    return Result.fail(runTaken);
-  }
-  if (leftToResume(result, state)) {
+  if (state === undefined || needsNoRun(state)) {
     return nothingToRecord;
   }
   const outcome = outcomeOfAttempt(result, state);
-  return needsNoRun(state) || isDeferralAfterItsResult(outcome, state) ? nothingToRecord : Result.succeed([outcome]);
+  if (isFinalResult(outcome) && mayRecordItsResult(attempt, state)) {
+    return Result.succeed([outcome]);
+  }
+  if (!holdsTheRun(attempt?.fencingToken, state)) {
+    return Result.fail(runTaken);
+  }
+  return !isRunning(state) || leftToResume(result, state) ? nothingToRecord : Result.succeed([outcome]);
 }
 
 export const endedWithAnotherResult = new Conflict({ detail: 'The run already ended with another result' });
@@ -178,12 +188,39 @@ function cancelOfARun(cancel: RunCancel, run: RecordedRunState): Decision {
     return Result.fail(endedBeforeCancelling);
   }
   const withinItsCall = endsWithinItsCall(run);
-  if (withinItsCall && cancel.byItsCaller !== true) {
+  if (withinItsCall && cancel.byItsCaller !== true && cancel.attemptDied !== true) {
     return Result.fail(runsWithinItsCall);
   }
   const asked = run.cancel === undefined ? [cancelRequested(cancel)] : [];
   const ended = withinItsCall && cancel.attemptDied === true ? endingOfADeadAttempt(run, run.cancel ?? cancel) : [];
   return Result.succeed([...asked, ...ended]);
+}
+
+const outlivesItsCall = new Conflict({
+  detail:
+    'The run outlives the call that started it, so an attempt of it that died is resumed or settled, never ended in its place',
+});
+
+export function isOutlivingItsCall(error: unknown): boolean {
+  return error === outlivesItsCall;
+}
+
+function endingOfItsAttempt(state: RecordedRunState): readonly RunEvent[] {
+  return state.cancel === undefined ? endingOfAnAttemptThatDied(state) : endingOfADeadAttempt(state, state.cancel);
+}
+
+function decideAttemptDied({ fencingToken }: RunAttemptDied, state: RunState): Decision {
+  if (state === undefined || !isRunning(state)) {
+    return Result.fail(runEnded);
+  }
+  if (!holdsTheRun(fencingToken, state)) {
+    return Result.fail(runTaken);
+  }
+  return endsWithinItsCall(state) ? Result.succeed(endingOfItsAttempt(state)) : Result.fail(outlivesItsCall);
+}
+
+function decideCallOfAnAttempt(command: RunCall, state: RunState): Decision {
+  return startedByAnotherAttempt(command, state) ? Result.fail(runTaken) : decideCall(command, state);
 }
 
 function decideCancel(cancel: RunCancel, state: RunStreamState): Decision {
@@ -206,7 +243,7 @@ export function decideOnRun(command: RunCommand, state: RunStreamState, admits: 
   }
   const run = startedRunOf(state);
   if (command.type === 'call') {
-    return decideCall(command, run);
+    return decideCallOfAnAttempt(command, run);
   }
   if (command.type === 'work') {
     return decideWork(command, run, admits);
@@ -216,6 +253,9 @@ export function decideOnRun(command: RunCommand, state: RunStreamState, admits: 
   }
   if (command.type === 'resume') {
     return decideResume(command, run);
+  }
+  if (command.type === 'attempt_died') {
+    return decideAttemptDied(command, run);
   }
   return command.type === 'finish' ? decideFinish(command, run) : decideSettlement(command, run);
 }

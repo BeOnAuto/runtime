@@ -1,12 +1,12 @@
-import { PlaybookReader, PlaybookWriter, defineCommand } from '@on.auto/operations';
+import { PlaybookReader, defineCommand } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
+import { judgedCancelRecorded } from '../attempts/judged-cancels.ts';
 import type { Capability } from '../capability/capability.ts';
 import { commandMetadata } from '../operations/command-metadata.ts';
 import { reasonFieldOf, RunIdInputField } from '../operations/definition-fields.ts';
 import { withItsOutputRead } from '../payloads/run-payloads.ts';
 import { cancellingWordsFor } from '../plain-language/run-words.ts';
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
 import { RunSchema } from '../runs/run.ts';
 import { runAfterItsAttemptHere } from './run-cancels.ts';
 
@@ -28,17 +28,17 @@ const correlationOf = Effect.fnUntraced(function* (id: string) {
   return records[0]?.correlationId ?? id;
 });
 
-const cancelled = Effect.fnUntraced(function* (id: string, reason: string | undefined) {
+const cancelled = Effect.fnUntraced(function* (
+  capabilities: readonly Capability[],
+  id: string,
+  reason: string | undefined,
+) {
   const { by, at } = yield* commandMetadata;
   const correlationId = yield* Effect.orDie(correlationOf(id));
-  yield* (yield* PlaybookWriter)
-    .execute(
-      runStreamNameOf(id),
-      runDecider,
-      { type: 'cancel', kind: 'requested', reason: reason ?? `Cancelled at the request of ${by}`, runId: id, by, at },
-      { causationId: null, correlationId },
-    )
-    .pipe(Effect.catchTags({ cancelled: Effect.die, unavailable: Effect.die }));
+  const asked = { reason: reason ?? `Cancelled at the request of ${by}`, by, at };
+  yield* judgedCancelRecorded(capabilities, id, asked, { causationId: null, correlationId }).pipe(
+    Effect.catchTags({ cancelled: Effect.die, unavailable: Effect.die }),
+  );
   return yield* withItsOutputRead(yield* runAfterItsAttemptHere(id));
 });
 
@@ -54,7 +54,7 @@ export function defineCancelRun(capabilities: readonly Capability[]) {
     inputSchema: Schema.Struct({ run_id: RunIdInputField, reason: Schema.optionalKey(ReasonField) }),
     outputSchema: RunSchema,
     reasons: ['not_found', 'conflict', 'unavailable'],
-    handle: ({ run_id: id, reason }) => cancelled(id, reason),
+    handle: ({ run_id: id, reason }) => cancelled(capabilities, id, reason),
     plainLanguage: {
       task: 'cancel a run',
       attempt: () => 'cancel the run',

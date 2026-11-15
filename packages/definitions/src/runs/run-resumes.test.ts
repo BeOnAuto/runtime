@@ -2,9 +2,10 @@ import type { Context } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { modelCallSent } from '../journal-testing/model-calls.ts';
 import { recordedAdmin } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
-import type { RunCommand } from './run-commands.ts';
+import type { RunCommand, RunOutcome } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
 import { runTaken, stillRunning } from './run-decisions.ts';
 import type { RecordedRunEvent, RunEvent } from './run-events.ts';
@@ -25,8 +26,10 @@ function decided(command: RunCommand, ...history: readonly RunEvent[]) {
   return runDecider.decide(command, runStateAfter(history.map((event): RecordedRunEvent => recorded(event))));
 }
 
-function finishedBy(attempt: number): RunCommand {
-  return { type: 'finish', result: { type: 'run_succeeded', data: { output: null, record: {} } }, attempt, ...acted };
+const succeeded = { type: 'run_succeeded', data: { output: null, record: {} } } as const;
+
+function finishedBy(fencingToken: number, result: RunOutcome = succeeded): RunCommand {
+  return { type: 'finish', result, attempt: { fencingToken, version: 1 }, ...acted };
 }
 
 describe('the resume of a run by an attempt after the one that died', () => {
@@ -55,13 +58,25 @@ describe('the resume of a run by an attempt after the one that died', () => {
   });
 });
 
-describe('the ending of an attempt that names its number', () => {
-  it('is recorded while that attempt holds the run, and refused as taken once a later one resumed it', () => {
-    const resumed: RunEvent = { type: 'attempt_resumed', data: { attempt: 2 } };
+describe('the ending of an attempt that names its fencing token', () => {
+  const resumed: RunEvent = { type: 'attempt_resumed', data: { attempt: 2 } };
+  const calledByTheLater: RunEvent = {
+    type: 'model_call_started',
+    data: { number: 1, ...modelCallSent() },
+  };
+  const failed: RunOutcome = { type: 'run_failed', data: {} };
 
-    expect([decided(finishedBy(2), resumable, resumed), decided(finishedBy(1), resumable, resumed)]).toStrictEqual([
-      Result.succeed([{ type: 'run_succeeded', data: { output: null, record: {} } }]),
-      Result.fail(runTaken),
-    ]);
+  it('is recorded while that attempt holds the run, and refused as taken once a later one resumed it unless it is a result', () => {
+    expect([
+      decided(finishedBy(2), resumable, resumed),
+      decided(finishedBy(1, failed), resumable, resumed),
+    ]).toStrictEqual([Result.succeed([succeeded]), Result.fail(runTaken)]);
+  });
+
+  it('keeps the result of the earlier attempt while the later one has started no call, so nothing paid for is lost', () => {
+    expect([
+      decided(finishedBy(1), resumable, resumed),
+      decided(finishedBy(1), resumable, resumed, calledByTheLater),
+    ]).toStrictEqual([Result.succeed([succeeded]), Result.fail(runTaken)]);
   });
 });

@@ -158,19 +158,18 @@ describe('two shells that ask for the next attempt of one run', () => {
 });
 
 describe('an attempt whose run a later attempt claimed', () => {
-  it('records no ending, whether its drive dies or succeeds, and the attempt that holds the run ends it once', async () => {
+  it('records no ending where its drive dies, and its result where its drive succeeds before the later one started a call, so the run ends once', async () => {
     const { started, capability, asked, types } = await aRunLeft();
 
     const outcome = await started.call(drivenByThree(capability), asked, momentAfter(quietMs + 1));
 
-    expect(outcome).toMatchObject({ status: 'succeeded', output: { endings: ['died', 'refused', 'ended'] } });
+    expect(outcome).toMatchObject({ status: 'succeeded', output: { endings: ['died', 'ended', 'ended'] } });
     expect(await types()).toEqual([
       'run_started',
       'model_call_started',
       'attempt_resumed',
       'attempt_resumed',
       'attempt_resumed',
-      'model_call_answered',
       'run_succeeded',
     ]);
   });

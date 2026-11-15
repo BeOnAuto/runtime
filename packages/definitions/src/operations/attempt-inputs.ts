@@ -9,7 +9,7 @@ import type { DocumentLoss } from './unread-texts.ts';
 
 export type AttemptWithoutItsInput = Omit<AttemptOfARun, 'input'>;
 
-export type AttemptToEnd = Pick<AttemptOfARun, 'id' | 'context' | 'number'>;
+export type AttemptToEnd = Pick<AttemptOfARun, 'id' | 'context' | 'fencingToken'>;
 
 export interface AttemptRefusal {
   readonly detail: string;
@@ -31,12 +31,12 @@ export const inputToRunOf = Effect.fnUntraced(function* (run: Pick<RecordedRunSt
   return 'unread' in read && read.unread === 'unavailable' ? yield* inputUnavailable : read;
 });
 
-export function interruptedByItsCancel({ id, context, number }: AttemptToEnd) {
-  return answeredWith(id, context, { type: 'run_interrupted' }, number);
+export function interruptedByItsCancel({ id, context, fencingToken }: AttemptToEnd) {
+  return answeredWith(id, context, { type: 'run_interrupted' }, fencingToken);
 }
 
 const endedForItsLostInput = Effect.fnUntraced(function* (
-  { id, context, number }: AttemptToEnd,
+  { id, context, fencingToken }: AttemptToEnd,
   read: Extract<PayloadAsRead, { readonly unread: unknown }>,
 ) {
   yield* Effect.logError(
@@ -47,23 +47,23 @@ const endedForItsLostInput = Effect.fnUntraced(function* (
     detail: `The input this run was given, which its playbook kept outside the run's record, is ${read.unread}, so no attempt of it can run; start it again with its input`,
     because: 'input_missing',
   } as const;
-  return yield* answeredWith(id, context, { type: 'run_rejected', data: { rejection } }, number);
+  return yield* answeredWith(id, context, { type: 'run_rejected', data: { rejection } }, fencingToken);
 });
 
 export const endedForItsLostDocument = Effect.fnUntraced(function* (
-  { id, context, number }: AttemptToEnd,
+  { id, context, fencingToken }: AttemptToEnd,
   { detail, because }: DocumentLoss,
 ) {
   yield* Effect.logError(
     `The document of the run ${id} is lost, so its next attempt cannot run and the run is rejected: ${detail}`,
   );
   const rejection = { reason: 'conflict', detail, because } as const;
-  return yield* answeredWith(id, context, { type: 'run_rejected', data: { rejection } }, number);
+  return yield* answeredWith(id, context, { type: 'run_rejected', data: { rejection } }, fencingToken);
 });
 
-export function endedAsRefused({ id, context, number }: AttemptToEnd, { detail, kind }: AttemptRefusal) {
+export function endedAsRefused({ id, context, fencingToken }: AttemptToEnd, { detail, kind }: AttemptRefusal) {
   const rejection: RunRejection = { reason: 'unavailable', detail, kind };
-  return answeredWith(id, context, { type: 'run_rejected', data: { rejection } }, number);
+  return answeredWith(id, context, { type: 'run_rejected', data: { rejection } }, fencingToken);
 }
 
 export function nextAttemptWith(attempt: AttemptWithoutItsInput, input: PayloadAsRead) {

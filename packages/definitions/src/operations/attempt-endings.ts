@@ -36,12 +36,13 @@ function endingWritten(ending: Ending) {
   });
 }
 
-export function answeredWith(id: string, context: JournalledRun, outcome: Ending, number: number) {
+export function answeredWith(id: string, context: JournalledRun, outcome: Ending, fencingToken: number) {
   return Effect.gen(function* () {
     const causationId = outcome.type === 'run_deferred' ? context.lineage.startId : yield* context.journal.latest;
     const lineage = { causationId, correlationId: context.lineage.correlationId };
     const { ending, inHand } = yield* endingWritten(outcome);
-    const { state } = yield* recordRun(id, { type: 'finish', result: ending, attempt: number }, lineage);
+    const finishing = { fencingToken, version: context.definition.version };
+    const { state } = yield* recordRun(id, { type: 'finish', result: ending, attempt: finishing }, lineage);
     return yield* runAnswered(id, state, inHand);
   });
 }
@@ -51,37 +52,42 @@ export interface AttemptOfARun {
   readonly run: Prepared;
   readonly input: Schema.Json;
   readonly context: JournalledRun;
-  readonly number: number;
+  readonly fencingToken: number;
 }
 
 type Restore = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
 
-const interruptedAs = Effect.fnUntraced(function* ({ id, run, context, number }: AttemptOfARun) {
+const interruptedAs = Effect.fnUntraced(function* ({ id, run, context, fencingToken }: AttemptOfARun) {
   const interrupted = interruptedAttempt(run.prepared.resumesAfterMs);
   if ((yield* loadRun(id))?.cancel === undefined) {
-    return yield* answeredWith(id, context, interrupted, number);
+    return yield* answeredWith(id, context, interrupted, fencingToken);
   }
   const { ends } = run.prepared.cancelledAttempt(yield* loadCalls(id));
   yield* Effect.forEach(ends, (end) => Effect.ignore(context.journal.record(end)), { discard: true });
   const { record } = run.prepared.cancelledAttempt(yield* loadCalls(id));
-  return yield* answeredWith(id, context, record === undefined ? interrupted : { ...interrupted, record }, number);
+  const ending = record === undefined ? interrupted : { ...interrupted, record };
+  return yield* answeredWith(id, context, ending, fencingToken);
 });
 
 export const attemptEnded = Effect.fnUntraced(function* (
   attempting: AttemptOfARun,
   ran: Effect.Effect<CapabilityAnswer, CapabilityRejection>,
 ) {
-  const { id, context, number } = attempting;
+  const { id, context, fencingToken } = attempting;
   const outcome = yield* attempt(ran).pipe(
     Effect.onError((cause) =>
       Effect.ignore(
-        Cause.hasInterruptsOnly(cause) ? interruptedAs(attempting) : answeredWith(id, context, failedAttempt, number),
+        Cause.hasInterruptsOnly(cause)
+          ? interruptedAs(attempting)
+          : answeredWith(id, context, failedAttempt, fencingToken),
       ),
     ),
   );
   return isTakenByAnother(outcome)
     ? yield* answerAfterAnother(id)
-    : yield* answeredWith(id, context, outcome, number).pipe(Effect.catchIf(isTaken, () => answerAfterAnother(id)));
+    : yield* answeredWith(id, context, outcome, fencingToken).pipe(
+        Effect.catchIf(isTaken, () => answerAfterAnother(id)),
+      );
 });
 
 export function answeredAttempt(attempting: AttemptOfARun, restore: Restore) {

@@ -15,6 +15,7 @@ describe('a fact the ledger cannot write', () => {
         '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
         { startId: 'start', correlationId: 'run' },
         { startedAt: '2026-10-01T09:00:00.000Z', modelCallsBefore: 0, calls: [] },
+        1,
       );
       return yield* journal.record({ type: 'model_call_started', data: { number: 1, ...modelCallSent() } });
     }).pipe(

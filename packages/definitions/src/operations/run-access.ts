@@ -15,7 +15,13 @@ import type { RunFinish, RunStart } from '../runs/run-commands.ts';
 import { isChangedSinceRead, runDecider, runDeciderAsRead, runStreamNameOf } from '../runs/run-decider.ts';
 import { stillRunning } from '../runs/run-decisions.ts';
 import { runAnswered } from '../runs/run-lookup.ts';
-import { lastModelCallOf, startedRunOf, type RunState, type RunStreamState } from '../runs/run-state.ts';
+import {
+  fencingTokenOf,
+  lastModelCallOf,
+  startedRunOf,
+  type RunState,
+  type RunStreamState,
+} from '../runs/run-state.ts';
 import { commandMetadata } from './command-metadata.ts';
 
 export const newRunId = Effect.sync(() => randomUUIDv7());
@@ -79,10 +85,13 @@ export const claimedAttempt = Effect.fnUntraced(function* (
   lineage: Lineage,
 ) {
   const command = { type: 'resume' as const, attempt, ...(yield* commandMetadata), runId: id };
-  const { version } = yield* (yield* PlaybookWriter)
+  const { state, version } = yield* (yield* PlaybookWriter)
     .execute(runStreamNameOf(id), runDeciderAsRead, { readAt, command }, lineage)
     .pipe(Effect.catchIf(isChangedSinceRead, () => Effect.fail(stillRunning)));
-  return messageIdOf(yield* streamOf(id), version);
+  return {
+    startId: messageIdOf(yield* streamOf(id), version),
+    fencingToken: fencingTokenOf(startedRunOf(state.state)),
+  };
 });
 
 export const loadCalls = Effect.fnUntraced(function* (id: string) {

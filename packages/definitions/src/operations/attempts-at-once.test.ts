@@ -87,6 +87,7 @@ function noticingTheSecond(
     attempt: live.attempt,
     interrupt: live.interrupt,
     close: live.close,
+    acquired: live.acquired,
     outliving: (key, run) =>
       Effect.suspend(() => {
         seen.count += 1;

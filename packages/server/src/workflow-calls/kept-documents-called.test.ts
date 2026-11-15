@@ -1,4 +1,4 @@
-import { firstTryAgainMs, mostInlinePayloadBytes } from '@on.auto/operations/payloads';
+import { mostInlinePayloadBytes } from '@on.auto/operations/payloads';
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -6,7 +6,8 @@ import { aLedger, minute, movedOn, nineOClock } from '../testing/accounts/refuse
 import { waitingAgain } from '../testing/accounts/waiting-workflows.ts';
 import { contentReads } from '../testing/servers/content-reads.ts';
 import { alpha, servingReasoning } from '../testing/servers/reasoning-server.ts';
-import { runIdIn, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
+import { isStarted, runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
+import { until } from '../testing/waiting/until.ts';
 
 const summary = [
   '---',
@@ -57,7 +58,19 @@ async function keepingTheSummary(replies: number, switched: Switched = switchedO
   return { server, clock, content };
 }
 
-async function twoRunsOfTheSummary(server: Awaited<ReturnType<typeof keepingTheSummary>>['server']) {
+type Kept = Awaited<ReturnType<typeof keepingTheSummary>>;
+
+function settledAsTheClockMovesOn(server: Kept['server'], clock: Kept['clock'], path: string) {
+  return until(
+    () => {
+      movedOn(clock, minute);
+      return server.call('GET', path);
+    },
+    ({ body }) => !isStarted(body),
+  );
+}
+
+async function twoRunsOfTheSummary(server: Kept['server']) {
   const runs = [
     await server.call('POST', `${alpha}/definitions/reasoning/summary/run`, { body: { input: {} } }),
     await server.call('POST', `${alpha}/definitions/reasoning/summary/run`, { body: { input: {} } }),
@@ -73,11 +86,7 @@ describe('a workflow whose step calls a function whose document its playbook kee
     const workflow = runIdIn(started.body);
     const [waiting] = await waitingAgain(server, workflow, 1);
     content.fail(false);
-    await new Promise((resolve) => {
-      setTimeout(resolve, firstTryAgainMs);
-    });
-    movedOn(clock, minute);
-    const settled = await settledRun(server, `${alpha}/runs/${workflow}`);
+    const settled = await settledAsTheClockMovesOn(server, clock, `${alpha}/runs/${workflow}`);
 
     expect(waiting?.summary).toContain('The step “ask” waits until what it calls can be read from storage.');
     expect(settled.body).toMatchObject({ status: 'succeeded' });

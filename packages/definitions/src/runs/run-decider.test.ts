@@ -146,10 +146,10 @@ describe('finishing a run', () => {
     expect(runDecider.context(finishing(failed), state)).toStrictEqual({ ...atTheFinish, definitionVersion: 2 });
   });
 
-  it('records the result of another attempt after unavailable or a failure', () => {
-    expect(decided(finishing(succeeded), startedAt(started), finishedAt(unavailable))).toStrictEqual(
-      Result.succeed([succeeded]),
-    );
+  it('records the result of another attempt, started again after unavailable or a failure', () => {
+    expect(
+      decided(finishing(succeeded), startedAt(started), finishedAt(unavailable), startedAt(started)),
+    ).toStrictEqual(Result.succeed([succeeded]));
   });
 
   it('records nothing once the run has a final result, nor for a run that never started', () => {
@@ -164,6 +164,7 @@ describe('finishing a run', () => {
 
 const recordedState = {
   attempt: 1,
+  holderStartedACall: false,
   finishesLater: false,
   deferred: false,
   callsTools: false,
@@ -174,6 +175,7 @@ const recordedState = {
   openModelCalls: new Set(),
   mayHaveChanged: false,
   calledOnlyReadOnly: true,
+  openActingCalls: new Set(),
   answer: null,
   work: [],
   depth: 0,
@@ -200,6 +202,7 @@ describe('a run', () => {
         finished_at: finish.at,
       },
       ...recordedState,
+      fencingToken: 1,
       result: { type: 'run_rejected', data: { rejection: { reason: 'unavailable', detail: 'The model is busy' } } },
     });
   });
@@ -222,6 +225,7 @@ describe('a run started again', () => {
         finished_at: finish.at,
       },
       ...recordedState,
+      fencingToken: 2,
       record: { model: 'x' },
       result: succeeded,
     });
