@@ -70,9 +70,10 @@ const waitingOnALock =
   "SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'";
 
 async function untilOneWaitsOnALock(database: string): Promise<void> {
-  await until(async () => {
-    expect(await queried(database, waitingOnALock)).toEqual([{ waiting: 1 }]);
-  });
+  await until(
+    () => queried(database, waitingOnALock),
+    (rows) => JSON.stringify(rows) === JSON.stringify([{ waiting: 1 }]),
+  );
 }
 
 function settled(appended: Promise<void>): Promise<unknown> {

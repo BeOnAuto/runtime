@@ -3,7 +3,13 @@
   "extends": ["//"],
   "tasks": {
     "test": {
-      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"]
+      "env": ["CI"],
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
+      ],
+      "passThroughEnv": ["LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"]
     }
   }
 }

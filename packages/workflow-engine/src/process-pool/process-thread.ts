@@ -6,6 +6,7 @@ import { Function, Option, Schema } from 'effect';
 import { crashed, stopped, type Interrupted } from '../jobs/job-endings.ts';
 import type { Job, Running } from '../jobs/pool-job.ts';
 import { ReadySchema } from '../jobs/ready-signal.ts';
+import { armedUntil } from '../program-pool/pool-slots.ts';
 import { restingFor, type Served, type Thread, type ThreadHooks } from '../program-pool/pool-threads.ts';
 import { ProcessAnswerSchema, type ProcessMessage } from './process-messages.ts';
 
@@ -116,9 +117,9 @@ function watchOf<Answer>(
     listening.heard = Function.constVoid;
     kill();
   };
-  const timer = setTimeout(() => {
+  const disarm = armedUntil(running.until, () => {
     stopping('deadline');
-  }, running.until - performance.now());
+  });
   const cancel = (): void => {
     stopping('cancelled');
   };
@@ -137,7 +138,7 @@ function watchOf<Answer>(
       },
     },
     done: () => {
-      clearTimeout(timer);
+      disarm();
       running.signal?.removeEventListener('abort', cancel);
     },
   };

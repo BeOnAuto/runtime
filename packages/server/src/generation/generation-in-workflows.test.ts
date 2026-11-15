@@ -27,6 +27,10 @@ const RunsSchema = Schema.Struct({
 
 const decodeRuns = Schema.decodeUnknownSync(RunsSchema);
 
+const decodeHandle = Schema.decodeUnknownSync(
+  Schema.Struct({ record: Schema.optional(Schema.NullOr(Schema.Struct({ handle: Schema.optional(Schema.String) }))) }),
+);
+
 interface Filming {
   readonly server: ReasoningServer;
   readonly clock: MovedClock;
@@ -54,7 +58,12 @@ async function filmed(gateway: GatewayOnTheLoopback, environment: Readonly<Recor
       async () => decodeRuns((await server.call('GET', `${alpha}/runs?type=generation&name=flight`)).body).runs,
       (runs) => runs.length > 0,
     );
-    return String(run?.run_id);
+    const id = String(run?.run_id);
+    await until(
+      async () => decodeHandle((await server.call('GET', `${alpha}/runs/${id}`)).body).record?.handle,
+      (handle) => handle !== undefined,
+    );
+    return id;
   };
   const made: Filming = { server, clock, workflow: runIdIn(started.body), generation };
   return made;

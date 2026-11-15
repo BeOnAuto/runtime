@@ -4,6 +4,7 @@ smoke_backend=${SMOKE_BACKEND:-docker}
 case "$smoke_backend" in docker | node) ;; *) echo "Unknown smoke backend: $smoke_backend" >&2; exit 1 ;; esac
 smoke_helper="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/node-command.ts"
 smoke_pids=()
+smoke_stoppers=()
 
 runtime_command() {
   if [ "$smoke_backend" = docker ]; then
@@ -83,6 +84,8 @@ runtime_cleanup() {
   local pid
   for pid in "${smoke_pids[@]}"; do kill -TERM "$pid" 2>/dev/null || true; done
   for pid in "${smoke_pids[@]}"; do wait "$pid" 2>/dev/null || true; done
+  local stopper
+  for stopper in "${smoke_stoppers[@]}"; do eval "$stopper" || true; done
 }
 smoke_goals="$(printf '%s\n' '- id: kept-going' '  statement: The playbook keeps doing its work.' '  success:' \
   '    label: Runs that ended' '    settles: on_crossing' '    target: { at_least: 0 }' '    passed: Kept going' \

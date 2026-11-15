@@ -8,9 +8,12 @@
         "$TURBO_ROOT$/packages/definitions/src/program-check/type-stripping.ts",
         "$TURBO_ROOT$/docs/**",
         "!$TURBO_ROOT$/docs/.vitepress/cache/**",
-        "!$TURBO_ROOT$/docs/.vitepress/dist/**"
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
-      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"]
+      "env": ["CI"],
+      "passThroughEnv": ["LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"]
     }
   }
 }

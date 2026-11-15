@@ -6,11 +6,13 @@ import {
   streamPrefixOfPlaybook,
   type RecordedPageRequest,
   type RecordedReader,
+  type RunCancelled,
   type StreamReader,
 } from '@on.auto/operations';
 import type { Payload } from '@on.auto/operations/payloads';
 import { Effect, Option, Schema } from 'effect';
 
+import { cancelledBeforeItsStart } from '../runs/run-claims.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
 import { RunEventSchema, type RecordedRunEvent } from '../runs/run-events.ts';
 import { runDetailOf } from '../runs/run-lookup.ts';
@@ -67,6 +69,17 @@ export function recordedRunIn(reader: StreamReader, address: RunStreamAddress): 
   return reader
     .load(`${streamPrefixOfPlaybook(address)}${runStreamNameOf(id)}`, runDecider)
     .pipe(Effect.flatMap(({ state }) => recordedOf(id, state)));
+}
+
+export function cancelledBeforeItsStartIn(
+  reader: StreamReader,
+  address: RunStreamAddress,
+): Effect.Effect<RunCancelled | undefined> {
+  if (!isWellFormed(address)) {
+    return Effect.undefined;
+  }
+  const stream = `${streamPrefixOfPlaybook(address)}${runStreamNameOf(address.id.toLowerCase())}`;
+  return Effect.map(reader.load(stream, runDecider), ({ state }) => cancelledBeforeItsStart(state));
 }
 
 export function recordedRunInPlaybook(reader: StreamReader, id: string): Effect.Effect<RecordedRun | undefined> {

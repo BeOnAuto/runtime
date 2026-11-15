@@ -31,9 +31,15 @@
     },
     "test:shard": {
       "dependsOn": ["transit"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.turbo/platform.json"],
-      "env": ["CI", "VITEST_SHARD", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
-      "outputs": [".vitest/blob/**"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.turbo/platform.json",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
+      ],
+      "env": ["CI", "VITEST_SHARD"],
+      "outputs": [".vitest/blob/**"],
+      "passThroughEnv": ["LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"]
     },
     "//#format:check": {
       "cache": false

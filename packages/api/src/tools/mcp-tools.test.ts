@@ -101,12 +101,13 @@ describe('the definition tools on a playbook endpoint', () => {
   it('create a definition, execute it and read the run back', async () => {
     const { created, ran, run } = await createdRanAndRead();
     const runId = String(ran.structuredContent?.['run_id']);
+    const definitionId = String(created.structuredContent?.['definition_id']);
 
     expect(created.structuredContent).toMatchObject({
       type: 'echo',
       name: 'greeter',
       version: 1,
-      studio: inStudio('echo=greeter&because=created&version=1'),
+      studio: inStudio(`echo=greeter&definition=${definitionId}&because=created&version=1`),
     });
     expect(ran.structuredContent).toMatchObject({
       status: 'succeeded',

@@ -100,6 +100,7 @@ export {
 export { recordedAnswerOf, type RecordedAnswer, type RecordedAnswerFact, type RecordedWork } from './runs/run-state.ts';
 export { RequestRecordSchema, isRequestRecord, takesAnAnswer, type RequestRecord } from './requests/request-record.ts';
 export {
+  cancelledBeforeItsStartIn,
   runCorrelationIn,
   runStartCursorIn,
   runEventOf,

@@ -65,21 +65,24 @@ const decodeLastTry = Schema.decodeUnknownSync(
 
 async function untilTriedAgainPast(database: string, pastMs: number): Promise<void> {
   const tries: number[] = [];
-  await until(async () => {
-    const [{ tried_at: triedAt }] = decodeLastTry(await queried(database, lastLockTryOn(database)));
-    tries.push(...(triedAt === null ? [] : [triedAt]));
-    expect(Math.max(...tries) - Math.min(...tries)).toBeGreaterThan(pastMs);
-  });
+  await until(
+    async () => {
+      const [{ tried_at: triedAt }] = decodeLastTry(await queried(database, lastLockTryOn(database)));
+      tries.push(...(triedAt === null ? [] : [triedAt]));
+      return tries;
+    },
+    (triedAt: readonly number[]) => Math.max(...triedAt) - Math.min(...triedAt) > pastMs,
+  );
 }
 
 async function untilNoneOpen(database: string): Promise<void> {
   const client = new Client({ connectionString: database });
   await client.connect();
   try {
-    await until(async () => {
-      const { rows } = await client.query<Readonly<Record<string, unknown>>>(connectionsTo(database));
-      expect({ afterDisposal: rows }).toEqual({ afterDisposal: [{ open: 0 }] });
-    });
+    await until(
+      async () => (await client.query<Readonly<Record<string, unknown>>>(connectionsTo(database))).rows,
+      (rows: readonly unknown[]) => JSON.stringify(rows) === JSON.stringify([{ open: 0 }]),
+    );
   } finally {
     await client.end();
   }
@@ -194,9 +197,10 @@ describe.skipIf(skipped)(`A ledger whose PostgreSQL database ends its connection
     await Effect.runPromise(ledger.execute('org/acme/tallies', tally, [1]));
 
     const ended = await queried(database, endingConnectionsTo(database));
-    await until(() => {
-      expect(logged).toHaveLength(ended.length);
-    });
+    await until(
+      () => logged.length,
+      (count) => count === ended.length,
+    );
 
     expect(await Effect.runPromise(ledger.load('org/acme/tallies', tally))).toEqual({ state: 1, version: 1 });
     expect(await Effect.runPromise(ledger.execute('org/acme/tallies', tally, [2]))).toEqual({

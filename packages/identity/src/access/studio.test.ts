@@ -53,23 +53,11 @@ function atPage(studio: StudioSettings, page: StudioPage): string {
 const atAlpha = 'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha';
 
 describe('the link that opens Studio on the runtime at a page', () => {
-  it("names the playbook of the page, and a definition's type and name, why the link is given and the version, or its Ledger and a run's id", () => {
+  it("names the playbook of the page, or its Ledger and a run's id", () => {
     expect([
       atPage(elsewhere, { kind: 'playbook', playbook: 'alpha' }),
-      atPage(elsewhere, {
-        kind: 'definition',
-        playbook: 'alpha',
-        type: 'workflow',
-        name: 'weekly-build',
-        version: 1,
-        saved: 'created',
-      }),
       atPage(elsewhere, { kind: 'run', playbook: 'alpha', run: '0190f5c2-run' }),
-    ]).toEqual([
-      atAlpha,
-      `${atAlpha}&workflow=weekly-build&because=created&version=1`,
-      `${atAlpha}&ledger=&run=0190f5c2-run`,
-    ]);
+    ]).toEqual([atAlpha, `${atAlpha}&ledger=&run=0190f5c2-run`]);
   });
 
   it('names the playbook and the goal of a goal page, as Studio opens one goal', () => {
@@ -83,22 +71,55 @@ describe('the link that opens Studio on the runtime at a page', () => {
       `${atAlpha}&goal=paying-customers&per=MAR+41`,
     );
   });
+});
+
+describe("the link that opens Studio on the runtime at a definition's page", () => {
+  const definition = '019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a';
+
+  it('names its type and name, then its id, as Studio names it in its own address, why the link is given and the version', () => {
+    expect(
+      atPage(elsewhere, {
+        kind: 'definition',
+        playbook: 'alpha',
+        type: 'workflow',
+        name: 'weekly-build',
+        definition,
+        version: 1,
+        saved: 'created',
+      }),
+    ).toBe(`${atAlpha}&workflow=weekly-build&definition=${definition}&because=created&version=1`);
+  });
 
   it('names a reasoning function by its type, as every definition is named', () => {
     expect(
       atPage(
         { ...elsewhere, served: true },
-        { kind: 'definition', playbook: 'alpha', type: 'reasoning', name: 'summary', version: 3, saved: 'updated' },
+        {
+          kind: 'definition',
+          playbook: 'alpha',
+          type: 'reasoning',
+          name: 'summary',
+          definition,
+          version: 3,
+          saved: 'updated',
+        },
       ),
     ).toBe(
-      'http://127.0.0.1:5555/studio/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha&reasoning=summary&because=updated&version=3',
+      `http://127.0.0.1:5555/studio/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha&reasoning=summary&definition=${definition}&because=updated&version=3`,
     );
   });
 
-  it("names a definition's version and no reason where the call saved nothing", () => {
+  it("names a definition's id and version and no reason where the call saved nothing", () => {
     expect(
-      atPage(elsewhere, { kind: 'definition', playbook: 'alpha', type: 'reasoning', name: 'summary', version: 2 }),
-    ).toBe(`${atAlpha}&reasoning=summary&version=2`);
+      atPage(elsewhere, {
+        kind: 'definition',
+        playbook: 'alpha',
+        type: 'reasoning',
+        name: 'summary',
+        definition,
+        version: 2,
+      }),
+    ).toBe(`${atAlpha}&reasoning=summary&definition=${definition}&version=2`);
   });
 });
 

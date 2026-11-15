@@ -1,14 +1,17 @@
-import type { RecordedEvent, RecordedPage, StreamWriter } from '@on.auto/operations';
+import { RunCancelled, type RecordedEvent, type RecordedPage, type StreamWriter } from '@on.auto/operations';
 import { Effect, Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  cancelledBeforeItsStartIn,
   playbookBoundSettler,
   recordedRunIn,
   recordedRunInPlaybook,
+  runCanceller,
   runCorrelationIn,
   runEventOf,
   runStartCursorIn,
+  type CancelRequest,
 } from '../index.ts';
 import { asked, askedRun as run, askedRunId, attempted, question } from '../testing/asked-runs.ts';
 import { askedRequest } from '../testing/asking.ts';
@@ -48,6 +51,27 @@ describe('a run as it was recorded', () => {
       await Effect.runPromise(recordedRunIn(ledger.service, { ...run, id: '0199a3c4-7d2e-7c1a-9b3f-000000000000' })),
     ).toBeUndefined();
     expect(runEventOf({ type: 'run_failed', data: { incident: 1 } })).toBeUndefined();
+  });
+});
+
+const deadline: CancelRequest = { kind: 'deadline', reason: 'The step that waited for this run ran out of time' };
+
+describe('a run its caller cancelled before its start, as its stream reads', () => {
+  it('is the cancel every start of it is refused with, and nothing for a run that started, one there is not, or an address no playbook holds', async () => {
+    const { ledger } = await asked();
+    const cancelled = { ...run, id: '0199a3c4-7d2e-7c1a-9b3f-0000000000c2' };
+    await Effect.runPromise(
+      runCanceller(ledger.service)(cancelled, deadline, { causationId: null, correlationId: cancelled.id }),
+    );
+    const readOf = (address: Readonly<typeof run>) =>
+      Effect.runPromise(cancelledBeforeItsStartIn(ledger.service, address));
+
+    expect([
+      await readOf({ ...cancelled, id: cancelled.id.toUpperCase() }),
+      await readOf(run),
+      await readOf({ ...run, id: '0199a3c4-7d2e-7c1a-9b3f-000000000000' }),
+      await readOf({ ...run, id: 'not-a-run' }),
+    ]).toEqual([new RunCancelled({ detail: deadline.reason, kind: 'deadline' }), undefined, undefined, undefined]);
   });
 });
 

@@ -19,8 +19,6 @@ interface Ran {
   readonly pid: number;
 }
 
-const timerSlackMs = 2;
-
 const fake = fakeProcesses();
 
 const pools: ProcessPool[] = [];
@@ -76,7 +74,7 @@ describe('the processes of a pool and its permits', () => {
     const held = await Promise.all(holding);
 
     expect(third).toMatchObject({ ended: 'busy' });
-    expect(third.milliseconds).toBeGreaterThanOrEqual(300 - timerSlackMs);
+    expect(third.milliseconds).toBeGreaterThanOrEqual(300);
     expect(held.map(({ ended }) => ended)).toEqual(['answered', 'answered']);
   });
 
@@ -167,7 +165,7 @@ describe('the deadline of a job of a process', () => {
     const after = await echoed(pool, 'a');
 
     expect(outcome).toMatchObject({ ended: 'timed_out' });
-    expect(outcome.milliseconds).toBeGreaterThanOrEqual(1000 - timerSlackMs);
+    expect(outcome.milliseconds).toBeGreaterThanOrEqual(1000);
     expect([after.jobs, after.pid === warm.pid, isAlive(warm.pid)]).toEqual([1, false, false]);
   });
 });

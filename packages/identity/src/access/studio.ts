@@ -53,7 +53,13 @@ function pageParametersOf(page: StudioPage | undefined): Parameter[] {
   }
   const playbook: Parameter = ['playbook', page.playbook];
   if (page.kind === 'definition') {
-    return [playbook, [page.type, page.name], ...becauseOf(page.saved), ['version', String(page.version)]];
+    return [
+      playbook,
+      [page.type, page.name],
+      ['definition', page.definition],
+      ...becauseOf(page.saved),
+      ['version', String(page.version)],
+    ];
   }
   if (page.kind === 'comment') {
     return [playbook, ...placeParametersOf(page.on), ['comment', page.comment]];

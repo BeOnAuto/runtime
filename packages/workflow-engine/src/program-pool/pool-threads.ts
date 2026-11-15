@@ -9,6 +9,7 @@ import type { PoolSettings } from '../jobs/pool-contract.ts';
 import type { Job, Running } from '../jobs/pool-job.ts';
 import { ReadySchema } from '../jobs/ready-signal.ts';
 import { handedData } from './handed-files.ts';
+import { armedUntil } from './pool-slots.ts';
 
 export const workerStackMegabytes = 64;
 
@@ -97,9 +98,9 @@ function watchOf<Answer>(job: number, work: Job<Answer>, running: Running, closi
   const ended = (ending: Ending<Answer>): void => {
     resolve({ ending, keep: false });
   };
-  const timer = setTimeout(() => {
+  const disarm = armedUntil(running.until, () => {
     ended(stopped('deadline'));
-  }, running.until - performance.now());
+  });
   const cancel = (): void => {
     ended(stopped('cancelled'));
   };
@@ -118,7 +119,7 @@ function watchOf<Answer>(job: number, work: Job<Answer>, running: Running, closi
       },
     },
     done: () => {
-      clearTimeout(timer);
+      disarm();
       running.signal?.removeEventListener('abort', cancel);
     },
   };
@@ -126,9 +127,9 @@ function watchOf<Answer>(job: number, work: Job<Answer>, running: Running, closi
 
 async function startWithin(loaded: Promise<boolean>, running: Running): Promise<Start> {
   const { promise, resolve } = Promise.withResolvers<Start>();
-  const timer = setTimeout(() => {
+  const disarm = armedUntil(running.until, () => {
     resolve(stopped('busy'));
-  }, running.until - performance.now());
+  });
   const cancel = (): void => {
     resolve(stopped('cancelled'));
   };
@@ -138,7 +139,7 @@ async function startWithin(loaded: Promise<boolean>, running: Running): Promise<
     return ready;
   });
   const start = await promise;
-  clearTimeout(timer);
+  disarm();
   running.signal?.removeEventListener('abort', cancel);
   return start;
 }

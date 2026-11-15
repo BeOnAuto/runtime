@@ -4,6 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { until } from '../testing/until.ts';
 import { postgresqlSecretRows, type SecretConnections } from './postgresql-secret-rows.ts';
 
+const lostConnectionWarning =
+  '{"message":"A connection to the PostgreSQL database of the ledger was lost; the ledger opens another when it needs one","level":"WARN"';
+
 interface Asked {
   readonly text: string;
   readonly values: readonly unknown[];
@@ -109,13 +112,11 @@ describe('the rows of the secret store on PostgreSQL, without a database', () =>
 
     fake.lose(new Error('terminating connection due to administrator command'));
 
-    await until(() => {
-      expect(logged).toEqual([
-        expect.stringContaining(
-          '{"message":"A connection to the PostgreSQL database of the ledger was lost; the ledger opens another when it needs one","level":"WARN"',
-        ),
-      ]);
-    });
+    await until(
+      () => logged.length,
+      (count) => count > 0,
+    );
+    expect(logged).toEqual([expect.stringContaining(lostConnectionWarning)]);
     expect(logged[0]).toContain('"annotations":{"error":"terminating connection due to administrator command"}');
   });
 });

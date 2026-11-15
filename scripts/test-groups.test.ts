@@ -32,7 +32,12 @@ const testEnvironmentOf = Schema.decodeUnknownSync(
   Schema.fromJsonString(
     Schema.Struct({
       tasks: Schema.Struct({
-        test: Schema.optionalKey(Schema.Struct({ env: Schema.optionalKey(Schema.Array(Schema.String)) })),
+        test: Schema.optionalKey(
+          Schema.Struct({
+            env: Schema.optionalKey(Schema.Array(Schema.String)),
+            passThroughEnv: Schema.optionalKey(Schema.Array(Schema.String)),
+          }),
+        ),
       }),
     }),
   ),
@@ -126,19 +131,26 @@ const groups = testGroupsOf(workflow).jobs.test.strategy.matrix.include.map(
   ({ packages, shard, services }): TestGroup => ({ names: packages.map((name) => `${scope}${name}`), shard, services }),
 );
 
-const defaultVariables = testEnvironmentOf(textOf('turbo.json')).tasks.test?.env ?? [];
+function namesAServer(variable: string): boolean {
+  return variable.endsWith('_URL');
+}
+
+function variablesReachingTheTestsOf(path: string): readonly string[] | undefined {
+  const task = testEnvironmentOf(textOf(path)).tasks.test;
+  return task === undefined
+    ? undefined
+    : [...(task.env ?? []), ...(task.passThroughEnv ?? [])].filter((variable) => namesAServer(variable));
+}
+
+const defaultVariables = variablesReachingTheTestsOf('turbo.json') ?? [];
 
 function variablesFor({ folder }: TestedPackage): readonly string[] {
   const path = `${folder}/turbo.json`;
-  return existsSync(join(root, path))
-    ? (testEnvironmentOf(textOf(path)).tasks.test?.env ?? defaultVariables)
-    : defaultVariables;
+  return existsSync(join(root, path)) ? (variablesReachingTheTestsOf(path) ?? defaultVariables) : defaultVariables;
 }
 
 const variablesOfTheTests = [
-  ...new Set(
-    [...defaultVariables, ...testedPackages.flatMap((tested) => variablesFor(tested))].filter((name) => name !== 'CI'),
-  ),
+  ...new Set([...defaultVariables, ...testedPackages.flatMap((tested) => variablesFor(tested))]),
 ];
 
 const jobs = stepsOf(workflow).jobs;

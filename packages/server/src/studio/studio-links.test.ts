@@ -41,18 +41,21 @@ function studioOf(answer: unknown): string | undefined {
   return Option.getOrUndefined(Option.map(studioIn(answer), ({ studio }) => studio));
 }
 
-function pagesOf(studioWithServer: string): readonly string[] {
+const definitionIdOf = Schema.decodeUnknownSync(Schema.Struct({ definition_id: Schema.String }));
+
+function pagesOf(studioWithServer: string, saved: unknown): readonly string[] {
   const playbook = `${studioWithServer}&src=agent&playbook=alpha`;
+  const summary = `${playbook}&reasoning=summary&definition=${definitionIdOf(saved).definition_id}`;
   return [
     playbook,
-    `${playbook}&reasoning=summary&because=created&version=1`,
-    `${playbook}&reasoning=summary&because=updated&version=2`,
+    `${summary}&because=created&version=1`,
+    `${summary}&because=updated&version=2`,
     `${playbook}&ledger=&run=${runId}`,
   ];
 }
 
 describe('the links to Studio in what the runtime answers over HTTP', () => {
-  it('are the pages of the playbook created, of its function as it is saved and of its run, in the Studio the runtime serves', async () => {
+  it('are the pages of the playbook created, of its function by its id as it is saved and of its run, in the Studio the runtime serves', async () => {
     server = await servingReasoning([answers(textResult('Profits rose.'))]);
     const playbook = '/v1/orgs/local/playbooks/alpha';
 
@@ -64,7 +67,7 @@ describe('the links to Studio in what the runtime answers over HTTP', () => {
     ];
 
     expect(answered.map(({ body }) => studioOf(body))).toEqual(
-      pagesOf(`${server.origin}/studio/?server=${encodeURIComponent(server.origin)}`),
+      pagesOf(`${server.origin}/studio/?server=${encodeURIComponent(server.origin)}`, answered[1]?.body),
     );
   });
 });
@@ -88,7 +91,7 @@ describe('the links to Studio in what the runtime answers over MCP', () => {
     );
 
     expect(answered.map(({ structuredContent }) => studioOf(structuredContent))).toEqual(
-      pagesOf(`https://studio.on.auto/?server=${encodeURIComponent(server.origin)}`),
+      pagesOf(`https://studio.on.auto/?server=${encodeURIComponent(server.origin)}`, answered[1]?.structuredContent),
     );
   });
 });

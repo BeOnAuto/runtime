@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { poolSlots } from './pool-slots.ts';
 
@@ -30,7 +30,29 @@ describe('the slots of a pool', () => {
     const started = performance.now();
 
     expect(await slots.admit(inMs(20))).toBe('busy');
-    expect(performance.now() - started).toBeGreaterThanOrEqual(15);
+    expect(performance.now() - started).toBeGreaterThanOrEqual(20);
+  });
+
+  it('turn away a run no sooner than its deadline, though its timer fires before it', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const clock = { now: 1000 };
+    vi.spyOn(performance, 'now').mockImplementation(() => clock.now);
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+    });
+    const slots = poolSlots(1);
+    await slots.admit(2000);
+    const settled: string[] = [];
+    const turnedAway = slots.admit(1050).then((admission) => settled.push(admission));
+
+    await vi.advanceTimersByTimeAsync(50);
+    const whileEarly = [...settled];
+    clock.now = 1050;
+    await vi.advanceTimersByTimeAsync(50);
+    await turnedAway;
+
+    expect([whileEarly, settled]).toEqual([[], ['busy']]);
   });
 });
 

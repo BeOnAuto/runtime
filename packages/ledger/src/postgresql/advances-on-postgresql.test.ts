@@ -49,9 +49,10 @@ const waitingOnALock =
   "SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'";
 
 async function untilWritesWaitOnALock(database: string, waiting = 1): Promise<void> {
-  await until(async () => {
-    expect(await queried(database, waitingOnALock)).toEqual([{ waiting }]);
-  });
+  await until(
+    () => queried(database, waitingOnALock),
+    (rows) => JSON.stringify(rows) === JSON.stringify([{ waiting }]),
+  );
 }
 
 describe.skipIf(skipped)(`A fold beside an advance of the same row on PostgreSQL${notice}`, () => {

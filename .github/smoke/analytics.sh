@@ -14,6 +14,7 @@ export API_KEYS
 runtime_start "$container" "$volume" DO_NOT_TRACK=1 API_KEYS
 for attempt in $(seq 1 30); do
   curl --silent --fail --max-time 5 http://127.0.0.1:$port/health > /dev/null && break
+  test "$attempt" -lt 30
   sleep 1
 done
 call() {

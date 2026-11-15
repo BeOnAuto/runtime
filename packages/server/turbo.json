@@ -10,10 +10,17 @@
         "$TURBO_ROOT$/auto-runtime.schema.json",
         "$TURBO_ROOT$/docs/**",
         "!$TURBO_ROOT$/docs/.vitepress/cache/**",
-        "!$TURBO_ROOT$/docs/.vitepress/dist/**"
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
-      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
-      "passThroughEnv": ["CI_SERVER_WORKERS", "UV_THREADPOOL_SIZE"]
+      "env": ["CI"],
+      "passThroughEnv": [
+        "LEDGER_TEST_POSTGRESQL_URL",
+        "CONTENT_TEST_OBJECT_STORE_URL",
+        "CI_SERVER_WORKERS",
+        "UV_THREADPOOL_SIZE"
+      ]
     },
     "test:shard": {
       "inputs": [
@@ -51,10 +58,17 @@
         "![m-r]*.test.ts",
         "!npm/[s-z]*.test.ts",
         "!npm/[s-z]*/**/*.test.ts",
-        "![s-z]*.test.ts"
+        "![s-z]*.test.ts",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
-      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
-      "passThroughEnv": ["CI_SERVER_WORKERS", "UV_THREADPOOL_SIZE"],
+      "env": ["CI"],
+      "passThroughEnv": [
+        "LEDGER_TEST_POSTGRESQL_URL",
+        "CONTENT_TEST_OBJECT_STORE_URL",
+        "CI_SERVER_WORKERS",
+        "UV_THREADPOOL_SIZE"
+      ],
       "outputs": [".vitest/groups/a-c/report.json"]
     },
     "test:d-l": {
@@ -82,10 +96,17 @@
         "![m-r]*.test.ts",
         "!npm/[s-z]*.test.ts",
         "!npm/[s-z]*/**/*.test.ts",
-        "![s-z]*.test.ts"
+        "![s-z]*.test.ts",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
-      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
-      "passThroughEnv": ["CI_SERVER_WORKERS", "UV_THREADPOOL_SIZE"],
+      "env": ["CI"],
+      "passThroughEnv": [
+        "LEDGER_TEST_POSTGRESQL_URL",
+        "CONTENT_TEST_OBJECT_STORE_URL",
+        "CI_SERVER_WORKERS",
+        "UV_THREADPOOL_SIZE"
+      ],
       "outputs": [".vitest/groups/d-l/report.json"]
     },
     "test:m-r": {
@@ -113,10 +134,17 @@
         "![d-l]*.test.ts",
         "!npm/[s-z]*.test.ts",
         "!npm/[s-z]*/**/*.test.ts",
-        "![s-z]*.test.ts"
+        "![s-z]*.test.ts",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
-      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
-      "passThroughEnv": ["CI_SERVER_WORKERS", "UV_THREADPOOL_SIZE"],
+      "env": ["CI"],
+      "passThroughEnv": [
+        "LEDGER_TEST_POSTGRESQL_URL",
+        "CONTENT_TEST_OBJECT_STORE_URL",
+        "CI_SERVER_WORKERS",
+        "UV_THREADPOOL_SIZE"
+      ],
       "outputs": [".vitest/groups/m-r/report.json"]
     },
     "test:s-z": {
@@ -144,10 +172,17 @@
         "![d-l]*.test.ts",
         "!npm/[m-r]*.test.ts",
         "!npm/[m-r]*/**/*.test.ts",
-        "![m-r]*.test.ts"
+        "![m-r]*.test.ts",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
-      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
-      "passThroughEnv": ["CI_SERVER_WORKERS", "UV_THREADPOOL_SIZE"],
+      "env": ["CI"],
+      "passThroughEnv": [
+        "LEDGER_TEST_POSTGRESQL_URL",
+        "CONTENT_TEST_OBJECT_STORE_URL",
+        "CI_SERVER_WORKERS",
+        "UV_THREADPOOL_SIZE"
+      ],
       "outputs": [".vitest/groups/s-z/report.json"]
     },
     "test:coverage": {
@@ -160,10 +195,13 @@
         "$TURBO_ROOT$/auto-runtime.schema.json",
         "$TURBO_ROOT$/docs/**",
         "!$TURBO_ROOT$/docs/.vitepress/cache/**",
-        "!$TURBO_ROOT$/docs/.vitepress/dist/**"
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
-      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
-      "outputs": ["coverage/**"]
+      "env": ["CI"],
+      "outputs": ["coverage/**"],
+      "passThroughEnv": ["LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"]
     },
     "ci": {
       "dependsOn": ["lint", "typecheck", "test:coverage"]

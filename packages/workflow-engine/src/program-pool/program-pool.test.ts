@@ -9,8 +9,6 @@ import { isWatched, longerThanTheTestMs, until } from '../pool-testing/waiting.t
 import { runMemoryBytes, unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
 import { programPool } from './program-pool.ts';
 
-const timerSlackMs = 2;
-
 const pools: ProgramPool[] = [];
 
 const blocking = moduleOfSource('while (true) {}');
@@ -163,7 +161,7 @@ describe('the deadline and the memory of a worker', () => {
     const ended = await poolOf({ worker: blocking }).run(request('.', null, { deadlineMs: 500 }));
 
     expect(ended).toMatchObject({ ran: 'stopped', because: 'deadline' });
-    expect(ended.milliseconds).toBeGreaterThanOrEqual(500 - timerSlackMs);
+    expect(ended.milliseconds).toBeGreaterThanOrEqual(500);
   });
 
   it('stop a worker whose own heap runs out', async () => {
@@ -197,7 +195,7 @@ describe('the workers of a pool', () => {
     const fifth = await pool.run(request('.', null, { deadlineMs: 300 }));
 
     expect(fifth).toMatchObject({ ran: 'stopped', because: 'busy' });
-    expect(fifth.milliseconds).toBeGreaterThanOrEqual(300 - timerSlackMs);
+    expect(fifth.milliseconds).toBeGreaterThanOrEqual(300);
     await pool.close();
     expect(await Promise.all(four)).toMatchObject(
       Array.from({ length: 4 }, () => ({ ran: 'stopped', because: 'closing' })),

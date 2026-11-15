@@ -15,14 +15,30 @@ interface Queue {
   readonly leave: (waiter: Waiter) => void;
 }
 
+export function armedUntil(until: number, due: () => void): () => void {
+  const timer: { id?: ReturnType<typeof setTimeout> } = {};
+  const checked = () => {
+    const left = until - performance.now();
+    if (left > 0) {
+      timer.id = setTimeout(checked, left);
+    } else {
+      due();
+    }
+  };
+  timer.id = setTimeout(checked, until - performance.now());
+  return () => {
+    clearTimeout(timer.id);
+  };
+}
+
 function waiting(queue: Queue, until: number, signal: Readonly<AbortSignal> | undefined): Promise<Admission> {
   const { promise, resolve } = Promise.withResolvers<Admission>();
-  const timer = setTimeout(() => {
+  const disarm = armedUntil(until, () => {
     waiter('busy');
-  }, until - performance.now());
+  });
   const waiter: Waiter = (admission) => {
     queue.leave(waiter);
-    clearTimeout(timer);
+    disarm();
     resolve(admission);
   };
   signal?.addEventListener(

@@ -80,16 +80,17 @@ function settling(appended: Promise<void>): Settling {
 }
 
 async function untilWaitingOnALock(database: string, waiting: number): Promise<void> {
-  await until(async () => {
-    expect(await queried(database, waitingOnALock)).toEqual([{ waiting }]);
-  });
+  await until(
+    () => queried(database, waitingOnALock),
+    (rows) => JSON.stringify(rows) === JSON.stringify([{ waiting }]),
+  );
 }
 
 async function untilKeptOrWaitingOnALock(database: string, appending: Settling, waiting: number): Promise<void> {
-  await until(async () => {
-    const [counted] = await queried(database, waitingOnALock);
-    expect(appending.settled() ? { waiting } : counted).toEqual({ waiting });
-  });
+  await until(
+    () => queried(database, waitingOnALock),
+    (rows) => appending.settled() || JSON.stringify(rows) === JSON.stringify([{ waiting }]),
+  );
 }
 
 const [d1, d2] = ['1'.repeat(64), '2'.repeat(64)] as const;

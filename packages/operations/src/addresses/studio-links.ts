@@ -10,6 +10,7 @@ export type StudioPage =
       readonly playbook: string;
       readonly type: string;
       readonly name: string;
+      readonly definition: string;
       readonly version: number;
       readonly saved?: DefinitionSaved;
     }

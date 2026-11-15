@@ -44,13 +44,14 @@ export function withDefinitionPageInStudio(
   definition: Definition,
   saved: DefinitionSaved | undefined,
 ): Effect.Effect<Definition & LinkedInStudio, never, PlaybookContext> {
-  const { type, name, version } = definition;
+  const { type, name, definition_id: id, version } = definition;
   return PlaybookContext.use(({ playbook }) =>
     withStudioLink(definition, {
       kind: 'definition',
       playbook,
       type,
       name,
+      definition: id,
       version,
       ...(saved === undefined ? {} : { saved }),
     }),

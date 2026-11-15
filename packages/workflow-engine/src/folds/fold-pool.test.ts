@@ -107,7 +107,7 @@ describe('a page of folds the pool stops', () => {
     );
 
     expect(outcome).toMatchObject({ ran: 'stopped', because: 'deadline', progress: { event: 1, view: 0 } });
-    expect(outcome.milliseconds).toBeGreaterThanOrEqual(500 - timerSlackMs);
+    expect(outcome.milliseconds).toBeGreaterThanOrEqual(500);
   });
 
   it('names the fold that took more memory than its worker has', async () => {

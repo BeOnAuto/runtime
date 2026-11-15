@@ -77,14 +77,14 @@ async function setsOf(ledger: Ledger['Service']): Promise<readonly string[]> {
 const checkpoint = 'SELECT CAST(folded_through AS INTEGER) AS folded_through FROM labelled_checkpoints_1';
 
 async function untilAnAppendWaitsOnALock(database: string): Promise<void> {
-  await until(async () => {
-    expect(
-      await queried(
+  await until(
+    () =>
+      queried(
         database,
         "SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'",
       ),
-    ).toEqual([{ waiting: 1 }]);
-  });
+    (rows) => JSON.stringify(rows) === JSON.stringify([{ waiting: 1 }]),
+  );
 }
 
 describe.skipIf(skipped)(`An append that meets a catch-up of its stream on PostgreSQL${notice}`, () => {

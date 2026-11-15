@@ -80,12 +80,15 @@ function lockOf(name: string): string {
 
 async function untilOneWaitsOnALock(database: string): Promise<void> {
   const watching = await connected(database);
-  await until(async () => {
-    const { rows } = await watching.query(
-      "SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND datname = current_database()",
-    );
-    return Schema.decodeUnknownSync(Schema.Tuple([Schema.Struct({ waiting: Schema.Number })]))(rows)[0].waiting > 0;
-  });
+  await until(
+    async () => {
+      const { rows } = await watching.query(
+        "SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND datname = current_database()",
+      );
+      return Schema.decodeUnknownSync(Schema.Tuple([Schema.Struct({ waiting: Schema.Number })]))(rows)[0].waiting;
+    },
+    (waiting) => waiting > 0,
+  );
 }
 
 describe.skipIf(skipped)(`The names of definitions on PostgreSQL${notice}`, () => {
