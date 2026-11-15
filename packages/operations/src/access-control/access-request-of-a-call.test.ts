@@ -6,6 +6,7 @@ import {
   allPermissions,
   defineCommand,
   defineQuery,
+  noLineage,
   playbookCallerOf,
   type AccessRequest,
   type CallerIdentity,
@@ -170,7 +171,7 @@ describe('the principal of the question', () => {
 });
 
 describe('how the question says a call arrived, and what it asks about', () => {
-  it('says a call a run makes arrived through the run, whether a step of a workflow or a trigger made it', async () => {
+  it('says a call a run makes arrived through the run, whether a step of a workflow, a trigger or the run itself made it', async () => {
     const byAStep: PlaybookRequest = {
       ...onAlpha(ada, { name: 'anvil' }),
       calledBy: { run_id: 'run-1', reference: 'steps/0', run: 1 },
@@ -179,15 +180,20 @@ describe('how the question says a call arrived, and what it asks about', () => {
       ...onAlpha(ada, { name: 'anvil' }),
       trigger: { kind: 'cron', reference: 'daily' },
     };
+    const byItsRun: PlaybookRequest = {
+      ...onAlpha(ada, { name: 'anvil' }),
+      lineage: { causationId: null, correlationId: 'run-2' },
+    };
+    const ofNoRun: PlaybookRequest = { ...onAlpha(ada, { name: 'anvil' }), lineage: noLineage };
 
     const asked = await Promise.all(
-      [byAStep, byATrigger].map(async (request) => {
+      [byAStep, byATrigger, byItsRun, ofNoRun, onAlpha(ada, { name: 'anvil' })].map(async (request) => {
         const [question] = await askedFor((dispatcher) => dispatcher.dispatchToPlaybook(getNote.registration, request));
         return question?.context.via;
       }),
     );
 
-    expect(asked).toEqual(['run', 'run']);
+    expect(asked).toEqual(['run', 'run', 'run', 'studio', 'studio']);
   });
 
   it('asks about the playbook an org operation names, and about the org where it names none or targets none', async () => {

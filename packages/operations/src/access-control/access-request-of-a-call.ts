@@ -28,8 +28,14 @@ function principalOf({ id }: Pick<CallerIdentity, 'id'>): PrincipalReference | u
   return id.includes(keyIdsTakeNo) ? undefined : { type: 'key', id };
 }
 
+function namesItsRun({ lineage }: PlaybookRequest): boolean {
+  return lineage !== undefined && lineage.correlationId !== null;
+}
+
 function isMadeByARun(request: OrgRequest | PlaybookRequest): boolean {
-  return 'playbook' in request && (request.calledBy !== undefined || request.trigger !== undefined);
+  return (
+    'playbook' in request && (namesItsRun(request) || request.calledBy !== undefined || request.trigger !== undefined)
+  );
 }
 
 const viaOfPrincipal: Readonly<Record<Exclude<PrincipalReference['type'], 'person'>, ArrivedVia>> = {
