@@ -213,6 +213,34 @@ async function summarisedAfterRestore({ harness, seen }: Together): Promise<read
     .filter((reference) => reference.includes('/summaries/'));
 }
 
+const { window: _dailyWindow, ...summarisedWithNoWindow } = summarised;
+
+async function retiredAt(at: string, goals: Parameters<ClockHarness['goalsSaved']>[0]) {
+  const seen = startsAnswering(() => 'started');
+  const harness = clockHarnessOf('2026-11-08T07:00:00.000Z', undefined, dueWorksIn([0, 1, 2], seen));
+  await harness.goalsSaved(goals, at);
+  harness.statusIs('retired');
+  const saved = harness.wakes.length;
+  await harness.until('2026-11-12T00:00:00.000Z');
+  return { wakes: harness.wakes.slice(saved).map(({ at: woke }) => new Date(woke).toISOString()), starts: seen.starts };
+}
+
+describe('the clock, the notices and the summaries of a playbook retired around a UTC midnight', () => {
+  it.each([
+    ['a millisecond before it', '2026-11-09T23:59:59.999Z', '2026-11-10T00:00:00.000Z'],
+    ['at it', '2026-11-10T00:00:00.000Z', '2026-11-10T01:00:00.000Z'],
+    ['a millisecond after it', '2026-11-10T00:00:00.001Z', '2026-11-10T01:00:00.000Z'],
+  ])(
+    'wake it, saved and retired %s, when its hourly summary is next due and then at each UTC midnight, with a daily window or none',
+    async (_named, at, summaryDue) => {
+      const retired = await Promise.all([retiredAt(at, [summarised]), retiredAt(at, [summarisedWithNoWindow])]);
+      const woken = { wakes: [summaryDue, '2026-11-11T00:00:00.000Z', '2026-11-12T00:00:00.000Z'], starts: [] };
+
+      expect(retired).toEqual([woken, woken]);
+    },
+  );
+});
+
 describe('the clock, the notices and the summaries of a retired playbook whose goal has no daily boundary', () => {
   it.each(['week', 'month', 'none'] as const)(
     'share one daily time with a %s window, waking it once a day at the UTC midnight, and summarise at the first wake after a restore',

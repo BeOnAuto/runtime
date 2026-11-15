@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { makeProviderOffering } from '../index.ts';
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
 import type { RuntimeAccess } from '../policy/policy-rules.ts';
-import { ada, developerTokenSet, harnessPages } from '../testing/harness.ts';
+import { connectionServicesWith, ada, developerTokenSet, harnessPages } from '../testing/harness.ts';
 
 const acmeKey: CallerIdentity = { ...ada, id: 'acme-key' };
 
@@ -28,14 +28,16 @@ function offeredBy(access: RuntimeAccess, settings: RuntimeSettings = {}) {
     providers = fixtureProviders,
     consent = consentClientWith(),
   } = settings;
-  const offering = makeProviderOffering({
-    providers,
-    providerValues,
-    policy: connectionPolicyOf(policy),
-    access,
-    pages: harnessPages,
-    consent,
-  });
+  const offering = makeProviderOffering(
+    connectionServicesWith({
+      providers,
+      providerValues,
+      policy: connectionPolicyOf(policy),
+      access,
+      pages: harnessPages,
+      consent,
+    }),
+  );
   return (caller: CallerIdentity) => Effect.runSync(offering(caller));
 }
 

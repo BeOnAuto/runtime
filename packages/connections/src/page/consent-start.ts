@@ -46,6 +46,8 @@ export function defineStartConsent(services: ConsentServices) {
     description: startDescription,
     route: { method: 'POST', path: '/connections/{id}/consent' },
     body: { kind: 'json' },
+    reachesOutside: true,
+    mayChangeOutside: true,
     successStatus: 201,
     inputSchema: LinkWithPlaybooksSchema,
     outputSchema: StartedSchema,

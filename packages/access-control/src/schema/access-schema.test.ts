@@ -31,7 +31,7 @@ describe('the schema of the access control', () => {
         '};',
         'action "playbook/search" in ["playbook:read"] appliesTo {',
         '  principal: [Person, Key, LocalDeveloper, Playbook],',
-        '  resource: [Playbook, Definition],',
+        '  resource: [Org, Playbook, Definition],',
         '  context: RequestContext,',
         '};',
       ].join('\n'),

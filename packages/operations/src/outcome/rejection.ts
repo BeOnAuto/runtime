@@ -1,6 +1,6 @@
 import type { CancelledKind, RunCancelled } from './cancelled-run.ts';
 import type { Conflict, ConflictKind } from './conflict.ts';
-import type { Forbidden } from './forbidden.ts';
+import type { Forbidden, ForbiddenKind } from './forbidden.ts';
 import type { InvalidInput, InvalidInputKind } from './invalid-input.ts';
 import type { NotFound } from './not-found.ts';
 import type { RunUnanswered, UnansweredKind } from './unanswered-run.ts';
@@ -10,6 +10,12 @@ type AnyRejection = NotFound | Conflict | Unavailable | InvalidInput | RunCancel
 
 export type DeclarableReason = AnyRejection['_tag'];
 
-export type RejectionKind = InvalidInputKind | ConflictKind | UnavailableKind | CancelledKind | UnansweredKind;
+export type RejectionKind =
+  | InvalidInputKind
+  | ForbiddenKind
+  | ConflictKind
+  | UnavailableKind
+  | CancelledKind
+  | UnansweredKind;
 
 export type Rejection<R extends DeclarableReason = DeclarableReason> = Extract<AnyRejection, { readonly _tag: R }>;

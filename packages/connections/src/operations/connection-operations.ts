@@ -17,8 +17,9 @@ interface OrgOperation {
 export type ConnectionOperations = readonly OrgOperation[];
 
 export function makeConnectionOperations(services: ConnectionServices): ConnectionOperations {
+  const adding = defineAddConnection(services);
   return [
-    defineAddConnection(services),
+    adding,
     defineListConnections(services),
     defineGetConnection(services),
     defineReconnectConnection(services),
@@ -26,6 +27,6 @@ export function makeConnectionOperations(services: ConnectionServices): Connecti
     defineSetConnectionPlaybooks(services),
     ...signingOperationsOf(services),
     ...pageOperationsOf(services),
-    defineListProviders(services),
+    defineListProviders(services, adding.registration),
   ];
 }

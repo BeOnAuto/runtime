@@ -14,10 +14,7 @@ export function actionIdOf({ scope, name }: ActionReference): string {
 }
 
 function resourcesOf({ scope, targetsPlaybook }: DeclaredAction): string {
-  if (scope === 'playbook') {
-    return '[Playbook, Definition]';
-  }
-  return targetsPlaybook ? '[Org, Playbook, Definition]' : '[Org]';
+  return scope === 'playbook' || targetsPlaybook ? '[Org, Playbook, Definition]' : '[Org]';
 }
 
 function quoted(text: string): string {

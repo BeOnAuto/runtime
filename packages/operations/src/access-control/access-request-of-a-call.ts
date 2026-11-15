@@ -2,6 +2,7 @@ import { Predicate } from 'effect';
 
 import { playbookFieldOf } from '../authorization/authorization.ts';
 import { localDeveloperId, playbookCallerPrefix, signedInPersonPrefix, type CallerIdentity } from '../caller/caller.ts';
+import type { PlaybookAccess } from '../caller/playbook-access.ts';
 import type { Runnable } from '../definition/registration.ts';
 import type { OrgRequest, PlaybookRequest } from '../dispatch/request.ts';
 import type {
@@ -63,6 +64,7 @@ function contextOf(
       reachesOutside: registration.reachesOutside,
       mayChangeOutside: registration.mayChangeOutside,
       irreversible: registration.irreversible,
+      permissionsManagement: registration.permissionsManagement,
     },
   };
 }
@@ -105,4 +107,31 @@ export function accessRequestOfPlaybookCall(
   request: PlaybookRequest,
 ): AccessRequest | undefined {
   return requestOn(registration, request, { type: 'playbook', id: request.playbook, org: request.org });
+}
+
+export interface AskedOfACaller {
+  readonly caller: CallerIdentity;
+  readonly org: string;
+  readonly playbook?: string;
+}
+
+const whicheverPlaybookItNames: PlaybookAccess = '*';
+
+function takesAPlaybook(registration: Runnable): boolean {
+  return registration.scope === 'playbook' || registration.targetsPlaybook;
+}
+
+export function accessRequestOfAsking(
+  registration: Runnable,
+  { caller, org, playbook }: AskedOfACaller,
+): AccessRequest | undefined {
+  if (playbook === undefined || !takesAPlaybook(registration)) {
+    const listing = { ...caller, playbooks: whicheverPlaybookItNames };
+    return requestOn(registration, { caller: listing, org, input: {}, encoding: 'json' }, { type: 'org', id: org });
+  }
+  return requestOn(
+    registration,
+    { caller, org, input: { playbook }, encoding: 'json' },
+    { type: 'playbook', id: playbook, org },
+  );
 }

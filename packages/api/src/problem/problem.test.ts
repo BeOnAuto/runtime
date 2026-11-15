@@ -54,6 +54,11 @@ describe('problemOf', () => {
       type: 'https://on.auto/problems/unavailable',
       title: 'Unavailable',
     });
+    expect(problemOf('forbidden', 'Not for this role', { kind: 'permission_denied' })).toMatchObject({
+      type: 'https://on.auto/problems/forbidden',
+      title: 'Forbidden',
+      status: 403,
+    });
   });
 
   it('carries the issues that point at invalid input', () => {

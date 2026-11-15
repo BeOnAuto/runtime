@@ -204,6 +204,8 @@ The release that brings ledger layout 23 gives every workflow and function an id
 
 The release that keeps who holds which role ([Roles](../reference/http.md#roles)) adds a table of the roles as it first starts. An earlier release still opens the ledger while no role has been given, taken away or imported in it: the table is not its own, and it leaves the table as it is. Once a role is recorded, no earlier release opens the ledger: it refuses the facts `role_assigned` and `role_unassigned` as an unknown fact type, naming them, and leaves the ledger as it was. Going back then means restoring the backup taken before the upgrade.
 
+The release that can refuse a call for a person's role adds the kind `permission_denied` to the words a refusal may carry ([Responses and errors](../reference/http.md#responses-and-errors)). Such a call is refused before anything is recorded, and the calls a run makes are never refused for a role, so no recorded fact, run or refusal holds it, and an earlier release still opens the ledger.
+
 One boundary is Auto's cloud's alone, since only it makes a connection through a gateway: once an org holds such a connection, no release before the one that reads it can be run for that org again. An earlier release cannot read that connection's facts, and since it reads an org's connections together, it fails every connection of that org, not that one alone.
 
 At startup, the server checks the database layout, every recorded fact type, and the newest fact of each type. It refuses a layout older than it can migrate, an unknown fact type, or a fact shape it cannot read. The error identifies the layout or the facts and their positions.

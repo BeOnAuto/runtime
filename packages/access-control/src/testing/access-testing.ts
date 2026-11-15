@@ -88,6 +88,7 @@ interface Asked {
   readonly permissions?: readonly Permission[];
   readonly playbooks?: PlaybookAccess;
   readonly irreversible?: boolean;
+  readonly permissionsManagement?: boolean;
 }
 
 export function requestOf({
@@ -99,6 +100,7 @@ export function requestOf({
   permissions = allPermissions,
   playbooks = '*',
   irreversible = false,
+  permissionsManagement = false,
 }: Asked): AccessRequest {
   return {
     principal,
@@ -114,6 +116,7 @@ export function requestOf({
         reachesOutside: false,
         mayChangeOutside: false,
         irreversible,
+        permissionsManagement,
       },
     },
   };

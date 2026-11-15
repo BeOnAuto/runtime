@@ -23,6 +23,7 @@ export interface RegisteredFieldsOf<S extends OperationScope, K extends Operatio
   readonly mayChangeOutside: boolean;
   readonly readsOnly: boolean;
   readonly irreversible: boolean;
+  readonly permissionsManagement: boolean;
   readonly repeatable: boolean;
   readonly whileRetired?: true;
   readonly permissions: readonly Permission[];

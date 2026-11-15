@@ -8,7 +8,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { makeProviderOffering } from '../index.ts';
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
 import { added, adding } from '../testing/additions.ts';
-import { ada, harness, harnessPages, operationNamed, type Harness } from '../testing/harness.ts';
+import {
+  connectionServicesWith,
+  ada,
+  harness,
+  harnessPages,
+  operationNamed,
+  type Harness,
+} from '../testing/harness.ts';
 
 const consentProviders = providersOf(adverts, drive);
 
@@ -203,14 +210,16 @@ describe('a provider whose way is consent where whoever runs Auto registered no 
 
 function offeredWith(consenting: Partial<ConsentClientOptions>) {
   return Effect.runPromise(
-    makeProviderOffering({
-      providers: providersOf(drive),
-      providerValues: new Map(),
-      policy: connectionPolicyOf({}),
-      access: 'people',
-      pages: harnessPages,
-      consent: consentClientWith(consenting),
-    })(ada),
+    makeProviderOffering(
+      connectionServicesWith({
+        providers: providersOf(drive),
+        providerValues: new Map(),
+        policy: connectionPolicyOf({}),
+        access: 'people',
+        pages: harnessPages,
+        consent: consentClientWith(consenting),
+      }),
+    )(ada),
   );
 }
 

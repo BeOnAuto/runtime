@@ -1,7 +1,9 @@
+import type { AccessDecision, AccessRequest, CallerIdentity, PolicyDecisionPoint } from '@on.auto/operations';
+import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { servedDocumentAt } from '../api-testing/described-documents.ts';
-import { describedAccess, playbookToolCalls, reportingAccess, toolReader } from '../testing/index.ts';
+import { describedAccess, playbookToolCalls, reportingAccess, toolCaller, toolReader } from '../testing/index.ts';
 import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
@@ -22,10 +24,20 @@ function remote(fake: FakeMcpServer, entry: Readonly<Record<string, unknown>> = 
   return { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry };
 }
 
-function callsOn(servers: Readonly<Record<string, unknown>>) {
+function callsOn(servers: Readonly<Record<string, unknown>>, decidedBy?: PolicyDecisionPoint) {
   const { access } = reportingAccess(servers, { environment: { GRAPH_API_KEY: apiKey } });
   closing.push(access.close);
-  return playbookToolCalls(access);
+  return playbookToolCalls(access, decidedBy === undefined ? {} : { decidedBy });
+}
+
+const decidedNothingElse: AccessDecision = { decision: 'allow', determiningPolicies: ['by-the-test'], errors: [] };
+
+function decidingExecuteConnection(decision: AccessDecision['decision']): PolicyDecisionPoint {
+  const decided = (request: AccessRequest): AccessDecision =>
+    request.action.name === 'execute_connection'
+      ? { decision, determiningPolicies: [], errors: [] }
+      : decidedNothingElse;
+  return { decide: (request) => Effect.succeed(decided(request)) };
 }
 
 const reached = { reachable: 'yes' };
@@ -107,6 +119,20 @@ describe('dry_run of a call that would not be made', () => {
         server: reached,
       },
     });
+  });
+});
+
+async function dryRunDecided(decision: AccessDecision['decision'], caller: CallerIdentity) {
+  const { call } = callsOn({ graph: remote(await fakeServer()) }, decidingExecuteConnection(decision));
+  return call('dry_run', { server: 'graph', tool: 'echo' }, { caller });
+}
+
+describe('dry_run where the dispatcher that runs it is decided by a policy decision point', () => {
+  it('answers that the caller may execute the tool as that decision point decides it, whatever the credential holds', async () => {
+    expect([await dryRunDecided('allow', toolReader), await dryRunDecided('deny', toolCaller)]).toMatchObject([
+      { status: 'succeeded', output: { caller_may: true, would_run: true } },
+      { status: 'succeeded', output: { caller_may: false, would_run: false } },
+    ]);
   });
 });
 

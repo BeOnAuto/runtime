@@ -20,6 +20,7 @@ const everyReason: Readonly<Record<RejectionReason, true>> = {
 
 const aKindOfEachReason: readonly RejectionKind[] = [
   'input_schema',
+  'permission_denied',
   'tool_not_offered',
   'paused',
   'overrun',

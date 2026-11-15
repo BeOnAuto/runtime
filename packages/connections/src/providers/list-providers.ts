@@ -1,12 +1,12 @@
-import { Caller, defineHttpOperation } from '@on.auto/operations';
+import { Caller, defineHttpOperation, type Runnable } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
 import { ProvidersSchema } from './listed-providers.ts';
 import { listedProviders } from './provider-listing.ts';
-import { refusalToAdd, type OfferingServices } from './provider-offering.ts';
+import { addingRefusedTo, type OfferingServices } from './provider-offering.ts';
 
-export function defineListProviders(listing: OfferingServices) {
+export function defineListProviders(listing: OfferingServices, adding: Runnable<'org'>) {
   return defineHttpOperation('org', 'query', {
     name: 'list_providers',
     title: 'List providers',
@@ -22,7 +22,7 @@ export function defineListProviders(listing: OfferingServices) {
     outputSchema: ProvidersSchema,
     reasons: [],
     handle: Effect.fnUntraced(function* () {
-      const refusal = refusalToAdd(listing, yield* Caller);
+      const refusal = yield* addingRefusedTo(listing, adding, yield* Caller);
       const consent = yield* listing.consent.hadSources(studioBaseFor(listing.pages));
       return {
         providers: listedProviders({ ...listing, consent }),

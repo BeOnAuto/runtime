@@ -1,6 +1,7 @@
 import { cedarDecisionPoint, cedarModuleIn, type DeclaredAction, type RoleAssignments } from '@on.auto/access-control';
 import {
   allPermissions,
+  enforcedDecisionOf,
   type AccessContext,
   type AccessRequest,
   type ArrivedVia,
@@ -84,8 +85,22 @@ const roles: RoleAssignments = {
 type Unsaid = Omit<AccessContext['operation'], 'targetsPlaybook'>;
 
 const whatTheDocumentDoesNotSay: readonly Unsaid[] = [
-  { kind: 'query', readsOnly: false, reachesOutside: false, mayChangeOutside: false, irreversible: false },
-  { kind: 'command', readsOnly: true, reachesOutside: true, mayChangeOutside: true, irreversible: true },
+  {
+    kind: 'query',
+    readsOnly: false,
+    reachesOutside: false,
+    mayChangeOutside: false,
+    irreversible: false,
+    permissionsManagement: false,
+  },
+  {
+    kind: 'command',
+    readsOnly: true,
+    reachesOutside: true,
+    mayChangeOutside: true,
+    irreversible: true,
+    permissionsManagement: true,
+  },
 ];
 
 function requestOf(kind: CallerKind, operation: DeclaredAction, unsaid: Unsaid): AccessRequest {
@@ -106,16 +121,29 @@ function requestOf(kind: CallerKind, operation: DeclaredAction, unsaid: Unsaid):
   };
 }
 
+type Enforced = Effect.Success<ReturnType<typeof enforcedDecisionOf>>;
+
 interface Decided {
   readonly operation: string;
   readonly allowed: boolean;
   readonly alike: boolean;
+  readonly enforced: readonly Enforced[];
 }
 
 export interface DecisionRow {
   readonly caller: string;
   readonly allowed: readonly string[];
   readonly decidedOtherwise: readonly Decided[];
+  readonly refusedForTheRole: readonly string[];
+  readonly enforcedOtherwise: readonly Decided[];
+}
+
+function isAllowed(enforced: Enforced): boolean {
+  return enforced.decision === 'allow';
+}
+
+function isRefusedForTheRole(enforced: Enforced): boolean {
+  return enforced.decision === 'deny' && enforced.cause === 'role';
 }
 
 const files = shippedFilesOnDisk(shippedRoots);
@@ -130,13 +158,31 @@ async function rowOf(operations: readonly DeclaredAction[], kind: CallerKind): P
           return decision === 'allow';
         }),
       );
-      return { operation: actionOf(operation), allowed: allowed.every(Boolean), alike: new Set(allowed).size === 1 };
+      const enforced = await Promise.all(
+        whatTheDocumentDoesNotSay.map((unsaid) =>
+          Effect.runPromise(enforcedDecisionOf(decisionPoint, requestOf(kind, operation, unsaid))),
+        ),
+      );
+      return {
+        operation: actionOf(operation),
+        allowed: allowed.every(Boolean),
+        alike: new Set(allowed).size === 1,
+        enforced,
+      };
     }),
   );
   return {
     caller: kind.caller,
     allowed: decided.filter(({ allowed }) => allowed).map(({ operation }) => operation),
     decidedOtherwise: decided.filter(({ alike }) => !alike),
+    refusedForTheRole: decided
+      .filter(({ enforced }) => enforced.every((each) => isRefusedForTheRole(each)))
+      .map(({ operation }) => operation),
+    enforcedOtherwise: decided.filter(
+      ({ allowed, enforced }) =>
+        new Set(enforced.map((each) => JSON.stringify(each))).size !== 1 ||
+        enforced.some((each) => isAllowed(each) !== allowed),
+    ),
   };
 }
 

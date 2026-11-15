@@ -1,6 +1,7 @@
 import {
   CancelledKindSchema,
   ConflictKindSchema,
+  ForbiddenKindSchema,
   InvalidInputKindSchema,
   IssueSchema,
   LimitedBecauseSchema,
@@ -48,6 +49,7 @@ export type ProblemReason = typeof ProblemReasonSchema.Type;
 
 const RejectionKindSchema = Schema.Union([
   InvalidInputKindSchema,
+  ForbiddenKindSchema,
   ConflictKindSchema,
   UnavailableKindSchema,
   CancelledKindSchema,

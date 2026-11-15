@@ -15,7 +15,13 @@ for (const entry of readdirSync(app)) {
   if (!existsSync(target)) symlinkSync(join(app, entry), target);
 }
 if (!existsSync(join(instance, 'data'))) symlinkSync(resolve(data), join(instance, 'data'));
-const environment: Record<string, string> = { PATH: process.env['PATH'] ?? '', ...image.environment, PORT: port };
+const tracking = process.env['RUNNER_TRACKING_ID'];
+const environment: Record<string, string> = {
+  PATH: process.env['PATH'] ?? '',
+  ...(tracking === undefined ? {} : { RUNNER_TRACKING_ID: tracking }),
+  ...image.environment,
+  PORT: port,
+};
 let command = image.command;
 for (let index = 0; index < settings.length; index++) {
   const setting = settings[index];

@@ -4,7 +4,7 @@ import { admittedOrgCall, admittedPlaybookCall, type DispatcherOptions } from '.
 import type { Registration, Runnable } from '../definition/registration.ts';
 import { Ledger } from '../ledger/ledger.ts';
 import type { Outcome, Rejected, Succeeded } from '../outcome/outcome.ts';
-import { withoutDispatcherServices, type DispatcherServices } from './dispatcher-services.ts';
+import { permittedAsDecidedBy, withoutDispatcherServices, type DispatcherServices } from './dispatcher-services.ts';
 import { withinOperation } from './operation-span.ts';
 import { runInOrg } from './org-binding.ts';
 import { runInPlaybook } from './playbook-binding.ts';
@@ -43,7 +43,10 @@ export function makeDispatcher(steps: readonly PipelineStep[], options: Dispatch
           yield* admittedOrgCall(options, registration, request);
           yield* passSteps(registration, request);
           const ledger = yield* Ledger;
-          return yield* runInOrg(registration, request, ledger).pipe(withoutDispatcherServices);
+          return yield* runInOrg(registration, request, ledger).pipe(
+            withoutDispatcherServices,
+            permittedAsDecidedBy(options.decidedBy),
+          );
         }),
       ),
     dispatchToPlaybook: <A extends Succeeded>(registration: Runnable<'playbook', A>, request: PlaybookRequest) =>
@@ -56,6 +59,7 @@ export function makeDispatcher(steps: readonly PipelineStep[], options: Dispatch
           const ledger = yield* Ledger;
           return yield* runInPlaybook(registration, request, { ledger, lifecycle: { status } }).pipe(
             withoutDispatcherServices,
+            permittedAsDecidedBy(options.decidedBy),
           );
         }),
       ),

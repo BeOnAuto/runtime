@@ -5,8 +5,9 @@ import {
   accessRequestOfPlaybookCall,
   playbookNamedBy,
 } from '../access-control/access-request-of-a-call.ts';
+import { enforcedBy } from '../access-control/enforcement.ts';
 import type { PolicyDecisionPoint } from '../access-control/policy-decision-point.ts';
-import { checkedReportingTo } from '../access-control/report-only.ts';
+import { checkedReportingTo, type AskedCall } from '../access-control/report-only.ts';
 import type { Runnable } from '../definition/registration.ts';
 import { callSummaryOf, type OrgRequest, type PlaybookRequest } from '../dispatch/request.ts';
 import type { LivePlaybookStatus, PlaybookRegistry } from '../ledger/playbook-registry.ts';
@@ -18,47 +19,50 @@ import {
   confirmPlaybookTakesCall,
 } from './authorization.ts';
 
-export interface DispatcherOptions {
-  readonly reportOnly?: PolicyDecisionPoint;
+export type DispatcherOptions =
+  | { readonly reportOnly?: PolicyDecisionPoint; readonly decidedBy?: never }
+  | { readonly decidedBy: PolicyDecisionPoint; readonly reportOnly?: never };
+
+function admittedAs(
+  { reportOnly, decidedBy }: DispatcherOptions,
+  call: () => AskedCall,
+  check: Effect.Effect<void, Rejected>,
+): Effect.Effect<void, Rejected> {
+  if (decidedBy !== undefined) {
+    return enforcedBy(decidedBy, call(), check);
+  }
+  return reportOnly === undefined ? check : checkedReportingTo(reportOnly, call(), check);
 }
 
 function authorizedOrgCall(
-  { reportOnly }: DispatcherOptions,
+  options: DispatcherOptions,
   registration: Runnable<'org'>,
   request: OrgRequest,
 ): Effect.Effect<void, Rejected> {
-  const check = authorizeOrgCall(registration, request);
-  if (reportOnly === undefined) {
-    return check;
-  }
-  return checkedReportingTo(
-    reportOnly,
-    {
+  return admittedAs(
+    options,
+    () => ({
       registration,
       summary: callSummaryOf(registration.name, request, playbookNamedBy(registration, request)),
       request: accessRequestOfOrgCall(registration, request),
-    },
-    check,
+    }),
+    authorizeOrgCall(registration, request),
   );
 }
 
 function authorizedPlaybookCall(
-  { reportOnly }: DispatcherOptions,
+  options: DispatcherOptions,
   registration: Runnable<'playbook'>,
   request: PlaybookRequest,
 ): Effect.Effect<void, Rejected> {
-  const check = authorizePlaybookCall(registration, request);
-  if (reportOnly === undefined) {
-    return check;
-  }
-  return checkedReportingTo(
-    reportOnly,
-    {
+  return admittedAs(
+    options,
+    () => ({
       registration,
       summary: callSummaryOf(registration.name, request, request.playbook),
       request: accessRequestOfPlaybookCall(registration, request),
-    },
-    check,
+    }),
+    authorizePlaybookCall(registration, request),
   );
 }
 

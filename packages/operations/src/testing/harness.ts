@@ -1,5 +1,6 @@
 import { Effect, Layer } from 'effect';
 
+import type { DispatcherOptions } from '../authorization/admitted-calls.ts';
 import {
   makeDispatcher,
   settle,
@@ -29,6 +30,7 @@ export interface HarnessOptions {
   readonly runOutcomes?: RunOutcomeMapping;
   readonly projections?: readonly KeyedProjection[];
   readonly reportOnly?: PolicyDecisionPoint;
+  readonly decidedBy?: PolicyDecisionPoint;
 }
 
 export interface Harness {
@@ -48,15 +50,22 @@ const knownPlaybooks: readonly PlaybookAddress[] = [
   { org: 'globex', playbook: 'gamma' },
 ];
 
-export function harness({
-  steps = [],
-  reporter,
-  playbooks = knownPlaybooks,
-  retiredPlaybooks = [],
-  runOutcomes,
-  projections = [],
-  reportOnly,
-}: HarnessOptions = {}): Harness {
+function dispatcherOptionsOf({ reportOnly, decidedBy }: HarnessOptions): DispatcherOptions {
+  if (decidedBy !== undefined) {
+    return { decidedBy };
+  }
+  return reportOnly === undefined ? {} : { reportOnly };
+}
+
+export function harness(options: HarnessOptions = {}): Harness {
+  const {
+    steps = [],
+    reporter,
+    playbooks = knownPlaybooks,
+    retiredPlaybooks = [],
+    runOutcomes,
+    projections = [],
+  } = options;
   const ledger = memoryLedger(runOutcomes, projections);
   const recording = recordingReporter();
   const services = Layer.mergeAll(
@@ -67,7 +76,7 @@ export function harness({
   const run = <A>(calls: Effect.Effect<A, never, DispatcherServices>) =>
     Effect.runPromise(calls.pipe(Effect.provide(services)));
   return {
-    dispatcher: makeDispatcher(steps, reportOnly === undefined ? {} : { reportOnly }),
+    dispatcher: makeDispatcher(steps, dispatcherOptionsOf(options)),
     ledger,
     reported: recording.reported,
     run,

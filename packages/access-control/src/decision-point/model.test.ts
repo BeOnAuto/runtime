@@ -1,4 +1,12 @@
-import type { AccessDecision, AccessRequest, PrincipalReference, ResourceReference } from '@on.auto/operations';
+import {
+  allPermissions,
+  type AccessDecision,
+  type AccessRequest,
+  type ArrivedVia,
+  type Permission,
+  type PrincipalReference,
+  type ResourceReference,
+} from '@on.auto/operations';
 import { shippedFilesInMemory } from '@on.auto/shipped-files/testing';
 import { Effect } from 'effect';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -43,6 +51,12 @@ function playbook(id: string): ResourceReference {
 
 const onlyAdminsUndoNothing =
   '@id("only-admins-undo-nothing")\nforbid (principal, action, resource) when { context.operation.irreversible } unless { principal in Role::"admin" };';
+
+const permissionsManagedByAdminsInStudio = [
+  '@id("permissions-managed-by-admins-in-studio")',
+  'forbid (principal, action, resource) when { context.operation.permissions_management }',
+  'unless { principal in Role::"admin" && context.via == "studio" };',
+].join('\n');
 
 function answered(
   decide: (request: AccessRequest) => Promise<AccessDecision>,
@@ -120,6 +134,16 @@ describe('a built-in role held at one playbook or one definition, with the polic
   });
 });
 
+function managingAs(principal: PrincipalReference, via: ArrivedVia, permissionsManagement: boolean): Promise<string> {
+  const decide = withPolicy(
+    permissionsManagedByAdminsInStudio,
+    rolesHeld({ ada: [builtIn('editor', acme)], grace: [builtIn('admin', acme)] }),
+  );
+  return decide(requestOf({ principal, operation: createPlaybook, resource: theOrg, via, permissionsManagement }));
+}
+
+const grace: PrincipalReference = { type: 'person', id: 'grace' };
+
 describe('the model, extended by one more policy and no change to the question', () => {
   it('keeps everyone but an Admin from what cannot be undone with one forbid on what an operation declares', async () => {
     expect(await Promise.all([retiringAs('ada', true), retiringAs('grace', true), retiringAs('ada', false)])).toEqual([
@@ -127,5 +151,47 @@ describe('the model, extended by one more policy and no change to the question',
       'allow by admin',
       'allow by editor',
     ]);
+  });
+
+  it('keeps everyone but an Admin in Studio from what manages permissions with one forbid on what an operation declares', async () => {
+    expect(
+      await Promise.all([
+        managingAs(grace, 'studio', true),
+        managingAs(grace, 'agent', true),
+        managingAs(ada, 'studio', true),
+        managingAs({ type: 'key', id: 'ci-key' }, 'key', true),
+        managingAs(ada, 'studio', false),
+      ]),
+    ).toEqual([
+      'allow by admin',
+      'deny by permissions-managed-by-admins-in-studio',
+      'deny by permissions-managed-by-admins-in-studio',
+      'deny by permissions-managed-by-admins-in-studio',
+      'allow by editor',
+    ]);
+  });
+});
+
+const viewerAdaEditorGrace = decidedBy(rolesHeld({ ada: [builtIn('viewer', acme)], grace: [builtIn('editor', acme)] }));
+
+function askedAtTheOrg(
+  principal: PrincipalReference,
+  operation: TestOperation,
+  permissions: readonly Permission[] = allPermissions,
+): Promise<string> {
+  return answered(viewerAdaEditorGrace)(requestOf({ principal, operation, resource: theOrg, permissions }));
+}
+
+describe('an operation of a playbook asked at the org, as a listing of tools asks before the call names its playbook', () => {
+  it('is decided by the roles held at the org and the permissions of the grant', async () => {
+    expect(
+      await Promise.all([
+        askedAtTheOrg(ada, getDefinition),
+        askedAtTheOrg(ada, runDefinition),
+        askedAtTheOrg(grace, runDefinition),
+        askedAtTheOrg(grace, runDefinition, ['org:read', 'playbook:read']),
+        askedAtTheOrg({ type: 'person', id: 'nobody' }, getDefinition),
+      ]),
+    ).toEqual(['allow by viewer', 'deny by ', 'allow by editor', 'deny by within-granted-permissions', 'deny by ']);
   });
 });

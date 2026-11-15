@@ -2,13 +2,15 @@ import { unsuccessfulWords } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineDryRun, defineIntrospect } from '../index.ts';
+import { defineDryRun, defineExecuteConnection, defineIntrospect } from '../index.ts';
 
 const lookup = { lookUp: () => Effect.never };
 
 const introspectWords = defineIntrospect(lookup).registration.plainLanguage;
 
-const dryRunWords = defineDryRun(lookup).registration.plainLanguage;
+const executing = defineExecuteConnection({ open: () => Effect.never, configured: false }).registration;
+
+const dryRunWords = defineDryRun(lookup, executing).registration.plainLanguage;
 
 const asked = { server: 'graph', tool: 'search' };
 

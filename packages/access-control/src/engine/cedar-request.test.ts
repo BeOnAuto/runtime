@@ -46,6 +46,7 @@ const readingTheOrg = {
     reaches_outside: false,
     may_change_outside: false,
     irreversible: false,
+    permissions_management: false,
   },
 };
 

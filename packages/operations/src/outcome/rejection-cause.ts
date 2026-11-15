@@ -2,6 +2,7 @@ import { Schema } from 'effect';
 
 import { CancelledKindSchema } from './cancelled-run.ts';
 import { ConflictKindSchema } from './conflict.ts';
+import { ForbiddenKindSchema } from './forbidden.ts';
 import { InvalidInputKindSchema } from './invalid-input.ts';
 import { RejectionBecauseSchema } from './rejection-because.ts';
 import { UnansweredKindSchema } from './unanswered-run.ts';
@@ -19,6 +20,7 @@ export const RejectionReasonSchema = Schema.Literals([
 
 export const RejectionKindSchema = Schema.Union([
   InvalidInputKindSchema,
+  ForbiddenKindSchema,
   UnavailableKindSchema,
   ConflictKindSchema,
   CancelledKindSchema,

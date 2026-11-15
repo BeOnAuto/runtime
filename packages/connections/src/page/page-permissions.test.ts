@@ -99,3 +99,25 @@ describe.each(Object.entries(openLinks))('the page operation %s', (_operation, o
     expect(await calling(acmeWriter)).toMatchObject({ status: 'succeeded' });
   });
 });
+
+const pageOperations = ['read_link', 'approve', 'give_credential', 'give_client', 'start', 'finish'];
+
+describe('what the operations of the page declare about themselves', () => {
+  it('say that start and finish reach the authorization server and may change something there, a client registered or tokens revoked, and that the others keep what they are given here alone', () => {
+    const { operations } = harness();
+
+    expect(
+      pageOperations.map((name) => {
+        const { reachesOutside, mayChangeOutside } = operationNamed(operations, name).registration;
+        return { name, reachesOutside, mayChangeOutside };
+      }),
+    ).toEqual([
+      { name: 'read_link', reachesOutside: false, mayChangeOutside: false },
+      { name: 'approve', reachesOutside: false, mayChangeOutside: false },
+      { name: 'give_credential', reachesOutside: false, mayChangeOutside: false },
+      { name: 'give_client', reachesOutside: false, mayChangeOutside: false },
+      { name: 'start', reachesOutside: true, mayChangeOutside: true },
+      { name: 'finish', reachesOutside: true, mayChangeOutside: true },
+    ]);
+  });
+});

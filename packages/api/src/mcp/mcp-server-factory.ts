@@ -1,13 +1,13 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import {
-  type CallerIdentity,
   type OperationScope,
   type RegisteredPlainLanguage,
   type Registration,
   type RouteRegistration,
   OperationsServed,
+  mayCall,
 } from '@on.auto/operations';
-import { Context } from 'effect';
+import { Context, Effect } from 'effect';
 
 import { playbookCallOf, orgCallOf, type HandedOff, type OrgCall } from '../hand-off/caller-hand-off.ts';
 import { toolCallbackOf, type AnsweringServing } from '../tools/linked-answers.ts';
@@ -36,7 +36,7 @@ import {
 
 export type ToolServing = McpServing & AnsweringServing;
 
-export type McpServerFactory = (context: HandedOff) => McpServer;
+export type McpServerFactory = (context: HandedOff) => Promise<McpServer>;
 
 interface Offered<R extends Registration> {
   readonly registration: R;
@@ -74,11 +74,22 @@ function servedAsTools<S extends OperationScope>(
 }
 
 function permittedTo<R extends Registration>(
-  { permissions }: CallerIdentity,
+  { caller, org, context }: OrgCall,
   offers: readonly Offered<R>[],
-): readonly Offered<R>[] {
-  return offers.filter(({ registration }) =>
-    registration.permissions.some((permission) => permissions.includes(permission)),
+  playbook?: string,
+): Promise<readonly Offered<R>[]> {
+  const named = playbook === undefined ? {} : { playbook };
+  const permitted = Effect.forEach(
+    offers,
+    (offer) =>
+      Effect.map(mayCall({ operation: offer.registration, caller, org, ...named }), (may) => (may ? [offer] : [])),
+    { concurrency: 'unbounded' },
+  );
+  return Effect.runPromise(
+    permitted.pipe(
+      Effect.map((each: readonly (readonly Offered<R>[])[]) => each.flat()),
+      Effect.provideContext(context),
+    ),
   );
 }
 
@@ -168,9 +179,9 @@ function playbookOffersOf({ catalog }: Cataloged): readonly Offered<Registration
 export function orgServerFactory(serving: ToolServing): McpServerFactory {
   const { twins, offers: orgOffers } = orgServingOf(serving);
   const connection = connectionOf('org', serving, everyToolOf(orgOffers, []));
-  return (context) => {
+  return async (context) => {
     const call = orgCallOf(context);
-    const listed = permittedTo(call.caller, orgOffers);
+    const listed = await permittedTo(call, orgOffers);
     const tools = toolsOf(listed, orgDispatchOf(serving.dispatcher, call, twins), orgInputBeside(twins));
     return serverWithTools({ connection, serving, call }, servedTools(listed, []), tools);
   };
@@ -179,9 +190,9 @@ export function orgServerFactory(serving: ToolServing): McpServerFactory {
 export function playbookServerFactory(serving: ToolServing): McpServerFactory {
   const playbookOffers = playbookOffersOf(serving);
   const connection = connectionOf('playbook', serving, everyToolOf([], playbookOffers));
-  return (context) => {
+  return async (context) => {
     const call = playbookCallOf(context);
-    const listed = permittedTo(call.caller, playbookOffers);
+    const listed = await permittedTo(call, playbookOffers, call.playbook);
     const tools = toolsOf(listed, playbookDispatchOf(serving.dispatcher, call));
     return serverWithTools({ connection, serving, call }, servedTools([], listed), tools);
   };
@@ -217,10 +228,12 @@ function ownOrgServerFactory(
 ): McpServerFactory {
   const { twins, orgOffers, playbookOffers } = ownOrgServingOf(serving);
   const connection = connectionOf(endpoint, serving, everyToolOf(orgOffers, playbookOffers));
-  return (context) => {
+  return async (context) => {
     const call = orgCallOf(context);
-    const listedInOrg = permittedTo(call.caller, orgOffers);
-    const listedInPlaybook = permittedTo(call.caller, playbookOffers);
+    const [listedInOrg, listedInPlaybook] = await Promise.all([
+      permittedTo(call, orgOffers),
+      permittedTo(call, playbookOffers),
+    ]);
     const tools = [
       ...toolsOf(listedInOrg, orgDispatchOf(serving.dispatcher, call, twins, listed), orgInputBeside(twins)),
       ...toolsOf(listedInPlaybook, playbookArgumentDispatchOf(serving.dispatcher, call, listed), withoutThePlaybook),

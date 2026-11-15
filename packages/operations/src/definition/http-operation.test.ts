@@ -67,6 +67,57 @@ describe('an operation served over HTTP alone', () => {
   });
 });
 
+describe('what an operation served over HTTP alone declares about itself', () => {
+  it('declares what an operation served everywhere declares about itself, each false where it is left out', () => {
+    const transcribeNote = defineHttpOperation('playbook', 'command', {
+      name: 'transcribe_note',
+      title: 'Transcribe note',
+      description: 'Sends a note to a service outside to be written out, which cannot be taken back.',
+      route: { method: 'POST', path: '/notes/{id}/transcription' },
+      body: { kind: 'none' },
+      reachesOutside: true,
+      mayChangeOutside: true,
+      readsOnly: true,
+      irreversible: true,
+      permissionsManagement: true,
+      inputSchema: Schema.Struct({ id: Schema.String }),
+      outputSchema: Schema.Struct({ sent: Schema.Boolean }),
+      reasons: [],
+      handle: () => Effect.succeed({ sent: true }),
+    });
+    const declared = ({
+      reachesOutside,
+      mayChangeOutside,
+      readsOnly,
+      irreversible,
+      permissionsManagement,
+    }: typeof nameNote.registration) => ({
+      reachesOutside,
+      mayChangeOutside,
+      readsOnly,
+      irreversible,
+      permissionsManagement,
+    });
+
+    expect([declared(transcribeNote.registration), declared(nameNote.registration)]).toEqual([
+      {
+        reachesOutside: true,
+        mayChangeOutside: true,
+        readsOnly: true,
+        irreversible: true,
+        permissionsManagement: true,
+      },
+      {
+        reachesOutside: false,
+        mayChangeOutside: false,
+        readsOnly: false,
+        irreversible: false,
+        permissionsManagement: false,
+      },
+    ]);
+  });
+});
+
 describe('the definition of an operation served over HTTP alone', () => {
   it('is refused when its output is not an object that declares its fields', () => {
     expect(() =>

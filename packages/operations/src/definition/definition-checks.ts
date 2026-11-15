@@ -18,6 +18,7 @@ interface CheckableDefinition {
   readonly inputSchema: Schema.Constraint;
   readonly outputSchema?: Schema.Constraint;
   readonly permittedBy?: readonly Permission[];
+  readonly permissionsManagement?: boolean;
 }
 
 interface CheckedDefinition {
@@ -87,6 +88,14 @@ function requirePlaybookFromPlaybookField(
   }
 }
 
+function requireACommandToManagePermissions(name: string, kind: OperationKind, permissionsManagement: boolean): void {
+  if (kind === 'query' && permissionsManagement) {
+    throw new Error(
+      `The query ${name} declares permissions management, which only a command that grants or changes access does`,
+    );
+  }
+}
+
 function permissionsOf(name: string, permittedBy: readonly Permission[]): readonly Permission[] {
   if (permittedBy.length === 0) {
     throw new Error(`The operation ${name} is permitted by no permission`);
@@ -97,11 +106,19 @@ function permissionsOf(name: string, permittedBy: readonly Permission[]): readon
 export function checkedDefinition(
   scope: OperationScope,
   kind: OperationKind,
-  { name, route, inputSchema, outputSchema, permittedBy = [permissionFor(kind, scope)] }: CheckableDefinition,
+  {
+    name,
+    route,
+    inputSchema,
+    outputSchema,
+    permittedBy = [permissionFor(kind, scope)],
+    permissionsManagement = false,
+  }: CheckableDefinition,
 ): CheckedDefinition {
   if (!operationName.test(name)) {
     throw new Error(`The operation name ${name} is malformed`);
   }
+  requireACommandToManagePermissions(name, kind, permissionsManagement);
   const pathParameters = pathParametersOf(route.path);
   const inputMembers = closedObjectMembers(name, 'input', inputSchema);
   if (outputSchema !== undefined) {

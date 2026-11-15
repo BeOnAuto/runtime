@@ -234,6 +234,27 @@ describe('every operation the server serves, as its API document declares it', (
   });
 });
 
+const refusedForTheRole = [
+  { caller: 'Admin, in Studio', refused: [] },
+  { caller: 'Admin, through their connected agent', refused: [] },
+  { caller: 'Admin, asking @Auto in Slack', refused: [] },
+  { caller: 'Admin, in a run they started', refused: [] },
+  { caller: 'Editor, in Studio', refused: [] },
+  { caller: 'Editor, through their connected agent', refused: [] },
+  { caller: 'Editor, asking @Auto in Slack', refused: [] },
+  { caller: 'Editor, in a run they started', refused: [] },
+  { caller: 'Editor, through an agent they approved to read', refused: [] },
+  { caller: 'Viewer, in Studio', refused: whatOnlyWritingPermits },
+  { caller: 'Viewer, through their connected agent', refused: whatOnlyWritingPermits },
+  { caller: 'Viewer, asking @Auto in Slack', refused: whatOnlyWritingPermits },
+  { caller: 'Viewer, in a run they started', refused: [] },
+  { caller: 'A person with no role, in Studio', refused: everything },
+  { caller: 'An Editor of another org, in Studio', refused: everything },
+  { caller: 'An API key', refused: [] },
+  { caller: 'An API key that reads', refused: [] },
+  { caller: 'Playbook alpha, in a run a trigger or a schedule started', refused: [] },
+];
+
 describe('every operation the server serves, decided for each role and each kind of caller', () => {
   it('is allowed as this table says, so an operation added or a declaration changed shows as a changed row', () => {
     expect(table.map(({ caller, allowed }) => ({ caller, allowed }))).toEqual(pinned);
@@ -241,5 +262,12 @@ describe('every operation the server serves, decided for each role and each kind
 
   it('is decided alike whatever else it declares about itself, which its API document does not say', () => {
     expect(table.flatMap(({ decidedOtherwise }) => decidedOtherwise)).toEqual([]);
+  });
+});
+
+describe('every operation the server serves, where the decision point decides, for each role and each kind of caller', () => {
+  it('is allowed exactly where the decision point allows it, and refused for the role where a credential granted everything would still be refused', () => {
+    expect(table.map(({ caller, refusedForTheRole: refused }) => ({ caller, refused }))).toEqual(refusedForTheRole);
+    expect(table.flatMap(({ enforcedOtherwise }) => enforcedOtherwise)).toEqual([]);
   });
 });

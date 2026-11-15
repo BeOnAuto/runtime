@@ -7,7 +7,7 @@ import { defineTranscribe } from './transcribe.ts';
 const said = { text: '  Flag any entry over ten thousand dollars for Priya.\n', cost_usd: 0.000167 };
 
 describe('transcribe', () => {
-  it('is a command of the org at POST /voice/transcriptions, over HTTP alone, for a reader of playbooks', () => {
+  it('is a command of the org at POST /voice/transcriptions, over HTTP alone, for a reader of playbooks, that reaches the voice model outside and changes nothing there', () => {
     expect(defineTranscribe(Effect.succeed(null)).registration).toMatchObject({
       scope: 'org',
       kind: 'command',
@@ -16,6 +16,8 @@ describe('transcribe', () => {
       servedOverHttpAlone: { kind: 'json' },
       permissions: ['playbook:read'],
       successStatus: 200,
+      reachesOutside: true,
+      mayChangeOutside: false,
     });
   });
 

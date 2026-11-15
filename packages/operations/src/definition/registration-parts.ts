@@ -59,6 +59,7 @@ type RegisteredDefinition<K extends OperationKind> = Pick<
   | 'mayChangeOutside'
   | 'readsOnly'
   | 'irreversible'
+  | 'permissionsManagement'
   | 'repeatable'
   | 'whileRetired'
   | 'permittedBy'
@@ -92,6 +93,7 @@ export function registeredFieldsOf<S extends OperationScope, K extends Operation
     mayChangeOutside: definition.mayChangeOutside ?? false,
     readsOnly: definition.readsOnly ?? false,
     irreversible: definition.irreversible ?? false,
+    permissionsManagement: definition.permissionsManagement ?? false,
     repeatable: definition.repeatable ?? false,
     ...(definition.whileRetired === true ? { whileRetired: true } : {}),
     permissions,

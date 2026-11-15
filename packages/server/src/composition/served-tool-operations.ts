@@ -20,15 +20,16 @@ export interface ProvidersOffered {
 
 export function toolOperationsOf(tools: ToolAccess, { offering, goals, messages }: ProvidersOffered) {
   const searchLead = goals === true ? searchLeadWhereGoalsAreKeptOf(messages === true) : '';
+  const executing = defineExecuteConnection(tools);
   return {
     inOrg: [defineSearchInOrg(tools, foundPlaybook, offering, searchLead), defineListConnectionTools(tools)],
     inPlaybook: [
       defineSearch(tools),
       defineIntrospect(tools),
       defineValidate(tools),
-      defineDryRun(tools),
+      defineDryRun(tools, executing.registration),
       defineQueryConnection(tools),
-      defineExecuteConnection(tools),
+      executing,
     ],
   };
 }

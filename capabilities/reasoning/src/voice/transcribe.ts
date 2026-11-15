@@ -78,6 +78,7 @@ export function defineTranscribe(voice: Effect.Effect<Transcriber | null>) {
       'It answers the text, and records the transcription on the org’s ledger without the recording or its text.',
     ].join(' '),
     route: { method: 'POST', path: '/voice/transcriptions' },
+    reachesOutside: true,
     permittedBy: ['playbook:read'],
     body: { kind: 'json' },
     inputSchema: TranscribeInputSchema,

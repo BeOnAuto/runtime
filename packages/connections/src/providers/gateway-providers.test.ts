@@ -7,7 +7,7 @@ import { makeProviderOffering } from '../index.ts';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { adding } from '../testing/additions.ts';
 import { gatewayHarnessAt, gatewayServed } from '../testing/gateways.ts';
-import { ada, harness, harnessPages, operationNamed } from '../testing/harness.ts';
+import { connectionServicesWith, ada, harness, harnessPages, operationNamed } from '../testing/harness.ts';
 
 const notHere =
   "The provider messages connects through a service that Auto's cloud runs, which this runtime does not have";
@@ -33,14 +33,16 @@ function listingWith(gateways: boolean, providers = providerListOf(providerOf(me
 
 function offeredWith(gateways: boolean) {
   return Effect.runPromise(
-    makeProviderOffering({
-      providers: providerListOf(providerOf(messages)),
-      providerValues: new Map(),
-      policy: connectionPolicyOf({}),
-      access: 'people',
-      pages: harnessPages,
-      consent: consentClientWith({ gateways }),
-    })(ada),
+    makeProviderOffering(
+      connectionServicesWith({
+        providers: providerListOf(providerOf(messages)),
+        providerValues: new Map(),
+        policy: connectionPolicyOf({}),
+        access: 'people',
+        pages: harnessPages,
+        consent: consentClientWith({ gateways }),
+      }),
+    )(ada),
   );
 }
 

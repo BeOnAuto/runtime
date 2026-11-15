@@ -1,8 +1,15 @@
-import { permissionFor, permissionRefusalOf, type CallerIdentity } from '@on.auto/operations';
+import {
+  mayCall,
+  permissionRefusalOf,
+  roleRefusalDetail,
+  type CallerIdentity,
+  type Runnable,
+} from '@on.auto/operations';
 import type { OfferedGroup, OfferedProvider, ProviderOffering } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
 import { studioBaseFor } from '../links/connect-page.ts';
+import { defineAddConnection } from '../operations/add-connection.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { addingRefusalOf, adderRefusalOf } from '../policy/policy-rules.ts';
 import type { ListedProvider } from './listed-providers.ts';
@@ -13,14 +20,22 @@ export type OfferingServices = Pick<
   'providers' | 'providerValues' | 'policy' | 'access' | 'consent' | 'pages'
 >;
 
-const addingPermissions = [permissionFor('command', 'org')];
+function refusalToAdd(
+  { access, policy }: OfferingServices,
+  { operation, caller }: { readonly operation: Runnable<'org'>; readonly caller: CallerIdentity },
+  mayAdd: boolean,
+): string | null {
+  const notPermitted = mayAdd ? undefined : (permissionRefusalOf(operation.permissions, caller) ?? roleRefusalDetail);
+  return notPermitted ?? adderRefusalOf(access, caller)?.detail ?? addingRefusalOf(policy)?.detail ?? null;
+}
 
-export function refusalToAdd({ access, policy }: OfferingServices, caller: CallerIdentity): string | null {
-  return (
-    permissionRefusalOf(addingPermissions, caller) ??
-    adderRefusalOf(access, caller)?.detail ??
-    addingRefusalOf(policy)?.detail ??
-    null
+export function addingRefusedTo(
+  services: OfferingServices,
+  adding: Runnable<'org'>,
+  caller: CallerIdentity,
+): Effect.Effect<string | null> {
+  return Effect.map(mayCall({ operation: adding, caller, org: caller.org }), (mayAdd) =>
+    refusalToAdd(services, { operation: adding, caller }, mayAdd),
   );
 }
 
@@ -59,11 +74,14 @@ function offeredAmong(listed: readonly ListedProvider[], money: ReadonlySet<stri
   return listed.filter((provider) => isOfferedOneWay(provider)).map((provider) => offeredOf(provider, money));
 }
 
-export function makeProviderOffering(services: OfferingServices): ProviderOffering {
+export function makeProviderOffering(services: ConnectionServices): ProviderOffering {
+  const adding = defineAddConnection(services).registration;
   return (caller) =>
-    refusalToAdd(services, caller) === null
-      ? Effect.map(services.consent.hadSources(studioBaseFor(services.pages)), (consent) =>
-          offeredAmong(listedProviders({ ...services, consent }), handlingMoney(services.providers)),
-        )
-      : Effect.undefined;
+    Effect.flatMap(addingRefusedTo(services, adding, caller), (refusal) =>
+      refusal === null
+        ? Effect.map(services.consent.hadSources(studioBaseFor(services.pages)), (consent) =>
+            offeredAmong(listedProviders({ ...services, consent }), handlingMoney(services.providers)),
+          )
+        : Effect.undefined,
+    );
 }

@@ -37,7 +37,7 @@ export {
 export { catalogPathOf, makeCatalog, type Catalog } from './catalog/catalog.ts';
 export { CancelledKindSchema, RunCancelled, type CancelledKind } from './outcome/cancelled-run.ts';
 export { Conflict, ConflictKindSchema, resolutionOf, type ConflictKind, type Resolution } from './outcome/conflict.ts';
-export { Forbidden } from './outcome/forbidden.ts';
+export { Forbidden, ForbiddenKindSchema } from './outcome/forbidden.ts';
 export { RunUnanswered, UnansweredKindSchema, type UnansweredKind } from './outcome/unanswered-run.ts';
 export { addressOfStreamPrefix, addressedStreamOf, advancedColumnsLeftBy } from './projections/keyed-projection.ts';
 export { advancedColumnsOf, childKeyColumn, foldsStream } from './projections/keyed-projection.ts';
@@ -126,13 +126,12 @@ export { TriggerKindSchema, triggerKinds, triggerKindsInWords, type TriggerKind 
 export type { DispatcherServices } from './dispatch/dispatcher-services.ts';
 export { makeDispatcher, type Dispatcher, type PipelineStep } from './dispatch/dispatcher.ts';
 export { reportedDifferenceMessage } from './access-control/report-only.ts';
+export { enforcedDecisionOf, roleRefusalDetail, undecidedMessage } from './access-control/enforcement.ts';
+export { CallPermission, callPermissionDecidedBy, mayCall, type CallAsked } from './access-control/call-permission.ts';
 export { deniedFor, type AccessContext, type AccessDecision } from './access-control/policy-decision-point.ts';
 export type { AccessRequest, ActionReference, ArrivedVia } from './access-control/policy-decision-point.ts';
-export type {
-  PolicyDecisionPoint,
-  PrincipalReference,
-  ResourceReference,
-} from './access-control/policy-decision-point.ts';
+export type { PolicyDecisionPoint, PrincipalReference } from './access-control/policy-decision-point.ts';
+export type { ResourceReference } from './access-control/policy-decision-point.ts';
 export { cursorOfParts, cursorWithin, partsOfCursor, type CursorPart } from './reading/cursor-parts.ts';
 export { eventsPageOf, type EventPaging, type EventsPage } from './reading/event-paging.ts';
 export { eventMetadataOf } from './reading/event-metadata.ts';

@@ -1,4 +1,12 @@
-import { Caller, PlaybookContext, PlaybookLifecycle, defineQuery, type Permission } from '@on.auto/operations';
+import {
+  Caller,
+  PlaybookContext,
+  PlaybookLifecycle,
+  defineQuery,
+  mayCall,
+  type Permission,
+  type Runnable,
+} from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
 
 import type { ToolMark } from '../bounds/tool-results.ts';
@@ -36,7 +44,7 @@ function markOf(seen: Seen): ToolMark | null {
   return 'tool' in seen ? seen.tool.mark : null;
 }
 
-export function defineDryRun(access: ToolLookup) {
+export function defineDryRun(access: ToolLookup, executing: Runnable<'playbook'>) {
   return defineQuery('playbook', {
     name: 'dry_run',
     title: 'Dry run a tool call',
@@ -55,7 +63,7 @@ export function defineDryRun(access: ToolLookup) {
       const allowed = Result.isSuccess(naming);
       const listed = yield* listing;
       const seen = yield* seenOn(listed, { server, tool }, allowed);
-      const callerMay = (yield* Caller).permissions.includes(executeNeeds);
+      const callerMay = yield* mayCall({ operation: executing, caller: yield* Caller, ...address });
       const retired = (yield* PlaybookLifecycle).status === 'retired';
       const answer: DryRun = {
         would_run: callerMay && !retired && allowed && seen.server.reachable === 'yes',

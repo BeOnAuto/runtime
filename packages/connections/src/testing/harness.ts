@@ -4,6 +4,7 @@ import {
   makeDispatcher,
   type CallerIdentity,
   type Outcome,
+  type PolicyDecisionPoint,
   type Runnable,
 } from '@on.auto/operations';
 import {
@@ -119,6 +120,7 @@ type ConnectionServices = Parameters<typeof makeConnectionOperations>[0];
 export interface HarnessOptions extends Partial<Omit<ConnectionServices, 'secrets'>>, HarnessConsenting {
   readonly callFetch?: typeof globalThis.fetch;
   readonly ledger?: MemoryLedger;
+  readonly decidedBy?: PolicyDecisionPoint;
 }
 
 function loggingInto(log: (line: string) => void) {
@@ -184,12 +186,17 @@ function servicesOver(
   );
 }
 
+export function connectionServicesWith(given: Partial<ConnectionServices> & Pick<ConnectionServices, 'consent'>) {
+  return composedOf(given, { secrets: keptSecrets({}), consent: given.consent });
+}
+
 export function harness({
   beforeKeeping,
   mostSecretCharacters,
   consenting,
   callFetch,
   ledger = memoryLedger(),
+  decidedBy,
   ...given
 }: HarnessOptions = {}): Harness {
   const secrets = keptSecrets({ beforeKeeping, mostSecretCharacters });
@@ -204,7 +211,7 @@ export function harness({
   );
   const composed = composedOf(given, { secrets, consent });
   const operations = makeConnectionOperations(composed);
-  const dispatcher = makeDispatcher([]);
+  const dispatcher = makeDispatcher([], decidedBy === undefined ? {} : { decidedBy });
   return {
     ledger,
     consent,

@@ -45,6 +45,7 @@ const declaredOfAQuery = {
   reachesOutside: false,
   mayChangeOutside: false,
   irreversible: false,
+  permissionsManagement: false,
 };
 
 const searchLabels = defineQuery('org', {
@@ -83,6 +84,18 @@ const askOutside = defineCommand('playbook', {
   reachesOutside: true,
   readsOnly: true,
   handle: () => Effect.succeed({ asked: true }),
+});
+
+const shareNotes = defineCommand('playbook', {
+  name: 'share_notes',
+  title: 'Share notes',
+  description: 'Lets a person read the notes of the playbook, which changes who may do what.',
+  route: { method: 'POST', path: '/notes/readers' },
+  inputSchema: Schema.Record(Schema.String, Schema.Never),
+  outputSchema: Schema.Struct({ shared: Schema.Boolean }),
+  reasons: [],
+  permissionsManagement: true,
+  handle: () => Effect.succeed({ shared: true }),
 });
 
 type Dispatched = (dispatcher: Dispatcher) => Effect.Effect<Outcome, never, DispatcherServices>;
@@ -204,18 +217,21 @@ describe('how the question says a call arrived, and what it asks about', () => {
 describe('what else the question carries', () => {
   it('carries what the operation declares about itself, and nothing of its input', async () => {
     const declared = await Promise.all(
-      [addNote.registration, retireEverything.registration, askOutside.registration].map(async (registration) => {
-        const [question] = await askedFor((dispatcher) =>
-          dispatcher.dispatchToPlaybook(registration, onAlpha(ada, { name: 'anvil', text: 'a secret' })),
-        );
-        return question?.context.operation;
-      }),
+      [addNote.registration, retireEverything.registration, askOutside.registration, shareNotes.registration].map(
+        async (registration) => {
+          const [question] = await askedFor((dispatcher) =>
+            dispatcher.dispatchToPlaybook(registration, onAlpha(ada, { name: 'anvil', text: 'a secret' })),
+          );
+          return question?.context.operation;
+        },
+      ),
     );
 
     expect(declared).toEqual([
       { ...declaredOfAQuery, kind: 'command' },
       { ...declaredOfAQuery, kind: 'command', reachesOutside: true, mayChangeOutside: true, irreversible: true },
       { ...declaredOfAQuery, kind: 'command', reachesOutside: true, readsOnly: true },
+      { ...declaredOfAQuery, kind: 'command', permissionsManagement: true },
     ]);
     expect(JSON.stringify(declared)).not.toContain('a secret');
   });

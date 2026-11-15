@@ -275,3 +275,22 @@ export async function askedInReportOnly(
   );
   return { today, reported, asked: counting.asked(), logged: logs.logged().map(({ message }) => message) };
 }
+
+interface Decided {
+  readonly today: readonly Outcome[];
+  readonly decided: readonly Outcome[];
+  readonly logged: readonly string[];
+}
+
+export async function decidedInstead(asking: readonly Call[], decisionPoint: PolicyDecisionPoint): Promise<Decided> {
+  const logs = capturedLogs();
+  const plain = makeDispatcher([]);
+  const deciding = makeDispatcher([], { decidedBy: decisionPoint });
+  const [today, decided] = await Effect.runPromise(
+    Effect.all([Effect.forEach(asking, (call) => call(plain)), Effect.forEach(asking, (call) => call(deciding))]).pipe(
+      Effect.provide(logs.layer),
+      Effect.provide(services),
+    ),
+  );
+  return { today, decided, logged: logs.logged().map(({ message }) => message) };
+}

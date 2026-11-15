@@ -10,6 +10,11 @@ export interface Explanation {
   readonly mayHaveChanged?: true;
 }
 
+export const roleRefusal: Explanation = {
+  why: 'your role in this organization does not allow that',
+  remedy: 'Ask an admin of the organization to change your role.',
+};
+
 export type Explanations = Readonly<Partial<Record<RejectionKind, Explanation>>>;
 
 export interface RefusalTerms {

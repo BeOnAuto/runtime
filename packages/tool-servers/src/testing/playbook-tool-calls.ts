@@ -3,6 +3,7 @@ import {
   makeDispatcher,
   settle,
   type CallerIdentity,
+  type PolicyDecisionPoint,
   type RecordedEvent,
   type RouteRegistration,
   type Settled,
@@ -53,6 +54,7 @@ export interface PlaybookToolCalls {
 export interface WritesOptions {
   readonly writesRefused?: boolean;
   readonly writesHeldUntil?: Promise<void>;
+  readonly decidedBy?: PolicyDecisionPoint;
 }
 
 interface Refusing {
@@ -69,19 +71,20 @@ function refusingWrites(ledger: Ledger['Service'], { held, attempted }: Refusing
 }
 
 function registrationsOf(access: ToolAccess): PlaybookToolCalls['registrations'] {
+  const executing = defineExecuteConnection(access);
   return {
     search: defineSearch(access).registration,
     introspect: defineIntrospect(access).registration,
     validate: defineValidate(access).registration,
-    dry_run: defineDryRun(access).registration,
+    dry_run: defineDryRun(access, executing.registration).registration,
     query_connection: defineQueryConnection(access).registration,
-    execute_connection: defineExecuteConnection(access).registration,
+    execute_connection: executing.registration,
   };
 }
 
 export function playbookToolCalls(
   access: ToolAccess,
-  { writesRefused = false, writesHeldUntil = Promise.resolve() }: WritesOptions = {},
+  { writesRefused = false, writesHeldUntil = Promise.resolve(), decidedBy }: WritesOptions = {},
 ): PlaybookToolCalls {
   const ledger = memoryLedger();
   const reporter = recordingReporter();
@@ -98,7 +101,7 @@ export function playbookToolCalls(
     reporter.layer,
   );
   const registrations = registrationsOf(access);
-  const dispatcher = makeDispatcher([]);
+  const dispatcher = makeDispatcher([], decidedBy === undefined ? {} : { decidedBy });
   return {
     registrations,
     call: (tool, input, { caller = toolCaller, playbook = 'alpha', signal, tracer, directoryListing } = {}) => {

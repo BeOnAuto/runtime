@@ -147,6 +147,8 @@ export function defineFinishConsent(services: ConsentServices) {
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/consent/code' },
     body: { kind: 'json' },
+    reachesOutside: true,
+    mayChangeOutside: true,
     inputSchema: FinishingSchema,
     outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],

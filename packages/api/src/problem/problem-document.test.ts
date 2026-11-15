@@ -14,6 +14,7 @@ describe('the schema of a problem document', () => {
       ...problemReasons.map((reason) => problemOf(reason, 'What happened')),
       problemOf('invalid_input', 'It does not fit', { errors: [{ detail: 'Expected a string', pointer: '/name' }] }),
       problemOf('unavailable', 'It stopped', { kind: 'tools_unfinished', because: 'server_failed' }),
+      problemOf('forbidden', 'Your role in this organization does not allow that', { kind: 'permission_denied' }),
       problemOf('internal', 'It broke', { instance: 'urn:uuid:0190a000-0000-7000-8000-000000000000' }),
     ];
 

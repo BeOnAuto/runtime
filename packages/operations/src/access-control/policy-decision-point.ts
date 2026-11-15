@@ -36,6 +36,7 @@ interface DeclaredOperation {
   readonly reachesOutside: boolean;
   readonly mayChangeOutside: boolean;
   readonly irreversible: boolean;
+  readonly permissionsManagement: boolean;
 }
 
 export interface AccessContext {

@@ -61,6 +61,7 @@ export interface Definition<
   readonly mayChangeOutside?: boolean;
   readonly readsOnly?: boolean;
   readonly irreversible?: boolean;
+  readonly permissionsManagement?: boolean;
   readonly repeatable?: boolean;
   readonly whileRetired?: boolean;
   readonly permittedBy?: readonly Permission[];
@@ -101,6 +102,11 @@ interface HttpFields<
   readonly route: Route<K, P, M>;
   readonly body: B;
   readonly successStatus?: SuccessStatusByKind[K];
+  readonly reachesOutside?: boolean;
+  readonly mayChangeOutside?: boolean;
+  readonly readsOnly?: boolean;
+  readonly irreversible?: boolean;
+  readonly permissionsManagement?: boolean;
   readonly repeatable?: boolean;
   readonly whileRetired?: boolean;
   readonly permittedBy?: readonly Permission[];

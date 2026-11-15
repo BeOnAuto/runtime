@@ -8,7 +8,14 @@ import { makeProviderOffering, makeProviderResolver } from '../index.ts';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import { added } from '../testing/additions.ts';
-import { ada, harness, harnessPages, operationNamed, type Harness } from '../testing/harness.ts';
+import {
+  connectionServicesWith,
+  ada,
+  harness,
+  harnessPages,
+  operationNamed,
+  type Harness,
+} from '../testing/harness.ts';
 
 const payments = providerOf({
   name: 'payments',
@@ -89,14 +96,16 @@ describe('a connection to a provider whose tools handle money', () => {
   });
 
   it('is offered with that said beside it', () => {
-    const offering = makeProviderOffering({
-      providers,
-      providerValues: new Map(),
-      policy: connectionPolicyOf({}),
-      access: 'people',
-      pages: harnessPages,
-      consent: consentClientWith(),
-    });
+    const offering = makeProviderOffering(
+      connectionServicesWith({
+        providers,
+        providerValues: new Map(),
+        policy: connectionPolicyOf({}),
+        access: 'people',
+        pages: harnessPages,
+        consent: consentClientWith(),
+      }),
+    );
 
     expect(Effect.runSync(offering(ada))?.find(({ name }) => name === 'payments')).toMatchObject({
       handles_money: true,
