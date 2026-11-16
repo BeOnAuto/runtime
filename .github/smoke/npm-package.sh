@@ -4,7 +4,7 @@ repository="${1:?the repository the package was packed in}"
 port="${2:?the port the packed runtime listens on}"
 . "$(dirname "${BASH_SOURCE[0]}")/runtime.sh"
 stop_signal=TERM
-kept_on_failure=(runtime.log playbook.json created.json totalled.json greeting.json greeted.json)
+kept_on_failure=(runtime.log warnings.log playbook.json created.json totalled.json greeting.json greeted.json)
 redacted() {
   sed -E -e 's/abk_[A-Za-z0-9_-]+/abk_[redacted]/g' \
     -e 's/alk\.[^.[:space:]"]+\.[^.[:space:]"]+\.[^.[:space:]"]+/alk.[redacted]/g' \
@@ -51,7 +51,7 @@ runtime() {
 }
 test "$(runtime --version)" = "$(jq --raw-output .version "$repository/package.json")"
 test "$(runtime key --org demo | grep --count --extended-regexp '^API key, shown only this once: abk_[0-9a-f]{8}_[A-Za-z0-9_-]{43}$')" = 1
-runtime > runtime.log 2>&1 &
+(export NODE_OPTIONS="--redirect-warnings=$PWD/warnings.log${NODE_OPTIONS:+ $NODE_OPTIONS}"; runtime) > runtime.log 2>&1 &
 started=$!
 for attempt in $(seq 1 300); do
   curl --silent --fail http://127.0.0.1:$port/health > /dev/null && break
@@ -92,3 +92,4 @@ test "$(jq --compact-output '[.status, .output]' greeted.json)" = '["succeeded",
 pkill -"$stop_signal" -f "$XDG_CACHE_HOME/auto-runtime/.*/packages/server/auto-runtime.ts"
 wait "$started"
 cat runtime.log
+test ! -s warnings.log

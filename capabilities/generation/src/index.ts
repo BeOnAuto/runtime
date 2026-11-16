@@ -12,6 +12,7 @@ export {
 export type { GenerationCatalog } from './catalog/generation-catalog.ts';
 export { generationFacts, makeGenerationFunctionAdapter } from './capability/generation-function.ts';
 export { generationType } from './capability/generation-type.ts';
+export { guideVariablesOf } from './capability/guide-variables.ts';
 export {
   generationBounds,
   type AssetAddresses,

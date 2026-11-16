@@ -1,0 +1,50 @@
+import type { GuideVariables } from '@on.auto/definitions';
+
+import { sizeInWords } from '../assets/asset-words.ts';
+import { generationBounds, type GenerationBounds } from './generation-ports.ts';
+
+interface Offered {
+  readonly bounds: GenerationBounds;
+  readonly gateway: string;
+}
+
+type Words = (offered: Offered) => string;
+
+const day = 86_400_000;
+
+const counted = new Intl.NumberFormat('en');
+
+const gatewayOfThePages = 'gateway';
+
+const gatewayToFillIn = '<gateway>';
+
+const modelsOfTheExamples = { image: 'openai/gpt-image-2', audio: 'openai/gpt-4o-mini-tts' };
+
+const changedOnlyByWhoeverRunsIt = 'can be changed only by whoever runs the server';
+
+function daysIn(milliseconds: number): string {
+  const days = milliseconds / day;
+  return `${counted.format(days)} ${days === 1 ? 'day' : 'days'}`;
+}
+
+const wordsOfEachValue: Readonly<Record<string, Words>> = {
+  'generation.most_image': ({ bounds }) => sizeInWords(bounds.mostBytes.image),
+  'generation.most_audio': ({ bounds }) => sizeInWords(bounds.mostBytes.audio),
+  'generation.most_kept': ({ bounds }) => sizeInWords(bounds.mostPlaybookBytes),
+  'generation.kept': ({ bounds }) => daysIn(bounds.keptMs),
+  'generation.bounds_changed_by': () => changedOnlyByWhoeverRunsIt,
+  'generation.example_image_model': ({ gateway }) => `${gateway}/${modelsOfTheExamples.image}`,
+  'generation.example_audio_model': ({ gateway }) => `${gateway}/${modelsOfTheExamples.audio}`,
+};
+
+const asThePagesHaveIt: Offered = { bounds: generationBounds, gateway: gatewayOfThePages };
+
+export function guideVariablesOf(bounds: GenerationBounds, gateways: readonly string[]): GuideVariables {
+  const offered: Offered = { bounds, gateway: gateways[0] ?? gatewayToFillIn };
+  return Object.fromEntries(
+    Object.entries(wordsOfEachValue).map(([name, words]: readonly [string, Words]) => [
+      name,
+      { value: words(offered), default: words(asThePagesHaveIt) },
+    ]),
+  );
+}

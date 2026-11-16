@@ -1562,6 +1562,9 @@ importers:
       '@on.auto/definitions':
         specifier: workspace:*
         version: link:../packages/definitions
+      '@on.auto/generation':
+        specifier: workspace:*
+        version: link:../capabilities/generation
       '@on.auto/interaction':
         specifier: workspace:*
         version: link:../capabilities/interaction

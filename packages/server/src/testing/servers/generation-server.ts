@@ -78,7 +78,10 @@ function polledIn(asked: readonly AskedOfTheGateway[]): number {
   return asked.filter(({ path }) => path.startsWith(`${videos}/`) && !path.endsWith('/content')).length;
 }
 
-export async function gatewayOnTheLoopback(standings: readonly unknown[] = madeInTime): Promise<GatewayOnTheLoopback> {
+export async function gatewayOnTheLoopback(
+  standings: readonly unknown[] = madeInTime,
+  name = 'gateway',
+): Promise<GatewayOnTheLoopback> {
   const asked: AskedOfTheGateway[] = [];
   const server = createServer((incoming, response) => {
     const path = String(incoming.url);
@@ -98,9 +101,7 @@ export async function gatewayOnTheLoopback(standings: readonly unknown[] = madeI
   });
   const baseUrl = `http://127.0.0.1:${tcpPort(server.address())}/v1`;
   return {
-    gateways: JSON.stringify([
-      { name: 'gateway', base_url: baseUrl, api_key: 'gateway-test-key', cost_header: costHeader },
-    ]),
+    gateways: JSON.stringify([{ name, base_url: baseUrl, api_key: 'gateway-test-key', cost_header: costHeader }]),
     asked: () => [...asked],
   };
 }
@@ -112,11 +113,13 @@ export interface GenerationServer {
 }
 
 export async function servingGeneration(
-  gateway: GatewayOnTheLoopback,
+  gateway: GatewayOnTheLoopback | undefined,
   ledger: TemporaryLedger,
+  settings: Readonly<Record<string, string>> = {},
 ): Promise<GenerationServer> {
+  const gateways = gateway === undefined ? {} : { MODEL_GATEWAYS: gateway.gateways };
   const server = await startServer(
-    { ...loopbackSettingsOver(ledger), MODEL_GATEWAYS: gateway.gateways },
+    { ...loopbackSettingsOver(ledger), ...gateways, ...settings },
     compositionRootWithoutGoals,
   );
   return {

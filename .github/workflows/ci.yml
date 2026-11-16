@@ -532,8 +532,14 @@ jobs:
         run: .github/smoke/triggers.sh 5555 onauto/runtime:ci
 
   package:
-    name: npm package
-    runs-on: ubuntu-latest
+    name: npm package (linux/${{ matrix.architecture }}, ${{ matrix.system }})
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [amd64, arm64]
+        system:
+          - ubuntu:24.04@sha256:73b999393d07f2bf65a40373778a44dc9a6d54ad7718d29247d8ff9413c4d6a8
+    runs-on: ${{ matrix.architecture == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
@@ -552,10 +558,16 @@ jobs:
           pnpm install --frozen-lockfile
           node scripts/cache-platform.ts
       - run: pnpm --filter @on.auto/server npm:pack
-      - name: Run the packed runtime with npx, outside the repository
-        timeout-minutes: 5
-        working-directory: ${{ runner.temp }}
-        run: '"$GITHUB_WORKSPACE/.github/smoke/npm-package.sh" "$GITHUB_WORKSPACE" 5555'
+      - name: Set up the version of Node the row names, which the container is given in place of the one the package was packed with
+        if: matrix.node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run the packed runtime with npx, outside the repository, inside a container of the system the row names
+        timeout-minutes: 10
+        run: .github/smoke/npm-package-in-container.sh "$GITHUB_WORKSPACE" 5555 "$SYSTEM"
+        env:
+          SYSTEM: ${{ matrix.system }}
 
   pull-request-title:
     name: Pull request title

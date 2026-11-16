@@ -21,7 +21,11 @@ const JobSchema = Schema.Struct({
   permissions: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
   strategy: Schema.optionalKey(
     Schema.Struct({
-      matrix: Schema.Struct({ include: Schema.Array(Schema.Record(Schema.String, Schema.Unknown)) }),
+      matrix: Schema.Struct({
+        include: Schema.optionalKey(Schema.Array(Schema.Record(Schema.String, Schema.Unknown))),
+        architecture: Schema.optionalKey(Schema.Array(Schema.String)),
+        system: Schema.optionalKey(Schema.Array(Schema.String)),
+      }),
     }),
   ),
   steps: Schema.Array(StepSchema),
@@ -73,11 +77,19 @@ function architecturesOf(job: Job): readonly unknown[] {
   return (job.strategy?.matrix.include ?? []).map(({ architecture }) => architecture);
 }
 
+function crossedArchitecturesOf(job: Job): readonly string[] {
+  return job.strategy?.matrix.architecture ?? [];
+}
+
+function systemsOf(job: Job): readonly string[] {
+  return job.strategy?.matrix.system ?? [];
+}
+
 function environmentOf(step: Step | undefined, name: string): unknown {
   return step?.env?.[name];
 }
 
-const smokeHelpers = new Set(['calls.sh', 'runtime.sh', 'npm-package.sh']);
+const smokeHelpers = new Set(['calls.sh', 'runtime.sh', 'npm-package.sh', 'npm-package-in-container.sh']);
 
 const imageSmokes = readdirSync(join(root, '.github/smoke'))
   .filter((file) => file.endsWith('.sh') && !smokeHelpers.has(file))
@@ -125,10 +137,21 @@ await test('the container job builds the image for amd64 and arm64 and runs ever
   );
 });
 
-await test('the package job packs the npm package and runs it with npx outside the repository', () => {
-  const scripts = scriptsOf(jobOf(ci.jobs, 'package'));
-  assert.match(scripts, /pnpm --filter @on\.auto\/server npm:pack/u);
-  assert.match(scripts, /\.github\/smoke\/npm-package\.sh/u);
+await test('the package job packs the npm package and runs it with npx outside the repository, inside a container of each system it names, pinned by digest, on amd64 and arm64', () => {
+  const job = jobOf(ci.jobs, 'package');
+  const systems = systemsOf(job);
+  assert.match(scriptsOf(job), /pnpm --filter @on\.auto\/server npm:pack/u);
+  assert.match(scriptsOf(job), /\.github\/smoke\/npm-package-in-container\.sh "\$GITHUB_WORKSPACE" \d+ "\$SYSTEM"/u);
+  assert.match(
+    readFileSync(join(root, '.github/smoke/npm-package-in-container.sh'), 'utf8'),
+    /\.github\/smoke\/npm-package\.sh/u,
+  );
+  assert.deepEqual(crossedArchitecturesOf(job), ['amd64', 'arm64']);
+  assert.ok(systems.length > 0);
+  assert.deepEqual(
+    systems.filter((system) => !/@sha256:[0-9a-f]{64}$/u.test(system)),
+    [],
+  );
 });
 
 await test('the smokes, the image build, the npm package and the AWS checks never come from a cache', () => {

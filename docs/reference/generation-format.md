@@ -6,13 +6,15 @@ description: 'The document format of a generation function, which makes an image
 
 # Generation function format
 
-A generation function is a definition of the type `generation`. It produces an asset, an image or audio, from a prompt: its document names what it produces, a model of that kind, the parameters the model takes and a prompt template. A run renders the prompt from its input, asks the model through a model gateway, keeps the bytes the model made in the playbook, and answers with a reference to the asset. An image or audio is made while the run's call waits; a run of a generation the provider finishes later waits for it instead, as [A generation the provider finishes later](#a-generation-the-provider-finishes-later) sets out.
+A generation function is a definition of the type `generation`. It produces an asset, an image or audio, from a prompt: its document names what it produces, a model of that kind, the parameters the model takes and a prompt template. A run renders the prompt from its input, asks the model through a model gateway, keeps the bytes the model made in the playbook, and answers with a reference to the asset. An image or audio is made while the run's call waits<span data-audience="developer operator">; a run of a generation the provider finishes later waits for it instead, as [A generation the provider finishes later](#a-generation-the-provider-finishes-later) sets out</span>.
 
 Use one for the pictures and the spoken words a playbook makes. Writing text is a [reasoning function](reasoning-format.md)'s work, and turning text into a file is a [computation function](computation-format.md)'s.
 
 ## A function document
 
 The source is Markdown: YAML front matter, then a Liquid prompt template. This example, `product-picture`, makes a picture of a product for its listing. Its page links each run's picture, and counts the pictures of each day:
+
+<div data-variable="generation.example_image_model">
 
 <!-- prettier-ignore -->
 ````markdown
@@ -62,7 +64,11 @@ page:
 A studio photograph of {{ input.product }} on a white table, in soft daylight.
 ````
 
+</div>
+
 This one speaks a welcome:
+
+<div data-variable="generation.example_audio_model">
 
 ```markdown
 ---
@@ -75,6 +81,8 @@ parameters:
 
 Welcome to {{ input.shop }}. Today is {{ today }}.
 ```
+
+</div>
 
 To save one, call `create_definition` with `type: "generation"`, a function `name`, such as `product-picture`, the document as `source`, and its `overview` and `diagram`. A save without a `diagram` is refused, so give the word `none` when a picture would add nothing; [The overview](#the-overview) says how to write both. To run it, call `run_definition` with the same type and name and its `input`. Both operations also need the playbook id, unless the MCP connection is scoped to that playbook.
 
@@ -93,16 +101,16 @@ A run answers the [asset](output-shapes.md#asset) it made:
 
 ## Fields
 
-| Field          | Required | Value                                                                                                                                                                                              |
-| -------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `description`  | No       | Text of 1 to 1,000 characters                                                                                                                                                                      |
-| `produces`     | Yes      | `image`, `audio` or `video`. The catalogue names no model that produces video, so a function that produces `video` is refused as it is saved; see [The models](#the-models)                        |
-| `model`        | Yes      | `gateway/model`: the name of a gateway of `MODEL_GATEWAYS`, then a model of [the catalogue](#the-models) that produces that kind, such as `gateway/openai/gpt-image-2`                             |
-| `input.schema` | No       | A JSON Schema of the input. The input is a JSON object; one the schema does not allow is `invalid_input`                                                                                           |
-| `parameters`   | No       | The [parameters](#parameters) of the kind, each within the limits of the model                                                                                                                     |
-| `references`   | No       | JSON Pointers into the input, such as `/photo`, each at the `id` of an asset of the playbook the model takes as a reference; see [References](#references)                                         |
-| `expires`      | No       | How long the asset is kept, an ISO 8601 duration from one hour to 3,650 days, such as `P30D`. Without it, an asset is kept for the days the runtime keeps one, 90 unless its operator sets another |
-| `page`         | No       | The [page](page-format.md) that presents its runs                                                                                                                                                  |
+| Field          | Required | Value                                                                                                                                                                                                                                                                                                                 |
+| -------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `description`  | No       | Text of 1 to 1,000 characters                                                                                                                                                                                                                                                                                         |
+| `produces`     | Yes      | `image`, `audio` or `video`. The catalogue names no model that produces video, so a function that produces `video` is refused as it is saved; see [The models](#the-models)                                                                                                                                           |
+| `model`        | Yes      | `gateway/model`: the name of a gateway<span data-audience="operator"> of `MODEL_GATEWAYS`</span>, then a model of [the catalogue](#the-models) that produces that kind, both as `list_generation_models` names them, such as <span data-variable="generation.example_image_model">`gateway/openai/gpt-image-2`</span> |
+| `input.schema` | No       | A JSON Schema of the input. The input is a JSON object; one the schema does not allow is `invalid_input`                                                                                                                                                                                                              |
+| `parameters`   | No       | The [parameters](#parameters) of the kind, each within the limits of the model                                                                                                                                                                                                                                        |
+| `references`   | No       | JSON Pointers into the input, such as `/photo`, each at the `id` of an asset of the playbook the model takes as a reference; see [References](#references)                                                                                                                                                            |
+| `expires`      | No       | How long the asset is kept, an ISO 8601 duration from one hour to 3,650 days, such as `P30D`. Without it, an asset is kept for <span data-variable="generation.kept">90 days</span><span data-audience="operator">, unless the runtime's operator sets another</span>                                                 |
+| `page`         | No       | The [page](page-format.md) that presents its runs                                                                                                                                                                                                                                                                     |
 
 The prompt is everything after the front matter. It is a [template](template.md) that reads `input`, `today`, the date as `YYYY-MM-DD`, and `now`, the time in ISO 8601, and it must render text: a list or an object written whole is refused. For audio, the prompt is the text the model speaks.
 
@@ -125,7 +133,9 @@ Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Po
 
 ## The models
 
-The runtime keeps a catalogue of the models a generation function may name, each with the kind it produces and the limits of what it takes. A model is named as the gateway names it, after the gateway's own name: a gateway named `gateway` that serves `openai/gpt-image-2` is named `gateway/openai/gpt-image-2`. `list_generation_models` answers the catalogue a server holds, with the names of its gateways; see [Generation models](mcp.md#generation-models).
+The runtime keeps a catalogue of the models a generation function may name, each with the kind it produces and the limits of what it takes. A model is named as the gateway names it, after the gateway's own name and a `/`, such as <span data-variable="generation.example_image_model">`gateway/openai/gpt-image-2`</span> for `openai/gpt-image-2`. `list_generation_models` answers the catalogue a server holds, with the names of its gateways<span data-audience="developer">; see [Generation models](mcp.md#generation-models)</span>.
+
+<div data-audience="developer operator user">
 
 | Model                        | Produces | Takes                                                                                                                                                                                                 |
 | ---------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -135,7 +145,9 @@ The runtime keeps a catalogue of the models a generation function may name, each
 | `openai/tts-1-hd`            | audio    | The same as `openai/tts-1`                                                                                                                                                                            |
 | `openai/gpt-4o-mini-tts`     | audio    | `voice` `alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer` or `verse`; the formats of `openai/tts-1`; a prompt of up to 4,096 characters                           |
 
-A gateway may not serve every model of the catalogue. A model it does not serve is answered by the gateway as not found when the function runs. The catalogue names no model that produces video, so a function that produces video is refused as it is saved.
+</div>
+
+A gateway may not serve every model of the catalogue. A model it does not serve is answered by the gateway as not found when the function runs.
 
 ### Parameters
 
@@ -156,6 +168,8 @@ A parameter the model has no values for is refused, such as an `aspect` for `ope
 
 A reference gives the model an asset of the playbook to work from, such as a photograph of a product to place in a new scene. `references` names where in the input each asset's `id` is, and the input holds the id an earlier run answered:
 
+<div data-variable="generation.example_image_model">
+
 ```markdown
 ---
 produces: image
@@ -165,6 +179,8 @@ references: [/photo]
 
 The same product, {{ input.product }}, on a garden table.
 ```
+
+</div>
 
 A reference is never an address. Each one is checked as the run starts, and the run is `invalid_input` at its pointer, asking the model nothing, when:
 
@@ -176,15 +192,23 @@ A reference is never an address. Each one is checked as the run starts, and the 
 
 ## The asset
 
+<div data-audience="developer">
+
 A run keeps the bytes the model made as content of the playbook, at once, and records the asset on a stream of its own, `assets/{id}`, as the fact `asset_kept`. The fact holds the asset's media type, size and SHA-256, the kind, what made it as `made_by`, and when the asset expires, `expires_at`. For a generation function, `made_by.generation` holds the model, the prompt as rendered, the parameters sent, the references taken, each by its id and digest, the cost the gateway answered as `cost_usd` where it answered one, and `own_key`. Its context names the run and the definition that made it. An image a tool answers a reasoning function's run is an asset too, made by that call, `made_by.tool_call` ([The run's history](reasoning-format.md#the-run-s-history)).
+
+</div>
 
 The reference a run answers is the [asset shape](output-shapes.md#asset):
 
 - `id` is the asset's id, which a later run takes as a reference;
-- `media_type`, `bytes` and `sha256` describe its bytes. An image's media type is read from its bytes; audio's is the one the gateway answers, or that of its format;
-- `address` is a [signed address](http.md#content-at-a-signed-address) its bytes are read at without a key, which lasts 15 minutes, until `address_until`. Both are `null` where the runtime's own address is neither `https` nor a loopback address, since the runtime signs no address there. An address in the record of an earlier run has expired: `get_asset` reads the asset again by its `id`, with the model that made it, when it expires and an address signed as it is read, until the asset expires ([Generation functions](http.md#generation-functions)).
+- `media_type`, `bytes` and `sha256` describe its bytes<span data-audience="developer">. An image's media type is read from its bytes; audio's is the one the gateway answers, or that of its format</span>;
+- `address` is a [signed address](http.md#content-at-a-signed-address) its bytes are read at without a key, which lasts 15 minutes, until `address_until`. Both are `null` where the runtime signs no address<span data-audience="operator">: where its own address is neither `https` nor a loopback address</span>. An address in the record of an earlier run has expired: `get_asset` reads the asset again by its `id`, with the model that made it, when it expires and an address signed as it is read, until the asset expires<span data-audience="developer"> ([Generation functions](http.md#generation-functions))</span>.
+
+<div data-audience="developer">
 
 When the asset expires, the runtime records `asset_expired` on the asset's stream, with its size, and its id as a reference is then refused. It then removes the content, unless another part of the playbook holds the same bytes, such as another asset made the same, or they were kept again within the last hour. Bytes another asset holds are removed when the last asset that holds them expires. Once the content is removed, the runtime records `asset_content_removed` on the asset's stream, with its size and digest, and an address answered before reads nothing more.
+
+</div>
 
 ## How a run works
 
@@ -192,11 +216,13 @@ When the asset expires, the runtime records `asset_expired` on the asset's strea
 2. The prompt is rendered from the input, and checked against the most characters the model takes, each character a Unicode code point.
 3. Each reference is read from the input and checked.
 4. The playbook must have room left for assets.
-5. The runtime asks the gateway once: `POST` to the gateway's `base_url` with `/images/generations` for an image, `/images/edits` with the references as files for an image with references, `/audio/speech` for audio, and `/videos` for a video, naming the seconds it asks for, with the gateway's key, headers and query parameters. For a generation the provider finishes later, the run then waits; see [A generation the provider finishes later](#a-generation-the-provider-finishes-later).
-6. The asset is checked against the most bytes the runtime keeps of one asset of its kind as it is read. The playbook was checked against the most it keeps of all its assets before the gateway was asked, so two runs that finish together may take it past that by one asset.
+5. The runtime asks the gateway once<span data-audience="developer operator">: `POST` to the gateway's `base_url` with `/images/generations` for an image, `/images/edits` with the references as files for an image with references, `/audio/speech` for audio, and `/videos` for a video, naming the seconds it asks for, with the gateway's key, headers and query parameters. For a generation the provider finishes later, the run then waits; see [A generation the provider finishes later](#a-generation-the-provider-finishes-later)</span>.
+6. The asset is checked against the most bytes the runtime keeps of one asset of its kind as it is read.<span data-audience="developer"> The playbook was checked against the most it keeps of all its assets before the gateway was asked, so two runs that finish together may take it past that by one asset.</span>
 7. The bytes are kept, the asset recorded, and its reference answered.
 
 A run reaches outside the runtime, and a run asked again asks the gateway again and may cost again, so a workflow retries a generation function only where a second asset is wanted.
+
+<div data-audience="developer operator">
 
 ## A generation the provider finishes later
 
@@ -208,55 +234,91 @@ Meanwhile the runtime asks the gateway at `/videos/{id}` how the generation stan
 
 A run waits 10 minutes at most, unless its operator sets another time from 1 to 60 minutes. A generation not made by then ends the run `unavailable`, kind `generation_timed_out`. One the provider fails to make ends the run as the gateway answers. Either way the run's record holds the cost the request spent. However many times the runtime finds a generation made, it keeps one asset of it, under an id the run's deferral gives.
 
+</div>
+
 ## How a run ends
 
-| Rejection                                  | When                                                                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `invalid_input`, kind `input_schema`       | The input is no JSON object, or the input schema does not allow it                                                                                                                                                                                                                                |
-| `invalid_input`                            | The prompt cannot be rendered from the input, renders empty, or is longer than the model takes; or a reference cannot be used, at its pointer                                                                                                                                                     |
-| `conflict`, kind `blocked_by_moderation`   | The provider behind the gateway refused the request under its moderation. Change the prompt, the input or the references                                                                                                                                                                          |
-| `conflict`, kind `oversized`               | The asset is larger than the runtime keeps of one asset of its kind, or the playbook already keeps all it may of its assets                                                                                                                                                                       |
-| `conflict`, kind `unworkable`              | The gateway did not take the request, such as for a model it does not serve, or the catalogue no longer takes the model. Update the function                                                                                                                                                      |
-| `unavailable`, kind `model_not_offered`    | The model names a gateway the runtime is not given                                                                                                                                                                                                                                                |
-| `unavailable`                              | The gateway rejected its key, limited the rate, refused for its own budget or quota, answered a redirect, failed, did not answer within 240 seconds, or answered no image, no audio or no video; or the provider failed to make a generation it finishes later, or the gateway no longer knows it |
-| `unavailable`, kind `generation_timed_out` | The provider had not made a generation it finishes later when the run had waited as long as it may. A new run asks for it again, which may cost again                                                                                                                                             |
+| Rejection                                | When                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invalid_input`, kind `input_schema`     | The input is no JSON object, or the input schema does not allow it                                                                                                                                                                                                                                                                                |
+| `invalid_input`                          | The prompt cannot be rendered from the input, renders empty, or is longer than the model takes; or a reference cannot be used, at its pointer                                                                                                                                                                                                     |
+| `conflict`, kind `blocked_by_moderation` | The provider behind the gateway refused the request under its moderation. Change the prompt, the input or the references                                                                                                                                                                                                                          |
+| `conflict`, kind `oversized`             | The asset is larger than the runtime keeps of one asset of its kind, or the playbook already keeps all it may of its assets                                                                                                                                                                                                                       |
+| `conflict`, kind `unworkable`            | The gateway did not take the request, such as for a model it does not serve, or the catalogue no longer takes the model. Update the function                                                                                                                                                                                                      |
+| `unavailable`, kind `model_not_offered`  | The model names a gateway the runtime is not given                                                                                                                                                                                                                                                                                                |
+| `unavailable`                            | The gateway rejected its key, limited the rate, refused for its own budget or quota, answered a redirect, failed, did not answer within 240 seconds, or answered no image, no audio or no video<span data-audience="developer operator">; or the provider failed to make a generation it finishes later, or the gateway no longer knows it</span> |
 
-A run refused before the gateway answers keeps no asset and records no cost. A run the gateway answered and the runtime then refused, such as for an image larger than it keeps, or a generation it waited for in vain, keeps no asset and records the cost the gateway answered, since the model was asked.
+<div data-audience="developer operator">
+
+| Rejection                                  | When                                                                                                                                                  |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unavailable`, kind `generation_timed_out` | The provider had not made a generation it finishes later when the run had waited as long as it may. A new run asks for it again, which may cost again |
+
+</div>
+
+A run refused before the gateway answers keeps no asset and records no cost. A run the gateway answered and the runtime then refused, such as for an image larger than it keeps<span data-audience="developer operator">, or a generation it waited for in vain</span>, keeps no asset and records the cost the gateway answered, since the model was asked.
 
 ## What a run records
 
 A run that succeeds records the asset's reference as its output and, as its `record`:
 
-| Field         | Value                                                                                                                                                                            |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `model`       | The model the document names                                                                                                                                                     |
-| `own_key`     | `true` where the gateway is reached with the key its entry of `MODEL_GATEWAYS` gives, the runtime operator's own, and `false` where the runtime reaches it with a key it is lent |
-| `duration_ms` | How long the run took, for a generation the provider finishes later from the request to its bytes kept                                                                           |
-| `cost_usd`    | The cost in US dollars the gateway answered in the header its entry names as `cost_header`, where it names one and answered a cost                                               |
+| Field         | Value                                                                                                                                                                                                                      |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`       | The model the document names                                                                                                                                                                                               |
+| `own_key`     | `true` where the gateway is reached with the runtime operator's own key<span data-audience="operator">, the one its entry of `MODEL_GATEWAYS` gives</span>, and `false` where the runtime reaches it with a key it is lent |
+| `duration_ms` | How long the run took<span data-audience="developer operator">, for a generation the provider finishes later from the request to its bytes kept</span>                                                                     |
+| `cost_usd`    | The cost in US dollars the gateway answered, where it answered one<span data-audience="operator">: in the header its entry names as `cost_header`, where it names one</span>                                               |
 
-Each run counts once on the runtime's meter, as a run of every other function does. The meter counts the run, not the model call it makes. On hosted Auto, the model call uses credits of its own, in addition to the run's, as [Pricing](https://on.auto/pricing) explains.
+Each run counts once on the runtime's meter, as a run of every other function does. The meter counts the run, not the model call it makes.<span data-audience="user"> On hosted Auto, the model call uses credits of its own, in addition to the run's, as [Pricing](https://on.auto/pricing) explains.</span>
 
 ## Bounds
 
-| Bound                                                | Default                     | Setting                                        |
-| ---------------------------------------------------- | --------------------------- | ---------------------------------------------- |
-| One image                                            | 20 MiB                      | `GENERATION_MAX_IMAGE_MIB`, from 1 to 1,024    |
-| One asset of audio                                   | 50 MiB                      | `GENERATION_MAX_AUDIO_MIB`, from 1 to 1,024    |
-| One video                                            | 200 MiB                     | `GENERATION_MAX_VIDEO_MIB`, from 1 to 4,096    |
-| The storage quota of a playbook's assets             | 2,048 MiB                   | `ASSET_STORAGE_QUOTA_MIB`, from 1 to 1,048,576 |
-| How long an asset is kept without `expires`          | 90 days                     | `ASSET_RETENTION_DAYS`, from 1 to 3,650        |
-| Waiting for a generation the provider finishes later | 10 minutes                  | `GENERATION_WAIT_MINUTES`, from 1 to 60        |
-| The prompt                                           | The model's                 | The catalogue                                  |
-| References                                           | The model's                 | The catalogue                                  |
-| Waiting for the gateway                              | 240 seconds                 |                                                |
-| A run                                                | 300 seconds                 |                                                |
-| A run of a generation the provider finishes later    | The wait and 9 minutes more | `GENERATION_WAIT_MINUTES` sets the wait        |
+| Bound                                       | Limit                                                       |
+| ------------------------------------------- | ----------------------------------------------------------- |
+| One image                                   | <span data-variable="generation.most_image">20 MiB</span>   |
+| One asset of audio                          | <span data-variable="generation.most_audio">50 MiB</span>   |
+| The storage quota of a playbook's assets    | <span data-variable="generation.most_kept">2,048 MiB</span> |
+| How long an asset is kept without `expires` | <span data-variable="generation.kept">90 days</span>        |
+| The prompt                                  | The model's                                                 |
+| References                                  | The model's                                                 |
+| Waiting for the gateway                     | 240 seconds                                                 |
+| A run                                       | 300 seconds                                                 |
 
-Each default holds where the runtime's operator sets no other value, as the configuration reference sets out for [generation functions](../self-host/configuration.md#generation-functions) and for [assets](../self-host/configuration.md#assets). Hosted Auto sets values of its own for some of them, the storage quota among them. A run refused for the storage quota says the quota in force: how much the playbook keeps, and how much it may keep.
+The limits for one image, one asset of audio, a playbook's assets and how long an asset is kept without `expires` <span data-variable="generation.bounds_changed_by">can be changed only by whoever runs the server</span>. A run refused for the storage quota says the quota in force: how much the playbook keeps, and how much it may keep.
+
+<div data-audience="developer operator">
+
+The bounds of a video and of a generation the provider finishes later, which no model of the catalogue makes:
+
+| Bound                                                | Limit                       |
+| ---------------------------------------------------- | --------------------------- |
+| One video                                            | 200 MiB                     |
+| Waiting for a generation the provider finishes later | 10 minutes                  |
+| A run of a generation the provider finishes later    | The wait and 9 minutes more |
+
+</div>
+
+<div data-audience="operator">
+
+A limit above that has a setting below is a default, which holds where the runtime's operator sets no other value, as the configuration reference sets out for [generation functions](../self-host/configuration.md#generation-functions) and for [assets](../self-host/configuration.md#assets). Hosted Auto sets values of its own for some of them, the storage quota among them.
+
+| Bound                                                | Setting                                        |
+| ---------------------------------------------------- | ---------------------------------------------- |
+| One image                                            | `GENERATION_MAX_IMAGE_MIB`, from 1 to 1,024    |
+| One asset of audio                                   | `GENERATION_MAX_AUDIO_MIB`, from 1 to 1,024    |
+| One video                                            | `GENERATION_MAX_VIDEO_MIB`, from 1 to 4,096    |
+| The storage quota of a playbook's assets             | `ASSET_STORAGE_QUOTA_MIB`, from 1 to 1,048,576 |
+| How long an asset is kept without `expires`          | `ASSET_RETENTION_DAYS`, from 1 to 3,650        |
+| Waiting for a generation the provider finishes later | `GENERATION_WAIT_MINUTES`, from 1 to 60        |
+| A run of a generation the provider finishes later    | `GENERATION_WAIT_MINUTES` sets the wait        |
+| The prompt                                           | The catalogue                                  |
+| References                                           | The catalogue                                  |
+
+</div>
 
 ## The overview
 
-`create_definition` and `update_definition` take an `overview` and a `diagram` beside the document. Write both after the document, and again with every update, as the descriptions of those arguments say. Auto Studio draws the diagram under the overview, at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. An overview holds up to 16,384 bytes and a diagram 8,192, in UTF-8. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
+`create_definition` and `update_definition` take an `overview` and a `diagram` beside the document. Write both after the document, and again with every update, as the descriptions of those arguments say. Auto Studio draws the diagram under the overview, at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. An overview holds up to 16,384 bytes and a diagram 8,192, in UTF-8.<span data-audience="developer"> [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.</span>
 
 ## Its page
 
@@ -269,6 +331,6 @@ Show numbers over time as a chart keyed by the period a run is about, and anythi
 
 ## Availability
 
-A runtime runs generation functions once it is given a model gateway in `MODEL_GATEWAYS` that serves the models of the catalogue. See [Functions and availability](../concepts/functions.md#availability).
+A runtime runs generation functions once it is given a model gateway<span data-audience="operator"> in `MODEL_GATEWAYS`</span> that serves the models of the catalogue. See [Functions and availability](../concepts/functions.md#availability).
 
 </div>

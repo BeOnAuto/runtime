@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
+import { forTheAgent } from '../guide-pages/agent-rendition.ts';
 import { mostGuideBytes, mostRecipeBytes } from '../index.ts';
 import {
   byteLengthOf,
@@ -18,7 +19,6 @@ import {
 } from '../testing/guide-shelves.ts';
 import { withLinksResolved } from './page-links.ts';
 import { guideShelfFrom, type ServedType } from './served-guides.ts';
-import { withoutSiteMarkup } from './site-markup.ts';
 
 function page(path: string): string {
   return readFileSync(new URL(`../../../../docs/${path}`, import.meta.url), 'utf8');
@@ -62,15 +62,15 @@ describe('the guides of a server that runs every type of definition', () => {
     ]);
   });
 
-  it('give each type the whole public page of its format, and the templates, triggers and events guides the pages of templates, triggers and events, without the markup of the documentation site, their links resolved, and the reasoning page what this server offers', () => {
+  it('give each type the public page of its format as an agent reads it, and the templates, triggers and events guides the pages of templates, triggers and events, without the markup of the documentation site or what it marks for another reader, their links resolved, and the reasoning page what this server offers', () => {
     const [reasoningGuide, ...otherGuides] = guides.slice(2);
     const [reasoningPage = '', ...otherPages] = Object.values(pages);
 
     expect(reasoningGuide?.text).toBe(
-      `${withLinksResolved(withoutSiteMarkup(page(reasoningPage)), reasoningPage).trimEnd()}\n\n${onThisServer}\n`,
+      `${withLinksResolved(forTheAgent(reasoningPage, page(reasoningPage), {}), reasoningPage).trimEnd()}\n\n${onThisServer}\n`,
     );
     expect(otherGuides.map(({ text }) => text)).toEqual(
-      otherPages.map((path) => withLinksResolved(withoutSiteMarkup(page(path)), path)),
+      otherPages.map((path) => withLinksResolved(forTheAgent(path, page(path), {}), path)),
     );
   });
 });

@@ -16,7 +16,7 @@ describe('the generation capability', () => {
     expect({
       type: capability.type,
       title: capability.title,
-      guide: capability.guide,
+      guide: capability.guide.name,
       noun: capability.noun,
       reachesOutside: capability.reachesOutside,
       mayChangeOutside: capability.mayChangeOutside,
@@ -26,7 +26,7 @@ describe('the generation capability', () => {
     }).toEqual({
       type: 'generation',
       title: 'Generation',
-      guide: { name: 'generation-function' },
+      guide: 'generation-function',
       noun: { one: 'generation function', other: 'generation functions' },
       reachesOutside: true,
       mayChangeOutside: true,

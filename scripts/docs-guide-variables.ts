@@ -4,8 +4,9 @@ import { join, relative, resolve } from 'node:path';
 
 import { defaultsTypedIn, markingFaultsOf, withDefaultsWritten } from '@on.auto/api';
 import type { GuideVariables } from '@on.auto/definitions';
+import { generationBounds, guideVariablesOf as generationVariablesOf } from '@on.auto/generation';
 
-export const declaredByDefault: GuideVariables = {};
+export const declaredByDefault: GuideVariables = generationVariablesOf(generationBounds, []);
 
 const regenerating = 'pnpm docs:guide-variables';
 

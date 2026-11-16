@@ -34,7 +34,21 @@ function withTemporaryDocs(pages: Readonly<Record<string, string>>, verify: (doc
 }
 
 await test('the published pages name only values a server declares, each with its default, and type none where its value belongs', () => {
-  assert.deepEqual(declaredByDefault, {});
+  assert.deepEqual(
+    Object.entries(declaredByDefault).map(([name, written]: readonly [string, { readonly default: string }]) => [
+      name,
+      written.default,
+    ]),
+    [
+      ['generation.most_image', '20 MiB'],
+      ['generation.most_audio', '50 MiB'],
+      ['generation.most_kept', '2,048 MiB'],
+      ['generation.kept', '90 days'],
+      ['generation.bounds_changed_by', 'can be changed only by whoever runs the server'],
+      ['generation.example_image_model', 'gateway/openai/gpt-image-2'],
+      ['generation.example_audio_model', 'gateway/openai/gpt-4o-mini-tts'],
+    ],
+  );
   checkGuideVariables(publishedDocs, declaredByDefault);
   const guidePages = guidePagesIn(publishedDocs);
   assert.ok(guidePages.includes('concepts/terminology.md'));

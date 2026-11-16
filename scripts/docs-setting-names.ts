@@ -8,7 +8,6 @@ import { agentTextsRecordIn, placesIn, type AgentTextsRecord } from './agent-tex
 export const textsNotYetClean: readonly string[] = [
   'guide computation-function',
   'guide connect-a-service',
-  'guide generation-function',
   'guide interaction-function',
   'guide lookup-function',
   'guide page',

@@ -12,9 +12,9 @@ import {
   type RecordedFacts,
 } from './recorded-facts.ts';
 
-const recordingVariable = 'LEDGER_RECORD_FACTS';
+export const recordingVariable = 'LEDGER_RECORD_FACTS';
 
-function recordingAsked(): boolean {
+export function recordingAsked(): boolean {
   return process.env[recordingVariable] === '1';
 }
 

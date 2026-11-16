@@ -1,0 +1,948 @@
+{
+  "layout": 25,
+  "writtenOn": "2026-11-16",
+  "writtenBy": {
+    "node": "v26.12.1",
+    "sqlite": "3.52.0"
+  },
+  "files": {
+    "ended-without-closing.db": "f5034ea23c042c3cefa7988ccacd4d2edbb0ea09030b88b45943626d16d06398",
+    "ended-without-closing.db-wal": "b9cca35768e2daca836059069c8291e42630f6c443369aa410060319d91e2d32"
+  },
+  "file": {
+    "integrity": ["ok"],
+    "header": {
+      "journal_mode": "wal",
+      "page_size": 4096,
+      "encoding": "UTF-8",
+      "auto_vacuum": 0,
+      "user_version": 0
+    },
+    "tables": {
+      "sqlite_schema": {
+        "rows": 61,
+        "sha256": "b09c9d44cb594d0753502f38491ac3f8ccb7655633993dc748244cfd2c2568cf"
+      },
+      "content_references_2": {
+        "rows": 2,
+        "sha256": "3731733c0de9cfd3088a1f6c5f354124ad08425a10c3bc3fbb8e68ade30a29f2"
+      },
+      "definition_names_1": {
+        "rows": 1,
+        "sha256": "7abdb1d8f1391879b394ea8fcc46c061db6a22498d27ba1945f7986c43dbf322"
+      },
+      "dmb_migrations": {
+        "rows": 3,
+        "sha256": "7c374e068d6e38a008cb146984a20301b5e80d59a492f99cf035cd9c5c5b6407"
+      },
+      "emt_messages": {
+        "rows": 16,
+        "sha256": "227c924f929fa3da1e168ab19252c36dab07a67955f5f8243ce9efe8b4f9f236"
+      },
+      "emt_processors": {
+        "rows": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "emt_projections": {
+        "rows": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "emt_streams": {
+        "rows": 9,
+        "sha256": "b53b3dc421b9fe19e99839b244f5a41d2c8c64a8af7d7fbf7a8b3bb88e0d969b"
+      },
+      "kept_beside": {
+        "rows": 13,
+        "sha256": "fca8c9202874981a1e760c66946fb3cbedc0ce329f5cef439a7d93761662ed73"
+      },
+      "kept_secrets": {
+        "rows": 2,
+        "sha256": "a00ff91d6a3e897b8072cbbf3ad3689fc2d89826fd168f088120fc1a2a3e4c89"
+      },
+      "label_notes_1": {
+        "rows": 1,
+        "sha256": "84e4d815f854b41de6012bc6b4f0cbfca0adc22a2fcae1a8165567446bdb71f4"
+      },
+      "label_sets_1": {
+        "rows": 1,
+        "sha256": "70dac18136ef804277f84cc2f8b08bc46bce43ecf5acd43c61977c4a23e2101f"
+      },
+      "labelled_checkpoints_1": {
+        "rows": 1,
+        "sha256": "42574bdae56d2b176ae2d7fe43dc4d9bd66fe9f6662f617963ba7154f0a30801"
+      },
+      "labelled_rows_1": {
+        "rows": 3,
+        "sha256": "2cc2b834cb21b31a892834c01844cb5a8c165d1c20ff7ea7795c77654f67a387"
+      },
+      "ledger_layout": {
+        "rows": 1,
+        "sha256": "eab790c7a48731c5ad25143ca8e90477983a9abb76b263fd1392c6207bd676f4"
+      },
+      "recorded_content_chunks": {
+        "rows": 3,
+        "sha256": "dc8350be9ebd606b0ea0531f00a3a814360593598d0d5fbf3d6abfa2341a93fc"
+      },
+      "recorded_content_heads": {
+        "rows": 5,
+        "sha256": "aeadcc498b2dbbe877b13c3e374f43ebbeab26be5cfbae9d106f5d3cbb43f9d2"
+      },
+      "recorded_content_places": {
+        "rows": 1,
+        "sha256": "6b90e862bf687620c69839d20b00f0eb1a6421e6d7d692aa4b4b1d3535b5d006"
+      },
+      "run_outcomes_5": {
+        "rows": 2,
+        "sha256": "ea860087b259cac63cea5b752727c6ef142c3ce660f2495fc9cc8155428442e0"
+      },
+      "run_tallies_2": {
+        "rows": 2,
+        "sha256": "a8c829deb6efd9e7f6ce35176e247e078849975a1621e21d4198cab258a5d5e5"
+      },
+      "sqlite_sequence": {
+        "rows": 1,
+        "sha256": "ae1f4205d54e26b545617264c236ca6672809f9fa0af37567a06d998aa4b2ce7"
+      },
+      "sqlite_stat1": {
+        "rows": 2,
+        "sha256": "05ce25056230f54afdc444839303f46285789d233ffef5892ba4d9cc57bdd033"
+      },
+      "topics_2": {
+        "rows": 1,
+        "sha256": "d1ad11885ef5f34f70398956ef5ba064e98b7e0cb980cf7d7a78e5e4badba162"
+      },
+      "webhooks_received": {
+        "rows": 1,
+        "sha256": "455728e940fb27493e3e1d896a1c715c5b724579cb5d19c1f8ac24694f21ea09"
+      }
+    }
+  },
+  "ledger": {
+    "streams": {
+      "journal": {
+        "state": [
+          {
+            "type": "entry_written",
+            "data": {
+              "at": {
+                "date": "2026-11-16T09:15:00.000Z"
+              },
+              "amount": {
+                "bigint": "9007199254740993"
+              },
+              "ratio": 0.1,
+              "tags": ["first", "second"],
+              "memo": "kept",
+              "source": null
+            },
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "tester"
+            }
+          },
+          {
+            "type": "entry_struck",
+            "data": {
+              "reason": "written twice"
+            },
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "tester"
+            }
+          }
+        ],
+        "version": 2
+      },
+      "tallies": {
+        "state": 2,
+        "version": 2
+      },
+      "endedRun": {
+        "state": null,
+        "version": 3
+      },
+      "lastOfTheEndedRun": {
+        "type": "run_ended",
+        "data": {
+          "status": "succeeded",
+          "ms": 1234,
+          "tokens": 2147483648,
+          "cost": 9007199254740991
+        },
+        "context": {
+          "at": "2026-10-05T09:00:00.000Z",
+          "by": "tallies"
+        }
+      },
+      "nameClaimedAgain": {
+        "_tag": "conflict",
+        "detail": "triage is held by another definition"
+      }
+    },
+    "recorded": {
+      "everything": {
+        "records": [
+          {
+            "id": "73b04ecd-2f33-5103-9aa7-d8df1a390076",
+            "causationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b01",
+            "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b02",
+            "stream": "playbook/acme/alpha/runs/r1",
+            "version": 1,
+            "globalPosition": 1,
+            "type": "run_began",
+            "data": {
+              "at": "2026-11-16T09:00:00.000Z",
+              "fn": "tally"
+            },
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "tallies"
+            },
+            "traceId": "ea390475945dd8a5ad005ca2da2e5fae",
+            "spanId": "3f95b47a9929391d",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjEiXQ"
+          },
+          {
+            "id": "beb330b8-cf89-5e6f-9e5e-77815a947142",
+            "causationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b01",
+            "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b02",
+            "stream": "playbook/acme/alpha/runs/r1",
+            "version": 2,
+            "globalPosition": 2,
+            "type": "run_noted",
+            "data": {},
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "tallies"
+            },
+            "traceId": "ea390475945dd8a5ad005ca2da2e5fae",
+            "spanId": "3f95b47a9929391d",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjIiXQ"
+          },
+          {
+            "id": "4e484cc4-b453-5f24-856e-9917e3c757a2",
+            "causationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b01",
+            "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b02",
+            "stream": "playbook/acme/alpha/runs/r1",
+            "version": 3,
+            "globalPosition": 3,
+            "type": "run_ended",
+            "data": {
+              "status": "succeeded",
+              "ms": 1234,
+              "tokens": 2147483648,
+              "cost": 9007199254740991
+            },
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "tallies"
+            },
+            "traceId": "ea390475945dd8a5ad005ca2da2e5fae",
+            "spanId": "3f95b47a9929391d",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjMiXQ"
+          },
+          {
+            "id": "59a604ce-a2c7-55ea-b138-7dbc7d90bcf3",
+            "causationId": null,
+            "correlationId": null,
+            "stream": "playbook/acme/alpha/runs/r2",
+            "version": 1,
+            "globalPosition": 4,
+            "type": "run_began",
+            "data": {
+              "at": "2026-11-16T09:30:00.000Z",
+              "fn": "tally"
+            },
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "tallies"
+            },
+            "traceId": "8265ad1e653f9be3d6c2ddfdcb4f3e68",
+            "spanId": "83f11d50ca076dee",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjQiXQ"
+          },
+          {
+            "id": "14b8a98b-766a-5581-9e56-75a677665f98",
+            "causationId": null,
+            "correlationId": null,
+            "stream": "playbook/acme/alpha/notes/t1",
+            "version": 1,
+            "globalPosition": 5,
+            "type": "topic_opened",
+            "data": {
+              "topic": "shared",
+              "at": 1794819600000
+            },
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "topics"
+            },
+            "traceId": "202959f451402216b20b34e28722bffb",
+            "spanId": "5c64575c5e774fb3",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjUiXQ"
+          },
+          {
+            "id": "282c8483-4bc0-55ab-9f82-e5fbaf7ec720",
+            "causationId": null,
+            "correlationId": null,
+            "stream": "playbook/acme/alpha/notes/t1",
+            "version": 2,
+            "globalPosition": 6,
+            "type": "topic_noted",
+            "data": {
+              "topic": "shared",
+              "note": "scrubbed"
+            },
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "topics"
+            },
+            "traceId": "202959f451402216b20b34e28722bffb",
+            "spanId": "5c64575c5e774fb3",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjYiXQ"
+          },
+          {
+            "id": "718adfb4-b843-5305-8c79-abb6bf1d1e68",
+            "causationId": null,
+            "correlationId": null,
+            "stream": "playbook/acme/alpha/notes/n1",
+            "version": 1,
+            "globalPosition": 7,
+            "type": "labels_set",
+            "data": {
+              "note": "n1",
+              "labels": ["billing", "urgent"]
+            },
+            "context": {
+              "at": "2026-11-11T09:00:00.000Z",
+              "by": "labeller"
+            },
+            "traceId": "e454aab9a8b4603fd228a51acd9b7f57",
+            "spanId": "cbec051cda0c2e23",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjciXQ"
+          },
+          {
+            "id": "2408ecb1-07d0-5253-b3a5-4043593f740f",
+            "causationId": null,
+            "correlationId": null,
+            "stream": "playbook/acme/alpha/notes/n1",
+            "version": 2,
+            "globalPosition": 8,
+            "type": "label_added",
+            "data": {
+              "note": "n1",
+              "label": "later"
+            },
+            "context": {
+              "at": "2026-11-11T09:00:00.000Z",
+              "by": "labeller"
+            },
+            "traceId": "e454aab9a8b4603fd228a51acd9b7f57",
+            "spanId": "cbec051cda0c2e23",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjgiXQ"
+          },
+          {
+            "id": "4c72900c-606d-56e6-b03c-f3813e1e5a1c",
+            "causationId": null,
+            "correlationId": null,
+            "stream": "playbook/acme/alpha/held/h1",
+            "version": 1,
+            "globalPosition": 14,
+            "type": "note_kept",
+            "data": {
+              "sha256": "da35ec222e8fc7290cfb0e8daa475e2505d6ddd305beab23bfa30fb2bcb42f89"
+            },
+            "context": {
+              "at": "2026-11-01T09:00:00.000Z",
+              "by": "noter"
+            },
+            "traceId": "3da1844a8612b6ae96d5a7620e9f5d5b",
+            "spanId": "e1274c7c50598661",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjE0Il0"
+          },
+          {
+            "id": "2636782f-35af-54cf-bae2-915d44079464",
+            "causationId": null,
+            "correlationId": null,
+            "stream": "playbook/acme/alpha/writings/w1",
+            "version": 1,
+            "globalPosition": 15,
+            "type": "note_written",
+            "data": {
+              "body_sha256": "09af8f987442003920e7196ada1deb57994a6f646e6ee3381864a3cbe830a86b",
+              "body_bytes": 50
+            },
+            "context": {
+              "at": "2026-11-01T09:00:00.000Z",
+              "by": "noter"
+            },
+            "traceId": "f80bd233f59315e1edbaf957803a1212",
+            "spanId": "1339dc91083c9924",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjE1Il0"
+          },
+          {
+            "id": "70ee1f92-b622-5dda-ad46-05e2cb91972b",
+            "causationId": null,
+            "correlationId": null,
+            "stream": "playbook/acme/alpha/notes/t1",
+            "version": 3,
+            "globalPosition": 16,
+            "type": "topic_noted",
+            "data": {
+              "topic": "erased",
+              "note": ""
+            },
+            "context": {
+              "at": "2026-11-16T10:00:00.000Z",
+              "by": "eraser"
+            },
+            "traceId": "53688612ad658baab10b9841ea207cb3",
+            "spanId": "abd2b320aaf650bd",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjE2Il0"
+          }
+        ],
+        "hasMore": false,
+        "nextCursor": null,
+        "lastExamined": {
+          "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjE2Il0",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        }
+      },
+      "correlated": {
+        "records": [
+          {
+            "id": "73b04ecd-2f33-5103-9aa7-d8df1a390076",
+            "causationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b01",
+            "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b02",
+            "stream": "playbook/acme/alpha/runs/r1",
+            "version": 1,
+            "globalPosition": 1,
+            "type": "run_began",
+            "data": {
+              "at": "2026-11-16T09:00:00.000Z",
+              "fn": "tally"
+            },
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "tallies"
+            },
+            "traceId": "ea390475945dd8a5ad005ca2da2e5fae",
+            "spanId": "3f95b47a9929391d",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjEiXQ"
+          },
+          {
+            "id": "beb330b8-cf89-5e6f-9e5e-77815a947142",
+            "causationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b01",
+            "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b02",
+            "stream": "playbook/acme/alpha/runs/r1",
+            "version": 2,
+            "globalPosition": 2,
+            "type": "run_noted",
+            "data": {},
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "tallies"
+            },
+            "traceId": "ea390475945dd8a5ad005ca2da2e5fae",
+            "spanId": "3f95b47a9929391d",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjIiXQ"
+          },
+          {
+            "id": "4e484cc4-b453-5f24-856e-9917e3c757a2",
+            "causationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b01",
+            "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b02",
+            "stream": "playbook/acme/alpha/runs/r1",
+            "version": 3,
+            "globalPosition": 3,
+            "type": "run_ended",
+            "data": {
+              "status": "succeeded",
+              "ms": 1234,
+              "tokens": 2147483648,
+              "cost": 9007199254740991
+            },
+            "context": {
+              "at": "2026-10-05T09:00:00.000Z",
+              "by": "tallies"
+            },
+            "traceId": "ea390475945dd8a5ad005ca2da2e5fae",
+            "spanId": "3f95b47a9929391d",
+            "recordedAt": "2026-11-16T16:41:21.000Z",
+            "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjMiXQ"
+          }
+        ],
+        "hasMore": false,
+        "nextCursor": null,
+        "lastExamined": {
+          "cursor": "WyJwbGF5Ym9vay9hY21lL2FscGhhLyIsIjMiXQ",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        }
+      },
+      "byId": [
+        {
+          "id": "73b04ecd-2f33-5103-9aa7-d8df1a390076",
+          "causationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b01",
+          "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b02",
+          "stream": "playbook/acme/alpha/runs/r1",
+          "version": 1,
+          "globalPosition": 1,
+          "type": "run_began",
+          "data": {
+            "at": "2026-11-16T09:00:00.000Z",
+            "fn": "tally"
+          },
+          "context": {
+            "at": "2026-10-05T09:00:00.000Z",
+            "by": "tallies"
+          },
+          "traceId": "ea390475945dd8a5ad005ca2da2e5fae",
+          "spanId": "3f95b47a9929391d",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        },
+        {
+          "id": "beb330b8-cf89-5e6f-9e5e-77815a947142",
+          "causationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b01",
+          "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b02",
+          "stream": "playbook/acme/alpha/runs/r1",
+          "version": 2,
+          "globalPosition": 2,
+          "type": "run_noted",
+          "data": {},
+          "context": {
+            "at": "2026-10-05T09:00:00.000Z",
+            "by": "tallies"
+          },
+          "traceId": "ea390475945dd8a5ad005ca2da2e5fae",
+          "spanId": "3f95b47a9929391d",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        },
+        {
+          "id": "4e484cc4-b453-5f24-856e-9917e3c757a2",
+          "causationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b01",
+          "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b02",
+          "stream": "playbook/acme/alpha/runs/r1",
+          "version": 3,
+          "globalPosition": 3,
+          "type": "run_ended",
+          "data": {
+            "status": "succeeded",
+            "ms": 1234,
+            "tokens": 2147483648,
+            "cost": 9007199254740991
+          },
+          "context": {
+            "at": "2026-10-05T09:00:00.000Z",
+            "by": "tallies"
+          },
+          "traceId": "ea390475945dd8a5ad005ca2da2e5fae",
+          "spanId": "3f95b47a9929391d",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        },
+        {
+          "id": "59a604ce-a2c7-55ea-b138-7dbc7d90bcf3",
+          "causationId": null,
+          "correlationId": null,
+          "stream": "playbook/acme/alpha/runs/r2",
+          "version": 1,
+          "globalPosition": 4,
+          "type": "run_began",
+          "data": {
+            "at": "2026-11-16T09:30:00.000Z",
+            "fn": "tally"
+          },
+          "context": {
+            "at": "2026-10-05T09:00:00.000Z",
+            "by": "tallies"
+          },
+          "traceId": "8265ad1e653f9be3d6c2ddfdcb4f3e68",
+          "spanId": "83f11d50ca076dee",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        },
+        {
+          "id": "14b8a98b-766a-5581-9e56-75a677665f98",
+          "causationId": null,
+          "correlationId": null,
+          "stream": "playbook/acme/alpha/notes/t1",
+          "version": 1,
+          "globalPosition": 5,
+          "type": "topic_opened",
+          "data": {
+            "topic": "shared",
+            "at": 1794819600000
+          },
+          "context": {
+            "at": "2026-10-05T09:00:00.000Z",
+            "by": "topics"
+          },
+          "traceId": "202959f451402216b20b34e28722bffb",
+          "spanId": "5c64575c5e774fb3",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        },
+        {
+          "id": "282c8483-4bc0-55ab-9f82-e5fbaf7ec720",
+          "causationId": null,
+          "correlationId": null,
+          "stream": "playbook/acme/alpha/notes/t1",
+          "version": 2,
+          "globalPosition": 6,
+          "type": "topic_noted",
+          "data": {
+            "topic": "shared",
+            "note": "scrubbed"
+          },
+          "context": {
+            "at": "2026-10-05T09:00:00.000Z",
+            "by": "topics"
+          },
+          "traceId": "202959f451402216b20b34e28722bffb",
+          "spanId": "5c64575c5e774fb3",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        },
+        {
+          "id": "718adfb4-b843-5305-8c79-abb6bf1d1e68",
+          "causationId": null,
+          "correlationId": null,
+          "stream": "playbook/acme/alpha/notes/n1",
+          "version": 1,
+          "globalPosition": 7,
+          "type": "labels_set",
+          "data": {
+            "note": "n1",
+            "labels": ["billing", "urgent"]
+          },
+          "context": {
+            "at": "2026-11-11T09:00:00.000Z",
+            "by": "labeller"
+          },
+          "traceId": "e454aab9a8b4603fd228a51acd9b7f57",
+          "spanId": "cbec051cda0c2e23",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        },
+        {
+          "id": "2408ecb1-07d0-5253-b3a5-4043593f740f",
+          "causationId": null,
+          "correlationId": null,
+          "stream": "playbook/acme/alpha/notes/n1",
+          "version": 2,
+          "globalPosition": 8,
+          "type": "label_added",
+          "data": {
+            "note": "n1",
+            "label": "later"
+          },
+          "context": {
+            "at": "2026-11-11T09:00:00.000Z",
+            "by": "labeller"
+          },
+          "traceId": "e454aab9a8b4603fd228a51acd9b7f57",
+          "spanId": "cbec051cda0c2e23",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        },
+        {
+          "id": "4c72900c-606d-56e6-b03c-f3813e1e5a1c",
+          "causationId": null,
+          "correlationId": null,
+          "stream": "playbook/acme/alpha/held/h1",
+          "version": 1,
+          "globalPosition": 14,
+          "type": "note_kept",
+          "data": {
+            "sha256": "da35ec222e8fc7290cfb0e8daa475e2505d6ddd305beab23bfa30fb2bcb42f89"
+          },
+          "context": {
+            "at": "2026-11-01T09:00:00.000Z",
+            "by": "noter"
+          },
+          "traceId": "3da1844a8612b6ae96d5a7620e9f5d5b",
+          "spanId": "e1274c7c50598661",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        },
+        {
+          "id": "2636782f-35af-54cf-bae2-915d44079464",
+          "causationId": null,
+          "correlationId": null,
+          "stream": "playbook/acme/alpha/writings/w1",
+          "version": 1,
+          "globalPosition": 15,
+          "type": "note_written",
+          "data": {
+            "body_sha256": "09af8f987442003920e7196ada1deb57994a6f646e6ee3381864a3cbe830a86b",
+            "body_bytes": 50
+          },
+          "context": {
+            "at": "2026-11-01T09:00:00.000Z",
+            "by": "noter"
+          },
+          "traceId": "f80bd233f59315e1edbaf957803a1212",
+          "spanId": "1339dc91083c9924",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        },
+        {
+          "id": "70ee1f92-b622-5dda-ad46-05e2cb91972b",
+          "causationId": null,
+          "correlationId": null,
+          "stream": "playbook/acme/alpha/notes/t1",
+          "version": 3,
+          "globalPosition": 16,
+          "type": "topic_noted",
+          "data": {
+            "topic": "erased",
+            "note": ""
+          },
+          "context": {
+            "at": "2026-11-16T10:00:00.000Z",
+            "by": "eraser"
+          },
+          "traceId": "53688612ad658baab10b9841ea207cb3",
+          "spanId": "abd2b320aaf650bd",
+          "recordedAt": "2026-11-16T16:41:21.000Z"
+        }
+      ],
+      "head": {
+        "facts": [],
+        "cursor": "WyIxNiIsIjcwZWUxZjkyLWI2MjItNWRkYS1hZDQ2LTA1ZTJjYjkxOTcyYiJd",
+        "through": "WyIxNiJd",
+        "more": false
+      }
+    },
+    "projected": {
+      "rows": [
+        [
+          {
+            "org": "acme",
+            "playbook": "alpha",
+            "key": "r1",
+            "row": {
+              "fn": "tally",
+              "began_at": 1794819600000,
+              "status": "succeeded",
+              "facts": 3,
+              "open": false,
+              "due_at": null,
+              "last_message": "4e484cc4-b453-5f24-856e-9917e3c757a2"
+            }
+          },
+          {
+            "org": "acme",
+            "playbook": "alpha",
+            "key": "r2",
+            "row": {
+              "fn": "tally",
+              "began_at": 1794821400000,
+              "status": "started",
+              "facts": 1,
+              "open": true,
+              "due_at": 1794821460000,
+              "last_message": "59a604ce-a2c7-55ea-b138-7dbc7d90bcf3"
+            }
+          }
+        ],
+        [
+          {
+            "org": "acme",
+            "playbook": "alpha",
+            "key": "shared",
+            "row": {
+              "topic": "shared",
+              "note": "scrubbed",
+              "last_message": "282c8483-4bc0-55ab-9f82-e5fbaf7ec720",
+              "open": true,
+              "next_at": 1794819605000,
+              "due_at": 1794819605000
+            }
+          }
+        ],
+        [
+          {
+            "org": "acme",
+            "playbook": "alpha",
+            "key": "n1/1",
+            "row": {
+              "note": "n1",
+              "labels": 2,
+              "set_at": 1
+            }
+          }
+        ],
+        [
+          {
+            "org": "acme",
+            "playbook": "alpha",
+            "key": "n1",
+            "row": {
+              "note": "n1",
+              "last_set_at": 1
+            }
+          }
+        ],
+        [
+          {
+            "org": "acme",
+            "playbook": "alpha",
+            "key": "n1",
+            "child": "billing",
+            "row": {
+              "label": "billing",
+              "place": 1,
+              "set_at": 1
+            }
+          },
+          {
+            "org": "acme",
+            "playbook": "alpha",
+            "key": "n1",
+            "child": "later",
+            "row": {
+              "label": "later",
+              "place": 3,
+              "set_at": 2
+            }
+          },
+          {
+            "org": "acme",
+            "playbook": "alpha",
+            "key": "n1",
+            "child": "urgent",
+            "row": {
+              "label": "urgent",
+              "place": 2,
+              "set_at": 1
+            }
+          }
+        ]
+      ],
+      "openRuns": 1,
+      "dueRuns": [
+        {
+          "org": "acme",
+          "playbook": "alpha",
+          "key": "r2",
+          "row": {
+            "fn": "tally",
+            "began_at": 1794821400000,
+            "status": "started",
+            "facts": 1,
+            "open": true,
+            "due_at": 1794821460000,
+            "last_message": "59a604ce-a2c7-55ea-b138-7dbc7d90bcf3"
+          }
+        }
+      ],
+      "nextTopicDue": 1794819605000,
+      "outcomes": [
+        {
+          "day": "2026-11-16",
+          "definitionType": "tally",
+          "name": "tally",
+          "status": "started",
+          "runs": 1,
+          "inputTokens": 0,
+          "outputTokens": 0,
+          "cachedTokens": 0,
+          "costMicroUsd": null,
+          "durations": []
+        },
+        {
+          "day": "2026-11-16",
+          "definitionType": "tally",
+          "name": "tally",
+          "status": "succeeded",
+          "runs": 1,
+          "inputTokens": 2147483648,
+          "outputTokens": 2147483648,
+          "cachedTokens": 2147483648,
+          "costMicroUsd": 9007199254740991,
+          "durations": [1234]
+        }
+      ]
+    },
+    "content": [
+      {
+        "head": {
+          "bytes": 23,
+          "mediaType": "application/json",
+          "keptAt": 1794819600000
+        },
+        "text": "A note kept as content."
+      },
+      {
+        "head": {
+          "bytes": 50,
+          "mediaType": "application/json",
+          "keptAt": 1794819600000
+        },
+        "text": "The body of a written note, kept outside its fact."
+      },
+      {
+        "head": {
+          "bytes": 28,
+          "mediaType": "application/json",
+          "keptAt": 1794819600000,
+          "expiresAt": 4102444800000
+        },
+        "text": "Kept until a day long after."
+      },
+      {
+        "head": {
+          "bytes": 21,
+          "mediaType": "application/json",
+          "keptAt": 1794819600000,
+          "erasedAt": 1794819602000
+        }
+      }
+    ],
+    "secrets": {
+      "sealed": {
+        "holding": {
+          "keptBy": "sealed-in-the-ledger",
+          "held": "c2VhbGVkIGJ5IG5vYm9keQ",
+          "wrappedKey": "d3JhcHBlZCBieSBub2JvZHk",
+          "kid": "key-1"
+        },
+        "version": 1,
+        "claimedUntil": "2026-11-16T09:01:00.000Z"
+      },
+      "plain": {
+        "holding": {
+          "keptBy": "sealed-in-the-ledger",
+          "held": "aGVsZCBwbGFpbg"
+        },
+        "version": 1
+      },
+      "endings": [["0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b11", "wxyz"]],
+      "held": [
+        {
+          "id": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b11",
+          "version": 1,
+          "holding": {
+            "keptBy": "sealed-in-the-ledger",
+            "held": "c2VhbGVkIGJ5IG5vYm9keQ",
+            "wrappedKey": "d3JhcHBlZCBieSBub2JvZHk",
+            "kid": "key-1"
+          }
+        },
+        {
+          "id": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b12",
+          "version": 1,
+          "holding": {
+            "keptBy": "sealed-in-the-ledger",
+            "held": "aGVsZCBwbGFpbg"
+          }
+        }
+      ]
+    }
+  }
+}
