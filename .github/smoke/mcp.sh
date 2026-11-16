@@ -27,6 +27,9 @@ call_mcp_as() {
 call_mcp() {
   call_mcp_as "$key" "$1" "$2" "$3"
 }
+structured_without_words() {
+  sed --quiet 's/^data: //p' "$1" | jq --compact-output '.result.structuredContent | del(.in_words)'
+}
 call_mcp /orgs/demo/mcp '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' tools.txt
 for tool in create_playbook list_playbooks update_playbook retire_playbook restore_playbook add_connection list_connections remove_connection; do
   grep --quiet "\"name\":\"$tool\"" tools.txt
@@ -44,13 +47,13 @@ for tool in list_models list_generation_models list_runs get_event list_playbook
   grep --quiet "\"name\":\"$tool\"" all-tools.txt
 done
 call_mcp /mcp '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"list_definitions","arguments":{"playbook":"smoke","type":"reasoning"}}}' definitions.txt
-grep --quiet '"structuredContent":{"definitions":\[\]}' definitions.txt
+test "$(structured_without_words definitions.txt)" = '{"definitions":[]}'
 call_mcp /mcp '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"list_runs","arguments":{"playbook":"smoke"}}}' runs.txt
-grep --quiet '"structuredContent":{"runs":\[\],"has_more":false,"next_cursor":null}' runs.txt
+test "$(structured_without_words runs.txt)" = '{"runs":[],"has_more":false,"next_cursor":null}'
 call_mcp /mcp '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"search","arguments":{"playbook":"smoke"}}}' tool-servers.txt
-grep --quiet '"structuredContent":{"servers":\[\],"tools":\[\],"scopes":\[\]}' tool-servers.txt
+test "$(structured_without_words tool-servers.txt)" = '{"servers":[],"tools":[],"scopes":[]}'
 call_mcp /mcp '{"jsonrpc":"2.0","id":15,"method":"tools/call","params":{"name":"search","arguments":{}}}' org-tool-servers.txt
-grep --quiet '"structuredContent":{"servers":\[\],"tools":\[\],"scopes":\[\]}' org-tool-servers.txt
+test "$(structured_without_words org-tool-servers.txt)" = '{"servers":[],"tools":[],"scopes":[]}'
 test "$(answered org-servers.json --header "authorization: Bearer $read_key" http://127.0.0.1:$port/v1/orgs/demo/tool-servers/search)" = 200
 test "$(cat org-servers.json)" = '{"servers":[],"tools":[],"scopes":[]}'
 call_mcp /mcp '{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"execute_connection","arguments":{"playbook":"smoke","server":"graph","tool":"search"}}}' executed.txt
@@ -95,9 +98,9 @@ for prompt in first-playbook connect-a-service give-tools schedule keep; do
   grep --quiet "\"name\":\"$prompt\"" prompts.txt
 done
 call_mcp /mcp '{"jsonrpc":"2.0","id":21,"method":"tools/call","params":{"name":"list_comments","arguments":{}}}' org-comments.txt
-grep --quiet '"structuredContent":{"comments":\[\],"has_more":false,"next_cursor":null}' org-comments.txt
+test "$(structured_without_words org-comments.txt)" = '{"comments":[],"has_more":false,"next_cursor":null}'
 call_mcp /mcp '{"jsonrpc":"2.0","id":22,"method":"tools/call","params":{"name":"list_comments","arguments":{"playbook":"smoke"}}}' playbook-comments.txt
-grep --quiet '"structuredContent":{"comments":\[\],"has_more":false,"next_cursor":null}' playbook-comments.txt
+test "$(structured_without_words playbook-comments.txt)" = '{"comments":[],"has_more":false,"next_cursor":null}'
 call_mcp /mcp '{"jsonrpc":"2.0","id":12,"method":"prompts/get","params":{"name":"first-playbook"}}' first-playbook.txt
 grep --quiet 'Create my first playbook.' first-playbook.txt
 runtime_stop "$container"

@@ -224,7 +224,7 @@ export interface ContractThree extends Omit<ContractTwo, 'runContext'> {
   };
 }
 
-export interface CancelledRunOfContractFour {
+interface CancelledRunOfContractFour {
   readonly run: { readonly org: string; readonly playbook: string; readonly id: string };
   readonly record: Schema.JsonObject;
   readonly kind: 'requested' | 'deadline' | 'parent_ended';

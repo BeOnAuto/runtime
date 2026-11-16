@@ -2,6 +2,8 @@
 description: Find the tools your Auto offers a playbook, try one, put it in the function its use needs and check the calls in a run's history.
 ---
 
+<div v-pre>
+
 # Give a function tools
 
 Put the tools of a service to work in your playbook, such as tools that read files, search the news or look up records in a business system. A lookup function reads through a tool, an interaction function acts through one, and a reasoning function calls tools while it runs only where what its model searches for next depends on what it has just read. Tools come from a tool server: a service or program that offers tools for a function to call. Connect the service to your organization through your agent or Studio, then choose which playbooks may use it. This guide uses your connected agent; hosted Auto needs no local setup.
@@ -245,3 +247,5 @@ When they confirm, start again at [Find the tools](#find-the-tools).
 - [Use Auto with Apollo](../integrations/apollo.md) connects a function to your business graph as a tool server.
 - [Connect Zoom](../integrations/zoom.md) and [Connect Slack](../integrations/slack.md) let a function use your own Zoom or Slack account through its tools.
 - [Interaction function format](../reference/interaction-format.md) shows an interaction function that calls one tool, or sends its request through one, without a model.
+
+</div>
