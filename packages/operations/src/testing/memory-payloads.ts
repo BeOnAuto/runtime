@@ -75,10 +75,11 @@ export function folded<State, Event extends Recorded>(
   stored: readonly AppendedFact[],
 ): Effect.Effect<StreamState<State>> {
   const decodeEvent = Schema.decodeUnknownEffect(Schema.toCodecJson(fold.eventSchema));
-  return Effect.forEach(stored, ({ type, data, context }) => Effect.orDie(decodeEvent({ type, data, context }))).pipe(
+  const read = fold.lastFactAlone === true ? stored.slice(-1) : stored;
+  return Effect.forEach(read, ({ type, data, context }) => Effect.orDie(decodeEvent({ type, data, context }))).pipe(
     Effect.map((events: readonly Event[]) => ({
       state: foldedOver(fold, fold.initialState, events),
-      version: events.length,
+      version: stored.length,
     })),
   );
 }

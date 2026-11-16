@@ -44,9 +44,10 @@ function create(name: string, content = plain, definitionId = `id-of-${name}`): 
 
 const decidedOnItsOwn = definitionsDecider('echo', alpha);
 
-const decidedWithoutTheOthers = {
+const decidedWithoutTheOthers: typeof decidedOnItsOwn = {
   ...decidedOnItsOwn,
-  evolve: (registry: typeof decidedOnItsOwn.initialState) => registry,
+  evolve: (registry) => registry,
+  lastFactAlone: true,
 };
 
 function createdUnderNewNames(ledger: Ledger, creations: readonly DefinitionCreation[]): Promise<void> {
