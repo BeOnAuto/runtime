@@ -141,6 +141,24 @@ describe('a pass that closes the calls of the runs that ended before this releas
   });
 });
 
+describe('a pass over runs whose logs the event store archived, with its own mark', () => {
+  it('reads each as a run whose log holds no record: it recovers no end from the log and finds no time of its last record', async () => {
+    const database = await ranOn([first, second]);
+    await written(
+      database,
+      statement`UPDATE workflow_runs SET ended_time = NULL WHERE run_key = ${keyOfTheRun(first)}`,
+      statement`UPDATE workflow_runs SET ended_at = NULL, ended_time = NULL WHERE run_key = ${keyOfTheRun(second)}`,
+      statement`UPDATE emt_streams SET is_archived = TRUE WHERE stream_id IN (SELECT stream_id FROM workflow_runs)`,
+      statement`UPDATE emt_messages SET is_archived = TRUE WHERE stream_id IN (SELECT stream_id FROM workflow_runs)`,
+    );
+
+    const pass = await passedOn(database, { now: Date.now(), quietMs: 0 });
+
+    expect(pass).toEqual({ ...nothingCounted, examined: 2, going: 1, logMissing: 1 });
+    expect((await callsIn(database)).map(({ state }) => state)).toEqual(['answered', 'answered']);
+  });
+});
+
 describe('a pass that holds back the runs it may not close', () => {
   it('holds back a run whose dispatch is behind its end, one whose settlement is not recorded, and one with a call open', async () => {
     const database = await ranOn([first, second, third, fourth]);

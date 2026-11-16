@@ -74,11 +74,16 @@ function ledgerFactsRefused(refused: Refused): LedgerFactsRefused {
 
 const messagesTable = 'emt_messages';
 
+const defaultPartition = 'emt:default';
+
 const newestFactOfEachType = SQL`SELECT m.message_type AS type, m.global_position AS position,
     m.message_data AS data, m.message_metadata AS metadata
   FROM emt_messages m
-  JOIN (SELECT message_type, MAX(global_position) AS newest FROM emt_messages GROUP BY message_type) n
+  JOIN (SELECT message_type, MAX(global_position) AS newest FROM emt_messages
+      WHERE partition = ${defaultPartition} AND is_archived = FALSE
+      GROUP BY message_type) n
     ON m.message_type = n.message_type AND m.global_position = n.newest
+  WHERE m.partition = ${defaultPartition} AND m.is_archived = FALSE
   ORDER BY m.message_type`;
 
 const NewestRows = Schema.Array(

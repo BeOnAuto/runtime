@@ -2,13 +2,20 @@ import { dumbo } from '@event-driven-io/dumbo';
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { describe, onTestFinished } from 'vitest';
 
-import { sqliteLayout, sqliteLedgerOpened, sqliteReceivedWebhooksOn, sqliteSecretRowsOn } from './index.ts';
+import {
+  sqliteLayout,
+  sqliteLedgerOpened,
+  sqliteReceivedWebhooksOn,
+  sqliteSecretRowsOn,
+  VersionConflict,
+} from './index.ts';
 import { sqliteLayoutCarried } from './layout/sqlite-schema.ts';
 import { definitionStreamsIndexed, executedOn, planOf, queried, statementPlanOf } from './recorded/sqlite-checks.ts';
 import { ledgerLayer, sqliteLedgerFile } from './sqlite3.ts';
 import { databaseStructureBehaviour } from './structure/database-structure-behaviour.ts';
 import {
   appendedFactsOnStoresBehaviour,
+  archivedStreamsBehaviour,
   definitionNamesBehaviour,
   appendsWithStatementsOnStoresBehaviour,
   measuredRiddenAppendsBehaviour,
@@ -88,6 +95,11 @@ describe('The ledger on SQLite', () => {
   earlierShapesBehaviour(onSQLite);
   databaseStructureBehaviour(onSQLite);
   knownFactsBehaviour(onSQLite);
+  archivedStreamsBehaviour(onSQLite, {
+    answered: new VersionConflict(),
+    read: { version: 0, types: [] },
+    rows: [{ archived: 1, facts: 2 }],
+  });
   ledgerStepsBehaviour(onSQLite);
   keptSecretsBehaviour({
     ...onSQLite,

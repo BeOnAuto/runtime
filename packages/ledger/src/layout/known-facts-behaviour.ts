@@ -1,14 +1,16 @@
-import { ActedContextSchema, factOf } from '@on.auto/operations';
+import { ActedContextSchema, factOf, noLineage } from '@on.auto/operations';
 import { runFacts } from '@on.auto/operations/testing';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { writtenAndArchivedIn } from '../archived-streams/archived-streams.ts';
 import { statement } from '../connection/statement.ts';
 import { aLedger, tallies, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { layoutFound } from './layout-found.ts';
-import type { LayoutCarrying } from './layout-steps.ts';
 import { factsReadBy, LedgerFactsRefused, type FactSchemaRead } from './ledger-facts-refused.ts';
 import { ledgerLayout, ledgerLayoutFloor } from './ledger-layout.ts';
+
+type LayoutCarrying = Parameters<LedgerEntry['carriedOn']>[1];
 
 const BeganSchema = factOf('run_began', Schema.Struct({ at: Schema.String, fn: Schema.String }), ActedContextSchema);
 
@@ -21,6 +23,10 @@ const EndedSchema = factOf(
 const EndedInAnotherShapeSchema = factOf('run_ended', Schema.Struct({ outcome: Schema.String }), ActedContextSchema);
 
 const NotedInAnotherShapeSchema = factOf('run_noted', Schema.Struct({ text: Schema.String }), ActedContextSchema);
+
+const NotedSchema = factOf('run_noted', Schema.Struct({}), ActedContextSchema);
+
+const archivedStream = 'org/acme/archived';
 
 const madeByAnotherRelease =
   'so this release cannot read its recorded facts. Use the release that wrote them or a compatible later release. Keep a backup before starting with an empty database';
@@ -110,9 +116,44 @@ function refusedBehaviour(entry: LedgerEntry): void {
   });
 }
 
+function archivedBehaviour(entry: LedgerEntry): void {
+  it('opens a database whose only facts of a type the server does not read are archived', async () => {
+    const database = await aDatabaseHoldingFacts(entry);
+    await writtenAndArchivedIn(entry, database, {
+      stream: archivedStream,
+      events: [{ type: 'run_retired', data: {} }],
+      lineage: noLineage,
+    });
+
+    await entry.carriedOn(database, reading([runFacts.eventSchema]));
+
+    expect((await entry.executedOn(database, (execute) => layoutFound(execute, entry.layout, []))).layout).toBe(
+      ledgerLayout,
+    );
+  });
+
+  it('reads the newest fact of each type that is not archived, so a newer archived fact in a shape it reads hides no older one in a shape it does not', async () => {
+    const database = await aDatabaseHoldingFacts(entry);
+    await writtenAndArchivedIn(entry, database, {
+      stream: archivedStream,
+      events: [{ type: 'run_ended', data: { outcome: 'done' } }],
+      lineage: noLineage,
+    });
+
+    const refused = await refusalOf(entry, database, reading([BeganSchema, EndedInAnotherShapeSchema, NotedSchema]));
+
+    expect(refused).toMatchObject({
+      unknown: [],
+      unreadable: [{ type: 'run_ended', position: '3' }],
+      message: `The ledger's database holds the fact run_ended at position 3, in a shape this server does not read, ${madeByAnotherRelease}`,
+    });
+  });
+}
+
 export function knownFactsBehaviour(entry: LedgerEntry): void {
   describe('the facts a database holds, read as the ledger opens it', () => {
     openedBehaviour(entry);
     refusedBehaviour(entry);
+    archivedBehaviour(entry);
   });
 }

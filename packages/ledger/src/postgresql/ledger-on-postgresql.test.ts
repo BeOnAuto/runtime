@@ -8,6 +8,7 @@ import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded
 import { databaseStructureBehaviour } from '../structure/database-structure-behaviour.ts';
 import {
   appendedFactsOnStoresBehaviour,
+  archivedStreamsBehaviour,
   definitionNamesBehaviour,
   appendsWithStatementsOnStoresBehaviour,
   measuredRiddenAppendsBehaviour,
@@ -201,6 +202,14 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   earlierShapesBehaviour(onPostgreSQL);
   databaseStructureBehaviour(onPostgreSQL);
   knownFactsBehaviour(onPostgreSQL);
+  archivedStreamsBehaviour(onPostgreSQL, {
+    answered: undefined,
+    read: { version: 1, types: ['run_began'] },
+    rows: [
+      { archived: 0, facts: 1 },
+      { archived: 1, facts: 2 },
+    ],
+  });
   ledgerStepsBehaviour(onPostgreSQL);
   keptSecretsBehaviour({
     ...onPostgreSQL,

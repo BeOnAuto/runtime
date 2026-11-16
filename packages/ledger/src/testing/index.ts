@@ -13,6 +13,7 @@ export { multiStreamAppendBehaviour } from '../multi-stream/multi-stream-append-
 export type { MultiStreamEntry } from '../multi-stream/multi-stream-cases.ts';
 export { earlierShapesBehaviour } from '../recorded-facts/earlier-shapes-behaviour.ts';
 export { knownFactsBehaviour } from '../layout/known-facts-behaviour.ts';
+export { archivedStreamsBehaviour } from '../archived-streams/archived-streams-behaviour.ts';
 export { ledgerStepsBehaviour } from '../layout/ledger-steps-behaviour.ts';
 export { recordedFactsBehaviour } from '../recorded-facts/recorded-facts-behaviour.ts';
 export type { RecordedFacts } from '../recorded-facts/recorded-facts.ts';

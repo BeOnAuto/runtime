@@ -46,6 +46,37 @@ describe('a playbook its org created before the host started', () => {
   });
 });
 
+describe('a registry of an org the event store archived, with its own mark', () => {
+  it('is read as a registry never written: its playbook is not followed from the open, and is followed from its first record once it is seen', async () => {
+    const settings = await onSQLite();
+    const database = await openedOn(settings);
+    await playbookCreated(database.store, 'alpha');
+    await definitionRecorded(database.store, { name: 'close', version: 1, triggers: [closed] });
+    await published(database.store, { id: 'before', type: 'com.acme.closed' });
+    await Effect.runPromise(
+      Effect.forEach(
+        [
+          statement`UPDATE emt_streams SET is_archived = TRUE WHERE stream_id = 'org/acme/playbooks'`,
+          statement`UPDATE emt_messages SET is_archived = TRUE WHERE stream_id = 'org/acme/playbooks'`,
+        ],
+        (archived) => database.write(archived),
+        { discard: true },
+      ),
+    );
+
+    const reacting = await reactingHost({ settings });
+    await published(database.store, { id: 'after', type: 'com.acme.closed' });
+    const starts = await startsReaching(reacting, 2);
+
+    expect(starts.map(({ cause }) => cause).toSorted()).toEqual(
+      [messageIdOf(`${alpha}events/before`, 1), messageIdOf(`${alpha}events/after`, 1)].toSorted(),
+    );
+    expect(
+      await Effect.runPromise(reacting.database.read(statement`SELECT stream_id FROM workflow_followed_orgs`)),
+    ).toEqual([]);
+  });
+});
+
 describe('a stream of an org whose name only ends as its registry’s does', () => {
   it('is not read as a registry of playbooks', async () => {
     const settings = await onSQLite();
