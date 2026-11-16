@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-import { conversations, openRequests, readings, tellings } from '@on.auto/interaction';
+import { conversations, openRequests, openRequestsName, readings, tellings } from '@on.auto/interaction';
 import {
+  alpha,
   answererId,
   beforeReadings,
   chatHarness,
@@ -19,7 +20,7 @@ import {
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
 import { Ledger, type KeyedProjection } from '@on.auto/operations';
-import { Layer, ManagedRuntime } from 'effect';
+import { Effect, Layer, ManagedRuntime, Schema } from 'effect';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -99,6 +100,15 @@ async function startedOn(place: Place, options: ChatHarnessOptions = {}): Promis
   const started = await place(projections);
   const playbook = await chatHarness({ ledger: started.ledger, inTheChat: recorded.messages, ...options });
   return { ...playbook, stop: started.stop };
+}
+
+const decodeSent = Schema.decodeUnknownSync(Schema.Struct({ sent_id: Schema.String }));
+
+async function threadOfRun(ledger: HarnessLedger, run: string): Promise<string> {
+  const requests = await Effect.runPromise(
+    ledger.service.readProjectedRows(openRequestsName, alpha, { where: [], orderBy: [], order: 'asc', limit: 50 }),
+  );
+  return decodeSent(requests.find(({ key }) => key === run)?.row).sent_id;
 }
 
 async function outputsOf(playbook: ChatHarness, runIds: readonly string[], at: number): Promise<readonly unknown[]> {
@@ -213,7 +223,7 @@ describe.each(stores)('two requests delivered into one channel, then a restart, 
     await asking.askInThread(older);
     await asking.askInThread(newer);
     await asking.performDue(Date.now());
-    const [, newerThread] = asking.chat.posted().map(({ ts }) => ts);
+    const newerThread = await threadOfRun(first.ledger, newer);
     await first.stop();
 
     const again = await startedOn(place, { document: keyedByTheChannel, inTheChat: asking.chat.posted() });

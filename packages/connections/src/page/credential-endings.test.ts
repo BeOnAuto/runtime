@@ -36,13 +36,13 @@ describe('the ending of a credential given', () => {
     const h = harness();
     const { id, token } = await added(h, crm);
 
-    expect(await given(h, { id, token, value: 'crm-key-1234' })).toBe('1234');
-    expect(await endingsShown(h, id)).toEqual(['1234', '1234']);
-    expect(h.secrets.endings()).toEqual(new Map([['secret-1', '1234']]));
+    expect(await given(h, { id, token, value: 'crm-key-qz7w' })).toBe('qz7w');
+    expect(await endingsShown(h, id)).toEqual(['qz7w', 'qz7w']);
+    expect(h.secrets.endings()).toEqual(new Map([['secret-1', 'qz7w']]));
     expect(
       decodeRead(await h.call(operationNamed(h.operations, 'get_connection'), ada, { id })).output.credential,
     ).toEqual(crm.credential);
-    expect(JSON.stringify(await h.facts())).not.toContain('1234');
+    expect(JSON.stringify(await h.facts())).not.toContain('qz7w');
   });
 
   it('is not kept of a secret of eleven', async () => {
