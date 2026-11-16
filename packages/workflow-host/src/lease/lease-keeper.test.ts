@@ -10,38 +10,45 @@ interface Keeping {
   readonly said: () => readonly string[];
   readonly answer: (answer: LeaseClaim | 'unreachable') => void;
   readonly at: (now: number) => void;
+  readonly attemptsRenewed: () => number;
 }
 
-async function keeping(first: LeaseClaim): Promise<Keeping> {
-  const state: { answer: LeaseClaim | 'unreachable'; now: number } = { answer: first, now: 0 };
-  const said: string[] = [];
-  const lease: HostLease = {
+const unreachable = new DatabaseFailed({ detail: 'The database cannot be reached' });
+
+interface KeptState {
+  answer: LeaseClaim | 'unreachable';
+  now: number;
+  renewals: number;
+}
+
+function leaseAnswering(state: Readonly<KeptState>): HostLease {
+  return {
     holder: 'this-server',
     claimed: () =>
-      Effect.suspend(() =>
-        state.answer === 'unreachable'
-          ? Effect.fail(new DatabaseFailed({ detail: 'The database cannot be reached' }))
-          : Effect.succeed(state.answer),
-      ),
+      Effect.suspend(() => (state.answer === 'unreachable' ? Effect.fail(unreachable) : Effect.succeed(state.answer))),
     released: () => Effect.void,
   };
+}
+
+async function keeping(first: LeaseClaim, attempts: 'renewed' | 'unreachable' = 'renewed'): Promise<Keeping> {
+  const state: KeptState = { answer: first, now: 0, renewals: 0 };
+  const said: string[] = [];
+  const saying = (line: string) =>
+    Effect.sync(() => {
+      said.push(line);
+    });
   const keeper = await keptLease({
-    lease,
+    lease: leaseAnswering(state),
+    attemptsRenewed: Effect.suspend(() => {
+      state.renewals += 1;
+      return attempts === 'renewed' ? Effect.void : Effect.fail(unreachable);
+    }),
     clock: { now: () => state.now, sleep: (milliseconds) => Effect.sleep(milliseconds) },
     sweepEveryMs: 5,
     lastsMs: 15,
-    held: (before) =>
-      Effect.sync(() => {
-        said.push(`held after ${before}`);
-      }),
-    standingBy: ({ holder }, before) =>
-      Effect.sync(() => {
-        said.push(`standing by for ${holder} after ${before}`);
-      }),
-    trouble: (what) =>
-      Effect.sync(() => {
-        said.push(what);
-      }),
+    held: (before) => saying(`held after ${before}`),
+    standingBy: ({ holder }, before) => saying(`standing by for ${holder} after ${before}`),
+    trouble: (what) => saying(what),
   });
   onTestFinished(() => keeper.stop());
   return {
@@ -52,6 +59,7 @@ async function keeping(first: LeaseClaim): Promise<Keeping> {
     at: (now) => {
       state.now = now;
     },
+    attemptsRenewed: () => state.renewals,
   };
 }
 
@@ -85,5 +93,26 @@ describe('the keeper of the claim of a host', () => {
       new Set(['The claim of this server on the workflows of its database could not be renewed']),
     );
     expect(said).toHaveLength(1 + standingBy.length + troubles.length);
+  });
+});
+
+describe('the keeper of the leases of the attempts a server holds', () => {
+  it('renews them in each tick of the claim, while the server stands by as while it serves', async () => {
+    const kept = await keeping(elsewhere);
+
+    await until(kept.attemptsRenewed, (renewals) => renewals > 2);
+
+    expect(kept.said()).toEqual(['standing by for another-server after unknown']);
+  });
+
+  it('says when they could not be renewed, and keeps the claim of the server as it was', async () => {
+    const kept = await keeping({ held: true }, 'unreachable');
+
+    const said = await until(kept.said, (lines) => lines.length > 2);
+
+    expect(said.at(0)).toBe('held after unknown');
+    expect(new Set(said.slice(1))).toEqual(
+      new Set(['The leases of the attempts this server holds could not be renewed; the next sweep renews them']),
+    );
   });
 });

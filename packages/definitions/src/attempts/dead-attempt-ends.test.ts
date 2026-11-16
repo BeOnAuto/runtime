@@ -1,14 +1,14 @@
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { deadAttemptEnder, defineCapability, type Capability } from '../index.ts';
+import { defineCapability, RunDetailSchema, type Capability } from '../index.ts';
 import { runWordsFor } from '../plain-language/run-words.ts';
 import type { RunCommand } from '../runs/run-commands.ts';
-import { RunDetailSchema } from '../runs/run.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 import { heldFromItsStart } from '../testing/run-facts.ts';
+import { deadAttemptEnder } from './index.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -42,13 +42,14 @@ function callStarted(number: number, readOnly = false): RunCommand {
   return {
     type: 'call',
     fact: { type: 'tool_call_started', data: readOnly ? { ...call, read_only: true } : call },
+    fencingToken: 1,
     ...acted,
   };
 }
 
 function callAnswered(number: number): RunCommand {
   const data = { number, is_error: false, result_bytes: 2, duration_ms: 5, jsonrpc_id: 1 };
-  return { type: 'call', fact: { type: 'tool_call_answered', data }, ...acted };
+  return { type: 'call', fact: { type: 'tool_call_answered', data }, fencingToken: 1, ...acted };
 }
 
 const systemCall: Capability = defineCapability({
@@ -257,6 +258,7 @@ describe('a run the ending of a dead attempt does not end', () => {
     const finish: RunCommand = {
       type: 'finish',
       result: { type: 'run_succeeded', data: { output: 'posted', record: {} } },
+      attempt: { fencingToken: 1, version: 1 },
       ...acted,
     };
     const cancelFirst: RunCommand = {

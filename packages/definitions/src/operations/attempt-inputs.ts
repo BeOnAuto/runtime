@@ -13,7 +13,7 @@ export type AttemptToEnd = Pick<AttemptOfARun, 'id' | 'context' | 'fencingToken'
 
 export interface AttemptRefusal {
   readonly detail: string;
-  readonly kind: UnavailableKind;
+  readonly kind?: UnavailableKind;
 }
 
 export type NextAttempt =
@@ -62,7 +62,7 @@ export const endedForItsLostDocument = Effect.fnUntraced(function* (
 });
 
 export function endedAsRefused({ id, context, fencingToken }: AttemptToEnd, { detail, kind }: AttemptRefusal) {
-  const rejection: RunRejection = { reason: 'unavailable', detail, kind };
+  const rejection: RunRejection = { reason: 'unavailable', detail, ...(kind === undefined ? {} : { kind }) };
   return answeredWith(id, context, { type: 'run_rejected', data: { rejection } }, fencingToken);
 }
 

@@ -194,7 +194,7 @@ Every server offers workflows and `send_run_event`, with nothing to configure.
 
 ## A run stays started
 
-**Cause.** A waiting workflow can legitimately remain `started`. A run whose end the ledger could not record also stays `started` until a later attempt records it.
+**Cause.** A waiting workflow can legitimately remain `started`. A run whose end the ledger could not record also stays `started` until a later attempt records it. A run whose server died reads `started` until the lease of its attempt lapses, three sweeps and at least 30 seconds after that server last renewed it, and the server that runs the workflows ends or resumes it at its next sweep ([A run whose server is gone](workflows.md#a-run-whose-server-is-gone)).
 
 **Fix.**
 

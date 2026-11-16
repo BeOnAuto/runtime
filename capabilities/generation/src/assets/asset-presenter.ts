@@ -6,9 +6,16 @@ import { dayOf, kindInWords, sizeInWords } from './asset-words.ts';
 
 const decodeAssetEvent = Schema.decodeUnknownSync(Schema.toCodecJson(AssetEventSchema));
 
+function placeInWords(pointer: string): string {
+  return pointer === '' ? 'as its output' : `at ${pointer} of its output`;
+}
+
 function makerInWords(madeBy: AssetMadeBy): string {
-  return 'tool_call' in madeBy
-    ? `the ${madeBy.tool_call.tool} tool of ${madeBy.tool_call.server} answered`
+  if ('tool_call' in madeBy) {
+    return `the ${madeBy.tool_call.tool} tool of ${madeBy.tool_call.server} answered`;
+  }
+  return 'function_output' in madeBy
+    ? `a run returned ${placeInWords(madeBy.function_output.pointer)}`
     : 'a generation function made';
 }
 

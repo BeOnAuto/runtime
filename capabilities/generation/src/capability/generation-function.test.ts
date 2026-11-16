@@ -113,14 +113,15 @@ describe('the words and the bounds of the generation capability', () => {
       'It made an image of 2 KiB, kept as an asset of the playbook.',
       'It made audio of 3 MiB, kept as an asset of the playbook.',
       'It made a video of 10 bytes, kept as an asset of the playbook.',
-      'It made an asset of 10 bytes, kept as an asset of the playbook.',
+      'It made a file of 10 bytes, kept as an asset of the playbook.',
       'It made an asset, which the details below describe.',
     ]);
   });
 
-  it('keeps 20 MiB of an image, 50 MiB of audio and 200 MiB of a video, 2 GiB a playbook and an asset 90 days, and waits ten minutes for a video, unless told otherwise', () => {
+  it('keeps 20 MiB of an image, 50 MiB of audio and 200 MiB of a video, 100 MiB of a file, 2 GiB a playbook and an asset 90 days, and waits ten minutes for a video, unless told otherwise', () => {
     expect(generationBounds).toEqual({
       mostBytes: { image: 20 * 1_048_576, audio: 50 * 1_048_576, video: 200 * 1_048_576 },
+      mostFileBytes: 100 * 1_048_576,
       mostPlaybookBytes: 2048 * 1_048_576,
       keptMs: 90 * 86_400_000,
       waitMs: 600_000,

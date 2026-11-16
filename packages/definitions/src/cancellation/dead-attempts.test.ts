@@ -82,14 +82,16 @@ function startOfTheRun(version = 1): RunCommand {
 
 const sent = { server: 'slack', tool: 'post_message', arguments_bytes: 2 };
 
+const held = { fencingToken: 1, ...acted };
+
 function callStarted(number: number): RunCommand {
-  return { type: 'call', fact: { type: 'tool_call_started', data: { call_id: `toolu_${number}`, ...sent } }, ...acted };
+  return { type: 'call', fact: { type: 'tool_call_started', data: { call_id: `toolu_${number}`, ...sent } }, ...held };
 }
 
 const readingCallStarted: RunCommand = {
   type: 'call',
   fact: { type: 'tool_call_started', data: { call_id: 'toolu_1', ...sent, read_only: true } },
-  ...acted,
+  ...held,
 };
 
 const callAnswered: RunCommand = {
@@ -98,7 +100,7 @@ const callAnswered: RunCommand = {
     type: 'tool_call_answered',
     data: { number: 1, is_error: false, result_bytes: 2, duration_ms: 5, jsonrpc_id: 1 },
   },
-  ...acted,
+  ...held,
 };
 
 const keptInput = { brief: 'b'.repeat(4096) };

@@ -153,7 +153,7 @@ function typesIn({ body }: { readonly body: unknown }): readonly string[] {
 }
 
 describe('a reasoning run whose server stops while the run calls a tool', () => {
-  it('interrupts the call before the tool server is stopped, records no end of it, and leaves the run started at once', async () => {
+  it('interrupts the call before the tool server is stopped, records no end of it, and leaves the run started at once, for the next server to resume', async () => {
     const gateway = await gatewayThatHangsAfterATool({ name: 'graph__sleep', arguments: '{"ms":60000}' });
     const environment = {
       MODEL_GATEWAYS: gateway.gateways,
@@ -186,7 +186,15 @@ describe('a reasoning run whose server stops while the run calls a tool', () => 
     second.signal('SIGTERM');
     await second.exited;
 
-    expect(typesIn(history)).toEqual(['run_started', 'model_call_started', 'model_call_answered', 'tool_call_started']);
+    const types = typesIn(history);
+
+    expect(types.slice(0, 4)).toEqual([
+      'run_started',
+      'model_call_started',
+      'model_call_answered',
+      'tool_call_started',
+    ]);
+    expect([undefined, 'attempt_resumed']).toContain(types[4]);
     const stopping: unknown = expect.objectContaining({ detail: 'The server is stopping' });
 
     expect([await asked, stoppedInMs < shutdownTimeoutMs]).toEqual([{ status: 503, body: stopping }, true]);

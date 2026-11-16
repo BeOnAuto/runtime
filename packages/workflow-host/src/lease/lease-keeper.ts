@@ -1,6 +1,7 @@
 import { Effect, Fiber, type Cause } from 'effect';
 
 import type { Trouble } from '../calls/host-executor.ts';
+import type { DatabaseFailed } from '../database/host-database.ts';
 import { forkedIn, ranIn, type HostContext } from '../loop/forked-fibers.ts';
 import type { HostClock } from '../loop/host-clock.ts';
 import type { HostLease, LeaseClaim } from './host-lease.ts';
@@ -11,6 +12,7 @@ type LeaseRefusal = Extract<LeaseClaim, { readonly held: false }>;
 
 export interface KeeperParts {
   readonly lease: HostLease;
+  readonly attemptsRenewed: Effect.Effect<void, DatabaseFailed>;
   readonly clock: HostClock;
   readonly sweepEveryMs: number;
   readonly lastsMs: number;
@@ -49,7 +51,15 @@ export async function keptLease(parts: KeeperParts): Promise<LeaseKeeper> {
       lapsed ? claimed({ held: false, holder: unknownHolder, until: state.renewedAt + lastsMs }) : Effect.void,
     );
   };
-  const kept = lease.claimed().pipe(Effect.flatMap(claimed), Effect.catchCause(unrenewed));
+  const attemptsKept = parts.attemptsRenewed.pipe(
+    Effect.catchCause((cause: Cause.Cause<unknown>) =>
+      trouble('The leases of the attempts this server holds could not be renewed; the next sweep renews them', cause),
+    ),
+  );
+  const kept = Effect.andThen(
+    lease.claimed().pipe(Effect.flatMap(claimed), Effect.catchCause(unrenewed)),
+    attemptsKept,
+  );
   await ranIn(parts.context, kept);
   const fiber = forkedIn(
     parts.context,

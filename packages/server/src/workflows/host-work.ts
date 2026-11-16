@@ -13,6 +13,7 @@ import {
   runSettlerKeepingOutputs,
   type PlaybookOwnNames,
   type Capability,
+  type LookAgain,
   type SettleRun,
 } from '@on.auto/definitions';
 import { Ledger, type DispatcherServices } from '@on.auto/operations';
@@ -30,6 +31,7 @@ export interface WorkParts {
   readonly capabilities: readonly Capability[];
   readonly evaluations: Evaluations;
   readonly names: PlaybookOwnNames;
+  readonly lookAgain: LookAgain;
 }
 
 type RunInProcess = (run: Omit<DefinitionRunRequest, 'longestMs' | 'resumesAfterMs'>) => ReturnType<RunDefinition>;
@@ -76,13 +78,19 @@ function settlements(runtime: AppRuntime<DispatcherServices>): SettleRun {
     );
 }
 
-function waitingOf(runtime: AppRuntime<DispatcherServices>, capabilities: readonly Capability[]): WaitingOptions {
+function waitingOf(
+  runtime: AppRuntime<DispatcherServices>,
+  capabilities: readonly Capability[],
+  lookAgain: LookAgain,
+): WaitingOptions {
   return {
     resultOf: callResultOfEnding,
     cancel: (run, request, lineage) =>
       inRuntime(
         runtime,
-        Effect.flatMap(Effect.service(Ledger), (ledger) => runCanceller(ledger, capabilities)(run, request, lineage)),
+        Effect.flatMap(Effect.service(Ledger), (ledger) =>
+          runCanceller(ledger, capabilities, lookAgain)(run, request, lineage),
+        ),
       ),
     cancelDeferred: (run, request, lineage) =>
       inRuntime(
@@ -97,13 +105,13 @@ function waitingOf(runtime: AppRuntime<DispatcherServices>, capabilities: readon
 export function hostWorkOf(
   runtime: AppRuntime<DispatcherServices>,
   dispatches: HostDispatches,
-  { capabilities, evaluations, names }: WorkParts,
+  { capabilities, evaluations, names, lookAgain }: WorkParts,
 ): HostWork {
   return {
     machine: workflowMachineOptionsOf(evaluations.machine, names),
     perform: definitionCalls(nestedRuns(runtime, dispatches.runDefinition)),
     settle: settlements(runtime),
     reactions: { ...reactionsOf(runtime, dispatches.startVersion, names), filters: evaluations.filters },
-    waiting: waitingOf(runtime, capabilities),
+    waiting: waitingOf(runtime, capabilities, lookAgain),
   };
 }

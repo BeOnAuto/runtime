@@ -88,10 +88,18 @@ describe('the finish of an attempt that holds the run, once its run has ended wi
     ]).toStrictEqual([Result.succeed([]), Result.succeed([])]);
   });
 
-  it('records its result, so a result paid for is never discarded', () => {
-    expect(decided(finishedBy(1, succeeded), startedAt(started), finishedAt(failed))).toStrictEqual(
-      Result.succeed([succeeded]),
-    );
+  it('records no result either, since the ending recorded in its place stands for whoever acted on it', () => {
+    expect([
+      decided(finishedBy(1, succeeded), startedAt(started), finishedAt(failed)),
+      decided(finishedBy(1, succeeded), startedAt(callingTools), startedAt(callStarted), finishedAt(unavailable)),
+    ]).toStrictEqual([Result.succeed([]), Result.succeed([])]);
+  });
+
+  it('records its result while its run is still going, so a result is recorded whenever the run has none', () => {
+    expect([
+      decided(finishedBy(1, succeeded), startedAt(started)),
+      decided(finishedBy(1, succeeded), startedAt(callingTools), startedAt(callStarted)),
+    ]).toStrictEqual([Result.succeed([succeeded]), Result.succeed([succeeded])]);
   });
 
   it('leaves a stream an earlier release wrote with a late ending after another folded as it was, by its last ending', () => {
@@ -186,5 +194,50 @@ describe('the ending of a run whose attempt died', () => {
         { type: 'run_rejected', data: { rejection: { reason: 'cancelled', kind: 'deadline', detail: 'Out of time' } } },
       ]),
     );
+  });
+});
+
+describe('the ending of a run that resumes, whose attempt died, where its shell makes no next attempt of it', () => {
+  const withNoNextAttempt: RunCommand = { type: 'attempt_died', fencingToken: 1, noNextAttempt: true, ...finish };
+
+  it('ends it as a run within its call is ended, by what it called', () => {
+    const interrupted: RunEvent = {
+      type: 'tool_call_failed',
+      data: { number: 1, because: 'interrupted', duration_ms: 0, jsonrpc_id: null },
+    };
+    const notKnown =
+      'Its attempt ended while it called a tool that may change something, so whether that call did is not known';
+
+    expect([
+      decided(withNoNextAttempt, startedAt(resuming)),
+      decided(withNoNextAttempt, startedAt(resuming), startedAt(callStarted)),
+    ]).toStrictEqual([
+      Result.succeed([failed]),
+      Result.succeed([
+        interrupted,
+        {
+          type: 'run_rejected',
+          data: {
+            rejection: {
+              reason: 'conflict',
+              kind: 'effect_unknown',
+              because: 'call_outcome_unknown',
+              detail: notKnown,
+            },
+          },
+        },
+      ]),
+    ]);
+  });
+
+  it('still leaves a run that finishes later to its settlement', () => {
+    const finishingLater: RunEvent = { type: 'run_started', data: { ...started.data, finishes_later: true } };
+
+    const outlivesItsCall = new Conflict({
+      detail:
+        'The run outlives the call that started it, so an attempt of it that died is resumed or settled, never ended in its place',
+    });
+
+    expect(decided(withNoNextAttempt, startedAt(finishingLater))).toStrictEqual(Result.fail(outlivesItsCall));
   });
 });

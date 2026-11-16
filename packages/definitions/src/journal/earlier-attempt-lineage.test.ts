@@ -16,6 +16,7 @@ describe('the journal of an attempt, given the end of a call an attempt before i
       {
         type: 'call',
         fact: { type: 'tool_call_started', data: startOfCall(1) },
+        fencingToken: 1,
         runId,
         by: 'acme-admin',
         at: '2026-10-01T09:00:01.000Z',

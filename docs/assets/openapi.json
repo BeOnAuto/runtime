@@ -13222,7 +13222,7 @@
                         },
                         "may_reconnect": {
                           "type": "boolean",
-                          "description": "Beside replaces, where only an admin of the organization connects this provider here: whether this caller may reconnect a connection made from a provider it replaces, whoever added it; left out where the person who added such a connection reconnects it, or where the runtime cannot say just now"
+                          "description": "Beside replaces: whether this caller may reconnect a connection made from a provider it replaces, whoever added it, true for an admin the runtime lets do so here and false for a caller it starts no connection of this provider for; left out where the person who added such a connection reconnects it, or where the runtime cannot say just now"
                         },
                         "reconnect_refusal": {
                           "type": "string",
@@ -28788,7 +28788,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "The model that made it, as its function names it, or null for an image a tool answered"
+                      "description": "The model that made it, as its function names it, or null where no model made it, such as an image a tool answered"
                     },
                     "kept_at": {
                       "type": "string",

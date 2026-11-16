@@ -6,7 +6,15 @@ import { Redacted, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { toolImagesKept } from '../assets/tool-images.ts';
-import { assetIdOf, day, issuesOf, numberedHarness, refusalOf, runIdOf } from '../run-testing/run-outcomes.ts';
+import {
+  aPageARunReturned,
+  assetIdOf,
+  day,
+  issuesOf,
+  numberedHarness,
+  refusalOf,
+  runIdOf,
+} from '../run-testing/run-outcomes.ts';
 import {
   alpha,
   beta,
@@ -131,6 +139,21 @@ describe('an image a tool call answered, read by its id', () => {
 
     expect(read).toMatchObject({ media_type: 'image/png', sha256: pngDigest, model: null, expired: false });
     expect(signing.checkedAddress(alpha, pngDigest, presentedIn(read.address))).toBe('signed');
+  });
+});
+
+describe('a file a run returned, of a kind a later release keeps, read by its id', () => {
+  it('answers no model, since none made it, an address to its bytes, and says it is a file', async () => {
+    const { playbook, signing } = signedHarness();
+    const page = await aPageARunReturned(playbook.ledger.service, alpha, assetIdOf(7), harnessStartsAt);
+
+    const read = await readOf(playbook, assetIdOf(7));
+
+    expect(read).toMatchObject({ media_type: 'text/markdown', bytes: page.bytes, model: null, expired: false });
+    expect(signing.checkedAddress(alpha, page.sha256, presentedIn(read.address))).toBe('signed');
+    expect(wordsOf(read)).toBe(
+      'The asset, a file of 15.6 KiB, is kept until 2027-01-30; its address, in the details below, opens it for 15 minutes.',
+    );
   });
 });
 

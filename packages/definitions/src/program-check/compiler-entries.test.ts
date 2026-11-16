@@ -25,6 +25,7 @@ describe('the compiler', () => {
   it('is reached by the check worker, which the pool starts with the first check, and by the entry of the handler it serves, and by no other entry of the package, the check entry among them', () => {
     expect(entries).toEqual([
       'index.ts',
+      'attempts/index.ts',
       'check.ts',
       checkHandler,
       'document.ts',

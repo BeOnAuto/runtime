@@ -1,4 +1,4 @@
-import { Conflict, type Context, type Decider } from '@on.auto/operations';
+import { Conflict, type Context, type Decided, type Decider } from '@on.auto/operations';
 import { Result } from 'effect';
 
 import { AssetEventSchema, type AssetEvent, type DecidedAssetEvent } from './asset-facts.ts';
@@ -28,10 +28,17 @@ const outOfTurn = new Conflict({
   kind: 'concurrent_change',
 });
 
+export function decidedInTurn(
+  event: Decided<AssetEvent>,
+  standing: AssetStanding,
+): Result.Result<readonly Decided<AssetEvent>[], Conflict> {
+  return takes[standing] === event.type ? Result.succeed([event]) : Result.fail(outOfTurn);
+}
+
 export const assetDecider: Decider<AssetStanding, AssetCommand, AssetEvent, 'conflict'> = {
   initialState: 'none',
   evolve: (_standing, { type }) => standingAfter[type],
-  decide: ({ event }, standing) => (takes[standing] === event.type ? Result.succeed([event]) : Result.fail(outOfTurn)),
+  decide: ({ event }, standing) => decidedInTurn(event, standing),
   context: ({ context }) => context,
   eventSchema: AssetEventSchema,
 };

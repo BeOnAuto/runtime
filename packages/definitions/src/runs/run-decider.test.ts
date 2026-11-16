@@ -72,8 +72,8 @@ function starting(request: object = {}, version = 1): RunCommand {
   };
 }
 
-function finishing(result: RunResult): RunCommand {
-  return { type: 'finish', result, ...finish };
+function finishing(result: RunResult, fencingToken = 1): RunCommand {
+  return { type: 'finish', result, attempt: { fencingToken, version: 1 }, ...finish };
 }
 
 const anotherRequest = new Conflict({

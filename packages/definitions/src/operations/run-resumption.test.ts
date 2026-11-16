@@ -195,6 +195,7 @@ describe('a run of a capability that resumes, which ended without a final result
         definitions.ledger.service.execute(stream, runDecider, {
           type: 'finish',
           result: { type: 'run_failed', data: {} },
+          attempt: { fencingToken: 1, version: 1 },
           ...acted,
         }),
       ),
@@ -234,6 +235,7 @@ describe('a run of a capability that resumes, whose call another attempt beat to
         definitions.ledger.service.execute(stream, runDecider, {
           type: 'finish',
           result: { type: 'run_succeeded', data: { output: 'from the other attempt', record: {} } },
+          attempt: { fencingToken: 1, version: 1 },
           ...acted,
         }),
       ),

@@ -1,6 +1,7 @@
 import { PlaybookContext, PlaybookReader, Caller, type GivenLineage } from '@on.auto/operations';
 import { Effect, Option } from 'effect';
 
+import { acquiredHere } from '../attempts/live-attempts.ts';
 import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import type { RunAttempt, RunContext, RunLineage } from '../capability/run-context.ts';
 import { runJournal, type LedgerJournal } from '../journal/run-journal.ts';
@@ -61,6 +62,7 @@ export const contextOf = Effect.fnUntraced(function* (
 ) {
   const { org, playbook } = yield* PlaybookContext;
   const journal = yield* runJournal(id, lineage, before, fencingToken);
+  yield* acquiredHere(id, fencingToken);
   const called = yield* calledDefinitionsIn(given.capabilities);
   const context: JournalledRun = {
     id,

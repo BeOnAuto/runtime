@@ -1,7 +1,6 @@
 import type { Lineage } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { acquiredHere } from '../attempts/live-attempts.ts';
 import { comparedWithoutItsValue } from '../payloads/payload-comparisons.ts';
 import { comparedWithItsRecordedInput } from '../runs/run-claims.ts';
 import type { RunStart } from '../runs/run-commands.ts';
@@ -24,7 +23,5 @@ function recordedStart(id: string, start: RunStart, lineage: Lineage) {
 
 export const startRecorded = Effect.fnUntraced(function* (id: string, start: RunStart, lineage: Lineage) {
   const recorded = yield* recordedStart(id, start, lineage);
-  const fencingToken = fencingTokenOf(recorded.state);
-  yield* acquiredHere(id, fencingToken);
-  return { ...recorded, fencingToken };
+  return { ...recorded, fencingToken: fencingTokenOf(recorded.state) };
 });

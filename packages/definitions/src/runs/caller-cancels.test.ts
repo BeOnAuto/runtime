@@ -10,6 +10,8 @@ import type { RecordedRunEvent, RunEvent } from './run-events.ts';
 
 const start = { runId: testRunId, by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
 
+const heldFirst = { fencingToken: 1, version: 1 };
+
 const later = '2026-10-01T11:00:00.000Z';
 
 const greeting = { definition_type: 'probe', name: 'plain', input: {} };
@@ -74,7 +76,9 @@ describe('a cancel from the caller of a run that has not started', () => {
     const failure = { type: 'run_failed', data: {} } as const;
 
     expect(decided(cancelling(true), cancelFirst)).toStrictEqual(Result.succeed([]));
-    expect(decided({ type: 'finish', result: failure, ...start }, cancelFirst)).toStrictEqual(Result.succeed([]));
+    expect(decided({ type: 'finish', result: failure, attempt: heldFirst, ...start }, cancelFirst)).toStrictEqual(
+      Result.succeed([]),
+    );
     expect(
       decided({ type: 'settle', result: failure, runId: testRunId, by: 'playbook:alpha', at: later }, cancelFirst),
     ).toStrictEqual(Result.fail(noSuchRun));
@@ -100,7 +104,12 @@ describe('a cancel from the caller of a run within its call', () => {
   });
 
   it('turns the interruption of the run into its cancellation, and an interruption nobody asked for into a failure', () => {
-    const interrupted: RunCommand = { type: 'finish', result: { type: 'run_interrupted' }, ...start };
+    const interrupted: RunCommand = {
+      type: 'finish',
+      result: { type: 'run_interrupted' },
+      attempt: heldFirst,
+      ...start,
+    };
 
     expect(decided(interrupted, started, askedOf)).toStrictEqual(
       Result.succeed([

@@ -1,4 +1,4 @@
-import type { GenerationKind } from '../catalog/catalog-entry.ts';
+import type { AssetKeptData } from './asset-facts.ts';
 
 const kibibyte = 1024;
 
@@ -15,10 +15,12 @@ export function sizeInWords(bytes: number): string {
   return bytes < mebibyte ? `${tenths.format(bytes / kibibyte)} KiB` : `${tenths.format(bytes / mebibyte)} MiB`;
 }
 
-export const kindInWords: Readonly<Record<GenerationKind, string>> = {
+export const kindInWords: Readonly<Record<AssetKeptData['kind'], string>> = {
   image: 'an image',
   audio: 'audio',
   video: 'a video',
+  text: 'a file',
+  file: 'a file',
 };
 
 export function dayOf(at: string): string {

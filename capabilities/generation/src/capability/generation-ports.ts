@@ -14,6 +14,7 @@ const day = 86_400_000;
 
 export interface GenerationBounds {
   readonly mostBytes: Readonly<Record<GenerationKind, number>>;
+  readonly mostFileBytes: number;
   readonly mostPlaybookBytes: number;
   readonly keptMs: number;
   readonly waitMs: number;
@@ -21,6 +22,7 @@ export interface GenerationBounds {
 
 export const generationBounds: GenerationBounds = {
   mostBytes: { image: 20 * mebibyte, audio: 50 * mebibyte, video: 200 * mebibyte },
+  mostFileBytes: 100 * mebibyte,
   mostPlaybookBytes: 2048 * mebibyte,
   keptMs: 90 * day,
   waitMs: 10 * minute,

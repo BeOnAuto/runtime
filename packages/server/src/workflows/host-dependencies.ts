@@ -11,14 +11,18 @@ import {
   type WorkflowStore,
 } from '@on.auto/workflow-host';
 
+import { attemptsWorkOf } from '../attempt-leases/attempts-work.ts';
 import { logWorkflows } from '../logging/logging.ts';
 import type { ServerServices } from '../server-options/composed-options.ts';
 import type { Settings } from '../settings/settings.ts';
-import type { HostDispatches } from './host-operations.ts';
 import { hostReports } from './host-reports.ts';
 import { hostWorkOf, type WorkParts } from './host-work.ts';
 import { orphansSweptIn } from './orphan-sweep.ts';
 import { functionStartOf, startingWorkWhere } from './reaction-dependencies.ts';
+
+type HostDispatches = Parameters<typeof hostWorkOf>[1];
+
+type AttemptsWorkParts = Parameters<typeof attemptsWorkOf>[0];
 
 export interface StudioAddress {
   readonly studio: Settings['studio'];
@@ -64,6 +68,8 @@ export interface HostParts {
   readonly messages: boolean;
   readonly consumers: FollowerConsumers;
   readonly consumersOf?: ConsumersOf;
+  readonly holding: AttemptsWorkParts['holding'];
+  readonly access: AttemptsWorkParts['access'];
 }
 
 export type HostRuntime = AppRuntime<ServerServices>;
@@ -85,17 +91,23 @@ export async function openedHost(
     studioAddress,
     consumers,
     consumersOf,
+    holding,
+    access,
   }: HostParts,
   { names }: Pick<WorkParts, 'names'>,
 ): Promise<WorkflowHost> {
   const start = functionStartOf(runtime, dispatches.startVersion);
   const starting = { start, runtime, now: clock?.now ?? Date.now, studioAddress };
   const started = (await startingWorkWhere(results && messages, startingWork)?.(starting)) ?? nothingStarted;
+  const attempts = attemptsWorkOf({ runtime, store, holding, access, dispatches, now: starting.now });
+  const work = hostWorkOf(runtime, dispatches, { capabilities, evaluations, names, lookAgain: attempts.lookAgain });
+  const ownWork = [await orphansSweptIn(runtime), ...attempts.dueWorkOf(work.waiting.cancel)];
   const host = await openWorkflowHost({
     database: store,
     projector,
-    dueWork: [...dueWork, ...started.dueWork, await orphansSweptIn(runtime)],
-    ...hostWorkOf(runtime, dispatches, { capabilities, evaluations, names }),
+    holder: holding.holder,
+    dueWork: [...dueWork, ...started.dueWork, ...ownWork],
+    ...work,
     reports: hostReports(runtime),
     context: runtime.context,
     sweepEveryMs: workflows.sweepEveryMs,

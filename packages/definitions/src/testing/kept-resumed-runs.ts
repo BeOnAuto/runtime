@@ -36,7 +36,7 @@ export async function leftWithItsInputKept({ input, held, store }: KeptInput) {
     Effect.all([
       held ? keptIn(service.content, alpha, input) : keptLongBeforeAndLost(service.content, store, alpha, input),
       recordedAsGiven(service, stream, [{ type: 'run_started', data }], context),
-      Effect.orDie(service.execute(stream, runDecider, { type: 'call', fact: call, ...acted })),
+      Effect.orDie(service.execute(stream, runDecider, { type: 'call', fact: call, fencingToken: 1, ...acted })),
     ]),
   );
   await defining('second', operations.updateDefinition);

@@ -74,8 +74,8 @@ const answered: ToolCallFact = {
   },
 };
 
-function recordingCall(fact: CallFact): RunCommand {
-  return { type: 'call', fact, ...during };
+function recordingCall(fact: CallFact, fencingToken = 1): RunCommand {
+  return { type: 'call', fact, fencingToken, ...during };
 }
 
 function startOfCall(number: number, readOnly = false): RunEvent {
@@ -169,7 +169,7 @@ describe('the calls a run recorded', () => {
 
   it('are counted across a start that was recorded again, so numbers never repeat under one id', () => {
     expect(stateAfter(started, callStarted, started)).toMatchObject({ lastCall: 1, mayHaveChanged: true });
-    expect(decided(recordingCall(called), started, callStarted, failed, started)).toStrictEqual(
+    expect(decided(recordingCall(called, 2), started, callStarted, failed, started)).toStrictEqual(
       Result.succeed([startOfCall(2)]),
     );
   });

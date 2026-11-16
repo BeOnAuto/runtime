@@ -22,15 +22,25 @@ const lineageActingFor = Effect.fnUntraced(function* (putInPlaceBy: string) {
   return { ...(yield* CallLineage), actsFor: actsFor ?? null };
 });
 
+interface StartAsked {
+  readonly request: RunRequest & { readonly version?: number | undefined };
+  readonly run: Readonly<Effect.Success<ReturnType<typeof preparedVersion>>>;
+}
+
+export const versionToStart = Effect.fnUntraced(function* (
+  capability: Capability,
+  { name, version }: StartAsked['request'],
+) {
+  return yield* preparedVersion(capability, name, version ?? (yield* activeVersionOf(capability.type, name)));
+});
+
 export const startVersionOnce = Effect.fnUntraced(function* (
   capabilities: readonly Capability[],
   capability: Capability,
-  request: RunRequest & { readonly version?: number | undefined },
   id: string,
+  { request, run }: StartAsked,
 ) {
   const { version, ...asked } = request;
-  const toRun = version ?? (yield* activeVersionOf(capability.type, asked.name));
-  const run = yield* preparedVersion(capability, asked.name, toRun);
   const stopped = yield* stoppedRefusalOf(capability.type, asked.name, version === undefined);
   if (stopped !== undefined) {
     const answered = yield* answeredWhileStopped(id, asked);

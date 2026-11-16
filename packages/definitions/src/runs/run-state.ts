@@ -266,8 +266,8 @@ export function fencingTokenOf(state: RunState): number {
   return state?.fencingToken ?? 0;
 }
 
-export function holdsTheRun(fencingToken: number | undefined, state: RecordedRunState): boolean {
-  return fencingToken === undefined || fencingToken === state.fencingToken;
+export function holdsTheRun(fencingToken: number, state: RecordedRunState): boolean {
+  return fencingToken === state.fencingToken;
 }
 
 export function startedByAnotherAttempt({ fact, fencingToken }: RunCall, state: RunState): boolean {

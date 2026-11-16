@@ -15,7 +15,7 @@ const madeInWords: ReadonlyMap<string, string> = new Map([
 ]);
 
 export function whatOf(mediaType: string): string {
-  return madeInWords.get(mediaType.slice(0, mediaType.indexOf('/'))) ?? 'an asset';
+  return madeInWords.get(mediaType.slice(0, mediaType.indexOf('/'))) ?? 'a file';
 }
 
 export function describeOutput(output: Schema.Json): string {

@@ -112,7 +112,7 @@ export interface FinishingAttempt {
 export interface RunFinish {
   readonly type: 'finish';
   readonly result: RunOutcome | InterruptedAttempt;
-  readonly attempt?: FinishingAttempt;
+  readonly attempt: FinishingAttempt;
 }
 
 export interface RunResume {
@@ -123,7 +123,7 @@ export interface RunResume {
 export interface RunCall {
   readonly type: 'call';
   readonly fact: CallFact;
-  readonly fencingToken?: number;
+  readonly fencingToken: number;
 }
 
 export interface RunWork {
@@ -139,6 +139,7 @@ export interface RunAnswer extends ComparedWithWhatWasRead {
 export interface RunAttemptDied {
   readonly type: 'attempt_died';
   readonly fencingToken: number;
+  readonly noNextAttempt?: true;
 }
 
 interface CommandMetadata {

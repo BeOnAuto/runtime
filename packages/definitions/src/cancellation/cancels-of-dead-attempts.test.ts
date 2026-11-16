@@ -246,6 +246,7 @@ describe('a cancel of a run within its call whose attempt cannot be judged', () 
             service.execute(stream, runDecider, {
               type: 'call',
               fact: { type: 'tool_call_started', data: anotherCall },
+              fencingToken: 1,
               ...at,
             }),
           ),

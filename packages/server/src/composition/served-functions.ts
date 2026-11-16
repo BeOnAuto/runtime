@@ -23,6 +23,8 @@ export interface ServedFunctions {
     | 'contentAddressKey'
     | 'shippedFiles'
     | 'studioAddress'
+    | 'holding'
+    | 'access'
   >;
 }
 

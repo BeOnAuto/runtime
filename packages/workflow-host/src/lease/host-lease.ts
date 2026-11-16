@@ -35,7 +35,7 @@ function currentHolderOf(database: HostDatabase): Effect.Effect<LeaseClaim, Data
   ).pipe(Effect.map(({ holder, expires_at: until }): LeaseClaim => ({ held: false, holder, until })));
 }
 
-function nowOn(database: HostDatabase, clock: HostClock): Effect.Effect<number, DatabaseFailed> {
+export function nowOn(database: HostDatabase, clock: HostClock): Effect.Effect<number, DatabaseFailed> {
   return database.sharedClock ?? Effect.sync(() => clock.now());
 }
 

@@ -339,7 +339,7 @@ An image a tool answers is kept as an asset of the run, apart from the result, w
 - The runtime records `asset_kept` on the asset's own stream, `assets/{id}`. Its `made_by.tool_call` names the id the model gave the call, the server, the connection where the server is one, and the tool.
 - The kept result names the asset in place of the image's bytes, as `{ "type": "image", "mimeType": "image/png", "asset": "<id>" }`, so the run's history holds no image.
 - [`get_asset`](http.md#generation-functions) reads the asset by that id, with an address to its bytes. Its `model` is `null`.
-- The runtime keeps an image this way when its bytes are a PNG, JPEG, GIF or WebP image no larger than the limit for one image, and the playbook has room for it. The [settings of generation functions](../self-host/configuration.md#generation-functions) set both limits, and how long the asset is kept, 90 days by default. Any other image stays in the result as the tool sent it.
+- The runtime keeps an image this way when its bytes are a PNG, JPEG, GIF or WebP image no larger than the limit for one image, and the playbook has room for it. The [settings of generation functions](../self-host/configuration.md#generation-functions) set the limit for one image, and the [asset settings](../self-host/configuration.md#assets) the room a playbook has and how long the asset is kept, 90 days by default. Any other image stays in the result as the tool sent it.
 - With `record_content: false`, the result is not kept, so its images are not kept either.
 
 ### When a tool-calling run cannot finish

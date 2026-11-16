@@ -1,8 +1,11 @@
-import type { Outcome } from '@on.auto/operations';
+import { textToKeep, type ContentKept, type ContentOwner, type RecordedContent } from '@on.auto/content';
+import { at } from '@on.auto/content/testing';
+import type { Outcome, StreamWriter } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { AssetKeptSchema, type AssetEvent, type AssetKeptData } from '../assets/asset-facts.ts';
 import { generationHarness, type GenerationHarness } from '../testing/index.ts';
+import { keptAsRead } from './kept-as-read.ts';
 
 const IssueSchema = Schema.Struct({ pointer: Schema.String, detail: Schema.String });
 
@@ -112,4 +115,47 @@ export function keptDataOf(facts: readonly AssetEvent[]): AssetKeptData {
 
 export function generationOfKept(facts: readonly AssetEvent[]) {
   return decodeMadeByAGeneration(keptDataOf(facts)).made_by.generation;
+}
+
+interface LedgerOfPages extends StreamWriter {
+  readonly content: Pick<RecordedContent, 'put'>;
+}
+
+const ninetyDays = 90 * 86_400_000;
+
+export async function aPageARunReturned(
+  ledger: LedgerOfPages,
+  playbook: ContentOwner,
+  id: string,
+  keptAt: number,
+): Promise<ContentKept> {
+  const moment = new Date(keptAt).toISOString();
+  const page = await at(
+    keptAt,
+    ledger.content.put(playbook, textToKeep('# The reference\n'.repeat(1000), 'text/markdown')),
+  );
+  await at(
+    keptAt,
+    keptAsRead(ledger, {
+      playbook,
+      id,
+      data: {
+        media_type: page.mediaType,
+        bytes: page.bytes,
+        sha256: page.sha256,
+        kind: 'text',
+        made_by: { function_output: { pointer: '/page' } },
+        expires_at: new Date(keptAt + ninetyDays).toISOString(),
+      },
+      context: {
+        at: moment,
+        by: 'acme-admin',
+        runId: '019a4f2e-5c1b-7d3a-8e6f-000000000003',
+        definitionType: 'lookup',
+        definitionName: 'fetch-the-page',
+        definitionVersion: 1,
+      },
+    }),
+  );
+  return page;
 }

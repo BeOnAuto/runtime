@@ -154,6 +154,7 @@ interface AttemptThatDied {
   readonly run: RunStreamAddress;
   readonly lineage: Lineage;
   readonly fencingToken: number;
+  readonly noNextAttempt?: true;
 }
 
 type DeadAttemptReceipt = 'ended' | 'not_running' | 'outlives_its_call';
@@ -161,13 +162,14 @@ type DeadAttemptReceipt = 'ended' | 'not_running' | 'outlives_its_call';
 type EndDeadAttempt = (attempt: AttemptThatDied) => Effect.Effect<DeadAttemptReceipt>;
 
 export function deadAttemptEnder(ledger: StreamWriter): EndDeadAttempt {
-  return ({ run, lineage, fencingToken }) =>
+  return ({ run, lineage, fencingToken, noNextAttempt }) =>
     Effect.gen(function* () {
       const stream = `${streamPrefixOfPlaybook(run)}${runStreamNameOf(run.id)}`;
       const at = DateTime.formatIso(yield* DateTime.now);
       const command: RunCommand = {
         type: 'attempt_died',
         fencingToken,
+        ...(noNextAttempt === undefined ? {} : { noNextAttempt }),
         runId: run.id,
         by: playbookCallerOf(run).id,
         at,

@@ -1,13 +1,14 @@
-import { defineCommand } from '@on.auto/operations';
-import { Effect, Schema } from 'effect';
+import { defineCommand, PlaybookContext } from '@on.auto/operations';
+import { Effect, Option, Schema } from 'effect';
 
+import { attemptKeyOf, LiveAttempts } from '../attempts/live-attempts.ts';
 import type { Capability } from '../capability/capability.ts';
 import { knownRunningCapabilities } from '../capability/known-capabilities.ts';
 import { definitionWordsFor } from '../plain-language/definition-words.ts';
 import { runPlainLanguage } from '../plain-language/run-words.ts';
 import { RunDetailSchema } from '../runs/run.ts';
 import { RunIdInputField, InputField, DefinitionNameField } from './definition-fields.ts';
-import { startVersionOnce } from './start-once.ts';
+import { startVersionOnce, versionToStart } from './start-once.ts';
 
 const description = [
   'Starts a run of one version of a definition under a run id, once, or of its active version when no version is named: when the playbook has a run under that id,',
@@ -36,12 +37,13 @@ export function defineStartVersion(capabilities: readonly Capability[]) {
       reasons: ['not_found', 'conflict', 'invalid_input', 'unavailable', 'cancelled', 'unanswered'],
       handle: Effect.fnUntraced(function* ({ type, name, version, input, run_id: id }) {
         const capability = yield* known.capabilityOfType(type);
-        return yield* startVersionOnce(
-          capabilities,
-          capability,
-          { definition_type: capability.type, name, version, input },
-          id,
-        );
+        const request = { definition_type: capability.type, name, version, input };
+        const run = yield* versionToStart(capability, request);
+        const started = startVersionOnce(capabilities, capability, id, { request, run });
+        const live = yield* Effect.serviceOption(LiveAttempts);
+        return Option.isNone(live) || run.prepared.finishesLaterFor(input)
+          ? yield* started
+          : yield* live.value.attempt(attemptKeyOf(yield* PlaybookContext, id), started);
       }),
       plainLanguage: {
         ...words,

@@ -22,7 +22,9 @@ export const AssetReadSchema = Schema.Struct({
   media_type: Schema.String.annotate({ description: 'The media type of its bytes, such as image/png or audio/mpeg' }),
   bytes: Schema.Int.annotate({ description: 'Its size in bytes' }),
   sha256: Schema.String.annotate({ description: 'The SHA-256 of its bytes, in lowercase hex' }),
-  model: nullOr('The model that made it, as its function names it, or null for an image a tool answered'),
+  model: nullOr(
+    'The model that made it, as its function names it, or null where no model made it, such as an image a tool answered',
+  ),
   kept_at: Schema.String.annotate({ description: 'When the playbook kept it, in ISO 8601 UTC' }),
   expires_at: nullOr('When it expires, in ISO 8601 UTC, or null once its expiry is recorded'),
   expired_at: nullOr('When its expiry was recorded, in ISO 8601 UTC, or null while it is kept'),

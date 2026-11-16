@@ -32,6 +32,7 @@ export interface CompositionParts {
 type Composing = Parameters<ComposedServerOptions['composed']>;
 
 interface Serving {
+  readonly holding: Readonly<ReturnType<typeof attemptHoldingOf>>;
   readonly modelAccessOf: ModelAccessOf;
   readonly wiring: FunctionWiring;
   readonly clock: WorkflowParts['clock'];
@@ -77,7 +78,7 @@ function meterOf(
 }
 
 function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'] {
-  const { modelAccessOf, wiring, settings, telemetry, shippedFiles, database, made } = serving;
+  const { modelAccessOf, wiring, settings, telemetry, shippedFiles, database, made, holding } = serving;
   return async (runtime, ownOrigin) => {
     const { ledger, workflows, identityIssuer } = settings;
     const { stores, consent, connections, source, offering, clientMetadata, license, ...ownKeys } =
@@ -111,6 +112,8 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       ...functions.parts,
       orgOperations: [...functions.parts.orgOperations, ...connections, ...license.operations],
       dueWork: [...functions.parts.dueWork, ...license.dueWork],
+      holding,
+      access: settings,
       ...optionalPartsOf(serving),
     };
     const served = stores.withSecretsClosed(
@@ -132,6 +135,41 @@ function goalsSwitchesOf(
   return { goals, results: goals && results, messages: goals && results && messages };
 }
 
+function theLedgerLayerOf(
+  settings: Composing[0],
+  database: Serving['database'],
+  made: Serving['made'],
+  wiring: Serving['wiring'],
+) {
+  return withARefusedLayoutExplained(
+    ledgerLayerFor(settings, database, {
+      declared: made.prediction.provided.capability.facts.onRuns,
+      appends: wiring.projections.appends,
+      mostActiveOf: made.bounds.mostActiveOf,
+    }),
+    settings,
+  );
+}
+
+function aStopOfThisProcess() {
+  const stop = { begun: false };
+  return {
+    began: () => {
+      stop.begun = true;
+    },
+    underway: () => stop.begun,
+  } as const;
+}
+
+function attemptHoldingOf({ workflows }: Composing[0], clock: CompositionParts['clock']) {
+  return {
+    holder: crypto.randomUUID(),
+    sweepEveryMs: workflows.sweepEveryMs,
+    stopping: aStopOfThisProcess(),
+    ...(clock === undefined ? {} : { clock }),
+  };
+}
+
 export function compositionRootWith(
   modelAccessOf: ModelAccessOf,
   {
@@ -151,18 +189,14 @@ export function compositionRootWith(
   return serverOptionsComposing(async (settings, telemetry, shippedFiles) => {
     const database = await ledgerDatabaseOf(settings, telemetry.appended);
     const made = await madeAtStart(settings, { programPoolOf: wiring.programPoolOf, shippedFiles, installed });
-    const ledgerLayer = withARefusedLayoutExplained(
-      ledgerLayerFor(settings, database, {
-        declared: made.prediction.provided.capability.facts.onRuns,
-        appends: wiring.projections.appends,
-        mostActiveOf: made.bounds.mostActiveOf,
-      }),
-      settings,
-    );
-    const services = applicationLayer(ledgerLayer, meterOf(settings, { signers, features }), settings.payloads);
+    const ledgerLayer = theLedgerLayerOf(settings, database, made, wiring);
+    const holding = attemptHoldingOf(settings, clock);
+    const meter = meterOf(settings, { signers, features });
+    const services = applicationLayer(ledgerLayer, meter, settings.payloads, holding);
     return {
       services: made.computation.closedLastOf(made.registry.closedFirstOf(services)),
       serve: servedWith({
+        holding,
         modelAccessOf,
         wiring,
         clock,

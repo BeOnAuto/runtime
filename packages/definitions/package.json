@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./attempts": "./src/attempts/index.ts",
     "./check": "./src/check.ts",
     "./check-handler": "./src/program-check/handed-checks.ts",
     "./document": "./src/document.ts",

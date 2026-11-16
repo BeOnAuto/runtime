@@ -20,6 +20,13 @@ export {
   type StartAnswer,
 } from './host/run-requests.ts';
 export { openWorkflowHost, type HostOptions, type WorkflowHost } from './host/workflow-host.ts';
+export {
+  attemptLeasesOn,
+  attemptLeasesOver,
+  type AttemptLeases,
+  type AttemptLeaseSettings,
+} from './lease/attempt-leases.ts';
+export { goneHoldersWork, type GoneHolders } from './lease/gone-holders.ts';
 export { openWorkflowStore, type WorkflowStore } from './host/workflow-store.ts';
 export { HeldValueSizeThreshold, hostPayloadCacheBytes } from './runs/run-payloads.ts';
 export type {

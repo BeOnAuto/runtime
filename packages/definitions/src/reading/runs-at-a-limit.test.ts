@@ -56,7 +56,17 @@ async function playbookWithRunsEndedAtALimit() {
       at: firstMoment,
     };
     return Effect.orDie(
-      Effect.andThen(execute(start), execute({ type: 'finish', result, runId, by: acmeAdmin.id, at: endedAt })),
+      Effect.andThen(
+        execute(start),
+        execute({
+          type: 'finish',
+          result,
+          attempt: { fencingToken: 1, version: 1 },
+          runId,
+          by: acmeAdmin.id,
+          at: endedAt,
+        }),
+      ),
     );
   };
   await definitions.run(

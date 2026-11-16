@@ -42,10 +42,16 @@ const startedDeep = recordedWith({ ...start, ...ofGreet, depth: 2 })(started);
 const finishing: RunCommand = {
   type: 'finish',
   result: { type: 'run_succeeded', data: { output: 'Hi', record: {} } },
+  attempt: { fencingToken: 1, version: 1 },
   ...finish,
 };
 
-const failing: RunCommand = { type: 'finish', result: { type: 'run_failed', data: {} }, ...finish };
+const failing: RunCommand = {
+  type: 'finish',
+  result: { type: 'run_failed', data: {} },
+  attempt: { fencingToken: 1, version: 1 },
+  ...finish,
+};
 
 const ended = recordedWith({ ...finish, ...ofGreet, depth: 2 });
 

@@ -4,7 +4,7 @@ import { streamPrefixOfPlaybook } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { assetDecider } from '../assets/asset-decider.ts';
+import { keptAsRead } from '../run-testing/kept-as-read.ts';
 import {
   assetIdOf,
   day,
@@ -99,10 +99,7 @@ describe('a reference to an asset of another playbook', () => {
     const kept = keptFactOf(await playbook.factsOf(assetIdOf(1)));
     const beta = { org: alpha.org, playbook: 'beta' };
     await Effect.runPromise(
-      playbook.ledger.service.execute(`${streamPrefixOfPlaybook(beta)}assets/${assetIdOf(9)}`, assetDecider, {
-        event: { type: 'asset_kept', data: kept.data },
-        context: kept.context,
-      }),
+      keptAsRead(playbook.ledger.service, { playbook: beta, id: assetIdOf(9), data: kept.data, context: kept.context }),
     );
 
     expect(await issuesAt(playbook, { photo: assetIdOf(9) })).toEqual([

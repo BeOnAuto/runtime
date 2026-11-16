@@ -1,0 +1,58 @@
+import { randomUUID } from 'node:crypto';
+
+import { Client } from 'pg';
+import { describe, onTestFinished } from 'vitest';
+
+import {
+  attemptLeaseSuite,
+  handedOverLeaseSuite,
+  lapsedLeaseSuite,
+  liveHolderSuite,
+} from '../suite-testing/attempt-lease-suite.ts';
+import {
+  systemClockLeaseSuite,
+  tokenlessBesideLeaseSuite,
+  tokenlessLeaseSuite,
+} from '../suite-testing/tokenless-lease-suite.ts';
+import { onPostgreSQLAt } from '../testing/host-files.ts';
+
+const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
+
+const skipped = server === '';
+
+const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
+
+async function administered(statement: string): Promise<void> {
+  const client = new Client({ connectionString: server });
+  await client.connect();
+  try {
+    await client.query(statement);
+  } finally {
+    await client.end();
+  }
+}
+
+async function onPostgreSQL() {
+  const name = `workflow_host_${randomUUID().replaceAll('-', '')}`;
+  await administered(`CREATE DATABASE ${name}`);
+  await administered(`ALTER DATABASE ${name} SET synchronous_commit = off`);
+  onTestFinished(async () => {
+    await administered(`DROP DATABASE ${name} WITH (FORCE)`);
+  });
+  const database = new URL(server);
+  database.pathname = `/${name}`;
+  return onPostgreSQLAt(database.href);
+}
+
+describe.skipIf(skipped)(`the lease of an attempt on PostgreSQL${notice}`, () => {
+  attemptLeaseSuite(onPostgreSQL);
+  liveHolderSuite(onPostgreSQL);
+  lapsedLeaseSuite(onPostgreSQL);
+  handedOverLeaseSuite(onPostgreSQL);
+  systemClockLeaseSuite(onPostgreSQL);
+});
+
+describe.skipIf(skipped)(`the lease of an attempt that names no token yet, on PostgreSQL${notice}`, () => {
+  tokenlessLeaseSuite(onPostgreSQL);
+  tokenlessBesideLeaseSuite(onPostgreSQL);
+});

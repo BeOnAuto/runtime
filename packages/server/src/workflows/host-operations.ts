@@ -3,7 +3,9 @@ import type { Dispatcher, DispatcherServices, Outcome, PlaybookRequest, Registra
 import type { WorkflowHost } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
-type HostOperationName = 'startVersion' | 'runDefinition';
+import { defineNextAttempt, defineRefusedAttempt } from '../attempt-leases/next-attempts.ts';
+
+type HostOperationName = 'startVersion' | 'runDefinition' | 'nextAttempt' | 'refusedAttempt';
 
 export type HostOperations = Readonly<Record<HostOperationName, PlaybookOperation>>;
 
@@ -17,20 +19,28 @@ interface HostOnceOpened {
 }
 
 export function hostOperationsOf(capabilities: readonly Capability[]): HostOperations {
-  return { startVersion: defineStartVersion(capabilities), runDefinition: defineRunDefinition(capabilities) };
+  return {
+    startVersion: defineStartVersion(capabilities),
+    runDefinition: defineRunDefinition(capabilities),
+    nextAttempt: defineNextAttempt(capabilities),
+    refusedAttempt: defineRefusedAttempt(capabilities),
+  };
 }
 
 export function hostRegistrationsOf(operations: HostOperations): readonly Registration<'playbook'>[] {
   return Object.values(operations).map(({ registration }) => registration);
 }
 
-export function hostDispatchesOf(
-  dispatcher: Dispatcher,
-  { startVersion, runDefinition }: HostOperations,
-): HostDispatches {
+export function hostDispatchesOf(dispatcher: Dispatcher, operations: HostOperations): HostDispatches {
+  const dispatchOf =
+    ({ registration }: PlaybookOperation): HostDispatch =>
+    (request) =>
+      dispatcher.dispatchToPlaybook(registration, request);
   return {
-    startVersion: (request) => dispatcher.dispatchToPlaybook(startVersion.registration, request),
-    runDefinition: (request) => dispatcher.dispatchToPlaybook(runDefinition.registration, request),
+    startVersion: dispatchOf(operations.startVersion),
+    runDefinition: dispatchOf(operations.runDefinition),
+    nextAttempt: dispatchOf(operations.nextAttempt),
+    refusedAttempt: dispatchOf(operations.refusedAttempt),
   };
 }
 

@@ -61,6 +61,7 @@ const calling: RunCommand = {
     type: 'tool_call_started',
     data: { call_id: 'toolu_1', server: 'slack', tool: 'post_message', arguments_bytes: 2 },
   },
+  fencingToken: 1,
   ...acted,
 };
 

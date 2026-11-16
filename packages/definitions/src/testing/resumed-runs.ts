@@ -60,6 +60,7 @@ export async function startedAndLeft(options: ResumerOptions = {}) {
         definitions.ledger.service.execute(stream, runDecider, {
           type: 'call',
           fact: { type: 'model_call_started', data: { number: 1, ...modelCallSent() } },
+          fencingToken: 1,
           ...acted,
         }),
       ]),
@@ -106,7 +107,14 @@ export function answeredOnceMeanwhile() {
       if (held.asked === 1 && held.definitions !== undefined) {
         const fact = { type: 'model_call_answered', data: { number: 2, ...modelCallAnswered() } } as const;
         Effect.runSync(
-          Effect.orDie(held.definitions.ledger.service.execute(stream, runDecider, { type: 'call', fact, ...acted })),
+          Effect.orDie(
+            held.definitions.ledger.service.execute(stream, runDecider, {
+              type: 'call',
+              fact,
+              fencingToken: 1,
+              ...acted,
+            }),
+          ),
         );
       }
       return attempt;

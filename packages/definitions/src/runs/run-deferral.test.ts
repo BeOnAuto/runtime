@@ -44,7 +44,7 @@ function decided(command: RunCommand, ...history: readonly RecordedRunEvent[]) {
 }
 
 function finishing(result: RunOutcome): RunCommand {
-  return { type: 'finish', result, ...start };
+  return { type: 'finish', result, attempt: { fencingToken: 1, version: 1 }, ...start };
 }
 
 function settling(result: RunResult, by = 'playbook:alpha'): RunCommand {

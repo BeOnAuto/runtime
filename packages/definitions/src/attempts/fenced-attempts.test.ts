@@ -81,23 +81,17 @@ async function endedWhileItsHolderStalls(holder: Holder) {
 }
 
 describe('the holder of a run whose attempt a shell ended as dead, which turns out to be alive, with its call answered', () => {
-  it('records its result, a result never being discarded, while its call ends unrecorded and was sent once', async () => {
+  it('records no result over the ending the shell recorded, which a workflow may have acted on, and its call was sent once', async () => {
     const holder = aHolderOfTheRun();
     const { died, running, endingTheAttemptOf, reading, recorded } = await endedWhileItsHolderStalls(holder);
 
     expect(await endingTheAttemptOf(died)).toBe('ended');
     holder.goOn();
 
-    expect(await running).toMatchObject({ status: 'succeeded' });
-    expect(await recorded()).toEqual([
-      'run_started',
-      'tool_call_started',
-      'tool_call_failed',
-      'run_rejected',
-      'run_succeeded',
-    ]);
+    expect(await running).toMatchObject({ status: 'rejected', reason: 'conflict', kind: 'effect_unknown' });
+    expect(await recorded()).toEqual(['run_started', 'tool_call_started', 'tool_call_failed', 'run_rejected']);
     expect(holder.sent()).toBe(1);
-    expect(await reading()).toMatchObject({ output: { status: 'succeeded', output: 'posted' } });
+    expect(await reading()).toMatchObject({ output: { status: 'rejected', rejection: { kind: 'effect_unknown' } } });
   });
 });
 

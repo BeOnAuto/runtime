@@ -9,22 +9,26 @@ import {
 import { Clock, Effect } from 'effect';
 
 import { assetDecider } from './asset-decider.ts';
-import { assetStreamOf, type AssetKeptData, type AssetMadeBy } from './asset-facts.ts';
+import {
+  assetStreamOf,
+  type AssetKeptDataWritten,
+  type AssetMadeBy,
+  type KindWritten,
+  type MadeByWritten,
+} from './asset-facts.ts';
 import type { KeptAsset } from './asset-reference.ts';
-
-type AssetKind = AssetKeptData['kind'];
 
 type Generation = Extract<AssetMadeBy, { readonly generation: unknown }>['generation'];
 
-export type MadeByAGeneration = Generation & { readonly kind: AssetKind };
+export type MadeByAGeneration = Generation & { readonly kind: KindWritten };
 
 export interface AssetToKeep {
   readonly id: string;
   readonly playbook: ContentOwner;
   readonly bytes: Readonly<Uint8Array>;
   readonly mediaType: string;
-  readonly kind: AssetKind;
-  readonly madeBy: AssetMadeBy;
+  readonly kind: KindWritten;
+  readonly madeBy: MadeByWritten;
   readonly keptForMs: number;
   readonly context: Omit<Context, 'at'>;
   readonly lineage: Lineage;
@@ -53,7 +57,7 @@ export function keptAsset({ ledger, content }: AssetKeeping, asset: AssetToKeep)
     const { stream, mediaType } = contentOfBytes(asset.bytes, asset.mediaType);
     const held = yield* Effect.orDie(content.put(asset.playbook, { stream, mediaType }));
     const at = yield* Clock.currentTimeMillis;
-    const data: AssetKeptData = {
+    const data: AssetKeptDataWritten = {
       media_type: held.mediaType,
       bytes: held.bytes,
       sha256: held.sha256,

@@ -2,6 +2,7 @@ export { createApiKey, type ApiKey, type CreatedKey, type KeyGrant } from './key
 export { configuredApiKeys, type ApiKeySource } from './keys/api-key-source.ts';
 export { ApiKeysSchema, apiKeysVariable, readApiKeys } from './keys/api-keys-setting.ts';
 export { authenticatorFor, type AccessSettings, type Authenticator } from './access/authenticator.ts';
+export { callersByIdOf, type CallersById } from './access/callers-by-id.ts';
 export { accessModeOf, type AccessFacts, type AccessMode, type DeclaredAccessMode } from './access/access-mode.ts';
 export { listensOnlyOnLoopback } from './access/loopback.ts';
 export { isHttpsOrLoopback, loopbackNames, namesTheLoopback } from './access/loopback-names.ts';

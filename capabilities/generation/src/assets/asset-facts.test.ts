@@ -3,15 +3,16 @@ import { at } from '@on.auto/content/testing';
 import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { contentHoldersOf, streamPrefixOfPlaybook } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import { Effect, Result } from 'effect';
+import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { keptAsRead } from '../run-testing/kept-as-read.ts';
 import { assetDecider } from './asset-decider.ts';
 import { AssetEventSchema, assetStreamOf, type AssetEvent } from './asset-facts.ts';
 
 const sha256 = 'c1f5e9a7d3b2a8f4e6c0d9b7a5f3e1c2d4b6a8f0e2c4d6b8a0f2e4c6d8b0a2f4';
 
-const kept: AssetEvent = {
+const kept = {
   type: 'asset_kept',
   data: {
     media_type: 'image/png',
@@ -38,7 +39,7 @@ const kept: AssetEvent = {
     definitionName: 'product-photo',
     definitionVersion: 3,
   },
-};
+} satisfies AssetEvent;
 
 const keptOfAToolCall: AssetEvent = {
   type: 'asset_kept',
@@ -129,6 +130,92 @@ describe('the content of an asset', () => {
     await Effect.runPromise(ledger.execute(stream, assetDecider, keeping));
     const whileKept = await at(pastItsHour, ledger.removeUnheld(playbook, content.sha256));
     await Effect.runPromise(ledger.execute(stream, assetDecider, expiring));
+    const onceExpired = await at(pastItsHour, ledger.removeUnheld(playbook, content.sha256));
+
+    expect([whileKept, onceExpired]).toEqual(['held', 'removed']);
+  });
+});
+
+const asJson = Schema.toCodecJson(AssetEventSchema);
+
+const decodeJson = Schema.decodeUnknownResult(asJson);
+
+const encodeJson = Schema.encodeSync(asJson);
+
+const onTheRun = {
+  at: '2026-11-20T09:00:00.000Z',
+  by: 'user_2q8Vb7KxN4',
+  runId: '019a5b12-3d4e-7a5f-8b6c-9d0e1f2a3b4d',
+  definitionType: 'lookup',
+  definitionName: 'fetch-the-reference',
+  definitionVersion: 4,
+};
+
+const aPageARunReturned = {
+  type: 'asset_kept',
+  data: {
+    media_type: 'text/markdown',
+    bytes: 3_355_443,
+    sha256,
+    kind: 'text',
+    made_by: { function_output: { pointer: '/page' } },
+    expires_at: '2027-02-18T09:00:00.000Z',
+  },
+  context: onTheRun,
+};
+
+const aFileARunReturnedWhole = {
+  ...aPageARunReturned,
+  data: {
+    ...aPageARunReturned.data,
+    media_type: 'application/pdf',
+    kind: 'file',
+    made_by: { function_output: { pointer: '' } },
+  },
+};
+
+describe('the kinds and the maker of an asset a later release writes, which this release reads first', () => {
+  it('reads an asset of the kind text or file that a run returned at a place of its output, and writes it back as it read it', () => {
+    const written: readonly unknown[] = [aPageARunReturned, aFileARunReturnedWhole];
+    const read = written.map((fact: unknown) => Result.getOrThrow(decodeJson(fact)));
+
+    expect(read).toEqual(written);
+    expect(read.map((fact: AssetEvent) => encodeJson(fact))).toEqual(written);
+    expect(read.map((fact: AssetEvent) => assetDecider.evolve('none', fact))).toEqual(['kept', 'kept']);
+  });
+
+  it('reads no kind and no maker beyond those, so a fact of one it does not know is not taken as an asset', () => {
+    const unknownKind = { ...aPageARunReturned, data: { ...aPageARunReturned.data, kind: 'spreadsheet' } };
+    const unknownMaker = { ...aPageARunReturned, data: { ...aPageARunReturned.data, made_by: { upload: {} } } };
+
+    expect([Result.isFailure(decodeJson(unknownKind)), Result.isFailure(decodeJson(unknownMaker))]).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it('holds its content as an asset of any other kind does, from the fact that keeps it until the fact that it expired', async () => {
+    const { service: ledger } = memoryLedger(undefined, [], contentHoldersOf([AssetEventSchema]));
+    const playbook = { org: 'acme', playbook: 'alpha' };
+    const keptAt = Date.parse(onTheRun.at);
+    const pastItsHour = keptAt + 2 * 3_600_000;
+    const content = await at(keptAt, ledger.content.put(playbook, textToKeep('# The reference', 'text/markdown')));
+    const id = '019a5b12-0000-7000-8000-000000000003';
+    const expiring = { event: { type: expired.type, data: expired.data }, context: expired.context };
+
+    await at(
+      keptAt,
+      keptAsRead(ledger, {
+        playbook,
+        id,
+        data: { ...aPageARunReturned.data, kind: 'text', sha256: content.sha256 },
+        context: onTheRun,
+      }),
+    );
+    const whileKept = await at(pastItsHour, ledger.removeUnheld(playbook, content.sha256));
+    await Effect.runPromise(
+      ledger.execute(`${streamPrefixOfPlaybook(playbook)}${assetStreamOf(id)}`, assetDecider, expiring),
+    );
     const onceExpired = await at(pastItsHour, ledger.removeUnheld(playbook, content.sha256));
 
     expect([whileKept, onceExpired]).toEqual(['held', 'removed']);

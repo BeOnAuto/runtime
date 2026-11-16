@@ -122,8 +122,8 @@ function agreesWithTheHolder({ version }: FinishingAttempt, { run, holderStarted
   return version === run.definition_version && !holderStartedACall;
 }
 
-function mayRecordItsResult(attempt: FinishingAttempt | undefined, state: RecordedRunState): boolean {
-  return attempt === undefined || holdsTheRun(attempt.fencingToken, state) || agreesWithTheHolder(attempt, state);
+function mayRecordItsResult(attempt: FinishingAttempt, state: RecordedRunState): boolean {
+  return holdsTheRun(attempt.fencingToken, state) ? isRunning(state) : agreesWithTheHolder(attempt, state);
 }
 
 function decideFinish({ result, attempt }: RunFinish, state: RunState): Decision {
@@ -134,7 +134,7 @@ function decideFinish({ result, attempt }: RunFinish, state: RunState): Decision
   if (isFinalResult(outcome) && mayRecordItsResult(attempt, state)) {
     return Result.succeed([outcome]);
   }
-  if (!holdsTheRun(attempt?.fencingToken, state)) {
+  if (!holdsTheRun(attempt.fencingToken, state)) {
     return Result.fail(runTaken);
   }
   return !isRunning(state) || leftToResume(result, state) ? nothingToRecord : Result.succeed([outcome]);
@@ -209,14 +209,18 @@ function endingOfItsAttempt(state: RecordedRunState): readonly RunEvent[] {
   return state.cancel === undefined ? endingOfAnAttemptThatDied(state) : endingOfADeadAttempt(state, state.cancel);
 }
 
-function decideAttemptDied({ fencingToken }: RunAttemptDied, state: RunState): Decision {
+function endsWithItsAttempt({ noNextAttempt }: RunAttemptDied, state: RecordedRunState): boolean {
+  return endsWithinItsCall(state) || (noNextAttempt === true && !takesSettlement(state));
+}
+
+function decideAttemptDied(command: RunAttemptDied, state: RunState): Decision {
   if (state === undefined || !isRunning(state)) {
     return Result.fail(runEnded);
   }
-  if (!holdsTheRun(fencingToken, state)) {
+  if (!holdsTheRun(command.fencingToken, state)) {
     return Result.fail(runTaken);
   }
-  return endsWithinItsCall(state) ? Result.succeed(endingOfItsAttempt(state)) : Result.fail(outlivesItsCall);
+  return endsWithItsAttempt(command, state) ? Result.succeed(endingOfItsAttempt(state)) : Result.fail(outlivesItsCall);
 }
 
 function decideCallOfAnAttempt(command: RunCall, state: RunState): Decision {

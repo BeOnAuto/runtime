@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { Effect } from 'effect';
 
+import { attemptLeasesRenewed } from '../lease/attempt-leases.ts';
 import { hostLease, leaseMsFor } from '../lease/host-lease.ts';
 import { keptLease } from '../lease/lease-keeper.ts';
 import type { HostParts } from './host-parts.ts';
@@ -31,6 +32,7 @@ export async function standingOn(
   });
   const keeper = await keptLease({
     lease,
+    attemptsRenewed: attemptLeasesRenewed(store.database, { holder, sweepEveryMs, clock }),
     clock,
     sweepEveryMs,
     lastsMs,

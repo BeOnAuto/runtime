@@ -16,6 +16,8 @@ const BytesSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
 const KindSchema = Schema.Literals(['image', 'audio', 'video']);
 
+const KindReadSchema = Schema.Literals(['image', 'audio', 'video', 'text', 'file']);
+
 const ParametersSchema = Schema.Struct({
   size: Schema.optionalKey(Schema.String),
   aspect: Schema.optionalKey(Schema.String),
@@ -45,9 +47,12 @@ const ToolCallSchema = Schema.Struct({
   tool: Schema.String,
 });
 
+const FunctionOutputSchema = Schema.Struct({ pointer: Schema.String });
+
 const MadeBySchema = Schema.Union([
   Schema.Struct({ generation: Schema.Struct(generationFields) }),
   Schema.Struct({ tool_call: ToolCallSchema }),
+  Schema.Struct({ function_output: FunctionOutputSchema }),
 ]);
 
 export type ToolCallOfAnAsset = typeof ToolCallSchema.Type;
@@ -56,7 +61,7 @@ const keptFields = { media_type: Schema.String, bytes: BytesSchema, sha256: Dige
 
 const AssetKeptNowSchema = factOf(
   'asset_kept',
-  Schema.Struct({ ...keptFields, kind: KindSchema, made_by: MadeBySchema, expires_at: Schema.String }),
+  Schema.Struct({ ...keptFields, kind: KindReadSchema, made_by: MadeBySchema, expires_at: Schema.String }),
   RunContextSchema,
   { content: { holds: ['/sha256'] } },
 );
@@ -99,7 +104,20 @@ export type AssetKeptData = AssetKept['data'];
 
 export type AssetMadeBy = AssetKeptData['made_by'];
 
-export type DecidedAssetEvent = Decided<AssetEvent>;
+export type KindWritten = typeof KindSchema.Type;
+
+export type MadeByWritten = Exclude<AssetMadeBy, { readonly function_output: unknown }>;
+
+export interface AssetKeptDataWritten extends Omit<AssetKeptData, 'kind' | 'made_by'> {
+  readonly kind: KindWritten;
+  readonly made_by: MadeByWritten;
+}
+
+type AssetEventWritten =
+  | (Omit<AssetKept, 'data'> & { readonly data: AssetKeptDataWritten })
+  | Exclude<AssetEvent, AssetKept>;
+
+export type DecidedAssetEvent = Decided<AssetEventWritten>;
 
 export function assetStreamOf(id: string): string {
   return `${assetsKind}/${id}`;

@@ -18,7 +18,7 @@ const during = { runId: testRunId, by: 'acme-admin', at: '2026-10-01T09:00:02.00
 const meanwhile = recordedWith({ ...during, ...ofGreet });
 
 function decided(fact: CallFact, ...history: readonly RecordedRunEvent[]) {
-  const command: RunCommand = { type: 'call', fact, ...during };
+  const command: RunCommand = { type: 'call', fact, fencingToken: 1, ...during };
   return runDecider.decide(command, runStateAfter(history));
 }
 

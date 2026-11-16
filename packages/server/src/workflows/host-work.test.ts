@@ -38,6 +38,7 @@ describe('the machine the workflow host decides runs with', () => {
     const { machine } = hostWorkOf(runtime, hostDispatchesOf(makeDispatcher([]), hostOperationsOf([echo])), {
       capabilities: [echo],
       names: playbookOwnNamesOf([echo]),
+      lookAgain: () => Effect.void,
       evaluations: pool.evaluations,
     });
     await Promise.all([pool.close(), runtime.dispose()]);
@@ -54,6 +55,7 @@ describe('the cancels the workflow host hands to the runtime of the server', () 
     const { waiting } = hostWorkOf(runtime, hostDispatchesOf(makeDispatcher([]), hostOperationsOf([echo])), {
       capabilities: [echo],
       names: playbookOwnNamesOf([echo]),
+      lookAgain: () => Effect.void,
       evaluations: {
         machine: machineSandboxOf(freshInstances(sandboxModule)),
         filters: filterSandboxOf(freshInstances(sandboxModule)),

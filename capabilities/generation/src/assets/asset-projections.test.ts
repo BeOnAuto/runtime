@@ -47,6 +47,23 @@ const screenshot = {
   expires_at: '2026-12-01T10:00:00.000Z',
 };
 
+const aPageARunReturned = {
+  media_type: 'text/markdown',
+  bytes: 3_355_443,
+  sha256,
+  kind: 'text',
+  made_by: { function_output: { pointer: '/page' } },
+  expires_at: '2027-01-30T10:00:00.000Z',
+};
+
+const aFileARunReturnedWhole = {
+  ...aPageARunReturned,
+  media_type: 'application/pdf',
+  bytes: 1_048_577,
+  kind: 'file',
+  made_by: { function_output: { pointer: '' } },
+};
+
 const onTheRun = {
   at: '2026-11-01T10:00:00.000Z',
   by: 'key_7f3a',
@@ -112,6 +129,34 @@ describe('the projection of the assets of a playbook', () => {
   });
 });
 
+describe('the projection of the assets of a playbook, of a kind a later release keeps', () => {
+  it("keeps the row of an asset of the kind text or file that a run returned, which no model made, and counts it among the playbook's bytes", () => {
+    const page = assets.rowAfter(undefined, message('asset_kept', aPageARunReturned, onTheRun));
+    const file = assets.rowAfter(undefined, message('asset_kept', aFileARunReturnedWhole, onTheRun));
+    const totals = assetTotals.rowAfter(
+      assetTotals.rowAfter(undefined, message('asset_kept', aPageARunReturned, onTheRun)),
+      message('asset_kept', aFileARunReturnedWhole, onTheRun),
+    );
+
+    expect([page, file]).toEqual([
+      {
+        media_type: 'text/markdown',
+        bytes: 3_355_443,
+        sha256,
+        kind: 'text',
+        model: null,
+        run: 'run-1',
+        kept_at: Date.parse('2026-11-01T10:00:00.000Z'),
+        expires_at: Date.parse('2027-01-30T10:00:00.000Z'),
+        expired_at: null,
+        live: true,
+      },
+      expect.objectContaining({ media_type: 'application/pdf', kind: 'file', model: null }),
+    ]);
+    expect(totals).toEqual({ bytes: 3_355_443 + 1_048_577, assets: 2 });
+  });
+});
+
 describe('the projection of the bytes each playbook keeps of assets', () => {
   it('keeps the bytes and the count of the assets a playbook holds', () => {
     const one = assetTotals.rowAfter(undefined, keptMessage);
@@ -166,6 +211,16 @@ describe('the facts of an asset as the feed shows them', () => {
       'The playbook kept an image of 47.1 KiB that the browser_take_screenshot tool of browser answered, until 2026-12-01.',
       'An asset of 2 KiB expired.',
       'The content of an expired asset, 2 KiB, was removed, since nothing else of the playbook holds it.',
+    ]);
+  });
+
+  it('says a file a run returned, at the place of its output it was taken from or as its output whole', () => {
+    expect([
+      shown('asset_kept', aPageARunReturned, onTheRun),
+      shown('asset_kept', aFileARunReturnedWhole, onTheRun),
+    ]).toEqual([
+      'The playbook kept a file of 3.2 MiB that a run returned at /page of its output, until 2027-01-30.',
+      'The playbook kept a file of 1 MiB that a run returned as its output, until 2027-01-30.',
     ]);
   });
 

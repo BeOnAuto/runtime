@@ -210,21 +210,21 @@ Each run counts once on the runtime's meter, as a run of every other function do
 
 ## Bounds
 
-| Bound                                                | Default                     | Setting                                      |
-| ---------------------------------------------------- | --------------------------- | -------------------------------------------- |
-| One image                                            | 20 MiB                      | `GENERATION_MAX_IMAGE_MIB`, from 1 to 1,024  |
-| One asset of audio                                   | 50 MiB                      | `GENERATION_MAX_AUDIO_MIB`, from 1 to 1,024  |
-| One video                                            | 200 MiB                     | `GENERATION_MAX_VIDEO_MIB`, from 1 to 4,096  |
-| The assets of a playbook, together                   | 2,048 MiB                   | `GENERATION_MAX_PLAYBOOK_MIB`                |
-| How long an asset is kept without `expires`          | 90 days                     | `GENERATION_RETENTION_DAYS`, from 1 to 3,650 |
-| Waiting for a generation the provider finishes later | 10 minutes                  | `GENERATION_WAIT_MINUTES`, from 1 to 60      |
-| The prompt                                           | The model's                 | The catalogue                                |
-| References                                           | The model's                 | The catalogue                                |
-| Waiting for the gateway                              | 240 seconds                 |                                              |
-| A run                                                | 300 seconds                 |                                              |
-| A run of a generation the provider finishes later    | The wait and 9 minutes more | `GENERATION_WAIT_MINUTES` sets the wait      |
+| Bound                                                | Default                     | Setting                                        |
+| ---------------------------------------------------- | --------------------------- | ---------------------------------------------- |
+| One image                                            | 20 MiB                      | `GENERATION_MAX_IMAGE_MIB`, from 1 to 1,024    |
+| One asset of audio                                   | 50 MiB                      | `GENERATION_MAX_AUDIO_MIB`, from 1 to 1,024    |
+| One video                                            | 200 MiB                     | `GENERATION_MAX_VIDEO_MIB`, from 1 to 4,096    |
+| The storage quota of a playbook's assets             | 2,048 MiB                   | `ASSET_STORAGE_QUOTA_MIB`, from 1 to 1,048,576 |
+| How long an asset is kept without `expires`          | 90 days                     | `ASSET_RETENTION_DAYS`, from 1 to 3,650        |
+| Waiting for a generation the provider finishes later | 10 minutes                  | `GENERATION_WAIT_MINUTES`, from 1 to 60        |
+| The prompt                                           | The model's                 | The catalogue                                  |
+| References                                           | The model's                 | The catalogue                                  |
+| Waiting for the gateway                              | 240 seconds                 |                                                |
+| A run                                                | 300 seconds                 |                                                |
+| A run of a generation the provider finishes later    | The wait and 9 minutes more | `GENERATION_WAIT_MINUTES` sets the wait        |
 
-The [configuration reference](../self-host/configuration.md#generation-functions) sets out the settings.
+Each default holds where the runtime's operator sets no other value, as the configuration reference sets out for [generation functions](../self-host/configuration.md#generation-functions) and for [assets](../self-host/configuration.md#assets). Hosted Auto sets values of its own for some of them, the storage quota among them. A run refused for the storage quota says the quota in force: how much the playbook keeps, and how much it may keep.
 
 ## The overview
 

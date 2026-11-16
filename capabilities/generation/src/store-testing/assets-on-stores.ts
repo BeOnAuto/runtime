@@ -4,7 +4,7 @@ import { Effect, type Layer } from 'effect';
 import { expect, it } from 'vitest';
 
 import { assetDecider } from '../assets/asset-decider.ts';
-import type { AssetKeptData } from '../assets/asset-facts.ts';
+import type { AssetKeptDataWritten } from '../assets/asset-facts.ts';
 import { assets, assetsName, assetTotals, assetTotalsName } from '../assets/asset-projections.ts';
 
 export type LedgerOn = (projections: readonly (typeof assets)[]) => Promise<Layer.Layer<Ledger>>;
@@ -19,7 +19,7 @@ const own = 'b'.repeat(64);
 
 const at = '2026-11-01T10:00:00.000Z';
 
-function keptOf(sha256: string, bytes: number, expiresAt: string): AssetKeptData {
+function keptOf(sha256: string, bytes: number, expiresAt: string): AssetKeptDataWritten {
   return {
     media_type: 'image/png',
     bytes,
@@ -47,7 +47,7 @@ const onTheRun: Context = {
   definitionVersion: 1,
 };
 
-function kept(playbook: ContentOwner, id: string, data: AssetKeptData) {
+function kept(playbook: ContentOwner, id: string, data: AssetKeptDataWritten) {
   return Effect.flatMap(Effect.service(Ledger), (ledger) =>
     ledger.execute(`${streamPrefixOfPlaybook(playbook)}assets/${id}`, assetDecider, {
       event: { type: 'asset_kept', data },

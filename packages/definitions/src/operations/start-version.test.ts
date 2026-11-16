@@ -2,12 +2,13 @@ import { playbookCallerOf, messageIdOf } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineStartVersion } from '../index.ts';
+import { defineStartVersion, LiveAttempts } from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { aProcess } from '../testing/held-attempts.ts';
 
 const { createDefinition, updateDefinition, retireDefinition, getRun } = definitionOperationsFor([echo]);
 
@@ -209,5 +210,29 @@ describe('the definitions of a playbook that start on their own', () => {
       status: 'succeeded',
       output: { definitions: [{ name: 'greet', triggers }, { name: 'plain' }] },
     });
+  });
+});
+
+describe('a start once in a process that keeps its live attempts', () => {
+  it('is made as an attempt there, under the key of the run, holding the run by the token its start took', async () => {
+    const definitions = await greetAtTwoVersions();
+    const shell = aProcess();
+    const keys: string[] = [];
+    const live = LiveAttempts.of({
+      ...shell.live,
+      attempt: (key, run) =>
+        Effect.suspend(() => {
+          keys.push(key);
+          return shell.live.attempt(key, run);
+        }),
+    });
+
+    const started = await definitions.run(
+      definitions.dispatch(startVersion, starting(2)).pipe(Effect.provideService(LiveAttempts, live)),
+    );
+
+    expect(started).toMatchObject({ status: 'succeeded', output: { status: 'succeeded' } });
+    expect(keys).toEqual([`acme/alpha/${runId}`]);
+    expect(shell.acquired()).toBe(1);
   });
 });

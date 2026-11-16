@@ -109,3 +109,24 @@ describe('a run with no attempt for a shell to refuse', () => {
     ).toMatchObject({ status: 'rejected', reason: 'not_found' });
   });
 });
+
+describe('a started run whose next attempt a shell refuses for a reason no kind names', () => {
+  it('is ended unavailable with the words the shell gives alone, naming no kind', async () => {
+    const started = await startedAndLeft();
+    const { capability } = started.resuming;
+    const callerRefused = { detail: 'The caller lacks the playbook:write permission' };
+
+    const ended = await started.call(
+      refusingAShell([capability], capability, callerRefused),
+      itsAttemptDied,
+      momentAfter(quietMs + 1),
+    );
+
+    expect(ended).toMatchObject({ status: 'rejected', reason: 'unavailable', detail: callerRefused.detail });
+    expect(ended).not.toHaveProperty('kind');
+    expect(await lastFactOf(started)).toEqual({
+      type: 'run_rejected',
+      data: { rejection: { reason: 'unavailable', detail: callerRefused.detail } },
+    });
+  });
+});

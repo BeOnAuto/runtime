@@ -25,12 +25,14 @@ const services = Layer.mergeAll(
 );
 
 describe('the operations the workflow host is handed', () => {
-  it('are its two own, the start of a version and the run of a definition, each the playbook operation it dispatches', () => {
+  it('are its own, the start of a version, the run of a definition, and the next attempt of a run whose holder is gone, made or refused, each the playbook operation it dispatches', () => {
     const host = hostOperationsOf([echo]);
 
     expect(hostRegistrationsOf(host).map(({ scope, name }) => `${scope}/${name}`)).toEqual([
       'playbook/start_definition_version',
       'playbook/run_definition',
+      'playbook/make_next_attempt',
+      'playbook/refuse_next_attempt',
     ]);
   });
 
