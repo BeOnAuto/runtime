@@ -49,7 +49,9 @@ function recordingHoldingOneChunk(data: unknown): Recording {
 }
 
 function answeringTheRemovedUpload(statement: string): readonly unknown[] {
-  return statement.startsWith('DELETE FROM recorded_content_heads') ? [{ upload_id: 'u1' }] : [];
+  return statement.startsWith('DELETE FROM recorded_content_heads')
+    ? [{ place_key: 'playbook/acme/alpha/', upload_id: 'u1' }]
+    : [];
 }
 
 function answeringTheHeadWritten(statement: string): readonly unknown[] {
@@ -74,7 +76,7 @@ const chunkShapes: ReadonlyArray<readonly [string, unknown]> = [
 ];
 
 function headOf(uploadId: string) {
-  return { upload_id: uploadId, bytes: 4, chunks: 1, media_type: 'text/plain' };
+  return { place_key: 'org/acme/', upload_id: uploadId, bytes: 4, chunks: 1, media_type: 'text/plain' };
 }
 
 describe('the writes of a recorded content', () => {
@@ -95,7 +97,7 @@ describe('the writes of a recorded content', () => {
       'INSERT INTO recorded_content_chunks',
       'INSERT INTO recorded_content_chunks',
       'INSERT INTO recorded_content_heads',
-      'SELECT upload_id, CAST(bytes',
+      'SELECT place_key, upload_id,',
       'DELETE FROM recorded_content_chunks',
     ]);
   });
@@ -136,7 +138,7 @@ describe('the writes of a recorded content whose head the first statement did no
     expect(kindsOf(recording).slice(3)).toEqual([
       'INSERT INTO recorded_content_heads',
       'INSERT INTO recorded_content_heads',
-      'SELECT upload_id, CAST(bytes',
+      'SELECT place_key, upload_id,',
       'DELETE FROM recorded_content_chunks',
     ]);
     expect(recording.statements.slice(3, 5)).toEqual([
@@ -157,17 +159,17 @@ describe('the writes of a recorded content that another put of its digest raced'
     expect(kept).toEqual({ sha256: sha256Of(largerThanTwoChunks), bytes: 4, mediaType: 'text/plain' });
     expect(kindsOf(recording).slice(-3)).toEqual([
       'INSERT INTO recorded_content_heads',
-      'SELECT upload_id, CAST(bytes',
+      'SELECT place_key, upload_id,',
       'DELETE FROM recorded_content_chunks',
     ]);
     expect(recording.statements.at(-1)).toMatch(
-      /^DELETE FROM recorded_content_chunks WHERE playbook_key = "playbook\/acme\/alpha\/" AND upload_id = "[0-9a-f-]{36}" AND NOT EXISTS \(SELECT 1 FROM recorded_content_heads WHERE playbook_key = "playbook\/acme\/alpha\/" AND upload_id = "[0-9a-f-]{36}" AND sha256 = "[0-9a-f]{64}"\)$/u,
+      /^DELETE FROM recorded_content_chunks WHERE place_key = "org\/acme\/" AND upload_id = "[0-9a-f-]{36}" AND NOT EXISTS \(SELECT 1 FROM recorded_content_heads WHERE org_key = "org\/acme\/" AND sha256 = "[0-9a-f]{64}" AND place_key = "org\/acme\/" AND upload_id = "[0-9a-f-]{36}"\)$/u,
     );
   });
 });
 
 describe('the removals of a recorded content', () => {
-  it("remove a content kept before a time within the transaction they are given, its head first, answering its upload, and that upload's chunks after, and look for a head that stands where none was removed", async () => {
+  it('remove a content kept before a time within the transaction they are given, its head first, answering the place and the upload of its chunks, and those chunks after, and look for a head that stands where none was removed', async () => {
     const [held, standing, none] = [
       recordingAnswering(answeringTheRemovedUpload),
       recordingAnswering(answeringAHeadThatStands),
@@ -181,15 +183,15 @@ describe('the removals of a recorded content', () => {
     );
 
     const headRemoved =
-      'DELETE FROM recorded_content_heads WHERE playbook_key = "playbook/acme/alpha/" AND sha256 = "digest" AND kept_at < 1000 RETURNING upload_id';
+      'DELETE FROM recorded_content_heads WHERE org_key = "org/acme/" AND sha256 = "digest" AND kept_at < 1000 RETURNING place_key, upload_id';
     const headSought =
-      'SELECT 1 AS standing FROM recorded_content_heads WHERE playbook_key = "playbook/acme/alpha/" AND sha256 = "digest"';
+      'SELECT 1 AS standing FROM recorded_content_heads WHERE org_key = "org/acme/" AND sha256 = "digest"';
     expect(removed).toEqual(['removed', 'fresh', 'removed']);
     expect([held.statements, standing.statements, none.statements]).toEqual([
       [
         'BEGIN',
         headRemoved,
-        'DELETE FROM recorded_content_chunks WHERE playbook_key = "playbook/acme/alpha/" AND upload_id = "u1"',
+        'DELETE FROM recorded_content_chunks WHERE place_key = "playbook/acme/alpha/" AND upload_id = "u1"',
         'COMMIT',
       ],
       ['BEGIN', headRemoved, headSought, 'COMMIT'],
@@ -204,7 +206,7 @@ describe('the reads of a recorded content', () => {
 
     const read = await Effect.runPromise(sqliteContentOn(recording.pool).content.get(alpha, 'digest'));
 
-    expect([read, kindsOf(recording)]).toEqual([undefined, ['SELECT upload_id, CAST(bytes']]);
+    expect([read, kindsOf(recording)]).toEqual([undefined, ['SELECT place_key, upload_id,']]);
   });
 
   it.each(chunkShapes)('read a content back from a chunk its store answers as %s', async (_shape, chunk) => {

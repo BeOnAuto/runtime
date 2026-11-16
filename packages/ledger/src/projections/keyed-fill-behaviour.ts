@@ -191,7 +191,7 @@ export function keyedFillBehaviour(entry: FillEntry): void {
     it('fills the holds of content in reads bounded by the bytes they load, so facts that each keep a mebibyte outside are read as many at once as the listing grows to, not four at a time', async () => {
       const database = await entry.aDatabase();
       await wroteHeldPayloads(await aLedgerOn(entry, database, { holders: noteHolders }), 20, 5);
-      await entry.executedOn(database, (execute) => execute.command(SQL`DROP TABLE content_references_1`));
+      await entry.executedOn(database, (execute) => execute.command(SQL`DROP TABLE content_references_2`));
 
       const { facts } = await filledMeasured(entry, database, {
         holders: noteHolders,

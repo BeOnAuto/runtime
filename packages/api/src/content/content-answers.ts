@@ -1,4 +1,5 @@
-import type { AskedRange, ContentOwner, ContentPart, RecordedContent, StreamedBytes } from '@on.auto/content';
+import type { AskedRange, ContentPart, RecordedContent, StreamedBytes } from '@on.auto/content';
+import type { PlaybookAddress } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { problemOf, problemResponse } from '../problem/problem.ts';
@@ -6,7 +7,7 @@ import { problemOf, problemResponse } from '../problem/problem.ts';
 export type ServedContent = Pick<RecordedContent, 'get' | 'getPart'>;
 
 export interface Addressed {
-  readonly playbook: ContentOwner;
+  readonly playbook: PlaybookAddress;
   readonly sha256: string;
 }
 

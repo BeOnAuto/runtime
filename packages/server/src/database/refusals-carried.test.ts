@@ -14,7 +14,7 @@ const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 const notice =
   server === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
 
-const putAtLayout17 = [
+const putAtLayout17 = (bytes: 'BLOB' | 'BYTEA') => [
   'DROP TABLE workflow_failed_rounds',
   'DROP INDEX workflow_followed_playbooks_held',
   'ALTER TABLE workflow_followed_playbooks DROP COLUMN held_since',
@@ -26,6 +26,12 @@ const putAtLayout17 = [
   'ALTER TABLE workflow_subscriptions DROP COLUMN held_due',
   "INSERT INTO workflow_reaction_refusals (playbook_key, workflow, version, minute, count, reason, recorded, kind, because, trigger_kind, trigger_reference) VALUES ('playbook/acme/alpha/', 'close', 3, 60000, 2, 'Refused by its schedule', 1, 'credits_exhausted', 'free_daily_limit', 'cron', '/schedule/cron')",
   "INSERT INTO workflow_reaction_refusals (playbook_key, workflow, version, minute, count, reason, recorded) VALUES ('playbook/acme/alpha/', 'listen', 1, 120000, 1, 'Refused a listen task', 1)",
+  'DROP TABLE recorded_content_heads',
+  'DROP TABLE recorded_content_chunks',
+  'DROP TABLE recorded_content_places',
+  "CREATE TABLE recorded_content_heads (playbook_key TEXT NOT NULL, sha256 TEXT NOT NULL, upload_id TEXT NOT NULL, bytes BIGINT NOT NULL, chunks INTEGER NOT NULL, media_type TEXT NOT NULL, kept_at BIGINT NOT NULL DEFAULT 0, kept_in TEXT NOT NULL DEFAULT 'ledger', removing_since BIGINT, expires_at BIGINT, erased_at BIGINT, PRIMARY KEY (playbook_key, sha256))",
+  `CREATE TABLE recorded_content_chunks (playbook_key TEXT NOT NULL, upload_id TEXT NOT NULL, chunk INTEGER NOT NULL, data ${bytes} NOT NULL, PRIMARY KEY (playbook_key, upload_id, chunk))`,
+  'CREATE INDEX recorded_content_heads_expiring ON recorded_content_heads (expires_at) WHERE expires_at IS NOT NULL',
   'DROP INDEX recorded_content_heads_expiring',
   'ALTER TABLE recorded_content_heads DROP COLUMN erased_at',
   'ALTER TABLE recorded_content_heads DROP COLUMN expires_at',
@@ -109,7 +115,7 @@ describe('the refusals of a SQLite database of layout 17, carried forward by the
     onTestFinished(ledger.remove);
     await (await startServer(loopbackSettingsOver(ledger), compositionRoot)).stop();
     const atSeventeen = new DatabaseSync(ledger.fileName);
-    for (const statement of putAtLayout17) atSeventeen.exec(statement);
+    for (const statement of putAtLayout17('BLOB')) atSeventeen.exec(statement);
     atSeventeen.close();
 
     await (await startServer(loopbackSettingsOver(ledger), compositionRoot)).stop();
@@ -125,7 +131,7 @@ describe.skipIf(server === '')(`the refusals of a PostgreSQL database of layout 
   it('keep every row, each under the trigger it named, and a row with no trigger under an empty one', async () => {
     const database = await aPostgreSQLDatabase();
     await servedOnPostgreSQL(database);
-    await editedOnPostgreSQL(database, putAtLayout17);
+    await editedOnPostgreSQL(database, putAtLayout17('BYTEA'));
 
     await servedOnPostgreSQL(database);
 

@@ -33,11 +33,13 @@ function counted(store: ContentStore): { readonly store: ContentStore; readonly 
 }
 
 describe('a content kept outside the ledger, as it is found', () => {
-  it('is found where its store holds its bytes, whatever head stands, as a read reads it, and is not found where the store holds none', async () => {
+  it('is found where a place recorded for it holds its bytes, whatever head stands, as a read reads it, and is not found where the store holds none', async () => {
     const store = memoryContentStore();
-    const outside = keptOutside(memoryContentHeads(), store);
+    const heads = memoryContentHeads();
+    const outside = keptOutside(heads, store);
     const staged = await resultOf(store.stage(alphaPlace, textToKeep(note, json)));
     await resultOf(staged.placed(json));
+    await resultOf(heads.placed(alpha, noteDigest, alphaPlace));
 
     const headless = await resultOf(outside.found(alpha, noteDigest));
     const read = await keptTextOf(outside.content, alpha, noteDigest);
@@ -62,9 +64,11 @@ describe('a content kept outside the ledger, as it is found', () => {
 
   it('reads a content with the media type of its head whatever its bytes were placed with, and with that of its bytes where no head stands', async () => {
     const store = memoryContentStore();
-    const { content } = keptOutside(memoryContentHeads(), store);
+    const heads = memoryContentHeads();
+    const { content } = keptOutside(heads, store);
     const staged = await resultOf(store.stage(alphaPlace, textToKeep(note, 'text/plain')));
     await resultOf(staged.placed('text/plain'));
+    await resultOf(heads.placed(alpha, noteDigest, alphaPlace));
 
     const headless = (await present(content.get(alpha, noteDigest))).mediaType;
     const kept = await resultOf(content.put(alpha, textToKeep(note, json)));

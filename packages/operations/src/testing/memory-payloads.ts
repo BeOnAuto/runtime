@@ -3,7 +3,7 @@ import { Effect, Schema, type SchemaAST } from 'effect';
 
 import { contentHoldersOf, type ContentHolders } from '../held-content/content-declaration.ts';
 import { payloadsNamed } from '../held-content/held-digests.ts';
-import { streamPrefixOfPlaybook } from '../ledger/bound-ports.ts';
+import { streamPrefixOfOrg } from '../ledger/bound-ports.ts';
 import type { Context } from '../ledger/context.ts';
 import type { Fold, Recorded, StreamState, TypedEvent } from '../ledger/decider.ts';
 import { addressedStreamOf } from '../projections/keyed-projection.ts';
@@ -48,17 +48,17 @@ export function payloadsHeaded(
   if (address?.playbook === undefined) {
     return Effect.void;
   }
-  const playbook = { org: address.org, playbook: address.playbook };
+  const owner = { org: address.org };
   const digests = facts.flatMap(({ type, data }) => {
     const declaration = holders.get(type);
     return declaration === undefined ? [] : payloadsNamed(data, declaration).map(({ sha256 }) => sha256);
   });
   return Effect.forEach(digests, (sha256) =>
-    Effect.flatMap(heads.read(playbook, sha256), (head) =>
+    Effect.flatMap(heads.read(owner, sha256), (head) =>
       head === undefined || head.erasedAt !== undefined
         ? Effect.die(
             new Error(
-              `A fact names the payload ${sha256} of ${streamPrefixOfPlaybook(playbook)}, which the playbook's content does not keep; a payload is put before the fact that names it is appended`,
+              `A fact names the payload ${sha256} of ${streamPrefixOfOrg(owner)}, which the org's content does not keep; a payload is put before the fact that names it is appended`,
             ),
           )
         : Effect.void,

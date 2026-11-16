@@ -6,7 +6,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { sha256Of, textOfContent, textToKeep } from '@on.auto/content';
 import { alpha, generated, octets, present, resultOf } from '@on.auto/content/testing';
-import { streamPrefixOfPlaybook } from '@on.auto/operations';
+import { streamPrefixOfOrg } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -15,7 +15,7 @@ import { bucketOnS3, uploadPartBytes } from '../s3/s3-bucket.ts';
 import { fakeContentStore, type FakeContentStore } from '../testing/fake-bucket.ts';
 import { openUploadsIn } from '../testing/test-object-store.ts';
 
-const alphaPlace = streamPrefixOfPlaybook(alpha);
+const alphaPlace = streamPrefixOfOrg(alpha);
 
 const location = { bucket: 'content', prefix: 'playbooks' };
 
@@ -40,13 +40,14 @@ function objectWritten(store: FakeContentStore, key: string, body?: string): Pro
 }
 
 describe('a read on object storage', () => {
-  it('answers nothing for a digest the playbook does not hold, and the default media type for an object kept without one', async () => {
+  it('answers nothing, whole or a part, for a digest it keeps no object of at the place, and the default media type for an object kept without one', async () => {
     const store = fakeContentStore(location);
     await objectWritten(store, keys.kept(alphaPlace, sha256Of('bare')), 'bare');
 
-    const read = await present(store.content.get(alpha, sha256Of('bare')));
+    const read = await present(store.read(alphaPlace, sha256Of('bare')));
 
-    expect(await resultOf(store.content.get(alpha, sha256Of('missing')))).toBeUndefined();
+    expect(await resultOf(store.read(alphaPlace, sha256Of('missing')))).toBeUndefined();
+    expect(await resultOf(store.readPart(alphaPlace, sha256Of('missing'), { start: 0, end: 1 }))).toBeUndefined();
     expect([read.mediaType, await resultOf(textOfContent(read))]).toEqual([octets, 'bare']);
   });
 

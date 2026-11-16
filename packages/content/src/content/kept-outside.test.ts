@@ -29,7 +29,8 @@ type ExpectedOf = Pick<ContentToKeep, 'expected'>;
 
 function outsideOf(heldIn?: HeldIn) {
   const paused = pausableStore(memoryContentStore());
-  return { ...keptOutside(memoryContentHeads(heldIn), paused.store), paused };
+  const heads = memoryContentHeads(heldIn);
+  return { ...keptOutside(heads, paused.store), paused, heads };
 }
 
 function removedByItsHead(): void {
@@ -198,10 +199,11 @@ function stoppedRemovalsFinished(): void {
 }
 
 function headlessRemoved(): void {
-  it('removes the bytes its store holds under a digest that has no head, as a content kept before heads were, and holds back a put that meets that removal', async () => {
-    const { content, removedKeptBefore, paused } = outsideOf();
+  it('removes the bytes at the place recorded for a digest that has no head, as a content kept before heads were, and holds back a put that meets that removal', async () => {
+    const { content, removedKeptBefore, paused, heads } = outsideOf();
     const staged = await resultOf(paused.store.stage(alphaPlace, textToKeep(note, json)));
     await resultOf(staged.placed(json));
+    await resultOf(heads.placed(alpha, noteDigest, alphaPlace));
     const deleting = paused.pausedDelete();
 
     const removal = resultOf(removedKeptBefore(alpha, noteDigest, keptAt));
@@ -239,7 +241,8 @@ function failedDeletesLetGo(): void {
   });
 
   it('lets go of the head its mark alone made where the delete of bytes with no head fails, so a put after it keeps them as new', async () => {
-    const { content, removedKeptBefore, paused } = outsideOf();
+    const { content, removedKeptBefore, paused, heads } = outsideOf();
+    await resultOf(heads.placed(alpha, noteDigest, alphaPlace));
     paused.pausedDelete().fail();
 
     const failed = await resultOf(defectOf(removedKeptBefore(alpha, noteDigest, keptAt)));
@@ -253,19 +256,16 @@ function failedDeletesLetGo(): void {
 }
 
 function erasedThenRemoved(): void {
-  it('waits, put while a removal deletes what is left of a content whose bytes were erased, then keeps it as new', async () => {
-    const { content, removedKeptBefore, eraseExpired, paused } = outsideOf();
+  it('removes what is left of a content whose bytes were erased, deleting nothing since its erasure left no place, and a put after it keeps it as new', async () => {
+    const { content, removedKeptBefore, eraseExpired, heads } = outsideOf();
     await at(keptAt, content.put(alpha, { ...textToKeep(note, json), expiresAt: keptAt + 1 }));
     await at(keptAt + 1, eraseExpired(10));
-    const deleting = paused.pausedDelete();
 
-    const removal = resultOf(removedKeptBefore(alpha, noteDigest, Date.now()));
-    await deleting.reached;
-    const put = resultOf(content.put(alpha, textToKeep(note, 'text/plain')));
-    const settledBefore = await settledWithin(put, 300);
-    deleting.release();
+    const places = await resultOf(heads.placesOf(alpha, noteDigest));
+    const removal = await resultOf(removedKeptBefore(alpha, noteDigest, Date.now()));
+    const put = await resultOf(content.put(alpha, textToKeep(note, 'text/plain')));
 
-    expect([settledBefore, await removal, (await put).mediaType]).toEqual([false, 'removed', 'text/plain']);
+    expect([places, removal, put.mediaType]).toEqual([[], 'removed', 'text/plain']);
     expect(await resultOf(content.getHead(alpha, noteDigest))).not.toHaveProperty('erasedAt');
   });
 }

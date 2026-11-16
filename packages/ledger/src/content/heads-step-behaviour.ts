@@ -3,11 +3,10 @@ import { alpha, json, resultOf } from '@on.auto/content/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { carryingOnToTheLayoutKept } from '../layout/carrying-on-behaviour.ts';
+import { carryingOnToTheLayoutKept, carryingTo } from '../layout/carrying-on-behaviour.ts';
 import { layoutIn } from '../layout/ledger-layout-behaviour.ts';
-import { ledgerLayoutFloor } from '../layout/ledger-layout.ts';
-import { ledgerLayoutSteps } from '../layout/ledger-steps.ts';
 import { structureIn } from '../structure/database-structure-behaviour.ts';
+import { contentTablesOfPlaybooks } from '../testing/content-tables-of-playbooks.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
 
 const HeadRows = Schema.Array(
@@ -28,15 +27,18 @@ const theIndexOfTheExpiry = 'recorded_content_heads_expiring';
 
 const everyHead = 'SELECT * FROM recorded_content_heads';
 
-const carryingToTheExpiry = { kept: theLayoutOfTheExpiry, floor: ledgerLayoutFloor, steps: ledgerLayoutSteps };
+const carryingToTheExpiry = carryingTo(theLayoutOfTheExpiry);
 
 async function headsKeptIn(entry: LedgerEntry, database: string): Promise<void> {
   const ledger = await aLedger(entry, database);
   await resultOf(ledger.content.put(alpha, textToKeep('{"kept":"before the step"}', json)));
 }
 
+const aHeadOfAPlaybook = `INSERT INTO recorded_content_heads (playbook_key, sha256, upload_id, bytes, chunks, media_type)
+  VALUES ('playbook/acme/alpha/', '${'a'.repeat(64)}', 'an upload', 2, 1, '${json}')`;
+
 async function theExpiryTakenAwayFrom(entry: LedgerEntry, database: string): Promise<void> {
-  await entry.queried(database, `DROP INDEX ${theIndexOfTheExpiry}`);
+  await entry.queried(database, `DROP INDEX IF EXISTS ${theIndexOfTheExpiry}`);
   await entry.queried(database, 'ALTER TABLE recorded_content_heads DROP COLUMN erased_at');
   await entry.queried(database, 'ALTER TABLE recorded_content_heads DROP COLUMN expires_at');
 }
@@ -62,11 +64,7 @@ function keptTimeBehaviour(entry: LedgerEntry): void {
       await headsAtTheLayoutBefore(entry, database);
 
       const before = Date.now();
-      await entry.carriedOn(database, {
-        kept: theLayoutOfTheHeads,
-        floor: ledgerLayoutFloor,
-        steps: ledgerLayoutSteps,
-      });
+      await entry.carriedOn(database, carryingTo(theLayoutOfTheHeads));
       const after = Date.now();
       const heads = Schema.decodeUnknownSync(HeadRows)(
         await entry.queried(
@@ -88,8 +86,10 @@ function expiryBehaviour(entry: LedgerEntry): void {
   describe('the step that gives the heads of recorded content the time their content expires and the time its bytes were erased', () => {
     it('adds both last, empty, to the head of a database of the layout before it, so the head reads as it did, and the database then opens as a new one, the index of the heads that expire made as it opens', async () => {
       const database = await entry.aDatabase();
-      await headsKeptIn(entry, database);
+      await aLedger(entry, database);
       const made = await structureIn(entry, database);
+      await contentTablesOfPlaybooks(entry, database);
+      await entry.queried(database, aHeadOfAPlaybook);
       await theExpiryTakenAwayFrom(entry, database);
       await entry.queried(database, `UPDATE ledger_layout SET layout = ${String(theLayoutOfTheExpiry - 1)}`);
       const before = await theHeadIn(entry, database);
@@ -117,6 +117,7 @@ function expiryBehaviour(entry: LedgerEntry): void {
       const made = await structureIn(entry, database);
       await entry.queried(database, 'DROP TABLE recorded_content_heads');
       await entry.queried(database, 'DROP TABLE recorded_content_chunks');
+      await entry.queried(database, 'DROP TABLE recorded_content_places');
       await entry.queried(database, `UPDATE ledger_layout SET layout = ${String(theLayoutOfTheExpiry - 1)}`);
 
       await entry.carriedOn(database, carryingToTheExpiry);

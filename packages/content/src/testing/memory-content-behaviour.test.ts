@@ -1,8 +1,8 @@
-import { describe } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { keptOutside } from '../content/kept-outside.ts';
 import type { ContentEntry, ExpiringContentEntry, InterleavedErasureEntry } from './content-entry.ts';
-import { resultOf } from './content-samples.ts';
+import { alpha, resultOf } from './content-samples.ts';
 import { expiringContentBehaviour } from './expiring-content-behaviour.ts';
 import { interleavedErasureBehaviour } from './interleaved-erasure-behaviour.ts';
 import { memoryContentHeads, memoryContentStore } from './memory-content.ts';
@@ -43,4 +43,16 @@ describe('The content kept in memory', () => {
   recordedContentBehaviour(inMemory);
   expiringContentBehaviour(expiringInMemory);
   interleavedErasureBehaviour(erasedInMemory);
+  it('reads nothing, whole or in part, at a place that holds no bytes of the digest', async () => {
+    const store = memoryContentStore();
+    const place = memoryContentHeads().placeOfNewBytes(alpha);
+    const digest = '0'.repeat(64);
+
+    const read = [
+      await resultOf(store.read(place, digest)),
+      await resultOf(store.readPart(place, digest, { start: 0, end: 1 })),
+    ];
+
+    expect(read).toEqual([undefined, undefined]);
+  });
 });

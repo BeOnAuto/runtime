@@ -1,4 +1,4 @@
-import type { ContentOwner, KeptContentHead } from '../content/recorded-content.ts';
+import type { KeptContentHead, PlaybookAddress } from '../content/recorded-content.ts';
 import type { ContentToKeep } from '../content/streamed-content.ts';
 import type { ErasingContent } from './content-entry.ts';
 import { resultOf, type Generated } from './content-samples.ts';
@@ -41,7 +41,7 @@ export function heldUntil(content: ContentToKeep, released: Promise<void>): Cont
 
 export function headOf(
   { content }: ErasingContent,
-  playbook: ContentOwner,
+  playbook: PlaybookAddress,
   sha256: string,
 ): Promise<KeptContentHead | undefined> {
   return resultOf(content.getHead(playbook, sha256));

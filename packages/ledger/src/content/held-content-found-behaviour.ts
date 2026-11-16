@@ -124,18 +124,19 @@ function missingFromItsStore(entry: LedgerEntry): void {
     expect(await foundBy(own)).toEqual({ checked: 2, keptElsewhere: 0, missing: 1 });
   });
 
-  it('counts as missing a content held under a key that names no playbook, since no store keeps content but a playbook’s', async () => {
+  it('counts as missing a content held under a key that names no org, since no store keeps content but an org’s', async () => {
     const database = await entry.aDatabase();
     const outside = await holdingOutside(entry, database, memoryContentStore());
     const sha256 = sha256Of(unheld);
     await entry.queried(
       database,
-      `INSERT INTO content_references_1 (playbook_key, stream, sha256, held) VALUES ('org/acme/', 'notes/n1', '${sha256}', 1)`,
+      `INSERT INTO content_references_2 (org_key, playbook_key, stream, sha256, held)
+        VALUES ('nothing/', 'playbook/acme/alpha/', 'notes/n1', '${sha256}', 1)`,
     );
     await entry.queried(
       database,
-      `INSERT INTO recorded_content_heads (playbook_key, sha256, upload_id, bytes, chunks, media_type, kept_in)
-        VALUES ('org/acme/', '${sha256}', '', 0, 0, 'application/json', 'external')`,
+      `INSERT INTO recorded_content_heads (org_key, sha256, place_key, upload_id, bytes, chunks, media_type, kept_in)
+        VALUES ('nothing/', '${sha256}', 'nothing/', '', 0, 0, 'application/json', 'external')`,
     );
 
     expect(await foundBy(outside)).toEqual({ checked: 1, keptElsewhere: 0, missing: 1 });
@@ -143,7 +144,7 @@ function missingFromItsStore(entry: LedgerEntry): void {
 }
 
 function foundAsTheReadFindsIt(entry: LedgerEntry): void {
-  it('counts as found a content whose bytes its store outside holds, whatever head stands, as a read finds it: one with no head, as one kept before heads were, and one whose head its own tables took over', async () => {
+  it('counts as found a content whose bytes its store outside holds at a place recorded for it, whatever head stands, as a read finds it: one with no head, as one kept before heads were, and one whose head its own tables took over', async () => {
     const database = await entry.aDatabase();
     const outside = await holdingOutside(entry, database, memoryContentStore());
     await heldIn(outside, [first, second]);

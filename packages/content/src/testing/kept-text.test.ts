@@ -9,7 +9,7 @@ import { memoryRecordedContent } from './memory-content.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
-const beta = { org: 'acme', playbook: 'beta' };
+const beta = { org: 'globex', playbook: 'beta' };
 
 const octets = 'application/octet-stream';
 
@@ -17,8 +17,8 @@ function run<A, E>(effect: Effect.Effect<A, E>): Promise<A> {
   return Effect.runPromise(effect);
 }
 
-describe('the text a playbook recorded', () => {
-  it('reads back as the text it was put as, across chunks and empty, and as nothing for a digest the playbook does not hold', async () => {
+describe('the text an org recorded', () => {
+  it('reads back as the text it was put as, across chunks and empty, and as nothing for a digest the org does not hold', async () => {
     const content = memoryRecordedContent();
     const text = 'é'.repeat(mostContentChunkBytes + 7);
     const [{ sha256 }] = await run(

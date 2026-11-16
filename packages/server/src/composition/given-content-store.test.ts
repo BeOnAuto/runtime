@@ -1,6 +1,6 @@
 import { textToKeep } from '@on.auto/content';
 import { memoryContentStore } from '@on.auto/content/testing';
-import { Ledger, streamPrefixOfPlaybook } from '@on.auto/operations';
+import { Ledger, streamPrefixOfOrg } from '@on.auto/operations';
 import { Effect, ManagedRuntime } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -10,10 +10,10 @@ import { ledgerLayerOf } from './ledger-store.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
-const alphaPlace = streamPrefixOfPlaybook(alpha);
+const placeOfItsOrg = streamPrefixOfOrg(alpha);
 
 describe('a ledger given a content store of its own', () => {
-  it('keeps what the ledger is given to keep, and reads it back, in the store it is composed with', async () => {
+  it('keeps what the ledger is given to keep, and reads it back, in the store it is composed with, under the org of its playbook', async () => {
     const store = memoryContentStore();
     const runtime = ManagedRuntime.make(
       ledgerLayerOf(await ledgerDatabaseOf(readSettingsOf({ LEDGER_FILE: ':memory:' })), { content: store }),
@@ -24,6 +24,6 @@ describe('a ledger given a content store of its own', () => {
       Effect.flatMap(Ledger, (ledger) => ledger.content.put(alpha, textToKeep('{"kept":true}', 'application/json'))),
     );
 
-    expect(await Effect.runPromise(store.read(alphaPlace, kept.sha256))).toMatchObject({ bytes: 13 });
+    expect(await Effect.runPromise(store.read(placeOfItsOrg, kept.sha256))).toMatchObject({ bytes: 13 });
   });
 });

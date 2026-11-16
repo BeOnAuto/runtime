@@ -249,13 +249,14 @@ export type OwnRemoval = Exclude<UnheldRemoval, 'held'>;
 
 export interface OwnContentStore {
   readonly content: KeptOutside['content'];
-  readonly removalWithin: (playbook: ContentOwner, sha256: string, before: number) => Within<OwnRemoval>;
+  readonly contentFound: KeptOutside['found'];
+  readonly removalWithin: (owner: ContentOwner, sha256: string, before: number) => Within<OwnRemoval>;
   readonly sweepContent: (before: number) => Promise<void>;
   readonly eraseExpired: (now: number, most: number) => Promise<ExpiredErased>;
   readonly externalHeadsWith: (unlessHeld: UnlessHeld) => ContentHeads;
 }
 
-export type UnlessHeld = <A>(playbook: ContentOwner, sha256: string, within: Within<A>) => Promise<A | 'held'>;
+export type UnlessHeld = <A>(owner: ContentOwner, sha256: string, within: Within<A>) => Promise<A | 'held'>;
 
 export type LedgerContent = Pick<KeptOutside, 'content' | 'found' | 'removedKeptBefore' | 'eraseExpired'>;
 

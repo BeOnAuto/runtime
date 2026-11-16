@@ -116,13 +116,13 @@ function refilledInBoundedBatches(entry: LedgerEntry): void {
     const kept = written({ body_sha256: sha256, body_bytes: fourMiB });
     await wrote(before, firstWritings, kept, kept, kept, written({ body: 'inline' }));
     await wrote(before, firstWritings, kept, kept, { type: 'note_kept', data: { sha256 } });
-    await entry.queried(database, 'DROP TABLE content_references_1');
+    await entry.queried(database, 'DROP TABLE content_references_2');
 
     const after = await aLedgerHolding(entry, noteHolders, database);
 
     expect(
       Schema.decodeUnknownSync(HeldRows)(
-        await entry.queried(database, 'SELECT sha256, CAST(held AS INTEGER) AS held FROM content_references_1'),
+        await entry.queried(database, 'SELECT sha256, CAST(held AS INTEGER) AS held FROM content_references_2'),
       ),
     ).toEqual([{ sha256, held: 6 }]);
     expect(await Effect.runPromise(after.removeUnheld(alpha, sha256))).toBe('held');

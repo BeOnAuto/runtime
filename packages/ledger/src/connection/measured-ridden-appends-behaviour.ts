@@ -36,7 +36,7 @@ function appendedOrRefused(appending: Effect.Effect<void, VersionConflict>): Pro
 
 function heldIn(entry: LedgerEntry, database: string): Promise<typeof HeldRows.Type> {
   return entry
-    .queried(database, 'SELECT stream, sha256, held FROM content_references_1 ORDER BY sha256')
+    .queried(database, 'SELECT stream, sha256, held FROM content_references_2 ORDER BY sha256')
     .then((rows) => Schema.decodeUnknownSync(HeldRows)(rows));
 }
 
@@ -75,7 +75,7 @@ export function measuredRiddenAppendsBehaviour(entry: LedgerEntry): void {
 
       expect(appended).toEqual([
         'appended',
-        `Error: A fact names the payload ${'a'.repeat(64)} of playbook/acme/alpha/, which the playbook's content does not keep; a payload is put before the fact that names it is appended`,
+        `Error: A fact names the payload ${'a'.repeat(64)} of org/acme/, which the org's content does not keep; a payload is put before the fact that names it is appended`,
       ]);
       expect(await heldIn(entry, database)).toEqual([{ stream: 'writings/w1', sha256: sha256Of(body), held: 1 }]);
     });

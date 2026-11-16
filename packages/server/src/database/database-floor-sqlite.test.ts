@@ -121,7 +121,7 @@ function headKeptIn(file: string): void {
 }
 
 describe('the head of a content a playbook kept, in a SQLite database made at the floor', () => {
-  it('reads as it did once every step carried the database forward, with no expiry of its content and no erasure of its bytes', async () => {
+  it('reads as it did once every step carried the database forward, kept under the org of its playbook at the place its playbook kept it, with no expiry of its content and no erasure of its bytes', async () => {
     const ledger = aLedgerOfTheTest();
     aDatabaseFrom(theSQLiteFloor(), ledger.fileName);
     headKeptIn(ledger.fileName);
@@ -133,7 +133,13 @@ describe('the head of a content a playbook kept, in a SQLite database made at th
       [head],
       [
         {
-          ...head,
+          org_key: 'org/acme/',
+          sha256: head.sha256,
+          place_key: head.playbook_key,
+          upload_id: head.upload_id,
+          bytes: head.bytes,
+          chunks: head.chunks,
+          media_type: head.media_type,
           kept_at: theTimeOfStep12,
           kept_in: 'ledger',
           removing_since: null,

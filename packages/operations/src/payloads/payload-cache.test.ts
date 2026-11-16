@@ -4,13 +4,13 @@ import { noPayloadCache, payloadCacheWithin } from './payload-cache.ts';
 
 const [alpha, beta] = [
   { org: 'acme', playbook: 'alpha' },
-  { org: 'acme', playbook: 'beta' },
+  { org: 'globex', playbook: 'beta' },
 ];
 
 const [first, second, third] = ['a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64)];
 
 describe('the texts of payloads kept in memory', () => {
-  it('answer a text by its playbook and its digest, so a playbook never reads one only another keeps', () => {
+  it('answer a text by its org and its digest, so an org never reads one only another keeps', () => {
     const cache = payloadCacheWithin(100);
 
     cache.kept(alpha, first, 'alpha text');

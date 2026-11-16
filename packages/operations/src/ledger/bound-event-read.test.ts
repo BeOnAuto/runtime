@@ -37,7 +37,7 @@ describe('the read of one event, bound to a call', () => {
 });
 
 describe('the read of a recorded content, bound to a call', () => {
-  it('reads a content of the playbook of the call by its digest, and none of another playbook', async () => {
+  it('reads a content of the org of the call by its digest, and none of another org', async () => {
     const { dispatcher, ledger, run } = harness();
     const [digest, other] = await Promise.all([
       Effect.runPromise(

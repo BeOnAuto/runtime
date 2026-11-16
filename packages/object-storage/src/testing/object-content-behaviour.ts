@@ -18,7 +18,7 @@ import {
   refusalOf,
   resultOf,
 } from '@on.auto/content/testing';
-import { randomUUIDv7, streamPrefixOfPlaybook } from '@on.auto/operations';
+import { randomUUIDv7, streamPrefixOfOrg } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { objectContentOn } from '../content/object-content.ts';
@@ -28,7 +28,7 @@ import { bucketOnS3 } from '../s3/s3-bucket.ts';
 import type { ObjectStoreEntry, ObjectStoreUnderTest } from './object-store-entry.ts';
 import { keysIn, multipartUploadBegun, openUploadsIn, uploadWritten } from './test-object-store.ts';
 
-const alphaPlace = streamPrefixOfPlaybook(alpha);
+const alphaPlace = streamPrefixOfOrg(alpha);
 
 const longAgo = '00000000-0000-7000-8000-000000000001';
 
@@ -50,7 +50,7 @@ function keptOnObjects(entry: ObjectStoreEntry): void {
     const kept = await keysIn(store.bucket, store.location.prefix);
     const held = await bucketOnS3(store.bucket).head(keys.kept(alphaPlace, sha256));
 
-    expect(kept).toEqual([`${store.location.prefix}/playbook/acme/alpha/${sha256}`]);
+    expect(kept).toEqual([`${store.location.prefix}/org/acme/${sha256}`]);
     expect(held).toEqual({ bytes: 2_500_000, mediaType: json });
   });
 
@@ -101,7 +101,7 @@ function misfiledRead(entry: ObjectStoreEntry): void {
     const misfiled = sha256Of('another content');
     await bucket.put(keys.kept(alphaPlace, misfiled), { copyOf: keys.kept(alphaPlace, sha256), mediaType: octets });
 
-    const delivered = await deliveredBeforeFailing((await present(content.get(alpha, misfiled))).stream);
+    const delivered = await deliveredBeforeFailing((await present(objectsOf(store).read(alphaPlace, misfiled))).stream);
 
     expect(delivered.failure).toEqual(notTheBytesOfItsDigest(misfiled));
     expect(delivered.bytes).toBeLessThan(2_500_000);

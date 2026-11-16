@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 
-import type { ContentOwner, RecordedContent } from '@on.auto/content';
-import { InvalidInput, type ProjectionReader } from '@on.auto/operations';
+import type { RecordedContent } from '@on.auto/content';
+import { InvalidInput, type ProjectionReader, type PlaybookAddress } from '@on.auto/operations';
 import { alternatives } from '@on.auto/phrasing';
 import { Effect, JsonPointer, Predicate, Result, type Schema } from 'effect';
 
@@ -21,7 +21,7 @@ export interface ReferenceReading {
 }
 
 interface Referring {
-  readonly playbook: ContentOwner;
+  readonly playbook: PlaybookAddress;
   readonly entry: CatalogEntry;
   readonly now: number;
 }
@@ -62,7 +62,7 @@ function idAt(input: Schema.JsonObject, pointer: string): Effect.Effect<string, 
     : Effect.fail(refused(pointer, 'Expected the id of an asset of this playbook'));
 }
 
-function rowOf(reading: ReferenceReading, playbook: ContentOwner, id: string): Effect.Effect<AssetRow | undefined> {
+function rowOf(reading: ReferenceReading, playbook: PlaybookAddress, id: string): Effect.Effect<AssetRow | undefined> {
   return Effect.map(reading.ledger.readProjectedRows(assetsName, playbook, rowKeyed(id)), ([kept]) =>
     assetRowOf(kept?.row),
   );

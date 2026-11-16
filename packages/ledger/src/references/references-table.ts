@@ -9,13 +9,14 @@ import { inTurn } from '../projections/inline-projection.ts';
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
 import type { HeldHead } from './held-heads.ts';
 
-export const contentReferences = { name: 'content_references', version: 1 };
+export const contentReferences = { name: 'content_references', version: 2 };
 
 export const referencesTable = projectedTableOf(contentReferences);
 
 const table = SQL.plain(referencesTable);
 
 export interface ReferencesPlace {
+  readonly orgKey: string;
   readonly prefix: string;
   readonly stream: string;
 }
@@ -26,6 +27,7 @@ export function referencesCreated(dialect: ProjectionDialect): readonly SQL[] {
   const { text, integer } = dialect.columnTypes;
   return [
     SQL`CREATE TABLE IF NOT EXISTS ${table} (
+      org_key ${SQL.plain(text)} NOT NULL,
       playbook_key ${SQL.plain(text)} NOT NULL,
       stream ${SQL.plain(text)} NOT NULL,
       sha256 ${SQL.plain(text)} NOT NULL,
@@ -33,6 +35,7 @@ export function referencesCreated(dialect: ProjectionDialect): readonly SQL[] {
       PRIMARY KEY (playbook_key, stream, sha256)
     )`,
     SQL`CREATE INDEX IF NOT EXISTS ${SQL.plain(`${referencesTable}_by_digest`)} ON ${table} (playbook_key, sha256)`,
+    SQL`CREATE INDEX IF NOT EXISTS ${SQL.plain(`${referencesTable}_by_org_and_digest`)} ON ${table} (org_key, sha256)`,
   ];
 }
 
@@ -81,14 +84,14 @@ interface HeldRow {
 export async function heldWritten(
   execute: StatementExecutor,
   dialect: ProjectionDialect,
-  { prefix, stream }: ReferencesPlace,
+  { orgKey, prefix, stream }: ReferencesPlace,
   rows: readonly HeldRow[],
 ): Promise<void> {
-  await inTurn(chunksOf(rows, dialect.rowsInAWrite(2)), (chunk) =>
+  await inTurn(chunksOf(rows, dialect.rowsInAWrite(3)), (chunk) =>
     execute.command(
-      SQL`INSERT INTO ${table} (playbook_key, stream, sha256, held)
+      SQL`INSERT INTO ${table} (org_key, playbook_key, stream, sha256, held)
         VALUES ${SQL.merge(
-          chunk.map(({ sha256, held }) => SQL`(${prefix}, ${stream}, ${sha256}, ${held})`),
+          chunk.map(({ sha256, held }) => SQL`(${orgKey}, ${prefix}, ${stream}, ${sha256}, ${held})`),
           ', ',
         )}
         ON CONFLICT (playbook_key, stream, sha256) DO UPDATE SET held = excluded.held`,
@@ -120,22 +123,22 @@ export async function digestsLocked(
   );
 }
 
-interface DigestsOfAPlaybook {
-  readonly prefix: string;
+interface DigestsOfAnOrg {
+  readonly orgKey: string;
   readonly digests: readonly string[];
 }
 
-function digestsOf(locking: readonly DigestsOfAPlaybook[], playbook: string): readonly string[] {
-  return [...new Set(locking.filter(({ prefix }) => prefix === playbook).flatMap(({ digests }) => digests))].toSorted();
+function digestsOf(locking: readonly DigestsOfAnOrg[], org: string): readonly string[] {
+  return [...new Set(locking.filter(({ orgKey }) => orgKey === org).flatMap(({ digests }) => digests))].toSorted();
 }
 
 export async function digestsLockedInOrder(
   execute: StatementExecutor,
   dialect: ProjectionDialect,
-  locking: readonly DigestsOfAPlaybook[],
+  locking: readonly DigestsOfAnOrg[],
 ): Promise<void> {
-  await inTurn([...new Set(locking.map(({ prefix }) => prefix))].toSorted(), (prefix) =>
-    digestsLocked(execute, dialect, prefix, digestsOf(locking, prefix)),
+  await inTurn([...new Set(locking.map(({ orgKey }) => orgKey))].toSorted(), (orgKey) =>
+    digestsLocked(execute, dialect, orgKey, digestsOf(locking, orgKey)),
   );
 }
 
@@ -147,14 +150,14 @@ const HeadedRows = Schema.Array(Schema.Struct({ sha256: Schema.String }));
 
 export async function digestsWithoutAHead(
   execute: StatementExecutor,
-  prefix: string,
+  orgKey: string,
   digests: readonly string[],
 ): Promise<readonly string[]> {
   const headed = new Set<string>();
   await inTurn(chunksOf([...new Set(digests)], digestsInAStatement), async (chunk) => {
     const { rows } = await execute.query(
       SQL`SELECT sha256 FROM ${headsTable}
-        WHERE playbook_key = ${prefix} AND removing_since IS NULL AND erased_at IS NULL
+        WHERE org_key = ${orgKey} AND removing_since IS NULL AND erased_at IS NULL
           AND sha256 IN (${SQL.merge(
             chunk.map((sha256) => SQL`${sha256}`),
             ', ',
@@ -167,15 +170,15 @@ export async function digestsWithoutAHead(
   return digests.filter((sha256) => !headed.has(sha256));
 }
 
-export async function isHeldIn(execute: StatementExecutor, prefix: string, sha256: string): Promise<boolean> {
+export async function isHeldIn(execute: StatementExecutor, orgKey: string, sha256: string): Promise<boolean> {
   const { rows } = await execute.query(
-    SQL`SELECT 1 AS held FROM ${table} WHERE playbook_key = ${prefix} AND sha256 = ${sha256} AND held > 0 LIMIT 1`,
+    SQL`SELECT 1 AS held FROM ${table} WHERE org_key = ${orgKey} AND sha256 = ${sha256} AND held > 0 LIMIT 1`,
   );
   return rows.length > 0;
 }
 
 const HeldHeadRows = Schema.Array(
-  Schema.Struct({ playbook_key: Schema.String, sha256: Schema.String, kept_in: Schema.NullOr(Schema.String) }),
+  Schema.Struct({ org_key: Schema.String, sha256: Schema.String, kept_in: Schema.NullOr(Schema.String) }),
 );
 
 export async function firstHeldHeads(
@@ -183,16 +186,16 @@ export async function firstHeldHeads(
   most: number,
 ): Promise<readonly HeldHead[]> {
   const rows = await read(
-    SQL`SELECT held.playbook_key, held.sha256, heads.kept_in
+    SQL`SELECT held.org_key, held.sha256, heads.kept_in
       FROM (
-        SELECT DISTINCT playbook_key, sha256 FROM ${table} WHERE held > 0 ORDER BY playbook_key, sha256 LIMIT ${most}
+        SELECT DISTINCT org_key, sha256 FROM ${table} WHERE held > 0 ORDER BY org_key, sha256 LIMIT ${most}
       ) AS held
-      LEFT JOIN ${headsTable} AS heads ON heads.playbook_key = held.playbook_key AND heads.sha256 = held.sha256
+      LEFT JOIN ${headsTable} AS heads ON heads.org_key = held.org_key AND heads.sha256 = held.sha256
       WHERE heads.erased_at IS NULL
-      ORDER BY held.playbook_key, held.sha256`,
+      ORDER BY held.org_key, held.sha256`,
   );
-  return Schema.decodeUnknownSync(HeldHeadRows)(rows).map(({ playbook_key: playbookKey, sha256, kept_in: keptIn }) => ({
-    playbookKey,
+  return Schema.decodeUnknownSync(HeldHeadRows)(rows).map(({ org_key: orgKey, sha256, kept_in: keptIn }) => ({
+    orgKey,
     sha256,
     keptIn: keptIn ?? undefined,
   }));

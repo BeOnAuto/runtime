@@ -29,7 +29,11 @@ function executorFinding(names: readonly string[]): {
 
 const firstContentTable = 'CREATE TABLE IF NOT EXISTS recorded_content_chunks';
 
-const theContentTables = [firstContentTable, 'CREATE TABLE IF NOT EXISTS recorded_content_heads'];
+const theContentTables = [
+  firstContentTable,
+  'CREATE TABLE IF NOT EXISTS recorded_content_heads',
+  'CREATE TABLE IF NOT EXISTS recorded_content_places',
+];
 
 const theContentIndexes = [
   'CREATE INDEX IF NOT EXISTS recorded_content_heads_by_upload ON recorded_content_heads',

@@ -1,5 +1,10 @@
-import type { ContentOwner } from '@on.auto/content';
-import { Ledger, playbookRowsOf, streamPrefixOfPlaybook, type Context } from '@on.auto/operations';
+import {
+  Ledger,
+  playbookRowsOf,
+  streamPrefixOfPlaybook,
+  type Context,
+  type PlaybookAddress,
+} from '@on.auto/operations';
 import { Effect, type Layer } from 'effect';
 import { expect, it } from 'vitest';
 
@@ -47,7 +52,7 @@ const onTheRun: Context = {
   definitionVersion: 1,
 };
 
-function kept(playbook: ContentOwner, id: string, data: AssetKeptDataWritten) {
+function kept(playbook: PlaybookAddress, id: string, data: AssetKeptDataWritten) {
   return Effect.flatMap(Effect.service(Ledger), (ledger) =>
     ledger.execute(`${streamPrefixOfPlaybook(playbook)}assets/${id}`, assetDecider, {
       event: { type: 'asset_kept', data },
@@ -56,7 +61,7 @@ function kept(playbook: ContentOwner, id: string, data: AssetKeptDataWritten) {
   );
 }
 
-function expired(playbook: ContentOwner, id: string, bytes: number) {
+function expired(playbook: PlaybookAddress, id: string, bytes: number) {
   return Effect.flatMap(Effect.service(Ledger), (ledger) =>
     ledger.execute(`${streamPrefixOfPlaybook(playbook)}assets/${id}`, assetDecider, {
       event: { type: 'asset_expired', data: { bytes } },

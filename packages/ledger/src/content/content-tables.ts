@@ -1,6 +1,7 @@
 import { SQL } from '@event-driven-io/dumbo';
-import type { KeptContentHead } from '@on.auto/content';
-import { Schema } from 'effect';
+import type { ContentOwner, KeptContentHead } from '@on.auto/content';
+import { streamPrefixOfOrg } from '@on.auto/operations';
+import { Effect, Schema } from 'effect';
 
 import type { StatementExecutor } from '../event-store.ts';
 import { createMissingIndexes, type PlaybookIndex } from '../recorded/missing-indexes.ts';
@@ -9,7 +10,7 @@ import type { ContentDialect } from './content-dialects.ts';
 export interface Shelf {
   readonly chunks: string;
   readonly heads: string;
-  readonly placeColumns: readonly string[];
+  readonly places: string;
   readonly chunkMissing: (sha256: string, index: number) => Error;
 }
 
@@ -20,7 +21,7 @@ export const keptExternally = 'external';
 export const keptShelf: Shelf = {
   chunks: 'recorded_content_chunks',
   heads: 'recorded_content_heads',
-  placeColumns: ['playbook_key'],
+  places: 'recorded_content_places',
   chunkMissing: (sha256, index) => new Error(`The content kept under ${sha256} is missing its chunk ${index}`),
 };
 
@@ -29,39 +30,24 @@ interface ContentTable {
   readonly create: (dialect: ContentDialect) => SQL;
 }
 
-function textColumns(columns: readonly string[]): SQL {
-  return SQL.merge(
-    columns.map((column) => SQL`${SQL.identifier(column)} TEXT NOT NULL`),
-    ', ',
-  );
-}
-
-function namesOf(columns: readonly string[]): SQL {
-  return SQL.merge(
-    columns.map((column) => SQL`${SQL.identifier(column)}`),
-    ', ',
-  );
-}
-
-function chunkTableOf({ chunks, placeColumns }: Shelf): ContentTable {
-  const key = [...placeColumns, 'upload_id', 'chunk'];
-  return {
-    name: chunks,
-    create: ({ bytesType }) => SQL`CREATE TABLE IF NOT EXISTS ${SQL.identifier(chunks)} (
-      ${textColumns([...placeColumns, 'upload_id'])},
+const chunkTable: ContentTable = {
+  name: keptShelf.chunks,
+  create: ({ bytesType }) => SQL`CREATE TABLE IF NOT EXISTS ${SQL.identifier(keptShelf.chunks)} (
+      place_key TEXT NOT NULL,
+      upload_id TEXT NOT NULL,
       chunk INTEGER NOT NULL,
       data ${SQL.plain(bytesType)} NOT NULL,
-      PRIMARY KEY (${namesOf(key)})
+      PRIMARY KEY (place_key, upload_id, chunk)
     )`,
-  };
-}
+};
 
-function headTableOf({ heads, placeColumns }: Shelf): ContentTable {
-  const key = [...placeColumns, 'sha256'];
-  return {
-    name: heads,
-    create: () => SQL`CREATE TABLE IF NOT EXISTS ${SQL.identifier(heads)} (
-      ${textColumns([...key, 'upload_id'])},
+const headTable: ContentTable = {
+  name: keptShelf.heads,
+  create: () => SQL`CREATE TABLE IF NOT EXISTS ${SQL.identifier(keptShelf.heads)} (
+      org_key TEXT NOT NULL,
+      sha256 TEXT NOT NULL,
+      place_key TEXT NOT NULL,
+      upload_id TEXT NOT NULL,
       bytes BIGINT NOT NULL,
       chunks INTEGER NOT NULL,
       media_type TEXT NOT NULL,
@@ -70,39 +56,37 @@ function headTableOf({ heads, placeColumns }: Shelf): ContentTable {
       removing_since BIGINT,
       expires_at BIGINT,
       erased_at BIGINT,
-      PRIMARY KEY (${namesOf(key)})
+      PRIMARY KEY (org_key, sha256)
     )`,
-  };
-}
+};
 
-export const shelves: readonly Shelf[] = [keptShelf];
+const placeTable: ContentTable = {
+  name: keptShelf.places,
+  create: () => SQL`CREATE TABLE IF NOT EXISTS ${SQL.identifier(keptShelf.places)} (
+      org_key TEXT NOT NULL,
+      sha256 TEXT NOT NULL,
+      place_key TEXT NOT NULL,
+      PRIMARY KEY (org_key, sha256, place_key)
+    )`,
+};
 
-const contentTables: readonly ContentTable[] = shelves.flatMap((shelf) => [chunkTableOf(shelf), headTableOf(shelf)]);
+const contentTables: readonly ContentTable[] = [chunkTable, headTable, placeTable];
 
 export const contentTableNames: readonly string[] = contentTables.map(({ name }) => name);
 
-function uploadIndexOf({ heads, placeColumns }: Shelf): PlaybookIndex {
-  const name = `${heads}_by_upload`;
-  return {
-    name,
-    create: () =>
-      SQL`CREATE INDEX IF NOT EXISTS ${SQL.identifier(name)} ON ${SQL.identifier(heads)} (${namesOf([...placeColumns, 'upload_id'])})`,
-  };
-}
+const uploadIndex: PlaybookIndex = {
+  name: `${keptShelf.heads}_by_upload`,
+  create: () =>
+    SQL`CREATE INDEX IF NOT EXISTS ${SQL.identifier(`${keptShelf.heads}_by_upload`)} ON ${SQL.identifier(keptShelf.heads)} (place_key, upload_id)`,
+};
 
-function expiringIndexOf({ heads }: Shelf): PlaybookIndex {
-  const name = `${heads}_expiring`;
-  return {
-    name,
-    create: () =>
-      SQL`CREATE INDEX IF NOT EXISTS ${SQL.identifier(name)} ON ${SQL.identifier(heads)} (expires_at) WHERE expires_at IS NOT NULL`,
-  };
-}
+const expiringIndex: PlaybookIndex = {
+  name: `${keptShelf.heads}_expiring`,
+  create: () =>
+    SQL`CREATE INDEX IF NOT EXISTS ${SQL.identifier(`${keptShelf.heads}_expiring`)} ON ${SQL.identifier(keptShelf.heads)} (expires_at) WHERE expires_at IS NOT NULL`,
+};
 
-const contentIndexes: readonly PlaybookIndex[] = shelves.flatMap((shelf) => [
-  uploadIndexOf(shelf),
-  expiringIndexOf(shelf),
-]);
+const contentIndexes: readonly PlaybookIndex[] = [uploadIndex, expiringIndex];
 
 const NameRows = Schema.Array(Schema.Struct({ name: Schema.String }));
 
@@ -175,4 +159,49 @@ function keptHeadOf({ bytes, media_type, kept_at, expires_at, erased_at }: (type
 export function keptHeadIn(rows: readonly unknown[]): KeptContentHead | undefined {
   const row = Schema.decodeUnknownSync(KeptHeadRows)(rows).at(0);
   return row === undefined ? undefined : keptHeadOf(row);
+}
+
+export function orgKeyOf({ org }: ContentOwner): string {
+  return streamPrefixOfOrg({ org });
+}
+
+export function theContent(owner: ContentOwner, sha256: string): SQL {
+  return SQL`org_key = ${orgKeyOf(owner)} AND sha256 = ${sha256}`;
+}
+
+const PlaceRows = Schema.Array(Schema.Struct({ place_key: Schema.String }));
+
+export function placesRead(
+  execute: StatementExecutor,
+  { places }: Shelf,
+  owner: ContentOwner,
+  sha256: string,
+): Effect.Effect<readonly string[]> {
+  return Effect.promise(async () => {
+    const { rows } = await execute.query(
+      SQL`SELECT place_key FROM ${SQL.identifier(places)} WHERE ${theContent(owner, sha256)} ORDER BY place_key`,
+    );
+    return Schema.decodeUnknownSync(PlaceRows)(rows).map(({ place_key }) => place_key);
+  });
+}
+
+interface PlacedContent {
+  readonly owner: ContentOwner;
+  readonly sha256: string;
+  readonly place: string;
+}
+
+export function placeRecorded(
+  execute: StatementExecutor,
+  { places }: Shelf,
+  { owner, sha256, place }: PlacedContent,
+): Effect.Effect<void> {
+  return Effect.asVoid(
+    Effect.promise(() =>
+      execute.command(
+        SQL`INSERT INTO ${SQL.identifier(places)} (org_key, sha256, place_key) VALUES (${orgKeyOf(owner)}, ${sha256}, ${place})
+          ON CONFLICT (org_key, sha256, place_key) DO NOTHING`,
+      ),
+    ),
+  );
 }

@@ -1,5 +1,4 @@
-import type { ContentOwner } from '@on.auto/content';
-import type { InvalidInput } from '@on.auto/operations';
+import type { InvalidInput, PlaybookAddress } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import type { AudioEntry, ImageEntry, VideoEntry } from '../catalog/catalog-entry.ts';
@@ -18,7 +17,7 @@ export interface PreparedRequest {
 interface Preparing {
   readonly document: GenerationFunctionDefinitionDocument;
   readonly model: RunnableModel;
-  readonly playbook: ContentOwner;
+  readonly playbook: PlaybookAddress;
   readonly now: number;
 }
 

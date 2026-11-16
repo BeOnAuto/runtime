@@ -1,5 +1,4 @@
-import type { ContentOwner } from '@on.auto/content';
-import { randomUUIDv7, type Context, type Lineage } from '@on.auto/operations';
+import { randomUUIDv7, type Context, type Lineage, type PlaybookAddress } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { generationBounds, type GenerationPorts } from '../capability/generation-ports.ts';
@@ -9,7 +8,7 @@ import type { ToolCallOfAnAsset } from './asset-facts.ts';
 import { keptAsset } from './asset-keeping.ts';
 
 export interface ToolImageToKeep {
-  readonly playbook: ContentOwner;
+  readonly playbook: PlaybookAddress;
   readonly bytes: Readonly<Uint8Array>;
   readonly call: ToolCallOfAnAsset;
   readonly context: Omit<Context, 'at'>;

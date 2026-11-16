@@ -90,9 +90,17 @@ export const keptAt = Date.parse('2026-11-01T09:00:00.000Z');
 
 export const anHour = keptContentGraceMs;
 
+export const alpha: PlaybookAddress = { org: 'acme', playbook: 'alpha' };
+
+export const beta: PlaybookAddress = { org: 'acme', playbook: 'beta' };
+
+export const elsewhere: PlaybookAddress = { org: 'globex', playbook: 'gamma' };
+
 export const firstNotes = 'playbook/acme/alpha/notes/n1';
 
 export const secondNotes = 'playbook/acme/alpha/notes/n2';
+
+export const notesOfBeta = 'playbook/acme/beta/notes/n1';
 
 export const notesOfTheOrg = 'org/acme/notes/n1';
 

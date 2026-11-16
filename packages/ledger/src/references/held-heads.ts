@@ -1,7 +1,7 @@
 import { Data } from 'effect';
 
 export interface HeldHead {
-  readonly playbookKey: string;
+  readonly orgKey: string;
   readonly sha256: string;
   readonly keptIn: string | undefined;
 }

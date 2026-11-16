@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-import { streamPrefixOfPlaybook } from '@on.auto/operations';
+import { streamPrefixOfOrg } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -26,7 +26,7 @@ import {
   type GenerationHarness,
 } from '../testing/index.ts';
 
-const alphaPlace = streamPrefixOfPlaybook(alpha);
+const alphaPlace = streamPrefixOfOrg(alpha);
 
 async function withAPicture(answering: GatewayAnswering = answeredByKind()): Promise<GenerationHarness> {
   const playbook = numberedHarness({ answering });

@@ -29,7 +29,7 @@ function payloadReadIn(service: Ledger['Service'], address: PlaybookAddress) {
 }
 
 describe('the reader of the payloads of the playbook of a call', () => {
-  it('reads a payload that playbook keeps, and finds missing one that only another playbook keeps', async () => {
+  it('reads a payload that playbook keeps, and finds missing one that only another org keeps', async () => {
     const { service } = memoryLedger();
     await Effect.runPromise(service.content.put(gamma, textToKeep(text, 'application/json')));
 

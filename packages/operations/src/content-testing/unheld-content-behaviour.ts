@@ -1,5 +1,5 @@
 import { sha256Of } from '@on.auto/content';
-import { alpha, beta, keptTextOf } from '@on.auto/content/testing';
+import { keptTextOf } from '@on.auto/content/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -23,6 +23,10 @@ import {
   writtenNotes,
   wrote,
   type UnheldContentEntry,
+  alpha,
+  beta,
+  elsewhere,
+  notesOfBeta,
 } from './held-notes.ts';
 import { payloadHoldsBehaviour } from './payload-holds-behaviour.ts';
 import { removedContentBehaviour } from './removed-content-behaviour.ts';
@@ -66,22 +70,29 @@ function heldThroughTheRace(entry: UnheldContentEntry): void {
   });
 }
 
-function heldByItsPlaybook(entry: UnheldContentEntry): void {
-  it('keeps a content any stream of its playbook holds, past its hour, and holds nothing for another playbook or for a stream of the org', async () => {
+function heldByItsOrg(entry: UnheldContentEntry): void {
+  it('keeps a content a stream of any playbook of its org holds, past its hour, whichever playbook the removal names, and neither reads nor removes it for another org', async () => {
     const ledger = await entry.aLedger(noteHolders);
     const sha256 = await keptIn(ledger, alpha, note, keptAt);
-    await keptIn(ledger, beta, note, keptAt);
-    await noted(ledger, secondNotes, kept(sha256));
-    await noted(ledger, notesOfTheOrg, kept(sha256));
+    await noted(ledger, notesOfBeta, kept(sha256));
 
     const removed = [
       await removedAt(ledger, keptAt + 2 * anHour, alpha, sha256),
       await removedAt(ledger, keptAt + 2 * anHour, beta, sha256),
+      await removedAt(ledger, keptAt + 2 * anHour, elsewhere, sha256),
     ];
 
-    expect(removed).toEqual(['held', 'removed']);
-    expect(await keptTextOf(ledger.content, alpha, sha256)).toBe(note);
-    expect(await keptTextOf(ledger.content, beta, sha256)).toBeUndefined();
+    expect(removed).toEqual(['held', 'held', 'removed']);
+    expect(await keptTextOf(ledger.content, beta, sha256)).toBe(note);
+    expect(await keptTextOf(ledger.content, elsewhere, sha256)).toBeUndefined();
+  });
+
+  it('holds nothing for a stream of the org itself, so a content only such a stream names is removed past its hour', async () => {
+    const ledger = await entry.aLedger(noteHolders);
+    const sha256 = await keptIn(ledger, alpha, note, keptAt);
+    await noted(ledger, notesOfTheOrg, kept(sha256));
+
+    expect(await removedAt(ledger, keptAt + 2 * anHour, alpha, sha256)).toBe('removed');
   });
 }
 
@@ -190,7 +201,7 @@ export function unheldContentBehaviour(entry: UnheldContentEntry): void {
   describe('the content a playbook kept, removed only when nothing holds it and its hour has passed', () => {
     removedOnceItsHourPassed(entry);
     heldThroughTheRace(entry);
-    heldByItsPlaybook(entry);
+    heldByItsOrg(entry);
     heldByThePayloadsKeptOutside(entry);
   });
   describe('the holds on a content, let go of', () => {

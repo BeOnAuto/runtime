@@ -1,7 +1,6 @@
 import {
   NotTheBytesKept,
   sha256Digest,
-  type ContentOwner,
   type Digested,
   type KeptContentHead,
   type RecordedContent,
@@ -10,6 +9,7 @@ import {
 } from '@on.auto/content';
 import { Clock, Effect, Function, Option, Schema } from 'effect';
 
+import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import { keptContentGraceMs } from '../held-content/unheld-removal.ts';
 import type { Unavailable } from '../outcome/unavailable.ts';
 import { noPayloadCache, type PayloadCache } from './payload-cache.ts';
@@ -31,7 +31,7 @@ export interface PayloadReader {
 }
 
 export interface PayloadSource {
-  readonly owner: ContentOwner;
+  readonly owner: PlaybookAddress;
   readonly content: Pick<RecordedContent, 'get' | 'getHead'>;
   readonly cache?: PayloadCache;
   readonly gate?: PayloadGate;
@@ -54,7 +54,7 @@ const missingBecause: Readonly<Record<PayloadMissingBecause, string>> = {
   not_its_kind: 'is not text of the kind its fact names',
 };
 
-function missing({ org, playbook }: ContentOwner, sha256: string, because: PayloadMissingBecause): PayloadMissing {
+function missing({ org, playbook }: PlaybookAddress, sha256: string, because: PayloadMissingBecause): PayloadMissing {
   return new PayloadMissing({
     org,
     playbook,
@@ -72,7 +72,7 @@ function goneOnPurpose(head: KeptContentHead | undefined, now: number): boolean 
   return head?.erasedAt !== undefined || (head?.expiresAt !== undefined && head.expiresAt <= now);
 }
 
-function erased({ org, playbook }: ContentOwner, sha256: string): PayloadErased {
+function erased({ org, playbook }: PlaybookAddress, sha256: string): PayloadErased {
   return new PayloadErased({
     org,
     playbook,
@@ -161,7 +161,7 @@ function readThrough(reader: BytesReader, most: number): Promise<StreamRead> {
   return readOn({ reader, most, digest: sha256Digest(), chunks: chunksHeld() }, 0);
 }
 
-function textOfRead(owner: ContentOwner, kept: Digested, read: StreamRead): Effect.Effect<string, PayloadMissing> {
+function textOfRead(owner: PlaybookAddress, kept: Digested, read: StreamRead): Effect.Effect<string, PayloadMissing> {
   if (read.bytes !== kept.bytes || read.sha256 !== kept.sha256) {
     return Effect.fail(missing(owner, kept.sha256, 'not_its_bytes'));
   }
@@ -169,7 +169,7 @@ function textOfRead(owner: ContentOwner, kept: Digested, read: StreamRead): Effe
 }
 
 function textIn(
-  owner: ContentOwner,
+  owner: PlaybookAddress,
   kept: Digested,
   content: StreamedContent,
   reader: BytesReader,

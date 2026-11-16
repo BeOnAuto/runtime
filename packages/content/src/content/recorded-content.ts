@@ -7,6 +7,9 @@ import type { ContentToKeep, StreamedContent } from './streamed-content.ts';
 
 export interface ContentOwner {
   readonly org: string;
+}
+
+export interface PlaybookAddress extends ContentOwner {
   readonly playbook: string;
 }
 
@@ -20,11 +23,11 @@ export interface ContentKept extends Digested {
 }
 
 export interface RecordedContent {
-  readonly put: (playbook: ContentOwner, content: ContentToKeep) => Effect.Effect<ContentKept, ContentRefused>;
-  readonly get: (playbook: ContentOwner, sha256: string) => Effect.Effect<StreamedContent | undefined>;
-  readonly getHead: (playbook: ContentOwner, sha256: string) => Effect.Effect<KeptContentHead | undefined>;
+  readonly put: (playbook: PlaybookAddress, content: ContentToKeep) => Effect.Effect<ContentKept, ContentRefused>;
+  readonly get: (playbook: PlaybookAddress, sha256: string) => Effect.Effect<StreamedContent | undefined>;
+  readonly getHead: (playbook: PlaybookAddress, sha256: string) => Effect.Effect<KeptContentHead | undefined>;
   readonly getPart: (
-    playbook: ContentOwner,
+    playbook: PlaybookAddress,
     sha256: string,
     asked: AskedRange,
   ) => Effect.Effect<ContentPart | undefined>;
@@ -68,7 +71,7 @@ export interface ErasureTimes {
 }
 
 export interface ExpiredContent {
-  readonly playbook: ContentOwner;
+  readonly owner: ContentOwner;
   readonly sha256: string;
 }
 
@@ -92,21 +95,21 @@ export interface RemovalTimes {
 }
 
 export interface ContentHeads {
-  readonly kept: (playbook: ContentOwner, sha256: string, head: HeadToKeep, keptAt: number) => Effect.Effect<HeadKept>;
+  readonly kept: (owner: ContentOwner, sha256: string, head: HeadToKeep, keptAt: number) => Effect.Effect<HeadKept>;
   readonly touched: (
-    playbook: ContentOwner,
+    owner: ContentOwner,
     sha256: string,
     keptAt: number,
     expiresAt?: number,
   ) => Effect.Effect<HeadKept | undefined>;
-  readonly marked: (playbook: ContentOwner, sha256: string, times: RemovalTimes) => Effect.Effect<HeadMarked>;
-  readonly cleared: (playbook: ContentOwner, sha256: string, since: number) => Effect.Effect<void>;
-  readonly unmarked: (playbook: ContentOwner, sha256: string, since: number) => Effect.Effect<void>;
-  readonly read: (playbook: ContentOwner, sha256: string) => Effect.Effect<KeptContentHead | undefined>;
+  readonly marked: (owner: ContentOwner, sha256: string, times: RemovalTimes) => Effect.Effect<HeadMarked>;
+  readonly cleared: (owner: ContentOwner, sha256: string, since: number) => Effect.Effect<void>;
+  readonly unmarked: (owner: ContentOwner, sha256: string, since: number) => Effect.Effect<void>;
+  readonly read: (owner: ContentOwner, sha256: string) => Effect.Effect<KeptContentHead | undefined>;
   readonly expired: (times: ErasureTimes, most: number) => Effect.Effect<readonly ExpiredContent[]>;
-  readonly erasing: (playbook: ContentOwner, sha256: string, times: ErasureTimes) => Effect.Effect<number | undefined>;
-  readonly erased: (playbook: ContentOwner, sha256: string, since: number) => Effect.Effect<boolean>;
-  readonly placeOfNewBytes: (playbook: ContentOwner) => string;
-  readonly placesOf: (playbook: ContentOwner, sha256: string) => Effect.Effect<readonly string[]>;
-  readonly placed: (playbook: ContentOwner, sha256: string, place: string) => Effect.Effect<void>;
+  readonly erasing: (owner: ContentOwner, sha256: string, times: ErasureTimes) => Effect.Effect<number | undefined>;
+  readonly erased: (owner: ContentOwner, sha256: string, since: number) => Effect.Effect<boolean>;
+  readonly placeOfNewBytes: (owner: ContentOwner) => string;
+  readonly placesOf: (owner: ContentOwner, sha256: string) => Effect.Effect<readonly string[]>;
+  readonly placed: (owner: ContentOwner, sha256: string, place: string) => Effect.Effect<void>;
 }

@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { namesFound } from '../content/content-tables.ts';
 import { structureIn } from '../structure/database-structure-behaviour.ts';
+import { contentTablesOfPlaybooks } from '../testing/content-tables-of-playbooks.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
-import { carryingOnToTheLayoutKept, theLayoutOfTheLastLedgerStep } from './carrying-on-behaviour.ts';
+import { carryingOnToTheLayoutKept, carryingTo, theLayoutOfTheLastLedgerStep } from './carrying-on-behaviour.ts';
 import { layoutWritten } from './layout-kept.ts';
 import { layoutIn } from './ledger-layout-behaviour.ts';
 import { ledgerLayoutFloor } from './ledger-layout.ts';
@@ -41,6 +42,7 @@ const theIndexesOfEither = new Set([theTreeByThePlaybook, theIdAlone, theTreeByT
 
 async function aDatabaseOfTheLayoutBeforeTheOrgsIndexes(entry: LedgerEntry, database: string): Promise<void> {
   await aLedger(entry, database);
+  await contentTablesOfPlaybooks(entry, database);
   await entry.queried(database, 'DROP TABLE definition_names_1');
   await entry.queried(database, `DROP INDEX ${theTreeByTheOrg}`);
   await entry.queried(database, `DROP INDEX ${theIdByTheOrg}`);
@@ -60,11 +62,7 @@ function theOrgsIndexesBehaviour(entry: LedgerEntry): void {
       await aLedger(entry, made);
       await aDatabaseOfTheLayoutBeforeTheOrgsIndexes(entry, database);
 
-      await entry.carriedOn(database, {
-        kept: theLayoutOfTheLastLedgerStep,
-        floor: ledgerLayoutFloor,
-        steps: ledgerLayoutSteps,
-      });
+      await entry.carriedOn(database, carryingTo(theLayoutOfTheLastLedgerStep));
       const carried = {
         layout: (await layoutIn(entry, database)).layout,
         indexes: Object.keys((await structureIn(entry, database)).indexes),

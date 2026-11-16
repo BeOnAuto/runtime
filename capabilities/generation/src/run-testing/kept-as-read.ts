@@ -1,5 +1,4 @@
-import type { ContentOwner } from '@on.auto/content';
-import type { Context, Decided, Decider, StreamWriter } from '@on.auto/operations';
+import type { Context, Decided, Decider, PlaybookAddress, StreamWriter } from '@on.auto/operations';
 
 import { assetDecider, decidedInTurn, type AssetStanding } from '../assets/asset-decider.ts';
 import type { AssetEvent, AssetKeptData } from '../assets/asset-facts.ts';
@@ -17,7 +16,7 @@ const assetDeciderOfWhatIsRead: Decider<AssetStanding, CommandOfWhatIsRead, Asse
 };
 
 interface KeptAsRead {
-  readonly playbook: ContentOwner;
+  readonly playbook: PlaybookAddress;
   readonly id: string;
   readonly data: AssetKeptData;
   readonly context: Context;

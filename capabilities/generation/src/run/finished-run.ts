@@ -1,6 +1,5 @@
-import type { ContentOwner } from '@on.auto/content';
 import type { Finished, RunContext } from '@on.auto/definitions';
-import { randomUUIDv7, type Conflict, type Context, type Lineage } from '@on.auto/operations';
+import { randomUUIDv7, type Conflict, type Context, type Lineage, type PlaybookAddress } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { keptAsset, madeByThe, type MadeByAGeneration } from '../assets/asset-keeping.ts';
@@ -16,7 +15,7 @@ export interface Made extends Asked {
 
 export interface Keeping {
   readonly id: string;
-  readonly playbook: ContentOwner;
+  readonly playbook: PlaybookAddress;
   readonly generated: Pick<Generated, 'bytes' | 'mediaType'>;
   readonly madeBy: MadeByAGeneration;
   readonly keptForMs: number;

@@ -1,5 +1,5 @@
 import { textToKeep, type ExpiredErased } from '@on.auto/content';
-import { alpha, at, json, resultOf } from '@on.auto/content/testing';
+import { at, json, resultOf } from '@on.auto/content/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -20,6 +20,7 @@ import {
   written,
   writtenNotes,
   wrote,
+  alpha,
 } from './held-notes.ts';
 
 export interface ErasingLedger {
@@ -77,7 +78,7 @@ function erasedPayloadsRefused(entry: ErasedContentEntry): void {
 
     const refused = wrote(ledger, firstWritings, written({ body_sha256: sha256, body_bytes: Buffer.byteLength(held) }));
 
-    await expect(refused).rejects.toThrow(`A fact names the payload ${sha256} of playbook/acme/alpha/`);
+    await expect(refused).rejects.toThrow(`A fact names the payload ${sha256} of org/acme/`);
     expect(await Effect.runPromise(ledger.load(firstWritings, writtenNotes))).toEqual({ state: null, version: 0 });
   });
 }

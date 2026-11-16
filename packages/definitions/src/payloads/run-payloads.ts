@@ -1,10 +1,11 @@
-import type { ContentOwner, Digested } from '@on.auto/content';
+import type { Digested } from '@on.auto/content';
 import {
   Conflict,
   Unavailable,
   playbookPayloadReader,
   type PlaybookContext,
   type PlaybookReader,
+  type PlaybookAddress,
 } from '@on.auto/operations';
 import {
   payloadIfAny,
@@ -33,7 +34,7 @@ export interface KeptContentReader {
   readonly content: PayloadSource['content'];
 }
 
-export function payloadsKeptIn(content: PayloadSource['content'], { org, playbook }: ContentOwner): PayloadReader {
+export function payloadsKeptIn(content: PayloadSource['content'], { org, playbook }: PlaybookAddress): PayloadReader {
   return payloadReaderOf({ owner: { org, playbook }, content });
 }
 

@@ -8,22 +8,24 @@ import {
   type AskedRange,
   type ByteRange,
   type ContentKept,
+  type ContentOwner,
   type ContentPart,
   type KeptContentHead,
   type StreamedContent,
 } from '@on.auto/content';
-import { streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
 import { Clock, Effect, Schema } from 'effect';
 
 import type { OwnRemoval, ReturningExecutor, StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import type { ContentDialect } from './content-dialects.ts';
-import { expiryKept, keptHeadColumns, keptHeadIn, keptInTheLedger, type Shelf } from './content-tables.ts';
+import { expiryKept, keptHeadColumns, keptHeadIn, keptInTheLedger, theContent, type Shelf } from './content-tables.ts';
 
-export type Key = readonly (readonly [column: string, value: string])[];
-
-export interface KeptHead extends ContentKept {
+export interface Upload {
+  readonly placeKey: string;
   readonly uploadId: string;
+}
+
+export interface KeptHead extends ContentKept, Upload {
   readonly chunks: number;
 }
 
@@ -34,38 +36,27 @@ export interface Shelved {
 }
 
 const HeadRows = Schema.Array(
-  Schema.Struct({ upload_id: Schema.String, bytes: Schema.Number, chunks: Schema.Number, media_type: Schema.String }),
+  Schema.Struct({
+    place_key: Schema.String,
+    upload_id: Schema.String,
+    bytes: Schema.Number,
+    chunks: Schema.Number,
+    media_type: Schema.String,
+  }),
 );
 
 const StoredBytes = Schema.Union([Schema.Uint8Array, Schema.instanceOf(ArrayBuffer)]);
 
 const ChunkRows = Schema.Array(Schema.Struct({ data: StoredBytes }));
 
-const RemovedUploadRows = Schema.Array(Schema.Struct({ upload_id: Schema.String }));
+const RemovedUploadRows = Schema.Array(Schema.Struct({ place_key: Schema.String, upload_id: Schema.String }));
+
+function theUpload({ placeKey, uploadId }: Upload): SQL {
+  return SQL`place_key = ${placeKey} AND upload_id = ${uploadId}`;
+}
 
 function viewOf(stored: Readonly<Uint8Array> | Readonly<ArrayBuffer>): Uint8Array {
   return stored instanceof Uint8Array ? stored : new Uint8Array(stored);
-}
-
-function matching(key: Key): SQL {
-  return SQL.merge(
-    key.map(([column, value]) => SQL`${SQL.identifier(column)} = ${value}`),
-    ' AND ',
-  );
-}
-
-export function columnsOf(key: Key, ...more: readonly string[]): SQL {
-  return SQL.merge(
-    [...key.map(([column]) => column), ...more].map((column) => SQL`${SQL.identifier(column)}`),
-    ', ',
-  );
-}
-
-export function valuesOf(key: Key): SQL {
-  return SQL.merge(
-    key.map(([, value]) => SQL`${value}`),
-    ', ',
-  );
 }
 
 export function hexOf(chunk: Readonly<Uint8Array>): string {
@@ -84,32 +75,43 @@ function written({ execute }: Shelved, sql: SQL): Effect.Effect<readonly unknown
   return Effect.promise(async () => (await execute.command(sql)).rows);
 }
 
-const headColumns = SQL.plain('upload_id, CAST(bytes AS DOUBLE PRECISION) AS bytes, chunks, media_type');
+const headColumns = SQL.plain('place_key, upload_id, CAST(bytes AS DOUBLE PRECISION) AS bytes, chunks, media_type');
 
 function headIn(rows: readonly unknown[], sha256: string): KeptHead | undefined {
   const head = Schema.decodeUnknownSync(HeadRows)(rows).at(0);
   return head === undefined
     ? undefined
-    : { sha256, uploadId: head.upload_id, bytes: head.bytes, chunks: head.chunks, mediaType: head.media_type };
+    : {
+        sha256,
+        placeKey: head.place_key,
+        uploadId: head.upload_id,
+        bytes: head.bytes,
+        chunks: head.chunks,
+        mediaType: head.media_type,
+      };
 }
 
-export function headOf(shelved: Shelved, place: Key, sha256: string): Effect.Effect<KeptHead | undefined> {
+export function headOf(shelved: Shelved, owner: ContentOwner, sha256: string): Effect.Effect<KeptHead | undefined> {
   return Effect.map(
     queried(
       shelved,
       SQL`SELECT ${headColumns} FROM ${SQL.identifier(shelved.shelf.heads)}
-        WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger} AND erased_at IS NULL`,
+        WHERE ${theContent(owner, sha256)} AND kept_in = ${keptInTheLedger} AND erased_at IS NULL`,
     ),
     (rows) => headIn(rows, sha256),
   );
 }
 
-export function keptHeadOn(shelved: Shelved, place: Key, sha256: string): Effect.Effect<KeptContentHead | undefined> {
+export function keptHeadOn(
+  shelved: Shelved,
+  owner: ContentOwner,
+  sha256: string,
+): Effect.Effect<KeptContentHead | undefined> {
   return Effect.map(
     queried(
       shelved,
       SQL`SELECT ${keptHeadColumns} FROM ${SQL.identifier(shelved.shelf.heads)}
-        WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger}`,
+        WHERE ${theContent(owner, sha256)} AND kept_in = ${keptInTheLedger}`,
     ),
     keptHeadIn,
   );
@@ -117,7 +119,7 @@ export function keptHeadOn(shelved: Shelved, place: Key, sha256: string): Effect
 
 export function headTouched(
   shelved: Shelved,
-  place: Key,
+  owner: ContentOwner,
   sha256: string,
   expiresAt: number | undefined,
 ): Effect.Effect<KeptHead | undefined> {
@@ -127,7 +129,7 @@ export function headTouched(
         shelved,
         SQL`UPDATE ${SQL.identifier(shelved.shelf.heads)}
           SET kept_at = ${keptAt}, expires_at = ${expiryKept(SQL`expires_at`, expiresAt)}
-          WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger} AND erased_at IS NULL
+          WHERE ${theContent(owner, sha256)} AND kept_in = ${keptInTheLedger} AND erased_at IS NULL
           RETURNING ${headColumns}`,
       ),
       (rows) => headIn(rows, sha256),
@@ -135,37 +137,32 @@ export function headTouched(
   );
 }
 
-async function chunkOf({ execute, shelf }: Shelved, upload: Key, index: number): Promise<Uint8Array | undefined> {
+async function chunkOf({ execute, shelf }: Shelved, upload: Upload, index: number): Promise<Uint8Array | undefined> {
   const { rows } = await execute.query(
-    SQL`SELECT data FROM ${SQL.identifier(shelf.chunks)} WHERE ${matching(upload)} AND chunk = ${index}`,
+    SQL`SELECT data FROM ${SQL.identifier(shelf.chunks)} WHERE ${theUpload(upload)} AND chunk = ${index}`,
   );
   const chunk = Schema.decodeUnknownSync(ChunkRows)(rows).at(0);
   return chunk === undefined ? undefined : viewOf(chunk.data);
 }
 
-export function uploadOf(place: Key, uploadId: string): Key {
-  return [...place, ['upload_id', uploadId]];
-}
-
-export interface Upload {
-  readonly uploadId: string;
+interface UploadOf extends Upload {
+  readonly owner: ContentOwner;
   readonly sha256: string | undefined;
 }
 
-export function uploadRemoved(shelved: Shelved, place: Key, { uploadId, sha256 }: Upload): Effect.Effect<void> {
-  const upload = uploadOf(place, uploadId);
+export function uploadRemoved(shelved: Shelved, { owner, sha256, ...upload }: UploadOf): Effect.Effect<void> {
   const { chunks, heads } = shelved.shelf;
   return commanded(
     shelved,
     sha256 === undefined
-      ? SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${matching(upload)}`
-      : SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${matching(upload)}
-          AND NOT EXISTS (SELECT 1 FROM ${SQL.identifier(heads)} WHERE ${matching([...upload, ['sha256', sha256]])})`,
+      ? SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${theUpload(upload)}`
+      : SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${theUpload(upload)}
+          AND NOT EXISTS (SELECT 1 FROM ${SQL.identifier(heads)} WHERE ${theContent(owner, sha256)} AND ${theUpload(upload)})`,
   );
 }
 
 interface StaleContent {
-  readonly place: Key;
+  readonly owner: ContentOwner;
   readonly sha256: string;
   readonly before: number;
 }
@@ -173,22 +170,20 @@ interface StaleContent {
 export async function keptRemovedWithin(
   { chunks, heads }: Shelf,
   execute: StatementExecutor,
-  { place, sha256, before }: StaleContent,
+  { owner, sha256, before }: StaleContent,
 ): Promise<OwnRemoval> {
+  const content = theContent(owner, sha256);
   const { rows } = await execute.query(
-    SQL`DELETE FROM ${SQL.identifier(heads)} WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_at < ${before}
-      RETURNING upload_id`,
+    SQL`DELETE FROM ${SQL.identifier(heads)} WHERE ${content} AND kept_at < ${before} RETURNING place_key, upload_id`,
   );
   const removed = Schema.decodeUnknownSync(RemovedUploadRows)(rows);
-  await inTurn(removed, ({ upload_id }) =>
-    execute.command(SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${matching(uploadOf(place, upload_id))}`),
+  await inTurn(removed, ({ place_key: placeKey, upload_id: uploadId }) =>
+    execute.command(SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${theUpload({ placeKey, uploadId })}`),
   );
   if (removed.length > 0) {
     return 'removed';
   }
-  const standing = await execute.query(
-    SQL`SELECT 1 AS standing FROM ${SQL.identifier(heads)} WHERE ${matching(place)} AND sha256 = ${sha256}`,
-  );
+  const standing = await execute.query(SQL`SELECT 1 AS standing FROM ${SQL.identifier(heads)} WHERE ${content}`);
   return standing.rows.length > 0 ? 'fresh' : 'removed';
 }
 
@@ -198,7 +193,7 @@ interface ChunksAsked {
   readonly within: (chunk: Readonly<Uint8Array>, index: number) => Uint8Array;
 }
 
-function chunkStreamOf(shelved: Shelved, place: Key, head: KeptHead, asked: ChunksAsked): ReadableStream<Uint8Array> {
+function chunkStreamOf(shelved: Shelved, head: KeptHead, asked: ChunksAsked): ReadableStream<Uint8Array> {
   let index = asked.first;
   return new ReadableStream<Uint8Array>(
     {
@@ -207,7 +202,7 @@ function chunkStreamOf(shelved: Shelved, place: Key, head: KeptHead, asked: Chun
           controller.close();
           return;
         }
-        const chunk = await chunkOf(shelved, uploadOf(place, head.uploadId), index);
+        const chunk = await chunkOf(shelved, head, index);
         if (chunk === undefined) {
           controller.error(shelved.shelf.chunkMissing(head.sha256, index));
           return;
@@ -220,12 +215,12 @@ function chunkStreamOf(shelved: Shelved, place: Key, head: KeptHead, asked: Chun
   );
 }
 
-function chunksOf(shelved: Shelved, place: Key, head: KeptHead): ReadableStream<Uint8Array> {
-  return chunkStreamOf(shelved, place, head, { first: 0, last: head.chunks - 1, within: (chunk) => chunk.subarray() });
+function chunksOf(shelved: Shelved, head: KeptHead): ReadableStream<Uint8Array> {
+  return chunkStreamOf(shelved, head, { first: 0, last: head.chunks - 1, within: (chunk) => chunk.subarray() });
 }
 
-function chunksWithin(shelved: Shelved, place: Key, head: KeptHead, { start, end }: ByteRange) {
-  return chunkStreamOf(shelved, place, head, {
+function chunksWithin(shelved: Shelved, head: KeptHead, { start, end }: ByteRange) {
+  return chunkStreamOf(shelved, head, {
     first: Math.floor(start / mostContentChunkBytes),
     last: Math.floor(end / mostContentChunkBytes),
     within: (chunk, index) => {
@@ -235,12 +230,16 @@ function chunksWithin(shelved: Shelved, place: Key, head: KeptHead, { start, end
   });
 }
 
-export function readOn(shelved: Shelved, place: Key, sha256: string): Effect.Effect<StreamedContent | undefined> {
-  return Effect.map(headOf(shelved, place, sha256), (head) =>
+export function readOn(
+  shelved: Shelved,
+  owner: ContentOwner,
+  sha256: string,
+): Effect.Effect<StreamedContent | undefined> {
+  return Effect.map(headOf(shelved, owner, sha256), (head) =>
     head === undefined
       ? head
       : {
-          stream: verifiedStream(sha256, head.bytes, chunksOf(shelved, place, head)),
+          stream: verifiedStream(sha256, head.bytes, chunksOf(shelved, head)),
           bytes: head.bytes,
           mediaType: head.mediaType,
         },
@@ -249,19 +248,15 @@ export function readOn(shelved: Shelved, place: Key, sha256: string): Effect.Eff
 
 export function readPartOn(
   shelved: Shelved,
-  place: Key,
+  owner: ContentOwner,
   sha256: string,
   asked: AskedRange,
 ): Effect.Effect<ContentPart | undefined> {
-  return Effect.map(headOf(shelved, place, sha256), (head) =>
+  return Effect.map(headOf(shelved, owner, sha256), (head) =>
     head === undefined
       ? head
       : contentPartOf(head.bytes, head.mediaType, asked, (range) =>
-          measuredStream(sha256, bytesIn(range), chunksWithin(shelved, place, head, range)),
+          measuredStream(sha256, bytesIn(range), chunksWithin(shelved, head, range)),
         ),
   );
-}
-
-export function playbookPlaceOf(playbook: PlaybookAddress): Key {
-  return [['playbook_key', streamPrefixOfPlaybook(playbook)]];
 }

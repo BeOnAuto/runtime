@@ -1,11 +1,12 @@
-import { sha256Of, type ContentOwner, type ContentStore, type Digested, type RecordedContent } from '@on.auto/content';
+import { sha256Of, type ContentStore, type Digested, type RecordedContent } from '@on.auto/content';
 import { memoryContentStore } from '@on.auto/content/testing';
 import {
-  streamPrefixOfPlaybook,
+  streamPrefixOfOrg,
   type Context,
   type Decider,
   type Lineage,
   type StreamWriter,
+  type PlaybookAddress,
 } from '@on.auto/operations';
 import {
   PayloadErased,
@@ -47,7 +48,7 @@ export function keptArmOf(value: Schema.Json): Digested {
   return { sha256: sha256Of(text), bytes: textBytesOf(text) };
 }
 
-export function keptIn(content: RecordedContent, owner: ContentOwner, value: Schema.Json): Effect.Effect<Digested> {
+export function keptIn(content: RecordedContent, owner: PlaybookAddress, value: Schema.Json): Effect.Effect<Digested> {
   const kept = keptArmOf(value);
   return Effect.as(Effect.orDie(payloadKept(content, owner, { ...kept, ...jsonPayloadText(value) })), kept);
 }
@@ -57,12 +58,12 @@ const longBefore = Date.parse('2026-01-01T00:00:00.000Z');
 export function keptLongBeforeAndLost(
   content: RecordedContent,
   store: Pick<ContentStore, 'delete'>,
-  owner: ContentOwner,
+  owner: PlaybookAddress,
   value: Schema.Json,
 ): Effect.Effect<Digested> {
   return TestClock.setTime(longBefore).pipe(
     Effect.andThen(keptIn(content, owner, value)),
-    Effect.tap(({ sha256 }) => store.delete(streamPrefixOfPlaybook(owner), sha256)),
+    Effect.tap(({ sha256 }) => store.delete(streamPrefixOfOrg(owner), sha256)),
     Effect.provide(TestClock.layer()),
   );
 }
@@ -109,7 +110,7 @@ export function watchedStore(): WatchedStore {
   };
 }
 
-export function erasingReader({ org, playbook }: ContentOwner): PayloadReader {
+export function erasingReader({ org, playbook }: PlaybookAddress): PayloadReader {
   const erased = ({ sha256 }: Digested) =>
     Effect.fail(new PayloadErased({ org, playbook, sha256, message: `The payload kept under ${sha256} was erased` }));
   return { json: erased, text: erased, all: () => erased({ sha256: 'each', bytes: 0 }) };

@@ -1,7 +1,7 @@
 import { PutObjectCommand, S3ServiceException } from '@aws-sdk/client-s3';
 import { sha256Of, textToKeep } from '@on.auto/content';
 import { alpha, generated, octets, resultOf } from '@on.auto/content/testing';
-import { streamPrefixOfPlaybook } from '@on.auto/operations';
+import { streamPrefixOfOrg } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -9,7 +9,7 @@ import { objectKeysOf } from '../location/object-keys.ts';
 import { bucketOnS3, uploadPartBytes } from '../s3/s3-bucket.ts';
 import { fakeContentStore, type FakeContentStore } from '../testing/fake-bucket.ts';
 
-const alphaPlace = streamPrefixOfPlaybook(alpha);
+const alphaPlace = streamPrefixOfOrg(alpha);
 
 const location = { bucket: 'content', prefix: 'playbooks' };
 

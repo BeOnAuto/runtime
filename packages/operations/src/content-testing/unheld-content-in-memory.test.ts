@@ -1,4 +1,4 @@
-import { alpha, memoryContentStore } from '@on.auto/content/testing';
+import { memoryContentStore } from '@on.auto/content/testing';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -6,7 +6,18 @@ import type { LedgerPorts } from '../ledger/ledger.ts';
 import type { KeyedProjection } from '../projections/keyed-projection.ts';
 import type { RunOutcomeMapping } from '../run-outcomes/run-outcomes.ts';
 import { memoryLedger } from '../testing/memory-ledger.ts';
-import { anHour, firstNotes, heldNotes, kept, keptAt, keptIn, noteHolders, noted, removedAt } from './held-notes.ts';
+import {
+  anHour,
+  firstNotes,
+  heldNotes,
+  kept,
+  keptAt,
+  keptIn,
+  noteHolders,
+  noted,
+  removedAt,
+  alpha,
+} from './held-notes.ts';
 import { interleavedRemovalBehaviour } from './interleaved-removal-behaviour.ts';
 import { unheldContentBehaviour } from './unheld-content-behaviour.ts';
 

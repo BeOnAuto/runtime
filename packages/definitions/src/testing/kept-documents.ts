@@ -1,4 +1,5 @@
-import { sha256Of, type ContentOwner, type Digested, type RecordedContent } from '@on.auto/content';
+import { sha256Of, type Digested, type RecordedContent } from '@on.auto/content';
+import type { PlaybookAddress } from '@on.auto/operations';
 import { payloadKept, textBytesOf, textPayloadText } from '@on.auto/operations/payloads';
 import { Effect, Schema } from 'effect';
 
@@ -24,7 +25,7 @@ export function keptArmOfText(text: string): Digested {
   return { sha256: sha256Of(text), bytes: textBytesOf(text) };
 }
 
-export function textKeptIn(content: Pick<RecordedContent, 'put'>, owner: ContentOwner, text: string) {
+export function textKeptIn(content: Pick<RecordedContent, 'put'>, owner: PlaybookAddress, text: string) {
   const kept = keptArmOfText(text);
   return Effect.as(Effect.orDie(payloadKept(content, owner, { ...kept, ...textPayloadText(text) })), kept);
 }

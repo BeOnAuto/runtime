@@ -1,5 +1,5 @@
-import type { ContentOwner } from '@on.auto/content';
 import { contentAddressLastsSeconds } from '@on.auto/identity';
+import type { PlaybookAddress } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import type { AssetAddresses } from '../capability/generation-ports.ts';
@@ -20,7 +20,7 @@ export const noAddress: AssetAddress = { address: null, address_until: null };
 
 export function addressOf(
   addresses: AssetAddresses | undefined,
-  playbook: ContentOwner,
+  playbook: PlaybookAddress,
   sha256: string,
   now: number,
 ): AssetAddress {

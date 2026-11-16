@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-import type { ContentOwner } from '@on.auto/content';
+import type { PlaybookAddress } from '@on.auto/operations';
 import { Redacted } from 'effect';
 
 import { isHttpsOrLoopback } from '../access/loopback-names.ts';
@@ -20,21 +20,30 @@ export type ContentAddressCheck = 'signed' | 'expired' | 'not_for_this_content';
 
 export type SignedContentAddress = (
   ownOrigin: string,
-  playbook: ContentOwner,
+  playbook: PlaybookAddress,
   sha256: string,
   until: number,
 ) => string | undefined;
 
 export interface ContentAddresses {
   readonly signedContentAddress: SignedContentAddress;
-  readonly checkedAddress: (playbook: ContentOwner, sha256: string, presented: ContentSignature) => ContentAddressCheck;
+  readonly checkedAddress: (
+    playbook: PlaybookAddress,
+    sha256: string,
+    presented: ContentSignature,
+  ) => ContentAddressCheck;
 }
 
 const untilText = /^\d{1,15}$/u;
 
 const sha256Text = /^[0-9a-f]{64}$/u;
 
-function signatureOf(key: ContentAddressKey, { org, playbook }: ContentOwner, sha256: string, until: string): Buffer {
+function signatureOf(
+  key: ContentAddressKey,
+  { org, playbook }: PlaybookAddress,
+  sha256: string,
+  until: string,
+): Buffer {
   return createHmac('sha256', Redacted.value(key))
     .update(JSON.stringify([org, playbook, sha256, until]))
     .digest();
@@ -44,7 +53,7 @@ function secondsAt(milliseconds: number): number {
   return Math.floor(milliseconds / 1000);
 }
 
-export function contentPathOf({ org, playbook }: ContentOwner, sha256: string): string {
+export function contentPathOf({ org, playbook }: PlaybookAddress, sha256: string): string {
   return ['', 'v1', 'orgs', org, 'playbooks', playbook, 'content', sha256]
     .map((segment) => encodeURIComponent(segment))
     .join('/');
@@ -54,7 +63,7 @@ export function contentAddressesUnder(key: ContentAddressKey, now: () => number 
   const lastPossibleUntil = () => secondsAt(now()) + contentAddressLastsSeconds;
   const withinTheMostItLasts = (until: string) =>
     untilText.test(until) && Number(until) <= lastPossibleUntil() + clockAllowanceSeconds;
-  const signedFor = (playbook: ContentOwner, sha256: string, { until = '', sig = '' }: ContentSignature) =>
+  const signedFor = (playbook: PlaybookAddress, sha256: string, { until = '', sig = '' }: ContentSignature) =>
     sha256Text.test(sha256) &&
     withinTheMostItLasts(until) &&
     sha256Text.test(sig) &&

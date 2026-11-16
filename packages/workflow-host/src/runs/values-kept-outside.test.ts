@@ -70,7 +70,7 @@ async function runLogOn(settings: DatabaseSettings) {
 
 async function heldOn(settings: DatabaseSettings) {
   const database = await openedOn(settings);
-  const rows = await Effect.runPromise(database.read(statement`SELECT stream, held FROM content_references_1`));
+  const rows = await Effect.runPromise(database.read(statement`SELECT stream, held FROM content_references_2`));
   return Schema.decodeUnknownSync(HeldRows)(rows).filter(({ stream }) => stream === runLog);
 }
 

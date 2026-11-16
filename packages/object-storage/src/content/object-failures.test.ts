@@ -96,7 +96,7 @@ describe('a put on object storage that its store fails', () => {
     unreachable.bucket.intercepting('PutObjectCommand', () => Promise.reject(new TypeError('fetch failed')));
 
     const reads = [
-      Effect.runPromise(refusing.content.get(alpha, sha256Of('a'))),
+      Effect.runPromise(refusing.read('org/acme/', sha256Of('a'))),
       Effect.runPromise(unreachable.content.put(alpha, textToKeep('a', octets))),
     ];
 

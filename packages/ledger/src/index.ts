@@ -81,6 +81,7 @@ export {
 export { LedgerFactsRefused, type FactSchemaRead, type UnreadableFact } from './layout/ledger-facts-refused.ts';
 export { LedgerLayoutRefused } from './layout/ledger-layout-refused.ts';
 export { ledgerLayoutSteps } from './layout/ledger-steps.ts';
+export { orgContentLayout } from './org-content/org-content-step.ts';
 export type { LedgerServices, OpenedLedger } from './ledger-layer.ts';
 export { cursorOf as recordedCursorOf } from './recorded/cursor.ts';
 export {

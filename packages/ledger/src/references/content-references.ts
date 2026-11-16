@@ -1,5 +1,5 @@
 import { SQL } from '@event-driven-io/dumbo';
-import { noHoldersKnown, streamPrefixOfPlaybook, type ContentHolders } from '@on.auto/operations';
+import { noHoldersKnown, streamPrefixOfOrg, type ContentHolders } from '@on.auto/operations';
 
 import type { InTransaction, StatementExecutor, UnlessHeld } from '../event-store.ts';
 import { inlineRegistrationOf, inTurn, type InlineRegistration } from '../projections/inline-projection.ts';
@@ -62,11 +62,11 @@ function referencesKept(keeping: ReferencesKeeping): ContentReferences {
     registrations: keeping.holders.size === 0 ? [] : [inlineRegistrationOf(keepingReferences(keeping))],
     prepare: (execute, inTransaction) => prepared(keeping, execute, inTransaction),
     refolded: (execute, stream) => referencesRefolded(keeping, execute, stream),
-    unlessHeldOn: (inTransaction) => (playbook, sha256, within) =>
+    unlessHeldOn: (inTransaction) => (owner, sha256, within) =>
       inTransaction(async (execute) => {
-        const prefix = streamPrefixOfPlaybook(playbook);
-        await digestsLocked(execute, keeping.dialect, prefix, [sha256]);
-        return (await isHeldIn(execute, prefix, sha256)) ? 'held' : within(execute);
+        const orgKey = streamPrefixOfOrg(owner);
+        await digestsLocked(execute, keeping.dialect, orgKey, [sha256]);
+        return (await isHeldIn(execute, orgKey, sha256)) ? 'held' : within(execute);
       }),
     heldHeadsOn: (read) => (most) => firstHeldHeads(read, most),
   };

@@ -2,12 +2,14 @@ import { Effect, Function } from 'effect';
 import { TestClock } from 'effect/testing';
 
 import { sha256Digest } from '../content/content-digest.ts';
-import type { ContentOwner, Digested } from '../content/recorded-content.ts';
+import type { Digested, PlaybookAddress } from '../content/recorded-content.ts';
 import type { ContentToKeep, StreamedContent } from '../content/streamed-content.ts';
 
-export const alpha: ContentOwner = { org: 'acme', playbook: 'alpha' };
+export const alpha: PlaybookAddress = { org: 'acme', playbook: 'alpha' };
 
-export const beta: ContentOwner = { org: 'acme', playbook: 'beta' };
+export const beta: PlaybookAddress = { org: 'acme', playbook: 'beta' };
+
+export const elsewhere: PlaybookAddress = { org: 'globex', playbook: 'gamma' };
 
 export const octets = 'application/octet-stream';
 

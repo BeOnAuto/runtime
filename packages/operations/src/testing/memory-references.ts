@@ -1,12 +1,10 @@
-import type { KeptOutside } from '@on.auto/content';
+import type { ContentOwner, KeptOutside } from '@on.auto/content';
 import type { HeldIn } from '@on.auto/content/testing';
 import { Clock, Effect, Function } from 'effect';
 
-import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import type { ContentHolders } from '../held-content/content-declaration.ts';
 import { heldOver, type HeldDigests } from '../held-content/held-digests.ts';
 import { keptContentGraceMs, noHoldersKnown, type UnheldContentRemover } from '../held-content/unheld-removal.ts';
-import { streamPrefixOfPlaybook } from '../ledger/bound-ports.ts';
 import type { TypedEvent } from '../ledger/decider.ts';
 import { addressedStreamOf } from '../projections/keyed-projection.ts';
 
@@ -21,10 +19,10 @@ function ofAPlaybook(stream: string): boolean {
   return addressedStreamOf(stream)?.scope === 'playbook';
 }
 
-function heldAmong(held: ReadonlyMap<string, HeldDigests>, playbook: PlaybookAddress, sha256: string): boolean {
-  const prefix = streamPrefixOfPlaybook(playbook);
+function heldAmong(held: ReadonlyMap<string, HeldDigests>, { org }: ContentOwner, sha256: string): boolean {
   return [...held].some(
-    ([stream, digests]: readonly [string, HeldDigests]) => stream.startsWith(prefix) && (digests.get(sha256) ?? 0) > 0,
+    ([stream, digests]: readonly [string, HeldDigests]) =>
+      addressedStreamOf(stream)?.address.org === org && (digests.get(sha256) ?? 0) > 0,
   );
 }
 
@@ -44,11 +42,11 @@ function referencesBy(holders: ContentHolders): MemoryReferences {
     refold: (stream, facts) => {
       folded(stream, facts)();
     },
-    heldIn: (playbook, sha256) => heldAmong(held, playbook, sha256),
+    heldIn: (owner, sha256) => heldAmong(held, owner, sha256),
     removalOver:
       ({ removedKeptBefore }) =>
-      (playbook, sha256) =>
-        Effect.flatMap(Clock.currentTimeMillis, (now) => removedKeptBefore(playbook, sha256, now - keptContentGraceMs)),
+      (owner, sha256) =>
+        Effect.flatMap(Clock.currentTimeMillis, (now) => removedKeptBefore(owner, sha256, now - keptContentGraceMs)),
   };
 }
 

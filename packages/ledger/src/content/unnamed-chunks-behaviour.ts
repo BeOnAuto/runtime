@@ -31,8 +31,8 @@ async function orphanedLike(
 ): Promise<void> {
   await entry.queried(
     database,
-    `INSERT INTO recorded_content_chunks (playbook_key, upload_id, chunk, data)
-      SELECT playbook_key, '${upload}', chunk, data FROM recorded_content_chunks WHERE upload_id = '${named.join()}'`,
+    `INSERT INTO recorded_content_chunks (place_key, upload_id, chunk, data)
+      SELECT place_key, '${upload}', chunk, data FROM recorded_content_chunks WHERE upload_id = '${named.join()}'`,
   );
 }
 

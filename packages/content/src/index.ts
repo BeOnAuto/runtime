@@ -12,6 +12,7 @@ export type {
   HeadMarked,
   HeadToKeep,
   KeptContentHead,
+  PlaybookAddress,
   RecordedContent,
   RemovalTimes,
   StagedContent,

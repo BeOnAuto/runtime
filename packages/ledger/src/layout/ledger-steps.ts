@@ -1,5 +1,6 @@
 import { statement } from '../connection/statement.ts';
 import { byDefinitionIndex, definitionNamesTable } from '../definition-names/definition-names-table.ts';
+import { orgContentCarried, orgContentLayout } from '../org-content/org-content-step.ts';
 import type { LayoutStep } from './layout-steps.ts';
 
 const headsBeforeLayout21 = statement`CREATE TABLE IF NOT EXISTS recorded_content_heads (
@@ -74,4 +75,5 @@ export const ledgerLayoutSteps: readonly LayoutStep[] = [
       },
     ],
   },
+  { layout: orgContentLayout, statements: [orgContentCarried] },
 ];

@@ -1,6 +1,7 @@
-import { textToKeep, type ContentOwner, type ContentRefused, type RecordedContent } from '@on.auto/content';
+import { textToKeep, type ContentRefused, type RecordedContent } from '@on.auto/content';
 import { Effect } from 'effect';
 
+import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import type { Unavailable } from '../outcome/unavailable.ts';
 import { noPayloadCache, type PayloadCache } from './payload-cache.ts';
 import { noPayloadGate, type PayloadGate } from './payload-gate.ts';
@@ -16,7 +17,7 @@ interface KeptWith {
 
 export function payloadKept(
   content: Pick<RecordedContent, 'put'>,
-  owner: ContentOwner,
+  owner: PlaybookAddress,
   { sha256, bytes, text, mediaType }: PayloadToKeep,
   { cache = noPayloadCache, gate = noPayloadGate }: KeptWith = {},
 ): Effect.Effect<void, Unavailable> {

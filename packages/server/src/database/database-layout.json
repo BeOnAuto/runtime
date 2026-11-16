@@ -1,5 +1,5 @@
 {
-  "layout": 24,
+  "layout": 25,
   "catalog": [
     {
       "name": "activity_1",
@@ -106,12 +106,16 @@
       "sql": "CREATE INDEX comments_2_open ON comments_2 (playbook_key, open, at, row_key)"
     },
     {
-      "name": "content_references_1",
-      "sql": "CREATE TABLE content_references_1 (playbook_key TEXT NOT NULL, stream TEXT NOT NULL, sha256 TEXT NOT NULL, held INTEGER NOT NULL, PRIMARY KEY (playbook_key, stream, sha256))"
+      "name": "content_references_2",
+      "sql": "CREATE TABLE content_references_2 (org_key TEXT NOT NULL, playbook_key TEXT NOT NULL, stream TEXT NOT NULL, sha256 TEXT NOT NULL, held INTEGER NOT NULL, PRIMARY KEY (playbook_key, stream, sha256))"
     },
     {
-      "name": "content_references_1_by_digest",
-      "sql": "CREATE INDEX content_references_1_by_digest ON content_references_1 (playbook_key, sha256)"
+      "name": "content_references_2_by_digest",
+      "sql": "CREATE INDEX content_references_2_by_digest ON content_references_2 (playbook_key, sha256)"
+    },
+    {
+      "name": "content_references_2_by_org_and_digest",
+      "sql": "CREATE INDEX content_references_2_by_org_and_digest ON content_references_2 (org_key, sha256)"
     },
     {
       "name": "conversations_4",
@@ -339,19 +343,23 @@
     },
     {
       "name": "recorded_content_chunks",
-      "sql": "CREATE TABLE recorded_content_chunks (playbook_key TEXT NOT NULL, upload_id TEXT NOT NULL, chunk INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (playbook_key, upload_id, chunk))"
+      "sql": "CREATE TABLE recorded_content_chunks (place_key TEXT NOT NULL, upload_id TEXT NOT NULL, chunk INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (place_key, upload_id, chunk))"
     },
     {
       "name": "recorded_content_heads",
-      "sql": "CREATE TABLE recorded_content_heads (playbook_key TEXT NOT NULL, sha256 TEXT NOT NULL, upload_id TEXT NOT NULL, bytes BIGINT NOT NULL, chunks INTEGER NOT NULL, media_type TEXT NOT NULL, kept_at BIGINT NOT NULL DEFAULT 0, kept_in TEXT NOT NULL DEFAULT 'ledger', removing_since BIGINT, expires_at BIGINT, erased_at BIGINT, PRIMARY KEY (playbook_key, sha256))"
+      "sql": "CREATE TABLE recorded_content_heads (org_key TEXT NOT NULL, sha256 TEXT NOT NULL, place_key TEXT NOT NULL, upload_id TEXT NOT NULL, bytes BIGINT NOT NULL, chunks INTEGER NOT NULL, media_type TEXT NOT NULL, kept_at BIGINT NOT NULL DEFAULT 0, kept_in TEXT NOT NULL DEFAULT 'ledger', removing_since BIGINT, expires_at BIGINT, erased_at BIGINT, PRIMARY KEY (org_key, sha256))"
     },
     {
       "name": "recorded_content_heads_by_upload",
-      "sql": "CREATE INDEX recorded_content_heads_by_upload ON recorded_content_heads (playbook_key, upload_id)"
+      "sql": "CREATE INDEX recorded_content_heads_by_upload ON recorded_content_heads (place_key, upload_id)"
     },
     {
       "name": "recorded_content_heads_expiring",
       "sql": "CREATE INDEX recorded_content_heads_expiring ON recorded_content_heads (expires_at) WHERE expires_at IS NOT NULL"
+    },
+    {
+      "name": "recorded_content_places",
+      "sql": "CREATE TABLE recorded_content_places (org_key TEXT NOT NULL, sha256 TEXT NOT NULL, place_key TEXT NOT NULL, PRIMARY KEY (org_key, sha256, place_key))"
     },
     {
       "name": "role_assignments_1",

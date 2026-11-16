@@ -1,5 +1,4 @@
 import { sha256Of } from '@on.auto/content';
-import { alpha } from '@on.auto/content/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -17,6 +16,7 @@ import {
   writtenNotes,
   wrote,
   type UnheldContentEntry,
+  alpha,
 } from './held-notes.ts';
 
 const writingsOfTheOrg = 'org/acme/writings/w1';
@@ -66,14 +66,14 @@ function measuredByTheirPayloads(entry: UnheldContentEntry): void {
 }
 
 function refusedUnheld(entry: UnheldContentEntry): void {
-  it("refuses, and records nothing, a fact that names a payload the playbook's content does not keep", async () => {
+  it("refuses, and records nothing, a fact that names a payload the org's content does not keep", async () => {
     const ledger = await entry.aLedger(noteHolders);
     const never = sha256Of('never kept');
 
     const refused = wrote(ledger, firstWritings, written({ body_sha256: never, body_bytes: 10 }));
 
     await expect(refused).rejects.toThrow(
-      `A fact names the payload ${never} of playbook/acme/alpha/, which the playbook's content does not keep`,
+      `A fact names the payload ${never} of org/acme/, which the org's content does not keep`,
     );
     expect(await versionOf(ledger, firstWritings)).toBe(0);
   });

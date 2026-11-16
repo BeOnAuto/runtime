@@ -1,6 +1,7 @@
 import {
   addressedStreamOf,
   digestsChanged,
+  streamPrefixOfOrg,
   digestsTouchedBy,
   heldOver,
   releasesEverything,
@@ -38,7 +39,9 @@ interface PlacedFact {
 
 function placeOf(stream: string): ReferencesPlace | undefined {
   const named = addressedStreamOf(stream);
-  return named?.scope === 'playbook' ? { prefix: named.prefix, stream: `${named.kind}/${named.id}` } : undefined;
+  return named?.scope === 'playbook'
+    ? { orgKey: streamPrefixOfOrg(named.address), prefix: named.prefix, stream: `${named.kind}/${named.id}` }
+    : undefined;
 }
 
 function placedOf(stream: string, fact: TypedEvent): readonly PlacedFact[] {
@@ -94,7 +97,7 @@ function changesLocked(
   return digestsLockedInOrder(
     execute,
     dialect,
-    changes.map(({ place, changed }) => ({ prefix: place.prefix, digests: changed })),
+    changes.map(({ place, changed }) => ({ orgKey: place.orgKey, digests: changed })),
   );
 }
 
@@ -148,11 +151,11 @@ function payloadDigestsOf(
   { holders }: ReferencesKeeping,
   placed: readonly PlacedFact[],
 ): ReadonlyMap<string, readonly string[]> {
-  const byPlaybook = new Map<string, readonly string[]>();
+  const byOrg = new Map<string, readonly string[]>();
   for (const { place, fact } of placed) {
-    byPlaybook.set(place.prefix, [...(byPlaybook.get(place.prefix) ?? []), ...payloadDigestsNamed(holders, fact)]);
+    byOrg.set(place.orgKey, [...(byOrg.get(place.orgKey) ?? []), ...payloadDigestsNamed(holders, fact)]);
   }
-  return byPlaybook;
+  return byOrg;
 }
 
 async function requirePayloadsHeaded(
@@ -162,11 +165,11 @@ async function requirePayloadsHeaded(
 ): Promise<void> {
   await inTurn(
     [...payloadDigestsOf(keeping, placed)],
-    async ([prefix, digests]: readonly [string, readonly string[]]) => {
-      const [unheaded] = digests.length === 0 ? [] : await digestsWithoutAHead(execute, prefix, digests);
+    async ([orgKey, digests]: readonly [string, readonly string[]]) => {
+      const [unheaded] = digests.length === 0 ? [] : await digestsWithoutAHead(execute, orgKey, digests);
       if (unheaded !== undefined) {
         throw new Error(
-          `A fact names the payload ${unheaded} of ${prefix}, which the playbook's content does not keep; a payload is put before the fact that names it is appended`,
+          `A fact names the payload ${unheaded} of ${orgKey}, which the org's content does not keep; a payload is put before the fact that names it is appended`,
         );
       }
     },

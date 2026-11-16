@@ -1,10 +1,10 @@
-import type { ContentOwner } from '@on.auto/content';
 import {
   playbookRowsOf,
   type PlaybookProjectedRow,
   type ProjectionReader,
   type StreamWriter,
   type UnheldContentRemover,
+  type PlaybookAddress,
 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
@@ -36,7 +36,7 @@ const byTheRuntime = 'runtime';
 const expiringColumn = 'expires_at';
 
 interface Expiring {
-  readonly playbook: ContentOwner;
+  readonly playbook: PlaybookAddress;
   readonly id: string;
   readonly row: AssetRow;
 }

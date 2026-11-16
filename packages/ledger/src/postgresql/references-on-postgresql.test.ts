@@ -20,6 +20,8 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 
 const prefix = 'playbook/acme/alpha/';
 
+const orgKey = 'org/acme/';
+
 const keptAt = Date.parse('2026-11-01T09:00:00.000Z');
 
 const pastItsHour = keptAt + keptContentGraceMs + 1;
@@ -76,7 +78,7 @@ async function theDigestLockedBy(database: string, sha256: string): Promise<Clie
   const holding = await connected(database);
   await holding.query('BEGIN');
   await holding.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
-    `content_references_1:${prefix}${sha256}`,
+    `content_references_2:${orgKey}${sha256}`,
   ]);
   return holding;
 }
@@ -87,8 +89,8 @@ describe.skipIf(skipped)(`The holds on a content beside its removal on PostgreSQ
     const { ledger, sha256 } = await aLedgerHolding(database);
     const folding = await theDigestLockedBy(database, sha256);
     await folding.query(
-      `INSERT INTO content_references_1 (playbook_key, stream, sha256, held) VALUES ($1, 'notes/n1', $2, 1)`,
-      [prefix, sha256],
+      `INSERT INTO content_references_2 (org_key, playbook_key, stream, sha256, held) VALUES ($1, $2, 'notes/n1', $3, 1)`,
+      [orgKey, prefix, sha256],
     );
 
     const removing = at(pastItsHour, ledger.removeUnheld(alpha, sha256));
@@ -110,7 +112,7 @@ describe.skipIf(skipped)(`The holds on a content beside its removal on PostgreSQ
     await removing.query('COMMIT');
     await folding;
 
-    expect(await queried(database, 'SELECT stream, sha256, held::int AS held FROM content_references_1')).toEqual([
+    expect(await queried(database, 'SELECT stream, sha256, held::int AS held FROM content_references_2')).toEqual([
       { stream: 'notes/n1', sha256, held: 1 },
     ]);
     expect(await at(pastItsHour, ledger.removeUnheld(alpha, sha256))).toBe('held');

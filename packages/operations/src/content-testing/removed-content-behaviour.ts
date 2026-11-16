@@ -1,19 +1,27 @@
 import { sha256Of, textToKeep } from '@on.auto/content';
-import { alpha, at, beta, generated, json, present, readBack, resultOf } from '@on.auto/content/testing';
+import { at, generated, json, present, readBack, resultOf } from '@on.auto/content/testing';
 import { describe, expect, it } from 'vitest';
 
-import { anHour, keptAt, noteHolders, removedAt, type UnheldContentEntry } from './held-notes.ts';
+import {
+  anHour,
+  keptAt,
+  noteHolders,
+  removedAt,
+  type UnheldContentEntry,
+  alpha,
+  beta,
+  elsewhere,
+} from './held-notes.ts';
 
 const pastItsHour = keptAt + anHour + 1;
 
 function removedWhole(entry: UnheldContentEntry): void {
-  it('removes a content of one chunk and one of several nothing holds once their hour has passed, so no read finds them, and leaves the other contents of the playbook and the same digest in another playbook whole', async () => {
+  it('removes a content of one chunk and one of several nothing holds once their hour has passed, so no read of any playbook of its org finds them, and leaves the other contents of the org whole', async () => {
     const ledger = await entry.aLedger(noteHolders);
     const [small, large, other] = [await generated(1000), await generated(2_500_000), await generated(1000, 11)];
     await at(keptAt, ledger.content.put(alpha, small.content()));
-    await at(keptAt, ledger.content.put(alpha, large.content()));
-    await at(keptAt + anHour, ledger.content.put(alpha, other.content()));
     await at(keptAt, ledger.content.put(beta, large.content()));
+    await at(keptAt + anHour, ledger.content.put(alpha, other.content()));
 
     const removed = [
       await removedAt(ledger, pastItsHour, alpha, small.sha256),
@@ -21,24 +29,20 @@ function removedWhole(entry: UnheldContentEntry): void {
     ];
 
     expect(removed).toEqual(['removed', 'removed']);
-    expect(await resultOf(ledger.content.get(alpha, small.sha256))).toBeUndefined();
-    expect(await resultOf(ledger.content.get(alpha, large.sha256))).toBeUndefined();
-    expect(await readBack(await present(ledger.content.get(alpha, other.sha256)))).toMatchObject({
+    expect(await resultOf(ledger.content.get(beta, small.sha256))).toBeUndefined();
+    expect(await resultOf(ledger.content.get(beta, large.sha256))).toBeUndefined();
+    expect(await readBack(await present(ledger.content.get(beta, other.sha256)))).toMatchObject({
       sha256: other.sha256,
       bytes: 1000,
     });
-    expect(await readBack(await present(ledger.content.get(beta, large.sha256)))).toMatchObject({
-      sha256: large.sha256,
-      bytes: 2_500_000,
-    });
   });
 
-  it('removes a content its playbook does not hold, or no longer holds, without failing, and answers it removed', async () => {
+  it('removes a content its org does not hold, or no longer holds, without failing, and answers it removed', async () => {
     const ledger = await entry.aLedger(noteHolders);
     const { sha256 } = await at(keptAt, ledger.content.put(alpha, textToKeep('{"a":1}', json)));
 
     const removed = [
-      await removedAt(ledger, pastItsHour, beta, sha256),
+      await removedAt(ledger, pastItsHour, elsewhere, sha256),
       await removedAt(ledger, pastItsHour, alpha, sha256),
       await removedAt(ledger, pastItsHour, alpha, sha256),
     ];

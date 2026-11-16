@@ -1,6 +1,11 @@
-import type { ContentOwner } from '@on.auto/content';
 import { RunEventSchema, type RecordedRunEvent, type RunEvent } from '@on.auto/definitions';
-import { Ledger, playbookRowsOf, streamPrefixOfPlaybook, type Decider } from '@on.auto/operations';
+import {
+  Ledger,
+  playbookRowsOf,
+  streamPrefixOfPlaybook,
+  type Decider,
+  type PlaybookAddress,
+} from '@on.auto/operations';
 import { Effect, Result, type Layer } from 'effect';
 import { expect, it } from 'vitest';
 
@@ -45,7 +50,7 @@ const recording: Decider<null, RunEvent, RecordedRunEvent> = {
   eventSchema: RunEventSchema,
 };
 
-function recorded(playbook: ContentOwner, run: string, event: RunEvent) {
+function recorded(playbook: PlaybookAddress, run: string, event: RunEvent) {
   return Effect.flatMap(Effect.service(Ledger), (ledger) =>
     ledger.execute(`${streamPrefixOfPlaybook(playbook)}runs/${run}`, recording, event),
   );

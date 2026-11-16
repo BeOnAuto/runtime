@@ -1,12 +1,12 @@
 import { SQL } from '@event-driven-io/dumbo';
 import type { ExpiredErased } from '@on.auto/content';
-import { playbookOfStreamPrefix, randomUUIDv7, uuidV7TimeOf } from '@on.auto/operations';
+import { orgOfStreamPrefix, randomUUIDv7, uuidV7TimeOf } from '@on.auto/operations';
 import { Context, Effect, Option, Schema } from 'effect';
 
 import type { LedgerContent, OwnContentStore, StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import { HeldContentUnchecked, type HeldHead, type HeldHeads } from '../references/held-heads.ts';
-import { dueBy, keptExternally, keptInTheLedger, keptShelf, shelves, type Shelf } from './content-tables.ts';
+import { dueBy, keptExternally, keptInTheLedger, keptShelf, type Shelf } from './content-tables.ts';
 
 export const unnamedChunksLastMs = 3_600_000;
 
@@ -23,24 +23,17 @@ export interface ChorePorts {
 
 export class LedgerChores extends Context.Service<LedgerChores, ChorePorts>()('@on.auto/ledger/LedgerChores') {}
 
-export function unnamedChunksSwept({ chunks, heads, placeColumns }: Shelf, before: string): SQL {
-  const sameUpload = SQL.merge(
-    [...placeColumns, 'upload_id'].map(
-      (column) =>
-        SQL`${SQL.identifier(heads)}.${SQL.identifier(column)} = ${SQL.identifier(chunks)}.${SQL.identifier(column)}`,
-    ),
-    ' AND ',
-  );
-  return SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE substr(upload_id, 1, 8) || substr(upload_id, 10, 4) < ${before}
-      AND NOT EXISTS (SELECT 1 FROM ${SQL.identifier(heads)} WHERE ${sameUpload})`;
-}
-
-function sweptShelf(execute: StatementExecutor, shelf: Shelf, before: string): Promise<unknown> {
-  return execute.command(unnamedChunksSwept(shelf, before));
+export function unnamedChunksSwept({ chunks, heads }: Shelf, before: string): SQL {
+  const [chunked, headed] = [SQL.identifier(chunks), SQL.identifier(heads)];
+  return SQL`DELETE FROM ${chunked} WHERE substr(upload_id, 1, 8) || substr(upload_id, 10, 4) < ${before}
+      AND NOT EXISTS (SELECT 1 FROM ${headed}
+        WHERE ${headed}.place_key = ${chunked}.place_key AND ${headed}.upload_id = ${chunked}.upload_id)`;
 }
 
 export function contentSweepOn(execute: StatementExecutor): ContentSweeping['sweepContent'] {
-  return (before) => inTurn(shelves, (shelf) => sweptShelf(execute, shelf, uuidV7TimeOf(before)));
+  return async (before) => {
+    await execute.command(unnamedChunksSwept(keptShelf, uuidV7TimeOf(before)));
+  };
 }
 
 export function orphansSweptOf({ sweepContent }: ContentSweeping): ChorePorts['sweepOrphans'] {
@@ -61,7 +54,7 @@ export function orphansSweptOf({ sweepContent }: ContentSweeping): ChorePorts['s
 const heads = SQL.identifier(keptShelf.heads);
 
 const ExpiredRows = Schema.Array(
-  Schema.Struct({ playbook_key: Schema.String, sha256: Schema.String, upload_id: Schema.String }),
+  Schema.Struct({ org_key: Schema.String, sha256: Schema.String, place_key: Schema.String, upload_id: Schema.String }),
 );
 
 const ErasedRows = Schema.Array(Schema.Struct({ upload_id: Schema.String }));
@@ -69,23 +62,23 @@ const ErasedRows = Schema.Array(Schema.Struct({ upload_id: Schema.String }));
 type Expired = (typeof ExpiredRows.Type)[number];
 
 export function ownExpiredRead(now: number, most: number): SQL {
-  return SQL`SELECT playbook_key, sha256, upload_id FROM ${heads}
+  return SQL`SELECT org_key, sha256, place_key, upload_id FROM ${heads}
     WHERE ${dueBy(now)} AND kept_in = ${keptInTheLedger}
     ORDER BY expires_at LIMIT ${most}`;
 }
 
 async function erasedOnce(execute: StatementExecutor, expired: Expired, now: number): Promise<number> {
-  const { playbook_key, sha256, upload_id } = expired;
+  const { org_key, sha256, place_key, upload_id } = expired;
   const { rows } = await execute.query(
     SQL`UPDATE ${heads} SET erased_at = ${now}, expires_at = NULL, upload_id = ${randomUUIDv7()}
-      WHERE playbook_key = ${playbook_key} AND sha256 = ${sha256} AND upload_id = ${upload_id}
+      WHERE org_key = ${org_key} AND sha256 = ${sha256} AND upload_id = ${upload_id}
         AND kept_in = ${keptInTheLedger} AND ${dueBy(now)}
       RETURNING upload_id`,
   );
   const erased = Schema.decodeUnknownSync(ErasedRows)(rows);
   await inTurn(erased.length > 0 ? [upload_id] : [], (upload) =>
     execute.command(
-      SQL`DELETE FROM ${SQL.identifier(keptShelf.chunks)} WHERE playbook_key = ${playbook_key} AND upload_id = ${upload}`,
+      SQL`DELETE FROM ${SQL.identifier(keptShelf.chunks)} WHERE place_key = ${place_key} AND upload_id = ${upload}`,
     ),
   );
   return erased.length;
@@ -125,10 +118,10 @@ function findingOf(
   { kept, outside }: HeldContentLooking,
   head: HeldHead,
 ): Effect.Effect<Finding, HeldContentUnchecked> {
-  return Option.match(playbookOfStreamPrefix(head.playbookKey), {
+  return Option.match(orgOfStreamPrefix(head.orgKey), {
     onNone: () => Effect.succeed<Finding>('missing'),
-    onSome: (playbook) =>
-      kept.found(playbook, head.sha256).pipe(
+    onSome: ({ org }) =>
+      kept.found({ org }, head.sha256).pipe(
         Effect.map((found): Finding => (found ? 'found' : notFoundAs(head, outside))),
         Effect.catchDefect((failure) => Effect.fail(new HeldContentUnchecked({ failure }))),
       ),

@@ -1,5 +1,4 @@
-import type { ContentOwner } from '@on.auto/content';
-import { Conflict, type ProjectionReader } from '@on.auto/operations';
+import { Conflict, type ProjectionReader, type PlaybookAddress } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { assetTotalsName, rowKeyed, totalsKey, totalsRowOf } from '../assets/asset-projections.ts';
@@ -7,7 +6,7 @@ import { sizeInWords } from '../assets/asset-words.ts';
 
 export type TotalsReading = Pick<ProjectionReader, 'readProjectedRows'>;
 
-function bytesKeptBy(ledger: TotalsReading, playbook: ContentOwner): Effect.Effect<number> {
+function bytesKeptBy(ledger: TotalsReading, playbook: PlaybookAddress): Effect.Effect<number> {
   return Effect.map(
     ledger.readProjectedRows(assetTotalsName, playbook, rowKeyed(totalsKey)),
     ([kept]) => totalsRowOf(kept?.row).bytes,
@@ -21,7 +20,11 @@ function full(kept: number, most: number): Conflict {
   });
 }
 
-export function roomLeft(ledger: TotalsReading, playbook: ContentOwner, most: number): Effect.Effect<void, Conflict> {
+export function roomLeft(
+  ledger: TotalsReading,
+  playbook: PlaybookAddress,
+  most: number,
+): Effect.Effect<void, Conflict> {
   return Effect.flatMap(bytesKeptBy(ledger, playbook), (kept) =>
     kept < most ? Effect.void : Effect.fail(full(kept, most)),
   );

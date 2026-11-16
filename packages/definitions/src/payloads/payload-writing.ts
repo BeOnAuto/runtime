@@ -1,5 +1,11 @@
-import type { ContentOwner, RecordedContent } from '@on.auto/content';
-import { playbookPayloadKept, type PlaybookContext, type PlaybookWriter, type Unavailable } from '@on.auto/operations';
+import type { RecordedContent } from '@on.auto/content';
+import {
+  playbookPayloadKept,
+  type PlaybookContext,
+  type PlaybookWriter,
+  type Unavailable,
+  type PlaybookAddress,
+} from '@on.auto/operations';
 import {
   PayloadOffloading,
   PayloadSizeThreshold,
@@ -82,7 +88,7 @@ export function payloadWritten(
 
 export function payloadWrittenIn(
   content: Pick<RecordedContent, 'put'>,
-  { org, playbook }: ContentOwner,
+  { org, playbook }: PlaybookAddress,
 ): (payload: Payload<Schema.Json>) => Effect.Effect<PayloadWritten> {
   return (payload) => writtenWith(payload, (toKeep) => payloadKept(content, { org, playbook }, toKeep));
 }

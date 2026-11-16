@@ -114,9 +114,9 @@ export function streamPortsOf(
 export function ownContentOf(store: LedgerStore): LedgerContent {
   return {
     content: store.content,
-    found: (playbook, sha256) => Effect.map(store.content.getHead(playbook, sha256), (head) => head !== undefined),
-    removedKeptBefore: (playbook, sha256, before) =>
-      Effect.promise(() => store.unlessHeld(playbook, sha256, store.removalWithin(playbook, sha256, before))),
+    found: store.contentFound,
+    removedKeptBefore: (owner, sha256, before) =>
+      Effect.promise(() => store.unlessHeld(owner, sha256, store.removalWithin(owner, sha256, before))),
     eraseExpired: (most) =>
       Effect.flatMap(Clock.currentTimeMillis, (now) => Effect.promise(() => store.eraseExpired(now, most))),
   };

@@ -7,13 +7,11 @@ import {
   json,
   memoryContentStore,
   octets,
-  pausableStore,
   present,
   readBack,
   resultOf,
-  settledWithin,
 } from '@on.auto/content/testing';
-import { streamPrefixOfPlaybook, uuidV7TimeOf } from '@on.auto/operations';
+import { streamPrefixOfOrg, uuidV7TimeOf } from '@on.auto/operations';
 import { noteHolders } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -23,7 +21,7 @@ import { anErasingLedger, anErasingLedgerOutside, type LedgerEntry } from '../te
 import { ownExpiredErasedOn, unnamedChunksLastMs, unnamedChunksSwept } from './content-sweep.ts';
 import { keptShelf } from './content-tables.ts';
 
-const alphaPlace = streamPrefixOfPlaybook(alpha);
+const alphaPlace = streamPrefixOfOrg(alpha);
 
 const CountRows = Schema.Array(Schema.Struct({ count: Schema.Number }));
 
@@ -36,20 +34,28 @@ const note = '{"note":"kept in the ledger until it expires"}';
 export async function chunksHeldIn(
   entry: LedgerEntry,
   database: string,
-  playbook: ContentOwner,
+  owner: ContentOwner,
   sha256: string,
 ): Promise<boolean> {
   const rows = await entry.queried(
     database,
     `SELECT CAST(count(*) AS INTEGER) AS count FROM recorded_content_chunks c
-      JOIN recorded_content_heads h ON h.playbook_key = c.playbook_key AND h.upload_id = c.upload_id
-      WHERE h.playbook_key = '${streamPrefixOfPlaybook(playbook)}' AND h.sha256 = '${sha256}'`,
+      JOIN recorded_content_heads h ON h.place_key = c.place_key AND h.upload_id = c.upload_id
+      WHERE h.org_key = '${streamPrefixOfOrg(owner)}' AND h.sha256 = '${sha256}'`,
   );
   return Schema.decodeUnknownSync(CountRows)(rows).some(({ count }) => count > 0);
 }
 
 const unnamedChunks = `SELECT CAST(count(*) AS INTEGER) AS count FROM recorded_content_chunks c WHERE NOT EXISTS (
-  SELECT 1 FROM recorded_content_heads h WHERE h.playbook_key = c.playbook_key AND h.upload_id = c.upload_id)`;
+  SELECT 1 FROM recorded_content_heads h WHERE h.place_key = c.place_key AND h.upload_id = c.upload_id)`;
+
+async function placesIn(entry: LedgerEntry, database: string, sha256: string): Promise<number> {
+  const rows = await entry.queried(
+    database,
+    `SELECT CAST(count(*) AS INTEGER) AS count FROM recorded_content_places WHERE sha256 = '${sha256}'`,
+  );
+  return Schema.decodeUnknownSync(CountRows)(rows).reduce((total, { count }) => total + count, 0);
+}
 
 async function unnamedIn(entry: LedgerEntry, database: string): Promise<number> {
   const rows = Schema.decodeUnknownSync(CountRows)(await entry.queried(database, unnamedChunks));
@@ -166,40 +172,39 @@ function erasedWhereverKept(entry: LedgerEntry): void {
   });
 }
 
-function namedNoPlaybook(entry: LedgerEntry): void {
-  it('fails as a defect an erasure through a store outside it that meets a head of a key that names no playbook', async () => {
+function namedNoOrg(entry: LedgerEntry): void {
+  it('fails as a defect an erasure through a store outside it that meets a head of a key that names no org', async () => {
     const database = await entry.aDatabase();
     const { eraseExpired } = await anErasingLedgerOutside(entry, noteHolders, memoryContentStore(), database);
     await entry.queried(
       database,
-      `INSERT INTO recorded_content_heads (playbook_key, sha256, upload_id, bytes, chunks, media_type, kept_in, expires_at)
-        VALUES ('org/acme/', '${'a'.repeat(64)}', 'an upload', 1, 0, '${json}', 'external', ${keptAt})`,
+      `INSERT INTO recorded_content_heads (org_key, sha256, place_key, upload_id, bytes, chunks, media_type, kept_in, expires_at)
+        VALUES ('playbook/acme/alpha/', '${'a'.repeat(64)}', 'org/acme/', 'an upload', 1, 0, '${json}', 'external', ${keptAt})`,
     );
 
     const failed = await at(keptAt, defectOf(eraseExpired(10)));
 
-    expect(failed).toEqual(new Error('A content head of org/acme/, which is not the key of a playbook, expires'));
+    expect(failed).toEqual(
+      new Error('A content head of playbook/acme/alpha/, which is not the key of an org, expires'),
+    );
   });
 }
 
 function removedOnceErased(entry: LedgerEntry): void {
-  it('holds back a put, through a store outside it, that meets the removal of what is left of an erased content, and keeps the content as new once the removal is done', async () => {
-    const paused = pausableStore(memoryContentStore());
-    const { ledger, eraseExpired } = await anErasingLedgerOutside(entry, noteHolders, paused.store);
+  it('removes, through a store outside it, what is left of an erased content, deleting nothing since its erasure left no place, and keeps the content as new on a put after', async () => {
+    const database = await entry.aDatabase();
+    const { ledger, eraseExpired } = await anErasingLedgerOutside(entry, noteHolders, memoryContentStore(), database);
     const { sha256 } = await at(
       keptAt,
       ledger.content.put(alpha, { ...textToKeep(note, json), expiresAt: keptAt + 1 }),
     );
     await at(keptAt + 1, eraseExpired(10));
-    const deleting = paused.pausedDelete();
 
-    const removal = resultOf(ledger.removeUnheld(alpha, sha256));
-    await deleting.reached;
-    const put = resultOf(ledger.content.put(alpha, textToKeep(note, 'text/plain')));
-    const settledBefore = await settledWithin(put, 300);
-    deleting.release();
+    const places = await placesIn(entry, database, sha256);
+    const removal = await resultOf(ledger.removeUnheld(alpha, sha256));
+    const put = await resultOf(ledger.content.put(alpha, textToKeep(note, 'text/plain')));
 
-    expect([settledBefore, await removal, (await put).mediaType]).toEqual([false, 'removed', 'text/plain']);
+    expect([places, removal, put.mediaType]).toEqual([0, 'removed', 'text/plain']);
     expect(await resultOf(ledger.content.getHead(alpha, sha256))).not.toHaveProperty('erasedAt');
   });
 }
@@ -210,7 +215,7 @@ export function erasedChunksBehaviour(entry: LedgerEntry): void {
     sweepsThroughTheUploadIndex(entry);
     keptAgainWhileErasing(entry);
     erasedWhereverKept(entry);
-    namedNoPlaybook(entry);
+    namedNoOrg(entry);
     removedOnceErased(entry);
   });
 }

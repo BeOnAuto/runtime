@@ -26,6 +26,7 @@ export {
   at,
   beta,
   brokenAfter,
+  elsewhere,
   deliveredBeforeFailing,
   generated,
   generatedStream,

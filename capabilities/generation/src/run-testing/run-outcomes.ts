@@ -1,6 +1,6 @@
-import { textToKeep, type ContentKept, type ContentOwner, type RecordedContent } from '@on.auto/content';
+import { textToKeep, type ContentKept, type RecordedContent } from '@on.auto/content';
 import { at } from '@on.auto/content/testing';
-import type { Outcome, StreamWriter } from '@on.auto/operations';
+import type { Outcome, PlaybookAddress, StreamWriter } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { AssetKeptSchema, type AssetEvent, type AssetKeptData } from '../assets/asset-facts.ts';
@@ -125,7 +125,7 @@ const ninetyDays = 90 * 86_400_000;
 
 export async function aPageARunReturned(
   ledger: LedgerOfPages,
-  playbook: ContentOwner,
+  playbook: PlaybookAddress,
   id: string,
   keptAt: number,
 ): Promise<ContentKept> {

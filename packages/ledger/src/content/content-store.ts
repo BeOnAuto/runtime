@@ -5,6 +5,7 @@ import {
   requireExpected,
   takenInChunks,
   type ContentKept,
+  type ContentOwner,
   type ContentRefused,
   type ContentToKeep,
   type Taken,
@@ -15,25 +16,21 @@ import { Clock, Effect } from 'effect';
 import type { OwnContentStore, ReturningExecutor, TransactionalPool } from '../event-store.ts';
 import { sqliteContent, type ContentDialect } from './content-dialects.ts';
 import {
-  playbookPlaceOf,
-  columnsOf,
   commanded,
   headOf,
   headTouched,
-  keptHeadOn,
   hexOf,
+  keptHeadOn,
   keptRemovedWithin,
   readOn,
   readPartOn,
-  uploadOf,
   uploadRemoved,
-  valuesOf,
-  type Key,
   type KeptHead,
   type Shelved,
+  type Upload,
 } from './content-places.ts';
 import { contentSweepOn, ownExpiredErasedOn } from './content-sweep.ts';
-import { expiryKeptOver, expiryOfThePut, keptInTheLedger, keptShelf, laterExpiry } from './content-tables.ts';
+import { expiryKeptOver, expiryOfThePut, keptInTheLedger, keptShelf, laterExpiry, orgKeyOf } from './content-tables.ts';
 import { externalHeadsOn } from './external-heads.ts';
 
 interface ChunkWriting {
@@ -42,7 +39,7 @@ interface ChunkWriting {
   readonly flushed: () => Effect.Effect<void>;
 }
 
-function chunkWritingOf(shelved: Shelved, upload: Key): ChunkWriting {
+function chunkWritingOf(shelved: Shelved, { placeKey, uploadId }: Upload): ChunkWriting {
   let pending: Readonly<Uint8Array> | undefined;
   let written = 0;
   const write = (chunk: Readonly<Uint8Array>) =>
@@ -51,8 +48,8 @@ function chunkWritingOf(shelved: Shelved, upload: Key): ChunkWriting {
       written += 1;
       return commanded(
         shelved,
-        SQL`INSERT INTO ${SQL.identifier(shelved.shelf.chunks)} (${columnsOf(upload, 'chunk', 'data')})
-          VALUES (${valuesOf(upload)}, ${index}, ${shelved.dialect.bytesOfHex(hexOf(chunk))})`,
+        SQL`INSERT INTO ${SQL.identifier(shelved.shelf.chunks)} (place_key, upload_id, chunk, data)
+          VALUES (${placeKey}, ${uploadId}, ${index}, ${shelved.dialect.bytesOfHex(hexOf(chunk))})`,
       );
     });
   return {
@@ -67,7 +64,7 @@ function chunkWritingOf(shelved: Shelved, upload: Key): ChunkWriting {
   };
 }
 
-const takenOverColumns = ['upload_id', 'bytes', 'chunks', 'media_type'];
+const takenOverColumns = ['place_key', 'upload_id', 'bytes', 'chunks', 'media_type'];
 
 function readAlone(): Effect.Effect<void> {
   return Effect.void;
@@ -112,62 +109,61 @@ interface HeadWriting {
   readonly expiresAt: number | undefined;
 }
 
-interface HeadPut extends HeadWriting {
-  readonly uploadId: string;
+interface HeadPut extends HeadWriting, Upload {
+  readonly owner: ContentOwner;
   readonly keptAt: number;
 }
 
-function headInserted({ shelf }: Shelved, place: Key, put: HeadPut, withExpiry: boolean): SQL {
-  const { taken, mediaType, expiresAt, uploadId, keptAt } = put;
-  const expiring = withExpiry ? ['expires_at'] : [];
+function headInserted({ shelf }: Shelved, put: HeadPut, withExpiry: boolean): SQL {
+  const { owner, taken, mediaType, expiresAt, placeKey, uploadId, keptAt } = put;
+  const expiring = withExpiry ? SQL`, expires_at` : SQL``;
   const values = [
-    valuesOf(place),
-    SQL`${taken.sha256}, ${uploadId}, ${taken.bytes}, ${taken.chunks}, ${mediaType}, ${keptAt}`,
-    ...expiring.map(() => expiryOfThePut(expiresAt)),
+    SQL`${orgKeyOf(owner)}, ${taken.sha256}, ${placeKey}, ${uploadId}, ${taken.bytes}, ${taken.chunks}, ${mediaType}, ${keptAt}`,
+    ...(withExpiry ? [expiryOfThePut(expiresAt)] : []),
   ];
-  return SQL`INSERT INTO ${SQL.identifier(shelf.heads)} (${columnsOf(place, 'sha256', 'upload_id', 'bytes', 'chunks', 'media_type', 'kept_at', ...expiring)})
+  return SQL`INSERT INTO ${SQL.identifier(shelf.heads)} (org_key, sha256, place_key, upload_id, bytes, chunks, media_type, kept_at${expiring})
     VALUES (${SQL.merge(values, ', ')})`;
 }
 
-function headWritten(shelved: Shelved, place: Key, put: HeadPut): Effect.Effect<boolean> {
+function headWritten(shelved: Shelved, put: HeadPut): Effect.Effect<boolean> {
   const heads = SQL.identifier(shelved.shelf.heads);
   const later = laterExpiry(SQL`${heads}.expires_at`, SQL`excluded.expires_at`);
-  const sql = SQL`${headInserted(shelved, place, put, put.expiresAt !== undefined)}
-    ON CONFLICT (${columnsOf(place, 'sha256')}) DO UPDATE SET kept_at = excluded.kept_at,
+  const sql = SQL`${headInserted(shelved, put, put.expiresAt !== undefined)}
+    ON CONFLICT (org_key, sha256) DO UPDATE SET kept_at = excluded.kept_at,
       expires_at = ${put.expiresAt === undefined ? SQL`NULL` : later}, ${externalTakenOver(shelved)}
     WHERE ${heads}.erased_at IS NULL
     RETURNING upload_id`;
   return Effect.promise(async () => (await shelved.execute.command(sql)).rows.length > 0);
 }
 
-function headWrittenOverWhatStands(shelved: Shelved, place: Key, put: HeadPut): Effect.Effect<void> {
+function headWrittenOverWhatStands(shelved: Shelved, put: HeadPut): Effect.Effect<void> {
   return commanded(
     shelved,
-    SQL`${headInserted(shelved, place, put, true)}
-      ON CONFLICT (${columnsOf(place, 'sha256')}) DO UPDATE SET kept_at = excluded.kept_at,
+    SQL`${headInserted(shelved, put, true)}
+      ON CONFLICT (org_key, sha256) DO UPDATE SET kept_at = excluded.kept_at,
         expires_at = ${expiryKeptOver(shelved.shelf.heads)}, ${takenOverUnlessItStands(shelved)}`,
   );
 }
 
 function placedAfter(
   shelved: Shelved,
-  place: Key,
-  uploadId: string,
+  keeping: Keeping,
   { writing, ...writes }: HeadWriting & { readonly writing: ChunkWriting },
 ): Effect.Effect<KeptHead | undefined> {
+  const { owner, upload } = keeping;
   return Effect.gen(function* () {
     const { taken, expiresAt } = writes;
-    const held = writing.written() === 0 ? yield* headTouched(shelved, place, taken.sha256, expiresAt) : undefined;
+    const held = writing.written() === 0 ? yield* headTouched(shelved, owner, taken.sha256, expiresAt) : undefined;
     if (held !== undefined) {
       return held;
     }
     yield* writing.flushed();
-    const put = { ...writes, uploadId, keptAt: yield* Clock.currentTimeMillis };
-    const wrote = yield* headWritten(shelved, place, put);
-    yield* wrote ? Effect.void : headWrittenOverWhatStands(shelved, place, put);
-    const head = yield* headOf(shelved, place, taken.sha256);
-    if (head?.uploadId !== uploadId) {
-      yield* uploadRemoved(shelved, place, { uploadId, sha256: taken.sha256 });
+    const put = { ...writes, ...upload, owner, keptAt: yield* Clock.currentTimeMillis };
+    const wrote = yield* headWritten(shelved, put);
+    yield* wrote ? Effect.void : headWrittenOverWhatStands(shelved, put);
+    const head = yield* headOf(shelved, owner, taken.sha256);
+    if (head?.uploadId !== upload.uploadId) {
+      yield* uploadRemoved(shelved, { ...upload, owner, sha256: taken.sha256 });
     }
     return head;
   });
@@ -177,44 +173,48 @@ function keptOf(head: ContentKept | undefined, { sha256, bytes }: Taken, mediaTy
   return head === undefined ? { sha256, bytes, mediaType } : { sha256, bytes: head.bytes, mediaType: head.mediaType };
 }
 
+interface Keeping {
+  readonly owner: ContentOwner;
+  readonly upload: Upload;
+}
+
 function placedOn(
   shelved: Shelved,
-  place: Key,
+  owner: ContentOwner,
   content: ContentToKeep,
   expiresAt: number | undefined,
 ): Effect.Effect<ContentKept, ContentRefused> {
   const { stream, mediaType, expected } = content;
   return Effect.suspend(() => {
-    const uploadId = randomUUIDv7();
+    const upload: Upload = { placeKey: orgKeyOf(owner), uploadId: randomUUIDv7() };
     let digested: string | undefined;
     return Effect.gen(function* () {
       const held =
-        expected?.sha256 === undefined ? undefined : yield* headTouched(shelved, place, expected.sha256, expiresAt);
-      const writing = chunkWritingOf(shelved, uploadOf(place, uploadId));
+        expected?.sha256 === undefined ? undefined : yield* headTouched(shelved, owner, expected.sha256, expiresAt);
+      const writing = chunkWritingOf(shelved, upload);
       const taken = yield* takenInChunks(stream, mostContentChunkBytes, held === undefined ? writing.take : readAlone);
       digested = taken.sha256;
       yield* requireExpected(expected, taken);
-      const head = held ?? (yield* placedAfter(shelved, place, uploadId, { taken, mediaType, expiresAt, writing }));
+      const head = held ?? (yield* placedAfter(shelved, { owner, upload }, { taken, mediaType, expiresAt, writing }));
       return keptOf(head, taken, mediaType);
-    }).pipe(Effect.onError(() => uploadRemoved(shelved, place, { uploadId, sha256: digested })));
+    }).pipe(Effect.onError(() => uploadRemoved(shelved, { ...upload, owner, sha256: digested })));
   });
 }
 
-const removalWithin: OwnContentStore['removalWithin'] = (playbook, sha256, before) => (within) =>
-  keptRemovedWithin(keptShelf, within, { place: playbookPlaceOf(playbook), sha256, before });
+const removalWithin: OwnContentStore['removalWithin'] = (owner, sha256, before) => (within) =>
+  keptRemovedWithin(keptShelf, within, { owner, sha256, before });
 
 export function contentStoreOn(execute: ReturningExecutor, dialect: ContentDialect): OwnContentStore {
   const keeping: Shelved = { execute, dialect, shelf: keptShelf };
   return {
     content: {
-      put: (playbook, content) =>
-        Effect.flatMap(expiryOf(content), (expiresAt) =>
-          placedOn(keeping, playbookPlaceOf(playbook), content, expiresAt),
-        ),
-      get: (playbook, sha256) => readOn(keeping, playbookPlaceOf(playbook), sha256),
-      getHead: (playbook, sha256) => keptHeadOn(keeping, playbookPlaceOf(playbook), sha256),
-      getPart: (playbook, sha256, asked) => readPartOn(keeping, playbookPlaceOf(playbook), sha256, asked),
+      put: (owner, content) =>
+        Effect.flatMap(expiryOf(content), (expiresAt) => placedOn(keeping, owner, content, expiresAt)),
+      get: (owner, sha256) => readOn(keeping, owner, sha256),
+      getHead: (owner, sha256) => keptHeadOn(keeping, owner, sha256),
+      getPart: (owner, sha256, asked) => readPartOn(keeping, owner, sha256, asked),
     },
+    contentFound: (owner, sha256) => Effect.map(keptHeadOn(keeping, owner, sha256), (head) => head !== undefined),
     removalWithin,
     sweepContent: contentSweepOn(execute),
     eraseExpired: ownExpiredErasedOn(execute),

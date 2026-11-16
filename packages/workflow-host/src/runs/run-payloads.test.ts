@@ -13,6 +13,8 @@ const alphaRun = runKeyOf({ org: 'acme', playbook: 'alpha', runId });
 
 const betaRun = runKeyOf({ org: 'acme', playbook: 'beta', runId });
 
+const gammaRun = runKeyOf({ org: 'globex', playbook: 'gamma', runId });
+
 const answer = keptOf({ text: 'a'.repeat(20_000) });
 
 function erasing(reader: PayloadReader): PayloadReader {
@@ -24,15 +26,19 @@ function erasing(reader: PayloadReader): PayloadReader {
 }
 
 describe('the store of payloads the host composes for its engine', () => {
-  it('keeps a text in the playbook its run names and reads it back whole, which a run of another playbook reads as missing', async () => {
+  it('keeps a text in the org of the playbook its run names and reads it back whole, which a run of another playbook of that org reads too and a run of another org reads as missing', async () => {
     const { payloads, notes } = storeOn();
 
     await Effect.runPromise(payloads.keep(alphaRun, [answer]));
-    const inAlpha = await Effect.runPromise(payloads.read(alphaRun, [answer]));
-    const inBeta = await Effect.runPromise(payloads.read(betaRun, [answer]));
+    const read = await Promise.all(
+      [alphaRun, betaRun, gammaRun].map((run) => Effect.runPromise(payloads.read(run, [answer]))),
+    );
 
-    expect(inAlpha).toEqual(new Map([[answer.sha256, { kind: 'read', text: answer.text }]]));
-    expect(inBeta).toEqual(new Map([[answer.sha256, { kind: 'missing' }]]));
+    expect(read).toEqual([
+      new Map([[answer.sha256, { kind: 'read', text: answer.text }]]),
+      new Map([[answer.sha256, { kind: 'read', text: answer.text }]]),
+      new Map([[answer.sha256, { kind: 'missing' }]]),
+    ]);
     expect(notes()).toEqual([
       {
         kind: 'payloads_read',
@@ -45,9 +51,10 @@ describe('the store of payloads the host composes for its engine', () => {
         kind: 'payloads_read',
         run: { org: 'acme', playbook: 'beta', runId },
         texts: 1,
-        bytes: 0,
-        unread: 1,
+        bytes: answer.bytes,
+        unread: 0,
       },
+      { kind: 'payloads_read', run: { org: 'globex', playbook: 'gamma', runId }, texts: 1, bytes: 0, unread: 1 },
     ]);
   });
 

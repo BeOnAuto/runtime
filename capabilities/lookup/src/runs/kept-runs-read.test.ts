@@ -42,9 +42,9 @@ describe('a read of runs whose outputs their playbook keeps outside them', () =>
   });
 
   it('is unavailable, an outage told from its bound, and reads no more, where the store of its content fails', async () => {
-    const { content, watched } = await contentKeeping([fourth]);
-    watched.fail();
     const many = Array.from({ length: 30 }, (_, day) => keptRunOf(day + 1, `Day ${day + 1}`));
+    const { content, watched } = await contentKeeping(many);
+    watched.fail();
 
     expect(await failedRead(pagedReader([{ runs: many }], content).reader)).toMatchObject({ _tag: 'unavailable' });
     expect(watched.reads()).toBeLessThanOrEqual(12);

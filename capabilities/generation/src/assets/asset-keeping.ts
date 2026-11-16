@@ -1,10 +1,11 @@
-import { contentOfBytes, type ContentOwner, type RecordedContent } from '@on.auto/content';
+import { contentOfBytes, type RecordedContent } from '@on.auto/content';
 import {
   streamPrefixOfPlaybook,
   type Conflict,
   type Context,
   type Lineage,
   type StreamWriter,
+  type PlaybookAddress,
 } from '@on.auto/operations';
 import { Clock, Effect } from 'effect';
 
@@ -24,7 +25,7 @@ export type MadeByAGeneration = Generation & { readonly kind: KindWritten };
 
 export interface AssetToKeep {
   readonly id: string;
-  readonly playbook: ContentOwner;
+  readonly playbook: PlaybookAddress;
   readonly bytes: Readonly<Uint8Array>;
   readonly mediaType: string;
   readonly kind: KindWritten;
@@ -44,7 +45,7 @@ export interface KeptAt {
   readonly at: number;
 }
 
-export function assetStreamIn(playbook: ContentOwner, id: string): string {
+export function assetStreamIn(playbook: PlaybookAddress, id: string): string {
   return `${streamPrefixOfPlaybook(playbook)}${assetStreamOf(id)}`;
 }
 

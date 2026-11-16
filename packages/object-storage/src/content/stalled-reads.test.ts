@@ -2,7 +2,7 @@ import { Readable } from 'node:stream';
 
 import { textToKeep } from '@on.auto/content';
 import { alpha, deliveredBeforeFailing, octets, present, resultOf } from '@on.auto/content/testing';
-import { streamPrefixOfPlaybook } from '@on.auto/operations';
+import { streamPrefixOfOrg } from '@on.auto/operations';
 import { sdkStreamMixin } from '@smithy/core/serde';
 import { Function } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -11,7 +11,7 @@ import { storageWaits } from '../client/storage-client.ts';
 import { objectKeysOf } from '../location/object-keys.ts';
 import { fakeContentStore } from '../testing/fake-bucket.ts';
 
-const alphaPlace = streamPrefixOfPlaybook(alpha);
+const alphaPlace = streamPrefixOfOrg(alpha);
 
 const location = { bucket: 'content', prefix: 'playbooks' };
 

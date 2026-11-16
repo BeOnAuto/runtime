@@ -43,10 +43,12 @@ const aRowFolded = `INSERT INTO prediction_rows (playbook_key, data_sha256, seri
 
 const ColumnRows = Schema.Array(Schema.Struct({ name: Schema.String }));
 
-function namesOfColumns(rows: readonly unknown[]): string {
-  return Schema.decodeUnknownSync(ColumnRows)(rows)
-    .map(({ name }) => name)
-    .join(', ');
+function namesOfColumns(rows: readonly unknown[]): readonly string[] {
+  return Schema.decodeUnknownSync(ColumnRows)(rows).map(({ name }) => name);
+}
+
+function selectedAtTheFloor(columns: readonly string[], made: ReadonlySet<string>): string {
+  return columns.map((name) => (made.has(name) ? name : `'${playbookKey}'`)).join(', ');
 }
 
 function withTheDetailsOfAnEarlierRelease(messageData: string): string {
@@ -62,9 +64,11 @@ export function aPredictionFunctionAtTheFloor(made: string, carried: string): vo
   try {
     database.prepare('ATTACH DATABASE ? AS made').run(made);
     const columnsOfTheFloor = database.prepare('SELECT name FROM main.pragma_table_info(?)');
+    const columnsMade = database.prepare("SELECT name FROM pragma_table_info(?, 'made')");
     for (const table of tablesOfTheFacts) {
       const columns = namesOfColumns(columnsOfTheFloor.all(table));
-      database.exec(`INSERT INTO ${table} (${columns}) SELECT ${columns} FROM made.${table}`);
+      const selected = selectedAtTheFloor(columns, new Set(namesOfColumns(columnsMade.all(table))));
+      database.exec(`INSERT INTO ${table} (${columns.join(', ')}) SELECT ${selected} FROM made.${table}`);
     }
     const [definition] = Schema.decodeUnknownSync(DefinitionFactSchema)(database.prepare(ofTheDefinition).all());
     database

@@ -11,7 +11,7 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 const gamma = { org: 'globex', playbook: 'gamma' };
 
 describe("the ledger the server hands its capabilities, over the runtime's own", () => {
-  it('reads the head of a content a playbook keeps, its size and type, and none for another playbook', async () => {
+  it('reads the head of a content a playbook keeps, its size and type, and none for a playbook of another org', async () => {
     const runtime = await memoryRuntime();
     const { content } = runtimeLedger(runtime);
     const kept = await Effect.runPromise(content.put(alpha, textToKeep('{"lead":"lead-1"}', 'application/json')));

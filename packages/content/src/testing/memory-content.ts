@@ -37,14 +37,14 @@ interface MemoryHead extends ExpiredContent {
 
 const noHead: ContentHead = { bytes: 0, mediaType: '' };
 
-export type HeldIn = (playbook: ContentOwner, sha256: string) => boolean;
+export type HeldIn = (owner: ContentOwner, sha256: string) => boolean;
 
-function keyOf({ org, playbook }: ContentOwner, sha256: string): string {
-  return JSON.stringify([org, playbook, sha256]);
+function keyOf({ org }: ContentOwner, sha256: string): string {
+  return JSON.stringify([org, sha256]);
 }
 
-function placeOf({ org, playbook }: ContentOwner): string {
-  return `playbook/${org}/${playbook}/`;
+function placeOf({ org }: ContentOwner): string {
+  return `org/${org}/`;
 }
 
 function keyAt(place: string, sha256: string): string {
@@ -112,8 +112,8 @@ function laterExpiry(standing: number | undefined, put: number | undefined): num
   return standing === undefined || put === undefined ? undefined : Math.max(standing, put);
 }
 
-function standingHead({ playbook, sha256, head, keptAt, expiresAt, erasedAt }: MemoryHead): MemoryHead {
-  return { playbook, sha256, head, keptAt, ...expiryOf(expiresAt), ...erasureOf(erasedAt) };
+function standingHead({ owner, sha256, head, keptAt, expiresAt, erasedAt }: MemoryHead): MemoryHead {
+  return { owner, sha256, head, keptAt, ...expiryOf(expiresAt), ...erasureOf(erasedAt) };
 }
 
 function newHead(content: ExpiredContent, { bytes, mediaType, expiresAt }: HeadToKeep, keptAt: number): MemoryHead {
@@ -121,7 +121,7 @@ function newHead(content: ExpiredContent, { bytes, mediaType, expiresAt }: HeadT
 }
 
 function keptOver(heads: Map<string, MemoryHead>, content: ExpiredContent, head: HeadToKeep, keptAt: number): HeadKept {
-  const key = keyOf(content.playbook, content.sha256);
+  const key = keyOf(content.owner, content.sha256);
   const standing = heads.get(key);
   if (standing === undefined || (standing.erasedAt !== undefined && standing.removingSince === undefined)) {
     const kept = newHead(content, head, keptAt);
@@ -140,9 +140,9 @@ function touchedOver(
   if (standing.removingSince !== undefined) {
     return { kept: 'removing', since: standing.removingSince, ...expiryOf(standing.expiresAt) };
   }
-  const { playbook, sha256, head } = standing;
-  heads.set(keyOf(playbook, sha256), {
-    playbook,
+  const { owner, sha256, head } = standing;
+  heads.set(keyOf(owner, sha256), {
+    owner,
     sha256,
     head,
     keptAt,
@@ -162,7 +162,7 @@ function markedOver(standing: MemoryHead | undefined, { before, now, staleBefore
 }
 
 function markedIn(heads: Map<string, MemoryHead>, content: ExpiredContent, times: RemovalTimes): HeadMarked {
-  const key = keyOf(content.playbook, content.sha256);
+  const key = keyOf(content.owner, content.sha256);
   const standing = heads.get(key);
   const marked = markedOver(standing, times);
   if (marked.marked) {
@@ -186,9 +186,9 @@ function unmarkedIn(heads: Map<string, MemoryHead>, key: string, since: number):
 
 type Due = readonly [expiresAt: number, content: ExpiredContent];
 
-function dueOf({ playbook, sha256, expiresAt, removingSince }: MemoryHead, times: ErasureTimes): readonly Due[] {
+function dueOf({ owner, sha256, expiresAt, removingSince }: MemoryHead, times: ErasureTimes): readonly Due[] {
   const unmarked = removingSince === undefined || removingSince < times.staleBefore;
-  return expiresAt !== undefined && expiresAt <= times.now && unmarked ? [[expiresAt, { playbook, sha256 }]] : [];
+  return expiresAt !== undefined && expiresAt <= times.now && unmarked ? [[expiresAt, { owner, sha256 }]] : [];
 }
 
 function headRead({ head, keptAt, expiresAt, erasedAt }: MemoryHead): KeptContentHead {
@@ -204,7 +204,7 @@ function expiredIn(heads: ReadonlyMap<string, MemoryHead>, times: ErasureTimes, 
 }
 
 function markedSince(heads: Map<string, MemoryHead>, standing: MemoryHead, since: number): number {
-  heads.set(keyOf(standing.playbook, standing.sha256), { ...standing, removingSince: since });
+  heads.set(keyOf(standing.owner, standing.sha256), { ...standing, removingSince: since });
   return since;
 }
 
@@ -220,8 +220,8 @@ function erasedIn(heads: Map<string, MemoryHead>, key: string, since: number): b
   if (standing?.removingSince !== since) {
     return false;
   }
-  const { playbook, sha256, head, keptAt } = standing;
-  heads.set(key, { playbook, sha256, head, keptAt, erasedAt: since });
+  const { owner, sha256, head, keptAt } = standing;
+  heads.set(key, { owner, sha256, head, keptAt, erasedAt: since });
   return true;
 }
 
@@ -229,43 +229,69 @@ function nothingHeld(): boolean {
   return false;
 }
 
+interface MemoryShelf {
+  readonly heads: Map<string, MemoryHead>;
+  readonly places: Map<string, readonly string[]>;
+}
+
+function placedIn({ places }: MemoryShelf, key: string, place: string): void {
+  const standing = places.get(key) ?? [];
+  places.set(key, standing.includes(place) ? standing : [...standing, place]);
+}
+
+function clearedIn({ heads, places }: MemoryShelf, key: string, since: number): void {
+  if (heads.get(key)?.removingSince === since) {
+    heads.delete(key);
+    places.delete(key);
+  }
+}
+
+function erasedWithItsPlaces({ heads, places }: MemoryShelf, key: string, since: number): boolean {
+  const recorded = erasedIn(heads, key, since);
+  if (recorded) {
+    places.delete(key);
+  }
+  return recorded;
+}
+
 export function memoryContentHeads(heldIn: HeldIn = nothingHeld): ContentHeads {
-  const heads = new Map<string, MemoryHead>();
+  const shelf: MemoryShelf = { heads: new Map<string, MemoryHead>(), places: new Map<string, readonly string[]>() };
+  const { heads, places } = shelf;
   return {
-    kept: (playbook, sha256, head, keptAt) => Effect.sync(() => keptOver(heads, { playbook, sha256 }, head, keptAt)),
-    touched: (playbook, sha256, keptAt, expiresAt) =>
+    kept: (owner, sha256, head, keptAt) => Effect.sync(() => keptOver(heads, { owner, sha256 }, head, keptAt)),
+    touched: (owner, sha256, keptAt, expiresAt) =>
       Effect.sync(() => {
-        const standing = heads.get(keyOf(playbook, sha256));
+        const standing = heads.get(keyOf(owner, sha256));
         return standing === undefined || standing.erasedAt !== undefined
           ? undefined
           : touchedOver(heads, standing, keptAt, expiresAt);
       }),
-    marked: (playbook, sha256, times) =>
+    marked: (owner, sha256, times) =>
       Effect.sync(() =>
-        heldIn(playbook, sha256) ? { marked: false, answer: 'held' } : markedIn(heads, { playbook, sha256 }, times),
+        heldIn(owner, sha256) ? { marked: false, answer: 'held' } : markedIn(heads, { owner, sha256 }, times),
       ),
-    cleared: (playbook, sha256, since) =>
+    cleared: (owner, sha256, since) =>
       Effect.sync(() => {
-        const key = keyOf(playbook, sha256);
-        if (heads.get(key)?.removingSince === since) {
-          heads.delete(key);
-        }
+        clearedIn(shelf, keyOf(owner, sha256), since);
       }),
-    unmarked: (playbook, sha256, since) =>
+    unmarked: (owner, sha256, since) =>
       Effect.sync(() => {
-        unmarkedIn(heads, keyOf(playbook, sha256), since);
+        unmarkedIn(heads, keyOf(owner, sha256), since);
       }),
-    read: (playbook, sha256) =>
+    read: (owner, sha256) =>
       Effect.sync(() => {
-        const standing = heads.get(keyOf(playbook, sha256));
+        const standing = heads.get(keyOf(owner, sha256));
         return standing === undefined || standing.markedAlone === true ? undefined : headRead(standing);
       }),
     expired: (times, most) => Effect.sync(() => expiredIn(heads, times, most)),
-    erasing: (playbook, sha256, times) => Effect.sync(() => erasingIn(heads, keyOf(playbook, sha256), times)),
-    erased: (playbook, sha256, since) => Effect.sync(() => erasedIn(heads, keyOf(playbook, sha256), since)),
+    erasing: (owner, sha256, times) => Effect.sync(() => erasingIn(heads, keyOf(owner, sha256), times)),
+    erased: (owner, sha256, since) => Effect.sync(() => erasedWithItsPlaces(shelf, keyOf(owner, sha256), since)),
     placeOfNewBytes: placeOf,
-    placesOf: (playbook) => Effect.succeed([placeOf(playbook)]),
-    placed: () => Effect.void,
+    placesOf: (owner, sha256) => Effect.sync(() => places.get(keyOf(owner, sha256)) ?? []),
+    placed: (owner, sha256, place) =>
+      Effect.sync(() => {
+        placedIn(shelf, keyOf(owner, sha256), place);
+      }),
   };
 }
 

@@ -38,7 +38,7 @@ function chunkSizesOf(bytes: number): readonly number[] {
 
 function chunksOfTheDigest(sha256: string): string {
   return `SELECT c.chunk, octet_length(c.data) AS bytes FROM recorded_content_chunks c
-    JOIN recorded_content_heads h ON h.playbook_key = c.playbook_key AND h.upload_id = c.upload_id
+    JOIN recorded_content_heads h ON h.place_key = c.place_key AND h.upload_id = c.upload_id
     WHERE h.sha256 = '${sha256}' ORDER BY c.chunk`;
 }
 
@@ -47,7 +47,7 @@ const theHeads =
 
 const unnamedChunks = [
   `SELECT CAST(count(*) AS INTEGER) AS count FROM recorded_content_chunks c WHERE NOT EXISTS (
-    SELECT 1 FROM recorded_content_heads h WHERE h.playbook_key = c.playbook_key AND h.upload_id = c.upload_id)`,
+    SELECT 1 FROM recorded_content_heads h WHERE h.place_key = c.place_key AND h.upload_id = c.upload_id)`,
 ];
 
 const notItsBytes = (sha256: string) =>
@@ -120,8 +120,8 @@ function keptInChunks(entry: LedgerEntry): void {
 async function copiedUnder(entry: LedgerEntry, database: string, from: string, to: string): Promise<void> {
   await entry.queried(
     database,
-    `INSERT INTO recorded_content_heads (playbook_key, sha256, upload_id, bytes, chunks, media_type)
-      SELECT playbook_key, '${to}', upload_id, bytes, chunks, media_type FROM recorded_content_heads WHERE sha256 = '${from}'`,
+    `INSERT INTO recorded_content_heads (org_key, sha256, place_key, upload_id, bytes, chunks, media_type)
+      SELECT org_key, '${to}', place_key, upload_id, bytes, chunks, media_type FROM recorded_content_heads WHERE sha256 = '${from}'`,
   );
 }
 

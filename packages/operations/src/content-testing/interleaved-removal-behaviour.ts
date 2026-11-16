@@ -1,7 +1,6 @@
 import { removalLastsMs, sha256Of, textToKeep, type ContentStore, type ContentToKeep } from '@on.auto/content';
 import {
   aStepFailedAtItsPause,
-  alpha,
   at,
   defectOf,
   generated,
@@ -16,9 +15,8 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import type { ContentHolders } from '../held-content/content-declaration.ts';
-import { streamPrefixOfPlaybook } from '../ledger/bound-ports.ts';
 import type { LedgerPorts } from '../ledger/ledger.ts';
-import { anHour, firstNotes, kept, keptAt, noteHolders, noted } from './held-notes.ts';
+import { anHour, firstNotes, kept, keptAt, noteHolders, noted, alpha } from './held-notes.ts';
 
 export interface InterleavedRemovalEntry {
   readonly aStore: () => Promise<ContentStore>;
@@ -118,15 +116,14 @@ function stoppedRemovalsFinished(entry: InterleavedRemovalEntry): void {
 }
 
 function marksLetGo(entry: InterleavedRemovalEntry): void {
-  it('lets go of its mark where its delete fails, so a put keeps the content at once and a removal after it removes it, and lets go of the head its mark alone made', async () => {
+  it('lets go of its mark where its delete fails, so a put keeps the content at once and a removal after it removes it, and removes a digest never kept, which lies at no place, deleting nothing', async () => {
     const { ledger, paused } = await interleavedOn(entry);
     await at(keptAt, ledger.content.put(alpha, textToKeep(note, json)));
-    paused.pausedDelete().fail();
     paused.pausedDelete().fail();
 
     const failed = [
       await at(keptAt + 2 * anHour, defectOf(ledger.removeUnheld(alpha, sha256Of(note)))),
-      await at(keptAt + 2 * anHour, defectOf(ledger.removeUnheld(alpha, sha256Of('never kept')))),
+      await at(keptAt + 2 * anHour, ledger.removeUnheld(alpha, sha256Of('never kept'))),
     ];
     const again = [
       await at(keptAt + 2 * anHour, ledger.content.put(alpha, textToKeep(note, json))),
@@ -134,7 +131,7 @@ function marksLetGo(entry: InterleavedRemovalEntry): void {
     ];
     const removed = await at(keptAt + 4 * anHour, ledger.removeUnheld(alpha, sha256Of(note)));
 
-    expect(failed).toEqual([aStepFailedAtItsPause(), aStepFailedAtItsPause()]);
+    expect(failed).toEqual([aStepFailedAtItsPause(), 'removed']);
     expect(again.map(({ bytes, mediaType }) => [bytes, mediaType])).toEqual([
       [Buffer.byteLength(note), json],
       [Buffer.byteLength('never kept'), 'text/plain'],
@@ -144,24 +141,22 @@ function marksLetGo(entry: InterleavedRemovalEntry): void {
   });
 }
 
-function headlessRemoved(entry: InterleavedRemovalEntry): void {
-  it('removes the bytes its store holds under a digest without a head, as a content kept before heads were, and holds back a put that meets that removal', async () => {
+function slowRemovalTakenOver(entry: InterleavedRemovalEntry): void {
+  it('leaves to a removal that took over from one too slow to end the head it clears and the places it lists, so the slow one clears nothing', async () => {
     const { ledger, paused } = await interleavedOn(entry);
-    const large = await generated(2_500_000);
-    const staged = await resultOf(paused.store.stage(streamPrefixOfPlaybook(alpha), large.content()));
-    await resultOf(staged.placed(octets));
-    const deleting = paused.pausedDelete();
+    await at(keptAt, ledger.content.put(alpha, textToKeep(note, json)));
+    const slow = paused.pausedDelete();
+    const slowRemoval = at(keptAt + 2 * anHour, ledger.removeUnheld(alpha, sha256Of(note)));
+    await slow.reached;
 
-    const removal = resultOf(ledger.removeUnheld(alpha, large.sha256));
-    await deleting.reached;
-    const put = resultOf(ledger.content.put(alpha, { ...large.content(), mediaType: json }));
-    const settledBefore = await settledWithin(put, 300);
-    deleting.release();
+    const takenOver = await at(keptAt + 2 * anHour + removalLastsMs + 1, ledger.removeUnheld(alpha, sha256Of(note)));
+    slow.release();
+    const slowOne = await slowRemoval;
+    const again = await at(keptAt + 3 * anHour, ledger.content.put(alpha, textToKeep(note, 'text/plain')));
 
-    expect([settledBefore, await removal, (await put).mediaType]).toEqual([false, 'removed', json]);
-    expect(await readBack(await present(ledger.content.get(alpha, large.sha256)))).toMatchObject({
-      sha256: large.sha256,
-      mediaType: json,
+    expect([takenOver, slowOne, again.mediaType]).toEqual(['removed', 'removed', 'text/plain']);
+    expect(await readBack(await present(ledger.content.get(alpha, sha256Of(note))))).toMatchObject({
+      mediaType: 'text/plain',
     });
   });
 }
@@ -171,7 +166,7 @@ export function interleavedRemovalBehaviour(entry: InterleavedRemovalEntry): voi
     putWhileDeleted(entry);
     placedAfterTheRemovalAsked(entry);
     stoppedRemovalsFinished(entry);
+    slowRemovalTakenOver(entry);
     marksLetGo(entry);
-    headlessRemoved(entry);
   });
 }

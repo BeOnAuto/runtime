@@ -163,7 +163,7 @@ describe.each(stores)('a reasoning run whose every call answers 1 MB, on $store'
 
 describe(`a reasoning run whose every call answers 1 MB, its content on object storage${objectStoreNotice}`, () => {
   it.skipIf(objectStore === '')(
-    'keeps the arguments and the answer of each call, and the messages and the response of each model call, as objects of the bucket under its playbook, and reads every answer back within the deadline of the run',
+    'keeps the arguments and the answer of each call, and the messages and the response of each model call, as objects of the bucket under its org and none under its playbook, and reads every answer back within the deadline of the run',
     { timeout: toolBounds.runMs },
     async () => {
       const prefix = `large-answers/${randomUUID()}`;
@@ -186,7 +186,8 @@ describe(`a reasoning run whose every call answers 1 MB, its content on object s
       );
       expect(server.modelCalls()).toBe(modelCallsOfTheRun.length);
       expect(kept).toHaveLength(calls * keptOfAToolCall.length + modelCallsOfTheRun.length * keptOfAModelCall.length);
-      expect(kept.every((key) => /^playbook\/acme\/alpha\/[0-9a-f]{64}$/u.test(key))).toBe(true);
+      expect(kept.filter((key) => !/^org\/acme\/[0-9a-f]{64}$/u.test(key))).toEqual([]);
+      expect(await objectsUnder(`${prefix}/playbook/`)).toEqual([]);
       expect(took).toBeLessThan(toolBounds.runMs);
     },
   );

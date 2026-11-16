@@ -121,7 +121,7 @@ export async function answeredAndHeld(store: OpenStore, server: InteractionServe
     () =>
       countOf(
         store,
-        `SELECT COUNT(*) AS counted FROM content_references_1 WHERE sha256 = '${answerDigest}' AND stream LIKE 'run-logs/%'`,
+        `SELECT COUNT(*) AS counted FROM content_references_2 WHERE sha256 = '${answerDigest}' AND stream LIKE 'run-logs/%'`,
       ),
     (held) => held >= count,
   );

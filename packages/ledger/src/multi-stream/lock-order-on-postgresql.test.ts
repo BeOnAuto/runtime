@@ -109,7 +109,7 @@ function holdsInOneOrder(): void {
     const holding = await connected(database);
     await holding.query('BEGIN');
     await holding.query(
-      "SELECT 1 FROM content_references_1 WHERE playbook_key = $1 AND stream = 'notes/x' AND sha256 = $2 FOR UPDATE",
+      "SELECT 1 FROM content_references_2 WHERE playbook_key = $1 AND stream = 'notes/x' AND sha256 = $2 FOR UPDATE",
       [alpha, d2],
     );
 
@@ -123,7 +123,7 @@ function holdsInOneOrder(): void {
     expect(
       await queried(
         database,
-        'SELECT stream, sha256, held::int AS held FROM content_references_1 ORDER BY stream, sha256',
+        'SELECT stream, sha256, held::int AS held FROM content_references_2 ORDER BY stream, sha256',
       ),
     ).toEqual([
       { stream: 'notes/x', sha256: d2, held: 2 },

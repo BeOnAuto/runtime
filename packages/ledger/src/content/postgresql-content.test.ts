@@ -43,23 +43,25 @@ function connectionsAnswering(
 }
 
 function headOf(uploadId: string) {
-  return { upload_id: uploadId, bytes: 7, chunks: 1, media_type: 'application/json' };
+  return { place_key: 'org/acme/', upload_id: uploadId, bytes: 7, chunks: 1, media_type: 'application/json' };
 }
 
 function answeringHeadsAfterTheFirst(): (text: string) => readonly unknown[] {
   let headsAsked = 0;
   return (text) => {
-    headsAsked += text.startsWith('SELECT upload_id') ? 1 : 0;
+    headsAsked += text.startsWith('SELECT place_key') ? 1 : 0;
     return headsAsked > 1 ? [headOf('u0')] : [];
   };
 }
 
 function answeringTheRemovedUpload(text: string): readonly unknown[] {
-  return text.startsWith('DELETE FROM recorded_content_heads') ? [{ upload_id: 'u1' }] : [];
+  return text.startsWith('DELETE FROM recorded_content_heads')
+    ? [{ place_key: 'playbook/acme/alpha/', upload_id: 'u1' }]
+    : [];
 }
 
 function answeringOneChunk(text: string): readonly unknown[] {
-  return text.startsWith('SELECT upload_id') ? [headOf('u1')] : [{ data: Buffer.from('{"a":1}') }];
+  return text.startsWith('SELECT place_key') ? [headOf('u1')] : [{ data: Buffer.from('{"a":1}') }];
 }
 
 function nothing(): readonly unknown[] {
@@ -79,7 +81,7 @@ describe('the content a playbook keeps on PostgreSQL', () => {
     expect(asked[1]?.values[3]).toBe(Buffer.from('{"b":2}').toString('hex'));
   });
 
-  it('removes a content kept before a time within a transaction on one connection, its head and then the chunks of the upload the head named, and commits and releases it', async () => {
+  it('removes a content kept before a time within a transaction on one connection, its head and then the chunks at the place and upload the head named, and commits and releases it', async () => {
     const { connections, asked } = connectionsAnswering(answeringTheRemovedUpload);
 
     const removed = await inTransactionOn(connections)(
@@ -95,9 +97,9 @@ describe('the content a playbook keeps on PostgreSQL', () => {
       'connection: COMMIT',
       'connection: released',
     ]);
-    expect(asked[1]?.text).toContain('RETURNING upload_id');
+    expect(asked[1]?.text).toContain('RETURNING place_key, upload_id');
     expect(asked.slice(1, 3).map(({ values }) => values)).toEqual([
-      ['playbook/acme/alpha/', 'digest', 1000],
+      ['org/acme/', 'digest', 1000],
       ['playbook/acme/alpha/', 'u1'],
     ]);
   });

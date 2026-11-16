@@ -1,4 +1,5 @@
 export {
+  orgOfStreamPrefix,
   playbookBoundProjectionReader,
   playbookBoundStreamReader,
   playbookOfStreamPrefix,

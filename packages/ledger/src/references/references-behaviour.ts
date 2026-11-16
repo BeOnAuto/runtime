@@ -21,7 +21,7 @@ const notesOfTheOrg = 'org/acme/notes/n1';
 const HeldStreamRows = Schema.Array(Schema.Struct({ stream: Schema.String, rows: Schema.Number, held: Schema.Number }));
 
 const heldByStream = `SELECT stream, CAST(count(*) AS INTEGER) AS rows, CAST(sum(held) AS INTEGER) AS held
-  FROM content_references_1 GROUP BY stream ORDER BY stream`;
+  FROM content_references_2 GROUP BY stream ORDER BY stream`;
 
 function kept(sha256: string): HeldNote {
   return { type: 'note_kept', data: { sha256 } };
@@ -60,11 +60,11 @@ function filledAsItOpens(entry: LedgerEntry): void {
   it('drops the table of an earlier version of the holds as it makes and fills the one it keeps', async () => {
     const database = await entry.aDatabase();
     await aLedger(entry, database);
-    await entry.queried(database, 'CREATE TABLE content_references_0 (playbook_key TEXT)');
+    await entry.queried(database, 'CREATE TABLE content_references_1 (playbook_key TEXT)');
 
     await aLedgerHolding(entry, noteHolders, database);
 
-    expect(await referenceTablesIn(entry, database)).toEqual(['content_references_1']);
+    expect(await referenceTablesIn(entry, database)).toEqual(['content_references_2']);
   });
 
   it('finds the table of holds it made and filled before as it opens again, and folds into it', async () => {
@@ -85,7 +85,7 @@ function keptWithoutHolders(entry: LedgerEntry): void {
     const ledger = await aLedgerHolding(entry, new Map(), database);
     await noted(ledger, firstNotes, [kept(sha256Of('kept'))]);
 
-    expect(await referenceTablesIn(entry, database)).toEqual(['content_references_1']);
+    expect(await referenceTablesIn(entry, database)).toEqual(['content_references_2']);
     expect(await heldIn(entry, database)).toEqual([]);
     expect(await Effect.runPromise(ledger.removeUnheld(alpha, sha256Of('kept')))).toBe('removed');
   });

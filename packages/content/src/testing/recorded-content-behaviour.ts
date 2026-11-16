@@ -9,10 +9,11 @@ import {
   alpha,
   answerOfAbout,
   at,
-  generatedStream,
   beta,
   brokenAfter,
+  elsewhere,
   generated,
+  generatedStream,
   json,
   octets,
   present,
@@ -47,7 +48,7 @@ function keptWhole(entry: ContentEntry): void {
 }
 
 function keptOnce(entry: ContentEntry): void {
-  it('keeps a text as its UTF-8 under the digest its fact carries, once, with the media type it was first put with, in its playbook alone', async () => {
+  it('keeps a text as its UTF-8 under the digest its fact carries, once, with the media type it was first put with, for every playbook of its org and for no other org', async () => {
     const store = await entry.aStore();
     const text = answerOfAbout(1_500_000);
     const sha256 = sha256Of(text);
@@ -63,7 +64,8 @@ function keptOnce(entry: ContentEntry): void {
       { sha256, bytes: Buffer.byteLength(text), mediaType: json },
     ]);
     expect([read.mediaType, await resultOf(textOfContent(read))]).toEqual([json, text]);
-    expect(await resultOf(store.content.get(beta, sha256))).toBeUndefined();
+    expect((await present(store.content.get(beta, sha256))).bytes).toBe(Buffer.byteLength(text));
+    expect(await resultOf(store.content.get(elsewhere, sha256))).toBeUndefined();
     expect(await resultOf(store.content.get(alpha, sha256Of('another answer')))).toBeUndefined();
     expect(await store.unnamedLeft()).toBe(0);
   });
@@ -91,7 +93,7 @@ function keptOnce(entry: ContentEntry): void {
 }
 
 function headRead(entry: ContentEntry): void {
-  it('answers the head of a content its playbook keeps, with when a put last kept it, and none where the playbook keeps no such content', async () => {
+  it('answers the head of a content its org keeps to every playbook of the org, with when a put last kept it, and none to another org or for a digest the org keeps no content of', async () => {
     const store = await entry.aStore();
     const text = answerOfAbout(3000);
     const sha256 = sha256Of(text);
@@ -102,11 +104,12 @@ function headRead(entry: ContentEntry): void {
       resultOf(store.content.getHead(alpha, sha256)),
       resultOf(store.elsewhere.getHead(alpha, sha256)),
       resultOf(store.content.getHead(beta, sha256)),
+      resultOf(store.content.getHead(elsewhere, sha256)),
       resultOf(store.content.getHead(alpha, sha256Of('another answer'))),
     ]);
 
     const head = { bytes: Buffer.byteLength(text), mediaType: json, keptAt: 2_000_000 };
-    expect(heads).toEqual([head, head, undefined, undefined]);
+    expect(heads).toEqual([head, head, head, undefined, undefined]);
   });
 }
 
@@ -253,7 +256,7 @@ function keptInParts(entry: ContentEntry): void {
 
     expect(parts).toEqual(Array.from({ length: 3 }, () => ({ size: 100, mediaType: octets })));
     expect(await resultOf(store.content.getPart(alpha, 'a'.repeat(64), { start: 0, end: 9 }))).toBeUndefined();
-    expect(await resultOf(store.content.getPart(beta, sha256, { start: 0, end: 9 }))).toBeUndefined();
+    expect(await resultOf(store.content.getPart(elsewhere, sha256, { start: 0, end: 9 }))).toBeUndefined();
   });
 }
 

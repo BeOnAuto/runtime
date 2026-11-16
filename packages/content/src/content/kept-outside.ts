@@ -29,8 +29,8 @@ export const erasureDeletesWithinMs = removalLastsMs / 2;
 
 export interface KeptOutside {
   readonly content: RecordedContent;
-  readonly found: (playbook: ContentOwner, sha256: string) => Effect.Effect<boolean>;
-  readonly removedKeptBefore: (playbook: ContentOwner, sha256: string, before: number) => Effect.Effect<UnheldRemoval>;
+  readonly found: (owner: ContentOwner, sha256: string) => Effect.Effect<boolean>;
+  readonly removedKeptBefore: (owner: ContentOwner, sha256: string, before: number) => Effect.Effect<UnheldRemoval>;
   readonly eraseExpired: (most: number) => Effect.Effect<ExpiredErased>;
 }
 
@@ -40,7 +40,7 @@ interface Outside {
 }
 
 interface Keeping extends Outside {
-  readonly playbook: ContentOwner;
+  readonly owner: ContentOwner;
   readonly sha256: string;
 }
 
@@ -71,10 +71,10 @@ function firstAnswerOf<A>(
 }
 
 function readAtItsPlaces<A>(
-  { heads, playbook, sha256 }: Keeping,
+  { heads, owner, sha256 }: Keeping,
   read: (place: string) => Effect.Effect<A | undefined>,
 ): Effect.Effect<A | undefined> {
-  return Effect.flatMap(heads.placesOf(playbook, sha256), (places) => firstAnswerOf(places, read));
+  return Effect.flatMap(heads.placesOf(owner, sha256), (places) => firstAnswerOf(places, read));
 }
 
 function heldAtAPlace(keeping: Keeping): Effect.Effect<boolean> {
@@ -85,41 +85,39 @@ function heldAtAPlace(keeping: Keeping): Effect.Effect<boolean> {
   return Effect.map(placeHolding, (place) => place !== undefined);
 }
 
-function deletedAtEveryPlace({ heads, store, playbook, sha256 }: Keeping): Effect.Effect<void> {
-  return Effect.flatMap(heads.placesOf(playbook, sha256), (places) =>
+function deletedAtEveryPlace({ heads, store, owner, sha256 }: Keeping): Effect.Effect<void> {
+  return Effect.flatMap(heads.placesOf(owner, sha256), (places) =>
     Effect.forEach(places, (place) => store.delete(place, sha256), { discard: true }),
   );
 }
 
 function removalFinished(keeping: Keeping, since: number): Effect.Effect<void> {
-  const { heads, playbook, sha256 } = keeping;
-  const deleted = deletedAtEveryPlace(keeping).pipe(Effect.onError(() => heads.unmarked(playbook, sha256, since)));
-  return Effect.andThen(deleted, heads.cleared(playbook, sha256, since));
+  const { heads, owner, sha256 } = keeping;
+  const deleted = deletedAtEveryPlace(keeping).pipe(Effect.onError(() => heads.unmarked(owner, sha256, since)));
+  return Effect.andThen(deleted, heads.cleared(owner, sha256, since));
 }
 
 function erasureFinished(keeping: Keeping, since: number): Effect.Effect<boolean> {
-  const { heads, playbook, sha256 } = keeping;
+  const { heads, owner, sha256 } = keeping;
   return Effect.gen(function* () {
     const left = since + erasureDeletesWithinMs - (yield* Clock.currentTimeMillis);
     if (left <= 0) {
-      yield* heads.unmarked(playbook, sha256, since);
+      yield* heads.unmarked(owner, sha256, since);
       return false;
     }
     const deleted = yield* deletedAtEveryPlace(keeping).pipe(
-      Effect.onError((cause) =>
-        Cause.hasInterruptsOnly(cause) ? Effect.void : heads.unmarked(playbook, sha256, since),
-      ),
+      Effect.onError((cause) => (Cause.hasInterruptsOnly(cause) ? Effect.void : heads.unmarked(owner, sha256, since))),
       Effect.timeoutOption(left),
     );
-    return Option.isSome(deleted) && (yield* heads.erased(playbook, sha256, since));
+    return Option.isSome(deleted) && (yield* heads.erased(owner, sha256, since));
   });
 }
 
 function erasedNow(keeping: Keeping): Effect.Effect<boolean> {
-  const { heads, playbook, sha256 } = keeping;
+  const { heads, owner, sha256 } = keeping;
   return Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis;
-    const since = yield* heads.erasing(playbook, sha256, { now, staleBefore: now - removalLastsMs });
+    const since = yield* heads.erasing(owner, sha256, { now, staleBefore: now - removalLastsMs });
     return since !== undefined && (yield* erasureFinished(keeping, since));
   });
 }
@@ -156,9 +154,9 @@ function heldWhole(
   keeping: Keeping,
   expiresAt: number | undefined,
 ): Effect.Effect<ContentHead | undefined, ContentRefused> {
-  const { heads, playbook, sha256 } = keeping;
+  const { heads, owner, sha256 } = keeping;
   return Effect.gen(function* () {
-    const touched = yield* afterAnyRemoval(keeping, (keptAt) => heads.touched(playbook, sha256, keptAt, expiresAt));
+    const touched = yield* afterAnyRemoval(keeping, (keptAt) => heads.touched(owner, sha256, keptAt, expiresAt));
     return touched !== undefined && (yield* heldAtAPlace(keeping)) ? touched.head : undefined;
   });
 }
@@ -180,46 +178,46 @@ function headToKeep(bytes: number, { mediaType, expiresAt }: ContentToKeep): Hea
 
 function stagedAndPlaced(
   outside: Outside,
-  playbook: ContentOwner,
+  owner: ContentOwner,
   content: ContentToKeep,
 ): Effect.Effect<ContentKept, ContentRefused> {
   const { heads, store } = outside;
   return Effect.gen(function* () {
-    const place = heads.placeOfNewBytes(playbook);
+    const place = heads.placeOfNewBytes(owner);
     const staged = yield* store.stage(place, content);
     const { sha256, bytes } = staged.taken;
-    const keeping = { ...outside, playbook, sha256 };
+    const keeping = { ...outside, owner, sha256 };
     const head = headToKeep(bytes, content);
-    const kept = yield* afterAnyRemoval(keeping, (keptAt) => heads.kept(playbook, sha256, head, keptAt)).pipe(
+    const kept = yield* afterAnyRemoval(keeping, (keptAt) => heads.kept(owner, sha256, head, keptAt)).pipe(
       Effect.onError(() => staged.discarded()),
     );
     const bytesStand = kept.kept === 'standing' && (yield* heldAtAPlace(keeping));
     yield* bytesStand
       ? staged.discarded()
-      : Effect.andThen(heads.placed(playbook, sha256, place), staged.placed(kept.head.mediaType));
+      : Effect.andThen(heads.placed(owner, sha256, place), staged.placed(kept.head.mediaType));
     return keptAs(sha256, kept.head);
   });
 }
 
 function put(
   outside: Outside,
-  playbook: ContentOwner,
+  owner: ContentOwner,
   content: ContentToKeep,
 ): Effect.Effect<ContentKept, ContentRefused> {
   return Effect.gen(function* () {
     const expiresAt = yield* expiryOf(content);
     const expected = content.expected?.sha256;
     const held =
-      expected === undefined ? undefined : yield* heldWhole({ ...outside, playbook, sha256: expected }, expiresAt);
-    return yield* held === undefined ? stagedAndPlaced(outside, playbook, content) : heldDigestRead(content, held);
+      expected === undefined ? undefined : yield* heldWhole({ ...outside, owner, sha256: expected }, expiresAt);
+    return yield* held === undefined ? stagedAndPlaced(outside, owner, content) : heldDigestRead(content, held);
   });
 }
 
 function removedKeptBefore(keeping: Keeping, before: number): Effect.Effect<UnheldRemoval> {
-  const { heads, playbook, sha256 } = keeping;
+  const { heads, owner, sha256 } = keeping;
   return Effect.gen(function* () {
     const now = yield* Clock.currentTimeMillis;
-    const marked = yield* heads.marked(playbook, sha256, { before, now, staleBefore: now - removalLastsMs });
+    const marked = yield* heads.marked(owner, sha256, { before, now, staleBefore: now - removalLastsMs });
     if (!marked.marked) {
       return marked.answer;
     }
@@ -233,9 +231,7 @@ function expiredErased(outside: Outside, most: number): Effect.Effect<ExpiredEra
     yield* requireABatch(most);
     const now = yield* Clock.currentTimeMillis;
     const expired = yield* outside.heads.expired({ now, staleBefore: now - removalLastsMs }, most);
-    const erasures = yield* Effect.forEach(expired, ({ playbook, sha256 }) =>
-      erasedNow({ ...outside, playbook, sha256 }),
-    );
+    const erasures = yield* Effect.forEach(expired, ({ owner, sha256 }) => erasedNow({ ...outside, owner, sha256 }));
     return { erased: erasures.filter(Boolean).length, more: expired.length === most };
   });
 }
@@ -247,18 +243,18 @@ interface Resolved<A> {
 
 function resolvedThroughItsHead<A>(
   { heads }: Outside,
-  playbook: ContentOwner,
+  owner: ContentOwner,
   sha256: string,
   { erased, stored }: Resolved<A>,
 ): Effect.Effect<A> {
-  return Effect.flatMap(heads.read(playbook, sha256), (head) => (head?.erasedAt === undefined ? stored(head) : erased));
+  return Effect.flatMap(heads.read(owner, sha256), (head) => (head?.erasedAt === undefined ? stored(head) : erased));
 }
 
 function readAsHeld<Read extends { readonly mediaType: string }>(
   keeping: Keeping,
   readAt: (place: string) => Effect.Effect<Read | undefined>,
 ): Effect.Effect<Read | undefined> {
-  return resolvedThroughItsHead(keeping, keeping.playbook, keeping.sha256, {
+  return resolvedThroughItsHead(keeping, keeping.owner, keeping.sha256, {
     erased: Effect.undefined,
     stored: (head) =>
       Effect.map(readAtItsPlaces(keeping, readAt), (read) =>
@@ -268,7 +264,7 @@ function readAsHeld<Read extends { readonly mediaType: string }>(
 }
 
 function foundAsRead(keeping: Keeping): Effect.Effect<boolean> {
-  return resolvedThroughItsHead(keeping, keeping.playbook, keeping.sha256, {
+  return resolvedThroughItsHead(keeping, keeping.owner, keeping.sha256, {
     erased: Effect.succeed(true),
     stored: () => heldAtAPlace(keeping),
   });
@@ -278,14 +274,14 @@ export function keptOutside(heads: ContentHeads, store: ContentStore): KeptOutsi
   const outside: Outside = { heads, store };
   return {
     content: {
-      put: (playbook, content) => put(outside, playbook, content),
-      get: (playbook, sha256) => readAsHeld({ ...outside, playbook, sha256 }, (place) => store.read(place, sha256)),
-      getHead: (playbook, sha256) => heads.read(playbook, sha256),
-      getPart: (playbook, sha256, asked) =>
-        readAsHeld({ ...outside, playbook, sha256 }, (place) => store.readPart(place, sha256, asked)),
+      put: (owner, content) => put(outside, owner, content),
+      get: (owner, sha256) => readAsHeld({ ...outside, owner, sha256 }, (place) => store.read(place, sha256)),
+      getHead: (owner, sha256) => heads.read(owner, sha256),
+      getPart: (owner, sha256, asked) =>
+        readAsHeld({ ...outside, owner, sha256 }, (place) => store.readPart(place, sha256, asked)),
     },
-    found: (playbook, sha256) => foundAsRead({ ...outside, playbook, sha256 }),
-    removedKeptBefore: (playbook, sha256, before) => removedKeptBefore({ ...outside, playbook, sha256 }, before),
+    found: (owner, sha256) => foundAsRead({ ...outside, owner, sha256 }),
+    removedKeptBefore: (owner, sha256, before) => removedKeptBefore({ ...outside, owner, sha256 }, before),
     eraseExpired: (most) => expiredErased(outside, most),
   };
 }

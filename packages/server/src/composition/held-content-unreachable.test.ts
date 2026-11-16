@@ -1,5 +1,5 @@
 import { statementOf } from '@on.auto/ledger';
-import { Ledger, streamPrefixOfPlaybook } from '@on.auto/operations';
+import { Ledger, streamPrefixOfOrg, streamPrefixOfPlaybook } from '@on.auto/operations';
 import { ManagedRuntime } from 'effect';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
@@ -25,21 +25,34 @@ async function opened(environment: Readonly<Record<string, string>>): Promise<vo
 async function aLedgerHoldingContentOutside(ledger: TemporaryLedger): Promise<void> {
   await opened({ LEDGER_FILE: ledger.fileName });
   const playbook = streamPrefixOfPlaybook({ org: 'acme', playbook: 'alpha' });
+  const org = streamPrefixOfOrg({ org: 'acme' });
   await onTheLedgerIn(ledger.fileName, async (connection) => {
     await connection.write(
       statementOf(
-        ['INSERT INTO content_references_1 (playbook_key, stream, sha256, held) VALUES (', ", 'notes/n1', ", ', 1)'],
-        [playbook, heldDigest],
+        [
+          'INSERT INTO content_references_2 (org_key, playbook_key, stream, sha256, held) VALUES (',
+          ', ',
+          ", 'notes/n1', ",
+          ', 1)',
+        ],
+        [org, playbook, heldDigest],
       ),
     );
     await connection.write(
       statementOf(
         [
-          'INSERT INTO recorded_content_heads (playbook_key, sha256, upload_id, bytes, chunks, media_type, kept_in) VALUES (',
+          'INSERT INTO recorded_content_heads (org_key, sha256, place_key, upload_id, bytes, chunks, media_type, kept_in) VALUES (',
+          ', ',
           ', ',
           ", '', 20, 0, 'application/json', 'external')",
         ],
-        [playbook, heldDigest],
+        [org, heldDigest, org],
+      ),
+    );
+    await connection.write(
+      statementOf(
+        ['INSERT INTO recorded_content_places (org_key, sha256, place_key) VALUES (', ', ', ', ', ')'],
+        [org, heldDigest, org],
       ),
     );
   });

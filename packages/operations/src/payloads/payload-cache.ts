@@ -13,8 +13,8 @@ interface CachedText {
 
 const bytesACodeUnit = 2;
 
-function keyOf({ org, playbook }: ContentOwner, sha256: string): string {
-  return JSON.stringify([org, playbook, sha256]);
+function keyOf({ org }: ContentOwner, sha256: string): string {
+  return JSON.stringify([org, sha256]);
 }
 
 export const noPayloadCache: PayloadCache = {
