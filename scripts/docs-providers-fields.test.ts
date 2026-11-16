@@ -97,6 +97,27 @@ function keysIn(value: unknown): readonly string[] {
 
 const fixtures = providersDocumentOf(providersOf(tracker, ledgers, drive));
 
+const [consent] = drive.credentials;
+
+const growing = providersDocumentOf(
+  providersOf({
+    ...drive,
+    credentials: [
+      {
+        ...consent,
+        more: [
+          {
+            name: 'share',
+            for: 'Share your files with other people.',
+            scope: 'files.share',
+            says: { 'files.share': 'Share the files of the account with other people.' },
+          },
+        ],
+      },
+    ],
+  }),
+);
+
 await test('each shipped provider publishes its words, its server, its ways, whether it handles money, and its tools where Auto ships its document', () => {
   for (const { entry } of shippedProviders.providers) {
     const provider = shipped(entry.name);
@@ -120,16 +141,11 @@ await test('a way of consent publishes the words of each scope it asks, in its o
     scopesIn(github.scope).map((scope) => ({ scope, says: github.says?.[scope] })),
   );
   assert.deepEqual([wayAt(shipped('github'), 0).more, wayAt(shipped('github'), 0).own_client], [[], false]);
-  assert.deepEqual(wayAt(shipped('google-drive'), 0).more, [
+  assert.deepEqual(wayAt(publishedIn(growing, 'drive'), 0).more, [
     {
-      name: 'edit',
-      for: 'Change and delete files you already have.',
-      scopes: [
-        {
-          scope: 'https://www.googleapis.com/auth/drive',
-          says: "See, change, create and delete every file of the person's Google Drive.",
-        },
-      ],
+      name: 'share',
+      for: 'Share your files with other people.',
+      scopes: [{ scope: 'files.share', says: 'Share the files of the account with other people.' }],
     },
   ]);
   assert.equal(wayAt(shipped('x'), 0).own_client, true);

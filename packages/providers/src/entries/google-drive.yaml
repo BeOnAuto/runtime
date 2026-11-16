@@ -11,12 +11,6 @@ credentials:
     says:
       https://www.googleapis.com/auth/drive.readonly: See and download every file of the person's Google Drive.
       https://www.googleapis.com/auth/drive.file: See, change, create and delete only the Google Drive files opened or created through this connection.
-    more:
-      - name: edit
-        for: Change and delete files you already have.
-        scope: https://www.googleapis.com/auth/drive
-        says:
-          https://www.googleapis.com/auth/drive: See, change, create and delete every file of the person's Google Drive.
     parameters:
       access_type: offline
       prompt: consent

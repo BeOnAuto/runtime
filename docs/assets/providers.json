@@ -1030,18 +1030,7 @@
               "says": "See, change, create and delete only the Google Drive files opened or created through this connection."
             }
           ],
-          "more": [
-            {
-              "name": "edit",
-              "for": "Change and delete files you already have.",
-              "scopes": [
-                {
-                  "scope": "https://www.googleapis.com/auth/drive",
-                  "says": "See, change, create and delete every file of the person's Google Drive."
-                }
-              ]
-            }
-          ],
+          "more": [],
           "own_client": false
         }
       ],

@@ -58,16 +58,9 @@ function breaksTheRule({ says = '' }: SaidScope): boolean {
 
 const saidScopes = shipped.providers.flatMap(({ entry }) => saidScopesOf(entry));
 
-const groupsSaid = shipped.providers.flatMap(({ entry }) => entry.credentials.flatMap(({ more = [] }) => more));
-
 describe('the words of the scopes the shipped providers ask', () => {
   it('say every scope in at most 120 characters, opening with a bare verb and naming no person by a pronoun', () => {
     expect(saidScopes.filter((said) => breaksTheRule(said))).toEqual([]);
-    expect(saidScopes).toHaveLength(109);
-  });
-
-  it('say what each group a later consent may add is for in the words of the person, opening with a bare verb', () => {
-    expect(groupsSaid.filter((group) => !opensWithABareVerb(group.for))).toEqual([]);
-    expect(groupsSaid).toHaveLength(1);
+    expect(saidScopes).toHaveLength(108);
   });
 });

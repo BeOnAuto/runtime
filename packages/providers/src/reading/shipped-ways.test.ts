@@ -171,12 +171,6 @@ function scopesOfEachWayAtGoogle({ name, credentials }: ProviderEntry) {
   return [name, credentials.map(({ scope = '' }) => namedAtGoogle(scope))];
 }
 
-function moreOfEachWayAtGoogle({ name, credentials }: ProviderEntry) {
-  return credentials.flatMap(({ more = [] }) =>
-    more.map((group) => [name, group.name, group.for, namedAtGoogle(group.scope)]),
-  );
-}
-
 function headersOf({ name, headers }: ProviderEntry) {
   return headers === undefined ? [] : [[name, headers]];
 }
@@ -218,14 +212,6 @@ describe('the ways of consent of the shipped providers of Google', () => {
       ['youtube', ['youtube.readonly']],
       ['youtube-analytics', ['yt-analytics.readonly yt-analytics-monetary.readonly']],
       ['youtube-management', ['youtube.force-ssl']],
-    ]);
-  });
-
-  it('name what a later consent may add on google-drive alone', () => {
-    const consenting = shipped.providers.filter(({ entry }) => signsInAtGoogle(entry));
-
-    expect(consenting.flatMap(({ entry }) => moreOfEachWayAtGoogle(entry))).toEqual([
-      ['google-drive', 'edit', 'Change and delete files you already have.', 'drive'],
     ]);
   });
 });

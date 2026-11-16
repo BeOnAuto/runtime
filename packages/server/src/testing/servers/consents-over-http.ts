@@ -48,20 +48,33 @@ function keyedBy({ key }: Consenting): { readonly key?: string } {
   return key === undefined ? {} : { key };
 }
 
-export async function consentStartedBy(served: ReasoningServer, consenting: Consenting = {}): Promise<StartedConsent> {
-  const connections = connectionsOf(consenting);
-  const { provider = 'files' } = consenting;
-  const link = linkAddedBy(await served.call('POST', connections, { ...keyedBy(consenting), body: { provider } }));
-  const started = await served.call('POST', `${connections}/${link.id}/consent`, {
+export async function consentStartedFrom(
+  served: ReasoningServer,
+  link: AddedLink,
+  consenting: Consenting = {},
+): Promise<StartedConsent> {
+  const started = await served.call('POST', `${connectionsOf(consenting)}/${link.id}/consent`, {
     ...keyedBy(consenting),
     body: { token: link.token },
   });
   return { ...link, authorize: new URL(Schema.decodeUnknownSync(StartedSchema)(started.body).authorize.url) };
 }
 
-export async function connectedByConsent(served: ReasoningServer, consenting: Consenting = {}): Promise<string> {
-  const { id, token, authorize } = await consentStartedBy(served, consenting);
-  const back = new URL(String((await fetch(authorize, { redirect: 'manual' })).headers.get('location')));
+export async function consentStartedBy(served: ReasoningServer, consenting: Consenting = {}): Promise<StartedConsent> {
+  const { provider = 'files' } = consenting;
+  const link = linkAddedBy(
+    await served.call('POST', connectionsOf(consenting), { ...keyedBy(consenting), body: { provider } }),
+  );
+  return consentStartedFrom(served, link, consenting);
+}
+
+export async function consentFinishedBy(
+  served: ReasoningServer,
+  { id, token }: AddedLink,
+  authorizeAt: string,
+  consenting: Consenting = {},
+): Promise<string> {
+  const back = new URL(String((await fetch(authorizeAt, { redirect: 'manual' })).headers.get('location')));
   const [code, state, iss] = ['code', 'state', 'iss'].map((name) => String(back.searchParams.get(name)));
   await served.call('POST', `${connectionsOf(consenting)}/${id}/consent/code`, {
     ...keyedBy(consenting),
@@ -70,7 +83,22 @@ export async function connectedByConsent(served: ReasoningServer, consenting: Co
   return id;
 }
 
-export function filesProvidedBy(fake: FakeMcpServer): Readonly<Record<string, string>> {
+export async function connectedByConsent(served: ReasoningServer, consenting: Consenting = {}): Promise<string> {
+  const started = await consentStartedBy(served, consenting);
+  return consentFinishedBy(served, started, started.authorize.href, consenting);
+}
+
+export interface GroupOfMore {
+  readonly name: string;
+  readonly for: string;
+  readonly scope: string;
+  readonly says: Readonly<Record<string, string>>;
+}
+
+export function filesProvidedBy(
+  fake: FakeMcpServer,
+  more: readonly GroupOfMore[] = [],
+): Readonly<Record<string, string>> {
   return {
     CONNECTIONS: JSON.stringify({
       allowed_hosts: ['127.0.0.1'],
@@ -91,6 +119,7 @@ export function filesProvidedBy(fake: FakeMcpServer): Readonly<Record<string, st
               issuer: fake.origin,
               scope: 'files.read',
               says: { 'files.read': 'Read the files of the account.' },
+              ...(more.length === 0 ? {} : { more }),
             },
           ],
         },
