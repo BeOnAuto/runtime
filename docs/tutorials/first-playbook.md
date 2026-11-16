@@ -14,11 +14,11 @@ Finish the [quick start](../get-started/cloud.md) first. Your agent should be co
 
 ## 1. Create a playbook
 
-A playbook is where Auto keeps one area of your team's work. Send your agent this message:
+A playbook is where Auto keeps one area of your team's work, and its goals say what that work should achieve. Auto creates a playbook only with its goals. Send your agent this message:
 
-> Create an Auto playbook called "Campaign review tutorial". If one with that name already exists, use it. Don't change any other playbooks.
+> Create an Auto playbook called "Campaign review tutorial". Its goal: every campaign brief we send gets a review that recommends Ready or Revise against our criteria, and we know it works when each brief we send has its review. If one with that name already exists, use it. Don't change any other playbooks.
 
-Your agent should confirm that the "Campaign review tutorial" playbook exists.
+Your agent says the goal back in its own words and asks a few questions about it, such as what to call it. Answer them, and say yes when the goal reads right. It then creates the playbook, shows you the goal as saved with a link to the playbook in Studio, and asks again. Reply yes once the saved goal reads right; your agent builds nothing in the playbook before that.
 
 ## 2. Describe the review
 
@@ -111,7 +111,7 @@ Next:
 
 - [Build your first workflow](first-workflow.md) adds a step that drafts feedback from the review.
 - To do the same with your own work, start with [Choose a first use case](https://on.auto/docs/get-started/discover), which helps you pick one repeatable task your team does.
-- [Give a function tools](../guides/tools.md) lets a function look things up while it runs.
+- [Give a function tools](../guides/tools.md) lets your functions read from and act on a service you already use, each tool in the function that needs it.
 - [Playbooks and methods](../concepts/playbooks.md) explains how this example fits into a bigger playbook.
 
 ## If something goes wrong

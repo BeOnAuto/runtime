@@ -42,7 +42,7 @@ const goalsInFirstPlaybook =
 const toldInFirstPlaybook = ' Learn too what they want to be told when it passes, fails or becomes overdue, and where.';
 
 const createStep =
-  "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it.";
+  "3. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it.";
 
 const goalsTerms = [
   '',
@@ -90,7 +90,7 @@ describe('the guides of a server that keeps goals', () => {
     expect(withGoals).toContain(`${whereToGoBeginsWith}${goalsInWhereToGo}\n- To build a playbook from nothing`);
     expect(withGoals).toContain(`results, run by run and over time.\n${goalsSection}\n\n## What a workflow owns`);
     expect(without).toContain(whereToGoBeginsWith);
-    expect([byteLengthOf(withGoals), byteLengthOf(without)]).toEqual([8703, 7670]);
+    expect([byteLengthOf(withGoals), byteLengthOf(without)]).toEqual([8931, 7898]);
     expect(internalTermsIn(withGoals)).toEqual([]);
   });
 });
@@ -110,10 +110,10 @@ describe('the terminology and recipes of a server that keeps goals', () => {
 
     expect(withGoals.replace(goalsInFirstPlaybook, '')).toBe(without);
     expect(createStep.endsWith(goalsInsertedAfter)).toBe(true);
-    expect(without).toContain(`\n${createStep}\n5. Write each function`);
-    expect(withGoals).toContain(`\n${createStep}${goalsInFirstPlaybook}\n5. Write each function`);
-    expect([byteLengthOf(without), byteLengthOf(withGoals)]).toEqual([7504, 8290]);
-    expect(byteLengthOf(withGoals)).toBeGreaterThan(mostRecipeBytes);
+    expect(without).toContain(`\n${createStep}\n4. Design the workflow`);
+    expect(withGoals).toContain(`\n${createStep}${goalsInFirstPlaybook}\n4. Design the workflow`);
+    expect([byteLengthOf(without), byteLengthOf(withGoals)]).toEqual([6317, 7103]);
+    expect(byteLengthOf(withGoals)).toBeLessThanOrEqual(mostRecipeBytes);
     expect(byteLengthOf(withGoals)).toBeLessThanOrEqual(mostRecipeBytesWhere(true));
     expect(internalTermsIn(goalsInFirstPlaybook)).toEqual([]);
   });

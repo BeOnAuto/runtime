@@ -116,6 +116,7 @@ describe('a reasoning function that calls tools, over HTTP', () => {
   it('runs with a tool of a remote server it connects to as its release, and its history shows the call', async () => {
     const fake = await fakeGraph();
     const server = await serving(fake, searched('graph'));
+    const before = { ended: fake.endedSessions(), seen: fake.seen().length };
 
     expect(await running(server, 'graph')).toMatchObject({
       status: 200,
@@ -125,10 +126,11 @@ describe('a reasoning function that calls tools, over HTTP', () => {
     expect(fake.received()).toEqual([
       { tool: 'search', arguments: { query: 'acme' }, meta: { 'auto.on/run_id': runId } },
     ]);
-    expect(fake.endedSessions()).toBe(1);
+    expect(fake.endedSessions() - before.ended).toBe(1);
     expect(
       fake
         .seen()
+        .slice(before.seen)
         .filter(({ rpc }) => rpc === 'initialize')
         .map(({ clientInfo }) => clientInfo),
     ).toEqual([release]);
@@ -193,6 +195,7 @@ describe('a server bound to another org, over HTTP', () => {
   it('is not offered to the functions of this org, which reach nothing of it', async () => {
     const fake = await fakeGraph();
     const server = await serving(fake);
+    const seenBefore = fake.seen().length;
 
     const refused = await running(server, 'crm');
 
@@ -201,7 +204,7 @@ describe('a server bound to another org, over HTTP', () => {
       body: { reason: 'unavailable', kind: 'tool_not_offered', because: 'tool_server_not_configured' },
     });
     expect(refused.headers.get('retry-after')).toBeNull();
-    expect(fake.seen()).toEqual([]);
+    expect(fake.seen().slice(seenBefore)).toEqual([]);
     expect(server.modelCalls()).toBe(0);
   });
 });

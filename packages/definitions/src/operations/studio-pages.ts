@@ -1,11 +1,15 @@
 import {
+  noticesFields,
+  noticesIn,
   PlaybookContext,
   studioLinkField,
+  withNotices,
   withStudioLink,
   type DefinitionSaved,
   type LinkedInStudio,
+  type Notice,
 } from '@on.auto/operations';
-import { Schema, type Effect } from 'effect';
+import { Effect, Schema } from 'effect';
 
 import { DefinitionSchema, DefinitionWithGoalsSchema, type Definition } from '../registry/definition.ts';
 import { RunDetailSchema, type RunDetail } from '../runs/run.ts';
@@ -16,11 +20,13 @@ const savedAnnotations = {
 };
 
 const SavedDefinitionSchema = Schema.Struct({
+  ...noticesFields(),
   ...DefinitionSchema.fields,
   studio: studioLinkField('saved'),
 }).annotate(savedAnnotations);
 
 const SavedDefinitionWithGoalsSchema = Schema.Struct({
+  ...noticesFields(),
   ...DefinitionWithGoalsSchema.fields,
   studio: studioLinkField('saved'),
 }).annotate(savedAnnotations);
@@ -32,6 +38,7 @@ export function savedDefinitionSchemaOf(
 }
 
 export const RequestedRunSchema = Schema.Struct({
+  ...noticesFields(),
   ...RunDetailSchema.fields,
   studio: studioLinkField('run'),
 }).annotate({
@@ -58,6 +65,16 @@ export function withDefinitionPageInStudio(
   );
 }
 
-export function withRunPageInStudio(run: RunDetail): Effect.Effect<RunDetail & LinkedInStudio, never, PlaybookContext> {
+function withRunPageInStudio(run: RunDetail): Effect.Effect<RunDetail & LinkedInStudio, never, PlaybookContext> {
   return PlaybookContext.use(({ playbook }) => withStudioLink(run, { kind: 'run', playbook, run: run.run_id }));
+}
+
+export function requestedRunAnswered(
+  run: RunDetail,
+): Effect.Effect<
+  RunDetail & LinkedInStudio & { readonly notices?: readonly Notice[]; readonly before_going_on?: string },
+  never,
+  PlaybookContext
+> {
+  return Effect.map(withRunPageInStudio(run), (linked) => withNotices(linked, noticesIn(run.record)));
 }

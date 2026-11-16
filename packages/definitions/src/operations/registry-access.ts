@@ -80,3 +80,26 @@ export const recordInRegistry = Effect.fnUntraced(function* ({ type }: RegistryK
   const stored = yield* Effect.orDie(findDefinition(state, type, data.name));
   return { registry: state, stored, newVersion: decidedOn.get(data.name)?.version !== stored.version };
 });
+
+interface Saved {
+  readonly registry: DefinitionRegistry;
+  readonly stored: Pick<StoredDefinition, 'version'>;
+}
+
+function holdsNothing(type: string): Effect.Effect<boolean, never, PlaybookReader | PlaybookContext> {
+  return Effect.map(loadRegistry(type), (registry) => registry.size === 0);
+}
+
+export function isThePlaybooksFirst(
+  types: readonly string[],
+  type: string,
+  { registry, stored }: Saved,
+): Effect.Effect<boolean, never, PlaybookReader | PlaybookContext> {
+  if (stored.version !== 1 || registry.size !== 1) {
+    return Effect.succeed(false);
+  }
+  const others = types.filter((other) => other !== type);
+  return Effect.map(Effect.forEach(others, holdsNothing, { concurrency: 'unbounded' }), (empty: readonly boolean[]) =>
+    empty.every(Boolean),
+  );
+}

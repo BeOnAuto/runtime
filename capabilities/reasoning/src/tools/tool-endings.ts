@@ -1,4 +1,5 @@
 import { Conflict, Unavailable, type IncompleteDetails, type RejectionBecause } from '@on.auto/operations';
+import { capitalized } from '@on.auto/phrasing';
 import type { CallsEndedBecause } from '@on.auto/tool-servers';
 import { askedPastTheCount, type CallCount, type CallTally } from '@on.auto/tool-servers/policy';
 import { Effect, type Schema } from 'effect';
@@ -31,6 +32,7 @@ export type LimitReached =
 
 export interface ToolUse {
   readonly calledAny: boolean;
+  readonly calledARead: boolean;
   readonly onlyRead: boolean;
   readonly inWords: string;
   readonly ending: CallsEndedBecause | null;
@@ -106,18 +108,21 @@ function moreCallsThanItsCount({ most, countsReads }: CallCount): string {
 function toolCallsToChange({ most, countsReads }: CallCount): string {
   const atMost = counted.format(mostToolCalls);
   if (!countsReads) {
-    return `Set max_tool_calls in the reasoning function definition to give the run a count of its own, of all its calls, to at most ${atMost}, or run the function once for each item from a workflow`;
+    return `run the function once for each item from a workflow, or set max_tool_calls in the reasoning function definition to give the run a count of its own, of all its calls, to at most ${atMost}`;
   }
   return most < mostToolCalls
-    ? `Raise max_tool_calls in the reasoning function definition, to at most ${atMost}, or run the function once for each item from a workflow`
-    : 'Run the function once for each item from a workflow, so each run makes the calls of one item';
+    ? `run the function once for each item from a workflow, or raise max_tool_calls in the reasoning function definition, to at most ${atMost}`
+    : 'run the function once for each item from a workflow, so each run makes the calls of one item';
 }
 
 const askForLess =
-  'Ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow';
+  'ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow';
 
 const answerFromWhatItHas =
   'to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
+
+const toLookups =
+  "Where the input or an earlier step could give this run's reads their arguments, move each into a lookup function the workflow runs, one for each item in a for, and hand this function what they read";
 
 const readByThisRuntime = `this runtime lets a run read (${inputTokensSetting})`;
 
@@ -133,12 +138,16 @@ function moreInputTokensThanItsBudget({ allowed, asked, most }: InputBudget): st
 
 function inputTokensToChange({ allowed, most }: InputBudget): string {
   return allowed < most
-    ? `Raise max_input_tokens in the reasoning function definition, to at most ${counted.format(most)}, ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow`
+    ? `ask each tool for less, such as one page of what it holds, run the function once for each item from a workflow, or raise max_input_tokens in the reasoning function definition, to at most ${counted.format(most)}`
     : askForLess;
 }
 
 function calledIn({ calledAny, inWords }: ToolUse): string {
   return calledAny ? `, after the run called ${inWords}` : '';
+}
+
+function readsFilledIt(reached: LimitReached): boolean {
+  return reached.because === 'max_input_tokens' || reached.count.countsReads;
 }
 
 function limitInWords(reached: LimitReached): { readonly needed: string; readonly change: string } {
@@ -147,9 +156,13 @@ function limitInWords(reached: LimitReached): { readonly needed: string; readonl
     : { needed: moreInputTokensThanItsBudget(reached.budget), change: inputTokensToChange(reached.budget) };
 }
 
+function remediesOf(use: ToolUse, reached: LimitReached, change: string): string {
+  return use.calledARead && readsFilledIt(reached) ? `${toLookups}. Otherwise ${change}` : capitalized(change);
+}
+
 export function limitEnding(use: ToolUse, reached: LimitReached, spent: Spent): Effect.Effect<never, Conflict> {
   const { needed, change } = limitInWords(reached);
-  const detail = `${needed}${calledIn(use)}. ${change}; ${answerFromWhatItHas}`;
+  const detail = `${needed}${calledIn(use)}. ${remediesOf(use, reached, change)}; ${answerFromWhatItHas}`;
   const kind = use.onlyRead ? 'unworkable' : 'effect_unknown';
   return Effect.fail(new Conflict({ detail, kind, because: reached.because, ...spent }));
 }

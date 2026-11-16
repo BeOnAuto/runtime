@@ -12,9 +12,10 @@ Use one for the pictures and the spoken words a playbook makes. Writing text is 
 
 ## A function document
 
-The source is Markdown: YAML front matter, then a Liquid prompt template. This example makes a picture of a product for its listing:
+The source is Markdown: YAML front matter, then a Liquid prompt template. This example, `product-picture`, makes a picture of a product for its listing. Its page links each run's picture, and counts the pictures of each day:
 
-```markdown
+<!-- prettier-ignore -->
+````markdown
 ---
 description: A picture of the product for its listing
 produces: image
@@ -29,10 +30,37 @@ parameters:
   size: 1024x1024
   quality: high
 expires: P30D
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: generation/product-picture
+    views:
+      pictures: series
+    module: |
+      export function fold(view: View, event: Event): View {
+        const time = event.time?.slice(0, 10);
+        if (time === undefined) return view;
+        const points = view.pictures?.lines[0]?.points ?? [];
+        const last = points.at(-1);
+        const day = last !== undefined && last.at > time ? last.at : time;
+        const days = last?.at === day
+          ? [...points.slice(0, -1), { at: day, value: last.value + 1 }]
+          : [...points, { at: day, value: 1 }];
+        return { pictures: { unit: 'pictures', period: 'day', lines: [{ name: 'Pictures', points: days.slice(-30) }] } };
+      }
+  result: |
+    [A picture of the product for its listing]({{ output.address }}), {{ output.bytes | divided_by: 1000000 | round: 1 }} MB.
+  runs: |
+    ```chart line
+    {{ views.pictures | json }}
+    ```
 ---
 
 A studio photograph of {{ input.product }} on a white table, in soft daylight.
-```
+````
 
 This one speaks a welcome:
 
@@ -48,7 +76,7 @@ parameters:
 Welcome to {{ input.shop }}. Today is {{ today }}.
 ```
 
-To save it, call `create_definition` with `type: "generation"`, a function `name`, the document as `source`, and its `overview` and `diagram`. A save without a `diagram` is refused, so give the word `none` when a picture would add nothing; [The overview](#the-overview) says how to write both. To run it, call `run_definition` with the same type and name and its `input`. Both operations also need the playbook id, unless the MCP connection is scoped to that playbook.
+To save one, call `create_definition` with `type: "generation"`, a function `name`, such as `product-picture`, the document as `source`, and its `overview` and `diagram`. A save without a `diagram` is refused, so give the word `none` when a picture would add nothing; [The overview](#the-overview) says how to write both. To run it, call `run_definition` with the same type and name and its `input`. Both operations also need the playbook id, unless the MCP connection is scoped to that playbook.
 
 A run answers the [asset](output-shapes.md#asset) it made:
 
@@ -228,18 +256,16 @@ Each default holds where the runtime's operator sets no other value, as the conf
 
 ## The overview
 
-`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update.
-
-They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.
+`create_definition` and `update_definition` take an `overview` and a `diagram` beside the document. Write both after the document, and again with every update, as the descriptions of those arguments say. Auto Studio draws the diagram under the overview, at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. An overview holds up to 16,384 bytes and a diagram 8,192, in UTF-8. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
 
 ## Its page
 
 A generation function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what the function made:
 
-- `result`: the asset the run produced, said in the function's own words with its kind and size, such as `A picture of the product for its listing, 1.8 MB.`, and linked at its `address`. The run's output is the asset's reference, not the prompt it rendered, so `result` names what the function makes as its description does. The address lasts 15 minutes after the run, so the link opens the asset only until `address_until`, and a client shows an image as a link, never in the page.
+- `result`: the asset the run produced, said in the function's own words with its kind and size, such as `A picture of the product for its listing, 1.8 MB.`, and linked at its `address`. The run's output is the asset's reference, not the prompt it rendered, so `result` names what the function makes as its description does. The address lasts 15 minutes after the run, so the link opens the asset only until `address_until`, and a client shows an image as a link, never in the page, as in [the example](#a-function-document).
 - `runs`: what was produced over time, such as the assets made each week by kind, as a count, or a table of the latest, each with its kind and size.
 
-Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. The page guide, [Page format](page-format.md), gives the whole format of a page.
 
 ## Availability
 

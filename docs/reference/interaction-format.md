@@ -664,11 +664,7 @@ The run ends `succeeded` with the answer, such as `{"verdict": "approve"}`, as i
 
 ## The overview
 
-`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update.
-
-They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.
-
-An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
+`create_definition` and `update_definition` take an `overview` and a `diagram` beside the document. Write both after the document, and again with every update, as the descriptions of those arguments say. Auto Studio draws the diagram under the overview, at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. An overview holds up to 16,384 bytes and a diagram 8,192, in UTF-8. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
 
 ## Its page
 
@@ -725,7 +721,7 @@ page:
 
 Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.
 
-A notification takes no answer, so its page counts what was sent. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
+A notification takes no answer, so its page counts what was sent. The page guide, [Page format](page-format.md), gives the whole format of a page.
 
 ## Availability
 

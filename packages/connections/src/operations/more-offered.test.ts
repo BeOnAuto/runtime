@@ -1,4 +1,5 @@
 import type { Outcome, RegisteredPlainLanguage } from '@on.auto/operations';
+import { mostOutcomeCharacters, withinCharacters } from '@on.auto/phrasing';
 import { providerListOf } from '@on.auto/providers/testing';
 import { consentedAt, registeredAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
@@ -133,12 +134,31 @@ async function wordsOfReconnectingFor(h: Harness, id: string, more: string): Pro
 }
 
 describe('the words of reconnecting a connection for more', () => {
+  it('keep, within the characters of an outcome, the advice to show the link by its name, whatever group it asks', async () => {
+    const longest = {
+      name: 'a'.repeat(32),
+      for: `${'Do'.padEnd(118, ' more')}.`,
+      scope: 'files.everything',
+      says: { 'files.everything': 'Do everything with the files of the account.' },
+    };
+    const h = consentHarnessAt(await served(), { way: { ...filesWay, more: [longest] } });
+    const pending = await added(h, { provider: 'files', name: 'quarterly-files-archive-2' });
+    const { url } = await startedAt(h, pending);
+    await finishing(h, pending, await consentedAt(url));
+
+    const words = await wordsOfReconnectingFor(h, pending.id, longest.name);
+
+    expect([words.length, withinCharacters(words, mostOutcomeCharacters)]).toEqual([
+      584,
+      expect.stringContaining('never its address.'),
+    ]);
+  });
   it('say the link asks the person to allow the group as well, in the words of what it is for', async () => {
     const h = consentHarnessAt(await served(), { way: growingWay });
     const { id } = await added(h, { provider: 'files' });
 
-    expect(await wordsOfReconnectingFor(h, id, 'share')).toMatch(
-      /^Gave a new link to the connection “files” that asks the person to allow “share” as well: Share your files with other people\. The link before it stops working\. The person who added it approves it/u,
+    expect(await wordsOfReconnectingFor(h, id, 'share')).toBe(
+      'Gave a new link to the connection “files”; the link before it stops working. Show the person who added the connection a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours. The link asks them to allow “share” as well: Share your files with other people.',
     );
   });
 
@@ -146,8 +166,8 @@ describe('the words of reconnecting a connection for more', () => {
     const h = consentHarnessAt(await served(), { way: growingWay });
     const id = await connectedFor(h);
 
-    expect(await wordsOfReconnectingFor(h, id, 'delete')).toContain(
-      '“delete” as well: Delete files you no longer need. It stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working.',
+    expect(await wordsOfReconnectingFor(h, id, 'delete')).toMatch(
+      /^Gave a new link to the connection “files”, which stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working\. Show the person who added the connection a link named “[^”]+”, never its address\. .* The link asks them to allow “delete” as well: Delete files you no longer need\.$/u,
     );
   });
 });

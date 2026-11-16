@@ -45,19 +45,34 @@ function termsPdf() {
   return { bytes: pdfOfPages([['Supplier terms', 'Net 30']]), mediaType: 'application/pdf', name: undefined };
 }
 
-function failingToAllocate(): () => URL {
+function processModuleOf(name: string, lines: readonly string[]): () => URL {
   const directory = mkdtempSync(join(tmpdir(), 'auto-runtime-documents-'));
   directories.push(directory);
-  const module = pathToFileURL(join(directory, 'failing-to-allocate.ts'));
+  const module = pathToFileURL(join(directory, name));
   writeFileSync(
     module,
     [
       `import { serveProcessJobs } from '${import.meta.resolve('@on.auto/workflow-engine/process-loop')}';`,
-      `import { refusedUnlessOutOfMemory } from '${new URL('../reading/document-text.ts', import.meta.url).href}';`,
-      `serveProcessJobs({ ${documentJobKind}: () => refusedUnlessOutOfMemory(new RangeError('Array buffer allocation failed'), 'It is not a Word document the runtime can read') }, process);`,
+      ...lines,
     ].join('\n'),
   );
   return () => module;
+}
+
+function failingToAllocate(): () => URL {
+  return processModuleOf('failing-to-allocate.ts', [
+    `import { refusedUnlessOutOfMemory } from '${new URL('../reading/document-text.ts', import.meta.url).href}';`,
+    `serveProcessJobs({ ${documentJobKind}: () => refusedUnlessOutOfMemory(new RangeError('Array buffer allocation failed'), 'It is not a Word document the runtime can read') }, process);`,
+  ]);
+}
+
+function decodingWithoutTheMemoryForIt(): () => URL {
+  return processModuleOf('decoding-without-the-memory-for-it.ts', [
+    `import { documentJobs } from '${new URL('./document-jobs.ts', import.meta.url).href}';`,
+    `await import('${import.meta.resolve('mammoth')}');`,
+    `TextDecoder.prototype.decode = () => { throw Object.assign(new RangeError('Failed to allocate memory'), { code: 'ERR_MEMORY_ALLOCATION_FAILED' }); };`,
+    'serveProcessJobs(documentJobs(), process);',
+  ]);
 }
 
 describe('a document read in a process of the pool that would take more memory than it may', () => {
@@ -79,6 +94,16 @@ describe('a document read in a process of the pool that would take more memory t
 
   it('is stopped as out of memory where a reader meets an allocation that fails, never refused as broken', async () => {
     const read = documentsReadIn(poolForTheTest(), failingToAllocate());
+
+    expect(await read({ bytes: wordDocumentOf(['a']), mediaType: wordType, name: undefined }, unbounded)).toEqual({
+      read: false,
+      because: outOfMemory,
+      mediaType: wordType,
+    });
+  });
+
+  it('stops a Word document as out of memory where Node fails to allocate the memory to decode its text, never refused as broken', async () => {
+    const read = documentsReadIn(poolForTheTest(), decodingWithoutTheMemoryForIt());
 
     expect(await read({ bytes: wordDocumentOf(['a']), mediaType: wordType, name: undefined }, unbounded)).toEqual({
       read: false,

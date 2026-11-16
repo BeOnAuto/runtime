@@ -1,8 +1,14 @@
-import { InvalidInput, PlaybookContext, type Unavailable } from '@on.auto/operations';
+import {
+  InvalidInput,
+  PlaybookContext,
+  type Notice,
+  type PlaybookAddress,
+  type Unavailable,
+} from '@on.auto/operations';
 import { articled, capitalized } from '@on.auto/phrasing';
-import { Effect } from 'effect';
+import { Duration, Effect, Option, Ref } from 'effect';
 
-import type { Capability, DefinitionSummary } from '../capability/capability.ts';
+import type { Capability, DefinitionSummary, PreparedDefinition } from '../capability/capability.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import { withoutThePage, writtenInOf, type DocumentWrittenIn } from '../page/page-lines.ts';
 import { textMembersOf, textsAsWritten } from '../payloads/definition-texts.ts';
@@ -14,6 +20,44 @@ type PageCheck = (
   text: string,
   writtenIn: DocumentWrittenIn,
 ) => Effect.Effect<DefinitionContent['page'], InvalidInput | Unavailable>;
+
+export const saveNoticesBudgetMs = 2_000;
+
+const noNotices: readonly Notice[] = [];
+
+export const firstDefinitionNotice: Notice = {
+  kind: 'first_definition',
+  detail:
+    "This is the playbook's first function or workflow. Has the person seen the workflow's steps in order, each with its function type, and said yes to that design? If not, show them the design now, in their words, and wait for their yes before you save anything else; if they change it, change what you just saved to match.",
+  certainty: 'reminder',
+};
+
+export function noticesWithinBudget(
+  { notices }: Pick<PreparedDefinition, 'notices'>,
+  place: PlaybookAddress,
+  budgetMs = saveNoticesBudgetMs,
+): Effect.Effect<readonly Notice[]> {
+  if (notices === undefined) {
+    return Effect.succeed(noNotices);
+  }
+  return Effect.suspend(() => notices(place)).pipe(
+    Effect.timeoutOption(Duration.millis(budgetMs)),
+    Effect.map(Option.getOrElse(() => noNotices)),
+    Effect.catchCause(() => Effect.succeed(noNotices)),
+  );
+}
+
+type KeepNotices = (notices: readonly Notice[]) => Effect.Effect<void>;
+
+interface NoticesOfASave {
+  readonly keep: KeepNotices;
+  readonly kept: Effect.Effect<readonly Notice[]>;
+}
+
+export const noticesOfASave: Effect.Effect<NoticesOfASave> = Effect.gen(function* () {
+  const noticed = yield* Ref.make(noNotices);
+  return { keep: (notices: readonly Notice[]) => Ref.set(noticed, notices), kept: Ref.get(noticed) };
+});
 
 export interface WrittenDefinition {
   readonly source: string;
@@ -78,11 +122,16 @@ function preparedContentOf(
   capability: Capability,
   written: WrittenDefinition,
   writtenIn: DocumentWrittenIn,
+  keepNotices: KeepNotices | undefined,
 ): Effect.Effect<DefinitionContent, InvalidInput | Unavailable, PlaybookContext> {
   return Effect.gen(function* () {
-    const { summary, check } = yield* capability.prepare(withoutThePage(written.source, writtenIn));
-    const stripped = yield* check(yield* PlaybookContext);
-    return contentFrom(written, summary, stripped);
+    const prepared = yield* capability.prepare(withoutThePage(written.source, writtenIn));
+    const place = yield* PlaybookContext;
+    const stripped = yield* prepared.check(place);
+    if (keepNotices !== undefined) {
+      yield* keepNotices(yield* noticesWithinBudget(prepared, place));
+    }
+    return contentFrom(written, prepared.summary, stripped);
   }).pipe(Effect.catchTag('invalid_input', refusedSource));
 }
 
@@ -98,10 +147,11 @@ export function checkedContentOf(
   capability: Capability,
   written: WrittenDefinition,
   pages: { readonly check: PageCheck },
+  keepNotices?: KeepNotices,
 ): Effect.Effect<DefinitionContent, InvalidInput | Unavailable, PlaybookContext> {
   const writtenIn = writtenInOf(capability.type);
   return diagramChosen(capability, written).pipe(
-    Effect.andThen(preparedContentOf(capability, written, writtenIn)),
+    Effect.andThen(preparedContentOf(capability, written, writtenIn, keepNotices)),
     Effect.flatMap((content) =>
       Effect.map(pages.check(written.source, writtenIn), (page) => withItsPage(content, page)),
     ),

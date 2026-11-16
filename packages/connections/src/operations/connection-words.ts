@@ -68,24 +68,12 @@ function approvalLinkNamed(providerTitle: string | undefined): string {
 
 type Linked = Pick<Connection, 'provider' | 'credential'>;
 
-interface Doing {
-  readonly theyDo: string;
-  readonly youDo: string;
-}
+const givingTheCredential = 'give its credential where it takes one';
 
-const givingTheCredential: Doing = {
-  theyDo: 'gives its credential where it takes one',
-  youDo: 'give its credential where it takes one',
-};
+const givingTheOrgsOAuthClient =
+  "give the client ID and the client secret of the organization's own OAuth client, registered with the provider, then sign in";
 
-const givingTheOrgsOAuthClient: Doing = {
-  theyDo:
-    "gives the client ID and the client secret of the organization's own OAuth client, registered with the provider, then signs in",
-  youDo:
-    "give the client ID and the client secret of the organization's own OAuth client, registered with the provider, then sign in",
-};
-
-function doingOf({ provider, credential }: Linked): Doing {
+function doingOf({ provider, credential }: Linked): string {
   if (credential.client_source === 'own') {
     return givingTheOrgsOAuthClient;
   }
@@ -93,12 +81,16 @@ function doingOf({ provider, credential }: Linked): Doing {
     return givingTheCredential;
   }
   const { host } = new URL(Option.getOrThrow(Option.fromNullishOr(credential.issuer)));
-  return { theyDo: `signs in at ${host}`, youDo: `sign in at ${host}` };
+  return `sign in at ${host}`;
 }
 
 function linkWordsOf(connection: Linked, providers: ProviderList): string {
   const linkName = approvalLinkNamed(providerTitleOf(connection.provider, providers));
-  return `The person who added it approves it, and ${doingOf(connection).theyDo}, on the page its link opens, within 24 hours; shown to them as a link named ${linkName}, never as its address.`;
+  return `Show the person who added the connection a link named ${linkName}, never its address. On that page they approve it and ${doingOf(connection)}, within 24 hours.`;
+}
+
+function groupWordsOf(group: ScopeGroup | undefined): readonly string[] {
+  return group === undefined ? [] : [`The link asks them to allow ${quoted(group.name)} as well: ${group.for}`];
 }
 
 function connectedWordsOf(named: string, linkRanOut: boolean): string {
@@ -125,16 +117,11 @@ function linkedWordsOf(
   done: (named: string) => string,
   { connect, ...connection }: AddedConnection,
   providers: ProviderList,
+  after: readonly string[],
 ): string {
   return connect === undefined
     ? standingWordsOf(connection)
-    : `${done(connectionNamed(connection))} ${linkWordsOf(connection, providers)}`;
-}
-
-function addedAskingMoreWordsOf(named: string, group: ScopeGroup | undefined): string {
-  return group === undefined
-    ? `Added ${named}.`
-    : `Added ${named}, whose link asks the person to allow ${quoted(group.name)} as well: ${group.for}`;
+    : [done(connectionNamed(connection)), linkWordsOf(connection, providers), ...after].join(' ');
 }
 
 function groupAskedOf(
@@ -146,8 +133,12 @@ function groupAskedOf(
 }
 
 export function addedWordsOf(added: AddedConnection, providers: ProviderList, more: string | undefined): string {
-  const group = groupAskedOf(added, providers, more);
-  return linkedWordsOf((named) => addedAskingMoreWordsOf(named, group), added, providers);
+  return linkedWordsOf(
+    (named) => `Added ${named}.`,
+    added,
+    providers,
+    groupWordsOf(groupAskedOf(added, providers, more)),
+  );
 }
 
 function newLinkWordsOf(named: string, { status }: AddedConnection): string {
@@ -156,45 +147,35 @@ function newLinkWordsOf(named: string, { status }: AddedConnection): string {
     : `Gave a new link to ${named}; the link before it stops working.`;
 }
 
-function linkForMoreWordsOf(named: string, { status }: AddedConnection, group: ScopeGroup): string {
-  const asking = `Gave a new link to ${named} that asks the person to allow ${quoted(group.name)} as well: ${group.for}`;
-  return status === 'connected'
-    ? `${asking} It stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working.`
-    : `${asking} The link before it stops working.`;
-}
-
 export function reconnectedWordsOf(
   reconnected: AddedConnection,
   providers: ProviderList,
   more: string | undefined,
 ): string {
-  const group = groupAskedOf(reconnected, providers, more);
   return linkedWordsOf(
-    (named) =>
-      group === undefined ? newLinkWordsOf(named, reconnected) : linkForMoreWordsOf(named, reconnected, group),
+    (named) => newLinkWordsOf(named, reconnected),
     reconnected,
     providers,
+    groupWordsOf(groupAskedOf(reconnected, providers, more)),
   );
 }
 
-function addedAgainFromWordsOf(named: string, provider: string, group: ScopeGroup | undefined): string {
-  const again = `Added ${named} again from the provider ${quoted(provider)}, under its name and for the same playbooks; it is now the caller's to finish, and the connection before is removed and its credential forgotten.`;
-  return group === undefined
-    ? again
-    : `${again} Its link asks the person to allow ${quoted(group.name)} as well: ${group.for}`;
-}
-
 export function addedAgainWordsOf(added: AddedConnection, providers: ProviderList, more: string | undefined): string {
-  const group = groupAskedOf(added, providers, more);
   const provider = Option.getOrThrow(Option.fromNullishOr(added.provider));
-  return linkedWordsOf((named) => addedAgainFromWordsOf(named, provider, group), added, providers);
+  return linkedWordsOf(
+    (named) =>
+      `Added ${named} again from the provider ${quoted(provider)}, under its name and for the same playbooks; the connection before is removed and its credential forgotten.`,
+    added,
+    providers,
+    groupWordsOf(groupAskedOf(added, providers, more)),
+  );
 }
 
 function linkToOpenOf({ connect, ...connection }: AddedConnection): LinkToOpen | undefined {
   return connect === undefined
     ? undefined
     : {
-        message: `Open this page to approve ${connectionNamed(connection)}, and ${doingOf(connection).youDo}, within 24 hours.`,
+        message: `Open this page to approve ${connectionNamed(connection)}, and ${doingOf(connection)}, within 24 hours.`,
         url: connect.url,
       };
 }

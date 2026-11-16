@@ -1,5 +1,7 @@
+import type { OfferedTool } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
+import { readToolsNoticesOfARun } from '../tools/read-tools-notice.ts';
 import { withTools } from '../tools/tool-opening.ts';
 import type { BeforeTheSteps } from './before-the-steps.ts';
 import { requestFor } from './definition-request.ts';
@@ -7,6 +9,15 @@ import { admitted, type DefinitionRejection } from './model-rejection.ts';
 import type { Answering, Stepping } from './run-services.ts';
 import type { AnsweredRun } from './spending-record.ts';
 import { steppedWith } from './steps-run.ts';
+
+function noticedAnswer(
+  answer: AnsweredRun,
+  stepping: Pick<Stepping, 'definition' | 'run'>,
+  offered: readonly OfferedTool[],
+): AnsweredRun {
+  const notices = readToolsNoticesOfARun(stepping.definition, offered, stepping.run);
+  return notices.length === 0 ? answer : { ...answer, notices };
+}
 
 export function answerOf(
   answering: Answering,
@@ -16,6 +27,10 @@ export function answerOf(
   const opening = { access: answering.access, references: definition.tools, run, before, images: answering.images };
   return Effect.andThen(
     admission,
-    withTools(opening, (tools) => steppedWith(answering, { definition, prompt, run }, tools)),
+    withTools(opening, (tools) =>
+      Effect.map(steppedWith(answering, { definition, prompt, run }, tools), (answer) =>
+        noticedAnswer(answer, { definition, run }, tools?.offered ?? []),
+      ),
+    ),
   );
 }

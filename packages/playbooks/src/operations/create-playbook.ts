@@ -43,7 +43,7 @@ export const createPlaybookWords = {
   task: 'create a playbook',
   attempt: ({ playbook }: { readonly playbook: string }) => `create the playbook ${quoted(playbook)}`,
   outcome: (playbook: Pick<Playbook, 'name' | 'description'>) =>
-    `Created ${playbookNamed(playbook)}.${purposeOf(playbook)} Its functions and workflows come next.`,
+    `Created ${playbookNamed(playbook)}. Next, design its workflow with the person, before any function, as the start guide says.${purposeOf(playbook)}`,
 };
 
 export const createPlaybook = defineCommand('org', {

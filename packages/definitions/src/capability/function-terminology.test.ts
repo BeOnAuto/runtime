@@ -103,13 +103,20 @@ function everySetOf(types: readonly string[]): readonly (readonly string[])[] {
 }
 
 describe('the words of the type a definition is created with', () => {
-  it('say, by each part of a job, which type takes it, one clause for each type in the product order, in 299 characters', () => {
+  it('say first that the workflow is the job, then by the job of a step that does work which function type takes it, one clause for each function type in the product order, in 299 characters', () => {
     const words = typeByEachPartsJob(definitionTypeOrder);
 
     expect(words).toBe(
-      "By each part's job: reasoning only interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio; workflow runs the parts in order.",
+      'workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio.',
     );
     expect(words?.length).toBe(299);
+  });
+
+  it("say by each part's job which function type takes it where the server runs no workflow, and that the workflow is the job where it runs workflows alone", () => {
+    expect(typeByEachPartsJob(['reasoning', 'computation'])).toBe(
+      "By each part's job: reasoning interprets, judges or writes; computation calculates or transforms exactly.",
+    );
+    expect(typeByEachPartsJob(['workflow'])).toBe('workflow is the job.');
   });
 
   it('take at most 300 characters, the bound of an argument, whichever types a server serves', () => {
@@ -119,9 +126,11 @@ describe('the words of the type a definition is created with', () => {
   });
 
   it('give every type its clause, so that no type arrives unnamed, and name no type a server does not serve', () => {
-    expect(definitionTypeOrder.filter((type) => !String(typeByEachPartsJob([type])).includes(`job: ${type} `))).toEqual(
-      [],
-    );
+    expect(
+      definitionTypeOrder.filter(
+        (type) => !new RegExp(`(?:^|: )${type} `, 'u').test(String(typeByEachPartsJob([type]))),
+      ),
+    ).toEqual([]);
     expect(
       everySetOf(definitionTypeOrder).flatMap((types) =>
         definitionTypeOrder

@@ -146,8 +146,8 @@ async function wordsOfAdding(h: Harness, input: Readonly<Record<string, unknown>
 
 describe('the words of adding a connection with a group of more', () => {
   it('say its link asks the person to allow the group as well, in the words of what it is for', async () => {
-    expect(await wordsOfAdding(await sharingHarness(), sharingToo)).toMatch(
-      /^Added the connection “files”, whose link asks the person to allow “share” as well: Share your files with other people\. The person who added it approves it/u,
+    expect(await wordsOfAdding(await sharingHarness(), sharingToo)).toBe(
+      'Added the connection “files”. Show the person who added the connection a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours. The link asks them to allow “share” as well: Share your files with other people.',
     );
   });
 });

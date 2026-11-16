@@ -48,11 +48,22 @@ export function unsuccessfulResultOf(
   };
 }
 
-function wordsOfTheOutput({ outcome, relayed }: RegisteredPlainLanguage, output: unknown, input: unknown): string {
+interface WordsOfTheOutput {
+  readonly words: string;
+  readonly heldByTheOutput: boolean;
+}
+
+function wordsOfTheOutput(
+  { outcome, relayed }: RegisteredPlainLanguage,
+  output: object,
+  input: unknown,
+): WordsOfTheOutput {
   const toRelay = relayed?.(output);
-  return toRelay === undefined
-    ? withinCharacters(outcome(output, input), mostOutcomeCharacters)
-    : withinCharacters(toRelay, mostRelayedCharacters);
+  const told = toRelay ?? outcome(output, input);
+  return {
+    words: withinCharacters(told, toRelay === undefined ? mostOutcomeCharacters : mostRelayedCharacters),
+    heldByTheOutput: Object.values(output).includes(told),
+  };
 }
 
 export function toolResultOf(
@@ -62,9 +73,12 @@ export function toolResultOf(
   input: unknown,
 ): CallToolResult {
   if (settled.status === 'succeeded') {
+    const { words, heldByTheOutput } = wordsOfTheOutput(plainLanguage, settled.output, input);
     return {
-      content: [textOf(wordsOfTheOutput(plainLanguage, settled.output, input)), textOf(JSON.stringify(settled.output))],
-      structuredContent: settled.output,
+      content: [textOf(words), textOf(JSON.stringify(settled.output))],
+      structuredContent: heldByTheOutput
+        ? settled.output
+        : Object.fromEntries([['in_words', words], ...Object.entries(settled.output)]),
     };
   }
   return unsuccessfulResultOf(settled, clientClosedRequest, {

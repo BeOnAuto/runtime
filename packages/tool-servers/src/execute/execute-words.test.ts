@@ -32,10 +32,10 @@ describe('the plain words of execute', () => {
 
   it('say what the tool answered, how long it took and how much, and where the model’s view of it is', () => {
     expect(words?.outcome(answer, asked)).toBe(
-      "The search tool of graph answered in 312 ms with 1,204 bytes; what a reasoning function's model would see is in the details.",
+      "The search tool of graph answered in 312 ms with 1,204 bytes; what a lookup function would read and a reasoning function's model would see are in the details.",
     );
     expect(words?.outcome({ ...answer, result_bytes: null }, asked)).toBe(
-      "The search tool of graph answered in 312 ms with nothing; what a reasoning function's model would see is in the details.",
+      "The search tool of graph answered in 312 ms with nothing; what a lookup function would read and a reasoning function's model would see are in the details.",
     );
   });
 

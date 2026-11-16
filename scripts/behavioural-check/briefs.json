@@ -1,5 +1,5 @@
 {
-  "note": "Made-up jobs a person might ask for, for the behavioural check. Each brief's shape is the kind of job it is, which decides the definitions a right answer holds: J one judgement, C one calculation, R a job that reads, calculates and writes, A one that reads, judges, asks a person and then acts, P a forecast and a decision on it, and M one where the model must choose among the tools while it runs. A shape asked in two lines of business is asked in two so that the shape and not the business decides. They live here, never in served text. The briefs marked held_out are held out: nobody reads a model's answers to them while wording, and they are run only on a finished change. search_answer is what search answers for a brief that reads or acts: four tools named for no business, two marked reads and two that act.",
+  "note": "Made-up jobs a person might ask for, for the behavioural check. Each brief's shape is the kind of job it is, which decides the definitions a right answer holds: J one judgement, C one calculation, R a job that reads, calculates and writes, A one that reads, judges, asks a person and then acts, P a forecast and a decision on it, and M one where the model must explore: it judges from each answer what to read next, so no step could name the reads beforehand. A shape asked in two lines of business is asked in two so that the shape and not the business decides. They live here, never in served text. The briefs marked held_out are held out: nobody reads a model's answers to them while wording, and they are run only on a finished change. search_answer is what search answers for a brief that reads or acts: four tools named for no business, two marked reads and two that act.",
   "briefs": [
     {
       "id": "J1",
@@ -79,7 +79,7 @@
       "business": "research",
       "held_out": false,
       "search": true,
-      "text": "When I name a company, find out what you can about it from whatever sources we have connected (who they are, what they sell, recent news, who runs it) and write a one-page profile of it."
+      "text": "When I ask a question about our customers in my own words, search our records until you can answer it: decide what to look for first, read what comes back, and search again with whatever those results point to, as often as it takes. Then answer me in a few sentences, naming the records you relied on."
     }
   ],
   "search_answer": {

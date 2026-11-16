@@ -111,8 +111,10 @@ describe('a playbook tool on /mcp', () => {
       elsewhere: await session.callTool('get_note', { playbook: 'alpha', name: 'own-org' }),
     }));
 
-    expect(outcome.added.structuredContent).toEqual({ name: 'own-org', text: 'hi' });
-    expect(outcome.read.structuredContent).toEqual({ name: 'own-org', text: 'hi' });
+    expect([outcome.added, outcome.read].map(({ structuredContent }) => structuredContent)).toEqual([
+      { in_words: 'Added the note “own-org”.', name: 'own-org', text: 'hi' },
+      { in_words: 'The note “own-org” says “hi”.', name: 'own-org', text: 'hi' },
+    ]);
     expect(problemIn(outcome.elsewhere)).toMatchObject({ reason: 'not_found', detail: 'There is no note own-org' });
   });
 
@@ -123,7 +125,11 @@ describe('a playbook tool on /mcp', () => {
     });
 
     expect(latest.isError).toBeUndefined();
-    expect(latest.structuredContent).toEqual({ name: 'latest', text: 'the last note' });
+    expect(latest.structuredContent).toEqual({
+      in_words: 'The latest note is “latest”.',
+      name: 'latest',
+      text: 'the last note',
+    });
     expect(plainTextIn(latest)).toBe('The latest note is “latest”.');
   });
 
@@ -159,7 +165,7 @@ describe('the callers of /mcp', () => {
       detail: 'There is no playbook alpha in this org',
     });
     expect(problemIn(outcome.withOrg)).toMatchObject({ reason: 'not_found' });
-    expect(outcome.own.structuredContent).toEqual({ notes: [] });
+    expect(outcome.own.structuredContent).toEqual({ in_words: 'Done: list the notes.', notes: [] });
   });
 
   it('are refused a playbook outside their key, and are offered no command their key does not permit', async () => {

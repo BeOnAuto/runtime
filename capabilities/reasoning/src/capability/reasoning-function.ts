@@ -8,8 +8,8 @@ import {
 import { handCallPresenter } from '@on.auto/tool-servers';
 
 import { readReasoningFunctionDefinition, summarize } from '../definition/definition-reading.ts';
-import { performedInProcess } from '../jobs/performed-in-process.ts';
 import type { OfferedModels } from '../model/offered-models.ts';
+import { readToolsNoticesAtSave } from '../tools/read-tools-notice.ts';
 import { cancelledAttemptOf } from './before-the-steps.ts';
 import { longestRequestMs, longestRunMsOf, resumesAfterMsOf } from './definition-request.ts';
 import { definitionRun } from './definition-run.ts';
@@ -22,8 +22,7 @@ export interface ReasoningFunctionAdapterOptions extends RunServices {
 }
 
 export function makeReasoningFunctionAdapter(options: ReasoningFunctionAdapterOptions): Capability {
-  const { languageModel, telemetry, performJob = performedInProcess(languageModel, telemetry) } = options;
-  const run = definitionRun({ ...options, performJob });
+  const run = definitionRun(options);
   return defineCapability({
     type: 'reasoning',
     title: functionCategoryLabels.reasoning,
@@ -40,6 +39,7 @@ export function makeReasoningFunctionAdapter(options: ReasoningFunctionAdapterOp
     describeOutput: outputInWords('answer'),
     mediaType: 'text/markdown',
     parse: readReasoningFunctionDefinition,
+    notices: readToolsNoticesAtSave(options.tools),
     summarize,
     run: (definition, input, context) => run(definition, input, context),
     longestAnyRunMs: longestRequestMs,

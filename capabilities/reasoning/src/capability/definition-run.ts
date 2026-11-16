@@ -2,6 +2,7 @@ import type { RunContext, Finished } from '@on.auto/definitions';
 import { Effect, type Schema } from 'effect';
 
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
+import { performedInProcess } from '../jobs/performed-in-process.ts';
 import { promptOfTheAttempt } from './attempt-prompt.ts';
 import { beforeTheSteps } from './before-the-steps.ts';
 import type { DefinitionRejection } from './model-rejection.ts';
@@ -15,9 +16,10 @@ export function definitionRun({
   tools: access,
   content,
   images,
-  performJob,
+  telemetry,
+  performJob = performedInProcess(languageModel, telemetry),
   reading,
-}: RunServices & { readonly performJob: NonNullable<RunServices['performJob']> }): (
+}: RunServices): (
   definition: ReasoningFunctionDefinitionDocument,
   input: Schema.Json,
   run: RunContext,

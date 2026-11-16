@@ -8,7 +8,7 @@
   "placeholders": "{origin} stands for the server's own address. Where a text is received, {org} and {playbook} stand for the ids in the address, and a required argument of a prompt in braces for the words the person gives. The instructions are as the page at /debug shows them: on a real connection they hold one more sentence, just before the last, which names the caller and the org.",
   "texts": [
     {
-      "sha256": "5a681ca939268273b46932f7e63d1be0513e28ce87b8429fb033083281e44464",
+      "sha256": "232c6a2b8ca3185332747babe2042629fe39f044dcddd58d34b0dca1457c2923",
       "tier": 2,
       "received": [
         {
@@ -19,7 +19,7 @@
         }
       ],
       "lines": [
-        "This organization has no playbooks yet. A playbook keeps work your team can use again. Its workflows coordinate functions that reason, interact, predict and compute. Unless the person has already said what they want, ask what they want done, and offer three starts: set up a first playbook, connect a service they use, or hear what Auto can do for their team. Before you build, read the guide start with get_guide: it says which function type each part of a job takes. In Studio, your team can review playbooks and run results. You can also manage workflows, connections, members and billing there. {origin}/studio/?server=%7Borigin%7D&src=agent"
+        "This organization has no playbooks yet. A playbook keeps work your team can use again. Its workflows coordinate functions that reason, look up, interact, predict, compute and generate. Unless the person has already said what they want, ask what they want done, and offer three starts: set up a first playbook, connect a service they use, or hear what Auto can do for their team. Before you build, read the guide start with get_guide: it says which function type each part of a job takes. In Studio, your team can review playbooks and run results. You can also manage workflows, connections, members and billing there. {origin}/studio/?server=%7Borigin%7D&src=agent"
       ]
     },
     {
@@ -1699,7 +1699,7 @@
       ]
     },
     {
-      "sha256": "16b7deb422b1aa8d155202d3be0b4811de4ef8d7fa87e18508ec895eaf06665f",
+      "sha256": "4fab4cbf5817e1aa6c6157e6b583ced4830feef7dfa47f96806af013e23f164d",
       "tier": 1,
       "received": [
         {
@@ -1712,7 +1712,7 @@
         }
       ],
       "lines": [
-        "Saves a new function or workflow from its document, without running it; a workflow needs a `contributes` list, as the goals guide says. update_definition changes one saved, and a name is never reused. Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it. A workflow owns one job the business does again and again, and a check, a test or a setup is not one. `source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business. A function needs `diagram`, a workflow none; the `page` shows the person its runs, as the page guide says. A document that does not fit its format is refused with the line and what is wrong."
+        "Saves a new function or workflow from its document, without running it; a workflow needs a `contributes` list, as the goals guide says. update_definition changes one saved, and a name is never reused. A workflow, designed before its functions, owns one job the business does again and again; a check, a test or a setup is not one. Each step that does work calls a function of the `type` that work needs, by its `name`. `source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business. A function needs `diagram`, a workflow none; the `page` shows the person its runs, as its type's guide shows. A document that does not fit its format is refused with the line and what is wrong."
       ]
     },
     {
@@ -1892,7 +1892,7 @@
       ]
     },
     {
-      "sha256": "4d95a27debf6211d37fcc909398076160f4e9fdfeab884bcea1820aad1f67c23",
+      "sha256": "b4404d733ca66199d590bcbc301c62405a561c8ec5ba5343f9cf3705c49e69df",
       "tier": 1,
       "received": [
         {
@@ -1904,7 +1904,7 @@
         }
       ],
       "lines": [
-        "By each part's job: reasoning only interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio; workflow runs the parts in order."
+        "workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio."
       ]
     },
     {
@@ -2452,7 +2452,7 @@
       ]
     },
     {
-      "sha256": "c7bc49dd4772e5750839fee8e91bd1c241d02ad6190ddb3019c5e5060b502c9d",
+      "sha256": "282fff4c567afc246b8d7735c50f413552eeb2a216140a4673d6f19846b13af1",
       "tier": 1,
       "received": [
         {
@@ -2465,7 +2465,7 @@
         }
       ],
       "lines": [
-        "Runs a function or workflow with an input and records the run. A run that ends within its call answers its result; one that finishes later answers started with a run_id unless it ends before its first wait; get_run shows how it ended. A workflow does a job the person wants done again; a function runs alone to be tested, and in workflow steps. `type` and `name` say which definition, `input` is the value it takes, as the input_schema get_definition shows, and `run_id` is optional: the same id retries safely, since a run that ended or waits answers as it stands and one that failed runs again. A function that calls a tool may change something outside the playbook, so a run of one that did not succeed is never run again under its id; list_playbook_events with its run_id shows what it called."
+        "Runs a function or workflow with an input and records the run. A run that ends within its call answers its result; one that finishes later answers started with a run_id unless it ends before its first wait; get_run shows how it ended. A workflow does a job the person wants done again; a function runs alone to be tested, and in workflow steps. `type` and `name` say which definition, `input` is the value it takes, as the input_schema get_definition shows, and `run_id` is optional: the same id retries safely, since a run that ended or waits answers as it stands and a function's failed run runs again. A run that called a tool may have changed something outside the playbook, so one that did not succeed never runs again under its id; list_playbook_events with its run_id shows what it called."
       ]
     },
     {
@@ -3884,13 +3884,14 @@
       ]
     },
     {
-      "sha256": "1a211b268ef72e46210fa77935e984ba5e951a0e605718a653c396317b91bda5",
+      "sha256": "14bc45b565e8be7071bce2a2dc28edc8e0bb83a91135c2b1a27833ea133a49e3",
       "tier": 2,
       "received": [
         {
           "as": "prompt first-playbook: message",
           "on": [
-            "/mcp"
+            "/mcp",
+            "/directory"
           ]
         }
       ],
@@ -3899,28 +3900,20 @@
         "",
         "# Create your first playbook",
         "",
-        "A first playbook starts from the job the person wants done again and again. Break the job into its parts, give each part a function of the type its work needs, and write the workflow that runs the parts in order. Read a type's guide with get_guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says. When you create or run something, the response includes `studio`, a link to its page in Studio. Give that link to the person. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
+        "A first playbook is built in the order of the start guide's Build from the job: what the person wants it to achieve, the workflow that achieves it, then its steps as functions. Read the start guide with get_guide if you have not yet. Read a type's guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. Give the person the `studio` link that each create or run answers, to its page in Studio. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
         "",
         "1. Call list_playbooks, and list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first.",
-        "2. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\", \"continuously\" or \"whenever one arrives\", take that as the answer and say so rather than asking again. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run. Where a person must approve or decide, ask once where they want to be asked. It can be through a connection that sends them a request and reads their reply, such as a chat, an email provider or a ticketing app, or through you (`deliver: agent`). A request saved with neither is refused, and the refusal names the connections that can send it and read the reply. Ask once, too, where a notice goes: a channel or their direct messages.",
-        "3. Say the job back to the person as its parts, in the order they happen, and give each part its type by what the part does, not by how it is done:",
-        "   - it interprets, judges or writes: a reasoning function",
-        "   - it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function",
-        "   - it asks a person and takes their answer, or has a service act: an interaction function",
-        "   - it forecasts a quantity from the playbook's own history: a prediction function",
-        "   - it calculates or transforms data exactly: a computation function",
-        "   - it makes an image or audio: a generation function",
-        "",
-        "   The order of the parts, the branches, the waits and what happens when a part fails belong to the workflow, never to a prompt. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. Agree the parts and their types with the person before you write anything.",
-        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
-        "5. Write each function in the format of its type's guide, in the order the job uses them, each with its `page` in the same document. A reasoning function takes the facts it judges as its input, which the workflow hands it. For a part that reads from a service or acts on one, follow the give-tools recipe. It makes a read a lookup function and an act an interaction function. A reasoning function names tools in `tools` only where its model must choose among them. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a part would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a part that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
-        "6. Once they agree, save each with create_definition, with its `type`. A function needs `diagram`: Mermaid source of how it works, or the word none. A workflow takes none. `overview` is optional: Markdown that tells the person what it does and why it is needed. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
-        "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of an interaction function held for you (`deliver: agent`) waits for its answer. list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs. Run it only once the person agrees. A prediction function answers once the playbook has history.",
-        "8. Read the workflow guide with get_guide and write the workflow that owns the job, whose steps call the functions in order and hand each one what the steps before it answered: one step is enough when that step finishes the job, and a later ask changes the workflow. Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period. Where the work starts on its own, give it a `schedule`, as the triggers guide says. A `schedule` holds its triggers: `cron` or `every` for set times, and `on` for what arrives. For set times, use `cron` with `time_zone` naming the person's time zone, or `every`. A run on a clock is given its due time alone. So its first steps are the lookup functions that find its material, or the workflow gives it a fixed input in `input.from`. For what arrives, use `on` with a filter on an event `type` named in the past tense, such as `com.example.item.received`. A run is then given a list holding the event, and the workflow passes the event's `data` to its first step. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once lookup functions reach the sources.",
+        "2. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\" or \"whenever one arrives\", take that as the answer rather than asking again. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run. Where a person must approve or decide, ask once where they want to be asked, as the start guide's Asking a person says. Where the job itself sends a notice, ask once where it goes: a channel or their direct messages.",
+        "3. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
+        "4. Design the workflow that achieves what the playbook is for, as the start guide's Build from the job says, before you write any function. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. A step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists. A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those. Then show the person the design and get their yes before you write anything.",
+        "5. Write the function of each step of the design, in the format of its type's guide, each with its `page` in the same document. For a step that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a step would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a step that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
+        "6. Once they agree, save each with create_definition, with its `type`, its `diagram` and, where it helps, its `overview`, as the arguments say: a workflow takes no `diagram`. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
+        "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of one held for you waits for its answer: list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs, so run it only once the person agrees. A prediction function answers once the playbook has history.",
+        "8. Write the workflow's document from the design the person agreed, as the workflow guide says: its steps call the functions you saved and hand each one what the steps before it answered. One step is enough when that step finishes the job, and a later ask changes the workflow. Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period. Where the work starts on its own, give it a `schedule`, as the triggers guide says: `cron` with the person's `time_zone`, or `every`, for set times, and `on` for what arrives. A run on a clock is given its due time alone, so its first steps are the lookup functions that find its material, or the workflow gives it a fixed input in `input.from`. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once lookup functions reach the sources.",
         "9. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.",
         "10. Run the workflow once, in one of two ways, never both. Where it starts `on` an event, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from and an `id` of its own, such as `test-1`. A real event's `source` and `id` would make that event a repeat, ignored when it comes. The event starts the run, so a moment later find it with list_runs, `type` workflow, and read it with get_run. Otherwise, start the run with run_definition. A step held for you (`deliver: agent`) waits for its answer, which you give with answer_interaction, as in a test. Tell the person what the run answered, in their words. Where the workflow starts on its own, tell them too when it next runs, in their own time, or what starts it.",
         "",
-        "Then tell the person what they can do next: change when it runs with the schedule recipe and the triggers guide, or connect the services its parts still wait for, with the connect-a-service and give-tools recipes. Once it has more than one workflow, give the playbook a page with update_playbook, led by each workflow's main number.",
+        "Then tell the person what they can do next: change when it runs with the schedule recipe and the triggers guide, or connect the services its steps still wait for, with the connect-a-service and give-tools recipes. Once it has more than one workflow, give the playbook a page with update_playbook, led by each workflow's main number.",
         ""
       ]
     },
@@ -4020,7 +4013,7 @@
       ]
     },
     {
-      "sha256": "c799fe97e98ce396fb94367a376dfc6b6858a8900ebbbf9bf2c85b9e6ae5e86f",
+      "sha256": "36062e200de25a51da1dfde3cffac7ac95abd160d3d05157852d4845f70b3443",
       "tier": 2,
       "received": [
         {
@@ -4033,7 +4026,7 @@
         }
       ],
       "lines": [
-        "Puts the tools of a connected service to work: a lookup function for a read, an interaction function for an act or a question, and a reasoning function's tools only where its model must choose."
+        "Puts the tools of a connected service to work: a lookup function for a read, an interaction function for an act or a question, and a reasoning function's tools only where its model must explore."
       ]
     },
     {
@@ -4054,7 +4047,7 @@
       ]
     },
     {
-      "sha256": "7a2e1ad9487dd0ff386e9902ebbfc0c4d25e991202f88ad780bdc0f5272fc4f4",
+      "sha256": "4f1951dae1665b189ed20c951a9663ff24a6d802577da4d7cd68bab0e2487bc1",
       "tier": 2,
       "received": [
         {
@@ -4071,20 +4064,20 @@
         "",
         "# Give the playbook tools",
         "",
-        "A tool of a connected service is put to work by the function type its use needs, and the tool itself says which: search gives each tool a `mark`. A read the job always makes, by a tool marked reads, is a lookup function: one call and no model. An act, by a tool marked acts or unmarked, is an interaction function, which calls it with `call`: it answers at once and spends no model call. A reasoning function names tools in `tools` only where its model must choose among them while it runs, because which to call, or how often, depends on what they answer. Read a type's guide with get_guide before you write a function of that type. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
+        "A tool of a connected service is put to work by the function type its use needs, and the tool itself says which: search gives each tool a `mark`. A read by a tool marked reads, searching included, is a lookup function: one call and no model, whether its arguments come from the run's input or from an earlier step's answer. An act, by a tool marked acts or unmarked, is an interaction function, which calls it with `call`: it answers at once and spends no model call. A reasoning function names tools in `tools` only where its model must explore, meaning what it looks for next depends on what it just read; choosing what to look for, what to open or which hits to read is not exploring, as the start guide's Build from the job says. Read a type's guide with get_guide before you write a function of that type. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
         "",
         "1. Call search to see the tool servers this playbook may use and their tools, each with its `mark`; when the person named a server, give its name as `server`, and give `terms`, a few words of what the person wants done, to find the tools that fit among many. Call introspect for the input_schema of a tool before writing its arguments.",
         "2. When no server is listed, or not the one the person wants, or search says a server's connection is `connection_broken`, follow the connect-a-service recipe: it connects the service, or reconnects it, and sets it up for what the playbook will do there; then call search again. When a server says it cannot be asked just now, tell the person why, in its words; whoever runs the server can look into it.",
-        "3. To learn what a tool answers, call it yourself with the arguments its input_schema takes and read its `text`: that is what a run of a function will get. Never save a function only to see what a tool answers. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a function needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
+        "3. To learn what a tool answers, call it yourself with the arguments its input_schema takes. The `read` of a lookup or interaction function points into the call's `answer`. A reasoning function's model reads the call's `text`. Never save a function only to see what a tool answers. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a function needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
         "4. Ask the person what the playbook should do with the tools, and give each use its function:",
-        "   - a read the job always makes, by a tool marked reads: a lookup function, whose `call` names the `server` and the `tool`, with its arguments in `with`, written from the run's input. One lookup function for each read.",
+        "   - a read by a tool marked reads: a lookup function, whose `call` names the `server` and the `tool`, with its arguments in `with`, written from its input. One lookup function for each read. Where an earlier step answers the arguments, such as the ids a listing gave, the workflow hands them on, one run for each in a `for`, as the workflow guide's A lookup for each item shows. Where choosing what to look for, what to open or which hits to read is a judgement, a reasoning function with no `tools` makes it, lookup functions read each choice, and a reasoning function judges what they read.",
         "   - an act on a system, or a read by a tool that is not marked reads: an interaction function that calls the tool with `call`, written from the answer execute_connection gave.",
         "   - a question to a person: an interaction function too. Ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`.",
-        "   - a choice among tools that the model must make while it runs: a reasoning function whose `tools` name only those tools. Hand it as input what lookup functions already read, so that it calls a tool only for what it could not be handed.",
+        "   - exploring, where what the model looks for next depends on what it just read: a reasoning function whose `tools` name only those tools. Hand it as input what lookup functions can read, so that it calls a tool only to explore.",
         "5. Write each function in the format of its type's guide, with its `page` in the same document, show it to the person, and save it with create_definition, with its `type`, once they agree.",
         "6. Run each with run_definition. A function that has a service act really acts when it runs, so run it only once the person agrees. A run that called tools and did not succeed is not run again under its id, since a tool may have changed something: read what it called with list_playbook_events, given its `run_id`, and start a new run only if the person still wants one.",
         "7. Tell the person what each run did with the tools, and that a function can call only the tools it names.",
-        "8. Then, with the workflow guide, write or change the workflow that owns the job the person wants done again, whose steps are the functions, with its `page` in the same document: the steps that read come first, and each later step is handed what the steps before it answered. Save it once they agree, run it, and tell the person what it answered and what they can do next.",
+        "8. Then, with the workflow guide, write or change the workflow that owns the job the person wants done again, whose steps are the functions, with its `page` in the same document: each step is handed what the steps before it answered, and a read comes before the step that needs it. Save it once they agree, run it, and tell the person what it answered and what they can do next.",
         ""
       ]
     },
@@ -4189,7 +4182,7 @@
       ]
     },
     {
-      "sha256": "065f52a8e36b9da7c85b302499e5b2d025eccc1c3c7f3cb947b8bfba603f8279",
+      "sha256": "5353ffb2ded9e864bafd875111efb9285d0a2d24e0e4afa2c256a713e73fe294",
       "tier": 3,
       "received": [
         {
@@ -4215,11 +4208,11 @@
         "",
         "A workflow coordinates a playbook's functions through steps. The API stores it as a definition of the type `workflow`. Its source document is YAML in the [Open Workflow Specification](https://github.com/open-workflow-specification/specification) DSL 1.0, within the rules and limits on this page. [Build your first workflow](https://on.auto/docs/tutorials/first-workflow) is a guided example, and [Workflows and runs](https://on.auto/docs/concepts/workflows) explains how a run starts, waits and ends.",
         "",
-        "A workflow does none of the work itself: each step that reads, calculates, judges, asks or acts calls a function of that type. The order, the branches, the waits and what happens when a step fails are the workflow's, never a prompt's. A workflow of one step is the job when that step is all the job does; a workflow made only to see a function answer is a wrapper, not a job.",
+        "A workflow exists to achieve what the person wants from the playbook, its goals where it has them. Design it with the person before you write its functions, as the `start` guide sets out under Build from the job. It does none of the work itself: each step that reads, calculates, judges, asks or acts calls a function of that type. The order, the branches, the waits and what happens when a step fails are the workflow's, never a prompt's. A workflow of one step is the job when that step is all the job does; a workflow made only to see a function answer is a wrapper, not a job.",
         "",
         "## A workflow document",
         "",
-        "This workflow reviews a campaign brief, then asks the brief's owner to approve the review. It calls two functions: the reasoning function `review-campaign-brief`, whose document follows it, and the interaction function `approve-campaign-brief`.",
+        "This workflow serves a playbook whose goal `briefs-ready` is that each campaign brief is reviewed and approved before launch. It reviews a brief, then asks the brief's owner to approve the review, and calls two functions: the reasoning function `review-campaign-brief`, whose document follows it, and the interaction function `approve-campaign-brief`.",
         "",
         "````yaml",
         "document:",
@@ -4237,6 +4230,9 @@
         "        brief: { type: string }",
         "        owner: { type: string }",
         "      required: [brief, owner]",
+        "contributes:",
+        "  - goal: briefs-ready",
+        "    purpose: Reviews each brief and asks its owner to approve it.",
         "use:",
         "  retries:",
         "    patient:",
@@ -4294,18 +4290,24 @@
         "          subject: workflow/review-and-approve",
         "    views:",
         "      briefs: table",
+        "      verdicts: categories",
         "    module: |",
         "      export function fold(view: View, event: Event): View {",
         "        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>",
         "          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;",
         "        const verdict = fieldOf(fieldOf(fieldOf(event.data, 'output'), 'approval'), 'verdict');",
         "        const day = event.time?.slice(0, 10);",
-        "        if (typeof verdict !== 'string' || day === undefined) return view;",
+        "        if ((verdict !== 'approve' && verdict !== 'revise') || day === undefined) return view;",
         "        const rows = view.briefs?.rows ?? [];",
         "        const counted = rows.some(([at, answer]) => at === day && answer === verdict)",
         "          ? rows.map((row) => (row[0] === day && row[1] === verdict ? [day, verdict, Number(row[2]) + 1] : row))",
         "          : [...rows, [day, verdict, 1]];",
-        "        return { briefs: { columns: [{ name: 'Day' }, { name: 'Verdict' }, { name: 'Briefs' }], rows: counted.slice(-60) } };",
+        "        const totals = new Map((view.verdicts?.values ?? []).map(({ name, value }) => [name, value]));",
+        "        totals.set(verdict, (totals.get(verdict) ?? 0) + 1);",
+        "        return {",
+        "          briefs: { columns: [{ name: 'Day' }, { name: 'Verdict' }, { name: 'Briefs' }], rows: counted.slice(-60) },",
+        "          verdicts: { unit: 'briefs', values: [...totals].map(([name, value]) => ({ name, value })) },",
+        "        };",
         "      }",
         "  result: |",
         "    {% if run.status == \"started\" %}",
@@ -4319,6 +4321,14 @@
         "    ```chart bars x=Day y=Briefs color=Verdict",
         "    {{ views.briefs | json }}",
         "    ```",
+        "  glance:",
+        "    headline: '{% assign reviewed = views.verdicts.values | sum: \"value\" %}{% if reviewed == 0 %}No brief has been reviewed yet.{% else %}Owners approved {{ views.verdicts.values | where: \"name\", \"approve\" | sum: \"value\" }} of the {{ reviewed }} {% if reviewed == 1 %}brief{% else %}briefs{% endif %} reviewed so far.{% endif %}'",
+        "    visual:",
+        "      kind: figures",
+        "      items:",
+        "        - { name: Approved, value: '{{ views.verdicts.values | where: \"name\", \"approve\" | sum: \"value\" }}' }",
+        "        - { name: Sent back, value: '{{ views.verdicts.values | where: \"name\", \"revise\" | sum: \"value\" }}' }",
+        "    outstanding: []",
         "````",
         "",
         "The reasoning function `review-campaign-brief`, in short. Replace the model with one that `list_models` offers:",
@@ -4344,7 +4354,7 @@
         "",
         "The interaction function `approve-campaign-brief` is the example of the [interaction function format](https://on.auto/docs/reference/interaction-format#a-function-document). It gives the owner two days to answer in the team chat: `{ verdict: approve | revise, note? }`.",
         "",
-        "Save the two functions first. `create_definition` takes each one's `type` (`reasoning` or `interaction`), `name`, document as `source`, and `diagram`: a Mermaid flowchart or state diagram of how it works, or the word `none`. A function saved without one is refused. Then save the workflow, which takes no diagram, with `type: \"workflow\"` and the name `review-and-approve`. `run_definition` takes the same type and name, with `brief` and `owner` in `input`. The run then:",
+        "`create_definition` saves each function with its `type` (`reasoning` or `interaction`), `name`, document as `source`, and `diagram`: a Mermaid flowchart or state diagram of how it works, or the word `none`. A function saved without one is refused. It saves the workflow, which takes no diagram, with `type: \"workflow\"` and the name `review-and-approve`. The workflow saves whether or not its functions are saved yet, but a run is rejected at a step whose function is not saved, so save both functions before you run it. `run_definition` takes the same type and name, with `brief` and `owner` in `input`. The run then:",
         "",
         "1. Reviews the brief. A review that raises status 503 is tried again after 5, 10 and 20 seconds. After the third retry, the run raises its own error; Errors, retries and timeouts explains this pattern.",
         "2. Asks the owner to approve the review. The interaction function's run posts the request in the chat, and the workflow waits for the answer without using server resources. The owner answers by replying in the thread of the message, or through their agent with `answer_interaction`, such as `{ \"verdict\": \"approve\" }`; see [Interaction function format](https://on.auto/docs/reference/interaction-format).",
@@ -4364,6 +4374,7 @@
         "| `input.from` | Optional expression or template shaping the run's input before the first task |",
         "| `evaluate.language`, `evaluate.mode` | Optional; only `typescript` and `strict` (Expressions) |",
         "| `schedule` | Optional triggers that start it on its own; see [Triggers](https://on.auto/docs/reference/triggers), the `triggers` guide |",
+        "| `contributes` | Required where the playbook has goals: the goals it serves and what it does for each, as the `goals` guide sets out |",
         "| `do` | Required list of named tasks, run in order |",
         "| `output.as` | Optional expression or template that shapes the run's output |",
         "| `output.schema.document` | Optional inline JSON Schema, published as the definition's `output_schema` |",
@@ -4696,6 +4707,46 @@
         "              input: { brief: '${ $data.revised }' }",
         "```",
         "",
+        "#### A lookup for each item",
+        "",
+        "A read whose arguments an earlier step answers is a lookup function the workflow runs with them, one run for each item. These steps read every document in a folder and hand them to a reasoning function as one list. The lookup function `list-documents` answers the ids of a folder's documents, `read-document` answers one document given its `id`, and `review-documents`, which has no `tools`, judges the documents it is handed:",
+        "",
+        "```yaml",
+        "do:",
+        "  - list:",
+        "      call: run_definition",
+        "      with:",
+        "        type: lookup",
+        "        name: list-documents",
+        "        input:",
+        "          folder: ${ $data.folder }",
+        "      output:",
+        "        as: '${ ({ ids: $data, documents: [] }) }'",
+        "  - read-each:",
+        "      for:",
+        "        each: id",
+        "        in: $data.ids",
+        "      do:",
+        "        - read:",
+        "            call: run_definition",
+        "            with:",
+        "              type: lookup",
+        "              name: read-document",
+        "              input:",
+        "                id: ${ $id }",
+        "            output:",
+        "              as: '${ ({ ...$input, documents: [...$input.documents, $data] }) }'",
+        "  - review:",
+        "      call: run_definition",
+        "      with:",
+        "        type: reasoning",
+        "        name: review-documents",
+        "        input:",
+        "          documents: ${ $data.documents }",
+        "```",
+        "",
+        "Each iteration adds the document it read to `documents` and hands the list on to the next, so `review` gets every document, in the order of the ids. `list` starts the list empty, so a folder with no documents hands `review` an empty list. A reasoning run takes at most 256 KiB of input, so where the documents together may pass that, have it judge each one in a run of its own.",
+        "",
         "### Expressions",
         "",
         "Expressions are TypeScript, the one language of the playbook. `evaluate.language` is `typescript` and `evaluate.mode` is `strict`, the defaults. The document is refused for any other language or mode, since an expression that fails must fail. The specification's default expression language is not this runtime's.",
@@ -4781,9 +4832,7 @@
         "",
         "## The overview",
         "",
-        "`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the workflow exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update. Unlike a function, a workflow takes no `diagram`, and a save that gives one is refused: Auto Studio draws a workflow from its steps, with the words in Describing steps.",
-        "",
-        "An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one. A definition the workflow calls names the workflow's steps there by the names of their tasks, so name each task for what it does.",
+        "`create_definition` and `update_definition` take an `overview` beside the document. Write it after the document, and again with every update, as the description of that argument says; it holds up to 16,384 bytes in UTF-8. Unlike a function, a workflow takes no `diagram`, and a save that gives one is refused: Auto Studio draws a workflow from its steps, with the words in Describing steps. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one. A definition the workflow calls names the workflow's steps there by the names of their tasks, so name each task for what it does.",
         "",
         "## Its page",
         "",
@@ -4791,9 +4840,9 @@
         "",
         "- `result`: the business outcome of the run, as a headline and its key figures.",
         "- `runs`: the main number of each period, with its breakdowns.",
-        "- `glance`: always; how it stands now and what waits on a person, which Auto Studio shows on its cards.",
+        "- `glance`: always; how it stands now and what waits on a person, which Auto Studio shows on its cards. It is a mapping of templates, `headline`, `visual` and `outstanding`, read from the views where it can, as in the example; `outstanding` lists only what a person must do, and is empty, `[]`, when nothing waits. The `glance` guide, [Glance format](https://on.auto/docs/reference/glance-format), gives its other shapes.",
         "",
-        "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](https://on.auto/docs/reference/page-format) says how to write `data`, `result`, `runs` and `glance`.",
+        "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. The page guide, [Page format](https://on.auto/docs/reference/page-format), gives the whole format of a page, `glance` included.",
         "",
         "## How a run ends",
         "",
@@ -4937,7 +4986,7 @@
       ]
     },
     {
-      "sha256": "73a91c4379a0a2a0a77843e3fb07959e080cc2109b1daf46c5a05335faf4c571",
+      "sha256": "627fb369014dd503651d10137d809828be44a6bd7b89bb46d049620394319f05",
       "tier": 3,
       "received": [
         {
@@ -4954,7 +5003,7 @@
         "",
         "# Keep something for later",
         "",
-        "What the person wants kept is the output of a run: each run that succeeds keeps its output in the playbook's history, and a lookup function reads it back from the runs of that definition. Read the lookup-function guide with get_guide before you write one; its section Reading the playbook's own runs sets out `runs`. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says.",
+        "What the person wants kept is the output of a run: each run that succeeds keeps its output in the playbook's history, and a lookup function reads it back from the runs of that definition. Read the lookup-function guide with get_guide before you write one; its section Reading the playbook's own runs sets out `runs`. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side.",
         "",
         "1. Ask the person what should be kept, in their words, and what later work needs it, such as who approves a budget, or what each round of the drivers reported.",
         "2. Find the function whose output already holds it with list_definitions. Where none does, write one whose output is that thing, such as a computation function whose program answers its input as it is, in the format of its type's guide; show it to the person, and save it with create_definition once they agree.",
@@ -4966,7 +5015,7 @@
       ]
     },
     {
-      "sha256": "a490692873a0676ac264f641462f625855d6326fb681301061c7b25117966e9b",
+      "sha256": "ef4520e9ab39fe37f61848061c79f68c6b3594bd321a409ba8867eae999fad4d",
       "tier": 3,
       "received": [
         {
@@ -4995,7 +5044,7 @@
         "- through one tool that only reads, such as the replies of a thread, a contact's record or this week's figures from a reporting tool. A run makes one call of that tool and returns the part of its result that `read` points at, at once.",
         "- from the playbook's own runs, such as the paces a computation function computed this month. A run returns the outputs of the runs of one definition that succeeded, newest first, at once; see Reading the playbook's own runs.",
         "",
-        "A lookup function never acts: it calls only a tool marked `reads`, or reads the playbook's runs, and asks no model. A reasoning function interprets what a lookup function fetches, and an interaction function calls a tool that may change something. It makes one call that the job always makes: where a model must choose which tool to call, that is a reasoning function's `tools`. A function document that asks for something else is refused when it is saved.",
+        "A lookup function never acts: it calls only a tool marked `reads`, or reads the playbook's runs, and asks no model. A reasoning function interprets what a lookup function fetches, and an interaction function calls a tool that may change something. A lookup function makes one call, with arguments written from its input, so it serves every read whose arguments a step can hand it: from the workflow's input, or from what an earlier step answered, such as the ids a listing gave. The workflow hands it those arguments, with one run for each item in a `for`, as [A lookup for each item](https://on.auto/docs/reference/workflow-format#a-lookup-for-each-item) shows. Only where what a model searches for next depends on what it has just read does the read belong in a reasoning function's [`tools`](https://on.auto/docs/reference/reasoning-format#tools). A function document that asks for something else is refused when it is saved.",
         "",
         "## A function document",
         "",
@@ -5266,7 +5315,7 @@
         "- `result`: what was found, as a table, such as the replies of a thread, a row for each with who wrote it and what it said.",
         "- `runs`: the values found over time, where they are numbers, such as the stock of each item each morning. Where the answer holds no numbers, `runs` keeps a table of the latest finds.",
         "",
-        "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](https://on.auto/docs/reference/page-format) says how to write `data`, `result` and `runs`.",
+        "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. The page guide, [Page format](https://on.auto/docs/reference/page-format), gives the whole format of a page.",
         "",
         "## Availability",
         "",
@@ -5275,7 +5324,7 @@
       ]
     },
     {
-      "sha256": "f2b8e084cc37f37c7f36a3237cd6a2c7f86a87c1a9cad77089fb8ba056f135aa",
+      "sha256": "a103d63e46969985ab7e5e19a265e5355a55a300c57d1f6215137e95078166d0",
       "tier": 2,
       "received": [
         {
@@ -5294,18 +5343,27 @@
         "",
         "## Build from the job",
         "",
-        "Start from the job the person wants done again and again, not from a function. Break the job into its parts and give each part a function of the type its work needs, by what the part does, not by how it is done:",
+        "Start from what the person wants the playbook to achieve, not from a function. Once they agree what it should achieve, design the workflow that achieves it:",
+        "",
+        "- what starts it, and what one run handles, such as an item, a case or a period",
+        "- its steps in order, and what each hands the next",
+        "- where it branches, loops or waits, and which decisions stay with a person",
+        "- which result shows the person it worked",
+        "",
+        "In the design, give each step that does work the function type its work needs, by what the step does, not by how it is done:",
         "",
         "- it interprets, judges or writes: a reasoning function",
-        "- it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function",
+        "- it reads or searches what a connected service holds, or reads what earlier runs of the playbook produced: a lookup function",
         "- it asks a person and takes their answer, or has a service act: an interaction function",
         "- it forecasts a quantity from the playbook's own history: a prediction function",
         "- it calculates or transforms data exactly: a computation function",
         "- it makes an image or audio: a generation function",
         "",
-        "A workflow runs the parts in order and hands each one what the parts before it answered. The order, the branches, the waits and what happens when a part fails are the workflow's, never a prompt's. A job that is one judgement is one reasoning function, and one step is enough. These run at once, with nothing connected: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A lookup function that reads a service needs its connection. An interaction function that goes through a service needs its connection. A prediction function needs the playbook's history.",
+        "A step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists. A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those. The order, the branches, the waits and what happens when a step fails are the workflow's, never a prompt's. A job that is one judgement is one reasoning function, and one step is enough.",
         "",
-        "When you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold a read, a calculation, a question or an act, give that part a function of its own type, and make it a step of the workflow. Do so once the person agrees, rather than write a longer prompt.",
+        "Show the person that design in a message of its own, in their words: what starts it, and each step in order with its function type, such as \"read each new item (lookup)\". Ask whether it is right, and write no function or workflow before their yes. A yes to what the playbook should achieve, or an answer about a service, a trigger or a model, is not a yes to its design.",
+        "",
+        "When you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold a read, a calculation, a question or an act, give that work a function of its own type, and make it a step of the workflow. Do so once the person agrees, rather than write a longer prompt.",
         "",
         "## Where to go",
         "",
@@ -5339,7 +5397,7 @@
         "",
         "## What a workflow owns",
         "",
-        "A workflow owns one job the business does again and again, with a result the person recognizes as done: a list of records kept ranked, a case that came in decided and answered, a period that ended measured and reported. Before you write one, work out with the person what starts it, a time, an event or someone asking; what one run handles, an item, a case or a period; what done looks like; and which decisions stay with a person. One step is enough when that step finishes the job. Such a workflow is the job, not a wrapper: it is what runs that step again and again.",
+        "A workflow owns one job the business does again and again, with a result the person recognizes as done: a list of records kept ranked, a case that came in decided and answered, a period that ended measured and reported. It exists to achieve what the person wants from the playbook, and you design it as Build from the job says. One step is enough when that step finishes the job. Such a workflow is the job, not a wrapper: it is what runs that step again and again.",
         "",
         "The playbook's workflows, which list_definitions shows and Studio presents, are the person's list of jobs: read it back in their words, and keep off it anything that is not a job they want done again. These are not workflows:",
         "",
@@ -5355,7 +5413,7 @@
         "You are the playbook's developer. Testing, setting up and checking are your work, done with the tools below, and none of it is saved as a workflow. Which tools a connection lists depends on where it acts and on what its caller may do. The caller's own org's connection lists every tool the caller may call. One that manages the org's playbooks lists the tools that manage playbooks and connections, not those that work inside a playbook. One that acts inside a playbook lists only those.",
         "",
         "- To learn what a tool answers, call it with query_connection; a tool that may change something, with execute_connection, once the person agrees; dry_run checks the arguments without calling. Never save a function only to see what a tool answers.",
-        "- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events. A run that called a tool may have changed something, so one that did not succeed is not run again under its id.",
+        "- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events.",
         "- To set a service up for the playbook's runs, such as a team's statuses, a channel or a label, do it with the person before the first run, through the tools of the connection; the recipe connect-a-service sets out how. A run acts on what is there and sets nothing up.",
         "- Where setting up or testing takes tools or access the runs do not need, connect them: ask for the access with the connection, as `more` of add_connection, or add the service's own MCP server or HTTP API by hand, so that you do the work here rather than send the person into the service.",
         "- A check a run must make each time, such as that an item is still where the job expects it, is a step of the workflow that owns the job. A check made before the first run, or when something at the service changes, is yours.",
@@ -5816,7 +5874,7 @@
       ]
     },
     {
-      "sha256": "319048be23286f5646e236592c3a38cdd5fc666eb45d538432c8ab20df6b718c",
+      "sha256": "3eb40b64c09aeffed04652225959defcca6cc4f4d5c1b56a60b89387e2ba5a15",
       "tier": 3,
       "received": [
         {
@@ -5834,7 +5892,7 @@
         "",
         "A reasoning function is a definition of the type `reasoning`. Its document names a model, the input and output contracts, the settings and a prompt template. A run renders the prompt from its input, calls the model and records the model's answer. [Build your first playbook](https://on.auto/docs/tutorials/first-playbook) walks through one with an agent.",
         "",
-        "Use one where the work needs judgement or language. It is not for reading what a service holds, which is a lookup function's work; for exact arithmetic or reshaping data, a computation function's; for asking a person or having a service act, an interaction function's; or for the order of the work, its branches and its waits, which are the workflow's.",
+        "Use one where the work needs judgement or language. It judges or writes from what it is handed: the workflow passes it what lookup functions read and computation functions worked out. Reading what a service holds is a lookup function's work, even where an earlier step's answer says what to read; exact arithmetic or reshaping data, a computation function's; asking a person or having a service act, an interaction function's; and the order of the work, its branches and its waits, the workflow's.",
         "",
         "## A function document",
         "",
@@ -5919,7 +5977,7 @@
         "| `output.schema` | With `json` | A JSON Schema the answer must match; see Answers that are JSON. Not allowed with `text` |",
         "| `output.shape` | No | The name of an [output shape](https://on.auto/docs/reference/output-shapes), `series`, `categories`, `table` or `text`: the answer is JSON of that shape. Not allowed beside `output.schema` or with `text` |",
         "| `provider_options` | No | Options for one provider, under its namespace; see Provider options |",
-        "| `tools` | No | The tools a run may call, each `server/tool` or `server/*`; see Tools |",
+        "| `tools` | No | The tools a run may call, each `server/tool` or `server/*`, only where the model must explore; see Tools |",
         "| `max_input_tokens` | No | A whole number from 10,000 to 9,999,999: the input tokens a run may read; see Limits on calls |",
         "| `max_tool_calls` | No | A whole number from 1 to 1,000: a count of all a run's tool calls, in place of 25 calls of tools not marked `reads`; see Limits on calls. Only with `tools` |",
         "| `exit_behavior` | No | `error`, the default, or `continue`: how a run ends at its limit of tool calls or of input tokens; see At a limit. Only with `tools` |",
@@ -6051,21 +6109,19 @@
         "",
         "## Tools",
         "",
-        "`tools` lists the tools a run may call, from the tool servers the operator configured for the playbook and the connections people added to its org. Write each as `server/tool`, or `server/*` for every tool of a server that the operator allows; a connection is named the same way, by its name:",
+        "`tools` lists the tools a run may call, from the tool servers the operator configured for the playbook and the connections people added to its org. Name them only where what the model searches for next depends on what it has just read, as when it searches again with better words until it can answer. A read whose arguments the input or an earlier step gives belongs in a lookup function, and the workflow hands its answer to this function, as the `start` guide sets out under Build from the job. Choosing from the input what to search for or open is not exploring, and neither is choosing which of a search's hits to read: a reasoning function with no tools makes each choice, one lookup searches, and another reads each chosen item in a `for`, as [A lookup for each item](https://on.auto/docs/reference/workflow-format#a-lookup-for-each-item) shows. A function whose tools are all marked reads is still saved, and run when you ask. Its save answers a notice that says so when its tool servers list their tools within two seconds, and so does a run you ask for that succeeds. When that notice comes, move those reads to lookup functions, or keep the tools and tell the person what the model searches for after a read.",
+        "",
+        "Write each as `server/tool`, or `server/*` for every tool of a server that the operator allows; a connection is named the same way, by its name:",
         "",
         "```yaml",
-        "tools: [graph/search, graph/query, notes/*]",
+        "tools: [notes/search, notes/read_note]",
         "```",
         "",
         "`server/*` gives every tool the server lists that the server's `allowed` setting names. When the operator left `allowed` out, it gives every tool the server lists. A tool written in another form, or listed twice, is refused when the document is saved.",
         "",
         "### Find the tool names",
         "",
-        "Do not guess tool names. Ask the runtime:",
-        "",
-        "1. Call `search` (MCP, or `GET /v1/orgs/{org}/playbooks/{playbook}/tool-servers/search`). It returns the servers set up for the playbook and the tools the operator allows on each. It asks each server for its tools, as a run does. When the servers offer many tools, pass a few words describing what the function should do as `terms`. See [Tool servers](https://on.auto/docs/reference/http#tool-servers).",
-        "2. Call `introspect` to read one tool in full, with the schema of its arguments.",
-        "3. Call the tool to see what it returns before you name it: `query_connection` calls a tool marked `reads`, and `execute_connection` calls a tool whatever its mark, once the person agrees. Each calls the tool once, as a run would, and returns what the run's model would see. The call is recorded in the playbook's history. `dry_run` reports beforehand what the call would check. See [Calling a tool by hand](https://on.auto/docs/reference/http#calling-a-tool-by-hand).",
+        "Do not guess tool names. `search` lists the servers set up for the playbook and the tools the operator allows on each; when there are many, give it `terms`, a few words of what the function should do. `introspect` reads one tool in full. Call a tool once before you name it, as a run would: `query_connection` for a tool marked `reads`, `execute_connection` for any tool once the person agrees. Each returns the `text` the run's model would see and is recorded in the playbook's history; see [Calling a tool by hand](https://on.auto/docs/reference/http#calling-a-tool-by-hand).",
         "",
         "### Before the model is called",
         "",
@@ -6090,7 +6146,7 @@
         "",
         "- Each tool reaches the model under a unique name made from `server__tool`, for an MCP server and an HTTP API alike. Characters other than letters, digits and underscores become underscores. A name longer than 64 characters, or one that clashes with another after that change, gets an 8-character hash. A numeric suffix resolves any clash that remains.",
         "- The tool's description is cut to 4 KiB. Its input schema is sent unchanged.",
-        "- Parts of a tool's input schema that the provider may refuse or not enforce are added to the run's `warnings`, such as `graph__search inputSchema#/properties/query/maxLength`. Tools are not sent as strict structured outputs, so the rules for JSON output schemas do not apply to them.",
+        "- Parts of a tool's input schema that the provider may refuse or not enforce are added to the run's `warnings`, such as `notes__search inputSchema#/properties/query/maxLength`. Tools are not sent as strict structured outputs, so the rules for JSON output schemas do not apply to them.",
         "- The model keeps the function's output format. It may call several tools in one step, and call tools over several steps, before it answers.",
         "- Each call carries the run id in the request's metadata, under `auto.on/run_id`.",
         "- A tool's text content reaches the model as text, and so does the text of an embedded resource, such as a file the tool returns, in the order the tool gave them. Structured content reaches it only when no part of the result holds text. A resource link reaches it as its fields in JSON: its `uri`, its `name`, and the title, description, media type and size the tool gave. Other content, such as an image, audio or an embedded resource that holds binary data, reaches it as a one-line placeholder that names its type.",
@@ -6101,7 +6157,7 @@
         "",
         "The runtime checks each call before it sends it:",
         "",
-        "- A run makes as many calls as it needs within its time, ten minutes, and the input tokens it reads. It makes at most 25 calls of tools not marked `reads`, a tool that declares nothing among them, counted from its history: each `tool_call_started` without `read_only: true`. A function that sets `max_tool_calls` gives the run a count of its own, which bounds all its calls: every call the model asks for, reads and refused repeats included. A step that asks for a call past the count ends the run, or has the calls past it refused; see At a limit. A tool's [mark](https://on.auto/docs/reference/http#the-mark-of-a-tool) is the one its server or its connection's entry declares.",
+        "- A run makes as many calls as it needs within its time, ten minutes, and the input tokens it reads. It makes at most 25 calls of tools not marked `reads`, a tool that declares nothing among them, counted from its history: each `tool_call_started` without `read_only: true`. Reads go uncounted, but a read the workflow can make still belongs in a lookup function. A function that sets `max_tool_calls` gives the run a count of its own, which bounds all its calls: every call the model asks for, reads and refused repeats included. A step that asks for a call past the count ends the run, or has the calls past it refused; see At a limit. A tool's [mark](https://on.auto/docs/reference/http#the-mark-of-a-tool) is the one its server or its connection's entry declares.",
         "- A call that sends more than 256 KiB of arguments as JSON is refused, the most a run may take as its input. The model reads how large its arguments were, and is told to send less in one call, in parts where the tool takes them.",
         "- A third call of the same tool with the same arguments is refused, and the model is pointed to the result of the earlier call.",
         "",
@@ -6120,13 +6176,13 @@
         "",
         "A run's budget of input tokens is its function's `max_input_tokens`, or else the server's default, never past the server's most; on a runtime of one's own, `REASONING_MAX_INPUT_TOKENS` is both, 2,000,000 unless set. Before each step, the runtime estimates that step's input from the step before. When the remaining budget would not cover another step after it, that step is the last the budget covers.",
         "",
-        "A run that calls tools costs more. Every step resends the conversation so far, so a long run can use its whole budget. Ask a tool for one page of its data when the whole would be more than the model should read. A function whose work grows with what it is given, such as a list to check item by item, runs once for each item, from a workflow's `for`, so each run has its own calls and its own budget. Raise `max_input_tokens` only for one item that needs more, and tell the person the cost first.",
+        "A run that calls tools costs more. Every step resends the conversation so far, so a long run can use its whole budget. Ask a tool for one page of its data when the whole would be more than the model should read. Work that grows with a list belongs to a workflow's `for`: a [lookup for each item](https://on.auto/docs/reference/workflow-format#a-lookup-for-each-item) reads them, and where each item needs judging on its own, this function runs once for each, with its own calls and budget. Raise `max_input_tokens` only for one item that needs more, and tell the person the cost first.",
         "",
         "#### At a limit",
         "",
         "`exit_behavior` sets what a run does when a step asks for a call past its count, or at the most input tokens it may read:",
         "",
-        "- `error`, the default: the run stops before it finished. A step that asks for a call past the count sends none of its calls. The last step the budget covers is made with the tools: if the model answers, the run succeeds; if it asks for a tool, none is sent. The run ends as `conflict`, kind `unworkable` when every tool it called is marked `reads`, else `effect_unknown`, with `because: \"max_tool_calls\"` or `\"max_input_tokens\"`. Its detail names the limit and what to change. A workflow's `catch` can take it by that `because`.",
+        "- `error`, the default: the run stops before it finished. A step that asks for a call past the count sends none of its calls. The last step the budget covers is made with the tools: if the model answers, the run succeeds; if it asks for a tool, none is sent. The run ends as `conflict`, kind `unworkable` when every tool it called is marked `reads`, else `effect_unknown`, with `because: \"max_tool_calls\"` or `\"max_input_tokens\"`. Its detail names the limit and what to change, starting with lookup functions where reads count toward it. A workflow's `catch` can take it by that `because`.",
         "- `continue`: the model answers from what it has. Calls past the count are refused and the calls within it are sent, and the next step, or the last the budget covers, is made without tools. The run succeeds, with `incomplete_details: { \"reason\": \"max_tool_calls\" }` or `\"max_input_tokens\"` beside its output. A workflow's step gets the output alone, so keep the default when the answer must cover everything.",
         "",
         "A run that makes the last call its count allows and then answers succeeds, unmarked, either way.",
@@ -6261,51 +6317,15 @@
         "",
         "## The run's model calls",
         "",
-        "A run calls its model one call at a time. Each call adds two events to the run's history, appended as they happen:",
-        "",
-        "1. `model_call_started`, recorded before the call is sent. It has the call's `number`, counted from 1 across the run, the `model` asked for, `tools_offered`, and `messages_bytes`, the size of the messages the call adds to the conversation: the prompt for the first call, the answers of the tools for a later one, and for the last step of a run that called tools, the conversation told again in one message.",
-        "2. Then one of:",
-        "   - `model_call_answered`, when the model answered: `finish_reason` and `raw_finish_reason`, `usage`, `cost_usd` where the gateway answered a cost, `response_id`, `duration_ms`, `request_bytes`, the size of the request the call sent, `response_bytes`, the model as `resolved_model` and `answered_model`, the provider's `warnings`, `tool_calls`, one for each tool call the model asked for, with its `call_id`, the `tool` and `server` it names, and the digest of its arguments, `output_mode: described` where the call told the model the schema of a JSON answer in its instructions, as through [a gateway without structured outputs](https://on.auto/docs/reference/model-settings#a-gateway-without-structured-outputs), or `portable` where it sent the provider [the portable form of the schema](https://on.auto/docs/reference/model-settings#the-portable-form-of-a-schema) and read the answer back, and `repair` where a JSON answer that missed its schema was [asked for once more](https://on.auto/docs/reference/model-settings#an-answer-that-misses-its-schema): `outcome: repaired`, the first answer's `issues`, and the second request's `usage`, `cost_usd` and `duration_ms`. The call's own `usage`, `cost_usd`, `duration_ms` and `request_bytes` are then those of both requests. It records `schema_refusal` where the provider refused the request that gave it the schema, with HTTP 400 or 422, and the answer was [asked for with the schema in the instructions](https://on.auto/docs/reference/model-settings#a-schema-the-provider-refuses): `outcome: described`, and the refused request's `status` and `duration_ms`.",
-        "   - `model_call_failed`, when it did not: `because` (`cancelled`, `content_refused`, `credentials_rejected`, `definition_invalid`, `interrupted`, `model_not_allowed`, `output_invalid`, `provider_not_configured`, `provider_unavailable`, `rate_limited`, `request_too_long` or `timed_out`), the `provider`, the failure message as `detail`, `duration_ms`, and, where they apply, the `usage` and `cost_usd` of an answer the run could not use, `finish_reason`, `retry_after_ms`, the provider's own words, the issues it named, `output_mode`, `described` where the answer it could not use was asked for in the instructions or `portable` where it was asked for in the portable form, and `repair` where that answer missed its schema: `outcome: invalid` with the first answer's `issues` and the second request's `usage`, `cost_usd` and `duration_ms` when it was asked for once more and missed it again, `outcome: failed` with `because`, how the second request failed, such as `provider_unavailable`, the first answer's `issues` and `duration_ms` when that request failed, or `outcome: skipped` with `because`, `input_tokens`, `context_window` or `time`, when the run had too little room left to ask; and `schema_refusal` where the provider refused the request that gave it the schema: `outcome: described` when the answer asked for with the schema in the instructions failed, `refused_again` when the provider refused that request too, so the schema was not the cause, or `skipped` with `because: time` when too little time was left to ask, each with the refused request's `status` and `duration_ms`.",
-        "",
-        "The messages each call adds and the model's response are kept in full, scrubbed of the secrets of the run's tool servers, when every tool server of the run keeps content, as `record_content` keeps it unless the operator turns it off. A run without tools always keeps them. The events then carry their SHA-256 digests, `messages_sha256` and `response_sha256`, and each tool call the digest of its arguments, `arguments_sha256`. A call keeps only what it adds, never the whole conversation again, so what a run keeps grows with its length. A run goes on from the scrubbed messages and response whether it keeps them or not, so a secret of a tool server in the prompt or in the model's answer reaches no model call and no tool. A JSON answer is checked against its schema again once scrubbed, and one that no longer matches, such as a number that held a secret, ends the run as an answer that does not match its schema does. A run's history shows each one when it is at most 2 KiB, and its size otherwise. `get_event` reads them in full.",
-        "",
-        "A gateway that answers what a call cost, in US dollars, in a response header gives the call its `cost_usd`; [Gateway fields](https://on.auto/docs/reference/model-settings#gateway-fields) names the header. The record of the run adds up its model calls.",
+        "Each model call adds `model_call_started` to the run's history, then `model_call_answered` or `model_call_failed`, which `list_playbook_events` reads, given the run's `run_id`. [A reasoning function's model calls](https://on.auto/docs/reference/http#a-reasoning-function-s-model-calls) gives their fields, and what a run keeps of its messages.",
         "",
         "## A run performed again",
         "",
-        "A run is not interrupted by its client going away; only the server stopping cuts it off, and that leaves it to be performed again from what it recorded. A run a workflow's step started goes on within that step: it stops when the step's server stops or hands its workflows to another server, and the server that runs the workflow then goes on with it. Nothing limits how many runs go on after their clients went away: each is bounded as any run is, and its client started it.",
-        "",
-        "`cancel_run` cancels a run that is still `started`, whether its client is there or gone. How soon the run stops depends on what started it and which server takes the cancel:",
-        "",
-        "- A run its client started stops at once when the server running it takes the cancel, and each call it has in flight ends as `interrupted`. A run a workflow's step started stops the same way when that workflow cancels it.",
-        "- A run going in another server, or a run a workflow's step started that `cancel_run` cancels, stops before its next model call or tool call. A call it already sent still records its answer, and a run whose last model call answers ends with that answer.",
-        "",
-        "Every cancelled run records the spending of its model calls so far. One that does not end with an answer ends `rejected` with the reason `cancelled`; see [Cancelling a run](https://on.auto/docs/reference/http#cancelling-a-run).",
-        "",
-        "A run that is still `started` is never started a second time. `run_definition` with its `run_id` goes on with it from what it recorded, at the version it started with, and answers when the run ends. The workflow host does the same for the calls its workflows wait on, once a server starts again after one stopped.",
-        "",
-        "A run is told to be still running by its events alone. Every model call and every tool call has a bound: the model call's limit under Limits on time and failures, and the server's bound of a tool call, 30 seconds. The two together are longer than any gap between two events of a run that is still going. A run whose last event is newer than that may still be running, so a request for it is refused as `conflict` with the kind `taken`, saying the run is still running, and makes no second attempt. Once its last event is older, the attempt that wrote it has ended, and the request goes on with the run. The age of the last event is read from the database's clock, so two servers that share a database need not agree on the time. The workflow host, which knows the server it replaces stopped, goes on at once. In the server where the run is going, a request for it waits for it to end and is given what it recorded, so two requests for one run in one server make one attempt of it, and a client that sends a request twice is answered once. Each model call and each tool call is numbered, and an event is recorded only under the next number, or as the end of a call that is still open, so of two attempts that go on at once, from two servers too, the second stops at its first event, before it calls anything, and no call is ever started a second time.",
-        "",
-        "The run goes on from its events and the content it kept, and reads them before it does anything else: it takes its prompt from what its first model call kept and does not render the template again, and an ending it meets before its first call, such as a tool server that cannot be opened yet, names the tools it called and records the spending of its model calls, as every other ending does.",
-        "",
-        "- The bound of a run that calls tools, 10 minutes, counts from its start.",
-        "- A model call that was answered is not made again. A model call started without an answer ends as `interrupted` and is made again from the same messages, under the next number.",
-        "- When the last model call asked for tool calls, each call that has an answer gives the model that answer again, rebuilt from what the run kept, and a call that failed gives the model its failure. A call without an answer ends as `interrupted`, and is made again when the tool is marked `reads`. The calls made before count toward the run's count as its history records them, and a step that asked past a limit ends the run as the limit does, calling nothing.",
-        "- A call without an answer of a tool not marked `reads` is not made again, since it may already have changed something outside the playbook, and neither is any other call of the same step without an answer, even one of a tool marked `reads`. Each ends as `interrupted`, and the run ends as `conflict`, kind `effect_unknown`, with `because: \"call_outcome_unknown\"`.",
-        "- A call of a tool the run no longer offers, because its tool server changed while the run was stopped, is not sent. The model is told so and goes on.",
-        "- A model call that failed ends the run as that failure did, and a run whose cancel was asked ends cancelled, neither calling anything.",
-        "- A run that kept no content, because a tool server of the run has `record_content: false`, cannot go on. Each of its calls without an answer ends as `interrupted`, so every call it started has an end, and the run ends as `unavailable` with `because: \"restarted_without_content\"`, or, once it called a tool, as `tools_unfinished` or `effect_unknown` with that `because`; see When a tool-calling run cannot finish.",
-        "",
-        "A run that has ended is never performed again in this way; [Retrying under a run id](https://on.auto/docs/reference/http#retrying-under-a-run-id) gives the rule.",
+        "A run keeps going when its client goes away; only the server stopping cuts it off. `run_definition` with the `run_id` of a run still `started` resumes it from what it recorded: a call that was answered is not made again, and a call without an answer of a tool not marked `reads` is never made again. While the run may still be running in another server, `run_definition` returns `conflict` with the kind `taken`. [A reasoning run performed again](https://on.auto/docs/reference/http#a-reasoning-run-performed-again) gives every rule, and what `cancel_run` does to a run going elsewhere.",
         "",
         "## The overview",
         "",
-        "`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update.",
-        "",
-        "They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.",
-        "",
-        "An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.",
+        "`create_definition` and `update_definition` take an `overview` and a `diagram` beside the document. Write both after the document, and again with every update, as the descriptions of those arguments say. Auto Studio draws the diagram under the overview, at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. An overview holds up to 16,384 bytes and a diagram 8,192, in UTF-8. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.",
         "",
         "## Its page",
         "",
@@ -6316,7 +6336,7 @@
         "",
         "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.",
         "",
-        "A page counts what the answer names, so give the answer the fields that decide it: `output.format: json`, and an `output.schema` that holds them, such as the `recommendation` of `Ready` or `Revise` and the criteria it found `missing` in the example. An answer in text gives the page its words alone. [Page format](https://on.auto/docs/reference/page-format) says how to write `data`, `result` and `runs`.",
+        "A page counts what the answer names, so give the answer the fields that decide it: `output.format: json`, and an `output.schema` that holds them, such as the `recommendation` of `Ready` or `Revise` and the criteria it found `missing` in the example. An answer in text gives the page its words alone. The page guide, [Page format](https://on.auto/docs/reference/page-format), gives the whole format of a page.",
         "",
         "## Provider options",
         "",
@@ -6372,7 +6392,7 @@
       ]
     },
     {
-      "sha256": "246518c4e3a4334363b6d3b827db5dde0e6e1570efdf0d41389d698c3d8763ea",
+      "sha256": "efd12d6c1c6cdabb17486669abca1681cc9fcb407d1b85b6b525b03cfc9b3e5b",
       "tier": 3,
       "received": [
         {
@@ -7045,11 +7065,7 @@
         "",
         "## The overview",
         "",
-        "`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update.",
-        "",
-        "They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.",
-        "",
-        "An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.",
+        "`create_definition` and `update_definition` take an `overview` and a `diagram` beside the document. Write both after the document, and again with every update, as the descriptions of those arguments say. Auto Studio draws the diagram under the overview, at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. An overview holds up to 16,384 bytes and a diagram 8,192, in UTF-8. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.",
         "",
         "## Its page",
         "",
@@ -7105,7 +7121,7 @@
         "",
         "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.",
         "",
-        "A notification takes no answer, so its page counts what was sent. [Page format](https://on.auto/docs/reference/page-format) says how to write `data`, `result` and `runs`.",
+        "A notification takes no answer, so its page counts what was sent. The page guide, [Page format](https://on.auto/docs/reference/page-format), gives the whole format of a page.",
         "",
         "## Availability",
         "",
@@ -7317,7 +7333,7 @@
       ]
     },
     {
-      "sha256": "66177c85be601da3339716014167973f60375784238447234313fe644baeb1cf",
+      "sha256": "07cbefa7b847f68f9e08e46aa2972d391ab458192af7681fc22efb9bf1c27962",
       "tier": 3,
       "received": [
         {
@@ -7802,11 +7818,7 @@
         "",
         "## The overview",
         "",
-        "`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update.",
-        "",
-        "They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.",
-        "",
-        "An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.",
+        "`create_definition` and `update_definition` take an `overview` and a `diagram` beside the document. Write both after the document, and again with every update, as the descriptions of those arguments say. Auto Studio draws the diagram under the overview, at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. An overview holds up to 16,384 bytes and a diagram 8,192, in UTF-8. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.",
         "",
         "## Its page",
         "",
@@ -7815,7 +7827,48 @@
         "- `result`: the forecast as a line, with its horizon: a headline with the likely value of the period ahead and its range, and a chart of the periods observed and those ahead, as The lines on a page shows. An answer does not name its series, and `result` reads no input. To name the series in the headline, the workflow that asks can give the series' name as the label of a mark, such as `marks: [{ label: 'North, last week', value: 136 }]`. The answer carries the mark back, so `result` reads the name as `output.marks[0].label`, and the chart draws the mark as a level. An answer to a question asked without marks has none. Read the label through `default`, as `{{ output.marks[0].label | default: \"This series\" }}`, since a missing field stops the render.",
         "- `runs`: the forecast against what happened. A fold keeps, for each period, the value forecast for it and, once the period has passed, the value a later answer observed, as two lines of one series. An answer does not name its series, so keep this view for a function asked of one series, or read the series from the output of the workflow that asks. `weekly-orders` is asked of each region, so its page has no `runs`, which would mix the regions.",
         "",
-        "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](https://on.auto/docs/reference/page-format) says how to write `data`, `result` and `runs`.",
+        "If a workflow asked `weekly-orders` of `north` alone, its page could keep each week's forecast beside the orders observed, with this `data` and `runs` beside `result`:",
+        "",
+        "````yaml",
+        "page:",
+        "  data:",
+        "    language: typescript",
+        "    source:",
+        "      events:",
+        "        - type: run_succeeded",
+        "          subject: prediction/weekly-orders",
+        "    views:",
+        "      held: series",
+        "    module: |",
+        "      export function fold(view: View, event: Event): View {",
+        "        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>",
+        "          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;",
+        "        const lines = fieldOf(fieldOf(event.data, 'output'), 'lines');",
+        "        const pointOf = (name: string, index: number) => {",
+        "          const line = Array.isArray(lines) ? lines.find((each) => fieldOf(each, 'name') === name) : undefined;",
+        "          const points = fieldOf(line, 'points');",
+        "          const point = Array.isArray(points) ? points.at(index) : undefined;",
+        "          const at = fieldOf(point, 'at');",
+        "          const value = fieldOf(point, 'value');",
+        "          return typeof at === 'string' && typeof value === 'number' ? { at, value } : undefined;",
+        "        };",
+        "        const kept = (name: string, point: { at: string; value: number } | undefined) => {",
+        "          const before = view.held?.lines.find((line) => line.name === name)?.points ?? [];",
+        "          const others = before.filter(({ at }) => at !== point?.at);",
+        "          const points = point === undefined ? others : [...others, point];",
+        "          return { name, points: points.toSorted((one, other) => (one.at < other.at ? -1 : 1)).slice(-26) };",
+        "        };",
+        "        const forecast = kept('Forecast', pointOf('predicted', 0));",
+        "        const orders = kept('Orders', pointOf('observed', -1));",
+        "        return { held: { unit: 'orders', period: 'week', lines: [forecast, orders] } };",
+        "      }",
+        "  runs: |",
+        "    ```chart line",
+        "    {{ views.held | json }}",
+        "    ```",
+        "````",
+        "",
+        "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. The page guide, [Page format](https://on.auto/docs/reference/page-format), gives the whole format of a page.",
         "",
         "## Availability",
         "",
@@ -7824,7 +7877,7 @@
       ]
     },
     {
-      "sha256": "31e0df3fcfba2d3df6dcfd2d23d65b58da3e10eb0edc4b157db0c7f2eec222c7",
+      "sha256": "d830e7ef106f7d094e404a6569e18be7e61f7fc0ee7d4723514e0eaed674b5b1",
       "tier": 3,
       "received": [
         {
@@ -8268,11 +8321,7 @@
         "",
         "## The overview",
         "",
-        "`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update.",
-        "",
-        "They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.",
-        "",
-        "An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.",
+        "`create_definition` and `update_definition` take an `overview` and a `diagram` beside the document. Write both after the document, and again with every update, as the descriptions of those arguments say. Auto Studio draws the diagram under the overview, at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. An overview holds up to 16,384 bytes and a diagram 8,192, in UTF-8. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.",
         "",
         "## Its page",
         "",
@@ -8283,7 +8332,7 @@
         "",
         "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.",
         "",
-        "The fold sees the output alone, so give the output the period it is about, such as the month a run totals. The example's output names none, so its page keys each total by the day it was worked out: the spend so far, as of that day. Write amounts kept in cents as dollars, with `divided_by: 100` and `money`. [Page format](https://on.auto/docs/reference/page-format) says how to write `data`, `result` and `runs`.",
+        "The fold sees the output alone, so give the output the period it is about, such as the month a run totals. The example's output names none, so its page keys each total by the day it was worked out: the spend so far, as of that day. Write amounts kept in cents as dollars, with `divided_by: 100` and `money`. The page guide, [Page format](https://on.auto/docs/reference/page-format), gives the whole format of a page.",
         "",
         "## Availability",
         "",
@@ -8292,7 +8341,7 @@
       ]
     },
     {
-      "sha256": "68167dd3c236f675383f7385864fd8a4788565aa201a6d4bc2b1011e4825fffa",
+      "sha256": "8d5acb57608608b0f52e2f6e22320e05bf0f250fc662e670f50326f752250739",
       "tier": 3,
       "received": [
         {
@@ -8313,9 +8362,9 @@
         "",
         "## A function document",
         "",
-        "The source is Markdown: YAML front matter, then a Liquid prompt template. This example makes a picture of a product for its listing:",
+        "The source is Markdown: YAML front matter, then a Liquid prompt template. This example, `product-picture`, makes a picture of a product for its listing. Its page links each run's picture, and counts the pictures of each day:",
         "",
-        "```markdown",
+        "````markdown",
         "---",
         "description: A picture of the product for its listing",
         "produces: image",
@@ -8330,10 +8379,37 @@
         "  size: 1024x1024",
         "  quality: high",
         "expires: P30D",
+        "page:",
+        "  data:",
+        "    language: typescript",
+        "    source:",
+        "      events:",
+        "        - type: run_succeeded",
+        "          subject: generation/product-picture",
+        "    views:",
+        "      pictures: series",
+        "    module: |",
+        "      export function fold(view: View, event: Event): View {",
+        "        const time = event.time?.slice(0, 10);",
+        "        if (time === undefined) return view;",
+        "        const points = view.pictures?.lines[0]?.points ?? [];",
+        "        const last = points.at(-1);",
+        "        const day = last !== undefined && last.at > time ? last.at : time;",
+        "        const days = last?.at === day",
+        "          ? [...points.slice(0, -1), { at: day, value: last.value + 1 }]",
+        "          : [...points, { at: day, value: 1 }];",
+        "        return { pictures: { unit: 'pictures', period: 'day', lines: [{ name: 'Pictures', points: days.slice(-30) }] } };",
+        "      }",
+        "  result: |",
+        "    [A picture of the product for its listing]({{ output.address }}), {{ output.bytes | divided_by: 1000000 | round: 1 }} MB.",
+        "  runs: |",
+        "    ```chart line",
+        "    {{ views.pictures | json }}",
+        "    ```",
         "---",
         "",
         "A studio photograph of {{ input.product }} on a white table, in soft daylight.",
-        "```",
+        "````",
         "",
         "This one speaks a welcome:",
         "",
@@ -8349,7 +8425,7 @@
         "Welcome to {{ input.shop }}. Today is {{ today }}.",
         "```",
         "",
-        "To save it, call `create_definition` with `type: \"generation\"`, a function `name`, the document as `source`, and its `overview` and `diagram`. A save without a `diagram` is refused, so give the word `none` when a picture would add nothing; The overview says how to write both. To run it, call `run_definition` with the same type and name and its `input`. Both operations also need the playbook id, unless the MCP connection is scoped to that playbook.",
+        "To save one, call `create_definition` with `type: \"generation\"`, a function `name`, such as `product-picture`, the document as `source`, and its `overview` and `diagram`. A save without a `diagram` is refused, so give the word `none` when a picture would add nothing; The overview says how to write both. To run it, call `run_definition` with the same type and name and its `input`. Both operations also need the playbook id, unless the MCP connection is scoped to that playbook.",
         "",
         "A run answers the [asset](https://on.auto/docs/reference/output-shapes#asset) it made:",
         "",
@@ -8529,18 +8605,16 @@
         "",
         "## The overview",
         "",
-        "`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update.",
-        "",
-        "They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.",
+        "`create_definition` and `update_definition` take an `overview` and a `diagram` beside the document. Write both after the document, and again with every update, as the descriptions of those arguments say. Auto Studio draws the diagram under the overview, at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. An overview holds up to 16,384 bytes and a diagram 8,192, in UTF-8. [Reasoning functions](https://on.auto/docs/reference/http#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.",
         "",
         "## Its page",
         "",
         "A generation function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what the function made:",
         "",
-        "- `result`: the asset the run produced, said in the function's own words with its kind and size, such as `A picture of the product for its listing, 1.8 MB.`, and linked at its `address`. The run's output is the asset's reference, not the prompt it rendered, so `result` names what the function makes as its description does. The address lasts 15 minutes after the run, so the link opens the asset only until `address_until`, and a client shows an image as a link, never in the page.",
+        "- `result`: the asset the run produced, said in the function's own words with its kind and size, such as `A picture of the product for its listing, 1.8 MB.`, and linked at its `address`. The run's output is the asset's reference, not the prompt it rendered, so `result` names what the function makes as its description does. The address lasts 15 minutes after the run, so the link opens the asset only until `address_until`, and a client shows an image as a link, never in the page, as in the example.",
         "- `runs`: what was produced over time, such as the assets made each week by kind, as a count, or a table of the latest, each with its kind and size.",
         "",
-        "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](https://on.auto/docs/reference/page-format) says how to write `data`, `result` and `runs`.",
+        "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. The page guide, [Page format](https://on.auto/docs/reference/page-format), gives the whole format of a page.",
         "",
         "## Availability",
         "",
@@ -9827,7 +9901,7 @@
       ]
     },
     {
-      "sha256": "85b179a7a4554dec29c771fe78252403ba611f7ce246ce5595ea926190f14bcb",
+      "sha256": "2e9c0e5bd099c8bb1dba1ed855919054ff5e48075255d56226d7ac21468080de",
       "tier": 2,
       "received": [
         {
@@ -9835,35 +9909,28 @@
           "on": [
             "/mcp",
             "/orgs/{org}/mcp",
-            "/orgs/{org}/playbooks/{playbook}/mcp"
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
           ]
         }
       ],
       "lines": [
         "# Create your first playbook",
         "",
-        "A first playbook starts from the job the person wants done again and again. Break the job into its parts, give each part a function of the type its work needs, and write the workflow that runs the parts in order. Read a type's guide with get_guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says. When you create or run something, the response includes `studio`, a link to its page in Studio. Give that link to the person. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
+        "A first playbook is built in the order of the start guide's Build from the job: what the person wants it to achieve, the workflow that achieves it, then its steps as functions. Read the start guide with get_guide if you have not yet. Read a type's guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. Give the person the `studio` link that each create or run answers, to its page in Studio. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
         "",
         "1. Call list_playbooks, and list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first.",
-        "2. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\", \"continuously\" or \"whenever one arrives\", take that as the answer and say so rather than asking again. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run. Where a person must approve or decide, ask once where they want to be asked. It can be through a connection that sends them a request and reads their reply, such as a chat, an email provider or a ticketing app, or through you (`deliver: agent`). A request saved with neither is refused, and the refusal names the connections that can send it and read the reply. Ask once, too, where a notice goes: a channel or their direct messages.",
-        "3. Say the job back to the person as its parts, in the order they happen, and give each part its type by what the part does, not by how it is done:",
-        "   - it interprets, judges or writes: a reasoning function",
-        "   - it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function",
-        "   - it asks a person and takes their answer, or has a service act: an interaction function",
-        "   - it forecasts a quantity from the playbook's own history: a prediction function",
-        "   - it calculates or transforms data exactly: a computation function",
-        "   - it makes an image or audio: a generation function",
-        "",
-        "   The order of the parts, the branches, the waits and what happens when a part fails belong to the workflow, never to a prompt. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. Agree the parts and their types with the person before you write anything.",
-        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
-        "5. Write each function in the format of its type's guide, in the order the job uses them, each with its `page` in the same document. A reasoning function takes the facts it judges as its input, which the workflow hands it. For a part that reads from a service or acts on one, follow the give-tools recipe. It makes a read a lookup function and an act an interaction function. A reasoning function names tools in `tools` only where its model must choose among them. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a part would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a part that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
-        "6. Once they agree, save each with create_definition, with its `type`. A function needs `diagram`: Mermaid source of how it works, or the word none. A workflow takes none. `overview` is optional: Markdown that tells the person what it does and why it is needed. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
-        "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of an interaction function held for you (`deliver: agent`) waits for its answer. list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs. Run it only once the person agrees. A prediction function answers once the playbook has history.",
-        "8. Read the workflow guide with get_guide and write the workflow that owns the job, whose steps call the functions in order and hand each one what the steps before it answered: one step is enough when that step finishes the job, and a later ask changes the workflow. Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period. Where the work starts on its own, give it a `schedule`, as the triggers guide says. A `schedule` holds its triggers: `cron` or `every` for set times, and `on` for what arrives. For set times, use `cron` with `time_zone` naming the person's time zone, or `every`. A run on a clock is given its due time alone. So its first steps are the lookup functions that find its material, or the workflow gives it a fixed input in `input.from`. For what arrives, use `on` with a filter on an event `type` named in the past tense, such as `com.example.item.received`. A run is then given a list holding the event, and the workflow passes the event's `data` to its first step. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once lookup functions reach the sources.",
+        "2. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\" or \"whenever one arrives\", take that as the answer rather than asking again. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run. Where a person must approve or decide, ask once where they want to be asked, as the start guide's Asking a person says. Where the job itself sends a notice, ask once where it goes: a channel or their direct messages.",
+        "3. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
+        "4. Design the workflow that achieves what the playbook is for, as the start guide's Build from the job says, before you write any function. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. A step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists. A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those. Then show the person the design and get their yes before you write anything.",
+        "5. Write the function of each step of the design, in the format of its type's guide, each with its `page` in the same document. For a step that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a step would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a step that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
+        "6. Once they agree, save each with create_definition, with its `type`, its `diagram` and, where it helps, its `overview`, as the arguments say: a workflow takes no `diagram`. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
+        "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of one held for you waits for its answer: list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs, so run it only once the person agrees. A prediction function answers once the playbook has history.",
+        "8. Write the workflow's document from the design the person agreed, as the workflow guide says: its steps call the functions you saved and hand each one what the steps before it answered. One step is enough when that step finishes the job, and a later ask changes the workflow. Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period. Where the work starts on its own, give it a `schedule`, as the triggers guide says: `cron` with the person's `time_zone`, or `every`, for set times, and `on` for what arrives. A run on a clock is given its due time alone, so its first steps are the lookup functions that find its material, or the workflow gives it a fixed input in `input.from`. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once lookup functions reach the sources.",
         "9. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.",
         "10. Run the workflow once, in one of two ways, never both. Where it starts `on` an event, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from and an `id` of its own, such as `test-1`. A real event's `source` and `id` would make that event a repeat, ignored when it comes. The event starts the run, so a moment later find it with list_runs, `type` workflow, and read it with get_run. Otherwise, start the run with run_definition. A step held for you (`deliver: agent`) waits for its answer, which you give with answer_interaction, as in a test. Tell the person what the run answered, in their words. Where the workflow starts on its own, tell them too when it next runs, in their own time, or what starts it.",
         "",
-        "Then tell the person what they can do next: change when it runs with the schedule recipe and the triggers guide, or connect the services its parts still wait for, with the connect-a-service and give-tools recipes. Once it has more than one workflow, give the playbook a page with update_playbook, led by each workflow's main number.",
+        "Then tell the person what they can do next: change when it runs with the schedule recipe and the triggers guide, or connect the services its steps still wait for, with the connect-a-service and give-tools recipes. Once it has more than one workflow, give the playbook a page with update_playbook, led by each workflow's main number.",
         ""
       ]
     },
@@ -9898,7 +9965,7 @@
       ]
     },
     {
-      "sha256": "d2bfda69245a38dfe4f004f5b687abbbfef3c42f524adffae81ed34794b56ea3",
+      "sha256": "03506f555be22d513e47c8828f6181a4e04a5cd33a6f6467ed9d36960254d89c",
       "tier": 2,
       "received": [
         {
@@ -9914,20 +9981,20 @@
       "lines": [
         "# Give the playbook tools",
         "",
-        "A tool of a connected service is put to work by the function type its use needs, and the tool itself says which: search gives each tool a `mark`. A read the job always makes, by a tool marked reads, is a lookup function: one call and no model. An act, by a tool marked acts or unmarked, is an interaction function, which calls it with `call`: it answers at once and spends no model call. A reasoning function names tools in `tools` only where its model must choose among them while it runs, because which to call, or how often, depends on what they answer. Read a type's guide with get_guide before you write a function of that type. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
+        "A tool of a connected service is put to work by the function type its use needs, and the tool itself says which: search gives each tool a `mark`. A read by a tool marked reads, searching included, is a lookup function: one call and no model, whether its arguments come from the run's input or from an earlier step's answer. An act, by a tool marked acts or unmarked, is an interaction function, which calls it with `call`: it answers at once and spends no model call. A reasoning function names tools in `tools` only where its model must explore, meaning what it looks for next depends on what it just read; choosing what to look for, what to open or which hits to read is not exploring, as the start guide's Build from the job says. Read a type's guide with get_guide before you write a function of that type. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
         "",
         "1. Call search to see the tool servers this playbook may use and their tools, each with its `mark`; when the person named a server, give its name as `server`, and give `terms`, a few words of what the person wants done, to find the tools that fit among many. Call introspect for the input_schema of a tool before writing its arguments.",
         "2. When no server is listed, or not the one the person wants, or search says a server's connection is `connection_broken`, follow the connect-a-service recipe: it connects the service, or reconnects it, and sets it up for what the playbook will do there; then call search again. When a server says it cannot be asked just now, tell the person why, in its words; whoever runs the server can look into it.",
-        "3. To learn what a tool answers, call it yourself with the arguments its input_schema takes and read its `text`: that is what a run of a function will get. Never save a function only to see what a tool answers. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a function needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
+        "3. To learn what a tool answers, call it yourself with the arguments its input_schema takes. The `read` of a lookup or interaction function points into the call's `answer`. A reasoning function's model reads the call's `text`. Never save a function only to see what a tool answers. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a function needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
         "4. Ask the person what the playbook should do with the tools, and give each use its function:",
-        "   - a read the job always makes, by a tool marked reads: a lookup function, whose `call` names the `server` and the `tool`, with its arguments in `with`, written from the run's input. One lookup function for each read.",
+        "   - a read by a tool marked reads: a lookup function, whose `call` names the `server` and the `tool`, with its arguments in `with`, written from its input. One lookup function for each read. Where an earlier step answers the arguments, such as the ids a listing gave, the workflow hands them on, one run for each in a `for`, as the workflow guide's A lookup for each item shows. Where choosing what to look for, what to open or which hits to read is a judgement, a reasoning function with no `tools` makes it, lookup functions read each choice, and a reasoning function judges what they read.",
         "   - an act on a system, or a read by a tool that is not marked reads: an interaction function that calls the tool with `call`, written from the answer execute_connection gave.",
         "   - a question to a person: an interaction function too. Ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`.",
-        "   - a choice among tools that the model must make while it runs: a reasoning function whose `tools` name only those tools. Hand it as input what lookup functions already read, so that it calls a tool only for what it could not be handed.",
+        "   - exploring, where what the model looks for next depends on what it just read: a reasoning function whose `tools` name only those tools. Hand it as input what lookup functions can read, so that it calls a tool only to explore.",
         "5. Write each function in the format of its type's guide, with its `page` in the same document, show it to the person, and save it with create_definition, with its `type`, once they agree.",
         "6. Run each with run_definition. A function that has a service act really acts when it runs, so run it only once the person agrees. A run that called tools and did not succeed is not run again under its id, since a tool may have changed something: read what it called with list_playbook_events, given its `run_id`, and start a new run only if the person still wants one.",
         "7. Tell the person what each run did with the tools, and that a function can call only the tools it names.",
-        "8. Then, with the workflow guide, write or change the workflow that owns the job the person wants done again, whose steps are the functions, with its `page` in the same document: the steps that read come first, and each later step is handed what the steps before it answered. Save it once they agree, run it, and tell the person what it answered and what they can do next.",
+        "8. Then, with the workflow guide, write or change the workflow that owns the job the person wants done again, whose steps are the functions, with its `page` in the same document: each step is handed what the steps before it answered, and a read comes before the step that needs it. Save it once they agree, run it, and tell the person what it answered and what they can do next.",
         ""
       ]
     },
@@ -9963,7 +10030,7 @@
       ]
     },
     {
-      "sha256": "f5ef2897b001ba47c83d7c2136ece4ca213c730783a042579afdacc1cc55d132",
+      "sha256": "6a8a6b4711191c05f49702913b57e1d6ccab7dc84c920cee8b758d8a3d4a89a4",
       "tier": 3,
       "received": [
         {
@@ -9979,7 +10046,7 @@
       "lines": [
         "# Keep something for later",
         "",
-        "What the person wants kept is the output of a run: each run that succeeds keeps its output in the playbook's history, and a lookup function reads it back from the runs of that definition. Read the lookup-function guide with get_guide before you write one; its section Reading the playbook's own runs sets out `runs`. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says.",
+        "What the person wants kept is the output of a run: each run that succeeds keeps its output in the playbook's history, and a lookup function reads it back from the runs of that definition. Read the lookup-function guide with get_guide before you write one; its section Reading the playbook's own runs sets out `runs`. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side.",
         "",
         "1. Ask the person what should be kept, in their words, and what later work needs it, such as who approves a budget, or what each round of the drivers reported.",
         "2. Find the function whose output already holds it with list_definitions. Where none does, write one whose output is that thing, such as a computation function whose program answers its input as it is, in the format of its type's guide; show it to the person, and save it with create_definition once they agree.",
@@ -10096,7 +10163,7 @@
       ]
     },
     {
-      "sha256": "2d2b98632f63c7a81b5957bf418afa5084f9429b93bac826159dc98c26ae455d",
+      "sha256": "b32942acf5f64caeffb015aa6dd264e865a104ec722c29f48fa2263d3b1336ee",
       "tier": 1,
       "received": [
         {
@@ -10107,51 +10174,11 @@
         }
       ],
       "lines": [
-        "By each part's job: reasoning only interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; workflow runs the parts in order."
+        "workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly."
       ]
     },
     {
-      "sha256": "667bd7c4f037fcd1c69acfa1672fbce8369719d6af52b7c8c650980b1d555029",
-      "tier": 2,
-      "received": [
-        {
-          "as": "prompt first-playbook: message",
-          "on": [
-            "/directory"
-          ]
-        }
-      ],
-      "lines": [
-        "Create my first playbook.",
-        "",
-        "# Create your first playbook",
-        "",
-        "A first playbook starts from the job the person wants done again and again. Break the job into its parts, give each part a function of the type its work needs, and write the workflow that runs the parts in order. Read a type's guide with get_guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says. When you create or run something, the response includes `studio`, a link to its page in Studio. Give that link to the person. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
-        "",
-        "1. Call list_playbooks, and list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first.",
-        "2. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\", \"continuously\" or \"whenever one arrives\", take that as the answer and say so rather than asking again. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run. Where a person must approve or decide, ask once where they want to be asked. It can be through a connection that sends them a request and reads their reply, such as a chat, an email provider or a ticketing app, or through you (`deliver: agent`). A request saved with neither is refused, and the refusal names the connections that can send it and read the reply. Ask once, too, where a notice goes: a channel or their direct messages.",
-        "3. Say the job back to the person as its parts, in the order they happen, and give each part its type by what the part does, not by how it is done:",
-        "   - it interprets, judges or writes: a reasoning function",
-        "   - it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function",
-        "   - it asks a person and takes their answer, or has a service act: an interaction function",
-        "   - it forecasts a quantity from the playbook's own history: a prediction function",
-        "   - it calculates or transforms data exactly: a computation function",
-        "",
-        "   The order of the parts, the branches, the waits and what happens when a part fails belong to the workflow, never to a prompt. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. Agree the parts and their types with the person before you write anything.",
-        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
-        "5. Write each function in the format of its type's guide, in the order the job uses them, each with its `page` in the same document. A reasoning function takes the facts it judges as its input, which the workflow hands it. For a part that reads from a service or acts on one, follow the give-tools recipe. It makes a read a lookup function and an act an interaction function. A reasoning function names tools in `tools` only where its model must choose among them. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a part would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a part that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
-        "6. Once they agree, save each with create_definition, with its `type`. A function needs `diagram`: Mermaid source of how it works, or the word none. A workflow takes none. `overview` is optional: Markdown that tells the person what it does and why it is needed. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
-        "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of an interaction function held for you (`deliver: agent`) waits for its answer. list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs. Run it only once the person agrees. A prediction function answers once the playbook has history.",
-        "8. Read the workflow guide with get_guide and write the workflow that owns the job, whose steps call the functions in order and hand each one what the steps before it answered: one step is enough when that step finishes the job, and a later ask changes the workflow. Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period. Where the work starts on its own, give it a `schedule`, as the triggers guide says. A `schedule` holds its triggers: `cron` or `every` for set times, and `on` for what arrives. For set times, use `cron` with `time_zone` naming the person's time zone, or `every`. A run on a clock is given its due time alone. So its first steps are the lookup functions that find its material, or the workflow gives it a fixed input in `input.from`. For what arrives, use `on` with a filter on an event `type` named in the past tense, such as `com.example.item.received`. A run is then given a list holding the event, and the workflow passes the event's `data` to its first step. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once lookup functions reach the sources.",
-        "9. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.",
-        "10. Run the workflow once, in one of two ways, never both. Where it starts `on` an event, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from and an `id` of its own, such as `test-1`. A real event's `source` and `id` would make that event a repeat, ignored when it comes. The event starts the run, so a moment later find it with list_runs, `type` workflow, and read it with get_run. Otherwise, start the run with run_definition. A step held for you (`deliver: agent`) waits for its answer, which you give with answer_interaction, as in a test. Tell the person what the run answered, in their words. Where the workflow starts on its own, tell them too when it next runs, in their own time, or what starts it.",
-        "",
-        "Then tell the person what they can do next: change when it runs with the schedule recipe and the triggers guide, or connect the services its parts still wait for, with the connect-a-service and give-tools recipes. Once it has more than one workflow, give the playbook a page with update_playbook, led by each workflow's main number.",
-        ""
-      ]
-    },
-    {
-      "sha256": "8a9598f8528f1bff8f432ab1bad38275cd863f1cbe15f4c213f0b521d926c2d2",
+      "sha256": "44fbb02df8c89db3ac5537958d6af457724cc35c4e885c9f174fd87fde87fae3",
       "tier": 2,
       "received": [
         {
@@ -10168,17 +10195,26 @@
         "",
         "## Build from the job",
         "",
-        "Start from the job the person wants done again and again, not from a function. Break the job into its parts and give each part a function of the type its work needs, by what the part does, not by how it is done:",
+        "Start from what the person wants the playbook to achieve, not from a function. Once they agree what it should achieve, design the workflow that achieves it:",
+        "",
+        "- what starts it, and what one run handles, such as an item, a case or a period",
+        "- its steps in order, and what each hands the next",
+        "- where it branches, loops or waits, and which decisions stay with a person",
+        "- which result shows the person it worked",
+        "",
+        "In the design, give each step that does work the function type its work needs, by what the step does, not by how it is done:",
         "",
         "- it interprets, judges or writes: a reasoning function",
-        "- it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function",
+        "- it reads or searches what a connected service holds, or reads what earlier runs of the playbook produced: a lookup function",
         "- it asks a person and takes their answer, or has a service act: an interaction function",
         "- it forecasts a quantity from the playbook's own history: a prediction function",
         "- it calculates or transforms data exactly: a computation function",
         "",
-        "A workflow runs the parts in order and hands each one what the parts before it answered. The order, the branches, the waits and what happens when a part fails are the workflow's, never a prompt's. A job that is one judgement is one reasoning function, and one step is enough. These run at once, with nothing connected: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A lookup function that reads a service needs its connection. An interaction function that goes through a service needs its connection. A prediction function needs the playbook's history.",
+        "A step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists. A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those. The order, the branches, the waits and what happens when a step fails are the workflow's, never a prompt's. A job that is one judgement is one reasoning function, and one step is enough.",
         "",
-        "When you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold a read, a calculation, a question or an act, give that part a function of its own type, and make it a step of the workflow. Do so once the person agrees, rather than write a longer prompt.",
+        "Show the person that design in a message of its own, in their words: what starts it, and each step in order with its function type, such as \"read each new item (lookup)\". Ask whether it is right, and write no function or workflow before their yes. A yes to what the playbook should achieve, or an answer about a service, a trigger or a model, is not a yes to its design.",
+        "",
+        "When you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold a read, a calculation, a question or an act, give that work a function of its own type, and make it a step of the workflow. Do so once the person agrees, rather than write a longer prompt.",
         "",
         "## Where to go",
         "",
@@ -10212,7 +10248,7 @@
         "",
         "## What a workflow owns",
         "",
-        "A workflow owns one job the business does again and again, with a result the person recognizes as done: a list of records kept ranked, a case that came in decided and answered, a period that ended measured and reported. Before you write one, work out with the person what starts it, a time, an event or someone asking; what one run handles, an item, a case or a period; what done looks like; and which decisions stay with a person. One step is enough when that step finishes the job. Such a workflow is the job, not a wrapper: it is what runs that step again and again.",
+        "A workflow owns one job the business does again and again, with a result the person recognizes as done: a list of records kept ranked, a case that came in decided and answered, a period that ended measured and reported. It exists to achieve what the person wants from the playbook, and you design it as Build from the job says. One step is enough when that step finishes the job. Such a workflow is the job, not a wrapper: it is what runs that step again and again.",
         "",
         "The playbook's workflows, which list_definitions shows and Studio presents, are the person's list of jobs: read it back in their words, and keep off it anything that is not a job they want done again. These are not workflows:",
         "",
@@ -10228,7 +10264,7 @@
         "You are the playbook's developer. Testing, setting up and checking are your work, done with the tools below, and none of it is saved as a workflow. Which tools a connection lists depends on where it acts and on what its caller may do. The caller's own org's connection lists every tool the caller may call. One that manages the org's playbooks lists the tools that manage playbooks and connections, not those that work inside a playbook. One that acts inside a playbook lists only those.",
         "",
         "- To learn what a tool answers, call it with query_connection; a tool that may change something, with execute_connection, once the person agrees; dry_run checks the arguments without calling. Never save a function only to see what a tool answers.",
-        "- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events. A run that called a tool may have changed something, so one that did not succeed is not run again under its id.",
+        "- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events.",
         "- To set a service up for the playbook's runs, such as a team's statuses, a channel or a label, do it with the person before the first run, through the tools of the connection; the recipe connect-a-service sets out how. A run acts on what is there and sets nothing up.",
         "- Where setting up or testing takes tools or access the runs do not need, connect them: ask for the access with the connection, as `more` of add_connection, or add the service's own MCP server or HTTP API by hand, so that you do the work here rather than send the person into the service.",
         "- A check a run must make each time, such as that an item is still where the job expects it, is a step of the workflow that owns the job. A check made before the first run, or when something at the service changes, is yours.",
@@ -10377,44 +10413,6 @@
         "- Measure: The one number a goal is judged by, with its label and its target.",
         "- Contribution: What a workflow does for a goal, written under contributes in its document: its purpose in the person's words, the milestone it marks and the measure it reports.",
         "- Verdict: Where one judging of a goal stands: open, passed or failed. The goal gives its own words for passed and failed.",
-        ""
-      ]
-    },
-    {
-      "sha256": "622414c2ad31afe7245525be1450341003d29ab8cd9c75d78068c5390b6ff282",
-      "tier": 2,
-      "received": [
-        {
-          "as": "guide first-playbook",
-          "on": [
-            "/directory"
-          ]
-        }
-      ],
-      "lines": [
-        "# Create your first playbook",
-        "",
-        "A first playbook starts from the job the person wants done again and again. Break the job into its parts, give each part a function of the type its work needs, and write the workflow that runs the parts in order. Read a type's guide with get_guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says. When you create or run something, the response includes `studio`, a link to its page in Studio. Give that link to the person. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
-        "",
-        "1. Call list_playbooks, and list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first.",
-        "2. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\", \"continuously\" or \"whenever one arrives\", take that as the answer and say so rather than asking again. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run. Where a person must approve or decide, ask once where they want to be asked. It can be through a connection that sends them a request and reads their reply, such as a chat, an email provider or a ticketing app, or through you (`deliver: agent`). A request saved with neither is refused, and the refusal names the connections that can send it and read the reply. Ask once, too, where a notice goes: a channel or their direct messages.",
-        "3. Say the job back to the person as its parts, in the order they happen, and give each part its type by what the part does, not by how it is done:",
-        "   - it interprets, judges or writes: a reasoning function",
-        "   - it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function",
-        "   - it asks a person and takes their answer, or has a service act: an interaction function",
-        "   - it forecasts a quantity from the playbook's own history: a prediction function",
-        "   - it calculates or transforms data exactly: a computation function",
-        "",
-        "   The order of the parts, the branches, the waits and what happens when a part fails belong to the workflow, never to a prompt. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. Agree the parts and their types with the person before you write anything.",
-        "4. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
-        "5. Write each function in the format of its type's guide, in the order the job uses them, each with its `page` in the same document. A reasoning function takes the facts it judges as its input, which the workflow hands it. For a part that reads from a service or acts on one, follow the give-tools recipe. It makes a read a lookup function and an act an interaction function. A reasoning function names tools in `tools` only where its model must choose among them. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a part would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a part that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
-        "6. Once they agree, save each with create_definition, with its `type`. A function needs `diagram`: Mermaid source of how it works, or the word none. A workflow takes none. `overview` is optional: Markdown that tells the person what it does and why it is needed. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
-        "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of an interaction function held for you (`deliver: agent`) waits for its answer. list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs. Run it only once the person agrees. A prediction function answers once the playbook has history.",
-        "8. Read the workflow guide with get_guide and write the workflow that owns the job, whose steps call the functions in order and hand each one what the steps before it answered: one step is enough when that step finishes the job, and a later ask changes the workflow. Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period. Where the work starts on its own, give it a `schedule`, as the triggers guide says. A `schedule` holds its triggers: `cron` or `every` for set times, and `on` for what arrives. For set times, use `cron` with `time_zone` naming the person's time zone, or `every`. A run on a clock is given its due time alone. So its first steps are the lookup functions that find its material, or the workflow gives it a fixed input in `input.from`. For what arrives, use `on` with a filter on an event `type` named in the past tense, such as `com.example.item.received`. A run is then given a list holding the event, and the workflow passes the event's `data` to its first step. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once lookup functions reach the sources.",
-        "9. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.",
-        "10. Run the workflow once, in one of two ways, never both. Where it starts `on` an event, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from and an `id` of its own, such as `test-1`. A real event's `source` and `id` would make that event a repeat, ignored when it comes. The event starts the run, so a moment later find it with list_runs, `type` workflow, and read it with get_run. Otherwise, start the run with run_definition. A step held for you (`deliver: agent`) waits for its answer, which you give with answer_interaction, as in a test. Tell the person what the run answered, in their words. Where the workflow starts on its own, tell them too when it next runs, in their own time, or what starts it.",
-        "",
-        "Then tell the person what they can do next: change when it runs with the schedule recipe and the triggers guide, or connect the services its parts still wait for, with the connect-a-service and give-tools recipes. Once it has more than one workflow, give the playbook a page with update_playbook, led by each workflow's main number.",
         ""
       ]
     }

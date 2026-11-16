@@ -40,7 +40,7 @@ const answeredFromWhatItRead = answers(textResult('The tool budget ran out; no d
 const threeHundredThousandByDefault = readingOf(300_000, 9_999_999);
 
 const namesTheLimit: unknown = expect.stringMatching(
-  /^The run needed more than the 300,000 input tokens a run may read by default, after the run called the large tool of graph\. Raise max_input_tokens in the reasoning function definition, to at most 9,999,999, /u,
+  /^The run needed more than the 300,000 input tokens a run may read by default, after the run called the large tool of graph\. Where the input or an earlier step could give this run's reads their arguments, move each into a lookup function .+, or raise max_input_tokens in the reasoning function definition, to at most 9,999,999; /u,
 );
 
 const bothStepsRead: unknown = expect.objectContaining({ total: 310_627 });

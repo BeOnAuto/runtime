@@ -2,7 +2,7 @@ import { articled, capitalized, listed as listedInWords } from '@on.auto/phrasin
 
 import { itsGoals, type GoalsCarried } from './goals/start-guide-goals.ts';
 import type { DefinitionType, Guide } from './guide-shelf.ts';
-import { whatEachPartDoes } from './start-guide-parts.ts';
+import { theDesignShown, theJobInParts, theWorkflowFirst, whatEachPartDoes } from './start-guide-parts.ts';
 
 export const startGuideName = 'start';
 
@@ -65,35 +65,38 @@ export function sentenceOver(subjects: readonly string[], alone: string, togethe
   ];
 }
 
-function whenEachRuns(carried: Carried): readonly string[] {
+export function readsAndJudgements(carried: Carried): readonly string[] {
+  const workflows = serves(carried, 'workflow');
+  const lookups = workflows && serves(carried, 'lookup');
+  const reasoning = workflows && serves(carried, 'reasoning');
   return [
-    ...sentenceOver(
-      runningAtOnce(carried),
-      'runs at once, with nothing connected',
-      'These run at once, with nothing connected',
-    ),
-    ...where(serves(carried, 'lookup'), 'A lookup function that reads a service needs its connection.'),
     ...where(
-      serves(carried, 'interaction'),
-      'An interaction function that goes through a service needs its connection.',
+      lookups,
+      "A step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists.",
     ),
-    ...where(serves(carried, 'prediction'), "A prediction function needs the playbook's history."),
+    ...where(
+      reasoning && lookups,
+      'A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those.',
+    ),
+    ...where(
+      reasoning && !lookups,
+      'A reasoning function judges or writes from what the workflow hands it, and calls tools only where it must explore.',
+    ),
   ];
 }
 
 function whatTheWorkflowOwns(carried: Carried): readonly string[] {
   const workflows = serves(carried, 'workflow');
   return [
+    ...readsAndJudgements(carried),
     ...where(
       workflows,
-      'A workflow runs the parts in order and hands each one what the parts before it answered.',
-      "The order, the branches, the waits and what happens when a part fails are the workflow's, never a prompt's.",
+      "The order, the branches, the waits and what happens when a step fails are the workflow's, never a prompt's.",
     ),
     ...where(
       serves(carried, 'reasoning'),
       `A job that is one judgement is one reasoning function${workflows ? ', and one step is enough' : ''}.`,
     ),
-    ...whenEachRuns(carried),
   ];
 }
 
@@ -110,7 +113,7 @@ function whenAPlaybookChanges(carried: Carried): readonly string[] {
   return where(
     serves(carried, 'reasoning') && serves(carried, 'workflow') && parts.length > 0,
     '',
-    `When you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold ${inTurn(parts, 'or')}, give that part a function of its own type, and make it a step of the workflow. Do so once the person agrees, rather than write a longer prompt.`,
+    `When you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold ${inTurn(parts, 'or')}, give that work a function of its own type, and make it a step of the workflow. Do so once the person agrees, rather than write a longer prompt.`,
   );
 }
 
@@ -122,10 +125,11 @@ const buildFromTheJob: Lines = (carried) => {
     '',
     '## Build from the job',
     '',
-    'Start from the job the person wants done again and again, not from a function. Break the job into its parts and give each part a function of the type its work needs, by what the part does, not by how it is done:',
+    ...(serves(carried, 'workflow') ? theWorkflowFirst : [theJobInParts]),
     '',
     ...parts,
     ...where(owned.length > 0, '', owned.join(' ')),
+    ...where(serves(carried, 'workflow'), '', theDesignShown(carried.definitionTypes.map(({ type }) => type))),
     ...whenAPlaybookChanges(carried),
   );
 };
@@ -226,7 +230,7 @@ const whatAWorkflowOwns: Lines = (carried) =>
     '',
     '## What a workflow owns',
     '',
-    'A workflow owns one job the business does again and again, with a result the person recognizes as done: a list of records kept ranked, a case that came in decided and answered, a period that ended measured and reported. Before you write one, work out with the person what starts it, a time, an event or someone asking; what one run handles, an item, a case or a period; what done looks like; and which decisions stay with a person. One step is enough when that step finishes the job. Such a workflow is the job, not a wrapper: it is what runs that step again and again.',
+    'A workflow owns one job the business does again and again, with a result the person recognizes as done: a list of records kept ranked, a case that came in decided and answered, a period that ended measured and reported. It exists to achieve what the person wants from the playbook, and you design it as Build from the job says. One step is enough when that step finishes the job. Such a workflow is the job, not a wrapper: it is what runs that step again and again.',
     '',
     "The playbook's workflows, which list_definitions shows and Studio presents, are the person's list of jobs: read it back in their words, and keep off it anything that is not a job they want done again. These are not workflows:",
     '',
@@ -248,7 +252,7 @@ const whatYouDoYourself: Lines = (carried) => [
   "You are the playbook's developer. Testing, setting up and checking are your work, done with the tools below, and none of it is saved as a workflow. Which tools a connection lists depends on where it acts and on what its caller may do. The caller's own org's connection lists every tool the caller may call. One that manages the org's playbooks lists the tools that manage playbooks and connections, not those that work inside a playbook. One that acts inside a playbook lists only those.",
   '',
   '- To learn what a tool answers, call it with query_connection; a tool that may change something, with execute_connection, once the person agrees; dry_run checks the arguments without calling. Never save a function only to see what a tool answers.',
-  '- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events. A run that called a tool may have changed something, so one that did not succeed is not run again under its id.',
+  '- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events.',
   `- To set a service up for the playbook's runs, such as a team's statuses, a channel or a label, do it with the person before the first run, through the tools of the connection${follows(carried, 'connect-a-service') ? '; the recipe connect-a-service sets out how' : ''}. A run acts on what is there and sets nothing up.`,
   "- Where setting up or testing takes tools or access the runs do not need, connect them: ask for the access with the connection, as `more` of add_connection, or add the service's own MCP server or HTTP API by hand, so that you do the work here rather than send the person into the service.",
   '- A check a run must make each time, such as that an item is still where the job expects it, is a step of the workflow that owns the job. A check made before the first run, or when something at the service changes, is yours.',

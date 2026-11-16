@@ -42,9 +42,9 @@ A reasoning function gives a language model a piece of work: interpret informati
 
 For example, "Review campaign brief" checks a brief against your team's criteria and recommends Ready or Revise. Each run fills the prompt with one brief, asks the model, and records the answer and the model's usage. The [first-playbook tutorial](../tutorials/first-playbook.md) builds it.
 
-Choose reasoning when the work needs judgment or language. Leave exact arithmetic to a computation function. A reasoning function does not remember earlier runs, so give it what it needs as input. It can also use tools, as [described below](#tool-access-inside-a-reasoning-function).
+Choose reasoning when the work needs judgment or language. Leave exact arithmetic to a computation function. A reasoning function does not remember earlier runs, so give it what it needs as input, from the person or from the step before it in a workflow. Where what its model searches for next depends on what it has just read, it can also call tools, as [described below](#tool-access-inside-a-reasoning-function).
 
-- [Give a function tools](../guides/tools.md) adds a tool to a reasoning function.
+- [Give a function tools](../guides/tools.md) puts a tool in the function its use needs.
 - [Reasoning function format](../reference/reasoning-format.md) describes the document.
 
 ## Lookup
@@ -101,7 +101,7 @@ Choose generation when the result is a picture or spoken words. Writing the text
 
 ## Tool access inside a reasoning function
 
-A reasoning function can call the tools of tool servers that the runtime's operator configures, and of connections, the tool servers a person adds to their organization through their agent and approves in Studio. A tool server is a service Auto can reach for a playbook, such as an MCP server or an HTTP API. The function names the tools it may use. During a run, the model can call them and read the results before it writes its answer. The run's history records each call.
+A reasoning function can call the tools of tool servers that the runtime's operator configures, and of connections, the tool servers a person adds to their organization through their agent and approves in Studio. A tool server is a service Auto can reach for a playbook, such as an MCP server or an HTTP API. The function names the tools it may use. During a run, the model can call them and read the results before it writes its answer. The run's history records each call. A read whose arguments the run's input or an earlier step can give belongs in a [lookup function](#lookup) instead.
 
 Your agent's tools are not the function's tools. Connecting an external agent to Auto does not give the function access to that agent's tools, credentials or accounts. Your agent can still gather evidence through its own accounts and pass it in as input.
 

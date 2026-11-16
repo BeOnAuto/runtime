@@ -71,6 +71,14 @@ afterAll(async () => {
   await server.runtime.dispose();
 });
 
+function madeAnswer(made: number, again: boolean) {
+  return { in_words: `Made ${pageOf(made)}.`, id: `page-${String(made)}`, page: pageOf(made), again };
+}
+
+function nothingLeftAnswer(made: number, again: boolean) {
+  return { in_words: 'Nothing is left to open.', id: `page-${String(made)}`, again };
+}
+
 function opening(how: Partial<LinkOpening> = {}, input: Readonly<Record<string, unknown>> = {}) {
   const connection = { url: `${listening.origin}/mcp`, headers: { authorization: `Bearer ${acmeAdmin.key}` } };
   return calledOpeningLinks(connection, { name: 'open_page', arguments: input }, how);
@@ -83,7 +91,7 @@ describe('a tool whose operation gives a link to open', () => {
     const { answer, elicited } = await opening();
 
     expect(elicited).toEqual([{ mode: 'url', message: 'Open the page to approve it', url: pageOf(made) }]);
-    expect(answer.structuredContent).toEqual({ id: `page-${String(made)}`, page: pageOf(made), again: true });
+    expect(answer.structuredContent).toEqual(madeAnswer(made, true));
     expect(plainTextIn(answer)).toBe(`Made ${pageOf(made)}.`);
     expect(opened.times).toBe(made);
   });
@@ -98,7 +106,7 @@ describe('a tool whose operation gives a link to open', () => {
       },
     });
 
-    expect(answer.structuredContent).toEqual({ id: `page-${String(made)}`, again: true });
+    expect(answer.structuredContent).toEqual(nothingLeftAnswer(made, true));
     expect(plainTextIn(answer)).toBe('Nothing is left to open.');
   });
 
@@ -122,8 +130,8 @@ describe('a tool whose operation gives a link to open, to a client that is not a
 
     expect([formsAlone.elicited, legacy.elicited]).toEqual([[], []]);
     expect([formsAlone.answer.structuredContent, legacy.answer.structuredContent]).toEqual([
-      { id: `page-${String(opened.times - 1)}`, page: pageOf(opened.times - 1), again: false },
-      { id: `page-${String(opened.times)}`, page: pageOf(opened.times), again: false },
+      madeAnswer(opened.times - 1, false),
+      madeAnswer(opened.times, false),
     ]);
   });
 
@@ -131,7 +139,7 @@ describe('a tool whose operation gives a link to open, to a client that is not a
     const { answer, elicited } = await opening({}, { closed: true });
 
     expect(elicited).toEqual([]);
-    expect(answer.structuredContent).toEqual({ id: `page-${String(opened.times)}`, again: false });
+    expect(answer.structuredContent).toEqual(nothingLeftAnswer(opened.times, false));
   });
 });
 
@@ -175,7 +183,7 @@ describe('a link offered before a retry', () => {
         { type: 'text', text: 'Made it.' },
         { type: 'text', text: JSON.stringify({ by: 'the read', id: 'page-0', url: pageOf(0) }) },
       ],
-      structuredContent: { by: 'the read', id: 'page-0', url: pageOf(0) },
+      structuredContent: { in_words: 'Made it.', by: 'the read', id: 'page-0', url: pageOf(0) },
     });
     expect(await replaying({ tool: 'other_page' })).toMatchObject(theCall);
     expect(await replaying({ caller: 'acme-reader' })).toMatchObject(theCall);
@@ -213,7 +221,7 @@ describe('the retry of a tool that asked to open a link', () => {
     const state = await stateAskedBy(keyed(listening.origin), openingThePage);
     const retried = await retriedWith(keyed(other), openingThePage, state);
 
-    expect(retried.structuredContent).toEqual({ id: `page-${String(made)}`, page: pageOf(made), again: true });
+    expect(retried.structuredContent).toEqual(madeAnswer(made, true));
     expect(opened.times).toBe(made);
   });
 

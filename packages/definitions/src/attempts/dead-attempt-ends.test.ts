@@ -130,7 +130,7 @@ describe('a run within its call whose attempt a shell knows died, with a call th
       },
     ]);
     expect(await wordsOfTheRun()).toBe(
-      'The run of the system call “post” did not go through: it could not finish after calling a tool that may change something, so whether that happened is not known, because the server restarted while it called a tool that may change something, so whether that call did is not known. It is not run again by itself: a person decides, or a workflow rule that names this kind; its history shows the call.',
+      'The run of the system call “post” did not go through: it could not finish after calling a tool that may change something, so whether that happened is not known, because the server restarted during that call. It is not run again by itself: a person decides, or a workflow rule that names this kind; its history shows the call.',
     );
   });
 });

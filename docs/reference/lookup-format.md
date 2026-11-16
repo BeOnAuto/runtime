@@ -11,7 +11,7 @@ A lookup function is a definition of the type `lookup`. It obtains information t
 - through one tool that only reads, such as the replies of a thread, a contact's record or this week's figures from a reporting tool. A run makes one call of that tool and returns the part of its result that `read` points at, at once.
 - from the playbook's own runs, such as the paces a computation function computed this month. A run returns the outputs of the runs of one definition that succeeded, newest first, at once; see [Reading the playbook's own runs](#reading-the-playbook-s-own-runs).
 
-A lookup function never acts: it calls only a tool marked `reads`, or reads the playbook's runs, and asks no model. A reasoning function interprets what a lookup function fetches, and an interaction function calls a tool that may change something. It makes one call that the job always makes: where a model must choose which tool to call, that is a reasoning function's `tools`. A function document that asks for something else is refused when it is saved.
+A lookup function never acts: it calls only a tool marked `reads`, or reads the playbook's runs, and asks no model. A reasoning function interprets what a lookup function fetches, and an interaction function calls a tool that may change something. A lookup function makes one call, with arguments written from its input, so it serves every read whose arguments a step can hand it: from the workflow's input, or from what an earlier step answered, such as the ids a listing gave. The workflow hands it those arguments, with one run for each item in a `for`, as [A lookup for each item](workflow-format.md#a-lookup-for-each-item) shows. Only where what a model searches for next depends on what it has just read does the read belong in a reasoning function's [`tools`](reasoning-format.md#tools). A function document that asks for something else is refused when it is saved.
 
 ## A function document
 
@@ -284,7 +284,7 @@ A lookup function's page is the `page` key of its front matter, written with the
 - `result`: what was found, as a table, such as the replies of a thread, a row for each with who wrote it and what it said.
 - `runs`: the values found over time, where they are numbers, such as the stock of each item each morning. Where the answer holds no numbers, `runs` keeps a table of the latest finds.
 
-Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. The page guide, [Page format](page-format.md), gives the whole format of a page.
 
 ## Availability
 

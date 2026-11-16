@@ -27,15 +27,15 @@ function attemptOf({ plainLanguage }: Registration, input: unknown): string | un
 }
 
 describe('the plain language of create_playbook', () => {
-  it('names the playbook it created, says what it is for, and what comes next', () => {
+  it('names the playbook it created, says that its workflow is designed with the person before any function, then what it is for, so a long description never cuts the next step', () => {
     expect(outcomeOf(createPlaybook.registration, sales, { playbook: 'sales', name: 'Sales' })).toBe(
-      'Created the playbook “Sales”. What it is for: Answers questions about the pipeline. Its functions and workflows come next.',
+      'Created the playbook “Sales”. Next, design its workflow with the person, before any function, as the start guide says. What it is for: Answers questions about the pipeline.',
     );
   });
 
   it('leaves out what it is for when it has no description', () => {
     expect(outcomeOf(createPlaybook.registration, undescribed, { playbook: 'sales', name: 'Sales' })).toBe(
-      'Created the playbook “Sales”. Its functions and workflows come next.',
+      'Created the playbook “Sales”. Next, design its workflow with the person, before any function, as the start guide says.',
     );
   });
 

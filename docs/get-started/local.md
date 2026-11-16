@@ -80,7 +80,7 @@ The first time, Auto starts in the background. It keeps running after your agent
 
 Auto runs your work with an AI model of its own, so it needs an API key from a model provider: [Anthropic](https://console.anthropic.com/settings/keys), [OpenAI](https://platform.openai.com/api-keys) or [Google](https://aistudio.google.com/app/apikey). Your agent's subscription does not cover it. Until there is a key, your agent tells you to put one line such as `ANTHROPIC_API_KEY=` followed by your key in `~/.auto-runtime/.env`, and restarts Auto once you have saved it. Never paste the key into the conversation. For Amazon Bedrock, Azure OpenAI, Google Vertex AI or your own gateway, see [Set up a model provider](../self-host/models.md).
 
-Once Auto lists your models, your agent offers to create your first function. Continue with [Build your first playbook](../tutorials/first-playbook.md), and later [Build your first workflow](../tutorials/first-workflow.md). To let a function look things up while it runs, see [Give a function tools](../guides/tools.md).
+Once Auto lists your models, your agent asks what you want a first playbook to achieve, designs with you the workflow that achieves it, and then writes the functions that are its steps. To learn the parts one at a time first, follow [Build your first playbook](../tutorials/first-playbook.md), and then [Build your first workflow](../tutorials/first-workflow.md). To let your functions use a service you already work with, see [Give a function tools](../guides/tools.md).
 
 ## See and control Auto
 

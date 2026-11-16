@@ -17,13 +17,15 @@ describe('the recipes whose function calls a model', () => {
     const giveTools = await recipeCarrying('give-tools', 'reasoning-function');
     const firstPlaybook = await recipeCarrying('first-playbook', 'reasoning-function', 'workflow');
 
-    expect(firstPlaybook?.text).toContain(`Give that link to the person.${modelSentence}`);
+    expect(firstPlaybook?.text).toContain(
+      `Give the person the \`studio\` link that each create or run answers, to its page in Studio.${modelSentence}`,
+    );
     expect(giveTools?.text).toContain(`before you write a function of that type.${modelSentence}`);
   });
 });
 
 const everyDocumentCarriesItsPage =
-  'Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says.';
+  "Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side.";
 
 describe('the keep recipe', () => {
   it('says first that every function it writes carries its page, read in the page guide, where the page guide is carried', async () => {
@@ -31,7 +33,7 @@ describe('the keep recipe', () => {
     const withoutPages = await recipeCarrying('keep', 'lookup-function');
 
     expect(withPages?.text).toContain(
-      "its section Reading the playbook's own runs sets out `runs`. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says.\n",
+      "its section Reading the playbook's own runs sets out `runs`. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side.\n",
     );
     expect(withoutPages?.text).not.toContain('page');
   });
@@ -111,11 +113,11 @@ describe('the give-tools recipe', () => {
     );
   });
 
-  it('ends, where the workflow guide is carried, with the workflow whose steps are the functions, the reads first, run and its answer told', async () => {
+  it('ends, where the workflow guide is carried, with the workflow whose steps are the functions, each read before the step that needs it, run and its answer told', async () => {
     const giveTools = await recipeCarrying('give-tools', 'reasoning-function', 'workflow');
 
     expect(giveTools?.text).toMatch(
-      /a function can call only the tools it names\.\n8\. Then, with the workflow guide, write or change the workflow that owns the job the person wants done again, whose steps are the functions: the steps that read come first, and each later step is handed what the steps before it answered\. Save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
+      /a function can call only the tools it names\.\n8\. Then, with the workflow guide, write or change the workflow that owns the job the person wants done again, whose steps are the functions: each step is handed what the steps before it answered, and a read comes before the step that needs it\. Save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
     );
   });
 
@@ -128,6 +130,6 @@ describe('the give-tools recipe', () => {
     expect(giveTools?.text).toContain(
       "5. Write each function in the format of its type's guide, with its `page` in the same document, show it to the person",
     );
-    expect(giveTools?.text).toContain('whose steps are the functions, with its `page` in the same document: the steps');
+    expect(giveTools?.text).toContain('whose steps are the functions, with its `page` in the same document: each step');
   });
 });

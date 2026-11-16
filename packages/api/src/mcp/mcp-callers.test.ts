@@ -69,7 +69,7 @@ describe('the playbooks of the caller of a tool', () => {
       (session) => session.callTool('add_note', { name: 'limited', text: 'yes' }),
     );
 
-    expect(added.structuredContent).toEqual({ name: 'limited', text: 'yes' });
+    expect(added.structuredContent).toEqual({ in_words: 'Added the note “limited”.', name: 'limited', text: 'yes' });
   });
 
   it('confine an org tool of a key limited to some playbooks to those playbooks', async () => {
@@ -82,7 +82,11 @@ describe('the playbooks of the caller of a tool', () => {
       }),
     );
 
-    expect(labelled.own.structuredContent).toEqual({ playbook: 'alpha', label: 'a' });
+    expect(labelled.own.structuredContent).toEqual({
+      in_words: 'Done: label a playbook.',
+      playbook: 'alpha',
+      label: 'a',
+    });
     expect(problemOf(labelled.other)).toMatchObject({ isError: true, problem: { reason: 'forbidden' } });
   });
 });

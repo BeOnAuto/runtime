@@ -14,6 +14,7 @@ import {
 import { definitionTypesOf, everySetOf, functionTypes, typesNamedIn } from '../testing/served-types.ts';
 import type { GuideShelf } from './guide-shelf.ts';
 import { guideShelfFrom } from './served-guides.ts';
+import { theDesignShown } from './start-guide-parts.ts';
 import { startGuideName, startGuideOf } from './start-guide.ts';
 
 function startOf(shelf: GuideShelf): string {
@@ -69,9 +70,9 @@ describe('the guide start of a server that runs every type and keeps pages', () 
     );
   });
 
-  it('teaches first that each part of the job takes a function of the type its work needs, a line for each type it runs, and what the workflow owns', () => {
+  it('teaches first the method in its order: what the person wants achieved, the workflow designed and shown to the person for their yes before any function, then each step a function of the type its work needs, a line for each type it runs', () => {
     expect(sectionOf(text, 'Build from the job')).toBe(
-      "Build from the job\n\nStart from the job the person wants done again and again, not from a function. Break the job into its parts and give each part a function of the type its work needs, by what the part does, not by how it is done:\n\n- it interprets, judges or writes: a reasoning function\n- it asks a person and takes their answer, or has a service act: an interaction function\n- it forecasts a quantity from the playbook's own history: a prediction function\n- it calculates or transforms data exactly: a computation function\n\nA workflow runs the parts in order and hands each one what the parts before it answered. The order, the branches, the waits and what happens when a part fails are the workflow's, never a prompt's. A job that is one judgement is one reasoning function, and one step is enough. These run at once, with nothing connected: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). An interaction function that goes through a service needs its connection. A prediction function needs the playbook's history.\n\nWhen you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold a calculation, a question or an act, give that part a function of its own type, and make it a step of the workflow. Do so once the person agrees, rather than write a longer prompt.\n",
+      "Build from the job\n\nStart from what the person wants the playbook to achieve, not from a function. Once they agree what it should achieve, design the workflow that achieves it:\n\n- what starts it, and what one run handles, such as an item, a case or a period\n- its steps in order, and what each hands the next\n- where it branches, loops or waits, and which decisions stay with a person\n- which result shows the person it worked\n\nIn the design, give each step that does work the function type its work needs, by what the step does, not by how it is done:\n\n- it interprets, judges or writes: a reasoning function\n- it asks a person and takes their answer, or has a service act: an interaction function\n- it forecasts a quantity from the playbook's own history: a prediction function\n- it calculates or transforms data exactly: a computation function\n\nA reasoning function judges or writes from what the workflow hands it, and calls tools only where it must explore. The order, the branches, the waits and what happens when a step fails are the workflow's, never a prompt's. A job that is one judgement is one reasoning function, and one step is enough.\n\nShow the person that design in a message of its own, in their words: what starts it, and each step in order with its function type, such as \"judge each item (reasoning)\". Ask whether it is right, and write no function or workflow before their yes. A yes to what the playbook should achieve, or an answer about a service, a trigger or a model, is not a yes to its design.\n\nWhen you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold a calculation, a question or an act, give that work a function of its own type, and make it a step of the workflow. Do so once the person agrees, rather than write a longer prompt.\n",
     );
   });
 });
@@ -79,9 +80,9 @@ describe('the guide start of a server that runs every type and keeps pages', () 
 describe('what the guide start of that server says of workflows, of the agent and of services', () => {
   const text = startOf(servedWithEverything);
 
-  it('says that a workflow owns one job the business does again and again, and what is not a workflow', () => {
+  it('says that a workflow owns one job the business does again and again, designed for what the person wants from the playbook, and what is not a workflow', () => {
     expect(text).toContain(
-      '## What a workflow owns\n\nA workflow owns one job the business does again and again, with a result the person recognizes as done: a list of records kept ranked, a case that came in decided and answered, a period that ended measured and reported. Before you write one, work out with the person what starts it, a time, an event or someone asking; what one run handles, an item, a case or a period; what done looks like; and which decisions stay with a person. One step is enough when that step finishes the job. Such a workflow is the job, not a wrapper: it is what runs that step again and again.\n',
+      '## What a workflow owns\n\nA workflow owns one job the business does again and again, with a result the person recognizes as done: a list of records kept ranked, a case that came in decided and answered, a period that ended measured and reported. It exists to achieve what the person wants from the playbook, and you design it as Build from the job says. One step is enough when that step finishes the job. Such a workflow is the job, not a wrapper: it is what runs that step again and again.\n',
     );
     expect(text).toContain(
       "The playbook's workflows, which list_definitions shows and Studio presents, are the person's list of jobs: read it back in their words, and keep off it anything that is not a job they want done again. These are not workflows:\n\n- A function the person wants to see answer, or that you want to test: run it with run_definition. A workflow made only to see a function answer is a wrapper, not a job.\n- A question to a person, and the wait for their answer: an interaction function. The workflow that needs the answer calls it as a step, and owns what comes before and after.\n- Work that several jobs share, such as scoring an item or reading a list of records: a function, which each workflow calls as a step.\n- A check of a service, its connection or its setup, a test, or a change to saved definitions: your own work, below.\n\nBefore you add a workflow, look for the one that owns the same job: a new source of input, a check inside the job or a handoff to a person usually belongs inside it.\n",
@@ -90,7 +91,7 @@ describe('what the guide start of that server says of workflows, of the agent an
 
   it("says that testing, setting up and checking are the agent's own work, done with the tools, with the connections that takes", () => {
     expect(text).toContain(
-      "## What you do yourself\n\nYou are the playbook's developer. Testing, setting up and checking are your work, done with the tools below, and none of it is saved as a workflow. Which tools a connection lists depends on where it acts and on what its caller may do. The caller's own org's connection lists every tool the caller may call. One that manages the org's playbooks lists the tools that manage playbooks and connections, not those that work inside a playbook. One that acts inside a playbook lists only those.\n\n- To learn what a tool answers, call it with query_connection; a tool that may change something, with execute_connection, once the person agrees; dry_run checks the arguments without calling. Never save a function only to see what a tool answers.\n- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events. A run that called a tool may have changed something, so one that did not succeed is not run again under its id.\n- To set a service up for the playbook's runs, such as a team's statuses, a channel or a label, do it with the person before the first run, through the tools of the connection; the recipe connect-a-service sets out how. A run acts on what is there and sets nothing up.\n- Where setting up or testing takes tools or access the runs do not need, connect them: ask for the access with the connection, as `more` of add_connection, or add the service's own MCP server or HTTP API by hand, so that you do the work here rather than send the person into the service.\n- A check a run must make each time, such as that an item is still where the job expects it, is a step of the workflow that owns the job. A check made before the first run, or when something at the service changes, is yours.\n",
+      "## What you do yourself\n\nYou are the playbook's developer. Testing, setting up and checking are your work, done with the tools below, and none of it is saved as a workflow. Which tools a connection lists depends on where it acts and on what its caller may do. The caller's own org's connection lists every tool the caller may call. One that manages the org's playbooks lists the tools that manage playbooks and connections, not those that work inside a playbook. One that acts inside a playbook lists only those.\n\n- To learn what a tool answers, call it with query_connection; a tool that may change something, with execute_connection, once the person agrees; dry_run checks the arguments without calling. Never save a function only to see what a tool answers.\n- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events.\n- To set a service up for the playbook's runs, such as a team's statuses, a channel or a label, do it with the person before the first run, through the tools of the connection; the recipe connect-a-service sets out how. A run acts on what is there and sets nothing up.\n- Where setting up or testing takes tools or access the runs do not need, connect them: ask for the access with the connection, as `more` of add_connection, or add the service's own MCP server or HTTP API by hand, so that you do the work here rather than send the person into the service.\n- A check a run must make each time, such as that an item is still where the job expects it, is a step of the workflow that owns the job. A check made before the first run, or when something at the service changes, is yours.\n",
     );
   });
 
@@ -100,7 +101,7 @@ describe('what the guide start of that server says of workflows, of the agent an
     );
   });
 
-  it('has its eight sections in that order, takes 7,670 bytes, and uses no term of the internal vocabulary', () => {
+  it('has its eight sections in that order, takes 7,898 bytes, and uses no term of the internal vocabulary', () => {
     expect(headings(text)).toEqual([
       '## Build from the job',
       '## Where to go',
@@ -110,7 +111,7 @@ describe('what the guide start of that server says of workflows, of the agent an
       '## Connecting a service',
       '## Asking a person',
     ]);
-    expect(byteLengthOf(text)).toBe(7670);
+    expect(byteLengthOf(text)).toBe(7898);
     expect(internalTermsIn(text)).toEqual([]);
   });
 });
@@ -118,17 +119,33 @@ describe('what the guide start of that server says of workflows, of the agent an
 describe('the guide start of a server that runs lookup functions and keeps pages', () => {
   const text = startOf(servedWithLookupAndPages);
 
-  it('names the recipe keep, and says what a lookup function is for and that one through a service needs its connection', () => {
+  it('names the recipe keep, and says what a lookup function is for and that a read or a search, whatever says what to read, is one', () => {
     expect(whereToGo(text)).toContain('- To keep something for later, and read it back: the recipe keep.');
     expect(text).toContain(
-      '- it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function\n',
+      '- it reads or searches what a connected service holds, or reads what earlier runs of the playbook produced: a lookup function\n',
     );
     expect(text).toContain(
-      'A reasoning function runs at once, with nothing connected. A lookup function that reads a service needs its connection.\n\nWhen you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold a read, give that part',
+      "\n\nA step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists. A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those. The order,",
     );
     expect(text).toContain(
       "Runs belong to the playbook.\n\nWhat the person wants kept is the output of a run, read back with a lookup of that definition's runs. A reasoning function names a model",
     );
+  });
+});
+
+describe('the design the guide start asks the agent to show the person', () => {
+  it('takes its example step from a type the server runs, a lookup first, and has none where it runs no function type', () => {
+    expect(startOf(servedWithLookupAndPages)).toContain(
+      '\n\nShow the person that design in a message of its own, in their words: what starts it, and each step in order with its function type, such as "read each new item (lookup)". Ask whether it is right,',
+    );
+    expect(theDesignShown(['workflow'])).toMatch(
+      /each step in order with its function type\. Ask whether it is right/u,
+    );
+    expect(theDesignShown(['workflow', 'computation'])).toContain('such as "total the amounts (computation)"');
+  });
+
+  it('is not served where the server runs no workflow', () => {
+    expect(startOf(servedForReasoning)).not.toContain('Show the person that design');
   });
 });
 
@@ -155,7 +172,7 @@ describe('the guide start of a server that runs reasoning functions alone', () =
     ]);
     expect(text).toContain('- To write a function: the guide of its type, reasoning-function. Each says how');
     expect(text).toContain(
-      '\n\n- it interprets, judges or writes: a reasoning function\n\nA job that is one judgement is one reasoning function. A reasoning function runs at once, with nothing connected.\n\n## Where to go\n',
+      '\n\n- it interprets, judges or writes: a reasoning function\n\nA job that is one judgement is one reasoning function.\n\n## Where to go\n',
     );
     expect(text).toContain('\n\nA reasoning function names a model that list_models lists.\n');
     expect(text).not.toMatch(/schedule|computation|prediction|lookup|the guide events/u);

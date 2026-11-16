@@ -477,11 +477,7 @@ Run on Monday 2 November 2026 with `{"store": "north", "week_start": "2026-10-26
 
 ## The overview
 
-`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update.
-
-They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.
-
-An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
+`create_definition` and `update_definition` take an `overview` and a `diagram` beside the document. Write both after the document, and again with every update, as the descriptions of those arguments say. Auto Studio draws the diagram under the overview, at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. An overview holds up to 16,384 bytes and a diagram 8,192, in UTF-8. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
 
 ## Its page
 
@@ -490,7 +486,49 @@ A prediction function's page is the `page` key of its front matter, written with
 - `result`: the forecast as a line, with its horizon: a headline with the likely value of the period ahead and its range, and a chart of the periods observed and those ahead, as [The lines on a page](#the-lines-on-a-page) shows. An answer does not name its series, and `result` reads no input. To name the series in the headline, the workflow that asks can give the series' name as the label of a mark, such as `marks: [{ label: 'North, last week', value: 136 }]`. The answer carries the mark back, so `result` reads the name as `output.marks[0].label`, and the chart draws the mark as a level. An answer to a question asked without marks has none. Read the label through `default`, as `{{ output.marks[0].label | default: "This series" }}`, since a missing field stops the render.
 - `runs`: the forecast against what happened. A fold keeps, for each period, the value forecast for it and, once the period has passed, the value a later answer observed, as two lines of one series. An answer does not name its series, so keep this view for a function asked of one series, or read the series from the output of the workflow that asks. `weekly-orders` is asked of each region, so its page has no `runs`, which would mix the regions.
 
-Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
+If a workflow asked `weekly-orders` of `north` alone, its page could keep each week's forecast beside the orders observed, with this `data` and `runs` beside `result`:
+
+<!-- prettier-ignore -->
+````yaml
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: prediction/weekly-orders
+    views:
+      held: series
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const lines = fieldOf(fieldOf(event.data, 'output'), 'lines');
+        const pointOf = (name: string, index: number) => {
+          const line = Array.isArray(lines) ? lines.find((each) => fieldOf(each, 'name') === name) : undefined;
+          const points = fieldOf(line, 'points');
+          const point = Array.isArray(points) ? points.at(index) : undefined;
+          const at = fieldOf(point, 'at');
+          const value = fieldOf(point, 'value');
+          return typeof at === 'string' && typeof value === 'number' ? { at, value } : undefined;
+        };
+        const kept = (name: string, point: { at: string; value: number } | undefined) => {
+          const before = view.held?.lines.find((line) => line.name === name)?.points ?? [];
+          const others = before.filter(({ at }) => at !== point?.at);
+          const points = point === undefined ? others : [...others, point];
+          return { name, points: points.toSorted((one, other) => (one.at < other.at ? -1 : 1)).slice(-26) };
+        };
+        const forecast = kept('Forecast', pointOf('predicted', 0));
+        const orders = kept('Orders', pointOf('observed', -1));
+        return { held: { unit: 'orders', period: 'week', lines: [forecast, orders] } };
+      }
+  runs: |
+    ```chart line
+    {{ views.held | json }}
+    ```
+````
+
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. The page guide, [Page format](page-format.md), gives the whole format of a page.
 
 ## Availability
 

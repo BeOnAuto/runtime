@@ -69,6 +69,6 @@ describe('the operations a call reads as served beside it', () => {
       await servedOver('/mcp', { playbook: 'alpha' }),
       await servedOver('/orgs/acme/playbooks/alpha/mcp', {}),
       overHttp.body,
-    ]).toEqual([{ served: true }, { served: false }, { served: true }]);
+    ]).toEqual([{ in_words: 'Said it.', served: true }, { in_words: 'Said it.', served: false }, { served: true }]);
   });
 });

@@ -29,8 +29,13 @@ function jobNamedIn(message: unknown): number {
   return typeof job === 'number' ? job : -1;
 }
 
+const nodeFailedToAllocate = 'ERR_MEMORY_ALLOCATION_FAILED';
+
 export function isAllocationFailure(error: unknown): boolean {
-  return error instanceof RangeError && /allocation failed/u.test(error.message);
+  return (
+    error instanceof RangeError &&
+    (/allocation failed/u.test(error.message) || Reflect.get(error, 'code') === nodeFailedToAllocate)
+  );
 }
 
 function handlerOf(handlers: ProcessHandlers, kind: string): ProcessHandler | undefined {

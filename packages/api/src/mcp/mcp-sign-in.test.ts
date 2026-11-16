@@ -37,7 +37,10 @@ describe('an agent signing in through the authorization server the metadata name
 
     expect(instructions).toContain(' This connection acts as Ada Lovelace (person:ada) in the org acme. ');
     expect(toolNamesIn(tools)).toContain('add_note');
-    expect(notes.structuredContent).toEqual({ notes: [{ name: 'from-ada', text: 'signed in' }] });
+    expect(notes.structuredContent).toEqual({
+      in_words: 'Done: list the notes.',
+      notes: [{ name: 'from-ada', text: 'signed in' }],
+    });
     expect(JSON.parse(Buffer.from(String(claims), 'base64url').toString('utf8'))).toMatchObject({
       iss: issuer.origin,
       aud: runtime.origin,

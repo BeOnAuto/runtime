@@ -1,5 +1,7 @@
 export const mostOutcomeCharacters = 400;
 
+export const mostNoticeCharacters = 400;
+
 export const mostRefusalCharacters = 600;
 
 export const mostRelayedCharacters = 1000;

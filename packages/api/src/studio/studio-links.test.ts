@@ -109,6 +109,7 @@ describe('the links of a tool of an MCP endpoint to pages in Studio', () => {
     );
 
     expect(result.structuredContent).toEqual({
+      in_words: 'Linked.',
       invocation: 'none',
       home: `${server.origin}/studio/?${named}`,
       studio: `${server.origin}/studio/?${named}&playbook=alpha&ledger=&run=r-2`,

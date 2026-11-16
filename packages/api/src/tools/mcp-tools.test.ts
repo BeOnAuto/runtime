@@ -114,7 +114,12 @@ describe('the definition tools on a playbook endpoint', () => {
       output: { greeting: 'Hello', input: { who: 'Ada' } },
       studio: inStudio(`ledger=&run=${runId}`),
     });
-    expect(run.structuredContent).toEqual({ ...ran.structuredContent, studio: undefined, ...echoRecord });
+    expect(run.structuredContent).toEqual({
+      ...ran.structuredContent,
+      in_words: 'The run of the greeting “greeter” finished. It answered with its greeting.',
+      studio: undefined,
+      ...echoRecord,
+    });
   });
 
   it('list, read, update and retire a definition', async () => {

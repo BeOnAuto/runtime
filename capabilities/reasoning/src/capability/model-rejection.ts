@@ -61,8 +61,8 @@ function whatToMoveOut({ calledAny, onlyRead }: Pick<ToolUse, 'calledAny' | 'onl
     return `; ${raiseTheLimit}, or, where one answer holds several pieces of work, give each piece a function of its own`;
   }
   return onlyRead
-    ? `, after the run called tools that only read. Where the job always makes those reads, move each into a lookup function and hand this function what it read; or ${raiseTheLimit}`
-    : `, after the run called tools. Where the job always makes a call, move it out of this function, a read into a lookup function and an act into an interaction function; or ${raiseTheLimit}`;
+    ? `, after the run called tools that only read. Where the input or an earlier step could give those reads their arguments, move each into a lookup function and hand this function what it read; or ${raiseTheLimit}`
+    : `, after the run called tools. Where the input or an earlier step could give a call its arguments, move it out of this function, a read into a lookup function and an act into an interaction function; or ${raiseTheLimit}`;
 }
 
 type Repaired = NonNullable<FailedCall['repair']>;

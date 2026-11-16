@@ -60,21 +60,21 @@ const noToolWords =
   '; raise config.max_output_tokens in the reasoning function definition, or, where one answer holds several pieces of work, give each piece a function of its own';
 
 const readingWords =
-  ', after the run called tools that only read. Where the job always makes those reads, move each into a lookup function and hand this function what it read; or raise config.max_output_tokens in the reasoning function definition';
+  ', after the run called tools that only read. Where the input or an earlier step could give those reads their arguments, move each into a lookup function and hand this function what it read; or raise config.max_output_tokens in the reasoning function definition';
 
 const actingWords =
-  ', after the run called tools. Where the job always makes a call, move it out of this function, a read into a lookup function and an act into an interaction function; or raise config.max_output_tokens in the reasoning function definition';
+  ', after the run called tools. Where the input or an earlier step could give a call its arguments, move it out of this function, a read into a lookup function and an act into an interaction function; or raise config.max_output_tokens in the reasoning function definition';
 
 describe('a run whose JSON answer was cut at max_output_tokens', () => {
   it('says, where it called no tool, to raise the limit or give each piece of work a function of its own', async () => {
     expect(await cutAfterCalling('records', [])).toEqual(unworkable(`${stopped}${noToolWords}`));
   });
 
-  it('says, where every tool it called only reads, to move each read the job always makes into a lookup function, then to raise the limit', async () => {
+  it('says, where every tool it called only reads, to move each read a step could give its arguments into a lookup function, then to raise the limit', async () => {
     expect(await cutAfterCalling('records', ['search', 'profile'])).toEqual(unworkable(`${stopped}${readingWords}`));
   });
 
-  it('says, where a tool it called may act, to move each call out, a read to a lookup function and an act to an interaction function, then to raise the limit', async () => {
+  it('says, where a tool it called may act, to move each call a step could give its arguments out, a read to a lookup function and an act to an interaction function, then to raise the limit', async () => {
     expect(await cutAfterCalling('records', ['search', 'echo'])).toEqual(unworkable(`${stopped}${actingWords}`));
   });
 });

@@ -25,6 +25,7 @@ export function afterTheFacts({ used, spent }: AttemptFacts, serversEnded: Calls
   return {
     use: {
       calledAny: tools.length > 0,
+      calledARead: tools.some(({ readOnly }) => readOnly),
       onlyRead: tools.every(({ readOnly }) => readOnly),
       inWords: toolsInWords(tools.map(({ server, tool }) => ({ server, tool }))),
       ending: serversEnded,

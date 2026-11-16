@@ -100,33 +100,35 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
   });
 
-  it('say in create_definition that each part of a job is its own function, of the type its work needs, that a workflow owns one job the business does again and again, that a function needs a diagram and a workflow takes none and that its page is a key of its document, written as the page guide says, at 725 characters in seven sentences, and leave its guide to get_guide, which lists every guide', () => {
+  it('say in create_definition that a workflow owns one job the business does again and again and is designed before its functions, that each step that does work calls a function of the type that work needs, that a function needs a diagram and a workflow takes none and that its page is a key of its document, written as the guide of its type shows, at 723 characters in seven sentences, and leave its guide to get_guide, which lists every guide', () => {
     const description = descriptionOf('create_definition');
 
     expect(description).toContain(
-      'Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it.',
+      'Each step that does work calls a function of the `type` that work needs, by its `name`.',
     );
     expect(description).toContain(
       "`source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business.",
     );
     expect(description).toContain('A function needs `diagram`; a workflow takes none.');
-    expect(description).toContain("The document's `page` shows the person its runs; write it as the page guide says.");
     expect(description).toContain(
-      'A workflow owns one job the business does again and again, and a check, a test or a setup is not one.',
+      "The document's `page` shows the person its runs; write it as its type's guide shows.",
     );
-    expect([description.length, sentencesOf(description)]).toEqual([725, 7]);
+    expect(description).toContain(
+      'A workflow, designed before its functions, owns one job the business does again and again; a check, a test or a setup is not one.',
+    );
+    expect([description.length, sentencesOf(description)]).toEqual([723, 7]);
     expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingEveryFormat } },
     });
   });
 
-  it('say that a function that calls a tool may change something, in run_definition at 797 characters, and that a reasoning run may be cancelled while one that ends within its call cannot, in cancel_run at 733', () => {
+  it('say that a run that called a tool may have changed something, in run_definition at 796 characters, and that a reasoning run may be cancelled while one that ends within its call cannot, in cancel_run at 733', () => {
     const [running, cancelling] = [descriptionOf('run_definition'), descriptionOf('cancel_run')];
 
-    expect(running).toContain('A function that calls a tool may change something outside the playbook');
+    expect(running).toContain('A run that called a tool may have changed something outside the playbook');
     expect(cancelling).toContain('such as a workflow or a reasoning function');
     expect(cancelling).toContain('or an interaction function that calls a tool, cannot be cancelled.');
-    expect([running.length, cancelling.length]).toEqual([797, 733]);
+    expect([running.length, cancelling.length]).toEqual([796, 733]);
   });
 });
 

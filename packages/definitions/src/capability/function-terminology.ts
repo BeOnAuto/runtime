@@ -28,18 +28,29 @@ export const functionDescriptions = {
 } satisfies Record<FunctionType, string>;
 
 const jobOfEachType: Readonly<Record<string, string>> = {
-  reasoning: 'reasoning only interprets, judges or writes',
+  reasoning: 'reasoning interprets, judges or writes',
   lookup: 'lookup reads a service or earlier runs',
   interaction: 'interaction asks a person or has a service act',
   prediction: 'prediction forecasts a quantity',
   computation: 'computation calculates or transforms exactly',
   generation: 'generation makes images or audio',
-  workflow: 'workflow runs the parts in order',
-} satisfies Record<FunctionType | 'workflow', string>;
+} satisfies Record<FunctionType, string>;
+
+const theWorkflowIsTheJob = 'workflow is the job';
+
+function whatEachStepIs(clauses: readonly string[], workflow: boolean): string {
+  if (!workflow) {
+    return `By each part's job: ${clauses.join('; ')}.`;
+  }
+  return clauses.length === 0
+    ? `${theWorkflowIsTheJob}.`
+    : `${theWorkflowIsTheJob}; each step that does work, by its job: ${clauses.join('; ')}.`;
+}
 
 export function typeByEachPartsJob(types: readonly string[]): string | undefined {
   const clauses = types.flatMap((type) => jobOfEachType[type] ?? []);
-  return clauses.length === 0 ? undefined : `By each part's job: ${clauses.join('; ')}.`;
+  const workflow = types.includes('workflow');
+  return clauses.length === 0 && !workflow ? undefined : whatEachStepIs(clauses, workflow);
 }
 
 export const functionTypeOrder: readonly FunctionType[] = [

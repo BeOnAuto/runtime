@@ -36,14 +36,16 @@ afterEach(async () => {
 });
 
 describe('a runtime on this computer with no model provider', () => {
-  it('tells an agent that lists its models where the person puts their key', async () => {
+  it('tells an agent that lists its models where the person puts their key, once, in provider_setup', async () => {
     const listed = await withMcpSession(
       'current revision',
       { url: `http://127.0.0.1:${server.port}/mcp`, headers: {} },
       (session) => session.callTool('list_models', {}),
     );
 
-    expect(plainTextIn(listed)).toContain(`This server has no model it can call. ${setup}`);
+    expect(plainTextIn(listed)).toBe(
+      'This server has no model it can call; provider_setup says how the person adds one.',
+    );
     expect(listed.structuredContent).toMatchObject({ data: [], provider_setup: setup });
   });
 

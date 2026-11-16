@@ -27,6 +27,12 @@ const handlers: ProcessHandlers = {
     throw new Error('raised on purpose');
   },
   allocate: () => Promise.reject(new RangeError('Array buffer allocation failed')),
+  decode: () => {
+    throw Object.assign(new RangeError('Failed to allocate memory'), { code: 'ERR_MEMORY_ALLOCATION_FAILED' });
+  },
+  range: () => {
+    throw new RangeError('Invalid array length');
+  },
   reserved: () => ({ $typed: 'Uint8Array', base64: 'AQID' }),
 };
 
@@ -122,6 +128,11 @@ describe('a job the loop of a process cannot answer', () => {
       { job: 8, failed: 'Error: raised on purpose' },
     ],
     [
+      'a job its handler raises a range error on that is not of memory',
+      { job: 11, kind: 'range', payload: null },
+      { job: 11, failed: 'RangeError: Invalid array length' },
+    ],
+    [
       'a job whose handler answers what the pipe cannot carry',
       { job: 9, kind: 'reserved', payload: null },
       { job: 9, failed: 'The process answered with what the pipe cannot carry' },
@@ -132,5 +143,9 @@ describe('a job the loop of a process cannot answer', () => {
 
   it('is one whose handler cannot allocate, answered as out of memory, which the pool reads as the end of its process', async () => {
     expect(await served().ask({ job: 10, kind: 'allocate', payload: null })).toEqual({ job: 10, exhausted: 'memory' });
+  });
+
+  it('is one whose handler meets the memory Node failed to allocate, answered as out of memory', async () => {
+    expect(await served().ask({ job: 12, kind: 'decode', payload: null })).toEqual({ job: 12, exhausted: 'memory' });
   });
 });

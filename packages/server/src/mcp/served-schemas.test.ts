@@ -88,10 +88,10 @@ interface Endpoint {
 }
 
 const endpoints: readonly Endpoint[] = [
-  { path: '/mcp', tools: 41, bytes: 64_137, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 39, bytes: 61_708, mostBytes: mostListingBytes.directory },
+  { path: '/mcp', tools: 41, bytes: 64_134, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 39, bytes: 61_705, mostBytes: mostListingBytes.directory },
   { path: '/orgs/local/mcp', tools: 18, bytes: 24_250, mostBytes: mostListingBytes.org },
-  { path: '/orgs/local/playbooks/alpha/mcp', tools: 27, bytes: 42_437, mostBytes: mostListingBytes.playbook },
+  { path: '/orgs/local/playbooks/alpha/mcp', tools: 27, bytes: 42_434, mostBytes: mostListingBytes.playbook },
 ];
 
 describe('the tools of each endpoint', () => {
@@ -144,7 +144,7 @@ describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
 
     expect(outcome.compiled).toEqual([]);
     expect(outcome.results.map((result) => plainTextIn(result))).toEqual([
-      'No tool server serves this org, so the functions of its playbooks can call no tools until whoever runs this server sets one up, or a person connects a provider this search lists, with add_connection where your tools include it; the give-tools guide says how.',
+      'No tool server serves this org, so the functions of its playbooks can call no tools until whoever runs this server sets one up, or a person connects a provider this search lists, with add_connection where your tools include it; the give-tools recipe of get_guide says how.',
       'There is 1 playbook: “Alpha”.',
       'Ran the reasoning function “summary”. Its answer: “Profits rose.”',
     ]);
@@ -154,8 +154,11 @@ describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
       { playbooks: [{ id: 'alpha' }] },
       { status: 'succeeded', output: 'Profits rose.' },
     ]);
-    expect(outcome.results.map((result) => [result.content.length, outputIn(result)])).toEqual(
-      outcome.results.map(({ structuredContent }) => [2, structuredContent]),
+    expect(outcome.results.map((result) => [result.content.length, plainTextIn(result), outputIn(result)])).toEqual(
+      outcome.results.map(({ structuredContent }) => {
+        const { in_words: words, ...output } = { ...structuredContent };
+        return [2, words, output];
+      }),
     );
   });
 });
@@ -169,7 +172,7 @@ describe('search on the endpoint of a playbook, which lists no add_connection', 
     );
 
     expect(plainTextIn(searched)).toBe(
-      'No tool server serves this playbook, so its functions can call no tools until whoever runs this server sets one up, or a person adds one to the org as a connection; the give-tools guide says how.',
+      'No tool server serves this playbook, so its functions can call no tools until whoever runs this server sets one up, or a person adds one to the org as a connection; the give-tools recipe of get_guide says how.',
     );
   });
 });

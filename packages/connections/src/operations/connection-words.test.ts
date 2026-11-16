@@ -52,7 +52,7 @@ async function wordsAfterTheLink(h: Harness, link: Added, at?: string): Promise<
 describe('the words of adding a connection', () => {
   it('say what was added, where the person approves it, and that the link is shown to them by a name, never as its address', async () => {
     expect(await outcomeWords(harness(), 'add_connection', notes)).toBe(
-      'Added the connection “notes”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.',
+      'Added the connection “notes”. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
     );
   });
 
@@ -60,7 +60,7 @@ describe('the words of adding a connection', () => {
     expect(
       await outcomeWords(harness(), 'add_connection', { provider: 'tracker', placeholders: { site: 'acme' } }),
     ).toBe(
-      'Added the connection “tracker”. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the Tracker connection”, never as its address.',
+      'Added the connection “tracker”. Show the person who added the connection a link named “Approve the Tracker connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
     );
   });
 
@@ -84,7 +84,7 @@ describe('the words of adding an MCP server given by hand that signs people in i
     const { host } = new URL(fake.origin);
 
     expect(wordsOf(h, 'add_connection').outcome(output, byHand)).toBe(
-      `Added the connection “files”. The person who added it approves it, and signs in at ${host}, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.`,
+      `Added the connection “files”. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and sign in at ${host}, within 24 hours.`,
     );
     expect(linkingOf(h).toOpen(output)?.message).toBe(
       `Open this page to approve the connection “files”, and sign in at ${host}, within 24 hours.`,
@@ -99,7 +99,7 @@ describe('the words of adding a connection under the organization’s own OAuth 
     const output = outputOf(await h.call(operationNamed(h.operations, 'add_connection'), ada, underTheOrgsOAuthClient));
 
     expect(wordsOf(h, 'add_connection').outcome(output, underTheOrgsOAuthClient)).toBe(
-      "Added the connection “drive”. The person who added it approves it, and gives the client ID and the client secret of the organization's own OAuth client, registered with the provider, then signs in, on the page its link opens, within 24 hours; shown to them as a link named “Approve the Drive connection”, never as its address.",
+      "Added the connection “drive”. Show the person who added the connection a link named “Approve the Drive connection”, never its address. On that page they approve it and give the client ID and the client secret of the organization's own OAuth client, registered with the provider, then sign in, within 24 hours.",
     );
     expect(linkingOf(h).toOpen(output)?.message).toBe(
       "Open this page to approve the connection “drive”, and give the client ID and the client secret of the organization's own OAuth client, registered with the provider, then sign in, within 24 hours.",
@@ -189,7 +189,7 @@ describe('the words of reconnecting a connection', () => {
     const { id } = await added(h, notes);
 
     expect(await outcomeWords(h, 'reconnect_connection', { id })).toBe(
-      'Gave a new link to the connection “notes”; the link before it stops working. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.',
+      'Gave a new link to the connection “notes”; the link before it stops working. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
     );
   });
 });
@@ -200,7 +200,7 @@ describe('the words of reconnecting a connection that is connected', () => {
     const id = await connectedCrm(h);
 
     expect(await outcomeWords(h, 'reconnect_connection', { id })).toBe(
-      'Gave a new link to the connection “crm”, which stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the connection”, never as its address.',
+      'Gave a new link to the connection “crm”, which stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
     );
   });
 });

@@ -1,4 +1,4 @@
-import { NotFound, defineQuery } from '@on.auto/operations';
+import { NotFound, defineQuery, noticesFields, withNotices, type Notice } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 export interface Asking {
@@ -7,7 +7,9 @@ export interface Asking {
   readonly argument?: string;
   readonly outcome?: string;
   readonly relayed?: string;
+  readonly told?: string;
   readonly attempt?: string;
+  readonly notices?: readonly Notice[];
 }
 
 export function asking({
@@ -16,7 +18,9 @@ export function asking({
   argument = 'What to ask',
   outcome = 'Asked.',
   relayed,
+  told,
   attempt = 'ask',
+  notices,
 }: Asking) {
   return defineQuery('playbook', {
     name,
@@ -24,13 +28,22 @@ export function asking({
     description,
     route: { method: 'GET', path: `/${name.replaceAll('_', '-')}` },
     inputSchema: Schema.Struct({ question: Schema.optionalKey(Schema.String.annotate({ description: argument })) }),
-    outputSchema: Schema.Struct({ answered: Schema.Boolean }),
+    outputSchema: Schema.Struct({
+      ...noticesFields(),
+      answered: Schema.Boolean,
+      told: Schema.optionalKey(Schema.String),
+    }),
     reasons: ['not_found'],
     handle: ({ question }) =>
       question === 'nothing'
         ? Effect.fail(new NotFound({ detail: 'There is nothing' }))
-        : Effect.succeed({ answered: true }),
-    plainLanguage: { task: 'ask', attempt: () => attempt, outcome: () => outcome, relayed: () => relayed },
+        : Effect.succeed(withNotices({ answered: true, ...(told === undefined ? {} : { told }) }, notices ?? [])),
+    plainLanguage: {
+      task: 'ask',
+      attempt: () => attempt,
+      outcome: () => outcome,
+      relayed: () => relayed,
+    },
   });
 }
 

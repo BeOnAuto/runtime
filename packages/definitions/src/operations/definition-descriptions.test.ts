@@ -27,9 +27,9 @@ function described(name: string): string {
 }
 
 describe('the description of create_definition', () => {
-  it('says that each part of a job is its own function, of the type its work needs, and leaves the types to the argument', () => {
+  it('says that a workflow is designed before its functions and each step that does work calls a function of the type that work needs, and leaves the types to the argument', () => {
     expect(described('create_definition')).toContain(
-      'update_definition changes one saved, and a name is never reused. Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it. A workflow owns one job',
+      'update_definition changes one saved, and a name is never reused. A workflow, designed before its functions, owns one job the business does again and again; a check, a test or a setup is not one. Each step that does work calls a function of the `type` that work needs, by its `name`.',
     );
   });
 });
@@ -52,10 +52,10 @@ describe('the description of create_definition where goals are kept', () => {
     expect(kept.split(/(?<=[.!?])\s+(?=\S)/u)).toEqual([
       'Saves a new function or workflow from its document, without running it; a workflow needs a `contributes` list, as the goals guide says.',
       'update_definition changes one saved, and a name is never reused.',
-      'Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it.',
-      'A workflow owns one job the business does again and again, and a check, a test or a setup is not one.',
+      'A workflow, designed before its functions, owns one job the business does again and again; a check, a test or a setup is not one.',
+      'Each step that does work calls a function of the `type` that work needs, by its `name`.',
       "`source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business.",
-      'A function needs `diagram`, a workflow none; the `page` shows the person its runs, as the page guide says.',
+      "A function needs `diagram`, a workflow none; the `page` shows the person its runs, as its type's guide shows.",
       'A document that does not fit its format is refused with the line and what is wrong.',
     ]);
     expect(kept.length).toBeLessThan(800);
@@ -81,11 +81,11 @@ function typeOf(name: string): unknown {
 }
 
 describe('the type argument of create_definition', () => {
-  it('says by each part of the job which type it takes, for each type the server serves, and the other tools keep their words', () => {
+  it('says that the workflow is the job, and by the job of a step that does work which type it takes, for each type the server serves, and the other tools keep their words', () => {
     expect(typeOf('create_definition')).toHaveProperty(['type'], {
       type: 'string',
       enum: ['reasoning', 'workflow'],
-      description: "By each part's job: reasoning only interprets, judges or writes; workflow runs the parts in order.",
+      description: 'workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes.',
     });
     expect(typeOf('update_definition')).toHaveProperty(['type', 'description'], "The definition's type");
   });

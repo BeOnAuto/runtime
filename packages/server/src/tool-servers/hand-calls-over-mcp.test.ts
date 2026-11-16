@@ -73,7 +73,7 @@ describe('execute_connection over MCP', () => {
 
     expect([called.structuredContent, onThePlaybook.structuredContent]).toMatchObject([answered, answered]);
     expect(plainTextIn(called)).toMatch(
-      /^The search tool of graph answered in [\d,]+ ms with \d+ bytes; what a reasoning function's model would see is in the details\.$/u,
+      /^The search tool of graph answered in [\d,]+ ms with \d+ bytes; what a lookup function would read and a reasoning function's model would see are in the details\.$/u,
     );
     expect(listedTools(onTheOrg).map(({ name }) => name)).not.toContain('execute_connection');
   });

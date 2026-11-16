@@ -74,8 +74,8 @@ describe('a name used by an org operation and a playbook operation', () => {
     }));
 
     expect([answered.inOrg.structuredContent, answered.inPlaybook.structuredContent]).toEqual([
-      { kept_for: 'the org' },
-      { kept_for: 'beta' },
+      { in_words: 'Done: list the notes.', kept_for: 'the org' },
+      { in_words: 'Done: list the notes.', kept_for: 'beta' },
     ]);
   });
 });
@@ -119,10 +119,10 @@ describe('a name used by a playbook operation and an org operation that takes no
     expect(
       [onOwn.inPlaybook, onOwn.inOrg, onOrg.inPlaybook, onOrg.inOrg].map(({ structuredContent }) => structuredContent),
     ).toEqual([
-      { name: 'kept', text: 'in alpha' },
-      { name: 'kept', text: 'kept by the org' },
-      { name: 'kept', text: 'in alpha' },
-      { name: 'kept', text: 'kept by the org' },
+      { in_words: 'Done: read the note.', name: 'kept', text: 'in alpha' },
+      { in_words: 'Done: read the note.', name: 'kept', text: 'kept by the org' },
+      { in_words: 'Done: read the note.', name: 'kept', text: 'in alpha' },
+      { in_words: 'Done: read the note.', name: 'kept', text: 'kept by the org' },
     ]);
     expect(onOwn.refused.isError).toBe(true);
   });

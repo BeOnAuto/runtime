@@ -81,7 +81,7 @@ describe('a tool call under 2024-11-05', () => {
             { type: 'text', text: 'Added the note “old”.' },
             { type: 'text', text: '{"name":"old","text":"hi"}' },
           ],
-          structuredContent: { name: 'old', text: 'hi' },
+          structuredContent: { in_words: 'Added the note “old”.', name: 'old', text: 'hi' },
         },
       },
       {

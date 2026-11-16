@@ -132,14 +132,17 @@ describe('episode 9: asked to send the person a draft in the chat and take their
     expect(seen.guide).toMatch(/^## Sending through a tool\n[\s\S]*^### Attempts\n[\s\S]*^## Fields$/mu);
     expect(Buffer.byteLength(seen.guide)).toBeLessThan(mostGuideBytes);
     expect(seen.saved.isError).not.toBe(true);
-    expect(seen.reasoning.structuredContent).toEqual({ definitions: [] });
+    expect(seen.reasoning.structuredContent).toEqual({
+      in_words: 'This playbook has no reasoning functions in use yet.',
+      definitions: [],
+    });
   });
 
   it('is told, on a playbook no tool server serves, what whoever runs the server sets up', async () => {
     const refused = await meetings.onMcp(askedWhereNoToolServerIs);
 
     expect(plainTextIn(refused)).toBe(
-      'Could not run the interaction function “approve-draft”: this server does not offer a tool it names, because whoever runs the server has not set up a tool server of that name for this playbook. Nothing was changed. This can be put right on your side: whoever runs the server decides which tool servers and tools this playbook may use, which search shows, so once it names only those, it can be tried again.',
+      'Could not run the interaction function “approve-draft”: this server does not offer a tool it names, because whoever runs the server has not set up a tool server of that name for this playbook. Nothing was changed. This can be put right on your side: search shows the tools this playbook may use; once the definition names only those, it can be tried again.',
     );
   });
 });
@@ -187,11 +190,11 @@ describe('episode 10: asked to put the replies of a thread into the weekly summa
   it('reads what a lookup function is for and the give-tools sentence, calls the tool, reads its answer, and saves one lookup function that calls it', async () => {
     const seen = await meetings.onMcp(askedForTheRepliesOfAThread);
 
-    expect(sentenceNaming(meetings.surfaces.start, 'it reads what a connected service holds')).toContain(
-      'or what earlier runs of the playbook produced: a lookup function',
+    expect(sentenceNaming(meetings.surfaces.start, 'it reads or searches what a connected service holds')).toContain(
+      'or reads what earlier runs of the playbook produced: a lookup function',
     );
     expect(seen.recipe).toContain(
-      'A read the job always makes, by a tool marked reads, is a lookup function: one call and no model.',
+      "A read by a tool marked reads, searching included, is a lookup function: one call and no model, whether its arguments come from the run's input or from an earlier step's answer.",
     );
     expect(seen.called.structuredContent).toMatchObject({
       outcome: 'result',
@@ -199,7 +202,10 @@ describe('episode 10: asked to put the replies of a thread into the weekly summa
       answer: { messages: someMessages },
     });
     expect(seen.saved.isError).not.toBe(true);
-    expect(seen.reasoning.structuredContent).toEqual({ definitions: [] });
+    expect(seen.reasoning.structuredContent).toEqual({
+      in_words: 'This playbook has no reasoning functions in use yet.',
+      definitions: [],
+    });
   });
 });
 

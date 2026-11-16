@@ -1,4 +1,4 @@
-import { defineCommand } from '@on.auto/operations';
+import { defineCommand, withNotices } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
@@ -47,7 +47,7 @@ export function defineUpdateDefinition(capabilities: readonly Capability[], page
           content,
           blanksRefused: goals,
         }));
-        return yield* withDefinitionPageInStudio(
+        const linked = yield* withDefinitionPageInStudio(
           yield* answeredDefinition(capability, known.types, updated, {
             change: 'saved',
             inHand: updated.inHand,
@@ -55,6 +55,7 @@ export function defineUpdateDefinition(capabilities: readonly Capability[], page
           }),
           updated.newVersion ? 'updated' : undefined,
         );
+        return withNotices(linked, updated.notices);
       }),
       plainLanguage: {
         task: `update a ${words.kinds}`,

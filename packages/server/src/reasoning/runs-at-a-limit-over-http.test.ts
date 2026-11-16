@@ -61,11 +61,15 @@ function ranUnder(server: ReasoningServer) {
   return server.call('POST', `${alpha}/definitions/reasoning/planner/run`, { body: { input: {}, run_id: runId } });
 }
 
-const advice =
-  'Ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
+const toLookups =
+  "Where the input or an earlier step could give this run's reads their arguments, move each into a lookup function the workflow runs, one for each item in a for, and hand this function what they read. Otherwise";
 
-const raisingItTo20000 =
-  'Raise max_input_tokens in the reasoning function definition, to at most 20,000, ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
+const answerFromWhatItHas =
+  'to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
+
+const advice = `${toLookups} ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; ${answerFromWhatItHas}`;
+
+const raisingItTo20000 = `${toLookups} ask each tool for less, such as one page of what it holds, run the function once for each item from a workflow, or raise max_input_tokens in the reasoning function definition, to at most 20,000; ${answerFromWhatItHas}`;
 
 describe('a reasoning run that reaches its input tokens and asks for more, over HTTP', () => {
   it('is a conflict that names the limit, 409, recorded so, sending nothing more, and tools_called under its id', async () => {

@@ -60,9 +60,14 @@ function stoppedAt(because: string, kind: string, detail: unknown) {
 const answerFromWhatItHas =
   'to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
 
-const ownCount = `Set max_tool_calls in the reasoning function definition to give the run a count of its own, of all its calls, to at most 1,000, or run the function once for each item from a workflow; ${answerFromWhatItHas}`;
+const ownCount = `Run the function once for each item from a workflow, or set max_tool_calls in the reasoning function definition to give the run a count of its own, of all its calls, to at most 1,000; ${answerFromWhatItHas}`;
+
+const toLookups =
+  "Where the input or an earlier step could give this run's reads their arguments, move each into a lookup function the workflow runs, one for each item in a for, and hand this function what they read. Otherwise";
 
 const askForLess = `Ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; ${answerFromWhatItHas}`;
+
+const otherwiseAskForLess = `${toLookups} ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; ${answerFromWhatItHas}`;
 
 const pastTheActingCalls = 'The run needed more than the 25 calls a run may make of tools not marked reads';
 
@@ -156,7 +161,7 @@ describe('a run whose function sets max_tool_calls', () => {
       exit: stoppedAt(
         'max_tool_calls',
         'unworkable',
-        `The run needed more than the 3 tool calls its function's max_tool_calls lets a run make. Raise max_tool_calls in the reasoning function definition, to at most 1,000, or run the function once for each item from a workflow; ${answerFromWhatItHas}`,
+        `The run needed more than the 3 tool calls its function's max_tool_calls lets a run make. Run the function once for each item from a workflow, or raise max_tool_calls in the reasoning function definition, to at most 1,000; ${answerFromWhatItHas}`,
       ),
       sent: 0,
     });
@@ -196,6 +201,19 @@ describe('a run whose function sets max_tool_calls', () => {
   });
 });
 
+describe('a run whose function sets max_tool_calls, after reads it sent', () => {
+  it('after reads it sent, says first to move the reads a step could give their arguments into lookup functions', async () => {
+    expect(await ranWith(countingAll(3), {}, asking(searches(2)), asking(searches(2, 2)))).toMatchObject({
+      exit: stoppedAt(
+        'max_tool_calls',
+        'unworkable',
+        `The run needed more than the 3 tool calls its function's max_tool_calls lets a run make, after the run called the search tool of graph. ${toLookups} run the function once for each item from a workflow, or raise max_tool_calls in the reasoning function definition, to at most 1,000; ${answerFromWhatItHas}`,
+      ),
+      sent: 2,
+    });
+  });
+});
+
 const tenThousand = { reading: readingUpTo(10_000) };
 
 describe('a run whose last step its input tokens cover asks for a tool, by default', () => {
@@ -203,7 +221,11 @@ describe('a run whose last step its input tokens cover asks for a tool, by defau
     expect(
       await ranWith(withGraphTools, tenThousand, asking(searches(1), sixThousandRead), asking(searches(1, 1))),
     ).toMatchObject({
-      exit: stoppedAt('max_input_tokens', 'unworkable', `${pastTheRuntimes} the search tool of graph. ${askForLess}`),
+      exit: stoppedAt(
+        'max_input_tokens',
+        'unworkable',
+        `${pastTheRuntimes} the search tool of graph. ${otherwiseAskForLess}`,
+      ),
       sent: 1,
       offered: [true, true],
     });

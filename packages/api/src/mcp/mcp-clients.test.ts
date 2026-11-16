@@ -128,9 +128,13 @@ describe.each(mcpClientKinds)('the %s client calling tools that succeed', (kind)
         { type: 'text', text: `Added the note “${name}”.` },
         { type: 'text', text: JSON.stringify({ name, text: 'hello' }) },
       ],
-      structuredContent: { name, text: 'hello' },
+      structuredContent: { in_words: `Added the note “${name}”.`, name, text: 'hello' },
     });
-    expect(outcome.read.structuredContent).toEqual({ name, text: 'hello' });
+    expect(outcome.read.structuredContent).toEqual({
+      in_words: `The note “${name}” says “hello”.`,
+      name,
+      text: 'hello',
+    });
     expect(outcome.compiled).toEqual([]);
   });
 });

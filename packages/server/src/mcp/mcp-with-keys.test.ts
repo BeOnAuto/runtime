@@ -10,6 +10,12 @@ import { temporaryLedger, type TemporaryLedger } from '../testing/records/tempor
 import { compositionRootWithoutGoals } from '../testing/servers/composition-without-goals.ts';
 import { withoutStudioLink } from '../testing/servers/http-client.ts';
 
+function playbookIn(answer: unknown): Readonly<Record<string, unknown>> {
+  return Object.fromEntries(
+    Object.entries(withoutStudioLink(answer)).filter(([field]: readonly [string, unknown]) => field !== 'in_words'),
+  );
+}
+
 const acmeAdmin = createApiKey({ id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' });
 
 const acmeReader = createApiKey({ id: 'acme-reader', org: 'acme', permissions: ['org:read'], playbooks: '*' });
@@ -156,7 +162,8 @@ describe('the playbook tools of the server', () => {
     );
     expect(outcome.created.structuredContent).toMatchObject({ id: 'alpha', name: 'Alpha', status: 'active' });
     expect(outcome.listed.structuredContent).toEqual({
-      playbooks: [withoutStudioLink(outcome.created.structuredContent)],
+      in_words: 'There is 1 playbook: “Alpha”.',
+      playbooks: [playbookIn(outcome.created.structuredContent)],
     });
     expect(outcome.updated.structuredContent).toMatchObject({ name: 'Alpha prime', description: 'Notes' });
     expect(outcome.retired.structuredContent).toMatchObject({ status: 'retired' });
@@ -209,7 +216,10 @@ describe('the permissions and playbooks of a key over MCP', () => {
     );
 
     expect(outcome.tools).toEqual(readerToolsOfTheOrg);
-    expect(outcome.listed.structuredContent).toEqual({ playbooks: [] });
+    expect(outcome.listed.structuredContent).toEqual({
+      in_words: 'There is no playbook in use that this connection may see.',
+      playbooks: [],
+    });
   });
 
   it('confine a key limited to some playbooks to the playbook endpoints of those playbooks', async () => {

@@ -259,7 +259,7 @@ describe('the first-playbook prompt of the quick start, over /mcp', () => {
     expect(
       inTheirOrder(outcome.recipe, ['list_playbooks', 'create_playbook', 'create_definition', 'run_definition']),
     ).toBe(true);
-    expect(outcome.recipe).toContain("Read a type's guide with get_guide before you write a function of that type");
+    expect(outcome.recipe).toContain("Read a type's guide before you write a function of that type");
     expect(outcome.guide).toContain('# Reasoning function format');
     expect(outcome).toMatchObject({
       playbooks: { isError: false, playbooks: [] },

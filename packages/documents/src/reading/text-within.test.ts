@@ -64,4 +64,22 @@ describe('a reader that meets an error', () => {
       ),
     ).toThrow('Array buffer allocation failed');
   });
+
+  it('lets through the memory Node failed to allocate, and refuses a range error that is not of memory', () => {
+    const nodeFailedToAllocate = Object.assign(new RangeError('Failed to allocate memory'), {
+      code: 'ERR_MEMORY_ALLOCATION_FAILED',
+    });
+
+    expect(() =>
+      refusedUnlessOutOfMemory(nodeFailedToAllocate, 'It is not a Word document the runtime can read'),
+    ).toThrow(nodeFailedToAllocate);
+    expect(
+      ['Invalid array length', 'Failed to allocate memory'].map((message) =>
+        refusedUnlessOutOfMemory(new RangeError(message), 'It is not a Word document the runtime can read'),
+      ),
+    ).toEqual([
+      { read: false, because: 'It is not a Word document the runtime can read: RangeError: Invalid array length' },
+      { read: false, because: 'It is not a Word document the runtime can read: RangeError: Failed to allocate memory' },
+    ]);
+  });
 });

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { explanationOf, unsuccessfulWords, type ExplainedRejection, type Remedies } from '../index.ts';
 
 const toolsNamed =
-  'This can be put right on your side: whoever runs the server decides which tool servers and tools this playbook may use, which search shows, so once it names only those, it can be tried again.';
+  'This can be put right on your side: search shows the tools this playbook may use; once the definition names only those, it can be tried again.';
 
 const serverFailed =
   'Nothing was called through it, so it can be tried again later; if it keeps happening, whoever runs the server can look into that tool server.';
@@ -30,6 +30,12 @@ const unfinishedBecauses = [
   ],
   ['run_bound', 'ran out of time', 'because it ran out of time'],
   ['no_answer', 'never came to an answer', 'because the model kept calling tools instead of answering'],
+  ['call_outcome_unknown', 'the server restarted during a call', 'because the server restarted during that call'],
+  [
+    'restarted_without_content',
+    'the server restarted with nothing kept to go on from',
+    'because the server restarted and kept no content of its calls to go on from',
+  ],
 ] as const;
 
 const toolEndings: ReadonlyArray<readonly [string, ExplainedRejection, string, string]> = [
@@ -115,7 +121,7 @@ describe('explanationOf a run that needs tools', () => {
       ([, rejection]) => explanationOf(rejection).mayHaveChanged === true,
     );
 
-    expect(changing.map(([, rejection]) => rejection.kind)).toEqual(Array.from({ length: 6 }, () => 'effect_unknown'));
+    expect(changing.map(([, rejection]) => rejection.kind)).toEqual(Array.from({ length: 8 }, () => 'effect_unknown'));
   });
 
   it('says why the effect is not known in 105 characters and what to do in 117, and that tools marked reads may run again in 147', () => {
@@ -128,6 +134,18 @@ describe('explanationOf a run that needs tools', () => {
         unknown.why.length + 2,
       ),
     ).toHaveLength(64);
+  });
+
+  it('keeps the words of a run whose effect is unknown, of a function with a name of 24 characters, within 400 characters, whatever ended it', () => {
+    const named = `the interaction function “${'x'.repeat(24)}”`;
+    const longest = Math.max(
+      ...unfinishedBecauses.map(([because]) => {
+        const { why, remedy } = explanationOf({ reason: 'conflict', kind: 'effect_unknown', because });
+        return `The run of ${named} did not go through: ${why}. ${remedy}`.length;
+      }),
+    );
+
+    expect(longest).toBe(384);
   });
 });
 

@@ -48,7 +48,7 @@ describe('the welcome of an org with no playbooks', () => {
     ]);
   });
 
-  it('is the text of the result over MCP, whole, and its welcome', async () => {
+  it('is the text of the result over MCP, whole, and its welcome, held once in its structured answer', async () => {
     server = await servingReasoning([]);
     const welcomed = welcomeLinking(servedStudioHomeOf(server.origin));
 
@@ -79,7 +79,8 @@ describe('the welcome of an org with no playbooks', () => {
     );
     const overMcp = await listedOverMcp({ authorization: `Bearer ${acmeReader.key}` });
 
-    expect([...answered, overMcp.structuredContent]).toEqual([{ playbooks: [] }, { playbooks: [] }, { playbooks: [] }]);
+    expect(answered).toEqual([{ playbooks: [] }, { playbooks: [] }]);
+    expect(overMcp.structuredContent).toEqual({ in_words: plainTextIn(overMcp), playbooks: [] });
     expect(plainTextIn(overMcp)).toBe('There is no playbook in use that this connection may see.');
   });
 });

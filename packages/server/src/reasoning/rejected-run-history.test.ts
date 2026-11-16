@@ -1,4 +1,4 @@
-import { withMcpSession } from '@on.auto/api/testing';
+import { plainTextIn, withMcpSession } from '@on.auto/api/testing';
 import { OutputInvalid } from '@on.auto/reasoning';
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Effect, Schema } from 'effect';
@@ -95,6 +95,7 @@ describe('the history of a reasoning run rejected after its model was called', (
         ],
       },
     });
-    expect(overMcp.structuredContent).toEqual(histories.rejected);
+    expect(overMcp.structuredContent?.['in_words']).toBe(plainTextIn(overMcp));
+    expect({ ...overMcp.structuredContent, in_words: undefined }).toEqual(histories.rejected);
   });
 });

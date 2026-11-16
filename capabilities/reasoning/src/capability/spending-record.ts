@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 
 import { mostResultBytes, type Finished } from '@on.auto/definitions';
-import { Conflict, type IncompleteDetails } from '@on.auto/operations';
+import { Conflict, type IncompleteDetails, type Notice } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
@@ -13,6 +13,7 @@ import { renderedOf } from './definition-request.ts';
 
 export interface AnsweredRun extends StepsAnswer {
   readonly incomplete_details?: IncompleteDetails;
+  readonly notices?: readonly Notice[];
 }
 
 interface Answered {
@@ -21,6 +22,7 @@ interface Answered {
   readonly format: OutputRequest['type'];
   readonly result: ModelResult;
   readonly incomplete?: IncompleteDetails;
+  readonly notices?: readonly Notice[];
 }
 
 interface RecordFields {
@@ -34,6 +36,7 @@ interface RecordFields {
   readonly cost_usd?: number;
   readonly warnings: readonly Schema.JsonObject[];
   readonly duration_ms: number;
+  readonly notices?: readonly Schema.JsonObject[];
 }
 
 const mostWarnings = 20;
@@ -81,7 +84,11 @@ export function spendingRecord(
   return { usage: usageRecord(usage), duration_ms: durationMs, ...(cost === undefined ? {} : { cost_usd: cost }) };
 }
 
-function recordFields({ settings, format, result }: Answered): RecordFields {
+function noticesRecorded(notices: readonly Notice[] | undefined): Pick<RecordFields, 'notices'> {
+  return notices === undefined ? {} : { notices: notices.map((notice) => ({ ...notice })) };
+}
+
+function recordFields({ settings, format, result, notices }: Answered): RecordFields {
   const { requested, resolved, answered } = result.model;
   const { stop_sequences: stopSequences, ...numbers } = settings;
   return {
@@ -95,6 +102,7 @@ function recordFields({ settings, format, result }: Answered): RecordFields {
     ...(result.cost_usd === undefined ? {} : { cost_usd: result.cost_usd }),
     warnings: result.warnings.slice(0, mostWarnings).map(({ type, feature, detail }) => ({ type, feature, detail })),
     duration_ms: result.duration_ms,
+    ...noticesRecorded(notices),
   };
 }
 
@@ -132,12 +140,13 @@ export function finishedOf(
   definition: ReasoningFunctionDefinitionDocument,
   answered: AnsweredRun,
 ): Effect.Effect<Finished, Conflict> {
-  const { incomplete_details: incomplete } = answered;
+  const { incomplete_details: incomplete, notices } = answered;
   return finishedWith(answered.output, {
     prompt: renderedOf(answered.prompt),
     settings: definition.settings,
     format: definition.output.type,
     result: answered.result,
     ...(incomplete === undefined ? {} : { incomplete }),
+    ...(notices === undefined ? {} : { notices }),
   });
 }

@@ -127,7 +127,7 @@ describe('a refusal that offers options, to a client that answers forms', () => 
   it('asks nothing of a call that succeeds', async () => {
     const { answer, elicited } = await saving({}, { text: 'Hello', way: 'team' });
 
-    expect([elicited, answer.structuredContent]).toEqual([[], { saved: true }]);
+    expect([elicited, answer.structuredContent]).toEqual([[], { in_words: 'Saved the note.', saved: true }]);
   });
 });
 

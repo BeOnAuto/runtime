@@ -8,11 +8,11 @@ description: 'The YAML format of a workflow, in the Open Workflow Specification 
 
 A workflow coordinates a playbook's functions through steps. The API stores it as a definition of the type `workflow`. Its source document is YAML in the [Open Workflow Specification](https://github.com/open-workflow-specification/specification) DSL 1.0, within the rules and limits on this page. [Build your first workflow](../tutorials/first-workflow.md) is a guided example, and [Workflows and runs](../concepts/workflows.md) explains how a run starts, waits and ends.
 
-A workflow does none of the work itself: each step that reads, calculates, judges, asks or acts calls a function of that type. The order, the branches, the waits and what happens when a step fails are the workflow's, never a prompt's. A workflow of one step is the job when that step is all the job does; a workflow made only to see a function answer is a wrapper, not a job.
+A workflow exists to achieve what the person wants from the playbook, its goals where it has them. Design it with the person before you write its functions, as the `start` guide sets out under Build from the job. It does none of the work itself: each step that reads, calculates, judges, asks or acts calls a function of that type. The order, the branches, the waits and what happens when a step fails are the workflow's, never a prompt's. A workflow of one step is the job when that step is all the job does; a workflow made only to see a function answer is a wrapper, not a job.
 
 ## A workflow document
 
-This workflow reviews a campaign brief, then asks the brief's owner to approve the review. It calls two functions: the reasoning function `review-campaign-brief`, whose document follows it, and the interaction function `approve-campaign-brief`.
+This workflow serves a playbook whose goal `briefs-ready` is that each campaign brief is reviewed and approved before launch. It reviews a brief, then asks the brief's owner to approve the review, and calls two functions: the reasoning function `review-campaign-brief`, whose document follows it, and the interaction function `approve-campaign-brief`.
 
 <!-- prettier-ignore -->
 ````yaml
@@ -31,6 +31,9 @@ input:
         brief: { type: string }
         owner: { type: string }
       required: [brief, owner]
+contributes:
+  - goal: briefs-ready
+    purpose: Reviews each brief and asks its owner to approve it.
 use:
   retries:
     patient:
@@ -88,18 +91,24 @@ page:
           subject: workflow/review-and-approve
     views:
       briefs: table
+      verdicts: categories
     module: |
       export function fold(view: View, event: Event): View {
         const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
           typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
         const verdict = fieldOf(fieldOf(fieldOf(event.data, 'output'), 'approval'), 'verdict');
         const day = event.time?.slice(0, 10);
-        if (typeof verdict !== 'string' || day === undefined) return view;
+        if ((verdict !== 'approve' && verdict !== 'revise') || day === undefined) return view;
         const rows = view.briefs?.rows ?? [];
         const counted = rows.some(([at, answer]) => at === day && answer === verdict)
           ? rows.map((row) => (row[0] === day && row[1] === verdict ? [day, verdict, Number(row[2]) + 1] : row))
           : [...rows, [day, verdict, 1]];
-        return { briefs: { columns: [{ name: 'Day' }, { name: 'Verdict' }, { name: 'Briefs' }], rows: counted.slice(-60) } };
+        const totals = new Map((view.verdicts?.values ?? []).map(({ name, value }) => [name, value]));
+        totals.set(verdict, (totals.get(verdict) ?? 0) + 1);
+        return {
+          briefs: { columns: [{ name: 'Day' }, { name: 'Verdict' }, { name: 'Briefs' }], rows: counted.slice(-60) },
+          verdicts: { unit: 'briefs', values: [...totals].map(([name, value]) => ({ name, value })) },
+        };
       }
   result: |
     {% if run.status == "started" %}
@@ -113,6 +122,14 @@ page:
     ```chart bars x=Day y=Briefs color=Verdict
     {{ views.briefs | json }}
     ```
+  glance:
+    headline: '{% assign reviewed = views.verdicts.values | sum: "value" %}{% if reviewed == 0 %}No brief has been reviewed yet.{% else %}Owners approved {{ views.verdicts.values | where: "name", "approve" | sum: "value" }} of the {{ reviewed }} {% if reviewed == 1 %}brief{% else %}briefs{% endif %} reviewed so far.{% endif %}'
+    visual:
+      kind: figures
+      items:
+        - { name: Approved, value: '{{ views.verdicts.values | where: "name", "approve" | sum: "value" }}' }
+        - { name: Sent back, value: '{{ views.verdicts.values | where: "name", "revise" | sum: "value" }}' }
+    outstanding: []
 ````
 
 The reasoning function `review-campaign-brief`, in short. Replace the model with one that `list_models` offers:
@@ -139,7 +156,7 @@ Review this brief for its audience, offer and channel, a budget of at most USD 1
 
 The interaction function `approve-campaign-brief` is the example of the [interaction function format](interaction-format.md#a-function-document). It gives the owner two days to answer in the team chat: `{ verdict: approve | revise, note? }`.
 
-Save the two functions first. `create_definition` takes each one's `type` (`reasoning` or `interaction`), `name`, document as `source`, and `diagram`: a Mermaid flowchart or state diagram of how it works, or the word `none`. A function saved without one is refused. Then save the workflow, which takes no diagram, with `type: "workflow"` and the name `review-and-approve`. `run_definition` takes the same type and name, with `brief` and `owner` in `input`. The run then:
+`create_definition` saves each function with its `type` (`reasoning` or `interaction`), `name`, document as `source`, and `diagram`: a Mermaid flowchart or state diagram of how it works, or the word `none`. A function saved without one is refused. It saves the workflow, which takes no diagram, with `type: "workflow"` and the name `review-and-approve`. The workflow saves whether or not its functions are saved yet, but a run is rejected at a step whose function is not saved, so save both functions before you run it. `run_definition` takes the same type and name, with `brief` and `owner` in `input`. The run then:
 
 1. Reviews the brief. A review that raises status 503 is tried again after 5, 10 and 20 seconds. After the third retry, the run raises its own error; [Errors, retries and timeouts](#errors-retries-and-timeouts) explains this pattern.
 2. Asks the owner to approve the review. The interaction function's run posts the request in the chat, and the workflow waits for the answer without using server resources. The owner answers by replying in the thread of the message, or through their agent with `answer_interaction`, such as `{ "verdict": "approve" }`; see [Interaction function format](interaction-format.md).
@@ -149,23 +166,24 @@ An approval, or any other question for a person or a system, is an interaction f
 
 ## Document fields
 
-| Field                                       | Purpose                                                                                       |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `document.dsl`                              | Required DSL version, from `1.0.0` to `1.0.3`                                                 |
-| `document.namespace`, `document.name`       | Required names of the document                                                                |
-| `document.version`                          | Required semantic version of the document, such as `1.0.0`                                    |
-| `document.title`, `document.summary`        | Optional; the summary, or else the title, is the definition's `description`                   |
-| `input.schema.document`                     | Optional inline JSON Schema, published as the definition's `input_schema`                     |
-| `input.from`                                | Optional expression or template shaping the run's input before the first task                 |
-| `evaluate.language`, `evaluate.mode`        | Optional; only `typescript` and `strict` ([Expressions](#expressions))                        |
-| `schedule`                                  | Optional triggers that start it on its own; see [Triggers](triggers.md), the `triggers` guide |
-| `do`                                        | Required list of named tasks, run in order                                                    |
-| `output.as`                                 | Optional expression or template that shapes the run's output                                  |
-| `output.schema.document`                    | Optional inline JSON Schema, published as the definition's `output_schema`                    |
-| `output.shape`                              | Optional [output shape](output-shapes.md), checked when the run ends; see below               |
-| `timeout`                                   | Optional limit for the run: `after` and a duration, or a name in `use.timeouts`               |
-| `use.errors`, `use.retries`, `use.timeouts` | Optional named errors, retry policies and timeouts that tasks name                            |
-| `page`                                      | Optional [page](page-format.md) of its runs; write one for every workflow                     |
+| Field                                       | Purpose                                                                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `document.dsl`                              | Required DSL version, from `1.0.0` to `1.0.3`                                                                       |
+| `document.namespace`, `document.name`       | Required names of the document                                                                                      |
+| `document.version`                          | Required semantic version of the document, such as `1.0.0`                                                          |
+| `document.title`, `document.summary`        | Optional; the summary, or else the title, is the definition's `description`                                         |
+| `input.schema.document`                     | Optional inline JSON Schema, published as the definition's `input_schema`                                           |
+| `input.from`                                | Optional expression or template shaping the run's input before the first task                                       |
+| `evaluate.language`, `evaluate.mode`        | Optional; only `typescript` and `strict` ([Expressions](#expressions))                                              |
+| `schedule`                                  | Optional triggers that start it on its own; see [Triggers](triggers.md), the `triggers` guide                       |
+| `contributes`                               | Required where the playbook has goals: the goals it serves and what it does for each, as the `goals` guide sets out |
+| `do`                                        | Required list of named tasks, run in order                                                                          |
+| `output.as`                                 | Optional expression or template that shapes the run's output                                                        |
+| `output.schema.document`                    | Optional inline JSON Schema, published as the definition's `output_schema`                                          |
+| `output.shape`                              | Optional [output shape](output-shapes.md), checked when the run ends; see below                                     |
+| `timeout`                                   | Optional limit for the run: `after` and a duration, or a name in `use.timeouts`                                     |
+| `use.errors`, `use.retries`, `use.timeouts` | Optional named errors, retry policies and timeouts that tasks name                                                  |
+| `page`                                      | Optional [page](page-format.md) of its runs; write one for every workflow                                           |
 
 - A run a caller starts is checked against `input.schema` before it starts, with its input as given, before `input.from` shapes it: an input it refuses is `invalid_input` of the kind `input_schema`, with a pointer under `/input` and a sentence for each issue. A triggered run is not, as it gets its trigger's input.
 - The input schema holds the rules of the fields the steps need; a field's `description` and `examples` are what a person is shown when it is refused. Output is not checked against `output.schema`.
@@ -491,6 +509,46 @@ This task reviews two briefs at once and outputs both reviews:
               input: { brief: '${ $data.revised }' }
 ```
 
+#### A lookup for each item
+
+A read whose arguments an earlier step answers is a lookup function the workflow runs with them, one run for each item. These steps read every document in a folder and hand them to a reasoning function as one list. The lookup function `list-documents` answers the ids of a folder's documents, `read-document` answers one document given its `id`, and `review-documents`, which has no `tools`, judges the documents it is handed:
+
+```yaml
+do:
+  - list:
+      call: run_definition
+      with:
+        type: lookup
+        name: list-documents
+        input:
+          folder: ${ $data.folder }
+      output:
+        as: '${ ({ ids: $data, documents: [] }) }'
+  - read-each:
+      for:
+        each: id
+        in: $data.ids
+      do:
+        - read:
+            call: run_definition
+            with:
+              type: lookup
+              name: read-document
+              input:
+                id: ${ $id }
+            output:
+              as: '${ ({ ...$input, documents: [...$input.documents, $data] }) }'
+  - review:
+      call: run_definition
+      with:
+        type: reasoning
+        name: review-documents
+        input:
+          documents: ${ $data.documents }
+```
+
+Each iteration adds the document it read to `documents` and hands the list on to the next, so `review` gets every document, in the order of the ids. `list` starts the list empty, so a folder with no documents hands `review` an empty list. A reasoning run takes at most 256 KiB of input, so where the documents together may pass that, have it judge each one in a run of its own.
+
 ### Expressions
 
 Expressions are TypeScript, the one language of the playbook. `evaluate.language` is `typescript` and `evaluate.mode` is `strict`, the defaults. The document is refused for any other language or mode, since an expression that fails must fail. The specification's default expression language is not this runtime's.
@@ -576,9 +634,7 @@ These are refused when a document is saved, each for the reason given:
 
 ## The overview
 
-`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the workflow exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update. Unlike a function, a workflow takes no `diagram`, and a save that gives one is refused: Auto Studio draws a workflow from its steps, with the words in [Describing steps](#describing-steps).
-
-An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one. A definition the workflow calls names the workflow's steps there by the names of their tasks, so name each task for what it does.
+`create_definition` and `update_definition` take an `overview` beside the document. Write it after the document, and again with every update, as the description of that argument says; it holds up to 16,384 bytes in UTF-8. Unlike a function, a workflow takes no `diagram`, and a save that gives one is refused: Auto Studio draws a workflow from its steps, with the words in [Describing steps](#describing-steps). [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one. A definition the workflow calls names the workflow's steps there by the names of their tasks, so name each task for what it does.
 
 ## Its page
 
@@ -586,9 +642,9 @@ A workflow's page is the `page` key of its document, written and saved with it. 
 
 - `result`: the business outcome of the run, as a headline and its key figures.
 - `runs`: the main number of each period, with its breakdowns.
-- `glance`: always; how it stands now and what waits on a person, which Auto Studio shows on its cards.
+- `glance`: always; how it stands now and what waits on a person, which Auto Studio shows on its cards. It is a mapping of templates, `headline`, `visual` and `outstanding`, read from the views where it can, as in [the example](#a-workflow-document); `outstanding` lists only what a person must do, and is empty, `[]`, when nothing waits. The `glance` guide, [Glance format](glance-format.md), gives its other shapes.
 
-Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result`, `runs` and `glance`.
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. The page guide, [Page format](page-format.md), gives the whole format of a page, `glance` included.
 
 ## How a run ends
 

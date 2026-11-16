@@ -49,9 +49,12 @@ const calledTheSearch = 'after the run called the search tool of graph';
 const answerFromWhatItHas =
   'to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
 
-const askForLess = `Ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; ${answerFromWhatItHas}`;
+const toLookups =
+  "Where the input or an earlier step could give this run's reads their arguments, move each into a lookup function the workflow runs, one for each item in a for, and hand this function what they read. Otherwise";
 
-const raiseItOrAskForLess = `Raise max_input_tokens in the reasoning function definition, to at most 9,999,999, ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; ${answerFromWhatItHas}`;
+const askForLess = `${toLookups} ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow; ${answerFromWhatItHas}`;
+
+const raiseItOrAskForLess = `${toLookups} ask each tool for less, such as one page of what it holds, run the function once for each item from a workflow, or raise max_input_tokens in the reasoning function definition, to at most 9,999,999; ${answerFromWhatItHas}`;
 
 const tenThousandByDefault = readingOf(10_000, 9_999_999);
 

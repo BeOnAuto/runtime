@@ -2,6 +2,7 @@ import type {
   Conflict,
   IncompleteDetails,
   InvalidInput,
+  Notice,
   PlaybookAddress,
   RunCancelled,
   Unavailable,
@@ -107,6 +108,7 @@ export interface CapabilityDeclaration<Parsed> {
     source: string,
     place: PlaybookAddress,
   ) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
+  readonly notices?: (parsed: NoInfer<Parsed>, place: PlaybookAddress) => Effect.Effect<readonly Notice[]>;
   readonly summarize: (parsed: NoInfer<Parsed>) => DefinitionSummary;
   readonly run: (
     parsed: NoInfer<Parsed>,
@@ -136,6 +138,7 @@ export interface CapabilityDeclaration<Parsed> {
 export interface PreparedDefinition {
   readonly summary: DefinitionSummary;
   readonly check: (place: PlaybookAddress) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
+  readonly notices?: (place: PlaybookAddress) => Effect.Effect<readonly Notice[]>;
   readonly run: (input: Schema.Json, context: RunContext) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
   readonly whenCancelled: WhenCancelled;
   readonly cancelledAttempt: (attempt: RunAttempt) => CancelledAttempt;
@@ -189,7 +192,7 @@ export interface Capability {
   readonly prepare: (source: string, stripped?: StrippedForms) => Effect.Effect<PreparedDefinition, InvalidInput>;
 }
 
-export const capabilityContract = 4;
+export const capabilityContract = 5;
 
 export const earliestCapabilityContractServed = 2;
 
@@ -235,6 +238,13 @@ function declaredLengths<Parsed>(definition: CapabilityDeclaration<Parsed>, long
   };
 }
 
+function noticesOf<Parsed>(
+  { notices }: CapabilityDeclaration<Parsed>,
+  parsed: Parsed,
+): Pick<PreparedDefinition, 'notices'> {
+  return notices === undefined ? {} : { notices: (place) => Effect.suspend(() => notices(parsed, place)) };
+}
+
 function declaredRuns<Parsed>(definition: CapabilityDeclaration<Parsed>, longestAnyRunMs: number) {
   return {
     check: definition.check ?? needsNoCheck,
@@ -263,21 +273,22 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
     mediaType,
     ...bounds,
     resumes: resumption !== undefined,
-    prepare: (source, stripped = noStrippedForms) =>
-      parse(source).pipe(
-        Effect.map((parsed) => ({
-          summary: summarize(parsed),
-          check: (place) => Effect.suspend(() => check(parsed, source, place)),
-          run: (input, context) => run(parsed, input, context, stripped),
-          whenCancelled,
-          cancelledAttempt: (attempt) => resumption?.cancelledAttempt(parsed, attempt) ?? nothingToEnd,
-          callsTools: callsTools(parsed),
-          finishesLaterFor: (input) => finishesLaterFor(parsed, input),
-          answersItsShapeFor: (input) => answersItsShapeFor(parsed, input),
-          longestRunMs: longestRunOf(parsed),
-          longestRunMsFor: (input) => longestRunFor(parsed, input),
-          resumesAfterMs: resumption?.afterMs(parsed) ?? Number.POSITIVE_INFINITY,
-        })),
-      ),
+    prepare: (source, stripped = noStrippedForms) => {
+      const preparedFrom = (parsed: Parsed): PreparedDefinition => ({
+        summary: summarize(parsed),
+        check: (place) => Effect.suspend(() => check(parsed, source, place)),
+        ...noticesOf(definition, parsed),
+        run: (input, context) => run(parsed, input, context, stripped),
+        whenCancelled,
+        cancelledAttempt: (attempt) => resumption?.cancelledAttempt(parsed, attempt) ?? nothingToEnd,
+        callsTools: callsTools(parsed),
+        finishesLaterFor: (input) => finishesLaterFor(parsed, input),
+        answersItsShapeFor: (input) => answersItsShapeFor(parsed, input),
+        longestRunMs: longestRunOf(parsed),
+        longestRunMsFor: (input) => longestRunFor(parsed, input),
+        resumesAfterMs: resumption?.afterMs(parsed) ?? Number.POSITIVE_INFINITY,
+      });
+      return parse(source).pipe(Effect.map(preparedFrom));
+    },
   };
 }

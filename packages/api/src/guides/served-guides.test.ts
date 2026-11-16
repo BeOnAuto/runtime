@@ -209,16 +209,16 @@ describe('the recipes that give a playbook tools', () => {
     const texts = recipeTextsOf(served);
 
     expect(String(texts['give-tools'])).toContain(
-      "3. To learn what a tool answers, call it yourself with the arguments its input_schema takes and read its `text`: that is what a run of a function will get. Never save a function only to see what a tool answers. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a function needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
+      "3. To learn what a tool answers, call it yourself with the arguments its input_schema takes. A reasoning function's model reads the call's `text`. Never save a function only to see what a tool answers. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a function needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
     );
     expect(String(texts['connect-a-service'])).toContain(
       'tell the person that whoever runs this server sets tool servers up in its settings file, `auto-runtime.yaml`, under `tool_servers`; the server reads them when it starts again, and nothing more can be done here until then.',
     );
     expect(String(texts['first-playbook'])).toContain(
-      'For a part that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe.',
+      'For a step that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe.',
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3013, 5909,
+      3010, 5133,
     ]);
   });
 });
@@ -232,15 +232,16 @@ describe('the recipes of a server that serves interaction functions', () => {
     );
     expect(recipeTextsOf(served)['give-tools']).not.toContain('interaction');
     expect(texts['first-playbook']).toContain(
-      '   - it asks a person and takes their answer, or has a service act: an interaction function\n',
+      "Where a person must approve or decide, ask once where they want to be asked, as the start guide's Asking a person says.",
     );
-    expect(texts['first-playbook']).toContain(' Ask a person through you (`deliver: agent`). Leave a part');
+    expect(recipeTextsOf(served)['first-playbook']).not.toContain('Asking a person');
+    expect(texts['first-playbook']).toContain(' Ask a person through you (`deliver: agent`). Leave a step');
     expect([
       bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [6978, 3661, 3564],
-      [5909, 3013, 3564],
+      [5724, 3825, 3564],
+      [5133, 3010, 3564],
     ]);
   });
 });

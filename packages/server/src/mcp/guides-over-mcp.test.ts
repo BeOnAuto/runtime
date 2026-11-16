@@ -158,7 +158,7 @@ const RecipePromptSchema = Schema.Struct({
 });
 
 describe('the first-playbook prompt of the server', () => {
-  it('answers the recipe get_guide reads, a line for each type the server runs and its workflow steps among them, and embeds no one format guide', async () => {
+  it('answers the recipe get_guide reads, the workflow designed before any function and written once its functions are, and embeds no one format guide', async () => {
     const { prompt, read } = await onMcp(async (session) => ({
       prompt: Schema.decodeUnknownSync(RecipePromptSchema)(await session.getPrompt('first-playbook')),
       read: Schema.decodeUnknownSync(TextSchema)(await session.callTool('get_guide', { guide: 'first-playbook' })),
@@ -168,10 +168,10 @@ describe('the first-playbook prompt of the server', () => {
 
     expect(asked.content.text).toBe(`Create my first playbook.\n\n${recipe}`);
     expect(recipe).toContain(
-      '\n   - it interprets, judges or writes: a reasoning function\n   - it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function\n',
+      "\n4. Design the workflow that achieves what the playbook is for, as the start guide's Build from the job says, before you write any function",
     );
     expect(recipe).toContain(
-      '\n8. Read the workflow guide with get_guide and write the workflow that owns the job, whose steps call the functions in order',
+      "\n8. Write the workflow's document from the design the person agreed, as the workflow guide says: its steps call the functions you saved",
     );
     expect(recipe).toContain('publish the material they paste with publish_event');
   });

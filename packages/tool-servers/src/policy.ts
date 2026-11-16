@@ -22,9 +22,11 @@ export { conversationCallIdKey, deliveryIdKey, runIdKey, takesAnswerKey } from '
 export {
   isServerName,
   isToolName,
+  namesEveryTool,
   serverNameShape,
   toolNameShape,
   toolReferenceOf,
   toolReferenceShape,
+  writtenOf,
   type ToolReference,
 } from './names/tool-reference.ts';

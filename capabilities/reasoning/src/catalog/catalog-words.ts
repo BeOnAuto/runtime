@@ -76,7 +76,7 @@ function nothingWords(provider: string | undefined, providerSetup: string | unde
   }
   return providerSetup === undefined
     ? 'This server has no model it can call.'
-    : `This server has no model it can call. ${providerSetup}`;
+    : 'This server has no model it can call; provider_setup says how the person adds one.';
 }
 
 const allowedOnly = 'It lists only the models its operator allows.';

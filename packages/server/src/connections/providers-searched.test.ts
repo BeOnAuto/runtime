@@ -107,7 +107,7 @@ describe('the providers the search of an org lists to the local developer', () =
   it('are said in the words of an empty search over MCP, on /mcp and on the org endpoint', async () => {
     const server = await served();
     const said =
-      'No tool server serves this org, so the functions of its playbooks can call no tools until whoever runs this server sets one up, or a person connects a provider this search lists, with add_connection where your tools include it; the give-tools guide says how.';
+      'No tool server serves this org, so the functions of its playbooks can call no tools until whoever runs this server sets one up, or a person connects a provider this search lists, with add_connection where your tools include it; the give-tools recipe of get_guide says how.';
 
     const searched = await Promise.all(
       ['/mcp', '/orgs/local/mcp'].map((path) =>

@@ -31,7 +31,7 @@ function failureOf({ server, text }: CallAnswer): string {
 
 const wordsOf: Readonly<Record<CalledOutcome, (answer: CallAnswer) => string>> = {
   result: (answer) =>
-    `${capitalized(toolInWords(answer))} answered in ${measured.format(answer.duration_ms)} ms with ${bytesInWords(answer.result_bytes)}; what a reasoning function's model would see is in the details.`,
+    `${capitalized(toolInWords(answer))} answered in ${measured.format(answer.duration_ms)} ms with ${bytesInWords(answer.result_bytes)}; what a lookup function would read and a reasoning function's model would see are in the details.`,
   tool_error: (answer) =>
     `${capitalized(toolInWords(answer))} answered an error, as a run's model would see it; the details show what it said.`,
   server_failure: (answer) =>

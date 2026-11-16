@@ -185,7 +185,7 @@ describe('search over MCP', () => {
       idempotentHint: true,
       openWorldHint: true,
     });
-    expect(found.structuredContent).toEqual(foundForAlpha);
+    expect(found.structuredContent).toEqual({ in_words: foundInWords, ...foundForAlpha });
     expect(plainTextIn(found)).toBe(foundInWords);
     expect(internalTermsIn(plainTextIn(found))).toEqual([]);
   });
@@ -235,6 +235,7 @@ describe('search on the org endpoint, without a playbook and with one', () => {
 
     expect(inOrg.structuredContent).toMatchObject({ servers: [graphInTheOrg, salesInTheOrg, wikiInTheOrg] });
     expect(inAlpha.structuredContent).toEqual({
+      in_words: foundInWords,
       ...foundForAlpha,
       servers: [graphInTheOrg, wikiInTheOrg],
       providers: offeredByTheServer,

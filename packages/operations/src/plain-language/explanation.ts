@@ -98,7 +98,7 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
   tool_not_offered: {
     why: 'this server does not offer a tool it names',
     remedy:
-      'This can be put right on your side: whoever runs the server decides which tool servers and tools this playbook may use, which search shows, so once it names only those, it can be tried again.',
+      'This can be put right on your side: search shows the tools this playbook may use; once the definition names only those, it can be tried again.',
   },
   tool_not_read_only: {
     why: 'the tool it reads through is no longer marked reads, so it was not called',
@@ -185,14 +185,12 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
   no_answer: 'because the model kept calling tools instead of answering',
   max_tool_calls: 'because it needed more tool calls than a run may make',
   max_input_tokens: 'because it needed to read more than a run may read',
-  restarted_without_content:
-    'because the server restarted before it finished, and the playbook keeps no content of its calls to go on from',
+  restarted_without_content: 'because the server restarted and kept no content of its calls to go on from',
   input_missing: "because the input it was given can't be found in the playbook's stored content",
   answer_missing: "because the answer it was given can't be found in the playbook's stored content",
   workflow_document_missing: "because the document of its workflow can't be found in the playbook's stored content",
   function_document_missing: "because the document of its function can't be found in the playbook's stored content",
-  call_outcome_unknown:
-    'because the server restarted while it called a tool that may change something, so whether that call did is not known',
+  call_outcome_unknown: 'because the server restarted during that call',
   only_read: 'because every tool it called is marked reads',
   stalled: 'because its dataset stopped at an event its fold could not take',
   ...creditBecauses,

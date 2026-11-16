@@ -7,8 +7,8 @@ import { textMemberNames, textMembersOf } from '../payloads/definition-texts.ts'
 import { textsWritten } from '../payloads/kept-texts.ts';
 import type { DefinitionCommandData } from '../registry/definition-commands.ts';
 import type { DefinitionContent } from '../registry/definition-events.ts';
-import { checkedContentOf, type WrittenDefinition } from './definition-views.ts';
-import { recordInRegistry } from './registry-access.ts';
+import { checkedContentOf, firstDefinitionNotice, noticesOfASave, type WrittenDefinition } from './definition-views.ts';
+import { isThePlaybooksFirst, recordInRegistry } from './registry-access.ts';
 
 export interface GoalsKeeping {
   readonly goals: boolean;
@@ -36,8 +36,20 @@ export const savedFrom = Effect.fnUntraced(function* (
   { capability, pages, written, goals = false, messages = false }: Saving,
   commandOf: (content: DefinitionContent) => DefinitionCommandData,
 ) {
-  const checking = checkedContentOf(capability, written, pages);
+  const noticed = yield* noticesOfASave;
+  const checking = checkedContentOf(capability, written, pages, noticed.keep);
   const checked = yield* goals ? contributionsGated(capability.type, checking, messages) : checking;
   const { content, inHand } = yield* withTheTextsKept(checked, written);
-  return { ...(yield* recordInRegistry(capability, commandOf(content))), inHand };
+  const recorded = yield* recordInRegistry(capability, commandOf(content));
+  return { ...recorded, inHand, notices: yield* noticed.kept };
+});
+
+export const createdFrom = Effect.fnUntraced(function* (
+  saving: Saving,
+  types: readonly string[],
+  commandOf: (content: DefinitionContent) => DefinitionCommandData,
+) {
+  const saved = yield* savedFrom(saving, commandOf);
+  const first = types.includes('workflow') && (yield* isThePlaybooksFirst(types, saving.capability.type, saved));
+  return first ? { ...saved, notices: [...saved.notices, firstDefinitionNotice] } : saved;
 });

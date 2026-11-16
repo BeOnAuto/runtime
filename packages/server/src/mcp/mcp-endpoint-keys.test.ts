@@ -1,5 +1,6 @@
 import {
   mcpClientKinds,
+  plainTextIn,
   problemIn,
   toolNamesIn,
   withMcpSession,
@@ -146,7 +147,10 @@ describe('a key limited to one playbook on /mcp', () => {
     }));
 
     expect(outcome.listed.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }] });
-    expect(outcome.own.structuredContent).toEqual({ definitions: [] });
+    expect(outcome.own.structuredContent).toEqual({
+      in_words: 'This playbook has no reasoning functions in use yet.',
+      definitions: [],
+    });
     expect(problemIn(outcome.other)).toMatchObject({
       reason: 'forbidden',
       detail: 'The caller may not access this playbook',
@@ -161,7 +165,15 @@ describe('the tool servers on /mcp, for a key limited to one playbook', () => {
       org: await session.callTool('search', {}),
     }));
 
-    expect(outcome.own.structuredContent).toEqual({ servers: [], tools: [], scopes: [] });
+    expect(outcome.own.structuredContent).toEqual({
+      in_words: plainTextIn(outcome.own),
+      servers: [],
+      tools: [],
+      scopes: [],
+    });
+    expect(plainTextIn(outcome.own)).toMatch(
+      /^No tool server serves this playbook, so its functions can call no tools/u,
+    );
     expect(problemIn(outcome.org)).toMatchObject({
       reason: 'forbidden',
       detail: 'The caller may access only some playbooks of this org; name one of them in playbook',

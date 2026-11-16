@@ -60,6 +60,6 @@ describe('the context of a call', () => {
       (session) => session.callTool('name_the_invocation'),
     );
 
-    expect(result.structuredContent).toEqual({ invocation: 'invocation-7' });
+    expect(result.structuredContent).toEqual({ in_words: 'Named.', invocation: 'invocation-7' });
   });
 });

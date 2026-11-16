@@ -55,7 +55,7 @@ function addedOf({ takesConnections, where }: Adding, { providers = [] }: Offere
 }
 
 function untilOneIsSetUp(adding: Adding, offered: Offered): string {
-  return `until whoever runs this server sets one up${addedOf(adding, offered)}; the give-tools guide says how.`;
+  return `until whoever runs this server sets one up${addedOf(adding, offered)}; the give-tools recipe of get_guide says how.`;
 }
 
 function noServer(adding: Adding, offered: Offered): string {

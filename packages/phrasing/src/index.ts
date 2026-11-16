@@ -10,6 +10,7 @@ export {
   type Noun,
 } from './plain-language/phrasing.ts';
 export {
+  mostNoticeCharacters,
   mostOutcomeCharacters,
   mostRefusalCharacters,
   mostRelayedCharacters,

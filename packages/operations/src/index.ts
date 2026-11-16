@@ -292,6 +292,7 @@ export {
   type StudioLinkTo,
   type StudioPage,
 } from './addresses/studio-links.ts';
+export { beforeGoingOnOf, noticesFields, noticesIn, withNotices, type Notice } from './addresses/answer-notices.ts';
 export { uuidV5 } from './uuid/uuid-v5.ts';
 export { randomUUIDv7, uuidV7Before, uuidV7TimeOf } from './uuid/uuid-v7.ts';
 export { changeKindOf, changingEvents, changingNothing, changingOne } from './changes/change-naming.ts';

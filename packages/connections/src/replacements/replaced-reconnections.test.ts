@@ -133,7 +133,7 @@ describe('the words of a connection added again from the provider that replaces 
 
     expect(outcome).toMatchObject({ output: { name: 'files', provider: 'shared-files' } });
     expect(wordsOf(after).outcome(outputOf(outcome), input)).toBe(
-      "Added the connection “files” again from the provider “shared-files”, under its name and for the same playbooks; it is now the caller's to finish, and the connection before is removed and its credential forgotten. Its link asks the person to allow “share” as well: Share your files with other people. The person who added it approves it, and gives its credential where it takes one, on the page its link opens, within 24 hours; shown to them as a link named “Approve the Shared files connection”, never as its address.",
+      'Added the connection “files” again from the provider “shared-files”, under its name and for the same playbooks; the connection before is removed and its credential forgotten. Show the person who added the connection a link named “Approve the Shared files connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours. The link asks them to allow “share” as well: Share your files with other people.',
     );
   });
 
@@ -145,7 +145,7 @@ describe('the words of a connection added again from the provider that replaces 
     const outcome = await reconnecting(replacing.h, replacing.after, input);
 
     expect(wordsOf(replacing.after).outcome(outputOf(outcome), input)).toMatch(
-      /^Added the connection “files” again from the provider “messages”, under its name and for the same playbooks; it is now the caller's to finish, and the connection before is removed and its credential forgotten\. The person who added it/u,
+      /^Added the connection “files” again from the provider “messages”, under its name and for the same playbooks; the connection before is removed and its credential forgotten\. Show the person who added the connection a link named “[^”]+”, never its address\. On that page they approve it and [^.]+, within 24 hours\.$/u,
     );
   });
 });

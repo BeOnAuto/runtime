@@ -191,7 +191,7 @@ describe('the instructions an agent receives when it connects', () => {
     },
   );
 
-  it('leave each definition type to the tools that take one, which name it by the kind the terminology page gives it, and create_definition by the part of a job each takes', async () => {
+  it('leave each definition type to the tools that take one, which name it by the kind the terminology page gives it, and create_definition by the workflow, the job, and the step each function type takes', async () => {
     server = await servingReasoning([]);
 
     const tools = await onMcp('/mcp', async (session) => listedTools(await session.listTools()));
@@ -207,7 +207,7 @@ describe('the instructions an agent receives when it connects', () => {
       properties: {
         type: {
           description:
-            "By each part's job: reasoning only interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio; workflow runs the parts in order.",
+            'workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio.',
         },
       },
     });
