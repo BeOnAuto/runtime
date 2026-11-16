@@ -10,6 +10,7 @@ export interface ConversationTurn {
   readonly place: ConversationPlace;
   readonly candidates: readonly KeptRequest[];
   readonly roomForACall: Effect.Effect<boolean>;
+  readonly heldUntil: number;
 }
 
 export interface OneRead {

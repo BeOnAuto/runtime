@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { firstDestination as destination, ofTheApp, overASocket, sentBy } from '../testing/event-destinations.ts';
+import {
+  aReply,
+  carrying,
+  firstDestination as destination,
+  ofEachSubscription,
+  ofTheApp,
+  overASocket,
+  sentBy,
+  without,
+} from '../testing/event-destinations.ts';
 
 const ofTheRequest =
   'Expected $request.header.<name>, $request.query.<name>, or $request.body#/<pointer>, a runtime expression of OpenAPI into the request';
@@ -73,6 +82,93 @@ describe('where a message down a socket or out of a queue says what it is about'
       [`${destination}/connection/account`, ofTheMessage],
       [`${destination}/acknowledge`, ofTheMessage],
     ]);
+  });
+});
+
+const reply = `${destination}/wake/reply`;
+
+const unproven =
+  'Expected reply only where verify proves every byte of the body and a time, as standard-webhooks does, and hmac where it signs {payload} and a timestamp: a secret or a signed token in a header proves who sent a delivery, not that its body is theirs, so such a destination only makes Auto read';
+
+const unowned =
+  'Expected reply only beside connection, where a delivery names the account it happened in, so that a reply is taken only for the connections made in it';
+
+const fromTheBody =
+  'Expected $request.body#/<pointer>, a runtime expression of OpenAPI into the request, since a reply is read from the body alone, which the proof covers';
+
+const fromThePayload =
+  'Expected $message.payload#/<pointer>, a runtime expression of AsyncAPI into the message, since a reply is read from the body alone, which the proof covers';
+
+function provenBy(verify: unknown) {
+  const proven = { ...ofTheApp, verify };
+  return sentBy(carrying(proven, aReply));
+}
+
+describe('the reply a delivery carries', () => {
+  it('is declared where the proof covers every byte of the body and a time, and the arrival names its account', () => {
+    expect([
+      sentBy(carrying(ofTheApp, aReply)),
+      sentBy(carrying(ofTheApp, without(aReply, 'time', 'changed'))),
+      provenBy({ scheme: 'standard-webhooks', secret: 'app' }),
+      provenBy({ ...ofTheApp.verify, signed_payload: '{payload}', timestamp: '$request.body#/sent_at' }),
+    ]).toEqual([[], [], [], []]);
+  });
+
+  it('names where the reply is, who wrote it, its words and the message it answers', () => {
+    expect(sentBy(carrying(ofTheApp, { time: aReply.time }))).toEqual([
+      [`${reply}/id`, 'Missing key'],
+      [`${reply}/sender`, 'Missing key'],
+      [`${reply}/text`, 'Missing key'],
+      [`${reply}/to`, 'Missing key'],
+    ]);
+    expect(sentBy(carrying(ofTheApp, { ...aReply, thread: '$request.body#/message/thread' }))).toMatchObject([
+      [`${reply}/thread`, expect.any(String)],
+    ]);
+  });
+
+  it('is read from the body alone, which the proof covers', () => {
+    expect(
+      sentBy(
+        carrying(ofTheApp, {
+          ...aReply,
+          id: '$request.header.X-Message-Id',
+          sender: '$request.query.author',
+          changed: 'message.edited',
+        }),
+      ),
+    ).toEqual([
+      [`${reply}/id`, fromTheBody],
+      [`${reply}/sender`, fromTheBody],
+      [`${reply}/changed`, fromTheBody],
+    ]);
+  });
+});
+
+describe('a destination whose deliveries carry a reply', () => {
+  it('proves every byte of the body and a time, which a secret or a token in a header does not', () => {
+    expect([
+      provenBy({ scheme: 'bearer', secret: 'app', token: '$request.header.X-Chat-Token' }),
+      provenBy({ scheme: 'jwt', secret: 'app', token: '$request.header.Authorization', alg: 'HS256' }),
+      provenBy({ ...ofTheApp.verify, signed_payload: '{payload}' }),
+      provenBy({ ...without(ofTheApp.verify, 'timestamp'), signed_payload: '{payload}' }),
+    ]).toEqual([[[reply, unproven]], [[reply, unproven]], [[reply, unproven]], [[reply, unproven]]]);
+  });
+
+  it('is no socket, which no proof of its own covers, though it reads a reply from the payload', () => {
+    expect(sentBy(carrying(overASocket, { ...aReply, id: '$message.payload#/payload/event/ts' }))).toEqual([
+      [`${reply}/sender`, fromThePayload],
+      [`${reply}/text`, fromThePayload],
+      [`${reply}/to`, fromThePayload],
+      [`${reply}/time`, fromThePayload],
+      [`${reply}/changed`, fromThePayload],
+      [reply, unproven],
+    ]);
+  });
+
+  it('names the account a delivery happened in, which an arrival of a subscription does not', () => {
+    const subscribed = { ...ofEachSubscription, verify: { scheme: 'standard-webhooks', secret: 'subscription' } };
+
+    expect(sentBy(carrying(subscribed, aReply))).toEqual([[reply, unowned]]);
   });
 });
 

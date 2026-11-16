@@ -31,7 +31,7 @@ export interface RequestLedger
     StreamWriter,
     StreamReader,
     Pick<RecordedReader, 'readRecorded'>,
-    Pick<ProjectionReader, 'readDueRows' | 'nextDueOf'>,
+    Pick<ProjectionReader, 'readDueRows' | 'nextDueOf' | 'readProjectedRows'>,
     Pick<ProjectionAdvancer, 'advanceRow'>,
     KeptContentReader {}
 

@@ -38,7 +38,7 @@ export const EventsSchema = EventsFieldsSchema.check(
   Schema.makeFilter(({ destinations }: typeof EventsFieldsSchema.Type) => typeIssuesOf(destinations)),
 ).annotate({
   description:
-    'How the service tells Auto that something changed where a request waits, so that Auto reads its replies at once: data alone, which only makes Auto read through the reading it does',
+    "How the service tells Auto that something changed where a request waits, so that Auto reads its replies at once: data alone, which makes Auto read through the reading it does, or, where a destination's wake says where, carries the reply itself",
 });
 
 export type Events = typeof EventsSchema.Type;

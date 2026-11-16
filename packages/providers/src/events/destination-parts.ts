@@ -2,6 +2,37 @@ import { Schema } from 'effect';
 
 const ConditionsSchema = Schema.Record(Schema.String, Schema.Array(Schema.String).check(Schema.isMinLength(1)));
 
+const DeliveredReplySchema = Schema.Struct({
+  id: Schema.String.annotate({
+    description:
+      'Where a delivery names the identity of the reply, the one a reading of the conversation lists it by, so that a reply is taken once however often it arrives',
+  }),
+  sender: Schema.String.annotate({
+    description:
+      'Where a delivery names who wrote the reply, so that only the person a request waits for can answer it',
+  }),
+  text: Schema.String.annotate({ description: "Where a delivery holds the reply's words" }),
+  to: Schema.String.annotate({
+    description:
+      "Where a delivery names the message the reply answers, as sent.id names a request's message, so that only the request sent as that message can take it",
+  }),
+  time: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'Where a delivery names when the reply was written, which orders the replies that arrive together and decides nothing else',
+    }),
+  ),
+  changed: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'Where a delivery holds something only when it is no new message, such as an edit, a deletion or a notice, which then carries no reply and only makes Auto read',
+    }),
+  ),
+}).annotate({
+  description:
+    "Where a delivery carries the person's reply, each in its body, so that Auto takes the reply as it arrives, by the rule a reading takes one by: only where verify proves every byte of the body and a time and connection names the account, and only in an entry the runtime ships",
+});
+
 export const WakeSchema = Schema.Struct({
   when: ConditionsSchema.annotate({
     description:
@@ -25,6 +56,7 @@ export const WakeSchema = Schema.Struct({
         'Where an arrival holds something only when an app posted the message it is about, which then makes Auto read nothing, as the automatic of conversations passes such a message over',
     }),
   ),
+  reply: Schema.optionalKey(DeliveredReplySchema),
 }).annotate({ description: 'Which arrivals make Auto read the conversations that wait, through the reading it does' });
 
 export const HandshakeSchema = Schema.Struct({

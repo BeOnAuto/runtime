@@ -1,21 +1,15 @@
-import { runCorrelationIn, type RecordWork, type RecordedWorkAt, type Work } from '@on.auto/definitions';
-import type { PlaybookAddress, ProjectionReader, RecordedReader, StreamWriter, Unavailable } from '@on.auto/operations';
-import type { ToolAccess } from '@on.auto/tool-servers';
+import { runCorrelationIn, type RecordedWorkAt, type Work } from '@on.auto/definitions';
+import type { PlaybookAddress, Unavailable } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { ReplyRefusal } from '../facts/run-facts.ts';
 import { replyRule } from '../facts/work-rules.ts';
+import type { DeliveryParts } from '../schedule/delivery-parts.ts';
 import { recordedWork } from '../schedule/request-ledger.ts';
 import type { KeptRequest, Reply } from './reply-taking.ts';
 
-export interface IntakeParts {
-  readonly ledger: StreamWriter & Pick<RecordedReader, 'readRecorded'> & Pick<ProjectionReader, 'readProjectedRows'>;
-  readonly tools: Pick<ToolAccess, 'preparedCall'>;
-  readonly record: RecordWork;
-}
-
 export interface ReplyPlace {
-  readonly parts: IntakeParts;
+  readonly parts: DeliveryParts;
   readonly playbook: PlaybookAddress;
   readonly causationId: string;
 }

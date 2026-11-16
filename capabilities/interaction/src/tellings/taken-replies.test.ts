@@ -166,24 +166,6 @@ describe('a telling of a taken reply that cannot be sent', () => {
   });
 });
 
-describe('the telling of a taken reply', () => {
-  it('is made once after a restart between the answer and the telling, and once by two hosts at the same time', async () => {
-    const { playbook: first, thread } = await asked(byTheProvider);
-    first.chat.reply({ channel, thread, user: answererId, text: 'approve' });
-    await first.performReads(Date.now() + farAhead);
-    const again = await chatHarness({ ...byTheProvider, ledger: first.ledger, inTheChat: first.chat.posted() });
-    const items = await again.dueItems(Date.now() + farAhead);
-
-    await Promise.all([again.performAll(items, Date.now()), again.performAll(items, Date.now())]);
-    await again.performDue(Date.now() + 2 * farAhead);
-
-    expect(first.chat.reactions()).toEqual([]);
-    expect(again.chat.reactions()).toHaveLength(1);
-    expect(linesOf(again)).toEqual([[thread, 'Auto recorded your answer: approve.']]);
-    expect(await recordsOf(again.ledger, 'telling_started')).toHaveLength(2);
-  });
-});
-
 describe('a function saved to read replies through a connection whose provider says nothing of replying', () => {
   it('is refused where it writes no tell, or a word that needs the provider, naming what to write', async () => {
     const playbook = await chatHarness();

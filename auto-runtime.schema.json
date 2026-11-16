@@ -969,6 +969,38 @@
                             "automatic": {
                               "type": "string",
                               "description": "Where an arrival holds something only when an app posted the message it is about, which then makes Auto read nothing, as the automatic of conversations passes such a message over"
+                            },
+                            "reply": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "Where a delivery names the identity of the reply, the one a reading of the conversation lists it by, so that a reply is taken once however often it arrives"
+                                },
+                                "sender": {
+                                  "type": "string",
+                                  "description": "Where a delivery names who wrote the reply, so that only the person a request waits for can answer it"
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "description": "Where a delivery holds the reply's words"
+                                },
+                                "to": {
+                                  "type": "string",
+                                  "description": "Where a delivery names the message the reply answers, as sent.id names a request's message, so that only the request sent as that message can take it"
+                                },
+                                "time": {
+                                  "type": "string",
+                                  "description": "Where a delivery names when the reply was written, which orders the replies that arrive together and decides nothing else"
+                                },
+                                "changed": {
+                                  "type": "string",
+                                  "description": "Where a delivery holds something only when it is no new message, such as an edit, a deletion or a notice, which then carries no reply and only makes Auto read"
+                                }
+                              },
+                              "required": ["id", "sender", "text", "to"],
+                              "additionalProperties": false,
+                              "description": "Where a delivery carries the person's reply, each in its body, so that Auto takes the reply as it arrives, by the rule a reading takes one by: only where verify proves every byte of the body and a time and connection names the account, and only in an entry the runtime ships"
                             }
                           },
                           "required": ["when"],

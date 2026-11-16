@@ -43,6 +43,16 @@ async function readAfter({ playbook, thread }: Asked, ...said: readonly (readonl
   return replies;
 }
 
+function toldInOrder(playbook: ChatHarness): readonly (readonly unknown[])[] {
+  return playbook.chat
+    .calls()
+    .filter(({ reference }) => reference.tool !== 'thread_replies')
+    .slice(1)
+    .map(({ reference, input }) =>
+      reference.tool === 'add_reaction' ? ['mark', input['timestamp']] : ['line', input['text']],
+    );
+}
+
 function linesOf(playbook: ChatHarness): readonly (string | undefined)[] {
   return playbook.chat
     .posted()
@@ -62,6 +72,10 @@ const notAnAnswer =
   "Auto couldn't take that as an answer. Reply with approve or reject. Anything after that word is kept as the note.";
 
 const tooLong = 'That reply is too long for Auto to take. A reply can hold up to 8 KB of text.';
+
+const recorded = 'Auto recorded your answer: approve.';
+
+const { react: _, ...lineOnly } = chatConversations;
 
 describe('an answer from someone the request does not wait on', () => {
   it('is told once that the request waits on someone else, keeping who gave it and never their words, while chatter is passed over', async () => {
@@ -102,9 +116,18 @@ describe('a reply after the request took its answer, in the same read', () => {
   it('is told once that the request was answered already, after the answer is recorded and marked', async () => {
     const thread = await asked();
 
-    await readAfter(thread, [answererId, 'approve'], [answererId, 'reject'], [answererId, 'reject, no']);
+    const [taken] = await readAfter(
+      thread,
+      [answererId, 'approve'],
+      [answererId, 'reject'],
+      [answererId, 'reject, no'],
+    );
 
-    expect(linesOf(thread.playbook)).toEqual([answeredAlready, 'Auto recorded your answer: approve.']);
+    expect(toldInOrder(thread.playbook)).toEqual([
+      ['mark', taken],
+      ['line', recorded],
+      ['line', answeredAlready],
+    ]);
     expect(await refusalsOf(thread.playbook)).toEqual([]);
   });
 
@@ -114,11 +137,17 @@ describe('a reply after the request took its answer, in the same read', () => {
 
     await readAfter(thread, [answererId, 'approve'], [answererId, 'reject']);
 
-    expect(linesOf(thread.playbook)).toEqual([
-      notAnAnswer,
-      tooLong,
-      notAnAnswer,
-      'Auto recorded your answer: approve.',
+    expect(linesOf(thread.playbook)).toEqual([notAnAnswer, tooLong, notAnAnswer, recorded]);
+  });
+
+  it('is told nothing where it is from someone the request does not wait on, while the reply taken is marked and answered', async () => {
+    const thread = await asked();
+
+    const [taken] = await readAfter(thread, [answererId, 'approve'], [stranger, 'approve']);
+
+    expect(toldInOrder(thread.playbook)).toEqual([
+      ['mark', taken],
+      ['line', recorded],
     ]);
   });
 
@@ -128,6 +157,30 @@ describe('a reply after the request took its answer, in the same read', () => {
     await readAfter(thread, [answererId, 'approve'], [answererId, 'reject']);
 
     expect(linesOf(thread.playbook)).toEqual([]);
+  });
+});
+
+describe('a reply after the request took its answer, told after the reply taken', () => {
+  it('is told after the mark where the function says tell: refusals, so the taken reply is marked and never answered', async () => {
+    const thread = await asked({ document: threadDocument({ replies: threadRepliesTelling('  tell: refusals') }) });
+
+    const [taken] = await readAfter(thread, [answererId, 'approve'], [answererId, 'reject']);
+
+    expect(toldInOrder(thread.playbook)).toEqual([
+      ['mark', taken],
+      ['line', answeredAlready],
+    ]);
+  });
+
+  it('is told after the line where the provider has no way to mark', async () => {
+    const thread = await asked({ conversations: lineOnly });
+
+    await readAfter(thread, [answererId, 'approve'], [answererId, 'reject']);
+
+    expect(toldInOrder(thread.playbook)).toEqual([
+      ['line', recorded],
+      ['line', answeredAlready],
+    ]);
   });
 });
 

@@ -11,6 +11,19 @@ export function sentBy(...destinations: readonly unknown[]): readonly (readonly 
 
 export const firstDestination = '/events/destinations/0';
 
+export const aReply = {
+  id: '$request.body#/message/id',
+  sender: '$request.body#/message/author',
+  text: '$request.body#/message/text',
+  to: '$request.body#/message/in_reply_to',
+  time: '$request.body#/message/written_at',
+  changed: '$request.body#/message/edited',
+};
+
+export function carrying(destination: { readonly wake: object }, reply: unknown): Readonly<Record<string, unknown>> {
+  return { ...destination, wake: { ...destination.wake, reply } };
+}
+
 export const ofEachSubscription = {
   type: 'webhook',
   per: 'subscription',

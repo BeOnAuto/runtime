@@ -14,6 +14,7 @@ export interface IntakeState {
   readonly refused: number;
   readonly foundAnswerer: boolean;
   readonly answered: ReadonlySet<string>;
+  readonly answeredAndTold: ReadonlySet<string>;
   readonly told: ReadonlyMap<string, number>;
   readonly lastSaid: ReadonlyMap<string, string>;
   readonly unrecorded: boolean;
@@ -24,6 +25,7 @@ export const nothingTaken: IntakeState = {
   refused: 0,
   foundAnswerer: false,
   answered: new Set(),
+  answeredAndTold: new Set(),
   told: new Map(),
   lastSaid: new Map(),
   unrecorded: false,
@@ -55,15 +57,24 @@ function toldToAnother({ request, because }: RefusalTold): boolean {
   return because === 'not_the_answerer' && routeOfRequest(request).telling.tellsOthers !== true;
 }
 
+function toldKnowinglySoFar(
+  ledger: TellingsReader,
+  playbook: PlaybookAddress,
+  state: IntakeState,
+  { runId }: KeptRequest,
+): Effect.Effect<boolean> {
+  return state.answered.has(runId)
+    ? Effect.succeed(state.answeredAndTold.has(runId))
+    : Effect.map(toldUnknowingly(ledger, playbook, runId), (unknown) => !unknown);
+}
+
 function mayTellAgain(
   ledger: TellingsReader,
   playbook: PlaybookAddress,
   state: IntakeState,
   request: KeptRequest,
 ): Effect.Effect<boolean> {
-  return mayTell(state, request)
-    ? Effect.map(toldUnknowingly(ledger, playbook, request.runId), (unknown) => !unknown)
-    : Effect.succeed(false);
+  return mayTell(state, request) ? toldKnowinglySoFar(ledger, playbook, state, request) : Effect.succeed(false);
 }
 
 function mayTellNow(

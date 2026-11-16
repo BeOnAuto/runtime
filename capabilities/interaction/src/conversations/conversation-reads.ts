@@ -22,7 +22,7 @@ function sentByThePlaybook(kept: ConversationTurn['candidates']): ReadonlySet<st
 }
 
 function sentRead(
-  { parts, place, candidates, roomForACall }: ConversationTurn,
+  { parts, place, candidates, roomForACall, heldUntil }: ConversationTurn,
   read: OneRead,
   input: Readonly<Record<string, Schema.Json>>,
   carried: ReadDone['state'],
@@ -37,6 +37,7 @@ function sentRead(
     candidates,
     arrival: { ...reference, conversation: read.request.sent.conversation, causationId: place.row.last_fact },
     roomForATelling: roomForACall,
+    heldUntil,
   };
   return Effect.gen(function* () {
     const { fields: start, called: calling } = yield* parts.tools.preparedCall(call);

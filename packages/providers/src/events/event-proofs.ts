@@ -137,8 +137,12 @@ const placedNames: readonly ('timestamp' | 'id')[] = ['timestamp', 'id'];
 
 const namedInBraces = /\{[^{}]*\}/gu;
 
+function namesSignedIn(signed: string): readonly string[] {
+  return (signed.match(namedInBraces) ?? []).map((braced) => braced.slice(1, -1));
+}
+
 function signedIssueOf(proof: Proof, signed: string): string | undefined {
-  const names = (signed.match(namedInBraces) ?? []).map((braced) => braced.slice(1, -1));
+  const names = namesSignedIn(signed);
   const unknown = names.find((name) => !signedNames.has(name));
   if (unknown !== undefined) {
     return `Holds {${unknown}}, which a signed payload does not have; it holds {id}, {timestamp} and {payload}`;
@@ -155,6 +159,26 @@ function signedIssueOf(proof: Proof, signed: string): string | undefined {
 function signedIssuesOf(proof: Proof): readonly ProofIssue[] {
   const issue = proof.signed_payload === undefined ? undefined : signedIssueOf(proof, proof.signed_payload);
   return issue === undefined ? [] : [{ path: ['signed_payload'], issue }];
+}
+
+const inTheBody: ExpressionPlace = { transport: 'request', sources: ['body'] };
+
+function signsItsTime({ signed_payload: signed = '', timestamp }: Proof): boolean {
+  return (
+    timestamp !== undefined &&
+    (namesSignedIn(signed).includes('timestamp') || expressionIssueOf(timestamp, inTheBody) === undefined)
+  );
+}
+
+const provesATime: Readonly<Record<Scheme, (proof: Proof) => boolean>> = {
+  hmac: signsItsTime,
+  'standard-webhooks': () => true,
+  bearer: () => false,
+  jwt: () => false,
+};
+
+export function provesTheBodyAndATime(proof: Proof): boolean {
+  return provesATime[proof.scheme](proof);
 }
 
 export const VerifySchema = ProofFieldsSchema.check(

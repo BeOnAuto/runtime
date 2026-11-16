@@ -245,3 +245,26 @@ describe('the telling of an answer kept outside the run', () => {
     expect(linesOf(playbook)).toEqual([[thread, 'Answered in Auto by acme-admin.']]);
   });
 });
+
+describe('an answer kept outside the run, taken by a read', () => {
+  it('is told by the due work while the read that took it cannot read it, and no later reply is told before it', async () => {
+    const trouble = new Set<BucketTrouble>(['down']);
+    const { playbook, thread } = await asked({ ledger: ledgerOverABucket(trouble) });
+    playbook.chat.reply({
+      channel,
+      thread,
+      user: answererId,
+      text: `approve ${noteDoubledInJsonOfBytes(pastTheBound)}`,
+    });
+    playbook.chat.reply({ channel, thread, user: answererId, text: 'reject' });
+
+    await playbook.performReads(Date.now() + farAhead);
+    const toldByTheRead = [playbook.chat.reactions(), linesOf(playbook)];
+    trouble.delete('down');
+    await toldTwiceWith(true, playbook, Date.now() + farAhead);
+
+    expect(toldByTheRead).toEqual([[], []]);
+    expect(playbook.chat.reactions()).toHaveLength(1);
+    expect(linesOf(playbook)).toEqual([[thread, 'Auto recorded your answer: approve.']]);
+  });
+});

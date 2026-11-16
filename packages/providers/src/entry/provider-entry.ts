@@ -160,11 +160,19 @@ const documentByItsAddress =
 const gatewayOfAnAddedProvider =
   'Expected no gateway: only an entry the runtime ships names one, since the document beside it says the header its key is sent in, and a provider whoever runs the runtime adds names its document by its address';
 
-function addedIssuesOf({ document: written, credentials }: ProviderEntry): readonly EntryIssue[] {
+const replyOfAnAddedProvider =
+  'Expected no reply: only an entry the runtime ships declares one, since a reply a delivery carries can answer a request, and a provider whoever runs the runtime adds only makes Auto read';
+
+function addedIssuesOf({ document: written, credentials, events }: ProviderEntry): readonly EntryIssue[] {
   return [
     ...(isADocumentBesideTheEntries(written) ? [{ path: ['document'], issue: documentByItsAddress }] : []),
     ...credentials.flatMap(({ gateway }, index) =>
       gateway === undefined ? [] : [{ path: ['credentials', index, 'gateway'], issue: gatewayOfAnAddedProvider }],
+    ),
+    ...(events?.destinations ?? []).flatMap(({ wake }, index) =>
+      wake.reply === undefined
+        ? []
+        : [{ path: ['events', 'destinations', index, 'wake', 'reply'], issue: replyOfAnAddedProvider }],
     ),
   ];
 }

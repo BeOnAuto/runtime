@@ -2,10 +2,10 @@ import type { Issue, PlaybookAddress } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import { saidOfARefusal, type ReplyRefusal, type ReplyRefused } from '../facts/run-facts.ts';
-import { toldAnsweredAlready } from '../tellings/late-tellings.ts';
+import { answerTold, toldAnsweredAlready } from '../tellings/late-tellings.ts';
 import { isPostedByThePlaybook } from '../tellings/own-messages.ts';
 import { told, type Telling } from '../tellings/tellings.ts';
-import { recordedReplyWork, type IntakeParts, type RecordedReply, type ReplyPlace } from './reply-recorder.ts';
+import { recordedReplyWork, type RecordedReply, type ReplyPlace } from './reply-recorder.ts';
 import { refusalTellingOf, replyBoundsOfAReading, type IntakeState } from './reply-recording.ts';
 import { decisionOf, type KeptRequest, type Reply, type ReplyDecision } from './reply-taking.ts';
 import { routeOfRequest } from './request-routes.ts';
@@ -18,11 +18,12 @@ interface Arrival {
 }
 
 export interface Intake {
-  readonly parts: IntakeParts;
+  readonly parts: ReplyPlace['parts'];
   readonly playbook: PlaybookAddress;
   readonly candidates: readonly KeptRequest[];
   readonly arrival: Arrival;
   readonly roomForATelling: Effect.Effect<boolean>;
+  readonly heldUntil: number;
 }
 
 function placeOf({ parts, playbook, arrival }: Intake): ReplyPlace {
@@ -43,19 +44,22 @@ interface Taking {
   readonly answer: Schema.Json;
 }
 
+function toldTaken(intake: Intake, state: IntakeState, request: KeptRequest, made: RecordedReply) {
+  const { parts, playbook, heldUntil: until, roomForATelling: room } = intake;
+  const answer = { parts, playbook, request, answeredAt: Date.parse(made.at), hold: { until, room } };
+  return Effect.map(answerTold(answer), (toldFirst): IntakeState => ({
+    ...state,
+    taken: state.taken + 1,
+    foundAnswerer: true,
+    answered: new Set([...state.answered, request.runId]),
+    answeredAndTold: toldFirst ? new Set([...state.answeredAndTold, request.runId]) : state.answeredAndTold,
+  }));
+}
+
 function taken(intake: Intake, state: IntakeState, { request, reply, answer }: Taking): Effect.Effect<IntakeState> {
   const work = { type: 'answer', answer: { answer, reply: answeredReplyOf(reply) } } as const;
   return recordedReplyWork(placeOf(intake), request, reply, { work }).pipe(
-    Effect.map((made): IntakeState =>
-      made === undefined
-        ? state
-        : {
-            ...state,
-            taken: state.taken + 1,
-            foundAnswerer: true,
-            answered: new Set([...state.answered, request.runId]),
-          },
-    ),
+    Effect.flatMap((made) => (made === undefined ? Effect.succeed(state) : toldTaken(intake, state, request, made))),
     Effect.catchTag('unavailable', () => Effect.succeed<IntakeState>({ ...state, unrecorded: true })),
   );
 }

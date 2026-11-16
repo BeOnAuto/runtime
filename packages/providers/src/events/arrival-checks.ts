@@ -2,6 +2,7 @@ import { isToolName, toolNameShape } from '@on.auto/tool-servers/policy';
 
 import { arrangesNoSubscription, transportOf, type Destination, type DestinationIssue } from './destination-fields.ts';
 import { answerIssuesOf } from './event-calls.ts';
+import { provesTheBodyAndATime } from './event-proofs.ts';
 import { pathOf } from './json-texts.ts';
 import { expressionIssueOf, inEveryPlaceOf, type ExpressionPlace } from './runtime-expressions.ts';
 
@@ -41,6 +42,38 @@ function wakeIssuesOf(destination: Destination): readonly DestinationIssue[] {
     ...(wake.subscription !== undefined && arrangesNoSubscription(destination)
       ? [{ path: ['wake', 'subscription'], issue: namesNoSubscription }]
       : []),
+  ];
+}
+
+type DeliveredReply = NonNullable<Destination['wake']['reply']>;
+
+const placesOfAReply: readonly (keyof DeliveredReply)[] = ['id', 'sender', 'text', 'to', 'time', 'changed'];
+
+const fromTheBody = 'since a reply is read from the body alone, which the proof covers';
+
+function replyPlaceOf(destination: Destination): ExpressionPlace {
+  return transportOf(destination) === 'request'
+    ? { transport: 'request', sources: ['body'], because: fromTheBody }
+    : { transport: 'message', sources: ['payload'], because: fromTheBody };
+}
+
+const unproven =
+  'Expected reply only where verify proves every byte of the body and a time, as standard-webhooks does, and hmac where it signs {payload} and a timestamp: a secret or a signed token in a header proves who sent a delivery, not that its body is theirs, so such a destination only makes Auto read';
+
+const unowned =
+  'Expected reply only beside connection, where a delivery names the account it happened in, so that a reply is taken only for the connections made in it';
+
+function replyIssuesOf(destination: Destination): readonly DestinationIssue[] {
+  const { wake, verify, connection } = destination;
+  const { reply } = wake;
+  if (reply === undefined) {
+    return [];
+  }
+  const place = replyPlaceOf(destination);
+  return [
+    ...placesOfAReply.flatMap((field) => expressionIssuesAt(['wake', 'reply', field], reply[field], place)),
+    ...(verify !== undefined && provesTheBodyAndATime(verify) ? [] : [{ path: ['wake', 'reply'], issue: unproven }]),
+    ...(connection === undefined ? [{ path: ['wake', 'reply'], issue: unowned }] : []),
   ];
 }
 
@@ -109,6 +142,7 @@ function openIssuesOf({ open }: Destination): readonly DestinationIssue[] {
 export function arrivalIssuesOf(destination: Destination): readonly DestinationIssue[] {
   return [
     ...wakeIssuesOf(destination),
+    ...replyIssuesOf(destination),
     ...handshakeIssuesOf(destination),
     ...connectionIssuesOf(destination),
     ...openIssuesOf(destination),

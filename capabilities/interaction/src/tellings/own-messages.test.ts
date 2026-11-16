@@ -116,6 +116,21 @@ describe('a telling whose message the playbook cannot know', () => {
     ]);
     expect(tellingsOf(playbook)).toEqual([howToAnswer]);
   });
+
+  it('is the last its request makes also after it takes an answer: a later reply in the read that took it is told nothing', async () => {
+    const { playbook, thread } = await askedOfThePersonItPostsAs(throughAnotherTool);
+    playbook.chat.reply({ channel, thread, user: answererId, text: 'maybe' });
+    await readTurns(playbook, 2);
+    playbook.chat.reply({ channel, thread, user: answererId, text: 'approve' });
+    playbook.chat.reply({ channel, thread, user: answererId, text: 'reject' });
+
+    await readTurns(playbook, 2, 2);
+
+    expect(await recordsOf(playbook.ledger, 'request_answered')).toMatchObject([
+      { data: { answer: { choice: 'approve' } } },
+    ]);
+    expect(tellingsOf(playbook)).toEqual([howToAnswer]);
+  });
 });
 
 async function refusedOnceWithItsTellingAnswered(telling: FakeAnswer): Promise<ChatHarness> {

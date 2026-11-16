@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { AddedProviderEntrySchema, joinedProviders, type ProviderEntry } from '../index.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
+import { aReply, carrying, ofTheApp } from '../testing/event-destinations.ts';
 import { fixtureProviders, ledgers, metrics, tracker } from '../testing/fixture-providers.ts';
 
 const decodeAdded = Schema.decodeUnknownResult(AddedProviderEntrySchema, { errors: 'all', onExcessProperty: 'error' });
@@ -94,6 +95,24 @@ describe('a provider whoever runs the runtime adds that names a gateway', () => 
       [
         '/credentials/0/gateway',
         'Expected no gateway: only an entry the runtime ships names one, since the document beside it says the header its key is sent in, and a provider whoever runs the runtime adds names its document by its address',
+      ],
+    ]);
+  });
+});
+
+function sending(destination: unknown) {
+  return addedProblemsOf({ ...notes, events: { destinations: [destination] } });
+}
+
+describe('a provider whoever runs the runtime adds whose service sends', () => {
+  it('makes Auto read, and is refused a reply its deliveries carry, which only an entry the runtime ships declares', () => {
+    expect([sending(ofTheApp), sending(carrying(ofTheApp, aReply))]).toEqual([
+      [],
+      [
+        [
+          '/events/destinations/0/wake/reply',
+          'Expected no reply: only an entry the runtime ships declares one, since a reply a delivery carries can answer a request, and a provider whoever runs the runtime adds only makes Auto read',
+        ],
       ],
     ]);
   });
