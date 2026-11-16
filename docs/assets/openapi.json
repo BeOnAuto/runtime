@@ -3,7 +3,7 @@
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "info": {
     "title": "Auto Runtime",
-    "version": "0.56.0",
+    "version": "0.57.0",
     "description": "A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. Before anything else, read the guide start, at /guides/start: it says what a playbook is made of, what a workflow owns, what the agent does itself, and which guide each task needs; the other guides hold what these words mean, the format of each definition and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
   },
   "servers": [
