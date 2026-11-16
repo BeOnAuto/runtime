@@ -248,25 +248,25 @@ describe('every operation the server serves, as its API document declares it', (
   });
 });
 
-const refusedForTheRole = [
-  { caller: 'Admin, in Studio', refused: [] },
-  { caller: 'Admin, through their connected agent', refused: whatManagesPermissions },
-  { caller: 'Admin, asking @Auto in Slack', refused: whatManagesPermissions },
-  { caller: 'Admin, in a run they started', refused: [] },
-  { caller: 'Editor, in Studio', refused: whatManagesPermissions },
-  { caller: 'Editor, through their connected agent', refused: whatManagesPermissions },
-  { caller: 'Editor, asking @Auto in Slack', refused: whatManagesPermissions },
-  { caller: 'Editor, in a run they started', refused: [] },
-  { caller: 'Editor, through an agent they approved to read', refused: whatManagesPermissions },
-  { caller: 'Viewer, in Studio', refused: whatOnlyWritingPermits },
-  { caller: 'Viewer, through their connected agent', refused: whatOnlyWritingPermits },
-  { caller: 'Viewer, asking @Auto in Slack', refused: whatOnlyWritingPermits },
-  { caller: 'Viewer, in a run they started', refused: [] },
-  { caller: 'A person with no role, in Studio', refused: everything },
-  { caller: 'An Editor of another org, in Studio', refused: everything },
-  { caller: 'An API key', refused: whatManagesPermissions },
-  { caller: 'An API key that reads', refused: whatManagesPermissions },
-  { caller: 'Playbook alpha, in a run a trigger or a schedule started', refused: [] },
+const refusedForTheRoleOrTheTokenType = [
+  { caller: 'Admin, in Studio', forTheRole: [], forTheTokenType: [] },
+  { caller: 'Admin, through their connected agent', forTheRole: [], forTheTokenType: whatManagesPermissions },
+  { caller: 'Admin, asking @Auto in Slack', forTheRole: [], forTheTokenType: whatManagesPermissions },
+  { caller: 'Admin, in a run they started', forTheRole: [], forTheTokenType: [] },
+  { caller: 'Editor, in Studio', forTheRole: whatManagesPermissions, forTheTokenType: [] },
+  { caller: 'Editor, through their connected agent', forTheRole: whatManagesPermissions, forTheTokenType: [] },
+  { caller: 'Editor, asking @Auto in Slack', forTheRole: whatManagesPermissions, forTheTokenType: [] },
+  { caller: 'Editor, in a run they started', forTheRole: [], forTheTokenType: [] },
+  { caller: 'Editor, through an agent they approved to read', forTheRole: whatManagesPermissions, forTheTokenType: [] },
+  { caller: 'Viewer, in Studio', forTheRole: whatOnlyWritingPermits, forTheTokenType: [] },
+  { caller: 'Viewer, through their connected agent', forTheRole: whatOnlyWritingPermits, forTheTokenType: [] },
+  { caller: 'Viewer, asking @Auto in Slack', forTheRole: whatOnlyWritingPermits, forTheTokenType: [] },
+  { caller: 'Viewer, in a run they started', forTheRole: [], forTheTokenType: [] },
+  { caller: 'A person with no role, in Studio', forTheRole: everything, forTheTokenType: [] },
+  { caller: 'An Editor of another org, in Studio', forTheRole: everything, forTheTokenType: [] },
+  { caller: 'An API key', forTheRole: [], forTheTokenType: whatManagesPermissions },
+  { caller: 'An API key that reads', forTheRole: [], forTheTokenType: whatManagesPermissions },
+  { caller: 'Playbook alpha, in a run a trigger or a schedule started', forTheRole: [], forTheTokenType: [] },
 ];
 
 describe('every operation the server serves, decided for each role and each kind of caller', () => {
@@ -280,8 +280,14 @@ describe('every operation the server serves, decided for each role and each kind
 });
 
 describe('every operation the server serves, where the decision point decides, for each role and each kind of caller', () => {
-  it('is allowed exactly where the decision point allows it, and refused for the role where a credential granted everything would still be refused', () => {
-    expect(table.map(({ caller, refusedForTheRole: refused }) => ({ caller, refused }))).toEqual(refusedForTheRole);
+  it('is allowed exactly where the decision point allows it, and refused, where a credential granted everything would still be refused, for the type of credential where the same person in Studio would be allowed or the caller holds no role, and for the role otherwise', () => {
+    expect(
+      table.map(({ caller, refusedForTheRole, refusedForTheTokenType }) => ({
+        caller,
+        forTheRole: refusedForTheRole,
+        forTheTokenType: refusedForTheTokenType,
+      })),
+    ).toEqual(refusedForTheRoleOrTheTokenType);
     expect(table.flatMap(({ enforcedOtherwise }) => enforcedOtherwise)).toEqual([]);
   });
 });

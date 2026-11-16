@@ -21,6 +21,7 @@ import {
   declaredOperations,
   filesOnDisk,
   getDefinition,
+  joinTheOrg,
   requestOf,
   rolesHeld,
   runDefinition,
@@ -168,6 +169,27 @@ describe('what manages permissions, with the policies as shipped', () => {
       'deny by permissions-managed-by-admins-in-studio',
       'allow by editor',
     ]);
+  });
+});
+
+const linus: PrincipalReference = { type: 'person', id: 'linus' };
+
+function joiningAs(principal: PrincipalReference, via: ArrivedVia, operation: TestOperation): Promise<string> {
+  const decide = answered(decidedBy(rolesHeld({ ada: [builtIn('editor', acme)] })));
+  return decide(requestOf({ principal, operation, resource: theOrg, via }));
+}
+
+describe('an operation by which a person joins the org by its enrolment, with the policies as shipped', () => {
+  it('is let through for a person who holds no role yet, signed in to Studio alone, and nothing else is', async () => {
+    expect(
+      await Promise.all([
+        joiningAs(linus, 'studio', joinTheOrg),
+        joiningAs(linus, 'agent', joinTheOrg),
+        joiningAs(linus, 'conversation', joinTheOrg),
+        joiningAs(linus, 'studio', createPlaybook),
+      ]),
+    ).toEqual(['allow by enrolment', 'deny by ', 'deny by ', 'deny by ']);
+    expect(await joiningAs(ada, 'studio', joinTheOrg)).toMatch(/^allow by /u);
   });
 });
 

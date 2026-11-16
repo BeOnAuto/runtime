@@ -25,6 +25,7 @@ export type OperationDeclaration = Pick<
   | 'mayChangeOutside'
   | 'irreversible'
   | 'permissionsManagement'
+  | 'enrolment'
 >;
 
 export const InAConversation = Context.Reference<boolean>('@on.auto/operations/InAConversation', {
@@ -97,6 +98,7 @@ function contextOf(
       mayChangeOutside: declaration.mayChangeOutside,
       irreversible: declaration.irreversible,
       permissionsManagement: declaration.permissionsManagement,
+      enrolment: declaration.enrolment === true,
     },
   };
 }

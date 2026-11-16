@@ -36,3 +36,20 @@ describe('an operation that declares permissions management', () => {
     );
   });
 });
+
+describe('an operation that declares enrolment', () => {
+  it('is a command of the org, registered so; every other operation says nothing of it', () => {
+    const joining = defineCommand('org', { ...probe, route: post, enrolment: true });
+    const changing = defineCommand('org', { ...probe, route: post });
+
+    expect([joining, changing].map(({ registration }) => registration.enrolment)).toEqual([true, undefined]);
+  });
+
+  it('is refused where it is a query, or an operation of a playbook', () => {
+    const refusal =
+      'The operation probe declares enrolment, which only a command of the org that makes its caller a member does';
+
+    expect(() => defineQuery('org', { ...probe, route: get, enrolment: true })).toThrow(refusal);
+    expect(() => defineCommand('playbook', { ...probe, route: post, enrolment: true })).toThrow(refusal);
+  });
+});

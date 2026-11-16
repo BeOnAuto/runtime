@@ -60,6 +60,7 @@ type RegisteredDefinition<K extends OperationKind> = Pick<
   | 'readsOnly'
   | 'irreversible'
   | 'permissionsManagement'
+  | 'enrolment'
   | 'repeatable'
   | 'whileRetired'
   | 'permittedBy'
@@ -94,6 +95,7 @@ export function registeredFieldsOf<S extends OperationScope, K extends Operation
     readsOnly: definition.readsOnly ?? false,
     irreversible: definition.irreversible ?? false,
     permissionsManagement: definition.permissionsManagement ?? false,
+    ...(definition.enrolment === true ? { enrolment: true } : {}),
     repeatable: definition.repeatable ?? false,
     ...(definition.whileRetired === true ? { whileRetired: true } : {}),
     permissions,

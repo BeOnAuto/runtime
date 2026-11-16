@@ -82,7 +82,7 @@ const roles: RoleAssignments = {
     ),
 };
 
-type Unsaid = Omit<AccessContext['operation'], 'targetsPlaybook' | 'permissionsManagement'>;
+type Unsaid = Omit<AccessContext['operation'], 'targetsPlaybook' | 'permissionsManagement' | 'enrolment'>;
 
 const whatTheDocumentDoesNotSay: readonly Unsaid[] = [
   {
@@ -118,6 +118,7 @@ function requestOf(kind: CallerKind, operation: ServedDeclaration, unsaid: Unsai
         ...unsaid,
         targetsPlaybook: operation.targetsPlaybook,
         permissionsManagement: operation.permissionsManagement,
+        enrolment: false,
       },
     },
   };
@@ -137,6 +138,7 @@ export interface DecisionRow {
   readonly allowed: readonly string[];
   readonly decidedOtherwise: readonly Decided[];
   readonly refusedForTheRole: readonly string[];
+  readonly refusedForTheTokenType: readonly string[];
   readonly enforcedOtherwise: readonly Decided[];
 }
 
@@ -144,8 +146,14 @@ function isAllowed(enforced: Enforced): boolean {
   return enforced.decision === 'allow';
 }
 
-function isRefusedForTheRole(enforced: Enforced): boolean {
-  return enforced.decision === 'deny' && enforced.cause === 'role';
+function isRefusedFor(cause: 'role' | 'token_type', enforced: Enforced): boolean {
+  return enforced.decision === 'deny' && enforced.cause === cause;
+}
+
+function refusedFor(cause: 'role' | 'token_type', decided: readonly Decided[]): readonly string[] {
+  return decided
+    .filter(({ enforced }) => enforced.every((each) => isRefusedFor(cause, each)))
+    .map(({ operation }) => operation);
 }
 
 const files = shippedFilesOnDisk(shippedRoots);
@@ -177,9 +185,8 @@ async function rowOf(operations: readonly ServedDeclaration[], kind: CallerKind)
     caller: kind.caller,
     allowed: decided.filter(({ allowed }) => allowed).map(({ operation }) => operation),
     decidedOtherwise: decided.filter(({ alike }) => !alike),
-    refusedForTheRole: decided
-      .filter(({ enforced }) => enforced.every((each) => isRefusedForTheRole(each)))
-      .map(({ operation }) => operation),
+    refusedForTheRole: refusedFor('role', decided),
+    refusedForTheTokenType: refusedFor('token_type', decided),
     enforcedOtherwise: decided.filter(
       ({ allowed, enforced }) =>
         new Set(enforced.map((each) => JSON.stringify(each))).size !== 1 ||

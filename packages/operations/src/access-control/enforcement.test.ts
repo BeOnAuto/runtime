@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   roleRefusalDetail,
+  tokenTypeRefusalDetail,
   type AccessDecision,
   type AccessRequest,
   type CallerIdentity,
@@ -144,5 +145,84 @@ describe('a caller whose id names no kind of principal', () => {
 
     expect(outcome).toEqual({ status: 'rejected', reason: 'forbidden', detail: 'The caller may not make this call' });
     expect(asking.asked()).toEqual([]);
+  });
+});
+
+const adaThroughAnAgent: CallerIdentity = {
+  ...ada,
+  client: { id: 'client-of-an-agent', name: 'An agent', domain: null },
+};
+
+const refusedForTheTokenType = {
+  status: 'rejected',
+  reason: 'forbidden',
+  detail: tokenTypeRefusalDetail,
+  kind: 'not_allowed_token_type',
+};
+
+function allowedInStudioAlone({ context: { via } }: AccessRequest): AccessDecision {
+  return via === 'studio' ? allowedByTheTest : deniedByTheTest;
+}
+
+const undecidedInStudio = recordingDecisionPoint(({ context: { via } }) =>
+  via === 'studio'
+    ? { decision: 'deny', determiningPolicies: [], errors: ['The roles could not be read'] }
+    : deniedByTheTest,
+);
+
+describe('a call no grant would let through, refused for what it came through or for the role', () => {
+  it('refuses a person’s agent, where the same person signed in to Studio would be allowed, for the type of credential, and asks a third time as in Studio', async () => {
+    const asking = recordingDecisionPoint(allowedInStudioAlone);
+
+    const { outcome, streams } = await decidedBy(
+      asking.decisionPoint,
+      onAlpha(adaThroughAnAgent, { name: 'anvil', text: 'a' }),
+    );
+
+    expect(outcome).toEqual(refusedForTheTokenType);
+    expect(streams).toEqual([]);
+    expect(asking.asked().map(({ context }) => [context.via, context.granted.permissions.length])).toEqual([
+      ['agent', 4],
+      ['agent', 4],
+      ['studio', 4],
+    ]);
+  });
+
+  it('refuses a person’s agent for the role where the same person signed in to Studio would be denied too', async () => {
+    const asking = recordingDecisionPoint(() => deniedByTheTest);
+
+    const { outcome } = await decidedBy(asking.decisionPoint, onAlpha(adaThroughAnAgent, { name: 'anvil', text: 'a' }));
+
+    expect(outcome).toEqual(refusedForTheRole);
+    expect(asking.asked()).toHaveLength(3);
+  });
+
+  it('refuses a person signed in to Studio for the role without asking a third time', async () => {
+    const asking = recordingDecisionPoint(() => deniedByTheTest);
+
+    const { outcome } = await decidedBy(asking.decisionPoint, onAlpha(ada, { name: 'anvil', text: 'a' }));
+
+    expect(outcome).toEqual(refusedForTheRole);
+    expect(asking.asked()).toHaveLength(2);
+  });
+});
+
+describe('a call no grant would let through, of a principal that holds no role or that the decision point cannot decide', () => {
+  it('refuses a key, which holds no role, for the type of credential without asking a third time', async () => {
+    const asking = recordingDecisionPoint(() => deniedByTheTest);
+
+    const { outcome } = await decidedBy(asking.decisionPoint, onAlpha(acmeAdmin, { name: 'anvil', text: 'a' }));
+
+    expect(outcome).toEqual(refusedForTheTokenType);
+    expect(asking.asked().map(({ principal }) => principal.type)).toEqual(['key', 'key']);
+  });
+
+  it('refuses as unavailable where the question asked as in Studio could not be decided', async () => {
+    const { outcome } = await decidedBy(
+      undecidedInStudio.decisionPoint,
+      onAlpha(adaThroughAnAgent, { name: 'anvil', text: 'a' }),
+    );
+
+    expect(outcome).toMatchObject({ status: 'rejected', reason: 'unavailable' });
   });
 });

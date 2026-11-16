@@ -25,12 +25,14 @@ export const cedarOnDisk = cedarModuleIn(filesOnDisk);
 export interface TestOperation extends DeclaredAction {
   readonly kind: OperationKind;
   readonly permissionsManagement: boolean;
+  readonly enrolment?: boolean;
 }
 
 interface Declared {
   readonly permissions: readonly Permission[];
   readonly targetsPlaybook?: boolean;
   readonly permissionsManagement?: boolean;
+  readonly enrolment?: boolean;
 }
 
 function declared(scope: TestOperation['scope'], kind: OperationKind, name: string, said: Declared): TestOperation {
@@ -41,6 +43,7 @@ function declared(scope: TestOperation['scope'], kind: OperationKind, name: stri
     permissions: said.permissions,
     targetsPlaybook: said.targetsPlaybook ?? false,
     permissionsManagement: said.permissionsManagement ?? false,
+    ...(said.enrolment === true ? { enrolment: true } : {}),
   };
 }
 
@@ -68,6 +71,8 @@ export const assignARole = declared('org', 'command', 'assign_role', {
   permissionsManagement: true,
 });
 
+export const joinTheOrg = declared('org', 'command', 'join_org', { permissions: ['org:write'], enrolment: true });
+
 export const declaredOperations: readonly TestOperation[] = [
   listConnections,
   listPlaybooks,
@@ -78,6 +83,7 @@ export const declaredOperations: readonly TestOperation[] = [
   runDefinition,
   makeComment,
   assignARole,
+  joinTheOrg,
 ];
 
 export function builtIn(role: string, scope: RoleAssignment['scope']): RoleAssignment {
@@ -126,6 +132,7 @@ export function requestOf({
         mayChangeOutside: false,
         irreversible,
         permissionsManagement,
+        enrolment: operation.enrolment === true,
       },
     },
   };

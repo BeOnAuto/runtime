@@ -37,6 +37,7 @@ interface DeclaredOperation {
   readonly mayChangeOutside: boolean;
   readonly irreversible: boolean;
   readonly permissionsManagement: boolean;
+  readonly enrolment: boolean;
 }
 
 export interface AccessContext {

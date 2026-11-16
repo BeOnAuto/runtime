@@ -124,6 +124,7 @@ describe('the built-in policies', () => {
         'within-granted-permissions',
         'within-granted-playbooks',
         'permissions-managed-by-admins-in-studio',
+        'enrolment',
       ].toSorted(),
     );
   });
@@ -138,7 +139,7 @@ describe('the built-in policies', () => {
 });
 
 describe('what the built-in policies read of a request', () => {
-  it('is how it arrived, what its credential grants and, of what its operation declares about itself, only whether it targets a playbook and whether it manages permissions, beside the permissions its action is in', () => {
+  it('is how it arrived, what its credential grants and, of what its operation declares about itself, only whether it targets a playbook, whether it manages permissions and whether it enrols its caller, beside the permissions its action is in', () => {
     const read = Object.values(policiesById(cedar, texts.policies)).flatMap((policy) => contextReadByPolicy(policy));
 
     expect(new Set(read)).toEqual(
@@ -150,6 +151,7 @@ describe('what the built-in policies read of a request', () => {
         'granted.playbooks',
         'operation.targets_playbook',
         'operation.permissions_management',
+        'operation.enrolment',
       ]),
     );
   });
@@ -167,7 +169,7 @@ describe('policies made ready for the engine', () => {
     expect([again.schemaName, again.policySetId, again.policies]).toEqual([
       prepared.schemaName,
       prepared.policySetId,
-      11,
+      12,
     ]);
     expect(other.schemaName).toBe(prepared.schemaName);
     expect(other.policySetId).not.toBe(prepared.policySetId);

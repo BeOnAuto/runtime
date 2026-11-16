@@ -1,4 +1,4 @@
-import { allPermissions, type Permission, type ResourceReference } from '@on.auto/operations';
+import { allPermissions, permissionFor, type Permission, type ResourceReference } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -76,5 +76,25 @@ describe('the built-in roles the decider reads', () => {
     expect(
       builtInRoleIds.flatMap((held) => builtInRoleIds.map((asked) => mayAssign(builtInRoles, held, asked))),
     ).toEqual([true, true, true, false, false, false, false, false, false]);
+  });
+});
+
+const whatAChangePermits: ReadonlySet<Permission> = new Set([
+  permissionFor('command', 'org'),
+  permissionFor('command', 'playbook'),
+]);
+
+describe('a role that may start a run', () => {
+  it('permits every permission a credential can hold, since a run acts on its starter’s credential, which no role cuts, as long as it runs', () => {
+    const startingRuns = builtInRoleIds.filter((role) =>
+      builtInRoles[role].permits.some((permission) => whatAChangePermits.has(permission)),
+    );
+
+    expect(
+      startingRuns.filter(
+        (role) => !allPermissions.every((permission) => builtInRoles[role].permits.includes(permission)),
+      ),
+    ).toEqual([]);
+    expect(startingRuns).toEqual(['admin', 'editor']);
   });
 });

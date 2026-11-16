@@ -97,6 +97,7 @@ export interface OperationServerOptions {
   readonly installId?: () => string | undefined;
   readonly routes?: readonly RegisterRoutes[];
   readonly shelf?: McpRoutesOptions['shelf'];
+  readonly dispatcherOptions?: Parameters<typeof makeDispatcher>[1];
 }
 
 type McpServed = Pick<McpRoutesOptions, 'catalog' | 'dispatcher' | 'runCall' | 'retryStateKeys' | 'shelf'> & {
@@ -123,6 +124,14 @@ function shelfServed(shelf: McpRoutesOptions['shelf'] | undefined): McpRoutesOpt
   return shelf ?? testShelf;
 }
 
+/** The catalog of the operations served, and the dispatcher that runs them, made with the options a test gives. */
+function catalogDispatched(
+  operations: Parameters<typeof makeCatalog>[0],
+  options: Parameters<typeof makeDispatcher>[1],
+): { readonly catalog: ReturnType<typeof makeCatalog>; readonly dispatcher: ReturnType<typeof makeDispatcher> } {
+  return { catalog: makeCatalog(operations), dispatcher: makeDispatcher([], options) };
+}
+
 export async function operationServer({
   authenticator = keyHolders,
   allowedOrigins = [],
@@ -136,12 +145,12 @@ export async function operationServer({
   installId,
   routes: more,
   shelf: shelfGiven,
+  dispatcherOptions,
 }: OperationServerOptions = {}): Promise<OperationServer> {
   const shelf = shelfServed(shelfGiven);
   const services = operationServices(tracer);
   const runtime = await makeAppRuntime(services.layer);
-  const catalog = makeCatalog(operations);
-  const dispatcher = makeDispatcher([]);
+  const { catalog, dispatcher } = catalogDispatched(operations, dispatcherOptions);
   const mcpErrors: string[] = [];
   const routes = [
     operationRoutes({ catalog, dispatcher, runCall: runtime.run }),

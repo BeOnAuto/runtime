@@ -5,9 +5,12 @@ import {
   Caller,
   InAConversation,
   PlaybookContext,
+  callAdmittedBy,
   callPermissionDecidedBy,
   callPermissionReportedTo,
   defineQuery,
+  roleRefusalDetail,
+  tokenTypeRefusalDetail,
   mayCall,
   type AccessDecision,
   type AccessRequest,
@@ -215,5 +218,56 @@ describe('an operation that asks whether its caller may call another', () => {
   it('is answered by the credential where the dispatcher does not decide', async () => {
     expect(await answeredBy({}, adaReading)).toEqual({ status: 'succeeded', output: { may: false } });
     expect(await answeredBy({}, ada)).toEqual({ status: 'succeeded', output: { may: true } });
+  });
+});
+
+function allowedWithEverythingGranted({ context }: AccessRequest): AccessDecision {
+  return context.granted.permissions.length === 4 ? allowedByTheTest : deniedByTheTest;
+}
+
+function allowedInStudio({ context }: AccessRequest): AccessDecision {
+  return context.via === 'studio' ? allowedByTheTest : deniedByTheTest;
+}
+
+function refusalOf(decide: (request: AccessRequest) => AccessDecision, asked: CallAsked) {
+  return Effect.runPromise(Effect.flip(callAdmittedBy(recordingDecisionPoint(decide).decisionPoint)(asked)));
+}
+
+const adaThroughAnAgent: CallerIdentity = {
+  ...ada,
+  client: { id: 'client-of-an-agent', name: 'An agent', domain: null },
+};
+
+describe('a call a host admits by the decision point, outside every dispatcher', () => {
+  it('is let through where the decision point allows it, whatever the credential grants', async () => {
+    const admitted = callAdmittedBy(recordingDecisionPoint(() => allowedByTheTest).decisionPoint)(askedOf(adaReading));
+
+    await expect(Effect.runPromise(admitted)).resolves.toBeUndefined();
+  });
+
+  it('is refused in the credential’s words where the credential is the cause, for the role, or for the type of credential', async () => {
+    const refusals = await Promise.all([
+      refusalOf(allowedWithEverythingGranted, askedOf(adaReading)),
+      refusalOf(() => deniedByTheTest, askedOf(ada)),
+      refusalOf(allowedInStudio, askedOf(adaThroughAnAgent)),
+    ]);
+
+    expect(refusals.map(({ detail, kind }) => [detail, kind])).toEqual([
+      ['The caller lacks the playbook:write permission', undefined],
+      [roleRefusalDetail, 'permission_denied'],
+      [tokenTypeRefusalDetail, 'not_allowed_token_type'],
+    ]);
+  });
+
+  it('is asked about as arriving through a conversation where it is made within one', async () => {
+    const asking = recordingDecisionPoint(() => allowedByTheTest);
+
+    await Effect.runPromise(
+      callAdmittedBy(asking.decisionPoint)(
+        askedOf({ ...ada, client: { id: 'client-of-an-agent', name: 'An agent', domain: null } }),
+      ).pipe(Effect.provideService(InAConversation, true)),
+    );
+
+    expect(asking.asked().map(({ context }) => context.via)).toEqual(['conversation']);
   });
 });

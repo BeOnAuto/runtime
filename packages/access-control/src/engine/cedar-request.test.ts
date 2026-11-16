@@ -47,6 +47,7 @@ const readingTheOrg = {
     may_change_outside: false,
     irreversible: false,
     permissions_management: false,
+    enrolment: false,
   },
 };
 

@@ -62,6 +62,7 @@ export interface Definition<
   readonly readsOnly?: boolean;
   readonly irreversible?: boolean;
   readonly permissionsManagement?: boolean;
+  readonly enrolment?: boolean;
   readonly repeatable?: boolean;
   readonly whileRetired?: boolean;
   readonly permittedBy?: readonly Permission[];
@@ -107,6 +108,7 @@ interface HttpFields<
   readonly readsOnly?: boolean;
   readonly irreversible?: boolean;
   readonly permissionsManagement?: boolean;
+  readonly enrolment?: boolean;
   readonly repeatable?: boolean;
   readonly whileRetired?: boolean;
   readonly permittedBy?: readonly Permission[];

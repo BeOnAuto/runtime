@@ -1,5 +1,4 @@
 export {
-  orgOfStreamPrefix,
   playbookBoundProjectionReader,
   playbookBoundStreamReader,
   playbookOfStreamPrefix,
@@ -7,7 +6,7 @@ export {
   streamPrefixOfOrg,
 } from './ledger/bound-ports.ts';
 export { PlaybookAccessSchema, canAccessPlaybook, type PlaybookAccess } from './caller/playbook-access.ts';
-export { PlaybookRegistry, type LivePlaybookStatus, type PlaybookStatus } from './ledger/playbook-registry.ts';
+export { PlaybookRegistry, type PlaybookStatus } from './ledger/playbook-registry.ts';
 export {
   boundedPage,
   mostBytesLoadedInAPage,
@@ -36,7 +35,7 @@ export {
 } from './outcome/call-result.ts';
 export { catalogPathOf, makeCatalog, type Catalog } from './catalog/catalog.ts';
 export { CancelledKindSchema, RunCancelled, type CancelledKind } from './outcome/cancelled-run.ts';
-export { Conflict, ConflictKindSchema, resolutionOf, type ConflictKind, type Resolution } from './outcome/conflict.ts';
+export { Conflict, ConflictKindSchema, resolutionOf, type ConflictKind } from './outcome/conflict.ts';
 export { Forbidden, ForbiddenKindSchema } from './outcome/forbidden.ts';
 export { RunUnanswered, UnansweredKindSchema, type UnansweredKind } from './outcome/unanswered-run.ts';
 export { addressOfStreamPrefix, addressedStreamOf, advancedColumnsLeftBy } from './projections/keyed-projection.ts';
@@ -48,7 +47,7 @@ export { circuitBreakers, readModelOpenForMs, type CircuitBreakers } from './str
 export { isStreamProjectionRefused, StreamProjectionRefused } from './stream-projections/stream-projection-refused.ts';
 export { keepsChildRows, projectedTableOf, requireAdvancedColumns } from './projections/keyed-projection.ts';
 export { rowKeyColumn, rowKeyOf, scopesOf, streamPrefixOfAddress } from './projections/keyed-projection.ts';
-export { type AddressedStream, type AdvancedColumn } from './projections/keyed-projection.ts';
+export { type AddressedStream } from './projections/keyed-projection.ts';
 export { type BoundProjectionReader, type ChildRowsProjection } from './projections/keyed-projection.ts';
 export { type DueRowsQuery, type KeptProjection, type KeyedProjection } from './projections/keyed-projection.ts';
 export { type OrgProjectionReader, type ProjectedAddress } from './projections/keyed-projection.ts';
@@ -110,8 +109,6 @@ export {
   holdsNoForbiddenCharacter,
   leastCount,
   mostReferenceBytes,
-  refusingForbiddenCharacters,
-  refusingLongReferences,
   type ActedContext,
   type ActedOnRunContext,
   type CalledBy,
@@ -126,16 +123,17 @@ export { TriggerKindSchema, triggerKinds, triggerKindsInWords, type TriggerKind 
 export type { DispatcherServices } from './dispatch/dispatcher-services.ts';
 export { makeDispatcher, type Dispatcher, type PipelineStep } from './dispatch/dispatcher.ts';
 export { reportedDifferenceMessage } from './access-control/report-only.ts';
-export { enforcedDecisionOf, roleRefusalDetail, undecidedMessage } from './access-control/enforcement.ts';
+export { enforcedDecisionOf, undecidedMessage } from './access-control/enforcement.ts';
+export { roleRefusalDetail, tokenTypeRefusalDetail } from './access-control/enforcement.ts';
 export { CallPermission, callPermissionDecidedBy, callPermissionReportedTo } from './access-control/call-permission.ts';
-export { mayCall, type CallAsked } from './access-control/call-permission.ts';
+export { callAdmittedBy, mayCall, type CallAsked } from './access-control/call-permission.ts';
 export { InAConversation, type OperationDeclaration } from './access-control/access-request-of-a-call.ts';
 export { deniedFor, type AccessContext, type AccessDecision } from './access-control/policy-decision-point.ts';
 export type { AccessRequest, ActionReference, ArrivedVia } from './access-control/policy-decision-point.ts';
 export type { PolicyDecisionPoint, PrincipalReference } from './access-control/policy-decision-point.ts';
 export type { ResourceReference } from './access-control/policy-decision-point.ts';
 export { cursorOfParts, cursorWithin, partsOfCursor, type CursorPart } from './reading/cursor-parts.ts';
-export { eventsPageOf, type EventPaging, type EventsPage } from './reading/event-paging.ts';
+export { eventsPageOf } from './reading/event-paging.ts';
 export { eventMetadataOf } from './reading/event-metadata.ts';
 export { keptContentOf } from './reading/kept-content.ts';
 export { shownData, type EventView } from './reading/shown-data.ts';
@@ -157,7 +155,6 @@ export {
   type RecordedPage,
   type RecordedPageRequest,
   type RecordedSelection,
-  type Trace,
 } from './reading/recorded-read.ts';
 export { IssueSchema, type Issue } from './outcome/issue.ts';
 export type { Choice, Options } from './outcome/options.ts';
@@ -172,8 +169,6 @@ export { OrgReader } from './ledger/org-reader.ts';
 export { explanationOf, unsuccessfulWords, type ExplainedRejection } from './plain-language/explanation.ts';
 export { refusalInWords } from './plain-language/refusal-words.ts';
 export type {
-  Explanation,
-  Explanations,
   LinkToOpen,
   PlainLanguage,
   RefusalTerms,
@@ -201,7 +196,7 @@ export {
 } from './reading/paging-fields.ts';
 export { PermissionSchema, allPermissions, permissionFor, type Permission } from './caller/permission.ts';
 export { permissionRefusalOf } from './authorization/authorization.ts';
-export type { KeptContent, PresentedFact, PresentedPart, Presenter } from './reading/presenter.ts';
+export type { KeptContent, PresentedFact, Presenter } from './reading/presenter.ts';
 export {
   presentationOf,
   stepIdSeparator,
@@ -216,8 +211,6 @@ export {
   mostPublicEventDataBytes,
   mostShownFieldBytes,
   mostToolFieldBytes,
-  type EventMetadata,
-  type PublicEvent,
 } from './reading/public-event.ts';
 export type { DeclarableReason, Rejection, RejectionKind } from './outcome/rejection.ts';
 export type { InputEncoding } from './definition/registered-run.ts';
@@ -228,8 +221,8 @@ export type {
   RouteRegistration,
   Runnable,
 } from './definition/registration.ts';
-export { callSummaryOf, DirectoryListing, type PlaybookRequest, type OrgRequest } from './dispatch/request.ts';
-export { takesNoBody, type Method, type Route } from './definition/route.ts';
+export { DirectoryListing, type PlaybookRequest, type OrgRequest } from './dispatch/request.ts';
+export { takesNoBody, type Method } from './definition/route.ts';
 export type { OperationKind, OperationScope } from './caller/operation-scope.ts';
 export { settle } from './dispatch/settle.ts';
 export { RejectionCauseSchema, RejectionKindSchema, type RejectionCause } from './outcome/rejection-cause.ts';
@@ -276,7 +269,6 @@ export {
   LimitedBecauseSchema,
   RejectionBecauseSchema,
   type AccountClosedBecause,
-  type CreditsExhaustedBecause,
   type LimitedBecause,
   type RejectionBecause,
 } from './outcome/rejection-because.ts';

@@ -15,6 +15,11 @@ export const roleRefusal: Explanation = {
   remedy: 'Ask an admin of the organization to change your role.',
 };
 
+export const tokenTypeRefusal: Explanation = {
+  why: 'only a person signed in to Studio can do that',
+  remedy: 'An agent or an API key cannot do it, whatever access it was given.',
+};
+
 export type Explanations = Readonly<Partial<Record<RejectionKind, Explanation>>>;
 
 export interface RefusalTerms {

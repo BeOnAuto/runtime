@@ -3,17 +3,23 @@ import { Effect } from 'effect';
 
 import { allPermissions } from '../caller/permission.ts';
 import { rejected, type Rejected } from '../outcome/outcome.ts';
-import { roleRefusal } from '../plain-language/plain-language.ts';
+import { roleRefusal, tokenTypeRefusal, type Explanation } from '../plain-language/plain-language.ts';
 import { askedInTime } from './asked-in-time.ts';
 import type { AccessDecision, AccessRequest, PolicyDecisionPoint, ResourceReference } from './policy-decision-point.ts';
 import type { AskedCall } from './report-only.ts';
 
 type EnforcedDecision =
   | { readonly decision: 'allow' }
-  | { readonly decision: 'deny'; readonly cause: 'grant' | 'role' }
+  | { readonly decision: 'deny'; readonly cause: 'grant' | 'role' | 'token_type' }
   | { readonly decision: 'indeterminate'; readonly errors: readonly string[] };
 
-export const roleRefusalDetail = `${capitalized(roleRefusal.why)}. ${roleRefusal.remedy}`;
+function detailOf({ why, remedy }: Explanation): string {
+  return `${capitalized(why)}. ${remedy}`;
+}
+
+export const roleRefusalDetail = detailOf(roleRefusal);
+
+export const tokenTypeRefusalDetail = detailOf(tokenTypeRefusal);
 
 export const undecidedMessage =
   'The policy decision point could not decide a call, so the call is refused as unavailable';
@@ -27,6 +33,8 @@ const allowed: EnforcedDecision = { decision: 'allow' };
 const deniedByTheGrant: EnforcedDecision = { decision: 'deny', cause: 'grant' };
 
 const deniedForTheRole: EnforcedDecision = { decision: 'deny', cause: 'role' };
+
+const deniedForTheTokenType: EnforcedDecision = { decision: 'deny', cause: 'token_type' };
 
 function orgOf(resource: ResourceReference): string {
   return resource.type === 'org' ? resource.id : resource.org;
@@ -42,14 +50,47 @@ function withTheGrantLifted(request: AccessRequest): AccessRequest {
   };
 }
 
+function inStudio(request: AccessRequest): AccessRequest {
+  return { ...request, context: { ...request.context, via: 'studio' } };
+}
+
 function indeterminateOf({ errors }: AccessDecision): EnforcedDecision | undefined {
   return errors.length === 0 ? undefined : { decision: 'indeterminate', errors };
 }
 
+function causeOnceAllowed(
+  decisionPoint: PolicyDecisionPoint,
+  request: AccessRequest,
+  allowedCause: EnforcedDecision,
+  otherwise: (request: AccessRequest) => Effect.Effect<EnforcedDecision>,
+): Effect.Effect<EnforcedDecision> {
+  return Effect.flatMap(askedInTime(decisionPoint, request), (decided) => {
+    const indeterminate = indeterminateOf(decided);
+    if (indeterminate !== undefined) {
+      return Effect.succeed(indeterminate);
+    }
+    return decided.decision === 'allow' ? Effect.succeed(allowedCause) : otherwise(request);
+  });
+}
+
+function causeBeyondTheGrant(
+  decisionPoint: PolicyDecisionPoint,
+  lifted: AccessRequest,
+): Effect.Effect<EnforcedDecision> {
+  if (lifted.principal.type !== 'person') {
+    return Effect.succeed(deniedForTheTokenType);
+  }
+  if (lifted.context.via === 'studio') {
+    return Effect.succeed(deniedForTheRole);
+  }
+  return causeOnceAllowed(decisionPoint, inStudio(lifted), deniedForTheTokenType, () =>
+    Effect.succeed(deniedForTheRole),
+  );
+}
+
 function causeOfTheDenial(decisionPoint: PolicyDecisionPoint, request: AccessRequest): Effect.Effect<EnforcedDecision> {
-  return Effect.map(
-    askedInTime(decisionPoint, withTheGrantLifted(request)),
-    (lifted) => indeterminateOf(lifted) ?? (lifted.decision === 'allow' ? deniedByTheGrant : deniedForTheRole),
+  return causeOnceAllowed(decisionPoint, withTheGrantLifted(request), deniedByTheGrant, (lifted) =>
+    causeBeyondTheGrant(decisionPoint, lifted),
   );
 }
 
@@ -94,8 +135,11 @@ export function enforcedBy(
     if (enforced.decision === 'indeterminate') {
       return refusedUndecided(call, enforced.errors);
     }
-    return enforced.cause === 'role'
-      ? Effect.fail(rejected('forbidden', roleRefusalDetail, undefined, 'permission_denied'))
+    if (enforced.cause === 'role') {
+      return Effect.fail(rejected('forbidden', roleRefusalDetail, undefined, 'permission_denied'));
+    }
+    return enforced.cause === 'token_type'
+      ? Effect.fail(rejected('forbidden', tokenTypeRefusalDetail, undefined, 'not_allowed_token_type'))
       : Effect.andThen(grantCheck, Effect.fail(rejected('forbidden', notAllowedByTheGrant)));
   });
 }

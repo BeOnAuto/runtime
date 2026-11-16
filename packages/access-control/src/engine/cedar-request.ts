@@ -110,6 +110,7 @@ function contextOf({ via, granted, operation }: AccessContext): Context {
       may_change_outside: operation.mayChangeOutside,
       irreversible: operation.irreversible,
       permissions_management: operation.permissionsManagement,
+      enrolment: operation.enrolment,
     },
   };
 }

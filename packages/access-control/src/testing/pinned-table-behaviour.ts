@@ -117,7 +117,7 @@ async function allowedTo(decide: Decide, kind: CallerKind): Promise<readonly str
   return allowed.flat();
 }
 
-const everything = [
+const everythingButWhatManagesOrEnrols = [
   'list_connections on org',
   'list_playbooks on org',
   'search_in_org on org, alpha, beta',
@@ -128,7 +128,11 @@ const everything = [
   'make_comment on alpha, beta, d-02',
 ];
 
-const everythingAnAdminInStudioDoes = [...everything, 'assign_role on org'];
+const joining = 'join_org on org';
+
+const everything = [...everythingButWhatManagesOrEnrols, joining];
+
+const everythingAnAdminInStudioDoes = [...everythingButWhatManagesOrEnrols, 'assign_role on org', joining];
 
 const reads = [
   'list_connections on org',
@@ -149,12 +153,12 @@ const pinned = [
   { caller: 'Editor, through an agent approved to read', allowed: reads },
   { caller: 'Editor, asking @Auto in a conversation', allowed: everything },
   { caller: 'Editor, in a run they started', allowed: everything },
-  { caller: 'Viewer, in Studio', allowed: reads },
+  { caller: 'Viewer, in Studio', allowed: [...reads, joining] },
   { caller: 'Viewer, through an agent', allowed: reads },
   { caller: 'Viewer, through an agent approved to read', allowed: reads },
   { caller: 'Viewer, asking @Auto in a conversation', allowed: reads },
   { caller: 'Viewer, in a run they started', allowed: everything },
-  { caller: 'A person with no role, in Studio', allowed: [] },
+  { caller: 'A person with no role, in Studio', allowed: [joining] },
   { caller: 'A person with no role, through an agent', allowed: [] },
   { caller: 'A person with no role, through an agent approved to read', allowed: [] },
   { caller: 'A person with no role, asking @Auto in a conversation', allowed: [] },

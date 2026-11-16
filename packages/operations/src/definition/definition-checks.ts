@@ -19,6 +19,7 @@ interface CheckableDefinition {
   readonly outputSchema?: Schema.Constraint;
   readonly permittedBy?: readonly Permission[];
   readonly permissionsManagement?: boolean;
+  readonly enrolment?: boolean;
 }
 
 interface CheckedDefinition {
@@ -96,6 +97,19 @@ function requireACommandToManagePermissions(name: string, kind: OperationKind, p
   }
 }
 
+function requireACommandOfTheOrgToEnrol(
+  name: string,
+  scope: OperationScope,
+  kind: OperationKind,
+  enrolment: boolean,
+): void {
+  if (enrolment && (scope !== 'org' || kind !== 'command')) {
+    throw new Error(
+      `The operation ${name} declares enrolment, which only a command of the org that makes its caller a member does`,
+    );
+  }
+}
+
 function permissionsOf(name: string, permittedBy: readonly Permission[]): readonly Permission[] {
   if (permittedBy.length === 0) {
     throw new Error(`The operation ${name} is permitted by no permission`);
@@ -113,12 +127,14 @@ export function checkedDefinition(
     outputSchema,
     permittedBy = [permissionFor(kind, scope)],
     permissionsManagement = false,
+    enrolment = false,
   }: CheckableDefinition,
 ): CheckedDefinition {
   if (!operationName.test(name)) {
     throw new Error(`The operation name ${name} is malformed`);
   }
   requireACommandToManagePermissions(name, kind, permissionsManagement);
+  requireACommandOfTheOrgToEnrol(name, scope, kind, enrolment);
   const pathParameters = pathParametersOf(route.path);
   const inputMembers = closedObjectMembers(name, 'input', inputSchema);
   if (outputSchema !== undefined) {

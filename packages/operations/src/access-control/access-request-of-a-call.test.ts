@@ -48,6 +48,7 @@ const declaredOfAQuery = {
   mayChangeOutside: false,
   irreversible: false,
   permissionsManagement: false,
+  enrolment: false,
 };
 
 const searchLabels = defineQuery('org', {

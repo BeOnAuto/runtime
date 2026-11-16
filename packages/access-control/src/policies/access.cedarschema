@@ -21,6 +21,7 @@ type Declaration = {
   may_change_outside: Bool,
   irreversible: Bool,
   permissions_management: Bool,
+  enrolment: Bool,
 };
 
 type RequestContext = {

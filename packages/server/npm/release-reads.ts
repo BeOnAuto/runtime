@@ -73,6 +73,7 @@ const decided = await Effect.runPromise(
         mayChangeOutside: false,
         irreversible: false,
         permissionsManagement: false,
+        enrolment: false,
       },
     },
   }),

@@ -32,6 +32,10 @@ permit (principal is Playbook, action, resource);
 permit (principal is Person, action, resource)
 when { context.via == "run" };
 
+@id("enrolment")
+permit (principal is Person, action, resource)
+when { context.operation.enrolment && context.via == "studio" };
+
 @id("own-org")
 forbid (principal, action, resource)
 unless { resource in context.granted.org };

@@ -278,3 +278,16 @@ describe('unsuccessfulWords for a run refused under its id', () => {
     ).toBe(calledToolsWords);
   });
 });
+
+describe('the words of a refusal by the decision point, to an agent', () => {
+  it('say the role is the cause, or that only a person signed in to Studio may, never that the connection could allow it', () => {
+    const words = (['permission_denied', 'not_allowed_token_type'] as const).map((kind) =>
+      unsuccessfulWords('remove a member', 'command', rejected('forbidden', 'refused', undefined, kind)),
+    );
+
+    expect(words).toEqual([
+      'Could not remove a member: your role in this organization does not allow that. Nothing was changed. Ask an admin of the organization to change your role.',
+      'Could not remove a member: only a person signed in to Studio can do that. Nothing was changed. An agent or an API key cannot do it, whatever access it was given.',
+    ]);
+  });
+});

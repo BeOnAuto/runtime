@@ -10,7 +10,7 @@ import {
   creditExplanationsByBecause,
   limitedCreditExplanationOf,
 } from './credit-explanations.ts';
-import { roleRefusal } from './plain-language.ts';
+import { roleRefusal, tokenTypeRefusal } from './plain-language.ts';
 import type { Explanation, Explanations, RefusalTerms, Remedies } from './plain-language.ts';
 import { predictionExplanations } from './prediction-explanations.ts';
 import { requestExplanations } from './request-explanations.ts';
@@ -62,6 +62,7 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     remedy: 'Asking again without it starts from now, with a cursor this server holds.',
   },
   permission_denied: roleRefusal,
+  not_allowed_token_type: tokenTypeRefusal,
   taken: { why: 'that name is already taken', remedy: 'A different name will work.' },
   retired: {
     why: 'it has been retired',
