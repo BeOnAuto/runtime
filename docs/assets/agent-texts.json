@@ -1641,7 +1641,8 @@
           "as": "tool list_generation_models: title",
           "on": [
             "/mcp",
-            "/orgs/{org}/mcp"
+            "/orgs/{org}/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp"
           ]
         }
       ],
@@ -1657,7 +1658,8 @@
           "as": "tool list_generation_models: description",
           "on": [
             "/mcp",
-            "/orgs/{org}/mcp"
+            "/orgs/{org}/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp"
           ]
         }
       ],
@@ -1673,7 +1675,8 @@
           "as": "tool list_generation_models: argument kind",
           "on": [
             "/mcp",
-            "/orgs/{org}/mcp"
+            "/orgs/{org}/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp"
           ]
         }
       ],

@@ -39,6 +39,12 @@ export type ObjectSchema<T extends ObjectValue = ObjectValue> = Schema.Constrain
   readonly EncodingServices: never;
 };
 
+type SameInEveryScope<K extends OperationKind, Services> = K extends 'query'
+  ? [Services] extends [never]
+    ? true
+    : never
+  : never;
+
 export type InputSchemaFor<S extends OperationScope, P extends string> = ObjectSchema<
   ObjectValue & ReservedFieldsByScope[S] & { readonly [Parameter in PathParameters<P>]: string }
 >;
@@ -65,6 +71,7 @@ export interface Definition<
   readonly enrolment?: boolean;
   readonly repeatable?: boolean;
   readonly whileRetired?: boolean;
+  readonly sameInEveryScope?: SameInEveryScope<K, Services | ReadServices>;
   readonly permittedBy?: readonly Permission[];
   readonly inputSchema: In;
   readonly outputSchema: Out;

@@ -24,5 +24,6 @@ export const toolsInsideAPlaybook = [
   'answer_interaction',
   'list_interactions',
   'get_asset',
+  'list_generation_models',
   'send_run_event',
 ];

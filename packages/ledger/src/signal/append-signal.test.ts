@@ -1,20 +1,19 @@
 import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
-import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
+import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { Effect, Result } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { dataAsWritten, emmettEventStore } from '../emmett/emmett-event-store.ts';
 import { eventAppenderOf, streamAppends, streamSignalOf, VersionConflict } from '../index.ts';
-import { ledgerLayer } from '../sqlite3.ts';
 import { happenings, noted } from '../testing/happenings.ts';
 import { stamped } from '../testing/happenings.ts';
 import { openLedgerWith, outcomeOf } from '../testing/open-ledger.ts';
+import { onEachSQLiteDriver, type OnASQLiteDriver } from '../testing/sqlite-drivers.ts';
 import { tally } from '../testing/tally.ts';
 
-async function aStoreSignalling(appended: ReturnType<typeof streamSignalOf>) {
+async function aStoreSignalling({ optionsOf }: OnASQLiteDriver, appended: ReturnType<typeof streamSignalOf>) {
   const emmett = getSQLiteEventStore({
-    driver: sqlite3EventStoreDriver,
-    fileName: ':memory:',
+    ...optionsOf(':memory:'),
     schema: { autoMigration: 'None' },
   });
   onTestFinished(() => emmett.close());
@@ -25,14 +24,16 @@ async function aStoreSignalling(appended: ReturnType<typeof streamSignalOf>) {
 
 const one = [{ type: 'noted', data: { n: 1 } }];
 
-describe('the signal an append raises', () => {
+const sqliteDrivers = onEachSQLiteDriver(() => nodeSqliteDumboDriver);
+
+describe.each(sqliteDrivers)('the signal an append raises, on SQLite through $through', (sqlite) => {
   it('names every stream appended to, after the append', async () => {
     const signal = streamSignalOf();
     const heard: string[] = [];
     signal.listen((playbookKey) => {
       heard.push(playbookKey);
     });
-    const store = await aStoreSignalling(signal);
+    const store = await aStoreSignalling(sqlite, signal);
 
     await store.append('playbook/acme/alpha/events/e1', one, { expectedVersion: 0, context: stamped });
     await store.append('org/acme/playbooks', one, { expectedVersion: 0, context: stamped });
@@ -47,7 +48,7 @@ describe('the signal an append raises', () => {
     const stop = signal.listen((playbookKey) => {
       heard.push(playbookKey);
     });
-    const store = await aStoreSignalling(signal);
+    const store = await aStoreSignalling(sqlite, signal);
     await store.append('playbook/acme/alpha/notes', one, { expectedVersion: 0, context: stamped });
 
     const conflicted = await outcomeOf(
@@ -63,14 +64,14 @@ describe('the signal an append raises', () => {
   });
 });
 
-describe('the signal of the process', () => {
+describe.each(sqliteDrivers)('the signal of the process, on SQLite through $through', (sqlite) => {
   it('is the signal when none is given, so every ledger of the process raises it', async () => {
     const heard: string[] = [];
     const stop = streamAppends.listen((playbookKey) => {
       heard.push(playbookKey);
     });
     onTestFinished(stop);
-    const { ledger, dispose } = await openLedgerWith(ledgerLayer({ fileName: ':memory:' }));
+    const { ledger, dispose } = await openLedgerWith(sqlite.ledgerLayer({ fileName: ':memory:' }));
     onTestFinished(dispose);
 
     await Effect.runPromise(ledger.execute('playbook/acme/gamma/notes', happenings, [noted('noted')]));

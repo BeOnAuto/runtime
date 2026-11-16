@@ -171,6 +171,55 @@ describe('a name used at both scopes', () => {
   });
 });
 
+const sameInEveryScope = {
+  ...probe,
+  name: 'count_shapes',
+  inputSchema: Empty,
+  handle: () => Effect.succeed({}),
+};
+
+const countShapesInTheOrg = defineQuery('org', {
+  ...sameInEveryScope,
+  route: { method: 'GET', path: '/shapes' },
+  sameInEveryScope: true,
+});
+
+const countShapesInAPlaybook = defineQuery('playbook', {
+  ...sameInEveryScope,
+  route: { method: 'GET', path: '/shapes' },
+  sameInEveryScope: true,
+});
+
+const countShapesOfThePlaybook = defineQuery('playbook', {
+  ...sameInEveryScope,
+  route: { method: 'GET', path: '/shapes' },
+});
+
+describe('an operation the same in every scope', () => {
+  it('is listed at both scopes, each declaring it', () => {
+    const catalog = makeCatalog([countShapesInTheOrg, countShapesInAPlaybook]);
+
+    expect(catalog.operations.map(({ scope, name }) => `${scope}:${name}`)).toEqual([
+      'org:count_shapes',
+      'playbook:count_shapes',
+    ]);
+  });
+
+  it('is refused where the operation of the same name at the other scope does not declare it', () => {
+    expect(() => makeCatalog([countShapesInTheOrg, countShapesOfThePlaybook])).toThrow(
+      'The operation name count_shapes is used at both scopes, so both must declare it is the same in every scope, or neither',
+    );
+  });
+
+  it('is refused where it is served at one scope alone', () => {
+    const refusal =
+      'The operation count_shapes declares it is the same in every scope, so it must be served at both scopes';
+
+    expect(() => makeCatalog([countShapesInTheOrg])).toThrow(refusal);
+    expect(() => makeCatalog([countShapesInAPlaybook])).toThrow(refusal);
+  });
+});
+
 describe('the routes of a catalog', () => {
   it('may not repeat a method and path, whatever their parameters are called', () => {
     expect(() => makeCatalog([getNote, getNoteById])).toThrow(

@@ -131,7 +131,7 @@ const listings: readonly Listing[] = [
   {
     endpoint: 'playbook',
     path: '/orgs/acme/playbooks/alpha/mcp',
-    most: 43_700,
+    most: 44_600,
     servingWith: (extra) => ({ operations: playbookToolsFilled(32, extra, longestArgument) }),
   },
 ];

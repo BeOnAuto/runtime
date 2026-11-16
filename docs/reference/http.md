@@ -47,7 +47,7 @@ These five need no key, and neither does [content at a signed address](#content-
 
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
-- Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`, and `make_comment_in_org`, `list_comments_in_org`, `resolve_comment_in_org` and `reopen_comment_in_org` for the org's own comments. Its summary is its title. Its tag names the resource it acts on.
+- Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`, `make_comment_in_org`, `list_comments_in_org`, `resolve_comment_in_org` and `reopen_comment_in_org` for the org's own comments, and `list_generation_models_in_org` for the org's `list_generation_models`. Its summary is its title. Its tag names the resource it acts on.
 - Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the six routes of Studio's connection page, `read_link`, `approve`, `give_credential`, `give_client`, `start` and `finish`; `get_connection`, `set_connection_playbooks`, `set_connection_signing_secret`, `remove_connection_signing_secret` and `list_providers`; `get_run_history`, `get_playbook_analytics`, `render_page`, `render_playbook_page` and `validate`; `make_comment` and `make_comment_in_org`, and `reopen_comment` and `reopen_comment_in_org`; `list_org_changes`, `list_playbook_changes`, `list_activity` and `mark_activity_seen`; `list_role_assignments`, `assign_role` and `unassign_role`; `transcribe` and `get_voice`; `get_content`, the route of [content at a signed address](#content-at-a-signed-address); and `get_license`, `activate_allocation` and `report_allocation`.
 - Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
@@ -179,14 +179,15 @@ A part adds no parameter: a comment on a part opens the page of its thing, and S
 
 ## Models
 
-| Operation                | Method and route                       | Permission | Input               |
-| ------------------------ | -------------------------------------- | ---------- | ------------------- |
-| `list_models`            | `GET /v1/orgs/{org}/models`            | `org:read` | Optional `provider` |
-| `list_generation_models` | `GET /v1/orgs/{org}/generation-models` | `org:read` | Optional `kind`     |
+| Operation                | Method and route                                            | Permission      | Input               |
+| ------------------------ | ----------------------------------------------------------- | --------------- | ------------------- |
+| `list_models`            | `GET /v1/orgs/{org}/models`                                 | `org:read`      | Optional `provider` |
+| `list_generation_models` | `GET /v1/orgs/{org}/generation-models`                      | `org:read`      | Optional `kind`     |
+| `list_generation_models` | `GET /v1/orgs/{org}/playbooks/{playbook}/generation-models` | `playbook:read` | Optional `kind`     |
 
 `list_models` lists the models a reasoning function may name. `provider` is a provider prefix of 1 to 32 lowercase letters, digits or hyphens, starting with a letter. The result is the same over HTTP and MCP; [Model information](mcp.md#model-information) describes its fields, aliases, wildcard entries and incomplete lists.
 
-`list_generation_models` lists the models a generation function may name, with the gateways it names them through. `kind` is `image`, `audio` or `video`. [Generation models](mcp.md#generation-models) describes its result.
+`list_generation_models` lists the models a generation function may name, with the gateways it names them through. It answers the same at the org's route and at a playbook's, since the catalogue is the server's. `kind` is `image`, `audio` or `video`. [Generation models](mcp.md#generation-models) describes its result.
 
 ## Voice
 

@@ -30,7 +30,7 @@ function routeShapeOf(registration: RouteRegistration): string {
     .join('/');
 }
 
-function scopedNameOf({ scope, name }: RouteRegistration): string {
+function scopedNameOf({ scope, name }: Pick<RouteRegistration, 'scope' | 'name'>): string {
   return `${scope}:${name}`;
 }
 
@@ -60,7 +60,25 @@ function twinProblem(org: RouteRegistration, playbook: RouteRegistration): strin
   if (!org.targetsPlaybook && !takesAndAnswersAlike(org, playbook)) {
     return 'so the org operation must take the playbook it answers for, or take, answer and be served as the playbook operation is';
   }
+  if ((org.sameInEveryScope === true) !== (playbook.sameInEveryScope === true)) {
+    return 'so both must declare it is the same in every scope, or neither';
+  }
   return org.kind === playbook.kind ? undefined : `so both must be of one kind, and the org one is a ${org.kind}`;
+}
+
+const otherScope: Readonly<Record<OperationScope, OperationScope>> = { org: 'playbook', playbook: 'org' };
+
+function requireEveryScopeServed(registrations: readonly RouteRegistration[]): void {
+  const scopedNames = new Set(registrations.map((registration) => scopedNameOf(registration)));
+  const alone = registrations.find(
+    ({ sameInEveryScope, scope, name }) =>
+      sameInEveryScope === true && !scopedNames.has(scopedNameOf({ scope: otherScope[scope], name })),
+  );
+  if (alone !== undefined) {
+    throw new Error(
+      `The operation ${alone.name} declares it is the same in every scope, so it must be served at both scopes`,
+    );
+  }
 }
 
 function requireTwinsAlike(registrations: readonly RouteRegistration[]): void {
@@ -92,6 +110,7 @@ export function makeCatalog(operations: readonly Registered[]): Catalog {
   const registrations = operations.map(({ registration }) => registration);
   requireUniqueNames(registrations);
   requireTwinsAlike(registrations);
+  requireEveryScopeServed(registrations);
   requireUniqueRoutes(registrations);
   const byScope: { readonly [S in OperationScope]: readonly RouteRegistration<S>[] } = {
     org: registrations.filter((registration) => registration.scope === 'org'),

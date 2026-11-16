@@ -22,7 +22,7 @@ For hosted Auto, use `https://mcp.on.auto`. It serves the caller's organization 
 | -------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `/mcp`                                 | The caller's own org and, through a `playbook` argument, its playbooks | Every tool. A tool that works inside a playbook takes a required `playbook` argument; `search`, `list_comments` and `resolve_comment` take it as an optional one                                 |
 | `/orgs/{org}/mcp`                      | One org's playbooks                                                    | Playbook management, `list_models`, `list_generation_models`, `search`, `list_comments` and `resolve_comment` with `playbook` optional, the connection tools, `activate_license` and `get_guide` |
-| `/orgs/{org}/playbooks/{playbook}/mcp` | One playbook                                                           | The tools that work inside a playbook, with no `playbook` argument, and `search` and `get_guide`                                                                                                 |
+| `/orgs/{org}/playbooks/{playbook}/mcp` | One playbook                                                           | The tools that work inside a playbook, with no `playbook` argument, and `search`, `list_generation_models` and `get_guide`                                                                       |
 | `/directory`                           | The caller's own org, as `/mcp` does                                   | The tools of `/mcp`, less what the directory listing leaves out, listed below                                                                                                                    |
 
 - Every endpoint uses streamable HTTP without sessions and accepts `POST`.
@@ -123,7 +123,7 @@ A client that honours the hints asks the person before it calls a tool marked de
 
 ### Playbooks and models
 
-These tools are listed on `/mcp` and the org endpoint. Their routes are relative to `/v1/orgs/{org}`.
+These tools are listed on `/mcp` and the org endpoint, and `list_generation_models` on a playbook endpoint too. Their routes are relative to `/v1/orgs/{org}`.
 
 | Tool                     | HTTP operation                       | What it is for                                                                              |
 | ------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------- |
@@ -466,7 +466,7 @@ This catalog lists language models, not MCP tools. `search` finds the tools of t
 
 ## Generation models
 
-`list_generation_models` lists the models a [generation function](generation-format.md) may name, from the catalogue the server holds, so an agent or Studio shows the models of the runtime it talks to rather than those of another release. It requires `org:read`, and it only reads: it reads the catalogue the server read as it started, and asks no gateway. It is served on `/mcp` and the org endpoint, and is not available on a playbook-scoped endpoint. Over HTTP it is [`GET /v1/orgs/{org}/generation-models`](http.md#models), which returns the same result.
+`list_generation_models` lists the models a [generation function](generation-format.md) may name, from the catalogue the server holds, so an agent or Studio shows the models of the runtime it talks to rather than those of another release. It only reads: it reads the catalogue the server read as it started, and asks no gateway, so it answers the same in every org and playbook of the server. It is served on `/mcp` and the org endpoint, where it requires `org:read`, and on a playbook endpoint, where it requires `playbook:read`, the permission to read that playbook; on none of them does it take a `playbook`. Over HTTP it is [`GET /v1/orgs/{org}/generation-models`](http.md#models), or `GET /v1/orgs/{org}/playbooks/{playbook}/generation-models` under `playbook:read`, which return the same result.
 
 Its optional `kind` input, `image`, `audio` or `video`, lists only the models that produce that kind.
 

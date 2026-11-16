@@ -21,18 +21,84 @@ const getNoteOfTheOrg = defineQuery('org', {
   plainLanguage: plainly('read the note'),
 });
 
+const countingShapes = {
+  name: 'count_shapes',
+  title: 'Count shapes',
+  description:
+    'Counts the shapes this server draws. Every org and playbook of the server is answered the same. Use it before a note names a shape.',
+  inputSchema: Schema.Struct({
+    kind: Schema.optionalKey(Schema.String.annotate({ description: 'Counts only the shapes of this kind' })),
+  }),
+  outputSchema: Schema.Struct({ shapes: Schema.Int }),
+  reasons: [],
+  handle: () => Effect.succeed({ shapes: 3 }),
+  plainLanguage: plainly('count the shapes'),
+};
+
+const everyFieldListedOf = Schema.decodeUnknownSync(
+  Schema.Struct({
+    tools: Schema.Array(
+      Schema.StructWithRest(Schema.Struct({ name: Schema.String }), [Schema.Record(Schema.String, Schema.Unknown)]),
+    ),
+  }),
+);
+
+const countShapesOfTheOrgAlone = defineQuery('org', {
+  ...countingShapes,
+  route: { method: 'GET', path: '/shapes' },
+});
+
+const countShapesInTheOrg = defineQuery('org', {
+  ...countingShapes,
+  route: { method: 'GET', path: '/shapes' },
+  sameInEveryScope: true,
+});
+
+const countShapesInAPlaybook = defineQuery('playbook', {
+  ...countingShapes,
+  route: { method: 'GET', path: '/shapes' },
+  sameInEveryScope: true,
+});
+
 let server: OperationServer;
 let listening: Listening;
+let alone: OperationServer;
+let everyScope: OperationServer;
+let listeningAlone: Listening;
+let listeningEveryScope: Listening;
 
 beforeAll(async () => {
   server = await operationServer({ operations: [...notebookOperations, listNotesOfTheOrg, getNoteOfTheOrg] });
-  listening = await listenOnLoopback(server.handler);
+  alone = await operationServer({ operations: [...notebookOperations, countShapesOfTheOrgAlone] });
+  everyScope = await operationServer({
+    operations: [...notebookOperations, countShapesInTheOrg, countShapesInAPlaybook],
+  });
+  [listening, listeningAlone, listeningEveryScope] = await Promise.all([
+    listenOnLoopback(server.handler),
+    listenOnLoopback(alone.handler),
+    listenOnLoopback(everyScope.handler),
+  ]);
 });
 
 afterAll(async () => {
-  await listening.close();
-  await server.runtime.dispose();
+  await Promise.all([listening, listeningAlone, listeningEveryScope].map((each) => each.close()));
+  await Promise.all([server, alone, everyScope].map(({ runtime }) => runtime.dispose()));
 });
+
+function onMcpOf<T>(origin: string, path: string, use: (session: McpSession) => Promise<T>): Promise<T> {
+  return withMcpSession(
+    'current revision',
+    { url: `${origin}${path}`, headers: { authorization: `Bearer ${acmeAdmin.key}` } },
+    use,
+  );
+}
+
+function countShapesListedOn(origin: string, path: string): Promise<string | undefined> {
+  return onMcpOf(origin, path, async (session) => {
+    const tool = everyFieldListedOf(await session.listTools()).tools.find(({ name }) => name === 'count_shapes');
+    return tool === undefined ? undefined : JSON.stringify(tool);
+  });
+}
 
 function onMcp<T>(path: string, use: (session: McpSession) => Promise<T>): Promise<T> {
   return withMcpSession(
@@ -76,6 +142,38 @@ describe('a name used by an org operation and a playbook operation', () => {
     expect([answered.inOrg.structuredContent, answered.inPlaybook.structuredContent]).toEqual([
       { in_words: 'Done: list the notes.', kept_for: 'the org' },
       { in_words: 'Done: list the notes.', kept_for: 'beta' },
+    ]);
+  });
+});
+
+describe('an operation the same in every scope', () => {
+  it('is listed on /mcp and on the org endpoint byte for byte as the org operation alone is, and as the same tool on a playbook endpoint, nowhere with a playbook argument', async () => {
+    const [ownAlone, orgAlone, own, org, playbook, playbookAlone] = await Promise.all([
+      countShapesListedOn(listeningAlone.origin, '/mcp'),
+      countShapesListedOn(listeningAlone.origin, '/orgs/acme/mcp'),
+      countShapesListedOn(listeningEveryScope.origin, '/mcp'),
+      countShapesListedOn(listeningEveryScope.origin, '/orgs/acme/mcp'),
+      countShapesListedOn(listeningEveryScope.origin, '/orgs/acme/playbooks/alpha/mcp'),
+      countShapesListedOn(listeningAlone.origin, '/orgs/acme/playbooks/alpha/mcp'),
+    ]);
+
+    expect([own, org]).toEqual([ownAlone, orgAlone]);
+    expect(playbook).toBe(org);
+    expect(playbookAlone).toBeUndefined();
+    expect(own).not.toContain('"playbook"');
+  });
+
+  it('answers the same on every endpoint', async () => {
+    const answered = await Promise.all(
+      ['/mcp', '/orgs/acme/mcp', '/orgs/acme/playbooks/alpha/mcp'].map((path) =>
+        onMcpOf(listeningEveryScope.origin, path, (session) => session.callTool('count_shapes', { kind: 'square' })),
+      ),
+    );
+
+    expect(answered.map(({ structuredContent }) => structuredContent)).toEqual([
+      { in_words: 'Done: count the shapes.', shapes: 3 },
+      { in_words: 'Done: count the shapes.', shapes: 3 },
+      { in_words: 'Done: count the shapes.', shapes: 3 },
     ]);
   });
 });

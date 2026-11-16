@@ -1,5 +1,5 @@
-import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { EmmettInstrumentation } from '@event-driven-io/emmett/otel';
+import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { runTallies } from '@on.auto/operations/testing';
 import { context } from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
@@ -8,7 +8,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { inTransactionOf } from '../event-store.ts';
 import { pooledOptionsOf, sqliteEventStore } from '../sqlite-event-store.ts';
-import { temporaryDatabase } from '../testing/temporary-database.ts';
+import { onEachSQLiteDriver, type OnASQLiteDriver } from '../testing/sqlite-drivers.ts';
 
 type Pool = ReturnType<typeof pooledOptionsOf>['pool'];
 
@@ -44,20 +44,18 @@ interface Ledger {
   readonly handedToTheWriter: Promise<void>;
 }
 
-async function aLedgerFileWithAProjection(): Promise<Ledger> {
-  const { fileName, remove } = temporaryDatabase();
-  onTestFinished(remove);
-  const { pool } = pooledOptionsOf(() => ({ driver: sqlite3EventStoreDriver, fileName }));
+async function aLedgerFileWithAProjection({ optionsOf, aDatabaseFile }: OnASQLiteDriver): Promise<Ledger> {
+  const fileName = aDatabaseFile();
+  const { pool } = pooledOptionsOf(() => optionsOf(fileName));
   const handing = { next: Promise.withResolvers<void>() };
   const withConnection: Pool['withConnection'] = (handle) => {
     const answer = pool.withConnection(handle, { readonly: false });
     handing.next.resolve();
     return answer;
   };
-  const store = sqliteEventStore(
-    () => ({ driver: sqlite3EventStoreDriver, fileName, pool: { ...pool, withConnection } }),
-    { runOutcomes: runTallies },
-  );
+  const store = sqliteEventStore(() => ({ ...optionsOf(fileName), pool: { ...pool, withConnection } }), {
+    runOutcomes: runTallies,
+  });
   await store.migrate();
   onTestFinished(() => store.close());
   handing.next = Promise.withResolvers<void>();
@@ -107,25 +105,30 @@ async function parentsOfAnAppendUnderACaller(
   };
 }
 
-describe('the spans of an append to a ledger on SQLite, made under a span of its caller', () => {
-  it('sit under the append and the append under its caller where its write waits behind a transaction of the writer', async () => {
-    const tracing = traced();
-    const ledger = await aLedgerFileWithAProjection();
-    const letGo = await ledger.heldUntilLetGo();
+const sqliteDrivers = onEachSQLiteDriver(() => nodeSqliteDumboDriver);
 
-    const { ofTheAppend, ofItsProjection, expected } = await parentsOfAnAppendUnderACaller(ledger, tracing, letGo);
+describe.each(sqliteDrivers)(
+  'the spans of an append to a ledger on SQLite through $through, made under a span of its caller',
+  (sqlite) => {
+    it('sit under the append and the append under its caller where its write waits behind a transaction of the writer', async () => {
+      const tracing = traced();
+      const ledger = await aLedgerFileWithAProjection(sqlite);
+      const letGo = await ledger.heldUntilLetGo();
 
-    expect([ofTheAppend, ofItsProjection]).toEqual(expected);
-  });
+      const { ofTheAppend, ofItsProjection, expected } = await parentsOfAnAppendUnderACaller(ledger, tracing, letGo);
 
-  it('sit under the append and the append under its caller where the writer is idle', async () => {
-    const tracing = traced();
-    const ledger = await aLedgerFileWithAProjection();
+      expect([ofTheAppend, ofItsProjection]).toEqual(expected);
+    });
 
-    const { ofTheAppend, ofItsProjection, expected } = await parentsOfAnAppendUnderACaller(ledger, tracing, () =>
-      Promise.resolve(),
-    );
+    it('sit under the append and the append under its caller where the writer is idle', async () => {
+      const tracing = traced();
+      const ledger = await aLedgerFileWithAProjection(sqlite);
 
-    expect([ofTheAppend, ofItsProjection]).toEqual(expected);
-  });
-});
+      const { ofTheAppend, ofItsProjection, expected } = await parentsOfAnAppendUnderACaller(ledger, tracing, () =>
+        Promise.resolve(),
+      );
+
+      expect([ofTheAppend, ofItsProjection]).toEqual(expected);
+    });
+  },
+);

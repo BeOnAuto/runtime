@@ -48,6 +48,10 @@ export async function generationServedBy(
 ): Promise<ServedGeneration> {
   const catalog = Result.getOrThrow(await readGenerationCatalog(shippedFiles));
   const ledger = runtimeLedger(runtime);
+  const listed = defineListGenerationModels(
+    catalog,
+    models.gateways.map(({ name }) => name),
+  );
   const { signedContentAddress } = contentAddressesUnder(contentAddressKey);
   const ports = {
     gateways: models.gateways,
@@ -59,13 +63,7 @@ export async function generationServedBy(
   };
   return {
     capability: makeGenerationFunctionAdapter({ ...ports, catalog, ownKey: true }),
-    operations: [
-      defineGetAsset(ports),
-      defineListGenerationModels(
-        catalog,
-        models.gateways.map(({ name }) => name),
-      ),
-    ],
+    operations: [defineGetAsset(ports), listed.org, listed.playbook],
     dueWork: [assetsDue({ ledger }), generationsDue(ports)],
   };
 }

@@ -27,6 +27,7 @@ export interface RegisteredFieldsOf<S extends OperationScope, K extends Operatio
   readonly enrolment?: true;
   readonly repeatable: boolean;
   readonly whileRetired?: true;
+  readonly sameInEveryScope?: true;
   readonly permissions: readonly Permission[];
   readonly reasons: readonly DeclarableReason[];
   readonly input: JsonSchemaDocument;

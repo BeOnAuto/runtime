@@ -38,6 +38,7 @@
     "sqlite3": "6.0.1"
   },
   "devDependencies": {
+    "@on.auto/node-sqlite": "workspace:*",
     "@on.auto/secrets": "workspace:*",
     "@opentelemetry/api": "1.9.1",
     "@opentelemetry/context-async-hooks": "2.9.0",

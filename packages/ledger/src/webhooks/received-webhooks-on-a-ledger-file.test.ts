@@ -1,3 +1,4 @@
+import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -7,12 +8,13 @@ import {
   committed,
   exitOf,
   heldUntilLetGo,
-  onAFile,
-  places,
+  onAFileThrough,
+  placesThrough,
   rolledBack,
 } from '../secrets/held-ledger-file.ts';
 import { LedgerNotOpen } from '../secrets/sqlite-ledger-file.ts';
 import { openConnectionWith } from '../testing/open-ledger.ts';
+import { onEachSQLiteDriver } from '../testing/sqlite-drivers.ts';
 import type { WebhookReceipt } from './received-webhooks.ts';
 
 const longerThanSQLiteWaitsForItsLock = 5_500;
@@ -31,53 +33,58 @@ function receiptFor(takenFor: string): WebhookReceipt {
   };
 }
 
-describe('the webhooks received of a ledger file on SQLite, as they are taken', () => {
-  it(
-    'take an id while the writer of the ledger holds the file past the 5 s a statement waits for its lock, once it lets go',
-    { timeout: 20_000 },
-    async () => {
-      const { received, appended } = await anOpenLedger(onAFile);
-      const letGo = await heldUntilLetGo(appended, committed);
+const sqliteDrivers = onEachSQLiteDriver(() => nodeSqliteDumboDriver);
 
-      const taken = Effect.runPromiseExit(received.taken(receiptFor('onboarding/run-1')));
-      await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
-      await letGo();
+describe.each(sqliteDrivers)(
+  'the webhooks received of a ledger file on SQLite through $through, as they are taken',
+  (sqlite) => {
+    it(
+      'take an id while the writer of the ledger holds the file past the 5 s a statement waits for its lock, once it lets go',
+      { timeout: 20_000 },
+      async () => {
+        const { received, appended } = await anOpenLedger(onAFileThrough(sqlite));
+        const letGo = await heldUntilLetGo(appended, committed);
 
-      expect(await taken).toEqual(Exit.succeed('onboarding/run-1'));
-    },
-  );
+        const taken = Effect.runPromiseExit(received.taken(receiptFor('onboarding/run-1')));
+        await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
+        await letGo();
 
-  it('keep an id taken while a transaction of the ledger is open, though that transaction is rolled back', async () => {
-    const { received, appended } = await anOpenLedger(onAFile);
-    const letGo = await heldUntilLetGo(appended, rolledBack);
+        expect(await taken).toEqual(Exit.succeed('onboarding/run-1'));
+      },
+    );
 
-    const taking = Effect.runPromiseExit(received.taken(receiptFor('onboarding/run-1')));
-    const transaction = await letGo();
-    const taken = await taking;
-    const takenAgain = await Effect.runPromise(received.taken(receiptFor('onboarding/run-2')));
+    it('keep an id taken while a transaction of the ledger is open, though that transaction is rolled back', async () => {
+      const { received, appended } = await anOpenLedger(onAFileThrough(sqlite));
+      const letGo = await heldUntilLetGo(appended, rolledBack);
 
-    expect([Exit.isFailure(transaction), taken, takenAgain]).toEqual([
-      true,
-      Exit.succeed('onboarding/run-1'),
-      'onboarding/run-1',
-    ]);
-  });
+      const taking = Effect.runPromiseExit(received.taken(receiptFor('onboarding/run-1')));
+      const transaction = await letGo();
+      const taken = await taking;
+      const takenAgain = await Effect.runPromise(received.taken(receiptFor('onboarding/run-2')));
 
-  it('are refused, naming the file, before its ledger is open and once it is closed', async () => {
-    const { file, named } = aLedgerFile(onAFile);
-    const before = await Effect.runPromiseExit(file.receivedWebhooks);
-    const { dispose } = await openConnectionWith(file.ledgerLayer());
-    await dispose();
+      expect([Exit.isFailure(transaction), taken, takenAgain]).toEqual([
+        true,
+        Exit.succeed('onboarding/run-1'),
+        'onboarding/run-1',
+      ]);
+    });
 
-    const after = await Effect.runPromiseExit(file.receivedWebhooks);
+    it('are refused, naming the file, before its ledger is open and once it is closed', async () => {
+      const { file, named } = aLedgerFile(onAFileThrough(sqlite));
+      const before = await Effect.runPromiseExit(file.receivedWebhooks);
+      const { dispose } = await openConnectionWith(file.ledgerLayer());
+      await dispose();
 
-    const refusal = `The webhooks received of the ledger in ${named} run on the pool its ledger opens, and its ledger is not open`;
-    expect([before, after]).toEqual([Exit.die(new LedgerNotOpen(refusal)), Exit.die(new LedgerNotOpen(refusal))]);
-  });
-});
+      const after = await Effect.runPromiseExit(file.receivedWebhooks);
 
-describe.each(places)(
-  'the webhooks received of a ledger on SQLite, on $place, taken inside a transaction of the ledger',
+      const refusal = `The webhooks received of the ledger in ${named} run on the pool its ledger opens, and its ledger is not open`;
+      expect([before, after]).toEqual([Exit.die(new LedgerNotOpen(refusal)), Exit.die(new LedgerNotOpen(refusal))]);
+    });
+  },
+);
+
+describe.each(sqliteDrivers.flatMap((sqlite) => placesThrough(sqlite)))(
+  'the webhooks received of a ledger on SQLite, on $place through $through, taken inside a transaction of the ledger',
   (place) => {
     it('keep an id whose take is started inside a transaction of the ledger, once it ends, though it is rolled back', async () => {
       const { received, appended } = await anOpenLedger(place);

@@ -59,6 +59,7 @@ const definitionTools = [
   'answer_interaction',
   'list_interactions',
   'get_asset',
+  'list_generation_models',
   'send_run_event',
 ];
 

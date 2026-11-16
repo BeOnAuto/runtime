@@ -1,10 +1,10 @@
-import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
+import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { RecordedStore } from '../event-store.ts';
-import { planOf } from '../recorded/sqlite-checks.ts';
 import { sqliteEventStore } from '../sqlite-event-store.ts';
+import { onEachSQLiteDriver, type OnASQLiteDriver } from '../testing/sqlite-drivers.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import type { RecordedKeys } from './recorded-keys.ts';
 
@@ -33,17 +33,17 @@ interface Planned {
   readonly steps: readonly PlanStep[];
 }
 
-async function aMigratedFile(): Promise<string> {
+async function aMigratedFile({ optionsOf }: OnASQLiteDriver): Promise<string> {
   const { fileName, remove } = temporaryDatabase();
   onTestFinished(remove);
-  const store = sqliteEventStore(() => ({ driver: sqlite3EventStoreDriver, fileName }));
+  const store = sqliteEventStore(() => optionsOf(fileName));
   await store.migrate();
   await store.close();
   return fileName;
 }
 
-async function plannedOn(read: (store: RecordedStore) => Promise<unknown>): Promise<Planned> {
-  const text = await planOf(await aMigratedFile(), read);
+async function plannedOn(sqlite: OnASQLiteDriver, read: (store: RecordedStore) => Promise<unknown>): Promise<Planned> {
+  const text = await sqlite.planOf(await aMigratedFile(sqlite), read);
   return { text, steps: Schema.decodeUnknownSync(Schema.fromJsonString(PlanSteps))(text).flatMap(({ rows }) => rows) };
 }
 
@@ -52,49 +52,54 @@ function underEachWalk({ steps }: Planned): readonly string[] {
   return steps.filter(({ parent }) => walks.has(parent)).map(({ detail }) => detail);
 }
 
-describe('the plans of the reads over keys on SQLite', () => {
-  it("read one key by equality, as before, and walk several keys in turn, each through the key's index in order, bounded", async () => {
-    const one = await plannedOn((store) =>
-      store.readRecordedOfKeys(ofOneKey, { kind: 'everything' }, { order: 'desc', limit: 5 }),
-    );
-    const several = await plannedOn((store) =>
-      store.readRecordedOfKeys(ofTwoKeys, { kind: 'everything' }, { order: 'desc', limit: 5 }),
-    );
-    const since = await plannedOn((store) =>
-      store.readRecordedOfKeys(
-        ofTwoKeys,
-        { kind: 'everything' },
-        { order: 'asc', limit: 5, since: '2026-11-01T00:00:00.000Z' },
-      ),
-    );
+describe.each(onEachSQLiteDriver(() => nodeSqliteDumboDriver))(
+  'the plans of the reads over keys on SQLite through $through',
+  (sqlite) => {
+    it("read one key by equality, as before, and walk several keys in turn, each through the key's index in order, bounded", async () => {
+      const one = await plannedOn(sqlite, (store) =>
+        store.readRecordedOfKeys(ofOneKey, { kind: 'everything' }, { order: 'desc', limit: 5 }),
+      );
+      const several = await plannedOn(sqlite, (store) =>
+        store.readRecordedOfKeys(ofTwoKeys, { kind: 'everything' }, { order: 'desc', limit: 5 }),
+      );
+      const since = await plannedOn(sqlite, (store) =>
+        store.readRecordedOfKeys(
+          ofTwoKeys,
+          { kind: 'everything' },
+          { order: 'asc', limit: 5, since: '2026-11-01T00:00:00.000Z' },
+        ),
+      );
 
-    expect(one.text).toContain('USING INDEX ledger_messages_by_playbook (<expr>=?)');
-    expect(one.text).not.toContain('LIST SUBQUERY');
-    expect(underEachWalk(several)).toEqual(['SEARCH emt_messages USING INDEX ledger_messages_by_playbook (<expr>=?)']);
-    expect(underEachWalk(since)).toEqual([
-      'SEARCH emt_messages USING INDEX ledger_messages_by_playbook_and_time (<expr>=? AND created>?)',
-    ]);
-  });
+      expect(one.text).toContain('USING INDEX ledger_messages_by_playbook (<expr>=?)');
+      expect(one.text).not.toContain('LIST SUBQUERY');
+      expect(underEachWalk(several)).toEqual([
+        'SEARCH emt_messages USING INDEX ledger_messages_by_playbook (<expr>=?)',
+      ]);
+      expect(underEachWalk(since)).toEqual([
+        'SEARCH emt_messages USING INDEX ledger_messages_by_playbook_and_time (<expr>=? AND created>?)',
+      ]);
+    });
 
-  it('walk the runs of several keys through the index of first messages by kind, and a run of several keys through the index of each stream', async () => {
-    const runs = await plannedOn((store) =>
-      store.readRecordedOfKeys(ofTwoKeys, { kind: 'runs' }, { order: 'desc', limit: 5 }),
-    );
-    const run = await plannedOn((store) =>
-      store.readRecordedOfKeys(ofTwoKeys, { kind: 'run', run: 'r1' }, { order: 'asc', limit: 5 }),
-    );
+    it('walk the runs of several keys through the index of first messages by kind, and a run of several keys through the index of each stream', async () => {
+      const runs = await plannedOn(sqlite, (store) =>
+        store.readRecordedOfKeys(ofTwoKeys, { kind: 'runs' }, { order: 'desc', limit: 5 }),
+      );
+      const run = await plannedOn(sqlite, (store) =>
+        store.readRecordedOfKeys(ofTwoKeys, { kind: 'run', run: 'r1' }, { order: 'asc', limit: 5 }),
+      );
 
-    expect(underEachWalk(runs)).toEqual(['SEARCH emt_messages USING INDEX ledger_first_messages_by_kind (<expr>=?)']);
-    expect(underEachWalk(run)).toEqual(['SEARCH emt_messages USING INDEX ledger_messages_by_stream (stream_id=?)']);
-  });
+      expect(underEachWalk(runs)).toEqual(['SEARCH emt_messages USING INDEX ledger_first_messages_by_kind (<expr>=?)']);
+      expect(underEachWalk(run)).toEqual(['SEARCH emt_messages USING INDEX ledger_messages_by_stream (stream_id=?)']);
+    });
 
-  it("read the tree of a run and one event through the org's indexes", async () => {
-    const tree = await plannedOn((store) =>
-      store.readRecordedOfKeys(ofTwoKeys, { kind: 'correlated', correlation: 'r1' }, { order: 'asc', limit: 5 }),
-    );
-    const event = await plannedOn((store) => store.readRecordedEventOfKeys(ofTwoKeys, 'message-1'));
+    it("read the tree of a run and one event through the org's indexes", async () => {
+      const tree = await plannedOn(sqlite, (store) =>
+        store.readRecordedOfKeys(ofTwoKeys, { kind: 'correlated', correlation: 'r1' }, { order: 'asc', limit: 5 }),
+      );
+      const event = await plannedOn(sqlite, (store) => store.readRecordedEventOfKeys(ofTwoKeys, 'message-1'));
 
-    expect(tree.text).toContain('USING INDEX ledger_messages_by_org_and_correlation (<expr>=? AND <expr>=?)');
-    expect(event.text).toContain('USING INDEX ledger_messages_by_org_and_id (<expr>=? AND message_id=?)');
-  });
-});
+      expect(tree.text).toContain('USING INDEX ledger_messages_by_org_and_correlation (<expr>=? AND <expr>=?)');
+      expect(event.text).toContain('USING INDEX ledger_messages_by_org_and_id (<expr>=? AND message_id=?)');
+    });
+  },
+);

@@ -16,7 +16,7 @@ export const mostListingBytes: Readonly<Record<McpEndpoint, number>> = {
   'own org': 67_200,
   directory: 64_800,
   org: 26_200,
-  playbook: 43_700,
+  playbook: 44_600,
 };
 
 export const mostGuideBytes = 65_536;

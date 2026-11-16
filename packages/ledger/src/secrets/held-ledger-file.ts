@@ -1,18 +1,20 @@
 import { randomUUID } from 'node:crypto';
 
-import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import type { SecretRows } from '@on.auto/secrets';
 import { Effect, type Cause, type Exit } from 'effect';
 import { onTestFinished } from 'vitest';
 
-import { modestConnections } from '../sqlite3.ts';
+import { modestConnections } from '../connection/sqlite-file-ledger.ts';
 import { stamped } from '../testing/happenings.ts';
 import { openConnectionWith } from '../testing/open-ledger.ts';
+import type { OnASQLiteDriver, SQLiteFileOptions } from '../testing/sqlite-drivers.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { sqliteLedgerFileOn, type SQLiteLedgerFile } from './sqlite-ledger-file.ts';
 
 interface APlace {
   readonly place: string;
+  readonly through: string;
+  readonly optionsOf: (fileName: string) => SQLiteFileOptions;
   readonly fileName: () => string;
   readonly inMemory: boolean;
 }
@@ -23,9 +25,17 @@ function aTemporaryFile(): string {
   return fileName;
 }
 
-export const onAFile: APlace = { place: 'a file', fileName: aTemporaryFile, inMemory: false };
+export function onAFileThrough({ through, optionsOf }: OnASQLiteDriver): APlace {
+  return { place: 'a file', through, optionsOf, fileName: aTemporaryFile, inMemory: false };
+}
 
-export const places: readonly APlace[] = [onAFile, { place: ':memory:', fileName: () => ':memory:', inMemory: true }];
+export function placesThrough(sqlite: OnASQLiteDriver): readonly APlace[] {
+  const { through, optionsOf } = sqlite;
+  return [
+    onAFileThrough(sqlite),
+    { place: ':memory:', through, optionsOf, fileName: () => ':memory:', inMemory: true },
+  ];
+}
 
 type InsideTheTransaction = () => Promise<void>;
 
@@ -40,15 +50,14 @@ interface ALedgerFile {
   readonly inside: { work: InsideTheTransaction };
 }
 
-export function aLedgerFile({ fileName, inMemory }: APlace): ALedgerFile {
+export function aLedgerFile({ optionsOf, fileName, inMemory }: APlace): ALedgerFile {
   const named = fileName();
   const inside = { work: committed };
   return {
     file: sqliteLedgerFileOn(
       {
         optionsOf: () => ({
-          driver: sqlite3EventStoreDriver,
-          fileName: named,
+          ...optionsOf(named),
           connectionOptions: modestConnections,
           hooks: { onBeforeCommit: () => inside.work() },
         }),

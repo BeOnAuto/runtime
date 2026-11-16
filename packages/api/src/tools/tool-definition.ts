@@ -69,7 +69,11 @@ export function twinsIn(
   orgRegistrations: readonly Registration<'org'>[],
   playbookRegistrations: readonly Registration<'playbook'>[],
 ): Twins {
-  const named = new Set(orgRegistrations.filter(({ targetsPlaybook }) => !targetsPlaybook).map(({ name }) => name));
+  const named = new Set(
+    orgRegistrations
+      .filter(({ targetsPlaybook, sameInEveryScope }) => !targetsPlaybook && sameInEveryScope !== true)
+      .map(({ name }) => name),
+  );
   return new Map(
     playbookRegistrations
       .filter(({ name }) => named.has(name))

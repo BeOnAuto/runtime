@@ -67,12 +67,23 @@ type RegisteredDefinition<K extends OperationKind> = Pick<
   | 'inputSchema'
   | 'reasons'
 > &
-  Partial<Pick<Definition<K, string, ObjectSchema, ObjectSchema, DeclarableReason, unknown>, 'outputSchema'>>;
+  Partial<Pick<Definition<K, string, ObjectSchema, ObjectSchema, DeclarableReason, unknown>, 'outputSchema'>> & {
+    readonly sameInEveryScope?: boolean;
+  };
 
 type RegisteredFields<S extends OperationScope, K extends OperationKind> = Omit<
   RegisteredFieldsOf<S, K>,
   'plainLanguage'
 >;
+
+function sameInEveryScopeWhereDeclared({
+  sameInEveryScope,
+}: Pick<RegisteredDefinition<OperationKind>, 'sameInEveryScope'>): Pick<
+  RegisteredFields<OperationScope, OperationKind>,
+  'sameInEveryScope'
+> {
+  return sameInEveryScope === true ? { sameInEveryScope: true } : {};
+}
 
 export function registeredFieldsOf<S extends OperationScope, K extends OperationKind>(
   scope: S,
@@ -98,6 +109,7 @@ export function registeredFieldsOf<S extends OperationScope, K extends Operation
     ...(definition.enrolment === true ? { enrolment: true } : {}),
     repeatable: definition.repeatable ?? false,
     ...(definition.whileRetired === true ? { whileRetired: true } : {}),
+    ...sameInEveryScopeWhereDeclared(definition),
     permissions,
     reasons: [...new Set(definition.reasons)],
     input: jsonSchemaDocumentOf(definition.inputSchema),

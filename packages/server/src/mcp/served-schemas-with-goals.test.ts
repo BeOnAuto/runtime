@@ -44,7 +44,7 @@ const endpoints = [
   { path: '/mcp', tools: 42, bytes: 67_128, mostBytes: mostListingBytes['own org'] },
   { path: '/directory', tools: 40, bytes: 64_699, mostBytes: mostListingBytes.directory },
   { path: '/orgs/local/mcp', tools: 18, bytes: 26_083, mostBytes: mostListingBytes.org },
-  { path: '/orgs/local/playbooks/alpha/mcp', tools: 28, bytes: 43_633, mostBytes: mostListingBytes.playbook },
+  { path: '/orgs/local/playbooks/alpha/mcp', tools: 29, bytes: 44_543, mostBytes: mostListingBytes.playbook },
 ] as const;
 
 describe('the listing of each endpoint of a server that keeps goals', () => {

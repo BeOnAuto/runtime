@@ -20,6 +20,7 @@ interface CheckableDefinition {
   readonly permittedBy?: readonly Permission[];
   readonly permissionsManagement?: boolean;
   readonly enrolment?: boolean;
+  readonly sameInEveryScope?: boolean;
 }
 
 interface CheckedDefinition {
@@ -110,6 +111,21 @@ function requireACommandOfTheOrgToEnrol(
   }
 }
 
+function requireNothingOfTheScopeAskedIn(
+  name: string,
+  targetsPlaybook: boolean,
+  permittedBy: readonly Permission[] | undefined,
+): void {
+  if (targetsPlaybook) {
+    throw new Error(`The operation ${name} declares it is the same in every scope, so it may not take a playbook`);
+  }
+  if (permittedBy !== undefined) {
+    throw new Error(
+      `The operation ${name} declares it is the same in every scope, so the permission to read the scope it is asked in permits it, and it may declare no other`,
+    );
+  }
+}
+
 function permissionsOf(name: string, permittedBy: readonly Permission[]): readonly Permission[] {
   if (permittedBy.length === 0) {
     throw new Error(`The operation ${name} is permitted by no permission`);
@@ -125,9 +141,10 @@ export function checkedDefinition(
     route,
     inputSchema,
     outputSchema,
-    permittedBy = [permissionFor(kind, scope)],
+    permittedBy,
     permissionsManagement = false,
     enrolment = false,
+    sameInEveryScope = false,
   }: CheckableDefinition,
 ): CheckedDefinition {
   if (!operationName.test(name)) {
@@ -143,10 +160,14 @@ export function checkedDefinition(
   requireNoReservedField(name, scope, inputMembers);
   requireRouteParametersAsFields(name, pathParameters, inputMembers);
   requirePlaybookFromPlaybookField(name, inputSchema, inputMembers);
+  const targetsPlaybook = inputMembers.some((member) => fieldOf(member, 'playbook') !== undefined);
+  if (sameInEveryScope) {
+    requireNothingOfTheScopeAskedIn(name, targetsPlaybook, permittedBy);
+  }
   return {
     pathParameters,
-    targetsPlaybook: inputMembers.some((member) => fieldOf(member, 'playbook') !== undefined),
-    permissions: permissionsOf(name, permittedBy),
+    targetsPlaybook,
+    permissions: permissionsOf(name, permittedBy ?? [permissionFor(kind, scope)]),
   };
 }
 

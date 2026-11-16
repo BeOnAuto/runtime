@@ -1,10 +1,11 @@
 import { SQL } from '@event-driven-io/dumbo';
-import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
+import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { EncodedEvent } from '../event-store.ts';
 import { sqliteEventStore } from '../sqlite-event-store.ts';
 import { stamped } from '../testing/happenings.ts';
+import { onEachSQLiteDriver, type OnASQLiteDriver } from '../testing/sqlite-drivers.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { isVersionConflict } from '../version-conflict.ts';
 import type { BeforeCommit } from './joined-appends.ts';
@@ -38,19 +39,19 @@ function aGate(): Gate {
   };
 }
 
-async function aStoreWith(onBeforeCommit: BeforeCommit) {
+async function aStoreWith({ optionsOf }: OnASQLiteDriver, onBeforeCommit: BeforeCommit) {
   const { fileName, remove } = temporaryDatabase();
   onTestFinished(remove);
-  const store = sqliteEventStore(() => ({ driver: sqlite3EventStoreDriver, fileName, hooks: { onBeforeCommit } }));
+  const store = sqliteEventStore(() => ({ ...optionsOf(fileName), hooks: { onBeforeCommit } }));
   onTestFinished(() => store.close());
   await store.migrate();
   return store;
 }
 
-function heldBackUntilItCommits(): void {
+function heldBackUntilItCommits(sqlite: OnASQLiteDriver): void {
   it('shows a reader none of its facts while its transaction is open, and all of them once it commits', async () => {
     const gate = aGate();
-    const store = await aStoreWith(gate.passed);
+    const store = await aStoreWith(sqlite, gate.passed);
     const factsOfAlpha = () =>
       store.readAppendedFacts({ kind: 'playbook', playbookKey: alpha }, { after: null, most: 10, dataOf: [] });
 
@@ -79,9 +80,9 @@ const writtenOnce: BeforeCommit = async (_messages, { transaction }) => {
   await transaction.execute.command(SQL`INSERT INTO written_once (id) VALUES (1)`);
 };
 
-function aRowWrittenTwiceMetAsAConflict(): void {
+function aRowWrittenTwiceMetAsAConflict(sqlite: OnASQLiteDriver): void {
   it('meets a row its transaction writes twice as a version conflict, as an append to one stream does, and keeps nothing', async () => {
-    const store = await aStoreWith(writtenOnce);
+    const store = await aStoreWith(sqlite, writtenOnce);
     await store.append(`${alpha}notes/a`, noted, place);
 
     const refused = await Promise.all([
@@ -99,7 +100,10 @@ function aRowWrittenTwiceMetAsAConflict(): void {
   });
 }
 
-describe('An append to several streams on a SQLite file', () => {
-  heldBackUntilItCommits();
-  aRowWrittenTwiceMetAsAConflict();
-});
+describe.each(onEachSQLiteDriver(() => nodeSqliteDumboDriver))(
+  'An append to several streams on a SQLite file through $through',
+  (sqlite) => {
+    heldBackUntilItCommits(sqlite);
+    aRowWrittenTwiceMetAsAConflict(sqlite);
+  },
+);

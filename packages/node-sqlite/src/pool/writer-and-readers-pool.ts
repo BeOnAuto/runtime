@@ -1,0 +1,113 @@
+import { cpus } from 'node:os';
+
+import {
+  createBoundedConnectionPool,
+  type PoolCloseOptions,
+  type QueryResultRow,
+  type SQL,
+} from '@event-driven-io/dumbo';
+
+import {
+  nodeSqliteDriverType,
+  type NodeSqliteConnection,
+  type NodeSqliteConnectionOptions,
+} from '../client/node-sqlite-connection.ts';
+import type {
+  ReadonlyAbortContext,
+  ReadonlyBatchCommandOptions,
+  ReadonlyConnectionOptions,
+  ReadonlyStatementOptions,
+} from '../client/readonly-options.ts';
+import type { ConnectionContext } from './connection-context.ts';
+import { writerPool, type NodeSqlitePool } from './writer-pool.ts';
+
+export interface WriterAndReadersOptions {
+  readonly connectionOf: (options: NodeSqliteConnectionOptions) => NodeSqliteConnection;
+  readonly connectionOptions: NodeSqliteConnectionOptions;
+  readonly context: ConnectionContext;
+  readonly readerPoolSize?: number | undefined;
+  readonly maxTaskIdleTime?: number | undefined;
+}
+
+interface Opening {
+  readonly connectionOf: (options: NodeSqliteConnectionOptions) => NodeSqliteConnection;
+  readonly connectionOptions: NodeSqliteConnectionOptions;
+  readonly databaseReady: () => Promise<void>;
+}
+
+const leastReaders = 4;
+
+function onceReady(prepare: () => Promise<void>): () => Promise<void> {
+  const kept: { preparing?: Promise<void> } = {};
+  return () => {
+    kept.preparing ??= prepare().catch((error: unknown) => {
+      delete kept.preparing;
+      throw error;
+    });
+    return kept.preparing;
+  };
+}
+
+async function databasePrepared({ connectionOf, connectionOptions }: Omit<Opening, 'databaseReady'>): Promise<void> {
+  const first = connectionOf({ ...connectionOptions, skipDatabasePragmas: false, readonly: false });
+  try {
+    await first.open();
+  } finally {
+    await first.close();
+  }
+}
+
+async function opened(
+  { connectionOf, connectionOptions, databaseReady }: Opening,
+  readonly: boolean,
+  abort: ReadonlyAbortContext,
+): Promise<NodeSqliteConnection> {
+  await databaseReady();
+  const connection = connectionOf({ ...connectionOptions, skipDatabasePragmas: true, readonly });
+  await connection.open(abort);
+  return connection;
+}
+
+export function writerAndReadersPool({
+  connectionOf,
+  connectionOptions,
+  context,
+  readerPoolSize = Math.max(leastReaders, cpus().length),
+  maxTaskIdleTime,
+}: WriterAndReadersOptions): NodeSqlitePool {
+  const opening: Opening = {
+    connectionOf,
+    connectionOptions,
+    databaseReady: onceReady(() => databasePrepared({ connectionOf, connectionOptions })),
+  };
+  const writer = writerPool({ getConnection: (abort) => opened(opening, false, abort), context, maxTaskIdleTime });
+  const readers = createBoundedConnectionPool({
+    driverType: nodeSqliteDriverType,
+    getConnection: (abort: ReadonlyAbortContext) => opened(opening, true, abort),
+    maxConnections: readerPoolSize,
+  });
+  const forReading = (options?: ReadonlyConnectionOptions) =>
+    options?.readonly === true && context.active() === undefined ? readers : writer;
+  const forQueries = () => (context.active() === undefined ? readers : writer);
+  return {
+    driverType: nodeSqliteDriverType,
+    connection: (options?: ReadonlyConnectionOptions) => forReading(options).connection(options),
+    withConnection: (handle, options?: ReadonlyConnectionOptions) =>
+      forReading(options).withConnection(handle, options),
+    transaction: (options) => writer.transaction(options),
+    withTransaction: (handle, options) => writer.withTransaction(handle, options),
+    execute: {
+      query: <Result extends QueryResultRow>(sql: SQL, options?: ReadonlyStatementOptions) =>
+        forQueries().execute.query<Result>(sql, options),
+      batchQuery: <Result extends QueryResultRow>(sqls: Iterable<SQL>, options?: ReadonlyStatementOptions) =>
+        forQueries().execute.batchQuery<Result>([...sqls], options),
+      command: <Result extends QueryResultRow>(sql: SQL, options?: ReadonlyStatementOptions) =>
+        writer.execute.command<Result>(sql, options),
+      batchCommand: <Result extends QueryResultRow>(sqls: Iterable<SQL>, options?: ReadonlyBatchCommandOptions) =>
+        writer.execute.batchCommand<Result>([...sqls], options),
+    },
+    close: async (options?: Readonly<PoolCloseOptions>) => {
+      await Promise.all([writer.close(options), readers.close(options)]);
+    },
+  };
+}

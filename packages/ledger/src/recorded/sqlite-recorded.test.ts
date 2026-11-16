@@ -2,10 +2,11 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { SQL } from '@event-driven-io/dumbo';
 import { sqliteFormatter } from '@event-driven-io/dumbo/sqlite';
-import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
+import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { sqliteEventStore } from '../sqlite-event-store.ts';
+import { onEachSQLiteDriver, type OnASQLiteDriver } from '../testing/sqlite-drivers.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import type { IndexExecutor } from './missing-indexes.ts';
 import { createSQLitePlaybookIndexes, orgOfStream } from './sqlite-indexes.ts';
@@ -53,21 +54,25 @@ function executorFinding(names: readonly string[]): { readonly execute: IndexExe
   };
 }
 
-async function migratedOnce(fileName: string): Promise<void> {
-  const store = sqliteEventStore(() => ({ driver: sqlite3EventStoreDriver, fileName }));
+const sqliteDrivers = onEachSQLiteDriver(() => nodeSqliteDumboDriver);
+
+async function migratedOnce({ optionsOf }: OnASQLiteDriver, fileName: string): Promise<void> {
+  const store = sqliteEventStore(() => optionsOf(fileName));
   await store.migrate();
   await store.close();
 }
 
-describe("the playbook's indexes on SQLite", () => {
+describe.each(sqliteDrivers)("the playbook's indexes on SQLite through $through", (sqlite) => {
   it('are created when the store migrates, as the ledger opens, once however often it migrates', async () => {
     const fileName = aDatabaseFile();
-    await migratedOnce(fileName);
-    await migratedOnce(fileName);
+    await migratedOnce(sqlite, fileName);
+    await migratedOnce(sqlite, fileName);
 
     expect(indexesOf(fileName)).toEqual(playbookIndexes);
   });
+});
 
+describe("the playbook's indexes on SQLite", () => {
   it('are created only when missing, so a start that finds them issues no CREATE', async () => {
     const present = executorFinding(playbookIndexes);
     const oneMissing = executorFinding(playbookIndexes.filter((name) => name !== 'ledger_messages_by_stream'));
@@ -82,13 +87,12 @@ describe("the playbook's indexes on SQLite", () => {
   });
 });
 
-describe('an event store on SQLite given hooks of its own', () => {
+describe.each(sqliteDrivers)('an event store on SQLite through $through given hooks of its own', ({ optionsOf }) => {
   it('keeps its hook, which runs after the schema is created, and still creates the indexes', async () => {
     const fileName = aDatabaseFile();
     const hooked: string[] = [];
     const store = sqliteEventStore(() => ({
-      driver: sqlite3EventStoreDriver,
-      fileName,
+      ...optionsOf(fileName),
       hooks: {
         onAfterSchemaCreated: () => {
           hooked.push('after the schema');
@@ -105,8 +109,7 @@ describe('an event store on SQLite given hooks of its own', () => {
   it('keeps its hook that runs before each commit', async () => {
     const hooked: string[] = [];
     const store = sqliteEventStore(() => ({
-      driver: sqlite3EventStoreDriver,
-      fileName: aDatabaseFile(),
+      ...optionsOf(aDatabaseFile()),
       hooks: {
         onBeforeCommit: (messages: readonly unknown[]) => {
           hooked.push(`before a commit of ${messages.length}`);
@@ -126,10 +129,10 @@ describe('an event store on SQLite given hooks of its own', () => {
   });
 });
 
-describe('the read of one message by its id on SQLite', () => {
+describe.each(sqliteDrivers)('the read of one message by its id on SQLite through $through', (sqlite) => {
   it('walks the index on the org and the message id', async () => {
     const fileName = aDatabaseFile();
-    await migratedOnce(fileName);
+    await migratedOnce(sqlite, fileName);
     const database = new DatabaseSync(fileName, { readOnly: true });
     onTestFinished(() => {
       database.close();

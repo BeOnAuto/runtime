@@ -25,7 +25,18 @@ const writerOnly: CallerIdentity = {
   permissions: ['playbook:write'],
 };
 
-const services = Layer.mergeAll(memoryLedger().layer, memoryPlaybookRegistry([]), recordingReporter().layer);
+const playbookReader: CallerIdentity = {
+  ...reader,
+  id: 'acme-playbook-reader',
+  name: 'acme-playbook-reader',
+  permissions: ['playbook:read'],
+};
+
+const services = Layer.mergeAll(
+  memoryLedger().layer,
+  memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
+  recordingReporter().layer,
+);
 
 interface Listing {
   readonly catalog?: GenerationCatalog;
@@ -37,10 +48,20 @@ async function listGenerationModels(
   input: unknown,
   { catalog = testCatalog, gateways = ['auto'], caller = reader }: Listing = {},
 ) {
-  const { registration } = defineListGenerationModels(catalog, gateways);
+  const { registration } = defineListGenerationModels(catalog, gateways).org;
   const outcome: Outcome = await Effect.runPromise(
     makeDispatcher([])
       .dispatchToOrg(registration, { caller, org: 'acme', input, encoding: 'strings' })
+      .pipe(Effect.provide(services)),
+  );
+  return { registration, outcome };
+}
+
+async function listGenerationModelsInAPlaybook(input: unknown, caller: CallerIdentity) {
+  const { registration } = defineListGenerationModels(testCatalog, ['auto']).playbook;
+  const outcome: Outcome = await Effect.runPromise(
+    makeDispatcher([])
+      .dispatchToPlaybook(registration, { caller, org: 'acme', playbook: 'alpha', input, encoding: 'strings' })
       .pipe(Effect.provide(services)),
   );
   return { registration, outcome };
@@ -96,6 +117,29 @@ describe('list_generation_models', () => {
       status: 'rejected',
       reason: 'invalid_input',
       issues: [{ pointer: '/kind' }],
+    });
+  });
+});
+
+describe('list_generation_models of a playbook', () => {
+  it('is the same in every scope: a query of a playbook too, at the same route, that anyone who may read the playbook can call, answering what the org query answers', async () => {
+    const inThePlaybook = await listGenerationModelsInAPlaybook({ kind: 'image' }, playbookReader);
+    const inTheOrg = await listGenerationModels({ kind: 'image' });
+    expect(inThePlaybook.registration).toMatchObject({
+      scope: 'playbook',
+      kind: 'query',
+      name: 'list_generation_models',
+      route: { method: 'GET', path: '/generation-models' },
+      permissions: ['playbook:read'],
+      sameInEveryScope: true,
+      reachesOutside: false,
+    });
+    expect(inTheOrg.registration).toMatchObject({ permissions: ['org:read'], sameInEveryScope: true });
+    expect(inThePlaybook.outcome).toEqual(inTheOrg.outcome);
+    expect((await listGenerationModelsInAPlaybook({}, reader)).outcome).toMatchObject({
+      status: 'rejected',
+      reason: 'forbidden',
+      detail: 'The caller lacks the playbook:read permission',
     });
   });
 });

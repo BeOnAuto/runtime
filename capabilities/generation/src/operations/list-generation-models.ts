@@ -126,20 +126,36 @@ function listOf(
   };
 }
 
+type Asked = typeof InputSchema.Type;
+
+const about = {
+  name: 'list_generation_models',
+  title: 'List generation models',
+  description,
+  inputSchema: InputSchema,
+  outputSchema: GenerationModelListSchema,
+  reasons: [],
+  plainLanguage: {
+    task,
+    attempt: ({ kind }: Asked) => (kind === undefined ? task : `${task} that makes ${kindWords[kind]}`),
+    outcome: (list: GenerationModelList, { kind }: Asked) => modelsListed(list, kind),
+  },
+};
+
 export function defineListGenerationModels(catalog: GenerationCatalog, gateways: readonly string[]) {
-  return defineQuery('org', {
-    name: 'list_generation_models',
-    title: 'List generation models',
-    description,
-    route: { method: 'GET', path: '/generation-models' },
-    inputSchema: InputSchema,
-    outputSchema: GenerationModelListSchema,
-    reasons: [],
-    handle: ({ kind }) => Effect.succeed(listOf(catalog, gateways, kind)),
-    plainLanguage: {
-      task,
-      attempt: ({ kind }) => (kind === undefined ? task : `${task} that makes ${kindWords[kind]}`),
-      outcome: (list, { kind }) => modelsListed(list, kind),
-    },
-  });
+  const handle = ({ kind }: Asked) => Effect.succeed(listOf(catalog, gateways, kind));
+  return {
+    org: defineQuery('org', {
+      ...about,
+      route: { method: 'GET', path: '/generation-models' },
+      sameInEveryScope: true,
+      handle,
+    }),
+    playbook: defineQuery('playbook', {
+      ...about,
+      route: { method: 'GET', path: '/generation-models' },
+      sameInEveryScope: true,
+      handle,
+    }),
+  };
 }

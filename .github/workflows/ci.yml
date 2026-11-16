@@ -115,6 +115,7 @@ jobs:
               - goals
               - json-schema
               - lookup
+              - node-sqlite
               - outbound
               - phrasing
               - playbooks

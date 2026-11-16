@@ -1,5 +1,4 @@
-import { dumbo } from '@event-driven-io/dumbo';
-import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
+import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { describe, onTestFinished } from 'vitest';
 
 import {
@@ -10,8 +9,7 @@ import {
   VersionConflict,
 } from './index.ts';
 import { sqliteLayoutCarried } from './layout/sqlite-schema.ts';
-import { definitionStreamsIndexed, executedOn, planOf, queried, statementPlanOf } from './recorded/sqlite-checks.ts';
-import { ledgerLayer, sqliteLedgerFile } from './sqlite3.ts';
+import { pooledOptionsOf } from './sqlite-event-store.ts';
 import { databaseStructureBehaviour } from './structure/database-structure-behaviour.ts';
 import {
   appendedFactsOnStoresBehaviour,
@@ -33,43 +31,49 @@ import {
   sqliteUpdatesCountingOf,
   type LedgerEntry,
 } from './testing/index.ts';
+import { onEachSQLiteDriver, type OnASQLiteDriver } from './testing/sqlite-drivers.ts';
 import { temporaryDatabase } from './testing/temporary-database.ts';
 
-const openedOn: LedgerEntry['openedOn'] = (fileName) =>
-  sqliteLedgerOpened({ optionsOf: () => ({ driver: sqlite3EventStoreDriver, fileName }), inMemory: false });
+const sqliteDrivers = onEachSQLiteDriver(() => nodeSqliteDumboDriver);
 
-const carriedOn: LedgerEntry['carriedOn'] = async (fileName, carrying) => {
-  const pool = dumbo(sqlite3EventStoreDriver.mapToDumboOptions({ fileName }));
-  try {
-    await sqliteLayoutCarried(pool, [], carrying);
-  } finally {
-    await pool.close();
-  }
-};
+function openedOnThe({ optionsOf }: OnASQLiteDriver): LedgerEntry['openedOn'] {
+  return (fileName) => sqliteLedgerOpened({ optionsOf: () => optionsOf(fileName), inMemory: false });
+}
 
-const onSQLite: LedgerEntry = {
+function carriedOnThe({ optionsOf }: OnASQLiteDriver): LedgerEntry['carriedOn'] {
+  return async (fileName, carrying) => {
+    const { pool } = pooledOptionsOf(() => optionsOf(fileName));
+    try {
+      await sqliteLayoutCarried(pool, [], carrying);
+    } finally {
+      await pool.close();
+    }
+  };
+}
+
+const onSQLiteThrough = (sqlite: OnASQLiteDriver): LedgerEntry => ({
   mostEventsInOneAppend: 8,
   afterClosing: 'Bounded connection pool has been closed',
-  closedWhileWriting: 'TaskProcessor has been stopped',
+  closedWhileWriting: sqlite.closedWhileWriting,
   aDatabase: () => {
     const { fileName, remove } = temporaryDatabase();
     onTestFinished(remove);
     return Promise.resolve(fileName);
   },
   ledgerOn: (fileName, runOutcomes, projections = [], holders) =>
-    ledgerLayer({ fileName, projections, runOutcomes, holders }),
-  streamLedgerOn: (fileName, kept) => ledgerLayer({ fileName, ...kept }),
-  ledgerOutsideOn: (fileName, holders, content) => ledgerLayer({ fileName, holders, content }),
-  ledgerRaisingOn: (fileName, appended) => ledgerLayer({ fileName, appended }),
-  storeOn: (fileName) => openedOn(fileName).store,
-  openedOn,
-  queried,
-  executedOn,
+    sqlite.ledgerLayer({ fileName, projections, runOutcomes, holders }),
+  streamLedgerOn: (fileName, kept) => sqlite.ledgerLayer({ fileName, ...kept }),
+  ledgerOutsideOn: (fileName, holders, content) => sqlite.ledgerLayer({ fileName, holders, content }),
+  ledgerRaisingOn: (fileName, appended) => sqlite.ledgerLayer({ fileName, appended }),
+  storeOn: (fileName) => openedOnThe(sqlite)(fileName).store,
+  openedOn: openedOnThe(sqlite),
+  queried: sqlite.queried,
+  executedOn: sqlite.executedOn,
   layout: sqliteLayout,
-  carriedOn,
-  definitionStreamsIndexed,
-  planOf,
-  statementPlanOf,
+  carriedOn: carriedOnThe(sqlite),
+  definitionStreamsIndexed: sqlite.definitionStreamsIndexed,
+  planOf: sqlite.planOf,
+  statementPlanOf: sqlite.statementPlanOf,
   throughTheKindIndex: 'USING INDEX ledger_first_messages_by_kind',
   throughTheIdIndex: 'USING INDEX ledger_messages_by_org_and_id',
   throughTheTreeIndex: 'USING INDEX ledger_messages_by_org_and_correlation',
@@ -83,9 +87,10 @@ const onSQLite: LedgerEntry = {
   projectionIndexes: "SELECT name FROM sqlite_master WHERE type = 'index' AND name GLOB 'run_tallies_*' ORDER BY name",
   topicTables: "SELECT name FROM sqlite_master WHERE type = 'table' AND name GLOB 'topics_*' ORDER BY name",
   labelledTables: "SELECT name FROM sqlite_master WHERE type = 'table' AND name GLOB 'label*' ORDER BY name",
-};
+});
 
-describe('The ledger on SQLite', () => {
+describe.each(sqliteDrivers)('The ledger on SQLite through $through', (sqlite) => {
+  const onSQLite = onSQLiteThrough(sqlite);
   ledgerBehaviour(onSQLite);
   logBehaviour(onSQLite);
   appendedFactsOnStoresBehaviour(onSQLite);
@@ -103,38 +108,40 @@ describe('The ledger on SQLite', () => {
   ledgerStepsBehaviour(onSQLite);
   keptSecretsBehaviour({
     ...onSQLite,
-    secretRowsOn: (fileName) => secretRowsOfItsOpenLedger(sqliteLedgerFile(fileName)),
+    secretRowsOn: (fileName) => secretRowsOfItsOpenLedger(sqlite.sqliteLedgerFile(fileName)),
   });
   receivedWebhooksBehaviour({
     ...onSQLite,
-    receivedWebhooksOn: (fileName) => receivedWebhooksOfItsOpenLedger(sqliteLedgerFile(fileName)),
+    receivedWebhooksOn: (fileName) => receivedWebhooksOfItsOpenLedger(sqlite.sqliteLedgerFile(fileName)),
   });
   multiStreamAppendBehaviour({
     ...onSQLite,
     storeKeeping: (fileName, kept) =>
-      sqliteLedgerOpened({ optionsOf: () => ({ driver: sqlite3EventStoreDriver, fileName }), inMemory: false }, kept)
-        .store,
+      sqliteLedgerOpened({ optionsOf: () => sqlite.optionsOf(fileName), inMemory: false }, kept).store,
   });
   definitionNamesBehaviour({
     ...onSQLite,
     storeKeepingNames: (fileName, definitionNames) =>
-      sqliteLedgerOpened(
-        { optionsOf: () => ({ driver: sqlite3EventStoreDriver, fileName }), inMemory: false },
-        { definitionNames },
-      ).store,
+      sqliteLedgerOpened({ optionsOf: () => sqlite.optionsOf(fileName), inMemory: false }, { definitionNames }).store,
   });
 });
 
-describe('The secret rows on a pool of their own, as code that opens the ledger on a driver of its own opens them', () => {
-  keptSecretsBehaviour({
-    ...onSQLite,
-    secretRowsOn: (fileName) => sqliteSecretRowsOn(() => ({ driver: sqlite3EventStoreDriver, fileName })),
-  });
-});
+describe.each(sqliteDrivers)(
+  'The secret rows on a pool of their own through $through, as code that opens the ledger on a driver of its own opens them',
+  (sqlite) => {
+    keptSecretsBehaviour({
+      ...onSQLiteThrough(sqlite),
+      secretRowsOn: (fileName) => sqliteSecretRowsOn(() => sqlite.optionsOf(fileName)),
+    });
+  },
+);
 
-describe('The webhooks received on a pool of their own, as code that opens the ledger on a driver of its own opens them', () => {
-  receivedWebhooksBehaviour({
-    ...onSQLite,
-    receivedWebhooksOn: (fileName) => sqliteReceivedWebhooksOn(() => ({ driver: sqlite3EventStoreDriver, fileName })),
-  });
-});
+describe.each(sqliteDrivers)(
+  'The webhooks received on a pool of their own through $through, as code that opens the ledger on a driver of its own opens them',
+  (sqlite) => {
+    receivedWebhooksBehaviour({
+      ...onSQLiteThrough(sqlite),
+      receivedWebhooksOn: (fileName) => sqliteReceivedWebhooksOn(() => sqlite.optionsOf(fileName)),
+    });
+  },
+);
