@@ -1,7 +1,7 @@
 {
   "type": "discovery",
   "discovery": "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
-  "revision": "20261023",
+  "revision": "20261109",
   "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
   "methods": [
     "drive.files.list",
@@ -9,7 +9,8 @@
     "drive.permissions.list",
     "drive.files.export",
     "drive.files.create",
-    "drive.files.copy"
+    "drive.files.copy",
+    "drive.files.generateIds"
   ],
   "left_out_parameters": [
     {
@@ -24,6 +25,19 @@
       "parameter": "alt",
       "values": ["media"],
       "says": "With `alt=media`, the call answers the text of the file where the runtime reads its type, a text file, a PDF or a Word document, and otherwise its type and its size."
+    }
+  ],
+  "uploads": ["drive.files.create"],
+  "descriptions": [
+    {
+      "operation": "drive.files.create",
+      "says": "Creates a file with no content, such as a folder, with the MIME type `application/vnd.google-apps.folder`, or a shortcut, with `application/vnd.google-apps.shortcut`. To save a text as a file, call `drive.files.create.upload`.",
+      "because": "Google's description of the method describes its upload too, which this operation does not send: it sends the file's metadata alone, as JSON"
+    },
+    {
+      "operation": "drive.files.create.upload",
+      "says": "Saves a text as a file in the person's Google Drive, its name and its content in one call. `body` is a list of two items: first the file's metadata, then the text. Give the text alone, and it is sent as plain text, or as `{ \"media_type\": …, \"text\": … }` to say what the text is, such as `text/markdown`, `text/html` or `text/csv`. Give `name` in the metadata with its extension, such as `report.md`. Give `parents` in the metadata as one folder's id; without it the file is placed directly in the person's My Drive folder. Without `mimeType` the file keeps the text as it is. To convert it, give `mimeType` in the metadata: `application/vnd.google-apps.document` for a Google Doc, `application/vnd.google-apps.spreadsheet` for a Google Sheet. Google converts the text as the media type it is given with: give Markdown or HTML with its media type for a formatted Doc, and CSV with its media type for a Sheet with columns. Convert only when the person asks for a Google Doc or Sheet; when they have not said whether they want one or the file as it is, ask them before you call. To make a repeat of the call safe, take an id from `drive.files.generateIds` first and give it as `id` in the metadata: a repeat is then answered 409 and no second file is created. An id cannot be given together with a conversion. Ask for `fields=id,name,webViewLink` to answer the file's link.",
+      "because": "Google's description of the method gives the upload's protocols and sizes, which an agent cannot act on; this says what the upload takes and what Google does with it, in Google's words where it has them"
     }
   ]
 }

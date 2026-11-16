@@ -4,7 +4,13 @@ import { documentInText } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 
 import { CutSchema } from './discovery-cuts.ts';
-import { GlobalParameterSchema, LeftOutParametersSchema, RequirementSchema } from './discovery-parameters.ts';
+import {
+  DescriptionSchema,
+  GlobalParameterSchema,
+  LeftOutParametersSchema,
+  RequirementSchema,
+  UploadsSchema,
+} from './discovery-parameters.ts';
 import { OpenApiTranslationSchema } from './openapi-translation.ts';
 import { convertedDocumentOf, SwaggerConversionSchema } from './swagger-conversion.ts';
 import { translatedDiscoveryOf } from './translate-discovery.ts';
@@ -40,6 +46,12 @@ const DiscoveryManifestSchema = Schema.Struct({
   global_parameters: Schema.optionalKey(
     Schema.Array(GlobalParameterSchema).annotate({
       description: 'The global parameters of the Discovery document a method kept takes, with the values a call sends',
+    }),
+  ),
+  uploads: Schema.optionalKey(UploadsSchema),
+  descriptions: Schema.optionalKey(
+    Schema.Array(DescriptionSchema).annotate({
+      description: "The operations whose description the manifest writes, where the vendor's describes more",
     }),
   ),
 });
@@ -170,7 +182,7 @@ async function discoveryTranslated(
   const metadata = await reading(manifest.authorization_server);
   const { document, revision } = translatedDiscoveryOf(read, metadata, manifest);
   const { type, discovery: address, authorization_server: authorizationServer, methods, cuts } = manifest;
-  const { required, left_out_parameters: leftOut, global_parameters: globals } = manifest;
+  const { required, left_out_parameters: leftOut, global_parameters: globals, uploads, descriptions } = manifest;
   const remade = {
     type,
     discovery: address,
@@ -181,6 +193,8 @@ async function discoveryTranslated(
     ...(required === undefined ? {} : { required }),
     ...(leftOut === undefined ? {} : { left_out_parameters: leftOut }),
     ...(globals === undefined ? {} : { global_parameters: globals }),
+    ...(uploads === undefined ? {} : { uploads }),
+    ...(descriptions === undefined ? {} : { descriptions }),
   };
   return [
     { file: shippedFileIn(folder, `${name}${documentSuffix}`), text: jsonText(document) },

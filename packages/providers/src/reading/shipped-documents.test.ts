@@ -49,7 +49,8 @@ interface Named {
 
 function namesOf(manifest: DocumentManifest): Named {
   if (manifest.type === 'discovery') {
-    return { kept: manifest.methods, scheme: 'oauth2', sources: [manifest.discovery] };
+    const uploads = (manifest.uploads ?? []).map((method) => `${method}.upload`);
+    return { kept: [...manifest.methods, ...uploads], scheme: 'oauth2', sources: [manifest.discovery] };
   }
   if (manifest.type === 'openapi') {
     return { kept: manifest.operations, scheme: manifest.scheme.name, sources: manifest.sources };

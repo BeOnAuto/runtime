@@ -64,6 +64,19 @@ export const GlobalParameterSchema = Schema.Struct({
 
 type GlobalParameter = typeof GlobalParameterSchema.Type;
 
+export const UploadsSchema = Schema.Array(Schema.String).annotate({
+  description:
+    'The ids of the methods kept whose media upload the document keeps too, each as an operation named <id>.upload',
+});
+
+export const DescriptionSchema = Schema.Struct({
+  operation: Schema.String.annotate({ description: 'The operation whose description the manifest writes' }),
+  says: Schema.String.annotate({ description: "Its description, written from the vendor's words, in place of theirs" }),
+  because: Schema.String.annotate({ description: "Why the vendor's description is not the operation's" }),
+});
+
+export type Description = typeof DescriptionSchema.Type;
+
 function missingOf(names: readonly string[], held: Readonly<Record<string, unknown>>): readonly string[] {
   return names.filter((name) => !Object.hasOwn(held, name));
 }

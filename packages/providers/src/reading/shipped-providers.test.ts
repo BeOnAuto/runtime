@@ -102,7 +102,7 @@ const addressesOfTheShipped = [
   ['google-analytics', 'https://analyticsdata.googleapis.com'],
   ['google-analytics-admin', 'https://analyticsadmin.googleapis.com'],
   ['google-docs', 'https://docs.googleapis.com'],
-  ['google-drive', 'https://www.googleapis.com/drive/v3'],
+  ['google-drive', 'https://www.googleapis.com'],
   ['google-search-console', 'https://searchconsole.googleapis.com'],
   ['google-sheets', 'https://sheets.googleapis.com'],
   ['google-slides', 'https://slides.googleapis.com'],

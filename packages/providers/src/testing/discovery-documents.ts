@@ -28,6 +28,7 @@ export const trackerDiscovery = {
     fields: { type: 'string', location: 'query', description: 'Selector specifying which fields to include.' },
     alt: { type: 'string', location: 'query', default: 'json', enum: ['json', 'media'] },
     key: { type: 'string', location: 'query', description: 'API key.' },
+    uploadType: { type: 'string', location: 'query', description: 'Legacy upload protocol for media.' },
   },
   auth: {
     oauth2: {
@@ -153,6 +154,23 @@ export const trackerDiscovery = {
               },
               scopes: [trackerWriteScope],
             },
+            import: {
+              id: 'tracker.projects.issues.import',
+              path: 'v1/projects/{+projectId}/issues:import',
+              flatPath: 'v1/projects/{projectsId}/issues:import',
+              httpMethod: 'POST',
+              description: 'Imports an issue. This method supports an /upload URI.',
+              mediaUpload: {
+                accept: ['text/csv', 'text/plain'],
+                protocols: {
+                  simple: { path: '/upload/tracker/v1/projects/{+projectId}/issues:import', multipart: true },
+                },
+              },
+              parameters: { projectId: { ...singleSegmentPath, description: 'The project.' } },
+              request: { $ref: 'Issue' },
+              response: { $ref: 'Issue' },
+              scopes: [trackerWriteScope],
+            },
             mutate: {
               id: 'tracker.projects.issues.mutate',
               path: 'v1/{+parent}/issues:mutate',
@@ -179,6 +197,8 @@ export const trackerMethodIds = [
 ];
 
 export const trackerMutateId = 'tracker.projects.issues.mutate';
+
+export const trackerImportId = 'tracker.projects.issues.import';
 
 const trackerCuts = [
   {

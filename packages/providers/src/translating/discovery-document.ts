@@ -13,6 +13,15 @@ export const byName: Order.Order<readonly [string, unknown]> = Order.mapInput(
 
 const ReferenceSchema = Schema.Struct({ $ref: Schema.String });
 
+const MediaUploadSchema = Schema.Struct({
+  accept: Schema.optionalKey(Schema.Array(Schema.String)),
+  protocols: Schema.optionalKey(
+    Schema.Struct({
+      simple: Schema.optionalKey(Schema.Struct({ path: Schema.String, multipart: Schema.optionalKey(Schema.Boolean) })),
+    }),
+  ),
+});
+
 const DiscoveryMethodSchema = Schema.Struct({
   id: Schema.String,
   path: Schema.String,
@@ -21,6 +30,7 @@ const DiscoveryMethodSchema = Schema.Struct({
   description: Schema.optionalKey(Schema.String),
   deprecated: Schema.optionalKey(Schema.Boolean),
   supportsMediaDownload: Schema.optionalKey(Schema.Boolean),
+  mediaUpload: Schema.optionalKey(MediaUploadSchema),
   parameters: Schema.optionalKey(Schema.Record(Schema.String, Schema.JsonObject)),
   request: Schema.optionalKey(ReferenceSchema),
   response: Schema.optionalKey(ReferenceSchema),

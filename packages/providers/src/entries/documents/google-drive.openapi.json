@@ -1,5 +1,5 @@
 {
-  "openapi": "3.1.0",
+  "openapi": "3.2.0",
   "info": {
     "title": "Google Drive API",
     "version": "v3",
@@ -10,7 +10,7 @@
   },
   "servers": [
     {
-      "url": "https://www.googleapis.com/drive/v3"
+      "url": "https://www.googleapis.com"
     }
   ],
   "security": [
@@ -19,7 +19,7 @@
     }
   ],
   "paths": {
-    "/files": {
+    "/drive/v3/files": {
       "get": {
         "operationId": "drive.files.list",
         "description": " Lists the user's files. For more information, see [Search for files and folders](https://developers.google.com/workspace/drive/api/guides/search-files). This method accepts the `q` parameter, which is a search query combining one or more search terms. This method returns *all* files by default, including trashed files. If you don't want trashed files to appear in the list, use the `trashed=false` query parameter to remove trashed files from the results.",
@@ -208,7 +208,7 @@
       },
       "post": {
         "operationId": "drive.files.create",
-        "description": " Creates a file. For more information, see [Create and manage files](https://developers.google.com/workspace/drive/api/guides/create-file). This method supports an */upload* URI and accepts uploaded media with the following characteristics: - *Maximum file size:* 5,120 GB - *Accepted Media MIME types:* `*/*` (Specify a valid MIME type, rather than the literal `*/*` value. The literal `*/*` is only used to indicate that any valid MIME type can be uploaded. For more information, see [Google Workspace and Google Drive supported MIME types](https://developers.google.com/workspace/drive/api/guides/mime-types).) For more information on uploading files, see [Upload file data](https://developers.google.com/workspace/drive/api/guides/manage-uploads). Apps creating shortcuts with the `create` method must specify the MIME type `application/vnd.google-apps.shortcut`. Apps should specify a file extension in the `name` property when inserting files with the API. For example, an operation to insert a JPEG file should specify something like `\"name\": \"cat.jpg\"` in the metadata. Subsequent `GET` requests include the read-only `fileExtension` property populated with the extension originally specified in the `name` property. When a Google Drive user requests to download a file, or when the file is downloaded through the sync client, Drive builds a full filename (with extension) based on the name. In cases where the extension is missing, Drive attempts to determine the extension based on the file's MIME type.",
+        "description": "Creates a file with no content, such as a folder, with the MIME type `application/vnd.google-apps.folder`, or a shortcut, with `application/vnd.google-apps.shortcut`. To save a text as a file, call `drive.files.create.upload`.",
         "parameters": [
           {
             "name": "enforceSingleParent",
@@ -334,7 +334,7 @@
         ]
       }
     },
-    "/files/{fileId}": {
+    "/drive/v3/files/{fileId}": {
       "get": {
         "operationId": "drive.files.get",
         "description": " Gets a file's metadata or content by ID. For more information, see [Search for files and folders](https://developers.google.com/workspace/drive/api/guides/search-files). If you provide the URL parameter `alt=media`, then the response includes the file contents in the response body. Downloading content with `alt=media` only works if the file is stored in Drive. To download Google Docs, Sheets, and Slides use [`files.export`](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/export) instead. For more information, see [Download and export files](https://developers.google.com/workspace/drive/api/guides/manage-downloads). With `alt=media`, the call answers the text of the file where the runtime reads its type, a text file, a PDF or a Word document, and otherwise its type and its size.",
@@ -441,7 +441,7 @@
         ]
       }
     },
-    "/files/{fileId}/permissions": {
+    "/drive/v3/files/{fileId}/permissions": {
       "get": {
         "operationId": "drive.permissions.list",
         "description": "Lists a file's or shared drive's permissions. For more information, see [Share files, folders, and drives](https://developers.google.com/workspace/drive/api/guides/manage-sharing).",
@@ -556,7 +556,7 @@
         ]
       }
     },
-    "/files/{fileId}/export": {
+    "/drive/v3/files/{fileId}/export": {
       "get": {
         "operationId": "drive.files.export",
         "description": "Exports a Google Workspace document to the requested MIME type and returns exported byte content. For more information, see [Download and export files](https://developers.google.com/workspace/drive/api/guides/manage-downloads). Note that the exported content is limited to 10 MB.",
@@ -609,7 +609,162 @@
         ]
       }
     },
-    "/files/{fileId}/copy": {
+    "/upload/drive/v3/files": {
+      "post": {
+        "operationId": "drive.files.create.upload",
+        "description": "Saves a text as a file in the person's Google Drive, its name and its content in one call. `body` is a list of two items: first the file's metadata, then the text. Give the text alone, and it is sent as plain text, or as `{ \"media_type\": …, \"text\": … }` to say what the text is, such as `text/markdown`, `text/html` or `text/csv`. Give `name` in the metadata with its extension, such as `report.md`. Give `parents` in the metadata as one folder's id; without it the file is placed directly in the person's My Drive folder. Without `mimeType` the file keeps the text as it is. To convert it, give `mimeType` in the metadata: `application/vnd.google-apps.document` for a Google Doc, `application/vnd.google-apps.spreadsheet` for a Google Sheet. Google converts the text as the media type it is given with: give Markdown or HTML with its media type for a formatted Doc, and CSV with its media type for a Sheet with columns. Convert only when the person asks for a Google Doc or Sheet; when they have not said whether they want one or the file as it is, ask them before you call. To make a repeat of the call safe, take an id from `drive.files.generateIds` first and give it as `id` in the metadata: a repeat is then answered 409 and no second file is created. An id cannot be given together with a conversion. Ask for `fields=id,name,webViewLink` to answer the file's link.",
+        "parameters": [
+          {
+            "name": "enforceSingleParent",
+            "in": "query",
+            "description": "Deprecated: Creating files in multiple folders is no longer supported.",
+            "schema": {
+              "default": "false",
+              "deprecated": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "ignoreDefaultVisibility",
+            "in": "query",
+            "description": "Whether to ignore the domain's default visibility settings for the created file. Domain administrators can choose to make all uploaded files visible to the domain by default; this parameter bypasses that behavior for the request. Permissions are still inherited from parent folders.",
+            "schema": {
+              "default": "false",
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "includeLabels",
+            "in": "query",
+            "description": "A comma-separated list of IDs of labels to include in the `labelInfo` part of the response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includePermissionsForView",
+            "in": "query",
+            "description": "Specifies which additional view's permissions to include in the response. Only `published` is supported.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keepRevisionForever",
+            "in": "query",
+            "description": "Whether to set the `keepForever` field in the new head revision. This is only applicable to files with binary content in Google Drive. Only 200 revisions for the file can be kept forever. If the limit is reached, try deleting pinned revisions.",
+            "schema": {
+              "default": "false",
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "ocrLanguage",
+            "in": "query",
+            "description": "A language hint for OCR processing during image import (ISO 639-1 code).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "supportsAllDrives",
+            "in": "query",
+            "description": "Whether the requesting application supports both My Drives and shared drives.",
+            "schema": {
+              "default": "false",
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "supportsTeamDrives",
+            "in": "query",
+            "description": "Deprecated: Use `supportsAllDrives` instead.",
+            "schema": {
+              "default": "false",
+              "deprecated": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "uploadType",
+            "in": "query",
+            "required": true,
+            "description": "Legacy upload protocol for media (e.g. \"media\", \"multipart\").",
+            "schema": {
+              "enum": ["multipart"],
+              "type": "string"
+            }
+          },
+          {
+            "name": "useContentAsIndexableText",
+            "in": "query",
+            "description": "Whether to use the uploaded content as indexable text.",
+            "schema": {
+              "default": "false",
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "Selector specifying which fields to include in a partial response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/related": {
+              "schema": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "$ref": "#/components/schemas/File"
+                  },
+                  {}
+                ],
+                "minItems": 2,
+                "items": false
+              },
+              "prefixEncoding": [
+                {
+                  "contentType": "application/json"
+                },
+                {
+                  "contentType": "*/*"
+                }
+              ]
+            }
+          }
+        },
+        "responses": {
+          "2XX": {
+            "description": "File",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/File"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": ["https://www.googleapis.com/auth/drive"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/drive.appdata"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/drive.file"]
+          }
+        ]
+      }
+    },
+    "/drive/v3/files/{fileId}/copy": {
       "post": {
         "operationId": "drive.files.copy",
         "description": "Creates a copy of a file and applies any requested updates with patch semantics. For more information, see [Create and manage files](https://developers.google.com/workspace/drive/api/guides/create-file).",
@@ -746,6 +901,75 @@
           },
           {
             "oauth2": ["https://www.googleapis.com/auth/drive.photos.readonly"]
+          }
+        ]
+      }
+    },
+    "/drive/v3/files/generateIds": {
+      "get": {
+        "operationId": "drive.files.generateIds",
+        "description": "Generates a set of file IDs which can be provided in create or copy requests. For more information, see [Create and manage files](https://developers.google.com/workspace/drive/api/guides/create-file).",
+        "parameters": [
+          {
+            "name": "count",
+            "in": "query",
+            "description": "The number of IDs to return.",
+            "schema": {
+              "default": "10",
+              "format": "int32",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "space",
+            "in": "query",
+            "description": "The space in which the IDs can be used to create files. Supported values are `drive` and `appDataFolder`. (Default: `drive`.) For more information, see [File organization](https://developers.google.com/workspace/drive/api/guides/about-files#file-organization).",
+            "schema": {
+              "default": "drive",
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "The type of items which the IDs can be used for. Supported values are `files` and `shortcuts`. Note that `shortcuts` are only supported in the `drive` `space`. (Default: `files`.) For more information, see [File organization](https://developers.google.com/workspace/drive/api/guides/about-files#file-organization).",
+            "schema": {
+              "default": "files",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "Selector specifying which fields to include in a partial response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "GeneratedIds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratedIds"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": ["https://www.googleapis.com/auth/drive"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/drive.appdata"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/drive.file"]
           }
         ]
       }
@@ -1572,6 +1796,28 @@
           },
           "nextPageToken": {
             "description": "The page token for the next page of files. This will be absent if the end of the files list has been reached. If the token is rejected for any reason, it should be discarded, and pagination should be restarted from the first page of results. The page token is typically valid for several hours. However, if new items are added or removed, your expected results might differ.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "GeneratedIds": {
+        "description": "A list of generated file IDs which can be provided in create requests.",
+        "properties": {
+          "ids": {
+            "description": "The IDs generated for the requesting user in the specified space.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "default": "drive#generatedIds",
+            "description": "Identifies what kind of resource this is. Value: the fixed string `\"drive#generatedIds\"`.",
+            "type": "string"
+          },
+          "space": {
+            "description": "The type of file that can be created with these IDs.",
             "type": "string"
           }
         },

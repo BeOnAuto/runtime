@@ -349,12 +349,12 @@ A function with `call` uses `call.tool` on `call.server`. A run checks every too
 
 ### `call`
 
-| Key      | Required                           | What it holds                                                                                                     |
-| -------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `server` | Yes                                | The tool server, as `search` names it: 1 to 32 lowercase letters, digits and hyphens, starting with a letter      |
-| `tool`   | Yes                                | The tool, as `search` lists it: 1 to 128 letters, digits, underscores, hyphens and dots. The server must list it  |
-| `with`   | No; `{}` when left out             | The tool's arguments, named as its `input_schema` names them. Their templates read `input`, `today` and `now`     |
-| `read`   | No; the whole answer when left out | A JSON Pointer to the part of the tool's answer the run returns, such as `/messages`. An empty pointer is refused |
+| Key      | Required                           | What it holds                                                                                                                                                                                                                                                      |
+| -------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `server` | Yes                                | The tool server, as `search` names it: 1 to 32 lowercase letters, digits and hyphens, starting with a letter                                                                                                                                                       |
+| `tool`   | Yes                                | The tool, as `search` lists it: 1 to 128 letters, digits, underscores, hyphens and dots. The server must list it                                                                                                                                                   |
+| `with`   | No; `{}` when left out             | The tool's arguments, named as its `input_schema` names them. Their templates read `input`, `today` and `now`. Where the tool takes a file, give a text, or a text with its media type as `{ media_type, text }`; a template that is one expression gives the text |
+| `read`   | No; the whole answer when left out | A JSON Pointer to the part of the tool's answer the run returns, such as `/messages`. An empty pointer is refused                                                                                                                                                  |
 
 The answer is the tool's structured content, else the text of every text block and every embedded resource that holds text, such as a file, in the tool's order and joined by a newline, parsed as JSON where that text is JSON, else that text.
 

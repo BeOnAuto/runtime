@@ -11,7 +11,9 @@ import {
   type Json,
   type JsonObject,
 } from './discovery-document.ts';
-import { discoveryParametersChanged, type ParameterChanges } from './discovery-parameters.ts';
+import { discoveryParametersChanged, type Description, type ParameterChanges } from './discovery-parameters.ts';
+import { fieldsParameterOf, parametersOf, pathOf, templated, type Writing } from './discovery-paths.ts';
+import { describedOperations, uploadBodyOf, uploadIdOf, uploadPlaceOf, uploadTypeOf } from './discovery-uploads.ts';
 import {
   authorizationServerOf,
   requirementsOf,
@@ -24,19 +26,7 @@ interface Described {
   readonly description?: string;
 }
 
-type DeclaredParameters = NonNullable<DiscoveryMethod['parameters']>;
-
 const securitySchemeName = 'oauth2';
-
-const fieldsParameterName = 'fields';
-
-const parameterKeywords: ReadonlySet<string> = new Set(['location', 'required', 'repeated', 'description']);
-
-const pathParameterKeywords: ReadonlySet<string> = new Set([...parameterKeywords, 'pattern']);
-
-const templatedSegment = /\{\+?([^{}]+)\}/gu;
-
-const singleSegment = '^[^/]+$';
 
 interface KeptMethod extends DiscoveryMethod {
   readonly scopes: readonly string[];
@@ -70,97 +60,6 @@ function keptMethodsOf(discovery: DiscoveryDocument, methodIds: readonly string[
   return kept.filter((method) => isScoped(method));
 }
 
-function pathOf(method: DiscoveryMethod): string {
-  return `/${(method.flatPath ?? method.path).replaceAll(templatedSegment, '{$1}')}`;
-}
-
-function pathNamesOf(path: string): readonly string[] {
-  return (path.match(templatedSegment) ?? []).map((segment) => segment.replaceAll(/^\{\+?|\}$/gu, ''));
-}
-
-function describedBy(parameter: JsonObject | undefined): Described {
-  const description = parameter?.['description'];
-  return typeof description === 'string' ? { description } : {};
-}
-
-function parameterSchemaOf(parameter: JsonObject, leftOut: ReadonlySet<string>): Json {
-  const schema = translatedSchema(
-    Object.fromEntries(Object.entries(parameter).filter(([keyword]: readonly [string, Json]) => !leftOut.has(keyword))),
-  );
-  return parameter['repeated'] === true ? { type: 'array', items: schema } : schema;
-}
-
-function declaredPathParameter(declared: DeclaredParameters, name: string): JsonObject | undefined {
-  const parameter = Object.hasOwn(declared, name) ? declared[name] : undefined;
-  return parameter?.['location'] === 'path' ? parameter : undefined;
-}
-
-function renamedPathParameter(
-  writtenPath: string,
-  declared: DeclaredParameters,
-  flatNames: readonly string[],
-  position: number,
-): JsonObject | undefined {
-  const writtenNames = pathNamesOf(writtenPath);
-  const written = writtenNames.length === flatNames.length ? writtenNames[position] : undefined;
-  const renamed = written === undefined ? undefined : declaredPathParameter(declared, written);
-  return renamed !== undefined && renamed['pattern'] === singleSegment ? renamed : undefined;
-}
-
-function pathParametersOf(method: DiscoveryMethod, declared: DeclaredParameters): readonly JsonObject[] {
-  const flatNames = pathNamesOf(pathOf(method));
-  return flatNames.map((name, position) =>
-    pathParameterOf(
-      name,
-      declaredPathParameter(declared, name) ?? renamedPathParameter(method.path, declared, flatNames, position),
-    ),
-  );
-}
-
-function pathParameterOf(name: string, declared: JsonObject | undefined): JsonObject {
-  return {
-    name,
-    in: 'path',
-    required: true,
-    ...describedBy(declared),
-    schema: declared === undefined ? { type: 'string' } : parameterSchemaOf(declared, pathParameterKeywords),
-  };
-}
-
-function queryParameterOf([name, parameter]: readonly [string, JsonObject]): readonly JsonObject[] {
-  if (parameter['location'] !== 'query') {
-    return [];
-  }
-  const required = parameter['required'] === true;
-  return [
-    {
-      name,
-      in: 'query',
-      ...(required ? { required } : {}),
-      ...describedBy(parameter),
-      schema: parameterSchemaOf(parameter, parameterKeywords),
-    },
-  ];
-}
-
-function fieldsParameterOf(discovery: DiscoveryDocument): readonly JsonObject[] {
-  const fields = discovery.parameters?.[fieldsParameterName];
-  return fields === undefined
-    ? []
-    : [{ name: fieldsParameterName, in: 'query', ...describedBy(fields), schema: { type: 'string' } }];
-}
-
-function parametersOf(method: DiscoveryMethod, fields: readonly JsonObject[]): readonly JsonObject[] {
-  const declared = method.parameters ?? {};
-  return [
-    ...pathParametersOf(method, declared),
-    ...Object.entries(declared)
-      .toSorted(byName)
-      .flatMap((each: readonly [string, JsonObject]) => queryParameterOf(each)),
-    ...(Object.hasOwn(declared, fieldsParameterName) ? [] : fields),
-  ];
-}
-
 function jsonContentOf(name: string): JsonObject {
   return { 'application/json': { schema: { $ref: componentReferenceOf(name) } } };
 }
@@ -183,25 +82,74 @@ function responsesOf(method: DiscoveryMethod): JsonObject {
   };
 }
 
-function operationOf(method: KeptMethod, fields: readonly JsonObject[]): JsonObject {
+function describedAs(operationId: string, method: DiscoveryMethod, { described }: Writing): Described {
+  const description = described.get(operationId) ?? method.description;
+  return description === undefined ? {} : { description };
+}
+
+function operationOf(method: KeptMethod, path: string, writing: Writing): JsonObject {
   return {
     operationId: method.id,
-    ...(method.description === undefined ? {} : { description: method.description }),
+    ...describedAs(method.id, method, writing),
     ...(method.deprecated === true ? { deprecated: true } : {}),
-    parameters: parametersOf(method, fields),
+    parameters: parametersOf(method, path, writing),
     ...requestBodyOf(method),
     responses: responsesOf(method),
     security: requirementsOf(securitySchemeName, method.scopes),
   };
 }
 
-function pathsOf(methods: readonly KeptMethod[], fields: readonly JsonObject[]): JsonObject {
+function uploadOperationOf(method: KeptMethod, discovery: DiscoveryDocument, writing: Writing): Placed {
+  const operationId = uploadIdOf(method.id);
+  const place = uploadPlaceOf(method);
+  const path = templated(place.path);
+  return [
+    path,
+    {
+      operationId,
+      ...describedAs(operationId, method, writing),
+      parameters: parametersOf(method, path, writing, uploadTypeOf(discovery)),
+      requestBody: uploadBodyOf(place),
+      responses: responsesOf(method),
+      security: requirementsOf(securitySchemeName, method.scopes),
+    },
+  ];
+}
+
+type Placed = readonly [string, JsonObject];
+
+function placedOf(method: KeptMethod, uploads: ReadonlySet<string>, discovery: DiscoveryDocument, writing: Writing) {
+  const path = pathOf(method, writing.prefix);
+  const own: Placed = [path, operationOf(method, path, writing)];
+  return uploads.has(method.id) ? [own, uploadOperationOf(method, discovery, writing)] : [own];
+}
+
+function pathsOf(
+  methods: readonly KeptMethod[],
+  uploads: ReadonlySet<string>,
+  discovery: DiscoveryDocument,
+  writing: Writing,
+): JsonObject {
   const paths: Record<string, Record<string, JsonObject>> = {};
   for (const method of methods) {
-    const path = pathOf(method);
-    paths[path] = { ...paths[path], [method.httpMethod.toLowerCase()]: operationOf(method, fields) };
+    for (const [path, operation] of placedOf(method, uploads, discovery, writing)) {
+      paths[path] = { ...paths[path], [method.httpMethod.toLowerCase()]: operation };
+    }
   }
   return paths;
+}
+
+function uploadsAmong(methods: readonly KeptMethod[], uploads: readonly string[]): ReadonlySet<string> {
+  const kept = new Set(methods.map(({ id }) => id));
+  const unkept = uploads.filter((id) => !kept.has(id));
+  if (unkept.length > 0) {
+    throw new Error(`The manifest keeps the upload of ${unkept.join(', ')}, and not the method itself`);
+  }
+  return new Set(uploads);
+}
+
+function operationIdsOf(methods: readonly KeptMethod[], uploads: ReadonlySet<string>): readonly string[] {
+  return methods.flatMap(({ id }) => (uploads.has(id) ? [id, uploadIdOf(id)] : [id]));
 }
 
 function rootSchemasOf(methods: readonly DiscoveryMethod[]): readonly string[] {
@@ -248,19 +196,33 @@ function infoOf({ name, title, version, description }: DiscoveryDocument): JsonO
   return { title: title ?? name, version, ...(description === undefined ? {} : { description }) };
 }
 
+export interface DocumentChanges {
+  readonly uploads?: readonly string[];
+  readonly descriptions?: readonly Description[];
+}
+
 export function curatedDocumentOf(
   discovery: DiscoveryDocument,
   server: AuthorizationServer,
   methodIds: readonly string[],
+  { uploads = [], descriptions = [] }: DocumentChanges = {},
 ): JsonObject {
   const methods = keptMethodsOf(discovery, methodIds);
+  const uploading = uploadsAmong(methods, uploads);
+  const fromTheRoot = uploading.size > 0;
+  const writing: Writing = {
+    prefix: fromTheRoot ? discovery.servicePath : '',
+    fields: fieldsParameterOf(discovery),
+    described: describedOperations(descriptions, operationIdsOf(methods, uploading)),
+  };
+  const serverUrl = fromTheRoot ? discovery.rootUrl : `${discovery.rootUrl}${discovery.servicePath}`;
   return {
-    openapi: '3.1.0',
+    openapi: fromTheRoot ? '3.2.0' : '3.1.0',
     info: infoOf(discovery),
     ...(discovery.documentationLink === undefined ? {} : { externalDocs: { url: discovery.documentationLink } }),
-    servers: [{ url: `${discovery.rootUrl}${discovery.servicePath}`.replace(/\/+$/u, '') }],
+    servers: [{ url: serverUrl.replace(/\/+$/u, '') }],
     security: rootRequirementOf(securitySchemeName),
-    paths: pathsOf(methods, fieldsParameterOf(discovery)),
+    paths: pathsOf(methods, uploading, discovery, writing),
     components: {
       schemas: componentSchemasOf(discovery, methods),
       securitySchemes: securitySchemesOf(securitySchemeName, server, scopesOf(discovery)),
@@ -268,7 +230,7 @@ export function curatedDocumentOf(
   };
 }
 
-export interface DiscoveryTranslation extends ParameterChanges {
+export interface DiscoveryTranslation extends ParameterChanges, DocumentChanges {
   readonly methods: readonly string[];
   readonly cuts?: readonly Cut[];
 }
@@ -281,10 +243,13 @@ export interface TranslatedDiscovery {
 export function translatedDiscoveryOf(
   read: unknown,
   metadata: unknown,
-  { methods, cuts = [], ...changes }: DiscoveryTranslation,
+  { methods, cuts = [], uploads, descriptions, ...changes }: DiscoveryTranslation,
 ): TranslatedDiscovery {
   const discovery = discoveryDocumentOf(read);
   const prepared = discoveryParametersChanged(discoveryCut(discovery, cuts), changes);
-  const document = curatedDocumentOf(prepared, authorizationServerOf(metadata), methods);
+  const document = curatedDocumentOf(prepared, authorizationServerOf(metadata), methods, {
+    ...(uploads === undefined ? {} : { uploads }),
+    ...(descriptions === undefined ? {} : { descriptions }),
+  });
   return { document, revision: discovery.revision };
 }

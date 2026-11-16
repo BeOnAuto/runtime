@@ -135,11 +135,13 @@
   },
   "google-drive, authorization": {
     "drive.files.list": "6bd62ea620e9e84a334aa7cfaf8a90720cfa28edce2904ba8a7a8edc405ac645",
-    "drive.files.create": "f907232796fcb907bdeb24a3b5af7a1806a4424ce8143e3455ce5369b1d9cde0",
+    "drive.files.create": "c454188f40214857d66bd55cc50a0b8fc04e6fa32d42b9f0d30ae627bdd86115",
     "drive.files.get": "40568d4647aaeb46efb8d696d3ae84e8e8c0f2bc3cb26043b8a3b7456dd3a80f",
     "drive.permissions.list": "1e38bddcfee5a09cf53f35981a51ccf62b65bc9953e01b4f7bf2beec8f7f43b7",
     "drive.files.export": "67d04fef73419fd53ad32a81cac1273d37c1d8cecbc2535f6f14ba4054f22982",
-    "drive.files.copy": "2dfb42fe41eaeb04e3a2f5c0651b682c4beb39f064e39519006bed8c9cd44c54"
+    "drive.files.create.upload": "5637a4e212602a20f18efdf5569607b1cf81472f8b8fcf9ef156d672fc5ec3c1",
+    "drive.files.copy": "2dfb42fe41eaeb04e3a2f5c0651b682c4beb39f064e39519006bed8c9cd44c54",
+    "drive.files.generateIds": "f7e46aad0d6e0135b203f89855435bad8336a14d5e7aa4fad41eb46ee5b2c47c"
   },
   "google-search-console, authorization": {
     "webmasters.searchanalytics.query": "0e565dcc9353439cbf84674af48b92c4f05dd5bb887deaad0c8bb8e385325c80",
