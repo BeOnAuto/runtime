@@ -10,6 +10,8 @@ import { listFromTheReadModel } from './read-model-lists.ts';
 import { referencesTo } from './read-model-rows.ts';
 import { versionFromTheReadModel } from './read-model-versions.ts';
 
+const goalsKept = true;
+
 function aLedger(): MemoryLedger {
   return readModelLedgerOf(['echo', 'workflow', 'probe']);
 }
@@ -48,8 +50,8 @@ describe('the readers of the read model', () => {
     });
 
     const read = await inThePlaybook(ledger, definitionFromTheReadModel(echo, ['echo'], 'alpha-one'));
-    const listed = await inThePlaybook(ledger, listFromTheReadModel(echo, false));
-    const everyOne = await inThePlaybook(ledger, listFromTheReadModel(echo, true));
+    const listed = await inThePlaybook(ledger, listFromTheReadModel(echo, false, goalsKept));
+    const everyOne = await inThePlaybook(ledger, listFromTheReadModel(echo, true, goalsKept));
 
     expect([
       read.definition.name,
@@ -87,7 +89,7 @@ describe('the readers of the read model, over more rows than a page', () => {
     await createdInTurn(ledger.service, names, callingTheFirst);
 
     expect([
-      (await inThePlaybook(ledger, listFromTheReadModel(echo, false))).length,
+      (await inThePlaybook(ledger, listFromTheReadModel(echo, false, goalsKept))).length,
       (await inThePlaybook(ledger, referencesTo('echo', 'greeter-000'))).length,
     ]).toEqual([102, 102]);
   });

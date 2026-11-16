@@ -3,7 +3,7 @@
   "info": {
     "title": "Slack Web API",
     "version": "2026-11-04",
-    "description": "Eleven Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the token, the bot token (xoxb-) of an app installed in the workspace or the user token (xoxp-) of the person who connects, is sent as Authorization: Bearer."
+    "description": "Eleven Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the bot token (xoxb-) of an app installed in the workspace is sent as Authorization: Bearer."
   },
   "externalDocs": {
     "url": "https://docs.slack.dev/apis/web-api"
@@ -37,9 +37,6 @@
         "security": [
           {
             "bot_token": []
-          },
-          {
-            "user_token": []
           }
         ]
       }
@@ -119,18 +116,6 @@
           },
           {
             "bot_token": ["mpim:read"]
-          },
-          {
-            "user_token": ["channels:read"]
-          },
-          {
-            "user_token": ["groups:read"]
-          },
-          {
-            "user_token": ["im:read"]
-          },
-          {
-            "user_token": ["mpim:read"]
           }
         ]
       }
@@ -193,18 +178,6 @@
           },
           {
             "bot_token": ["mpim:read"]
-          },
-          {
-            "user_token": ["channels:read"]
-          },
-          {
-            "user_token": ["groups:read"]
-          },
-          {
-            "user_token": ["im:read"]
-          },
-          {
-            "user_token": ["mpim:read"]
           }
         ]
       }
@@ -301,18 +274,6 @@
           },
           {
             "bot_token": ["mpim:history"]
-          },
-          {
-            "user_token": ["channels:history"]
-          },
-          {
-            "user_token": ["groups:history"]
-          },
-          {
-            "user_token": ["im:history"]
-          },
-          {
-            "user_token": ["mpim:history"]
           }
         ]
       }
@@ -418,18 +379,6 @@
           },
           {
             "bot_token": ["mpim:history"]
-          },
-          {
-            "user_token": ["channels:history"]
-          },
-          {
-            "user_token": ["groups:history"]
-          },
-          {
-            "user_token": ["im:history"]
-          },
-          {
-            "user_token": ["mpim:history"]
           }
         ]
       }
@@ -490,9 +439,6 @@
         "security": [
           {
             "bot_token": ["users:read"]
-          },
-          {
-            "user_token": ["users:read"]
           }
         ]
       }
@@ -537,9 +483,6 @@
         "security": [
           {
             "bot_token": ["users:read"]
-          },
-          {
-            "user_token": ["users:read"]
           }
         ]
       }
@@ -647,9 +590,6 @@
         "security": [
           {
             "bot_token": ["chat:write"]
-          },
-          {
-            "user_token": ["chat:write"]
           }
         ]
       }
@@ -743,9 +683,6 @@
         "security": [
           {
             "bot_token": ["chat:write"]
-          },
-          {
-            "user_token": ["chat:write"]
           }
         ]
       }
@@ -798,9 +735,6 @@
         "security": [
           {
             "bot_token": ["reactions:write"]
-          },
-          {
-            "user_token": ["reactions:write"]
           }
         ]
       }
@@ -869,9 +803,6 @@
         "security": [
           {
             "bot_token": ["reactions:read"]
-          },
-          {
-            "user_token": ["reactions:read"]
           }
         ]
       }
@@ -903,30 +834,6 @@
         "type": "http",
         "scheme": "bearer",
         "description": "A bot token (xoxb-) of the Slack app installed in the workspace."
-      },
-      "user_token": {
-        "type": "oauth2",
-        "description": "The user token (xoxp-) of the person who connects, from the OAuth flow Slack gives for user tokens alone, sent as Authorization: Bearer.",
-        "flows": {
-          "authorizationCode": {
-            "authorizationUrl": "https://slack.com/oauth/v2_user/authorize",
-            "tokenUrl": "https://slack.com/api/oauth.v2.user.access",
-            "scopes": {
-              "channels:read": "View basic information about public channels in a workspace",
-              "groups:read": "View basic information about private channels that your Slack app has been added to",
-              "im:read": "View basic information about direct messages that your Slack app has been added to",
-              "mpim:read": "View basic information about group direct messages that your Slack app has been added to",
-              "channels:history": "View messages and other content in public channels that your Slack app has been added to",
-              "groups:history": "View messages and other content in private channels that your Slack app has been added to",
-              "im:history": "View messages and other content in direct messages that your Slack app has been added to",
-              "mpim:history": "View messages and other content in group direct messages that your Slack app has been added to",
-              "users:read": "View people in a workspace",
-              "chat:write": "Send messages as your Slack app",
-              "reactions:read": "View emoji reactions and their associated content in channels and conversations that your Slack app has been added to",
-              "reactions:write": "Add and edit emoji reactions"
-            }
-          }
-        }
       }
     }
   }

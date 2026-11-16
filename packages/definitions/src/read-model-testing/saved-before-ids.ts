@@ -1,4 +1,4 @@
-import { Ledger, type Decided, type ProjectedKeyedRow } from '@on.auto/operations';
+import { Ledger, type Decided, type ProjectedKeyedRow, type ProjectedValue } from '@on.auto/operations';
 import type { MemoryLedger } from '@on.auto/operations/testing';
 import { Cause, Effect, Exit, Result } from 'effect';
 
@@ -52,19 +52,21 @@ export function savedToday(ledger: MemoryLedger, command: DefinitionCommandData)
   return refusalOf(ledger, decidedToday(), command);
 }
 
-function withoutTheColumnOfIds({ row, ...keyed }: ProjectedKeyedRow): ProjectedKeyedRow {
-  const { definition_id: _id, ...before } = row;
-  return { ...keyed, row: before };
+function withoutTheColumn(column: string, { row, ...keyed }: ProjectedKeyedRow): ProjectedKeyedRow {
+  return {
+    ...keyed,
+    row: Object.fromEntries(Object.entries(row).filter(([name]: readonly [string, ProjectedValue]) => name !== column)),
+  };
 }
 
-export function answeringAsTheReleaseBefore(ledger: MemoryLedger): MemoryLedger {
+export function answeringAsTheReleaseBefore(ledger: MemoryLedger, itsNewColumn: string): MemoryLedger {
   return {
     ...ledger,
     service: Ledger.of({
       ...ledger.service,
       readProjectedRows: (projection, address, query) =>
         Effect.map(ledger.service.readProjectedRows(projection, address, query), (rows) =>
-          rows.map((each) => withoutTheColumnOfIds(each)),
+          rows.map((each) => withoutTheColumn(itsNewColumn, each)),
         ),
     }),
   };

@@ -2,12 +2,15 @@ import { messageIdOf, PlaybookContext, streamPrefixOfPlaybook } from '@on.auto/o
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
+import { publishedDetails } from '../operations/published-details.ts';
 import { storedContentOf, type RegisteredDefinition } from '../registry/definition-registry.ts';
 import { TriggerSchema } from '../registry/definition-triggers.ts';
-import type { ListedDefinition } from '../registry/definition.ts';
+import type { ListedDefinition, StoredDefinition } from '../registry/definition.ts';
 import { definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import type { DefinitionRow, RowAndSave } from './read-model-rows.ts';
 import { warningsOfAListEntry } from './remembered-warnings.ts';
+
+const decodeJson = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json));
 
 const decodeObject = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.JsonObject));
 
@@ -58,8 +61,30 @@ function schemasOf({ input_schema: input, output_schema: output, triggers }: Def
   };
 }
 
-export function listedOfTheRow(capability: Capability, row: DefinitionRow, savedBy: string): ListedDefinition {
+function detailsOfTheRow({ shape, contributes }: DefinitionRow): Pick<StoredDefinition, 'details'> {
+  return {
+    details: {
+      ...(shape === null ? {} : { shape }),
+      ...(contributes === null ? {} : { contributes: decodeJson(contributes) }),
+    },
+  };
+}
+
+export function listedWarningsOf(
+  capability: Capability,
+  row: DefinitionRow,
+  savedBy: string,
+): Pick<ListedDefinition, 'warnings'> {
   const warnings = warningsOfAListEntry(capability, savedBy, savedWarningsOf(row));
+  return warnings.length === 0 ? {} : { warnings };
+}
+
+export function listedOfTheRow(
+  capability: Capability,
+  row: DefinitionRow,
+  savedBy: string,
+  goals: boolean,
+): ListedDefinition {
   return {
     type: capability.type,
     media_type: capability.mediaType,
@@ -70,7 +95,7 @@ export function listedOfTheRow(capability: Capability, row: DefinitionRow, saved
     ...(row.description === null ? {} : { description: row.description }),
     ...schemasOf(row),
     ...standingOf(row),
-    ...(warnings.length === 0 ? {} : { warnings }),
-    ...(row.shape === null ? {} : { details: { shape: row.shape } }),
+    ...listedWarningsOf(capability, row, savedBy),
+    ...publishedDetails(detailsOfTheRow(row), goals),
   };
 }

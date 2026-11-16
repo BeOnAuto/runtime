@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "rows": {
     "definitions": [
       {
@@ -15,6 +15,7 @@
           "output_schema": null,
           "warnings": null,
           "shape": null,
+          "contributes": null,
           "triggers": null,
           "created_at": "2026-10-29T10:00:00.000Z",
           "created_by_id": "key_7f3a",
@@ -41,6 +42,7 @@
           "output_schema": null,
           "warnings": null,
           "shape": null,
+          "contributes": null,
           "triggers": null,
           "created_at": "2026-10-29T10:00:00.000Z",
           "created_by_id": "key_7f3a",
@@ -67,6 +69,7 @@
           "output_schema": null,
           "warnings": null,
           "shape": null,
+          "contributes": null,
           "triggers": null,
           "created_at": "2026-10-29T10:00:00.000Z",
           "created_by_id": "key_7f3a",
@@ -93,6 +96,7 @@
           "output_schema": "{\"type\":\"object\",\"properties\":{\"greeting\":{\"const\":\"Hello\"},\"input\":{\"type\":\"object\"}},\"required\":[\"greeting\",\"input\"]}",
           "warnings": "[\"The greeting is never checked\"]",
           "shape": null,
+          "contributes": null,
           "triggers": null,
           "created_at": "2026-10-01T09:00:00.000Z",
           "created_by_id": "acme-admin",
@@ -119,6 +123,7 @@
           "output_schema": null,
           "warnings": null,
           "shape": null,
+          "contributes": null,
           "triggers": null,
           "created_at": "2026-11-13T12:00:00.000Z",
           "created_by_id": "person:user_2ada",
@@ -145,6 +150,7 @@
           "output_schema": null,
           "warnings": null,
           "shape": null,
+          "contributes": null,
           "triggers": "[{\"kind\":\"every\",\"reference\":\"/schedule/every\",\"milliseconds\":3600000}]",
           "created_at": "2026-11-09T08:30:00.000Z",
           "created_by_id": "person:user_2ada",

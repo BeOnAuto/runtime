@@ -58,7 +58,13 @@ function textOfBytes(written: string): string | undefined {
   }
 }
 
-function decodedIn(value: unknown, schemas: readonly SchemaObject[], answers: AnswerSchemas): unknown {
+type Described = readonly [name: string, item: unknown, after: unknown];
+
+function isWriteOnly(schemas: readonly SchemaObject[]): boolean {
+  return schemas.some((schema) => schema['writeOnly'] === true);
+}
+
+function describedIn(value: unknown, schemas: readonly SchemaObject[], answers: AnswerSchemas): unknown {
   if (schemas.length === 0) {
     return value;
   }
@@ -67,30 +73,24 @@ function decodedIn(value: unknown, schemas: readonly SchemaObject[], answers: An
   }
   if (Array.isArray(value)) {
     const items = schemas.flatMap((schema) => applying(schema['items'], answers));
-    const decoded = value.map((item: unknown) => decodedIn(item, items, answers));
+    const decoded = value.map((item: unknown) => describedIn(item, items, answers));
     return decoded.every((item, index) => item === value[index]) ? value : decoded;
   }
   if (!Predicate.isObject(value)) {
     return value;
   }
-  const decoded = Object.entries(value).map(
-    ([name, item]: readonly [string, unknown]): readonly [string, unknown, unknown] => [
-      name,
-      item,
-      decodedIn(
-        item,
-        schemas.flatMap((schema) => applying(propertySchemaOf(schema, name), answers)),
-        answers,
-      ),
-    ],
-  );
-  return decoded.every(([, item, after]) => after === item)
+  const written = Object.entries(value);
+  const kept = written.flatMap(([name, item]: readonly [string, unknown]): readonly Described[] => {
+    const described = schemas.flatMap((schema) => applying(propertySchemaOf(schema, name), answers));
+    return isWriteOnly(described) ? [] : [[name, item, describedIn(item, described, answers)]];
+  });
+  return kept.length === written.length && kept.every(([, item, after]) => after === item)
     ? value
-    : Object.fromEntries(decoded.map(([name, , after]) => [name, after]));
+    : Object.fromEntries(kept.map(([name, , after]) => [name, after]));
 }
 
-export function decodedAnswer(value: unknown, answers: AnswerSchemas): unknown {
-  return decodedIn(
+export function answerAsDescribed(value: unknown, answers: AnswerSchemas): unknown {
+  return describedIn(
     value,
     answers.schemas.flatMap((schema) => applying(schema, answers)),
     answers,

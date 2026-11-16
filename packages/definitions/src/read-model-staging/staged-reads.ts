@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { readDefinition, type ReadDefinition } from '../operations/definition-reading.ts';
 import { triggersSince } from '../operations/registry-access.ts';
-import { listedOfTheRow } from '../read-model-reads/read-model-answers.ts';
+import { listedWarningsOf } from '../read-model-reads/read-model-answers.ts';
 import { definitionFromTheReadModel, type ReadFromTheReadModel } from '../read-model-reads/read-model-definitions.ts';
 import { differingFieldsOf, sameAnswer } from './same-answers.ts';
 import { comparisonOf, loggedComparison, matched, stagedRead } from './shadow-comparison.ts';
@@ -21,7 +21,7 @@ function namedFields(prefix: string, fields: readonly string[]): readonly string
 }
 
 export function readsCompared(capability: Capability, today: DefinitionReadAt, candidate: ReadFromTheReadModel) {
-  const remembered = listedOfTheRow(capability, candidate.row, candidate.savedBy).warnings;
+  const remembered = listedWarningsOf(capability, candidate.row, candidate.savedBy).warnings;
   return Effect.succeed(
     comparisonOf([
       ...namedFields('stored', differingFieldsOf(today.stored, candidate.stored)),

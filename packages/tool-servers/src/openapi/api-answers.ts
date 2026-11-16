@@ -6,7 +6,7 @@ import type { CallSettled } from '../clients/server-client.ts';
 import { fileBytesOf, fileTextOf, shownTextIn, shownTextOf, unreadFiles, type AnsweredFile } from './answer-bodies.ts';
 import { AnsweredStatus, answeredHttpWords } from './answered-status.ts';
 import { headersCarriedBy, unschemedAnswers, type AnswerSchemas } from './api-parameters.ts';
-import { decodedAnswer } from './byte-strings.ts';
+import { answerAsDescribed } from './described-answers.ts';
 import { DocumentTooLarge } from './document-too-large.ts';
 import { refusalOf, type FailureCodes } from './failure-codes.ts';
 
@@ -68,7 +68,7 @@ function parsedJson(text: string): { readonly parsed: unknown } | undefined {
 }
 
 function jsonAnswer(text: string, parsed: unknown, answers: AnswerSchemas): Answer {
-  const decoded = decodedAnswer(parsed, answers);
+  const decoded = answerAsDescribed(parsed, answers);
   return {
     content: [{ type: 'text', text: decoded === parsed ? text : JSON.stringify(decoded) }],
     structuredContent: decoded,

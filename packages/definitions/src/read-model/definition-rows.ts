@@ -8,6 +8,7 @@ import {
 } from '@on.auto/operations';
 import { Option } from 'effect';
 
+import { contributesIn } from '../contributions/contributes-details.ts';
 import {
   DefinitionEventSchema,
   type DefinitionContent,
@@ -37,6 +38,7 @@ function contentColumns(content: DefinitionContent): ProjectedRow {
     output_schema: jsonOf(content.output_schema),
     warnings: jsonOf(content.warnings),
     shape: shapeNameIn(content.details) ?? null,
+    contributes: jsonOf(contributesIn(content.details)),
     triggers: jsonOf(content.triggers),
   };
 }
@@ -113,7 +115,7 @@ function definitionRowAfter(row: ProjectedRow | undefined, message: ProjectedMes
 
 export const definitionRows: KeyedProjection = {
   name: 'definitions',
-  version: 2,
+  version: 3,
   kinds: ['definitions'],
   types: [
     'definition_created',
@@ -134,6 +136,7 @@ export const definitionRows: KeyedProjection = {
     { name: 'output_schema', kind: 'text' },
     { name: 'warnings', kind: 'text' },
     { name: 'shape', kind: 'text' },
+    { name: 'contributes', kind: 'text' },
     { name: 'triggers', kind: 'text' },
     { name: 'created_at', kind: 'text' },
     { name: 'created_by_id', kind: 'text' },

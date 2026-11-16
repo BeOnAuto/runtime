@@ -11,6 +11,8 @@ import { readModelLedgerOf } from './read-model-ledger.ts';
 
 export const savedWarnings = ['The greeting is never checked'];
 
+const goalsKept = true;
+
 const everyMonday = {
   kind: 'cron',
   reference: '/schedule/cron',
@@ -34,7 +36,7 @@ export async function aSavedGreeting(): Promise<SavedGreeting> {
     Effect.all([
       readToday(echo, ['echo'], 'greet'),
       definitionFromTheReadModel(echo, ['echo'], 'greet'),
-      listedRowsFromTheReadModel(echo, false),
+      listedRowsFromTheReadModel(echo, false, goalsKept),
     ]),
   );
   return { ledger, today, candidate, listed };

@@ -6,9 +6,8 @@ import type { PlaybookOperation } from '../operations/definition-operations.ts';
 import type { ReadModelStage } from '../read-model-staging/read-model-stage.ts';
 import { comparedMessage } from '../read-model-staging/shadow-comparison.ts';
 import { acmeAdmin } from '../testing/callers.ts';
-import { echo } from '../testing/capabilities/echo.ts';
-import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
+import { playbookWithGoals, scriptOperationsFor, weeklyContributes } from './script-operations.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -37,13 +36,15 @@ const callingGreet = JSON.stringify({
       ],
     },
   ],
+  contributes: weeklyContributes,
 });
 
 type Step = readonly [PlaybookOperation, Readonly<Record<string, unknown>>, string?];
 
-function scriptFor(workflow: Capability): readonly Step[] {
-  const operations = definitionOperationsFor([echo, workflow]);
+function scriptFor(workflow: Capability, goals: boolean): readonly Step[] {
+  const operations = scriptOperationsFor(workflow, goals);
   return [
+    [operations.savePlaybook, playbookWithGoals],
     [operations.createDefinition, { ...greet, source: echoing('Hello') }],
     [operations.createDefinition, { ...weekly, source: callingGreet }],
     [operations.updateDefinition, { ...greet, source: echoing('Hi') }, '2026-10-02T09:00:00.000Z'],
@@ -63,9 +64,9 @@ function scriptFor(workflow: Capability): readonly Step[] {
   ];
 }
 
-export function answeredBy(definitions: Harness, workflow: Capability): Promise<readonly Outcome[]> {
+export function answeredBy(definitions: Harness, workflow: Capability, goals: boolean): Promise<readonly Outcome[]> {
   return Effect.runPromise(
-    Effect.forEach(scriptFor(workflow), ([operation, input, at]) =>
+    Effect.forEach(scriptFor(workflow, goals), ([operation, input, at]) =>
       Effect.promise(() => definitions.call(operation, toAlpha(acmeAdmin, input), at)),
     ),
   );
@@ -78,7 +79,7 @@ function comparedIn(definitions: Harness): readonly (readonly unknown[])[] {
     .map(({ annotations }) => [annotations['read'], annotations['outcome'], annotations['differing']]);
 }
 
-export async function staged(stage: ReadModelStage, workflow: Capability) {
+export async function staged(stage: ReadModelStage, workflow: Capability, goals: boolean) {
   const definitions = harness(undefined, undefined, { stage, folds: ['echo', 'workflow'] });
-  return { answers: await answeredBy(definitions, workflow), compared: comparedIn(definitions) };
+  return { answers: await answeredBy(definitions, workflow, goals), compared: comparedIn(definitions) };
 }

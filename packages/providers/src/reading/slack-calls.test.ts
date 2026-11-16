@@ -13,11 +13,7 @@ const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(provide
 
 const entriesFolder = new URL('../entries/', import.meta.url);
 
-const { entry: slack } = Result.getOrThrow(providerNamed(shipped, 'slack'));
-
 const { entry: slackBot } = Result.getOrThrow(providerNamed(shipped, 'slack-bot'));
-
-const clientSecret = 'slack-secret-9e2b';
 
 const botToken = 'slack-bot-token-4c8d1f';
 
@@ -72,7 +68,7 @@ function toolReadingOn(name: string): unknown {
   return expect.objectContaining({ name, description: readingOnInWords });
 }
 
-const document = relative(process.cwd(), fileURLToPath(new URL(slack.document ?? '', entriesFolder)));
+const document = relative(process.cwd(), fileURLToPath(new URL(slackBot.document ?? '', entriesFolder)));
 
 type Answered = Parameters<FakeApiServer['answerNextWith']>[0];
 
@@ -84,29 +80,30 @@ function failedWith(error: string, headers: Readonly<Record<string, string>> = {
   };
 }
 
+function answeredWith(body: unknown): Answered {
+  return { status: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
+}
+
+const address = 'spengler@ghostbusters.example.com';
+
+const memberOf = (id: string) => ({
+  id,
+  team_id: 'T012AB3CD',
+  name: 'spengler',
+  deleted: false,
+  real_name: 'Egon Spengler',
+  profile: {
+    real_name: 'Egon Spengler',
+    display_name: 'spengler',
+    email: address,
+    image_72: 'https://avatars.example/e.png',
+  },
+});
+
 interface Reached {
   readonly fake: FakeApiServer;
   readonly access: Awaited<ReturnType<typeof describedAccess>>['access'];
   readonly server: string;
-}
-
-async function asThePerson(): Promise<Reached> {
-  const fake = await serveFakeApi({ client: { clientId: 'slack', clientSecret, expiresInSeconds: 3600 } });
-  closing.push(fake.close);
-  const { access } = await describedAccess(
-    {
-      slack: {
-        org: 'acme',
-        document,
-        base_url: fake.baseUrl,
-        failure_codes: slack.failure_codes,
-        auth: { issuer: String(fake.issuing?.issuer), client_id: 'slack', client_secret: '${CLIENT_SECRET}' },
-      },
-    },
-    { environment: { CLIENT_SECRET: clientSecret }, timing: patientTiming },
-  );
-  closing.push(access.close);
-  return { fake, access, server: 'slack' };
 }
 
 async function asTheBot(): Promise<Reached> {
@@ -158,20 +155,25 @@ async function sentThrough(reached: Reached, made: readonly Called[]): Promise<R
   };
 }
 
-describe('the two Slack providers', () => {
-  it('share the one document of the Slack Web API, and read its failed answers by the same codes', () => {
-    expect([slack.document, slackBot.document]).toEqual([
+describe('the Slack Bot provider', () => {
+  it('reads the document of the Slack Web API beside the entries, and its failed answers by Slack’s codes', () => {
+    expect([slackBot.document, slackBot.failure_codes]).toEqual([
       'documents/slack.openapi.json',
-      'documents/slack.openapi.json',
+      {
+        succeeded: '/ok',
+        code: '/error',
+        key_refused: ['invalid_auth', 'not_authed', 'token_revoked', 'token_expired', 'account_inactive'],
+        scope_lacking: ['missing_scope'],
+        rate_limited: ['ratelimited', 'rate_limited'],
+      },
     ]);
-    expect(slack.failure_codes).toEqual(slackBot.failure_codes);
   });
 
-  it('offer the person its eleven methods as tools, those that read marked read-only and those that post, update or react not', async () => {
-    const [listed] = await Effect.runPromise(listedBy(await asThePerson()));
+  it('offers the bot its eleven methods as tools, those that read marked read-only and those that post, update or react not', async () => {
+    const [listed] = await Effect.runPromise(listedBy(await asTheBot()));
 
     expect(listed).toMatchObject({
-      name: 'slack',
+      name: 'slack-bot',
       tools: calls.map(({ tool }) => ({
         name: tool,
         annotations: { readOnlyHint: !['chat_postMessage', 'chat_update', 'reactions_add'].includes(tool) },
@@ -179,63 +181,82 @@ describe('the two Slack providers', () => {
     });
   });
 
-  it('offer the bot the same eleven tools as the person', async () => {
+  it('says on the history of a conversation and of a thread that Slack returns 15 messages a call outside its Marketplace, and how to read on', async () => {
     const [listed] = await Effect.runPromise(listedBy(await asTheBot()));
-
-    expect(listed).toMatchObject({ name: 'slack-bot', tools: calls.map(({ tool }) => ({ name: tool })) });
-  });
-
-  it('say on the history of a conversation and of a thread that Slack returns 15 messages a call outside its Marketplace, and how to read on', async () => {
-    const [listed] = await Effect.runPromise(listedBy(await asThePerson()));
     const theTwoReads: unknown = expect.arrayContaining([
       toolReadingOn('conversations_history'),
       toolReadingOn('conversations_replies'),
     ]);
 
-    expect(listed).toMatchObject({ name: 'slack', tools: theTwoReads });
+    expect(listed).toMatchObject({ name: 'slack-bot', tools: theTwoReads });
   });
 });
 
-describe('the calls of slack and slack-bot through their shipped document', () => {
-  it('reach the Web API at the path of each method, with the user token of the person or the bot token of the app as a bearer', async () => {
-    const asPerson = await sentThrough(await asThePerson(), calls);
+describe('the calls of slack-bot through its shipped document', () => {
+  it('reach the Web API at the path of each method, with the bot token of the app as a bearer', async () => {
     const asBot = await sentThrough(await asTheBot(), calls);
 
-    expect([asPerson.sent, asBot.sent]).toEqual([sentByEach.toSorted(byPath), sentByEach.toSorted(byPath)]);
-    expect([asPerson.bearers, asBot.bearers]).toEqual([
-      new Set([expect.stringMatching(/^Bearer token-1-/u)]),
-      new Set([`Bearer ${botToken}`]),
+    expect([asBot.sent, asBot.bearers]).toEqual([sentByEach.toSorted(byPath), new Set([`Bearer ${botToken}`])]);
+  });
+});
+
+describe('a member’s email address, which Slack answers in a user object to an app granted users:read.email', () => {
+  it('reaches a function through Slack Bot as Slack answered it, since the document of a company’s own app declares nothing of it', async () => {
+    const bot = await asTheBot();
+    bot.fake.answerNextWith(answeredWith({ ok: true, user: memberOf('W012A3CDE') }));
+    bot.fake.answerNextWith(
+      answeredWith({
+        ok: true,
+        members: [memberOf('W012A3CDE'), memberOf('W07QCRPA4')],
+        response_metadata: { next_cursor: '' },
+      }),
+    );
+
+    const person = await called(bot, { tool: 'users_info', input: { user: 'W012A3CDE' } });
+    const directory = await called(bot, { tool: 'users_list', input: { limit: 100 } });
+
+    expect([person, directory]).toMatchObject([
+      { outcome: 'result', answer: { structuredContent: { ok: true, user: memberOf('W012A3CDE') } } },
+      {
+        outcome: 'result',
+        answer: {
+          structuredContent: {
+            ok: true,
+            members: [memberOf('W012A3CDE'), memberOf('W07QCRPA4')],
+            response_metadata: { next_cursor: '' },
+          },
+        },
+      },
     ]);
+    expect(JSON.stringify(person)).toContain(address);
   });
 });
 
 describe('the answers of Slack that say a call failed', () => {
-  it('end the token where Slack refused it, a second refusal being a key refused, in words that name the code', async () => {
-    const person = await asThePerson();
-    await called(person, { tool: 'auth_test', input: {} });
+  it('are a key refused where Slack refused the bot token, in words that name the code', async () => {
+    const bot = await asTheBot();
 
-    person.fake.answerNextWith(failedWith('token_revoked'), 2);
-    const refused = await called(person, { tool: 'auth_test', input: {} });
+    bot.fake.answerNextWith(failedWith('token_revoked'));
+    const refused = await called(bot, { tool: 'auth_test', input: {} });
 
     expect(refused).toMatchObject({ outcome: 'server_failure', detail: 'The tool server answered token_revoked' });
-    expect(person.fake.issuing?.tokenRequests()).toBe(2);
   });
 
   it('are a lacking scope, a limited rate waited out where it fits, or an error result naming the code, and never a success', async () => {
-    const person = await asThePerson();
+    const bot = await asTheBot();
     const history = { tool: 'conversations_history', input: { channel } };
 
-    person.fake.answerNextWith(failedWith('missing_scope'));
-    const lacking = await called(person, history);
-    person.fake.answerNextWith(failedWith('ratelimited', { 'retry-after': '0' }));
-    person.fake.answerNextWith({
+    bot.fake.answerNextWith(failedWith('missing_scope'));
+    const lacking = await called(bot, history);
+    bot.fake.answerNextWith(failedWith('ratelimited', { 'retry-after': '0' }));
+    bot.fake.answerNextWith({
       status: 200,
       headers: { 'content-type': 'application/json' },
       body: '{"ok":true,"messages":[]}',
     });
-    const waited = await called(person, history);
-    person.fake.answerNextWith(failedWith('channel_not_found'));
-    const missing = await called(person, history);
+    const waited = await called(bot, history);
+    bot.fake.answerNextWith(failedWith('channel_not_found'));
+    const missing = await called(bot, history);
 
     expect([lacking, waited, missing]).toMatchObject([
       {

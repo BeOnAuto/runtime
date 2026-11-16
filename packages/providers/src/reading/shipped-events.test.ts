@@ -11,43 +11,33 @@ const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(provide
 
 const declaring = shipped.providers.filter(({ entry }) => entry.events !== undefined);
 
-describe('the events parts of the shipped providers', () => {
-  it('are written for Slack alone, whose app sends what happens to the address set once on the app', () => {
-    expect(
-      declaring.map(({ entry }) => [entry.name, entry.events?.destinations.map(({ type, per }) => [type, per])]),
-    ).toEqual([['slack', [['webhook', 'app']]]]);
-  });
+const hearing = (name: string) =>
+  joinedProviders(shipped, [
+    Schema.decodeUnknownSync(ProviderEntrySchema)({ ...tracker, name, events: { destinations: [overASocket] } }),
+  ]);
 
-  it("say where Slack's event names the conversation its message was posted in, and the message an app posted", () => {
-    expect(eventDestinationOf(shipped, 'slack', 'webhook')).toMatchObject({
-      verify: {
-        scheme: 'hmac',
-        secret: 'app',
-        signed_payload: 'v0:{timestamp}:{payload}',
-        signature: '$request.header.X-Slack-Signature',
-        timestamp: '$request.header.X-Slack-Request-Timestamp',
-      },
-      wake: {
-        when: { '$request.body#/type': ['event_callback'], '$request.body#/event/type': ['message'] },
-        conversation: '$request.body#/event/channel',
-        automatic: '$request.body#/event/bot_id',
-      },
-      connection: { account: '$request.body#/team_id' },
-    });
+describe('the events parts of the shipped providers', () => {
+  it('are written by none of them, so a provider that hears what its service sends is one whoever runs the runtime adds', () => {
+    expect(declaring).toEqual([]);
   });
 });
 
 describe('the destination of a provider', () => {
-  it('is answered for a provider and a type, and for a type it does not declare, a server added by hand or a provider unknown, not at all', () => {
+  it('is answered for a provider and a type it declares', () => {
+    expect(eventDestinationOf(hearing('team-chat'), 'team-chat', 'websocket')).toMatchObject({ type: 'websocket' });
+  });
+
+  it('is answered for a type it does not declare, a server added by hand or a provider unknown, not at all', () => {
+    const joined = hearing('team-chat');
     const asked: readonly (readonly [string | null, 'webhook' | 'websocket' | 'queue'])[] = [
-      ['slack', 'websocket'],
-      ['slack', 'queue'],
+      ['team-chat', 'webhook'],
+      ['team-chat', 'queue'],
       [null, 'webhook'],
       ['slack-bot', 'webhook'],
       ['unknown', 'webhook'],
     ];
 
-    expect(asked.map(([provider, type]) => eventDestinationOf(shipped, provider, type))).toEqual([
+    expect(asked.map(([provider, type]) => eventDestinationOf(joined, provider, type))).toEqual([
       undefined,
       undefined,
       undefined,
@@ -57,14 +47,9 @@ describe('the destination of a provider', () => {
   });
 
   it('is that of a provider whoever runs the runtime adds, in place of a shipped one of the same name', () => {
-    const added = Schema.decodeUnknownSync(ProviderEntrySchema)({
-      ...tracker,
-      name: 'slack',
-      events: { destinations: [overASocket] },
-    });
-    const joined = joinedProviders(shipped, [added]);
+    const joined = hearing('slack-bot');
 
-    expect(eventDestinationOf(joined, 'slack', 'websocket')).toMatchObject({ type: 'websocket' });
-    expect(eventDestinationOf(joined, 'slack', 'webhook')).toBeUndefined();
+    expect(eventDestinationOf(joined, 'slack-bot', 'websocket')).toMatchObject({ type: 'websocket' });
+    expect(eventDestinationOf(shipped, 'slack-bot', 'websocket')).toBeUndefined();
   });
 });

@@ -2,11 +2,22 @@ import { definitionNamesOf } from '@on.auto/definitions/identity';
 import { aGeneratedHistory, definitionsReadModelOf } from '@on.auto/definitions/testing';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
-import { Ledger, type StreamProjection } from '@on.auto/operations';
-import { Effect, ManagedRuntime, type Layer } from 'effect';
+import {
+  checkpointsOf,
+  keepsChildRows,
+  Ledger,
+  projectedTableOf,
+  type KeptProjection,
+  type ProjectedKeyedRow,
+  type ProjectedRow,
+  type ProjectedValue,
+  type StreamProjection,
+} from '@on.auto/operations';
+import { Effect, ManagedRuntime, Schema, type Layer } from 'effect';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { catalogOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 
 const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
@@ -32,35 +43,62 @@ interface Kept {
 
 type Opening = (kept: Kept) => Layer.Layer<Ledger>;
 
+interface Place {
+  readonly ledgerOn: Opening;
+  readonly tablesNamed: () => Promise<readonly string[]>;
+}
+
 function opened(layer: Layer.Layer<Ledger>): Promise<Ledger['Service']> {
   const runtime = ManagedRuntime.make(layer);
   onTestFinished(() => runtime.dispose());
   return runtime.runPromise(Effect.service(Ledger));
 }
 
-function onSQLite(): Promise<Opening> {
+function onSQLite(): Promise<Place> {
   const ledger = temporaryLedger();
   onTestFinished(ledger.remove);
-  return Promise.resolve((kept: Kept) => ledgerLayer({ fileName: ledger.fileName, ...kept }));
+  return Promise.resolve({
+    ledgerOn: (kept: Kept) => ledgerLayer({ fileName: ledger.fileName, ...kept }),
+    tablesNamed: async () =>
+      (await catalogOfTheLedgerIn(ledger.fileName))
+        .filter(({ sql }) => sql.startsWith('CREATE TABLE'))
+        .map(({ name }) => name),
+  });
 }
 
-async function administer(connectionString: string, statement: string): Promise<void> {
+const decodeNames = Schema.decodeUnknownSync(Schema.Array(Schema.Struct({ name: Schema.String })));
+
+async function rowsQueried(connectionString: string, statement: string): Promise<readonly unknown[]> {
   const client = new Client({ connectionString });
   await client.connect();
   try {
-    await client.query(statement);
+    const { rows }: { readonly rows: readonly unknown[] } = await client.query(statement);
+    return rows;
   } finally {
     await client.end();
   }
 }
 
-async function onPostgreSQL(): Promise<Opening> {
+async function administer(connectionString: string, statement: string): Promise<void> {
+  await rowsQueried(connectionString, statement);
+}
+
+async function onPostgreSQL(): Promise<Place> {
   const name = `definitions_${crypto.randomUUID().replaceAll('-', '')}`;
   await administer(postgresql, `CREATE DATABASE ${name}`);
   onTestFinished(() => administer(postgresql, `DROP DATABASE ${name} WITH (FORCE)`));
   const url = new URL(postgresql);
   url.pathname = `/${name}`;
-  return (kept: Kept) => postgresqlLedgerLayer({ pools: plainPoolsOn(url.href), ...kept });
+  return {
+    ledgerOn: (kept: Kept) => postgresqlLedgerLayer({ pools: plainPoolsOn(url.href), ...kept }),
+    tablesNamed: async () =>
+      decodeNames(
+        await rowsQueried(
+          url.href,
+          "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
+        ),
+      ).map(({ name: table }) => table),
+  };
 }
 
 function rowsOf(ledger: Ledger['Service']) {
@@ -71,15 +109,15 @@ function rowsOf(ledger: Ledger['Service']) {
   );
 }
 
-async function foldedInline(aPlace: () => Promise<Opening>, seed: number) {
-  const ledgerOn = await aPlace();
+async function foldedInline(aPlace: () => Promise<Place>, seed: number) {
+  const { ledgerOn } = await aPlace();
   const ledger = await opened(ledgerOn({ definitionNames, streamProjections: [readModel] }));
   await aGeneratedHistory(ledger, seed, types);
   return rowsOf(ledger);
 }
 
-async function caughtUp(aPlace: () => Promise<Opening>, seed: number, mostBytesFilledAtOnce?: number) {
-  const ledgerOn = await aPlace();
+async function caughtUp(aPlace: () => Promise<Place>, seed: number, mostBytesFilledAtOnce?: number) {
+  const { ledgerOn } = await aPlace();
   await aGeneratedHistory(await opened(ledgerOn({ definitionNames, streamProjections: [] })), seed, types);
   const reopened = ledgerOn({
     definitionNames,
@@ -89,10 +127,55 @@ async function caughtUp(aPlace: () => Promise<Opening>, seed: number, mostBytesF
   return rowsOf(await opened(reopened));
 }
 
+const theNewColumn = 'contributes';
+
+function withoutTheNewColumn(row: ProjectedRow | undefined): ProjectedRow | undefined {
+  return row === undefined
+    ? undefined
+    : Object.fromEntries(
+        Object.entries(row).filter(([name]: readonly [string, ProjectedValue]) => name !== theNewColumn),
+      );
+}
+
+function asTheVersionBefore(table: KeptProjection, version: number): KeptProjection {
+  const columns = table.columns.filter(({ name }) => name !== theNewColumn);
+  return keepsChildRows(table)
+    ? { ...table, version, columns }
+    : { ...table, version, columns, rowAfter: (row, message) => withoutTheNewColumn(table.rowAfter(row, message)) };
+}
+
+function theVersionBefore(projection: StreamProjection): StreamProjection {
+  const version = projection.version - 1;
+  return { ...projection, version, tables: projection.tables.map((table) => asTheVersionBefore(table, version)) };
+}
+
+function tablesOfTheVersion(projection: StreamProjection): readonly string[] {
+  return [...projection.tables, checkpointsOf(projection)].map((table) => projectedTableOf(table)).toSorted();
+}
+
+const namesOfTheReadModel = new Set([...readModel.tables.map(({ name }) => name), checkpointsOf(readModel).name]);
+
+async function tablesOfTheReadModelIn({ tablesNamed }: Place): Promise<readonly string[]> {
+  return (await tablesNamed()).filter((table) => namesOfTheReadModel.has(table.replace(/_\d+$/u, ''))).toSorted();
+}
+
+function contributionsIn([definitions = []]: readonly (readonly ProjectedKeyedRow[])[]): readonly unknown[] {
+  return definitions.flatMap(({ row }) => ((row[theNewColumn] ?? null) === null ? [] : [row[theNewColumn]]));
+}
+
+async function rebuiltOverTheVersionBefore(aPlace: () => Promise<Place>, seed: number) {
+  const place = await aPlace();
+  const before = await opened(place.ledgerOn({ definitionNames, streamProjections: [theVersionBefore(readModel)] }));
+  await aGeneratedHistory(before, seed, types);
+  const keptBefore = { rows: await rowsOf(before), tables: await tablesOfTheReadModelIn(place) };
+  const rebuilt = await rowsOf(await opened(place.ledgerOn({ definitionNames, streamProjections: [readModel] })));
+  return { keptBefore, rebuilt, tables: await tablesOfTheReadModelIn(place) };
+}
+
 interface Store {
   readonly store: string;
   readonly skipped: boolean;
-  readonly aPlace: () => Promise<Opening>;
+  readonly aPlace: () => Promise<Place>;
 }
 
 const stores: readonly Store[] = [
@@ -108,6 +191,22 @@ describe.each(stores)('the read model of the current definitions on $store', ({ 
 
       expect(inline.flat().length).toBeGreaterThan(10);
       expect([await caughtUp(aPlace, seed), await caughtUp(aPlace, seed, 1)]).toEqual([inline, inline]);
+    },
+  );
+
+  it.skipIf(skipped).each([1, 2, 3])(
+    'is built again from its facts where a store held the rows of its version before, whose tables it drops, history %i',
+    async (seed) => {
+      const { keptBefore, rebuilt, tables: tablesAfter } = await rebuiltOverTheVersionBefore(aPlace, seed);
+
+      expect(keptBefore.rows.flat().length).toBeGreaterThan(10);
+      expect([keptBefore.tables, contributionsIn(keptBefore.rows)]).toEqual([
+        tablesOfTheVersion(theVersionBefore(readModel)),
+        [],
+      ]);
+      expect(contributionsIn(rebuilt).length).toBeGreaterThan(0);
+      expect(rebuilt).toEqual(await foldedInline(aPlace, seed));
+      expect(tablesAfter).toEqual(tablesOfTheVersion(readModel));
     },
   );
 });

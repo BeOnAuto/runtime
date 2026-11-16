@@ -27,6 +27,7 @@ const DefinitionRowSchema = Schema.Struct({
   output_schema: Schema.NullOr(Schema.String),
   warnings: Schema.NullOr(Schema.String),
   shape: Schema.NullOr(Schema.String),
+  contributes: Schema.optionalKey(Schema.NullOr(Schema.String)),
   triggers: Schema.NullOr(Schema.String),
   created_at: Schema.String,
   created_by_id: Schema.String,
@@ -40,7 +41,10 @@ const DefinitionRowSchema = Schema.Struct({
   saved_position: Schema.Number,
 });
 
-export type DefinitionRow = Omit<typeof DefinitionRowSchema.Type, 'definition_id'> & { readonly definition_id: string };
+export type DefinitionRow = Omit<typeof DefinitionRowSchema.Type, 'definition_id' | 'contributes'> & {
+  readonly definition_id: string;
+  readonly contributes: string | null;
+};
 
 const VersionRowSchema = Schema.Struct({
   definition_type: Schema.String,
@@ -68,7 +72,11 @@ const decodeDefinitionRow = Schema.decodeUnknownSync(DefinitionRowSchema);
 function definitionRowIn(playbook: PlaybookAddress, stored: unknown): DefinitionRow {
   const row = decodeDefinitionRow(stored);
   const { definition_type: type, name } = row;
-  return { ...row, definition_id: row.definition_id ?? earlierDefinitionIdOf({ ...playbook, type, name }) };
+  return {
+    ...row,
+    definition_id: row.definition_id ?? earlierDefinitionIdOf({ ...playbook, type, name }),
+    contributes: row.contributes ?? null,
+  };
 }
 
 const decodeVersionRow = Schema.decodeUnknownSync(VersionRowSchema);

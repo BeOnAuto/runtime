@@ -8,7 +8,7 @@ import { definitionVersionRows } from './version-rows.ts';
 export function definitionsReadModelOf(types: readonly string[]): StreamProjection {
   return {
     name: 'definitions',
-    version: 2,
+    version: 3,
     kind: 'definitions',
     streams: types,
     tables: [definitionRows, definitionVersionRows, definitionReferenceRows],

@@ -105,7 +105,7 @@ export function stagedList(
     definitionType: capability.type,
     involved: [capability.type],
     today: listedToday(capability, includeRetired, goals),
-    fromTheReadModel: listedRowsFromTheReadModel(capability, includeRetired),
+    fromTheReadModel: listedRowsFromTheReadModel(capability, includeRetired, goals),
     answerOf: (candidate) => candidate.map(({ listed }): ListedToday => ({ listed, saved: [] })),
     compared: (today, candidate) => listsCompared(capability.type, today, candidate),
   });

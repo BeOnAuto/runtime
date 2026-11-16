@@ -114,12 +114,12 @@ await test('each shipped provider publishes its words, its server, its ways, whe
 });
 
 await test('a way of consent publishes the words of each scope it asks, in its order, and the groups a later consent adds', () => {
-  const slack = entryWayOf('slack');
+  const github = entryWayOf('github');
   assert.deepEqual(
-    wayAt(shipped('slack'), 0).scopes,
-    scopesIn(slack.scope).map((scope) => ({ scope, says: slack.says?.[scope] })),
+    wayAt(shipped('github'), 0).scopes,
+    scopesIn(github.scope).map((scope) => ({ scope, says: github.says?.[scope] })),
   );
-  assert.deepEqual([wayAt(shipped('slack'), 0).more, wayAt(shipped('slack'), 0).own_client], [[], false]);
+  assert.deepEqual([wayAt(shipped('github'), 0).more, wayAt(shipped('github'), 0).own_client], [[], false]);
   assert.deepEqual(wayAt(shipped('google-drive'), 0).more, [
     {
       name: 'edit',
@@ -142,7 +142,7 @@ await test('a way of a key publishes where the key is made and how', () => {
 });
 
 await test('a server is published by its hosts, each region of one reached in regions, and a placeholder by its description and its choices', () => {
-  assert.deepEqual(shipped('slack').server.hosts, ['slack.com']);
+  assert.deepEqual(shipped('slack-bot').server.hosts, ['slack.com']);
   assert.deepEqual(shipped('hubspot').server.hosts, ['mcp.hubspot.com']);
   assert.deepEqual(shipped('amazon-ads').server.hosts, [
     'advertising-api.amazon.com',

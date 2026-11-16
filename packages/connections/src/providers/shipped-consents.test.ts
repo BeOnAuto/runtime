@@ -167,7 +167,6 @@ const providersTakingConsent = [
   'posthog',
   'profound',
   'search-ads-360',
-  'slack',
   'stripe',
   'work-iq',
   'x',

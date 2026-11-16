@@ -117,7 +117,6 @@ const addressesOfTheShipped = [
   ['posthog', 'https://mcp.posthog.com/mcp?mode=tools'],
   ['profound', 'https://mcp.tryprofound.com/mcp'],
   ['search-ads-360', 'https://searchads360.googleapis.com'],
-  ['slack', 'https://slack.com/api'],
   ['slack-bot', 'https://slack.com/api'],
   ['stripe', 'https://mcp.stripe.com'],
   ['work-iq', 'https://workiq.svc.cloud.microsoft/mcp'],
@@ -133,7 +132,7 @@ describe('the shipped providers', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
 
     expect(names).toEqual(addressesOfTheShipped.map(([name]: readonly string[]) => name));
-    expect(names).toHaveLength(39);
+    expect(names).toHaveLength(38);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -181,7 +180,6 @@ const waysOfTheShipped = [
   ['posthog', ['authorization'], []],
   ['profound', ['authorization', 'secret'], []],
   ['search-ads-360', ['authorization'], []],
-  ['slack', ['authorization'], []],
   ['slack-bot', ['secret'], []],
   ['stripe', ['authorization'], []],
   ['work-iq', ['authorization'], []],

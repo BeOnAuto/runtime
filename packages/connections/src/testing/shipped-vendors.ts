@@ -212,11 +212,6 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     resource: 'https://mcp.tryprofound.com/mcp',
   },
   'search-ads-360': googleApi,
-  slack: {
-    metadata: { issuer: 'https://mcp.slack.com', takesBasicSecrets: false },
-    authorizationServerAt: 'https://mcp.slack.com/.well-known/oauth-authorization-server',
-    resource: null,
-  },
   stripe: {
     metadata: {
       issuer: stripeAccess,

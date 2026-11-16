@@ -9,6 +9,8 @@ import { echo } from '../testing/capabilities/echo.ts';
 import { definitionFromTheReadModel } from './read-model-definitions.ts';
 import { listFromTheReadModel } from './read-model-lists.ts';
 
+const goalsKept = true;
+
 describe('the readers of the read model, of a definition created before definitions had ids', () => {
   it('answer the id of the address it was created at, in a read and in a list, before and after it is saved again', async () => {
     const ledger = readModelLedgerOf(['echo']);
@@ -24,7 +26,7 @@ describe('the readers of the read model, of a definition created before definiti
     await savedBeforeIds(ledger, { type: 'update', name: 'earlier', content: { source: '{"again":true}' } });
 
     const read = await inThePlaybook(ledger, definitionFromTheReadModel(echo, ['echo'], 'earlier'));
-    const listed = await inThePlaybook(ledger, listFromTheReadModel(echo, false));
+    const listed = await inThePlaybook(ledger, listFromTheReadModel(echo, false, goalsKept));
 
     expect([created.definition.definition_id, read.definition.version, read.definition.definition_id]).toEqual([
       itsId,
@@ -47,7 +49,7 @@ describe('the readers of the read model, answered by an object of the release be
     });
 
     const read = await inThePlaybook(
-      answeringAsTheReleaseBefore(ledger),
+      answeringAsTheReleaseBefore(ledger, 'definition_id'),
       definitionFromTheReadModel(echo, ['echo'], 'earlier'),
     );
 

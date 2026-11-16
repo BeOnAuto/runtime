@@ -11,6 +11,8 @@ import { listFromTheReadModel } from './read-model-lists.ts';
 
 const foundToday = JSON.stringify({ greeting: 'Hi', warnings: ['found today'] });
 
+const goalsKept = true;
+
 function aProcess(): Capability {
   return defineCapability(echoDeclaration);
 }
@@ -22,7 +24,9 @@ async function aDefinitionSavedWith(warnings: readonly string[]): Promise<Memory
 }
 
 async function listed(ledger: MemoryLedger, capability: Capability) {
-  return (await inThePlaybook(ledger, listFromTheReadModel(capability, true))).map(({ warnings }) => warnings);
+  return (await inThePlaybook(ledger, listFromTheReadModel(capability, true, goalsKept))).map(
+    ({ warnings }) => warnings,
+  );
 }
 
 describe('the warnings a list of the read model shows', () => {

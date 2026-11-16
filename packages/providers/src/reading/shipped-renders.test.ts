@@ -9,20 +9,16 @@ import { tracker } from '../testing/index.ts';
 const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
 
 describe('the shipped providers a message through which can be a card', () => {
-  it('are the two Slack entries, each naming the render target slack', () => {
+  it('are the Slack Bot entry alone, naming the render target slack', () => {
     expect(
       shipped.providers
         .filter(({ entry }) => entry.renders !== undefined)
         .map(({ entry }) => [entry.name, entry.renders]),
-    ).toEqual([
-      ['slack', 'slack'],
-      ['slack-bot', 'slack'],
-    ]);
+    ).toEqual([['slack-bot', 'slack']]);
   });
 
   it('answer by the name of the provider, and nothing for a provider that renders none or a server given by hand', () => {
-    expect(['slack', 'slack-bot', 'zoom', 'unknown', null].map((provider) => rendersOf(shipped, provider))).toEqual([
-      'slack',
+    expect(['slack-bot', 'zoom', 'unknown', null].map((provider) => rendersOf(shipped, provider))).toEqual([
       'slack',
       undefined,
       undefined,

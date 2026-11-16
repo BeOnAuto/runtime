@@ -35,23 +35,47 @@ interface NamedUse {
 
 type Part = Partial<DefinitionContent>;
 
+const servedGoal = 'kept-going';
+
+interface DeclaredDetails {
+  readonly shape?: string;
+  readonly calls?: Schema.Json;
+  readonly reads?: Schema.Json;
+  readonly contributes?: Schema.Json;
+}
+
+function contributesOf(step: number): DeclaredDetails {
+  const declared: readonly [DeclaredDetails, ...DeclaredDetails[]] = [
+    {},
+    { contributes: [{ goal: servedGoal, purpose: `Serves the goal from step ${step}` }] },
+    {
+      contributes: [
+        { goal: servedGoal, purpose: `Measures the goal from step ${step}`, measures: '/sum', final: true, extra: 1 },
+      ],
+    },
+    { contributes: 'not a list of contributions' },
+  ];
+  const chosen = step % declared.length;
+  return declared.reduce((kept, each, at) => (at === chosen ? each : kept), declared[0]);
+}
+
 function detailsOf(pick: Pick, step: number, uses: Uses): Part {
   const [called, read] = [pick(uses), pick(uses)];
   const calls = { type: called.type, name: called.name };
   const reads = { type: read.type, name: read.name };
-  return pick<Part>([
+  const declared = pick<DeclaredDetails>([
     {},
-    { details: { shape: 'table' } },
+    { shape: 'table' },
     {
-      details: {
-        calls: [
-          { ...calls, steps: [{ number: step, name: `step ${step}` }] },
-          { ...calls, steps: [] },
-        ],
-      },
+      calls: [
+        { ...calls, steps: [{ number: step, name: `step ${step}` }] },
+        { ...calls, steps: [] },
+      ],
     },
-    { details: { calls: [{ ...calls, steps: [] }], reads: [reads, reads] } },
+    { calls: [{ ...calls, steps: [] }], reads: [reads, reads] },
   ]);
+  const details = { ...declared, ...contributesOf(step) };
+  return Object.keys(details).length === 0 ? {} : { details };
 }
 
 function contentOf(pick: Pick, step: number, uses: Uses): DefinitionContent {

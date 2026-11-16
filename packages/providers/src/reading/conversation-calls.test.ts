@@ -15,6 +15,7 @@ import {
   providerNamed,
   providersShippedRoots,
   readProviders,
+  type ProviderEntry,
 } from '../index.ts';
 
 const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
@@ -45,10 +46,22 @@ function inputOf(written: Readonly<Record<string, Schema.Json>>) {
   return Result.getOrThrow(renderedArguments(written, conversationTemplates.sample, () => 0)).input;
 }
 
+function schemeKeyOf({ credentials }: ProviderEntry): string | undefined {
+  const [way] = credentials;
+  return way?.kind === 'secret' && way.in === 'security' ? way.name : undefined;
+}
+
 async function reachedThrough(name: string): Promise<Reached> {
   const { entry } = Result.getOrThrow(providerNamed(shipped, name));
-  const fake = await serveFakeApi({ client: { clientId: name, clientSecret, expiresInSeconds: 3600 } });
+  const scheme = schemeKeyOf(entry);
+  const fake = await serveFakeApi(
+    scheme === undefined ? { client: { clientId: name, clientSecret, expiresInSeconds: 3600 } } : { key: clientSecret },
+  );
   closing.push(fake.close);
+  const credential =
+    scheme === undefined
+      ? { auth: { issuer: String(fake.issuing?.issuer), client_id: name, client_secret: '${CLIENT_SECRET}' } }
+      : { security: { [scheme]: '${CLIENT_SECRET}' } };
   const document = relative(process.cwd(), fileURLToPath(new URL(entry.document ?? '', entriesFolder)));
   const { access } = await describedAccess(
     {
@@ -57,7 +70,7 @@ async function reachedThrough(name: string): Promise<Reached> {
         document,
         base_url: fake.baseUrl,
         ...(entry.failure_codes === undefined ? {} : { failure_codes: entry.failure_codes }),
-        auth: { issuer: String(fake.issuing?.issuer), client_id: name, client_secret: '${CLIENT_SECRET}' },
+        ...credential,
       },
     },
     { environment: { CLIENT_SECRET: clientSecret }, timing: patientTiming },
@@ -97,8 +110,8 @@ function partOf(name: string) {
 
 describe('a line and a mark through the shipped parts', () => {
   it('reach Slack as a reply in the thread of the message the reply answers and a check mark on the reply, the line known by its ts', async () => {
-    const { reply, react } = partOf('slack');
-    const slack = await reachedThrough('slack');
+    const { reply, react } = partOf('slack-bot');
+    const slack = await reachedThrough('slack-bot');
     slack.answerNextWith('{"ok":true,"channel":"C0123","ts":"1699.3"}');
     slack.answerNextWith('{"ok":true}');
 
@@ -130,8 +143,8 @@ describe('a line and a mark through the shipped parts', () => {
   });
 
   it('read no id from a call that failed', async () => {
-    const { reply } = partOf('slack');
-    const slack = await reachedThrough('slack');
+    const { reply } = partOf('slack-bot');
+    const slack = await reachedThrough('slack-bot');
     slack.answerNextWith('{"ok":false,"error":"channel_not_found"}');
 
     expect(postedId(await slack.called(reply.tool, reply.with), reply.sent)).toBeUndefined();

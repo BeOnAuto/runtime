@@ -19,12 +19,13 @@ export interface ListedRow {
 export function listedRowsFromTheReadModel(
   capability: Capability,
   includeRetired: boolean,
+  goals: boolean,
 ): Reading<readonly ListedRow[]> {
   return Effect.flatMap(definitionRowsOfType(capability.type), (rows) =>
     Effect.forEach(rows.filter((row) => includeRetired || row.status !== 'retired').toSorted(rowsByName), (row) =>
       Effect.map(savedByOf(capability.type, row.saved_position), (savedBy): ListedRow => ({
         row,
-        listed: listedOfTheRow(capability, row, savedBy),
+        listed: listedOfTheRow(capability, row, savedBy, goals),
       })),
     ),
   );
@@ -33,6 +34,9 @@ export function listedRowsFromTheReadModel(
 export function listFromTheReadModel(
   capability: Capability,
   includeRetired: boolean,
+  goals: boolean,
 ): Reading<readonly ListedDefinition[]> {
-  return Effect.map(listedRowsFromTheReadModel(capability, includeRetired), (rows) => rows.map(({ listed }) => listed));
+  return Effect.map(listedRowsFromTheReadModel(capability, includeRetired, goals), (rows) =>
+    rows.map(({ listed }) => listed),
+  );
 }
