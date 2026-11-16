@@ -4,7 +4,7 @@ repository="${1:?the repository the package was packed in}"
 port="${2:?the port the packed runtime listens on}"
 . "$(dirname "${BASH_SOURCE[0]}")/runtime.sh"
 stop_signal=TERM
-kept_on_failure=(runtime.log warnings.log playbook.json created.json totalled.json greeting.json greeted.json)
+kept_on_failure=(npm-install.log runtime.log warnings.log playbook.json created.json totalled.json greeting.json greeted.json)
 redacted() {
   sed -E -e 's/abk_[A-Za-z0-9_-]+/abk_[redacted]/g' \
     -e 's/alk\.[^.[:space:]"]+\.[^.[:space:]"]+\.[^.[:space:]"]+/alk.[redacted]/g' \
@@ -46,6 +46,8 @@ show_what_failed() {
 trap 'show_what_failed "$?" "$LINENO" "$BASH_COMMAND"' ERR
 tarball="$(ls "$repository"/dist/on.auto-runtime-*.tgz)"
 export XDG_CACHE_HOME="$RUNNER_TEMP/cache" LEDGER_FILE="$RUNNER_TEMP/ledger.db" DO_NOT_TRACK=1 PORT="$port"
+npm install --prefix "$RUNNER_TEMP/installed" --no-audit --no-fund "$tarball" > npm-install.log 2>&1
+node "$(dirname "${BASH_SOURCE[0]}")/native-add-ons.ts" "$RUNNER_TEMP/installed/node_modules"
 runtime() {
   npx --yes --package="$tarball" auto-runtime "$@"
 }

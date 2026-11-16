@@ -1,24 +1,32 @@
-import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
+import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 import { Result } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { emmettEventStore } from '../emmett/emmett-event-store.ts';
+import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
+import { emmettEventStore, type EmmettStore } from '../emmett/emmett-event-store.ts';
 import { eventAppenderOf, VersionConflict } from '../index.ts';
 import { stamped } from '../testing/happenings.ts';
 import { outcomeOf } from '../testing/open-ledger.ts';
-import { onEachSQLiteDriver } from '../testing/sqlite-drivers.ts';
 import { tally } from '../testing/tally.ts';
 import { dataAsJsonText } from './json-text.ts';
+
+function anEmmettStore(): EmmettStore {
+  const store = getSQLiteEventStore({
+    driver: nodeSqliteEventStoreDriver,
+    fileName: ':memory:',
+    schema: { autoMigration: 'None' },
+  });
+  onTestFinished(() => store.close());
+  return store;
+}
 
 const run = 'run/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const awkward = { zeta: 'a NUL \u0000 inside', a: { y: 'half a pair \uD800 alone', x: [1, null] } };
 
-const sqliteDrivers = onEachSQLiteDriver(() => nodeSqliteDumboDriver);
-
-describe.each(sqliteDrivers)('the data of an event kept as its JSON text, on SQLite through $through', (sqlite) => {
+describe('the data of an event kept as its JSON text', () => {
   it('is stored under json, and comes back exactly, keys in order', async () => {
-    const emmett = sqlite.anEmmettStoreInMemory();
+    const emmett = anEmmettStore();
     const store = emmettEventStore(emmett, { data: dataAsJsonText, mostEventsInOneAppend: 64 });
     await store.migrate();
 
@@ -34,7 +42,7 @@ describe.each(sqliteDrivers)('the data of an event kept as its JSON text, on SQL
   });
 
   it('is appended only at the version expected, and a wrong version meets a version conflict', async () => {
-    const store = emmettEventStore(sqlite.anEmmettStoreInMemory(), { data: dataAsJsonText, mostEventsInOneAppend: 64 });
+    const store = emmettEventStore(anEmmettStore(), { data: dataAsJsonText, mostEventsInOneAppend: 64 });
     await store.migrate();
     await store.append(run, [{ type: 'noted', data: awkward }], { expectedVersion: 0, context: stamped });
 

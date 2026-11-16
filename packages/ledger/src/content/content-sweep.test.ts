@@ -1,13 +1,12 @@
 import { textToKeep } from '@on.auto/content';
 import { memoryContentStore } from '@on.auto/content/testing';
-import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { Effect, Logger } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
 import { sqliteLedgerOpened } from '../connection/sqlite-opening.ts';
 import { ledgerLayerOver } from '../ledger-layer.ts';
 import { openChoresWith } from '../testing/open-ledger.ts';
-import { onEachSQLiteDriver } from '../testing/sqlite-drivers.ts';
 import { orphansSweptOf, unnamedChunksLastMs, type ContentSweeping } from './content-sweep.ts';
 
 interface Sweeps extends ContentSweeping {
@@ -53,16 +52,12 @@ describe('the sweep of the chunks no head names', () => {
     expect(logged).toEqual([expect.stringContaining(couldNotSweep)]);
     expect(logged[0]).toContain('The database went away');
   });
-});
 
-const sqliteDrivers = onEachSQLiteDriver(() => nodeSqliteDumboDriver);
-
-describe.each(sqliteDrivers)('the sweep of the chunks no head names, on SQLite through $through', (sqlite) => {
   it('runs on no clock of the ledger, which sweeps nothing as it opens or keeps content, and sweeps once its chore is called', async () => {
     const sweeps = sweepsFailingAt(0);
     const opened = () => {
       const { store, connection } = sqliteLedgerOpened({
-        optionsOf: () => sqlite.optionsOf(':memory:'),
+        optionsOf: () => ({ driver: nodeSqliteEventStoreDriver, fileName: ':memory:' }),
         inMemory: true,
       });
       return { store: { ...store, sweepContent: sweeps.sweepContent }, connection };
@@ -81,26 +76,23 @@ describe.each(sqliteDrivers)('the sweep of the chunks no head names, on SQLite t
   });
 });
 
-describe.each(sqliteDrivers)(
-  'the sweep of a ledger given a content store of its own, on SQLite through $through',
-  (sqlite) => {
-    it('sweeps its own chunks and then the content store it is given, so the chunks a database kept before it was given one go too', async () => {
-      const own = sweepsFailingAt(0);
-      const given = sweepsFailingAt(0);
-      const opened = () => {
-        const { store, connection } = sqliteLedgerOpened({
-          optionsOf: () => sqlite.optionsOf(':memory:'),
-          inMemory: true,
-        });
-        return { store: { ...store, sweepContent: own.sweepContent }, connection };
-      };
-      const content = { ...memoryContentStore(), sweepContent: given.sweepContent };
-      const { sweptAt, dispose } = await openChoresWith(ledgerLayerOver(opened, { content }));
-      onTestFinished(dispose);
+describe('the sweep of a ledger given a content store of its own', () => {
+  it('sweeps its own chunks and then the content store it is given, so the chunks a database kept before it was given one go too', async () => {
+    const own = sweepsFailingAt(0);
+    const given = sweepsFailingAt(0);
+    const opened = () => {
+      const { store, connection } = sqliteLedgerOpened({
+        optionsOf: () => ({ driver: nodeSqliteEventStoreDriver, fileName: ':memory:' }),
+        inMemory: true,
+      });
+      return { store: { ...store, sweepContent: own.sweepContent }, connection };
+    };
+    const content = { ...memoryContentStore(), sweepContent: given.sweepContent };
+    const { sweptAt, dispose } = await openChoresWith(ledgerLayerOver(opened, { content }));
+    onTestFinished(dispose);
 
-      await sweptAt(5 * anHour);
+    await sweptAt(5 * anHour);
 
-      expect([own.asked, given.asked]).toEqual([[4 * anHour], [4 * anHour]]);
-    });
-  },
-);
+    expect([own.asked, given.asked]).toEqual([[4 * anHour], [4 * anHour]]);
+  });
+});

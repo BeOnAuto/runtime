@@ -8,8 +8,9 @@ const sources = fileURLToPath(new URL('..', import.meta.url));
 const drivers: ReadonlySet<string> = new Set([
   '@on.auto/ledger/sqlite3',
   '@on.auto/ledger/postgresql',
+  '@on.auto/node-sqlite',
+  'node:sqlite',
   'pg',
-  'sqlite3',
 ]);
 
 function driversReachedFrom(module: string): readonly string[] {

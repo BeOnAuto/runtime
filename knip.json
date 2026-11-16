@@ -5,7 +5,7 @@
   },
   "workspaces": {
     ".": {
-      "entry": [".github/smoke/node-command.ts", ".github/smoke/clock-ahead.ts"]
+      "entry": [".github/smoke/node-command.ts", ".github/smoke/clock-ahead.ts", ".github/smoke/native-add-ons.ts"]
     },
     "packages/server": {
       "entry": ["vitest.groups.ts"]

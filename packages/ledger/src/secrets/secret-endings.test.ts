@@ -1,12 +1,12 @@
-import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
+import { dumbo } from '@event-driven-io/dumbo';
 import type { SecretRows } from '@on.auto/secrets';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { sqliteMostBoundValues } from '../connection/bound-values.ts';
-import { pooledOptionsOf, sqliteEventStore } from '../sqlite-event-store.ts';
+import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
+import { sqliteEventStore } from '../sqlite-event-store.ts';
 import { boundedExecutor } from '../testing/bounded-executor.ts';
-import { onEachSQLiteDriver, type OnASQLiteDriver } from '../testing/sqlite-drivers.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { secretRowsOn } from './secret-rows.ts';
 
@@ -16,14 +16,12 @@ const ids = Array.from({ length: 20 }, (_, at) => `secret-${at}`);
 
 const endings = new Map(ids.map((id, at) => [id, String(1000 + at)]));
 
-async function keptOnADatabaseOfFewerValues(
-  { optionsOf }: OnASQLiteDriver,
-  mostBoundValues: number,
-): Promise<SecretRows> {
+async function keptOnADatabaseOfFewerValues(mostBoundValues: number): Promise<SecretRows> {
   const { fileName, remove } = temporaryDatabase();
   onTestFinished(remove);
-  const { pool } = pooledOptionsOf(() => optionsOf(fileName));
-  const store = sqliteEventStore(() => ({ ...optionsOf(fileName), pool }));
+  const options = { driver: nodeSqliteEventStoreDriver, fileName };
+  const pool = dumbo(nodeSqliteEventStoreDriver.mapToDumboOptions(options));
+  const store = sqliteEventStore(() => ({ ...options, pool }));
   await store.migrate();
   const rows = secretRowsOn(boundedExecutor(pool.execute, fewerValues), () => store.close(), mostBoundValues);
   onTestFinished(() => rows.close());
@@ -39,19 +37,16 @@ async function keptOnADatabaseOfFewerValues(
   return rows;
 }
 
-describe.each(onEachSQLiteDriver(() => nodeSqliteDumboDriver))(
-  'the endings of the secrets on a database through $through that allows fewer bound values than the ids asked',
-  (sqlite) => {
-    it('are read in statements within its bound, and answered as one', async () => {
-      const rows = await keptOnADatabaseOfFewerValues(sqlite, fewerValues);
+describe('the endings of the secrets on a database that allows fewer bound values than the ids asked', () => {
+  it('are read in statements within its bound, and answered as one', async () => {
+    const rows = await keptOnADatabaseOfFewerValues(fewerValues);
 
-      expect(await Effect.runPromise(rows.endingsOf([...ids, 'secret-unknown']))).toEqual(endings);
-    });
+    expect(await Effect.runPromise(rows.endingsOf([...ids, 'secret-unknown']))).toEqual(endings);
+  });
 
-    it('are refused by that database when read in one statement past its bound', async () => {
-      const rows = await keptOnADatabaseOfFewerValues(sqlite, sqliteMostBoundValues);
+  it('are refused by that database when read in one statement past its bound', async () => {
+    const rows = await keptOnADatabaseOfFewerValues(sqliteMostBoundValues);
 
-      await expect(Effect.runPromise(rows.endingsOf(ids))).rejects.toThrow('too many SQL variables');
-    });
-  },
-);
+    await expect(Effect.runPromise(rows.endingsOf(ids))).rejects.toThrow('too many SQL variables');
+  });
+});

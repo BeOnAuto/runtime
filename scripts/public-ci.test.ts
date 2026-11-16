@@ -13,10 +13,12 @@ const StepSchema = Schema.Struct({
   run: Schema.optionalKey(Schema.String),
   with: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
   env: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
+  'continue-on-error': Schema.optionalKey(Schema.Unknown),
 });
 
 const JobSchema = Schema.Struct({
   if: Schema.optionalKey(Schema.String),
+  'continue-on-error': Schema.optionalKey(Schema.Unknown),
   needs: Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)])),
   permissions: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
   strategy: Schema.optionalKey(
@@ -50,8 +52,13 @@ const releaseWorkflowOf = Schema.decodeUnknownSync(
 type Job = typeof JobSchema.Type;
 type Step = typeof StepSchema.Type;
 type Jobs = Readonly<Record<string, Job>>;
+type Row = Readonly<Record<string, unknown>>;
 
 const ci = workflowOf(parse(readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8')));
+
+const { engines } = Schema.decodeUnknownSync(
+  Schema.fromJsonString(Schema.Struct({ engines: Schema.Struct({ node: Schema.String }) })),
+)(readFileSync(join(root, 'package.json'), 'utf8'));
 const release = releaseWorkflowOf(parse(readFileSync(join(root, '.github/workflows/release.yml'), 'utf8')));
 
 function jobOf(jobs: Jobs, name: string): Job {
@@ -83,6 +90,58 @@ function crossedArchitecturesOf(job: Job): readonly string[] {
 
 function systemsOf(job: Job): readonly string[] {
   return job.strategy?.matrix.system ?? [];
+}
+
+function systemsOnNode(job: Job, node: string): readonly unknown[] {
+  return (job.strategy?.matrix.include ?? []).filter((row) => row['node'] === node).map((row) => row['system']);
+}
+
+function alpineSystemsOf(job: Job): readonly string[] {
+  return systemsOf(job).filter((system) => /^node:[\d.]+-alpine/u.test(system));
+}
+
+function agreesWithTheRow(extra: Row, row: Row): boolean {
+  return ['architecture', 'system'].every((key) => !(key in extra) || extra[key] === row[key]);
+}
+
+function crossedRowsOf(job: Job): readonly Row[] {
+  return crossedArchitecturesOf(job).flatMap((architecture) =>
+    systemsOf(job).map((system): Row => ({ architecture, system })),
+  );
+}
+
+function includedRowsOf(job: Job): readonly Row[] {
+  return job.strategy?.matrix.include ?? [];
+}
+
+function rowsOf(job: Job): readonly Row[] {
+  return crossedRowsOf(job).map((row) =>
+    Object.fromEntries(
+      [row, ...includedRowsOf(job).filter((extra) => agreesWithTheRow(extra, row))].flatMap((part) =>
+        Object.entries(part),
+      ),
+    ),
+  );
+}
+
+function includedRowsThatAddARow(job: Job): readonly Row[] {
+  return includedRowsOf(job).filter((extra) => !crossedRowsOf(job).some((row) => agreesWithTheRow(extra, row)));
+}
+
+function rowsThatMayFail(job: Job): readonly (readonly unknown[])[] {
+  return rowsOf(job)
+    .filter((row) => row['experimental'] === true)
+    .map(({ architecture, system }) => [architecture, system]);
+}
+
+function jobsAllowedToFail(jobs: Jobs): readonly string[] {
+  return Object.keys(jobs).filter((name) => 'continue-on-error' in jobOf(jobs, name));
+}
+
+function stepsAllowedToFail(jobs: Jobs): readonly Step[] {
+  return Object.values(jobs)
+    .flatMap(({ steps }) => steps)
+    .filter((step) => 'continue-on-error' in step);
 }
 
 function environmentOf(step: Step | undefined, name: string): unknown {
@@ -152,6 +211,26 @@ await test('the package job packs the npm package and runs it with npx outside t
     systems.filter((system) => !/@sha256:[0-9a-f]{64}$/u.test(system)),
     [],
   );
+});
+
+await test('the package job starts the package on the least Node the package allows, on one of the systems it names', () => {
+  const job = jobOf(ci.jobs, 'package');
+  const systems = systemsOnNode(job, engines.node.replace(/^>=/u, ''));
+  assert.equal(systems.length, 1);
+  assert.deepEqual(
+    systems.filter((system) => !systemsOf(job).includes(String(system))),
+    [],
+  );
+});
+
+await test('the package job lets one row fail without failing CI, Alpine on arm64, which Node does not list, and no other row of any job', () => {
+  const job = jobOf(ci.jobs, 'package');
+  assert.equal(alpineSystemsOf(job).length, 1);
+  assert.deepEqual(includedRowsThatAddARow(job), []);
+  assert.deepEqual(rowsThatMayFail(job), [['arm64', ...alpineSystemsOf(job)]]);
+  assert.equal(job['continue-on-error'], '${{ matrix.experimental == true }}');
+  assert.deepEqual(jobsAllowedToFail(ci.jobs), ['package']);
+  assert.deepEqual(stepsAllowedToFail(ci.jobs), []);
 });
 
 await test('the smokes, the image build, the npm package and the AWS checks never come from a cache', () => {

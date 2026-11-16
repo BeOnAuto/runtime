@@ -1,11 +1,11 @@
-import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { ledgerLayer } from '../sqlite3.ts';
 import { openConnectionWith, type OpenConnection } from '../testing/open-ledger.ts';
-import { onEachSQLiteDriver } from '../testing/sqlite-drivers.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { valuesListOf } from '../testing/values-list.ts';
 import { chunksWithin, itemsInAStatement, sqliteMostBoundValues } from './bound-values.ts';
+import { nodeSqliteEventStoreDriver } from './node-sqlite-event-store-driver.ts';
 import { sqliteLedgerLayer, sqliteLedgerOpened } from './sqlite-opening.ts';
 
 function aDatabaseFile(): string {
@@ -71,40 +71,37 @@ describe('the items of a statement within the values its database allows', () =>
   });
 });
 
-describe.each(onEachSQLiteDriver(() => nodeSqliteDumboDriver))(
-  'the most values a statement binds on the Node SQLite host through $through',
-  (sqlite) => {
-    it('are 32,766, which its SQLite takes in one statement, refusing one more', async () => {
-      const { connection } = await opened(sqlite.ledgerLayer({ fileName: aDatabaseFile() }));
+describe('the most values a statement binds on the Node SQLite host', () => {
+  it('are 32,766, which its SQLite takes in one statement, refusing one more', async () => {
+    const { connection } = await opened(ledgerLayer({ fileName: aDatabaseFile() }));
 
-      expect(connection.mostBoundValues).toBe(sqliteMostBoundValues);
-      expect(await connection.read(valuesListOf(sqliteMostBoundValues))).toEqual([{ counted: sqliteMostBoundValues }]);
-      await expect(connection.read(valuesListOf(sqliteMostBoundValues + 1))).rejects.toThrow('too many SQL variables');
-    });
+    expect(connection.mostBoundValues).toBe(sqliteMostBoundValues);
+    expect(await connection.read(valuesListOf(sqliteMostBoundValues))).toEqual([{ counted: sqliteMostBoundValues }]);
+    await expect(connection.read(valuesListOf(sqliteMostBoundValues + 1))).rejects.toThrow('too many SQL variables');
+  });
 
-    it('are those its opening names, for a host whose SQLite allows fewer', async () => {
-      const fileName = aDatabaseFile();
-      const { connection } = await opened(
-        sqliteLedgerLayer({
-          optionsOf: () => sqlite.optionsOf(fileName),
-          inMemory: false,
-          mostBoundValues: 100,
-        }),
-      );
+  it('are those its opening names, for a host whose SQLite allows fewer', async () => {
+    const fileName = aDatabaseFile();
+    const { connection } = await opened(
+      sqliteLedgerLayer({
+        optionsOf: () => ({ driver: nodeSqliteEventStoreDriver, fileName }),
+        inMemory: false,
+        mostBoundValues: 100,
+      }),
+    );
 
-      expect(connection.mostBoundValues).toBe(100);
-    });
+    expect(connection.mostBoundValues).toBe(100);
+  });
 
-    it('are refused below the 100 the ledger binds in one statement on any SQLite', () => {
-      const fileName = aDatabaseFile();
+  it('are refused below the 100 the ledger binds in one statement on any SQLite', () => {
+    const fileName = aDatabaseFile();
 
-      expect(() =>
-        sqliteLedgerOpened({
-          optionsOf: () => sqlite.optionsOf(fileName),
-          inMemory: false,
-          mostBoundValues: 99,
-        }),
-      ).toThrow('A SQLite that binds at most 99 values in a statement holds no ledger, which binds up to 100 there');
-    });
-  },
-);
+    expect(() =>
+      sqliteLedgerOpened({
+        optionsOf: () => ({ driver: nodeSqliteEventStoreDriver, fileName }),
+        inMemory: false,
+        mostBoundValues: 99,
+      }),
+    ).toThrow('A SQLite that binds at most 99 values in a statement holds no ledger, which binds up to 100 there');
+  });
+});

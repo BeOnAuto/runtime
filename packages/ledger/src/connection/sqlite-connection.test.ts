@@ -1,20 +1,24 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { ledgerLayer } from '../sqlite3.ts';
 import { stamped } from '../testing/happenings.ts';
 import { openConnectionWith, type OpenConnection } from '../testing/open-ledger.ts';
-import { onEachSQLiteDriver, type OnASQLiteDriver } from '../testing/sqlite-drivers.ts';
 import { tally } from '../testing/tally.ts';
+import { temporaryDatabase } from '../testing/temporary-database.ts';
 import type { ReadRows } from './ledger-connection.ts';
 import { statement } from './statement.ts';
 
-const sqliteDrivers = onEachSQLiteDriver(() => nodeSqliteDumboDriver);
+function aDatabaseFile(): string {
+  const { fileName, remove } = temporaryDatabase();
+  onTestFinished(remove);
+  return fileName;
+}
 
-async function connectedTo(sqlite: OnASQLiteDriver, fileName: string): Promise<OpenConnection> {
-  const opened = await openConnectionWith(sqlite.ledgerLayer({ fileName }));
+async function connectedTo(fileName: string): Promise<OpenConnection> {
+  const opened = await openConnectionWith(ledgerLayer({ fileName }));
   onTestFinished(opened.dispose);
   return opened;
 }
@@ -31,21 +35,21 @@ const figuresRead = statement`SELECT amount, (SELECT COUNT(*) FROM beside) AS co
 
 const raised = statement`UPDATE beside SET amount = ${2} WHERE name = ${'north'}`;
 
-async function withOneRow(sqlite: OnASQLiteDriver, fileName: string): Promise<OpenConnection> {
-  const opened = await connectedTo(sqlite, fileName);
+async function withOneRow(fileName: string): Promise<OpenConnection> {
+  const opened = await connectedTo(fileName);
   await opened.connection.migrated([besideTable, added('north')]);
   return opened;
 }
 
-describe.each(sqliteDrivers)('the connection of the ledger on SQLite through $through', (sqlite) => {
+describe('the connection of the ledger on SQLite', () => {
   it('runs its statements in the database of the ledger, beside its tables, and appends its streams there', async () => {
-    const fileName = sqlite.aDatabaseFile();
-    const first = await withOneRow(sqlite, fileName);
+    const fileName = aDatabaseFile();
+    const first = await withOneRow(fileName);
     await first.connection.streams.append('org/acme/tallies', [{ type: 'counted', data: { by: 2 } }], {
       expectedVersion: 0,
       context: stamped,
     });
-    const second = await connectedTo(sqlite, fileName);
+    const second = await connectedTo(fileName);
 
     expect(await second.connection.read(namesRead)).toEqual([{ name: 'north' }]);
     expect(await second.connection.read(statement`SELECT COUNT(*) AS streams FROM emt_streams`)).toEqual([
@@ -56,7 +60,7 @@ describe.each(sqliteDrivers)('the connection of the ledger on SQLite through $th
   });
 
   it('writes in one transaction, keeping it only when its last statement writes a row, and nothing of one that fails', async () => {
-    const { connection } = await withOneRow(sqlite, sqlite.aDatabaseFile());
+    const { connection } = await withOneRow(aDatabaseFile());
 
     const kept = await connection.transaction([
       added('east'),
@@ -77,55 +81,52 @@ describe.each(sqliteDrivers)('the connection of the ledger on SQLite through $th
   });
 });
 
-describe.each(sqliteDrivers)(
-  'the reads of the connection of the ledger in one snapshot, on SQLite through $through',
-  (sqlite) => {
-    it('read what was committed when their first read began, and none of what is written while they read', async () => {
-      const { connection } = await withOneRow(sqlite, sqlite.aDatabaseFile());
+describe('the reads of the connection of the ledger in one snapshot, on SQLite', () => {
+  it('read what was committed when their first read began, and none of what is written while they read', async () => {
+    const { connection } = await withOneRow(aDatabaseFile());
 
-      const read = await connection.readConsistently(async (reading) => {
-        const before = await reading(figuresRead);
-        await connection.write(raised);
-        await connection.write(added('south', 5));
-        return [...before, ...(await reading(figuresRead))];
-      });
-
-      expect([...read, ...(await connection.read(figuresRead))]).toEqual([
-        { amount: 1, counted: 1 },
-        { amount: 1, counted: 1 },
-        { amount: 2, counted: 2 },
-      ]);
+    const read = await connection.readConsistently(async (reading) => {
+      const before = await reading(figuresRead);
+      await connection.write(raised);
+      await connection.write(added('south', 5));
+      return [...before, ...(await reading(figuresRead))];
     });
 
-    it('fail as their reads fail', async () => {
-      const { connection } = await withOneRow(sqlite, sqlite.aDatabaseFile());
+    expect([...read, ...(await connection.read(figuresRead))]).toEqual([
+      { amount: 1, counted: 1 },
+      { amount: 1, counted: 1 },
+      { amount: 2, counted: 2 },
+    ]);
+  });
 
-      await expect(
-        connection.readConsistently((reading) => reading(statement`SELECT amount FROM nowhere`)),
-      ).rejects.toThrow('no such table: nowhere');
-    });
+  it('fail as their reads fail', async () => {
+    const { connection } = await withOneRow(aDatabaseFile());
 
-    it('hold the one connection of a private database in memory, so a write asked meanwhile lands once they end', async () => {
-      const { connection } = await withOneRow(sqlite, ':memory:');
-      const firstRead = Promise.withResolvers<void>();
-      const readTwice = async (reading: ReadRows) => {
-        const before = await reading(figuresRead);
-        firstRead.resolve();
-        await setTimeout(50);
-        return [...before, ...(await reading(figuresRead))];
-      };
+    await expect(
+      connection.readConsistently((reading) => reading(statement`SELECT amount FROM nowhere`)),
+    ).rejects.toThrow('no such table: nowhere');
+  });
 
-      const reading = connection.readConsistently(readTwice);
-      await firstRead.promise;
-      const writing = connection.write(raised);
-      const read = await reading;
-      await writing;
+  it('hold the one connection of a private database in memory, so a write asked meanwhile lands once they end', async () => {
+    const { connection } = await withOneRow(':memory:');
+    const firstRead = Promise.withResolvers<void>();
+    const readTwice = async (reading: ReadRows) => {
+      const before = await reading(figuresRead);
+      firstRead.resolve();
+      await setTimeout(50);
+      return [...before, ...(await reading(figuresRead))];
+    };
 
-      expect([...read, ...(await connection.read(figuresRead))]).toEqual([
-        { amount: 1, counted: 1 },
-        { amount: 1, counted: 1 },
-        { amount: 2, counted: 1 },
-      ]);
-    });
-  },
-);
+    const reading = connection.readConsistently(readTwice);
+    await firstRead.promise;
+    const writing = connection.write(raised);
+    const read = await reading;
+    await writing;
+
+    expect([...read, ...(await connection.read(figuresRead))]).toEqual([
+      { amount: 1, counted: 1 },
+      { amount: 1, counted: 1 },
+      { amount: 2, counted: 1 },
+    ]);
+  });
+});

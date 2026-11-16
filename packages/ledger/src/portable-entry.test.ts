@@ -9,11 +9,15 @@ function entriesOfPg(packages: readonly string[]): readonly string[] {
   return packages.filter((name) => name === 'pg' || name.endsWith('/pg'));
 }
 
+function entriesOfSQLite(packages: readonly string[]): readonly string[] {
+  return packages.filter((name) => name === 'node:sqlite' || name === '@on.auto/node-sqlite');
+}
+
 describe('the ledger entry points', () => {
   it('keep the drivers out of the main entry', () => {
     const packages = packagesReachableFrom('index.ts');
 
-    expect(packages.filter((name) => name.includes('sqlite3'))).toEqual([]);
+    expect(entriesOfSQLite(packages)).toEqual([]);
     expect(entriesOfPg(packages)).toEqual([]);
     expect(packages.filter((name) => name.includes('postgresql'))).toEqual([]);
     expect(packages).toContain('@event-driven-io/emmett-sqlite');
@@ -22,7 +26,7 @@ describe('the ledger entry points', () => {
   it('keep the drivers out of the testing entry, so a suite run on a driver of its own loads neither', () => {
     const packages = packagesReachableFrom('testing/index.ts');
 
-    expect(packages.filter((name) => name.includes('sqlite3'))).toEqual([]);
+    expect(entriesOfSQLite(packages)).toEqual([]);
     expect(packages.filter((name) => name.includes('postgresql'))).toEqual([]);
     expect(entriesOfPg(packages)).toEqual([]);
     expect(packages).toContain('vitest');
@@ -41,13 +45,13 @@ describe('the ledger entry points', () => {
 
     expect(packages).toContain('pg');
     expect(packages).toContain('@event-driven-io/emmett-postgresql');
-    expect(packages).toContain('@event-driven-io/emmett-sqlite/sqlite3');
+    expect(packages).toContain('@on.auto/node-sqlite');
   });
 
-  it('keep the sqlite3 driver and the file system behind the sqlite3 entry', () => {
+  it('keep the driver of node:sqlite and the file system behind the sqlite3 entry', () => {
     const packages = packagesReachableFrom('sqlite3.ts');
 
-    expect(packages).toContain('@event-driven-io/emmett-sqlite/sqlite3');
+    expect(packages).toContain('@on.auto/node-sqlite');
     expect(packages).toContain('node:fs');
     expect(modulesReachedFrom(import.meta.dirname, 'sqlite3.ts').files).toContain('layout/sqlite-file-in-layout.ts');
   });

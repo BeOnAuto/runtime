@@ -1,9 +1,9 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { Function } from 'effect';
 import { Client } from 'pg';
 
+import { nodeSqliteEventStoreDriver } from '../src/connection/node-sqlite-event-store-driver.ts';
 import type { AppendListeners, LedgerStore } from '../src/event-store.ts';
 import { plainPoolsOn, postgresqlEventStore } from '../src/postgresql/postgresql-ledger.ts';
 import type { KeptTables } from '../src/projections/projection-parts.ts';
@@ -56,7 +56,7 @@ async function sqliteStore({ sqliteConnections }: MeasuredOn): Promise<MeasuredS
   const open = (listeners: AppendListeners = {}, kept: KeptTables = {}): LedgerStore =>
     sqliteEventStore(
       () => ({
-        driver: sqlite3EventStoreDriver,
+        driver: nodeSqliteEventStoreDriver,
         fileName,
         ...(sqliteConnections === undefined ? {} : { connectionOptions: sqliteConnections }),
       }),

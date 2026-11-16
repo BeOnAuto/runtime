@@ -143,3 +143,59 @@ describe('a client of node:sqlite whose file another connection holds', () => {
     await waiting.command(SQL`ROLLBACK`);
   });
 });
+
+async function aReadHeldOpen(reader: NodeSqliteClient): Promise<readonly unknown[]> {
+  await reader.command(SQL`BEGIN DEFERRED`);
+  return rowsOf(reader, 'SELECT count(*) AS notes FROM notes');
+}
+
+describe('a COMMIT of a client of node:sqlite on a file in WAL', () => {
+  it('is answered while another connection holds a read of the same file open, since in WAL a reader does not block the writer', async () => {
+    const [writer, reader] = await twoClientsOnOneFile();
+    const before = await aReadHeldOpen(reader);
+    await writer.command(SQL`BEGIN IMMEDIATE`);
+    await writer.command(SQL`INSERT INTO notes VALUES ('committed')`);
+
+    const committed = await settled(writer.command(SQL`COMMIT`));
+
+    expect(committed).toMatchObject({ status: 'fulfilled' });
+    expect([before, await rowsOf(reader, 'SELECT count(*) AS notes FROM notes')]).toEqual([
+      [{ notes: 0 }],
+      [{ notes: 0 }],
+    ]);
+    await reader.command(SQL`COMMIT`);
+    expect(await rowsOf(reader, 'SELECT count(*) AS notes FROM notes')).toEqual([{ notes: 1 }]);
+  });
+
+  it('is answered past the checkpoint SQLite runs by itself at 1,000 pages while a reader holds the log, which SQLite runs passive and does not wait for', async () => {
+    const [writer, reader] = await twoClientsOnOneFile();
+    await aReadHeldOpen(reader);
+    await writer.command(SQL`BEGIN IMMEDIATE`);
+    await writer.command(
+      SQL`WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 1500) INSERT INTO notes SELECT hex(randomblob(4096)) FROM n`,
+    );
+
+    const committed = await settled(writer.command(SQL`COMMIT`));
+
+    expect(committed).toMatchObject({ status: 'fulfilled' });
+    expect(await rowsOf(writer, 'SELECT count(*) AS notes FROM notes')).toEqual([{ notes: 1500 }]);
+    await reader.command(SQL`COMMIT`);
+  });
+
+  it('meets another writer at BEGIN IMMEDIATE, never at its COMMIT, since the write lock is taken as the transaction begins', async () => {
+    const [writer, other] = await twoClientsOnOneFile();
+    await writer.command(SQL`BEGIN IMMEDIATE`);
+    await writer.command(SQL`INSERT INTO notes VALUES ('first')`);
+
+    const refused = await settled(other.command(SQL`BEGIN IMMEDIATE`));
+    const committed = await settled(writer.command(SQL`COMMIT`));
+
+    expect([refused, committed]).toMatchObject([
+      {
+        status: 'rejected',
+        reason: { errorType: 'LockNotAvailableError', message: 'SQLITE_BUSY: database is locked' },
+      },
+      { status: 'fulfilled' },
+    ]);
+  });
+});

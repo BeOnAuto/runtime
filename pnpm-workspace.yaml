@@ -21,10 +21,8 @@ allowBuilds:
   esbuild: true
   lefthook: true
   protobufjs: false
-  sqlite3: true
 
 patchedDependencies:
-  '@event-driven-io/dumbo@0.13.0-beta.56': patches/@event-driven-io__dumbo@0.13.0-beta.56.patch
   '@openworkflowspec/sdk@1.0.3-alpha8': patches/@openworkflowspec__sdk@1.0.3-alpha8.patch
 
 overrides:
@@ -32,3 +30,4 @@ overrides:
   'undici@>=6.0.0 <6.29.1': 6.29.1
   'fast-uri@>=3.0.0 <3.1.9': 3.1.9
   'zod@>=4.0.0 <4.6.7': 4.6.7
+  sqlite3: '-'

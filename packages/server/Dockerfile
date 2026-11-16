@@ -1,8 +1,5 @@
 # syntax=docker/dockerfile:1
 FROM node:26.12.1-slim@sha256:94816674c62774da0d099a947bf4613b9e1972a2733abd0d0cd80e795f8411d0 AS dependencies
-RUN apt-get update \
-  && apt-get install --yes --no-install-recommends g++ make python3 \
-  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 RUN npm install --global --no-fund --no-audit pnpm@12.11.2
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -22,6 +19,7 @@ COPY packages/identity/package.json packages/identity/
 COPY packages/json-schema/package.json packages/json-schema/
 COPY packages/ledger/package.json packages/ledger/
 COPY packages/meter/package.json packages/meter/
+COPY packages/node-sqlite/package.json packages/node-sqlite/
 COPY packages/object-storage/package.json packages/object-storage/
 COPY packages/operations/package.json packages/operations/
 COPY packages/outbound/package.json packages/outbound/
@@ -40,10 +38,6 @@ COPY capabilities/lookup/package.json capabilities/lookup/
 COPY capabilities/prediction/package.json capabilities/prediction/
 COPY capabilities/reasoning/package.json capabilities/reasoning/
 RUN pnpm install --frozen-lockfile --prod --no-optional --ignore-scripts --filter @on.auto/server...
-RUN --network=none npm_config_build_from_source=sqlite3 npm_config_nodedir=/usr/local \
-  pnpm rebuild --filter @on.auto/server... sqlite3 \
-  && find node_modules/.pnpm -path '*/node_modules/sqlite3/build/Release/*' -prune ! -name node_sqlite3.node \
-    -exec rm -rf {} +
 ARG AZURE_IDENTITY=false
 RUN case "$AZURE_IDENTITY" in \
     true) pnpm install --frozen-lockfile --prod --ignore-scripts --filter @on.auto/reasoning ;; \
@@ -80,6 +74,7 @@ COPY packages/identity/src packages/identity/src
 COPY packages/json-schema/src packages/json-schema/src
 COPY packages/ledger/src packages/ledger/src
 COPY packages/meter/src packages/meter/src
+COPY packages/node-sqlite/src packages/node-sqlite/src
 COPY packages/object-storage/src packages/object-storage/src
 COPY packages/operations/src packages/operations/src
 COPY packages/outbound/src packages/outbound/src

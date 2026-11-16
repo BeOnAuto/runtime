@@ -32,13 +32,12 @@
     "@event-driven-io/emmett-postgresql": "0.43.0-beta.50",
     "@event-driven-io/emmett-sqlite": "0.43.0-beta.50",
     "@on.auto/content": "workspace:*",
+    "@on.auto/node-sqlite": "workspace:*",
     "@on.auto/operations": "workspace:*",
     "effect": "catalog:",
-    "pg": "8.23.1",
-    "sqlite3": "6.0.1"
+    "pg": "8.23.1"
   },
   "devDependencies": {
-    "@on.auto/node-sqlite": "workspace:*",
     "@on.auto/secrets": "workspace:*",
     "@opentelemetry/api": "1.9.1",
     "@opentelemetry/context-async-hooks": "2.9.0",

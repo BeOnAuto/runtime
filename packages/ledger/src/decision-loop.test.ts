@@ -1,8 +1,9 @@
-import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
+import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 import { ActedOnRunContextSchema, Conflict, factOf, type Context, type Decider } from '@on.auto/operations';
 import { Data, Effect, Result, Schema } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { nodeSqliteEventStoreDriver } from './connection/node-sqlite-event-store-driver.ts';
 import { dataAsWritten, emmettEventStore } from './emmett/emmett-event-store.ts';
 import {
   decisionLoop,
@@ -15,7 +16,6 @@ import {
 } from './index.ts';
 import { stamped } from './testing/happenings.ts';
 import { outcomeOf } from './testing/open-ledger.ts';
-import { onEachSQLiteDriver, type OnASQLiteDriver } from './testing/sqlite-drivers.ts';
 import { tally, type Amounts } from './testing/tally.ts';
 
 interface Loaded {
@@ -158,8 +158,14 @@ describe('the context of a decision', () => {
   });
 });
 
-async function lentStreams({ anEmmettStoreInMemory }: OnASQLiteDriver): Promise<Streams & StreamMessagesStore> {
-  const store = emmettEventStore(anEmmettStoreInMemory(), { data: dataAsWritten, mostEventsInOneAppend: 8 });
+async function lentStreams(): Promise<Streams & StreamMessagesStore> {
+  const emmett = getSQLiteEventStore({
+    driver: nodeSqliteEventStoreDriver,
+    fileName: ':memory:',
+    schema: { autoMigration: 'None' },
+  });
+  onTestFinished(() => emmett.close());
+  const store = emmettEventStore(emmett, { data: dataAsWritten, mostEventsInOneAppend: 8 });
   await store.migrate();
   return {
     mostEventsInOneAppend: store.mostEventsInOneAppend,
@@ -200,44 +206,37 @@ function inConflictOnce(streams: Streams & StreamMessagesStore, conflict: () => 
   };
 }
 
-describe.each(onEachSQLiteDriver(() => nodeSqliteDumboDriver))(
-  'the stream reader and writer over any streams, on SQLite through $through',
-  (sqlite) => {
-    it('execute a command and load the state it left, as a ledger does, over streams a shell lends', async () => {
-      const { load, execute } = streamPortsOf(await lentStreams(sqlite));
+describe('the stream reader and writer over any streams', () => {
+  it('execute a command and load the state it left, as a ledger does, over streams a shell lends', async () => {
+    const { load, execute } = streamPortsOf(await lentStreams());
 
-      const executed = await Effect.runPromise(execute('tally/1', tally, [2, 3]));
-      const loaded = await Effect.runPromise(load('tally/1', tally));
+    const executed = await Effect.runPromise(execute('tally/1', tally, [2, 3]));
+    const loaded = await Effect.runPromise(load('tally/1', tally));
 
-      expect([executed, loaded]).toEqual([
-        { state: 5, version: 2, decidedOn: 0 },
-        { state: 5, version: 2 },
-      ]);
-    });
+    expect([executed, loaded]).toEqual([
+      { state: 5, version: 2, decidedOn: 0 },
+      { state: 5, version: 2 },
+    ]);
+  });
 
-    it('decide again on the stream another writer appended to meanwhile, and answer the state they decided on then', async () => {
-      const { execute } = streamPortsOf(aheadOnce(await lentStreams(sqlite)));
+  it('decide again on the stream another writer appended to meanwhile, and answer the state they decided on then', async () => {
+    const { execute } = streamPortsOf(aheadOnce(await lentStreams()));
 
-      expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({
-        state: 101,
-        version: 2,
-        decidedOn: 100,
-      });
-    });
+    expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 101, version: 2, decidedOn: 100 });
+  });
 
-    it.each([
-      ['VersionConflict', () => new VersionConflict()],
-      ['an error of another copy of the class, with its tag', () => new ConflictOfAnotherCopy()],
-    ])(
-      'decide again when the streams reject an append with %s, as streams a shell lends across a boundary do',
-      async (_named, conflict) => {
-        const lent = await lentStreams(sqlite);
-        const { execute } = streamPortsOf(inConflictOnce(lent, conflict));
+  it.each([
+    ['VersionConflict', () => new VersionConflict()],
+    ['an error of another copy of the class, with its tag', () => new ConflictOfAnotherCopy()],
+  ])(
+    'decide again when the streams reject an append with %s, as streams a shell lends across a boundary do',
+    async (_named, conflict) => {
+      const lent = await lentStreams();
+      const { execute } = streamPortsOf(inConflictOnce(lent, conflict));
 
-        expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 1, version: 1, decidedOn: 0 });
+      expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 1, version: 1, decidedOn: 0 });
 
-        expect([(await lent.read('tally/1')).version, isVersionConflict(conflict())]).toEqual([1, true]);
-      },
-    );
-  },
-);
+      expect([(await lent.read('tally/1')).version, isVersionConflict(conflict())]).toEqual([1, true]);
+    },
+  );
+});

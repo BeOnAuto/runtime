@@ -1,12 +1,11 @@
 import { SQL } from '@event-driven-io/dumbo';
-import { nodeSqliteDumboDriver } from '@on.auto/node-sqlite';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { modestConnections } from '../connection/sqlite-file-ledger.ts';
+import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
 import { inTransactionOf, type ReturningExecutor, type TransactionalPool } from '../event-store.ts';
 import { pooledOptionsOf, sqliteEventStore } from '../sqlite-event-store.ts';
-import { onEachSQLiteDriver, type OnASQLiteDriver } from '../testing/sqlite-drivers.ts';
+import { modestConnections } from '../sqlite3.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { receivedWebhooksOn, type WebhookReceipt } from './received-webhooks.ts';
 
@@ -16,13 +15,12 @@ const waitingForNoLock = { pragmaOptions: { ...modestConnections.pragmaOptions, 
 
 const tenMinutes = 600_000;
 
-async function aPoolWhoseConnectionsWaitForNoLock({
-  optionsOf,
-}: OnASQLiteDriver): Promise<TransactionalPool<ReturningExecutor>> {
+async function aPoolWhoseConnectionsWaitForNoLock(): Promise<TransactionalPool<ReturningExecutor>> {
   const { fileName, remove } = temporaryDatabase();
   onTestFinished(remove);
   const options = pooledOptionsOf(() => ({
-    ...optionsOf(fileName),
+    driver: nodeSqliteEventStoreDriver,
+    fileName,
     connectionOptions: waitingForNoLock,
   }));
   const store = sqliteEventStore(() => options);
@@ -64,40 +62,35 @@ function receiptOf(webhookId: string, takenFor: string): WebhookReceipt {
   return { org: 'acme', connection: 'approvals', webhookId, takenFor, keptUntilMs: Date.now() + tenMinutes };
 }
 
-const sqliteDrivers = onEachSQLiteDriver(() => nodeSqliteDumboDriver);
+describe('a take of the webhooks received on SQLite, while the one writer of their pool is in a transaction', () => {
+  it('takes an id once a transaction that began between its two statements ends, and takes each id once', async () => {
+    const pool = await aPoolWhoseConnectionsWaitForNoLock();
+    const between = aTransactionBeginningAfterTheFirstWrite(pool);
+    const received = receivedWebhooksOn(between.execute, () => Promise.resolve());
 
-describe.each(sqliteDrivers)(
-  'a take of the webhooks received on SQLite through $through, while the one writer of their pool is in a transaction',
-  (sqlite) => {
-    it('takes an id once a transaction that began between its two statements ends, and takes each id once', async () => {
-      const pool = await aPoolWhoseConnectionsWaitForNoLock(sqlite);
-      const between = aTransactionBeginningAfterTheFirstWrite(pool);
-      const received = receivedWebhooksOn(between.execute, () => Promise.resolve());
+    const taking = Effect.runPromiseExit(received.taken(receiptOf('msg_2Lh9KRb1t3', 'onboarding/run-1')));
+    await Promise.race([taking, Effect.runPromise(Effect.sleep(longerThanAWriteTakesToReachSQLite))]);
+    await between.letGo();
+    const taken = await taking;
+    const takenAgain = await Effect.runPromise(
+      Effect.forEach(
+        [
+          receiptOf('msg_2Lh9KRb1t3', 'onboarding/run-2'),
+          receiptOf('msg_2Lh9KRb1t3', 'onboarding/run-1'),
+          receiptOf('msg_3Mk0LSc2u4', 'onboarding/run-2'),
+        ],
+        (receipt) => received.taken(receipt),
+      ),
+    );
+    const { rows } = await pool.execute.query(
+      SQL`SELECT webhook_id, taken_for FROM webhooks_received ORDER BY webhook_id`,
+    );
 
-      const taking = Effect.runPromiseExit(received.taken(receiptOf('msg_2Lh9KRb1t3', 'onboarding/run-1')));
-      await Promise.race([taking, Effect.runPromise(Effect.sleep(longerThanAWriteTakesToReachSQLite))]);
-      await between.letGo();
-      const taken = await taking;
-      const takenAgain = await Effect.runPromise(
-        Effect.forEach(
-          [
-            receiptOf('msg_2Lh9KRb1t3', 'onboarding/run-2'),
-            receiptOf('msg_2Lh9KRb1t3', 'onboarding/run-1'),
-            receiptOf('msg_3Mk0LSc2u4', 'onboarding/run-2'),
-          ],
-          (receipt) => received.taken(receipt),
-        ),
-      );
-      const { rows } = await pool.execute.query(
-        SQL`SELECT webhook_id, taken_for FROM webhooks_received ORDER BY webhook_id`,
-      );
-
-      expect(taken).toEqual(Exit.succeed('onboarding/run-1'));
-      expect(takenAgain).toEqual(['onboarding/run-1', 'onboarding/run-1', 'onboarding/run-2']);
-      expect(rows).toEqual([
-        { webhook_id: 'msg_2Lh9KRb1t3', taken_for: 'onboarding/run-1' },
-        { webhook_id: 'msg_3Mk0LSc2u4', taken_for: 'onboarding/run-2' },
-      ]);
-    });
-  },
-);
+    expect(taken).toEqual(Exit.succeed('onboarding/run-1'));
+    expect(takenAgain).toEqual(['onboarding/run-1', 'onboarding/run-1', 'onboarding/run-2']);
+    expect(rows).toEqual([
+      { webhook_id: 'msg_2Lh9KRb1t3', taken_for: 'onboarding/run-1' },
+      { webhook_id: 'msg_3Mk0LSc2u4', taken_for: 'onboarding/run-2' },
+    ]);
+  });
+});
