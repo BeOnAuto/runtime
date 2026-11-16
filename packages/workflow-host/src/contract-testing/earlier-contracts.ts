@@ -25,6 +25,7 @@ import type {
   CallLink,
   Conflict,
   InvalidInput,
+  Notice,
   PlaybookAddress,
   Presenter,
   RecordedCaller,
@@ -261,5 +262,22 @@ export interface ContractFour extends Omit<ContractThree, 'capability'> {
     readonly facts: { readonly onRuns: readonly DeclaredFact[]; readonly streams: readonly Presenter[] };
     readonly resumes: boolean;
     readonly prepare: (source: string, stripped?: StrippedForms) => Effect.Effect<PreparedDefinition, InvalidInput>;
+  };
+}
+
+export interface ContractFive extends Omit<ContractFour, 'prepared'> {
+  readonly prepared: {
+    readonly summary: DefinitionSummary;
+    readonly check: (place: PlaybookAddress) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
+    readonly notices?: (place: PlaybookAddress) => Effect.Effect<readonly Notice[]>;
+    readonly run: (input: Schema.Json, context: RunContext) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
+    readonly whenCancelled: 'stop' | 'finish';
+    readonly cancelledAttempt: (attempt: RunAttempt) => CancelledAttempt;
+    readonly callsTools: boolean;
+    readonly finishesLaterFor: (input: Schema.Json) => boolean;
+    readonly answersItsShapeFor: (input: Schema.Json) => boolean;
+    readonly longestRunMs: number;
+    readonly longestRunMsFor: (input: Schema.Json) => number;
+    readonly resumesAfterMs: number;
   };
 }

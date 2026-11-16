@@ -1,6 +1,9 @@
+import type { GuideVariables } from '@on.auto/definitions';
 import { describe, expect, it } from 'vitest';
 
 import { forTheAgent } from './agent-rendition.ts';
+
+const nothingDeclared: GuideVariables = {};
 
 function page(...lines: readonly string[]): string {
   return `${lines.join('\n')}\n`;
@@ -24,6 +27,7 @@ describe('a page that marks nothing', () => {
           '',
           '</div>',
         ),
+        nothingDeclared,
       ),
     ).toBe(page('# Example', '', 'A sentence.'));
   });
@@ -67,6 +71,7 @@ describe('a marked passage', () => {
           '',
           '</div>',
         ),
+        nothingDeclared,
       ),
     ).toBe(page('# Example', '', 'For everyone.', '', 'For everyone again.'));
   });
@@ -78,12 +83,14 @@ describe('a marked passage at either end of a page', () => {
       forTheAgent(
         'reference/example.md',
         page('<div data-audience="user">', '', 'First.', '', '</div>', '', '# Example', '', 'Then.'),
+        nothingDeclared,
       ),
     ).toBe(page('# Example', '', 'Then.'));
     expect(
       forTheAgent(
         'reference/example.md',
         page('# Example', '', 'Before.', '', '<div data-audience="user">', '', 'Last.', '', '</div>'),
+        nothingDeclared,
       ),
     ).toBe(page('# Example', '', 'Before.'));
   });
@@ -100,6 +107,7 @@ describe('a marked clause in a sentence', () => {
           'A model is named after its gateway<span data-audience="operator">, one of `MODEL_GATEWAYS`</span>, then the model.',
           'It runs<span data-audience="developer"> as [the HTTP reference](http.md) and **its route** say</span>.<br>Then it ends<span data-audience="operator user"> here</span>.',
         ),
+        nothingDeclared,
       ),
     ).toBe(page('# Example', '', 'A model is named after its gateway, then the model.', 'It runs.<br>Then it ends.'));
   });
@@ -119,6 +127,7 @@ describe('a marked clause in a table', () => {
           '| `a \\| b` | 2 | <span data-audience="operator">`MOST_B`</span>           |',
           '| Short     | 3                                                         |',
         ),
+        nothingDeclared,
       ),
     ).toBe(
       page(
@@ -152,6 +161,7 @@ describe('a marked clause in a list', () => {
           '',
           '\tseven<span data-audience="operator"> and more</span>.',
         ),
+        nothingDeclared,
       ),
     ).toBe(
       page('# Example', '', '- One;', '  two;', '- Three', '  - Four.', '    Five.', '', '1. Six', '', '\tseven.'),
@@ -172,6 +182,6 @@ describe('code on a page', () => {
       '```',
     );
 
-    expect(forTheAgent('reference/example.md', shown)).toBe(shown);
+    expect(forTheAgent('reference/example.md', shown, nothingDeclared)).toBe(shown);
   });
 });

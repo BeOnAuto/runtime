@@ -1,6 +1,9 @@
+import type { GuideVariables } from '@on.auto/definitions';
 import { describe, expect, it } from 'vitest';
 
 import { forTheAgent } from './agent-rendition.ts';
+
+const nothingDeclared: GuideVariables = {};
 
 function page(...lines: readonly string[]): string {
   return `${lines.join('\n')}\n`;
@@ -8,7 +11,7 @@ function page(...lines: readonly string[]): string {
 
 function refusalOf(...lines: readonly string[]): string {
   try {
-    forTheAgent('reference/example.md', page(...lines));
+    forTheAgent('reference/example.md', page(...lines), nothingDeclared);
   } catch (error: unknown) {
     return String(error);
   }

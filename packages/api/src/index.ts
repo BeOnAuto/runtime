@@ -64,7 +64,7 @@ export {
 } from './guides/guide-shelf.ts';
 export { guideAddress, guideMediaType } from './guides/guide-resources.ts';
 export { guideShelfFrom, type ServedType } from './guides/served-guides.ts';
-export { markingFaultsOf } from './guide-pages/agent-rendition.ts';
+export { defaultsTypedIn, markingFaultsOf, withDefaultsWritten } from './guide-pages/agent-rendition.ts';
 export {
   mostArgumentDescriptionCharacters,
   mostDescriptionCharacters,

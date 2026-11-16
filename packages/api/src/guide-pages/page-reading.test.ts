@@ -1,18 +1,22 @@
+import type { GuideVariables } from '@on.auto/definitions';
 import { describe, expect, it } from 'vitest';
 
 import { forTheAgent, markingFaultsOf } from './agent-rendition.ts';
+import { unknownForm } from './reading.ts';
+
+const nothingDeclared: GuideVariables = {};
 
 function page(...lines: readonly string[]): string {
   return `${lines.join('\n')}\n`;
 }
 
 function faultsOf(...lines: readonly string[]): readonly string[] {
-  return markingFaultsOf(page(...lines));
+  return markingFaultsOf(page(...lines), nothingDeclared);
 }
 
 function refusalOf(...lines: readonly string[]): string {
   try {
-    forTheAgent('reference/example.md', page(...lines));
+    forTheAgent('reference/example.md', page(...lines), nothingDeclared);
   } catch (error: unknown) {
     return String(error);
   }
@@ -63,8 +67,8 @@ describe('a marked passage a guide cannot read', () => {
     ]).toEqual([
       'The line "<div data-audience="user">" writes a marked passage whose opening line is not set apart by blank lines.',
       'The line "</div>" writes a marked passage whose closing line is not set apart by blank lines.',
-      'The line "<div data-audience="user">" writes a marking in a form a page may not use: a passage opens with <div data-audience="…"> alone on its line, and a clause is wrapped in <span data-audience="…">.',
-      'The line "<div data-variable="generation.most_image">" writes a marking in a form a page may not use: a passage opens with <div data-audience="…"> alone on its line, and a clause is wrapped in <span data-audience="…">.',
+      'The line "<div data-audience="user">" writes a marking in a form a page may not use: a passage opens with <div data-audience="…"> alone on its line, a clause is wrapped in <span data-audience="…">, a value in <span data-variable="…">, and a code example that holds values in <div data-variable="…"> alone on its line.',
+      'The line "<div data-variable="generation.most_image">" declares a code example in a form a page may not use: <div data-variable="…"> alone on its line, a blank line, one fenced code example, a blank line and </div>, set apart by blank lines.',
     ]);
   });
 });
@@ -78,13 +82,15 @@ describe('a marked clause a guide cannot read', () => {
       ...faultsOf('A<span data-audience="user"> b <span data-audience="operator">c</span></span>.'),
       ...faultsOf('A<span data-audience="user"> **b <span data-audience="operator">c</span>**</span>.'),
       ...faultsOf('A <span data-variable="generation.most_image">20 MiB</span>.'),
+      ...faultsOf('A <b data-audience="user">b</b>.'),
     ]).toEqual([
       'The line "A<span data-audience="user"> b" runs a marked span over more than one line.',
       'The line "A<span data-audience="user"> b." opens a marked span and does not close it on the same line.',
       'The line "A<span data-audience="user"> b<br>c</span>." holds HTML or another marking inside a marked span.',
       'The line "A<span data-audience="user"> b <span data-audience="operator">c</span></span>." holds HTML or another marking inside a marked span.',
       'The line "A<span data-audience="user"> **b <span data-audience="operator">c</span>**</span…" holds HTML or another marking inside a marked span.',
-      'The line "A <span data-variable="generation.most_image">20 MiB</span>." writes a marking in a form a page may not use: a passage opens with <div data-audience="…"> alone on its line, and a clause is wrapped in <span data-audience="…">.',
+      'The line "A <span data-variable="generation.most_image">20 MiB</span>." names the value generation.most_image, which this server does not declare.',
+      'The line "A <b data-audience="user">b</b>." writes a marking in a form a page may not use: a passage opens with <div data-audience="…"> alone on its line, a clause is wrapped in <span data-audience="…">, a value in <span data-variable="…">, and a code example that holds values in <div data-variable="…"> alone on its line.',
     ]);
   });
 
@@ -123,9 +129,28 @@ describe('a marking a guide cannot place', () => {
   });
 
   it('is in a page the parser cannot account for character by character', () => {
-    expect(markingFaultsOf('# A\r\n\r\nB<span data-audience="user"> c</span>.\r\n')).toEqual([
+    expect(markingFaultsOf('# A\r\n\r\nB<span data-audience="user"> c</span>.\r\n', nothingDeclared)).toEqual([
       'The page cannot be read: the Markdown parser does not account for every character of it.',
     ]);
+  });
+
+  it('is spelled as HTML also allows, with a space at its equals sign or a capital letter, or named in a sentence, and is refused, never served as it stands', () => {
+    expect([
+      ...faultsOf('A <span data-variable ="generation.most_image">20 MiB</span>.'),
+      ...faultsOf('A<span data-audience= "operator"> b</span>.'),
+      ...faultsOf('A<span DATA-AUDIENCE="operator"> b</span>.'),
+      ...faultsOf('<div Data-Audience="operator">', '', 'B.', '', '</div>'),
+      ...faultsOf('A data-variable names a value.'),
+    ]).toEqual([
+      `The line "A <span data-variable ="generation.most_image">20 MiB</span>." ${unknownForm}`,
+      `The line "A<span data-audience= "operator"> b</span>." ${unknownForm}`,
+      `The line "A<span DATA-AUDIENCE="operator"> b</span>." ${unknownForm}`,
+      `The line "<div Data-Audience="operator">" ${unknownForm}`,
+      'The line "A data-variable names a value." writes a marking where the Markdown parser reads it as text, not as an element.',
+    ]);
+    expect(refusalOf('# A', '', 'B<span data-audience ="operator"> c</span>.')).toBe(
+      `Error: The page reference/example.md cannot be served as a guide. The line "B<span data-audience ="operator"> c</span>." ${unknownForm}`,
+    );
   });
 
   it('stops the page from being served, and the page is named', () => {

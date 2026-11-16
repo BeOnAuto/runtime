@@ -1,3 +1,4 @@
+import type { ShippedFiles } from '@on.auto/shipped-files';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import type { ProgramPoolOf } from '../composition/served-computation.ts';
@@ -18,13 +19,15 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-function forecastsFilling(name: string, contract = 2): ScratchPackage {
+const unnamed = "{ name: 'prediction-function' }";
+
+function forecastsFilling(name: string, contract = 2, guide = unnamed): ScratchPackage {
   const capability = `(ports) => ({
     ...datasetsProvidedOn(ports),
     capability: defineCapability({
       type: 'prediction',
       title: 'Prediction',
-      guide: { name: 'prediction-function' },
+      guide: ${guide},
       noun: { one: 'prediction function', other: 'prediction functions' },
       describeOutput: () => 'The extension answered.',
       mediaType: 'text/markdown',
@@ -72,9 +75,12 @@ function lackingTitle(name: string): ScratchPackage {
   };
 }
 
+type ShippedFilesOver = (files: ShippedFiles) => ShippedFiles;
+
 async function servingWith(
   fillings: readonly ScratchPackage[],
   programPoolOf: ProgramPoolOf = patientWorkerPool,
+  shippedFilesOver?: ShippedFilesOver,
 ): Promise<ReasoningServer> {
   const ledger = temporaryLedger();
   onTestFinished(ledger.remove);
@@ -83,6 +89,7 @@ async function servingWith(
     installed: packages,
     ledger,
     programPoolOf,
+    ...(shippedFilesOver === undefined ? {} : { shippedFilesOver }),
   });
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
@@ -114,7 +121,7 @@ describe('a question to a prediction function of a runtime an extension fills ca
 describe('a runtime an extension fills capability/prediction of', () => {
   it('does not start for an extension built against another contract, naming it, the point and both contracts', async () => {
     await expect(servingWith([forecastsFilling('@acme/forecasts', 1)])).rejects.toThrow(
-      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 5',
+      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 6',
     );
   });
 
@@ -143,5 +150,60 @@ describe('a runtime an extension fills capability/prediction of', () => {
     ).rejects.toThrow(
       'The extensions @acme/forecasts and @globex/forecasts each fill capability/prediction, and one extension at most may fill it; keep one of them in extensions',
     );
+  });
+});
+
+const naming = `{ name: 'prediction-function', variables: { 'prediction.most_active': { value: ports.mostFunctions + ' functions', default: '32 functions' } } }`;
+
+const predictionPage = 'docs/reference/prediction-format.md';
+
+const namingTheValue = [
+  '# Prediction function format',
+  '',
+  'A playbook keeps at most <span data-variable="prediction.most_active">30 functions</span> active.',
+  '',
+  '<div data-variable="prediction.most_active">',
+  '',
+  '```yaml',
+  'most_active: 32 functions',
+  '```',
+  '',
+  '</div>',
+].join('\n');
+
+const withThePageNamingTheValue: ShippedFilesOver = (files) => ({
+  ...files,
+  text: async (file) => {
+    const text = await files.text(file);
+    return file.path === predictionPage ? text.replace('# Prediction function format', namingTheValue) : text;
+  },
+});
+
+async function guideOf(server: ReasoningServer): Promise<readonly [number, string]> {
+  const answered = await fetch(`${server.origin}/v1/guides/prediction-function`);
+  return [answered.status, await answered.text()];
+}
+
+describe('the guide of a runtime an extension fills capability/prediction of', () => {
+  it('says the value the operator set, where the page names it, though the page writes another default', async () => {
+    const server = await servingWith(
+      [forecastsFilling('@acme/forecasts', 6, naming)],
+      patientWorkerPool,
+      withThePageNamingTheValue,
+    );
+
+    const [status, guide] = await guideOf(server);
+
+    expect(status).toBe(200);
+    expect(guide).toContain('A playbook keeps at most 7 functions active.\n\n```yaml\nmost_active: 7 functions\n```');
+    expect(guide).not.toMatch(/data-variable|30 functions|32 functions/u);
+  });
+
+  it('is served as its page is, of an extension built before a guide declared values', async () => {
+    const server = await servingWith([forecastsFilling('@acme/forecasts', 5)]);
+
+    const [status, guide] = await guideOf(server);
+
+    expect([status, guide.startsWith('# Prediction function format\n')]).toEqual([200, true]);
   });
 });

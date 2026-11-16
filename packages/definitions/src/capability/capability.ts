@@ -76,9 +76,12 @@ export interface Resumption<Parsed> {
 
 const nothingToEnd: CancelledAttempt = { ends: [] };
 
+export type GuideVariables = Readonly<Record<string, { readonly value: string; readonly default: string }>>;
+
 export interface CapabilityGuide {
   readonly name: string;
   readonly onThisServer?: string;
+  readonly variables?: GuideVariables;
 }
 
 export interface RunAccount {
@@ -192,7 +195,7 @@ export interface Capability {
   readonly prepare: (source: string, stripped?: StrippedForms) => Effect.Effect<PreparedDefinition, InvalidInput>;
 }
 
-export const capabilityContract = 5;
+export const capabilityContract = 6;
 
 export const earliestCapabilityContractServed = 2;
 

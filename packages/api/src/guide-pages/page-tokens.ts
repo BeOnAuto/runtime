@@ -37,7 +37,7 @@ export interface Placed {
   readonly at: number;
 }
 
-const markingAttribute = /\bdata-(?:audience|variable)=/gu;
+const markingAttribute = /(?<![\w.:-])data-(?:audience|variable)(?![\w.:-])/giu;
 
 function cellOf({ text, tokens }: LexerCell): Cell {
   return { text, tokens: tokens.map((token) => tokenOf(token)) };

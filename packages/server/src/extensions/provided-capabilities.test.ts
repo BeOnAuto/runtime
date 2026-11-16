@@ -6,19 +6,24 @@ import { describe, expect, it } from 'vitest';
 import { AFactOfAnyTypeSchema, ForecastNotedSchema, forecastChecked } from '../testing/extensions/declared-facts.ts';
 import { providedCapabilityOf } from './provided-capabilities.ts';
 
+const forecasts = defineCapability({
+  type: 'prediction',
+  title: 'Forecasts',
+  guide: { name: 'prediction-function' },
+  noun: { one: 'prediction function', other: 'prediction functions' },
+  describeOutput: () => 'The extension answered.',
+  mediaType: 'text/markdown',
+  parse: (source) => Effect.succeed(source),
+  summarize: () => ({}),
+  run: () => Effect.succeed({ output: null, record: {} }),
+});
+
 function declaringOnRuns(...onRuns: readonly unknown[]): unknown {
-  const capability = defineCapability({
-    type: 'prediction',
-    title: 'Forecasts',
-    guide: { name: 'prediction-function' },
-    noun: { one: 'prediction function', other: 'prediction functions' },
-    describeOutput: () => 'The extension answered.',
-    mediaType: 'text/markdown',
-    parse: (source) => Effect.succeed(source),
-    summarize: () => ({}),
-    run: () => Effect.succeed({ output: null, record: {} }),
-  });
-  return { capability: { ...capability, facts: { onRuns, streams: [] } } };
+  return { capability: { ...forecasts, facts: { onRuns, streams: [] } } };
+}
+
+function declaringTheGuide(guide: unknown): unknown {
+  return { capability: { ...forecasts, guide } };
 }
 
 const ForecastCheckedBefore = factOf('forecast_checked', Schema.Struct({ verdict: Schema.String }), RunContextSchema);
@@ -106,6 +111,32 @@ describe('the content a fact on runs of a capability an extension provides holds
       Result.fail(
         'its capability.facts.onRuns[0] declares the fact forecast_checked with a declaration of the content it holds or releases that the runtime does not read',
       ),
+    );
+  });
+});
+
+describe('the guide of a capability an extension provides', () => {
+  it('may give, for each value its pages name, the words in force on this server and the default the pages write', () => {
+    const guide = {
+      name: 'prediction-function',
+      variables: { 'prediction.longest_history': { value: '90 days', default: '365 days' } },
+    };
+
+    expect(Result.map(providedCapabilityOf(declaringTheGuide(guide)), ({ capability }) => capability.guide)).toEqual(
+      Result.succeed(guide),
+    );
+  });
+
+  it.each<readonly [string, unknown, string]>([
+    ['not a record', ['90 days'], 'its capability.guide.variables is not a record'],
+    [
+      'a value without its default',
+      { 'prediction.longest_history': { value: '90 days' } },
+      'its capability.guide.variables.prediction.longest_history has no default',
+    ],
+  ])('is refused where its variables are %s, naming the place', (_case, variables, refusal) => {
+    expect(providedCapabilityOf(declaringTheGuide({ name: 'prediction-function', variables }))).toEqual(
+      Result.fail(refusal),
     );
   });
 });

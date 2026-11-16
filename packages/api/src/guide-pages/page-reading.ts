@@ -1,5 +1,9 @@
+import type { GuideVariables } from '@on.auto/definitions';
+
 import { audienceOfABlock, blockClosing, unknownAudienceIn } from './audience.ts';
+import { exampleReading } from './declared-examples.ts';
 import { spansOf, type Context } from './marked-spans.ts';
+import { isEdge, isSpace, type Here, type PageRead } from './page-read.ts';
 import {
   everyTokenOf,
   holdsAMarking,
@@ -11,6 +15,7 @@ import {
   type Token,
 } from './page-tokens.ts';
 import { faultAt, readingsJoined, unknownForm, type Reading } from './reading.ts';
+import { variablesOfAnExample } from './variable-forms.ts';
 
 interface Opened {
   readonly at: number;
@@ -20,33 +25,17 @@ interface BlockScan extends Reading {
   readonly open: Opened | undefined;
 }
 
-interface Here {
-  readonly index: number;
-  readonly placed: Placed;
-}
-
-interface Page {
-  readonly text: string;
-  readonly placed: readonly Placed[];
-}
-
-function isSpace(page: Page, index: number): boolean {
-  return page.placed.slice(index, index + 1).some(({ token }) => token.type === 'space');
-}
-
-function isEdge(page: Page, index: number): boolean {
-  return index < 0 || index >= page.placed.length || isSpace(page, index);
-}
+const nothing: Reading = { edits: [], faults: [], stale: [] };
 
 function isAComment({ type, raw }: Token): boolean {
   return type === 'html' && raw.startsWith('<!--') && markingsWrittenIn(raw) === 0;
 }
 
-function faulted(scan: BlockScan, page: Page, at: number, fault: string): BlockScan {
+function faulted(scan: BlockScan, page: PageRead, at: number, fault: string): BlockScan {
   return { ...scan, faults: [...scan.faults, faultAt(page.text, at, fault)] };
 }
 
-function opened(scan: BlockScan, page: Page, { index, placed }: Here, audience: string): BlockScan {
+function opened(scan: BlockScan, page: PageRead, { index, placed }: Here, audience: string): BlockScan {
   const faults = [
     ...(scan.open === undefined ? [] : ['opens a marked passage inside another.']),
     ...[unknownAudienceIn(audience)].filter((fault) => fault !== undefined),
@@ -58,22 +47,18 @@ function opened(scan: BlockScan, page: Page, { index, placed }: Here, audience: 
   return scan.open === undefined ? { ...faulty, open: { at: placed.at } } : faulty;
 }
 
-function closed(scan: BlockScan, page: Page, { index, placed }: Here, open: Opened): BlockScan {
+function closed(scan: BlockScan, page: PageRead, { index, placed }: Here, open: Opened): BlockScan {
   const end = page.placed
     .slice(index + 1, index + 2)
     .filter(({ token }) => token.type === 'space')
     .reduce((_end, { token, at }) => at + token.raw.length, placed.at + placed.token.raw.length);
-  const ended: BlockScan = {
-    edits: [...scan.edits, { start: open.at, end, words: '' }],
-    faults: scan.faults,
-    open: undefined,
-  };
+  const ended: BlockScan = { ...scan, edits: [...scan.edits, { start: open.at, end, words: '' }], open: undefined };
   return isSpace(page, index - 1) && isEdge(page, index + 1)
     ? ended
     : faulted(ended, page, placed.at, 'writes a marked passage whose closing line is not set apart by blank lines.');
 }
 
-function stepInside(scan: BlockScan, page: Page, here: Here, open: Opened): BlockScan {
+function stepInside(scan: BlockScan, page: PageRead, here: Here, open: Opened): BlockScan {
   const { token, at } = here.placed;
   if (token.type === 'html' && token.raw.trimEnd() === blockClosing) {
     return closed(scan, page, here, open);
@@ -87,22 +72,30 @@ function stepInside(scan: BlockScan, page: Page, here: Here, open: Opened): Bloc
   return scan;
 }
 
-function step(scan: BlockScan, page: Page, here: Here): BlockScan {
+function stepOutside(scan: BlockScan, page: PageRead, here: Here): BlockScan {
   const { token, at } = here.placed;
+  if (token.type !== 'html' || markingsWrittenIn(token.raw) === 0) {
+    return scan;
+  }
+  const names = variablesOfAnExample(token.raw.trimEnd());
+  if (names === undefined) {
+    return faulted(scan, page, at, unknownForm);
+  }
+  return { ...readingsJoined([scan, exampleReading(page, here, names)]), open: undefined };
+}
+
+function step(scan: BlockScan, page: PageRead, here: Here): BlockScan {
+  const { token } = here.placed;
   const audience = token.type === 'html' ? audienceOfABlock(token.raw.trimEnd()) : undefined;
   if (audience !== undefined) {
     return opened(scan, page, here, audience);
   }
-  if (scan.open !== undefined) {
-    return stepInside(scan, page, here, scan.open);
-  }
-  return token.type === 'html' && markingsWrittenIn(token.raw) > 0 ? faulted(scan, page, at, unknownForm) : scan;
+  return scan.open === undefined ? stepOutside(scan, page, here) : stepInside(scan, page, here, scan.open);
 }
 
-function blocksOf(page: Page): BlockScan {
+function blocksOf(page: PageRead): BlockScan {
   const scan = page.placed.reduce<BlockScan>((reading, placed, index) => step(reading, page, { index, placed }), {
-    edits: [],
-    faults: [],
+    ...nothing,
     open: undefined,
   });
   return scan.open === undefined
@@ -110,8 +103,8 @@ function blocksOf(page: Page): BlockScan {
     : faulted(scan, page, scan.open.at, 'opens a marked passage and never closes it with a line that is </div>.');
 }
 
-function spansOfPage(page: Page, holding: readonly Placed[], blocks: Reading): Reading {
-  const context: Context = { page: page.text, place: (offset) => offset };
+function spansOfPage(page: PageRead, holding: readonly Placed[], blocks: Reading): Reading {
+  const context: Context = { page: page.text, place: (offset) => offset, variables: page.variables };
   const isInABlock = (at: number): boolean => blocks.edits.some(({ start, end }) => at >= start && at < end);
   return readingsJoined(
     holding
@@ -120,9 +113,9 @@ function spansOfPage(page: Page, holding: readonly Placed[], blocks: Reading): R
   );
 }
 
-function codeHoldingMarkings(page: Page, holding: readonly Placed[]): Reading {
+function codeHoldingMarkings(page: PageRead, holding: readonly Placed[]): Reading {
   return {
-    edits: [],
+    ...nothing,
     faults: holding
       .filter(({ token }) =>
         everyTokenOf([token]).some((each) => each.type === 'code' && markingsWrittenIn(each.raw) > 0),
@@ -139,9 +132,9 @@ function markingsAccountedIn(token: Token): number {
     .reduce((count, { raw }) => count + markingsWrittenIn(raw), 0);
 }
 
-function markingsUnread(page: Page, holding: readonly Placed[]): Reading {
+function markingsUnread(page: PageRead, holding: readonly Placed[]): Reading {
   return {
-    edits: [],
+    ...nothing,
     faults: holding
       .filter(({ token }) => markingsWrittenIn(token.raw) > markingsAccountedIn(token))
       .map(({ at }) =>
@@ -150,18 +143,18 @@ function markingsUnread(page: Page, holding: readonly Placed[]): Reading {
   };
 }
 
-export function readingOf(text: string): Reading {
+export function readingOf(text: string, variables: GuideVariables): Reading {
   if (markingsWrittenIn(text) === 0) {
-    return { edits: [], faults: [] };
+    return nothing;
   }
   const tokens = lexed(text);
   if (rawsOf(tokens) !== text) {
     return {
-      edits: [],
+      ...nothing,
       faults: ['The page cannot be read: the Markdown parser does not account for every character of it.'],
     };
   }
-  const page: Page = { text, placed: placedFrom(tokens, 0) };
+  const page: PageRead = { text, placed: placedFrom(tokens, 0), variables };
   const blocks = blocksOf(page);
   const holding = page.placed.filter(({ token }) => markingsWrittenIn(token.raw) > 0);
   return readingsJoined([

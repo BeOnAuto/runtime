@@ -1,4 +1,4 @@
-import { inDefinitionTypeOrder, type CapabilityGuide } from '@on.auto/definitions';
+import { inDefinitionTypeOrder, type CapabilityGuide, type GuideVariables } from '@on.auto/definitions';
 import { capitalized, type Noun } from '@on.auto/phrasing';
 import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
@@ -82,6 +82,12 @@ interface ServedOptions {
   readonly goals?: boolean;
   readonly messages?: boolean;
   readonly companions?: readonly CompanionGuide[];
+  readonly variables?: GuideVariables;
+}
+
+interface Shelving {
+  readonly shippedFiles: ShippedFiles;
+  readonly variables: GuideVariables;
 }
 
 function pageOfGuide(guide: string): string {
@@ -92,16 +98,32 @@ function pageText(shippedFiles: ShippedFiles, page: string): Promise<string> {
   return shippedFiles.text(shippedFileIn(documentation, page));
 }
 
-async function pageGuideOf(shippedFiles: ShippedFiles, page: string, about: Omit<Guide, 'text'>): Promise<Guide> {
-  return { ...about, text: withLinksResolved(forTheAgent(page, await pageText(shippedFiles, page)), page) };
+async function pageGuideOf(
+  { shippedFiles, variables }: Shelving,
+  page: string,
+  about: Omit<Guide, 'text'>,
+): Promise<Guide> {
+  return { ...about, text: withLinksResolved(forTheAgent(page, await pageText(shippedFiles, page), variables), page) };
+}
+
+function variablesOf(served: readonly ServedType[], host: GuideVariables): GuideVariables {
+  const declared = [host, ...served.map(({ guide }) => guide.variables ?? {})].flatMap((each: GuideVariables) =>
+    Object.entries(each),
+  );
+  const names = declared.map(([name]: readonly [string, GuideVariables[string]]) => name);
+  const repeated = names.find((name, index) => names.indexOf(name) !== index);
+  if (repeated !== undefined) {
+    throw new Error(`The value ${repeated} is declared more than once for the guides of the server`);
+  }
+  return Object.fromEntries(declared);
 }
 
 async function typeGuideOf(
-  shippedFiles: ShippedFiles,
+  shelving: Shelving,
   { noun, guide }: Pick<ServedType, 'noun' | 'guide'>,
   companions: readonly CompanionGuide[],
 ): Promise<readonly Guide[]> {
-  const { text, ...about } = await pageGuideOf(shippedFiles, pageOfGuide(guide.name), {
+  const { text, ...about } = await pageGuideOf(shelving, pageOfGuide(guide.name), {
     name: guide.name,
     title: `${capitalized(noun.one)} format`,
     description: `How ${noun.other} are written: their document, fields, examples and bounds.`,
@@ -111,9 +133,7 @@ async function typeGuideOf(
     text: guide.onThisServer === undefined ? text : `${text.trimEnd()}\n\n${guide.onThisServer}\n`,
   };
   const companionGuides = await Promise.all(
-    companions.map(({ page, name, title, description }) =>
-      pageGuideOf(shippedFiles, page, { name, title, description }),
-    ),
+    companions.map(({ page, name, title, description }) => pageGuideOf(shelving, page, { name, title, description })),
   );
   return [typeGuide, ...companionGuides];
 }
@@ -121,9 +141,10 @@ async function typeGuideOf(
 export async function guideShelfFrom(
   shippedFiles: ShippedFiles,
   served: readonly ServedType[],
-  { pages, goals = false, messages: messagesAsked = false, companions = [] }: ServedOptions,
+  { pages, goals = false, messages: messagesAsked = false, companions = [], variables = {} }: ServedOptions,
 ): Promise<GuideShelf> {
   const messages = goals && messagesAsked;
+  const shelving: Shelving = { shippedFiles, variables: variablesOf(served, variables) };
   const types = inDefinitionTypeOrder(served);
   const companionsOf = (type: string): readonly CompanionGuide[] =>
     companions.filter((companion) => companion.type === type);
@@ -136,20 +157,20 @@ export async function guideShelfFrom(
   const events = pages || types.some(({ type }) => typesTakingEvents.has(type));
   const pageGuides = [
     ...(await leadingGuidesOf(
-      shippedFiles,
+      shelving,
       definitionTypes.map(({ noun }) => noun),
       { goals, messages },
     )),
     ...(
       await Promise.all(
-        types.map(({ type, noun, guide }) => typeGuideOf(shippedFiles, { noun, guide }, companionsOf(type))),
+        types.map(({ type, noun, guide }) => typeGuideOf(shelving, { noun, guide }, companionsOf(type))),
       )
     ).flat(),
-    await pageGuideOf(shippedFiles, templatesPage, templatesAbout),
-    ...(workflows ? [await pageGuideOf(shippedFiles, triggersPage, triggersAbout)] : []),
-    ...(events ? [await pageGuideOf(shippedFiles, eventsPage, eventsAbout)] : []),
+    await pageGuideOf(shelving, templatesPage, templatesAbout),
+    ...(workflows ? [await pageGuideOf(shelving, triggersPage, triggersAbout)] : []),
+    ...(events ? [await pageGuideOf(shelving, eventsPage, eventsAbout)] : []),
     ...(pages
-      ? [await pageGuideOf(shippedFiles, pagePage, pageAbout), await pageGuideOf(shippedFiles, glancePage, glanceAbout)]
+      ? [await pageGuideOf(shelving, pagePage, pageAbout), await pageGuideOf(shelving, glancePage, glanceAbout)]
       : []),
   ];
   const recipes = await recipesFor(shippedFiles, pageGuides, definitionTypes, { messages });

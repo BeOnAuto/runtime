@@ -32,7 +32,13 @@ function anObject<Fields extends Schema.Struct.Fields>(fields: Fields) {
 const CapabilitySchema = anObject({
   type: text,
   title: text,
-  guide: anObject({ name: text, onThisServer: Schema.optionalKey(text) }),
+  guide: anObject({
+    name: text,
+    onThisServer: Schema.optionalKey(text),
+    variables: Schema.optionalKey(
+      kept(Schema.Record(Schema.String, anObject({ value: text, default: text })), 'a record'),
+    ),
+  }),
   noun: anObject({ one: text, other: text }),
   describeOutput: aFunction,
   mediaType: text,

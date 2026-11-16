@@ -6,6 +6,8 @@ import { test } from 'node:test';
 
 import { markingFaultsOf } from '@on.auto/api';
 
+import { declaredByDefault } from './docs-guide-variables.ts';
+
 const docs = resolve(import.meta.dirname, '../docs');
 
 const pages = readdirSync(docs, { recursive: true, withFileTypes: true })
@@ -19,7 +21,9 @@ await test('every page marks a passage for another reader only in the forms a gu
   assert.ok(pages.includes(join(docs, 'reference/workflow-format.md')));
   assert.deepEqual(
     pages.flatMap((page) =>
-      markingFaultsOf(readFileSync(page, 'utf8')).map((fault) => `${relative(docs, page)}: ${fault}`),
+      markingFaultsOf(readFileSync(page, 'utf8'), declaredByDefault).map(
+        (fault) => `${relative(docs, page)}: ${fault}`,
+      ),
     ),
     [],
   );
@@ -38,6 +42,7 @@ await test('a page whose marking a guide cannot read is refused, at its line', (
         '</div>',
         '',
       ].join('\n'),
+      declaredByDefault,
     ),
     [
       'The line "A clause<span data-audience="admin"> for no one</span>." names no audience a page may name in data-audience="admin": name one or more of operator, developer, user, each once and separated by one space.',

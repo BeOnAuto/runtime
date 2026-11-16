@@ -1,3 +1,4 @@
+import type { GuideVariables } from '@on.auto/definitions';
 import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
 import { forTheAgent } from '../guide-pages/agent-rendition.ts';
@@ -27,12 +28,17 @@ async function goalsGuideOf(shippedFiles: ShippedFiles, messages: boolean): Prom
   };
 }
 
+interface Reading {
+  readonly shippedFiles: ShippedFiles;
+  readonly variables: GuideVariables;
+}
+
 export async function leadingGuidesOf(
-  shippedFiles: ShippedFiles,
+  { shippedFiles, variables }: Reading,
   nouns: readonly string[],
   kept: GoalsKept,
 ): Promise<readonly Guide[]> {
   const page = await shippedFiles.text(shippedFileIn(documentation, terminologyPage));
-  const terminology = terminologyGuideOf(forTheAgent(terminologyPage, page), nouns, kept);
+  const terminology = terminologyGuideOf(forTheAgent(terminologyPage, page, variables), nouns, kept);
   return kept.goals ? [terminology, await goalsGuideOf(shippedFiles, kept.messages)] : [terminology];
 }

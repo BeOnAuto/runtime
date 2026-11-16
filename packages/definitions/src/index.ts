@@ -30,7 +30,6 @@ export {
   type PreparedDefinition,
   type Capability,
   type CapabilityDeclaration,
-  type CapabilityGuide,
   type CapabilityRejection,
   type DefinitionSummary,
   type RunAccount,
@@ -38,6 +37,7 @@ export {
   type Standing,
   type StandingRequest,
 } from './capability/capability.ts';
+export type { CapabilityGuide, GuideVariables } from './capability/capability.ts';
 export {
   inTheDirectoryListing,
   operationsInTheDirectoryListing,
