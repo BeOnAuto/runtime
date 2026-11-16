@@ -11,7 +11,7 @@ import {
   type HarnessLedger,
 } from '@on.auto/interaction/testing';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger } from '@on.auto/operations';
 import { Effect, Layer, ManagedRuntime } from 'effect';
 import { Client } from 'pg';

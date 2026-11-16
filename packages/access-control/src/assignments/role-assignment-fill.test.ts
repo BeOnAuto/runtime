@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger, streamPrefixOfOrg, type KeptProjection } from '@on.auto/operations';
 import { Effect, ManagedRuntime } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';

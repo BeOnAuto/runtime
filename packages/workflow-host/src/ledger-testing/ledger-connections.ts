@@ -38,7 +38,7 @@ export interface ClosingHostDatabase extends HostDatabase {
 
 async function ledgerLayerOn(settings: DatabaseSettings): Promise<Layer.Layer<LedgerServices>> {
   if (settings.store === 'sqlite') {
-    const { ledgerLayer } = await import('@on.auto/ledger/sqlite3');
+    const { ledgerLayer } = await import('@on.auto/ledger/sqlite');
     return ledgerLayer({ fileName: settings.file, observer: settings.observer, holders: settings.holders });
   }
   const { postgresqlLedgerLayer } = await import('@on.auto/ledger/postgresql');

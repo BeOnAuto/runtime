@@ -5,7 +5,7 @@ import { Effect, type Cause, type Exit } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
-import { modestConnections } from '../sqlite3.ts';
+import { modestConnections } from '../sqlite.ts';
 import { stamped } from '../testing/happenings.ts';
 import { openConnectionWith } from '../testing/open-ledger.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';

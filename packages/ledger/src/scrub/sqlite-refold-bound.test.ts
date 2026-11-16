@@ -3,7 +3,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { mostValuesTheLedgerBindsOnSQLite } from '../connection/bound-values.ts';
 import { sqliteProjectionsOf } from '../projections/sqlite-projections.ts';
 import { executedOn } from '../recorded/sqlite-checks.ts';
-import { ledgerLayer } from '../sqlite3.ts';
+import { ledgerLayer } from '../sqlite.ts';
 import { boundedExecutor } from '../testing/bounded-executor.ts';
 import { openLedgerWith } from '../testing/open-ledger.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';

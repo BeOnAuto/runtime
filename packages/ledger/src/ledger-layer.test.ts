@@ -6,7 +6,7 @@ import { Cause, Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { ledgerLayoutFloor } from './layout/ledger-layout.ts';
-import { aSQLiteFileInLayout, ledgerLayer } from './sqlite3.ts';
+import { aSQLiteFileInLayout, ledgerLayer } from './sqlite.ts';
 import { openLedgerWith } from './testing/open-ledger.ts';
 import { tally } from './testing/tally.ts';
 import { temporaryDatabase, type TemporaryDatabase } from './testing/temporary-database.ts';

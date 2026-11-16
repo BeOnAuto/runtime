@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import type { LedgerServices } from '@on.auto/ledger';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import type { Layer } from 'effect';
 import { Client } from 'pg';
 

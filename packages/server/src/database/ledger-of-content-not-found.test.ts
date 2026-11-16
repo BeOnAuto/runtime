@@ -1,5 +1,5 @@
 import { HeldContentUnchecked, LedgerChores, type LedgerServices } from '@on.auto/ledger';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Context, Effect, Layer, ManagedRuntime, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 

@@ -1,5 +1,5 @@
 import { makeAppRuntime } from '@on.auto/api';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Cause, Effect, Exit, Layer, Logger } from 'effect';
 import { describe, expect, it } from 'vitest';
 

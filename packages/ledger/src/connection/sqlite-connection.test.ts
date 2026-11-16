@@ -3,7 +3,7 @@ import { setTimeout } from 'node:timers/promises';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { ledgerLayer } from '../sqlite3.ts';
+import { ledgerLayer } from '../sqlite.ts';
 import { stamped } from '../testing/happenings.ts';
 import { openConnectionWith, type OpenConnection } from '../testing/open-ledger.ts';
 import { tally } from '../testing/tally.ts';

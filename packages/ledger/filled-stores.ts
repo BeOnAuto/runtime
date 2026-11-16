@@ -7,7 +7,7 @@ import { postgresqlProjectionsOf } from './src/postgresql/postgresql-projections
 import type { KeptTables, ProjectionParts } from './src/projections/projection-parts.ts';
 import { sqliteProjectionsOf } from './src/projections/sqlite-projections.ts';
 import { executedOn } from './src/recorded/sqlite-checks.ts';
-import { ledgerLayer } from './src/sqlite3.ts';
+import { ledgerLayer } from './src/sqlite.ts';
 
 export type FilledIn =
   | { readonly store: 'sqlite'; readonly file: string }

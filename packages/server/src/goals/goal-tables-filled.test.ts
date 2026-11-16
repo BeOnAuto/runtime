@@ -1,6 +1,6 @@
 import { goalsLedger, summaryRunIdOf } from '@on.auto/goals';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { ContextSchema, Ledger, projectedTableOf, type Decider } from '@on.auto/operations';
 import { Effect, ManagedRuntime, Result, Schema, type Layer } from 'effect';
 import { Client } from 'pg';

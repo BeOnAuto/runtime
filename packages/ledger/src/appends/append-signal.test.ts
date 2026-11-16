@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { StreamStore } from '../event-store.ts';
 import type { MultiStreamAppends } from '../multi-stream/multi-stream-appends.ts';
-import { ledgerLayer } from '../sqlite3.ts';
+import { ledgerLayer } from '../sqlite.ts';
 import { happenings, noted, stamped } from '../testing/happenings.ts';
 import { appendSignal, playbookKeyOfStream, signalledOn } from './append-signal.ts';
 

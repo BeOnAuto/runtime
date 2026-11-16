@@ -107,7 +107,7 @@ const unreadable = [
   [
     'it is no OpenAPI document of version 3',
     json({ swagger: '2.0', info: { title: 'Billing', version: '2' }, paths: {} }),
-    'At /swagger of the document: not what the runtime reads there in an OpenAPI document of version 3.0 or 3.1',
+    'At /swagger of the document: not what the runtime reads there in an OpenAPI document of version 3.0, 3.1 or 3.2',
   ],
   [
     'it is larger than a document of a tool server may be',

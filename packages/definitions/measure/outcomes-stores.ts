@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger, type RunOutcomeMapping } from '@on.auto/operations';
 import { Effect, ManagedRuntime, type Layer } from 'effect';
 import { Client } from 'pg';

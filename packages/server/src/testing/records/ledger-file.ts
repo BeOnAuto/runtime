@@ -6,7 +6,7 @@ import {
   type Statement,
   type StatementValue,
 } from '@on.auto/ledger';
-import { sqliteLedgerReads } from '@on.auto/ledger/sqlite3';
+import { sqliteLedgerReads } from '@on.auto/ledger/sqlite';
 import { Effect, ManagedRuntime, Schema } from 'effect';
 
 import { sqliteLedgerDatabase } from '../../database/sqlite-ledger-database.ts';

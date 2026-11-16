@@ -48,11 +48,11 @@ describe('the ledger entry points', () => {
     expect(packages).toContain('@on.auto/node-sqlite');
   });
 
-  it('keep the driver of node:sqlite and the file system behind the sqlite3 entry', () => {
-    const packages = packagesReachableFrom('sqlite3.ts');
+  it('keep the driver of node:sqlite and the file system behind the sqlite entry', () => {
+    const packages = packagesReachableFrom('sqlite.ts');
 
     expect(packages).toContain('@on.auto/node-sqlite');
     expect(packages).toContain('node:fs');
-    expect(modulesReachedFrom(import.meta.dirname, 'sqlite3.ts').files).toContain('layout/sqlite-file-in-layout.ts');
+    expect(modulesReachedFrom(import.meta.dirname, 'sqlite.ts').files).toContain('layout/sqlite-file-in-layout.ts');
   });
 });

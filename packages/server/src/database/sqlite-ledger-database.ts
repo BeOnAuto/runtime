@@ -1,5 +1,5 @@
 import type { AppendObserver } from '@on.auto/ledger';
-import { sqliteLedgerFile } from '@on.auto/ledger/sqlite3';
+import { sqliteLedgerFile } from '@on.auto/ledger/sqlite';
 
 import type { LedgerDatabase } from './ledger-database.ts';
 

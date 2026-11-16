@@ -4,7 +4,7 @@ import { createServer } from 'node:net';
 import { rolesImported } from '@on.auto/access-control';
 import { signInScopes } from '@on.auto/identity';
 import type { FakeIssuer } from '@on.auto/identity/testing';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger, OrgWriter, streamPrefixOfOrg } from '@on.auto/operations';
 import { Effect, ManagedRuntime } from 'effect';
 

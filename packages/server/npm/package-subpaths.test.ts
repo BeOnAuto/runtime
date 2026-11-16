@@ -6,7 +6,7 @@ const packed: readonly PackedPackage[] = [
   {
     name: '@on.auto/ledger',
     directory: 'packages/ledger',
-    exports: { '.': './src/index.ts', './sqlite3': './src/sqlite3.ts', './testing': './src/testing/index.ts' },
+    exports: { '.': './src/index.ts', './sqlite': './src/sqlite.ts', './testing': './src/testing/index.ts' },
   },
   { name: '@on.auto/prediction', directory: 'capabilities/prediction', exports: { '.': './src/index.ts' } },
   { name: '@on.auto/server', directory: 'packages/server', exports: {} },
@@ -16,7 +16,7 @@ describe('the subpaths of the package', () => {
   it('name each entry of each packed package under the name of the package within its scope', () => {
     expect(subpathsOf(packed)).toEqual({
       './ledger': './packages/ledger/src/index.ts',
-      './ledger/sqlite3': './packages/ledger/src/sqlite3.ts',
+      './ledger/sqlite': './packages/ledger/src/sqlite.ts',
       './ledger/testing': './packages/ledger/src/testing/index.ts',
       './prediction': './capabilities/prediction/src/index.ts',
     });

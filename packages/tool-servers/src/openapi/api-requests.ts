@@ -2,6 +2,8 @@ import { Buffer } from 'node:buffer';
 
 import { Predicate, Redacted, Result } from 'effect';
 
+import { sentContentOf } from '../request-bodies/sent-bodies.ts';
+import type { OperationBody } from './api-parameters.ts';
 import type { ApiOperation, QueryInput } from './api-tools.ts';
 import type { Placement } from './security-schemes.ts';
 
@@ -15,9 +17,14 @@ export interface ApiRequest {
   readonly url: string;
   readonly method: string;
   readonly headers: Readonly<Record<string, string>>;
-  readonly body: string | null;
+  readonly body: string | Readonly<Uint8Array> | null;
   readonly usesToken: boolean;
   readonly named: string | undefined;
+}
+
+interface BuiltBody {
+  readonly contentType: string;
+  readonly content: string | Readonly<Uint8Array>;
 }
 
 type Scalar = string | number | boolean;
@@ -136,13 +143,19 @@ function unknownArgument(operation: ApiOperation, input: Readonly<Record<string,
   return unknown === undefined ? undefined : `The arguments give ${unknown}, which this operation does not take`;
 }
 
-function bodyOf(operation: ApiOperation, input: Readonly<Record<string, unknown>>): Built<string | null> {
+function sentOf(body: OperationBody, value: unknown): Built<BuiltBody> {
+  return body.kind === 'json'
+    ? Result.succeed({ contentType: body.mediaType, content: JSON.stringify(value) })
+    : sentContentOf(body, value);
+}
+
+function bodyOf(operation: ApiOperation, input: Readonly<Record<string, unknown>>): Built<BuiltBody | null> {
   if (operation.body === null || !Predicate.hasProperty(input, 'body')) {
     return operation.body?.required === true
       ? Result.fail('The arguments give no body, which this operation needs')
       : Result.succeed(null);
   }
-  return Result.succeed(JSON.stringify(input['body']));
+  return sentOf(operation.body, input['body']);
 }
 
 function credentialHeader(placement: Placement): readonly (readonly [string, string])[] {
@@ -157,14 +170,14 @@ function credentialHeader(placement: Placement): readonly (readonly [string, str
     : [];
 }
 
-function headersOf(operation: ApiOperation, endpoint: ApiEndpoint, body: string | null): Record<string, string> {
+function headersOf(operation: ApiOperation, endpoint: ApiEndpoint, body: BuiltBody | null): Record<string, string> {
   return {
     ...Object.fromEntries(
       [...endpoint.headers].map(([name, value]: readonly [string, Redacted.Redacted]) => [name, Redacted.value(value)]),
     ),
     ...Object.fromEntries(operation.credentials.flatMap((placement) => credentialHeader(placement))),
     accept: 'application/json, */*;q=0.5',
-    ...(body === null || operation.body === null ? {} : { 'content-type': operation.body.mediaType }),
+    ...(body === null ? {} : { 'content-type': body.contentType }),
   };
 }
 
@@ -183,7 +196,7 @@ export function apiRequestOf(
         url: `${endpoint.baseUrl}${path}${query}`,
         method: operation.method.toUpperCase(),
         headers: headersOf(operation, endpoint, body),
-        body,
+        body: body?.content ?? null,
         usesToken: operation.credentials.some(({ kind }) => kind === 'token'),
         named: fileNameArgumentOf(operation, input),
       })),

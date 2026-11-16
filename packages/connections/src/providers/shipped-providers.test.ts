@@ -1,45 +1,20 @@
-import {
-  additionOfProvider,
-  holdsAClientId,
-  readProviders,
-  type Placeholder,
-  type Provider,
-  type ProviderAddition,
-  providersShippedRoots,
-} from '@on.auto/providers';
+import { additionOfProvider, providersShippedRoots, type Provider, type ProviderAddition } from '@on.auto/providers';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import {
-  describedToolServers,
-  isConnectionServerSettings,
-  type AuthSettings,
-  type ServerSettings,
-  type ToolServers,
-} from '@on.auto/tool-servers';
+import { describedToolServers, type ServerSettings, type ToolServers } from '@on.auto/tool-servers';
 import { Effect, Option, Redacted, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { additionIssuesOf, readAddition, type AdditionInput } from '../entries/entry-checks.ts';
-import { credentialFieldIssuesOf, placesNoValue } from '../registry/credential.ts';
+import { additionIssuesOf } from '../entries/entry-checks.ts';
+import { credentialFieldIssuesOf } from '../registry/credential.ts';
 import { ada, harness, operationNamed } from '../testing/harness.ts';
+import { additions, checking, clientId, settingsOf, shipped } from '../testing/shipped-additions.ts';
 
 const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
-
-const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
 
 const filesBesideTheEntries = await providersOnDisk.list({
   package: '@on.auto/providers',
   path: 'src/entries/documents',
 });
-
-const checking = {
-  org: 'acme',
-  modelProviders: ['anthropic', 'openai'],
-  providing: { documents: shipped.documents, values: new Map(), documentServer: undefined },
-};
-
-const standIn = { value: Redacted.make('a value the person gives'), algorithm: undefined };
-
-const clientId = 'a client id of the connection';
 
 const DocumentSchema = Schema.Struct({
   paths: Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown)),
@@ -50,62 +25,6 @@ const ListedWaysSchema = Schema.Struct({
     providers: Schema.Array(Schema.Struct({ credentials: Schema.Array(Schema.Record(Schema.String, Schema.Unknown)) })),
   }),
 });
-
-type Given = Readonly<Record<string, string>>;
-
-function valuesOf({ example = '', choices }: Placeholder): readonly string[] {
-  return choices === undefined ? [example] : choices.map(({ value }) => value);
-}
-
-function givenOf(given: readonly Given[], [name, placeholder]: readonly [string, Placeholder]): readonly Given[] {
-  return given.flatMap((each) =>
-    valuesOf(placeholder).map((value) => Object.fromEntries([...Object.entries(each), [name, value]])),
-  );
-}
-
-function examplesOf({ entry }: Provider): readonly Given[] {
-  return Object.entries(entry.placeholders ?? {}).reduce<readonly Given[]>(
-    (given, placeholder: readonly [string, Placeholder]) => givenOf(given, placeholder),
-    [{}],
-  );
-}
-
-function additionsOf(provider: Provider): readonly ProviderAddition[] {
-  return provider.entry.credentials.flatMap(({ kind }) =>
-    examplesOf(provider).map((placeholders) =>
-      Result.getOrThrow(additionOfProvider(provider.entry, { placeholders, kind })),
-    ),
-  );
-}
-
-const additions = shipped.providers.flatMap((provider) => additionsOf(provider));
-
-function authOfTheConsent({ credential }: ProviderAddition): AuthSettings {
-  return {
-    issuer: credential.issuer ?? '',
-    client_id: clientId,
-    scope: credential.scope ?? null,
-    credential: { kind: 'client_secret', client_secret: standIn.value },
-  };
-}
-
-function withTheClientId(addition: ProviderAddition): AdditionInput {
-  const { credential } = addition;
-  return holdsAClientId(credential.kind)
-    ? { ...addition, credential: { ...credential, client_id: clientId } }
-    : addition;
-}
-
-function settingsOf(addition: ProviderAddition): ServerSettings {
-  const { kind } = addition.credential;
-  const read = readAddition(
-    withTheClientId(addition),
-    checking,
-    placesNoValue(addition.credential) ? undefined : standIn,
-  );
-  const settings = Option.getOrThrow(Option.liftPredicate(Result.getOrThrow(read), isConnectionServerSettings));
-  return kind === 'authorization' ? { ...settings, auth: authOfTheConsent(addition) } : settings;
-}
 
 function operationsIn(document = ''): number {
   const { paths } = Schema.decodeUnknownSync(Schema.fromJsonString(DocumentSchema))(

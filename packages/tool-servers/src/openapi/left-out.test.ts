@@ -17,7 +17,7 @@ describe('an operation of an HTTP API that no tool is offered for', () => {
       },
       {
         operation: 'upload (POST /uploads)',
-        because: 'its body is application/xml, and a call sends a body only as JSON',
+        because: 'its body is multipart/mixed, and the document does not say what each of its parts is',
       },
     ]);
   });

@@ -16,7 +16,7 @@ import {
 } from './measure/dataset.ts';
 import { plainPoolsOn, postgresqlLedgerLayer } from './src/postgresql/postgresql-ledger.ts';
 import { cursorOf } from './src/recorded/cursor.ts';
-import { ledgerLayer } from './src/sqlite3.ts';
+import { ledgerLayer } from './src/sqlite.ts';
 import { openLedgerWith, type OpenLedger } from './src/testing/open-ledger.ts';
 import { temporaryDatabase } from './src/testing/temporary-database.ts';
 

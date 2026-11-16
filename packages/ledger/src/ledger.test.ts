@@ -11,7 +11,7 @@ import {
 } from './index.ts';
 import { sqliteLayoutCarried } from './layout/sqlite-schema.ts';
 import { definitionStreamsIndexed, executedOn, planOf, queried, statementPlanOf } from './recorded/sqlite-checks.ts';
-import { ledgerLayer, sqliteLedgerFile } from './sqlite3.ts';
+import { ledgerLayer, sqliteLedgerFile } from './sqlite.ts';
 import { databaseStructureBehaviour } from './structure/database-structure-behaviour.ts';
 import {
   appendedFactsOnStoresBehaviour,

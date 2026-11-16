@@ -1,4 +1,4 @@
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger, makeDispatcher } from '@on.auto/operations';
 import { memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
 import { providerListOf } from '@on.auto/providers/testing';

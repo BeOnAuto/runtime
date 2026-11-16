@@ -1,7 +1,7 @@
 import { makeAppRuntime } from '@on.auto/api';
 import { recordedAsGiven } from '@on.auto/definitions/testing';
 import { LedgerConnection } from '@on.auto/ledger';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger } from '@on.auto/operations';
 import { openWorkflowStore } from '@on.auto/workflow-host';
 import { Effect } from 'effect';

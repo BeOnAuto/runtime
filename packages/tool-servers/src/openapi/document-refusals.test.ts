@@ -101,7 +101,7 @@ describe('a document refused at start because of its bytes', () => {
 });
 
 describe('a document refused at start because of what it holds', () => {
-  it('when it is neither JSON nor YAML, nests too deep, is not of OpenAPI 3.0 or 3.1, or is Swagger 2.0', async () => {
+  it('when it is neither JSON nor YAML, nests too deep, is not of OpenAPI 3.0, 3.1 or 3.2, or is Swagger 2.0', async () => {
     const refused = refusedIn(
       directoryWith({
         'broken.yaml': 'openapi: [3.1\n',
@@ -116,7 +116,7 @@ describe('a document refused at start because of what it holds', () => {
     );
     expect(await refused('deep.json')).toBe(documentProblem('The document nests values more than 128 levels deep'));
     expect(await refused('later.json')).toBe(
-      documentProblem('At /openapi of the document: Expected an OpenAPI document of version 3.0 or 3.1'),
+      documentProblem('At /openapi of the document: Expected an OpenAPI document of version 3.0, 3.1 or 3.2'),
     );
     expect(await refused('swagger.json')).toBe(
       documentProblem(

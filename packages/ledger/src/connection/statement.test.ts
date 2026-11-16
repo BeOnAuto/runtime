@@ -1,6 +1,6 @@
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { ledgerLayer } from '../sqlite3.ts';
+import { ledgerLayer } from '../sqlite.ts';
 import { openConnectionWith } from '../testing/open-ledger.ts';
 import { statement, statementOf, textOnPostgreSQL } from './statement.ts';
 

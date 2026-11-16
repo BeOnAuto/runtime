@@ -69,7 +69,7 @@ const openApiFields = {
   document: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'The OpenAPI document of an HTTP API, version 3.0 or 3.1, read once at start: an https URL, an http URL on a loopback address, or a path relative to the directory of the configuration file',
+        'The OpenAPI document of an HTTP API, version 3.0, 3.1 or 3.2, read once at start: an https URL, an http URL on a loopback address, or a path relative to the directory of the configuration file',
     }),
   ),
   base_url: Schema.optionalKey(

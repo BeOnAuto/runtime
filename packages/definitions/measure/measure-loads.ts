@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { allPermissions, makeDispatcher, type CallerIdentity, type Runnable } from '@on.auto/operations';
 import { memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
 import { Effect, Layer, ManagedRuntime, Predicate, Schema } from 'effect';

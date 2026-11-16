@@ -1,7 +1,7 @@
 import { describe, onTestFinished } from 'vitest';
 
 import { executedOn } from '../recorded/sqlite-checks.ts';
-import { ledgerLayer } from '../sqlite3.ts';
+import { ledgerLayer } from '../sqlite.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { keyedFillBehaviour } from './keyed-fill-behaviour.ts';
 import { sqliteProjectionsOf } from './sqlite-projections.ts';

@@ -10,7 +10,7 @@
     "./database-structure": "./src/structure/database-floors.ts",
     "./dataset": "./measure/dataset.ts",
     "./postgresql": "./src/postgresql/postgresql-ledger.ts",
-    "./sqlite3": "./src/sqlite3.ts",
+    "./sqlite": "./src/sqlite.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {

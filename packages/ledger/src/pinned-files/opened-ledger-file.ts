@@ -5,7 +5,7 @@ import { Effect, ManagedRuntime } from 'effect';
 import { LedgerConnection, type ConnectionPorts } from '../connection/ledger-connection.ts';
 import { LedgerChores, type ChorePorts } from '../content/content-sweep.ts';
 import type { StoreLayerOptions } from '../ledger-layer.ts';
-import { sqliteLedgerFile } from '../sqlite3.ts';
+import { sqliteLedgerFile } from '../sqlite.ts';
 import type { ReceivedWebhooks } from '../webhooks/received-webhooks.ts';
 import { pinnedTables } from './pinned-tables.ts';
 

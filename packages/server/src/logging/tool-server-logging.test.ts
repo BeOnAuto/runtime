@@ -51,12 +51,12 @@ describe('logLeftOutOperation', () => {
     const [line] = await linesLoggedBy(
       logLeftOutOperation('billing', {
         operation: 'upload (POST /uploads)',
-        because: 'its body is application/xml, and a call sends a body only as JSON',
+        because: 'its body is application/x-www-form-urlencoded, a form a call does not send',
       }),
     );
 
     expect(line).toContain(
-      '"message":"The tool server billing offers no tool for the operation upload (POST /uploads) of its document: its body is application/xml, and a call sends a body only as JSON","level":"WARN"',
+      '"message":"The tool server billing offers no tool for the operation upload (POST /uploads) of its document: its body is application/x-www-form-urlencoded, a form a call does not send","level":"WARN"',
     );
     expect(line).toContain('"annotations":{"tool_server":"billing"}');
   });

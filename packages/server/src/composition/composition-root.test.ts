@@ -1,6 +1,6 @@
 import { workflowFacts } from '@on.auto/coordination';
 import { nudging } from '@on.auto/interaction/testing';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { PlaybookRegistry, allPermissions, makeDispatcher, type CallerIdentity } from '@on.auto/operations';
 import { createPlaybook } from '@on.auto/playbooks';
 import { Context, Effect, Layer, ManagedRuntime } from 'effect';

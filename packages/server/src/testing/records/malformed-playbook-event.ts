@@ -1,4 +1,4 @@
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { ActedContextSchema, Ledger, factOf, type Decided, type Decider } from '@on.auto/operations';
 import { playbooksStreamOfOrg } from '@on.auto/playbooks';
 import { Effect, ManagedRuntime, Result, Schema } from 'effect';

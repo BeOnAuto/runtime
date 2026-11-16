@@ -90,7 +90,7 @@ describe('the refusal of a document by its address', () => {
       [
         ...['$ref', 'in'].map((member) => ({
           pointer: '/entry/document',
-          detail: `At /paths/~1invoices/get/parameters/0/${member} of the document: not what the runtime reads there in an OpenAPI document of version 3.0 or 3.1`,
+          detail: `At /paths/~1invoices/get/parameters/0/${member} of the document: not what the runtime reads there in an OpenAPI document of version 3.0, 3.1 or 3.2`,
         })),
         whereTheDocumentComesFrom,
       ],

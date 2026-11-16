@@ -7,7 +7,7 @@ export interface DocumentProblem {
   readonly detail: string;
 }
 
-export type OpenApiVersion = '3.0' | '3.1';
+export type OpenApiVersion = '3.0' | '3.1' | '3.2';
 
 const SchemaValue = Schema.Union([Schema.JsonObject, Schema.Boolean]);
 
@@ -15,7 +15,7 @@ const ReferenceSchema = Schema.Struct({ $ref: Schema.String });
 
 const ParameterSchema = Schema.Struct({
   name: Schema.String,
-  in: Schema.Literals(['path', 'query', 'header', 'cookie']),
+  in: Schema.Literals(['path', 'query', 'querystring', 'header', 'cookie']),
   required: Schema.optionalKey(Schema.Boolean),
   description: Schema.optionalKey(Schema.String),
   style: Schema.optionalKey(Schema.String),
@@ -23,7 +23,25 @@ const ParameterSchema = Schema.Struct({
   schema: Schema.optionalKey(SchemaValue),
 });
 
-const MediaTypeSchema = Schema.Struct({ schema: Schema.optionalKey(SchemaValue) });
+const EncodingSchema = Schema.Struct({
+  contentType: Schema.optionalKey(Schema.String),
+  headers: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
+  style: Schema.optionalKey(Schema.String),
+  explode: Schema.optionalKey(Schema.Boolean),
+  allowReserved: Schema.optionalKey(Schema.Boolean),
+  encoding: Schema.optionalKey(Schema.Unknown),
+  prefixEncoding: Schema.optionalKey(Schema.Unknown),
+  itemEncoding: Schema.optionalKey(Schema.Unknown),
+});
+
+const MediaTypeSchema = Schema.Struct({
+  $ref: Schema.optionalKey(Schema.String),
+  schema: Schema.optionalKey(SchemaValue),
+  itemSchema: Schema.optionalKey(SchemaValue),
+  encoding: Schema.optionalKey(Schema.Record(Schema.String, EncodingSchema)),
+  prefixEncoding: Schema.optionalKey(Schema.Array(EncodingSchema)),
+  itemEncoding: Schema.optionalKey(EncodingSchema),
+});
 
 const RequestBodySchema = Schema.Struct({
   required: Schema.optionalKey(Schema.Boolean),
@@ -75,6 +93,8 @@ const PathItemSchema = Schema.Struct({
   head: Schema.optionalKey(OperationSchema),
   patch: Schema.optionalKey(OperationSchema),
   trace: Schema.optionalKey(OperationSchema),
+  query: Schema.optionalKey(OperationSchema),
+  additionalOperations: Schema.optionalKey(Schema.Record(Schema.String, OperationSchema)),
 });
 
 const ServerSchema = Schema.Struct({
@@ -134,6 +154,10 @@ export type ParameterOrReference = typeof ParameterOrReferenceSchema.Type;
 
 export type RequestBody = typeof RequestBodySchema.Type;
 
+export type MediaType = typeof MediaTypeSchema.Type;
+
+export type Encoding = typeof EncodingSchema.Type;
+
 export type SecurityRequirement = typeof SecurityRequirementSchema.Type;
 
 export type SecurityScheme = typeof SecuritySchemeSchema.Type;
@@ -155,7 +179,13 @@ const formatIssues = SchemaIssue.makeFormatterStandardSchemaV1();
 
 const decodeDocument = Schema.decodeUnknownResult(ApiDocumentSchema, { errors: 'all' });
 
-const supportedVersion = /^3\.([01])\.\d+$/u;
+const supportedVersion = /^3\.([012])\.\d+$/u;
+
+const versionsByMinor: ReadonlyMap<string, OpenApiVersion> = new Map([
+  ['0', '3.0'],
+  ['1', '3.1'],
+  ['2', '3.2'],
+]);
 
 function isPropertyKey(segment: PathSegment): segment is PropertyKey {
   return typeof segment !== 'object';
@@ -176,9 +206,10 @@ function versionOf(value: unknown): Result.Result<OpenApiVersion, readonly Docum
   }
   const declared: unknown = Predicate.hasProperty(value, 'openapi') ? value.openapi : undefined;
   const matched = typeof declared === 'string' ? supportedVersion.exec(declared) : null;
-  return matched === null
-    ? Result.fail([{ pointer: '/openapi', detail: 'Expected an OpenAPI document of version 3.0 or 3.1' }])
-    : Result.succeed(matched[1] === '0' ? '3.0' : '3.1');
+  const version = matched === null ? undefined : versionsByMinor.get(String(matched[1]));
+  return version === undefined
+    ? Result.fail([{ pointer: '/openapi', detail: 'Expected an OpenAPI document of version 3.0, 3.1 or 3.2' }])
+    : Result.succeed(version);
 }
 
 export function decodedDocument(value: unknown): Result.Result<ReadDocument, readonly DocumentProblem[]> {

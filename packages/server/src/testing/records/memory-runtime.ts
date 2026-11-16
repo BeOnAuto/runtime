@@ -1,5 +1,5 @@
 import { makeAppRuntime, type AppRuntime } from '@on.auto/api';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import type { DispatcherServices } from '@on.auto/operations';
 
 import { applicationLayer } from '../../composition/application-layer.ts';

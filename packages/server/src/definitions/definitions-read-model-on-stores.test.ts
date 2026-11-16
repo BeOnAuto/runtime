@@ -1,7 +1,7 @@
 import { definitionNamesOf } from '@on.auto/definitions/identity';
 import { aGeneratedHistory, definitionsReadModelOf } from '@on.auto/definitions/testing';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import {
   checkpointsOf,
   keepsChildRows,

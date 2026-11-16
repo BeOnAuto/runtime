@@ -5,7 +5,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
 import { inTransactionOf, type ReturningExecutor, type TransactionalPool } from '../event-store.ts';
 import { pooledOptionsOf, sqliteEventStore } from '../sqlite-event-store.ts';
-import { modestConnections } from '../sqlite3.ts';
+import { modestConnections } from '../sqlite.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { receivedWebhooksOn, type WebhookReceipt } from './received-webhooks.ts';
 

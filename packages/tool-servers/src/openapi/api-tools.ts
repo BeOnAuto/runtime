@@ -14,19 +14,27 @@ import {
   type ReadDocument,
 } from './api-document.ts';
 import {
+  answerBecauseOf,
   answersOf,
   bodyOf,
   collected,
   parametersOf,
   type AnswerSchemas,
   type BodyOf,
-  type JsonBody,
+  type OperationBody,
   type Placed,
 } from './api-parameters.ts';
 import { keepsItsSegments } from './api-requests.ts';
 import { documentBounds } from './document-reading.ts';
 import { bytesOf, componentsOf, inputSchemaOf, oversizedBecause, type Components } from './input-schemas.ts';
-import { leftOutReasonOf, requiredHeadersOf, type LeftOutReason } from './left-out.ts';
+import {
+  leftOutReasonOf,
+  operationNamed,
+  requiredHeadersOf,
+  unsentMethodsOf,
+  type LeftOutOperation,
+  type LeftOutReason,
+} from './left-out.ts';
 import { headersPlacedBy, requirementOf, type Placement, type Presented } from './security-schemes.ts';
 
 interface PathInput {
@@ -47,13 +55,9 @@ export interface ApiOperation {
   readonly method: Method;
   readonly path: string;
   readonly inputs: readonly ApiInput[];
-  readonly body: Pick<JsonBody, 'mediaType' | 'required'> | null;
+  readonly body: OperationBody | null;
   readonly credentials: readonly Placement[];
   readonly answers: AnswerSchemas;
-}
-
-export interface LeftOutOperation extends LeftOutReason {
-  readonly operation: string;
 }
 
 export interface DerivedTools {
@@ -132,9 +136,14 @@ function inputsOf(parameters: readonly Placed<Parameter>[]): readonly ApiInput[]
 }
 
 function namedOperation({ method, path, operation }: Located): string {
-  const route = `${method.toUpperCase()} ${path}`;
-  const given = operation.value.operationId;
-  return given === undefined ? route : `${given} (${route})`;
+  return operationNamed(method.toUpperCase(), path, operation.value);
+}
+
+function operationBodyOf(body: BodyOf): OperationBody | null {
+  if (body.kind === 'json') {
+    return { kind: 'json', mediaType: body.body.mediaType, required: body.body.required };
+  }
+  return body.kind === 'other' ? { ...body.body.sent, required: body.body.required } : null;
 }
 
 function offeredOf(located: Located, inputSchema: Schema.JsonObject, sent: Sent): Offered {
@@ -152,7 +161,7 @@ function offeredOf(located: Located, inputSchema: Schema.JsonObject, sent: Sent)
       method: located.method,
       path: located.path,
       inputs: inputsOf(parameters),
-      body: body.kind === 'json' ? { mediaType: body.body.mediaType, required: body.body.required } : null,
+      body: operationBodyOf(body),
       credentials,
       answers,
     },
@@ -166,7 +175,7 @@ function leftOut(located: Located, reason: LeftOutReason): Derived {
 
 function derivedAt(read: ReadDocument, { components, presented }: Context, located: Located): Deriving<Derived> {
   const parameters = parametersOf(read.document, located.item, located.operation);
-  const body = bodyOf(read.document, located.operation);
+  const body = bodyOf(read, located.operation);
   if (Result.isFailure(parameters) || Result.isFailure(body)) {
     return Result.fail([
       ...(Result.isFailure(parameters) ? parameters.failure : []),
@@ -182,6 +191,10 @@ function derivedAt(read: ReadDocument, { components, presented }: Context, locat
   });
   if (reason !== undefined) {
     return Result.succeed(leftOut(located, reason));
+  }
+  const answerBecause = answerBecauseOf(read.document, located.operation);
+  if (answerBecause !== undefined) {
+    return Result.succeed(leftOut(located, { because: answerBecause }));
   }
   if (requirement.kind === 'unmet') {
     return Result.succeed(leftOut(located, { because: requirement.because }));
@@ -244,14 +257,14 @@ function listingProblemsOf(offered: readonly Offered[]): readonly DocumentProble
     : [];
 }
 
-function toolsOf(derived: readonly Derived[]): Deriving<DerivedTools> {
+function toolsOf(derived: readonly Derived[], unsentMethods: readonly LeftOutOperation[]): Deriving<DerivedTools> {
   const offered = derived.flatMap((each) => (each.kind === 'offered' ? [each.offered] : []));
   const problems = [...collisionsOf(offered), ...listingProblemsOf(offered)];
   return problems.length > 0
     ? Result.fail(problems)
     : Result.succeed({
         operations: offered.map(({ operation }) => operation),
-        leftOut: derived.flatMap((each) => (each.kind === 'left_out' ? [each.leftOut] : [])),
+        leftOut: [...derived.flatMap((each) => (each.kind === 'left_out' ? [each.leftOut] : [])), ...unsentMethods],
       });
 }
 
@@ -281,6 +294,6 @@ export function derivedTools(read: ReadDocument, presented: Presented): Deriving
   }
   return Result.flatMap(componentsOf(read), (components) => {
     const derived = collected(located, (each) => derivedAt(read, { components, presented }, each));
-    return Result.flatMap(derived, toolsOf);
+    return Result.flatMap(derived, (each) => toolsOf(each, unsentMethodsOf(read.document)));
   });
 }

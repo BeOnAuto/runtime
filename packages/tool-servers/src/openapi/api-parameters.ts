@@ -1,9 +1,12 @@
 import { JsonPointer, Predicate, Result, type Schema } from 'effect';
 
+import { otherBodyOf, type OtherBody, type SentBody } from '../request-bodies/body-places.ts';
+import { isJsonType } from '../request-bodies/media-types.ts';
 import type {
   ApiDocument,
   ApiResponse,
   DocumentProblem,
+  MediaType,
   Operation,
   Parameter,
   ParameterOrReference,
@@ -29,29 +32,36 @@ export interface Placed<A> {
   readonly pointer: string;
 }
 
-export interface JsonBody {
+interface JsonBody {
   readonly mediaType: string;
   readonly required: boolean;
   readonly schema: Schema.Json;
   readonly pointer: string;
 }
 
+interface OtherBodyOf extends OtherBody {
+  readonly required: boolean;
+  readonly pointer: string;
+}
+
+export type OperationBody = { readonly required: boolean } & (
+  | ({ readonly kind: 'json' } & Pick<JsonBody, 'mediaType'>)
+  | SentBody
+);
+
 export type BodyOf =
   | { readonly kind: 'none' }
   | { readonly kind: 'json'; readonly body: JsonBody }
-  | { readonly kind: 'other'; readonly mediaType: string };
+  | { readonly kind: 'other'; readonly body: OtherBodyOf }
+  | { readonly kind: 'unsent'; readonly because: string };
 
 type Resolved<A> = Result.Result<A, readonly DocumentProblem[]>;
 
 const mostReferenceHops = 8;
 
-const jsonMediaType = /^application\/(?:[\w.-]+\+)?json$/u;
-
 const successStatus = /^2(?:\d\d|XX)$/u;
 
-function isJson(mediaType: string): boolean {
-  return jsonMediaType.test(mediaType.split(';', 1).join('').trim().toLowerCase());
-}
+const referredMediaType = 'refers to a media type under components, which the runtime does not follow';
 
 function componentOf<A>(
   reference: string,
@@ -136,28 +146,42 @@ export function parametersOf(
   });
 }
 
-function bodyIn(body: Placed<RequestBody>): BodyOf {
-  const entries = Object.entries(body.value.content);
-  const json = entries.find(([mediaType]: readonly [string, unknown]) => isJson(mediaType));
+type Content = readonly (readonly [string, MediaType])[];
+
+function otherIn(firstType: string, entries: Content, body: Placed<RequestBody>, read: ReadDocument): BodyOf {
+  const other = otherBodyOf(entries, { version: read.version, components: read.document.components?.schemas ?? {} });
+  if (other.kind === 'unsent') {
+    return other;
+  }
+  const pointer = `${body.pointer}/content/${JsonPointer.escapeToken(firstType)}/schema`;
+  return { kind: 'other', body: { ...other.body, required: body.value.required === true, pointer } };
+}
+
+function bodyIn(body: Placed<RequestBody>, read: ReadDocument): BodyOf {
+  const entries: Content = Object.entries(body.value.content);
+  if (entries.some(([, media]: readonly [string, MediaType]) => media.$ref !== undefined)) {
+    return { kind: 'unsent', because: `its body ${referredMediaType}` };
+  }
+  const json = entries.find(([mediaType]: readonly [string, MediaType]) => isJsonType(mediaType));
   if (json !== undefined) {
     const [mediaType, { schema = {} }] = json;
     const pointer = `${body.pointer}/content/${JsonPointer.escapeToken(mediaType)}/schema`;
     return { kind: 'json', body: { mediaType, required: body.value.required === true, schema, pointer } };
   }
-  const other = entries.map(([mediaType]: readonly [string, unknown]) => mediaType).at(0);
-  return other === undefined ? { kind: 'none' } : { kind: 'other', mediaType: other };
+  const [first] = entries;
+  return first === undefined ? { kind: 'none' } : otherIn(first[0], entries, body, read);
 }
 
-export function bodyOf(document: ApiDocument, operation: Placed<Operation>): Resolved<BodyOf> {
+export function bodyOf(read: ReadDocument, operation: Placed<Operation>): Resolved<BodyOf> {
   const written: RequestBodyOrReference | undefined = operation.value.requestBody;
   if (written === undefined) {
     return Result.succeed({ kind: 'none' });
   }
   return Result.map(
     followed(written, `${operation.pointer}/requestBody`, (reference) =>
-      componentOf(reference, 'requestBodies', document.components?.requestBodies),
+      componentOf(reference, 'requestBodies', read.document.components?.requestBodies),
     ),
-    bodyIn,
+    (body) => bodyIn(body, read),
   );
 }
 
@@ -191,9 +215,16 @@ function noBodyIn(responses: readonly SuccessResponse[]): boolean {
 function answerSchemasOf(responses: readonly SuccessResponse[]): readonly Schema.Json[] {
   return responses.flatMap(([, { content = {} }]: SuccessResponse) =>
     Object.entries(content).flatMap(([mediaType, { schema }]: readonly [string, { readonly schema?: Schema.Json }]) =>
-      isJson(mediaType) && schema !== undefined ? [schema] : [],
+      isJsonType(mediaType) && schema !== undefined ? [schema] : [],
     ),
   );
+}
+
+export function answerBecauseOf(document: ApiDocument, operation: Placed<Operation>): string | undefined {
+  const referring = successResponsesOf(document, operation).some(([, { content = {} }]: SuccessResponse) =>
+    Object.values(content).some((media) => media.$ref !== undefined),
+  );
+  return referring ? `its answer ${referredMediaType}` : undefined;
 }
 
 const headersNeverCarried: ReadonlySet<string> = new Set([

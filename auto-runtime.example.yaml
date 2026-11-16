@@ -50,8 +50,8 @@ model_aliases:
 # the field that names it when type is left out: mcp, a remote MCP server at a
 # url; stdio, an MCP server run as a process, a command installed and pinned,
 # which inherits nothing from the server's environment but its env; openapi, an
-# HTTP API whose OpenAPI document, 3.0 or 3.1, is read once at start from an
-# https URL or from a path relative to the directory of this file, each
+# HTTP API whose OpenAPI document, 3.0, 3.1 or 3.2, is read once at start from
+# an https URL or from a path relative to the directory of this file, each
 # operation one tool.
 #
 # allowed names the tools of a server a function may name, as the server lists

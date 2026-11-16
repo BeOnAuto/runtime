@@ -5,7 +5,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
 import { dataAsWritten, emmettEventStore } from '../emmett/emmett-event-store.ts';
 import { eventAppenderOf, streamAppends, streamSignalOf, VersionConflict } from '../index.ts';
-import { ledgerLayer } from '../sqlite3.ts';
+import { ledgerLayer } from '../sqlite.ts';
 import { happenings, noted } from '../testing/happenings.ts';
 import { stamped } from '../testing/happenings.ts';
 import { openLedgerWith, outcomeOf } from '../testing/open-ledger.ts';

@@ -1,5 +1,5 @@
 import { goalsLedger } from '@on.auto/goals';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { ContextSchema, Ledger, type Decider } from '@on.auto/operations';
 import { Effect, ManagedRuntime, Result, Schema } from 'effect';
 import { afterAll, afterEach, describe, expect, it, onTestFinished } from 'vitest';

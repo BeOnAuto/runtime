@@ -1,6 +1,6 @@
 import { connectionsStreamOfOrg } from '@on.auto/connections';
 import { connectionsFoldOf } from '@on.auto/connections/testing';
-import { ledgerLayer, sqliteLedgerFile } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer, sqliteLedgerFile } from '@on.auto/ledger/sqlite';
 import { secretRowsOfItsOpenLedger } from '@on.auto/ledger/testing';
 import { Ledger } from '@on.auto/operations';
 import { providerListOf } from '@on.auto/providers/testing';

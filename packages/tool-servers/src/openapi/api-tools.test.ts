@@ -202,7 +202,7 @@ describe('the descriptions and the bodies of the tools of an HTTP API', () => {
     expect(tools.operations.map(({ tool, body }) => [tool.inputSchema, body])).toEqual([
       [
         { type: 'object', properties: { body: {} }, additionalProperties: false },
-        { mediaType: 'application/vnd.api+json; charset=utf-8', required: false },
+        { kind: 'json', mediaType: 'application/vnd.api+json; charset=utf-8', required: false },
       ],
       [{ type: 'object', properties: {}, additionalProperties: false }, null],
     ]);

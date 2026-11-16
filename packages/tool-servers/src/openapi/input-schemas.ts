@@ -89,11 +89,15 @@ function propertyOf(version: OpenApiVersion, { value, pointer }: Placed<Paramete
 }
 
 function bodyPropertyOf(version: OpenApiVersion, body: BodyOf): readonly Property[] {
-  if (body.kind !== 'json') {
-    return [];
+  if (body.kind === 'json') {
+    const { schema, pointer, required } = body.body;
+    return [{ name: 'body', required, standalone: standaloneOf(translatedSchema(schema, version), pointer) }];
   }
-  const { schema, pointer, required } = body.body;
-  return [{ name: 'body', required, standalone: standaloneOf(translatedSchema(schema, version), pointer) }];
+  if (body.kind === 'other') {
+    const { schema, pointer, required } = body.body;
+    return [{ name: 'body', required, standalone: standaloneOf(schema, pointer) }];
+  }
+  return [];
 }
 
 function definitionsOf(references: readonly ComponentReference[], components: Components): Deriving<Definitions> {

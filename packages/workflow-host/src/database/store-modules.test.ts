@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 const sources = fileURLToPath(new URL('..', import.meta.url));
 
 const drivers: ReadonlySet<string> = new Set([
-  '@on.auto/ledger/sqlite3',
+  '@on.auto/ledger/sqlite',
   '@on.auto/ledger/postgresql',
   '@on.auto/node-sqlite',
   'node:sqlite',

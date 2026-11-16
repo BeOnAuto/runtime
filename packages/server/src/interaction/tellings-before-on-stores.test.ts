@@ -13,7 +13,7 @@ import {
   type HarnessLedger,
 } from '@on.auto/interaction/testing';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger, type KeyedProjection } from '@on.auto/operations';
 import { Layer, ManagedRuntime } from 'effect';
 import { Client } from 'pg';

@@ -1,0 +1,268 @@
+{
+  "adobe-analytics, authorization": {
+    "findCalculatedMetrics": "9d7ffa3706568a62cfdc0d463b52cc61cdc661554cb640a3c9301387fc9fe7b0",
+    "getDateRanges_1": "e16b55a516ce50133ba9b63ddfd65e9371e95f8f9f76575760339cfe2c86a909",
+    "dimensions_getDimensions": "de8bf8969335643623c909b1ee7783203c8341a05e95bf511be78fc8f7b66832",
+    "getMetrics": "dda48a2e93835a4481d85f200666caf407585378bf7e4e698248cfd798e99cf6",
+    "projects_getProjects": "e0c8742e4745024394acd890ec85ec5f658b05f3c3e7c3898886efc9dc338c06",
+    "runReport": "257a52b42f58849ec599e13df7fc39f1815e3a88b07b2021f6ea461b4a4405ff",
+    "runTopItemReport": "4e39da9924e7d5da99ee29386a6a3cba0de616f616c7d4b21ae8f5bf8decd0e0",
+    "segments_getSegments": "54be6945cc71b54d11fc42502d7388007fdcebf7213d04d37d2b0b91c60ed681",
+    "segments_createSegment": "e9b11f13e852993c323cb9ec05306f0c048385546dfa76a0aa6ac1eef9968163",
+    "segments_getSegment": "0198401404d6d3081153c02356832706699b43b9ee5dc409b9ca2e75ae9d7d47",
+    "getCurrentUser": "07f90d5a65aeb2a3469bc406171d989a1ba8a83f5619c4869b87121d816947dd",
+    "getSuites_1": "a5275c598ebdb1487f16dc6cdd80d8c142b70e2349e241391694d367b6826f95"
+  },
+  "adobe-analytics, client_credentials": {
+    "findCalculatedMetrics": "9d7ffa3706568a62cfdc0d463b52cc61cdc661554cb640a3c9301387fc9fe7b0",
+    "getDateRanges_1": "e16b55a516ce50133ba9b63ddfd65e9371e95f8f9f76575760339cfe2c86a909",
+    "dimensions_getDimensions": "de8bf8969335643623c909b1ee7783203c8341a05e95bf511be78fc8f7b66832",
+    "getMetrics": "dda48a2e93835a4481d85f200666caf407585378bf7e4e698248cfd798e99cf6",
+    "projects_getProjects": "e0c8742e4745024394acd890ec85ec5f658b05f3c3e7c3898886efc9dc338c06",
+    "runReport": "257a52b42f58849ec599e13df7fc39f1815e3a88b07b2021f6ea461b4a4405ff",
+    "runTopItemReport": "4e39da9924e7d5da99ee29386a6a3cba0de616f616c7d4b21ae8f5bf8decd0e0",
+    "segments_getSegments": "54be6945cc71b54d11fc42502d7388007fdcebf7213d04d37d2b0b91c60ed681",
+    "segments_createSegment": "e9b11f13e852993c323cb9ec05306f0c048385546dfa76a0aa6ac1eef9968163",
+    "segments_getSegment": "0198401404d6d3081153c02356832706699b43b9ee5dc409b9ca2e75ae9d7d47",
+    "getCurrentUser": "07f90d5a65aeb2a3469bc406171d989a1ba8a83f5619c4869b87121d816947dd",
+    "getSuites_1": "a5275c598ebdb1487f16dc6cdd80d8c142b70e2349e241391694d367b6826f95"
+  },
+  "amazon-ads, authorization": {
+    "QueryAdvertiserAccount": "9768bec8459ab1fe3b2c937653a7e59cbbc0740306cefc01993064d23a6a2b9e",
+    "QueryCampaign": "84b124ff1779e6e969d1f98113b418948d57522c90c94a1ff6e6e5ff200acb68",
+    "QueryAdGroup": "4e12469c72691f85e6cf7e1dba77dcadcf2093e1f6ebdfe9f160ca8851012abf",
+    "QueryAd": "72e3b8895749f1b972c0cb8cf84f39a0c8216b7b9b0ce6da2ec221d528eafeb8",
+    "QueryTarget": "d0681d34ca22d9f19db048ff687b2259f3df5f513932e04de752da8f0716c030",
+    "UpdateCampaign": "acf169c74bc0faa378dd664a6387418aca40726bbcd7c459a363487c1f1ed039",
+    "UpdateAdGroup": "201cf11f28309015d19e611ce121e249f28d025ec91ccd63d2458a149498b2f2",
+    "UpdateTarget": "7ea124574e1786f8f8fbc86fee76d17fdcfa644d708e9b69af69e0d8c196b14a",
+    "AdsApiv1CreateReport": "a4decb9bbd338e6d4f9282a17729f412b091740ed7619ee7dd318262807e4e49",
+    "AdsApiv1RetrieveReport": "70b70f85e2060c2d9b3a638f24789697c8abf3f054fbec89299a1677f5ac62bf",
+    "QueryRecommendation": "0925762e382444cbd83cb9b72394775a5c05fe82fb29c48aa453c9b178d0e9a4"
+  },
+  "campaign-manager-360, authorization": {
+    "dfareporting.userProfiles.list": "1ab8f735a9bd3d7da1cebc6e4d772a8513c082037252f82e203c6c7d14ed32fe",
+    "dfareporting.userProfiles.get": "84581328dd93229d69d57254394191a27187b8aa6948a7e79200e338991820d0",
+    "dfareporting.reports.list": "0daaddce9f31a2baeb604737d36ca0a98e3b9e823ca3c819c4b50d72b74d1df5",
+    "dfareporting.reports.insert": "58439bf0ed8b492fada59502ff1bacbea5bf1a162d4fbf9e454571866980dda7",
+    "dfareporting.reports.get": "43e077a61836713f72cee3209fb20ca9ed3ab4689a80376b2f6586d65336a309",
+    "dfareporting.reports.run": "7c59561bb5918023501c922008bbc66186a3e665e6b3352012e5274e1d3d6290",
+    "dfareporting.reports.files.list": "6a1de923f38d29af6c9f724e94737376be3f138ec63de91031eab75c0cedfdb1",
+    "dfareporting.reports.files.get": "68c66678bb64a2d9236fc031c9116071479351b7f6c9b5c763f7dcab9bc6cdcf",
+    "dfareporting.files.get": "01f0c448a0576e04fb45eaaa04c838f14cd728747f94b1cf7c4909dd6af52d11",
+    "dfareporting.dimensionValues.query": "2d1c4fb99b26b4e2b519d2650e89eefeea6c97a04bfc91091a11568d9c6aa2d5",
+    "dfareporting.reports.compatibleFields.query": "c88ab6f18d30f21bc68790742699b7fadd1d15a848d32ecf5f7eb51b31306a38",
+    "dfareporting.campaigns.list": "a56e69b5a921da8bea5e11cef0beb8ff665be0564a0d57119d360c0a2e68a497",
+    "dfareporting.campaigns.get": "b557a298174736268b3b8fbf96a1ba827d7718fcd1b53ca2de973812665c4979",
+    "dfareporting.advertisers.list": "ac827868abfc53dc00d1fa5599a43dda414918ec9e87dd3921f1a38da3973314",
+    "dfareporting.placements.list": "47d33ca79c897c3c9c0e702ffab9cde6d1fc2ea342efee04f597becc3603a385",
+    "dfareporting.ads.list": "0436ae4feface681e5482c241f50ea6e6e420c2bf25b0c08701f22cd1a4a044a",
+    "dfareporting.creatives.list": "c246c080247b33803eb8c5c1cf82b84e7ac1b02e079476936215ee36c9b3433d",
+    "dfareporting.sites.list": "eb0fb4942aea949d87633ecc5bd2216a822e6217a128b7a01e740a63a955613f"
+  },
+  "display-video-360, authorization": {
+    "displayvideo.partners.list": "7b185d25d03bc962ad52ea0f9f5b5fb5d3724e2982e9fb48a6118482426e33dc",
+    "displayvideo.advertisers.list": "baf4b070abc5659b031888a58b9a78fd61465f677d50330f7ec6649496943651",
+    "displayvideo.advertisers.get": "d7c4adc7c997864ad103a19f3b8904980959f4c323216ca7e096d6c18b0666dd",
+    "displayvideo.advertisers.campaigns.list": "3c067e66276040c5401e08c319a5dfa967b6df595f3a24116e59b67edb1cb235",
+    "displayvideo.advertisers.campaigns.get": "41876d2f5691f86c25153894b100ba4dbf1e616558f13ac8e5fd330ef441a1c3",
+    "displayvideo.advertisers.campaigns.patch": "6c54353f645c1884be0f5fa0f9f01c2506de3761d8cbad5823fe782460c22e53",
+    "displayvideo.advertisers.insertionOrders.list": "2d1244e7fe770c9ba347a0da54e3425222f5c9ba8f30de7c0b7cf30428dc5a86",
+    "displayvideo.advertisers.insertionOrders.get": "b530c3f1a35c7146dca9fcf599966db071833177df15ac27aa432b7f31a8ecfb",
+    "displayvideo.advertisers.insertionOrders.patch": "e27a891f72eb97ccb3632705a04ad3eb1b15ef0c24ddaa87cd031d9fc2940fe8",
+    "displayvideo.advertisers.lineItems.list": "58d5c2b4916fbb2cd6906b377e0efa2851fdcb4184402ef0f7cf2d0501ccf212",
+    "displayvideo.advertisers.lineItems.get": "7972480bf71a117c3e1f1a30fd4bf087a702fadb4f971bdb1661a702be3b80b1",
+    "displayvideo.advertisers.lineItems.patch": "3743547ac26961ed6e2e267071cfd63328883b1ef864a9fa14658e16062ed706",
+    "displayvideo.advertisers.adGroups.list": "3cd2bee8fa9e9023cfb672fd6e75a9fdac1cb4037ebf334d914db91f99e49f2d",
+    "displayvideo.advertisers.creatives.list": "1d411ac409194d6031e162de2710a170108ccdb8b4b43b1a7a0f1b18fc987790"
+  },
+  "display-video-360-reports, authorization": {
+    "doubleclickbidmanager.queries.list": "fc0da50ce8d31196caa66ff1071a3911c737a99223d3efe9ec0c3b92cb2148fd",
+    "doubleclickbidmanager.queries.create": "97437802501e9ae300a02e65575dada6a487c56acb76c39fbc0cb47cf657dabb",
+    "doubleclickbidmanager.queries.get": "771e18bd5b6fb9c496637ac6193e18fe52fd79c9d3827e967e95274cb5395863",
+    "doubleclickbidmanager.queries.delete": "e0d10f08e2e148b93b7af53c59cd7763c25a9c172c18eeccc67fa0d739f232d8",
+    "doubleclickbidmanager.queries.run": "2fe9591e0dc84570fee2e9ebcd7eb7f72b4c9e66ffdf7dc31261bcbfd5bb0864",
+    "doubleclickbidmanager.queries.reports.list": "5d2278bf1a5bf409d10372cd4f5df32789c6f35e94f7b52ffe3f29f82c49c90f",
+    "doubleclickbidmanager.queries.reports.get": "49dbff221a79d950d7c566940db2b2f6761c787663dad72ec2db568058ad52d7"
+  },
+  "gmail, authorization": {
+    "gmail.users.threads.list": "aa04dd0bd600a046677113a67b5f1ebc2c23e9ba2eb4381b7dcc5053fb196a3d",
+    "gmail.users.threads.get": "79141c12cae64d1e11dd57346c6f43ad02fcfd116378fd2e1f02f2d1c8c12df0",
+    "gmail.users.messages.list": "7b92efe45330fd74044b27fd00a8bc08bac4fb35735c7ee3becd2c6e3c9670c7",
+    "gmail.users.messages.get": "eab29b97790fa17569be4ffc98dd5b79598690ea5649f74d142ed0539371ee69",
+    "gmail.users.drafts.list": "54d576c5ab3dd10d264bd8392d6df4352e432129d7d1295195ffd0a37fe0c767",
+    "gmail.users.labels.list": "1cef5302182d476ff3989e1b79a4999201fee69b638d81fbdfe5bac11c03ed92"
+  },
+  "google-ads, authorization": {
+    "googleads.customers.listAccessibleCustomers": "0768a6f0f454be70479fb83839d0cacde5c72fe6b24e097d0d25b3354c88ae01",
+    "googleads.customers.googleAds.search": "6895fd58d890e08e8f9a9c92bd16892dbbce940572d124f957494ecfea6ae44d",
+    "googleads.customers.googleAds.searchStream": "93c161e2b6bab90b7afd0ba734b4691071a6d405f4cb0f236ec802edaa11ab1b",
+    "googleads.googleAdsFields.search": "145e866a78fac32c03658c9f3d0a1e57a6f87f245aea403218f10260655b36cd",
+    "googleads.googleAdsFields.get": "25dff4faa649089f8397587754f00c3a7fed155ae2f2ad36f27c402180cfb3a6",
+    "googleads.customers.googleAds.mutate": "e80191be82a8bf2ae78587bbb34d8b27ab5a45f089b4d97e5ba9845940f610a9",
+    "googleads.customers.campaigns.mutate": "49763ea447989a8bf32cb231803dd88de01b90b9ffdff4bc9f515eb37fd264a7",
+    "googleads.customers.campaignBudgets.mutate": "17f1db53b59045595fa2c96c3894742096bfd5f79098a4935919d8004262f8d9",
+    "googleads.customers.adGroups.mutate": "efbadd9cb6f08bc10ecaa47c6b93e234264a00a48fcc78bb2bd6ce2270aea8b4",
+    "googleads.customers.adGroupCriteria.mutate": "f0309d11e4a211a17b70d29d0326433049c99a7560353d7d34e6c70924b0cd13"
+  },
+  "google-analytics, authorization": {
+    "analyticsdata.properties.runReport": "2550c3f4e7c14862a38cc575e390f25cde042776cccf358534b079d84efca4ce",
+    "analyticsdata.properties.runPivotReport": "0824dc02b7ad236a6e11f497a011d9d91e99c1e754a976dd1ea9b7a87677084a",
+    "analyticsdata.properties.batchRunReports": "1eb80bf4572b0c2fd29757164ceb4d1c568618bf14c965a21af9c6b3b67e8d7b",
+    "analyticsdata.properties.batchRunPivotReports": "8d7068f337aed313339530f2c88ae75542f636a1fa17ee16b9d2b5509233fdb3",
+    "analyticsdata.properties.runRealtimeReport": "046e92310018597e64e28423add6933ede512469fbd5553b54bf824b5c4d6478",
+    "analyticsdata.properties.checkCompatibility": "c9d854758bee6e217ec2493c3e3e22313f2efba3ba640da710f3c4e1bf39936e",
+    "analyticsdata.properties.getMetadata": "4c6ca5b2cf961e76de26c1d922050c6a052f5005bde651428dc04b84da5c8954",
+    "analyticsdata.properties.audienceExports.list": "58e67b142eb34bde2e725a5ac4c1c44806deb52c5b4e4c1640735f6e968cb111",
+    "analyticsdata.properties.audienceExports.create": "2940f4bbcd80039722e89aa43971bd1ed9d35058071e4e9d3281e1bb6652eebc",
+    "analyticsdata.properties.audienceExports.get": "1df26f9f29a729e0094100db05fd3f6650257860ca3f7a29890e00e31f03c879",
+    "analyticsdata.properties.audienceExports.query": "dffe6f964fb82bb5210ac23c5d9ae55255a5894598710d60d2cb5e44927e7565"
+  },
+  "google-analytics-admin, authorization": {
+    "analyticsadmin.accountSummaries.list": "f9ba579682d266111b3e2e77fe0f874cffc4ba46dec3579d79e0b4799a9b1d11",
+    "analyticsadmin.accounts.list": "cb4449e77e4b21d51984a76aa71dc9b97ccee82d4a3ff22b88b83903247f79de",
+    "analyticsadmin.properties.list": "e1be340ea18301791556c0a93bc9915e83611a1a4b6b81cb367a47cb7b048e10",
+    "analyticsadmin.properties.get": "5f6cc89d4911e84af024bf92d4ad9c2018c0a5fc9a16603e3a90807773fb948f",
+    "analyticsadmin.properties.dataStreams.list": "2a120ddc4929aa71b804c2bfabadba94a60b6972bbadad2aacc3616466e0e6e4",
+    "analyticsadmin.properties.customDimensions.list": "e6ca6f8c4c997f0d70ddf4b1b1823b16a3bc44879b0cea68053a0091f85b9da3",
+    "analyticsadmin.properties.customMetrics.list": "6a5507c6a18afe90bad98f922c67b06eee41ec22f28729f414978f7fdb9217bb",
+    "analyticsadmin.properties.keyEvents.list": "138de3f9d6dbf157f6d2702ee918ec09ae10642af9afcf8d3ac12cd66842f15a",
+    "analyticsadmin.properties.runAccessReport": "e410c58f503ff230c9f94fe0e26e09d8978b301c85f606745beab13626513c5a"
+  },
+  "google-docs, authorization": {
+    "docs.documents.get": "de31dd7d0d413f3ef935c15f1e7555e0b6d107763afab185a764bc961cae5f1e",
+    "docs.documents.batchUpdate": "3d70ad8281b1a34d11e14cef54e21b34f6a2bedac1367174f20c7270c9770884"
+  },
+  "google-drive, authorization": {
+    "drive.files.list": "6bd62ea620e9e84a334aa7cfaf8a90720cfa28edce2904ba8a7a8edc405ac645",
+    "drive.files.create": "f907232796fcb907bdeb24a3b5af7a1806a4424ce8143e3455ce5369b1d9cde0",
+    "drive.files.get": "40568d4647aaeb46efb8d696d3ae84e8e8c0f2bc3cb26043b8a3b7456dd3a80f",
+    "drive.permissions.list": "1e38bddcfee5a09cf53f35981a51ccf62b65bc9953e01b4f7bf2beec8f7f43b7",
+    "drive.files.export": "67d04fef73419fd53ad32a81cac1273d37c1d8cecbc2535f6f14ba4054f22982",
+    "drive.files.copy": "2dfb42fe41eaeb04e3a2f5c0651b682c4beb39f064e39519006bed8c9cd44c54"
+  },
+  "google-search-console, authorization": {
+    "webmasters.searchanalytics.query": "0e565dcc9353439cbf84674af48b92c4f05dd5bb887deaad0c8bb8e385325c80",
+    "webmasters.sites.list": "6511479d4a78d0d16bf7473b555795f57dd152497478042b566c7c810254e917",
+    "webmasters.sites.get": "2f812b56684a2299e356090476dd06dd55abacb8026a964ab1edbfcbefcff99c",
+    "webmasters.sites.add": "e4aeaa41c89640cf1699f277dcfaa956677d64273ac650f130ee91142936d57d",
+    "webmasters.sites.delete": "9da63a235d2cbdf722915eed065f59add3f8c14f9afac23f40674cbecb034ae7",
+    "webmasters.sitemaps.list": "393aca8f80c4f39856aaf3f68954372827706f13b406f697827c1c081eb35b94",
+    "searchconsole.urlInspection.index.inspect": "b68860e24a5f883df2cf10c7c45a38681afd8117d1b12ffa0ef7d7ac1e64bc32"
+  },
+  "google-sheets, authorization": {
+    "sheets.spreadsheets.get": "76b9c8dc721a723e0192d0c438044627ba1d6d79e4b2d930998f194319d94352",
+    "sheets.spreadsheets.values.get": "2d2281af4abfe5384fc0b4bb64e949eeed7514eb4487bfd0b611ed8ea1dae9a6",
+    "sheets.spreadsheets.values.update": "5a8be1327bc2e8e8c0d809b8a5a66fa444fbe8dabbcff54889e74a7c5039e8bf",
+    "sheets.spreadsheets.values.append": "0750b6041591b20700806a4c594761a0473df377ee4908dc29b782606d8c8c82",
+    "sheets.spreadsheets.values.batchUpdate": "6c55edf5e9519b34db43fadcf16cb7d9cede8b12f044afcd6d62516e815d42df",
+    "sheets.spreadsheets.batchUpdate": "20c7cdbccd985e608c0532f5e82bd24d7b67267549c45405ed9bc3de653e3619"
+  },
+  "google-slides, authorization": {
+    "slides.presentations.get": "c4ecaef1fbe297e23cfd199fc0d79dd59ae16ebe8685e290f7287a1797759630",
+    "slides.presentations.batchUpdate": "39698ee1e7f281bcdbce3f95c909af1e1c007962d44a1f1fbc25e02343d84928"
+  },
+  "linkedin, authorization": {
+    "get_userinfo": "12a925c5f5bff0eb4653f2fd9e77395a1cec176c4e5cbf4021527413825461c7",
+    "create_post": "a7464722b18c80f139037f7acac6917d1f5caba3c5d594e7dcf96eed65bb3619",
+    "delete_post": "1892af4a35c63f75ee1d7c07633561aa59022438bac03e2be37dc2b3e8a8724f",
+    "create_comment": "49290bc39e474ed7df1a3db3128252102b3ad5606cf06d511618f6ae6bf1ff3f",
+    "create_reaction": "05ff519fdfcde4135764e5ac3a208453378f2174099338f34a3b13f132e76c08"
+  },
+  "microsoft-teams, authorization": {
+    "me.ListJoinedTeams": "be105563c332f4877cf0c3ca02825bbd79a6039face94607d16b43208e1f102b",
+    "teams.ListChannels": "402f346662973585ada6087f65002396ef8ccdbd535ad0266ba7fd1a5b80ea25",
+    "me.ListChats": "23328d8cec65e3a6e06f0ca290ac4a1177041e699fb11bd70e5c3fdcd1464a74",
+    "chats.ListMessages": "86209ded1bf6dcde8d994b8b58d47f01cc59fb061255b061fc1ce557eaf016bb",
+    "chats.CreateMessages": "eeb1bef57330576589dd10320a2e8c59cb5278248f95510c0225317f1714b49c",
+    "teams.channels.CreateMessages": "22777a4b1bac295d19578cdb420c89f8a674bb15021652d0e363a23e64628ec2"
+  },
+  "onedrive, authorization": {
+    "me.GetDrive": "4e11d7157efc2126c01bc0c789390df3b6baa755151621705d0844c27c20e822",
+    "drives.drive.search": "d77689a3e7d383ab9d145365d350f94f718efa1b900ee6cb7f0a5382304ee062",
+    "drives.items.ListChildren": "93656fa8ea850d7d6d98178a26a2432d83b9534bd566e156c9c4d9c33f221e0d",
+    "drives.GetItems": "83b127a8fbee64f52f3e8439e93560aceee4c3e1066d5ea672a76d74d9edf5a2",
+    "drives.items.workbook.ListWorksheets": "f06d05c585d9947b77e763484c6952f366b7f261b76e863acbfa4b02134566d3",
+    "drives.drive.items.driveItem.workbook.worksheets.workbookWorksheet.range-b0fa": "36f657bc09ffaa9995b8fd5ed15da184be86a575ca9b6a0191c0eb4344795a40",
+    "drives.drive.items.driveItem.workbook.worksheets.workbookWorksheet.usedRange-5ff6": "a7b3d20ad1190ddbe9d84c325f99693197dc8f3cdcf507982bea8df3403aeea1",
+    "drives.items.workbook.ListTables": "ac2c2db9d6888f3753b533ca4d42efdc7cc39aa5dd2ec1154676446d9679a785",
+    "drives.items.workbook.tables.ListRows": "77e32499af462602cc779c323c57d235cf82f7f882a7a93473b5c7e31da98506",
+    "sites.ListDrives": "9a2330c7e2b61b791ca830c89d2e6f7eae713f89217e798a06e887bbb9acd466",
+    "drives.drive.items.driveItem.workbook.worksheets.add": "e973526168352194a8cd8218949c9d6e704d43e40704b5d66d30d3ae682b29a4",
+    "drives.drive.items.driveItem.workbook.tables.workbookTable.rows.add": "50d220c3f80020f312db10ad5be4045e01e878026891d08e6e3747d90d16776e"
+  },
+  "outlook, authorization": {
+    "me.ListMessages": "63c0122dd648419fbb759721b3ac8c721ce6754afc5cdf0413a67c2a7f0e252b",
+    "me.CreateMessages": "1355a6a151763e659705987cdab7e527c4c8107c05a8d61027ddf9d5bd0c7919",
+    "me.GetMessages": "8aa39daa51f6530de00ab9db1030f087a7fb911bc3fc1439ba8e04aac1d5b6b1",
+    "me.ListMailFolders": "e7c80c851e38182b7b84a5cff6ce47d0b648d41976ed950fb116f67ec3289b9b",
+    "me.ListCalendarView": "011d70d01c5732e1a44108cbd94111473131eab7de88967d2ca13f36bf717523",
+    "me.ListEvents": "a5732d5e0f5363f858c61ba693ea822c2db4f9954809c2f924a76a6415fa9969",
+    "me.CreateEvents": "58b86cb6304ccefa4a900a3b54e89e4a79b493c3d4e9647f45ed915a36701774",
+    "me.GetEvents": "2e4354b2c8ca455f7fdb10fae6fe7b052d002968ac38ef68b17578c564ea2537",
+    "me.UpdateEvents": "63e30e575d5844fda1afb92adb86f5c59017aa408c40d5f86d46720b3061a225",
+    "me.sendMail": "16a153b71573aa54cc26929c3c66c4d7f883fd82810ba1c5a21cfa153b319e04",
+    "me.messages.message.reply": "a93188ae20b8e8be0b12f062dce5225d5a980f73664d064b2463d149321a7dbc",
+    "me.events.event.cancel": "65ef321e55da3f4ba578961fd933276d21ba4597e93705d012bcd488b82b2387"
+  },
+  "search-ads-360, authorization": {
+    "searchads360.customers.searchAds360.search": "3a123955c5e912d6b859cd4688bfb4095f1c87e9895585af91ad5de488ec0971",
+    "searchads360.customers.listAccessibleCustomers": "0768a6f0f454be70479fb83839d0cacde5c72fe6b24e097d0d25b3354c88ae01",
+    "searchads360.searchAds360Fields.search": "d89e0527cdb5a777aa3c1f3186b1930926e01164a6dde2728aea6694d3ff1b22",
+    "searchads360.searchAds360Fields.get": "76f91b4779442d9cb544ccdf289fa2b7e35e9b7264e1fd469e9446809fddf042",
+    "searchads360.customers.customColumns.list": "eac343f95c6c165685fa3839453047daf35a027fe6960d32ee44cdd581026d1b",
+    "searchads360.customers.customColumns.get": "fc57873c9c6cb01c681921a59164f55098111d81e3503569ab343074ba1a3ed1"
+  },
+  "slack-bot, secret": {
+    "auth_test": "4cfd6fd74c2f6957585595f0123ad6ade0bb3368b741a6a14f49594d412d8493",
+    "conversations_list": "e1b853c6e8bf53cf97a8dbfef216572c4d51b97a6051f0da50ea6af5ca1df719",
+    "conversations_info": "e8bb47eb4f63c08ed09be96bf83831943986cee1f422e4c42b18f4a604216e4b",
+    "conversations_history": "9cf26d7246b16d38e1c2032ad2493d60263a93cabe7232ae930630488f506707",
+    "conversations_replies": "1d1b72ff950ac2daefbddcdd9e29401a65613386800e643f1f1234093a9794fc",
+    "users_list": "886a34ce229cb5f73b4b4766a39aff9aa08209188876c017a5aa14acdf0b94c0",
+    "users_info": "1bf1a72eeec3035b07ba8962d2eade929894eb46de60898eea99df95e231e6c2",
+    "chat_postMessage": "d72ec54e1968f462a4868eed082e4b18cb39d197b3181335894658951a0bbef8",
+    "chat_update": "b72fe99c8f0fb29d05057b0ecd7116704b66a7eeb2e43e9f9d03a9ac003bf606",
+    "reactions_add": "a28af3a9f44d1b6fb6207067a4fe9e1ed279f6ad1cd64a0cde74901972457211",
+    "reactions_get": "0d1c8e77b69eb03ebb35dd4497c5ab3d0515a5c18d06d5fe9fd8ab669506f7f6"
+  },
+  "x, authorization": {
+    "getUsersMe": "ab476f0ba7189af4a5b7feb4c6af0f83d9cce98173de783e793f6011b77cf3fb",
+    "createPosts": "dcd9cc7baa85a571d78053b4b3e5f08b1160c896cb39c9ca3aca1ebb5a4b0531",
+    "deletePosts": "6502bc4d061fd9357bc57d1cb89db44b906c8378d2f48bd3ddaab89354e6f799",
+    "getUsersPosts": "a73e43335c917420e9d025961bb7f713113790d3426d9bf933a07cc9fa24c6c6",
+    "getUsersMentions": "0588fe503354a822c31ca66c2e782aa4b0fc4564c2dac007e805c423c83ebec6",
+    "searchPostsRecent": "f4c3ff681c8399a2b1a16685d6ca926f47a41fd1edfa6efa6505670a4e27f1d5"
+  },
+  "youtube, authorization": {
+    "youtube.channels.list": "4878523d71906f448395b021fae67eb908740b9d2801e6d1a2fb18cce4823222",
+    "youtube.playlists.list": "f876e72c9b8532d97e7ec9675428b62551e9443c9d990b44f4643e9571d9baa1",
+    "youtube.playlistItems.list": "11067d5b40588688ac00e9dfaaea38522a5c4ac3a3d472de56bf46db3c0bb852",
+    "youtube.videos.list": "9dc1a1e2bf63357de433973380831e8b4ffa26275885c233aea8f61a0eb4ce8c"
+  },
+  "youtube-analytics, authorization": {
+    "youtubeAnalytics.reports.query": "c7f3f44780c29ed544fa8d1e76bb0dafb9ee1ade288af0dd1aa219443630683a"
+  },
+  "youtube-management, authorization": {
+    "youtube.commentThreads.list": "b56e0d779ad7e92d34bfce4e44a03bcf39c804137c997bc1108ce786689094f5",
+    "youtube.comments.list": "1fc62b1393dd0531e448f7fe68380e94cad85cbee38beab5df49e4af984b20fc",
+    "youtube.videos.update": "be394ff61d3aa3a9ac08631270bc65b051054716d7a938c8990a7dc6471730c7"
+  },
+  "zoom, authorization": {
+    "user": "85affbd3a169176fe8a3d9ed0bbd653748ffbb30f9382825be89507c41327a16",
+    "meetings": "5f708c4f4dee768ddac7c60a72330d8cfeaa742470fbbc821b6dea1f64693ac1",
+    "meetingCreate": "65a7ff06e18c0a46a69b3d53cc2a5514218088adc28251c9552ab6d720325dbb",
+    "meeting": "3efe6d51a392ce1f5ecb3482728451520e5203cc42fd410fffece4613f7f452e",
+    "meetingUpdate": "f415142f8ed49e5ca02f6915274399296eb49d936b90bc9ff745fd29fd7685cc",
+    "pastMeetingDetails": "fb81f9299ed4de9c1a41f8fd36fe59e484209fa3f69652e4978869fbf0d32adc",
+    "pastMeetingParticipants": "171aa6c5b5916c6fb0ad07a05acbbe937856480bf97cc9e7cfd488a36dc83999",
+    "recordingsList": "e8009ee907104b45ffbc17ede833ad841466e30fb017a6b599cae65f67431af9",
+    "recordingGet": "731415cf60c42d516f24cf91a1eaf6210cac51d4facadafd62afb3fa78acf182",
+    "GetMeetingTranscript": "bc2817e4d0ed65b2ab279df636f2e4310af7073d1c62e161cee100046ec3d949",
+    "Getameetingsummary": "6f171674effca005ba9d1c1b26969b5fc647c83d300fff2901b5ab85d86871e0",
+    "getChannels": "bb7c2e1a0bd9549e1aa27e950e0cdf843952831c86c4ec044800c4e0151b26d5",
+    "getChatMessages": "989d5f748ff791c871d33f025cd6e8fed2604523b48c19d4dce773bc7a415f0a",
+    "sendaChatMessage": "e1a7bd176bc74df06fb6c0fe51afa549f90c0c401738a488c0d54f17f7157ac7",
+    "retrieveThread": "932765e7604f9f5e1ddbe353775b271c9fcc93ab23e0ca8f39e93fd6fe5ba23d"
+  }
+}

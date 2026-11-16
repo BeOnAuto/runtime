@@ -3,7 +3,8 @@ import type { SettingProblem } from '@on.auto/config';
 import { Data } from 'effect';
 
 import type { McpServerSettings, OpenApiServerSettings, StdioServerSettings } from '../settings/server-settings.ts';
-import type { ApiOperation, LeftOutOperation } from './api-tools.ts';
+import type { ApiOperation } from './api-tools.ts';
+import type { LeftOutOperation } from './left-out.ts';
 
 interface DescribedApi {
   readonly baseUrl: string;

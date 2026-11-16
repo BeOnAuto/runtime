@@ -18,7 +18,7 @@ const neitherJsonNorYaml = 'The document is neither JSON nor YAML';
 
 const fixedWords = {
   placed: (pointer: string) =>
-    `At ${pointer} of the document: not what the runtime reads there in an OpenAPI document of version 3.0 or 3.1`,
+    `At ${pointer} of the document: not what the runtime reads there in an OpenAPI document of version 3.0, 3.1 or 3.2`,
   scheme: 'The document declares no security scheme of this name by which a call sends this credential',
   placedByAScheme: 'Placed by a security scheme of the document; give the credential under security alone',
 } as const;

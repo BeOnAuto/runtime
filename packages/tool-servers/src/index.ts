@@ -189,7 +189,7 @@ export type {
 } from './settings/server-settings.ts';
 export { shippedDocumentOf } from './settings/server-settings.ts';
 export type { Describing, ToolServers } from './openapi/described-api.ts';
-export type { LeftOutOperation } from './openapi/api-tools.ts';
+export type { LeftOutOperation } from './openapi/left-out.ts';
 export { ToolServerDocumentRefused, describedToolServers } from './openapi/described-servers.ts';
 export { documentInText } from './openapi/document-reading.ts';
 export { mappedSchema, type SchemaObject } from './openapi/schema-translation.ts';

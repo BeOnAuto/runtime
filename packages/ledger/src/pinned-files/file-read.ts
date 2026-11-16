@@ -4,7 +4,7 @@ import { Schema } from 'effect';
 
 import type { LedgerReads } from '../connection/ledger-connection.ts';
 import { statement, statementOf } from '../connection/statement.ts';
-import { sqliteLedgerReads } from '../sqlite3.ts';
+import { sqliteLedgerReads } from '../sqlite.ts';
 import { canonicalJsonOf } from './canonical-json.ts';
 
 const TableReadSchema = Schema.Struct({ rows: Schema.Number, sha256: Schema.String });

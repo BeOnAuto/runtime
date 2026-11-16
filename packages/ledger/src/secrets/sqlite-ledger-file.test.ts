@@ -2,7 +2,7 @@ import { Cause, Deferred, Effect, Exit } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
-import { modestConnections } from '../sqlite3.ts';
+import { modestConnections } from '../sqlite.ts';
 import { openConnectionWith } from '../testing/open-ledger.ts';
 import {
   aLedgerFile,

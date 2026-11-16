@@ -32,7 +32,7 @@ const writing: ApiOperation = {
   method: 'post',
   path: '/notes',
   inputs: [],
-  body: { mediaType: 'application/merge-patch+json', required: true },
+  body: { kind: 'json', mediaType: 'application/merge-patch+json', required: true },
   credentials: [],
   answers: { schemas: [], components: {}, headers: {}, describesNoBody: false },
 };
@@ -192,7 +192,11 @@ describe('the body of a call of an HTTP API', () => {
     );
     expect(
       Result.map(
-        apiRequestOf({ ...writing, body: { mediaType: 'application/json', required: false } }, {}, endpoint),
+        apiRequestOf(
+          { ...writing, body: { kind: 'json', mediaType: 'application/json', required: false } },
+          {},
+          endpoint,
+        ),
         ({ body }) => body,
       ),
     ).toEqual(Result.succeed(null));

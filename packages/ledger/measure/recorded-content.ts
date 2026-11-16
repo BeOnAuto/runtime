@@ -1,4 +1,4 @@
-import { modestConnections } from '../src/sqlite3.ts';
+import { modestConnections } from '../src/sqlite.ts';
 import { contentTableHead, measuredContent } from './content-measurement.ts';
 import { measuredOnEachStore, write, type MeasuredStore } from './stores.ts';
 

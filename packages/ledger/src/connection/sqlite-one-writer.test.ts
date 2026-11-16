@@ -5,7 +5,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { inTransactionOf, type LedgerStore, type ReturningExecutor, type TransactionalPool } from '../event-store.ts';
 import { secretRowsOn } from '../secrets/secret-rows.ts';
 import { pooledOptionsOf, sqliteEventStore } from '../sqlite-event-store.ts';
-import { modestConnections } from '../sqlite3.ts';
+import { modestConnections } from '../sqlite.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { sqliteMostBoundValues } from './bound-values.ts';
 import { nodeSqliteEventStoreDriver } from './node-sqlite-event-store-driver.ts';

@@ -111,7 +111,7 @@ function otherPaths(): DocumentFields {
     '/uploads': {
       post: {
         operationId: 'upload',
-        requestBody: { content: { 'application/xml': { schema: { type: 'string' } } } },
+        requestBody: { content: { 'multipart/mixed': { schema: { type: 'array' } } } },
       },
     },
   };

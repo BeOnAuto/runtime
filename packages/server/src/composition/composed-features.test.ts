@@ -1,4 +1,4 @@
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { LicensedFeatures, licensedFeaturesOf } from '@on.auto/meter';
 import { Effect, ManagedRuntime } from 'effect';
 import { describe, expect, it } from 'vitest';

@@ -1,5 +1,5 @@
 import { statement, VersionConflict } from '@on.auto/ledger';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger } from '@on.auto/operations';
 import { Effect, ManagedRuntime, Result } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';

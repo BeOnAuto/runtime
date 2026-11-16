@@ -1,5 +1,5 @@
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger } from '@on.auto/operations';
 import { memoryLedger, type InterleavedRemovalEntry, type UnheldContentEntry } from '@on.auto/operations/testing';
 import { Effect, ManagedRuntime, type Layer } from 'effect';

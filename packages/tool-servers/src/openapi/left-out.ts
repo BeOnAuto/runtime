@@ -1,39 +1,19 @@
-import { JsonPointer, type Schema } from 'effect';
+import type { Schema } from 'effect';
 
+import { resolvedSchema } from '../request-bodies/part-places.ts';
 import { headersTheRuntimeSets } from '../settings/reserved-headers.ts';
-import type { Method, Parameter } from './api-document.ts';
+import type { ApiDocument, Method, Operation, Parameter, PathItem } from './api-document.ts';
 import type { BodyOf, Placed } from './api-parameters.ts';
 import type { Components } from './input-schemas.ts';
-import { isSchemaObject } from './schema-translation.ts';
 
 interface OperationContext {
   readonly components: Components;
   readonly sentHeaders: ReadonlySet<string>;
 }
 
-const mostReferenceHops = 8;
-
-const componentReference = '#/components/schemas/';
-
-function componentAt(reference: string, components: Components): Schema.Json | undefined {
-  if (!reference.startsWith(componentReference)) {
-    return undefined;
-  }
-  const name = JsonPointer.unescapeToken(reference.slice(componentReference.length));
-  return Object.hasOwn(components.written, name) ? components.written[name] : undefined;
-}
-
 function isObjectSchema(schema: Schema.Json | undefined, components: Components): boolean {
-  let current = schema;
-  for (let hops = 0; hops <= mostReferenceHops && isSchemaObject(current); hops += 1) {
-    const reference = current['$ref'];
-    if (typeof reference !== 'string') {
-      const type = current['type'];
-      return type === 'object' || (Array.isArray(type) && type.includes('object'));
-    }
-    current = componentAt(reference, components);
-  }
-  return false;
+  const type = resolvedSchema(schema, components.written)?.['type'];
+  return type === 'object' || (Array.isArray(type) && type.includes('object'));
 }
 
 function sharedNameOf(names: readonly string[]): string | undefined {
@@ -61,6 +41,9 @@ function methodBecause(method: Method, body: BodyOf): string | undefined {
 
 function serializedBecause(sent: readonly Parameter[]): string | undefined {
   for (const each of sent) {
+    if (each.in === 'querystring') {
+      return `its parameter ${each.name} is the whole query string, which a call does not send`;
+    }
     const style = unsentStyleOf(each);
     if (style !== undefined) {
       return `its ${each.in} parameter ${each.name} is written with style ${style}, a form a call does not send`;
@@ -121,12 +104,12 @@ function becauseOf(sent: readonly Parameter[], body: BodyOf, components: Compone
   if (objectQuery !== undefined) {
     return `its query parameter ${objectQuery.name} is an object, which a call does not send in a query`;
   }
-  if (body.kind === 'other') {
-    return `its body is ${body.mediaType}, and a call sends a body only as JSON`;
+  if (body.kind === 'unsent') {
+    return body.because;
   }
   const inputs = [
     ...sent.flatMap((each) => (each.in === 'path' || each.in === 'query' ? [each.name] : [])),
-    ...(body.kind === 'json' ? ['body'] : []),
+    ...(body.kind === 'none' ? [] : ['body']),
   ];
   const shared = sharedNameOf(inputs);
   return shared === undefined ? undefined : `two of its inputs are named ${shared}`;
@@ -145,4 +128,34 @@ export function leftOutReasonOf(
   }
   const because = becauseOf(sent, body, components);
   return neededReasonOf(sent, sentHeaders) ?? (because === undefined ? undefined : { because });
+}
+
+export interface LeftOutOperation extends LeftOutReason {
+  readonly operation: string;
+}
+
+export function operationNamed(sentMethod: string, path: string, { operationId }: Operation): string {
+  const route = `${sentMethod} ${path}`;
+  return operationId === undefined ? route : `${operationId} (${route})`;
+}
+
+const queryUnsent = 'a call does not send QUERY';
+
+function queryOf(path: string, { query }: PathItem): readonly LeftOutOperation[] {
+  return query === undefined ? [] : [{ operation: operationNamed('QUERY', path, query), because: queryUnsent }];
+}
+
+function additionalOf(path: string, { additionalOperations = {} }: PathItem): readonly LeftOutOperation[] {
+  return Object.entries(additionalOperations).map(([method, operation]: readonly [string, Operation]) => ({
+    operation: operationNamed(method, path, operation),
+    because: `a call does not send ${method}, a method OpenAPI lists only among additional operations`,
+  }));
+}
+
+export function unsentMethodsOf(document: ApiDocument): readonly LeftOutOperation[] {
+  const items = Object.entries(document.paths ?? {});
+  return [
+    ...items.flatMap(([path, item]: readonly [string, PathItem]) => queryOf(path, item)),
+    ...items.flatMap(([path, item]: readonly [string, PathItem]) => additionalOf(path, item)),
+  ];
 }

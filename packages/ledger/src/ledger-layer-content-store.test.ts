@@ -6,7 +6,7 @@ import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { placeOfNewBytesOf } from './content/external-heads.ts';
-import { ledgerLayer } from './sqlite3.ts';
+import { ledgerLayer } from './sqlite.ts';
 import { openChoresWith } from './testing/open-ledger.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };

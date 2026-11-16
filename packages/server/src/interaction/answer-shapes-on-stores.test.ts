@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
-import { ledgerLayer } from '@on.auto/ledger/sqlite3';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Client } from 'pg';
 import { onTestFinished } from 'vitest';
 

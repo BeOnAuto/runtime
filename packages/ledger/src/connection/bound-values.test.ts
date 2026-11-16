@@ -1,6 +1,6 @@
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { ledgerLayer } from '../sqlite3.ts';
+import { ledgerLayer } from '../sqlite.ts';
 import { openConnectionWith, type OpenConnection } from '../testing/open-ledger.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { valuesListOf } from '../testing/values-list.ts';

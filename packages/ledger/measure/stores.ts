@@ -8,7 +8,7 @@ import type { AppendListeners, LedgerStore } from '../src/event-store.ts';
 import { plainPoolsOn, postgresqlEventStore } from '../src/postgresql/postgresql-ledger.ts';
 import type { KeptTables } from '../src/projections/projection-parts.ts';
 import { sqliteEventStore } from '../src/sqlite-event-store.ts';
-import type { modestConnections } from '../src/sqlite3.ts';
+import type { modestConnections } from '../src/sqlite.ts';
 import { temporaryDatabase } from '../src/testing/temporary-database.ts';
 
 const postgresqlServer = process.env['LEDGER_MEASURE_POSTGRESQL_URL'] ?? '';

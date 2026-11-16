@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { ledgerLayer, sqliteLedgerReads } from '../sqlite3.ts';
+import { ledgerLayer, sqliteLedgerReads } from '../sqlite.ts';
 import { openConnectionWith } from '../testing/open-ledger.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { statement } from './statement.ts';
