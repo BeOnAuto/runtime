@@ -104,6 +104,14 @@ describe('the smallest reasoning function definition', () => {
   });
 });
 
+function issuesOfMarkers(count: number) {
+  const markers = '{%system%}\n'.repeat(count);
+  const before = process.cpuUsage();
+  const issues = issuesIn(documentOf('model: openai/gpt-5', markers));
+  const { user, system } = process.cpuUsage(before);
+  return { markers, issues, milliseconds: (user + system) / 1000 };
+}
+
 describe('the issues of a document', () => {
   it('are all found at once, in the order of their lines', () => {
     expect(
@@ -136,10 +144,9 @@ describe('the issues of a document', () => {
   });
 
   it('are at most 20, with how many more there were, however many the document holds', () => {
-    const markers = '{%system%}\n'.repeat(5900);
-    const before = process.cpuUsage();
-    const issues = issuesIn(documentOf('model: openai/gpt-5', markers));
-    const { user, system } = process.cpuUsage(before);
+    issuesOfMarkers(590);
+    const tenth = issuesOfMarkers(590);
+    const { markers, issues, milliseconds } = issuesOfMarkers(5900);
 
     expect(markers.length).toBeLessThan(65_536);
     expect(issues).toEqual([
@@ -148,6 +155,6 @@ describe('the issues of a document', () => {
       ...Array.from({ length: 18 }, (_, index) => `Line ${index + 5}: A template holds at most one {% system %} block`),
       'Line 23: 5881 more issues are not shown',
     ]);
-    expect((user + system) / 1000).toBeLessThan(400);
+    expect(milliseconds).toBeLessThan(Math.max(tenth.milliseconds, 5) * 30);
   });
 });

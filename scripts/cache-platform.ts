@@ -13,7 +13,6 @@ function written(path: string, value: unknown) {
 
 written(resolve(folder, 'platform.json'), {
   platform: process.platform,
-  arch: process.arch,
   node: process.versions.node,
 });
 for (const [service, variable] of [
