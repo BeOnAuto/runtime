@@ -12,7 +12,7 @@ import { givenAgainFrom } from './added-again.ts';
 
 export interface AddedAgain {
   readonly from: Provider;
-  readonly byAnAdmin: boolean;
+  readonly takesOver: boolean;
   readonly whilePending: boolean;
 }
 
@@ -23,10 +23,10 @@ interface Adding extends AddedAgain {
 }
 
 export const addedAgainFrom = Effect.fnUntraced(function* (
-  { from, byAnAdmin, whilePending, found, more, bindsPerson }: Adding,
+  { from, takesOver, whilePending, found, more, bindsPerson }: Adding,
   services: ConnectionServices,
 ) {
-  const binding = byAnAdmin ? undefined : bindingRefusalOf(found, bindsPerson, (yield* Caller).id);
+  const binding = takesOver ? undefined : bindingRefusalOf(found, bindsPerson, (yield* Caller).id);
   if (binding !== undefined) {
     return yield* Effect.fail(binding);
   }
@@ -35,7 +35,7 @@ export const addedAgainFrom = Effect.fnUntraced(function* (
     type: 'replace',
     connection: found.connection.id,
     bindsPerson,
-    byAnAdmin,
+    takesOver,
     whilePending,
     addition: additionOf(admitted.described, admitted.link, yield* recordedCaller),
   });

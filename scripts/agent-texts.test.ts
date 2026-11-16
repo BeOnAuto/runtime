@@ -157,13 +157,47 @@ await test('the command writes the list, checks it, and refuses any other argume
     await runAgentTexts(['--check'], path, servedWith(everyGuide));
     await assert.rejects(runAgentTexts(['--check'], path, servedWith([...everyGuide, 'triggers'])), /stale/u);
     await Promise.all(
-      [['--write'], ['--check', '--check']].map((commandArguments: readonly string[]) =>
-        assert.rejects(runAgentTexts(commandArguments, path, servedWith(everyGuide)), /Usage: pnpm agent-texts/u),
+      [['--write'], ['--check', '--check'], ['--changes'], ['--changes', path, path]].map(
+        (commandArguments: readonly string[]) =>
+          assert.rejects(
+            runAgentTexts(commandArguments, path, servedWith(everyGuide)),
+            /^Error: Usage: pnpm agent-texts \[--check \| --changes <the record before>\]$/u,
+          ),
       ),
     );
   });
 });
 
+await test('the command prints what an agent reads that changed between the record it is given and the one it keeps', async () => {
+  await withTemporaryList(async (path) => {
+    const before = `${path}.before`;
+    writeFileSync(before, await servedDocument(servedWith(everyGuide)));
+    await runAgentTexts([], path, servedWith([...everyGuide, 'triggers']));
+    const printed: string[] = [];
+    const print = (text: string) => {
+      printed.push(text);
+    };
+    await runAgentTexts(['--changes', before], path, undefined, print);
+    await runAgentTexts(['--changes', path], path, undefined, print);
+    const [changed, unchanged] = printed;
+    assert.ok(
+      String(changed).includes('### guide triggers\n\nTier 3.\n\nNew: an agent did not receive this text before.\n'),
+    );
+    assert.ok(String(changed).includes('- Before: not there\n\n  After: What triggers says.\n'));
+    assert.deepEqual([printed.length, unchanged], [2, 'Nothing an agent reads changed.\n']);
+  });
+});
+
 await test('the committed list is what a throwaway server of this release serves', () => {
   execFileSync(process.execPath, [resolve(import.meta.dirname, 'agent-texts.ts'), '--check']);
+});
+
+await test('the command prints the changes on its standard output, as Markdown to post', () => {
+  const committed = resolve(import.meta.dirname, '../docs/assets/agent-texts.json');
+  assert.equal(
+    execFileSync(process.execPath, [resolve(import.meta.dirname, 'agent-texts.ts'), '--changes', committed], {
+      encoding: 'utf8',
+    }),
+    'Nothing an agent reads changed.\n',
+  );
 });

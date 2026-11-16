@@ -31,7 +31,7 @@ function takenOverFrom(waiting: Provider | undefined, services: ConnectionServic
   return waiting === undefined
     ? Effect.undefined
     : Effect.map(admittedStartOf(services, waiting.entry.name), (start) =>
-        start === 'an admin' ? { from: waiting, byAnAdmin: true, whilePending: true } : undefined,
+        start === 'may take over' ? { from: waiting, takesOver: true, whilePending: true } : undefined,
       );
 }
 
@@ -43,7 +43,7 @@ export function addedAgainOf(
   if (replaced !== undefined) {
     return Effect.map(admittedStartOf(services, replaced.replacement.entry.name), (start) => ({
       from: replaced.replacement,
-      byAnAdmin: start === 'an admin',
+      takesOver: start === 'may take over',
       whilePending: false,
     }));
   }

@@ -5,13 +5,12 @@ import { startGuideName } from '@on.auto/api';
 import { agentTextsOf, type AgentText, type ServedSurface } from '@on.auto/api/testing';
 import { servedByAThrowawayServer, type ServedToAnAgent } from '@on.auto/server/served-to-an-agent';
 
+import { changesBetween, inTurn } from './agent-texts-changes.ts';
+import { agentTextsRecordIn } from './agent-texts-record.ts';
+
 export const onboardingPath: readonly string[] = [startGuideName, 'first-playbook', 'give-tools', 'get-started'];
 
 const regenerating = 'pnpm agent-texts';
-
-function inTurn(names: readonly string[]): string {
-  return `${names.slice(0, -1).join(', ')} and ${names.slice(-1).join('')}`;
-}
 
 const about = [
   'The texts that a server of this release gives an agent, as the agent receives them, each with its SHA-256:',
@@ -71,17 +70,25 @@ export function checkAgentTexts(path: string, document: string): void {
   }
 }
 
+function printed(text: string): void {
+  process.stdout.write(text);
+}
+
 export async function runAgentTexts(
   commandArguments: readonly string[],
   path: string,
   served?: () => Promise<ServedToAnAgent>,
+  print: (text: string) => void = printed,
 ): Promise<void> {
-  if (commandArguments.length === 0) {
+  const [option, recordBefore, ...more] = commandArguments;
+  if (option === undefined) {
     writeAgentTexts(path, await servedDocument(served));
-  } else if (commandArguments.length === 1 && commandArguments[0] === '--check') {
+  } else if (option === '--check' && recordBefore === undefined) {
     checkAgentTexts(path, await servedDocument(served));
+  } else if (option === '--changes' && recordBefore !== undefined && more.length === 0) {
+    print(changesBetween({ before: agentTextsRecordIn(recordBefore), after: agentTextsRecordIn(path) }));
   } else {
-    throw new Error(`Usage: ${regenerating} [--check]`);
+    throw new Error(`Usage: ${regenerating} [--check | --changes <the record before>]`);
   }
 }
 

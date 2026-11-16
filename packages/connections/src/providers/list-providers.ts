@@ -13,7 +13,9 @@ function reconnectingOf(start: ConnectionStart): Reconnecting {
   if (start === 'anyone') {
     return {};
   }
-  return start === 'an admin' ? { may_reconnect: true } : { may_reconnect: false, reconnect_refusal: start.refused };
+  return start === 'may take over'
+    ? { may_reconnect: true }
+    : { may_reconnect: false, reconnect_refusal: start.refused };
 }
 
 function withWhoReconnects(services: StartsOfConnections) {

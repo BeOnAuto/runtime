@@ -15,7 +15,7 @@ interface StartsHeard {
 }
 
 function startFor(admins: readonly string[], caller: string | undefined): ConnectionStart {
-  return caller !== undefined && admins.includes(caller) ? 'an admin' : { refused: adminsAlone };
+  return caller !== undefined && admins.includes(caller) ? 'may take over' : { refused: adminsAlone };
 }
 
 export function startedByAdminsOf(provider: string, admins: readonly string[]): StartsHeard {

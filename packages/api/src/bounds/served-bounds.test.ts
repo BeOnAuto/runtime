@@ -2,7 +2,7 @@ import { defineQuery, makeCatalog, makeDispatcher, type Registration } from '@on
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { guideShelfOf, mcpRoutes, type DefinitionType, type Guide, type Recipe } from '../index.ts';
+import { guideShelfOf, mcpRoutes, sentencesIn, type DefinitionType, type Guide, type Recipe } from '../index.ts';
 import { createTestHandler } from '../testing/api-calls.ts';
 import { asking, sentencesOf } from '../testing/asking-operation.ts';
 import { notebookGuide, noteRecipe, wordsGuide } from '../testing/guides.ts';
@@ -56,6 +56,17 @@ function describedIn(length: number): string {
 function sentencesNumbering(count: number): string {
   return Array.from({ length: count }, () => 'It asks.').join(' ');
 }
+
+describe('the sentences of a text', () => {
+  it('end at a full stop, a question mark or an exclamation mark that a space or a line break follows', () => {
+    expect(sentencesIn('It asks. Does it?\nIt does! Release 1.2 keeps it.')).toEqual([
+      'It asks.',
+      'Does it?',
+      'It does!',
+      'Release 1.2 keeps it.',
+    ]);
+  });
+});
 
 describe('a tool description', () => {
   it('starts the server at 800 characters, and refuses to start it at 801', () => {

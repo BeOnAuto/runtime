@@ -19,8 +19,10 @@ export { cedarModuleBundled } from './engine/cedar-module-bundled.ts';
 export { cedarModuleIn } from './engine/cedar-module.ts';
 export type { CedarModuleSource } from './engine/cedar.ts';
 export { accessControlShippedRoots, cedarNoticeFiles } from './files/access-control-files.ts';
+export { getCaller } from './operations/get-caller.ts';
 export { roleAssignmentOperations } from './operations/role-assignment-operations.ts';
 export { builtInRoles } from './roles/built-in-roles.ts';
+export { CallerRoles } from './roles/caller-roles.ts';
 export { roleAssignmentsFrom, type RoleSource } from './roles/recorded-role-assignments.ts';
 export {
   editorRoleForEveryPerson,

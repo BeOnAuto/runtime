@@ -95,7 +95,7 @@ const ProviderSchema = Schema.Struct({
   may_reconnect: Schema.optionalKey(
     Schema.Boolean.annotate({
       description:
-        'Beside replaces: whether this caller may reconnect a connection made from a provider it replaces, whoever added it, true for an admin the runtime lets do so here and false for a caller it starts no connection of this provider for; left out where the person who added such a connection reconnects it, or where the runtime cannot say just now',
+        'Beside replaces: whether this caller may reconnect a connection made from a provider it replaces, whoever added it, true for a caller the runtime lets do so here and false for a caller it starts no connection of this provider for; left out where the person who added such a connection reconnects it, or where the runtime cannot say just now',
     }),
   ),
   reconnect_refusal: Schema.optionalKey(

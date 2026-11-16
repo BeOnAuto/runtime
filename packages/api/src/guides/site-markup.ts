@@ -32,8 +32,12 @@ function withoutFormatterLines(part: string): string {
   return part.replaceAll(formatterLine, '');
 }
 
+function unwrapped(content: string): string {
+  return verbatimOpening.test(content) ? content.replace(verbatimOpening, '').replace(verbatimClosing, '') : content;
+}
+
 export function withoutSiteMarkup(page: string): string {
   const content = page.replace(frontMatter, '');
   const unformatted = outsideCode(content, (part) => withoutColumnPadding(withoutFormatterLines(part)));
-  return `${unformatted.replace(verbatimOpening, '').replace(verbatimClosing, '').trimEnd()}\n`;
+  return `${unwrapped(unformatted).trimEnd()}\n`;
 }

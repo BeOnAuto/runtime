@@ -45,12 +45,12 @@ function requireAtLeast(what: string, size: number, fewest: number, unit: string
   }
 }
 
-function sentencesIn(text: string): number {
-  return text.split(/(?<=[.!?])\s+(?=\S)/u).length;
+export function sentencesIn(text: string): readonly string[] {
+  return text.split(/(?<=[.!?])\s+(?=\S)/u);
 }
 
 export function requireSentencesWithin(what: string, text: string): void {
-  const sentences = sentencesIn(text);
+  const sentences = sentencesIn(text).length;
   requireAtLeast(what, sentences, fewestDescriptionSentences, 'sentences');
   requireWithin(what, sentences, mostDescriptionSentences, 'sentences');
 }

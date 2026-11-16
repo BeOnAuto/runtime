@@ -64,6 +64,7 @@ export {
 } from './guides/guide-shelf.ts';
 export { guideAddress, guideMediaType } from './guides/guide-resources.ts';
 export { guideShelfFrom, type ServedType } from './guides/served-guides.ts';
+export { markingFaultsOf } from './guide-pages/agent-rendition.ts';
 export {
   mostArgumentDescriptionCharacters,
   mostDescriptionCharacters,
@@ -73,6 +74,7 @@ export {
   mostRecipeBytes,
   mostRecipes,
   mostToolsOnAConnection,
+  sentencesIn,
 } from './bounds/served-bounds.ts';
 export type { ServerInfo } from './mcp/mcp-connection.ts';
 export type { ReportIncident } from './problem/error-boundary.ts';

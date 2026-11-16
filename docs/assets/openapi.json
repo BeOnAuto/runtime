@@ -31,6 +31,9 @@
       "name": "role-assignments"
     },
     {
+      "name": "caller"
+    },
+    {
       "name": "models",
       "description": "The models this server can call, which a reasoning function names, and those a generation function may name"
     },
@@ -4077,6 +4080,99 @@
           {
             "openIdConnect": [
               "org:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/caller": {
+      "get": {
+        "operationId": "get_caller",
+        "summary": "Get caller",
+        "description": "Answers the permissions the caller may use in the org: those their credential holds that their role in the org permits.",
+        "tags": [
+          "caller"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/get_caller/output",
+                  "type": "object",
+                  "properties": {
+                    "permissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "org:read",
+                          "org:write",
+                          "playbook:read",
+                          "playbook:write"
+                        ]
+                      },
+                      "description": "The permissions the caller may use in the org, of org:read, org:write, playbook:read and playbook:write"
+                    }
+                  },
+                  "required": [
+                    "permissions"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:read"
+            ]
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
             ]
           }
         ]
@@ -13222,7 +13318,7 @@
                         },
                         "may_reconnect": {
                           "type": "boolean",
-                          "description": "Beside replaces: whether this caller may reconnect a connection made from a provider it replaces, whoever added it, true for an admin the runtime lets do so here and false for a caller it starts no connection of this provider for; left out where the person who added such a connection reconnects it, or where the runtime cannot say just now"
+                          "description": "Beside replaces: whether this caller may reconnect a connection made from a provider it replaces, whoever added it, true for a caller the runtime lets do so here and false for a caller it starts no connection of this provider for; left out where the person who added such a connection reconnects it, or where the runtime cannot say just now"
                         },
                         "reconnect_refusal": {
                           "type": "string",

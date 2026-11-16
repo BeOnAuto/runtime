@@ -18,7 +18,7 @@ To connect it, ask your agent to connect Slack, or open **Settings**, then **Con
 
 A Slack connection made as yourself, before Slack connected through @Auto, stops working: playbooks can't use it. Its row in Studio's Connections shows **Needs attention** and says "Slack now connects through @Auto. Connect again to keep your playbooks working."
 
-1. Select **Connect again** on its row. The person who made the connection can, and so can an admin of your organization.
+1. Select **Connect again** on its row. The person who made the connection can, and so can an admin or an editor of your organization.
 2. Allow access at Slack.
 
 Auto removes the old connection and adds the new one under the same name, for the same playbooks, so your playbooks keep their Slack steps. As soon as you select **Connect again**, Auto forgets the old connection's tokens and stops renewing them, so it can never use them again. Nothing needs doing at Slack.

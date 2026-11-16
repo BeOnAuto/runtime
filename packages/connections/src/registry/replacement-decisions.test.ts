@@ -48,16 +48,16 @@ const messagesAdded: ConnectionAddition = {
 
 interface Pressed {
   readonly by?: string;
-  readonly byAnAdmin?: boolean;
+  readonly takesOver?: boolean;
   readonly whilePending?: boolean;
 }
 
-function replacing({ by = acted.by, byAnAdmin = false, whilePending = false }: Pressed = {}): ConnectionCommand {
+function replacing({ by = acted.by, takesOver = false, whilePending = false }: Pressed = {}): ConnectionCommand {
   return {
     type: 'replace',
     connection: 'files-id',
     bindsPerson: true,
-    byAnAdmin,
+    takesOver,
     whilePending,
     addition: messagesAdded,
     ...acted,
@@ -105,13 +105,13 @@ describe('a connection replaced by its addition from another provider', () => {
   });
 });
 
-describe('a connection replaced by an admin the admission found', () => {
-  it('is decided for an admin the admission found, whoever added it, but never once it is removed', () => {
+describe('a connection replaced by a person the admission found may take it over', () => {
+  it('is decided for them, whoever added it, but never once it is removed', () => {
     const removed: ConnectionEvent = { type: 'connection_removed', data: { connection: 'files-id' } };
-    const byAnAdmin = replacing({ by: 'person:grace', byAnAdmin: true });
+    const takenOver = replacing({ by: 'person:grace', takesOver: true });
 
-    expect(Result.isSuccess(decided(byAnAdmin, filesAdded))).toBe(true);
-    expect(decided(byAnAdmin, filesAdded, removed)).toMatchObject({ failure: { _tag: 'conflict' } });
+    expect(Result.isSuccess(decided(takenOver, filesAdded))).toBe(true);
+    expect(decided(takenOver, filesAdded, removed)).toMatchObject({ failure: { _tag: 'conflict' } });
   });
 
   it('is decided only while the connection waits to be connected, where it is added again while pending', () => {
@@ -119,7 +119,7 @@ describe('a connection replaced by an admin the admission found', () => {
       type: 'connection_connected',
       data: { connection: 'files-id', connected_by: ada },
     };
-    const whilePending = replacing({ by: 'person:grace', byAnAdmin: true, whilePending: true });
+    const whilePending = replacing({ by: 'person:grace', takesOver: true, whilePending: true });
 
     expect(Result.isSuccess(decided(whilePending, filesAdded))).toBe(true);
     expect(decided(whilePending, filesAdded, connected)).toMatchObject({

@@ -106,7 +106,7 @@ export interface ConnectionReplacement {
   readonly type: 'replace';
   readonly connection: string;
   readonly bindsPerson: boolean;
-  readonly byAnAdmin: boolean;
+  readonly takesOver: boolean;
   readonly whilePending: boolean;
   readonly addition: ConnectionAddition;
 }

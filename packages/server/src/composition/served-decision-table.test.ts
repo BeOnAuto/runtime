@@ -34,6 +34,7 @@ const declared = [
   'org/assign_role: org:write (manages permissions)',
   'org/create_playbook: org:write (names a playbook)',
   'org/finish: org:write',
+  'org/get_caller: org:read,playbook:read',
   'org/get_connection: org:read',
   'org/get_license: org:read,playbook:read',
   'org/get_playbook: org:read (names a playbook)',
@@ -108,6 +109,7 @@ const declared = [
 ];
 
 const whatReadingPermits = [
+  'org/get_caller',
   'org/get_connection',
   'org/get_license',
   'org/get_playbook',
@@ -201,6 +203,7 @@ const everythingButWhatManagesPermissions = everything.filter(
 
 const whatPlaybookAlphaMayDoAsItself = [
   ...everything.filter((operation) => operation.startsWith('playbook/')),
+  'org/get_caller',
   'org/get_license',
   'org/get_voice',
   'org/list_comments',

@@ -47,6 +47,12 @@ describe('a page served as a guide', () => {
       '# Workflow format\n\nA workflow runs steps.\n',
     );
   });
+
+  it('keeps the last line of a page that has no wrapper, though it closes an element of the page', () => {
+    const marked = '# Terminology\n\n<div data-audience="operator">\n\nFor the operator.\n\n</div>\n';
+
+    expect(withoutSiteMarkup(marked)).toBe(marked);
+  });
 });
 
 describe('the front matter of a page served as a guide', () => {

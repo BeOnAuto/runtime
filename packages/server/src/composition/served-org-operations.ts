@@ -1,4 +1,4 @@
-import { roleAssignmentOperations } from '@on.auto/access-control';
+import { getCaller, roleAssignmentOperations } from '@on.auto/access-control';
 import { activityOperationsOf, commentChanges, orgCommentOperations } from '@on.auto/activity';
 import { connectionChanges } from '@on.auto/connections';
 import { defineListOrgChanges, playbookChanges, playbookOperationsOf } from '@on.auto/playbooks';
@@ -24,6 +24,7 @@ function orgOperationsOfPlaybooks(
     ...activityOperationsOf(goals),
     ...orgCommentOperations,
     ...roleAssignmentOperations,
+    getCaller,
   ];
 }
 

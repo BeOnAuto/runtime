@@ -218,9 +218,9 @@ function standingRefusalOf({ connection }: KeptConnection, whilePending: boolean
 
 function replacementRefusalOf(
   kept: KeptConnection,
-  { bindsPerson, byAnAdmin, whilePending, by }: ConnectionReplacement & CommandMetadata,
+  { bindsPerson, takesOver, whilePending, by }: ConnectionReplacement & CommandMetadata,
 ): Rejection<RegistryRefusal> | undefined {
-  const binding = byAnAdmin ? undefined : bindingRefusalOf(kept, bindsPerson, by);
+  const binding = takesOver ? undefined : bindingRefusalOf(kept, bindsPerson, by);
   return binding ?? standingRefusalOf(kept, whilePending);
 }
 

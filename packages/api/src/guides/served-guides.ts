@@ -2,6 +2,7 @@ import { inDefinitionTypeOrder, type CapabilityGuide } from '@on.auto/definition
 import { capitalized, type Noun } from '@on.auto/phrasing';
 import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
+import { forTheAgent } from '../guide-pages/agent-rendition.ts';
 import { documentation } from './guide-files.ts';
 import {
   eventsGuideName,
@@ -14,7 +15,6 @@ import {
 import { leadingGuidesOf } from './leading-guides.ts';
 import { withLinksResolved } from './page-links.ts';
 import { recipesFor } from './recipes.ts';
-import { withoutSiteMarkup } from './site-markup.ts';
 import { startGuideOf } from './start-guide.ts';
 
 export interface ServedType {
@@ -93,7 +93,7 @@ function pageText(shippedFiles: ShippedFiles, page: string): Promise<string> {
 }
 
 async function pageGuideOf(shippedFiles: ShippedFiles, page: string, about: Omit<Guide, 'text'>): Promise<Guide> {
-  return { ...about, text: withLinksResolved(withoutSiteMarkup(await pageText(shippedFiles, page)), page) };
+  return { ...about, text: withLinksResolved(forTheAgent(page, await pageText(shippedFiles, page)), page) };
 }
 
 async function typeGuideOf(

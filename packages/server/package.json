@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     "./openapi-document": "./src/testing/openapi/served-document-text.ts",
-    "./served-to-an-agent": "./src/testing/agent-texts/served-to-an-agent.ts"
+    "./served-to-an-agent": "./src/testing/agent-texts/served-to-an-agent.ts",
+    "./setting-names": "./src/testing/agent-texts/setting-names.ts"
   },
   "scripts": {
     "dev": "node dev.ts",

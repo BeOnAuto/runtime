@@ -64,6 +64,7 @@ const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'list_role_assignments',
   'assign_role',
   'unassign_role',
+  'get_caller',
   'get_content',
 ]);
 
@@ -103,7 +104,7 @@ describe('the operations of the document and the tools of the endpoints', () => 
     const named = servedAsTools().flatMap((described) => toolsOf(described));
 
     expect(named).toHaveLength(tools.org.length + tools.playbook.length);
-    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(33);
+    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(34);
     expect([...tools.org, ...tools.playbook].filter(({ name }) => servedOverHttpAlone.has(name))).toEqual([]);
   });
 });
