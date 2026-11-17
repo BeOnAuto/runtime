@@ -33,7 +33,7 @@
         "!$TURBO_ROOT$/docs/.vitepress/dist/**"
       ]
     },
-    "test:a-c": {
+    "test:a-b": {
       "dependsOn": ["^transit"],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -44,21 +44,11 @@
         "$TURBO_ROOT$/docs/**",
         "!$TURBO_ROOT$/docs/.vitepress/cache/**",
         "!$TURBO_ROOT$/docs/.vitepress/dist/**",
-        "!src/[d-l]*/**/*.test.ts",
-        "!src/[d-l]*.test.ts",
-        "!src/[m-r]*/**/*.test.ts",
-        "!src/[m-r]*.test.ts",
-        "!src/[s-z]*/**/*.test.ts",
-        "!src/[s-z]*.test.ts",
-        "!npm/[d-l]*.test.ts",
-        "!npm/[d-l]*/**/*.test.ts",
-        "![d-l]*.test.ts",
-        "!npm/[m-r]*.test.ts",
-        "!npm/[m-r]*/**/*.test.ts",
-        "![m-r]*.test.ts",
-        "!npm/[s-z]*.test.ts",
-        "!npm/[s-z]*/**/*.test.ts",
-        "![s-z]*.test.ts",
+        "!src/[!a-b]*/**/*.test.ts",
+        "!src/[!a-b]*.test.ts",
+        "!npm/[!a-b]*.test.ts",
+        "!npm/[!a-b]*/**/*.test.ts",
+        "![!a-b]*.test.ts",
         "$TURBO_ROOT$/.turbo/services/postgresql.json",
         "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
@@ -69,9 +59,9 @@
         "CI_SERVER_WORKERS",
         "UV_THREADPOOL_SIZE"
       ],
-      "outputs": [".vitest/groups/a-c/report.json"]
+      "outputs": [".vitest/groups/a-b/report.json"]
     },
-    "test:d-l": {
+    "test:c": {
       "dependsOn": ["^transit"],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -82,21 +72,11 @@
         "$TURBO_ROOT$/docs/**",
         "!$TURBO_ROOT$/docs/.vitepress/cache/**",
         "!$TURBO_ROOT$/docs/.vitepress/dist/**",
-        "!src/[a-c]*/**/*.test.ts",
-        "!src/[a-c]*.test.ts",
-        "!src/[m-r]*/**/*.test.ts",
-        "!src/[m-r]*.test.ts",
-        "!src/[s-z]*/**/*.test.ts",
-        "!src/[s-z]*.test.ts",
-        "!npm/[a-c]*.test.ts",
-        "!npm/[a-c]*/**/*.test.ts",
-        "![a-c]*.test.ts",
-        "!npm/[m-r]*.test.ts",
-        "!npm/[m-r]*/**/*.test.ts",
-        "![m-r]*.test.ts",
-        "!npm/[s-z]*.test.ts",
-        "!npm/[s-z]*/**/*.test.ts",
-        "![s-z]*.test.ts",
+        "!src/[!c]*/**/*.test.ts",
+        "!src/[!c]*.test.ts",
+        "!npm/[!c]*.test.ts",
+        "!npm/[!c]*/**/*.test.ts",
+        "![!c]*.test.ts",
         "$TURBO_ROOT$/.turbo/services/postgresql.json",
         "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
@@ -107,9 +87,9 @@
         "CI_SERVER_WORKERS",
         "UV_THREADPOOL_SIZE"
       ],
-      "outputs": [".vitest/groups/d-l/report.json"]
+      "outputs": [".vitest/groups/c/report.json"]
     },
-    "test:m-r": {
+    "test:d-h": {
       "dependsOn": ["^transit"],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -120,21 +100,11 @@
         "$TURBO_ROOT$/docs/**",
         "!$TURBO_ROOT$/docs/.vitepress/cache/**",
         "!$TURBO_ROOT$/docs/.vitepress/dist/**",
-        "!src/[a-c]*/**/*.test.ts",
-        "!src/[a-c]*.test.ts",
-        "!src/[d-l]*/**/*.test.ts",
-        "!src/[d-l]*.test.ts",
-        "!src/[s-z]*/**/*.test.ts",
-        "!src/[s-z]*.test.ts",
-        "!npm/[a-c]*.test.ts",
-        "!npm/[a-c]*/**/*.test.ts",
-        "![a-c]*.test.ts",
-        "!npm/[d-l]*.test.ts",
-        "!npm/[d-l]*/**/*.test.ts",
-        "![d-l]*.test.ts",
-        "!npm/[s-z]*.test.ts",
-        "!npm/[s-z]*/**/*.test.ts",
-        "![s-z]*.test.ts",
+        "!src/[!d-h]*/**/*.test.ts",
+        "!src/[!d-h]*.test.ts",
+        "!npm/[!d-h]*.test.ts",
+        "!npm/[!d-h]*/**/*.test.ts",
+        "![!d-h]*.test.ts",
         "$TURBO_ROOT$/.turbo/services/postgresql.json",
         "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
@@ -145,9 +115,9 @@
         "CI_SERVER_WORKERS",
         "UV_THREADPOOL_SIZE"
       ],
-      "outputs": [".vitest/groups/m-r/report.json"]
+      "outputs": [".vitest/groups/d-h/report.json"]
     },
-    "test:s-z": {
+    "test:i-l": {
       "dependsOn": ["^transit"],
       "inputs": [
         "$TURBO_DEFAULT$",
@@ -158,21 +128,11 @@
         "$TURBO_ROOT$/docs/**",
         "!$TURBO_ROOT$/docs/.vitepress/cache/**",
         "!$TURBO_ROOT$/docs/.vitepress/dist/**",
-        "!src/[a-c]*/**/*.test.ts",
-        "!src/[a-c]*.test.ts",
-        "!src/[d-l]*/**/*.test.ts",
-        "!src/[d-l]*.test.ts",
-        "!src/[m-r]*/**/*.test.ts",
-        "!src/[m-r]*.test.ts",
-        "!npm/[a-c]*.test.ts",
-        "!npm/[a-c]*/**/*.test.ts",
-        "![a-c]*.test.ts",
-        "!npm/[d-l]*.test.ts",
-        "!npm/[d-l]*/**/*.test.ts",
-        "![d-l]*.test.ts",
-        "!npm/[m-r]*.test.ts",
-        "!npm/[m-r]*/**/*.test.ts",
-        "![m-r]*.test.ts",
+        "!src/[!i-l]*/**/*.test.ts",
+        "!src/[!i-l]*.test.ts",
+        "!npm/[!i-l]*.test.ts",
+        "!npm/[!i-l]*/**/*.test.ts",
+        "![!i-l]*.test.ts",
         "$TURBO_ROOT$/.turbo/services/postgresql.json",
         "$TURBO_ROOT$/.turbo/services/object-store.json"
       ],
@@ -183,10 +143,94 @@
         "CI_SERVER_WORKERS",
         "UV_THREADPOOL_SIZE"
       ],
-      "outputs": [".vitest/groups/s-z/report.json"]
+      "outputs": [".vitest/groups/i-l/report.json"]
+    },
+    "test:m-q": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.turbo/platform.json",
+        "$TURBO_ROOT$/.env.example",
+        "$TURBO_ROOT$/auto-runtime.example.yaml",
+        "$TURBO_ROOT$/auto-runtime.schema.json",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**",
+        "!src/[!m-q]*/**/*.test.ts",
+        "!src/[!m-q]*.test.ts",
+        "!npm/[!m-q]*.test.ts",
+        "!npm/[!m-q]*/**/*.test.ts",
+        "![!m-q]*.test.ts",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
+      ],
+      "env": ["CI"],
+      "passThroughEnv": [
+        "LEDGER_TEST_POSTGRESQL_URL",
+        "CONTENT_TEST_OBJECT_STORE_URL",
+        "CI_SERVER_WORKERS",
+        "UV_THREADPOOL_SIZE"
+      ],
+      "outputs": [".vitest/groups/m-q/report.json"]
+    },
+    "test:r-t": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.turbo/platform.json",
+        "$TURBO_ROOT$/.env.example",
+        "$TURBO_ROOT$/auto-runtime.example.yaml",
+        "$TURBO_ROOT$/auto-runtime.schema.json",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**",
+        "!src/[!r-t]*/**/*.test.ts",
+        "!src/[!r-t]*.test.ts",
+        "!npm/[!r-t]*.test.ts",
+        "!npm/[!r-t]*/**/*.test.ts",
+        "![!r-t]*.test.ts",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
+      ],
+      "env": ["CI"],
+      "passThroughEnv": [
+        "LEDGER_TEST_POSTGRESQL_URL",
+        "CONTENT_TEST_OBJECT_STORE_URL",
+        "CI_SERVER_WORKERS",
+        "UV_THREADPOOL_SIZE"
+      ],
+      "outputs": [".vitest/groups/r-t/report.json"]
+    },
+    "test:u-z": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.turbo/platform.json",
+        "$TURBO_ROOT$/.env.example",
+        "$TURBO_ROOT$/auto-runtime.example.yaml",
+        "$TURBO_ROOT$/auto-runtime.schema.json",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**",
+        "!src/[!u-z]*/**/*.test.ts",
+        "!src/[!u-z]*.test.ts",
+        "!npm/[!u-z]*.test.ts",
+        "!npm/[!u-z]*/**/*.test.ts",
+        "![!u-z]*.test.ts",
+        "$TURBO_ROOT$/.turbo/services/postgresql.json",
+        "$TURBO_ROOT$/.turbo/services/object-store.json"
+      ],
+      "env": ["CI"],
+      "passThroughEnv": [
+        "LEDGER_TEST_POSTGRESQL_URL",
+        "CONTENT_TEST_OBJECT_STORE_URL",
+        "CI_SERVER_WORKERS",
+        "UV_THREADPOOL_SIZE"
+      ],
+      "outputs": [".vitest/groups/u-z/report.json"]
     },
     "test:coverage": {
-      "dependsOn": ["test:a-c", "test:d-l", "test:m-r", "test:s-z"],
+      "dependsOn": ["test:a-b", "test:c", "test:d-h", "test:i-l", "test:m-q", "test:r-t", "test:u-z"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/.turbo/platform.json",

@@ -23,10 +23,13 @@
     "test": "VITEST_MAX_WORKERS=\"${CI_SERVER_WORKERS:-$VITEST_MAX_WORKERS}\" vitest run --coverage",
     "test:shard": "vitest run --shard=$VITEST_SHARD --coverage --coverage.reporter=none --coverage.thresholds.100=false --reporter=default --reporter=blob",
     "test:merge": "vitest run --merge-reports --coverage",
-    "test:a-c": "node test-groups.ts run a-c",
-    "test:d-l": "node test-groups.ts run d-l",
-    "test:m-r": "node test-groups.ts run m-r",
-    "test:s-z": "node test-groups.ts run s-z",
+    "test:a-b": "node test-groups.ts run a-b",
+    "test:c": "node test-groups.ts run c",
+    "test:d-h": "node test-groups.ts run d-h",
+    "test:i-l": "node test-groups.ts run i-l",
+    "test:m-q": "node test-groups.ts run m-q",
+    "test:r-t": "node test-groups.ts run r-t",
+    "test:u-z": "node test-groups.ts run u-z",
     "test:coverage": "node test-groups.ts merge"
   },
   "dependencies": {

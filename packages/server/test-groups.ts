@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-const groups = ['a-c', 'd-l', 'm-r', 's-z'];
+const groups = ['a-b', 'c', 'd-h', 'i-l', 'm-q', 'r-t', 'u-z'];
 const [operation, group] = process.argv.slice(2);
 const root = resolve(import.meta.dirname, '../..');
 const directory = join(import.meta.dirname, '.vitest');

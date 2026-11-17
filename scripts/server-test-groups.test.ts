@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { Schema } from 'effect';
 
 const server = resolve(import.meta.dirname, '../packages/server');
-const groups = ['a-c', 'd-l', 'm-r', 's-z'];
+const groups = ['a-b', 'c', 'd-h', 'i-l', 'm-q', 'r-t', 'u-z'];
 const patternsOf = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(Schema.String)));
 const filesOf = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(Schema.Struct({ file: Schema.String }))));
 const includes = groups.map((group) =>
