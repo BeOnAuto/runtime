@@ -54,3 +54,14 @@ Run one package's gate with `pnpm turbo run lint typecheck test --filter @on.aut
 - Commits are conventional with a scope named after a package or capability folder (`feat(server): ...`, `docs(reasoning): ...`); `global`, `deps`, `ci` and `release` are the other scopes.
 - `pnpm check` must pass before you finish. Fixing a problem is a change, so rerun it.
 - When something fails, assume your change broke it. What is on `main` passed the same gate.
+
+## Tests
+
+Every test file pays a fixed cost before its first test runs: its imports, its environment and often a server start. These rules keep that cost down.
+
+- Add a case to the topic's existing test file. A new test file needs a reason, such as a new topic; a new file for each pull request is the pattern to stop.
+- Never wait on a real clock or a real timeout. Use Effect's `TestClock` or Vitest's fake timers, or make the limit injectable and pass a small one.
+- Do not test text. Do not assert the wording a person or an agent reads, exact copy, or the character or byte count of prose. Assert what the code does: codes, keys, roles and length caps. Wording is judged by reading it, as the rule on text an agent reads sets out, never by a test.
+- Test a rule once, where it lives, plus one wiring test for each outer layer it passes through, such as the server over HTTP or MCP. Do not prove a rule again through a server when unit tests already prove it.
+- Run logic on one store, SQLite or memory. Only a store's own contract (its SQL, migrations, locks and concurrency) runs on each database, PostgreSQL included. A server test over HTTP runs on SQLite only.
+- Share a server or a fixture across a file with `beforeAll` where the tests do not interfere with each other.
