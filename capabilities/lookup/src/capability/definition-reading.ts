@@ -5,14 +5,17 @@ import { callOutputInWords } from '@on.auto/definitions/tool-blocks';
 import { InvalidInput } from '@on.auto/operations';
 import { Effect, Result, type Schema } from 'effect';
 
-import { parseLookupDocument } from '../document/document-parsing.ts';
+import { parseLookupDocument, type DocumentBounds } from '../document/document-parsing.ts';
 import type { LookupFunctionDefinitionDocument } from '../document/lookup-document.ts';
 import { runsAnswerSchema } from '../runs/runs-answer.ts';
 import { runsOutputInWords } from '../runs/runs-words.ts';
 
-export function parse(source: string): Effect.Effect<LookupFunctionDefinitionDocument, InvalidInput> {
+export function parse(
+  source: string,
+  { mostRequestBytesTo }: Pick<DocumentBounds, 'mostRequestBytesTo'>,
+): Effect.Effect<LookupFunctionDefinitionDocument, InvalidInput> {
   return Effect.flatMap(renderClock, (clock) =>
-    Result.match(parseLookupDocument(source, clock), {
+    Result.match(parseLookupDocument(source, { clock, mostRequestBytesTo }), {
       onSuccess: (document) => Effect.succeed(document),
       onFailure: (issues) =>
         Effect.fail(

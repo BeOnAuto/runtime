@@ -164,7 +164,8 @@ export { answeredInWords, failedInWords, toolInWords } from './names/tool-words.
 export { HandCallEventSchema } from './hand-calls/hand-call-events.ts';
 export { handCallPresenter } from './hand-calls/hand-call-presenter.ts';
 export { conversationCallPresenter } from './own-calls/conversation-call-presenter.ts';
-export { defaultTiming, runBoundMs, toolBounds, type Timing } from './bounds/call-bounds.ts';
+export { defaultTiming, runBoundMs, sendableInWords, toolBounds, type Timing } from './bounds/call-bounds.ts';
+export { mostRequestBytesAmong } from './access/run-ways.ts';
 export { secretsOf, type Secrets } from './bounds/secrets.ts';
 export {
   ServerEntrySchema,

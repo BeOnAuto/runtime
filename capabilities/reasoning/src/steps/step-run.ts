@@ -10,7 +10,10 @@ import type { StepBounds } from './step-decision.ts';
 import type { Kept, Offered, RequestBase } from './step-facts.ts';
 import { evolve, type StepContent, type StepState } from './step-state.ts';
 
-export type StepTool = Pick<OfferedTool, 'name' | 'description' | 'inputSchema' | 'reference' | 'readOnly' | 'start'>;
+export type StepTool = Pick<
+  OfferedTool,
+  'name' | 'description' | 'inputSchema' | 'reference' | 'readOnly' | 'mostBytes' | 'start'
+>;
 
 export interface StepTools {
   readonly offered: readonly StepTool[];

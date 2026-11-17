@@ -20,7 +20,7 @@ export function noLongerOffered(tool: string): string {
   return `The run no longer offers the tool ${tool}, since its server changed while the run was stopped, so this call was not sent.`;
 }
 
-type StartingTool = Pick<OfferedTool, 'reference' | 'readOnly' | 'start'>;
+type StartingTool = Pick<OfferedTool, 'reference' | 'readOnly' | 'mostBytes' | 'start'>;
 
 export interface Offer {
   readonly final: boolean;

@@ -3,7 +3,7 @@ import { Buffer } from 'node:buffer';
 import type { Payload } from '@on.auto/operations/payloads';
 import { Effect, type Schema } from 'effect';
 
-export const mostInputBytes = 262_144;
+export const mostInputBytes = 1_048_576;
 
 export const mostResultBytes = 1_048_576;
 

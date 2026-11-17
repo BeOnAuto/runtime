@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 
 import { assetPresenter } from './asset-presenter.ts';
 import { assets, assetTotals, totalsRowOf } from './asset-projections.ts';
-import { sizeInWords } from './asset-words.ts';
 
 const sha256 = 'c1f5e9a7d3b2a8f4e6c0d9b7a5f3e1c2d4b6a8f0e2c4d6b8a0f2e4c6d8b0a2f4';
 
@@ -222,11 +221,5 @@ describe('the facts of an asset as the feed shows them', () => {
       'The playbook kept a file of 3.2 MiB that a run returned at /page of its output, until 2027-01-30.',
       'The playbook kept a file of 1 MiB that a run returned as its output, until 2027-01-30.',
     ]);
-  });
-
-  it('words a size in bytes, KiB or MiB', () => {
-    expect([sizeInWords(0), sizeInWords(1), sizeInWords(1023), sizeInWords(1536), sizeInWords(20 * 1_048_576)]).toEqual(
-      ['0 bytes', '1 byte', '1,023 bytes', '1.5 KiB', '20 MiB'],
-    );
   });
 });

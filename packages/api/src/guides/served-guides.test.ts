@@ -16,12 +16,17 @@ import {
   servedWithEverything,
   servedWithInteraction,
   servedWithLookupAndPages,
+  valuesOfThePages,
 } from '../testing/guide-shelves.ts';
 import { withLinksResolved } from './page-links.ts';
 import { guideShelfFrom, type ServedType } from './served-guides.ts';
 
 function page(path: string): string {
   return readFileSync(new URL(`../../../../docs/${path}`, import.meta.url), 'utf8');
+}
+
+function asAnAgentReadsIt(path: string): string {
+  return withLinksResolved(forTheAgent(path, page(path), valuesOfThePages), path);
 }
 
 function outsideCode(text: string): string {
@@ -62,16 +67,12 @@ describe('the guides of a server that runs every type of definition', () => {
     ]);
   });
 
-  it('give each type the public page of its format as an agent reads it, and the templates, triggers and events guides the pages of templates, triggers and events, without the markup of the documentation site or what it marks for another reader, their links resolved, and the reasoning page what this server offers', () => {
+  it('give each type the public page of its format as an agent reads it, and the templates, triggers and events guides the pages of templates, triggers and events, without the markup of the documentation site or what it marks for another reader, each value as the server has it, their links resolved, and the reasoning page what this server offers', () => {
     const [reasoningGuide, ...otherGuides] = guides.slice(2);
     const [reasoningPage = '', ...otherPages] = Object.values(pages);
 
-    expect(reasoningGuide?.text).toBe(
-      `${withLinksResolved(forTheAgent(reasoningPage, page(reasoningPage), {}), reasoningPage).trimEnd()}\n\n${onThisServer}\n`,
-    );
-    expect(otherGuides.map(({ text }) => text)).toEqual(
-      otherPages.map((path) => withLinksResolved(forTheAgent(path, page(path), {}), path)),
-    );
+    expect(reasoningGuide?.text).toBe(`${asAnAgentReadsIt(reasoningPage).trimEnd()}\n\n${onThisServer}\n`);
+    expect(otherGuides.map(({ text }) => text)).toEqual(otherPages.map((path) => asAnAgentReadsIt(path)));
   });
 });
 

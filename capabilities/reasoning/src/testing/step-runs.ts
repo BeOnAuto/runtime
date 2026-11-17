@@ -42,6 +42,8 @@ function keptAnswerOf(kept: KeptContent | undefined): () => Effect.Effect<ToolCa
         }));
 }
 
+export const stepToolBytes = 1_048_576;
+
 export function toolOf(server: string, tool: string, readOnly = true): StepTool {
   return {
     name: `${server}__${tool}`,
@@ -49,6 +51,7 @@ export function toolOf(server: string, tool: string, readOnly = true): StepTool 
     inputSchema: { type: 'object', properties: { query: { type: 'string' } } },
     reference: { server, tool },
     readOnly,
+    mostBytes: stepToolBytes,
     start: ({ callId, input }) =>
       Promise.resolve({
         call_id: callId,

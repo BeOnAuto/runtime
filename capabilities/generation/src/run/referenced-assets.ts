@@ -2,11 +2,10 @@ import { Buffer } from 'node:buffer';
 
 import type { RecordedContent } from '@on.auto/content';
 import { InvalidInput, type ProjectionReader, type PlaybookAddress } from '@on.auto/operations';
-import { alternatives } from '@on.auto/phrasing';
+import { alternatives, sizeInWords } from '@on.auto/phrasing';
 import { Effect, JsonPointer, Predicate, Result, type Schema } from 'effect';
 
 import { assetRowOf, assetsName, hasExpired, rowKeyed, type AssetRow } from '../assets/asset-projections.ts';
-import { sizeInWords } from '../assets/asset-words.ts';
 import { referenceLimitsOf, type CatalogEntry } from '../catalog/catalog-entry.ts';
 import type { ReferenceContent } from '../gateway/generation-gateway.ts';
 

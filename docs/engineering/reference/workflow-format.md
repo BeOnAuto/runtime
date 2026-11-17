@@ -100,7 +100,7 @@ What a server spends on workflows is bounded by limits a tenant cannot raise:
 - **Loaded runs**: the engine keeps at most 1,024 runs and 64 MiB of the data they hold between their inputs, letting go of the run used longest ago; a run it let go of is loaded again from its latest snapshot, at most about 5.3 MiB, and the events after it.
 - **Compiled expressions** are kept in one cache for the process, holding at most 262,144 characters of expression source and letting go of the expression used longest ago. A compiled expression measured 22 to 34 bytes of heap for each character of its source, so the cache holds at most about 9 MiB; compiling one again took 10 to 150 µs.
 
-Measured once with the arm64 image and no memory limit, the server took about 180 MiB idle. Requests to the API add what they carry (each body at most 1 MiB), and calls add what their capabilities use, at most `WORKFLOW_NESTED_RUNS` (32) of them at once. To cap the resident size, give the container a memory limit, from which Node sizes its heap to about half of it, or set `--max-old-space-size` in `NODE_OPTIONS`.
+Measured once with the arm64 image and no memory limit, the server took about 180 MiB idle. Requests to the API add what they carry (each body at most 1 MiB and 64 KiB), and calls add what their capabilities use, at most `WORKFLOW_NESTED_RUNS` (32) of them at once. To cap the resident size, give the container a memory limit, from which Node sizes its heap to about half of it, or set `--max-old-space-size` in `NODE_OPTIONS`.
 
 ### Settings
 

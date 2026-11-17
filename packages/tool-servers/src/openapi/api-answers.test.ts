@@ -10,6 +10,7 @@ const answering = {
   requestIdHeader: 'x-request-id',
   failureCodes: null,
   now: () => Date.parse('2026-10-13T09:00:00.000Z'),
+  input: { text: 'x'.repeat(200_000) },
 };
 
 function streamOf(bytes: number): ReadableStream<Uint8Array> {
@@ -90,7 +91,10 @@ describe('an answer of an HTTP API that is not shown as it is', () => {
       { content: [{ type: 'text', text: 'The tool server answered HTTP 409' }], isError: true },
       {
         content: [
-          { type: 'text', text: 'The tool server answered HTTP 413: the request was larger than the server takes' },
+          {
+            type: 'text',
+            text: 'The tool server answered HTTP 413: the request, with arguments of 200011 bytes as JSON, was larger than the server takes; send less in one call, in parts where the tool takes them',
+          },
         ],
         isError: true,
       },
@@ -188,7 +192,7 @@ describe('an answer of an HTTP API that fails its call', () => {
   it('of JSON larger than a call over HTTP may take is a failure noted as too large', async () => {
     const settled = await settledOf(
       new Response(streamOf(toolBounds.httpAnswerBytes + 1), { headers: { 'content-type': 'application/json' } }),
-      { requestIdHeader: null, failureCodes: null, now: Date.now },
+      { requestIdHeader: null, failureCodes: null, now: Date.now, input: {} },
     );
 
     expect(settled).toMatchObject({ observed: { id: null, response: { tooLarge: true, serverRequestId: null } } });

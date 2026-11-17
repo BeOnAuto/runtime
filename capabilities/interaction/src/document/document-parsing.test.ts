@@ -1,14 +1,13 @@
 import { issueText } from '@on.auto/definitions/document';
-import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { approvalDocument, notificationDocument } from '../testing/index.ts';
-import { requestDocumentOf } from '../testing/route-documents.ts';
+import { requestDocumentOf, standingBounds } from '../testing/route-documents.ts';
 import { parseInteractionDocument } from './document-parsing.ts';
 
 function problemsOf(source: string): readonly string[] {
-  const parsed = parseInteractionDocument(source, standingRenderClock);
+  const parsed = parseInteractionDocument(source, standingBounds);
   return Result.isFailure(parsed) ? parsed.failure.map((issue) => issueText(issue)) : [];
 }
 
@@ -48,7 +47,7 @@ describe('an interaction function definition', () => {
   });
 
   it('is a notification when it gives no answer schema', () => {
-    expect(Result.getOrThrow(parseInteractionDocument(notificationDocument(), standingRenderClock)).output).toEqual({});
+    expect(Result.getOrThrow(parseInteractionDocument(notificationDocument(), standingBounds)).output).toEqual({});
   });
 
   it.each(['channel', 'model', 'tools', 'language', 'config', 'sign_in'])(

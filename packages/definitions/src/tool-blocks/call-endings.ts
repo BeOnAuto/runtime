@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import { issuesDetail, type CompiledSchema } from '@on.auto/json-schema';
 import { Conflict, Unavailable } from '@on.auto/operations';
-import { capitalized } from '@on.auto/phrasing';
+import { capitalized, sizeInWords } from '@on.auto/phrasing';
 import {
   answerDocument,
   onlyReads,
@@ -60,7 +60,7 @@ function checkedValue(document: CalledDocument, value: Schema.Json, { named, at,
   const bytes = Buffer.byteLength(JSON.stringify({ output: value, record: recordOf(document) }), 'utf8');
   if (bytes > mostResultBytes) {
     return unreadable(
-      `${what} takes ${bytes} bytes as JSON with the record of the run, more than the ${mostResultBytes} a run may record`,
+      `${what} takes ${bytes} bytes as JSON with the run's record, more than the ${sizeInWords(mostResultBytes)} a run may record; point read at a smaller part, or ask the tool for less`,
     );
   }
   if (measureOf(value) === undefined) {

@@ -9,6 +9,7 @@ const answering = {
   requestIdHeader: 'x-request-id',
   failureCodes: null,
   now: () => Date.parse('2026-11-04T09:00:00.000Z'),
+  input: {},
 };
 
 function resultOf(settled: CallSettled): unknown {

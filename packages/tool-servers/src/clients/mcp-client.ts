@@ -3,7 +3,7 @@ import { Predicate } from 'effect';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
 import { decodeListedTools, decodeToolResult, type ToolResult } from '../bounds/tool-results.ts';
-import { observations, type Observations } from './observed-requests.ts';
+import { observations, postedId, type Observations } from './observed-requests.ts';
 import type { ServedClient } from './server-client.ts';
 
 export type TraceMeta = () => Readonly<Record<string, string>>;
@@ -73,7 +73,7 @@ export function observingFetch<Args extends readonly [unknown, unknown?]>(
   return async (...args) => {
     const response = await fetch(...args);
     const [, init] = args;
-    return observed.noteAnswered(Predicate.hasProperty(init, 'body') ? init.body : undefined, response);
+    return observed.noteAnswered(postedId(Predicate.hasProperty(init, 'body') ? init.body : undefined), response);
   };
 }
 

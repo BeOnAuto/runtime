@@ -21,19 +21,33 @@ async function withPlain() {
   return { ...definitions, ...operations, running };
 }
 
-const inputTooLarge = {
-  status: 'rejected',
-  reason: 'invalid_input',
-  detail: 'The input does not match the input schema',
-  issues: [{ detail: 'Expected an input of at most 262144 bytes as JSON in UTF-8', pointer: '/input' }],
-};
+function inputTooLarge(bytes: number) {
+  return {
+    status: 'rejected',
+    reason: 'invalid_input',
+    detail: 'What was given is too large',
+    issues: [
+      {
+        detail: `The input takes ${String(bytes)} bytes as JSON, more than the 1 MiB a run takes; give a smaller input, or split the work across several runs`,
+        pointer: '/input',
+      },
+    ],
+  };
+}
 
 describe('the input of a run', () => {
-  it('may take 262144 bytes as JSON in UTF-8, whatever its length in characters', async () => {
+  it('may take 1048576 bytes as JSON in UTF-8, as much as a run may answer, whatever its length in characters', async () => {
     const { running } = await withPlain();
 
-    expect(await running('a'.repeat(262_142))).toMatchObject({ status: 'succeeded' });
-    expect(await running('é'.repeat(131_071), '0199a3c4-7d2e-7c1a-9b3f-000000000002')).toMatchObject({
+    const envelope = JSON.stringify({ bulk: 1, pad: '' }).length;
+
+    expect(await running({ bulk: 1, pad: 'a'.repeat(1_048_576 - envelope) })).toMatchObject({ status: 'succeeded' });
+    expect(
+      await running(
+        { bulk: 1, pad: `${'é'.repeat((1_048_576 - envelope - 1) / 2)}a` },
+        '0199a3c4-7d2e-7c1a-9b3f-000000000002',
+      ),
+    ).toMatchObject({
       status: 'succeeded',
     });
   });
@@ -41,8 +55,8 @@ describe('the input of a run', () => {
   it('is rejected above that, before anything is recorded', async () => {
     const { running, ledger } = await withPlain();
 
-    expect(await running('a'.repeat(262_143))).toEqual(inputTooLarge);
-    expect(await running({ text: 'é'.repeat(131_070) })).toEqual(inputTooLarge);
+    expect(await running('a'.repeat(1_048_575))).toEqual(inputTooLarge(1_048_577));
+    expect(await running({ text: 'é'.repeat(524_286) })).toEqual(inputTooLarge(1_048_583));
     expect(ledger.streamNames()).toEqual(['playbook/acme/alpha/definitions/probe']);
   });
 });

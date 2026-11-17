@@ -38,6 +38,7 @@ export interface SystemOptions {
   readonly timing?: ServedParts['toolTiming'];
   readonly ledgerOver?: LedgerOver;
   readonly environment?: Readonly<Record<string, string>>;
+  readonly serverTakes?: number;
 }
 
 export interface SystemServer extends InteractionServer {
@@ -76,8 +77,10 @@ export async function askingASystem({
   timing,
   ledgerOver,
   environment = {},
+  serverTakes,
 }: SystemOptions = {}): Promise<SystemServer> {
-  const fake = await serveFakeMcp({ bearer: chatKey, data: true, hints });
+  const takes = serverTakes === undefined ? {} : { mostRequestBytes: serverTakes };
+  const fake = await serveFakeMcp({ bearer: chatKey, data: true, hints, ...takes });
   onTestFinished(fake.close);
   const chat = { url: fake.url, headers: { Authorization: 'Bearer ${CHAT_KEY}' }, org: 'acme', ...entry };
   const server = await interactionServerOn(

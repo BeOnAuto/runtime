@@ -38,6 +38,49 @@ const notLocal = { loopbackAllowed: false };
 
 const onByDefault = { offloading: true, sizeThresholdBytes: 16_384 };
 
+const everyDefaultRead = {
+  host: '0.0.0.0',
+  port: 5555,
+  allowedOrigins: [],
+  apiKeys: undefined,
+  identityIssuer: 'https://clerk.on.auto',
+  identityKeySet: { from: 'discovery' },
+  publicUrl: undefined,
+  accessMode: undefined,
+  signIn: undefined,
+  studio: { origin: 'https://studio.on.auto', served: false },
+  ledger: { store: 'sqlite', file: 'data/ledger.db' },
+  secrets: aKeyFileAt('data/secrets.key'),
+  keepers: { current: { kind: 'ledger', setting: 'SECRETS_KEEPER' }, previous: undefined },
+  content: { store: 'ledger' },
+  proxy: { enabled: false, environment: {} },
+  logFormat: 'json',
+  logLevel: 'info',
+  modelProviders: modelProvidersByDefault,
+  reasoning: { mostInputTokens: 2_000_000 },
+  workflows: { mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, mostOpenCalls: 1000, sweepEveryMs: 1000 },
+  computation: { workers: 4 },
+  projection: { pageRebuildsAtOnce: 4, playbooksAtOnce: 4 },
+  prediction: defaultPrediction,
+  generation: generationBounds,
+  documents: { processes: 2, processMemoryMebibytes: 1280 },
+  toolCalls: { mostRequestBytes: 16 * 1_048_576 },
+  connections: { peopleMayAdd: true, allowedHosts: null, ...notLocal, credentialKinds: null, variables: [] },
+  registeredClients: [],
+  autoClientsWritten: undefined,
+  autoClients: { enabled: false, serviceUrl: 'https://consent.on.auto' },
+  connectionVariables: new Map(),
+  providers: shippedList,
+  providerValues: new Map(),
+  telemetry: undefined,
+  usagePing: { distribution: 'source' },
+  license: { key: undefined, allocation: undefined, accounts: 'https://billing.on.auto' },
+  distribution: 'source',
+  configFile: undefined,
+  extensions: [],
+  extensionSettings: new Map(),
+};
+
 describe('readSettings', () => {
   it('listens on every interface at port 5555, allows no origin, has no API keys and keeps the ledger in data/ by default', () => {
     const { models, toolServers, interaction, receiving, payloads, ...server } = readSettingsOf({});
@@ -45,47 +88,7 @@ describe('readSettings', () => {
     expect(models.openai).toEqual({ configured: false, missing: ['OPENAI_API_KEY'] });
     expect(toolServers).toEqual({ servers: [], referencedVariables: [] });
     expect([interaction, receiving, payloads]).toEqual([{ mostOpenRequests: 10_000 }, { overHttp: true }, onByDefault]);
-    expect(server).toEqual({
-      host: '0.0.0.0',
-      port: 5555,
-      allowedOrigins: [],
-      apiKeys: undefined,
-      identityIssuer: 'https://clerk.on.auto',
-      identityKeySet: { from: 'discovery' },
-      publicUrl: undefined,
-      accessMode: undefined,
-      signIn: undefined,
-      studio: { origin: 'https://studio.on.auto', served: false },
-      ledger: { store: 'sqlite', file: 'data/ledger.db' },
-      secrets: aKeyFileAt('data/secrets.key'),
-      keepers: { current: { kind: 'ledger', setting: 'SECRETS_KEEPER' }, previous: undefined },
-      content: { store: 'ledger' },
-      proxy: { enabled: false, environment: {} },
-      logFormat: 'json',
-      logLevel: 'info',
-      modelProviders: modelProvidersByDefault,
-      reasoning: { mostInputTokens: 2_000_000 },
-      workflows: { mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, mostOpenCalls: 1000, sweepEveryMs: 1000 },
-      computation: { workers: 4 },
-      projection: { pageRebuildsAtOnce: 4, playbooksAtOnce: 4 },
-      prediction: defaultPrediction,
-      generation: generationBounds,
-      documents: { processes: 2, processMemoryMebibytes: 1280 },
-      connections: { peopleMayAdd: true, allowedHosts: null, ...notLocal, credentialKinds: null, variables: [] },
-      registeredClients: [],
-      autoClientsWritten: undefined,
-      autoClients: { enabled: false, serviceUrl: 'https://consent.on.auto' },
-      connectionVariables: new Map(),
-      providers: shippedList,
-      providerValues: new Map(),
-      telemetry: undefined,
-      usagePing: { distribution: 'source' },
-      license: { key: undefined, allocation: undefined, accounts: 'https://billing.on.auto' },
-      distribution: 'source',
-      configFile: undefined,
-      extensions: [],
-      extensionSettings: new Map(),
-    });
+    expect(server).toEqual(everyDefaultRead);
   });
 });
 
@@ -106,6 +109,7 @@ const everySetting = {
   OPENAI_API_KEY: 'sk-test',
   INTERACTION_OPEN_REQUESTS: '250',
   REASONING_MAX_INPUT_TOKENS: '500000',
+  TOOL_CALL_MAX_REQUEST_MIB: '32',
   AUTO_RUNTIME_EXTENSIONS: JSON.stringify([{ package: '@acme/extension' }]),
   CONNECTIONS: JSON.stringify({
     people_may_add: false,
@@ -159,6 +163,7 @@ const everySettingRead = {
   prediction: defaultPrediction,
   generation: generationBounds,
   documents: { processes: 2, processMemoryMebibytes: 1280 },
+  toolCalls: { mostRequestBytes: 32 * 1_048_576 },
   connections: {
     peopleMayAdd: false,
     allowedHosts: ['*.example.com'],

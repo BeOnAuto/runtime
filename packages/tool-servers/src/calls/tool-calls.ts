@@ -5,7 +5,7 @@ import { metaValueOf, type ToolAnswer, type ToolResult } from '../bounds/tool-re
 import { ignored } from '../clients/ignored.ts';
 import type { Observed } from '../clients/observed-requests.ts';
 import { unobserved, type ToolCalling } from '../clients/server-client.ts';
-import { failureOf, type FailureKind } from '../clients/server-failures.ts';
+import { failureOf, failureOfACall, type FailureKind } from '../clients/server-failures.ts';
 import { DocumentTooLarge } from '../openapi/document-too-large.ts';
 import type { SentCallFailedBecause } from './call-facts.ts';
 import type { ServerSlot } from './server-slot.ts';
@@ -163,7 +163,7 @@ async function attempted(forwarding: Forwarding, attempt: Attempt): Promise<Forw
   if (halted !== undefined) {
     return halted;
   }
-  const { kind, message } = failureOf(settled.error);
+  const { kind, message } = failureOfACall(settled.error, forwarding.input);
   const next = await retried(forwarding, kind, settled.observed, attempt);
   return next === undefined ? settledFailure(kind, message, settled.observed) : attempted(forwarding, next);
 }

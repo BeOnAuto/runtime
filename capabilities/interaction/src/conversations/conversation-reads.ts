@@ -64,8 +64,10 @@ export function readReplies(
 ): Effect.Effect<ReadDone> {
   const { request, since } = read;
   const asked = { to: request.row.party, sent: request.sent, key: turn.place.row.conversation };
+  const route = routeOfRequest(request);
+  const mostBytes = turn.parts.tools.mostRequestBytesTo(route.server);
   return Effect.flatMap(
-    Effect.map(renderClock, (clock) => readArgumentsOf(routeOfRequest(request).replies, asked, since ?? '', clock)),
+    Effect.map(renderClock, (clock) => readArgumentsOf(route.replies, asked, since ?? '', { clock, mostBytes })),
     Result.match({
       onFailure: (failure) => unsentRead(turn, read, failure, carried),
       onSuccess: ({ input }) => sentRead(turn, read, input, carried),

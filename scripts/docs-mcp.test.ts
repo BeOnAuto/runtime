@@ -3,7 +3,15 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 
+import { agentTextsRecordIn, placesIn } from './agent-texts-record.ts';
+
 const docs = resolve(import.meta.dirname, '../docs');
+
+function servedGuideNamed(as: string): string {
+  return String(
+    placesIn(agentTextsRecordIn(join(docs, 'assets/agent-texts.json'))).find((place) => place.as === as)?.text,
+  );
+}
 
 await test('docs distinguish inbound MCP from the tools a reasoning function calls', () => {
   const mcp = readFileSync(join(docs, 'reference/mcp.md'), 'utf8');
@@ -28,12 +36,16 @@ await test('docs distinguish inbound MCP from the tools a reasoning function cal
 await test('reasoning guides retain tool-use limits and side-effect-aware retries', () => {
   const publicGuide = readFileSync(join(docs, 'reference/reasoning-format.md'), 'utf8');
   const engineeringGuide = readFileSync(join(docs, 'engineering/reference/reasoning-format.md'), 'utf8');
+  const servedGuide = servedGuideNamed('guide reasoning-function');
   for (const guide of [publicGuide, engineeringGuide]) {
     assert.ok(guide.includes('tools_unfinished'));
     assert.ok(guide.includes('tools_called'));
     assert.ok(guide.includes('25'));
-    assert.ok(guide.includes('REASONING_MAX_INPUT_TOKENS'));
-    assert.ok(guide.includes('256 KiB'));
+  }
+  for (const setting of ['REASONING_MAX_INPUT_TOKENS', 'TOOL_CALL_MAX_REQUEST_MIB']) {
+    assert.ok(engineeringGuide.includes(setting));
+    assert.ok(servedGuide.includes('max_input_tokens'));
+    assert.equal(servedGuide.includes(setting), false);
   }
   assert.ok(publicGuide.includes('Inspect its history and any external effects'));
   assert.ok(publicGuide.includes('Retrying a successful run returns its recorded result'));

@@ -1,3 +1,5 @@
+import { mostInputBytes } from '@on.auto/definitions';
+import { sizeInWords } from '@on.auto/phrasing';
 import { type ErrorKind, field, isObject, type Json, jsonBytesOf, textField } from '@on.auto/workflow-engine';
 
 import { runDefinitionFunction } from './workflow-functions.ts';
@@ -13,8 +15,6 @@ export interface ArgumentsProblem {
   readonly title: string;
 }
 
-const mostDefinitionInputBytes = 262_144;
-
 export function definitionArgumentsOf(arguments_: Json): DefinitionArguments | ArgumentsProblem {
   if (!isObject(arguments_)) {
     return { kind: 'validation', title: `${runDefinitionFunction} takes with: { type, name, input }` };
@@ -26,10 +26,10 @@ export function definitionArgumentsOf(arguments_: Json): DefinitionArguments | A
   }
   const input = field(arguments_, 'input') ?? {};
   const bytes = jsonBytesOf(input);
-  return bytes > mostDefinitionInputBytes
+  return bytes > mostInputBytes
     ? {
         kind: 'validation',
-        title: `The input of ${runDefinitionFunction} takes ${bytes} bytes as JSON, more than the ${mostDefinitionInputBytes} a run takes`,
+        title: `The input of ${runDefinitionFunction} takes ${bytes} bytes as JSON, more than the ${sizeInWords(mostInputBytes)} a run takes; give a smaller input, or split the work across several runs`,
       }
     : { type, name, input };
 }

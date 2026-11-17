@@ -1,6 +1,6 @@
-import type { RenderClock } from '@on.auto/definitions/template';
 import { Schema } from 'effect';
 
+import type { CallRendering } from '../readings/call-rendering.ts';
 import type { OpenRequestRow } from '../requests/request-rows.ts';
 import { endingFrom } from './ending-rows.ts';
 import { endingWords, isPlacedByTheRequest, namingTheRequest } from './ending-words.ts';
@@ -17,7 +17,7 @@ export interface DueCalls {
 interface Place {
   readonly toldTo: Told;
   readonly sentAt: number;
-  readonly clock: RenderClock;
+  readonly rendering: CallRendering;
 }
 
 const decodeSent = Schema.decodeUnknownSync(
@@ -31,19 +31,22 @@ function made({ toldTo }: Place, cause: string, calls: readonly (TellingCall | u
 function takenCalls(telling: TellingRoute, place: Place, taken: unknown): DueCalls {
   const { fact, reply, words } = takenFrom(taken);
   const said = { ...place.toldTo, reply, message: takenMessageOf({ fact, reply, words }) };
-  return made(place, fact, [markCallOf(telling, said, place.clock), lineCallOf(telling, 'taken', said, place.clock)]);
+  return made(place, fact, [
+    markCallOf(telling, said, place.rendering),
+    lineCallOf(telling, 'taken', said, place.rendering),
+  ]);
 }
 
 function endingCalls(telling: TellingRoute, place: Place, ending: string): DueCalls {
   const ended = endingFrom(ending);
   const words = endingWords(ended);
   const message = isPlacedByTheRequest(telling) ? words : namingTheRequest(place.sentAt, words);
-  return made(place, ended.fact, [lineCallOf(telling, 'ended', { ...place.toldTo, message }, place.clock)]);
+  return made(place, ended.fact, [lineCallOf(telling, 'ended', { ...place.toldTo, message }, place.rendering)]);
 }
 
-export function dueCallsOf(row: OpenRequestRow, clock: RenderClock): DueCalls {
+export function dueCallsOf(row: OpenRequestRow, rendering: CallRendering): DueCalls {
   const { sent_conversation: conversation, sent_id: id, sent_at: sentAt } = decodeSent(row);
   const telling = tellingOfATakenRow(row.tell);
-  const place = { toldTo: { to: row.party, sent: { conversation, id } }, sentAt, clock };
+  const place = { toldTo: { to: row.party, sent: { conversation, id } }, sentAt, rendering };
   return row.ending === null ? takenCalls(telling, place, row.taken) : endingCalls(telling, place, row.ending);
 }

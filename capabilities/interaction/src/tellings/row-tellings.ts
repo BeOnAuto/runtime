@@ -22,10 +22,12 @@ function callsMade(parts: DeliveryParts, address: RequestAddress, row: OpenReque
   return Effect.gen(function* () {
     const correlationId = yield* runCorrelationIn(parts.ledger, address);
     const withItsWords = yield* rowTellingItsWords(parts, address, row);
-    const { cause, conversation, calls } = dueCallsOf(withItsWords, yield* renderClock);
+    const { server } = decodeDelivery(row.delivery);
+    const rendering = { clock: yield* renderClock, mostBytes: parts.tools.mostRequestBytesTo(server) };
+    const { cause, conversation, calls } = dueCallsOf(withItsWords, rendering);
     const tellingOf = (call: DueCalls['calls'][number]): Telling => ({
       playbook: playbookOf(address),
-      server: decodeDelivery(row.delivery).server,
+      server,
       runId: address.id,
       definition: { definitionType: 'interaction', definitionName: row.function, definitionVersion: row.version },
       lineage: { causationId: cause, correlationId },

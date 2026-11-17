@@ -139,3 +139,47 @@ describe.each(writers)('a page of more than 100 KiB written to a tool by $by', (
     expect(overMcp).not.toHaveProperty('arguments');
   });
 });
+
+const mebibyte = 1_048_576;
+
+const reference = 'docs/reference.md';
+
+function pageWithin(bytes: number, copies: number): string {
+  const sentEnvelope = JSON.stringify({ path: reference, content: '' }).length;
+  const inputEnvelope = JSON.stringify({ path: reference, page: '' }).length;
+  return 'x'.repeat(Math.min(Math.floor((bytes - sentEnvelope) / copies), mebibyte - inputEnvelope));
+}
+
+async function renderedAndWritten(bytes: number, copies: number) {
+  const filling = pageWithin(bytes, copies);
+  const server = await askingASystem({ serverTakes: 16 * mebibyte });
+  await server.define('write-reference', {
+    tool: 'echo',
+    read: '/path',
+    with: ["    path: '{{ input.path }}'", `    content: '${'{{ input.page }}'.repeat(copies)}'`],
+    input: openInput,
+    output: ['output:', '  schema: { type: string }'],
+  });
+  const ran = await server.runCall('write-reference', { path: reference, page: filling });
+  const sent = { path: reference, content: filling.repeat(copies) };
+  const started = (await server.history(systemRunId)).find(({ type }) => type === 'tool_call_started');
+  return { ran: ran.body, received: server.fake.received(), sent, started: started?.data };
+}
+
+describe.each([
+  ['357 KiB, the page that 256 KiB refused', 357 * 1024, 1],
+  ['1 MiB', mebibyte, 1],
+  ['4 MiB', 4 * mebibyte, 4],
+  ['8 MiB', 8 * mebibyte, 8],
+])('a call block whose arguments render %s from an input of at most 1 MiB', (_size, bytes, copies) => {
+  it('sends them whole within the 16 MiB a runtime sends unless set, and records their size and digest', async () => {
+    const { ran, received, sent, started } = await renderedAndWritten(bytes, copies);
+    const sentBytes = Buffer.byteLength(JSON.stringify(sent));
+
+    expect(sentBytes).toBeLessThanOrEqual(bytes);
+    expect(sentBytes).toBeGreaterThan(bytes - 1024);
+    expect(ran).toMatchObject({ status: 'succeeded', output: reference });
+    expect(received).toMatchObject([{ tool: 'echo', arguments: sent }]);
+    expect(started).toMatchObject({ arguments_bytes: sentBytes, arguments_sha256: digestOf(JSON.stringify(sent)) });
+  });
+});

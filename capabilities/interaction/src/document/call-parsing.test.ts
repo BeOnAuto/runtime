@@ -1,10 +1,9 @@
-import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { summarize } from '../capability/definition-reading.ts';
 import { callDocument, replyRuleLines } from '../testing/index.ts';
-import { problemsOf, reading } from '../testing/route-documents.ts';
+import { problemsOf, reading, standingBounds } from '../testing/route-documents.ts';
 import { parseInteractionDocument } from './document-parsing.ts';
 
 function timesAThousand(times: number): string {
@@ -18,7 +17,7 @@ const asksNoParty = 'A function with call answers at once and asks no party, so 
 
 describe('an interaction function that asks a system', () => {
   it('reads its call as written, and is summarised with the tool it calls', () => {
-    const parsed = Result.getOrThrow(parseInteractionDocument(callDocument(), standingRenderClock));
+    const parsed = Result.getOrThrow(parseInteractionDocument(callDocument(), standingBounds));
 
     expect(parsed).toMatchObject({
       shape: 'call',
@@ -127,13 +126,17 @@ describe('the arguments of a call', () => {
     ]);
   });
 
-  it('refuse arguments that read no input and take more than 256 KiB as JSON, or one that does alone', () => {
+  it('refuse arguments that read no input and take more as JSON than their server may be sent, or one that does alone', () => {
     expect([
-      problemsOf(callDocument({ with: [`    a: ${timesAThousand(140)}`, `    b: ${timesAThousand(140)}`] })),
-      problemsOf(callDocument({ with: [`    note: ${timesAThousand(270)}`] })),
+      problemsOf(callDocument({ with: [`    a: ${timesAThousand(540)}`, `    b: ${timesAThousand(540)}`] })),
+      problemsOf(callDocument({ with: [`    note: ${timesAThousand(1050)}`] })),
     ]).toEqual([
-      ['Line 7, /call/with: The arguments of the call take 280015 bytes, more than the 262144 a call may send'],
-      ['Line 7, /call/with/note: The argument note of the call renders more than the 262144 bytes a call may send'],
+      [
+        'Line 7, /call/with: The arguments of the call take 1080015 bytes, more than the 1 MiB a call may send to a tool server; make its templates render less',
+      ],
+      [
+        'Line 7, /call/with/note: The argument note of the call renders more than the 1 MiB a call may send to a tool server; make its templates render less',
+      ],
     ]);
   });
 });

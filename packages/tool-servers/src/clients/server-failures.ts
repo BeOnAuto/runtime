@@ -8,7 +8,7 @@ import {
 } from '@modelcontextprotocol/client';
 import { causesOf, codesOf, HostRefused, HostUnresolved, isUntrustedCertificate } from '@on.auto/outbound';
 
-import { AnsweredStatus, answeredHttpWords } from '../openapi/answered-status.ts';
+import { AnsweredStatus, answeredHttpWords, answeredToACall } from '../openapi/answered-status.ts';
 import { ArgumentsRefused } from '../openapi/arguments-refused.ts';
 import { AnsweredCode } from '../openapi/failure-codes.ts';
 import { ScopeLacking, scopeLackingIn, scopeLackingWords } from '../openapi/scope-lacking.ts';
@@ -55,6 +55,7 @@ const closedCodes: ReadonlySet<unknown> = new Set([
 const httpKinds: ReadonlyMap<number, FailureKind> = new Map([
   [401, 'key_refused'],
   [404, 'forgotten'],
+  [413, 'refused'],
   [429, 'rate_limited'],
 ]);
 
@@ -152,6 +153,17 @@ export function failureOf(error: unknown): ServerFailure {
   return causesOf(error).some((cause) => isHostUnresolved(cause))
     ? { kind: 'unreachable', message: 'The tool server could not be reached' }
     : knownFailureOf(error);
+}
+
+function answeredStatusOf(error: unknown): number | undefined {
+  if (error instanceof AnsweredStatus || error instanceof SdkHttpError) {
+    return error.status;
+  }
+  return undefined;
+}
+
+export function failureOfACall(error: unknown, input: unknown): ServerFailure {
+  return answeredStatusOf(error) === 413 ? { kind: 'refused', message: answeredToACall(413, input) } : failureOf(error);
 }
 
 export function isCredentialRefused(error: unknown): boolean {

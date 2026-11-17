@@ -22,8 +22,17 @@ export type FakeAnswer =
 
 export type ToolPorts = Pick<
   ToolAccess,
-  'named' | 'configured' | 'preparedCall' | 'callOnce' | 'listServers' | 'takesConnections'
+  | 'named'
+  | 'configured'
+  | 'preparedCall'
+  | 'callOnce'
+  | 'listServers'
+  | 'takesConnections'
+  | 'mostRequestBytes'
+  | 'mostRequestBytesTo'
 >;
+
+export const fakeRequestBytes = 1_048_576;
 
 export interface FakeTools extends ToolPorts, Pick<ChatBoard, 'posted' | 'reply' | 'reactions'> {
   readonly calls: () => readonly OneCall[];
@@ -142,6 +151,7 @@ export function fakeTools(
   duringCall: (call: OneCall) => Effect.Effect<unknown> = () => Effect.void,
   inTheChat: readonly ChatMessage[] = [],
   postsAs?: string,
+  mostRequestBytes = fakeRequestBytes,
 ): FakeTools {
   const board = chatBoard(inTheChat, postsAs);
   const calls: OneCall[] = [];
@@ -168,6 +178,8 @@ export function fakeTools(
     preparedCall: (call) =>
       Effect.map(startOf(call), (fields) => ({ fields, called: Effect.suspend(() => sent(call)) })),
     callOnce: sent,
+    mostRequestBytes,
+    mostRequestBytesTo: () => mostRequestBytes,
     calls: () => [...calls],
     posted: board.posted,
     reactions: board.reactions,
@@ -191,4 +203,6 @@ export const noTools: ToolPorts = {
   named: (_address, references) => namedBy(references.map(({ server }) => notConfigured(server))),
   preparedCall: (call) => Effect.map(startOf(call), (fields) => ({ fields, called: notOfferedOnce(call) })),
   callOnce: notOfferedOnce,
+  mostRequestBytes: fakeRequestBytes,
+  mostRequestBytesTo: () => fakeRequestBytes,
 };

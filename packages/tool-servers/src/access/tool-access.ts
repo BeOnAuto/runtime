@@ -23,6 +23,7 @@ export interface ToolAccessOptions {
   readonly documents?: LinkOptions['documents'];
   readonly timing?: LinkOptions['timing'];
   readonly traceMeta?: LinkOptions['traceMeta'];
+  readonly mostRequestBytes?: number;
 }
 
 export interface ToolAccess extends RunWays, ListingWays {
@@ -87,7 +88,11 @@ export function toolAccessOf(
   return {
     configured: settings.servers.length > 0 || source.takesConnections,
     takesConnections: source.takesConnections,
-    ...runWaysOf(access, recording, options.timing),
+    ...runWaysOf(access, recording, {
+      timing: options.timing,
+      servers: settings.servers,
+      most: options.mostRequestBytes,
+    }),
     ...listingWaysOf(access),
     linksSendingNoRequest: async () => sendingNoRequest((await linkedOnUse()).fileLinks),
     listingsKept: access.listingsKept,

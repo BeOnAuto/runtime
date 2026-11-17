@@ -1,5 +1,6 @@
-import { defineCapability, type Capability, type CapabilityGuide } from '@on.auto/definitions';
+import { defineCapability, type Capability, type CapabilityGuide, type GuideVariables } from '@on.auto/definitions';
 import { echoDeclaration } from '@on.auto/definitions/testing';
+import { changedOnlyByWhoeverRunsTheServer } from '@on.auto/phrasing';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 
 import type { GuideShelf } from '../guides/guide-shelf.ts';
@@ -7,6 +8,48 @@ import { guideShelfFrom } from '../guides/served-guides.ts';
 import { apiShippedRoots } from '../shipped-files/api-roots.ts';
 
 export const guideFiles = shippedFilesOnDisk(apiShippedRoots());
+
+const valuesThePagesName: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  'computation-function': {
+    'computation.most_memory': '256 MiB',
+    'computation.bounds_changed_by': 'are fixed on this server',
+  },
+  'interaction-function': {
+    'interaction.most_call_arguments': '16 MiB',
+    'interaction.most_open_requests': '10,000 at once',
+    'interaction.bounds_changed_by': changedOnlyByWhoeverRunsTheServer,
+  },
+  'lookup-function': {
+    'lookup.most_call_arguments': '16 MiB',
+    'lookup.bounds_changed_by': changedOnlyByWhoeverRunsTheServer,
+  },
+  workflow: {
+    'workflow.longest_run': '30 days from its start',
+    'workflow.bounds_changed_by': changedOnlyByWhoeverRunsTheServer,
+  },
+};
+
+function asThePageWritesThem(values: Readonly<Record<string, string>>): GuideVariables {
+  return Object.fromEntries(
+    Object.entries(values).map(([value, words]: readonly [string, string]) => [
+      value,
+      { value: words, default: words },
+    ]),
+  );
+}
+
+export const valuesOfThePages: GuideVariables = asThePageWritesThem(
+  Object.fromEntries(Object.values(valuesThePagesName).flatMap((values) => Object.entries(values))),
+);
+
+export function guideOfThePage(name: string, onThisServer?: string): CapabilityGuide {
+  const values = valuesThePagesName[name];
+  return {
+    name,
+    ...(onThisServer === undefined ? {} : { onThisServer }),
+    ...(values === undefined ? {} : { variables: asThePageWritesThem(values) }),
+  };
+}
 
 function capabilityOf(name: string, noun: string, guide: CapabilityGuide): Capability {
   return defineCapability({
@@ -20,17 +63,17 @@ function capabilityOf(name: string, noun: string, guide: CapabilityGuide): Capab
 
 export const onThisServer = 'On this server, a reasoning function names its model through anthropic.';
 
-const reasoning = capabilityOf('reasoning', 'reasoning function', { name: 'reasoning-function', onThisServer });
+const reasoning = capabilityOf('reasoning', 'reasoning function', guideOfThePage('reasoning-function', onThisServer));
 
-const computation = capabilityOf('computation', 'computation function', { name: 'computation-function' });
+const computation = capabilityOf('computation', 'computation function', guideOfThePage('computation-function'));
 
-const prediction = capabilityOf('prediction', 'prediction function', { name: 'prediction-function' });
+const prediction = capabilityOf('prediction', 'prediction function', guideOfThePage('prediction-function'));
 
-const workflow = capabilityOf('workflow', 'workflow', { name: 'workflow' });
+const workflow = capabilityOf('workflow', 'workflow', guideOfThePage('workflow'));
 
 const everyType = [reasoning, computation, prediction, workflow];
 
-const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
+const interaction = capabilityOf('interaction', 'interaction function', guideOfThePage('interaction-function'));
 
 const cards = {
   type: 'interaction',
@@ -66,7 +109,7 @@ export const servedWithEverythingAndGoalsUntold = await guideShelfFrom(guideFile
   goals: true,
 });
 
-const lookup = capabilityOf('lookup', 'lookup function', { name: 'lookup-function' });
+const lookup = capabilityOf('lookup', 'lookup function', guideOfThePage('lookup-function'));
 
 export const servedWithLookupAndPages = await guideShelfFrom(guideFiles, [reasoning, lookup, workflow], {
   pages: true,

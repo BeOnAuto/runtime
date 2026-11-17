@@ -1,4 +1,4 @@
-import { actingCallsCount, admission } from '../bounds/call-bounds.ts';
+import { actingCallsCount, admission, mostRequestBytesTo } from '../bounds/call-bounds.ts';
 import { answerOf, onlyReads } from '../bounds/tool-results.ts';
 import { imageCallOf, imagesKeptOutOf, imagesOfTheCall } from '../images/answered-images.ts';
 import { shownFormat, type CallAnswered, type CallEnded, type CallFailed, type CallStarted } from './call-facts.ts';
@@ -200,7 +200,9 @@ export function caller(
       return notSent;
     }
     const readOnly = onlyReads(offered.tool);
-    const admitted = admission(state.tally(), { tool: offered.name, callId, input, reads: readOnly }, actingCallsCount);
+    const mostBytes = mostRequestBytesTo(slot.settings, parts.mostRequestBytes);
+    const asked = { tool: offered.name, callId, input, reads: readOnly, mostBytes };
+    const admitted = admission(state.tally(), asked, actingCallsCount);
     state.tallied(admitted.tally);
     if (!admitted.admitted) {
       return unsentReply(admitted.refusal);

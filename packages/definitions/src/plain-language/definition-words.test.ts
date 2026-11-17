@@ -256,7 +256,7 @@ describe('the attempt of a read that renders a page', () => {
 
   it('names the definition whose page it renders, even where its input is refused', () => {
     expect([
-      read?.attempt({ type: 'echo', name: 'greet', render: true, sample_output: 'x'.repeat(262_145) }),
+      read?.attempt({ type: 'echo', name: 'greet', render: true, sample_output: 'x'.repeat(1_048_577) }),
       read?.attempt({ type: 'echo', name: 'greet', render: true }),
       read?.attempt({ type: 'echo', name: 'greet' }),
     ]).toEqual(['render the greeting “greet”', 'render the greeting “greet”', 'look up the greeting “greet”']);

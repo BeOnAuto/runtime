@@ -3,6 +3,7 @@ import { renderedArguments } from '@on.auto/definitions/tool-blocks';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { fakeRequestBytes } from '../testing/fake-tools.ts';
 import { deliveryVariablesOf } from './delivery-arguments.ts';
 
 const record = {
@@ -27,9 +28,9 @@ describe('the arguments of a delivery', () => {
       expires_at: '2026-10-09T09:00:00.000Z',
       answer_schema: null,
     });
-    expect(renderedArguments({ text: '{{ to }}: {{ message }}' }, variables, standingRenderClock)).toEqual(
-      Result.succeed({ input: { text: 'ada: Approve?' }, bytes: 24 }),
-    );
+    expect(
+      renderedArguments({ text: '{{ to }}: {{ message }}' }, variables, standingRenderClock, fakeRequestBytes),
+    ).toEqual(Result.succeed({ input: { text: 'ada: Approve?' }, bytes: 24 }));
   });
 
   it('read the answer schema of a request that takes an answer', () => {
@@ -39,8 +40,8 @@ describe('the arguments of a delivery', () => {
       { input: {}, runId: 'run-1', functionName: 'approve' },
     );
 
-    expect(renderedArguments({ schema: '{{ answer_schema }}' }, variables, standingRenderClock)).toEqual(
-      Result.succeed({ input: { schema }, bytes: 82 }),
-    );
+    expect(
+      renderedArguments({ schema: '{{ answer_schema }}' }, variables, standingRenderClock, fakeRequestBytes),
+    ).toEqual(Result.succeed({ input: { schema }, bytes: 82 }));
   });
 });

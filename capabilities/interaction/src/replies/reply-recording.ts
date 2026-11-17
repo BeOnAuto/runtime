@@ -1,5 +1,6 @@
 import { renderClock } from '@on.auto/definitions/template';
 import type { Issue, PlaybookAddress } from '@on.auto/operations';
+import type { ToolAccess } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
 import { saidOfARefusal, type ReplyRefusal } from '../facts/run-facts.ts';
@@ -88,23 +89,29 @@ function mayTellNow(
     : mayTellAgain(ledger, playbook, state, refusal.request);
 }
 
+interface RefusalTellingParts {
+  readonly ledger: TellingsReader;
+  readonly tools: Pick<ToolAccess, 'mostRequestBytesTo'>;
+}
+
 export function answeredAlreadyTellingOf(
-  ledger: TellingsReader,
+  { ledger, tools }: RefusalTellingParts,
   playbook: PlaybookAddress,
   state: IntakeState,
   { request, reply }: Pick<RefusalTold, 'request' | 'reply'>,
 ): Effect.Effect<TellingCall | undefined> {
+  const route = routeOfRequest(request);
   return Effect.gen(function* () {
-    const clock = yield* renderClock;
+    const rendering = { clock: yield* renderClock, mostBytes: tools.mostRequestBytesTo(route.server) };
     const said = { to: request.row.party, sent: request.sent, reply, message: answeredAlreadyWords };
     return (yield* mayTellAgain(ledger, playbook, state, request))
-      ? lineCallOf(routeOfRequest(request).telling, 'refused', said, clock)
+      ? lineCallOf(route.telling, 'refused', said, rendering)
       : undefined;
   });
 }
 
 export function refusalTellingOf(
-  ledger: TellingsReader,
+  { ledger, tools }: RefusalTellingParts,
   playbook: PlaybookAddress,
   state: IntakeState,
   refusal: RefusalTold,
@@ -114,10 +121,10 @@ export function refusalTellingOf(
   const namesItsMessage = route.replies.read.each.to !== undefined;
   const message = tellingWords({ rule: request.rule, because, issues, open, namesItsMessage });
   return Effect.gen(function* () {
-    const clock = yield* renderClock;
+    const rendering = { clock: yield* renderClock, mostBytes: tools.mostRequestBytesTo(route.server) };
     const said = { to: request.row.party, sent: request.sent, reply, message };
     return (yield* mayTellNow(ledger, playbook, state, refusal))
-      ? lineCallOf(route.telling, 'refused', said, clock)
+      ? lineCallOf(route.telling, 'refused', said, rendering)
       : undefined;
   });
 }

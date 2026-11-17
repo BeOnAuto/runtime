@@ -418,7 +418,7 @@ The server that runs the playbook's workflows keeps the views:
 - It reads the playbook's history in pages of up to 1,000 records. It folds each page in a worker apart from the server, kept ready between pages.
 - It writes the views once a page, so a restart folds at most one page again, to the same views.
 - Saving a page with `data`, or with its `data` changed, builds its views from the start of the playbook's history. A new version that leaves `data` as it was keeps the views. Until they have caught up, `page.runs` is the one line that says so; see [Lines in place of a render](#lines-in-place-of-a-render).
-- A playbook builds the views of at most four pages at once, the setting `PAGE_MAX_REBUILDS`. The others wait in the order they were saved.
+- A playbook builds the views of only some of its pages at once. The others wait in the order they were saved.
 - Changed `data` replaces views of the `data` before it that are being built, waiting or stalled.
 
 #### The standing of the views
@@ -928,24 +928,24 @@ The playbook's page is read with `render_playbook_page`, `POST /render` relative
 
 ## Limits
 
-| Bound                                 | Value                                                           | When it is reached                                   |
-| ------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------- |
-| Document                              | 65,536 bytes in UTF-8, the page included                        | Refused when saved                                   |
-| Templates                             | 32 KiB (32,768 bytes) in UTF-8, the two together                | Refused when saved                                   |
-| Names in tags and outputs             | 1,000 in each template, as in a reasoning function's            | Refused when saved                                   |
-| Views                                 | 8                                                               | Refused when saved                                   |
-| Filters                               | 8                                                               | Refused when saved                                   |
-| The check at save                     | 2 seconds of the server's time on the check's own worker        | `invalid_input`; `unavailable` with no checker ready |
-| The views together                    | 512 KiB as JSON, checked after every fold                       | The views stall at that event, `size`                |
-| Work, memory and duration of one fold | 500 checkpoints, 64 MiB and 10 seconds                          | The views stall at that event                        |
-| Views built at once                   | 4 pages a playbook, the setting `PAGE_MAX_REBUILDS`             | The save succeeds; the standing says `waiting`       |
-| A replay [as of a run](#as-of-a-run)  | 10 pages of up to 1,000 records, with one page folded at a time | `out_of_reach`, and the line in place of `runs`      |
-| Time to render                        | 200 ms for each template                                        | The line in place of the template                    |
-| Memory a render may charge            | 5,000,000 characters or items                                   | The line in place of the template                    |
-| A rendered template                   | 64 KiB (65,536 bytes) in UTF-8, for `result` and for `runs`     | The line in place of the template                    |
-| The headline                          | 200 characters                                                  | A client cuts it there, with an ellipsis             |
-| `sample_output`                       | 256 KiB as JSON, nesting at most 512 levels, as a run's input   | `invalid_input` at `/sample_output`                  |
-| Cells of a row                        | 2 to 4                                                          | Refused when saved; a line says why when it renders  |
+| Bound                                | Value                                                       | When it is reached                                   |
+| ------------------------------------ | ----------------------------------------------------------- | ---------------------------------------------------- |
+| Document                             | 65,536 bytes in UTF-8, the page included                    | Refused when saved                                   |
+| Templates                            | 32 KiB (32,768 bytes) in UTF-8, the two together            | Refused when saved                                   |
+| Names in tags and outputs            | 1,000 in each template, as in a reasoning function's        | Refused when saved                                   |
+| Views                                | 8                                                           | Refused when saved                                   |
+| Filters                              | 8                                                           | Refused when saved                                   |
+| The check at save                    | 2 seconds                                                   | `invalid_input`; `unavailable` with no checker ready |
+| The views together                   | 512 KiB as JSON                                             | The views stall at that event, `size`                |
+| Work and duration of one fold        | About 5 million steps and 10 seconds                        | The views stall at that event                        |
+| Views built at once                  | Some pages of a playbook; the others wait their turn        | The save succeeds; the standing says `waiting`       |
+| A replay [as of a run](#as-of-a-run) | 10,000 records                                              | `out_of_reach`, and the line in place of `runs`      |
+| Time to render                       | 200 ms for each template                                    | The line in place of the template                    |
+| Text and lists a render builds       | 5,000,000 characters or items in all                        | The line in place of the template                    |
+| A rendered template                  | 64 KiB (65,536 bytes) in UTF-8, for `result` and for `runs` | The line in place of the template                    |
+| The headline                         | 200 characters                                              | A client cuts it there, with an ellipsis             |
+| `sample_output`                      | 1 MiB as JSON, nesting at most 512 levels, as a run's input | `invalid_input` at `/sample_output`                  |
+| Cells of a row                       | 2 to 4                                                      | Refused when saved; a line says why when it renders  |
 
 ## Availability
 

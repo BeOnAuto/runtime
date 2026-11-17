@@ -37,6 +37,7 @@ export interface RunToolsParts {
   readonly secrets: Secrets;
   readonly keep: KeepContent;
   readonly timing: Timing;
+  readonly mostRequestBytes: number;
   readonly report: (message: ServerMessage) => void;
   readonly run: <A>(effect: Effect.Effect<A>) => Promise<A>;
 }

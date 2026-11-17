@@ -10,6 +10,8 @@ import {
   defaultTiming,
   failedOnce,
   failuresEnded,
+  mostRequestBytesOf,
+  mostRequestBytesTo,
   noCalls,
   runBoundMs,
   shownResult,
@@ -17,16 +19,20 @@ import {
   type CallAsked,
   type CallCount,
   type CallTally,
+  toolBounds,
 } from './call-bounds.ts';
 import { bytesOf } from './text-bytes.ts';
 
 type Input = Readonly<Record<string, unknown>>;
 
-const asked = (callId: string, input: Input, reads = true): CallAsked => ({
+const mebibyte = 1_048_576;
+
+const asked = (callId: string, input: Input, reads = true, mostBytes = mebibyte): CallAsked => ({
   tool: 'graph__search',
   callId,
   input,
   reads,
+  mostBytes,
 });
 
 const searched = (callId: string) => asked(callId, { query: callId });
@@ -83,7 +89,7 @@ describe('admitting a call, by default', () => {
 
   it('counts no call it refuses for its arguments or as a repeat, since none of them is sent', () => {
     const twice = tallyAfter([asked('call-1', { a: 1 }, false), asked('call-2', { a: 1 }, false)], actingCallsCount);
-    const tooLarge = asked('call-4', { text: 'x'.repeat(262_144) }, false);
+    const tooLarge = asked('call-4', { text: 'x'.repeat(mebibyte) }, false);
 
     expect(admission(twice, asked('call-3', { a: 1 }, false), actingCallsCount)).toMatchObject({
       admitted: false,
@@ -147,14 +153,16 @@ describe('a call its run already sent, as its fact records it', () => {
 });
 
 describe('admitting the arguments of a call', () => {
-  it('admits arguments of 256 KiB as JSON, and refuses one byte more', () => {
-    expect(admission(noCalls, asked('call-1', { query: 'x'.repeat(262_144 - 12) }), actingCallsCount)).toMatchObject({
-      admitted: true,
-    });
-    expect(admission(noCalls, asked('call-1', { query: 'x'.repeat(262_144 - 11) }), actingCallsCount)).toMatchObject({
+  it('admits arguments of as many bytes as JSON as its server may be sent, and refuses one byte more in their words', () => {
+    const twoMebibytes = 2 * mebibyte;
+    const fits = asked('call-1', { query: 'x'.repeat(twoMebibytes - 12) }, true, twoMebibytes);
+    const past = asked('call-1', { query: 'x'.repeat(twoMebibytes - 11) }, true, twoMebibytes);
+
+    expect(admission(noCalls, fits, actingCallsCount)).toMatchObject({ admitted: true });
+    expect(admission(noCalls, past, actingCallsCount)).toMatchObject({
       admitted: false,
       refusal:
-        'The arguments of this call take 262145 bytes, more than the 262144 a call may send; send less in one call, in parts where the tool takes them.',
+        'The arguments of this call take 2097153 bytes, more than the 2 MiB a call may send to a tool server; send less in one call, in parts where the tool takes them.',
     });
   });
 
@@ -250,5 +258,19 @@ describe('the failures and the time of a run', () => {
     expect(runBoundMs(60_000)).toBe(600_000);
     expect(runBoundMs(1_660_000)).toBe(1_660_000);
     expect(defaultTiming).toEqual({ callMs: 30_000, openMs: 10_000, longestRetryWaitMs: 10_000 });
+  });
+});
+
+describe('the most a call may send', () => {
+  it('may send a server what the runtime is given, 16 MiB unless given another, and a local process 4 MiB at most', () => {
+    expect([
+      mostRequestBytesOf(),
+      mostRequestBytesOf(8 * mebibyte),
+      mostRequestBytesTo({ type: 'mcp' }, 16 * mebibyte),
+      mostRequestBytesTo({ type: 'openapi' }, 128 * mebibyte),
+      mostRequestBytesTo({ type: 'stdio' }, 16 * mebibyte),
+      mostRequestBytesTo({ type: 'stdio' }, 2 * mebibyte),
+    ]).toEqual([16 * mebibyte, 8 * mebibyte, 16 * mebibyte, 128 * mebibyte, 4 * mebibyte, 2 * mebibyte]);
+    expect(toolBounds.handArgumentBytes).toBe(mebibyte);
   });
 });

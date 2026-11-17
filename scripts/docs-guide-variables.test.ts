@@ -47,6 +47,15 @@ await test('the published pages name only values a server declares, each with it
       ['generation.bounds_changed_by', 'can be changed only by whoever runs the server'],
       ['generation.example_image_model', 'gateway/openai/gpt-image-2'],
       ['generation.example_audio_model', 'gateway/openai/gpt-4o-mini-tts'],
+      ['computation.most_memory', '256 MiB'],
+      ['computation.bounds_changed_by', 'are fixed on this server'],
+      ['interaction.most_call_arguments', '16 MiB'],
+      ['interaction.most_open_requests', '10,000 at once'],
+      ['interaction.bounds_changed_by', 'can be changed only by whoever runs the server'],
+      ['lookup.most_call_arguments', '16 MiB'],
+      ['lookup.bounds_changed_by', 'can be changed only by whoever runs the server'],
+      ['workflow.longest_run', '30 days from its start'],
+      ['workflow.bounds_changed_by', 'can be changed only by whoever runs the server'],
     ],
   );
   checkGuideVariables(publishedDocs, declaredByDefault);

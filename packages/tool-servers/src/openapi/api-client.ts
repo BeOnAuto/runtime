@@ -68,7 +68,7 @@ function listingOf({ operations }: DescribedApiSettings['api']): ServedClient['l
     );
 }
 
-function answeringOf(settings: DescribedApiSettings, { now }: ApiOpening): Answering {
+function answeringOf(settings: DescribedApiSettings, { now }: ApiOpening): Omit<Answering, 'input'> {
   return { requestIdHeader: settings.request_id, failureCodes: settings.failure_codes, now };
 }
 
@@ -117,7 +117,7 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
           meta,
           opening,
           signal,
-          settle: (response) => settledOf(response, answering, operation.answers, file),
+          settle: (response) => settledOf(response, { ...answering, input }, operation.answers, file),
         });
       } catch (error) {
         return { error, observed: unobserved };

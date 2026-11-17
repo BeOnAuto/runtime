@@ -6,9 +6,12 @@
   "type": "module",
   "devDependencies": {
     "@on.auto/api": "workspace:*",
+    "@on.auto/computation": "workspace:*",
+    "@on.auto/coordination": "workspace:*",
     "@on.auto/definitions": "workspace:*",
     "@on.auto/generation": "workspace:*",
     "@on.auto/interaction": "workspace:*",
+    "@on.auto/lookup": "workspace:*",
     "@on.auto/providers": "workspace:*",
     "@on.auto/reasoning": "workspace:*",
     "@on.auto/server": "workspace:*",

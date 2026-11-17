@@ -15,6 +15,7 @@ const search: StepTool = {
   inputSchema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
   reference: { server: 'graph', tool: 'search' },
   readOnly: true,
+  mostBytes: 16_777_216,
   start: ({ callId }) =>
     Promise.resolve({ call_id: callId, server: 'graph', tool: 'search', arguments_bytes: 2, read_only: true }),
 };

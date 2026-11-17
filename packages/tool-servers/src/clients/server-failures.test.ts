@@ -11,7 +11,13 @@ import { describe, expect, it } from 'vitest';
 
 import { AnsweredStatus } from '../openapi/answered-status.ts';
 import { ScopeLacking } from '../openapi/scope-lacking.ts';
-import { ConnectionBroken, failureOf, isCredentialRefused, untrustedCertificate } from './server-failures.ts';
+import {
+  ConnectionBroken,
+  failureOf,
+  failureOfACall,
+  isCredentialRefused,
+  untrustedCertificate,
+} from './server-failures.ts';
 
 const answered = (status: number) =>
   new SdkHttpError(SdkErrorCode.ClientHttpNotImplemented, `Error POSTing to endpoint: ${status}`, { status });
@@ -23,9 +29,13 @@ function caused(...codes: readonly unknown[]): Error {
 }
 
 describe('a server that refuses a request as too large', () => {
-  it('fails in words that say what its 413, 414 or 431 means', () => {
+  it('refuses the request whole on a 413, and fails in words that say what its 413, 414 or 431 means', () => {
     expect([413, 414, 431].map((status) => failureOf(answered(status)))).toEqual([
-      { kind: 'failing', message: 'The tool server answered HTTP 413: the request was larger than the server takes' },
+      {
+        kind: 'refused',
+        message:
+          'The tool server answered HTTP 413: the request was larger than the server takes; send less in one call, in parts where the tool takes them',
+      },
       {
         kind: 'failing',
         message: 'The tool server answered HTTP 414: the address of the request was longer than the server takes',
@@ -35,6 +45,24 @@ describe('a server that refuses a request as too large', () => {
         message: 'The tool server answered HTTP 431: the headers of the request were larger than the server takes',
       },
     ]);
+  });
+});
+
+describe('the failure of a call', () => {
+  it('says how large its arguments were where an MCP server or an HTTP API refused the request as too large, and is the failure as it is otherwise', () => {
+    const input = { text: 'x'.repeat(100) };
+    const tooLarge = {
+      kind: 'refused',
+      message:
+        'The tool server answered HTTP 413: the request, with arguments of 111 bytes as JSON, was larger than the server takes; send less in one call, in parts where the tool takes them',
+    };
+
+    expect([
+      failureOfACall(answered(413), input),
+      failureOfACall(new AnsweredStatus(413), input),
+      failureOfACall(answered(414), input),
+      failureOfACall(new ConnectionBroken('closed'), input),
+    ]).toEqual([tooLarge, tooLarge, failureOf(answered(414)), failureOf(new ConnectionBroken('closed'))]);
   });
 });
 

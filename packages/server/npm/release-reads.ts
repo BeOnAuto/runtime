@@ -8,6 +8,7 @@ import {
   editorRoleForEveryPerson,
 } from '@on.auto/access-control';
 import { apiShippedRoots, guideShelfFrom } from '@on.auto/api';
+import { guideVariablesOf as workflowGuideVariables } from '@on.auto/coordination';
 import { checkShippedRoots, handedWorkersWithChecks } from '@on.auto/definitions/check';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { freshInstances, sandboxAnswers, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
@@ -27,7 +28,11 @@ deepStrictEqual(
   [1, 2, true],
 );
 
-const workflows = { type: 'workflow', noun: { one: 'workflow', other: 'workflows' }, guide: { name: 'workflow' } };
+const workflows = {
+  type: 'workflow',
+  noun: { one: 'workflow', other: 'workflows' },
+  guide: { name: 'workflow', variables: workflowGuideVariables() },
+};
 const guideFiles = shippedFilesOnDisk(apiShippedRoots());
 const shelf = await guideShelfFrom(guideFiles, [workflows], { pages: true });
 const pages = [...shelf.guides, ...shelf.recipes].map(({ name, text }) => [name, text.length > 0]);

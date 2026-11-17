@@ -211,7 +211,7 @@ describe('the child of a call', () => {
   });
 
   it('is not named when its arguments are too large to call it, which raises in the input it starts', () => {
-    const run = drivenRun(workflow('do:\n  - ask: { call: notify, with: { to: \'${ "x".repeat(300000) }\' } }'));
+    const run = drivenRun(workflow('do:\n  - ask: { call: notify, with: { to: \'${ "x".repeat(1100000) }\' } }'));
 
     expect(run.events[0]?.event.steps.map(({ outcome }) => outcome)).toEqual(['raised']);
   });

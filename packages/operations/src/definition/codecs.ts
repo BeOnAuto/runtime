@@ -20,10 +20,27 @@ function isPropertyKey(segment: IssueSegment): segment is PropertyKey {
   return typeof segment !== 'object';
 }
 
-function invalidInput({ issues }: StandardSchema.StandardSchemaV1.FailureResult): Rejected {
+const declaresASizeBound = 'declaresASizeBound';
+
+export function sizeBoundCheck<T>(within: (value: T) => true | string): SchemaAST.Filter<T> {
+  return Schema.makeFilter(within, { [declaresASizeBound]: true });
+}
+
+function isPastASizeBound(issue: SchemaIssue.Issue): boolean {
+  if (issue instanceof SchemaIssue.Filter) {
+    return issue.filter.annotations?.[declaresASizeBound] === true;
+  }
+  if (issue instanceof SchemaIssue.Pointer) {
+    return isPastASizeBound(issue.issue);
+  }
+  return issue instanceof SchemaIssue.Composite && issue.issues.every((each) => isPastASizeBound(each));
+}
+
+function invalidInput(issue: SchemaIssue.Issue): Rejected {
+  const { issues }: StandardSchema.StandardSchemaV1.FailureResult = failureOf(issue);
   return rejected(
     'invalid_input',
-    'The input does not match the input schema',
+    isPastASizeBound(issue) ? 'What was given is too large' : 'The input does not match the input schema',
     issues.map(({ message, path = [] }) => ({
       detail: message,
       pointer: pointerOf(path.filter((segment) => isPropertyKey(segment))),
@@ -51,7 +68,7 @@ export function inputDecoder<In extends ObjectSchema>(
   const decode = Effect.fnUntraced(function* (input: unknown, encoding: InputEncoding) {
     const decoded = yield* Effect.result(decoders[encoding](input));
     if (Result.isFailure(decoded)) {
-      return yield* Effect.fail(invalidInput(failureOf(decoded.failure.issue)));
+      return yield* Effect.fail(invalidInput(decoded.failure.issue));
     }
     return decoded.success;
   });

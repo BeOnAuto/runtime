@@ -56,7 +56,8 @@ export function readNow(parts: ConversationParts, place: ConversationPlace, now:
     if (place.row.reads === 0 && now < firstRead) {
       return yield* advanced(parts, place, { ...cadenceOf(place), open: true, next_read_at: firstRead });
     }
-    const readings = readingsOfTheTurn(open.kept, place.row.conversation, yield* renderClock);
+    const rendering = { clock: yield* renderClock, mostRequestBytesTo: parts.tools.mostRequestBytesTo };
+    const readings = readingsOfTheTurn(open.kept, place.row.conversation, rendering);
     const turn = {
       parts,
       place,

@@ -15,6 +15,8 @@ import { onTestFinished } from 'vitest';
 import { makeInteractionFunctionAdapter } from '../capability/interaction-function.ts';
 import { noConversations } from './chat-conversations.ts';
 
+const leastRequestBytes = 1_048_576;
+
 export const callRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const chatCallKey = 'chat-api-key-5a1c9e27';
@@ -55,7 +57,11 @@ export async function callRuns(options: CallRunOptions = {}): Promise<CallRuns> 
   const chat = { url: fake.url, headers: { Authorization: 'Bearer ${CHAT_KEY}' }, org: 'acme', ...options.entry };
   const { access } = reportingAccess(
     { chat },
-    { environment: { CHAT_KEY: chatCallKey }, ...(options.timing === undefined ? {} : { timing: options.timing }) },
+    {
+      environment: { CHAT_KEY: chatCallKey },
+      mostRequestBytes: leastRequestBytes,
+      ...(options.timing === undefined ? {} : { timing: options.timing }),
+    },
   );
   onTestFinished(access.close);
   const capability = makeInteractionFunctionAdapter({

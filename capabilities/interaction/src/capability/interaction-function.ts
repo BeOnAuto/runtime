@@ -11,7 +11,7 @@ import { requestRun } from '../run/interaction-run.ts';
 import type { InteractionPorts } from '../run/request-reach.ts';
 import { definitionReadingOf } from './definition-reading.ts';
 import { interactionType } from './interaction-type.ts';
-import { describeAnswer, interactionRunWords } from './interaction-words.ts';
+import { describeAnswer, guideVariablesOf, interactionRunWords } from './interaction-words.ts';
 import { cancelledRequest } from './request-cancels.ts';
 import { callsTools, finishesLater, longestRunOf } from './run-declarations.ts';
 
@@ -22,7 +22,7 @@ export function makeInteractionFunctionAdapter(ports: InteractionPorts): Capabil
   return defineCapability({
     type: interactionType,
     title: functionCategoryLabels.interaction,
-    guide: { name: 'interaction-function' },
+    guide: { name: 'interaction-function', variables: guideVariablesOf(ports) },
     noun: { one: functionResourceLabels.interaction.singular, other: functionResourceLabels.interaction.plural },
     describeOutput: describeAnswer,
     mediaType: 'text/markdown',

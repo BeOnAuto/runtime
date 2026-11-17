@@ -4,15 +4,20 @@ import { renderClock } from '@on.auto/definitions/template';
 import { InvalidInput, type PlaybookAddress } from '@on.auto/operations';
 import { Effect, Result, type Schema } from 'effect';
 
-import { parseInteractionDocument } from '../document/document-parsing.ts';
+import { parseInteractionDocument, type DocumentBounds } from '../document/document-parsing.ts';
 import type { InteractionFunctionDefinitionDocument } from '../document/interaction-document.ts';
 import { callCheck } from './call-check.ts';
 import { wayCheck, type WayPorts } from './request-ways.ts';
 import { tellCheck, type TellCheckPorts } from './tell-check.ts';
 
-function parse(source: string): Effect.Effect<InteractionFunctionDefinitionDocument, InvalidInput> {
+type RequestBounds = Pick<DocumentBounds, 'mostRequestBytesTo'>;
+
+function parse(
+  source: string,
+  { mostRequestBytesTo }: RequestBounds,
+): Effect.Effect<InteractionFunctionDefinitionDocument, InvalidInput> {
   return Effect.flatMap(renderClock, (clock) =>
-    Result.match(parseInteractionDocument(source, clock), {
+    Result.match(parseInteractionDocument(source, { clock, mostRequestBytesTo }), {
       onSuccess: (document) => Effect.succeed(document),
       onFailure: (issues) =>
         Effect.fail(
@@ -45,12 +50,15 @@ export function summarize(document: InteractionFunctionDefinitionDocument): Defi
   };
 }
 
-export function definitionReadingOf(tools: WayPorts, conversationsOf: TellCheckPorts['conversationsOf']) {
+export function definitionReadingOf(
+  tools: WayPorts & RequestBounds,
+  conversationsOf: TellCheckPorts['conversationsOf'],
+) {
   const calls = callCheck(tools);
   const ways = wayCheck(tools);
   const tells = tellCheck({ tools, conversationsOf });
   return {
-    parse,
+    parse: (source: string) => parse(source, tools),
     check: (document: InteractionFunctionDefinitionDocument, source: string, place: PlaybookAddress) =>
       document.shape === 'call'
         ? calls(document, place)

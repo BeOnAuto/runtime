@@ -25,10 +25,15 @@ interface Waiting {
 
 const renderedUnderTodaysBound = (channel: string) => `${'a'.repeat(16_240)}${channel.repeat(20)}`;
 
-async function waitingSinceBefore(recorded = recordedBeforeReadings()): Promise<Waiting> {
+const boundWhenRecorded = 262_144;
+
+async function waitingSinceBefore(
+  recorded = recordedBeforeReadings(),
+  mostRequestBytes = boundWhenRecorded,
+): Promise<Waiting> {
   const ledger = ledgerHoldingRuns(chatProjections);
   await keptAsRecorded(ledger.service, recorded.facts);
-  const playbook = await chatHarness({ ledger, inTheChat: recorded.messages });
+  const playbook = await chatHarness({ ledger, inTheChat: recorded.messages, mostRequestBytes });
   return { playbook, settledAt: recorded.lastAt + 60_000 };
 }
 
@@ -98,7 +103,7 @@ describe('requests a release before readings delivered, once read again', () => 
 });
 
 describe('requests a release before readings delivered whose reads passed the 16 KiB a call then took', () => {
-  it('render under today’s 256 KiB and are read, beside the threads from where the conversation was', async () => {
+  it('render under the 256 KiB a call took when they were recorded and are read, beside the threads from where the conversation was', async () => {
     const { playbook } = await waitingSinceBefore();
 
     await playbook.performReads(Date.now() + farAhead);
@@ -113,7 +118,7 @@ describe('requests a release before readings delivered whose reads passed the 16
 
 const { beside, unrenderedBeside, unrenderedAlone } = readsPastTheBound;
 
-describe('requests main delivered with no reading whose reads render past today’s bound', () => {
+describe('requests main delivered with no reading whose reads render past the bound of their server', () => {
   it('are passed over beside others, and a conversation of one alone rests, as before', async () => {
     const { playbook, settledAt } = await waitingSinceBefore(recordedReadsPastTheBound());
 
@@ -135,5 +140,17 @@ describe('requests main delivered with no reading whose reads render past today�
       { output: { status: 'started' } },
       { output: { status: 'started' } },
     ]);
+  });
+});
+
+describe('the same requests, read where their server may be sent more than 256 KiB', () => {
+  it('render under that bound, so their reads are sent and none is passed over again', async () => {
+    const { playbook } = await waitingSinceBefore(recordedReadsPastTheBound(), 1_048_576);
+    const failedBefore = await recordsOf(playbook.ledger, 'reading_failed');
+
+    await playbook.performReads(Date.now() + farAhead);
+
+    expect(readsIn(playbook, '#approvals-legal').length).toBeGreaterThan(0);
+    expect(await recordsOf(playbook.ledger, 'reading_failed')).toEqual(failedBefore);
   });
 });

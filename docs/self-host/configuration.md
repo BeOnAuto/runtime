@@ -270,6 +270,16 @@ The server reads [the text of a file](connections.md#the-text-of-a-file) a tool 
 | `DOCUMENT_PROCESSES`      | `2`     | The most processes that read the text of a file at once, from 1 to 64                                                                                        |
 | `DOCUMENT_PROCESS_MEMORY` | `1280`  | The data each of those processes may reserve, in MiB, from 768 to 16,384. A process that reaches it is ended, and the reading of its file ends out of memory |
 
+### Tool calls
+
+A reasoning function's model, a lookup or an interaction function, and a call made by hand send a tool its arguments as JSON. The server refuses a call whose arguments take more than `TOOL_CALL_MAX_REQUEST_MIB` before it sends it, and sends a server it runs as a program, `stdio`, at most 4 MiB, what such a server may write back at once. A model reads why, and a function's run ends as a `conflict` of the kind `unworkable`. A call made by hand takes at most 1 MiB, as much as a run takes as its input.
+
+One call holds about 3 MiB of the server's heap for each MiB its arguments take, and its request beside the heap while it is sent: measured on this release with `pnpm --filter @on.auto/tool-servers measure:large-calls`. A value one call of which would need more heap than the process may use stops the server at start, naming the setting and never its value: `The tool call settings are invalid. TOOL_CALL_MAX_REQUEST_MIB: one call of that size needs more memory than this process may use; lower it, or give the process more memory`. A value outside its range stops it too. Calls at once each hold their own; [Plan memory](production.md#plan-memory) sizes them.
+
+| Variable                    | Default | Purpose                                                                         |
+| --------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `TOOL_CALL_MAX_REQUEST_MIB` | `16`    | The most the arguments of one tool call may take as JSON, in MiB, from 1 to 128 |
+
 ### Extensions
 
 An extension is a package installed beside the runtime. This release supports one extension point, `capability/prediction`. An extension at that point answers all prediction functions in place of the built-in forecaster. The same [`PREDICTION_MAX_FUNCTIONS`](#prediction-functions) limit applies, regardless of the extension's settings. Without an extension, the built-in forecaster answers.

@@ -14,6 +14,7 @@ export { requestsDue, type RequestsDue } from './schedule/due-requests.ts';
 export type { DeliveryParts } from './schedule/delivery-parts.ts';
 export type { RequestLedger } from './schedule/request-ledger.ts';
 export { makeInteractionFunctionAdapter } from './capability/interaction-function.ts';
+export { guideVariablesOf } from './capability/interaction-words.ts';
 export { interactionType } from './capability/interaction-type.ts';
 export { InteractionRunFactSchema } from './facts/run-facts.ts';
 export { answerInteraction } from './requests/answer-interaction.ts';

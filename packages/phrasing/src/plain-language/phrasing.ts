@@ -86,3 +86,5 @@ export function asSentence(text: string): string {
   const trimmed = text.trim();
   return sentenceEnd.test(trimmed) ? trimmed : `${trimmed}.`;
 }
+
+export const changedOnlyByWhoeverRunsTheServer = 'can be changed only by whoever runs the server';

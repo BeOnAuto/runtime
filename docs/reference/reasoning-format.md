@@ -118,7 +118,7 @@ Any other key, at any level, is rejected.
 
 A run takes these steps:
 
-1. It applies `input.default`: each top-level field the supplied input leaves out takes its default. It checks the result against `input.schema`. The input may be at most 256 KiB as JSON and 512 levels deep. A run without input gets `{}`.
+1. It applies `input.default`: each top-level field the supplied input leaves out takes its default. It checks the result against `input.schema`. The input may be at most 1 MiB as JSON and 512 levels deep. A run without input gets `{}`.
 2. It renders the [template](#the-template). The system block becomes the system instructions, and everything else becomes one user message.
 3. It calls the model, one call at a time, and records each [model call](#the-run-s-model-calls) in the run's history. A function with `tools` lets the model call them before it answers; see [Tools](#tools).
 4. It checks a JSON answer against `output.schema`, or against the shape `output.shape` names.
@@ -274,24 +274,24 @@ A run checks its tools after it confirms that its model is offered, and before i
 
 The runtime checks each call before it sends it:
 
-- A run makes as many calls as it needs within its time, ten minutes, and the input tokens it reads. It makes at most 25 calls of tools not marked `reads`, a tool that declares nothing among them, counted from its history: each `tool_call_started` without `read_only: true`. Reads go uncounted, but a read the workflow can make still belongs in a lookup function. A function that sets `max_tool_calls` gives the run a count of its own, which bounds all its calls: every call the model asks for, reads and refused repeats included. A step that asks for a call past the count ends the run, or has the calls past it refused; see [At a limit](#at-a-limit). A tool's [mark](http.md#the-mark-of-a-tool) is the one its server or its connection's entry declares.
-- A call that sends more than 256 KiB of arguments as JSON is refused, the most a run may take as its input. The model reads how large its arguments were, and is told to send less in one call, in parts where the tool takes them.
+- A run makes as many calls as it needs within its time, ten minutes, and the input tokens it reads. It makes at most 25 calls of tools not marked `reads`, a tool that declares nothing among them. Reads go uncounted, but a read the workflow can make still belongs in a lookup function. A function that sets `max_tool_calls` gives the run a count of its own, which bounds all its calls: every call the model asks for, reads and refused repeats included. A step that asks for a call past the count ends the run, or has the calls past it refused; see [At a limit](#at-a-limit). A tool's [mark](http.md#the-mark-of-a-tool) is the one its server or its connection's entry declares.
 - A third call of the same tool with the same arguments is refused, and the model is pointed to the result of the earlier call.
 
-A refused call is not sent and not recorded, and the model is told why. A tool server may take less than a call may send: Auto Browser, the browser of Auto Cloud, refuses a call of more than 64 KiB with HTTP 413, which the model reads as `The tool server answered HTTP 413: the request was larger than the server takes`.
+A refused call is not sent and not recorded, and the model is told why. A tool's server may take less than a model writes, and says so only by refusing, with HTTP 413: the model then reads how large the arguments were, and to send less in one call, in parts where the tool takes them.
 
-A model writes a call's arguments as output tokens, so `config.max_output_tokens` limits them first. A token is about 3 to 4 bytes of English prose, and fewer of code or of text full of quotes and line breaks. At the default of 1,024 tokens, a model writes about 3 to 4 KiB of arguments. To let it write a large argument, such as a whole document, raise `config.max_output_tokens` to about one token for every 3 bytes: about 22,000 for a document of 64 KiB. At the most it allows, 64,000, a model writes roughly 200 KiB.
+A model writes a call's arguments as output tokens, so `config.max_output_tokens` limits them. At the default of 1,024, a model writes about 3 to 4 KiB of arguments. For larger arguments, raise it to about one token for every 3 bytes: about 22,000 for 64 KiB. At its most, 64,000, a model writes roughly 200 KiB.
 
-When the model reaches `config.max_output_tokens` while it writes a call, a call whose arguments were cut so that they no longer parse is not sent: the model reads that they did not parse, as any call it cannot make, and the run goes on. A call whose arguments still parse is sent as written, though the model may have been cut off before it finished them. In a function that answers in JSON, the run ends as `conflict`, kind `unworkable`, as a JSON answer cut off at `max_output_tokens` does. Every later step of the run reads those arguments again as input, so a run that writes several large documents uses its input tokens quickly; [Write a large document to a service](../guides/tools.md#write-a-large-document-to-a-service) shows a workflow that writes one document a run.
+When the model reaches `config.max_output_tokens` while it writes a call, a call whose arguments were cut so that they no longer parse is not sent: the model reads that they did not parse, and the run goes on. A call whose arguments still parse is sent as written, though the model may have been cut off before it finished them. In a function that answers in JSON, the run ends as `conflict`, kind `unworkable`, as a JSON answer cut off at `max_output_tokens` does. Every later step of the run reads those arguments again as input, so a run that writes several large arguments uses its input tokens quickly; [Send a large value to a tool](../guides/tools.md#send-a-large-value-to-a-tool) shows a workflow that sends one large value a run.
 
-The model reads each tool result in full. A result is cut, with a note of how much was left out, only when it would not fit in the room left for the step that called it:
+The model reads each tool result in full, unless it would not fit in the room left for the step that called it. Then the result is cut, stays valid JSON, and ends with a note of how much was left out, asking for fewer rows, fields or depth: ask the tool for less, such as one page.
 
-- The room starts as the smaller of two figures: the model's context window, as the server's model catalog gives it, and what is left of the run's budget. The step's input and output are taken off it, and the step's calls share the rest equally.
-- Room is counted in the provider's tokens for that step, and converted to bytes at the step's ratio of bytes sent to input tokens counted.
-- A cut result stays valid JSON, with a note asking for fewer rows, fields or depth.
-- When the catalog does not know the window, or the provider reports no token counts, each result is read in full.
+A run reads at most its function's `max_input_tokens` input tokens, or the default of the server it runs on where the function sets none, and never more than that server's most. A run at that limit ends as [At a limit](#at-a-limit) says, in words that name the limit in force and what to change.
 
-A run's budget of input tokens is its function's `max_input_tokens`, or else the server's default, never past the server's most; on a runtime of one's own, `REASONING_MAX_INPUT_TOKENS` is both, 2,000,000 unless set. Before each step, the runtime estimates that step's input from the step before. When the remaining budget would not cover another step after it, that step is the last the budget covers.
+<div data-audience="operator">
+
+On a runtime of one's own, [`REASONING_MAX_INPUT_TOKENS`](../self-host/configuration.md#models) is both the default and the most, 2,000,000 unless set. Auto Cloud sets its own.
+
+</div>
 
 A run that calls tools costs more. Every step resends the conversation so far, so a long run can use its whole budget. Ask a tool for one page of its data when the whole would be more than the model should read. Work that grows with a list belongs to a workflow's `for`: a [lookup for each item](workflow-format.md#a-lookup-for-each-item) reads them, and where each item needs judging on its own, this function runs once for each, with its own calls and budget. Raise `max_input_tokens` only for one item that needs more, and tell the person the cost first.
 
@@ -303,8 +303,6 @@ A run that calls tools costs more. Every step resends the conversation so far, s
 - `continue`: the model answers from what it has. Calls past the count are refused and the calls within it are sent, and the next step, or the last the budget covers, is made without tools. The run succeeds, with `incomplete_details: { "reason": "max_tool_calls" }` or `"max_input_tokens"` beside its output. A workflow's step gets the output alone, so keep the default when the answer must cover everything.
 
 A run that makes the last call its count allows and then answers succeeds, unmarked, either way.
-
-A step without tools gives the model the calls so far as text, so every provider accepts it. The tool results sit in a block fenced by a random marker and labelled as the results of the tools the model called. The label tells the model they are data to answer from, not instructions and not the user's words.
 
 ### Limits on time and failures
 

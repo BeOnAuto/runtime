@@ -1,4 +1,5 @@
 import { standingRenderClock } from '@on.auto/definitions/testing';
+import { toolBounds } from '@on.auto/tool-servers';
 import type { ServerTool, ToolServer } from '@on.auto/tool-servers';
 import { Effect, Exit, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -6,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { parseLookupDocument } from '../document/document-parsing.ts';
 import { lookupDocument, lookupRuns } from '../testing/index.ts';
 import { markCheck } from './mark-check.ts';
+
+const standingBounds = { clock: standingRenderClock, mostRequestBytesTo: () => toolBounds.requestBytes };
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -29,7 +32,7 @@ const fromTheCatalogue: ToolServer = { ...selfHosted, connection: 'conn_chat', p
 const connectedByHand: ToolServer = { ...selfHosted, connection: 'conn_chat' };
 
 function checkedAgainst(servers: readonly ToolServer[], tool = 'thread') {
-  const document = Result.getOrThrow(parseLookupDocument(lookupDocument({ tool }), standingRenderClock));
+  const document = Result.getOrThrow(parseLookupDocument(lookupDocument({ tool }), standingBounds));
   const check = markCheck({ listServers: () => Effect.succeed(servers) });
   return Effect.runSync(Effect.exit(check(document, '', alpha)));
 }

@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { apiShippedRoots, mostRecipeBytes, type GuideShelf } from '../index.ts';
+import { guideOfThePage } from '../testing/guide-shelves.ts';
 import { guideShelfFrom } from './served-guides.ts';
 
 const guideFiles = shippedFilesOnDisk(apiShippedRoots());
@@ -22,13 +23,13 @@ function capabilityOf(name: string, noun: string, guide: CapabilityGuide): Capab
   });
 }
 
-const reasoning = capabilityOf('reasoning', 'reasoning function', { name: 'reasoning-function' });
+const reasoning = capabilityOf('reasoning', 'reasoning function', guideOfThePage('reasoning-function'));
 
-const lookup = capabilityOf('lookup', 'lookup function', { name: 'lookup-function' });
+const lookup = capabilityOf('lookup', 'lookup function', guideOfThePage('lookup-function'));
 
-const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
+const interaction = capabilityOf('interaction', 'interaction function', guideOfThePage('interaction-function'));
 
-const workflow = capabilityOf('workflow', 'workflow', { name: 'workflow' });
+const workflow = capabilityOf('workflow', 'workflow', guideOfThePage('workflow'));
 
 const servedWithLookup = await guideShelfFrom(guideFiles, [reasoning, lookup, interaction, workflow], { pages: false });
 

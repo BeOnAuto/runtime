@@ -27,7 +27,7 @@ export interface Recording {
   readonly content: boolean;
   readonly requestId: boolean;
   readonly connection: string | null;
-  readonly secrets: Pick<Secrets, 'scrub' | 'scrubValue'>;
+  readonly secrets: Pick<Secrets, 'scrub' | 'scrubJson'>;
   readonly keep: KeepContent;
   readonly keepImage?: KeepImageOfTheCall;
 }
@@ -46,7 +46,7 @@ export interface CallAnswer {
 
 export function recordingOf(
   settings: Pick<ServerSettings, 'record_content' | 'request_id' | 'connection'>,
-  secrets: Pick<Secrets, 'scrub' | 'scrubValue'>,
+  secrets: Pick<Secrets, 'scrub' | 'scrubJson'>,
   keep: KeepContent,
 ): Recording {
   return {
@@ -63,11 +63,10 @@ export function keepingImagesOf(recording: Recording, keepImage: KeepImageOfTheC
 }
 
 export function scrubbedJsonOf(json: string, { secrets }: Pick<Recording, 'secrets'>): string {
-  const parsed: unknown = JSON.parse(json);
-  return JSON.stringify(secrets.scrubValue(parsed));
+  return secrets.scrubJson(json);
 }
 
-export function argumentsDigestOf(input: unknown, secrets: Pick<Secrets, 'scrub' | 'scrubValue'>): string {
+export function argumentsDigestOf(input: unknown, secrets: Pick<Secrets, 'scrub' | 'scrubJson'>): string {
   return sha256Of(scrubbedJsonOf(JSON.stringify(input), { secrets }));
 }
 

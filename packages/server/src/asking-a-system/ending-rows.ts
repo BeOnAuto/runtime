@@ -51,13 +51,14 @@ export const beforeAnything: Rows = [
     ),
   ],
   [
-    'arguments past 256 KiB',
+    'arguments past the most the runtime is set to send, TOOL_CALL_MAX_REQUEST_MIB',
     {
       document: { with: ["    a: '{{ input.a }}'", "    b: '{{ input.a }}'"], input: openInput },
-      input: { a: 'x'.repeat(131_100) },
+      input: { a: 'x'.repeat(524_300) },
+      server: { environment: { TOOL_CALL_MAX_REQUEST_MIB: '1' } },
     },
     unworkable(
-      'The arguments of the call take 262215 bytes, more than the 262144 a call may send; give the function a smaller input',
+      'The arguments of the call take 1048615 bytes, more than the 1 MiB a call may send to a tool server; give the function a smaller input',
     ),
   ],
   [

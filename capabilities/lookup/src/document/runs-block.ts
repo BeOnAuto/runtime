@@ -24,6 +24,7 @@ export interface WrittenPlace {
   readonly lines: SourceLines;
   readonly clock: RenderClock;
   readonly inputSchema: Schema.JsonObject | undefined;
+  readonly mostRequestBytesTo: (server: string) => number;
 }
 
 const runsTemplates: TemplateSet = {

@@ -1,4 +1,4 @@
-import { defaultTiming } from '../bounds/call-bounds.ts';
+import { defaultTiming, mostRequestBytesOf } from '../bounds/call-bounds.ts';
 import { serverLink, type ServerLink } from '../clients/server-links.ts';
 import { listedTools } from '../listing/tool-servers.ts';
 import { oneCall, type OneCall, type RunCall } from '../one-call/one-call.ts';
@@ -24,6 +24,7 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
   const report = options.reportServerMessage;
   const timing = options.timing ?? defaultTiming;
   const { secrets, keepIn } = options;
+  const mostRequestBytes = mostRequestBytesOf(options.mostRequestBytes);
   const linkOptions = {
     clientInfo: options.clientInfo,
     fetch: options.fetch ?? globalThis.fetch,
@@ -45,7 +46,7 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
   return {
     fileLinks,
     connectionLink: (id, server) => connectionLinkOf(id, server, linking),
-    open: (opened) => openedRun({ ...opened, secrets, keepIn, timing, report }),
+    open: (opened) => openedRun({ ...opened, secrets, keepIn, timing, report, mostRequestBytes }),
     callOnce: (call, server, runCall) => oneCall(call, server, { secrets, keepIn, timing }, runCall),
     listed: (served, link) => listedTools(served, link, { secrets, timing }),
     close: async () => {

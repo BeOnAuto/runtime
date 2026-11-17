@@ -1,7 +1,12 @@
 import { renderClock } from '@on.auto/definitions/template';
-import { smallerInputRemedy, unworkable, type ArgumentsFailure } from '@on.auto/definitions/tool-blocks';
+import {
+  smallerInputRemedy,
+  unworkable,
+  type ArgumentsFailure,
+  type TextFailure,
+} from '@on.auto/definitions/tool-blocks';
 import { Unavailable, type PlaybookAddress, type Conflict } from '@on.auto/operations';
-import { toolBounds, type ToolAccess, type ToolNotOffered } from '@on.auto/tool-servers';
+import { sendableInWords, type ToolAccess, type ToolNotOffered } from '@on.auto/tool-servers';
 import type { ToolReference } from '@on.auto/tool-servers/policy';
 import { Effect, Result, type Schema } from 'effect';
 
@@ -10,7 +15,10 @@ import { deliveryArgumentsOf } from '../tool-blocks/delivery-arguments.ts';
 import type { RequestRecord } from './request-record.ts';
 
 export interface InteractionPorts {
-  readonly tools: Pick<ToolAccess, 'named' | 'configured' | 'callOnce' | 'listServers' | 'takesConnections'>;
+  readonly tools: Pick<
+    ToolAccess,
+    'named' | 'configured' | 'callOnce' | 'listServers' | 'takesConnections' | 'mostRequestBytes' | 'mostRequestBytesTo'
+  >;
   readonly openRequests: (playbook: PlaybookAddress) => Effect.Effect<number>;
   readonly mostOpenRequests: number;
   readonly conversationsOf: ConversationsOf;
@@ -41,23 +49,26 @@ export function roomFor(ports: InteractionPorts, playbook: PlaybookAddress): Eff
   );
 }
 
-const argumentWords = {
-  not_text: 'renders a value that is not text for this request',
-  too_long: `renders more than the ${toolBounds.argumentBytes} bytes a call may send for this request; ${smallerInputRemedy}`,
-  missing_variable: 'reads what this request does not have',
-  limit_exceeded: 'cannot be rendered for this request',
-  failed: 'cannot be rendered for this request',
-} as const;
+function argumentWords(reason: TextFailure['reason'], most: number): string {
+  const words: Readonly<Record<TextFailure['reason'], string>> = {
+    not_text: 'renders a value that is not text for this request',
+    too_long: `renders more than ${sendableInWords(most)} for this request; ${smallerInputRemedy}`,
+    missing_variable: 'reads what this request does not have',
+    limit_exceeded: 'cannot be rendered for this request',
+    failed: 'cannot be rendered for this request',
+  };
+  return words[reason];
+}
 
 function argumentsRefusal(failure: ArgumentsFailure): Conflict {
   return failure.reason === 'too_large'
     ? unworkable(
         '/deliver/with',
-        `The arguments of the call that delivers the request take ${failure.bytes} bytes, more than the ${toolBounds.argumentBytes} a call may send; ${smallerInputRemedy}`,
+        `The arguments of the call that delivers the request take ${failure.bytes} bytes, more than ${sendableInWords(failure.most)}; ${smallerInputRemedy}`,
       )
     : unworkable(
         `/deliver/with/${failure.argument}`,
-        `The argument ${failure.argument} of the call that delivers the request ${argumentWords[failure.failure.reason]}`,
+        `The argument ${failure.argument} of the call that delivers the request ${argumentWords(failure.failure.reason, failure.most)}`,
       );
 }
 
@@ -67,15 +78,22 @@ export interface Asking {
   readonly functionName: string;
 }
 
-export function checkedArguments(record: RequestRecord, asking: Asking): Effect.Effect<void, Conflict> {
+export function checkedArguments(
+  record: RequestRecord,
+  asking: Asking,
+  mostRequestBytesTo: InteractionPorts['tools']['mostRequestBytesTo'],
+): Effect.Effect<void, Conflict> {
   if (record.deliver === undefined) {
     return Effect.void;
   }
   const { deliver } = record;
   return Effect.flatMap(renderClock, (clock) =>
-    Result.match(deliveryArgumentsOf(deliver.with, record, asking, clock), {
-      onSuccess: () => Effect.void,
-      onFailure: (failure) => Effect.fail(argumentsRefusal(failure)),
-    }),
+    Result.match(
+      deliveryArgumentsOf(deliver.with, record, asking, { clock, mostBytes: mostRequestBytesTo(deliver.server) }),
+      {
+        onSuccess: () => Effect.void,
+        onFailure: (failure) => Effect.fail(argumentsRefusal(failure)),
+      },
+    ),
   );
 }

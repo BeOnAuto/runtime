@@ -6,6 +6,7 @@ import { argumentsFailureWords, renderedText, textAt, toolBlockEngine } from '@o
 import { answerDocument, type CallAnswer } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 
+import type { CallRendering } from '../readings/call-rendering.ts';
 import { readingOf } from '../readings/request-readings.ts';
 import type { DeliveringRecord } from '../run/request-record.ts';
 import type { DeliveredAs, Replies, RepliesIn } from '../tool-blocks/tool-block-schemas.ts';
@@ -65,27 +66,34 @@ interface KeyedDelivery {
   readonly key: string;
 }
 
-function placeOf({ record, replies, sent, key }: KeyedDelivery, clock: RenderClock): Result.Result<RepliesIn, string> {
-  return Result.mapBoth(readingOf(replies, { to: record.to, sent, key }, clock), {
+function placeOf(
+  { record, replies, sent, key }: KeyedDelivery,
+  rendering: CallRendering,
+): Result.Result<RepliesIn, string> {
+  return Result.mapBoth(readingOf(replies, { to: record.to, sent, key }, rendering), {
     onFailure: (failure) => argumentsFailureWords(failure, 'the read'),
     onSuccess: (reading) => ({ server: record.deliver.server, tool: replies.tool, key, reading }),
   });
 }
 
-function keptAs(record: DeliveringRecord, deliveredAs: DeliveredAs, clock: RenderClock): Result.Result<Kept, string> {
+function keptAs(
+  record: DeliveringRecord,
+  deliveredAs: DeliveredAs,
+  rendering: CallRendering,
+): Result.Result<Kept, string> {
   const replies = repliesReadFor(record);
   if (replies === undefined) {
     return Result.succeed({ delivered_as: deliveredAs });
   }
-  return Result.flatMap(keyOf(replies, record.to, deliveredAs, clock), (key) =>
-    Result.map(placeOf({ record, replies, sent: deliveredAs, key }, clock), (place) => ({
+  return Result.flatMap(keyOf(replies, record.to, deliveredAs, rendering.clock), (key) =>
+    Result.map(placeOf({ record, replies, sent: deliveredAs, key }, rendering), (place) => ({
       delivered_as: deliveredAs,
       replies_in: place,
     })),
   );
 }
 
-export function keptOf(record: DeliveringRecord, answer: CallAnswer, clock: RenderClock): Kept {
+export function keptOf(record: DeliveringRecord, answer: CallAnswer, rendering: CallRendering): Kept {
   const { sent } = record.deliver;
   if (sent === undefined) {
     return {};
@@ -99,7 +107,7 @@ export function keptOf(record: DeliveringRecord, answer: CallAnswer, clock: Rend
             conversation: partAt(document, sent.conversation, 'conversation'),
             id: partAt(document, sent.id, 'message'),
           }),
-          (deliveredAs) => keptAs(record, deliveredAs, clock),
+          (deliveredAs) => keptAs(record, deliveredAs, rendering),
         );
   return Result.getOrElse(kept, (what) => ({
     detail:

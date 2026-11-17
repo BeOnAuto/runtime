@@ -1,3 +1,4 @@
+import { mostInputBytes } from '@on.auto/definitions';
 import { Predicate, Result } from 'effect';
 
 import type { Problem } from '../problem/problem-document.ts';
@@ -11,7 +12,9 @@ interface MediaType {
   readonly charset: string | undefined;
 }
 
-export const requestBodyLimit = 1024 * 1024;
+const requestEnvelopeBytes = 65_536;
+
+export const requestBodyLimit = mostInputBytes + requestEnvelopeBytes;
 
 const tooLarge = bodyTooLarge(requestBodyLimit);
 

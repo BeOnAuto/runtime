@@ -1,7 +1,8 @@
 import type { RunAccount } from '@on.auto/definitions';
+import { sizeInWords } from '@on.auto/phrasing';
 import { Option, Schema } from 'effect';
 
-import { kindInWords, sizeInWords } from '../assets/asset-words.ts';
+import { kindInWords } from '../assets/asset-words.ts';
 import { generationWaitOf } from '../waiting/generation-wait.ts';
 
 const MadeSchema = Schema.Struct({ media_type: Schema.String, bytes: Schema.Int });

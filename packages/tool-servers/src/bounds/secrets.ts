@@ -9,6 +9,7 @@ export interface Secrets {
   readonly replace: (source: string, secret: string) => void;
   readonly scrub: (text: string) => string;
   readonly scrubValue: (value: unknown) => unknown;
+  readonly scrubJson: (json: string) => string;
 }
 
 const leastSecretCharacters = 8;
@@ -75,6 +76,10 @@ function formsOfEach(secrets: readonly string[]): readonly string[] {
   return [...new Set(secrets.flatMap((secret) => formsOf(secret)))];
 }
 
+function mayHoldAny(json: string, forms: readonly string[]): boolean {
+  return forms.some((form) => json.includes(form) || json.includes(asInJson(form)));
+}
+
 export function secretsOf(redacted: readonly Redacted.Redacted[]): Secrets {
   const kept = redacted.map((value) => Redacted.value(value));
   const heldBySource = new Map<string, readonly string[]>();
@@ -93,7 +98,15 @@ export function secretsOf(redacted: readonly Redacted.Redacted[]): Secrets {
   };
   const scrub = (text: string): string =>
     known.reduce((scrubbed, secret) => scrubbed.replaceAll(secret, redactedMark), text);
-  return { keep, replace, scrub, scrubValue: (value) => scrubbedValueOf(value, scrub) };
+  const scrubValue = (value: unknown): unknown => scrubbedValueOf(value, scrub);
+  const scrubJson = (json: string): string => {
+    if (!mayHoldAny(json, known)) {
+      return json;
+    }
+    const parsed: unknown = JSON.parse(json);
+    return JSON.stringify(scrubValue(parsed));
+  };
+  return { keep, replace, scrub, scrubValue, scrubJson };
 }
 
 function credentialOf(auth: AuthSettings | null): readonly Redacted.Redacted[] {

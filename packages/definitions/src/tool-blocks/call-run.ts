@@ -13,7 +13,7 @@ import { momentVariables } from './rendered-arguments.ts';
 export const longestCallRunMs = 4 * toolBounds.openMs + toolBounds.callMs;
 
 export interface CallPorts {
-  readonly tools: Pick<ToolAccess, 'callOnce'>;
+  readonly tools: Pick<ToolAccess, 'callOnce' | 'mostRequestBytesTo'>;
 }
 
 export interface CallingDocument extends CalledDocument {
@@ -34,8 +34,12 @@ export function callRunOf(ports: CallPorts, { noun, requiredMark }: CallRunning)
     Effect.gen(function* () {
       const admitted = yield* checkedInput(input, document.input.schema, noun);
       const at = new Date(yield* Clock.currentTimeMillis).toISOString();
-      const rendered = yield* callArgumentsOf(document.call, momentVariables(admitted, at));
       const { server, tool } = document.call;
+      const rendered = yield* callArgumentsOf(
+        document.call,
+        momentVariables(admitted, at),
+        ports.tools.mostRequestBytesTo(server),
+      );
       const called = yield* ports.tools.callOnce(
         {
           org: context.org,

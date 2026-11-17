@@ -25,9 +25,10 @@ function argumentsRejection(failure: ArgumentsFailure): Conflict | InvalidInput 
 export function callArgumentsOf(
   call: CallBlock,
   variables: TemplateVariables,
+  mostBytes: number,
 ): Effect.Effect<Readonly<Record<string, Schema.Json>>, Conflict | InvalidInput> {
   return Effect.flatMap(renderClock, (clock) =>
-    Result.match(renderedArguments(call.with ?? {}, variables, clock), {
+    Result.match(renderedArguments(call.with ?? {}, variables, clock, mostBytes), {
       onSuccess: ({ input }) => Effect.succeed(input),
       onFailure: (failure) => Effect.fail(argumentsRejection(failure)),
     }),

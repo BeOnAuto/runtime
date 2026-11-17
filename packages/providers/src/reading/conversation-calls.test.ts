@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { renderedArguments, textAt } from '@on.auto/definitions/tool-blocks';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { answerDocument, type CalledOnce } from '@on.auto/tool-servers';
+import { answerDocument, toolBounds, type CalledOnce } from '@on.auto/tool-servers';
 import { serveFakeApi } from '@on.auto/tool-servers/served-fakes';
 import { describedAccess, patientTiming } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Result, type Schema } from 'effect';
@@ -43,7 +43,8 @@ interface Reached {
 }
 
 function inputOf(written: Readonly<Record<string, Schema.Json>>) {
-  return Result.getOrThrow(renderedArguments(written, conversationTemplates.sample, () => 0)).input;
+  return Result.getOrThrow(renderedArguments(written, conversationTemplates.sample, () => 0, toolBounds.requestBytes))
+    .input;
 }
 
 function schemeKeyOf({ credentials }: ProviderEntry): string | undefined {

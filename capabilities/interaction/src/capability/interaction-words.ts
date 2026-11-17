@@ -1,9 +1,18 @@
 import { Buffer } from 'node:buffer';
 
-import { defaultRunWords, outputInWords, type RunAccount, type RunWords } from '@on.auto/definitions';
+import {
+  defaultRunWords,
+  outputInWords,
+  type GuideVariables,
+  type RunAccount,
+  type RunWords,
+} from '@on.auto/definitions';
 import { callOutputInWords } from '@on.auto/definitions/tool-blocks';
+import { changedOnlyByWhoeverRunsTheServer, sizeInWords } from '@on.auto/phrasing';
+import { toolBounds, type ToolAccess } from '@on.auto/tool-servers';
 import type { Schema } from 'effect';
 
+import type { InteractionPorts } from '../run/request-reach.ts';
 import { isNotification, requestRecordOf, takesAnswer } from '../run/request-record.ts';
 import { interactionBounds } from '../run/run-bounds.ts';
 import { routeOf, throughWords } from '../tool-blocks/routes.ts';
@@ -52,4 +61,36 @@ export function describeAnswer(output: Schema.Json, record?: Schema.JsonObject):
     return asked;
   }
   return isNotification(record) ? 'It delivered its notification.' : answerInWords(output);
+}
+
+interface Offered extends Pick<InteractionPorts, 'mostOpenRequests'> {
+  readonly tools: Pick<ToolAccess, 'mostRequestBytes'>;
+}
+
+const counted = new Intl.NumberFormat('en');
+
+const asThePageHasIt: Offered = {
+  tools: { mostRequestBytes: toolBounds.requestBytes },
+  mostOpenRequests: interactionBounds.openRequests,
+};
+
+function openAtOnce(requests: number): string {
+  return `${counted.format(requests)} at once`;
+}
+
+export function guideVariablesOf({ tools, mostOpenRequests } = asThePageHasIt): GuideVariables {
+  return {
+    'interaction.most_call_arguments': {
+      value: sizeInWords(tools.mostRequestBytes),
+      default: sizeInWords(asThePageHasIt.tools.mostRequestBytes),
+    },
+    'interaction.most_open_requests': {
+      value: openAtOnce(mostOpenRequests),
+      default: openAtOnce(asThePageHasIt.mostOpenRequests),
+    },
+    'interaction.bounds_changed_by': {
+      value: changedOnlyByWhoeverRunsTheServer,
+      default: changedOnlyByWhoeverRunsTheServer,
+    },
+  };
 }

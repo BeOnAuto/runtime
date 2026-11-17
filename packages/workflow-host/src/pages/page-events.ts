@@ -21,7 +21,7 @@ export interface PageEvent {
   readonly event: CloudEvent;
 }
 
-const recordsInAPage = 1000;
+export const recordsInAPage = 1000;
 
 export const pageReadBounds = { outputs: 100, bytes: 8 * 1_048_576 } as const;
 

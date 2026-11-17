@@ -26,7 +26,17 @@ export interface ServedInteraction {
 export function interactionServedBy(
   runtime: AppRuntime<DispatcherServices>,
   { interaction, providers }: Pick<Settings, 'interaction' | 'providers'>,
-  tools: Pick<ToolAccess, 'named' | 'configured' | 'preparedCall' | 'callOnce' | 'listServers' | 'takesConnections'>,
+  tools: Pick<
+    ToolAccess,
+    | 'named'
+    | 'configured'
+    | 'preparedCall'
+    | 'callOnce'
+    | 'listServers'
+    | 'takesConnections'
+    | 'mostRequestBytes'
+    | 'mostRequestBytesTo'
+  >,
 ): ServedInteraction {
   const ledger = runtimeLedger(runtime);
   return {

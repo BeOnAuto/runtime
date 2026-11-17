@@ -43,6 +43,7 @@ const search: OfferedTool = {
   inputSchema: { type: 'object' },
   annotations: { readOnlyHint: true },
   readOnly: true,
+  mostBytes: 16_777_216,
   start: ({ callId }) =>
     Promise.resolve({ call_id: callId, server: 'graph', tool: 'search', arguments_bytes: 2, read_only: true }),
   send: () =>

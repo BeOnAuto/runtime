@@ -14,9 +14,9 @@ import { newestFirstReplies, threadRepliesWith } from '../testing/reading-docume
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-const fitsForTheSampleNotForTheRequest = `{% for i in (1..262) %}${'a'.repeat(1000)}{% endfor %}${'{{ to }}'.repeat(20)}`;
+const fitsForTheSampleNotForTheRequest = `{% for i in (1..1048) %}${'a'.repeat(1000)}{% endfor %}${'a'.repeat(432)}${'{{ to }}'.repeat(20)}`;
 
-const pastTheBoundOnceItHasACursor = '{% for i in (1..1100) %}{{ since }}{% endfor %}';
+const pastTheBoundOnceItHasACursor = '{% for i in (1..4300) %}{{ since }}{% endfor %}';
 
 async function deliveredInThread(document?: string) {
   const playbook = await chatHarness(document === undefined ? {} : { document });
@@ -54,7 +54,7 @@ describe('a conversation read later', () => {
         server: 'chat',
         tool: 'thread_replies',
         because: 'not_sent',
-        detail: 'The argument oldest of the read renders more than the 262144 bytes a call may send',
+        detail: 'The argument oldest of the read renders more than the 1 MiB a call may send to a tool server',
       },
     ]);
     expect(row?.row).toMatchObject({ open: false, due_at: null });

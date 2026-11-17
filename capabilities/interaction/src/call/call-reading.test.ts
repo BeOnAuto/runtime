@@ -49,7 +49,7 @@ describe('a run that asks a system and cannot read what the tool answered', () =
     ]).toEqual([
       unworkable(
         expect.stringMatching(
-          /^What the large tool of chat answered takes \d+ bytes as JSON with the record of the run, more than the 1048576 a run may record$/u,
+          /^What the large tool of chat answered takes \d+ bytes as JSON with the run's record, more than the 1 MiB a run may record; point read at a smaller part, or ask the tool for less$/u,
         ),
       ),
       unworkable(

@@ -174,10 +174,10 @@ describe('the calls a run may make', () => {
 });
 
 describe('the arguments of a call', () => {
-  it('refuses arguments over 256 KiB, and the third call with the same arguments', async () => {
+  it('refuses arguments over the 16 MiB a runtime sends unless it is given another, and the third call with the same arguments', async () => {
     const { call, fake } = await runWith(['echo']);
     const inputs: readonly Readonly<Record<string, string>>[] = [
-      { text: 'x'.repeat(262_144) },
+      { text: 'x'.repeat(16_777_216) },
       { text: 'once' },
       { text: 'once' },
       { text: 'once' },
@@ -186,7 +186,7 @@ describe('the arguments of a call', () => {
     const replies = await inTurn(inputs, (input) => call('echo', input));
 
     expect(replies[0]).toMatchObject({
-      text: 'The arguments of this call take 262155 bytes, more than the 262144 a call may send; send less in one call, in parts where the tool takes them.',
+      text: 'The arguments of this call take 16777227 bytes, more than the 16 MiB a call may send to a tool server; send less in one call, in parts where the tool takes them.',
       isError: true,
     });
     expect(replies[3]).toMatchObject({
@@ -243,23 +243,26 @@ describe('a server that fails a call', () => {
 });
 
 describe('a server that refuses the body of a call as too large', () => {
-  it('fails the call in words that say so', async () => {
-    const { call, fake, journal } = await runWith(['echo']);
+  it('refused the arguments whole, so the model reads how large they were and what to do, and no failure of the server is counted', async () => {
+    const { call, fake, journal, messages } = await runWith(['echo']);
 
     fake.answerNextOf('tools/call', 413);
     const reply = await call('echo', { text: 'x'.repeat(200_000) });
 
     expect(reply).toMatchObject({
-      text: 'The tool server graph failed: The tool server answered HTTP 413: the request was larger than the server takes',
+      text: 'The tool server answered HTTP 413: the request, with arguments of 200011 bytes as JSON, was larger than the server takes; send less in one call, in parts where the tool takes them',
       isError: true,
+      outcome: 'tool_error',
     });
     expect(journal.facts().at(-1)).toMatchObject({
       type: 'tool_call_failed',
       data: {
-        because: 'server_failure',
-        detail: 'The tool server answered HTTP 413: the request was larger than the server takes',
+        because: 'arguments_refused',
+        detail:
+          'The tool server answered HTTP 413: the request, with arguments of 200011 bytes as JSON, was larger than the server takes; send less in one call, in parts where the tool takes them',
       },
     });
+    expect(messages().filter(({ run_id: run }) => run !== null)).toEqual([]);
   });
 });
 

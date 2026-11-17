@@ -59,7 +59,8 @@ function deliveredOn(
 ): Effect.Effect<Delivered | undefined> {
   const { request, record, input } = plan;
   const asking = { input, runId: request.address.id, functionName: request.row.function };
-  const rendered = deliveryArgumentsOf(record.deliver.with, record, asking, clock);
+  const mostBytes = parts.tools.mostRequestBytesTo(record.deliver.server);
+  const rendered = deliveryArgumentsOf(record.deliver.with, record, asking, { clock, mostBytes });
   if (Result.isFailure(rendered)) {
     const { failure } = rendered;
     const because = failure.reason === 'too_large' ? 'too_large' : 'unworkable';
@@ -69,7 +70,7 @@ function deliveredOn(
     Effect.flatMap(recordedStart(parts, plan, fields), (startedId) =>
       startedId === undefined
         ? Effect.undefined
-        : Effect.map(called, (once): Delivered => ({ startedId, end: endOf(once, record, clock) })),
+        : Effect.map(called, (once): Delivered => ({ startedId, end: endOf(once, record, { clock, mostBytes }) })),
     ),
   );
 }

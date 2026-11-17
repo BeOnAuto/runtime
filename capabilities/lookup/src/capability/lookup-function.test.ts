@@ -7,7 +7,12 @@ import { lookupDocument, runsDocument } from '../testing/index.ts';
 import { makeLookupFunctionAdapter } from './lookup-function.ts';
 
 const lookup = makeLookupFunctionAdapter({
-  tools: { listServers: () => Effect.succeed([]), callOnce: () => Effect.die(new Error('No call is made here')) },
+  tools: {
+    listServers: () => Effect.succeed([]),
+    callOnce: () => Effect.die(new Error('No call is made here')),
+    mostRequestBytes: 16_777_216,
+    mostRequestBytesTo: () => 16_777_216,
+  },
   runs: { readRecorded: () => Effect.die(new Error('No run is read here')), content: memoryLedger().service.content },
 });
 
@@ -42,7 +47,16 @@ describe('the lookup capability', () => {
     ]).toEqual([
       'lookup',
       'Lookup',
-      { name: 'lookup-function' },
+      {
+        name: 'lookup-function',
+        variables: {
+          'lookup.most_call_arguments': { value: '16 MiB', default: '16 MiB' },
+          'lookup.bounds_changed_by': {
+            value: 'can be changed only by whoever runs the server',
+            default: 'can be changed only by whoever runs the server',
+          },
+        },
+      },
       { one: 'lookup function', other: 'lookup functions' },
       'text/markdown',
       true,

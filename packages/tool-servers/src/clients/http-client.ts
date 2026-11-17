@@ -12,7 +12,7 @@ import { Redacted } from 'effect';
 import type { McpServerSettings } from '../settings/server-settings.ts';
 import { ignored } from './ignored.ts';
 import { observingFetch, openingClient, serverClientOver, type ClientInfo } from './mcp-client.ts';
-import type { Observations } from './observed-requests.ts';
+import { posting, type Observations } from './observed-requests.ts';
 import type { ServedClient } from './server-client.ts';
 import { failureOf } from './server-failures.ts';
 
@@ -74,7 +74,7 @@ class ObservedHttpTransport extends StreamableHTTPClientTransport {
 
   override send(message: unknown, options?: Readonly<SendOptions>): Promise<void> {
     this.#observations.noteSent(message, options);
-    return super.send(parseJSONRPCMessage(message), options);
+    return posting(message, () => super.send(parseJSONRPCMessage(message), options));
   }
 }
 

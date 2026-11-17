@@ -41,7 +41,8 @@ function admittedIn({ asking }: Admitted, call: AdmittedCall, tally: CallTally):
 
 function askedNow(admitted: Admitted, call: Omit<AdmittedCall, 'reads'>, count: CallCount): Admitted {
   const { callId, tool, input, offer } = call;
-  const admitting = admission(admitted.tally, { tool, callId, input, reads: offer.readOnly }, count);
+  const asked = { tool, callId, input, reads: offer.readOnly, mostBytes: offer.mostBytes };
+  const admitting = admission(admitted.tally, asked, count);
   return admitting.admitted
     ? admittedIn(admitted, { ...call, reads: offer.readOnly }, admitting.tally)
     : refusedIn({ ...admitted, tally: admitting.tally }, call, admitting.refusal);

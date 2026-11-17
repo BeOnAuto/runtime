@@ -1,11 +1,11 @@
-import type { Finished } from '@on.auto/definitions';
+import { mostResultBytes, type Finished } from '@on.auto/definitions';
 import { issuesDetail } from '@on.auto/json-schema';
 import { Conflict, Unavailable } from '@on.auto/operations';
 import type { PoolOutcome, ProgramIssue, Stopped } from '@on.auto/workflow-engine/dsl';
 import { Effect, type Schema } from 'effect';
 
 import type { ComputationFunctionDefinitionDocument } from '../document/computation-document.ts';
-import { computationBounds, mebibytes, mostOutputBytes } from './run-bounds.ts';
+import { computationBounds, mebibytes } from './run-bounds.ts';
 
 export interface RunFacts {
   readonly document: ComputationFunctionDefinitionDocument;
@@ -63,7 +63,7 @@ function exhaustedWith({ limit, work }: Exhausted, facts: RunFacts): Ending {
   }
   if (limit === 'memory') {
     return unworkable(
-      `The program used more memory than a run may, the ${memoryBytes / mebibytes} MiB of its sandbox, having done ${work} checkpoints of work`,
+      `The program used more memory than a run may, the ${memoryBytes / mebibytes} MiB of its sandbox, having done ${work} checkpoints of work; keep less in memory at once, or give each run a part of the input`,
     );
   }
   return limit === 'stack'
@@ -87,7 +87,9 @@ function unworkableWith(outcome: Unworkable): Ending {
     );
   }
   return outcome.ran === 'oversized'
-    ? unworkable(`The program's output takes more than the ${mostOutputBytes} bytes as JSON a run can record`)
+    ? unworkable(
+        `The program's output is more than a run may record, ${mostResultBytes / mebibytes} MiB as JSON with the run's record; return less, or give each run a part of the input`,
+      )
     : unworkable(`The program's output is not JSON: ${outcome.issue.detail}`);
 }
 

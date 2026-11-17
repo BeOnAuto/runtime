@@ -1572,6 +1572,12 @@ importers:
       '@on.auto/api':
         specifier: workspace:*
         version: link:../packages/api
+      '@on.auto/computation':
+        specifier: workspace:*
+        version: link:../capabilities/computation
+      '@on.auto/coordination':
+        specifier: workspace:*
+        version: link:../capabilities/coordination
       '@on.auto/definitions':
         specifier: workspace:*
         version: link:../packages/definitions
@@ -1581,6 +1587,9 @@ importers:
       '@on.auto/interaction':
         specifier: workspace:*
         version: link:../capabilities/interaction
+      '@on.auto/lookup':
+        specifier: workspace:*
+        version: link:../capabilities/lookup
       '@on.auto/providers':
         specifier: workspace:*
         version: link:../packages/providers

@@ -1,4 +1,4 @@
-import { savedIn, standingRenderClock } from '@on.auto/definitions/testing';
+import { savedIn } from '@on.auto/definitions/testing';
 import type { ServerTool, ToolServer } from '@on.auto/tool-servers';
 import { Effect, Exit, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { parseInteractionDocument } from '../document/document-parsing.ts';
 import type { CallDocument } from '../document/interaction-document.ts';
 import { callDocument, fakeTools, interactionHarness } from '../testing/index.ts';
+import { standingBounds } from '../testing/route-documents.ts';
 import { callCheck } from './call-check.ts';
 
 const toALookup =
@@ -52,7 +53,7 @@ const unreachable: ToolServer = {
 };
 
 function checkedAgainst(servers: readonly ToolServer[]) {
-  const parsed = Result.getOrThrow(parseInteractionDocument(calling('thread_replies'), standingRenderClock));
+  const parsed = Result.getOrThrow(parseInteractionDocument(calling('thread_replies'), standingBounds));
   const document: CallDocument | undefined = parsed.shape === 'call' ? parsed : undefined;
   const check = callCheck({ listServers: () => Effect.succeed(servers) });
   return document === undefined ? undefined : Effect.runSync(Effect.exit(check(document, savedIn)));

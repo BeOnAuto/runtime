@@ -8,7 +8,7 @@ import type { RequestLedger } from './request-ledger.ts';
 
 export interface DeliveryParts {
   readonly ledger: RequestLedger;
-  readonly tools: Pick<ToolAccess, 'preparedCall'>;
+  readonly tools: Pick<ToolAccess, 'preparedCall' | 'mostRequestBytesTo'>;
   readonly record: RecordWork;
 }
 

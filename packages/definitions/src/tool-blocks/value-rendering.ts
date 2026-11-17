@@ -1,11 +1,10 @@
-import { Buffer } from 'node:buffer';
-
 import { Result, Schema } from 'effect';
 import { toValue } from 'liquidjs';
 
 import type { RenderClock } from '../template/render-clock.ts';
 import type { ParsedTemplate } from '../template/template-parsing.ts';
 import { renderedTemplate } from '../template/template-rendering.ts';
+import { bytesAsJsonOf } from './bytes-as-json.ts';
 import { toolBlockEngine, type TextFailure } from './text-rendering.ts';
 
 const loneExpression = /^\{\{(?:[^}]|\}(?!\}))*\}\}$/su;
@@ -41,9 +40,7 @@ function checkedValue(value: unknown, mostBytes: number, line: number): Result.R
   if (!isJson(value)) {
     return Result.fail({ reason: 'failed', detail: 'The expression reads a value that is not JSON', line });
   }
-  return Buffer.byteLength(JSON.stringify(value), 'utf8') > mostBytes
-    ? Result.fail({ reason: 'too_long', line })
-    : Result.succeed(value);
+  return bytesAsJsonOf(value) > mostBytes ? Result.fail({ reason: 'too_long', line }) : Result.succeed(value);
 }
 
 export function renderedValue(

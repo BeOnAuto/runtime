@@ -7,6 +7,12 @@ import { generationVariables, readGenerationSettings, type GenerationSettings } 
 import { interactionVariables, readInteractionSettings, type InteractionSettings } from './interaction-settings.ts';
 import { predictionVariables, readPredictionSettings, type PredictionSettings } from './prediction-settings.ts';
 import { projectionVariables, readProjectionSettings, type ProjectionSettings } from './projection-settings.ts';
+import {
+  processHeapBytes,
+  readToolCallSettings,
+  toolCallVariables,
+  type ToolCallSettings,
+} from './tool-call-settings.ts';
 
 export interface FunctionBounds {
   readonly computation: ComputationSettings;
@@ -15,6 +21,7 @@ export interface FunctionBounds {
   readonly projection: ProjectionSettings;
   readonly generation: GenerationSettings;
   readonly documents: DocumentSettings;
+  readonly toolCalls: ToolCallSettings;
 }
 
 export const functionBoundsVariables: readonly string[] = [
@@ -24,6 +31,7 @@ export const functionBoundsVariables: readonly string[] = [
   ...projectionVariables,
   ...generationVariables,
   ...documentVariables,
+  ...toolCallVariables,
 ];
 
 export function readFunctionBounds(environment: Environment): FunctionBounds {
@@ -34,5 +42,6 @@ export function readFunctionBounds(environment: Environment): FunctionBounds {
     projection: Effect.runSync(readProjectionSettings(environment)),
     generation: Effect.runSync(readGenerationSettings(environment)),
     documents: Effect.runSync(readDocumentSettings(environment)),
+    toolCalls: Effect.runSync(readToolCallSettings(environment, processHeapBytes())),
   };
 }

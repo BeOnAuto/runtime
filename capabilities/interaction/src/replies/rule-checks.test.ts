@@ -1,18 +1,18 @@
 import { issueText } from '@on.auto/definitions/document';
-import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { parseInteractionDocument } from '../document/document-parsing.ts';
 import { notificationDocument, threadDocument } from '../testing/index.ts';
+import { standingBounds } from '../testing/route-documents.ts';
 
 function problemsOf(source: string): readonly string[] {
-  const parsed = parseInteractionDocument(source, standingRenderClock);
+  const parsed = parseInteractionDocument(source, standingBounds);
   return Result.isFailure(parsed) ? parsed.failure.map((issue) => issueText(issue)) : [];
 }
 
 function ruleOf(source: string) {
-  const parsed = parseInteractionDocument(source, standingRenderClock);
+  const parsed = parseInteractionDocument(source, standingBounds);
   return Result.isSuccess(parsed) && parsed.success.shape === 'request' ? parsed.success.reply : 'refused';
 }
 

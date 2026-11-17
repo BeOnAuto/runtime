@@ -1,44 +1,43 @@
 import { readFileSync } from 'node:fs';
 
+import { pollsPerCheckpoint } from '@on.auto/workflow-engine/dsl';
 import { describe, expect, it } from 'vitest';
 
+import { recordsInAPage } from '../pages/page-events.ts';
 import { replayBounds } from '../pages/view-replay.ts';
 import { projectorBounds } from '../projector/projector-settings.ts';
-import { pageFolding, pageViewsBounds } from './page-views.ts';
+import { pageFolding } from './page-views.ts';
 
 const page = readFileSync(new URL('../../../../docs/reference/page-format.md', import.meta.url), 'utf8');
 
 const counted = new Intl.NumberFormat('en');
 
-const mebibytes = 1_048_576;
+const aMillion = 1_000_000;
 
-function valueOf(bound: string): string {
-  return String(
-    page
-      .split('\n')
-      .find((line) => line.startsWith(`| ${bound} `))
-      ?.split('|')[2],
-  );
+function valueOf(bound: string): string | undefined {
+  return page
+    .split('\n')
+    .find((line) => line.startsWith(`| ${bound} `))
+    ?.split('|')[2];
 }
 
 describe('the bounds on the public reference page of pages', () => {
   it('are the bounds the code holds the views and a fold to', () => {
-    expect([
-      valueOf('The views together'),
-      valueOf('Work, memory and duration of one fold'),
-      valueOf('Views built at once'),
-    ]).toEqual([
+    expect([valueOf('The views together'), valueOf('Work and duration of one fold')]).toEqual([
       expect.stringContaining(`${pageFolding.mostViewBytes / 1024} KiB`),
       expect.stringContaining(
-        `${counted.format(pageFolding.budget)} checkpoints, ${pageFolding.memoryBytes / mebibytes} MiB and ${pageFolding.foldDeadlineMs / 1000} seconds`,
+        `About ${(pageFolding.budget * pollsPerCheckpoint) / aMillion} million steps and ${pageFolding.foldDeadlineMs / 1000} seconds`,
       ),
-      expect.stringContaining(`${pageViewsBounds.rebuildsAtOnce} pages a playbook`),
     ]);
+  });
+
+  it('name no count of the views a playbook builds at once, which a server’s settings choose', () => {
+    expect(valueOf('Views built at once')).toMatch(/^\D+$/u);
   });
 
   it('say how far a replay as of a run reads', () => {
     expect(valueOf('A replay [as of a run](#as-of-a-run)')).toContain(
-      `${replayBounds.pages} pages of up to 1,000 records`,
+      `${counted.format(replayBounds.pages * recordsInAPage)} records`,
     );
   });
 

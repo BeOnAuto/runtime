@@ -5,6 +5,7 @@ import {
   placeOf,
   pointerIssues,
   renderedArguments,
+  smallerTemplatesRemedy,
   templateIssues,
   templatesIssues,
   type DocumentReading,
@@ -83,25 +84,25 @@ function deliveryIssues(written: WrittenRoute, place: TemplatePlace, renders: bo
   ];
 }
 
-function readArgumentIssues(replies: Replies, place: TemplatePlace): readonly DocumentIssue[] {
+function readArgumentIssues(replies: Replies, place: TemplatePlace, mostBytes: number): readonly DocumentIssue[] {
   const pointer = placeOf('replies', 'with');
   const written = templatesIssues(readingTemplates, replies.with, { ...place, pointer });
   if (written.length > 0) {
     return written;
   }
-  return Result.match(renderedArguments(replies.with, readingTemplates.sample, place.clock), {
+  return Result.match(renderedArguments(replies.with, readingTemplates.sample, place.clock, mostBytes), {
     onSuccess: () => [],
     onFailure: (failure) => [
       issueAt(
         place.lines,
         failure.reason === 'too_large' ? pointer : `${pointer}/${failure.argument}`,
-        argumentsFailureWords(failure, 'the read over a sample reading'),
+        argumentsFailureWords(failure, 'the read over a sample reading', smallerTemplatesRemedy),
       ),
     ],
   });
 }
 
-function readingIssues(replies: Replies, place: TemplatePlace): readonly DocumentIssue[] {
+function readingIssues(replies: Replies, place: TemplatePlace, mostBytes: number): readonly DocumentIssue[] {
   const { lines } = place;
   const { read } = replies;
   const tell = tellBlockOf(replies);
@@ -119,7 +120,7 @@ function readingIssues(replies: Replies, place: TemplatePlace): readonly Documen
       ...place,
       pointer: placeOf('replies', 'conversation'),
     }),
-    ...readArgumentIssues(replies, place),
+    ...readArgumentIssues(replies, place, mostBytes),
     ...templatesIssues(tellingTemplates, tell?.with ?? {}, { ...place, pointer: placeOf('replies', 'tell', 'with') }),
     ...pointerIssues(lines, [
       [placeOf('replies', 'read', 'list'), read.list],
@@ -135,14 +136,15 @@ function readingIssues(replies: Replies, place: TemplatePlace): readonly Documen
 
 export function compiledToolBlock(
   written: WrittenRoute,
-  { lines, clock }: DocumentReading,
+  { lines, clock, mostRequestBytesTo }: DocumentReading,
   inputSchema: Schema.JsonObject | undefined,
   renders: boolean,
 ): Result.Result<WrittenRoute, readonly DocumentIssue[]> {
   const place = { lines, pointer: '', inputSchema, clock };
+  const mostBytes = mostRequestBytesTo(written.deliver.server);
   const issues = [
     ...deliveryIssues(written, place, renders),
-    ...(written.replies === undefined ? [] : readingIssues(written.replies, place)),
+    ...(written.replies === undefined ? [] : readingIssues(written.replies, place, mostBytes)),
   ];
   return issues.length > 0 ? Result.fail(issues) : Result.succeed(written);
 }

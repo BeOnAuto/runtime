@@ -2,13 +2,14 @@ import { mostExaminedInAPage, type Outcome } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { mostInputBytes } from '../runs/recorded-size.ts';
 import { runDecider } from '../runs/run-decider.ts';
 import { acmeAdmin, globexAdmin, recordedAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { relay } from '../testing/capabilities/relay.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
+
+const quarterOfAMebibyte = 262_144;
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -97,7 +98,7 @@ describe('paging through the runs of a playbook', () => {
 
 describe('the bounds of a page of runs', () => {
   it('end a page at 4 MiB of stored data, with fewer runs than its limit and a cursor', async () => {
-    const { listing } = await playbookWithEchoes(9, { text: 'x'.repeat(mostInputBytes - 16) });
+    const { listing } = await playbookWithEchoes(9, { text: 'x'.repeat(quarterOfAMebibyte - 16) });
 
     const pages = await everyPage((cursor) => listing(withCursor(cursor)));
 

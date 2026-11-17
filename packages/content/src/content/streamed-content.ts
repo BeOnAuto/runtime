@@ -1,5 +1,7 @@
 import { Effect } from 'effect';
 
+import { textPieces } from './text-pieces.ts';
+
 export interface StreamedBytes {
   readonly stream: ReadableStream<Uint8Array>;
   readonly bytes: number;
@@ -31,8 +33,24 @@ export function contentOfBytes(bytes: Readonly<Uint8Array>, mediaType: string): 
   return { stream: blob.stream(), bytes: blob.size, mediaType };
 }
 
+const encoder = new TextEncoder();
+
+function encodedInPieces(text: string): ReadableStream<Uint8Array> {
+  const pieces = textPieces(text);
+  return new ReadableStream({
+    pull: (controller) => {
+      const next = pieces.next();
+      if (next.done === true) {
+        controller.close();
+        return;
+      }
+      controller.enqueue(encoder.encode(next.value));
+    },
+  });
+}
+
 export function textToKeep(text: string, mediaType: string): ContentToKeep {
-  return { stream: new Blob([text]).stream(), mediaType };
+  return { stream: encodedInPieces(text), mediaType };
 }
 
 async function decoded(stream: ReadableStream<Uint8Array>): Promise<string> {

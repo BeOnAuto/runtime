@@ -69,8 +69,8 @@ function answeredOf(section: ValueSection, lines: SourceLines): Checked<CallLook
 }
 
 function callReadingOf(call: CallBlock, output: ValueSection, place: WrittenPlace): Checked<Reading> {
-  const { lines, clock, inputSchema } = place;
-  const compiled = compiledCallBlock(call, { lines, clock }, inputSchema);
+  const { lines, clock, inputSchema, mostRequestBytesTo } = place;
+  const compiled = compiledCallBlock(call, { lines, clock, mostRequestBytesTo }, inputSchema);
   const answered = answeredOf(output, lines);
   const issues = [...issuesOf(() => compiled), ...issuesOf(() => answered)];
   return issues.length > 0
@@ -102,10 +102,15 @@ function readingOf({ call, runs, output }: LookupFrontMatter, place: WrittenPlac
     : runsReadingOf(runs, output, place);
 }
 
+export interface DocumentBounds {
+  readonly clock: RenderClock;
+  readonly mostRequestBytesTo: (server: string) => number;
+}
+
 function documentFrom(
   { root, lines, issues }: ReadFrontMatter,
   parts: DocumentParts,
-  clock: RenderClock,
+  bounds: DocumentBounds,
 ): Checked<LookupFunctionDefinitionDocument> {
   const decoded = decodeFrontMatter(root);
   if (issues.length > 0 || Result.isFailure(decoded)) {
@@ -114,7 +119,7 @@ function documentFrom(
   const { description } = decoded.success;
   const input = contractOf(decoded.success.input, 'input', lines);
   const inputSchema = Result.isSuccess(input) ? input.success.schema?.document : undefined;
-  const reading = readingOf(decoded.success, { lines, clock, inputSchema });
+  const reading = readingOf(decoded.success, { lines, inputSchema, ...bounds });
   const found = [...bodyIssues(parts), ...issuesOf(() => reading), ...issuesOf(() => input)];
   return found.length > 0
     ? Result.fail(found)
@@ -125,16 +130,16 @@ function documentFrom(
       }));
 }
 
-function documentOf(parts: DocumentParts, clock: RenderClock): Checked<LookupFunctionDefinitionDocument> {
+function documentOf(parts: DocumentParts, bounds: DocumentBounds): Checked<LookupFunctionDefinitionDocument> {
   const reading = frontMatterIn(parts.frontMatter, parts.frontMatterLine, lookupFrontMatter);
   return Result.isFailure(reading)
     ? Result.fail([...reading.failure, ...bodyIssues(parts)])
-    : documentFrom(reading.success, parts, clock);
+    : documentFrom(reading.success, parts, bounds);
 }
 
-export function parseLookupDocument(source: string, clock: RenderClock): Checked<LookupFunctionDefinitionDocument> {
+export function parseLookupDocument(source: string, bounds: DocumentBounds): Checked<LookupFunctionDefinitionDocument> {
   return Result.mapError(
-    Result.flatMap(splitDocument(source, 'A lookup function definition'), (parts) => documentOf(parts, clock)),
+    Result.flatMap(splitDocument(source, 'A lookup function definition'), (parts) => documentOf(parts, bounds)),
     reportedIssues,
   );
 }

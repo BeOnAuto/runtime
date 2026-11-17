@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { call } from '../testing/api-calls.ts';
 import { acmeAdmin, operationServer } from '../testing/operation-server.ts';
+import { requestBodyLimit } from './request-body.ts';
 
 type Headers = Readonly<Record<string, string>>;
 
@@ -16,7 +17,7 @@ const jsonAsAdmin: Headers = { ...asAdmin, 'content-type': 'application/json' };
 
 const notes = '/v1/orgs/acme/playbooks/alpha/notes';
 
-const mebibyte = 1024 * 1024;
+const limit = requestBodyLimit;
 
 const rejectedBodies: ReadonlyArray<readonly [string, Headers, string, ExpectedRejection]> = [
   [
@@ -116,9 +117,9 @@ describe('the content coding and charset of a body', () => {
 });
 
 describe('the size of a body', () => {
-  it('is rejected once it passes 1 MiB while being read, whatever length the request declares', async () => {
+  it('is rejected once it passes 1 MiB and 64 KiB, a run input and its envelope, while being read, whatever length the request declares', async () => {
     const { handler } = await operationServer();
-    const body = JSON.stringify({ name: 'big', text: 'x'.repeat(mebibyte) });
+    const body = JSON.stringify({ name: 'big', text: 'x'.repeat(limit) });
 
     expect(await call(handler, notes, { method: 'POST', headers: jsonAsAdmin, body })).toMatchObject({
       status: 413,
@@ -126,28 +127,28 @@ describe('the size of a body', () => {
     });
   });
 
-  it('is not read when the request declares more than 1 MiB', async () => {
+  it('is not read when the request declares more than that', async () => {
     const { handler } = await operationServer();
-    const headers = { ...jsonAsAdmin, 'content-length': String(mebibyte + 1) };
+    const headers = { ...jsonAsAdmin, 'content-length': String(limit + 1) };
 
     expect(await call(handler, notes, { method: 'POST', headers, body: '{}' })).toMatchObject({ status: 413 });
   });
 
-  it('may be exactly 1 MiB', async () => {
+  it('may be exactly that, 1,114,112 bytes', async () => {
     const { handler } = await operationServer();
     const envelope = JSON.stringify({ name: 'big', text: '' });
-    const body = JSON.stringify({ name: 'big', text: 'x'.repeat(mebibyte - envelope.length) });
+    const body = JSON.stringify({ name: 'big', text: 'x'.repeat(limit - envelope.length) });
 
     expect(await call(handler, notes, { method: 'POST', headers: jsonAsAdmin, body })).toMatchObject({ status: 201 });
   });
 
-  it('is counted in bytes, so a body of fewer than 1 Mi characters but more than 1 MiB is rejected', async () => {
+  it('is counted in bytes, so a body of fewer characters than the limit but more bytes is rejected', async () => {
     const { handler } = await operationServer();
-    const text = 'é'.repeat(mebibyte / 2 + 1);
+    const text = 'é'.repeat(limit / 2 + 1);
     const body = JSON.stringify({ name: 'big', text });
 
-    expect(body.length).toBeLessThan(mebibyte);
-    expect(Buffer.byteLength(body)).toBeGreaterThan(mebibyte);
+    expect(body.length).toBeLessThan(limit);
+    expect(Buffer.byteLength(body)).toBeGreaterThan(limit);
     expect(await call(handler, notes, { method: 'POST', headers: jsonAsAdmin, body })).toMatchObject({
       status: 413,
       body: { reason: 'content_too_large' },

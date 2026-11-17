@@ -5,6 +5,7 @@ import {
   defaultTiming,
   describedToolServers,
   makeToolAccess,
+  mostRequestBytesAmong,
   type ConnectionSource,
   type ConsentClient,
   type Describing,
@@ -38,13 +39,13 @@ interface ServedDocuments {
   readonly documents: NonNullable<ToolAccessOptions['documents']>;
 }
 
-type ToolSettings = Pick<Settings, 'toolServers' | 'registeredClients'>;
+type ToolSettings = Pick<Settings, 'toolServers' | 'registeredClients' | 'toolCalls'>;
 
 export class ComposedTools extends Context.Service<ComposedTools, ToolAccess>()('@on.auto/server/ComposedTools') {}
 
 export function toolsComposedBy(
   runtime: AppRuntime<DispatcherServices>,
-  { toolServers, registeredClients }: ToolSettings,
+  { toolServers, registeredClients, toolCalls }: ToolSettings,
   {
     toolTiming,
     now,
@@ -70,6 +71,7 @@ export function toolsComposedBy(
       ...(now === undefined ? {} : { now }),
       ...(traceMeta === undefined ? {} : { traceMeta }),
       content: runtimeLedger(runtime).content,
+      mostRequestBytes: toolCalls.mostRequestBytes,
       runtimeSecrets: registeredClientSecrets(registeredClients),
       reportServerMessage: (report) => {
         void runtime.run(logServerMessage(report));
@@ -87,7 +89,7 @@ export function toolsComposedBy(
 
 export function toolAccessOf(
   composed: Effect.Effect<ToolAccess, ToolServerDocumentRefused>,
-  { toolServers }: Pick<Settings, 'toolServers'>,
+  { toolServers, toolCalls }: Pick<Settings, 'toolServers' | 'toolCalls'>,
   { takesConnections }: Pick<ConnectionSource, 'takesConnections'>,
   { callMs }: Timing = defaultTiming,
 ): ToolAccess {
@@ -96,6 +98,8 @@ export function toolAccessOf(
     configured: toolServers.servers.length > 0 || takesConnections,
     takesConnections,
     callMs,
+    mostRequestBytes: toolCalls.mostRequestBytes,
+    mostRequestBytesTo: mostRequestBytesAmong({ servers: toolServers.servers, most: toolCalls.mostRequestBytes }),
     callOnce: (call, runCall) => Effect.flatMap(tools, (access) => access.callOnce(call, runCall)),
     preparedCall: (call) => Effect.flatMap(tools, (access) => access.preparedCall(call)),
     open: (context, references) => Effect.flatMap(tools, (access) => access.open(context, references)),

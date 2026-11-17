@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { boundedAnswerOf } from '@on.auto/outbound';
 import { Option, Schema } from 'effect';
 
@@ -26,7 +28,7 @@ export interface Observed {
 export interface Observations {
   readonly mark: () => Marker;
   readonly noteSent: (message: unknown, options: Readonly<SendOptions> | undefined) => void;
-  readonly noteAnswered: (body: unknown, response: Readonly<Response>) => Response;
+  readonly noteAnswered: (posted: RequestId | undefined, response: Readonly<Response>) => Response;
   readonly whenTooLarge: (marker: Marker, stop: () => void) => void;
   readonly noteOverflow: () => void;
   readonly take: (marker: Marker) => Observed;
@@ -38,17 +40,21 @@ const MessageSchema = Schema.Struct({
   method: Schema.optionalKey(Schema.String),
 });
 
-const decodeBody = Schema.decodeUnknownSync(Schema.fromJsonString(MessageSchema));
-
 const decodeMessage = Schema.decodeUnknownOption(MessageSchema);
-
-function idIn(body: unknown): RequestId | undefined {
-  return typeof body === 'string' ? decodeBody(body).id : undefined;
-}
 
 function requestIdOf(message: unknown): RequestId | undefined {
   const decoded = Option.getOrUndefined(decodeMessage(message));
   return decoded?.method === undefined ? undefined : decoded.id;
+}
+
+const postedRequests = new AsyncLocalStorage<RequestId | undefined>();
+
+export function posting<A>(message: unknown, post: () => A): A {
+  return postedRequests.run(requestIdOf(message), post);
+}
+
+export function postedId(body: unknown): RequestId | undefined {
+  return typeof body === 'string' ? postedRequests.getStore() : undefined;
 }
 
 const delaySeconds = /^\d+$/u;
@@ -111,10 +117,9 @@ export function observations(requestId: string | null, mostAnswerBytes: number):
         answered.set(id, null);
       }
     },
-    noteAnswered: (body, response) => {
+    noteAnswered: (id, response) => {
       const observed = observedOf(response, requestIdHeader);
       latest.retryAfterMs = observed.retryAfterMs;
-      const id = idIn(body);
       if (id === undefined || !answered.has(id)) {
         return boundedAnswerOf(response, mostAnswerBytes, ignored);
       }

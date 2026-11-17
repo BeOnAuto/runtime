@@ -6,12 +6,19 @@ import type { RenderClock } from '../template/render-clock.ts';
 import { templatesIssues, type TemplatePlace } from './block-templates.ts';
 import type { CallBlock } from './call-block-schemas.ts';
 import { isJsonPointer } from './json-pointers.ts';
-import { argumentsFailureWords, isOversized, renderedArguments, type Templates } from './rendered-arguments.ts';
+import {
+  argumentsFailureWords,
+  isOversized,
+  renderedArguments,
+  smallerTemplatesRemedy,
+  type Templates,
+} from './rendered-arguments.ts';
 import { callTemplates } from './template-sets.ts';
 
 export interface DocumentReading {
   readonly lines: SourceLines;
   readonly clock: RenderClock;
+  readonly mostRequestBytesTo: (server: string) => number;
 }
 
 type WrittenNames = readonly (readonly [string, string | undefined])[];
@@ -44,30 +51,31 @@ export function pointerIssues(lines: SourceLines, pointers: WrittenNames): reado
     .map(([place]) => issueAt(lines, place, pointerWords));
 }
 
-function callArgumentIssues(written: Templates, place: TemplatePlace): readonly DocumentIssue[] {
+function callArgumentIssues(written: Templates, place: TemplatePlace, mostBytes: number): readonly DocumentIssue[] {
   const pointer = placeOf('call', 'with');
   const issues = templatesIssues(callTemplates, written, { ...place, pointer });
   if (issues.length > 0) {
     return issues;
   }
-  const rendered = renderedArguments(written, callTemplates.sample, place.clock);
+  const rendered = renderedArguments(written, callTemplates.sample, place.clock, mostBytes);
   if (Result.isSuccess(rendered) || !isOversized(rendered.failure)) {
     return [];
   }
   const { failure } = rendered;
   const at = failure.reason === 'too_large' ? pointer : `${pointer}/${failure.argument}`;
-  return [issueAt(place.lines, at, argumentsFailureWords(failure, 'the call'))];
+  return [issueAt(place.lines, at, argumentsFailureWords(failure, 'the call', smallerTemplatesRemedy))];
 }
 
 export function compiledCallBlock(
   call: CallBlock,
-  { lines, clock }: DocumentReading,
+  { lines, clock, mostRequestBytesTo }: DocumentReading,
   inputSchema: Schema.JsonObject | undefined,
 ): Result.Result<CallBlock, readonly DocumentIssue[]> {
+  const mostBytes = mostRequestBytesTo(call.server);
   const issues = [
     ...nameIssues(lines, [[placeOf('call', 'server'), call.server]], isServerName, serverNameShape),
     ...nameIssues(lines, [[placeOf('call', 'tool'), call.tool]], isToolName, toolNameShape),
-    ...callArgumentIssues(call.with ?? {}, { lines, pointer: '', inputSchema, clock }),
+    ...callArgumentIssues(call.with ?? {}, { lines, pointer: '', inputSchema, clock }, mostBytes),
     ...pointerIssues(lines, [[placeOf('call', 'read'), call.read]]),
   ];
   return issues.length > 0 ? Result.fail(issues) : Result.succeed(call);

@@ -249,14 +249,13 @@ A template holds no `${`, since a document is never filled from the environment.
 
 ### Attempts
 
-A request sent through a tool is attempted at once. After a failed attempt it is tried again 1, 2, 4 and 8 minutes after the one before: five attempts in all.
+A request sent through a tool is attempted at once, and tried again after a failed attempt: five attempts in all, over about a quarter of an hour.
 
-- A server that responds with `Retry-After` is waited for as long as it asks, up to 8 minutes.
-- Each attempt is one call of the tool. It is recorded in the run's history before it is sent, with the size and digest of its arguments. So two servers never make the same attempt. Its end records what the tool returned.
-- These are failed attempts, tried again: a tool error, a server failure, no response within 30 seconds, and a connection not opened within 10 seconds.
-- Arguments past 256 KiB as JSON are refused and not tried again.
+- Each attempt is one call of the tool, and the run's history shows each.
+- A tool error, a server failure and no answer in time are tried again.
+- Arguments larger than one call may send are refused, and not tried again.
 - A tool the server no longer offers to the playbook fails the attempt. The request stays open, and `answer_interaction` answers it.
-- An attempt cut off by a restart counts as failed a minute after it started, and the next one follows. So a tool may be called twice for one request.
+- A restart can cut an attempt off, and it is tried again, so a tool may be called twice for one request.
 - A question whose attempts are spent stays open until someone answers it or it expires. A notification whose attempts are spent ends `unanswered` as `undelivered`.
 
 ## Rendering the message as a card
@@ -539,16 +538,16 @@ How replies are taken:
 | `succeeded`                                    | A function with `call`: the tool returned a result and the part `read` points at matched `output.schema`; that part is the output                                                                                                                                |
 | `invalid_input`                                | The input does not match the input schema, a card cannot be made from it, a template names a value the input lacks, or a filter refuses a value it reads, as `money` refuses text that is not a decimal number: `The message cannot be rendered with this input` |
 | `conflict`, kind `unworkable`                  | `to` or `from` rendered empty, as something that is not text, with a control character, or longer than 256 bytes                                                                                                                                                 |
-| `conflict`, kind `unworkable`                  | The message, or the plain text of a card, is longer than 8 KiB, the blocks of a card pass 32 KiB, or the arguments of `deliver` pass 256 KiB or one renders no text                                                                                              |
-| `conflict`, kind `unworkable`                  | A function with `call`: an argument renders a structure among text, or the arguments pass 256 KiB                                                                                                                                                                |
+| `conflict`, kind `unworkable`                  | The message, or the plain text of a card, is longer than 8 KiB, the blocks of a card pass 32 KiB, or the arguments of `deliver` pass the most a call may send to its server or one renders no text                                                               |
+| `conflict`, kind `unworkable`                  | A function with `call`: an argument renders a structure among text, or the arguments pass the most a call may send to its server                                                                                                                                 |
 | `conflict`, kind `unworkable`                  | A function with `call`: the tool refused the arguments                                                                                                                                                                                                           |
 | `conflict`, kind `unworkable`                  | A function with `call`: the answer has nothing to read, or nothing where `read` points                                                                                                                                                                           |
-| `conflict`, kind `unworkable`                  | A function with `call`: the part at `read` is more than a run may record (1 MiB with its record), or holds a value `output.schema` refuses                                                                                                                       |
+| `conflict`, kind `unworkable`                  | A function with `call`: the part at `read` is more than a run may record, about 1 MiB as JSON, or holds a value `output.schema` refuses                                                                                                                          |
 | `unavailable`, kind `tool_not_offered`         | A server the function names does not serve the playbook, or its operator does not allow a tool the function names. For a function with `call`, also a tool the server does not list. Nothing was sent                                                            |
 | `unavailable`, kind `tool_server_failed`       | A function with `call`: the tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent                                                                                                                            |
 | `unavailable`, kind `tools_unfinished`         | A function with `call`: the call was sent and then failed, and the tool is marked `reads`. Trying again under a new run id is safe                                                                                                                               |
 | `conflict`, kind `effect_unknown`              | The same, for a tool not marked `reads`, which may have changed something. No retry on status 503 matches it; a person, or a workflow rule that names the kind, decides                                                                                          |
-| `unavailable`, kind `requests_full`            | The playbook already has as many open requests as the runtime allows: 10,000 unless its operator sets another number with `INTERACTION_OPEN_REQUESTS`                                                                                                            |
+| `unavailable`, kind `requests_full`            | The playbook already holds the most open requests it may                                                                                                                                                                                                         |
 | `rejected` as `unanswered`, kind `expired`     | Nobody answered the request before it expired                                                                                                                                                                                                                    |
 | `rejected` as `unanswered`, kind `undelivered` | Every attempt to deliver a notification failed                                                                                                                                                                                                                   |
 | `rejected` as `cancelled`                      | `cancel_run` cancelled the run, or the workflow that waited for it ran out of time or ended first                                                                                                                                                                |
@@ -577,39 +576,45 @@ A function with `call` shows its call as `tool_call_started` and `tool_call_answ
 
 What is kept and shown:
 
-- The playbook keeps the arguments, the message among them, and the tool's whole result, scrubbed of secrets. The operator can turn this off for a server with `record_content`.
-- The history shows each where it takes at most 2 KiB, and its size beyond. `get_event` reads one event with both whole.
-- An answer is the run's output. Its `run_succeeded` shows it where it takes at most 2 KiB, and `get_run` returns it whole.
+- The playbook keeps the arguments, the message among them, and the tool's whole result, scrubbed of secrets, where the server's entry keeps content.
+- The history shows a large one in part, with its size. `get_event` reads one event whole.
+- An answer is the run's output. `get_run` returns it whole.
 - `list_playbook_events` shows the playbook's reads of a conversation, `replies_read` or `reading_failed`, and its tellings: `telling_started`, then `telling_succeeded` or `telling_failed`.
 
 ## Bounds
 
-| Bound                                             | Value                                                                                                                      | When it is reached                                                               |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| The rendered party, and the answerer              | 256 bytes, no control character                                                                                            | `conflict`, `unworkable`                                                         |
-| The rendered message, or the plain text of a card | 8 KiB                                                                                                                      | `conflict`, `unworkable`                                                         |
-| The blocks of a card, as JSON                     | 32 KiB (32,768 bytes)                                                                                                      | `conflict`, `unworkable`                                                         |
-| The arguments of a call                           | 256 KiB as JSON                                                                                                            | `conflict`, `unworkable` at the start; a read or telling is not sent             |
-| The arguments of a call that reads no `input`     | 256 KiB as JSON                                                                                                            | Refused when saved                                                               |
-| A call of the tool                                | 10 seconds to open, 30 seconds to respond                                                                                  | A failed attempt or read                                                         |
-| A function's call of its tool                     | 10 seconds to open, 10 to list the tools, 30 to respond                                                                    | `tool_server_failed` before sending; then `tools_unfinished` or `effect_unknown` |
-| What a function's `read` takes                    | 1 MiB as JSON with the run's record, 512 levels                                                                            | `conflict`, `unworkable`                                                         |
-| Calls in one run of a function with `call`        | 1, within 70 seconds                                                                                                       | Not applicable                                                                   |
-| What `sent` reads, and the conversation key       | 256 bytes of text each, no control character                                                                               | Delivered without what it was delivered as; the request takes no reply           |
-| A read's result                                   | 64 KiB                                                                                                                     | A failed read; the reading goes on                                               |
-| A reply's words                                   | 8 KiB                                                                                                                      | The reply is refused                                                             |
-| A reply rule                                      | 16 values, 16 words a value, 64 bytes a word                                                                               | Refused when saved                                                               |
-| Refused replies of a request                      | 10 recorded, 3 told                                                                                                        | Further ones leave no trace, or are recorded and nobody is told                  |
-| Reads of a conversation                           | 5 seconds after a request joins, then 10, 20 and 40 seconds, then every minute through the 18th read, then every 5 minutes | Not applicable                                                                   |
-| `expires`                                         | 1 minute to 30 days                                                                                                        | Refused when saved                                                               |
-| An answer                                         | 64 KiB as JSON, 512 levels                                                                                                 | `invalid_input`                                                                  |
-| `claimed_for`                                     | 256 bytes                                                                                                                  | `invalid_input`                                                                  |
-| Attempts                                          | 5: at once, then after 1, 2, 4 and 8 minutes                                                                               | A question stays open; a notification ends `unanswered` as `undelivered`         |
-| Open requests of a playbook                       | 10,000 unless the operator sets another number                                                                             | `unavailable`, `requests_full`                                                   |
+| Bound                                             | Value                                                                                                    | When it is reached                                                                                       |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| The rendered party, and the answerer              | 256 bytes, no control character                                                                          | `conflict`, `unworkable`                                                                                 |
+| The rendered message, or the plain text of a card | 8 KiB                                                                                                    | `conflict`, `unworkable`                                                                                 |
+| The blocks of a card, as JSON                     | 32 KiB (32,768 bytes)                                                                                    | `conflict`, `unworkable`                                                                                 |
+| The arguments of a call                           | <span data-variable="interaction.most_call_arguments">16 MiB</span> as JSON                              | `conflict`, `unworkable` at the start: give the function a smaller input; a read or telling is not sent  |
+| The arguments of a call that reads no `input`     | The same                                                                                                 | Refused when saved: make the call's templates render less                                                |
+| A call of the tool                                | 30 seconds to answer                                                                                     | A failed attempt or read, tried again                                                                    |
+| A function's call of its tool                     | 30 seconds to answer                                                                                     | `tools_unfinished`, or `effect_unknown` for a tool not marked `reads`: ask the tool for less in one call |
+| What a function's `read` takes                    | About 1 MiB as JSON, 512 levels                                                                          | `conflict`, `unworkable`: point `read` at a smaller part, or ask the tool for less                       |
+| Calls in one run of a function with `call`        | 1                                                                                                        | Not applicable                                                                                           |
+| What `sent` reads, and the conversation key       | 256 bytes of text each, no control character                                                             | Delivered without what it was delivered as; the request takes no reply                                   |
+| A read's result                                   | 64 KiB                                                                                                   | A failed read; the reading goes on                                                                       |
+| A reply's words                                   | 8 KiB                                                                                                    | The reply is refused                                                                                     |
+| A reply rule                                      | 16 values, 16 words a value, 64 bytes a word                                                             | Refused when saved                                                                                       |
+| Refused replies of a request                      | The first 3 are told why                                                                                 | Later ones are not told                                                                                  |
+| Reads of a conversation                           | Within seconds of a request at first, then every minute, then after a quarter of an hour every 5 minutes | Not applicable                                                                                           |
+| `expires`                                         | 1 minute to 30 days                                                                                      | Refused when saved                                                                                       |
+| An answer                                         | 64 KiB as JSON, 512 levels                                                                               | `invalid_input`                                                                                          |
+| `claimed_for`                                     | 256 bytes                                                                                                | `invalid_input`                                                                                          |
+| Attempts                                          | 5, over about a quarter of an hour                                                                       | A question stays open; a notification ends `unanswered` as `undelivered`                                 |
+| Open requests of a playbook                       | <span data-variable="interaction.most_open_requests">10,000 at once</span>                               | `unavailable`, `requests_full`: one must be answered, expire or be cancelled first                       |
 
-A tool server may take less than a call may send: Auto Browser, the browser of Auto Cloud, refuses a call of more than 64 KiB with HTTP 413, which the run reads as `The tool server answered HTTP 413: the request was larger than the server takes`.
+The limits for what one call may send and for the requests a playbook holds open <span data-variable="interaction.bounds_changed_by">can be changed only by whoever runs the server</span>. A run, a save or a call refused for its size says how large it was, the most allowed here, and what to do. A tool's server may take less than a call may send, and says so only by refusing, with HTTP 413: the run then reads how large the arguments were, and to send less in one call, in parts where the tool takes them.
 
-Reads of a conversation never come sooner than the function's `wait`. A server that responds to a read with `Retry-After` is waited for as long as it asks, up to an hour.
+<div data-audience="operator">
+
+On a runtime of one's own, the arguments of a call take what its operator sets with [`TOOL_CALL_MAX_REQUEST_MIB`](../self-host/configuration.md#tool-calls), 16 MiB unless set, and at most 4 MiB to a server started as a program, and a playbook holds at once the open requests its operator sets with [`INTERACTION_OPEN_REQUESTS`](../self-host/configuration.md#interaction-functions), 10,000 unless set. Auto Cloud sets its own.
+
+</div>
+
+Reads of a conversation never come sooner than the function's `wait`.
 
 ## In a workflow
 

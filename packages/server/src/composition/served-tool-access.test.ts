@@ -5,7 +5,12 @@ import { describe, expect, it } from 'vitest';
 
 import { toolAccessOf } from './served-tool-access.ts';
 
-const noServers = { toolServers: { servers: [], referencedVariables: [] } };
+const mebibyte = 1_048_576;
+
+const noServers = {
+  toolServers: { servers: [], referencedVariables: [] },
+  toolCalls: { mostRequestBytes: 16 * mebibyte },
+};
 
 const scope = { org: 'acme', playbook: 'alpha' };
 
@@ -66,5 +71,24 @@ describe('the tool access a server makes at start', () => {
     const cause = await Effect.runPromise(Effect.flip(Effect.sandbox(tools.listServers(scope))));
 
     expect([Cause.hasDies(cause), Cause.squash(cause)]).toEqual([true, refusal]);
+  });
+});
+
+describe('the most a call through the access a server makes may send', () => {
+  it('bounds the request of a call to any server by the setting it is given, without composing anything', () => {
+    const { asked, composing } = countedComposing();
+    const tools = toolAccessOf(
+      composing,
+      { ...noServers, toolCalls: { mostRequestBytes: 32 * mebibyte } },
+      {
+        takesConnections: true,
+      },
+    );
+
+    expect([tools.mostRequestBytes, tools.mostRequestBytesTo('graph'), asked()]).toEqual([
+      32 * mebibyte,
+      32 * mebibyte,
+      0,
+    ]);
   });
 });

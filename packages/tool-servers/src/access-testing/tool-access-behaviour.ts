@@ -75,14 +75,16 @@ interface Calling {
   readonly fake: ServedUnderTest;
   readonly source: SourceUnderTest;
   readonly entry?: Readonly<Record<string, unknown>>;
+  readonly mostRequestBytes?: number;
 }
 
 async function calledThrough(
-  { fake, source, entry = {} }: Calling,
+  { fake, source, entry = {}, mostRequestBytes }: Calling,
   tool: string,
   input: Readonly<Record<string, unknown>>,
 ) {
-  const { access, content } = await source.accessTo(sourced(fake, entry), { environment, timing });
+  const bounded = mostRequestBytes === undefined ? {} : { mostRequestBytes };
+  const { access, content } = await source.accessTo(sourced(fake, entry), { environment, timing, ...bounded });
   onTestFinished(access.close);
   const journal = recordingCallJournal();
   const tools = await Effect.runPromise(access.open(toolRun(journal), [{ server: 'graph', tool }]));
@@ -215,14 +217,21 @@ function serverFailures(underTest: ServerUnderTest, source: SourceUnderTest): vo
   });
 }
 
+const pastTheBound: unknown = expect.stringContaining('more than the 1 MiB a call may send to a tool server');
+
 function argumentBounds(underTest: ServerUnderTest, source: SourceUnderTest): void {
-  it('refuses arguments larger than a call may send, sending and recording nothing', async () => {
+  it('refuses arguments larger than the access may send, sending and recording nothing, in words of its bound', async () => {
     const fake = await served(underTest);
-    const input = fake.echoed({ note: 'x'.repeat(toolBounds.argumentBytes) });
+    const mostRequestBytes = toolBounds.handArgumentBytes;
+    const input = fake.echoed({ note: 'x'.repeat(mostRequestBytes) });
 
-    const { reply, facts } = await calledThrough({ fake, source }, 'echo', input);
+    const { reply, facts } = await calledThrough({ fake, source, mostRequestBytes }, 'echo', input);
 
-    expect(reply).toMatchObject({ isError: true, outcome: 'not_sent' });
+    expect(reply).toMatchObject({
+      isError: true,
+      outcome: 'not_sent',
+      text: pastTheBound,
+    });
     expect(facts).toEqual([]);
     expect(fake.calls()).toBe(0);
   });

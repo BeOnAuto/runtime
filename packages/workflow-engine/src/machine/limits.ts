@@ -6,9 +6,11 @@ export const mostInlineHeldValueBytes = 16_384;
 
 export const mostEventBytes = 1_572_864;
 
-export const mostOutputBytes = 1_048_574;
+export const mostRecordedRunBytes = 1_048_576;
 
-export const mostCallArgumentsBytes = 270_336;
+export const mostOutputBytes = mostRecordedRunBytes - JSON.stringify({}).length;
+
+export const mostCallArgumentsBytes = 1_056_768;
 
 export const mostTasksPerInput = 100;
 

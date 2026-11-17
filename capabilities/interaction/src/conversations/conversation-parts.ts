@@ -11,7 +11,7 @@ export interface ConversationLedger
 
 export interface ConversationParts {
   readonly ledger: ConversationLedger;
-  readonly tools: Pick<ToolAccess, 'preparedCall'>;
+  readonly tools: Pick<ToolAccess, 'preparedCall' | 'mostRequestBytesTo'>;
   readonly record: RecordWork;
 }
 

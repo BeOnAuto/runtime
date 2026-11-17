@@ -19,7 +19,12 @@ import type { AnsweredFile } from './answer-bodies.ts';
 import { settledOf } from './api-answers.ts';
 import { DocumentTooLarge } from './document-too-large.ts';
 
-const answering = { requestIdHeader: null, failureCodes: null, now: () => Date.parse('2026-10-29T09:00:00.000Z') };
+const answering = {
+  requestIdHeader: null,
+  failureCodes: null,
+  now: () => Date.parse('2026-10-29T09:00:00.000Z'),
+  input: {},
+};
 
 const byteOrderMark = String.fromCodePoint(0xfe_ff);
 

@@ -3,10 +3,20 @@ import type { Dirent } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 import { defaultsTypedIn, markingFaultsOf, withDefaultsWritten } from '@on.auto/api';
+import { guideVariablesOf as computationVariablesOf } from '@on.auto/computation';
+import { guideVariablesOf as workflowVariablesOf } from '@on.auto/coordination';
 import type { GuideVariables } from '@on.auto/definitions';
 import { generationBounds, guideVariablesOf as generationVariablesOf } from '@on.auto/generation';
+import { guideVariablesOf as interactionVariablesOf } from '@on.auto/interaction';
+import { guideVariablesOf as lookupVariablesOf } from '@on.auto/lookup';
 
-export const declaredByDefault: GuideVariables = generationVariablesOf(generationBounds, []);
+export const declaredByDefault: GuideVariables = {
+  ...generationVariablesOf(generationBounds, []),
+  ...computationVariablesOf(),
+  ...interactionVariablesOf(),
+  ...lookupVariablesOf(),
+  ...workflowVariablesOf(),
+};
 
 const regenerating = 'pnpm docs:guide-variables';
 

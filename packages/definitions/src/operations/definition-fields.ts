@@ -1,5 +1,7 @@
 import { Buffer } from 'node:buffer';
 
+import { sizeBoundCheck } from '@on.auto/operations';
+import { sizeInWords } from '@on.auto/phrasing';
 import { Schema, SchemaTransformation } from 'effect';
 
 import { refusingBlankText, refusingForbiddenCharacters } from '../events/cloud-event.ts';
@@ -65,14 +67,26 @@ export const RunIdInputField = Schema.String.annotate({
   .check(Schema.isUUID())
   .pipe(Schema.decodeTo(Schema.String, SchemaTransformation.toLowerCase()));
 
-function fitsInInputLimit(input: Schema.Json): boolean {
-  return jsonBytesOf(input) <= mostInputBytes;
+const mostInputInWords = sizeInWords(mostInputBytes);
+
+function inputWithinItsBound(input: Schema.Json): true | string {
+  const bytes = jsonBytesOf(input);
+  return bytes <= mostInputBytes
+    ? true
+    : `The input takes ${bytes} bytes as JSON, more than the ${mostInputInWords} a run takes; give a smaller input, or split the work across several runs`;
+}
+
+function sampleOutputWithinItsBound(output: Schema.Json): true | string {
+  const bytes = jsonBytesOf(output);
+  return bytes <= mostInputBytes
+    ? true
+    : `The sample output takes ${bytes} bytes as JSON, more than the ${mostInputInWords} it may take; give a smaller one`;
 }
 
 export const InputField = Schema.Json.annotate({
-  description: `The run input: any JSON value the definition takes, {} when left out, at most ${mostInputBytes} bytes as JSON in UTF-8 and ${mostInputDepth} levels deep`,
+  description: `The run input: any JSON value the definition takes, {} when left out, at most ${mostInputInWords} as JSON in UTF-8 and ${mostInputDepth} levels deep`,
 }).check(
-  Schema.makeFilter(fitsInInputLimit, { expected: `an input of at most ${mostInputBytes} bytes as JSON in UTF-8` }),
+  sizeBoundCheck(inputWithinItsBound),
   Schema.makeFilter((input: Schema.Json) => nestsWithin(input, mostInputDepth), {
     expected: `an input that nests at most ${mostInputDepth} levels deep`,
   }),
@@ -96,7 +110,7 @@ export const IncludeRetiredField = Schema.Boolean.annotate({
 export const SampleOutputField = Schema.Json.annotate({
   description: 'With render, an output to render result over, as of a run that succeeded',
 }).check(
-  Schema.makeFilter(fitsInInputLimit, { expected: `an output of at most ${mostInputBytes} bytes as JSON in UTF-8` }),
+  sizeBoundCheck(sampleOutputWithinItsBound),
   Schema.makeFilter((output: Schema.Json) => nestsWithin(output, mostInputDepth), {
     expected: `an output that nests at most ${mostInputDepth} levels deep`,
   }),

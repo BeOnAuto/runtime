@@ -9,15 +9,14 @@ import {
 import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
 import type { FetchHandler, LoopbackServer } from '../testing/fetch-handler.ts';
 import { fakeChat, type FakeChat } from './fake-chat.ts';
-import { fakeSessions, type FakeSessions } from './fake-sessions.ts';
+import { fakeSessions, type FakeSessions, type SessionsServed } from './fake-sessions.ts';
 import { fakeToolChanges } from './fake-tool-changes.ts';
 import type { FakeHints, FakeTool, ReceivedCall } from './fake-tools.ts';
 
-export interface FakeMcpOptions {
+export interface FakeMcpOptions extends SessionsServed {
   readonly bearer?: string;
   readonly client?: ClientRegistration;
   readonly requestIdHeader?: string;
-  readonly issuesSessionIds?: boolean;
   readonly annotated?: boolean;
   readonly hints?: FakeHints;
   readonly chat?: boolean;
@@ -268,7 +267,7 @@ export function fakeMcpAnswers(options: FakeMcpOptions = {}): FakeMcpAnswers {
   const authorizations: FakeAuthorization[] = [];
   const chat = fakeChat(options.echoes);
   const records = recordsOf(options, changes.removed, chat, changes.hints);
-  const sessions = fakeSessions({ ...records, receive: (call) => received.push(call) }, options.issuesSessionIds);
+  const sessions = fakeSessions({ ...records, receive: (call) => received.push(call) }, options);
   const endpoint = mcpEndpoint({
     sessions,
     see: (request) => {

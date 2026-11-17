@@ -16,6 +16,7 @@ import { runnableDocument, workflowReaderOf, type ReadWorkflow } from '../docume
 import { summaryOf } from '../document/workflow-summary.ts';
 import { runPresenter } from '../presenting/run-presenter.ts';
 import { started, type WorkflowStarts } from '../runs/run-start.ts';
+import { guideVariablesOf } from './guide-variables.ts';
 
 export interface WorkflowAdapterDependencies extends WorkflowStarts {
   readonly check: ExpressionCheck;
@@ -41,7 +42,7 @@ export function makeWorkflowAdapter(dependencies: WorkflowAdapterDependencies): 
   return defineCapability({
     type: workflowFacts.type,
     title: 'Workflow',
-    guide: { name: 'workflow' },
+    guide: { name: 'workflow', variables: guideVariablesOf(dependencies) },
     noun,
     describeOutput: outputInWords('result'),
     mediaType: 'application/yaml',

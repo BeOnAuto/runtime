@@ -156,6 +156,20 @@ describe('the answer of a call of a tool of an HTTP API', () => {
   });
 });
 
+describe('a call of a tool of an HTTP API whose server refuses its request as too large, with no words of its own', () => {
+  it('answers an error result that says how large the arguments were and what to do, and claims no bound of the server', async () => {
+    const fake = await fakeApi();
+    const access = await accessTo(keyed(fake));
+    fake.answerNextWith({ status: 413, body: '' });
+
+    expect(await called(access, 'get_profiles_id', { id: 'eve' })).toMatchObject({
+      outcome: 'tool_error',
+      detail:
+        'The tool server answered HTTP 413: the request, with arguments of 12 bytes as JSON, was larger than the server takes; send less in one call, in parts where the tool takes them',
+    });
+  });
+});
+
 describe('a call of a tool of an HTTP API that answers a redirect', () => {
   it('is an error result with its status, sending nothing and no key to the address the redirect names', async () => {
     const fake = await fakeApi();

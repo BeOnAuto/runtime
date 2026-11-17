@@ -41,13 +41,14 @@ describe('the bounds on the public reference page of reasoning functions', () =>
     expect(rowOf('`max_tool_calls`')).toContain(
       `from 1 to ${counted.format(mostToolCalls)}: a count of all a run's tool calls, in place of ${toolBounds.actingCallsInRun} calls of tools not marked \`reads\``,
     );
-    expect(page).toContain(`sends more than ${toolBounds.argumentBytes / 1024} KiB of arguments`);
   });
 
   it('give the input tokens a run may read, and the setting of a runtime of one’s own, as the code holds them', () => {
     expect(rowOf('`max_input_tokens`')).toContain(
       `A whole number from ${counted.format(inputTokensRange.least)} to ${counted.format(inputTokensRange.most)}: the input tokens a run may read;`,
     );
-    expect(page).toContain(`\`${inputTokensSetting}\` is both, ${counted.format(defaultMostInputTokens)} unless set`);
+    expect(page).toContain(
+      `[\`${inputTokensSetting}\`](../self-host/configuration.md#models) is both the default and the most, ${counted.format(defaultMostInputTokens)} unless set`,
+    );
   });
 });

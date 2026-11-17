@@ -13,10 +13,11 @@ import { markCheck } from '../marks/mark-check.ts';
 import { mostPagesReadInARun } from '../runs/runs-read.ts';
 import { runsRun } from '../runs/runs-run.ts';
 import { describeLookup, parse, summarize } from './definition-reading.ts';
+import { guideVariablesOf } from './guide-variables.ts';
 import { lookupType } from './lookup-type.ts';
 
 export interface LookupPorts {
-  readonly tools: Pick<ToolAccess, 'callOnce' | 'listServers'>;
+  readonly tools: Pick<ToolAccess, 'callOnce' | 'listServers' | 'mostRequestBytes' | 'mostRequestBytesTo'>;
   readonly runs: SucceededRunsReader;
   readonly mostPagesRead?: number;
 }
@@ -36,11 +37,11 @@ export function makeLookupFunctionAdapter({
   return defineCapability({
     type: lookupType,
     title: functionCategoryLabels.lookup,
-    guide: { name: 'lookup-function' },
+    guide: { name: 'lookup-function', variables: guideVariablesOf(tools) },
     noun: { one: singular, other: plural },
     describeOutput: describeLookup,
     mediaType: 'text/markdown',
-    parse,
+    parse: (source: string) => parse(source, tools),
     check: markCheck(tools),
     summarize,
     run: (document, input, context) =>

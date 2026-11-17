@@ -6,18 +6,13 @@ import { sentencesOfText } from './agent-text-sentences.ts';
 import { agentTextsRecordIn, placesIn, type AgentTextsRecord } from './agent-texts-record.ts';
 
 export const textsNotYetClean: readonly string[] = [
-  'guide computation-function',
   'guide connect-a-service',
-  'guide interaction-function',
   'guide lookup-function',
-  'guide page',
   'guide prediction-function',
   'guide reasoning-function',
   'guide terminology',
-  'guide workflow',
   'prompt connect-a-service: message',
   'prompt keep: attached guide://lookup-function',
-  'prompt schedule: attached guide://workflow',
   'tool add_connection: argument credential.variable',
 ];
 

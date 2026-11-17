@@ -1,7 +1,7 @@
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import { describe, expect, it } from 'vitest';
 
-import { guideFiles } from '../testing/guide-shelves.ts';
+import { guideFiles, guideOfThePage } from '../testing/guide-shelves.ts';
 import { guideShelfFrom, type ServedType } from './served-guides.ts';
 
 function withChanged(path: string, changed: (text: string) => string): ShippedFiles {
@@ -15,11 +15,15 @@ function withChanged(path: string, changed: (text: string) => string): ShippedFi
 const workflowType: ServedType = {
   type: 'workflow',
   noun: { one: 'workflow', other: 'workflows' },
-  guide: { name: 'workflow' },
+  guide: guideOfThePage('workflow'),
 };
 
 function servedFrom(files: ShippedFiles): ReturnType<typeof guideShelfFrom> {
   return guideShelfFrom(files, [workflowType], { pages: false });
+}
+
+function marksIn(text: string): number {
+  return [...text.matchAll(/data-audience/gu)].length;
 }
 
 function withPassagesMarked(text: string): string {
@@ -51,12 +55,10 @@ describe('a page that marks a passage for another reader', () => {
     const plain = await servedFrom(guideFiles);
     const marked = await servedFrom(withChanged('reference/workflow-format.md', withPassagesMarked));
 
+    const written = await guideFiles.text({ package: '@on.auto/runtime', path: 'docs/reference/workflow-format.md' });
+
     expect(marked.named('workflow')?.text).toBe(plain.named('workflow')?.text);
-    expect(
-      withPassagesMarked(
-        await guideFiles.text({ package: '@on.auto/runtime', path: 'docs/reference/workflow-format.md' }),
-      ).match(/data-audience/gu)?.length,
-    ).toBe(2);
+    expect(marksIn(withPassagesMarked(written)) - marksIn(written)).toBe(2);
   });
 
   it('serves the terminology without the rows of a marked table, which it would serve unmarked', async () => {

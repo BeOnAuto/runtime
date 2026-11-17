@@ -4,7 +4,7 @@ import { decodeToolResult } from '../bounds/tool-results.ts';
 import { retryAfterMsOf, type Observed } from '../clients/observed-requests.ts';
 import type { CallSettled } from '../clients/server-client.ts';
 import { fileBytesOf, fileTextOf, shownTextIn, shownTextOf, unreadFiles, type AnsweredFile } from './answer-bodies.ts';
-import { AnsweredStatus, answeredHttpWords } from './answered-status.ts';
+import { AnsweredStatus, answeredToACall } from './answered-status.ts';
 import { headersCarriedBy, unschemedAnswers, type AnswerSchemas } from './api-parameters.ts';
 import { answerAsDescribed } from './described-answers.ts';
 import { DocumentTooLarge } from './document-too-large.ts';
@@ -14,6 +14,7 @@ export interface Answering {
   readonly requestIdHeader: string | null;
   readonly failureCodes: FailureCodes | null;
   readonly now: () => number;
+  readonly input: unknown;
 }
 
 interface ContentBlock {
@@ -100,9 +101,10 @@ function jsonOf(text: string, mediaType: string | undefined, failureCodes: Failu
   return isJson(mediaType) || failureCodes !== null ? parsedJson(text) : undefined;
 }
 
-function shownAnswer(status: number, text: string, json: Parsed, answers: AnswerSchemas): Answer {
+function shownAnswer(status: number, shown: Shown): Answer {
+  const { text, json, answers, input } = shown;
   if (status >= 300) {
-    return errorAnswer(text === '' ? answeredHttpWords(status) : text);
+    return errorAnswer(text === '' ? answeredToACall(status, input) : text);
   }
   return json === undefined ? textAnswer(text) : jsonAnswer(text, json.parsed, answers);
 }
@@ -140,21 +142,17 @@ function isAFile(response: Readonly<Response>, mediaType: string | undefined): b
   return response.status < 300 && response.body !== null && !isJson(mediaType);
 }
 
-interface Shown extends ReadAsJson {
+interface Shown extends ReadAsJson, Pick<Answering, 'failureCodes' | 'input'> {
   readonly answers: AnswerSchemas;
   readonly carried: Carried;
-  readonly failureCodes: FailureCodes | null;
 }
 
-function shownOrRefused(
-  response: Readonly<Response>,
-  { text, json, answers, carried, failureCodes }: Shown,
-  observed: Observed,
-): CallSettled {
+function shownOrRefused(response: Readonly<Response>, shown: Shown, observed: Observed): CallSettled {
+  const { text, json, carried, failureCodes } = shown;
   const challenge = extractWWWAuthenticateParams(response);
   const refusal = refusalOf({ status: response.status, text, challenge, json }, failureCodes);
   if (refusal === undefined) {
-    return settled(withHeaders(shownAnswer(response.status, text, json, answers), carried), observed);
+    return settled(withHeaders(shownAnswer(response.status, shown), carried), observed);
   }
   return refusal.error === undefined ? settled(errorAnswer(text), observed) : { error: refusal.error, observed };
 }
@@ -180,20 +178,20 @@ export async function settledOf(
   const carried = headersCarriedBy(response.status, response.headers, answers);
   let tooLarge = false;
   try {
-    const { failureCodes } = answering;
+    const { failureCodes, input } = answering;
     const observed = observedOf(response, answering, false);
     if (isAFile(response, mediaType)) {
       const bytes = await fileBytesOf(response);
       const read = failureCodes === null ? undefined : jsonWithinTheBound(bytes);
       return read === undefined
         ? settled(withHeaders(textAnswer(await fileTextOf(response, bytes, file)), carried), observed)
-        : shownOrRefused(response, { ...read, answers, carried, failureCodes }, observed);
+        : shownOrRefused(response, { ...read, answers, carried, failureCodes, input }, observed);
     }
     const text = await shownTextOf(response, () => {
       tooLarge = true;
     });
     const json = jsonOf(text, mediaType, failureCodes);
-    return shownOrRefused(response, { text, json, answers, carried, failureCodes }, observed);
+    return shownOrRefused(response, { text, json, answers, carried, failureCodes, input }, observed);
   } catch (error) {
     return { error, observed: observedOf(response, answering, tooLarge || error instanceof DocumentTooLarge) };
   }

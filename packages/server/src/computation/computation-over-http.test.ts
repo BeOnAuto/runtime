@@ -142,7 +142,8 @@ describe('an output too large to record, over HTTP', () => {
       body: {
         reason: 'conflict',
         kind: 'unworkable',
-        detail: "The program's output takes more than the 1048320 bytes as JSON a run can record",
+        detail:
+          "The program's output is more than a run may record, 1 MiB as JSON with the run's record; return less, or give each run a part of the input",
       },
     });
     expect(await running('pace', { input: campaignRows(2) })).toMatchObject({ status: 200 });

@@ -1,12 +1,16 @@
 import { sha256Of } from '@on.auto/content';
+import { sizeInWords } from '@on.auto/phrasing';
 
 import type { CallsEndedBecause } from '../access/tool-server-failed.ts';
+import type { ServerSettings } from '../settings/server-settings.ts';
 import { cutWhereValid } from './structural-cut.ts';
 import { bytesOf, canonicalJson, cutAtCodePoint } from './text-bytes.ts';
 
 export const toolBounds = {
   actingCallsInRun: 25,
-  argumentBytes: 262_144,
+  requestBytes: 16_777_216,
+  stdioRequestBytes: 4_194_304,
+  handArgumentBytes: 1_048_576,
   sameCallsInRun: 2,
   failuresInRun: 5,
   longestRetryWaitMs: 10_000,
@@ -62,12 +66,23 @@ export interface CallTally {
   readonly sameCalls: ReadonlyMap<string, readonly string[]>;
 }
 
+export function mostRequestBytesOf(given?: number): number {
+  return given ?? toolBounds.requestBytes;
+}
+
+export function mostRequestBytesTo({ type }: Pick<ServerSettings, 'type'>, mostRequestBytes: number): number {
+  return type === 'stdio' ? Math.min(mostRequestBytes, toolBounds.stdioRequestBytes) : mostRequestBytes;
+}
+
 export interface CallAsked {
   readonly tool: string;
   readonly callId: string;
   readonly input: Readonly<Record<string, unknown>>;
   readonly reads: boolean;
+  readonly mostBytes: number;
 }
+
+type CallSentBefore = Omit<CallAsked, 'mostBytes'>;
 
 export type Admission =
   | { readonly admitted: true; readonly tally: CallTally }
@@ -86,17 +101,23 @@ function allCallsMade({ most, countsReads }: CallCount): string {
     : `This run has made all the ${most} calls it may make of tools that can change things; answer from what you have.`;
 }
 
-function argumentsTooLarge(bytes: number): string {
-  return `The arguments of this call take ${bytes} bytes, more than the ${toolBounds.argumentBytes} a call may send; send less in one call, in parts where the tool takes them.`;
+export function sendableInWords(mostBytes: number): string {
+  return `the ${sizeInWords(mostBytes)} a call may send to a tool server`;
+}
+
+export const sendLessRemedy = 'send less in one call, in parts where the tool takes them';
+
+function argumentsTooLarge(bytes: number, mostBytes: number): string {
+  return `The arguments of this call take ${bytes} bytes, more than ${sendableInWords(mostBytes)}; ${sendLessRemedy}.`;
 }
 
 function repeated(earlier: readonly string[]): string {
   return `This call repeats, with the same arguments, a call this run already made ${toolBounds.sameCallsInRun} times; use the answer to the call ${String(earlier.at(-1))} instead.`;
 }
 
-function refusalOf(argumentBytes: number, earlier: readonly string[]): string | undefined {
-  if (argumentBytes > toolBounds.argumentBytes) {
-    return argumentsTooLarge(argumentBytes);
+function refusalOf(argumentBytes: number, mostBytes: number, earlier: readonly string[]): string | undefined {
+  if (argumentBytes > mostBytes) {
+    return argumentsTooLarge(argumentBytes, mostBytes);
   }
   return earlier.length >= toolBounds.sameCallsInRun ? repeated(earlier) : undefined;
 }
@@ -118,7 +139,9 @@ export function admission(tally: CallTally, call: CallAsked, count: CallCount): 
   const pastTheCount = itCounts && tally.counted >= count.most;
   const key = sameCallKeyOf(call);
   const earlier = tally.sameCalls.get(key) ?? [];
-  const refusal = pastTheCount ? allCallsMade(count) : refusalOf(bytesOf(JSON.stringify(call.input)), earlier);
+  const refusal = pastTheCount
+    ? allCallsMade(count)
+    : refusalOf(bytesOf(JSON.stringify(call.input)), call.mostBytes, earlier);
   const isCounted = itCounts && (count.countsReads || pastTheCount || refusal === undefined);
   const counted = isCounted ? { ...tally, counted: tally.counted + 1 } : tally;
   return refusal === undefined
@@ -130,7 +153,7 @@ export function countedAsSent(tally: CallTally, call: Pick<CallAsked, 'reads'>, 
   return countsAgainst(count, call) ? { ...tally, counted: tally.counted + 1 } : tally;
 }
 
-export function admittedAsSent(tally: CallTally, call: CallAsked, count: CallCount): CallTally {
+export function admittedAsSent(tally: CallTally, call: CallSentBefore, count: CallCount): CallTally {
   return sentIn(countedAsSent(tally, call, count), sameCallKeyOf(call), call.callId);
 }
 

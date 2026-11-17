@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { observations, retryAfterMsOf } from './observed-requests.ts';
+import { observations, postedId, posting, retryAfterMsOf } from './observed-requests.ts';
 
 const call = { jsonrpc: '2.0', id: 7, method: 'tools/call', params: { name: 'search' } };
 
@@ -13,7 +13,7 @@ describe('the requests a client observes', () => {
     const marker = observed.mark();
 
     observed.noteSent(call, { onresumptiontoken: marker });
-    observed.noteAnswered(JSON.stringify(call), answeredWith({ 'retry-after': '2', 'x-request-id': 'r-1' }, 429));
+    observed.noteAnswered(call.id, answeredWith({ 'retry-after': '2', 'x-request-id': 'r-1' }, 429));
 
     expect(observed.take(marker)).toEqual({
       id: 7,
@@ -39,8 +39,8 @@ describe('the requests a client observes', () => {
     observed.noteSent(call, {});
     observed.noteSent({ jsonrpc: '2.0', id: 8, result: {} }, { onresumptiontoken: marker });
     observed.noteSent({ jsonrpc: '2.0', method: 'notifications/initialized' }, { onresumptiontoken: marker });
-    observed.noteAnswered(null, answeredWith());
-    observed.noteAnswered(JSON.stringify(call), answeredWith({ 'x-request-id': 'r-2' }));
+    observed.noteAnswered(undefined, answeredWith());
+    observed.noteAnswered(call.id, answeredWith({ 'x-request-id': 'r-2' }));
 
     expect(observed.take(marker)).toEqual({ id: null, response: null });
     expect(observed.lastRetryAfterMs()).toBeNull();
@@ -53,7 +53,7 @@ describe('the size of an HTTP answer', () => {
     const marker = observed.mark();
     observed.noteSent(call, { onresumptiontoken: marker });
 
-    const answer = observed.noteAnswered(JSON.stringify(call), new Response('four'));
+    const answer = observed.noteAnswered(call.id, new Response('four'));
 
     await expect(answer.text()).resolves.toBe('four');
     expect(observed.take(marker)).toMatchObject({ response: { tooLarge: false } });
@@ -68,7 +68,7 @@ describe('the size of an HTTP answer', () => {
       stopped.push('stopped');
     });
 
-    const answer = observed.noteAnswered(JSON.stringify(call), new Response('fives'));
+    const answer = observed.noteAnswered(call.id, new Response('fives'));
 
     await expect(answer.text()).rejects.toThrow('The answer takes more than the 4 bytes it may take');
     expect(stopped).toEqual(['stopped']);
@@ -90,19 +90,32 @@ describe('the size of an HTTP answer to one of several requests', () => {
       stopped.push('second');
     });
 
-    await expect(
-      observed.noteAnswered(JSON.stringify({ ...call, id: 8 }), new Response('fives')).text(),
-    ).rejects.toThrow('The answer takes more than the 4 bytes it may take');
+    await expect(observed.noteAnswered(8, new Response('fives')).text()).rejects.toThrow(
+      'The answer takes more than the 4 bytes it may take',
+    );
     expect(stopped).toEqual(['second']);
   });
 
   it('stops an answer past the bound to a request it did not keep, and passes an answer without a body', async () => {
     const observed = observations(null, 4);
 
-    await expect(observed.noteAnswered(null, new Response('fives')).text()).rejects.toThrow(
+    await expect(observed.noteAnswered(undefined, new Response('fives')).text()).rejects.toThrow(
       'The answer takes more than the 4 bytes it may take',
     );
-    expect(observed.noteAnswered(null, new Response(null, { status: 202 })).status).toBe(202);
+    expect(observed.noteAnswered(undefined, new Response(null, { status: 202 })).status).toBe(202);
+  });
+});
+
+describe('the request a body posts', () => {
+  it('is the request whose sending posts it, read from where it was sent and never from the body', async () => {
+    const posted = await posting(call, async () => {
+      await Promise.resolve();
+      return [postedId('{"id":"not read"}'), postedId(new URLSearchParams({ id: '7' }))];
+    });
+
+    expect(posted).toEqual([7, undefined]);
+    expect(postedId(JSON.stringify(call))).toBeUndefined();
+    expect(posting({ jsonrpc: '2.0', method: 'notifications/initialized' }, () => postedId('{}'))).toBeUndefined();
   });
 });
 

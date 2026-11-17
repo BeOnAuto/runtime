@@ -21,12 +21,16 @@ const variables = {
   schema,
 };
 
+const mebibyte = 1_048_576;
+
+const mostBytes = toolBounds.requestBytes;
+
 function remedied(failure: ArgumentsFailure): string {
   return argumentsFailureWords(failure, 'the call', smallerInputRemedy);
 }
 
 function inputOf(templates: Templates) {
-  return Result.map(renderedArguments(templates, variables, standingRenderClock), ({ input }) => input);
+  return Result.map(renderedArguments(templates, variables, standingRenderClock, mostBytes), ({ input }) => input);
 }
 
 describe('the moments a call renders over', () => {
@@ -41,34 +45,51 @@ describe('the moments a call renders over', () => {
 
 describe('the arguments of a call', () => {
   it('are rendered with their size as JSON', () => {
-    expect(renderedArguments({ text: '{{ to }} on {{ today }}' }, variables, standingRenderClock)).toEqual(
+    expect(renderedArguments({ text: '{{ to }} on {{ today }}' }, variables, standingRenderClock, mostBytes)).toEqual(
       Result.succeed({ input: { text: 'ada on 2026-10-07' }, bytes: 28 }),
     );
   });
 
-  it('fail at an argument that does not compile or renders no text, and past the bound of a call', () => {
+  it('fail at an argument that does not compile or renders no text, and past the bound they are given', () => {
     expect([
-      renderedArguments({ a: '{{ to' }, { to: 'ada' }, standingRenderClock),
-      renderedArguments({ a: 'Input: {{ input }}' }, { input: { a: 1 } }, standingRenderClock),
-      renderedArguments({ a: '{{ text }}', b: '{{ text }}' }, { text: 'x'.repeat(131_100) }, standingRenderClock),
+      renderedArguments({ a: '{{ to' }, { to: 'ada' }, standingRenderClock, mostBytes),
+      renderedArguments({ a: 'Input: {{ input }}' }, { input: { a: 1 } }, standingRenderClock, mostBytes),
+      renderedArguments(
+        { a: '{{ text }}', b: '{{ text }}' },
+        { text: 'x'.repeat(524_300) },
+        standingRenderClock,
+        mebibyte,
+      ),
     ]).toMatchObject([
       Result.fail({ reason: 'argument', argument: 'a', failure: { reason: 'failed', line: 1 } }),
       Result.fail({ reason: 'argument', argument: 'a', failure: { reason: 'not_text' } }),
-      Result.fail({ reason: 'too_large', bytes: 262_215 }),
+      Result.fail({ reason: 'too_large', bytes: 1_048_615, most: mebibyte }),
     ]);
   });
 
-  it('may take what a run may take as its input, so any input a run takes, sent as it is, is arguments a call may send', () => {
+  it('may take what a run may take as its input at the least a call may send, so any input a run takes, sent as it is, is arguments a call may send', () => {
     const page = 'x'.repeat(mostInputBytes - JSON.stringify({ page: '' }).length);
     const moment = momentVariables({ page }, '2026-11-10T09:00:00.000Z');
 
-    expect(toolBounds.argumentBytes).toBe(mostInputBytes);
-    expect(renderedArguments({ page: '{{ input.page }}' }, moment, standingRenderClock)).toEqual(
+    expect([mostInputBytes, toolBounds.handArgumentBytes]).toEqual([mebibyte, mostInputBytes]);
+    expect(renderedArguments({ page: '{{ input.page }}' }, moment, standingRenderClock, mebibyte)).toEqual(
       Result.succeed({ input: { page }, bytes: mostInputBytes }),
     );
-    expect(renderedArguments({ page: '{{ input.page }}', path: 'a' }, moment, standingRenderClock)).toEqual(
-      Result.fail({ reason: 'too_large', bytes: mostInputBytes + 11 }),
+    expect(renderedArguments({ page: '{{ input.page }}', path: 'a' }, moment, standingRenderClock, mebibyte)).toEqual(
+      Result.fail({ reason: 'too_large', bytes: mostInputBytes + 11, most: mebibyte }),
     );
+  });
+
+  it('may be many times the input they render, up to the bound, as a template that writes a value again and again', () => {
+    const page = 'x'.repeat(mebibyte - JSON.stringify({ page: '' }).length);
+    const moment = momentVariables({ page }, '2026-11-10T09:00:00.000Z');
+    const eight = { content: '{{ input.page }}'.repeat(8) };
+
+    const rendered = renderedArguments(eight, moment, standingRenderClock, 8 * mebibyte);
+    const past = renderedArguments({ ...eight, more: '{{ input.page }}' }, moment, standingRenderClock, 8 * mebibyte);
+
+    expect(Result.map(rendered, ({ bytes }) => bytes)).toEqual(Result.succeed(8 * page.length + 14));
+    expect(past).toMatchObject(Result.fail({ reason: 'too_large', bytes: 9 * page.length + 24, most: 8 * mebibyte }));
   });
 });
 
@@ -100,8 +121,8 @@ describe('an argument written as a value', () => {
   it('fails at its path when an expression alone reads no JSON, or more than a call may send', () => {
     expect([
       inputOf({ blocks: [{ count: '{{ 1 | divided_by: 0 }}' }] }),
-      renderedArguments({ a: '{{ text }}' }, { text: 'x'.repeat(262_144) }, standingRenderClock),
-      renderedArguments({ a: 'At {{ text }}' }, { text: 'x'.repeat(262_144) }, standingRenderClock),
+      renderedArguments({ a: '{{ text }}' }, { text: 'x'.repeat(mebibyte) }, standingRenderClock, mebibyte),
+      renderedArguments({ a: 'At {{ text }}' }, { text: 'x'.repeat(mebibyte) }, standingRenderClock, mebibyte),
       inputOf({ a: '{{ nothing }}' }),
     ]).toMatchObject([
       Result.fail({
@@ -119,35 +140,45 @@ describe('an argument written as a value', () => {
 describe('the words of arguments that could not be rendered', () => {
   it('name the argument and why, or the size of all of them, for the call they belong to', () => {
     expect([
-      argumentsFailureWords({ reason: 'too_large', bytes: 300_000 }, 'the call'),
+      argumentsFailureWords({ reason: 'too_large', bytes: 9_000_000, most: 8 * mebibyte }, 'the call'),
       argumentsFailureWords(
-        { reason: 'argument', argument: 'a', failure: { reason: 'not_text', line: 1 } },
+        { reason: 'argument', argument: 'a', failure: { reason: 'not_text', line: 1 }, most: mostBytes },
         'the call',
       ),
       argumentsFailureWords(
-        { reason: 'argument', argument: 'a', failure: { reason: 'too_long', line: 1 } },
+        { reason: 'argument', argument: 'a', failure: { reason: 'too_long', line: 1 }, most: 4 * mebibyte },
         'the read',
       ),
       argumentsFailureWords(
-        { reason: 'argument', argument: 'a', failure: { reason: 'limit_exceeded', limit: 'time', line: 1 } },
+        {
+          reason: 'argument',
+          argument: 'a',
+          failure: { reason: 'limit_exceeded', limit: 'time', line: 1 },
+          most: mostBytes,
+        },
         'the call',
       ),
     ]).toEqual([
-      'The arguments of the call take 300000 bytes, more than the 262144 a call may send',
+      'The arguments of the call take 9000000 bytes, more than the 8 MiB a call may send to a tool server',
       'The argument a of the call renders a value that is not text among text; write | json after it, or write it alone as one {{ }} to send it as it is',
-      'The argument a of the read renders more than the 262144 bytes a call may send',
+      'The argument a of the read renders more than the 4 MiB a call may send to a tool server',
       'The argument a of the call cannot be rendered within the limits of a template',
     ]);
   });
 
   it('end with what to do, where the caller gives it, once the arguments or one of them are past what a call may send', () => {
     expect([
-      remedied({ reason: 'too_large', bytes: 300_000 }),
-      remedied({ reason: 'argument', argument: 'a', failure: { reason: 'too_long', line: 1 } }),
-      remedied({ reason: 'argument', argument: 'a', failure: { reason: 'missing_variable', variable: 'b', line: 1 } }),
+      remedied({ reason: 'too_large', bytes: 17_000_000, most: mostBytes }),
+      remedied({ reason: 'argument', argument: 'a', failure: { reason: 'too_long', line: 1 }, most: mostBytes }),
+      remedied({
+        reason: 'argument',
+        argument: 'a',
+        failure: { reason: 'missing_variable', variable: 'b', line: 1 },
+        most: mostBytes,
+      }),
     ]).toEqual([
-      'The arguments of the call take 300000 bytes, more than the 262144 a call may send; give the function a smaller input',
-      'The argument a of the call renders more than the 262144 bytes a call may send; give the function a smaller input',
+      'The arguments of the call take 17000000 bytes, more than the 16 MiB a call may send to a tool server; give the function a smaller input',
+      'The argument a of the call renders more than the 16 MiB a call may send to a tool server; give the function a smaller input',
       'The argument a of the call reads a value it does not have',
     ]);
   });

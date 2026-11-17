@@ -1,5 +1,6 @@
 import type { RenderClock } from '@on.auto/definitions/template';
 import { longestCallRunMs } from '@on.auto/definitions/tool-blocks';
+import type { ToolAccess } from '@on.auto/tool-servers';
 import { Clock, Effect, Result } from 'effect';
 
 import type { KeptRequest } from '../replies/reply-taking.ts';
@@ -27,12 +28,21 @@ function askedBy(request: KeptRequest, key: string) {
   return { to: request.row.party, sent: request.sent, key };
 }
 
-function readingOfKept(request: KeptRequest, key: string, clock: RenderClock): string | undefined {
+interface TurnRendering {
+  readonly clock: RenderClock;
+  readonly mostRequestBytesTo: ToolAccess['mostRequestBytesTo'];
+}
+
+function renderingOf(request: KeptRequest, { clock, mostRequestBytesTo }: TurnRendering) {
+  return { clock, mostBytes: mostRequestBytesTo(routeOfRequest(request).server) };
+}
+
+function readingOfKept(request: KeptRequest, key: string, rendering: TurnRendering): string | undefined {
   const recorded = request.row.reading;
   if (recorded !== null) {
     return recorded;
   }
-  const rendered = readingOf(routeOfRequest(request).replies, askedBy(request, key), clock);
+  const rendered = readingOf(routeOfRequest(request).replies, askedBy(request, key), renderingOf(request, rendering));
   return Result.isSuccess(rendered) ? rendered.success : undefined;
 }
 
@@ -48,15 +58,16 @@ function joined(grouped: Grouped, request: KeptRequest, reading: string): Groupe
 export function readingsOfTheTurn(
   kept: readonly KeptRequest[],
   key: string,
-  clock: RenderClock,
+  rendering: TurnRendering,
 ): readonly ReadingOfATurn[] {
   const grouped = kept.reduce<Grouped>((readings, request) => {
-    const reading = readingOfKept(request, key, clock);
+    const reading = readingOfKept(request, key, rendering);
     return reading === undefined ? readings : joined(readings, request, reading);
   }, new Map());
   return [...grouped].map(([reading, requests]: readonly [string, Requests]) => {
     const [first] = requests;
-    const namesItsMessage = readNamesItsMessage(routeOfRequest(first).replies, askedBy(first, key), clock);
+    const asked = askedBy(first, key);
+    const namesItsMessage = readNamesItsMessage(routeOfRequest(first).replies, asked, renderingOf(first, rendering));
     return { reading, first, requests, namesItsMessage };
   });
 }

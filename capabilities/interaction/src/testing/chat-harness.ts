@@ -33,6 +33,7 @@ export interface ChatHarnessOptions {
   readonly postsAs?: string;
   readonly conversations?: HarnessOptions['conversations'];
   readonly payloadOffloading?: boolean;
+  readonly mostRequestBytes?: number;
 }
 
 export const answererId = 'U024BE7LH';
@@ -40,7 +41,7 @@ export const answererId = 'U024BE7LH';
 export const farAhead = 3_600_000;
 
 export async function chatHarness(options: ChatHarnessOptions = {}): Promise<ChatHarness> {
-  const chat = fakeTools(options.duringCall, options.inTheChat, options.postsAs);
+  const chat = fakeTools(options.duringCall, options.inTheChat, options.postsAs, options.mostRequestBytes);
   const ledger = options.ledger ?? ledgerHoldingRuns(chatProjections);
   const playbook = interactionHarness({
     ledger,

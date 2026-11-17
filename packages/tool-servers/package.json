@@ -13,6 +13,7 @@
   "scripts": {
     "measure": "node measure/bridge-overhead.ts",
     "measure:search": "node measure/search-over-a-document.ts",
+    "measure:large-calls": "node measure/large-call-memory.ts",
     "lint": "oxlint -c ../../.oxlintrc.json",
     "typecheck": "tsc",
     "test": "vitest run --coverage"

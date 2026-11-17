@@ -10,7 +10,8 @@ import { notListed, offeredOn, unlistedOn, type Listed, type Offering } from '..
 import { refusalOf, type Unusable } from '../org-servers/server-refusals.ts';
 import type { ToolsNotOpened } from './caller-context.ts';
 
-export interface Opening extends Offering, Pick<RunToolsParts, 'context' | 'secrets' | 'timing' | 'report'> {
+export interface Opening
+  extends Offering, Pick<RunToolsParts, 'context' | 'secrets' | 'timing' | 'report' | 'mostRequestBytes'> {
   readonly links: readonly ServerLink[];
   readonly keepIn: KeepIn;
 }

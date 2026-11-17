@@ -1,7 +1,6 @@
 import { Conflict, Unavailable } from '@on.auto/operations';
+import { sizeInWords } from '@on.auto/phrasing';
 import { Predicate, type Schema } from 'effect';
-
-import { sizeInWords } from '../assets/asset-words.ts';
 
 export type GatewayRefusal = Conflict | Unavailable;
 

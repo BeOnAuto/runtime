@@ -10,6 +10,10 @@ import type { MemoryDriver } from '../testing/memory-driver.ts';
 import { drivenRunId, drivenRun, outputKindsIn, outputsIn } from '../testing/run-history.ts';
 import { workflow } from '../testing/workflows.ts';
 
+const pastWhatOneChangeHolds: unknown = expect.stringMatching(
+  /more than the 1572864 it may record at once; .*turn on payload offloading$/u,
+);
+
 const calling = workflow(
   "do:\n  - ask: { call: notify, with: { to: '${ $data.name }' } }\n  - after: { set: { answer: '${ $data }' } }",
 );
@@ -108,6 +112,20 @@ describe('the arguments of a call', () => {
       kind: 'raised',
       error: { type: errorType('validation'), status: 400, title: 'notify needs a to', instance: '/do/0/ask' },
     });
+  });
+
+  it('take 1 MiB of a run input and 8 KiB more, and start the call with them kept, with payload offloading on', () => {
+    const run = drivenRun(calling, { input: { name: 'x'.repeat(1_048_576) }, payloadOffloading: true });
+
+    expect(mostCallArgumentsBytes).toBe(1_048_576 + 8192);
+    expect(startsIn(run)).toMatchObject([{ key: firstAsk, arguments_bytes: 1_048_576 + 9 }]);
+  });
+
+  it('are held inline with payload offloading off, so a value of 1 MiB passes what one recorded change may hold', () => {
+    const run = drivenRun(calling, { input: { name: 'x'.repeat(1_048_576) }, payloadOffloading: false });
+
+    expect(startsIn(run)).toEqual([]);
+    expect(run.outcome).toMatchObject({ kind: 'raised', error: { title: pastWhatOneChangeHolds } });
   });
 
   it('raise a validation error, and start nothing, when they are larger than a call takes', () => {

@@ -24,7 +24,7 @@ function endedWithin(bounds: RunBounds, body: string) {
 
 function usedAfter(checkpoints: number, mebibytes = 16): Exit.Exit<never, Conflict> {
   return unworkable(
-    `The program used more memory than a run may, the ${mebibytes} MiB of its sandbox, having done ${checkpoints} checkpoints of work`,
+    `The program used more memory than a run may, the ${mebibytes} MiB of its sandbox, having done ${checkpoints} checkpoints of work; keep less in memory at once, or give each run a part of the input`,
   );
 }
 
@@ -124,7 +124,9 @@ describe('a run whose program answers what cannot be its output', () => {
 
   it('ends in conflict when its output takes more than a run can record', async () => {
     expect(await ended('return "x".repeat(1100000);')).toEqual(
-      unworkable("The program's output takes more than the 1048320 bytes as JSON a run can record"),
+      unworkable(
+        "The program's output is more than a run may record, 1 MiB as JSON with the run's record; return less, or give each run a part of the input",
+      ),
     );
   });
 

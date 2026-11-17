@@ -59,19 +59,19 @@ function text(template: string): readonly string[] {
 }
 
 function inputOf(more: number) {
-  return { ...brief, text: 'x'.repeat(131_000), more: 'y'.repeat(more) };
+  return { ...brief, text: 'x'.repeat(524_000), more: 'y'.repeat(more) };
 }
 
 const anyText: unknown = expect.any(String);
 
 describe('the arguments of a delivery, at the start of its run', () => {
-  it('take 256 KiB as JSON, and end the run as unworkable one byte past it', async () => {
+  it('take as many bytes as JSON as their server may be sent, and end the run as unworkable one byte past it', async () => {
     const twiceAndMore = text('{{ input.text }}{{ input.text }}{{ input.more }}');
     const source = documentOf(replacing(twiceAndMore, "    channel: '{{ to }}'", ''), answering);
 
     expect([
-      (await askedThrough(source, fakeTools(), inputOf(133))).asked,
-      (await askedThrough(source, fakeTools(), inputOf(134))).asked,
+      (await askedThrough(source, fakeTools(), inputOf(565))).asked,
+      (await askedThrough(source, fakeTools(), inputOf(566))).asked,
     ]).toMatchObject([
       { status: 'succeeded', output: { status: 'started' } },
       {
@@ -79,7 +79,7 @@ describe('the arguments of a delivery, at the start of its run', () => {
         reason: 'conflict',
         kind: 'unworkable',
         detail:
-          'The arguments of the call that delivers the request take 262145 bytes, more than the 262144 a call may send; give the function a smaller input',
+          'The arguments of the call that delivers the request take 1048577 bytes, more than the 1 MiB a call may send to a tool server; give the function a smaller input',
       },
     ]);
   });

@@ -100,15 +100,4 @@ describe('the arguments of run_definition', () => {
     expect(settlement).toMatchObject({ status: 'rejected', detail: `${title}, at the step x.` });
     expect(callsIn(commands)).toEqual([]);
   });
-
-  it('are rejected when the input is larger than a run takes', async () => {
-    const { settlement } = await interpret(summarizing, { input: { text: 'x'.repeat(262_200) } });
-
-    expect(settlement).toEqual({
-      status: 'rejected',
-      reason: 'invalid_input',
-      detail:
-        'The input of run_definition takes 262211 bytes as JSON, more than the 262144 a run takes, at the step summarize.',
-    });
-  });
 });

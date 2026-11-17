@@ -1,8 +1,9 @@
 import { contentAddressLastsSeconds } from '@on.auto/identity';
 import { defineQuery } from '@on.auto/operations';
+import { sizeInWords } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
-import { dayOf, sizeInWords } from '../assets/asset-words.ts';
+import { dayOf } from '../assets/asset-words.ts';
 import type { GenerationPorts } from '../capability/generation-ports.ts';
 import { whatOf } from '../capability/generation-words.ts';
 import { AssetIdInputField, assetRead, AssetReadSchema, type AssetRead } from './asset-read.ts';

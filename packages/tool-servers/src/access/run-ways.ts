@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 
-import { defaultTiming, type Timing } from '../bounds/call-bounds.ts';
+import { defaultTiming, mostRequestBytesOf, mostRequestBytesTo, type Timing } from '../bounds/call-bounds.ts';
 import type { RunTools } from '../calls/run-tools.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import type { OrgAccess } from '../org-servers/org-access.ts';
@@ -17,12 +17,37 @@ export interface RunWays extends CallWays {
   ) => Effect.Effect<RunTools, ToolsNotOpened>;
   readonly named: NamingCheck;
   readonly callMs: number;
+  readonly mostRequestBytes: number;
+  readonly mostRequestBytesTo: (server: string) => number;
 }
 
-export function runWaysOf(access: OrgAccess, recording: RecordingParts, timing: Timing = defaultTiming): RunWays {
+type NamedServer = Parameters<typeof mostRequestBytesTo>[0] & { readonly name: string };
+
+interface RequestBytesBounds {
+  readonly servers: readonly NamedServer[];
+  readonly most: number;
+}
+
+interface RunBounds extends Pick<RequestBytesBounds, 'servers'> {
+  readonly timing: Timing | undefined;
+  readonly most: number | undefined;
+}
+
+export function mostRequestBytesAmong({ servers, most }: RequestBytesBounds): RunWays['mostRequestBytesTo'] {
+  return (named) => {
+    const server = servers.find(({ name }) => name === named);
+    return server === undefined ? most : mostRequestBytesTo(server, most);
+  };
+}
+
+export function runWaysOf(access: OrgAccess, recording: RecordingParts, bounds: RunBounds): RunWays {
+  const { callMs } = bounds.timing ?? defaultTiming;
+  const mostRequestBytes = mostRequestBytesOf(bounds.most);
   return {
     ...callWaysOf(access, recording),
-    callMs: timing.callMs,
+    callMs,
+    mostRequestBytes,
+    mostRequestBytesTo: mostRequestBytesAmong({ servers: bounds.servers, most: mostRequestBytes }),
     open: (context, references) =>
       Effect.gen(function* () {
         const servers = yield* access.serversOf(context.org);

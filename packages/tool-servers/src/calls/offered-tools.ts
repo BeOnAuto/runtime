@@ -1,6 +1,6 @@
 import type { Schema } from 'effect';
 
-import { cutToDescriptionBound } from '../bounds/call-bounds.ts';
+import { cutToDescriptionBound, mostRequestBytesTo } from '../bounds/call-bounds.ts';
 import { onlyReads, type ToolAnnotations } from '../bounds/tool-results.ts';
 import { scrubbedSchema } from '../listing/shown-tools.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
@@ -23,6 +23,7 @@ export interface OfferedTool extends ToolSending {
   readonly inputSchema: Schema.JsonObject;
   readonly annotations: ToolAnnotations | undefined;
   readonly readOnly: boolean;
+  readonly mostBytes: number;
   readonly call: (request: ToolCallRequest, signals: CallSignals) => Promise<CallReply>;
 }
 
@@ -40,6 +41,7 @@ export function offeredToolOf(parts: RunToolsParts, state: RunState, tool: Named
     inputSchema: scrubbedSchema(tool.tool.inputSchema, parts.secrets.scrub),
     annotations: tool.tool.annotations,
     readOnly: onlyReads(tool.tool),
+    mostBytes: mostRequestBytesTo(tool.slot.settings, parts.mostRequestBytes),
     start,
     send,
     call: caller(parts, state, tool),

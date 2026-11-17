@@ -16,6 +16,7 @@ import { documentCheck, invalidDefinition } from '../document/document-check.ts'
 import { parseComputationDocument } from '../document/document-parsing.ts';
 import { computationRun } from '../run/computation-run.ts';
 import { computationBounds } from '../run/run-bounds.ts';
+import { guideVariablesOf } from './guide-variables.ts';
 
 export interface ComputationFunctionAdapterOptions {
   readonly pool: ProgramPool;
@@ -49,7 +50,7 @@ export function makeComputationFunctionAdapter({
   return defineCapability({
     type: 'computation',
     title: functionCategoryLabels.computation,
-    guide: { name: 'computation-function' },
+    guide: { name: 'computation-function', variables: guideVariablesOf({ memoryBytes }) },
     noun: { one: functionResourceLabels.computation.singular, other: functionResourceLabels.computation.plural },
     describeOutput: outputInWords('result'),
     mediaType: 'text/markdown',

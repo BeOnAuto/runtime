@@ -31,7 +31,7 @@ import { outputShapeRejections } from './workflow-output.ts';
 
 type Problem = Pick<Rejection, 'pointer' | 'detail'>;
 
-const thirtyDays = 2_592_000_000;
+export const thirtyDays = 2_592_000_000;
 
 export type WorkflowDefinitionDocument = JsonObject;
 

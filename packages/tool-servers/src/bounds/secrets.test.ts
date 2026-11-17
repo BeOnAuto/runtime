@@ -164,6 +164,22 @@ describe('the secrets of a value', () => {
   });
 });
 
+describe('the secrets of a JSON text', () => {
+  const quoted = 'graph-api-key"4f1d/9a7c~2b+';
+
+  it('leave a text that holds none of their forms as it is, and scrub one that does as its value is scrubbed', () => {
+    const secrets = secretsOf([Redacted.make(quoted), Redacted.make('31415926535')]);
+    const clean = JSON.stringify({ said: 'nothing secret', n: 7 });
+    const held = JSON.stringify({ said: `the key is ${quoted}`, [quoted]: 1, pin: 31_415_926_535 });
+
+    expect([secrets.scrubJson(clean), secrets.scrubJson(held)]).toEqual([
+      clean,
+      JSON.stringify(secrets.scrubValue(JSON.parse(held))),
+    ]);
+    expect(secrets.scrubJson(held)).toBe('{"said":"the key is [redacted]","[redacted]":1,"pin":"[redacted]"}');
+  });
+});
+
 describe('a secret sent in an address', () => {
   it('is scrubbed in the forms a query and a path carry it, as well as written', () => {
     const key = 'k3y+With/Slash=Pad== and more';

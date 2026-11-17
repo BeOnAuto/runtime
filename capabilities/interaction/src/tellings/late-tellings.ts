@@ -40,7 +40,7 @@ export function toldAnsweredAlready(late: LateReply, state: IntakeState): Effect
   const { parts, playbook, request, causationId, roomForATelling } = late;
   const { runId, row, sent } = request;
   return Effect.gen(function* () {
-    const call = yield* answeredAlreadyTellingOf(parts.ledger, playbook, state, late);
+    const call = yield* answeredAlreadyTellingOf(parts, playbook, state, late);
     if (call === undefined || !(yield* roomForATelling)) {
       return;
     }

@@ -17,6 +17,8 @@ export function makeToolAccess(settings: ToolServers, options: ToolAccessOptions
     configured: own.configured,
     takesConnections: own.takesConnections,
     callMs: own.callMs,
+    mostRequestBytes: own.mostRequestBytes,
+    mostRequestBytesTo: own.mostRequestBytesTo,
     open: (context, references) => Effect.flatMap(ofTheCall, (access) => access.open(context, references)),
     named: (address, references) => Effect.flatMap(ofTheCall, (access) => access.named(address, references)),
     callOnce: (call, runCall) => Effect.flatMap(ofTheCall, (access) => access.callOnce(call, runCall)),

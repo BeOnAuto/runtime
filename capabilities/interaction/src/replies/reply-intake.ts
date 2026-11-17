@@ -106,7 +106,7 @@ function refusedReply(intake: Intake, state: IntakeState, refusal: Refusal) {
   const { request, reply } = refusal;
   return Effect.gen(function* () {
     const open = intake.candidates.filter(({ runId }) => !state.answered.has(runId)).length;
-    const input = yield* refusalTellingOf(intake.parts.ledger, intake.playbook, state, { ...refusal, open });
+    const input = yield* refusalTellingOf(intake.parts, intake.playbook, state, { ...refusal, open });
     if (input !== undefined && !(yield* intake.roomForATelling)) {
       return { ...state, foundAnswerer: true, unrecorded: true };
     }

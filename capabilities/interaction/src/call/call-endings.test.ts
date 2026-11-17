@@ -6,6 +6,10 @@ import { describe, expect, it } from 'vitest';
 import { callRuns } from '../testing/call-runs.ts';
 import { callDocument } from '../testing/index.ts';
 
+function pastTheBound(words: string): unknown {
+  return expect.stringContaining(`${words} the 1 MiB a call may send to a tool server`);
+}
+
 const anyOutput = ['output:', '  schema: {}'];
 
 function asking(tool: string, written: readonly string[] = []): string {
@@ -89,7 +93,7 @@ describe('a run that asks a system with arguments it cannot render', () => {
     expect(fake.received()).toEqual([]);
   });
 
-  it('is unworkable when an argument renders a structure among text, or the arguments take more than 256 KiB', async () => {
+  it('is unworkable when an argument renders a structure among text, or the arguments take more than their server may be sent', async () => {
     const { run } = await callRuns();
     const open = ['input:', '  schema: { type: object }'];
     const among = callDocument({ with: ["    channel: 'In {{ input.channel }}'"], input: open });
@@ -98,15 +102,15 @@ describe('a run that asks a system with arguments it cannot render', () => {
 
     expect([
       await run(among, { channel: ['C0123'] }),
-      await run(whole, { a: 'x'.repeat(131_100) }),
-      await run(text, { channel: 'x'.repeat(131_100) }),
+      await run(whole, { a: 'x'.repeat(524_300) }),
+      await run(text, { channel: 'x'.repeat(524_300) }),
     ]).toEqual([
       rejectedWith({
         kind: 'unworkable',
         detail: expect.stringContaining('renders a value that is not text among text'),
       }),
-      rejectedWith({ kind: 'unworkable', detail: expect.stringContaining('take 262215 bytes, more than the 262144') }),
-      rejectedWith({ kind: 'unworkable', detail: expect.stringContaining('renders more than the 262144 bytes') }),
+      rejectedWith({ kind: 'unworkable', detail: pastTheBound('take 1048615 bytes, more than') }),
+      rejectedWith({ kind: 'unworkable', detail: pastTheBound('renders more than') }),
     ]);
   });
 });

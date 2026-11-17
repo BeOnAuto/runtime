@@ -1,15 +1,18 @@
 import { issueText } from '@on.auto/definitions/document';
 import { standingRenderClock } from '@on.auto/definitions/testing';
+import { toolBounds } from '@on.auto/tool-servers';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { lookupDocument, runsDocument } from '../testing/index.ts';
 import { parseLookupDocument } from './document-parsing.ts';
 
+const standingBounds = { clock: standingRenderClock, mostRequestBytesTo: () => toolBounds.requestBytes };
+
 const anOpenSchema: unknown = expect.objectContaining({ document: {} });
 
 function problemsOf(source: string): readonly string[] {
-  return Result.match(parseLookupDocument(source, standingRenderClock), {
+  return Result.match(parseLookupDocument(source, standingBounds), {
     onSuccess: () => [],
     onFailure: (issues) => issues.map((issue) => issueText(issue)),
   });
@@ -17,7 +20,7 @@ function problemsOf(source: string): readonly string[] {
 
 describe('a lookup function document', () => {
   it('reads its call, the line it starts on and its schemas as written', () => {
-    const parsed = Result.getOrThrow(parseLookupDocument(lookupDocument(), standingRenderClock));
+    const parsed = Result.getOrThrow(parseLookupDocument(lookupDocument(), standingBounds));
 
     expect(parsed).toMatchObject({
       description: 'Read the replies of a thread in the team chat, oldest first',
@@ -37,7 +40,7 @@ describe('a lookup function document', () => {
     const plain = ['---', 'call:', '  server: chat', '  tool: thread', 'output:', '  schema: {}', '---', ''].join('\n');
 
     expect([problemsOf(plain), problemsOf(lookupDocument({ with: [], read: null }))]).toEqual([[], []]);
-    expect(Result.getOrThrow(parseLookupDocument(plain, standingRenderClock))).toEqual({
+    expect(Result.getOrThrow(parseLookupDocument(plain, standingBounds))).toEqual({
       kind: 'call',
       call: { server: 'chat', tool: 'thread' },
       callLine: 3,
@@ -127,7 +130,7 @@ const description = 'Reads the paces computed for one campaign since a day, newe
 
 describe('a lookup function document that reads runs', () => {
   it('reads the definition whose runs it reads, and its words and since as templates at their pointers', () => {
-    const parsed = Result.getOrThrow(parseLookupDocument(runsDocument(), standingRenderClock));
+    const parsed = Result.getOrThrow(parseLookupDocument(runsDocument(), standingBounds));
 
     expect(parsed).toMatchObject({
       description,
@@ -146,7 +149,7 @@ describe('a lookup function document that reads runs', () => {
   it('takes runs without words or since, and literal ones within their bounds, of any definition type', () => {
     const plain = runsDocument({ words: null, since: null, input: [] });
 
-    expect(Result.getOrThrow(parseLookupDocument(plain, standingRenderClock))).toEqual({
+    expect(Result.getOrThrow(parseLookupDocument(plain, standingBounds))).toEqual({
       description,
       kind: 'runs',
       runs: { type: 'computation', name: 'campaign-pace' },

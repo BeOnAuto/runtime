@@ -235,7 +235,7 @@ When a lookup function runs, the runtime reads the mark again, as it lists the s
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `succeeded`                              | The tool returned a result and the part `read` points at matched `output.schema`; that part is the output. For `runs`, the runs it read, which may be none                                                                                             |
 | `invalid_input`                          | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads                                                                                                                              |
-| `conflict`, kind `unworkable`            | An argument renders a structure among text, or the arguments pass 256 KiB                                                                                                                                                                              |
+| `conflict`, kind `unworkable`            | An argument renders a structure among text, or the arguments pass the most a call may send to its server                                                                                                                                               |
 | `conflict`, kind `unworkable`            | `runs.words` renders more than 1,000 characters, `runs.since` renders neither a day nor a date and time, or either renders a structure                                                                                                                 |
 | `conflict`, kind `unworkable`            | The tool refused the arguments, the answer has nothing to read or nothing where `read` points, the part at `read` is more than a run may record, or `output.schema` refuses it                                                                         |
 | `unavailable`, kind `tool_not_read_only` | The tool is no longer marked `reads`. Nothing was sent                                                                                                                                                                                                 |
@@ -252,22 +252,28 @@ A run takes place within the call that started it. It cannot be cancelled, and i
 
 The run's history shows its start, its call as `tool_call_started` and `tool_call_answered`, or `tool_call_failed` when the tool never returned a result, and its end. The call's start says it only reads. A run that reads runs calls no tool, so its history shows its start and its end, with `{ examined, through }` as its record.
 
-The playbook keeps the arguments and the tool's whole result, scrubbed of secrets, unless the operator turns this off for a server with `record_content`. The history shows each where it takes at most 2 KiB, and its size beyond. `get_event` reads one event with both whole. The output is shown in `run_succeeded` where it takes at most 2 KiB, and `get_run` returns it whole.
+The playbook keeps the arguments and the tool's whole result, scrubbed of secrets, where the server's entry keeps content. The history shows a large one in part, with its size; `get_event` reads one event whole, and `get_run` the output.
 
 ## Bounds
 
-| Bound                                         | Value                                                   | When it is reached                                              |
-| --------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------- |
-| The arguments of the call                     | 256 KiB as JSON                                         | `conflict`, `unworkable`                                        |
-| The arguments of a call that reads no `input` | 256 KiB as JSON                                         | Refused when saved                                              |
-| The call of its tool                          | 10 seconds to open, 10 to list the tools, 30 to respond | `tool_server_failed` before sending; then `tools_unfinished`    |
-| What `read` takes                             | 1 MiB as JSON with the run's record, 512 levels         | `conflict`, `unworkable`                                        |
-| Calls in one run                              | 1, within 70 seconds                                    | Not applicable                                                  |
-| `runs.words`                                  | 1,000 characters                                        | Refused when saved; `conflict`, `unworkable` when rendered      |
-| The runs one run reads                        | 10 pages: 10,000 runs of the playbook, 1,000 answered   | `more: true`                                                    |
-| What a read of runs answers                   | 1 MiB as JSON with the run's record                     | The output that does not fit is given by its size; `more: true` |
+| Bound                                         | Value                                                                  | When it is reached                                                                 |
+| --------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| The arguments of the call                     | <span data-variable="lookup.most_call_arguments">16 MiB</span> as JSON | `conflict`, `unworkable`: give the function a smaller input                        |
+| The arguments of a call that reads no `input` | The same                                                               | Refused when saved: make the call's templates render less                          |
+| The call of its tool                          | 30 seconds to answer                                                   | `tools_unfinished`: ask the tool for less in one call                              |
+| What `read` takes                             | About 1 MiB as JSON, 512 levels                                        | `conflict`, `unworkable`: point `read` at a smaller part, or ask the tool for less |
+| Calls in one run                              | 1                                                                      | Not applicable                                                                     |
+| `runs.words`                                  | 1,000 characters                                                       | Refused when saved; `conflict`, `unworkable` when rendered                         |
+| The runs one run reads                        | 1,000 answered, of at most 10,000 looked at                            | `more: true`, and `through` says how far back it looked                            |
+| What a read of runs answers                   | About 1 MiB as JSON                                                    | The output that does not fit is given by its size; `more: true`                    |
 
-A tool server may take less than a call may send: Auto Browser, the browser of Auto Cloud, refuses a call of more than 64 KiB with HTTP 413, which the run reads as `The tool server answered HTTP 413: the request was larger than the server takes`.
+The limits for what one call may send <span data-variable="lookup.bounds_changed_by">can be changed only by whoever runs the server</span>. A run, a save or a call refused for its size says how large it was, the most allowed here, and what to do. A tool's server may take less than a call may send, and says so only by refusing, with HTTP 413: the run then reads how large the arguments were, and to send less in one call, in parts where the tool takes them.
+
+<div data-audience="operator">
+
+On a runtime of one's own, the arguments of a call take what its operator sets with [`TOOL_CALL_MAX_REQUEST_MIB`](../self-host/configuration.md#tool-calls), 16 MiB unless set, and at most 4 MiB to a server started as a program. Auto Cloud sets its own.
+
+</div>
 
 A tool that pages returns one page for each run. Point `read` at the part that holds both the items and the cursor, and have the workflow call again with the cursor while there is one.
 

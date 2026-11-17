@@ -16,7 +16,18 @@ const lines = new Map([
   ['/call/read', 12],
 ]);
 
-const reading = { lines, clock: standingRenderClock };
+const mebibyte = 1_048_576;
+
+const serversAsked: string[] = [];
+
+const reading = {
+  lines,
+  clock: standingRenderClock,
+  mostRequestBytesTo: (server: string) => {
+    serversAsked.push(server);
+    return mebibyte;
+  },
+};
 
 const thread: CallBlock = {
   server: 'chat',
@@ -109,17 +120,22 @@ describe('the values the arguments of a call block hold', () => {
     ]);
   });
 
-  it('refuse arguments that take more than 256 KiB as JSON, or one that does alone, and leave what only an input renders to the run', () => {
+  it('refuse arguments that take more than their server may be sent as JSON, or one that does alone, and leave what only an input renders to the run', () => {
+    serversAsked.length = 0;
+
     expect([
-      problemsOf({ ...thread, with: { a: timesAThousand(140), b: timesAThousand(140) } }),
-      problemsOf({ ...thread, with: { channel: timesAThousand(270) } }),
+      problemsOf({ ...thread, with: { a: timesAThousand(540), b: timesAThousand(540) } }),
+      problemsOf({ ...thread, with: { channel: timesAThousand(1050) } }),
       withChannel('{{ input.channel | divided_by: 0 }}'),
     ]).toEqual([
-      ['Line 7, /call/with: The arguments of the call take 280015 bytes, more than the 262144 a call may send'],
       [
-        'Line 8, /call/with/channel: The argument channel of the call renders more than the 262144 bytes a call may send',
+        'Line 7, /call/with: The arguments of the call take 1080015 bytes, more than the 1 MiB a call may send to a tool server; make its templates render less',
+      ],
+      [
+        'Line 8, /call/with/channel: The argument channel of the call renders more than the 1 MiB a call may send to a tool server; make its templates render less',
       ],
       [],
     ]);
+    expect(new Set(serversAsked)).toEqual(new Set(['chat']));
   });
 });

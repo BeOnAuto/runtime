@@ -34,13 +34,14 @@ export const beforeSending: Rows = [
     },
   ],
   [
-    'arguments past 256 KiB',
+    'arguments past the most the runtime is set to send, TOOL_CALL_MAX_REQUEST_MIB',
     {
       document: { with: ["    a: '{{ input.a }}'", "    b: '{{ input.a }}'"], input: openInput },
-      input: { a: 'x'.repeat(131_100) },
+      input: { a: 'x'.repeat(524_300) },
+      server: { environment: { TOOL_CALL_MAX_REQUEST_MIB: '1' } },
     },
     unworkable(
-      'The arguments of the call take 262215 bytes, more than the 262144 a call may send; give the function a smaller input',
+      'The arguments of the call take 1048615 bytes, more than the 1 MiB a call may send to a tool server; give the function a smaller input',
     ),
   ],
   [
@@ -127,7 +128,7 @@ export const unreadable: Rows = [
     { document: calling('large', ['    kib: 1030']) },
     unworkable(
       expect.stringMatching(
-        /^What the large tool of chat answered takes \d+ bytes as JSON with the record of the run, more than the 1048576 a run may record$/u,
+        /^What the large tool of chat answered takes \d+ bytes as JSON with the run's record, more than the 1 MiB a run may record; point read at a smaller part, or ask the tool for less$/u,
       ),
     ),
   ],

@@ -24,10 +24,15 @@ function bodyIssuesOf(parts: DocumentParts, skipsMessage: boolean): readonly Doc
   return Result.isFailure(message) ? message.failure : [];
 }
 
+export interface DocumentBounds {
+  readonly clock: RenderClock;
+  readonly mostRequestBytesTo: (server: string) => number;
+}
+
 function documentFrom(
   reading: ReadFrontMatter,
   parts: DocumentParts,
-  clock: RenderClock,
+  bounds: DocumentBounds,
 ): Checked<InteractionFunctionDefinitionDocument> {
   const decoded = decodeFrontMatter(reading.root);
   if (reading.issues.length > 0 || Result.isFailure(decoded)) {
@@ -37,23 +42,23 @@ function documentFrom(
     ]);
   }
   const written = decoded.success;
-  const read = { lines: reading.lines, clock };
+  const read = { lines: reading.lines, ...bounds };
   return written.call === undefined ? requestFrom(written, read, parts) : callFrom(written, written.call, read, parts);
 }
 
-function documentOf(parts: DocumentParts, clock: RenderClock): Checked<InteractionFunctionDefinitionDocument> {
+function documentOf(parts: DocumentParts, bounds: DocumentBounds): Checked<InteractionFunctionDefinitionDocument> {
   const reading = frontMatterIn(parts.frontMatter, parts.frontMatterLine, interactionFrontMatter);
   return Result.isFailure(reading)
     ? Result.fail([...reading.failure, ...bodyIssuesOf(parts, seemsToAskASystem(parts) || seemsToRender(parts))])
-    : documentFrom(reading.success, parts, clock);
+    : documentFrom(reading.success, parts, bounds);
 }
 
 export function parseInteractionDocument(
   source: string,
-  clock: RenderClock,
+  bounds: DocumentBounds,
 ): Checked<InteractionFunctionDefinitionDocument> {
   return Result.mapError(
-    Result.flatMap(splitDocument(source, 'An interaction function definition'), (parts) => documentOf(parts, clock)),
+    Result.flatMap(splitDocument(source, 'An interaction function definition'), (parts) => documentOf(parts, bounds)),
     reportedIssues,
   );
 }

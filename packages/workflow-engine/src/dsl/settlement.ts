@@ -11,9 +11,11 @@ import {
   type Settlement,
   type UnavailableKind,
 } from '@on.auto/operations';
+import { sizeInWords } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
 import type { DslError, ErrorCause } from '../machine/dsl-error.ts';
+import { mostRecordedRunBytes } from '../machine/limits.ts';
 import type { CancelOrder } from '../machine/run-input.ts';
 import type { Json } from './json.ts';
 import { describeError } from './raised-error.ts';
@@ -130,7 +132,7 @@ function endingOf(outcome: Exclude<SettledOutcome, { readonly kind: 'completed' 
     return { status: 'rejected', reason: 'cancelled', kind: 'overrun', detail };
   }
   if (outcome.kind === 'oversized') {
-    const detail = `The output of the workflow takes ${outcome.bytes} bytes as JSON, more than the ${outcome.most} a run records`;
+    const detail = `The output of the workflow takes ${outcome.bytes} bytes as JSON, more than a run may record, ${sizeInWords(mostRecordedRunBytes)} with the run's record; return less`;
     return { status: 'rejected', reason: 'conflict', kind: 'oversized', detail };
   }
   return { status: 'failed' };

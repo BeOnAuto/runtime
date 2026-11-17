@@ -9,6 +9,11 @@ import type {
   RequestDocument,
   TextRequestDocument,
 } from '../document/interaction-document.ts';
+import { fakeRequestBytes } from './fake-tools.ts';
+
+export const standingBounds = { clock: standingRenderClock, mostRequestBytesTo: () => fakeRequestBytes };
+
+export const standingRendering = { clock: standingRenderClock, mostBytes: fakeRequestBytes };
 
 export const delivering: readonly string[] = [
   "to: '{{ input.owner }}'",
@@ -68,7 +73,7 @@ export function without(lines: readonly string[], ...left: readonly string[]): r
 }
 
 export function problemsOf(source: string): readonly string[] {
-  const parsed = parseInteractionDocument(source, standingRenderClock);
+  const parsed = parseInteractionDocument(source, standingBounds);
   return Result.isFailure(parsed) ? parsed.failure.map((issue) => issueText(issue)) : [];
 }
 
@@ -86,7 +91,7 @@ function isRenderedRequest(document: RequestDocument): document is RenderedReque
 
 function requestOf(source: string): RequestDocument {
   return Option.getOrThrow(
-    Option.liftPredicate(Result.getOrThrow(parseInteractionDocument(source, standingRenderClock)), isRequest),
+    Option.liftPredicate(Result.getOrThrow(parseInteractionDocument(source, standingBounds)), isRequest),
   );
 }
 

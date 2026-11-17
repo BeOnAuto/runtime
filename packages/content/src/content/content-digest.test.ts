@@ -1,6 +1,9 @@
+import { Buffer } from 'node:buffer';
+
 import { describe, expect, it } from 'vitest';
 
 import { sha256Digest, sha256Of } from './content-digest.ts';
+import { textPieceCodeUnits } from './text-pieces.ts';
 
 const knownDigests: readonly (readonly [string | Readonly<Uint8Array>, string])[] = [
   ['', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'],
@@ -23,5 +26,11 @@ describe('the SHA-256 of a content', () => {
 
   it('is the same known digest digested in parts as it streams', () => {
     expect(knownDigests.map(([content]) => digestedInParts(content))).toEqual(knownDigests.map(([, digest]) => digest));
+  });
+
+  it('is the digest of the UTF-8 of a text of many pieces, a character across where they meet among them', () => {
+    const text = `${'x'.repeat(textPieceCodeUnits - 1)}\u{1D11E}\uD834 and more`.repeat(3);
+
+    expect(sha256Of(text)).toBe(sha256Of(new Uint8Array(Buffer.from(text, 'utf8'))));
   });
 });

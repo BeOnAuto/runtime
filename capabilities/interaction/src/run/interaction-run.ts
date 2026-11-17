@@ -128,7 +128,8 @@ export function requestRun(ports: InteractionPorts) {
       }
       yield* roomFor(ports, playbook);
       const record = yield* requestOf(document, admitted, yield* partOf(ports, playbook, document));
-      yield* checkedArguments(record, { input: admitted, runId: context.id, functionName: context.definition.name });
+      const asking = { input: admitted, runId: context.id, functionName: context.definition.name };
+      yield* checkedArguments(record, asking, ports.tools.mostRequestBytesTo);
       return { finishesLater: true, record };
     });
 }

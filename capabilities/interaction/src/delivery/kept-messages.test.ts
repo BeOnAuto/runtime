@@ -126,14 +126,14 @@ describe('the reading a delivery records', () => {
       undefined,
       threadRepliesWith(
         "    ts: '{{ sent.id }}'",
-        `    ts: '{% for i in (1..262) %}${'a'.repeat(1000)}{% endfor %}${'{{ to }}'.repeat(20)}'`,
+        `    ts: '{% for i in (1..1048) %}${'a'.repeat(1000)}{% endfor %}${'a'.repeat(432)}${'{{ to }}'.repeat(20)}'`,
       ),
     );
 
     expect(keptOf(ended)).toEqual([
       undefined,
       undefined,
-      `The argument ts of the read renders more than the 262144 bytes a call may send${takesNoReply}`,
+      `The argument ts of the read renders more than the 1 MiB a call may send to a tool server${takesNoReply}`,
     ]);
   });
 });

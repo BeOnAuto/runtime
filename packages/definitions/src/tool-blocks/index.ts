@@ -10,6 +10,7 @@ export {
   momentVariables,
   renderedArguments,
   smallerInputRemedy,
+  smallerTemplatesRemedy,
   type ArgumentsFailure,
   type RenderedArguments,
   type Templates,

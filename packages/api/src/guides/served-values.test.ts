@@ -1,4 +1,5 @@
 import type { GuideVariables } from '@on.auto/definitions';
+import { changedOnlyByWhoeverRunsTheServer } from '@on.auto/phrasing';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import { describe, expect, it } from 'vitest';
 
@@ -18,6 +19,10 @@ function guideVariablesOf(bounds: WorkflowBounds): GuideVariables {
     'workflow.longest_run': {
       value: `${bounds.longestRunMinutes} minutes`,
       default: `${defaultBounds.longestRunMinutes} minutes`,
+    },
+    'workflow.bounds_changed_by': {
+      value: changedOnlyByWhoeverRunsTheServer,
+      default: changedOnlyByWhoeverRunsTheServer,
     },
   };
 }

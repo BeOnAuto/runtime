@@ -160,7 +160,7 @@ describe('a call whose answer cannot be read', () => {
       rejectedWith({
         kind: 'unworkable',
         detail: expect.stringMatching(
-          /^What the thread tool of chat answered takes \d+ bytes as JSON with the record of the run, more than the 1048576 a run may record$/u,
+          /^What the thread tool of chat answered takes \d+ bytes as JSON with the run's record, more than the 1 MiB a run may record; point read at a smaller part, or ask the tool for less$/u,
         ),
       }),
       rejectedWith({

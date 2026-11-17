@@ -1,8 +1,8 @@
 import { Conflict, type ProjectionReader, type PlaybookAddress } from '@on.auto/operations';
+import { sizeInWords } from '@on.auto/phrasing';
 import { Effect } from 'effect';
 
 import { assetTotalsName, rowKeyed, totalsKey, totalsRowOf } from '../assets/asset-projections.ts';
-import { sizeInWords } from '../assets/asset-words.ts';
 
 export type TotalsReading = Pick<ProjectionReader, 'readProjectedRows'>;
 

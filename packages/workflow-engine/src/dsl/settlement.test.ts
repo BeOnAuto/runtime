@@ -153,7 +153,8 @@ describe('the settlement of a workflow whose output or run broke', () => {
         status: 'rejected',
         reason: 'conflict',
         kind: 'oversized',
-        detail: 'The output of the workflow takes 1048575 bytes as JSON, more than the 1048574 a run records',
+        detail:
+          "The output of the workflow takes 1048575 bytes as JSON, more than a run may record, 1 MiB with the run's record; return less",
       },
       { status: 'failed' },
     ]);

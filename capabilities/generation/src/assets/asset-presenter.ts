@@ -1,8 +1,9 @@
 import { changingEvents, type PresentedFact, type Presenter } from '@on.auto/operations';
+import { sizeInWords } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
 import { AssetEventSchema, assetsKind, type AssetEvent, type AssetMadeBy } from './asset-facts.ts';
-import { dayOf, kindInWords, sizeInWords } from './asset-words.ts';
+import { dayOf, kindInWords } from './asset-words.ts';
 
 const decodeAssetEvent = Schema.decodeUnknownSync(Schema.toCodecJson(AssetEventSchema));
 

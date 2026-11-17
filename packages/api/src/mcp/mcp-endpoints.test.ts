@@ -1,13 +1,14 @@
 import { authenticatorFor } from '@on.auto/identity';
 import { describe, expect, it } from 'vitest';
 
+import { requestBodyLimit } from '../operations/request-body.ts';
 import { call } from '../testing/api-calls.ts';
 import { jsonOf, postMcp } from '../testing/mcp-requests.ts';
 import { acmeAdmin, acmeAlphaWriter, globexAdmin, operationServer } from '../testing/operation-server.ts';
 
 const asAdmin = { authorization: `Bearer ${acmeAdmin.key}` };
 
-const mebibyte = 1024 * 1024;
+const limit = requestBodyLimit;
 
 function forbiddenProblem(detail: string): Readonly<Record<string, unknown>> {
   return { type: 'https://on.auto/problems/forbidden', title: 'Forbidden', status: 403, detail, reason: 'forbidden' };
@@ -129,16 +130,16 @@ describe('an MCP endpoint once the MCP SDK runs', () => {
     expect(mcpErrors()).toEqual(['Unsupported Media Type: Content-Type must be application/json']);
   });
 
-  it('answers a body over 1 MiB with the SDK’s own JSON-RPC error and 413, and accepts one at the limit', async () => {
+  it('answers a body over 1 MiB and 64 KiB with the SDK’s own JSON-RPC error and 413, and accepts one at the limit', async () => {
     const { handler } = await operationServer();
     const envelope = pingWithPadding(0).length;
 
-    const over = await postMcp(handler, '/orgs/acme/mcp', asAdmin, pingWithPadding(mebibyte - envelope + 1));
-    const atLimit = await postMcp(handler, '/orgs/acme/mcp', asAdmin, pingWithPadding(mebibyte - envelope));
+    const over = await postMcp(handler, '/orgs/acme/mcp', asAdmin, pingWithPadding(limit - envelope + 1));
+    const atLimit = await postMcp(handler, '/orgs/acme/mcp', asAdmin, pingWithPadding(limit - envelope));
 
     expect({ status: over.status, body: jsonOf(over.text) }).toEqual({
       status: 413,
-      body: sdkError('Payload Too Large: Request body must not exceed 1048576 bytes'),
+      body: sdkError('Payload Too Large: Request body must not exceed 1114112 bytes'),
     });
     expect(atLimit.status).not.toBe(413);
   });

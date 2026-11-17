@@ -1,7 +1,7 @@
 import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineCommand, defineQuery, takesNoBody, type OfferedLink } from '../index.ts';
+import { defineCommand, defineQuery, sizeBoundCheck, takesNoBody, type OfferedLink } from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { harness, toOrg, toPlaybook } from '../testing/harness.ts';
 import { holdTree } from '../testing/misbehaving.ts';
@@ -31,6 +31,32 @@ function treeNested(depth: number): unknown {
   return JSON.parse(`${'{"children":['.repeat(depth)}${']}'.repeat(depth)}`);
 }
 
+const mostNoteCharacters = 8;
+
+function noteWithinItsBound(note: string): true | string {
+  return note.length <= mostNoteCharacters
+    ? true
+    : `The note takes ${String(note.length)} characters, more than the ${String(mostNoteCharacters)} it may take`;
+}
+
+const keep = defineCommand('playbook', {
+  name: 'keep',
+  title: 'Keep',
+  description: 'Keeps short notes.',
+  route: { method: 'POST', path: '/keep' },
+  inputSchema: Schema.Struct({
+    note: Schema.String.check(sizeBoundCheck(noteWithinItsBound)),
+    aside: Schema.optionalKey(Schema.String.check(sizeBoundCheck(noteWithinItsBound))),
+    code: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[a-z]+$/u))),
+    mark: Schema.optionalKey(Schema.String.check(Schema.makeFilter((mark: string) => mark !== 'none'))),
+  }),
+  outputSchema: NoInput,
+  reasons: [],
+  handle: () => Effect.succeed({}),
+});
+
+const pastItsBound = 'The note takes 9 characters, more than the 8 it may take';
+
 describe('the input of a call', () => {
   it('is rejected with a pointer to every problem', async () => {
     const { dispatcher, run } = harness();
@@ -56,6 +82,45 @@ describe('the input of a call', () => {
     expect(await run(dispatcher.dispatchToPlaybook(inspect.registration, toAlpha(acmeAdmin, input)))).toMatchObject({
       issues: [{ pointer: '/nested/a~1b' }, { pointer: '/nested/c~0d' }, { pointer: '/items/1' }],
     });
+  });
+});
+
+function keeping(input: unknown) {
+  const { dispatcher, run } = harness();
+  return run(dispatcher.dispatchToPlaybook(keep.registration, toAlpha(acmeAdmin, input)));
+}
+
+describe('an input past a check that declares a size bound', () => {
+  it('is rejected as too large, in the words of each check, when every problem is past such a check', async () => {
+    expect(await keeping({ note: 'n'.repeat(8) })).toEqual({ status: 'succeeded', output: {} });
+    expect([
+      await keeping({ note: 'n'.repeat(9) }),
+      await keeping({ note: 'n'.repeat(9), aside: 'a'.repeat(9) }),
+    ]).toEqual([
+      {
+        status: 'rejected',
+        reason: 'invalid_input',
+        detail: 'What was given is too large',
+        issues: [{ detail: pastItsBound, pointer: '/note' }],
+      },
+      {
+        status: 'rejected',
+        reason: 'invalid_input',
+        detail: 'What was given is too large',
+        issues: [
+          { detail: pastItsBound, pointer: '/note' },
+          { detail: pastItsBound, pointer: '/aside' },
+        ],
+      },
+    ]);
+  });
+
+  it('is rejected as not matching the input schema when another problem is beside it', async () => {
+    expect([
+      await keeping({ note: 'n'.repeat(9), code: 'X1' }),
+      await keeping({ note: 'n'.repeat(9), mark: 'none' }),
+      await keeping({ note: 9 }),
+    ]).toMatchObject(Array.from({ length: 3 }, () => ({ detail: 'The input does not match the input schema' })));
   });
 });
 

@@ -1,4 +1,3 @@
-import type { RenderClock } from '@on.auto/definitions/template';
 import {
   argumentsFailureWords,
   momentVariables,
@@ -10,6 +9,7 @@ import {
 } from '@on.auto/definitions/tool-blocks';
 import type { Result, Schema } from 'effect';
 
+import type { CallRendering } from '../readings/call-rendering.ts';
 import type { RequestRecord } from '../run/request-record.ts';
 
 export interface DeliveryContext {
@@ -35,9 +35,9 @@ export function deliveryArgumentsOf(
   templates: Templates,
   record: RequestRecord,
   context: DeliveryContext,
-  clock: RenderClock,
+  { clock, mostBytes }: CallRendering,
 ): Result.Result<RenderedArguments, ArgumentsFailure> {
-  return renderedArguments(templates, deliveryVariablesOf(record, context), clock);
+  return renderedArguments(templates, deliveryVariablesOf(record, context), clock, mostBytes);
 }
 
 export function undeliverableWords(failure: ArgumentsFailure): string {

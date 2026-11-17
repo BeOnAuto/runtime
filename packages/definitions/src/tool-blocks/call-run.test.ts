@@ -71,6 +71,7 @@ function ranWith(running: CallRunning, document: CallingDocument, input = inACha
           sent.push({ call, runCall });
           return Effect.succeed(answered);
         },
+        mostRequestBytesTo: () => 1_048_576,
       },
     },
     running,
@@ -148,8 +149,8 @@ describe('a run of a call refused before it calls', () => {
 
   it('is unworkable at the argument that renders a structure among text, or one past what a call may send, and at all of them past it together', async () => {
     const among = ranWith(interaction, calling({ channel: 'In {{ input.channel }}' }), { channel: ['C0123'] });
-    const long = ranWith(interaction, calling({ channel: twiceTheChannel }), { channel: 'x'.repeat(131_100) });
-    const large = ranWith(interaction, calling({ a: '{{ input.a }}', b: '{{ input.a }}' }), { a: 'x'.repeat(131_100) });
+    const long = ranWith(interaction, calling({ channel: twiceTheChannel }), { channel: 'x'.repeat(524_300) });
+    const large = ranWith(interaction, calling({ a: '{{ input.a }}', b: '{{ input.a }}' }), { a: 'x'.repeat(524_300) });
 
     expect([await among.ended, await long.ended, await large.ended]).toEqual([
       Exit.fail(expect.objectContaining({ kind: 'unworkable', record: { pointer: '/call/with/channel' } })),
@@ -158,7 +159,7 @@ describe('a run of a call refused before it calls', () => {
         expect.objectContaining({
           kind: 'unworkable',
           detail:
-            'The arguments of the call take 262215 bytes, more than the 262144 a call may send; give the function a smaller input',
+            'The arguments of the call take 1048615 bytes, more than the 1 MiB a call may send to a tool server; give the function a smaller input',
           record: { pointer: '/call/with' },
         }),
       ),
