@@ -82,24 +82,24 @@ describe('the audience of a token request', () => {
     expect(recording.bodies()).not.toHaveProperty('0.audience');
   });
 
-  it('is sent beside the resource and the scope when the auth block names both', async () => {
+  it('is sent in place of the resource, with the scope, when the auth block names both', async () => {
     const fake = await served();
     const recording = recordingFetch();
 
     await tokenOf(fake, authOf(fake, { audience, scope: 'graph.read' }), recording.fetch, 'from_the_server');
 
-    expect(recording.bodies()).toMatchObject([
-      { grant_type: 'client_credentials', audience, resource: fake.url, scope: 'graph.read' },
-    ]);
+    expect(recording.bodies()).toMatchObject([{ grant_type: 'client_credentials', audience, scope: 'graph.read' }]);
+    expect(recording.bodies()).not.toHaveProperty('0.resource');
   });
 
-  it('is sent beside the resource with no scope when the auth block names none', async () => {
+  it('is sent in place of the resource with no scope when the auth block names none', async () => {
     const fake = await served();
     const recording = recordingFetch();
 
     await tokenOf(fake, authOf(fake, { audience }), recording.fetch, 'from_the_server');
 
-    expect(recording.bodies()).toMatchObject([{ audience, resource: fake.url }]);
+    expect(recording.bodies()).toMatchObject([{ audience }]);
+    expect(recording.bodies()).not.toHaveProperty('0.resource');
     expect(recording.bodies()).not.toHaveProperty('0.scope');
   });
 });

@@ -35,7 +35,7 @@ const AuthSchema = Schema.Struct({
   audience: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'The audience a token is asked for, sent beside the resource, for an authorization server that names its API by audience',
+        'The audience a token is asked for, sent in place of the resource, for an authorization server that names its API by audience and refuses a resource',
     }),
   ),
 }).annotate({

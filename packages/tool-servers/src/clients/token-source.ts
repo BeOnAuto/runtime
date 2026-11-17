@@ -79,6 +79,7 @@ function audienceOf(audience: string | undefined) {
   return audience === undefined
     ? {}
     : {
+        validateResourceURL: () => Promise.resolve(),
         prepareTokenRequest: (scope?: string) =>
           new URLSearchParams({
             grant_type: 'client_credentials',
