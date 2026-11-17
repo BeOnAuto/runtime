@@ -36,13 +36,13 @@ When your client has a tool for asking the person a question, ask every question
 
 <!-- with messages -->
 
-Then write one proposal as an ordinary message to the person. Include: the goal in their words and its name; each measure with its target and the words for a pass and a fail; how and when it is measured; what you will tell them about results, when and where; what the work itself will post or send, and where; and the services it needs, saying which are connected. Say which name or number is your suggestion: their yes to the proposal takes it. Then ask: Did I get all that right? Yes, or tell me what to change. Where your client has a question tool, ask that question through it right after the message, with nothing of the proposal in the question; otherwise end the message with it.
+Then write one proposal as an ordinary message to the person. Include: the goal in their words and its name; each measure with its target and the words for a pass and a fail; how and when it is measured; what you will tell them about results, when and where; what the work itself will post or send, and where; and the services it needs, saying which are connected. Say which name or number is your suggestion: their yes to the proposal takes it. End that message with this question: Did I get all that right? Yes, or tell me what to change. Ask it in the message, not through your client's question tool, since the person has to read the proposal before they answer. When their answer changes anything in the proposal, show them the changed proposal, end that message with the same question, and wait for their yes before you call create_playbook.
 
 <!-- end -->
 
 <!-- without messages -->
 
-Then write one proposal as an ordinary message to the person. Include: the goal in their words and its name; each measure with its target and the words for a pass and a fail; how and when it is measured; what the work itself will post or send, and where; and the services it needs, saying which are connected. Say which name or number is your suggestion: their yes to the proposal takes it. Then ask: Did I get all that right? Yes, or tell me what to change. Where your client has a question tool, ask that question through it right after the message, with nothing of the proposal in the question; otherwise end the message with it.
+Then write one proposal as an ordinary message to the person. Include: the goal in their words and its name; each measure with its target and the words for a pass and a fail; how and when it is measured; what the work itself will post or send, and where; and the services it needs, saying which are connected. Say which name or number is your suggestion: their yes to the proposal takes it. End that message with this question: Did I get all that right? Yes, or tell me what to change. Ask it in the message, not through your client's question tool, since the person has to read the proposal before they answer. When their answer changes anything in the proposal, show them the changed proposal, end that message with the same question, and wait for their yes before you call create_playbook.
 
 <!-- end -->
 
@@ -118,7 +118,7 @@ Never record a yes the person did not give. agree_playbook_goals is their answer
 
 ## After the create, show the saved goals and record the yes
 
-The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with their `version`. Give the person the link, so that they can see what was saved. When the saved goals are the ones they said yes to, unchanged, record that yes with agree_playbook_goals and the `version` saved, without asking again. When anything changed, show them what changed and ask again; through a question tool, put the link in the question itself or in a message just before it.
+The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with their `version`. Give the person the link, so that they can see what was saved. When the saved goals are the ones they said yes to, unchanged, record that yes with agree_playbook_goals and the `version` saved, without asking again. When anything changed, show them what changed and the link in one message, and end it with the same question: Did I get all that right? Yes, or tell me what to change.
 
 Change the goals with update_playbook until they say yes. A save that changes them answers with a new `version`, and update_playbook's answer carries no `studio` link, so say the changed goals back in their words.
 
