@@ -26,9 +26,21 @@ const AuthSchema = Schema.Struct({
     Schema.String.annotate({ description: 'The signing algorithm of private_key, such as RS256 or ES256' }),
   ),
   scope: Schema.optionalKey(Schema.String.annotate({ description: 'The scopes to ask for, separated by spaces' })),
+  discovery: Schema.optionalKey(
+    Schema.Literals(['server', 'issuer']).annotate({
+      description:
+        "How an mcp server's authorization server is found: server, the default, from the server's own metadata; issuer, the issuer itself, whatever the server's metadata names",
+    }),
+  ),
+  audience: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'The audience a token is asked for, sent beside the resource, for an authorization server that names its API by audience',
+    }),
+  ),
 }).annotate({
   description:
-    "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, an openapi server's from the issuer's",
+    "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata unless discovery is issuer, an openapi server's from the issuer's",
 });
 
 const remoteFields = {

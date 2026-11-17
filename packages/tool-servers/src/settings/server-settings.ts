@@ -18,6 +18,8 @@ export interface AuthSettings {
   readonly issuer: string;
   readonly client_id: string;
   readonly scope: string | null;
+  readonly discovery?: 'server' | 'issuer';
+  readonly audience?: string;
   readonly credential: AuthCredential;
 }
 

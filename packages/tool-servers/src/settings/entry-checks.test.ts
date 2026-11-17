@@ -150,3 +150,26 @@ describe('the name of a server, checked alone', () => {
     ]);
   });
 });
+
+describe('the discovery and audience of an auth block', () => {
+  const auth = { client_id: 'playbook', issuer: 'https://auth.example.com', client_secret: '${GRAPH_CLIENT_SECRET}' };
+
+  it('reads the discovery and the audience an auth block names', () => {
+    const { servers } = settingsOf({
+      graph: { ...graph, auth: { ...auth, discovery: 'issuer', audience: 'https://graph.example.com/mcp' } },
+    });
+
+    expect(servers).toMatchObject([{ auth: { discovery: 'issuer', audience: 'https://graph.example.com/mcp' } }]);
+  });
+
+  it('leaves both out when the auth block names neither', () => {
+    const { servers } = settingsOf({ graph: { ...graph, auth } });
+
+    expect(servers).not.toHaveProperty('0.auth.discovery');
+    expect(servers).not.toHaveProperty('0.auth.audience');
+  });
+
+  it('refuses a discovery that is neither server nor issuer', () => {
+    expect(problemsOf({ graph: { ...graph, auth: { ...auth, discovery: 'browser' } } })).not.toHaveLength(0);
+  });
+});
