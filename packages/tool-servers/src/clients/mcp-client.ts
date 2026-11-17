@@ -3,6 +3,7 @@ import { Predicate } from 'effect';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
 import { decodeListedTools, decodeToolResult, type ToolResult } from '../bounds/tool-results.ts';
+import { argumentsSent, sendingWith } from '../sent-assets/spliced-bodies.ts';
 import { observations, postedId, type Observations } from './observed-requests.ts';
 import type { ServedClient } from './server-client.ts';
 
@@ -101,18 +102,19 @@ export function serverClientOver(
   end: () => Promise<void>,
 ): ServedClient {
   return {
-    call: async ({ tool, input, meta, signal, timeoutMs }) => {
+    call: async ({ tool, input, assets = [], meta, signal, timeoutMs }) => {
       const marker = observed.mark();
       const tooLarge = new AbortController();
       observed.whenTooLarge(marker, () => {
         tooLarge.abort();
       });
-      const settled = await client
-        .request(
-          { method: 'tools/call', params: { name: tool, arguments: { ...input }, [metaField]: { ...meta } } },
+      const sent = argumentsSent(input, assets);
+      const settled = await sendingWith(sent.splices, () =>
+        client.request(
+          { method: 'tools/call', params: { name: tool, arguments: { ...sent.input }, [metaField]: { ...meta } } },
           { signal: AbortSignal.any([signal, tooLarge.signal]), timeout: timeoutMs, onresumptiontoken: marker },
-        )
-        .then(settledOf, (error: unknown) => ({ error }));
+        ),
+      ).then(settledOf, (error: unknown) => ({ error }));
       return { ...settled, observed: observed.take(marker) };
     },
     listTools: async (timeoutMs) => {

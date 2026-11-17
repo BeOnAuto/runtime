@@ -71,7 +71,7 @@ describe('execute_connection', () => {
       irreversible: false,
       repeatable: false,
       permissions: ['playbook:write'],
-      reasons: ['unavailable'],
+      reasons: ['unavailable', 'invalid_input'],
     });
   });
 
@@ -97,7 +97,7 @@ describe('query_connection', () => {
       mayChangeOutside: false,
       readsOnly: true,
       permissions: ['playbook:write'],
-      reasons: ['unavailable'],
+      reasons: ['unavailable', 'invalid_input'],
     });
   });
 

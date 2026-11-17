@@ -33,6 +33,7 @@ export interface AccessOptions {
   readonly providers?: NonNullable<ToolServerSettingsContext['providers']>;
   readonly reportMarkUnlisted?: ToolAccessOptions['reportMarkUnlisted'];
   readonly mostRequestBytes?: ToolAccessOptions['mostRequestBytes'];
+  readonly assets?: ToolAccessOptions['assets'];
 }
 
 export interface ReportingAccess {
@@ -61,10 +62,12 @@ function timedBy({
   now,
   traceMeta,
   mostRequestBytes,
-}: AccessOptions): Pick<ToolAccessOptions, 'timing' | 'now' | 'traceMeta' | 'mostRequestBytes'> {
+  assets,
+}: AccessOptions): Pick<ToolAccessOptions, 'timing' | 'now' | 'traceMeta' | 'mostRequestBytes' | 'assets'> {
   return {
     ...(timing === undefined ? {} : { timing }),
     ...(mostRequestBytes === undefined ? {} : { mostRequestBytes }),
+    ...(assets === undefined ? {} : { assets }),
     ...(now === undefined ? {} : { now }),
     ...(traceMeta === undefined ? {} : { traceMeta }),
   };

@@ -23,7 +23,7 @@ export interface LinkedAccess {
 export function linkedAccess(settings: ToolServers, options: LinkedOptions): LinkedAccess {
   const report = options.reportServerMessage;
   const timing = options.timing ?? defaultTiming;
-  const { secrets, keepIn } = options;
+  const { secrets, keepIn, assets } = options;
   const mostRequestBytes = mostRequestBytesOf(options.mostRequestBytes);
   const linkOptions = {
     clientInfo: options.clientInfo,
@@ -46,8 +46,9 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
   return {
     fileLinks,
     connectionLink: (id, server) => connectionLinkOf(id, server, linking),
-    open: (opened) => openedRun({ ...opened, secrets, keepIn, timing, report, mostRequestBytes }),
-    callOnce: (call, server, runCall) => oneCall(call, server, { secrets, keepIn, timing }, runCall),
+    open: (opened) => openedRun({ ...opened, secrets, keepIn, timing, report, mostRequestBytes, assets }),
+    callOnce: (call, server, runCall) =>
+      oneCall(call, server, { secrets, keepIn, timing, assets, mostRequestBytes }, runCall),
     listed: (served, link) => listedTools(served, link, { secrets, timing }),
     close: async () => {
       await Promise.all([...madeLinks.values()].map((link) => link.stop()));

@@ -1,7 +1,13 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { askedRunId, askedThroughChat, chatDelivery, type InteractionHarness } from '../testing/index.ts';
+import {
+  askedRunId,
+  askedThroughChat,
+  chatDelivery,
+  type FakeAnswer,
+  type InteractionHarness,
+} from '../testing/index.ts';
 
 const address = { org: 'acme', playbook: 'alpha', id: askedRunId };
 
@@ -185,6 +191,13 @@ describe('an attempt that fails', () => {
   });
 });
 
+async function refusedFor(answer: FakeAnswer) {
+  const { playbook, tools, askedAt } = await askedThroughChat();
+  tools.answerNext(answer);
+  await playbook.performEach([askedAt, askedAt + 61_000]);
+  return deliveryFacts(playbook);
+}
+
 describe('an attempt whose call did not answer as asked', () => {
   it('records an interrupted call as lost, and a tool the server no longer lists as a tool error', async () => {
     const { playbook, tools, askedAt } = await askedThroughChat();
@@ -230,5 +243,22 @@ describe('an attempt whose call did not answer as asked', () => {
     expect(notOffered).not.toHaveProperty('data.result_bytes');
     expect(unopened).not.toHaveProperty('data.result_bytes');
     expect(tools.calls()).toEqual([]);
+  });
+});
+
+describe('an attempt whose call could not send an asset', () => {
+  it('ends refused, and is not tried again, when the call could not send an asset its arguments name', async () => {
+    const expired = 'The argument /text names an asset that cannot be sent: The asset a has expired';
+    const tooLarge = 'The arguments of this call take 9000000 bytes with the assets they send, more than the 8 MiB';
+
+    const ended = await Promise.all([
+      refusedFor({ kind: 'asset_not_sent', because: 'asset_unusable', detail: expired }),
+      refusedFor({ kind: 'asset_not_sent', because: 'too_large', detail: tooLarge }),
+    ]);
+
+    expect(ended).toMatchObject([
+      [{ type: 'delivery_started' }, { type: 'delivery_refused', data: { because: 'unworkable', detail: expired } }],
+      [{ type: 'delivery_started' }, { type: 'delivery_refused', data: { because: 'too_large', detail: tooLarge } }],
+    ]);
   });
 });

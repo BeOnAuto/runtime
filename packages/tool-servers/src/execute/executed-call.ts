@@ -14,6 +14,7 @@ export interface HandCall {
   readonly reference: ToolReference;
   readonly callId: string;
   readonly input: Schema.JsonObject;
+  readonly assets?: Parameters<OfferedTool['call']>[2];
 }
 
 interface Calling {
@@ -39,11 +40,13 @@ async function closedOnceAnswered(tools: RunTools, answering: Promise<CallReply>
   }
 }
 
-function startedCall(tools: RunTools, offered: OfferedTool, { callId, input }: HandCall, calledAt: string): Calling {
+function startedCall(tools: RunTools, offered: OfferedTool, called: HandCall, calledAt: string): Calling {
+  const { callId, input, assets } = called;
   const stop = new AbortController();
   const answering = offered.call(
     { callId, input, room: toolBounds.executedAnswerBytes },
     { signal: stop.signal, cancelled: stop.signal },
+    assets,
   );
   const replying = closedOnceAnswered(tools, answering);
   replying.catch(ignored);

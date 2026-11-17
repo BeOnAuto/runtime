@@ -23,6 +23,7 @@ import {
   type SchemaPlace,
 } from '../schema-words/schema-reading.ts';
 import { descriptionOf, examplesWordsOf, expectedWordsOf, givesAnExample } from '../schema-words/schema-words.ts';
+import { besideStandingAssets } from './standing-assets.ts';
 
 const kindKeywords = ['type', 'enum', 'const', 'anyOf', 'oneOf', 'properties', 'items', 'prefixItems'];
 
@@ -234,15 +235,23 @@ function tooDeepFor(noun: string): InvalidInput {
   });
 }
 
+type AssetsInTheInput = 'read' | 'passed_whole';
+
+function issuesOfTheInput(input: Schema.Json, schema: CompiledSchema, assets: AssetsInTheInput): readonly Issue[] {
+  const issues = wordedIssuesOf(schema, input);
+  return assets === 'passed_whole' ? besideStandingAssets(schema, input, issues) : issues;
+}
+
 export function checkedInput(
   input: Schema.Json,
   schema: CompiledSchema | undefined,
   noun: string,
+  assets: AssetsInTheInput = 'read',
 ): Effect.Effect<Schema.Json, InvalidInput> {
   if (measureOf(input) === undefined) {
     return Effect.fail(tooDeepFor(noun));
   }
-  const issues = schema === undefined ? [] : wordedIssuesOf(schema, input);
+  const issues = schema === undefined ? [] : issuesOfTheInput(input, schema, assets);
   return issues.length === 0
     ? Effect.succeed(input)
     : Effect.fail(refusedByTheInputSchema({ detail: sentencesOf(issues), issues }));

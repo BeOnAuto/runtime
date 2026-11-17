@@ -5,7 +5,7 @@ import type { ToolAccess } from '../access/tool-access.ts';
 import { handCallContext } from '../hand-calls/hand-call-journal.ts';
 import { tracedByHand } from '../one-call/traced-calls.ts';
 import { toolRemedies, unavailableOf } from '../tool-reads/tool-refusals.ts';
-import { inTheListing, readsOnlyIn } from './connection-checks.ts';
+import { inTheListing, plannedIn, readsOnlyIn } from './connection-checks.ts';
 import { ExecuteInputSchema, ExecutedSchema } from './execute-schemas.ts';
 import { executeAttempted, executeTask, executed } from './execute-words.ts';
 import { answeredOn, offeredIn, type HandCall } from './executed-call.ts';
@@ -38,12 +38,16 @@ function handCallOf(access: ConnectionAccess, onlyReads: boolean) {
     const called: HandCall = { reference: { server, tool }, callId, input };
     return yield* Effect.uninterruptibleMask((restore) =>
       Effect.gen(function* () {
-        const tools = yield* restore(access.open(context, [called.reference]));
-        const listed = yield* inTheListing(tools, yield* offeredIn(tools, called));
-        const offered = onlyReads ? yield* readsOnlyIn(tools, listed) : listed;
-        return yield* tracedByHand(called.reference, offered.server, answeredOn(tools, offered, called, restore));
+        const opened = Effect.gen(function* () {
+          const tools = yield* restore(access.open(context, [called.reference]));
+          const listed = yield* inTheListing(tools, yield* offeredIn(tools, called));
+          return { tools, offered: onlyReads ? yield* readsOnlyIn(tools, listed) : listed };
+        });
+        const { tools, offered } = yield* Effect.mapError(opened, unavailableOf);
+        const planned = yield* plannedIn(tools, offered, called);
+        return yield* tracedByHand(called.reference, offered.server, answeredOn(tools, offered, planned, restore));
       }),
-    ).pipe(Effect.mapError(unavailableOf));
+    );
   });
 }
 
@@ -64,7 +68,7 @@ export function defineExecuteConnection(access: ConnectionAccess) {
     mayChangeOutside: access.configured,
     inputSchema: ExecuteInputSchema,
     outputSchema: ExecutedSchema,
-    reasons: ['unavailable'],
+    reasons: ['unavailable', 'invalid_input'],
     handle: handCallOf(access, false),
     plainLanguage,
   });
@@ -80,7 +84,7 @@ export function defineQueryConnection(access: ConnectionAccess) {
     readsOnly: true,
     inputSchema: ExecuteInputSchema,
     outputSchema: ExecutedSchema,
-    reasons: ['unavailable'],
+    reasons: ['unavailable', 'invalid_input'],
     handle: handCallOf(access, true),
     plainLanguage,
   });

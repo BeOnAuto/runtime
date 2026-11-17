@@ -1,4 +1,5 @@
 import { sha256Of } from '@on.auto/content';
+import { holdsAnAsset } from '@on.auto/operations';
 import { sizeInWords } from '@on.auto/phrasing';
 
 import type { CallsEndedBecause } from '../access/tool-server-failed.ts';
@@ -80,9 +81,10 @@ export interface CallAsked {
   readonly input: Readonly<Record<string, unknown>>;
   readonly reads: boolean;
   readonly mostBytes: number;
+  readonly assetsPlanned?: true;
 }
 
-type CallSentBefore = Omit<CallAsked, 'mostBytes'>;
+type CallSentBefore = Omit<CallAsked, 'mostBytes' | 'assetsPlanned'>;
 
 export type Admission =
   | { readonly admitted: true; readonly tally: CallTally }
@@ -107,17 +109,28 @@ export function sendableInWords(mostBytes: number): string {
 
 export const sendLessRemedy = 'send less in one call, in parts where the tool takes them';
 
-function argumentsTooLarge(bytes: number, mostBytes: number): string {
-  return `The arguments of this call take ${bytes} bytes, more than ${sendableInWords(mostBytes)}; ${sendLessRemedy}.`;
+export function withTheAssetsSent(sendsAssets: boolean): string {
+  return sendsAssets ? ' with the assets they send' : '';
+}
+
+export function argumentsTooLarge(bytes: number, mostBytes: number, sendsAssets: boolean): string {
+  return `The arguments of this call take ${bytes} bytes${withTheAssetsSent(sendsAssets)}, more than ${sendableInWords(mostBytes)}; ${sendLessRemedy}.`;
 }
 
 function repeated(earlier: readonly string[]): string {
   return `This call repeats, with the same arguments, a call this run already made ${toolBounds.sameCallsInRun} times; use the answer to the call ${String(earlier.at(-1))} instead.`;
 }
 
-function refusalOf(argumentBytes: number, mostBytes: number, earlier: readonly string[]): string | undefined {
-  if (argumentBytes > mostBytes) {
-    return argumentsTooLarge(argumentBytes, mostBytes);
+export const modelSendsNoAsset =
+  'A call a model writes sends no asset; pass the asset to an interaction function, whose call sends it.';
+
+function refusalOf(call: CallAsked, earlier: readonly string[]): string | undefined {
+  if (call.assetsPlanned !== true && holdsAnAsset(call.input)) {
+    return modelSendsNoAsset;
+  }
+  const argumentBytes = bytesOf(JSON.stringify(call.input));
+  if (argumentBytes > call.mostBytes) {
+    return argumentsTooLarge(argumentBytes, call.mostBytes, false);
   }
   return earlier.length >= toolBounds.sameCallsInRun ? repeated(earlier) : undefined;
 }
@@ -139,9 +152,7 @@ export function admission(tally: CallTally, call: CallAsked, count: CallCount): 
   const pastTheCount = itCounts && tally.counted >= count.most;
   const key = sameCallKeyOf(call);
   const earlier = tally.sameCalls.get(key) ?? [];
-  const refusal = pastTheCount
-    ? allCallsMade(count)
-    : refusalOf(bytesOf(JSON.stringify(call.input)), call.mostBytes, earlier);
+  const refusal = pastTheCount ? allCallsMade(count) : refusalOf(call, earlier);
   const isCounted = itCounts && (count.countsReads || pastTheCount || refusal === undefined);
   const counted = isCounted ? { ...tally, counted: tally.counted + 1 } : tally;
   return refusal === undefined

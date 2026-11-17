@@ -12,6 +12,7 @@ import { AnsweredStatus, answeredHttpWords, answeredToACall } from '../openapi/a
 import { ArgumentsRefused } from '../openapi/arguments-refused.ts';
 import { AnsweredCode } from '../openapi/failure-codes.ts';
 import { ScopeLacking, scopeLackingIn, scopeLackingWords } from '../openapi/scope-lacking.ts';
+import type { SentAsset } from '../sent-assets/planned-assets.ts';
 
 export type FailureKind =
   | 'unreachable'
@@ -162,8 +163,10 @@ function answeredStatusOf(error: unknown): number | undefined {
   return undefined;
 }
 
-export function failureOfACall(error: unknown, input: unknown): ServerFailure {
-  return answeredStatusOf(error) === 413 ? { kind: 'refused', message: answeredToACall(413, input) } : failureOf(error);
+export function failureOfACall(error: unknown, input: unknown, assets: readonly SentAsset[]): ServerFailure {
+  return answeredStatusOf(error) === 413
+    ? { kind: 'refused', message: answeredToACall(413, input, assets) }
+    : failureOf(error);
 }
 
 export function isCredentialRefused(error: unknown): boolean {

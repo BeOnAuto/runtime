@@ -7,6 +7,7 @@ import {
   type CallAnswered,
   type CalledOnce,
   type ReadingFailedBecause,
+  type UnopenedOnce,
 } from '@on.auto/tool-servers';
 
 import { isBoundedPart } from '../delivery/sent-messages.ts';
@@ -78,9 +79,16 @@ function listed(replies: Replies, document: unknown, answered: CallAnswered, pas
   };
 }
 
+const unopenedBecause: Readonly<Record<UnopenedOnce['refused'], ReadingFailedBecause>> = {
+  tool_not_offered: 'tool_not_offered',
+  tool_server_failed: 'server_failure',
+  tool_not_read_only: 'server_failure',
+  asset_not_sent: 'arguments_refused',
+};
+
 export function readAnswerOf(replies: Replies, called: CalledOnce, passed: PassedOver): ReadAnswer {
   if (called.kind === 'unopened') {
-    return failedRead(called.refused === 'tool_not_offered' ? 'tool_not_offered' : 'server_failure', called.detail);
+    return failedRead(unopenedBecause[called.refused], called.detail);
   }
   if (called.outcome !== 'result') {
     return failedRead(called.outcome, called.detail, called.retryAfterMs);

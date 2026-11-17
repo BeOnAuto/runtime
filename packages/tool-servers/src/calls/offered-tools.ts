@@ -1,9 +1,11 @@
-import type { Schema } from 'effect';
+import type { Effect, Schema } from 'effect';
 
 import { cutToDescriptionBound, mostRequestBytesTo } from '../bounds/call-bounds.ts';
 import { onlyReads, type ToolAnnotations } from '../bounds/tool-results.ts';
 import { scrubbedSchema } from '../listing/shown-tools.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
+import { toolInWords } from '../names/tool-words.ts';
+import { plannedAssets, type AssetsNotSent, type AssetsPlanned } from '../sent-assets/planned-assets.ts';
 import type { CallReply } from './call-replies.ts';
 import type {
   CallSignals,
@@ -13,7 +15,7 @@ import type {
   RunToolsParts,
   ToolCallRequest,
 } from './run-parts.ts';
-import { caller, sending, type ToolSending } from './tool-caller.ts';
+import { caller, sending, type SentAssets, type ToolSending } from './tool-caller.ts';
 
 export interface OfferedTool extends ToolSending {
   readonly name: string;
@@ -24,11 +26,13 @@ export interface OfferedTool extends ToolSending {
   readonly annotations: ToolAnnotations | undefined;
   readonly readOnly: boolean;
   readonly mostBytes: number;
-  readonly call: (request: ToolCallRequest, signals: CallSignals) => Promise<CallReply>;
+  readonly planned: (input: Readonly<Record<string, unknown>>) => Effect.Effect<AssetsPlanned, AssetsNotSent>;
+  readonly call: (request: ToolCallRequest, signals: CallSignals, assets?: SentAssets) => Promise<CallReply>;
 }
 
 export function offeredToolOf(parts: RunToolsParts, state: RunState, tool: NamedOffer): OfferedTool {
   const { start, send } = sending(parts, tool);
+  const mostBytes = mostRequestBytesTo(tool.slot.settings, parts.mostRequestBytes);
   return {
     name: tool.name,
     reference: tool.reference,
@@ -41,7 +45,15 @@ export function offeredToolOf(parts: RunToolsParts, state: RunState, tool: Named
     inputSchema: scrubbedSchema(tool.tool.inputSchema, parts.secrets.scrub),
     annotations: tool.tool.annotations,
     readOnly: onlyReads(tool.tool),
-    mostBytes: mostRequestBytesTo(tool.slot.settings, parts.mostRequestBytes),
+    mostBytes,
+    planned: (input) =>
+      plannedAssets(input, {
+        holding: parts.assets,
+        playbook: { org: parts.context.org, playbook: parts.context.playbook },
+        inputSchema: tool.tool.inputSchema,
+        tool: toolInWords(tool.reference),
+        mostBytes,
+      }),
     start,
     send,
     call: caller(parts, state, tool),

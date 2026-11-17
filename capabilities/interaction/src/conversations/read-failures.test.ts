@@ -53,6 +53,7 @@ describe('a read that fails', () => {
       { outcome: 'cancelled', detail: '', retryAfterMs: null },
       { kind: 'unopened', detail: 'The tool server could not be reached' },
       { kind: 'not_offered' },
+      { kind: 'asset_not_sent', because: 'asset_not_taken', detail: 'The argument /text is a file of image/png' },
     ];
 
     expect(await Promise.all(answers.map((answer) => failedRead(answer)))).toMatchObject([
@@ -65,6 +66,7 @@ describe('a read that fails', () => {
       [{ because: 'cancelled' }, true],
       [{ because: 'server_failure' }, true],
       [{ because: 'tool_not_offered', server: 'chat', tool: 'thread_replies' }, true],
+      [{ because: 'arguments_refused' }, true],
     ]);
   });
 

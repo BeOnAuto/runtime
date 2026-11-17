@@ -47,10 +47,19 @@ export interface NotReadOnlyOnce {
   readonly detail: string;
 }
 
+export interface AssetNotSentOnce {
+  readonly kind: 'unopened';
+  readonly refused: 'asset_not_sent';
+  readonly because: 'asset_unusable' | 'asset_not_taken' | 'too_large';
+  readonly pointer: string;
+  readonly detail: string;
+}
+
 export type UnopenedOnce =
   | Unopened<'tool_not_offered', NotOfferedBecause>
   | Unopened<'tool_server_failed', ServerFailedBecause>
-  | NotReadOnlyOnce;
+  | NotReadOnlyOnce
+  | AssetNotSentOnce;
 
 export type CalledOnce = UnopenedOnce | AnsweredOnce;
 

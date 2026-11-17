@@ -1,7 +1,8 @@
+import { noAssetsHeld } from '@on.auto/operations';
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defaultTiming } from '../bounds/call-bounds.ts';
+import { defaultTiming, toolBounds } from '../bounds/call-bounds.ts';
 import { secretsOf } from '../bounds/secrets.ts';
 import type { ListedTool } from '../bounds/tool-results.ts';
 import type { ServerLink } from '../clients/server-links.ts';
@@ -30,6 +31,8 @@ const access = {
   secrets: secretsOf([Redacted.make('notes-key')]),
   timing: defaultTiming,
   keepIn: () => (text: string) => Promise.resolve(text),
+  assets: noAssetsHeld,
+  mostRequestBytes: toolBounds.requestBytes,
 };
 
 const search = { server: 'notes', tool: 'search' };

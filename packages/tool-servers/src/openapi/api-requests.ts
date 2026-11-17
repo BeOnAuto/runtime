@@ -3,6 +3,8 @@ import { Buffer } from 'node:buffer';
 import { Predicate, Redacted, Result } from 'effect';
 
 import { sentContentOf } from '../request-bodies/sent-bodies.ts';
+import type { SentAsset } from '../sent-assets/planned-assets.ts';
+import { argumentsSent, splicedBody, type Splices } from '../sent-assets/spliced-bodies.ts';
 import type { OperationBody } from './api-parameters.ts';
 import type { ApiOperation, QueryInput } from './api-tools.ts';
 import type { Placement } from './security-schemes.ts';
@@ -18,6 +20,7 @@ export interface ApiRequest {
   readonly method: string;
   readonly headers: Readonly<Record<string, string>>;
   readonly body: string | Readonly<Uint8Array> | null;
+  readonly splices: Splices;
   readonly usesToken: boolean;
   readonly named: string | undefined;
 }
@@ -181,15 +184,63 @@ function headersOf(operation: ApiOperation, endpoint: ApiEndpoint, body: BuiltBo
   };
 }
 
+const bodyPointer = '/body';
+
+function isInTheBody({ pointer }: SentAsset): boolean {
+  return pointer === bodyPointer || pointer.startsWith(`${bodyPointer}/`);
+}
+
+function outsideTheBody(assets: readonly SentAsset[]): string | undefined {
+  const outside = assets.find((asset) => !isInTheBody(asset));
+  return outside === undefined
+    ? undefined
+    : `The argument ${outside.pointer} is an asset of ${outside.held.mediaType}, which a call sends only in the body of its request; give it in the body`;
+}
+
+function placeKindOfThePart(body: OperationBody, part: string | undefined): string | undefined {
+  if (body.kind === 'named_parts') {
+    return body.parts.find(({ name }) => name === part)?.place.kind;
+  }
+  if (body.kind === 'ordered_parts') {
+    return (body.parts[Number(part)] ?? body.after)?.kind;
+  }
+  return body.kind === 'json' ? 'json' : undefined;
+}
+
+function writtenAsJson(body: OperationBody | null, assets: readonly SentAsset[]): readonly SentAsset[] {
+  return body === null ? [] : assets.filter(({ place: [, part] }) => placeKindOfThePart(body, part) === 'json');
+}
+
+type Headed = Readonly<Record<string, string>>;
+
+type SentBody =
+  | { readonly headers: Headed; readonly body: string | Readonly<Uint8Array> | null }
+  | { readonly headers: Headed; readonly body: ReadableStream<Uint8Array>; readonly duplex: 'half' };
+
+const decoder = new TextDecoder();
+
+function textOf(body: string | Readonly<Uint8Array>): string {
+  return typeof body === 'string' ? body : decoder.decode(body);
+}
+
+export function sentBodyOf({ body, splices }: ApiRequest, headers: Headed): SentBody {
+  const spliced = body === null || splices.size === 0 ? undefined : splicedBody(textOf(body), splices);
+  return spliced === undefined
+    ? { headers, body }
+    : { headers: { ...headers, 'content-length': String(spliced.length) }, body: spliced.stream, duplex: 'half' };
+}
+
 export function apiRequestOf(
   operation: ApiOperation,
-  input: Readonly<Record<string, unknown>>,
+  given: Readonly<Record<string, unknown>>,
   endpoint: ApiEndpoint,
+  assets: readonly SentAsset[] = [],
 ): Built<ApiRequest> {
-  const unknown = unknownArgument(operation, input);
-  if (unknown !== undefined) {
-    return Result.fail(unknown);
+  const refusal = unknownArgument(operation, given) ?? outsideTheBody(assets);
+  if (refusal !== undefined) {
+    return Result.fail(refusal);
   }
+  const { input, splices } = argumentsSent(given, writtenAsJson(operation.body, assets));
   return Result.flatMap(pathOf(operation, input), (path) =>
     Result.flatMap(queryOf(operation, input, endpoint), (query) =>
       Result.map(bodyOf(operation, input), (body) => ({
@@ -197,6 +248,7 @@ export function apiRequestOf(
         method: operation.method.toUpperCase(),
         headers: headersOf(operation, endpoint, body),
         body: body?.content ?? null,
+        splices,
         usesToken: operation.credentials.some(({ kind }) => kind === 'token'),
         named: fileNameArgumentOf(operation, input),
       })),

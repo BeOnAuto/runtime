@@ -10,6 +10,8 @@ export interface HeardRequest {
   readonly method: string;
   readonly path: string;
   readonly userAgent: string | undefined;
+  readonly contentLength: string | undefined;
+  readonly transferEncoding: string | undefined;
 }
 
 export interface LoopbackServer {

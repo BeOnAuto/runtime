@@ -59,6 +59,10 @@ export function endOf(called: CalledOnce, record: DeliveringRecord, rendering: C
   if (called.kind === 'answered') {
     return endOfAnswer(called, record, rendering);
   }
+  if (called.refused === 'asset_not_sent') {
+    const because = called.because === 'too_large' ? 'too_large' : 'unworkable';
+    return { type: 'delivery_refused', data: { because, detail: called.detail } };
+  }
   const { refused, detail } = called;
   return {
     type: 'delivery_failed',

@@ -16,6 +16,7 @@ export interface Forwarding {
   readonly slot: ServerSlot;
   readonly tool: string;
   readonly input: Readonly<Record<string, unknown>>;
+  readonly assets?: ToolCalling['assets'];
   readonly meta: ToolCalling['meta'];
   readonly callMs: number;
   readonly longestRetryWaitMs: number;
@@ -149,6 +150,7 @@ async function attempted(forwarding: Forwarding, attempt: Attempt): Promise<Forw
   const settled = await forwarding.slot.client().call({
     tool: forwarding.tool,
     input: forwarding.input,
+    ...(forwarding.assets === undefined ? {} : { assets: forwarding.assets }),
     meta: forwarding.meta,
     signal: AbortSignal.any([forwarding.signal, attempt.deadline]),
     timeoutMs: forwarding.callMs,
@@ -163,7 +165,7 @@ async function attempted(forwarding: Forwarding, attempt: Attempt): Promise<Forw
   if (halted !== undefined) {
     return halted;
   }
-  const { kind, message } = failureOfACall(settled.error, forwarding.input);
+  const { kind, message } = failureOfACall(settled.error, forwarding.input, forwarding.assets ?? []);
   const next = await retried(forwarding, kind, settled.observed, attempt);
   return next === undefined ? settledFailure(kind, message, settled.observed) : attempted(forwarding, next);
 }

@@ -58,10 +58,10 @@ describe('the failure of a call', () => {
     };
 
     expect([
-      failureOfACall(answered(413), input),
-      failureOfACall(new AnsweredStatus(413), input),
-      failureOfACall(answered(414), input),
-      failureOfACall(new ConnectionBroken('closed'), input),
+      failureOfACall(answered(413), input, []),
+      failureOfACall(new AnsweredStatus(413), input, []),
+      failureOfACall(answered(414), input, []),
+      failureOfACall(new ConnectionBroken('closed'), input, []),
     ]).toEqual([tooLarge, tooLarge, failureOf(answered(414)), failureOf(new ConnectionBroken('closed'))]);
   });
 });

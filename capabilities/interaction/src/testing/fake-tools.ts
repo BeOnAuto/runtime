@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import type {
   AnsweredOnce,
+  AssetNotSentOnce,
   CalledOnce,
   NotOfferedBecause,
   OneCall,
@@ -18,7 +19,8 @@ import { chatBoard, type BoardAnswer, type ChatBoard, type ChatMessage } from '.
 export type FakeAnswer =
   | BoardAnswer
   | { readonly kind: 'not_offered' }
-  | { readonly kind: 'unopened'; readonly detail: string };
+  | { readonly kind: 'unopened'; readonly detail: string }
+  | { readonly kind: 'asset_not_sent'; readonly because: AssetNotSentOnce['because']; readonly detail: string };
 
 export type ToolPorts = Pick<
   ToolAccess,
@@ -88,6 +90,10 @@ function notOfferedOnce({ reference }: OneCall): Effect.Effect<CalledOnce> {
 }
 
 function unsentBy(answer: Exclude<FakeAnswer, BoardAnswer>, { reference }: OneCall): CalledOnce {
+  if (answer.kind === 'asset_not_sent') {
+    const { because, detail } = answer;
+    return { kind: 'unopened', refused: 'asset_not_sent', because, pointer: '/text', detail };
+  }
   return answer.kind === 'unopened'
     ? { kind: 'unopened', refused: 'tool_server_failed', because: 'failing', detail: answer.detail }
     : notOfferedBy(notAllowed(reference.tool));

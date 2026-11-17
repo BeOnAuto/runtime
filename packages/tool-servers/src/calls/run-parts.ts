@@ -1,3 +1,4 @@
+import type { AssetHolding } from '@on.auto/operations';
 import type { Effect } from 'effect';
 
 import type { CallerContext, ServerMessage } from '../access/caller-context.ts';
@@ -38,6 +39,7 @@ export interface RunToolsParts {
   readonly keep: KeepContent;
   readonly timing: Timing;
   readonly mostRequestBytes: number;
+  readonly assets: AssetHolding;
   readonly report: (message: ServerMessage) => void;
   readonly run: <A>(effect: Effect.Effect<A>) => Promise<A>;
 }

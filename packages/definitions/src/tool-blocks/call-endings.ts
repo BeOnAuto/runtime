@@ -1,13 +1,14 @@
 import { Buffer } from 'node:buffer';
 
 import { issuesDetail, type CompiledSchema } from '@on.auto/json-schema';
-import { Conflict, Unavailable } from '@on.auto/operations';
+import { Conflict, InvalidInput, Unavailable } from '@on.auto/operations';
 import { capitalized, sizeInWords } from '@on.auto/phrasing';
 import {
   answerDocument,
   onlyReads,
   toolInWords,
   type AnsweredOnce,
+  type AssetNotSentOnce,
   type CalledOnce,
   type UnopenedOnce,
 } from '@on.auto/tool-servers';
@@ -30,7 +31,7 @@ interface CallFinished {
   readonly record: Schema.JsonObject;
 }
 
-type CallEnding = Effect.Effect<CallFinished, Unavailable | Conflict>;
+type CallEnding = Effect.Effect<CallFinished, Unavailable | Conflict | InvalidInput>;
 
 function unworkable(detail: string): CallEnding {
   return Effect.fail(new Conflict({ detail, kind: 'unworkable' }));
@@ -123,7 +124,16 @@ function endedWith(document: CalledDocument, called: AnsweredOnce): CallEnding {
       );
 }
 
-function unsentWith(called: UnopenedOnce): Unavailable {
+function assetNotSentWith({ because, pointer, detail }: AssetNotSentOnce): Conflict | InvalidInput {
+  return because === 'asset_unusable'
+    ? new InvalidInput({ detail, issues: [{ pointer: '', detail }] })
+    : new Conflict({ detail, kind: 'unworkable', record: { pointer: `/call/with${pointer}` } });
+}
+
+function unsentWith(called: UnopenedOnce): Unavailable | Conflict | InvalidInput {
+  if (called.refused === 'asset_not_sent') {
+    return assetNotSentWith(called);
+  }
   return called.refused === 'tool_not_read_only'
     ? new Unavailable({ detail: called.detail, kind: called.refused })
     : new Unavailable({ detail: called.detail, kind: called.refused, because: called.because });

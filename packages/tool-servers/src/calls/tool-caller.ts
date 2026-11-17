@@ -1,6 +1,7 @@
 import { actingCallsCount, admission, mostRequestBytesTo } from '../bounds/call-bounds.ts';
 import { answerOf, onlyReads } from '../bounds/tool-results.ts';
 import { imageCallOf, imagesKeptOutOf, imagesOfTheCall } from '../images/answered-images.ts';
+import type { SentAsset } from '../sent-assets/planned-assets.ts';
 import { shownFormat, type CallAnswered, type CallEnded, type CallFailed, type CallStarted } from './call-facts.ts';
 import {
   callReplyOf,
@@ -186,44 +187,62 @@ export function sending(parts: RunToolsParts, offered: NamedOffer): ToolSending 
   };
 }
 
+interface JournallingOf {
+  readonly parts: RunToolsParts;
+  readonly state: RunState;
+  readonly offered: NamedOffer;
+}
+
+function journallingOf(
+  { parts, state, offered }: JournallingOf,
+  callId: string,
+  signals: CallSignals,
+): CallJournalling {
+  const { journal } = parts.context;
+  return {
+    callId,
+    readOnly: onlyReads(offered.tool),
+    started: async (fact) => {
+      const number = await parts.run(journal.started(fact));
+      if (number !== undefined) {
+        state.used(offered);
+      }
+      return number;
+    },
+    ended: async (number, fact) => {
+      if (!signals.cancelled.aborted) {
+        await parts.run(journal.ended(number, fact));
+      }
+    },
+  };
+}
+
+export type SentAssets = readonly SentAsset[];
+
 export function caller(
   parts: RunToolsParts,
   state: RunState,
   offered: NamedOffer,
-): (request: ToolCallRequest, signals: CallSignals) => Promise<CallReply> {
+): (request: ToolCallRequest, signals: CallSignals, assets?: SentAssets) => Promise<CallReply> {
   const { slot } = offered;
   const { context, timing } = parts;
   const recording = recordingOf(slot.settings, parts.secrets, parts.keep);
   const replying = replyingOf(parts, offered);
-  return async ({ callId, input, room }, signals) => {
+  return async ({ callId, input, room }, signals, assets) => {
     if (signals.signal.aborted) {
       return notSent;
     }
-    const readOnly = onlyReads(offered.tool);
     const mostBytes = mostRequestBytesTo(slot.settings, parts.mostRequestBytes);
-    const asked = { tool: offered.name, callId, input, reads: readOnly, mostBytes };
+    const planned = assets === undefined ? {} : { assetsPlanned: true as const };
+    const asked = { tool: offered.name, callId, input, reads: onlyReads(offered.tool), mostBytes, ...planned };
     const admitted = admission(state.tally(), asked, actingCallsCount);
     state.tallied(admitted.tally);
     if (!admitted.admitted) {
       return unsentReply(admitted.refusal);
     }
-    const forwarding = { slot, tool: offered.tool.name, input, meta: context.meta, signal: signals.signal };
-    const journalling: CallJournalling = {
-      callId,
-      readOnly,
-      started: async (fact) => {
-        const number = await parts.run(context.journal.started(fact));
-        if (number !== undefined) {
-          state.used(offered);
-        }
-        return number;
-      },
-      ended: async (number, fact) => {
-        if (!signals.cancelled.aborted) {
-          await parts.run(context.journal.ended(number, fact));
-        }
-      },
-    };
+    const carried = assets === undefined ? {} : { assets };
+    const forwarding = { slot, tool: offered.tool.name, input, ...carried, meta: context.meta, signal: signals.signal };
+    const journalling = journallingOf({ parts, state, offered }, callId, signals);
     const journey = await journalledCall(
       { ...forwarding, ...timing },
       recordingOfTheCall(recording, parts, { callId, slot, tool: offered.tool.name }),

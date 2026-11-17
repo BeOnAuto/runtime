@@ -11,6 +11,7 @@ const answering = {
   failureCodes: null,
   now: () => Date.parse('2026-10-29T09:00:00.000Z'),
   input: {},
+  assets: [],
 };
 
 function resultOf(settled: CallSettled): unknown {

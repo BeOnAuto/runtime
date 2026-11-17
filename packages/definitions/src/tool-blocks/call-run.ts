@@ -32,7 +32,7 @@ export function callRunOf(ports: CallPorts, { noun, requiredMark }: CallRunning)
     context: RunContext,
   ): Effect.Effect<CapabilityAnswer, CapabilityRejection> =>
     Effect.gen(function* () {
-      const admitted = yield* checkedInput(input, document.input.schema, noun);
+      const admitted = yield* checkedInput(input, document.input.schema, noun, 'passed_whole');
       const at = new Date(yield* Clock.currentTimeMillis).toISOString();
       const { server, tool } = document.call;
       const rendered = yield* callArgumentsOf(

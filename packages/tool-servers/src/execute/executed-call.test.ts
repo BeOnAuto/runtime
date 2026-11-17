@@ -44,6 +44,7 @@ const search: OfferedTool = {
   annotations: { readOnlyHint: true },
   readOnly: true,
   mostBytes: 16_777_216,
+  planned: () => Effect.succeed({ sent: [], requestBytes: 2 }),
   start: ({ callId }) =>
     Promise.resolve({ call_id: callId, server: 'graph', tool: 'search', arguments_bytes: 2, read_only: true }),
   send: () =>

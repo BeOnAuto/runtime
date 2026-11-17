@@ -24,6 +24,7 @@ export interface ToolAccessOptions {
   readonly timing?: LinkOptions['timing'];
   readonly traceMeta?: LinkOptions['traceMeta'];
   readonly mostRequestBytes?: number;
+  readonly assets?: RecordingParts['assets'];
 }
 
 export interface ToolAccess extends RunWays, ListingWays {
@@ -36,7 +37,7 @@ type Links = LinkedAccess['fileLinks'];
 
 type LinksLent = () => Promise<Links>;
 
-export interface LinkedOptions extends ToolAccessOptions, RecordingParts {
+export interface LinkedOptions extends Omit<ToolAccessOptions, 'assets'>, RecordingParts {
   readonly reportLeftOut: Describing['reportLeftOut'];
   readonly reportMarkUnlisted: LinkOptions['reportMarkUnlisted'];
   readonly borrowed: Links;
@@ -70,7 +71,7 @@ export function toolAccessOf(
   listingsKept?: OrgAccess['listingsKept'],
 ): LendingAccess {
   const loading: { access?: Promise<LinkedAccess> } = {};
-  const recording = recordingPartsOf(settings.servers, options.content, options.runtimeSecrets ?? []);
+  const recording = recordingPartsOf(settings.servers, options.content, options.runtimeSecrets ?? [], options.assets);
   const source = options.connections ?? noConnections;
   const linkedOnUse = (): Promise<LinkedAccess> => {
     const reportLeftOut = options.reportLeftOut ?? ignored;

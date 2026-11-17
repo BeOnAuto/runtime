@@ -1,4 +1,5 @@
 import { sha256Of, textToKeep, type RecordedContent } from '@on.auto/content';
+import { noAssetsHeld, type AssetHolding } from '@on.auto/operations';
 import { Effect, type Redacted } from 'effect';
 
 import { secretsOfServers, type Secrets } from '../bounds/secrets.ts';
@@ -29,14 +30,16 @@ export type SecretValues = readonly Redacted.Redacted[];
 export interface RecordingParts {
   readonly keepIn: KeepIn;
   readonly secrets: Secrets;
+  readonly assets: AssetHolding;
 }
 
 export function recordingPartsOf(
   servers: readonly ServerSettings[],
   content: ContentStore,
   besides: SecretValues,
+  assets: AssetHolding = noAssetsHeld,
 ): RecordingParts {
-  return { keepIn: keepingIn(content), secrets: secretsOfServers(servers, besides) };
+  return { keepIn: keepingIn(content), secrets: secretsOfServers(servers, besides), assets };
 }
 
 const nothingKept: Pick<Served, 'record_content' | 'connection'> = { record_content: false, connection: null };

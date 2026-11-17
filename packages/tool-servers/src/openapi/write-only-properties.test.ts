@@ -9,6 +9,7 @@ const answering = {
   failureCodes: null,
   now: () => Date.parse('2026-11-16T09:00:00.000Z'),
   input: {},
+  assets: [],
 };
 
 const ADDRESS = 'pat.person@team.example';

@@ -53,6 +53,27 @@ describe('a run that has ended', () => {
   });
 });
 
+describe('a call a model writes that names an asset', () => {
+  it('is not sent or recorded, and the model reads why and what sends one', async () => {
+    const { call, fake, journal } = await runWith(['search']);
+    const asset = {
+      id: '019a5b12-0000-7000-8000-000000000001',
+      media_type: 'text/plain',
+      bytes: 3,
+      sha256: 'a'.repeat(64),
+      address: null,
+      address_until: null,
+    };
+
+    expect(await call('search', { query: asset })).toMatchObject({
+      text: 'A call a model writes sends no asset; pass the asset to an interaction function, whose call sends it.',
+      isError: true,
+      outcome: 'not_sent',
+    });
+    expect([fake.received(), journal.facts()]).toEqual([[], []]);
+  });
+});
+
 describe('a run that ends while it calls', () => {
   it('records a call in flight when the run ends as cancelled', async () => {
     const { call, fake, journal } = await runWith(['sleep']);

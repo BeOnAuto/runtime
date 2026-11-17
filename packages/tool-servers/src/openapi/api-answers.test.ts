@@ -11,6 +11,7 @@ const answering = {
   failureCodes: null,
   now: () => Date.parse('2026-10-13T09:00:00.000Z'),
   input: { text: 'x'.repeat(200_000) },
+  assets: [],
 };
 
 function streamOf(bytes: number): ReadableStream<Uint8Array> {
@@ -192,7 +193,7 @@ describe('an answer of an HTTP API that fails its call', () => {
   it('of JSON larger than a call over HTTP may take is a failure noted as too large', async () => {
     const settled = await settledOf(
       new Response(streamOf(toolBounds.httpAnswerBytes + 1), { headers: { 'content-type': 'application/json' } }),
-      { requestIdHeader: null, failureCodes: null, now: Date.now, input: {} },
+      { requestIdHeader: null, failureCodes: null, now: Date.now, input: {}, assets: [] },
     );
 
     expect(settled).toMatchObject({ observed: { id: null, response: { tooLarge: true, serverRequestId: null } } });

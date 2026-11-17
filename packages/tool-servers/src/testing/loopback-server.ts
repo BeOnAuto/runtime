@@ -89,6 +89,8 @@ export async function serveOnLoopback(handlerAt: (origin: string) => FetchHandle
       method: String(incoming.method),
       path: String(incoming.url),
       userAgent: incoming.headers['user-agent'],
+      contentLength: incoming.headers['content-length'],
+      transferEncoding: incoming.headers['transfer-encoding'],
     });
     void respond(incoming, outgoing, answering);
   });

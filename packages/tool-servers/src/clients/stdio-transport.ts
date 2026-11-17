@@ -5,6 +5,7 @@ import { setTimeout } from 'node:timers/promises';
 import { ReadBuffer, type JSONRPCMessage, type Transport } from '@modelcontextprotocol/client';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
+import { splicedBody, splicesInFlight } from '../sent-assets/spliced-bodies.ts';
 import { ignored } from './ignored.ts';
 import { boundedReport, type OutputReport } from './mcp-client.ts';
 import type { Observations, SendOptions } from './observed-requests.ts';
@@ -42,6 +43,8 @@ export class StdioProcessTransport implements Transport {
   readonly #readBuffer = new ReadBuffer({ maxBufferSize: toolBounds.stdioOutputBytes });
   readonly #spawned: Promise<unknown>;
   readonly #closed: Promise<unknown>;
+  #writing: Promise<void> = Promise.resolve();
+  #pending = 0;
 
   constructor(parameters: StdioParameters, observed: Observations, output: OutputReport) {
     const child = spawn(parameters.command, [...parameters.args], {
@@ -97,8 +100,43 @@ export class StdioProcessTransport implements Transport {
 
   send(message: unknown, options?: Readonly<SendOptions>): Promise<void> {
     this.#observations.noteSent(message, options);
-    this.#child.stdin.write(`${JSON.stringify(message)}\n`);
-    return Promise.resolve();
+    const line = `${JSON.stringify(message)}\n`;
+    const splices = splicesInFlight();
+    const body = splices === undefined ? undefined : splicedBody(line, splices)?.stream;
+    if (body === undefined && this.#pending === 0) {
+      this.#child.stdin.write(line);
+      return Promise.resolve();
+    }
+    this.#pending += 1;
+    const written = this.#writing.then(() => this.#written(line, body));
+    this.#writing = written.catch(ignored);
+    return written;
+  }
+
+  async #written(line: string, body: ReadableStream<Uint8Array> | undefined): Promise<void> {
+    try {
+      if (body === undefined) {
+        this.#child.stdin.write(line);
+      } else {
+        await this.#wroteBody(body);
+      }
+    } finally {
+      this.#pending -= 1;
+    }
+  }
+
+  async #wroteBody(body: ReadableStream<Uint8Array>): Promise<void> {
+    const { stdin } = this.#child;
+    try {
+      for await (const piece of body) {
+        if (!stdin.write(piece)) {
+          await Promise.race([once(stdin, 'drain'), this.#closed]);
+        }
+      }
+    } catch (error) {
+      stdin.write('\n');
+      throw error;
+    }
   }
 
   async close(): Promise<void> {

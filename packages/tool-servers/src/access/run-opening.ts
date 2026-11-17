@@ -11,7 +11,7 @@ import { refusalOf, type Unusable } from '../org-servers/server-refusals.ts';
 import type { ToolsNotOpened } from './caller-context.ts';
 
 export interface Opening
-  extends Offering, Pick<RunToolsParts, 'context' | 'secrets' | 'timing' | 'report' | 'mostRequestBytes'> {
+  extends Offering, Pick<RunToolsParts, 'context' | 'secrets' | 'timing' | 'report' | 'mostRequestBytes' | 'assets'> {
   readonly links: readonly ServerLink[];
   readonly keepIn: KeepIn;
 }

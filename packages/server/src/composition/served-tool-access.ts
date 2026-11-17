@@ -18,9 +18,9 @@ import { Context, Effect, Layer } from 'effect';
 
 import { logLeftOutOperation, logMarkUnlisted, logServerMessage } from '../logging/tool-server-logging.ts';
 import type { Settings } from '../settings/settings.ts';
+import { heldForCalls } from './kept-by-runs.ts';
 import { outboundFetch } from './outbound-fetch.ts';
 import { release } from './release.ts';
-import { runtimeLedger } from './runtime-ledger.ts';
 
 export interface ToolAccessWiring {
   readonly toolTiming?: Timing;
@@ -70,7 +70,7 @@ export function toolsComposedBy(
       ...(toolTiming === undefined ? {} : { timing: toolTiming }),
       ...(now === undefined ? {} : { now }),
       ...(traceMeta === undefined ? {} : { traceMeta }),
-      content: runtimeLedger(runtime).content,
+      ...heldForCalls(runtime),
       mostRequestBytes: toolCalls.mostRequestBytes,
       runtimeSecrets: registeredClientSecrets(registeredClients),
       reportServerMessage: (report) => {

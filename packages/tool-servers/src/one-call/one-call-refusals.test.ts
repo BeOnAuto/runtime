@@ -1,14 +1,15 @@
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 
-import { Effect, Function, Result, Schema } from 'effect';
+import { Effect, Exit, Function, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { defaultTiming, toolBounds } from '../bounds/call-bounds.ts';
-import { reportingAccess } from '../testing/index.ts';
+import { keptForATest, reportingAccess } from '../testing/index.ts';
 import {
   calledOnce,
   closedAfter,
+  echoCall,
   oneCallAccess,
   oneCallKey,
   oneCallServer,
@@ -149,6 +150,29 @@ describe('one call to a server that does not list its tools in time', () => {
     ).toEqual(
       unopenedWith('tool_server_failed', 'unreachable', `${couldNotBeUsed}The tool server did not answer in time`),
     );
+    expect(fake.received()).toEqual([]);
+  });
+});
+
+describe('one call whose assets cannot be planned, the store failing as it is read', () => {
+  it('lets the server go, so its session ends, though the call dies', async () => {
+    const fake = await oneCallServer();
+    const page = keptForATest('019a5b12-0000-7000-8000-00000000000a', 'text/plain', 'a page');
+    const { access } = reportingAccess(
+      { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },
+      {
+        environment: { GRAPH_API_KEY: oneCallKey },
+        assets: { held: () => Effect.die(new Error('The store could not be read')) },
+      },
+    );
+    closedAfter(access.close);
+
+    const died = await Effect.runPromiseExit(
+      access.callOnce({ ...echoCall, input: { channel: '#approvals', text: page.reference } }),
+    );
+
+    expect(Exit.hasDies(died)).toBe(true);
+    expect([fake.openSessions(), fake.endedSessions()]).toEqual([0, 1]);
     expect(fake.received()).toEqual([]);
   });
 });

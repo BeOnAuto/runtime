@@ -1,4 +1,4 @@
-import type { CallMeta } from '@on.auto/operations';
+import type { AssetHolding, CallMeta } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { recordingOf, type CallJournal, type KeepIn } from '../calls/recorded-calls.ts';
@@ -6,9 +6,9 @@ import { journalledCall, type CallJournalling } from '../calls/tool-caller.ts';
 import type { Listing } from '../listing/server-listing.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import type { Linked, OrgServer } from '../org-servers/org-servers.ts';
-import { openedFor } from './call-opening.ts';
+import { admittedOnce } from './call-admission.ts';
+import { openedFor, type Opened } from './call-opening.ts';
 import { answeredOnce, refusedOnce, tracedOnce, type CalledOnce } from './called-once.ts';
-import { notReadOnlyOnce } from './not-read-only.ts';
 
 export interface OneCall {
   readonly org: string;
@@ -29,42 +29,61 @@ export type CallOnce = (call: OneCall, runCall?: RunCall) => Effect.Effect<Calle
 
 export interface OneCallAccess extends Listing {
   readonly keepIn: KeepIn;
+  readonly assets: AssetHolding;
+  readonly mostRequestBytes: number;
 }
 
 type Journalling = (readOnly: boolean) => CallJournalling;
+
+type Awaiting = <A>(effect: Effect.Effect<A>) => Promise<A>;
 
 interface Calling {
   readonly access: OneCallAccess;
   readonly journalling: Journalling | undefined;
   readonly signal: Readonly<AbortSignal>;
+  readonly awaited: Awaiting;
 }
 
 const notRecorded = 'The start of the call could not be recorded on its run, so the call was not sent';
 
 type LinkedServer = Extract<Linked, { readonly link: unknown }>;
 
-async function calledOnce(call: OneCall, { link }: LinkedServer, { access, journalling, signal }: Calling) {
-  const opened = await openedFor(call.reference, link, access);
-  if ('kind' in opened) {
-    return opened;
-  }
+async function sentOnce(call: OneCall, link: LinkedServer['link'], opened: Opened, calling: Calling) {
+  const { access, journalling, signal } = calling;
   const { slot, tool, readOnly } = opened;
-  if (call.requiredMark === 'reads' && tool.mark !== 'reads') {
-    await slot.release();
-    return notReadOnlyOnce(call.reference, tool.mark);
+  const assets = await admittedOnce(call, opened, { ...access, awaited: calling.awaited });
+  if ('kind' in assets) {
+    return assets;
   }
   const recording = recordingOf(link.settings, access.secrets, access.keepIn(call));
   const { callMs } = access.timing;
   const longestRetryWaitMs = Math.min(call.longestRetryWaitMs ?? 0, access.timing.longestRetryWaitMs);
-  const forwarding = { slot, tool: tool.name, input: call.input, meta: call.meta, callMs, longestRetryWaitMs, signal };
+  const forwarding = {
+    slot,
+    tool: tool.name,
+    input: call.input,
+    assets,
+    meta: call.meta,
+    callMs,
+    longestRetryWaitMs,
+    signal,
+  };
+  const journey = await journalledCall(forwarding, recording, journalling?.(readOnly));
+  if (!journey.sent) {
+    throw new Error(notRecorded);
+  }
+  return answeredOnce(journey, access.secrets.scrub, tool.mark);
+}
+
+async function calledOnce(call: OneCall, { link }: LinkedServer, calling: Calling): Promise<CalledOnce> {
+  const opened = await openedFor(call.reference, link, calling.access);
+  if ('kind' in opened) {
+    return opened;
+  }
   try {
-    const journey = await journalledCall(forwarding, recording, journalling?.(readOnly));
-    if (!journey.sent) {
-      throw new Error(notRecorded);
-    }
-    return answeredOnce(journey, access.secrets.scrub, tool.mark);
+    return await sentOnce(call, link, opened, calling);
   } finally {
-    await slot.release();
+    await opened.slot.release();
   }
 }
 
@@ -72,8 +91,6 @@ async function linkedAndCalled(call: OneCall, server: OrgServer, calling: Callin
   const linked = await server.linked();
   return 'refused' in linked ? refusedOnce(linked.refused) : calledOnce(call, linked, calling);
 }
-
-type Awaiting = <A>(effect: Effect.Effect<A>) => Promise<A>;
 
 function journallingOf(runCall: RunCall | undefined, awaited: Awaiting): Journalling | undefined {
   return runCall === undefined
@@ -98,8 +115,9 @@ export function oneCall(
     { server: server.settings.name, tool: call.reference.tool },
     server.settings,
     Effect.gen(function* () {
-      const journalling = journallingOf(runCall, Effect.runPromiseWith(yield* Effect.context()));
-      return yield* Effect.promise((signal) => linkedAndCalled(call, server, { access, journalling, signal }));
+      const awaited = Effect.runPromiseWith(yield* Effect.context());
+      const journalling = journallingOf(runCall, awaited);
+      return yield* Effect.promise((signal) => linkedAndCalled(call, server, { access, journalling, signal, awaited }));
     }),
   );
 }

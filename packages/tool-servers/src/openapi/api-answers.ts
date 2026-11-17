@@ -15,6 +15,7 @@ export interface Answering {
   readonly failureCodes: FailureCodes | null;
   readonly now: () => number;
   readonly input: unknown;
+  readonly assets: Parameters<typeof answeredToACall>[2];
 }
 
 interface ContentBlock {
@@ -102,9 +103,9 @@ function jsonOf(text: string, mediaType: string | undefined, failureCodes: Failu
 }
 
 function shownAnswer(status: number, shown: Shown): Answer {
-  const { text, json, answers, input } = shown;
+  const { text, json, answers, input, assets } = shown;
   if (status >= 300) {
-    return errorAnswer(text === '' ? answeredToACall(status, input) : text);
+    return errorAnswer(text === '' ? answeredToACall(status, input, assets) : text);
   }
   return json === undefined ? textAnswer(text) : jsonAnswer(text, json.parsed, answers);
 }
@@ -142,7 +143,7 @@ function isAFile(response: Readonly<Response>, mediaType: string | undefined): b
   return response.status < 300 && response.body !== null && !isJson(mediaType);
 }
 
-interface Shown extends ReadAsJson, Pick<Answering, 'failureCodes' | 'input'> {
+interface Shown extends ReadAsJson, Pick<Answering, 'failureCodes' | 'input' | 'assets'> {
   readonly answers: AnswerSchemas;
   readonly carried: Carried;
 }
@@ -178,20 +179,20 @@ export async function settledOf(
   const carried = headersCarriedBy(response.status, response.headers, answers);
   let tooLarge = false;
   try {
-    const { failureCodes, input } = answering;
+    const { failureCodes, input, assets } = answering;
     const observed = observedOf(response, answering, false);
     if (isAFile(response, mediaType)) {
       const bytes = await fileBytesOf(response);
       const read = failureCodes === null ? undefined : jsonWithinTheBound(bytes);
       return read === undefined
         ? settled(withHeaders(textAnswer(await fileTextOf(response, bytes, file)), carried), observed)
-        : shownOrRefused(response, { ...read, answers, carried, failureCodes, input }, observed);
+        : shownOrRefused(response, { ...read, answers, carried, failureCodes, input, assets }, observed);
     }
     const text = await shownTextOf(response, () => {
       tooLarge = true;
     });
     const json = jsonOf(text, mediaType, failureCodes);
-    return shownOrRefused(response, { text, json, answers, carried, failureCodes, input }, observed);
+    return shownOrRefused(response, { text, json, answers, carried, failureCodes, input, assets }, observed);
   } catch (error) {
     return { error, observed: observedOf(response, answering, tooLarge || error instanceof DocumentTooLarge) };
   }

@@ -24,6 +24,7 @@ const answering = {
   failureCodes: null,
   now: () => Date.parse('2026-10-29T09:00:00.000Z'),
   input: {},
+  assets: [],
 };
 
 const byteOrderMark = String.fromCodePoint(0xfe_ff);

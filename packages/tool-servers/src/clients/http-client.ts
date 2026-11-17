@@ -9,6 +9,7 @@ import {
 } from '@modelcontextprotocol/client';
 import { Redacted } from 'effect';
 
+import { splicingFetch } from '../sent-assets/spliced-bodies.ts';
 import type { McpServerSettings } from '../settings/server-settings.ts';
 import { ignored } from './ignored.ts';
 import { observingFetch, openingClient, serverClientOver, type ClientInfo } from './mcp-client.ts';
@@ -59,7 +60,7 @@ function transportOptions(
 ): StreamableHTTPClientTransportOptions {
   return {
     requestInit: { headers: headersOf(settings) },
-    fetch: observingFetch(opening.fetch, observed),
+    fetch: observingFetch(splicingFetch(opening.fetch), observed),
     ...(opening.authProvider === undefined ? {} : { authProvider: opening.authProvider }),
   };
 }

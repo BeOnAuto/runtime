@@ -35,7 +35,9 @@ const metaField = '_meta';
 
 interface InputSchema {
   readonly type: 'object';
-  readonly properties: Readonly<Record<string, Readonly<{ type: string; description?: string }>>>;
+  readonly properties: Readonly<
+    Record<string, Readonly<{ type: string; description?: string; contentEncoding?: string }>>
+  >;
   readonly required: readonly string[];
 }
 

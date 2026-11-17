@@ -89,6 +89,10 @@ export {
   type HeldDigests,
 } from './held-content/held-digests.ts';
 export { keptContentGraceMs, noHoldersKnown, type UnheldContentRemover } from './held-content/unheld-removal.ts';
+export { assetContentOf, assetsIn, holdsAnAsset } from './asset-references/asset-references.ts';
+export type { AssetContent, AssetReference, PlacedAsset } from './asset-references/asset-references.ts';
+export { assetUnusable, noAssetsHeld } from './asset-references/held-assets.ts';
+export type { AssetHolding, AssetUnusable, HeldAsset } from './asset-references/held-assets.ts';
 export { earlierShapeOf, readingEarlierShapes, type EarlierShape } from './fact-shapes/earlier-shapes.ts';
 export { factReaderOf, factTypesOf, type FactReader } from './fact-shapes/fact-readers.ts';
 export {

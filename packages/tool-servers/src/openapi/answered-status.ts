@@ -1,5 +1,5 @@
-import { sendLessRemedy } from '../bounds/call-bounds.ts';
-import { bytesOf } from '../bounds/text-bytes.ts';
+import { sendLessRemedy, withTheAssetsSent } from '../bounds/call-bounds.ts';
+import { argumentBytesSent, type SentAsset } from '../sent-assets/planned-assets.ts';
 
 const meanings: ReadonlyMap<number, string> = new Map([
   [413, `the request was larger than the server takes; ${sendLessRemedy}`],
@@ -14,9 +14,9 @@ export function answeredHttpWords(status: number): string {
     : `The tool server answered HTTP ${status}: ${meaning}`;
 }
 
-export function answeredToACall(status: number, input: unknown): string {
+export function answeredToACall(status: number, input: unknown, assets: readonly SentAsset[]): string {
   return status === 413
-    ? `The tool server answered HTTP 413: the request, with arguments of ${bytesOf(JSON.stringify(input))} bytes as JSON, was larger than the server takes; ${sendLessRemedy}`
+    ? `The tool server answered HTTP 413: the request, with arguments of ${argumentBytesSent(input, assets)} bytes as JSON${withTheAssetsSent(assets.length > 0)}, was larger than the server takes; ${sendLessRemedy}`
     : answeredHttpWords(status);
 }
 

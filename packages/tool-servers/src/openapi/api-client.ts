@@ -6,7 +6,7 @@ import { unobserved, type CallSettled, type ServedClient } from '../clients/serv
 import { isCredentialRefused } from '../clients/server-failures.ts';
 import type { TokenSource } from '../clients/token-source.ts';
 import { settledOf, type Answering } from './api-answers.ts';
-import { apiRequestOf, isUnderBase, type ApiEndpoint, type ApiRequest } from './api-requests.ts';
+import { apiRequestOf, isUnderBase, sentBodyOf, type ApiEndpoint, type ApiRequest } from './api-requests.ts';
 import { ArgumentsRefused } from './arguments-refused.ts';
 import type { DescribedApiSettings } from './described-api.ts';
 
@@ -46,8 +46,7 @@ async function settledCall(request: ApiRequest, sending: Sending, mintedAgain = 
     request.url,
     {
       method: request.method,
-      headers: { ...request.headers, ...(await authorizationOf(tokens)) },
-      body: request.body,
+      ...sentBodyOf(request, { ...request.headers, ...(await authorizationOf(tokens)) }),
       redirect: 'manual',
       signal,
     },
@@ -68,7 +67,7 @@ function listingOf({ operations }: DescribedApiSettings['api']): ServedClient['l
     );
 }
 
-function answeringOf(settings: DescribedApiSettings, { now }: ApiOpening): Omit<Answering, 'input'> {
+function answeringOf(settings: DescribedApiSettings, { now }: ApiOpening): Omit<Answering, 'input' | 'assets'> {
   return { requestIdHeader: settings.request_id, failureCodes: settings.failure_codes, now };
 }
 
@@ -97,13 +96,13 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
   const answering = answeringOf(settings, opening);
   const { promise: closed, resolve } = Promise.withResolvers<void>();
   return {
-    call: async ({ tool, input, meta, signal, timeoutMs }) => {
+    call: async ({ tool, input, assets = [], meta, signal, timeoutMs }) => {
       const started = performance.now();
       const operation = operations.get(tool);
       if (operation === undefined) {
         return { error: new ArgumentsRefused(`The tool server lists no tool ${tool}`), observed: unobserved };
       }
-      const request = apiRequestOf(operation, input, endpoint);
+      const request = apiRequestOf(operation, input, endpoint, assets);
       if (Result.isFailure(request)) {
         return { error: new ArgumentsRefused(request.failure), observed: unobserved };
       }
@@ -117,7 +116,7 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
           meta,
           opening,
           signal,
-          settle: (response) => settledOf(response, { ...answering, input }, operation.answers, file),
+          settle: (response) => settledOf(response, { ...answering, input, assets }, operation.answers, file),
         });
       } catch (error) {
         return { error, observed: unobserved };

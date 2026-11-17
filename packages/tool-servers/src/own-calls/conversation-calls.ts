@@ -4,7 +4,7 @@ import { Struct } from 'effect';
 import type { CallAnswered } from '../calls/call-facts.ts';
 import type { StartedFields } from '../calls/recorded-calls.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
-import type { CalledOnce } from '../one-call/called-once.ts';
+import type { CalledOnce, UnopenedOnce } from '../one-call/called-once.ts';
 import {
   ConversationCallEventSchema,
   type RecordedConversationCall,
@@ -66,10 +66,19 @@ export function tellingStartedOf(telling: Telling, start: StartedFields, recorde
   return { event, context: tellingContextOf(telling, recorded) };
 }
 
+const unopenedBecause = {
+  tool_not_offered: 'tool_not_offered',
+  tool_server_failed: 'server_failure',
+  tool_not_read_only: 'server_failure',
+  asset_not_sent: 'arguments_refused',
+} as const satisfies Readonly<Record<UnopenedOnce['refused'], string>>;
+
 function tellingEnd(callId: string, end: CalledOnce, toldAs: ToldAs | undefined): TellingEnded {
   if (end.kind === 'unopened') {
-    const because = end.refused === 'tool_not_offered' ? 'tool_not_offered' : 'server_failure';
-    return { type: 'telling_failed', data: { call_id: callId, because, ...detailOf(end.detail) } };
+    return {
+      type: 'telling_failed',
+      data: { call_id: callId, because: unopenedBecause[end.refused], ...detailOf(end.detail) },
+    };
   }
   if (end.outcome === 'result') {
     const posted = toldAs === undefined ? {} : { told_as: toldAs };
