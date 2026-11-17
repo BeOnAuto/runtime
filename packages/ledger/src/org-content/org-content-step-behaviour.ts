@@ -13,7 +13,7 @@ import {
   alpha,
   aStoreOfPlaybooksContent,
   beta,
-  carryingToIt,
+  carryingThroughIt,
   chunkKept,
   countedIn,
   digest,
@@ -44,7 +44,7 @@ function keptInTheLedger(entry: LedgerEntry): void {
     await chunkKept(entry, database, beta, later);
     await chunkKept(entry, database, gamma, elsewhere);
 
-    await entry.carriedOn(database, carryingToIt);
+    await entry.carriedOn(database, carryingThroughIt);
     const heads = await headsIn(entry, database);
     const chunks = await countedIn(entry, database, 'recorded_content_chunks');
     const ledger = await aLedger(entry, database);
@@ -68,7 +68,7 @@ function wholeCopyChosen(entry: LedgerEntry): void {
     await headKept(entry, database, { key: beta, upload: later, keptAt: 20 });
     await chunkKept(entry, database, beta, later);
 
-    await entry.carriedOn(database, carryingToIt);
+    await entry.carriedOn(database, carryingThroughIt);
     const ledger = await aLedger(entry, database);
 
     expect((await headsIn(entry, database)).map(({ place_key }) => place_key)).toEqual([beta]);
@@ -89,7 +89,7 @@ function keptOutsideItsLedger(entry: LedgerEntry): void {
       }),
     );
 
-    await entry.carriedOn(database, carryingToIt);
+    await entry.carriedOn(database, carryingThroughIt);
     const places = await placesIn(entry, database);
     const ledger = await aLedgerOutside(entry, noteHolders, store, database);
     const read = (await resultOf(ledger.content.get(acmesOther, digest)))?.bytes;
@@ -125,7 +125,7 @@ function holdsCarried(entry: LedgerEntry): void {
     );
     await layoutBeforeSet(entry, database);
 
-    await entry.carriedOn(database, carryingToIt);
+    await entry.carriedOn(database, carryingThroughIt);
     const holds = Schema.decodeUnknownSync(HoldRows)(
       await entry.queried(
         database,
@@ -201,7 +201,7 @@ function holdsEqualAFold(entry: LedgerEntry): void {
     await aLedgerHolding(entry, noteHolders, database);
     await holdsTakenBackToTheLayoutBefore(entry, database);
 
-    await entry.carriedOn(database, carryingToIt);
+    await entry.carriedOn(database, carryingThroughIt);
     const carried = await foldedHoldsIn(entry, database);
     await entry.queried(database, 'DROP TABLE content_references_2');
     await aLedgerHolding(entry, noteHolders, database);
@@ -235,7 +235,7 @@ function marksAndExpiriesMerged(entry: LedgerEntry): void {
     await headKept(entry, database, { key: 'playbook/initech/one/', upload: '', keptAt: 0, removingSince: 3 });
     await headKept(entry, database, { key: 'playbook/initech/two/', upload: '', keptAt: 0, removingSince: 4 });
 
-    await entry.carriedOn(database, carryingToIt);
+    await entry.carriedOn(database, carryingThroughIt);
 
     expect(await headsIn(entry, database)).toEqual([
       aHead({ org_key: 'org/acme/', place_key: alpha, upload_id: earlier, kept_at: 20, expires_at: 90 }),
@@ -255,7 +255,7 @@ function marksAndExpiriesMerged(entry: LedgerEntry): void {
     await headKept(entry, database, { key: alpha, upload: earlier, keptAt: 10, removingSince: 15, keptIn: 'external' });
     await headKept(entry, database, { key: beta, upload: later, keptAt: 20, removingSince: 25, keptIn: 'external' });
 
-    await entry.carriedOn(database, carryingToIt);
+    await entry.carriedOn(database, carryingThroughIt);
 
     expect((await headsIn(entry, database)).map(({ removing_since }) => removing_since)).toEqual([25]);
   });

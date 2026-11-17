@@ -27,6 +27,7 @@ export type StoreKept = Pick<
   | 'factSchemas'
   | 'floor'
   | 'definitionNames'
+  | 'tableMadeAgain'
 >;
 
 const eventsInOneBoundedAppend = 64;

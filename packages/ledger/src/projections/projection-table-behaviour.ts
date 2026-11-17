@@ -19,6 +19,11 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { runOutcomeTableBehaviour } from '../outcomes/run-outcome-table-behaviour.ts';
+import {
+  caughtUpAt,
+  checkpointsOfTheTallies,
+  projectionCheckpointsBehaviour,
+} from '../projection-checkpoints/projection-checkpoints-behaviour.ts';
 import { streamProjectionBehaviour } from '../stream-projections/stream-projection-behaviour.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { projectionsBehaviour, topicsOf } from './projections-behaviour.ts';
@@ -83,6 +88,7 @@ function aTableNotThereYet(entry: LedgerEntry): void {
         { key: 'r1', row: { facts: 2, last_message: messageIdOf('playbook/acme/alpha/runs/r1', 2) } },
       ]);
       expect(await entry.queried(database, entry.projectionTables)).toEqual([{ name: 'run_tallies_3' }]);
+      expect(await entry.queried(database, checkpointsOfTheTallies)).toEqual([caughtUpAt(3)]);
       expect(await entry.queried(database, entry.projectionIndexes)).toEqual([
         { name: 'run_tallies_3_by_playbook_and_status' },
         { name: 'run_tallies_3_due' },
@@ -97,6 +103,7 @@ function aTableNotThereYet(entry: LedgerEntry): void {
       const reopened = await aLedger(entry, database, undefined, [runTallyRows]);
 
       expect(await Effect.runPromise(reopened.readProjectedRows('run_tallies', alpha, everyRow))).toEqual([]);
+      expect(await entry.queried(database, checkpointsOfTheTallies)).toEqual([caughtUpAt(2)]);
     });
 
     it('reads no row it finds under a key that is neither a playbook’s nor an org’s', async () => {
@@ -281,6 +288,7 @@ export function projectionTableBehaviour(entry: LedgerEntry): void {
   anAppendThatBreaksDown(entry);
   aReadOrderedByAnUndeclaredColumn(entry);
   aTableNotThereYet(entry);
+  projectionCheckpointsBehaviour(entry);
   aKeyedTableNotThereYet(entry);
   aTableOfOrgsNotThereYet(entry);
   aTableOfChildRowsNotThereYet(entry);

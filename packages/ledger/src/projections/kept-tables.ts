@@ -12,6 +12,7 @@ export interface KeptTables extends CarriedTables {
   readonly holders?: ContentHolders | undefined;
   readonly mostBytesFilledAtOnce?: number | undefined;
   readonly definitionNames?: DefinitionNames | undefined;
+  readonly tableMadeAgain?: ((table: string) => void) | undefined;
 }
 
 export function namesKeptBy(

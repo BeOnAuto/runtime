@@ -1,11 +1,11 @@
 import { Effect, Layer } from 'effect';
 
-import { watchFailuresLoggedWith } from '../appended/append-watch.ts';
 import { listenersOf, type AppendListeners } from '../event-store.ts';
 import { ledgerLayerOver, type LedgerServices, type OpenedLedger, type StoreLayerOptions } from '../ledger-layer.ts';
 import type { KeptTables } from '../projections/projection-parts.ts';
 import { pooledOptionsOf, sqliteEventStore, type AnyDriver, type SQLiteStoreOptions } from '../sqlite-event-store.ts';
 import { mostValuesTheLedgerBindsOnSQLite, sqliteMostBoundValues } from './bound-values.ts';
+import { openingLogsWith } from './opening-logs.ts';
 import { sqliteConnectionOn } from './sqlite-connection.ts';
 
 export interface SQLiteOpening<Driver extends AnyDriver> {
@@ -53,20 +53,22 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
     appends,
     content,
   } = options;
-  const kept = {
-    runOutcomes,
-    projections,
-    streamProjections,
-    holders,
-    layoutSteps,
-    factSchemas,
-    floor,
-    mostBytesFilledAtOnce,
-    definitionNames,
-  };
   return Layer.unwrap(
     Effect.map(Effect.context(), (context) => {
-      const listeners = { ...listenersOf(options), watchFailed: watchFailuresLoggedWith(context) };
+      const { watchFailed, tableMadeAgain } = openingLogsWith(context);
+      const kept = {
+        runOutcomes,
+        projections,
+        streamProjections,
+        holders,
+        layoutSteps,
+        factSchemas,
+        floor,
+        mostBytesFilledAtOnce,
+        definitionNames,
+        tableMadeAgain,
+      };
+      const listeners = { ...listenersOf(options), watchFailed };
       return ledgerLayerOver(() => sqliteLedgerOpened(opening, kept, listeners), { appends, content });
     }),
   );

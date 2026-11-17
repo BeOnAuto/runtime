@@ -1,5 +1,5 @@
 {
-  "layout": 25,
+  "layout": 26,
   "catalog": [
     {
       "name": "activity_1",
@@ -336,6 +336,10 @@
     {
       "name": "prediction_rows",
       "sql": "CREATE TABLE prediction_rows (playbook_key TEXT NOT NULL, data_sha256 TEXT NOT NULL, series TEXT NOT NULL, period_index BIGINT NOT NULL, period TEXT NOT NULL, target DOUBLE PRECISION, target_count BIGINT NOT NULL, target_at BIGINT, events BIGINT NOT NULL, PRIMARY KEY (playbook_key, data_sha256, series, period_index))"
+    },
+    {
+      "name": "projection_checkpoints",
+      "sql": "CREATE TABLE projection_checkpoints (projection TEXT NOT NULL, version INTEGER NOT NULL, folded_through TEXT, PRIMARY KEY (projection, version))"
     },
     {
       "name": "readings_1",
