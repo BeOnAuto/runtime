@@ -43,6 +43,8 @@ function given(fields: Readonly<Record<string, string | number | undefined>>): B
   return body;
 }
 
+const answersAnAddressUnlessAsked = /^xai\//u;
+
 function imageFields({ model, prompt, parameters }: GenerationRequest): Body {
   return given({
     model,
@@ -51,6 +53,7 @@ function imageFields({ model, prompt, parameters }: GenerationRequest): Body {
     size: parameters.size,
     quality: parameters.quality,
     aspect_ratio: parameters.aspect,
+    response_format: answersAnAddressUnlessAsked.test(model) ? 'b64_json' : undefined,
   });
 }
 

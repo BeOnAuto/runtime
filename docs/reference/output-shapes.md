@@ -131,7 +131,7 @@ A text of Markdown.
 
 ### asset
 
-An asset a generation function made: an image or audio the playbook keeps until it expires.
+An asset a generation function made: an image, audio or a video the playbook keeps until it expires.
 
 | Field           | Required | Value                                                                                                                               |
 | --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |

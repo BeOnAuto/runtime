@@ -15,11 +15,13 @@ const mebibyte = 1_048_576;
 const asThePagesWriteThem = {
   'generation.most_image': '20 MiB',
   'generation.most_audio': '50 MiB',
+  'generation.most_video': '200 MiB',
   'generation.most_kept': '2,048 MiB',
   'generation.kept': '90 days',
   'generation.bounds_changed_by': 'can be changed only by whoever runs the server',
   'generation.example_image_model': 'gateway/openai/gpt-image-2',
-  'generation.example_audio_model': 'gateway/openai/gpt-4o-mini-tts',
+  'generation.example_audio_model': 'gateway/vertex_ai/gemini-3.8-flash-tts',
+  'generation.example_video_model': 'gateway/vertex_ai/veo-3.1-fast-generate-001',
 };
 
 const ofACloud: GenerationBounds = {
@@ -61,11 +63,13 @@ describe('the values the guide of generation functions names', () => {
     expect(wordsOf(capability, 'value')).toEqual({
       'generation.most_image': '8 MiB',
       'generation.most_audio': '32 MiB',
+      'generation.most_video': '32 MiB',
       'generation.most_kept': '1,024,000 MiB',
       'generation.kept': '1 day',
       'generation.bounds_changed_by': 'can be changed only by whoever runs the server',
       'generation.example_image_model': 'images/openai/gpt-image-2',
-      'generation.example_audio_model': 'images/openai/gpt-4o-mini-tts',
+      'generation.example_audio_model': 'images/vertex_ai/gemini-3.8-flash-tts',
+      'generation.example_video_model': 'images/vertex_ai/veo-3.1-fast-generate-001',
     });
     expect(wordsOf(capability, 'default')).toEqual(asThePagesWriteThem);
     expect(guideVariablesOf(ofACloud, ['images'])).toEqual(capability.guide.variables);
@@ -82,7 +86,8 @@ describe('the models the examples of the guide of generation functions name', ()
     );
 
     expect(copied).toBe('<gateway>/openai/gpt-image-2');
-    expect(said(capability, 'generation.example_audio_model')).toBe('<gateway>/openai/gpt-4o-mini-tts');
+    expect(said(capability, 'generation.example_audio_model')).toBe('<gateway>/vertex_ai/gemini-3.8-flash-tts');
+    expect(said(capability, 'generation.example_video_model')).toBe('<gateway>/vertex_ai/veo-3.1-fast-generate-001');
     expect(refused.issues).toEqual([
       { pointer: '', detail: 'Line 3, /model: A model is written gateway/model, such as gateway/openai/gpt-image-2' },
     ]);
@@ -99,8 +104,12 @@ describe('the models the examples of the guide of generation functions name', ()
       'welcome',
       sourceWith(['produces: audio', `model: ${said(playbook.capability, 'generation.example_audio_model')}`]),
     );
+    const film = await playbook.define(
+      'film',
+      sourceWith(['produces: video', `model: ${said(playbook.capability, 'generation.example_video_model')}`]),
+    );
 
-    expect([picture.status, welcome.status]).toEqual(['succeeded', 'succeeded']);
+    expect([picture.status, welcome.status, film.status]).toEqual(['succeeded', 'succeeded', 'succeeded']);
   });
 });
 
@@ -109,6 +118,7 @@ describe('a run of the capability, against the values its guide names', () => {
     const playbook = numberedHarness({
       bounds: { ...generationBounds, mostBytes: { ...generationBounds.mostBytes, image: 16, audio: 4 } },
       gateways: [{ ...fakeGatewaySettings, name: 'images' }],
+      catalog: shipped,
     });
     await playbook.define(
       'picture',

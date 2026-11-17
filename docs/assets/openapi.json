@@ -14981,7 +14981,7 @@
       "get": {
         "operationId": "list_generation_models_in_org",
         "summary": "List generation models",
-        "description": "Lists the models a generation function may name, from this server's catalogue, with what each produces and takes, and the gateways a function names a model through. A function names its model as gateway/model, such as auto/openai/gpt-image-2. A retired model is listed so a saved function that names it can be explained; it is not one to name. Use it before a generation function names its model or its parameters.",
+        "description": "Lists the models a generation function may name, from this server's catalogue, with what each produces and takes, and the gateways a function names a model through. A function names its model as gateway/model, such as auto/openai/gpt-image-2. A retired model may be named until its retired.on and is refused from that day. Use it before a generation function names its model or its parameters.",
         "tags": [
           "models"
         ],
@@ -15019,6 +15019,10 @@
                       "enum": [
                         "list"
                       ]
+                    },
+                    "as_of": {
+                      "type": "string",
+                      "description": "Today, YYYY-MM-DD"
                     },
                     "gateways": {
                       "type": "array",
@@ -15140,7 +15144,7 @@
                               "replacement"
                             ],
                             "additionalProperties": false,
-                            "description": "The day it retired, YYYY-MM-DD, and the model that replaces it"
+                            "description": "The day it retires, YYYY-MM-DD, and the model that replaces it"
                           }
                         },
                         "required": [
@@ -15156,6 +15160,7 @@
                   },
                   "required": [
                     "object",
+                    "as_of",
                     "gateways",
                     "data"
                   ],
@@ -15237,7 +15242,7 @@
                 "generation",
                 "workflow"
               ],
-              "description": "workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio."
+              "description": "workflow is the job; each working step, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images, audio or video."
             }
           }
         ],
@@ -29156,7 +29161,7 @@
       "get": {
         "operationId": "list_generation_models",
         "summary": "List generation models",
-        "description": "Lists the models a generation function may name, from this server's catalogue, with what each produces and takes, and the gateways a function names a model through. A function names its model as gateway/model, such as auto/openai/gpt-image-2. A retired model is listed so a saved function that names it can be explained; it is not one to name. Use it before a generation function names its model or its parameters.",
+        "description": "Lists the models a generation function may name, from this server's catalogue, with what each produces and takes, and the gateways a function names a model through. A function names its model as gateway/model, such as auto/openai/gpt-image-2. A retired model may be named until its retired.on and is refused from that day. Use it before a generation function names its model or its parameters.",
         "tags": [
           "models"
         ],
@@ -29197,6 +29202,10 @@
                       "enum": [
                         "list"
                       ]
+                    },
+                    "as_of": {
+                      "type": "string",
+                      "description": "Today, YYYY-MM-DD"
                     },
                     "gateways": {
                       "type": "array",
@@ -29318,7 +29327,7 @@
                               "replacement"
                             ],
                             "additionalProperties": false,
-                            "description": "The day it retired, YYYY-MM-DD, and the model that replaces it"
+                            "description": "The day it retires, YYYY-MM-DD, and the model that replaces it"
                           }
                         },
                         "required": [
@@ -29334,6 +29343,7 @@
                   },
                   "required": [
                     "object",
+                    "as_of",
                     "gateways",
                     "data"
                   ],

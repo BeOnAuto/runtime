@@ -1,0 +1,39 @@
+model: vertex_ai/gemini-3.8-flash-lite-tts
+kind: audio
+media_types: []
+limits:
+  voices:
+    [
+      kore,
+      achernar,
+      achird,
+      algenib,
+      algieba,
+      alnilam,
+      aoede,
+      autonoe,
+      callirrhoe,
+      charon,
+      despina,
+      enceladus,
+      erinome,
+      fenrir,
+      gacrux,
+      iapetus,
+      laomedeia,
+      leda,
+      orus,
+      puck,
+      pulcherrima,
+      rasalgethi,
+      sadachbia,
+      sadaltager,
+      schedar,
+      sulafat,
+      umbriel,
+      vindemiatrix,
+      zephyr,
+      zubenelgenubi,
+    ]
+  formats: [wav]
+  prompt_characters: 4096

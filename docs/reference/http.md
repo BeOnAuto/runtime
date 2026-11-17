@@ -455,7 +455,7 @@ Prediction functions use the operations of reasoning functions, with `prediction
 
 Generation functions use the operations of reasoning functions, with `generation` in place of `reasoning` in each route, such as `POST /definitions/generation` and `POST /definitions/generation/{name}/run`. The `source` is a [generation function document](generation-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions). A run's output is the [asset](output-shapes.md#asset) it made, with an address that lasts 15 minutes from the end of the run.
 
-It finishes within the request that starts it, unless the provider finishes the generation later, as it does a video: then `run_definition` returns the run `started`, as [A generation the provider finishes later](generation-format.md#a-generation-the-provider-finishes-later) sets out. The [catalogue](generation-format.md#the-models) names no model that produces video, so a function that produces video is refused as it is saved. [How a run ends](generation-format.md#how-a-run-ends) lists its endings.
+It finishes within the request that starts it, unless the provider finishes the generation later, as it does a video: then `run_definition` returns the run `started`, as [A generation the provider finishes later](generation-format.md#a-generation-the-provider-finishes-later) sets out. The [catalogue](generation-format.md#the-models) names the models that produce video. [How a run ends](generation-format.md#how-a-run-ends) lists its endings.
 
 The assets of a playbook have an operation of their own, relative to `/v1/orgs/{org}/playbooks/{playbook}`, which reads an asset again with an address signed as it is read:
 

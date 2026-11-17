@@ -71,6 +71,15 @@ function namesListedOn(path: string, key: string): Promise<readonly string[]> {
   return onMcpAs(path, key, async (session) => toolNamesIn(await session.listTools()));
 }
 
+const imageModels = [
+  'openai/gpt-image-2',
+  'openai/gpt-image-2.6-flare',
+  'openai/gpt-image-2.6-sunburst',
+  'vertex_ai/gemini-3-pro-image',
+  'vertex_ai/gemini-nano-banana-2.1',
+  'xai/grok-imagine-image-2.0',
+];
+
 describe('list_generation_models on the endpoint of one playbook', () => {
   it('is listed as on /mcp and the org endpoint, with the same title, description, hints and arguments, none of them a playbook, and answers the same', async () => {
     const tools = await Promise.all(
@@ -97,7 +106,7 @@ describe('list_generation_models on the endpoint of one playbook', () => {
     expect(inThePlaybook.structuredContent).toMatchObject({
       object: 'list',
       gateways: ['images'],
-      data: [{ model: 'openai/gpt-image-2' }, { model: 'openai/gpt-image-2.6-flare' }],
+      data: imageModels.map((model) => ({ model })),
     });
   });
 

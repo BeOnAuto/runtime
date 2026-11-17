@@ -1,0 +1,9 @@
+model: vertex_ai/gemini-3-pro-image
+kind: image
+media_types: [image/png, image/jpeg, image/webp]
+limits:
+  aspects: ['1:1', '3:2', '2:3', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9', '1:4', '4:1', '1:8', '8:1']
+  prompt_characters: 32000
+  references:
+    most: 14
+    bytes: 15728640

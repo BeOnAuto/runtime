@@ -1,0 +1,10 @@
+model: vertex_ai/veo-3.1-fast-generate-001
+kind: video
+media_types: [image/png, image/jpeg]
+limits:
+  sizes: [1280x720, 720x1280, 1920x1080, 1080x1920]
+  seconds: { least: 8, most: 8 }
+  prompt_characters: 1000
+  references:
+    most: 1
+    bytes: 20000000

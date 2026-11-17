@@ -12,16 +12,17 @@ import { alpha } from '../testing/servers/reasoning-server.ts';
 
 const exampleFence = /^(`{3,4})markdown\n([\s\S]*?)^\1$/gmu;
 
-const examplesNamed = ['product-picture', 'welcome', 'restyled'];
+const examplesNamed = ['product-picture', 'welcome', 'film', 'restyled'];
 
 const changedOnlyByWhoeverRunsIt =
-  "The limits for one image, one asset of audio, a playbook's assets and how long an asset is kept without `expires` can be changed only by whoever runs the server.";
+  "The limits for one image, one asset of audio, one video, a playbook's assets and how long an asset is kept without `expires` can be changed only by whoever runs the server.";
 
 const decodeRun = Schema.decodeUnknownSync(Schema.Struct({ status: Schema.String }));
 
 const settingsOfAnOperator = {
   GENERATION_MAX_IMAGE_MIB: '3',
   GENERATION_MAX_AUDIO_MIB: '7',
+  GENERATION_MAX_VIDEO_MIB: '17',
   ASSET_STORAGE_QUOTA_MIB: '11',
   ASSET_RETENTION_DAYS: '13',
 };
@@ -86,6 +87,7 @@ describe('the guide of generation functions a server serves', () => {
 
     expect(serving.guide).toContain('| One image | 3 MiB |');
     expect(serving.guide).toContain('| One asset of audio | 7 MiB |');
+    expect(serving.guide).toContain('| One video | 17 MiB |');
     expect(serving.guide).toContain("| The storage quota of a playbook's assets | 11 MiB |");
     expect(serving.guide).toContain('| How long an asset is kept without `expires` | 13 days |');
     expect(serving.guide).toContain('Without it, an asset is kept for 13 days |');
@@ -94,10 +96,11 @@ describe('the guide of generation functions a server serves', () => {
     expect(serving.guide).not.toMatch(/20 MiB|50 MiB|2,048 MiB|90 days|gateway\/openai|data-audience|data-variable/u);
     expect(serving.examples.map((example) => /^model: (.*)$/mu.exec(example)?.[1])).toEqual([
       'images/openai/gpt-image-2',
-      'images/openai/gpt-4o-mini-tts',
+      'images/vertex_ai/gemini-3.8-flash-tts',
+      'images/vertex_ai/veo-3.1-fast-generate-001',
       'images/openai/gpt-image-2',
     ]);
-    expect(saved.map(({ status }) => status)).toEqual([201, 201, 201]);
+    expect(saved.map(({ status }) => status)).toEqual([201, 201, 201, 201]);
     expect(decodeRun(ran.body).status).toBe('succeeded');
     expect(gateway.asked().map(({ path }) => path)).toEqual(['/v1/audio/speech']);
   });
@@ -113,9 +116,10 @@ describe('the guide of generation functions a server serves', () => {
     expect(serving.guide).toContain('such as `<gateway>/openai/gpt-image-2` for `openai/gpt-image-2`.');
     expect(serving.examples.map((example) => /^model: (.*)$/mu.exec(example)?.[1])).toEqual([
       '<gateway>/openai/gpt-image-2',
-      '<gateway>/openai/gpt-4o-mini-tts',
+      '<gateway>/vertex_ai/gemini-3.8-flash-tts',
+      '<gateway>/vertex_ai/veo-3.1-fast-generate-001',
       '<gateway>/openai/gpt-image-2',
     ]);
-    expect(saved).toEqual(Array.from({ length: 3 }, () => ({ status: 422, refusedAtTheModel: true })));
+    expect(saved).toEqual(Array.from({ length: 4 }, () => ({ status: 422, refusedAtTheModel: true })));
   });
 });

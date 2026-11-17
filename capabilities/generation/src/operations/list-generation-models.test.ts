@@ -1,13 +1,13 @@
 import { makeDispatcher, type CallerIdentity, type Outcome } from '@on.auto/operations';
 import { memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { Effect, Layer, Result } from 'effect';
+import { Clock, Effect, Layer, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { CatalogEntry } from '../catalog/catalog-entry.ts';
 import { generationShippedRoots, readGenerationCatalog } from '../catalog/catalog-reading.ts';
 import { catalogOf, type GenerationCatalog } from '../catalog/generation-catalog.ts';
-import { testCatalog, testEntries } from '../testing/test-catalog.ts';
+import { clockAt, testCatalog, testEntries } from '../testing/index.ts';
 import { defineListGenerationModels } from './list-generation-models.ts';
 
 const reader: CallerIdentity = {
@@ -32,27 +32,38 @@ const playbookReader: CallerIdentity = {
   permissions: ['playbook:read'],
 };
 
-const services = Layer.mergeAll(
-  memoryLedger().layer,
-  memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
-  recordingReporter().layer,
-);
+const listedOn = Date.parse('2026-11-16T09:00:00Z');
+
+function servicesAt(now: number) {
+  return Layer.mergeAll(
+    memoryLedger().layer,
+    memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
+    recordingReporter().layer,
+    Layer.succeed(
+      Clock.Clock,
+      clockAt(() => now),
+    ),
+  );
+}
+
+const services = servicesAt(listedOn);
 
 interface Listing {
   readonly catalog?: GenerationCatalog;
   readonly gateways?: readonly string[];
   readonly caller?: CallerIdentity;
+  readonly now?: number;
 }
 
 async function listGenerationModels(
   input: unknown,
-  { catalog = testCatalog, gateways = ['auto'], caller = reader }: Listing = {},
+  { catalog = testCatalog, gateways = ['auto'], caller = reader, now = listedOn }: Listing = {},
 ) {
   const { registration } = defineListGenerationModels(catalog, gateways).org;
   const outcome: Outcome = await Effect.runPromise(
     makeDispatcher([])
       .dispatchToOrg(registration, { caller, org: 'acme', input, encoding: 'strings' })
-      .pipe(Effect.provide(services)),
+      .pipe(Effect.provide(servicesAt(now))),
   );
   return { registration, outcome };
 }
@@ -97,7 +108,7 @@ describe('list_generation_models', () => {
   it('answers the gateways and every model of the catalogue as its entry says, a retired one with its retirement', async () => {
     const catalog = Result.getOrThrow(catalogOf(sortedEntries));
     const output = outputOf((await listGenerationModels({}, { catalog })).outcome);
-    expect(output).toEqual({ object: 'list', gateways: ['auto'], data: catalog.entries });
+    expect(output).toEqual({ object: 'list', as_of: '2026-11-16', gateways: ['auto'], data: catalog.entries });
     expect(output).toMatchObject({
       data: [
         { model: 'example/long-sound' },
@@ -175,7 +186,7 @@ describe('the plain words of list_generation_models', () => {
     const shipped = Result.getOrThrow(await readGenerationCatalog(shippedFilesOnDisk(generationShippedRoots())));
     const { registration, outcome } = await listGenerationModels({}, { catalog: shipped, gateways: ['gateway'] });
     expect(registration.plainLanguage?.outcome(outputOf(outcome), {})).toBe(
-      'A generation function can name 5 models through gateway: it makes an image with gpt-image-2 or gpt-image-2.6-flare and audio with gpt-4o-mini-tts, tts-1, or tts-1-hd.',
+      'A generation function can name 14 models through gateway: it makes an image with gpt-image-2, gpt-image-2.6-flare, gpt-image-2.6-sunburst, gemini-3-pro-image, gemini-nano-banana-2.1, or grok-imagine-image-2.0, audio with gpt-4o-mini-tts, tts-1, tts-1-hd, gemini-3.8-flash-lite-tts, or gemini-3.8-flash-tts, and a video with veo-3.1-fast-generate-001, veo-3.1-generate-001, or veo-3.1-lite-generate-001. gpt-4o-mini-tts retires on 2027-01-06; name gemini-3.8-flash-tts before then. tts-1 retires on 2027-01-06; name gemini-3.8-flash-lite-tts before then. tts-1-hd retires on 2027-01-06; name gemini-3.8-flash-tts before then.',
     );
   });
 
@@ -193,7 +204,25 @@ describe('the description of list_generation_models', () => {
   it('says what it lists, how a function names a model, what a retired one is and when to use it', async () => {
     const { registration } = await listGenerationModels({});
     expect(registration.description).toContain('auto/openai/gpt-image-2');
-    expect(registration.description).toContain('it is not one to name');
+    expect(registration.description).toContain('is refused from that day');
     expect(registration.description.length).toBeLessThan(700);
+  });
+});
+
+async function audioWordsOn(day: string): Promise<string | undefined> {
+  const shipped = Result.getOrThrow(await readGenerationCatalog(shippedFilesOnDisk(generationShippedRoots())));
+  const { registration, outcome } = await listGenerationModels(
+    { kind: 'audio' },
+    { catalog: shipped, gateways: ['gateway'], now: Date.parse(day) },
+  );
+  return registration.plainLanguage?.outcome(outputOf(outcome), { kind: 'audio' });
+}
+
+describe('the plain words of list_generation_models about the speech models OpenAI retires', () => {
+  it('say, from the day OpenAI retires them, that they were retired and leave them out of what a function can name', async () => {
+    expect([await audioWordsOn('2027-01-05T23:59:59Z'), await audioWordsOn('2027-01-06T00:00:00Z')]).toEqual([
+      'A generation function can name 5 models through gateway: it makes audio with gpt-4o-mini-tts, tts-1, tts-1-hd, gemini-3.8-flash-lite-tts, or gemini-3.8-flash-tts. gpt-4o-mini-tts retires on 2027-01-06; name gemini-3.8-flash-tts before then. tts-1 retires on 2027-01-06; name gemini-3.8-flash-lite-tts before then. tts-1-hd retires on 2027-01-06; name gemini-3.8-flash-tts before then.',
+      'A generation function can name 2 models through gateway: it makes audio with gemini-3.8-flash-lite-tts or gemini-3.8-flash-tts. gpt-4o-mini-tts was retired on 2027-01-06; gemini-3.8-flash-tts replaces it. tts-1 was retired on 2027-01-06; gemini-3.8-flash-lite-tts replaces it. tts-1-hd was retired on 2027-01-06; gemini-3.8-flash-tts replaces it.',
+    ]);
   });
 });

@@ -1,9 +1,16 @@
-import { Effect, Result, Schema } from 'effect';
+import { Clock, Effect, Layer, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { catalogOf } from '../catalog/generation-catalog.ts';
 import { runnableModel } from '../run/runnable-model.ts';
-import { generationHarness, sourceWith, testCatalog, testEntries } from '../testing/index.ts';
+import {
+  clockAt,
+  fakeGatewaySettings,
+  generationHarness,
+  sourceWith,
+  testCatalog,
+  testEntries,
+} from '../testing/index.ts';
 import { parseGenerationDocument } from './document-parsing.ts';
 
 const SavedSchema = Schema.Struct({
@@ -123,5 +130,66 @@ describe('the model of a saved generation function, checked again as it runs', (
       'Line 3, /model: example/old-image was retired on 2026-06-30; name gateway/openai/gpt-image-2 instead; update the generation function definition',
       'unworkable',
     ]);
+  });
+});
+
+const fading = Result.getOrThrow(
+  catalogOf([
+    ...testEntries,
+    {
+      model: 'example/fading-image',
+      kind: 'image',
+      media_types: [],
+      limits: { prompt_characters: 400 },
+      retired: { on: '2026-12-01', replacement: 'openai/gpt-image-2' },
+    },
+  ]),
+);
+
+const naming = sourceWith(['produces: image', 'model: gateway/example/fading-image']);
+
+function runnableAt(iso: string) {
+  const document = Result.getOrThrow(parseGenerationDocument(naming));
+  return runnableModel({ catalog: fading, gateways: [fakeGatewaySettings] }, document).pipe(
+    Effect.provide(
+      Layer.succeed(
+        Clock.Clock,
+        clockAt(() => Date.parse(iso)),
+      ),
+    ),
+  );
+}
+
+describe('a model its provider retires on a day still to come', () => {
+  it('is saved until that day with a notice naming the day and its replacement, and refused from that day', async () => {
+    const harness = generationHarness({ catalog: fading });
+    const before = await harness.define('made', naming);
+    harness.passes(Date.parse('2026-12-01T00:00:00Z') - Date.parse('2026-11-01T10:00:00Z'));
+    const onTheDay = decodeSaved(await harness.define('made', naming));
+
+    expect([before, onTheDay.issues?.map(({ detail }) => detail)]).toMatchObject([
+      {
+        status: 'succeeded',
+        output: {
+          notices: [
+            {
+              kind: 'model_retiring',
+              at: '/model',
+              certainty: 'exact',
+              detail:
+                'example/fading-image retires on 2026-12-01, and a run of this function is refused from that day; name gateway/openai/gpt-image-2 before then',
+            },
+          ],
+        },
+      },
+      ['Line 3, /model: example/fading-image was retired on 2026-12-01; name gateway/openai/gpt-image-2 instead'],
+    ]);
+  });
+
+  it('runs until that day, and is refused as a definition to update from that day', async () => {
+    const before = await Effect.runPromise(runnableAt('2026-11-30T23:59:59Z'));
+    const onTheDay = await Effect.runPromise(Effect.flip(runnableAt('2026-12-01T00:00:00Z')));
+
+    expect([before.entry.model, onTheDay.kind]).toEqual(['example/fading-image', 'unworkable']);
   });
 });

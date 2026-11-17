@@ -1,7 +1,8 @@
 import { issueAt, type DocumentIssue, type SourceLines } from '@on.auto/definitions/document';
+import type { Notice } from '@on.auto/operations';
 import { alternatives, articled } from '@on.auto/phrasing';
 
-import { referenceLimitsOf, type CatalogEntry, type Seconds } from '../catalog/catalog-entry.ts';
+import { referenceLimitsOf, retiredBy, type CatalogEntry, type Seconds } from '../catalog/catalog-entry.ts';
 import type { GenerationCatalog } from '../catalog/generation-catalog.ts';
 import type { GenerationFunctionDefinitionDocument, GenerationParameters } from './generation-document.ts';
 
@@ -71,9 +72,9 @@ function referenceIssues({ lines, model }: Choosing, entry: CatalogEntry, refere
   return [issueAt(lines, '/references', detail)];
 }
 
-function modelsOfKind(catalog: GenerationCatalog, document: GenerationFunctionDefinitionDocument): string {
+function modelsOfKind(catalog: GenerationCatalog, document: GenerationFunctionDefinitionDocument, day: string): string {
   const models = catalog.entries
-    .filter(({ kind, retired }) => kind === document.produces && retired === undefined)
+    .filter((entry) => entry.kind === document.produces && !retiredBy(entry, day))
     .map(({ model }) => model);
   return models.length === 0
     ? `the catalogue names no model that produces ${document.produces}`
@@ -84,9 +85,10 @@ function entryIssues(
   document: GenerationFunctionDefinitionDocument,
   gateway: string,
   entry: CatalogEntry,
+  day: string,
 ): readonly DocumentIssue[] {
   const { lines } = document;
-  if (entry.retired !== undefined) {
+  if (entry.retired !== undefined && retiredBy(entry, day)) {
     const { on, replacement } = entry.retired;
     return [issueAt(lines, '/model', `${entry.model} was retired on ${on}; name ${gateway}/${replacement} instead`)];
   }
@@ -100,7 +102,11 @@ function entryIssues(
   ];
 }
 
-export function modelChoiceOf(catalog: GenerationCatalog, document: GenerationFunctionDefinitionDocument): ModelChoice {
+export function modelChoiceOf(
+  catalog: GenerationCatalog,
+  document: GenerationFunctionDefinitionDocument,
+  day: string,
+): ModelChoice {
   const split = document.model.indexOf('/');
   const gateway = document.model.slice(0, split);
   const model = document.model.slice(split + 1);
@@ -111,11 +117,33 @@ export function modelChoiceOf(catalog: GenerationCatalog, document: GenerationFu
         issueAt(
           document.lines,
           '/model',
-          `${model} is no model of the catalogue of generation models; ${modelsOfKind(catalog, document)}`,
+          `${model} is no model of the catalogue of generation models; ${modelsOfKind(catalog, document, day)}`,
         ),
       ],
     };
   }
-  const issues = entryIssues(document, gateway, entry);
+  const issues = entryIssues(document, gateway, entry, day);
   return issues.length > 0 ? { issues } : { chosen: { gateway, entry } };
+}
+
+export function retirementNotices(
+  catalog: GenerationCatalog,
+  document: GenerationFunctionDefinitionDocument,
+  day: string,
+): readonly Notice[] {
+  const split = document.model.indexOf('/');
+  const entry = catalog.entryOf(document.model.slice(split + 1));
+  if (entry?.retired === undefined || retiredBy(entry, day)) {
+    return [];
+  }
+  const { on, replacement } = entry.retired;
+  const gateway = document.model.slice(0, split);
+  return [
+    {
+      kind: 'model_retiring',
+      detail: `${entry.model} retires on ${on}, and a run of this function is refused from that day; name ${gateway}/${replacement} before then`,
+      at: '/model',
+      certainty: 'exact',
+    },
+  ];
 }

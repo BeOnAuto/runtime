@@ -3,6 +3,7 @@ import { Effect, Redacted, Schema } from 'effect';
 import { revealed } from '../providers/direct-providers.ts';
 import type { Fetch } from '../providers/sdk-model.ts';
 import type { GatewaySettings } from '../settings/gateway-settings.ts';
+import { isForConversation, isModeForConversation } from './conversation-models.ts';
 import { listedModels, type ListedModel } from './listed-model.ts';
 import { decodedAs, endpointUrl, listingJson, wellFormedEntries, type ProviderListing } from './listing-request.ts';
 
@@ -16,6 +17,7 @@ const gatewayEntries = wellFormedEntries(
     context_window: Schema.optionalKey(Schema.Unknown),
     max_tokens: Schema.optionalKey(Schema.Unknown),
     type: Schema.optionalKey(Schema.Unknown),
+    mode: Schema.optionalKey(Schema.Unknown),
   }),
 );
 
@@ -36,8 +38,8 @@ export function gatewayHeaders({ api_key: apiKey, headers }: GatewaySettings): R
   };
 }
 
-function isLanguageModel({ type }: GatewayEntry): boolean {
-  return typeof type !== 'string' || type === 'language';
+function isLanguageModel({ id, type, mode }: GatewayEntry): boolean {
+  return (typeof type !== 'string' || type === 'language') && isModeForConversation(mode) && isForConversation(id);
 }
 
 function modelsOf(gateway: string, entries: readonly unknown[]): readonly ListedModel[] {

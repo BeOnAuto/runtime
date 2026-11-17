@@ -1,8 +1,8 @@
 import { defineQuery } from '@on.auto/operations';
 import { alternatives, counted, listed, type Noun } from '@on.auto/phrasing';
-import { Effect, Schema } from 'effect';
+import { Clock, Effect, Schema } from 'effect';
 
-import { GenerationKindSchema, type GenerationKind } from '../catalog/catalog-entry.ts';
+import { dayOf, GenerationKindSchema, type GenerationKind } from '../catalog/catalog-entry.ts';
 import type { GenerationCatalog } from '../catalog/generation-catalog.ts';
 
 const task = 'list the models a generation function may name';
@@ -10,7 +10,7 @@ const task = 'list the models a generation function may name';
 const description = [
   "Lists the models a generation function may name, from this server's catalogue, with what each produces and takes, and the gateways a function names a model through.",
   'A function names its model as gateway/model, such as auto/openai/gpt-image-2.',
-  'A retired model is listed so a saved function that names it can be explained; it is not one to name.',
+  'A retired model may be named until its retired.on and is refused from that day.',
   'Use it before a generation function names its model or its parameters.',
 ].join(' ');
 
@@ -40,13 +40,16 @@ const ListedEntrySchema = Schema.Struct({
   }).annotate({ description: 'The values each parameter takes, the seconds it makes and the references it takes' }),
   retired: Schema.optionalKey(
     Schema.Struct({ on: Schema.String, replacement: Schema.String }).annotate({
-      description: 'The day it retired, YYYY-MM-DD, and the model that replaces it',
+      description: 'The day it retires, YYYY-MM-DD, and the model that replaces it',
     }),
   ),
 });
 
 const GenerationModelListSchema = Schema.Struct({
   object: Schema.Literal('list'),
+  as_of: Schema.String.annotate({
+    description: 'Today, YYYY-MM-DD',
+  }),
   gateways: ValuesSchema.annotate({
     description: 'The gateways of MODEL_GATEWAYS a function names its model through, by name; none where none is set',
   }),
@@ -86,8 +89,12 @@ function gatewayWords(gateways: readonly string[]): string {
     : '';
 }
 
-function modelsWords(data: readonly ListedEntry[], gateways: readonly string[], kind: GenerationKind | undefined) {
-  const named = data.filter(({ retired }) => retired === undefined);
+function hasRetired({ retired }: ListedEntry, day: string): boolean {
+  return retired !== undefined && retired.on <= day;
+}
+
+function modelsWords({ data, gateways, as_of: day }: GenerationModelList, kind: GenerationKind | undefined) {
+  const named = data.filter((entry) => !hasRetired(entry, day));
   if (named.length === 0) {
     return kind === undefined
       ? 'The catalogue names no model.'
@@ -99,17 +106,21 @@ function modelsWords(data: readonly ListedEntry[], gateways: readonly string[], 
   return `A generation function can name ${counted(named.length, modelNoun)}${through}: it makes ${made}.`;
 }
 
-function retiredWords(data: readonly ListedEntry[]): readonly string[] {
+function retiredWords({ data, as_of: day }: GenerationModelList): readonly string[] {
   const models = data.map(({ model }) => model);
-  return data.flatMap(({ model, retired }) =>
-    retired === undefined
-      ? []
-      : [`${nameOf(model, models)} was retired on ${retired.on}; ${nameOf(retired.replacement, models)} replaces it.`],
-  );
+  return data.flatMap(({ model, retired }) => {
+    if (retired === undefined) {
+      return [];
+    }
+    const replacing = nameOf(retired.replacement, models);
+    return retired.on <= day
+      ? [`${nameOf(model, models)} was retired on ${retired.on}; ${replacing} replaces it.`]
+      : [`${nameOf(model, models)} retires on ${retired.on}; name ${replacing} before then.`];
+  });
 }
 
-function modelsListed({ data, gateways }: GenerationModelList, kind: GenerationKind | undefined): string {
-  return [gatewayWords(gateways), modelsWords(data, gateways, kind), ...retiredWords(data)]
+function modelsListed(list: GenerationModelList, kind: GenerationKind | undefined): string {
+  return [gatewayWords(list.gateways), modelsWords(list, kind), ...retiredWords(list)]
     .filter((words) => words !== '')
     .join(' ');
 }
@@ -118,9 +129,11 @@ function listOf(
   catalog: GenerationCatalog,
   gateways: readonly string[],
   kind: GenerationKind | undefined,
+  now: number,
 ): GenerationModelList {
   return {
     object: 'list',
+    as_of: dayOf(now),
     gateways,
     data: catalog.entries.filter((entry) => kind === undefined || entry.kind === kind),
   };
@@ -143,7 +156,8 @@ const about = {
 };
 
 export function defineListGenerationModels(catalog: GenerationCatalog, gateways: readonly string[]) {
-  const handle = ({ kind }: Asked) => Effect.succeed(listOf(catalog, gateways, kind));
+  const handle = ({ kind }: Asked) =>
+    Effect.map(Clock.currentTimeMillis, (now) => listOf(catalog, gateways, kind, now));
   return {
     org: defineQuery('org', {
       ...about,

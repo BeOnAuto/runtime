@@ -18,7 +18,7 @@ Each function has one of six types, described below. Workflows coordinate functi
 | Interaction | Ask a person or a system, and take the answer      | Ask the brief's owner to approve the review          |
 | Prediction  | Predict a quantity from the playbook's own history | Forecast next week's sign-ups in each region         |
 | Computation | Calculate or transform data exactly, with code     | Total a campaign's spend and its pace against budget |
-| Generation  | Produce an image or audio from a prompt            | Make a picture of a product for its listing          |
+| Generation  | Produce an image, audio or a video from a prompt   | Make a picture of a product for its listing          |
 
 Choose a type by the function's job, not by how it does it. A function that reads what another system holds right now is lookup, and one that asks a system to do something is interaction. A function whose job is to forecast is prediction, even though its forecaster runs as code. Prompts, tools and models support functions, but they are not function types; [Terminology](terminology.md#supporting-assets) defines them.
 
@@ -91,7 +91,7 @@ Choose computation for arithmetic a language model should not do, and for any ch
 
 ## Generation
 
-A generation function produces an asset, an image or audio, from a prompt. A model the runtime reaches through a model gateway makes it, and the playbook keeps the asset until it expires, 90 days unless the function or the runtime says otherwise. [The asset](../reference/generation-format.md#the-asset) sets out what is removed when it expires.
+A generation function produces an asset, an image, audio or a video, from a prompt. A model the runtime reaches through a model gateway makes it, and the playbook keeps the asset until it expires, 90 days unless the function or the runtime says otherwise. [The asset](../reference/generation-format.md#the-asset) sets out what is removed when it expires.
 
 For example, a workflow writes a product's description with a reasoning function, then a generation function makes a picture of the product from it. The run answers a reference to the picture: its id, its size and an address it can be read at for a few minutes. Another generation function can take that id as a reference, to place the same product in a new scene.
 

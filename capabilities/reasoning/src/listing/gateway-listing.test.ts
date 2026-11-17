@@ -179,3 +179,31 @@ describe('an answer that arrives in many small pieces', () => {
     expect([pieces.reads(), list.data.map(({ id }) => id)]).toEqual([80_001, ['gateway/llama-3.3-70b']]);
   });
 });
+
+describe('the models of a gateway that make images, speech or video', () => {
+  it('are left out of the models for conversation, by the mode LiteLLM gives each and by their family where it gives none', async () => {
+    const entries = [
+      { id: 'openai/gpt-5.5', mode: 'chat' },
+      { id: 'openai/gpt-5.5-pro', mode: 'responses' },
+      { id: 'vertex_ai/gemini-3.8-flash' },
+      { id: 'openai/gpt-image-2.6-sunburst', mode: 'image_generation' },
+      { id: 'openai/tts-1', mode: 'audio_speech' },
+      { id: 'xai/grok-imagine-video-1.5', mode: 'video_generation' },
+      { id: 'vertex_ai/gemini-2.5-pro-preview-tts', mode: 'chat' },
+      { id: 'vertex_ai/gemini-3-pro-image' },
+      { id: 'vertex_ai/gemini-nano-banana-2.1' },
+      { id: 'xai/grok-imagine-image-2.0' },
+      { id: 'vertex_ai/gemini-3.8-flash-tts' },
+      { id: 'vertex_ai/gemini-3.8-flash-lite-tts' },
+      { id: 'vertex_ai/veo-3.1-generate-001' },
+      { id: 'vertex_ai/veo-3.1-lite-generate-001' },
+    ];
+    const catalog = await catalogFor(withGateway(gateway), () => jsonResponse({ data: entries }));
+
+    expect((await catalog.list()).data.map(({ id }) => id)).toEqual([
+      'gateway/openai/gpt-5.5',
+      'gateway/openai/gpt-5.5-pro',
+      'gateway/vertex_ai/gemini-3.8-flash',
+    ]);
+  });
+});

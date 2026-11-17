@@ -291,16 +291,16 @@ Each time the task runs, including on a retry, it starts a separate run of the f
 
 Some runs finish within their call, and others later. A task waits for the longest its definition's run may take, plus one minute:
 
-| Definition                                 | Finishes        | The function's own maximum                                         |
-| ------------------------------------------ | --------------- | ------------------------------------------------------------------ |
-| A reasoning function                       | Within its call | Its model's deadline, or its tool loop's bound when it names tools |
-| A lookup function                          | Within its call | 70 seconds                                                         |
-| An interaction function that calls a tool  | Within its call | 70 seconds                                                         |
-| An interaction function that asks a person | Later           | The `expires` of its document                                      |
-| A computation function                     | Within its call | 10 seconds                                                         |
-| A prediction function's question           | Within its call | 10 seconds                                                         |
-| A generation function                      | Within its call | 300 seconds                                                        |
-| A workflow                                 | Later           | The longest a run may last                                         |
+| Definition                                 | Finishes                              | The function's own maximum                                         |
+| ------------------------------------------ | ------------------------------------- | ------------------------------------------------------------------ |
+| A reasoning function                       | Within its call                       | Its model's deadline, or its tool loop's bound when it names tools |
+| A lookup function                          | Within its call                       | 70 seconds                                                         |
+| An interaction function that calls a tool  | Within its call                       | 70 seconds                                                         |
+| An interaction function that asks a person | Later                                 | The `expires` of its document                                      |
+| A computation function                     | Within its call                       | 10 seconds                                                         |
+| A prediction function's question           | Within its call                       | 10 seconds                                                         |
+| A generation function                      | Within its call, or later for a video | 300 seconds, or for a video the wait for it and 9 minutes more     |
+| A workflow                                 | Later                                 | The longest a run may last                                         |
 
 - A run that finishes later records the task that waits for it. Its ending reaches the task whenever it comes and on whichever server it is recorded. While the task waits, it holds none of the calls the server runs at once. A restart of the server does not start the run again.
 - A task never waits past the longest the workflow itself may still run.

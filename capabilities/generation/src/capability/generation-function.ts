@@ -9,7 +9,7 @@ import {
 import { assetPresenter } from '../assets/asset-presenter.ts';
 import { generationRun } from '../run/generation-run.ts';
 import { cancelledWaiting } from '../waiting/waiting-ends.ts';
-import { checkedAgainst, parse, summarize } from './definition-reading.ts';
+import { checkedAgainst, noticedAgainst, parse, summarize } from './definition-reading.ts';
 import { generationBounds, type GenerationPorts } from './generation-ports.ts';
 import { generationType } from './generation-type.ts';
 import { describeOutput, waitingAccount } from './generation-words.ts';
@@ -35,6 +35,7 @@ export function makeGenerationFunctionAdapter(ports: GenerationPorts): Capabilit
     mediaType: 'text/markdown',
     parse,
     check: checkedAgainst(ports.catalog),
+    notices: noticedAgainst(ports.catalog),
     summarize,
     run: (document, input, context) => run(document, input, context),
     whenCancelled: 'finish',

@@ -24,7 +24,7 @@ export const functionDescriptions = {
   interaction: 'Exchange information with people or systems.',
   prediction: "Predict a quantity from the playbook's own history, with a likely range.",
   computation: 'Run defined code or expressions to calculate or transform data.',
-  generation: 'Produce an asset, such as an image or audio, from a prompt.',
+  generation: 'Produce an asset, such as an image, audio or a video, from a prompt.',
 } satisfies Record<FunctionType, string>;
 
 const jobOfEachType: Readonly<Record<string, string>> = {
@@ -33,7 +33,7 @@ const jobOfEachType: Readonly<Record<string, string>> = {
   interaction: 'interaction asks a person or has a service act',
   prediction: 'prediction forecasts a quantity',
   computation: 'computation calculates or transforms exactly',
-  generation: 'generation makes images or audio',
+  generation: 'generation makes images, audio or video',
 } satisfies Record<FunctionType, string>;
 
 const theWorkflowIsTheJob = 'workflow is the job';
@@ -44,7 +44,7 @@ function whatEachStepIs(clauses: readonly string[], workflow: boolean): string {
   }
   return clauses.length === 0
     ? `${theWorkflowIsTheJob}.`
-    : `${theWorkflowIsTheJob}; each step that does work, by its job: ${clauses.join('; ')}.`;
+    : `${theWorkflowIsTheJob}; each working step, by its job: ${clauses.join('; ')}.`;
 }
 
 export function typeByEachPartsJob(types: readonly string[]): string | undefined {

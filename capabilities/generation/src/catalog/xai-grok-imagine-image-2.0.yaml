@@ -1,0 +1,28 @@
+model: xai/grok-imagine-image-2.0
+kind: image
+media_types: [image/png, image/jpeg, image/webp]
+limits:
+  aspects:
+    [
+      auto,
+      '1:1',
+      '16:9',
+      '9:16',
+      '4:3',
+      '3:4',
+      '3:2',
+      '2:3',
+      '2:1',
+      '1:2',
+      '19.5:9',
+      '9:19.5',
+      '20:9',
+      '9:20',
+      '21:9',
+      '5:2',
+    ]
+  qualities: [low, medium, auto]
+  prompt_characters: 4000
+  references:
+    most: 5
+    bytes: 10485760

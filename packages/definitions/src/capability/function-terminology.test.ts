@@ -50,7 +50,7 @@ describe('playbook function terminology', () => {
       'Exchange information with people or systems.',
       "Predict a quantity from the playbook's own history, with a likely range.",
       'Run defined code or expressions to calculate or transform data.',
-      'Produce an asset, such as an image or audio, from a prompt.',
+      'Produce an asset, such as an image, audio or a video, from a prompt.',
     ]);
   });
 });
@@ -107,7 +107,7 @@ describe('the words of the type a definition is created with', () => {
     const words = typeByEachPartsJob(definitionTypeOrder);
 
     expect(words).toBe(
-      'workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio.',
+      'workflow is the job; each working step, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images, audio or video.',
     );
     expect(words?.length).toBe(299);
   });

@@ -207,7 +207,7 @@ describe('the instructions an agent receives when it connects', () => {
       properties: {
         type: {
           description:
-            'workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio.',
+            'workflow is the job; each working step, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images, audio or video.',
         },
       },
     });

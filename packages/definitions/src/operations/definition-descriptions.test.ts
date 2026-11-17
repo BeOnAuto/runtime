@@ -85,7 +85,7 @@ describe('the type argument of create_definition', () => {
     expect(typeOf('create_definition')).toHaveProperty(['type'], {
       type: 'string',
       enum: ['reasoning', 'workflow'],
-      description: 'workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes.',
+      description: 'workflow is the job; each working step, by its job: reasoning interprets, judges or writes.',
     });
     expect(typeOf('update_definition')).toHaveProperty(['type', 'description'], "The definition's type");
   });

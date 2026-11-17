@@ -42,7 +42,7 @@
       "label": "Generation",
       "singular": "generation function",
       "plural": "generation functions",
-      "description": "Produce an asset, such as an image or audio, from a prompt."
+      "description": "Produce an asset, such as an image, audio or a video, from a prompt."
     }
   ]
 }

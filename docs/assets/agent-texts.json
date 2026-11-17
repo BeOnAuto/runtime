@@ -1651,7 +1651,7 @@
       ]
     },
     {
-      "sha256": "697c139a7193810315f2105b52090c7e33157c92ce30e781e75cb30c5d370e94",
+      "sha256": "bb0d303ca04bb9cbcc992cd509a7d2079f38a9cfccb8adf44434b087a21f6c8f",
       "tier": 1,
       "received": [
         {
@@ -1664,7 +1664,7 @@
         }
       ],
       "lines": [
-        "Lists the models a generation function may name, from this server's catalogue, with what each produces and takes, and the gateways a function names a model through. A function names its model as gateway/model, such as auto/openai/gpt-image-2. A retired model is listed so a saved function that names it can be explained; it is not one to name. Use it before a generation function names its model or its parameters."
+        "Lists the models a generation function may name, from this server's catalogue, with what each produces and takes, and the gateways a function names a model through. A function names its model as gateway/model, such as auto/openai/gpt-image-2. A retired model may be named until its retired.on and is refused from that day. Use it before a generation function names its model or its parameters."
       ]
     },
     {
@@ -1895,7 +1895,7 @@
       ]
     },
     {
-      "sha256": "b4404d733ca66199d590bcbc301c62405a561c8ec5ba5343f9cf3705c49e69df",
+      "sha256": "944faaaf15f989baab42fe58dc57dff2bf4a91836727411ae16dc5286defd811",
       "tier": 1,
       "received": [
         {
@@ -1907,7 +1907,7 @@
         }
       ],
       "lines": [
-        "workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio."
+        "workflow is the job; each working step, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images, audio or video."
       ]
     },
     {
@@ -4185,7 +4185,7 @@
       ]
     },
     {
-      "sha256": "e65ce4ff5b16a99454080d42b030835fbdc0d1c6ed4b0264e64e211038102b31",
+      "sha256": "74fc8c183510237b522b172ed817aacc5f702bdf781e70178035bb4ac619c1e9",
       "tier": 3,
       "received": [
         {
@@ -4500,7 +4500,7 @@
         "| An interaction function that asks a person | Later | The `expires` of its document |",
         "| A computation function | Within its call | 10 seconds |",
         "| A prediction function's question | Within its call | 10 seconds |",
-        "| A generation function | Within its call | 300 seconds |",
+        "| A generation function | Within its call, or later for a video | 300 seconds, or for a video the wait for it and 9 minutes more |",
         "| A workflow | Later | The longest a run may last |",
         "",
         "- A run that finishes later records the task that waits for it. Its ending reaches the task whenever it comes and on whichever server it is recorded. While the task waits, it holds none of the calls the server runs at once. A restart of the server does not start the run again.",
@@ -5327,7 +5327,7 @@
       ]
     },
     {
-      "sha256": "a103d63e46969985ab7e5e19a265e5355a55a300c57d1f6215137e95078166d0",
+      "sha256": "847785dd421eada0eecd6d2a487f78b2654a3b482bb2b6f6a0362b15fe15c532",
       "tier": 2,
       "received": [
         {
@@ -5360,7 +5360,7 @@
         "- it asks a person and takes their answer, or has a service act: an interaction function",
         "- it forecasts a quantity from the playbook's own history: a prediction function",
         "- it calculates or transforms data exactly: a computation function",
-        "- it makes an image or audio: a generation function",
+        "- it makes an image, audio or a video: a generation function",
         "",
         "A step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists. A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those. The order, the branches, the waits and what happens when a step fails are the workflow's, never a prompt's. A job that is one judgement is one reasoning function, and one step is enough.",
         "",
@@ -5434,7 +5434,7 @@
       ]
     },
     {
-      "sha256": "ba06289ae9562ead4bd6c2f3ab0e8fcf29b356126efa27776ea6862d4c7e33e9",
+      "sha256": "250c343b24fe611a9720bc275207f25414c7d64e0e1a98b83d6a1c38d91f1849",
       "tier": 3,
       "received": [
         {
@@ -5459,7 +5459,7 @@
         "- Interaction: Interaction function. Exchange information with people or systems.",
         "- Prediction: Prediction function. Predict a quantity from the playbook's own history, with a likely range.",
         "- Computation: Computation function. Run a TypeScript program to calculate or transform data exactly.",
-        "- Generation: Generation function. Produce an asset, an image or audio, from a prompt, with a model reached through a model gateway.",
+        "- Generation: Generation function. Produce an asset, an image, audio or a video, from a prompt, with a model reached through a model gateway.",
         "",
         "Definitions and runs:",
         "",
@@ -8323,7 +8323,7 @@
       ]
     },
     {
-      "sha256": "7277576ae88d4a2028d2b3c5f153505b34946d84128aa30a08726d618c2a1e3f",
+      "sha256": "925a44e190c60db9ba94e41e94fd22f38394dbd4fea1a194a58f437f1ba6da7e",
       "tier": 3,
       "received": [
         {
@@ -8338,9 +8338,9 @@
       "lines": [
         "# Generation function format",
         "",
-        "A generation function is a definition of the type `generation`. It produces an asset, an image or audio, from a prompt: its document names what it produces, a model of that kind, the parameters the model takes and a prompt template. A run renders the prompt from its input, asks the model through a model gateway, keeps the bytes the model made in the playbook, and answers with a reference to the asset. An image or audio is made while the run's call waits.",
+        "A generation function is a definition of the type `generation`. It produces an asset, an image, audio or a video, from a prompt: its document names what it produces, a model of that kind, the parameters the model takes and a prompt template. A run renders the prompt from its input, asks the model through a model gateway, keeps the bytes the model made in the playbook, and answers with a reference to the asset. An image or audio is made while the run's call waits. A video takes minutes, so its run stays `started` until the video is made.",
         "",
-        "Use one for the pictures and the spoken words a playbook makes. Writing text is a [reasoning function](https://on.auto/docs/reference/reasoning-format)'s work, and turning text into a file is a [computation function](https://on.auto/docs/reference/computation-format)'s.",
+        "Use one for the pictures, the spoken words and the videos a playbook makes. Writing text is a [reasoning function](https://on.auto/docs/reference/reasoning-format)'s work, and turning text into a file is a [computation function](https://on.auto/docs/reference/computation-format)'s.",
         "",
         "## A function document",
         "",
@@ -8398,13 +8398,27 @@
         "```markdown",
         "---",
         "produces: audio",
-        "model: <gateway>/openai/gpt-4o-mini-tts",
+        "model: <gateway>/vertex_ai/gemini-3.8-flash-tts",
         "parameters:",
-        "  voice: coral",
-        "  format: mp3",
+        "  voice: kore",
+        "  format: wav",
         "---",
         "",
         "Welcome to {{ input.shop }}. Today is {{ today }}.",
+        "```",
+        "",
+        "This one films eight seconds of a product, at 1280x720:",
+        "",
+        "```markdown",
+        "---",
+        "produces: video",
+        "model: <gateway>/vertex_ai/veo-3.1-fast-generate-001",
+        "parameters:",
+        "  size: 1280x720",
+        "  duration: 8",
+        "---",
+        "",
+        "A slow pan across {{ input.product }} on a wooden table, in warm morning light.",
         "```",
         "",
         "To save one, call `create_definition` with `type: \"generation\"`, a function `name`, such as `product-picture`, the document as `source`, and its `overview` and `diagram`. A save without a `diagram` is refused, so give the word `none` when a picture would add nothing; The overview says how to write both. To run it, call `run_definition` with the same type and name and its `input`. Both operations also need the playbook id, unless the MCP connection is scoped to that playbook.",
@@ -8427,7 +8441,7 @@
         "| Field | Required | Value |",
         "| --- | --- | --- |",
         "| `description` | No | Text of 1 to 1,000 characters |",
-        "| `produces` | Yes | `image`, `audio` or `video`. The catalogue names no model that produces video, so a function that produces `video` is refused as it is saved; see The models |",
+        "| `produces` | Yes | `image`, `audio` or `video`; see The models |",
         "| `model` | Yes | `gateway/model`: the name of a gateway, then a model of the catalogue that produces that kind, both as `list_generation_models` names them, such as `<gateway>/openai/gpt-image-2` |",
         "| `input.schema` | No | A JSON Schema of the input. The input is a JSON object; one the schema does not allow is `invalid_input` |",
         "| `parameters` | No | The parameters of the kind, each within the limits of the model |",
@@ -8443,7 +8457,7 @@
         "",
         "- a `produces` other than `image`, `audio` or `video`, and a `model` not written `gateway/model`;",
         "- a model the catalogue does not name, with the models it names that produce that kind;",
-        "- a model the catalogue says was retired, naming the model to use instead;",
+        "- a model the catalogue says has retired, from the day it retires, naming the model to use instead;",
         "- a model that produces another kind than `produces`;",
         "- a parameter of another kind, and a parameter outside the limits of the model, naming the values it takes;",
         "- more references than the model takes, or any for a model that takes none;",
@@ -8452,6 +8466,8 @@
         "",
         "A gateway the runtime is not given is not refused when the function is saved; its runs are.",
         "",
+        "A function that names a model the catalogue retires on a later day is saved, with a notice that names that day and the model to use instead. Its runs keep working until that day. From that day, both saving the function and running it are refused, so name the replacement before then.",
+        "",
         "Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Posts the notes in #deliveries'` or `{ note: 'Costs 1,000 a month' }`. Unquoted, YAML reads ` #` as the start of a comment and a comma there, even the one in `1,000`, as the start of another key, so the text ends early, and the save does not always say so.",
         "",
         "## The models",
@@ -8459,6 +8475,14 @@
         "The runtime keeps a catalogue of the models a generation function may name, each with the kind it produces and the limits of what it takes. A model is named as the gateway names it, after the gateway's own name and a `/`, such as `<gateway>/openai/gpt-image-2` for `openai/gpt-image-2`. `list_generation_models` answers the catalogue a server holds, with the names of its gateways.",
         "",
         "A gateway may not serve every model of the catalogue. A model it does not serve is answered by the gateway as not found when the function runs.",
+        "",
+        "### Choosing a model",
+        "",
+        "`list_generation_models` is the source of truth: it lists the models this server offers, and what each one takes. Choose by what the function needs to make and what a run may cost. The providers charge an image by the image, speech by its length and a video by the second, so a video is the dearest kind to make.",
+        "",
+        "- **An image.** Name `vertex_ai/gemini-nano-banana-2.1` for most pictures: it is one of the cheapest images here, takes an `aspect` and up to 14 references. Name `vertex_ai/gemini-3-pro-image` where the picture must be at its best; it costs about four times as much. Name `openai/gpt-image-2.6-flare` for an exact `size` or to try many drafts, since its `quality` runs from `low`, the cheapest, to `max`; `openai/gpt-image-2.6-sunburst` takes the same values at the same price. `openai/gpt-image-2` is OpenAI's earlier model. `xai/grok-imagine-image-2.0` takes the widest range of aspects, and up to 5 references.",
+        "- **Speech.** Name `vertex_ai/gemini-3.8-flash-tts` for the most natural voice, or `vertex_ai/gemini-3.8-flash-lite-tts`, which costs about two thirds as much. Both take the same 30 voices and make `wav`. `openai/tts-1`, `openai/tts-1-hd` and `openai/gpt-4o-mini-tts` retire on 2027-01-06, so a new function names a Gemini model.",
+        "- **A video.** Each Veo 3.1 model makes 8 seconds at one of four sizes. Name `vertex_ai/veo-3.1-fast-generate-001` for most work. Name `vertex_ai/veo-3.1-generate-001` for the best quality, at about three times Fast's price a second, and `vertex_ai/veo-3.1-lite-generate-001` for the cheapest, at about two thirds of Fast's, which takes no first-frame reference.",
         "",
         "### Parameters",
         "",
@@ -8550,6 +8574,7 @@
         "| --- | --- |",
         "| One image | 20 MiB |",
         "| One asset of audio | 50 MiB |",
+        "| One video | 200 MiB |",
         "| The storage quota of a playbook's assets | 2,048 MiB |",
         "| How long an asset is kept without `expires` | 90 days |",
         "| The prompt | The model's |",
@@ -8557,7 +8582,7 @@
         "| Waiting for the gateway | 240 seconds |",
         "| A run | 300 seconds |",
         "",
-        "The limits for one image, one asset of audio, a playbook's assets and how long an asset is kept without `expires` can be changed only by whoever runs the server. A run refused for the storage quota says the quota in force: how much the playbook keeps, and how much it may keep.",
+        "The limits for one image, one asset of audio, one video, a playbook's assets and how long an asset is kept without `expires` can be changed only by whoever runs the server. A run refused for the storage quota says the quota in force: how much the playbook keeps, and how much it may keep.",
         "",
         "## The overview",
         "",
@@ -10119,7 +10144,7 @@
       ]
     },
     {
-      "sha256": "b32942acf5f64caeffb015aa6dd264e865a104ec722c29f48fa2263d3b1336ee",
+      "sha256": "6526fe84e5bd464776455d21122a88dba5a9d4fac53eee0c0633c946b39f9ca4",
       "tier": 1,
       "received": [
         {
@@ -10130,7 +10155,7 @@
         }
       ],
       "lines": [
-        "workflow is the job; each step that does work, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly."
+        "workflow is the job; each working step, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly."
       ]
     },
     {

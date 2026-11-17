@@ -74,7 +74,8 @@ const VideoLimitsSchema = Schema.Struct({
 
 const RetiredSchema = Schema.Struct({
   on: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/u)).annotate({
-    description: 'The day the provider retired the model, as YYYY-MM-DD',
+    description:
+      'The day the provider retires the model, as YYYY-MM-DD: a definition may name it until then, and is refused from that day',
   }),
   replacement: ModelIdSchema.annotate({ description: 'The model of the catalogue a definition names instead' }),
 });
@@ -109,6 +110,14 @@ export const KindOfAnEntrySchema = Schema.Struct({ kind: GenerationKindSchema })
 
 export function referenceLimitsOf(entry: CatalogEntry): ReferenceLimits | undefined {
   return entry.kind === 'audio' ? undefined : entry.limits.references;
+}
+
+export function dayOf(millis: number): string {
+  return new Date(millis).toISOString().slice(0, 10);
+}
+
+export function retiredBy(entry: CatalogEntry, day: string): boolean {
+  return entry.retired !== undefined && entry.retired.on <= day;
 }
 
 export function fileNameOf(model: string): string {

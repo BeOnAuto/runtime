@@ -31,7 +31,7 @@ What each function type is for:
 | Interaction | Exchange information with people or systems.                                                                    |
 | Prediction  | Predict a quantity from the playbook's own history, with a likely range.                                        |
 | Computation | Run a TypeScript program to calculate or transform data exactly.                                                |
-| Generation  | Produce an asset, an image or audio, from a prompt, with a model reached through a model gateway.               |
+| Generation  | Produce an asset, an image, audio or a video, from a prompt, with a model reached through a model gateway.      |
 
 Skill references and a separately managed tool library are still planned.
 

@@ -6,7 +6,7 @@ export const whatEachPartDoes: Readonly<Record<string, string>> = {
   interaction: 'it asks a person and takes their answer, or has a service act',
   prediction: "it forecasts a quantity from the playbook's own history",
   computation: 'it calculates or transforms data exactly',
-  generation: 'it makes an image or audio',
+  generation: 'it makes an image, audio or a video',
 } satisfies Record<FunctionType, string>;
 
 export const theWorkflowFirst = [
