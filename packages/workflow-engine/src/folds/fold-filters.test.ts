@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Json, JsonObject } from '../dsl/json.ts';
 import { sourcesUnderTest, type SourceUnderTest } from '../pool-testing/test-pools.ts';
+import { argumentTextOf } from '../programs/argument-texts.ts';
 import { filterContextOf, type FilterContext } from '../programs/kept-contexts.ts';
 import type { Evaluation } from '../programs/program-run.ts';
 import { threadStackBytes, unitMemoryBytes } from '../programs/sandbox-bounds.ts';
@@ -29,7 +30,7 @@ function succeeded(verdict: Json): JsonObject {
 
 function matched(context: FilterContext, filters: readonly JsonObject[], event: JsonObject, budget = 500): Matching {
   return matchingOf(preparedFilters(filters, context.define), event, (test, actual) =>
-    test(JSON.stringify(actual), { ...evaluation, budget }),
+    test(argumentTextOf(actual), { ...evaluation, budget }),
   );
 }
 

@@ -9,6 +9,7 @@ import {
   momentVariables,
   renderedArguments,
   smallerInputRemedy,
+  variablesReadInside,
   type ArgumentsFailure,
   type Templates,
 } from './rendered-arguments.ts';
@@ -172,5 +173,22 @@ describe('the words of arguments that could not be rendered', () => {
         most: mostBytes,
       }),
     ]).toEqual([expect.any(String), expect.any(String), 'The argument a of the call reads a value it does not have']);
+  });
+});
+
+describe('the variables a call block reads inside', () => {
+  it('are those of its templates that mix text or apply a filter, in lists and objects, and none of a lone expression it passes whole or of one that does not parse', () => {
+    const read = variablesReadInside({
+      whole: '{{ input.page }}',
+      filtered: '{{ input.rows | json }}',
+      nested: { list: ['# {{ input.title }}', 3] },
+      broken: 'a {{ input.',
+      count: 2,
+    });
+
+    expect(read.map(({ path }) => path)).toEqual([
+      ['input', 'rows'],
+      ['input', 'title'],
+    ]);
   });
 });

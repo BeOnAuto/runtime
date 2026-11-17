@@ -2,11 +2,11 @@ import { sendableInWords } from '@on.auto/tool-servers';
 import { Result, type Schema } from 'effect';
 
 import type { RenderClock } from '../template/render-clock.ts';
-import { parsedTemplate } from '../template/template-parsing.ts';
+import { parsedTemplate, type VariableReference } from '../template/template-parsing.ts';
 import { bytesAsJsonOf } from './bytes-as-json.ts';
 import { childrenOf, isJsonArray, isJsonParent, type JsonChild } from './json-children.ts';
 import { renderedText, toolBlockEngine, type TextFailure } from './text-rendering.ts';
-import { isLoneExpression, renderedValue } from './value-rendering.ts';
+import { isLoneExpression, passesWhole, renderedValue } from './value-rendering.ts';
 
 export type Templates = Readonly<Record<string, Schema.Json>>;
 
@@ -23,21 +23,39 @@ export interface RenderedArguments {
 
 interface Rendering {
   readonly variables: TemplateVariables;
+  readonly textVariables: TemplateVariables;
   readonly clock: RenderClock;
   readonly mostBytes: number;
 }
 
 function renderedString(
   text: string,
-  { variables, clock, mostBytes }: Rendering,
+  { variables, textVariables, clock, mostBytes }: Rendering,
 ): Result.Result<Schema.Json, TextFailure> {
   const parsed = parsedTemplate(toolBlockEngine, text, 1);
   if (Result.isFailure(parsed)) {
     return Result.fail({ reason: 'failed', detail: parsed.failure.map(({ detail }) => detail).join('; '), line: 1 });
   }
+  if (passesWhole(parsed.success)) {
+    return renderedValue(parsed.success, variables, mostBytes + 1, clock);
+  }
   return isLoneExpression(text)
-    ? renderedValue(parsed.success, variables, mostBytes + 1, clock)
-    : renderedText(parsed.success, variables, mostBytes + 1, clock);
+    ? renderedValue(parsed.success, textVariables, mostBytes + 1, clock)
+    : renderedText(parsed.success, textVariables, mostBytes + 1, clock);
+}
+
+function templatesIn(value: Schema.Json): readonly string[] {
+  if (typeof value === 'string') {
+    return [value];
+  }
+  return isJsonParent(value) ? childrenOf(value).flatMap(([, child]) => templatesIn(child)) : [];
+}
+
+export function variablesReadInside(templates: Templates): readonly VariableReference[] {
+  return templatesIn(templates).flatMap((text) => {
+    const parsed = parsedTemplate(toolBlockEngine, text, 1);
+    return Result.isSuccess(parsed) && !passesWhole(parsed.success) ? parsed.success.variables : [];
+  });
 }
 
 function pathOf(path: string, key: string): string {
@@ -81,19 +99,26 @@ function renderedJson(
   );
 }
 
+export function renderedArgumentsOf(
+  templates: Templates,
+  rendering: Rendering,
+): Result.Result<RenderedArguments, ArgumentsFailure> {
+  return Result.flatMap(renderedEntries(childrenOf(templates), rendering, ''), (entries) => {
+    const input = Object.fromEntries(entries);
+    const bytes = bytesAsJsonOf(input);
+    return bytes > rendering.mostBytes
+      ? Result.fail({ reason: 'too_large', bytes, most: rendering.mostBytes })
+      : Result.succeed({ input, bytes });
+  });
+}
+
 export function renderedArguments(
   templates: Templates,
   variables: TemplateVariables,
   clock: RenderClock,
   mostBytes: number,
 ): Result.Result<RenderedArguments, ArgumentsFailure> {
-  return Result.flatMap(renderedEntries(childrenOf(templates), { variables, clock, mostBytes }, ''), (entries) => {
-    const input = Object.fromEntries(entries);
-    const bytes = bytesAsJsonOf(input);
-    return bytes > mostBytes
-      ? Result.fail({ reason: 'too_large', bytes, most: mostBytes })
-      : Result.succeed({ input, bytes });
-  });
+  return renderedArgumentsOf(templates, { variables, textVariables: variables, clock, mostBytes });
 }
 
 export const notTextRemedy = 'write | json after it, or write it alone as one {{ }} to send it as it is';

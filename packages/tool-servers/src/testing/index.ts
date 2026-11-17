@@ -34,7 +34,6 @@ export {
 export { brokenPromise, threadReplies } from '../mcp-testing/fake-data-tools.ts';
 export { fetchWithDeletion } from '../mcp-testing/deleting-fetch.ts';
 export { recordingTimer, type RecordingTimer, type Wait } from './recording-timer.ts';
-export { heldForATest, keptForATest, type HeldForATest, type KeptForATest } from './held-assets.ts';
 export { pendingWords } from './fake-connections.ts';
 export {
   playbookToolCalls,

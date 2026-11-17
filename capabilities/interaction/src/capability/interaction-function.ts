@@ -7,8 +7,8 @@ import {
 
 import { callRun } from '../call/call-run.ts';
 import { interactionFacts } from '../facts/declared-facts.ts';
-import { requestRun } from '../run/interaction-run.ts';
 import type { InteractionPorts } from '../run/request-reach.ts';
+import { requestRun } from '../run/request-run.ts';
 import { definitionReadingOf } from './definition-reading.ts';
 import { interactionType } from './interaction-type.ts';
 import { describeAnswer, guideVariablesOf, interactionRunWords } from './interaction-words.ts';

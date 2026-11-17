@@ -17,7 +17,7 @@ import { guideVariablesOf } from './guide-variables.ts';
 import { lookupType } from './lookup-type.ts';
 
 export interface LookupPorts {
-  readonly tools: Pick<ToolAccess, 'callOnce' | 'listServers' | 'mostRequestBytes' | 'mostRequestBytesTo'>;
+  readonly tools: Pick<ToolAccess, 'assets' | 'callOnce' | 'listServers' | 'mostRequestBytes' | 'mostRequestBytesTo'>;
   readonly runs: SucceededRunsReader;
   readonly mostPagesRead?: number;
 }
@@ -33,7 +33,7 @@ export function makeLookupFunctionAdapter({
 }: LookupPorts): Capability {
   const { singular, plural } = functionResourceLabels.lookup;
   const callRun = callRunOf({ tools }, { noun: singular, requiredMark: 'reads' });
-  const runsRunOf = runsRun({ runs, mostPagesRead });
+  const runsRunOf = runsRun({ runs, assets: tools.assets, mostPagesRead });
   return defineCapability({
     type: lookupType,
     title: functionCategoryLabels.lookup,

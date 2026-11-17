@@ -14,6 +14,7 @@ export function makeToolAccess(settings: ToolServers, options: ToolAccessOptions
     return toolAccessOf(settings, { ...options, fetch, consent }, own.linksSendingNoRequest, own.listingsKept);
   });
   return {
+    assets: own.assets,
     configured: own.configured,
     takesConnections: own.takesConnections,
     callMs: own.callMs,

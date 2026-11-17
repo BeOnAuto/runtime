@@ -1,4 +1,4 @@
-import { toolBounds, type ToolAccess } from '@on.auto/tool-servers';
+import { sendLessRemedy, toolBounds, type ToolAccess } from '@on.auto/tool-servers';
 import { runIdKey } from '@on.auto/tool-servers/policy';
 import { Clock, Effect, type Schema } from 'effect';
 
@@ -8,12 +8,11 @@ import { checkedInput } from '../checking/schema-refusals.ts';
 import type { ValueContract } from '../document/function-fields.ts';
 import { callArgumentsOf } from './call-arguments.ts';
 import { callEndingOf, type CalledDocument } from './call-endings.ts';
-import { momentVariables } from './rendered-arguments.ts';
 
 export const longestCallRunMs = 4 * toolBounds.openMs + toolBounds.callMs;
 
 export interface CallPorts {
-  readonly tools: Pick<ToolAccess, 'callOnce' | 'mostRequestBytesTo'>;
+  readonly tools: Pick<ToolAccess, 'assets' | 'callOnce' | 'mostRequestBytesTo'>;
 }
 
 export interface CallingDocument extends CalledDocument {
@@ -35,11 +34,16 @@ export function callRunOf(ports: CallPorts, { noun, requiredMark }: CallRunning)
       const admitted = yield* checkedInput(input, document.input.schema, noun, 'passed_whole');
       const at = new Date(yield* Clock.currentTimeMillis).toISOString();
       const { server, tool } = document.call;
-      const rendered = yield* callArgumentsOf(
-        document.call,
-        momentVariables(admitted, at),
-        ports.tools.mostRequestBytesTo(server),
-      );
+      const rendered = yield* callArgumentsOf(document.call, admitted, at, {
+        holding: ports.tools.assets,
+        playbook: { org: context.org, playbook: context.playbook },
+        bound: {
+          most: ports.tools.mostRequestBytesTo(server),
+          unit: 'bytes',
+          reader: 'a call may send to a tool server',
+          remedy: sendLessRemedy,
+        },
+      });
       const called = yield* ports.tools.callOnce(
         {
           org: context.org,

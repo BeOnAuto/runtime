@@ -5,6 +5,7 @@ import type { Settings } from '../settings/settings.ts';
 import type { WorkflowParts } from '../workflows/workflows.ts';
 import { factsComposedOf } from './composed-facts.ts';
 import type { ServedWiring } from './function-wiring.ts';
+import { heldForCalls } from './kept-by-runs.ts';
 import { generationServedBy } from './served-generation.ts';
 import { orgPartsServedBy } from './served-org-operations.ts';
 import { toolUsersServedBy } from './served-tools.ts';
@@ -43,7 +44,8 @@ export async function functionsServedBy(
   await prediction.servedIn(runtime, projections.store.database);
   const forecaster = foldedBeforeItRuns({ capability, folders, database: projections.store.database });
   const toolCapabilities = [reasoning.capability, lookup, interaction.capability];
-  const capabilities = [...toolCapabilities, computation.capability, forecaster, generation.capability];
+  const computing = computation.capabilityHolding(heldForCalls(runtime).assets);
+  const capabilities = [...toolCapabilities, computing, forecaster, generation.capability];
   const { facts, names, record } = factsComposedOf(runtime, capabilities);
   const lists = await servedWithTheGoalsEngine(
     { ...tools, goals: results, runtime, database: projections.store.database, pool: computation.pool },

@@ -2,12 +2,13 @@ import { mostFilterMs, mostInputMs, testedOrRaised } from '../dsl/evaluation.ts'
 import type { Json, JsonObject } from '../dsl/json.ts';
 import { RaisedError } from '../dsl/raised-error.ts';
 import type { DslError } from '../machine/dsl-error.ts';
+import { argumentTextOf, type ArgumentText } from '../programs/argument-texts.ts';
 import type { Evaluation, Limit, ProgramFailure, ProgramRun } from '../programs/program-run.ts';
 import { meterOf, type Meter } from '../runner/run-tables.ts';
 import { attributeHoldsLater, filterAttributesOf, type FilterAttribute } from './attribute-match.ts';
 import type { FilterVerdict, LiteralFilter } from './event-filter.ts';
 
-type AskedTest = (value: string, evaluation: Evaluation) => Promise<ProgramRun>;
+type AskedTest = (value: ArgumentText, evaluation: Evaluation) => Promise<ProgramRun>;
 
 export interface FilterSession {
   readonly define: (source: string) => AskedTest;
@@ -72,7 +73,7 @@ function preparedOf({ reference, attributes }: MatchedFilter, define: FilterSess
 
 function verdictIn(testing: Testing): (test: AskedTest, actual: Json, source: string) => Promise<Json> {
   return async (test, actual, source) => {
-    const run = await test(JSON.stringify(actual), {
+    const run = await test(argumentTextOf(actual), {
       budget: testing.meter.allowance(),
       deadlineAt: testing.deadlineAt,
       moment: testing.now,

@@ -8,6 +8,8 @@ import { alpha, servingReasoning, type ReasoningServer } from '../testing/server
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
+const anyText: unknown = expect.any(String);
+
 const photographedRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const sentRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
@@ -163,5 +165,29 @@ describe('an asset a person’s agent names in a call made by hand, over HTTP', 
 
     expect(executed.body).toMatchObject({ outcome: 'result', answer: 'done' });
     expect(sentTo(graph)).toMatchObject([{ tool: 'upload', arguments: { file: pixel } }]);
+  });
+});
+
+describe('a dry run of a call by hand that names an asset, over HTTP', () => {
+  it('finds it valid where the tool takes a file, and refuses it at its argument where the tool takes text', async () => {
+    const { server, graph, photo } = await photographed();
+
+    const asFile = await server.call('POST', `${alpha}/tool-servers/graph/tools/upload/dry-run`, {
+      body: { arguments: { name: 'photo.png', file: photo } },
+    });
+    const asText = await server.call('POST', `${alpha}/tool-servers/graph/tools/save/dry-run`, {
+      body: { arguments: { name: 'photo.png', content: photo } },
+    });
+
+    expect([asFile.body, asText.body]).toMatchObject([
+      { arguments: { valid: true, issues: [] } },
+      {
+        arguments: {
+          valid: false,
+          issues: [{ path: '/content', message: anyText }],
+        },
+      },
+    ]);
+    expect(sentTo(graph)).toEqual([]);
   });
 });

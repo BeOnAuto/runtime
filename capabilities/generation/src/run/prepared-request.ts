@@ -4,7 +4,7 @@ import { Effect, type Schema } from 'effect';
 import type { AudioEntry, ImageEntry, VideoEntry } from '../catalog/catalog-entry.ts';
 import type { GenerationFunctionDefinitionDocument, GenerationParameters } from '../document/generation-document.ts';
 import type { GenerationRequest } from '../gateway/generation-gateway.ts';
-import { preparedInput } from './prepared-input.ts';
+import { preparedInput, promptInputOf } from './prepared-input.ts';
 import { referencedAssets, type ReferenceReading, type ReferencedAsset } from './referenced-assets.ts';
 import { renderedPrompt } from './rendered-prompt.ts';
 import type { RunnableModel } from './runnable-model.ts';
@@ -46,14 +46,15 @@ function parametersSent({ entry }: RunnableModel, parameters: GenerationParamete
 export function preparedRequest(
   reading: ReferenceReading,
   input: Schema.Json,
-  { document, model, playbook, now }: Preparing,
+  preparing: Preparing,
 ): Effect.Effect<PreparedRequest, InvalidInput> {
+  const { document, model, playbook, now } = preparing;
   return Effect.gen(function* () {
     const fields = yield* preparedInput(input, document.input);
     const at = new Date(now).toISOString();
     const prompt = yield* renderedPrompt(
       document.prompt,
-      { input: fields, today: at.slice(0, 10), now: at },
+      { input: yield* promptInputOf(reading, fields, preparing), today: at.slice(0, 10), now: at },
       model.entry.limits.prompt_characters,
     );
     const references = yield* referencedAssets(reading, fields, document.references, {

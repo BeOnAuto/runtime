@@ -1,5 +1,6 @@
 import type { QuickJSRuntime, QuickJSWASMModule } from 'quickjs-emscripten-core';
 
+import type { ArgumentText, AssetPlace } from './argument-texts.ts';
 import { oversizedBy, type Evaluation, type Form, type ProgramFailure, type ProgramRun } from './program-run.ts';
 import { counterOf, type Counter } from './sandbox-counter.ts';
 import { freezingPreludeSource, preludeSource } from './sandbox-prelude.ts';
@@ -19,7 +20,7 @@ export interface SandboxSettings {
   readonly clock: () => number;
 }
 
-type Argument = number | string;
+type Argument = number | string | ArgumentText;
 
 interface Call {
   readonly fn: number;
@@ -50,6 +51,7 @@ export interface SandboxRuntime {
 interface Prelude {
   readonly moment: number;
   readonly parse: number;
+  readonly passedWholeAt: number;
   readonly write: number;
   readonly freeze: number;
   readonly describe: number;
@@ -71,6 +73,7 @@ function preludeOf(vm: Vm, freezes: boolean): Prelude {
   return {
     moment: named('moment'),
     parse: named('parse'),
+    passedWholeAt: named('passedWholeAt'),
     write: named('write'),
     freeze: named('freeze'),
     describe: named('describe'),
@@ -119,15 +122,32 @@ function settled(session: Session, outcome: Outcome, raised: Raised): Settled {
     : { kept: outcome.value };
 }
 
+function parsedText(session: Session, text: string): Settled {
+  const { vm, prelude } = session;
+  const raw = vm.text(text);
+  const parsed = vm.call(prelude.parse, [raw]);
+  vm.forget(raw);
+  return settled(session, parsed, 'raised');
+}
+
+function passedWholeAt(session: Session, value: number, assets: readonly AssetPlace[]): Settled {
+  const { vm, counter, prelude } = session;
+  const places = vm.text(JSON.stringify(assets));
+  const whole = counter.unbounded(() => settled(session, vm.call(prelude.passedWholeAt, [value, places]), 'raised'));
+  vm.forget(places);
+  vm.forget(value);
+  return whole;
+}
+
 function parsedArgument(session: Session, given: Argument): Settled {
   if (typeof given === 'number') {
     return { kept: given };
   }
-  const { vm, prelude } = session;
-  const raw = vm.text(given);
-  const parsed = vm.call(prelude.parse, [raw]);
-  vm.forget(raw);
-  return settled(session, parsed, 'raised');
+  if (typeof given === 'string') {
+    return parsedText(session, given);
+  }
+  const parsed = parsedText(session, given.text);
+  return 'failed' in parsed || given.assets.length === 0 ? parsed : passedWholeAt(session, parsed.kept, given.assets);
 }
 
 function parsedArguments(session: Session, args: readonly Argument[]): readonly number[] | ProgramFailure {
@@ -173,7 +193,7 @@ function called(session: Session, call: Call, evaluation: Evaluation): ProgramRu
   }
   const outcome = settled(session, session.vm.call(call.fn, values), 'raised');
   values.forEach((value, index) => {
-    if (typeof call.args[index] === 'string') {
+    if (typeof call.args[index] !== 'number') {
       session.vm.forget(value);
     }
   });
@@ -233,12 +253,12 @@ function contextOf(
         counter,
         () => {
           begin(session, evaluation);
-          return parsedArgument(session, text);
+          return parsedText(session, text);
         },
         failedSettling,
       ),
     parsedUncounted: (text) =>
-      guarded(counter, () => counter.unbounded(() => parsedArgument(session, text)), failedSettling),
+      guarded(counter, () => counter.unbounded(() => parsedText(session, text)), failedSettling),
     call: (call, evaluation) => guarded(counter, () => called(session, call, evaluation), failedCall),
     forget: vm.forget,
     close: () => {

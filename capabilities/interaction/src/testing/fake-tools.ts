@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer';
 
+import { noAssetsHeld } from '@on.auto/operations';
 import type {
   AnsweredOnce,
   AssetNotSentOnce,
@@ -24,6 +25,7 @@ export type FakeAnswer =
 
 export type ToolPorts = Pick<
   ToolAccess,
+  | 'assets'
   | 'named'
   | 'configured'
   | 'preparedCall'
@@ -177,6 +179,7 @@ export function fakeTools(
     return Effect.as(duringCall(call), answeredWith(next, calls.length));
   };
   return {
+    assets: noAssetsHeld,
     configured: true,
     takesConnections: true,
     listServers: () => Effect.sync(() => listing.servers),
@@ -203,6 +206,7 @@ export function fakeTools(
 }
 
 export const noTools: ToolPorts = {
+  assets: noAssetsHeld,
   configured: false,
   takesConnections: false,
   listServers: () => Effect.succeed([]),

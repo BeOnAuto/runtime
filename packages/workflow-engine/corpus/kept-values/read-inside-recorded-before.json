@@ -1,0 +1,285 @@
+{
+  "format": 11,
+  "stream": [
+    {
+      "version": 1,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "started",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7d",
+          "at": 1794819600000
+        },
+        "steps": [
+          {
+            "reference": "/do/0/read",
+            "run": 1,
+            "outcome": "completed",
+            "name": "read",
+            "times": 1,
+            "caused_by": "input"
+          }
+        ],
+        "resumed": null,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/runId",
+            "value": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7d"
+          },
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "ended"
+          },
+          {
+            "op": "replace",
+            "path": "/workflow",
+            "value": {
+              "document": {
+                "document": {
+                  "dsl": "1.0.3",
+                  "namespace": "acme",
+                  "name": "test",
+                  "version": "1.0.0"
+                },
+                "do": [
+                  {
+                    "read": {
+                      "set": {
+                        "title": "${ $data.page.title ?? null }",
+                        "kind": "${ $data.page.media_type }",
+                        "page": "${ $data.page }"
+                      }
+                    }
+                  }
+                ]
+              },
+              "input": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/limits/mostDurationMs",
+            "value": 2592000000
+          },
+          {
+            "op": "replace",
+            "path": "/limits/longestCallMs",
+            "value": 600000
+          },
+          {
+            "op": "replace",
+            "path": "/startedAt",
+            "value": 1794819600000
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1794819600000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/random/seed",
+            "value": 7
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1read",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 419
+          },
+          {
+            "op": "replace",
+            "path": "/stepsWithoutWaiting",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/1",
+            "value": {
+              "value": {
+                "page": {
+                  "id": "019a5b12-0000-7000-8000-000000000081",
+                  "media_type": "text/markdown",
+                  "bytes": 3355443,
+                  "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                  "address": null,
+                  "address_until": null
+                }
+              },
+              "bytes": 211
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/outcome",
+            "value": {
+              "kind": "completed",
+              "output": {
+                "title": null,
+                "kind": "text/markdown",
+                "page": {
+                  "id": "019a5b12-0000-7000-8000-000000000081",
+                  "media_type": "text/markdown",
+                  "bytes": 3355443,
+                  "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                  "address": null,
+                  "address_until": null
+                }
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 2301
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "settle",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7d",
+            "settlement": {
+              "status": "succeeded",
+              "output": {
+                "title": null,
+                "kind": "text/markdown",
+                "page": {
+                  "id": "019a5b12-0000-7000-8000-000000000081",
+                  "media_type": "text/markdown",
+                  "bytes": 3355443,
+                  "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                  "address": null,
+                  "address_until": null
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "state": {
+    "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7d",
+    "status": "ended",
+    "workflow": {
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "read": {
+              "set": {
+                "title": "${ $data.page.title ?? null }",
+                "kind": "${ $data.page.media_type }",
+                "page": "${ $data.page }"
+              }
+            }
+          }
+        ]
+      },
+      "input": 1
+    },
+    "attributes": {},
+    "limits": {
+      "mostDurationMs": 2592000000,
+      "longestCallMs": 600000
+    },
+    "startedAt": 1794819600000,
+    "lastInputAt": 1794819600000,
+    "inputs": 1,
+    "random": {
+      "seed": 7,
+      "draws": 0
+    },
+    "runs": {
+      "/do/0/read": 1
+    },
+    "timers": {
+      "next": 2,
+      "armed": {}
+    },
+    "calls": {},
+    "listeners": {},
+    "emitted": {
+      "count": 0,
+      "bytes": 0
+    },
+    "inbox": {
+      "waiting": [],
+      "waitingBytes": 0,
+      "receivedIds": [],
+      "offeredIds": [],
+      "received": 0,
+      "receivedBytes": 0
+    },
+    "heldBytes": 419,
+    "historyBytes": 2301,
+    "stepsWithoutWaiting": 1,
+    "cancelRequested": false,
+    "machine": {
+      "values": {
+        "0": {
+          "value": {},
+          "bytes": 2
+        },
+        "1": {
+          "value": {
+            "page": {
+              "id": "019a5b12-0000-7000-8000-000000000081",
+              "media_type": "text/markdown",
+              "bytes": 3355443,
+              "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+              "address": null,
+              "address_until": null
+            }
+          },
+          "bytes": 211
+        }
+      },
+      "nextValue": 3,
+      "context": 0,
+      "root": null
+    },
+    "outcome": {
+      "kind": "completed",
+      "output": {
+        "title": null,
+        "kind": "text/markdown",
+        "page": {
+          "id": "019a5b12-0000-7000-8000-000000000081",
+          "media_type": "text/markdown",
+          "bytes": 3355443,
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "address": null,
+          "address_until": null
+        }
+      }
+    }
+  }
+}

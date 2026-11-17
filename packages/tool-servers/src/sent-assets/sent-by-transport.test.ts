@@ -1,12 +1,13 @@
 import { Buffer } from 'node:buffer';
 
+import { heldForATest, keptForATest } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { apiKey, apiTiming, keyed } from '../api-testing/api-calls.ts';
 import { resultText } from '../bounds/tool-results.ts';
 import type { CalledOnce } from '../one-call/called-once.ts';
-import { heldForATest, keptForATest, patientTiming, type HeardRequest } from '../testing/index.ts';
+import { patientTiming, type HeardRequest } from '../testing/index.ts';
 import { describedAccess, reportingAccess } from '../testing/reporting-access.ts';
 import { fakeApiKey, fakeStdioServerPath, serveFakeApi, serveFakeMcp, type FakeTool } from '../testing/served-fakes.ts';
 

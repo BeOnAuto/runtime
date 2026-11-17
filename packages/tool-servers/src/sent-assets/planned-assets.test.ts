@@ -1,9 +1,9 @@
 import { Buffer } from 'node:buffer';
 
+import { heldForATest, keptForATest, type KeptForATest } from '@on.auto/operations/testing';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { heldForATest, keptForATest, type KeptForATest } from '../testing/held-assets.ts';
 import { mostDepthOfAValue, plannedAssets, type AssetPlanning, type AssetsNotSent } from './planned-assets.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };

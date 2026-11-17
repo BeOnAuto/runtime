@@ -221,3 +221,30 @@ describe('what a template reads from the input', () => {
     expect(rendered('{{ input.list | sort: "constructor" | json }}', input)).toEqual({ message: '[{"a":1},["x"]]' });
   });
 });
+
+describe('a kept file a template writes as text', () => {
+  const photo = {
+    id: 'a',
+    media_type: 'image/png',
+    bytes: 4,
+    sha256: 'd'.repeat(64),
+    address: null,
+    address_until: null,
+  };
+
+  it('fails as not text, at its part and line, written directly, through a filter or in a list, but not as JSON', () => {
+    expect([
+      failureOf('Describe\n{{ input.photo }}', { photo }),
+      failureOf('{{ input.photo | upcase }}', { photo }),
+      failureOf('{% system %}{{ input.photo | clip: 5 }}{% endsystem %}Go', { photo }),
+      failureOf('{{ input.photos }}', { photos: [photo] }),
+      failureOf('{{ input.photo | json }} {{ input.photo.media_type }}', { photo }),
+    ]).toEqual([
+      { reason: 'not_text', part: 'message', line: 2 },
+      { reason: 'not_text', part: 'message', line: 1 },
+      { reason: 'not_text', part: 'instructions', line: 1 },
+      { reason: 'not_text', part: 'message', line: 1 },
+      null,
+    ]);
+  });
+});

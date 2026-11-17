@@ -1,13 +1,9 @@
 import { sha256Of } from '@on.auto/content';
-import {
-  assetContentOf,
-  assetUnusable,
-  type AssetHolding,
-  type AssetReference,
-  type HeldAsset,
-  type PlaybookAddress,
-} from '@on.auto/operations';
 import { Effect } from 'effect';
+
+import { assetContentOf, type AssetReference } from '../asset-references/asset-references.ts';
+import { assetUnusable, type AssetHolding, type HeldAsset } from '../asset-references/held-assets.ts';
+import type { PlaybookAddress } from '../caller/playbook-context.ts';
 
 export interface KeptForATest {
   readonly reference: AssetReference;

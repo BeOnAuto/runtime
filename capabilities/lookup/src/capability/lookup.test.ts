@@ -1,4 +1,5 @@
 import { onTheStandingClock } from '@on.auto/definitions/testing';
+import { noAssetsHeld } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { deniedText, patientTiming, threadReplies } from '@on.auto/tool-servers/testing';
 import { Effect, Exit } from 'effect';
@@ -133,6 +134,7 @@ describe('a run of a lookup function that could not finish', () => {
 
 const lookup = makeLookupFunctionAdapter({
   tools: {
+    assets: noAssetsHeld,
     listServers: () => Effect.succeed([]),
     callOnce: () => Effect.die(new Error('No call is made here')),
     mostRequestBytes: 16_777_216,

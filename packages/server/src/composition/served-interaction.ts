@@ -30,6 +30,7 @@ export function interactionServedBy(
     ToolAccess,
     | 'named'
     | 'configured'
+    | 'assets'
     | 'preparedCall'
     | 'callOnce'
     | 'listServers'

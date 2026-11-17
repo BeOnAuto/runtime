@@ -16,13 +16,15 @@ export const ProgramRunSchema = Schema.Union([
 
 const EvaluationSchema = Schema.Struct({ budget: Schema.Number, deadlineAt: Schema.Number, moment: Schema.Number });
 
+const ArgumentTextSchema = Schema.Struct({ text: Schema.String, assets: Schema.Array(Schema.Array(Schema.String)) });
+
 export const EvaluationRequestSchema = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal('evaluate'),
     unit: Schema.Number,
     source: Schema.String,
     names: Schema.Array(Schema.String),
-    texts: Schema.Array(Schema.String),
+    texts: Schema.Array(ArgumentTextSchema),
     evaluation: EvaluationSchema,
   }),
   Schema.Struct({
@@ -35,7 +37,7 @@ export const EvaluationRequestSchema = Schema.Union([
     kind: Schema.Literal('test'),
     unit: Schema.Number,
     test: Schema.Number,
-    value: Schema.String,
+    value: ArgumentTextSchema,
     evaluation: EvaluationSchema,
   }),
   Schema.Struct({ kind: Schema.Literal('close'), unit: Schema.Number }),

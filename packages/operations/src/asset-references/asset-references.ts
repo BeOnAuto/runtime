@@ -39,22 +39,39 @@ export function assetReferenceOf(value: unknown): AssetReference | undefined {
   return isAssetShaped(value) ? Option.getOrUndefined(decodeReference(value)) : undefined;
 }
 
-function placedIn(value: unknown, pointer: string): readonly PlacedAsset[] {
-  if (isAssetShaped(value)) {
-    return [{ pointer, reference: assetReferenceOf(value), shaped: value }];
-  }
-  if (Array.isArray(value)) {
-    return value.flatMap((item: unknown, index) => placedIn(item, `${pointer}/${index}`));
-  }
-  return isRecord(value)
-    ? Object.entries(value).flatMap(([key, member]: readonly [string, unknown]) =>
-        placedIn(member, `${pointer}/${JsonPointer.escapeToken(key)}`),
-      )
-    : [];
+type Token = string | number;
+
+function pointerOf(tokens: readonly Token[]): string {
+  return tokens.map((token) => `/${typeof token === 'number' ? token : JsonPointer.escapeToken(token)}`).join('');
 }
 
 export function assetsIn(value: unknown): readonly PlacedAsset[] {
-  return placedIn(value, '');
+  const placed: PlacedAsset[] = [];
+  const tokens: Token[] = [];
+  const placeWithin = (each: unknown): void => {
+    if (isAssetShaped(each)) {
+      placed.push({ pointer: pointerOf(tokens), reference: assetReferenceOf(each), shaped: each });
+      return;
+    }
+    if (Array.isArray(each)) {
+      for (let index = 0; index < each.length; index += 1) {
+        const item: unknown = each[index];
+        tokens.push(index);
+        placeWithin(item);
+        tokens.pop();
+      }
+      return;
+    }
+    if (isRecord(each)) {
+      for (const key of Object.keys(each)) {
+        tokens.push(key);
+        placeWithin(each[key]);
+        tokens.pop();
+      }
+    }
+  };
+  placeWithin(value);
+  return placed;
 }
 
 export function holdsAnAsset(value: unknown): boolean {

@@ -1,4 +1,5 @@
 import {
+  isTextToWrite,
   outputText,
   renderedTemplate,
   templateLimits,
@@ -11,9 +12,11 @@ import { toValue, type Emitter } from 'liquidjs';
 import type { PromptPart, RenderedPrompt, RenderFailure, TemplateScope } from './compiled-template.ts';
 import { engine, instructionsBegin, instructionsEnd } from './liquid-engine.ts';
 import { PromptTooLong } from './prompt-too-long.ts';
+import { PromptWritesAFile } from './prompt-writes-a-file.ts';
 
 interface PromptEmitter extends Emitter {
   readonly prompt: () => RenderedPrompt;
+  readonly part: () => PromptPart;
 }
 
 function promptEmitter(hasInstructions: boolean): PromptEmitter {
@@ -26,7 +29,11 @@ function promptEmitter(hasInstructions: boolean): PromptEmitter {
         part = html === instructionsBegin ? 'instructions' : 'message';
         return;
       }
-      const text = outputText(toValue(html));
+      const value: unknown = toValue(html);
+      if (!isTextToWrite(value, 'written_as_liquid_writes')) {
+        throw new PromptWritesAFile({ part });
+      }
+      const text = outputText(value);
       if (texts[part].length + text.length > templateLimits.renderedCharacters) {
         throw new PromptTooLong({ part });
       }
@@ -34,10 +41,14 @@ function promptEmitter(hasInstructions: boolean): PromptEmitter {
     },
     prompt: () =>
       hasInstructions ? { instructions: texts.instructions, message: texts.message } : { message: texts.message },
+    part: () => part,
   };
 }
 
-function tooLongOf(cause: unknown, line: number): RenderFailure | undefined {
+function refusalOf(cause: unknown, line: number): RenderFailure | undefined {
+  if (cause instanceof PromptWritesAFile) {
+    return { reason: 'not_text', part: cause.part, line };
+  }
   return cause instanceof PromptTooLong ? { reason: 'too_long', part: cause.part, line } : undefined;
 }
 
@@ -49,7 +60,8 @@ export function renderTemplate(
 ): Result.Result<RenderedPrompt, RenderFailure> {
   const emitter = promptEmitter(hasInstructions);
   const variables = { input: scope.input, today: scope.today, now: scope.now };
-  return Result.map(renderedTemplate(engine, parsed, { variables, emitter, refusalOf: tooLongOf, clock }), () =>
+  const keptFileAsText = (line: number): RenderFailure => ({ reason: 'not_text', part: emitter.part(), line });
+  return Result.map(renderedTemplate(engine, parsed, { variables, emitter, refusalOf, clock, keptFileAsText }), () =>
     emitter.prompt(),
   );
 }

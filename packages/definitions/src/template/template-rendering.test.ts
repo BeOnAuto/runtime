@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   engineFailureOf,
+  isTextToWrite,
   linesOf,
   outputText,
   parsedTemplate,
@@ -153,5 +154,35 @@ describe('the text of a value a template writes', () => {
 
   it.each(values)('writes %s as Liquid writes it', (_case, value, text) => {
     expect(outputText(value)).toBe(text);
+  });
+});
+
+describe('a value a template writes as text', () => {
+  const asset = {
+    id: 'a',
+    media_type: 'image/png',
+    bytes: 3,
+    sha256: 'a'.repeat(64),
+    address: null,
+    address_until: null,
+  };
+  const values: readonly Schema.Json[] = [asset, [asset], { photo: asset }];
+
+  it('is never a kept file, alone or inside a list or an object, whatever the template writes of other objects', () => {
+    expect(
+      values.flatMap((value: Schema.Json) => [
+        isTextToWrite(value, 'refused'),
+        isTextToWrite(value, 'written_as_liquid_writes'),
+      ]),
+    ).toEqual([false, false, false, false, false, false]);
+  });
+
+  it('is a list or an object only where the template writes them as Liquid writes them', () => {
+    expect([
+      isTextToWrite('text', 'refused'),
+      isTextToWrite({ a: 1 }, 'refused'),
+      isTextToWrite(['a'], 'refused'),
+      isTextToWrite({ a: 1 }, 'written_as_liquid_writes'),
+    ]).toEqual([true, false, false, true]);
   });
 });

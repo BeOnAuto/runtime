@@ -1,9 +1,13 @@
-import { Exit } from 'effect';
+import { heldForATest, keptForATest } from '@on.auto/operations/testing';
+import { noToolServers } from '@on.auto/tool-servers/testing';
+import { Exit, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { documentOf, reasoningExample } from '../testing/definition-documents.ts';
-import { answers, jsonResult, textResult } from '../testing/index.ts';
-import { reasoningWith } from '../testing/reasoning-runs.ts';
+import { answers, jsonResult, textResult, type ScriptedReply } from '../testing/index.ts';
+import { reasoningOf, reasoningWith } from '../testing/reasoning-runs.ts';
+
+const anyText: unknown = expect.any(String);
 
 const summarizing = documentOf(
   [
@@ -128,5 +132,99 @@ describe('the output of a run', () => {
     expect(await running(documentOf('model: openai/gpt-5'), { text: 'x' })).toMatchObject(
       Exit.succeed({ record: { prompt: { message: 'Summarize x', truncated: false } } }),
     );
+  });
+});
+
+const sonnet = 'model: anthropic/claude-sonnet-4-5';
+
+const page = keptForATest('019a5b12-0000-7000-8000-000000000021', 'text/markdown', '# Prices\n\nThey went up.');
+const rows = keptForATest('019a5b12-0000-7000-8000-000000000022', 'application/json', '{"rows":[{"city":"Lyon"}]}');
+const photo = keptForATest('019a5b12-0000-7000-8000-000000000023', 'image/png', new Uint8Array([137, 80, 78, 71]));
+const theirs = keptForATest('019a5b12-0000-7000-8000-000000000024', 'text/plain', 'theirs', {
+  org: 'acme',
+  playbook: 'beta',
+});
+const full = keptForATest('019a5b12-0000-7000-8000-000000000025', 'text/plain', 'x'.repeat(200_000));
+const long = keptForATest('019a5b12-0000-7000-8000-000000000026', 'text/plain', 'x'.repeat(200_001));
+
+function reasoningOver(...replies: readonly ScriptedReply[]) {
+  const holding = heldForATest([page, rows, photo, theirs, full, long]);
+  return { holding, ...reasoningOf({ tools: { ...noToolServers, assets: holding } }, ...replies) };
+}
+
+function refusedAt(pointer: string) {
+  return Exit.fail(expect.objectContaining({ _tag: 'invalid_input', issues: [{ pointer, detail: anyText }] }));
+}
+
+async function messagesOf(body: string, input: Schema.Json) {
+  const { running, requests } = reasoningOver(answers(textResult('Noted.')));
+  const ran = await running(documentOf(sonnet, body), input);
+  return { ran, messages: requests()[0]?.messages };
+}
+
+describe('a kept text or JSON value a prompt reads', () => {
+  it('is written into the prompt as its text, and a JSON value is read as itself', async () => {
+    const { ran, messages } = await messagesOf('{{ input.page }}\n\nFirst city: {{ input.rows.rows.first.city }}', {
+      page: page.reference,
+      rows: rows.reference,
+    });
+
+    expect(Exit.isSuccess(ran)).toBe(true);
+    expect(messages).toMatchObject([{ content: [{ text: '# Prices\n\nThey went up.\n\nFirst city: Lyon' }] }]);
+  });
+
+  it('stands for what it holds in the input schema, and an asset the prompt does not read is not opened', async () => {
+    const { running, requests, holding } = reasoningOver(answers(textResult('Noted.')));
+    const schema =
+      'input:\n  schema:\n    type: object\n    properties:\n      page: { type: string }\n      kept: { type: string }';
+
+    const ran = await running(documentOf(`${sonnet}\n${schema}`, 'Read {{ input.page }}'), {
+      page: page.reference,
+      kept: long.reference,
+    });
+
+    expect(Exit.isSuccess(ran)).toBe(true);
+    expect(requests()[0]?.messages).toMatchObject([{ content: [{ text: 'Read # Prices\n\nThey went up.' }] }]);
+    expect(holding.opened()).toBe(1);
+  });
+
+  it('is read up to the characters a prompt holds, and refused at its place past them or where it is no asset of this playbook', async () => {
+    const { running, requests } = reasoningOver(answers(textResult('Noted.')));
+
+    const fitting = await running(documentOf(sonnet, '{{ input.page }}'), { page: full.reference });
+    const refusals = [
+      await running(documentOf(sonnet, '{{ input.page }}'), { page: long.reference }),
+      await running(documentOf(sonnet, 'Read {{ input.page }}'), { page: theirs.reference }),
+    ];
+
+    expect(Exit.isSuccess(fitting)).toBe(true);
+    expect(refusals).toEqual([refusedAt('/page'), refusedAt('/page')]);
+    expect(requests()).toHaveLength(1);
+  });
+});
+
+describe('a kept file a prompt writes', () => {
+  it('is refused as not text, directly or through a filter that needs text, and the model is sent nothing', async () => {
+    const { running, requests } = reasoningOver();
+
+    const refusals = await Promise.all(
+      ['Describe {{ input.photo }}', 'Describe {{ input.photo | upcase }}', 'Describe {{ input.photo | clip: 5 }}'].map(
+        (body) => running(documentOf(sonnet, body), { photo: photo.reference }),
+      ),
+    );
+
+    expect(refusals).toEqual([refusedAt(''), refusals[0], refusals[0]]);
+    expect(requests()).toEqual([]);
+  });
+
+  it('is read by its description, a field of it or | json', async () => {
+    const { ran, messages } = await messagesOf('A file of {{ input.photo.media_type }}: {{ input.photo | json }}', {
+      photo: photo.reference,
+    });
+
+    expect(Exit.isSuccess(ran)).toBe(true);
+    expect(messages).toMatchObject([
+      { content: [{ text: `A file of image/png: ${JSON.stringify(photo.reference)}` }] },
+    ]);
   });
 });

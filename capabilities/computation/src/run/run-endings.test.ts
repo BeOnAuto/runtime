@@ -1,10 +1,14 @@
 import { Conflict, Unavailable } from '@on.auto/operations';
+import { heldForATest, keptForATest } from '@on.auto/operations/testing';
 import type { PoolOutcome, ProgramPool, ProgramRequest } from '@on.auto/workflow-engine/dsl';
 import { scriptedPool } from '@on.auto/workflow-engine/testing';
-import { Exit } from 'effect';
+import { Exit, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { computationWith, functionOf, poolOf, programDocument, type RunBounds } from '../testing/computation-runs.ts';
+import { mostKeptBytesRead } from './run-bounds.ts';
+
+const anyText: unknown = expect.any(String);
 
 function unworkable(detail: string): Exit.Exit<never, Conflict> {
   return Exit.fail(new Conflict({ detail, kind: 'unworkable' }));
@@ -243,5 +247,54 @@ describe('a run of the server that cannot finish', () => {
         }),
       ),
     );
+  });
+});
+
+describe('a kept text or JSON value a computation takes as its input', () => {
+  const page = keptForATest('019a5b12-0000-7000-8000-000000000051', 'text/plain', 'spring sale');
+  const rows = keptForATest('019a5b12-0000-7000-8000-000000000052', 'application/json', '{"n":[1,2,3]}');
+  const photo = keptForATest('019a5b12-0000-7000-8000-000000000053', 'image/png', new Uint8Array([137, 80, 78, 71]));
+  const theirs = keptForATest('019a5b12-0000-7000-8000-000000000054', 'text/plain', 'theirs', {
+    org: 'acme',
+    playbook: 'beta',
+  });
+  const reading = programDocument(
+    functionOf('return { page: input.page, total: input.rows.n.length, kind: input.photo.media_type };'),
+  );
+
+  async function ranWithin(memoryBytes: number, input: Schema.Json) {
+    const { pool, asked } = recordingPool([reaching('memory')]);
+    const { running } = computationWith(pool, { assets: heldForATest([page, theirs]), memoryBytes });
+    return { ran: await running(reading, input), asked: asked().length };
+  }
+
+  it('reaches its program as the value it holds, and a kept file as its description', async () => {
+    const { running } = computationWith(poolOf(), { assets: heldForATest([page, rows, photo]) });
+
+    const ran = await running(reading, { page: page.reference, rows: rows.reference, photo: photo.reference });
+
+    expect(ran).toMatchObject(
+      Exit.succeed({ output: { page: 'spring sale', total: 3, kind: 'image/png' }, record: { input_bytes: 244 } }),
+    );
+  });
+
+  it('is read within an eighth of the sandbox, and refused before the program runs past it or when it is no asset of this playbook', async () => {
+    const eighth = page.reference.bytes * 8;
+
+    const fitting = await ranWithin(eighth, { page: page.reference });
+    const tooLarge = await ranWithin(eighth - 1, { page: page.reference });
+    const elsewhere = await ranWithin(268_435_456, { page: theirs.reference });
+
+    const notOurs: unknown = expect.objectContaining({
+      _tag: 'invalid_input',
+      issues: [{ pointer: '/page', detail: anyText }],
+    });
+
+    expect([eighth, eighth - 1, 268_435_456].map((memory) => mostKeptBytesRead(memory))).toEqual([11, 10, 33_554_432]);
+    expect([fitting.asked, tooLarge, elsewhere]).toEqual([
+      1,
+      { ran: Exit.fail(expect.objectContaining({ _tag: 'conflict', kind: 'unworkable' })), asked: 0 },
+      { ran: Exit.fail(notOurs), asked: 0 },
+    ]);
   });
 });

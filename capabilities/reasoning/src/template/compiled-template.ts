@@ -22,7 +22,8 @@ export type PromptPart = 'instructions' | 'message';
 
 export type RenderFailure =
   | EngineRenderFailure
-  | { readonly reason: 'too_long'; readonly part: PromptPart; readonly line: number };
+  | { readonly reason: 'too_long'; readonly part: PromptPart; readonly line: number }
+  | { readonly reason: 'not_text'; readonly part: PromptPart; readonly line: number };
 
 export interface CompiledTemplate {
   readonly hasInstructions: boolean;

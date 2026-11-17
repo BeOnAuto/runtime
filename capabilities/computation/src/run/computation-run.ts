@@ -4,18 +4,21 @@ import {
   functionResourceLabels,
   type CapabilityAnswer,
   type CapabilityRejection,
+  type RunContext,
   type StrippedForms,
 } from '@on.auto/definitions';
-import { Conflict, type InvalidInput } from '@on.auto/operations';
+import { unreadAssetOf } from '@on.auto/definitions/template';
+import { Conflict, readInside, type AssetHolding, type InvalidInput } from '@on.auto/operations';
 import { jsonBytesOf, pooledJob, type ProgramPool, type ProgramRequest } from '@on.auto/workflow-engine/dsl';
 import { Clock, Effect, type Schema } from 'effect';
 
 import type { ComputationFunctionDefinitionDocument } from '../document/computation-document.ts';
-import { computationBounds, mostOutputBytes } from './run-bounds.ts';
+import { computationBounds, mostKeptBytesRead, mostOutputBytes } from './run-bounds.ts';
 import { endingOf } from './run-outcome.ts';
 
 export interface ComputationRunOptions {
   readonly pool: ProgramPool;
+  readonly assets: AssetHolding;
   readonly deadlineMs: number;
   readonly budget: number;
   readonly memoryBytes: number;
@@ -24,6 +27,7 @@ export interface ComputationRunOptions {
 export type ComputationRun = (
   document: ComputationFunctionDefinitionDocument,
   input: Schema.Json,
+  run: Pick<RunContext, 'org' | 'playbook'>,
   stripped: StrippedForms,
 ) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
 
@@ -46,7 +50,7 @@ function requestOf(
   { document, program }: Runnable,
   input: Schema.Json,
   moment: number,
-  { deadlineMs, budget, memoryBytes }: Omit<ComputationRunOptions, 'pool'>,
+  { deadlineMs, budget, memoryBytes }: Omit<ComputationRunOptions, 'pool' | 'assets'>,
 ): ProgramRequest {
   return {
     source: program,
@@ -69,11 +73,31 @@ function runnableOf(
   return module === undefined ? Effect.fail(notCompiled) : Effect.succeed({ document, program: module });
 }
 
-export function computationRun({ pool, ...bounds }: ComputationRunOptions): ComputationRun {
-  return (document, input, stripped) =>
+function inputReadOf(
+  input: Schema.Json,
+  { org, playbook }: Pick<RunContext, 'org' | 'playbook'>,
+  { assets, memoryBytes }: Pick<ComputationRunOptions, 'assets' | 'memoryBytes'>,
+): Effect.Effect<Schema.Json, Conflict | InvalidInput> {
+  const bound = {
+    most: mostKeptBytesRead(memoryBytes),
+    unit: 'bytes',
+    reader: 'a computation reads at once',
+    remedy: 'give it a part of it',
+  } as const;
+  return Effect.mapError(
+    readInside(input, () => true, { holding: assets, playbook: { org, playbook }, bound }),
+    unreadAssetOf,
+  );
+}
+
+export function computationRun({ pool, assets, ...bounds }: ComputationRunOptions): ComputationRun {
+  return (document, input, run, stripped) =>
     Effect.all([
       runnableOf(document, stripped),
-      checkedInput(input, document.input.schema, functionResourceLabels.computation.singular),
+      Effect.flatMap(
+        checkedInput(input, document.input.schema, functionResourceLabels.computation.singular, 'passed_whole'),
+        (admitted) => inputReadOf(admitted, run, { assets, memoryBytes: bounds.memoryBytes }),
+      ),
       Clock.currentTimeMillis,
     ]).pipe(
       Effect.flatMap(

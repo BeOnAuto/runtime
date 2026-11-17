@@ -1,15 +1,17 @@
-import type { Conflict, InvalidInput } from '@on.auto/operations';
+import type { Conflict, InsideReading, InvalidInput } from '@on.auto/operations';
 import { Effect, Result, type Schema } from 'effect';
 
+import { inputReadBy, unreadAssetOf } from '../template/inside-reads.ts';
 import { renderClock } from '../template/render-clock.ts';
 import type { CallBlock } from './call-block-schemas.ts';
 import { unrenderableFor, unworkable } from './render-refusals.ts';
 import {
   argumentsFailureWords,
-  renderedArguments,
+  momentVariables,
+  renderedArgumentsOf,
   smallerInputRemedy,
+  variablesReadInside,
   type ArgumentsFailure,
-  type TemplateVariables,
 } from './rendered-arguments.ts';
 
 function argumentsRejection(failure: ArgumentsFailure): Conflict | InvalidInput {
@@ -24,13 +26,22 @@ function argumentsRejection(failure: ArgumentsFailure): Conflict | InvalidInput 
 
 export function callArgumentsOf(
   call: CallBlock,
-  variables: TemplateVariables,
-  mostBytes: number,
+  input: Schema.Json,
+  at: string,
+  reading: InsideReading,
 ): Effect.Effect<Readonly<Record<string, Schema.Json>>, Conflict | InvalidInput> {
-  return Effect.flatMap(renderClock, (clock) =>
-    Result.match(renderedArguments(call.with ?? {}, variables, clock, mostBytes), {
-      onSuccess: ({ input }) => Effect.succeed(input),
+  const templates = call.with ?? {};
+  return Effect.gen(function* () {
+    const read = yield* Effect.mapError(inputReadBy(variablesReadInside(templates), input, reading), unreadAssetOf);
+    const rendering = {
+      variables: momentVariables(input, at),
+      textVariables: momentVariables(read, at),
+      clock: yield* renderClock,
+      mostBytes: reading.bound.most,
+    };
+    return yield* Result.match(renderedArgumentsOf(templates, rendering), {
+      onSuccess: ({ input: rendered }) => Effect.succeed(rendered),
       onFailure: (failure) => Effect.fail(argumentsRejection(failure)),
-    }),
-  );
+    });
+  });
 }

@@ -1,4 +1,5 @@
 import {
+  isTextToWrite,
   outputText,
   renderClockOf,
   renderedTemplate,
@@ -6,13 +7,13 @@ import {
   type ParsedTemplate,
   type RenderFailure,
 } from '@on.auto/definitions/template';
-import { InvalidInput } from '@on.auto/operations';
-import { Effect, JsonPointer, Predicate, Result, type Schema } from 'effect';
+import { InvalidInput, isAssetShaped } from '@on.auto/operations';
+import { Effect, JsonPointer, Result, type Schema } from 'effect';
 import { toValue } from 'liquidjs';
 
 import { generationEngine } from '../document/prompt-template.ts';
 
-type RefusedBecause = 'not_text' | 'too_long';
+type RefusedBecause = 'not_text' | 'kept_file' | 'too_long';
 
 class PromptRefused extends Error {
   readonly because: RefusedBecause;
@@ -33,7 +34,10 @@ function promptEmitter(): PromptEmitter {
     buffer: '',
     write: (html) => {
       const value: unknown = toValue(html);
-      if (Predicate.isObjectOrArray(value)) {
+      if (isAssetShaped(value)) {
+        throw new PromptRefused('kept_file');
+      }
+      if (!isTextToWrite(value, 'refused')) {
         throw new PromptRefused('not_text');
       }
       emitter.buffer += outputText(value);
@@ -47,15 +51,17 @@ function promptEmitter(): PromptEmitter {
 
 type Refusal =
   | { readonly reason: 'not_text'; readonly line: number }
+  | { readonly reason: 'kept_file'; readonly line: number }
   | { readonly reason: 'too_long'; readonly line: number };
 
 type PromptFailure = RenderFailure | Refusal;
 
 function refusalOf(cause: unknown, line: number): Refusal | undefined {
-  if (!(cause instanceof PromptRefused)) {
-    return undefined;
-  }
-  return cause.because === 'not_text' ? { reason: 'not_text', line } : { reason: 'too_long', line };
+  return cause instanceof PromptRefused ? { reason: cause.because, line } : undefined;
+}
+
+function keptFileAsText(line: number): Refusal {
+  return { reason: 'kept_file', line };
 }
 
 const inputPath = /^input\./u;
@@ -96,6 +102,12 @@ function rejectionOf(failure: PromptFailure): InvalidInput {
       `Line ${failure.line}: write one value of text here, such as a field of the list or the object`,
     );
   }
+  if (failure.reason === 'kept_file') {
+    return refused(
+      `The prompt writes a kept file on line ${failure.line}, which the model does not read as text`,
+      `Line ${failure.line}: write one of its fields here, such as media_type, or name its id in references to give the model its content`,
+    );
+  }
   if (failure.reason === 'failed') {
     return refused('The prompt cannot be rendered with this input', `Line ${failure.line}: ${failure.detail}`);
   }
@@ -129,6 +141,7 @@ export function renderedPrompt(
       emitter,
       refusalOf,
       clock: renderClockOf(clock),
+      keptFileAsText,
     });
     return Result.isFailure(rendered)
       ? Effect.fail(rejectionOf(rendered.failure))

@@ -32,7 +32,10 @@ export function definitionRun({
     run: RunContext,
   ) {
     const before = beforeTheSteps(run.journal, definition.model);
-    const prompt = yield* promptOfTheAttempt({ content, clock: runClock }, { definition, input, run, before });
+    const prompt = yield* promptOfTheAttempt(
+      { content, assets: access.assets, clock: runClock },
+      { definition, input, run, before },
+    );
     const answered = yield* answerOf(answering, { definition, prompt, run, before });
     return yield* finishedOf(definition, answered);
   });

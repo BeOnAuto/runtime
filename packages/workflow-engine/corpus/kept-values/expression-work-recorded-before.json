@@ -1,0 +1,529 @@
+{
+  "format": 11,
+  "stream": [
+    {
+      "version": 1,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "started",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e",
+          "at": 1794819600000
+        },
+        "steps": [
+          {
+            "reference": "/do/0/make",
+            "run": 1,
+            "outcome": "completed",
+            "name": "make",
+            "times": 1,
+            "caused_by": "input"
+          },
+          {
+            "reference": "/do/1/measure",
+            "run": 1,
+            "outcome": "completed",
+            "name": "measure",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/make",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/2/weigh",
+            "run": 1,
+            "outcome": "completed",
+            "name": "weigh",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/1/measure",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            }
+          }
+        ],
+        "resumed": null,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/runId",
+            "value": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e"
+          },
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "running"
+          },
+          {
+            "op": "replace",
+            "path": "/workflow",
+            "value": {
+              "document": {
+                "document": {
+                  "dsl": "1.0.3",
+                  "namespace": "acme",
+                  "name": "test",
+                  "version": "1.0.0"
+                },
+                "do": [
+                  {
+                    "make": {
+                      "set": {
+                        "rows": "${ Array.from({ length: 8000 }, (_, index) => ({ id: index, name: \"Name \" + index, email: \"c\" + index + \"@example.com\", amount: index * 3, place: { city: \"Delft\", code: \"26\" + (index % 100) } })) }"
+                      }
+                    }
+                  },
+                  {
+                    "measure": {
+                      "set": {
+                        "n0": "${ $data.rows.length + 0 }",
+                        "n1": "${ $data.rows.length + 1 }",
+                        "n2": "${ $data.rows.length + 2 }",
+                        "n3": "${ $data.rows.length + 3 }",
+                        "n4": "${ $data.rows.length + 4 }",
+                        "n5": "${ $data.rows.length + 5 }",
+                        "n6": "${ $data.rows.length + 6 }",
+                        "n7": "${ $data.rows.length + 7 }",
+                        "n8": "${ $data.rows.length + 8 }",
+                        "n9": "${ $data.rows.length + 9 }",
+                        "n10": "${ $data.rows.length + 10 }",
+                        "n11": "${ $data.rows.length + 11 }",
+                        "n12": "${ $data.rows.length + 12 }",
+                        "n13": "${ $data.rows.length + 13 }",
+                        "dear": "${ $data.rows.filter((row) => row.amount > 12000).length }"
+                      }
+                    }
+                  },
+                  {
+                    "weigh": {
+                      "set": {
+                        "n13": "${ $data.n13 }",
+                        "dear": "${ $data.dear }",
+                        "total": "${ (() => { let total = 0; for (let index = 0; index < 1000000; index++) total += index % 7; return total; })() }"
+                      }
+                    }
+                  },
+                  {
+                    "done": {
+                      "set": {
+                        "n13": "${ $data.n13 }",
+                        "dear": "${ $data.dear }",
+                        "total": "${ $data.total }"
+                      }
+                    }
+                  }
+                ]
+              },
+              "input": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/limits/mostDurationMs",
+            "value": 2592000000
+          },
+          {
+            "op": "replace",
+            "path": "/limits/longestCallMs",
+            "value": 600000
+          },
+          {
+            "op": "replace",
+            "path": "/startedAt",
+            "value": 1794819600000
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1794819600000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/random/seed",
+            "value": 7
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1make",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~11~1measure",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~12~1weigh",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 3
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/1",
+            "value": {
+              "purpose": "deadline",
+              "reference": "/",
+              "armedAt": 1794819600000,
+              "dueAt": 1797411600000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/2",
+            "value": {
+              "purpose": "yield",
+              "reference": "/do/3/done",
+              "armedAt": 1794819600000,
+              "dueAt": 1794819600000
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 5322
+          },
+          {
+            "op": "replace",
+            "path": "/stepsWithoutWaiting",
+            "value": 3
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/1",
+            "value": {
+              "value": {},
+              "bytes": 2
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/4",
+            "value": {
+              "value": {
+                "n13": 8013,
+                "dear": 3999,
+                "total": 2999997
+              },
+              "bytes": 40
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 5
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": {
+              "reference": "/",
+              "run": 1,
+              "startedAt": 1794819600000,
+              "context": 0,
+              "rawInput": 1,
+              "input": 1,
+              "variables": {},
+              "timeout": null,
+              "body": {
+                "kind": "list",
+                "list": {
+                  "pointer": "/do",
+                  "position": 3,
+                  "data": 4,
+                  "variables": {},
+                  "current": {
+                    "kind": "yielding",
+                    "timer": "2",
+                    "after": {
+                      "reference": "/do/2/weigh",
+                      "run": 1,
+                      "outcome": "completed",
+                      "times": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 3908
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e",
+            "timerId": "1",
+            "dueAt": 1797411600000,
+            "purpose": "deadline",
+            "label": "the most the workflow may run"
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e",
+            "timerId": "2",
+            "dueAt": 1794819600000,
+            "purpose": "yield",
+            "label": "/do/3/done lets other workflows run"
+          }
+        ]
+      }
+    },
+    {
+      "version": 2,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "timer_fired",
+          "key": "2",
+          "at": 1794819600000
+        },
+        "steps": [
+          {
+            "reference": "/do/3/done",
+            "run": 1,
+            "outcome": "completed",
+            "name": "done",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/weigh",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            }
+          }
+        ],
+        "resumed": null,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "ended"
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 2
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~13~1done",
+            "value": 1
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/1"
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/2"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 1186
+          },
+          {
+            "op": "replace",
+            "path": "/stepsWithoutWaiting",
+            "value": 4
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/4"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 6
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": null
+          },
+          {
+            "op": "replace",
+            "path": "/outcome",
+            "value": {
+              "kind": "completed",
+              "output": {
+                "n13": 8013,
+                "dear": 3999,
+                "total": 2999997
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 5103
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e",
+            "timerId": "1"
+          },
+          {
+            "kind": "settle",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e",
+            "settlement": {
+              "status": "succeeded",
+              "output": {
+                "n13": 8013,
+                "dear": 3999,
+                "total": 2999997
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "state": {
+    "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e",
+    "status": "ended",
+    "workflow": {
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "make": {
+              "set": {
+                "rows": "${ Array.from({ length: 8000 }, (_, index) => ({ id: index, name: \"Name \" + index, email: \"c\" + index + \"@example.com\", amount: index * 3, place: { city: \"Delft\", code: \"26\" + (index % 100) } })) }"
+              }
+            }
+          },
+          {
+            "measure": {
+              "set": {
+                "n0": "${ $data.rows.length + 0 }",
+                "n1": "${ $data.rows.length + 1 }",
+                "n2": "${ $data.rows.length + 2 }",
+                "n3": "${ $data.rows.length + 3 }",
+                "n4": "${ $data.rows.length + 4 }",
+                "n5": "${ $data.rows.length + 5 }",
+                "n6": "${ $data.rows.length + 6 }",
+                "n7": "${ $data.rows.length + 7 }",
+                "n8": "${ $data.rows.length + 8 }",
+                "n9": "${ $data.rows.length + 9 }",
+                "n10": "${ $data.rows.length + 10 }",
+                "n11": "${ $data.rows.length + 11 }",
+                "n12": "${ $data.rows.length + 12 }",
+                "n13": "${ $data.rows.length + 13 }",
+                "dear": "${ $data.rows.filter((row) => row.amount > 12000).length }"
+              }
+            }
+          },
+          {
+            "weigh": {
+              "set": {
+                "n13": "${ $data.n13 }",
+                "dear": "${ $data.dear }",
+                "total": "${ (() => { let total = 0; for (let index = 0; index < 1000000; index++) total += index % 7; return total; })() }"
+              }
+            }
+          },
+          {
+            "done": {
+              "set": {
+                "n13": "${ $data.n13 }",
+                "dear": "${ $data.dear }",
+                "total": "${ $data.total }"
+              }
+            }
+          }
+        ]
+      },
+      "input": 1
+    },
+    "attributes": {},
+    "limits": {
+      "mostDurationMs": 2592000000,
+      "longestCallMs": 600000
+    },
+    "startedAt": 1794819600000,
+    "lastInputAt": 1794819600000,
+    "inputs": 2,
+    "random": {
+      "seed": 7,
+      "draws": 0
+    },
+    "runs": {
+      "/do/0/make": 1,
+      "/do/1/measure": 1,
+      "/do/2/weigh": 1,
+      "/do/3/done": 1
+    },
+    "timers": {
+      "next": 3,
+      "armed": {}
+    },
+    "calls": {},
+    "listeners": {},
+    "emitted": {
+      "count": 0,
+      "bytes": 0
+    },
+    "inbox": {
+      "waiting": [],
+      "waitingBytes": 0,
+      "receivedIds": [],
+      "offeredIds": [],
+      "received": 0,
+      "receivedBytes": 0
+    },
+    "heldBytes": 1186,
+    "historyBytes": 5103,
+    "stepsWithoutWaiting": 4,
+    "cancelRequested": false,
+    "machine": {
+      "values": {
+        "0": {
+          "value": {},
+          "bytes": 2
+        },
+        "1": {
+          "value": {},
+          "bytes": 2
+        }
+      },
+      "nextValue": 6,
+      "context": 0,
+      "root": null
+    },
+    "outcome": {
+      "kind": "completed",
+      "output": {
+        "n13": 8013,
+        "dear": 3999,
+        "total": 2999997
+      }
+    }
+  }
+}

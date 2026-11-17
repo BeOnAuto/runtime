@@ -41,7 +41,7 @@ export interface GenerationPorts {
   readonly fetch: GatewayFetch;
   readonly ownKey: boolean;
   readonly ledger: AssetLedger;
-  readonly content: Pick<RecordedContent, 'put' | 'get'>;
+  readonly content: Pick<RecordedContent, 'put' | 'get' | 'getHead'>;
   readonly addresses?: AssetAddresses;
   readonly bounds?: GenerationBounds;
   readonly newAssetId?: () => string;

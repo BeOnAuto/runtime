@@ -1,8 +1,9 @@
 import { Buffer } from 'node:buffer';
 
+import { heldForATest, keptForATest } from '@on.auto/operations/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { heldForATest, keptForATest, patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
+import { patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
 import { fakeApiKey, serveFakeMcp, type FakeTool } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];

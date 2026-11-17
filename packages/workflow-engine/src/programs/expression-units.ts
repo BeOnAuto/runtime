@@ -1,4 +1,5 @@
 import type { Json } from '../dsl/json.ts';
+import { argumentTextOf, type ArgumentText } from './argument-texts.ts';
 import { expressionScript } from './expression-script.ts';
 import { exhaustedBy, type Evaluation, type ProgramRun } from './program-run.ts';
 import {
@@ -12,7 +13,7 @@ export type Arguments = Readonly<Record<string, Json>>;
 
 export interface NamedArguments {
   readonly names: readonly string[];
-  readonly texts: readonly string[];
+  readonly texts: readonly ArgumentText[];
 }
 
 export interface ExpressionUnit {
@@ -34,8 +35,11 @@ const argumentName = /\$[A-Za-z_][\w$]*/gu;
 
 export function namedArguments(source: string, values: Arguments): NamedArguments {
   const named = new Set(source.match(argumentName));
-  const names = Object.keys(values).filter((name) => named.has(`$${name}`));
-  return { names, texts: names.map((name) => JSON.stringify(values[name])) };
+  const given = Object.entries(values).filter(([name]: readonly [string, Json]) => named.has(`$${name}`));
+  return {
+    names: given.map(([name]: readonly [string, Json]) => name),
+    texts: given.map(([, value]: readonly [string, Json]) => argumentTextOf(value)),
+  };
 }
 
 export function expressionUnitOf(instances: () => SandboxInstance, settings: SandboxSettings): OpenedUnit {

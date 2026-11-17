@@ -1,11 +1,12 @@
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 
+import { keptForATest } from '@on.auto/operations/testing';
 import { Effect, Exit, Function, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
-import { keptForATest, reportingAccess } from '../testing/index.ts';
+import { reportingAccess } from '../testing/index.ts';
 import {
   calledOnce,
   closedAfter,

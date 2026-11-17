@@ -241,6 +241,7 @@ export {
 } from './run-log/state-patch.ts';
 export type { MachineOptions, MachineSettings } from './runner/run-descriptors.ts';
 export { reusedSandbox, type MachineSandbox } from './programs/reserved-instances.ts';
+export { argumentTextOf, type ArgumentText } from './programs/argument-texts.ts';
 export type { Evaluations } from './jobs/remote-evaluations.ts';
 export type {
   EmitReceipt,

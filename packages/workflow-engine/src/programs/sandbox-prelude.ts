@@ -213,6 +213,30 @@ const freezing = String.raw`
   };
 `;
 
+const keptValues = String.raw`
+  const Guard = Proxy;
+  const grouped = (digits) => (matches(/^\d{4,}$/, digits) ? grouped(apply(slice, digits, [0, -3])) + ',' + apply(slice, digits, [-3]) : digits);
+  const readInside = (asset, key, kept = 'a kept ' + TextOf(asset.media_type) + ' of ' + grouped(TextOf(asset.bytes)) + ' bytes') => new Refusal('The expression ' + (key === 'toString' || key === 'valueOf' ? 'writes ' + kept + ' as text' : 'reads ' + apply(slice, key, [0, 100]) + ' inside ' + kept) + '; a workflow passes it on whole, to a function that takes it');
+  const passedWhole = (asset) => new Guard(asset, {
+    get: (target, key) => {
+      if (typeof key !== 'string' || key === 'toJSON' || hasOwn(target, key)) return target[key];
+      throw readInside(target, key);
+    },
+  });
+  const passedWholeAt = (value, placesText) => {
+    const places = parse(placesText);
+    if (places[0].length === 0) return passedWhole(value);
+    for (let index = 0; index < places.length; index++) {
+      const place = places[index];
+      let holder = value;
+      for (let depth = 0; depth < place.length - 1; depth++) holder = holder[place[depth]];
+      const last = place[place.length - 1];
+      holder[last] = passedWhole(holder[last]);
+    }
+    return value;
+  };
+`;
+
 const describing = String.raw`
   const isHeld = (value) => (typeof value === 'object' || typeof value === 'function') && value !== null;
   const describe = (thrown) => {
@@ -250,18 +274,20 @@ function preludeWith(frozen: string, exported: string): string {
   const Depths = Map;
   const mapGet = Depths.prototype.get;
   const mapSet = Depths.prototype.set;
-  const push = Array.prototype.push;
-  const pop = Array.prototype.pop;
+  const { push, pop } = Array.prototype;
   const slice = String.prototype.slice;
   const mostDescribed = 4096;
 ${dates}
 ${removals}
 ${writing}
+${keptValues}
 ${describing}
 ${frozen}
   return {
     moment: (value) => { moment = value; },
     parse: (text) => parse(text),
+    passedWholeAt,
+    grouped,
     write,
     describe,
     drain: () => { for (;;) {} },

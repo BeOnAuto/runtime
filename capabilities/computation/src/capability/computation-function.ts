@@ -7,7 +7,7 @@ import {
   type DefinitionSummary,
   type Capability,
 } from '@on.auto/definitions';
-import type { InvalidInput } from '@on.auto/operations';
+import { noAssetsHeld, type AssetHolding, type InvalidInput } from '@on.auto/operations';
 import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, Result } from 'effect';
 
@@ -20,6 +20,7 @@ import { guideVariablesOf } from './guide-variables.ts';
 
 export interface ComputationFunctionAdapterOptions {
   readonly pool: ProgramPool;
+  readonly assets?: AssetHolding;
   readonly deadlineMs?: number;
   readonly budget?: number;
   readonly memoryBytes?: number;
@@ -42,11 +43,12 @@ function summarize({ description, input, output }: ComputationFunctionDefinition
 
 export function makeComputationFunctionAdapter({
   pool,
+  assets = noAssetsHeld,
   deadlineMs = computationBounds.deadlineMs,
   budget = computationBounds.budget,
   memoryBytes = computationBounds.memoryBytes,
 }: ComputationFunctionAdapterOptions): Capability {
-  const run = computationRun({ pool, deadlineMs, budget, memoryBytes });
+  const run = computationRun({ pool, assets, deadlineMs, budget, memoryBytes });
   return defineCapability({
     type: 'computation',
     title: functionCategoryLabels.computation,
@@ -57,7 +59,7 @@ export function makeComputationFunctionAdapter({
     parse,
     check: documentCheck(pool),
     summarize,
-    run: (document, input, _run, stripped) => run(document, input, stripped),
+    run: (document, input, context, stripped) => run(document, input, context, stripped),
     longestAnyRunMs: deadlineMs,
   });
 }

@@ -95,6 +95,9 @@ export function toolAccessOf(
 ): ToolAccess {
   const tools = Effect.orDie(composed);
   return {
+    assets: {
+      held: (playbook, reference) => Effect.flatMap(tools, (access) => access.assets.held(playbook, reference)),
+    },
     configured: toolServers.servers.length > 0 || takesConnections,
     takesConnections,
     callMs,

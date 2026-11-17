@@ -1,6 +1,7 @@
 import { computationBounds, makeComputationFunctionAdapter } from '@on.auto/computation';
 import type { Capability } from '@on.auto/definitions';
 import { checkedAtSave, handedWorkersWithChecks } from '@on.auto/definitions/check';
+import type { AssetHolding } from '@on.auto/operations';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import { programPool, type CheckJob, type HandedWorkers, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, Layer } from 'effect';
@@ -10,7 +11,7 @@ import type { ComputationSettings } from '../function-settings/computation-setti
 export type ProgramPoolOf = (settings: ComputationSettings, handed: HandedWorkers) => ProgramPool;
 
 export interface ServedComputation {
-  readonly capability: Capability;
+  readonly capabilityHolding: (assets: AssetHolding) => Capability;
   readonly pool: ProgramPool;
   readonly check: (job: CheckJob) => ReturnType<typeof checkedAtSave>;
   readonly closedIfRefused: <Made>(making: () => Made) => Promise<Made>;
@@ -27,7 +28,7 @@ export async function computationServedBy(
 ): Promise<ServedComputation> {
   const pool = poolOf(settings, await handedWorkersWithChecks(shippedFiles));
   return {
-    capability: makeComputationFunctionAdapter({ pool }),
+    capabilityHolding: (assets) => makeComputationFunctionAdapter({ pool, assets }),
     pool,
     check: (job) => checkedAtSave(pool, job),
     closedIfRefused: async (making) => {

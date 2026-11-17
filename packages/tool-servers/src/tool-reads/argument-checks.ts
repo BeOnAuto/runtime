@@ -45,13 +45,34 @@ function schemaRefused(issues: readonly SchemaIssue[]): ArgumentCheck {
   );
 }
 
-export function checkedArguments(inputSchema: Schema.JsonObject, input: Schema.JsonObject): ArgumentCheck {
+function isAtOrWithin(pointer: string, place: string): boolean {
+  return pointer === place || pointer.startsWith(`${place}/`);
+}
+
+export function checkedArguments(
+  inputSchema: Schema.JsonObject,
+  input: Schema.JsonObject,
+  assetsAt: readonly string[] = [],
+): ArgumentCheck {
   return Result.match(compileJsonSchema(inputSchema, checking), {
     onFailure: schemaRefused,
     onSuccess: ({ validate }) =>
       Result.match(validate(input), {
-        onFailure: (issues) => ({ valid: false, issues: issues.map((issue) => issueOf(issue)) }),
+        onFailure: (found) => {
+          const issues = found.filter(({ pointer }) => !assetsAt.some((place) => isAtOrWithin(pointer, place)));
+          return { valid: issues.length === 0, issues: issues.map((issue) => issueOf(issue)) };
+        },
         onSuccess: () => ({ valid: true, issues: [] }),
       }),
   });
+}
+
+export function assetsRefused({
+  pointer,
+  detail,
+}: {
+  readonly pointer: string;
+  readonly detail: string;
+}): ArgumentCheck {
+  return { valid: false, issues: [{ path: pointer, message: detail }] };
 }

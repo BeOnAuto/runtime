@@ -1,6 +1,7 @@
 import { Array } from 'effect';
 
 import { jsonOfText, textField, type Json, type JsonObject } from '../dsl/json.ts';
+import { argumentTextOf } from '../programs/argument-texts.ts';
 import { mostIssueBytes, textWithin, utf8BytesWithin } from '../programs/byte-sizes.ts';
 import { foldingUnitOf, type Fold } from '../programs/kept-contexts.ts';
 import type { Evaluation, ProgramFailure, ProgramRun } from '../programs/program-run.ts';
@@ -198,7 +199,7 @@ function turnOf(folding: Folding, { at, event }: PlacedEvent, turns: Turns): Fol
     deadlineAt: turns.host.now() + turns.page.foldDeadlineMs,
     moment: momentOf(event),
   };
-  const matching = matchingOf(ready.filters, event, (test, actual) => test(JSON.stringify(actual), evaluation));
+  const matching = matchingOf(ready.filters, event, (test, actual) => test(argumentTextOf(actual), evaluation));
   if ('stopped' in matching) {
     return after(folding.state, at, { step: exhaustedStep(matching.stopped), work: matching.stopped.work });
   }

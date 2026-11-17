@@ -10,6 +10,7 @@ import {
   allPermissions,
   Conflict,
   makeDispatcher,
+  type AssetHolding,
   type CallerIdentity,
   type Outcome,
   type Runnable,
@@ -50,6 +51,7 @@ const answeringItsInput = defineCapability({
 });
 
 export interface RunsHarnessOptions {
+  readonly assets?: AssetHolding;
   readonly mostPagesRead?: number;
   readonly readingBegins?: (harness: RunsHarness) => Promise<unknown>;
 }
@@ -67,7 +69,7 @@ export interface RunsHarness {
   readonly ran: (asked: AskedRun) => Promise<Outcome>;
 }
 
-export function runsHarness({ readingBegins, ...bounds }: RunsHarnessOptions = {}): RunsHarness {
+export function runsHarness({ readingBegins, assets, ...bounds }: RunsHarnessOptions = {}): RunsHarness {
   const ledger = memoryLedger();
   const { access } = reportingAccess({});
   onTestFinished(access.close);
@@ -82,7 +84,8 @@ export function runsHarness({ readingBegins, ...bounds }: RunsHarnessOptions = {
       Effect.andThen(Effect.promise(begun), ledger.service.readRecorded(place, selection, page)),
     content: ledger.service.content,
   };
-  const capabilities = [answeringItsInput, makeLookupFunctionAdapter({ tools: access, runs, ...bounds })];
+  const tools = assets === undefined ? access : { ...access, assets };
+  const capabilities = [answeringItsInput, makeLookupFunctionAdapter({ tools, runs, ...bounds })];
   const creating = defineCreateDefinition(capabilities, uncheckedPages);
   const running = defineRunDefinition(capabilities);
   const dispatcher = makeDispatcher([]);

@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
+import { argumentTextOf } from '../programs/argument-texts.ts';
 import type { Evaluation } from '../programs/program-run.ts';
 import { filterSandboxOf, hostClock, machineSandboxOf } from './host-sandboxes.ts';
 
@@ -36,7 +37,7 @@ describe.each(sourcesUnderTest)('the sandboxes of a host on the $name source', (
     const session = await sandbox.session(() => evaluation);
     const [fitting, overflowing] = [session.define(fits), session.define(overflows)];
     const frozen = await session.freeze();
-    const runs = [await fitting('null', evaluation), await overflowing('null', evaluation)];
+    const runs = [await fitting(argumentTextOf(null), evaluation), await overflowing(argumentTextOf(null), evaluation)];
     session.close();
 
     expect(runs).toMatchObject([

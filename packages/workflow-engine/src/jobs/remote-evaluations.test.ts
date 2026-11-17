@@ -119,7 +119,10 @@ describe('the sandbox of a machine whose units another thread evaluates', () => 
           unit: 1,
           source: '$data.n * $context.k',
           names: ['data', 'context'],
-          texts: ['{"n":6}', '{"k":7}'],
+          texts: [
+            { text: '{"n":6}', assets: [] },
+            { text: '{"k":7}', assets: [] },
+          ],
           evaluation: evaluationAt(2500),
         },
         waitMs: 2000,

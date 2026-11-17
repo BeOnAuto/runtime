@@ -1,9 +1,10 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { Result, Schema } from 'effect';
+import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import type { JsonObject } from '../dsl/json.ts';
 import {
   loadedRunOf,
   RunLogEventSchema,
@@ -13,6 +14,10 @@ import {
   stateInCurrentFormat,
   StateFormatSchema,
 } from '../index.ts';
+import type { RunState } from '../machine/run-state.ts';
+import { testSandbox } from '../pool-testing/test-sandbox.ts';
+import { memoryDriver } from '../testing/memory-driver.ts';
+import { workflow } from '../testing/workflows.ts';
 
 const StoredEventsSchema = Schema.Array(Schema.Struct({ version: Schema.Int, event: RunLogEventSchema }));
 
@@ -112,5 +117,102 @@ describe('the committed corpus of past state formats', () => {
         return [recorded, recorded, stream.length, stream.length];
       }),
     );
+  });
+});
+
+const KeptValuesCorpusSchema = Schema.toCodecJson(
+  Schema.Struct({ format: StateFormatSchema, stream: StoredEventsSchema, state: Schema.Json }),
+);
+
+const readKeptValuesCorpus = Schema.decodeUnknownSync(Schema.fromJsonString(KeptValuesCorpusSchema));
+
+function keptValuesText(name: string): string {
+  return readFileSync(new URL(`../../corpus/kept-values/${name}.json`, import.meta.url), 'utf8');
+}
+
+function writtenBack(corpus: typeof KeptValuesCorpusSchema.Type): string {
+  return `${JSON.stringify(Schema.encodeSync(KeptValuesCorpusSchema)(corpus), null, 2)}\n`;
+}
+
+const page = {
+  id: '019a5b12-0000-7000-8000-000000000081',
+  media_type: 'text/markdown',
+  bytes: 3355443,
+  sha256: 'c'.repeat(64),
+  address: null,
+  address_until: null,
+};
+
+function documentOf({ workflow: started }: RunState): JsonObject {
+  if (started === null) {
+    throw new RangeError('The corpus records no workflow');
+  }
+  return started.document;
+}
+
+function decidedNow(set: string) {
+  const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7d';
+  const driver = memoryDriver({ sandbox: testSandbox, startedAt: Date.UTC(2026, 10, 16, 9) });
+  driver.start({ runId, input: { page }, document: workflow(`do:\n  - read: { set: ${set} }`) });
+  return driver.runUntilEnded(runId).outcome;
+}
+
+describe('a run recorded before a workflow refused to read inside an asset', () => {
+  const text = keptValuesText('read-inside-recorded-before');
+  const corpus = readKeptValuesCorpus(text);
+
+  it('is written back text for text as it was recorded', () => {
+    expect(writtenBack(corpus)).toBe(text);
+  });
+
+  it('loads from its stream to the state it recorded, with what it read inside the asset as it read it then', () => {
+    const recorded = stateInCurrentFormat(corpus.format, corpus.state);
+    const loaded = loadedRunOf({ snapshot: null, tail: corpus.stream });
+
+    expect([loaded.state, loaded.format]).toEqual([recorded, 11]);
+    expect(loaded.state.outcome).toEqual({ kind: 'completed', output: { title: null, kind: 'text/markdown', page } });
+  });
+});
+
+describe('a workflow that holds an asset, decided now', () => {
+  it('reads the asset’s own members and passes it on whole', () => {
+    expect(decidedNow("{ kind: '${ $data.page.media_type }', page: '${ $data.page }' }")).toEqual({
+      kind: 'completed',
+      output: { kind: 'text/markdown', page },
+    });
+  });
+
+  it('is raised as a failed expression where an expression reads inside the asset', () => {
+    expect(decidedNow("{ title: '${ $data.page.title ?? null }' }")).toMatchObject({
+      kind: 'raised',
+      error: { status: 400 },
+    });
+  });
+});
+
+describe('a run recorded before a workflow refused to read inside an asset, whose expressions name large values, several in one task', () => {
+  const workText = keptValuesText('expression-work-recorded-before');
+  const work = readKeptValuesCorpus(workText);
+  const workRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e';
+  const recorded = stateInCurrentFormat(work.format, work.state);
+
+  it('is written back text for text as it was recorded', () => {
+    expect(writtenBack(work)).toBe(workText);
+  });
+
+  it('loads from its stream to the state it recorded, after the yield the work of its expressions asked for', () => {
+    const loaded = loadedRunOf({ snapshot: null, tail: work.stream });
+
+    expect([loaded.state, loaded.format, work.stream.length]).toEqual([recorded, 11, 2]);
+    expect(loaded.state.outcome).toEqual({ kind: 'completed', output: { n13: 8013, dear: 3999, total: 2_999_997 } });
+  });
+
+  it('is decided now event for event as it was decided then, its expressions charged what they were charged then', () => {
+    const driver = memoryDriver({ sandbox: testSandbox, startedAt: Date.UTC(2026, 10, 16, 9) });
+
+    driver.start({ runId: workRunId, input: {}, document: documentOf(recorded) });
+    driver.runUntilEnded(workRunId);
+
+    expect(Effect.runSync(driver.ports.runStore.eventsAfter(workRunId, 0))).toEqual(work.stream);
   });
 });

@@ -1,5 +1,5 @@
 import { compileJsonSchema } from '@on.auto/json-schema';
-import { allPermissions } from '@on.auto/operations';
+import { allPermissions, noAssetsHeld } from '@on.auto/operations';
 import type { CalledOnce, OneCall, RunCall } from '@on.auto/tool-servers';
 import { Effect, Exit, Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -73,6 +73,7 @@ function ranWith(running: CallRunning, document: CallingDocument, input = inACha
   const run = callRunOf(
     {
       tools: {
+        assets: noAssetsHeld,
         callOnce: (call, runCall) => {
           sent.push({ call, runCall });
           return Effect.succeed(answered);

@@ -1,3 +1,4 @@
+import type { ArgumentText } from './argument-texts.ts';
 import { expressionScript } from './expression-script.ts';
 import type { Evaluation, ProgramFailure, ProgramRun } from './program-run.ts';
 import {
@@ -8,7 +9,7 @@ import {
   type Settled,
 } from './sandbox-session.ts';
 
-export type FilterTest = (value: string, evaluation: Evaluation) => ProgramRun;
+export type FilterTest = (value: ArgumentText, evaluation: Evaluation) => ProgramRun;
 
 export type Fold = (event: string, evaluation: Evaluation) => ProgramRun;
 

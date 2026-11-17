@@ -1,5 +1,5 @@
-import { renderClockOf } from '@on.auto/definitions/template';
-import { InvalidInput } from '@on.auto/operations';
+import { inputReadBy, renderClockOf, templateLimits } from '@on.auto/definitions/template';
+import { InvalidInput, type AssetHolding, type AssetNotRead, type PlaybookAddress } from '@on.auto/operations';
 import { Effect, JsonPointer, Result, type Clock, type Schema } from 'effect';
 
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
@@ -34,6 +34,12 @@ function rejectionOf(failure: RenderFailure): InvalidInput {
       pointerOf(failure.variable),
     );
   }
+  if (failure.reason === 'not_text') {
+    return rejection(
+      `The ${failure.part} of the prompt writes a kept file on line ${failure.line}, which a model does not read as text`,
+      `Line ${failure.line}: write one of its fields here, such as media_type, or write | json after it`,
+    );
+  }
   if (failure.reason === 'too_long') {
     return rejection(
       `With this input the ${failure.part} of the prompt would be longer than the template may render`,
@@ -65,14 +71,39 @@ function renderedPrompt(
   });
 }
 
+export interface PromptAssets {
+  readonly holding: AssetHolding;
+  readonly playbook: PlaybookAddress;
+}
+
+function unread({ pointer, detail }: AssetNotRead): InvalidInput {
+  return rejection(detail, detail, pointer);
+}
+
+function promptInputOf(
+  { template }: ReasoningFunctionDefinitionDocument,
+  fields: Schema.JsonObject,
+  { holding, playbook }: PromptAssets,
+): Effect.Effect<Schema.Json, InvalidInput> {
+  const parts = template.hasInstructions ? 2 : 1;
+  const bound = {
+    most: parts * templateLimits.renderedCharacters,
+    unit: 'characters',
+    reader: 'a prompt holds',
+    remedy: 'give it a shorter text, or split the work',
+  } as const;
+  return Effect.mapError(inputReadBy(template.variables, fields, { holding, playbook, bound }), unread);
+}
+
 export const renderedFor = Effect.fnUntraced(function* (
   definition: ReasoningFunctionDefinitionDocument,
   input: Schema.Json,
   clock: Clock.Clock,
+  assets: PromptAssets,
 ) {
   const fields = yield* preparedInput(input, definition.input);
   const now = new Date(yield* clock.currentTimeMillis).toISOString();
-  const scope = { input: fields, today: now.slice(0, 10), now };
+  const scope = { input: yield* promptInputOf(definition, fields, assets), today: now.slice(0, 10), now };
   const prompt: Prompt = promptOf(yield* renderedPrompt(definition.template, scope, clock));
   return prompt;
 });

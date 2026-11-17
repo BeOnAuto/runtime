@@ -1,4 +1,4 @@
-import { unsuccessfulWords } from '@on.auto/operations';
+import { noAssetsHeld, unsuccessfulWords } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -10,7 +10,8 @@ const introspectWords = defineIntrospect(lookup).registration.plainLanguage;
 
 const executing = defineExecuteConnection({ open: () => Effect.never, configured: false }).registration;
 
-const dryRunWords = defineDryRun(lookup, executing).registration.plainLanguage;
+const dryRunWords = defineDryRun({ ...lookup, assets: noAssetsHeld, mostRequestBytesTo: () => 0 }, executing)
+  .registration.plainLanguage;
 
 const asked = { server: 'graph', tool: 'search' };
 

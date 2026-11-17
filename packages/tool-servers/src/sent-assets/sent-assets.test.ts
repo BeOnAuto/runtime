@@ -1,17 +1,12 @@
 import { Buffer } from 'node:buffer';
 
 import { keptTextOf } from '@on.auto/content/testing';
+import { heldForATest, keptForATest, type KeptForATest } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { CallStarted } from '../calls/call-facts.ts';
-import {
-  heldForATest,
-  keptForATest,
-  patientTiming,
-  recordingCallJournal,
-  type KeptForATest,
-} from '../testing/index.ts';
+import { patientTiming, recordingCallJournal } from '../testing/index.ts';
 import { closedAfter, echoCall, oneCallKey } from '../testing/one-calls.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
 import { serveFakeMcp, type FakeTool } from '../testing/served-fakes.ts';

@@ -28,6 +28,7 @@ export interface ToolAccessOptions {
 }
 
 export interface ToolAccess extends RunWays, ListingWays {
+  readonly assets: RecordingParts['assets'];
   readonly configured: boolean;
   readonly takesConnections: boolean;
   readonly close: () => Promise<void>;
@@ -87,6 +88,7 @@ export function toolAccessOf(
     now: options.now ?? Date.now,
   });
   return {
+    assets: recording.assets,
     configured: settings.servers.length > 0 || source.takesConnections,
     takesConnections: source.takesConnections,
     ...runWaysOf(access, recording, {

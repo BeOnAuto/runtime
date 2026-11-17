@@ -16,3 +16,9 @@ const recordRoomBytes = 256;
 export const mostOutputBytes = mostResultBytes - recordRoomBytes;
 
 export const mebibytes = 1_048_576;
+
+const sandboxShareOfAKeptValue = 8;
+
+export function mostKeptBytesRead(memoryBytes: number): number {
+  return Math.floor(memoryBytes / sandboxShareOfAKeptValue);
+}

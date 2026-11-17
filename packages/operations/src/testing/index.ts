@@ -64,3 +64,4 @@ export { endWithTheTest, spawnForTheTest, type PidReader } from '../process-test
 export { measuredEnvironment } from '../process-testing/measured-environment.ts';
 export { modulesReachedFrom, type ModulesReached } from '../module-testing/modules-reached.ts';
 export { importedWithoutAnAddress } from '../module-testing/unaddressed-modules.ts';
+export { heldForATest, keptForATest, type HeldForATest, type KeptForATest } from './held-assets.ts';

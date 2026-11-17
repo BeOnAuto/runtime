@@ -1,16 +1,17 @@
 import { compileJsonSchema } from '@on.auto/json-schema';
-import { allPermissions, Conflict, InvalidInput } from '@on.auto/operations';
+import { allPermissions, Conflict, InvalidInput, noAssetsHeld } from '@on.auto/operations';
+import { heldForATest, keptForATest } from '@on.auto/operations/testing';
 import type { AssetNotSentOnce, CalledOnce, OneCall } from '@on.auto/tool-servers';
 import { Effect, Exit, Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { RunContext } from '../capability/run-context.ts';
-import { recordingJournal } from '../journal-testing/recording-journal.ts';
-import { noCalledDefinitions } from '../testing/called-definitions.ts';
-import { onTheStandingClock } from '../testing/time/stepping-clock.ts';
+import { noCalledDefinitions, onTheStandingClock, recordingJournal } from '../testing/index.ts';
 import { callRunOf, type CallingDocument } from './call-run.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+const anyText: unknown = expect.any(String);
 
 const context: RunContext = {
   id: runId,
@@ -37,7 +38,7 @@ const saving: CallingDocument = {
 
 function endedWith(refused: AssetNotSentOnce) {
   const run = callRunOf(
-    { tools: { callOnce: () => Effect.succeed(refused), mostRequestBytesTo: () => 1_048_576 } },
+    { tools: { assets: noAssetsHeld, callOnce: () => Effect.succeed(refused), mostRequestBytesTo: () => 1_048_576 } },
     { noun: 'interaction function' },
   );
   return Effect.runPromiseExit(onTheStandingClock(run(saving, { page: 'the page' }, context)));
@@ -99,6 +100,7 @@ async function sentWith(input: Schema.Json) {
   const run = callRunOf(
     {
       tools: {
+        assets: noAssetsHeld,
         callOnce: (call) => {
           sent.push(call);
           return Effect.succeed(answered);
@@ -138,5 +140,127 @@ describe('the input of a call block that holds an asset', () => {
       Exit.fail(expect.objectContaining({ _tag: 'invalid_input', kind: 'input_schema' })),
     ]);
     expect([...asText.sent, ...notAnAsset.sent]).toEqual([]);
+  });
+});
+
+const page = keptForATest('019a5b12-0000-7000-8000-000000000011', 'text/markdown', 'Prices went up.');
+const rows = keptForATest('019a5b12-0000-7000-8000-000000000012', 'application/json', '{"rows":[1,2]}');
+const photo = keptForATest('019a5b12-0000-7000-8000-000000000013', 'image/png', new Uint8Array([137, 80]));
+const theirs = keptForATest('019a5b12-0000-7000-8000-000000000014', 'text/plain', 'theirs', {
+  org: 'acme',
+  playbook: 'beta',
+});
+
+function savingWith(arguments_: Schema.JsonObject): CallingDocument {
+  return {
+    input: { schema: openInput },
+    call: { server: 'files', tool: 'save', with: arguments_ },
+    output: { schema: anything },
+  };
+}
+
+async function readThrough(document: CallingDocument, input: Schema.Json, mostBytes = 1_048_576) {
+  const calls: OneCall[] = [];
+  const holding = heldForATest([page, rows, photo, theirs]);
+  const run = callRunOf(
+    {
+      tools: {
+        assets: holding,
+        callOnce: (call) => {
+          calls.push(call);
+          return Effect.succeed(answered);
+        },
+        mostRequestBytesTo: () => mostBytes,
+      },
+    },
+    { noun: 'interaction function' },
+  );
+  const ended = await Effect.runPromiseExit(onTheStandingClock(run(document, input, context)));
+  return { ended, sent: calls.map(({ input: given }) => given), opened: holding.opened() };
+}
+
+const notTextAmongText = Exit.fail(
+  expect.objectContaining({ _tag: 'conflict', kind: 'unworkable', record: { pointer: '/call/with/content' } }),
+);
+
+describe('a call block that mixes a kept text or JSON value into text', () => {
+  it('reads it into the text it renders, and passes the same asset whole where a template is one expression', async () => {
+    const document = savingWith({
+      content: '# Copy\n\n{{ input.page }}',
+      count: 'Rows: {{ input.rows.rows | size }}',
+      whole: '{{ input.page }}',
+    });
+
+    const { ended, sent, opened } = await readThrough(document, { page: page.reference, rows: rows.reference });
+
+    expect(Exit.isSuccess(ended)).toBe(true);
+    expect(sent).toEqual([{ content: '# Copy\n\nPrices went up.', count: 'Rows: 2', whole: page.reference }]);
+    expect(opened).toBe(2);
+  });
+
+  it('reads nothing when every template that reads an asset passes it whole', async () => {
+    const { sent, opened } = await readThrough(savingWith({ whole: '{{ input.page }}' }), { page: page.reference });
+
+    expect([sent, opened]).toEqual([[{ whole: page.reference }], 0]);
+  });
+});
+
+describe('a call block whose one expression applies a filter', () => {
+  it('reads a kept text or JSON value inside before the filter, and keeps what the filter answers as it is', async () => {
+    const document = savingWith({
+      stripped: '{{ input.page | strip }}',
+      quoted: '{{ input.page | json }}',
+      listed: '{{ input.rows | json }}',
+      first: '{{ input.rows.rows | first }}',
+      count: '{{ input.n | plus: 1 }}',
+    });
+
+    const { ended, sent } = await readThrough(document, { page: page.reference, rows: rows.reference, n: 1 });
+
+    expect(Exit.isSuccess(ended)).toBe(true);
+    expect(sent).toEqual([
+      { stripped: 'Prices went up.', quoted: '"Prices went up."', listed: '{"rows":[1,2]}', first: 1, count: 2 },
+    ]);
+  });
+
+  it('writes the description of a kept file with | json, and passes it on whole where the filter answers it', async () => {
+    const document = savingWith({ described: '{{ input.photo | json }}', kept: '{{ input.photos | first }}' });
+
+    const { sent } = await readThrough(document, { photo: photo.reference, photos: [photo.reference] });
+
+    expect(sent).toEqual([{ described: JSON.stringify(photo.reference), kept: photo.reference }]);
+  });
+});
+
+describe('a call block that writes a kept file as text', () => {
+  it('refuses it at its argument, through a filter that needs text or mixed into text, as it refuses an object there, and sends nothing', async () => {
+    const input = { photo: photo.reference, photos: [photo.reference], object: { a: 1 } };
+    const contents = [
+      '{{ input.photo | upcase }}',
+      'See {{ input.photo | clip: 5 }}',
+      'See {{ input.photos | join: ", " }}',
+      'See {{ input.photo }}',
+      'See {{ input.object }}',
+    ];
+
+    const ran = await Promise.all(contents.map((content) => readThrough(savingWith({ content }), input)));
+
+    expect(ran[0]).toEqual({ ended: notTextAmongText, sent: [], opened: 0 });
+    expect(ran).toEqual(contents.map(() => ran[0]));
+  });
+});
+
+describe('a call block that cannot read what it mixes into text', () => {
+  it('refuses an asset of another playbook as invalid input at its place, and a text larger than the call may send as unworkable', async () => {
+    const document = savingWith({ content: '# Copy\n\n{{ input.page }}' });
+
+    const elsewhere = await readThrough(document, { page: theirs.reference });
+    const tooLarge = await readThrough(document, { page: page.reference }, page.reference.bytes - 1);
+
+    expect([elsewhere.ended, tooLarge.ended]).toEqual([
+      Exit.fail(expect.objectContaining({ _tag: 'invalid_input', issues: [{ pointer: '/page', detail: anyText }] })),
+      Exit.fail(expect.objectContaining({ _tag: 'conflict', kind: 'unworkable' })),
+    ]);
+    expect([...elsewhere.sent, ...tooLarge.sent, tooLarge.opened]).toEqual([0]);
   });
 });

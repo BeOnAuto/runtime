@@ -1,3 +1,4 @@
+import { heldForATest, keptForATest } from '@on.auto/operations/testing';
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -216,5 +217,48 @@ describe('a run of a lookup function whose words or since cannot be used', () =>
         detail: anyWords,
       },
     ]);
+  });
+});
+
+describe('a lookup function whose words read a kept text', () => {
+  const campaign = keptForATest('019a5b12-0000-7000-8000-000000000041', 'text/plain', 'spring-sale');
+  const essay = keptForATest('019a5b12-0000-7000-8000-000000000042', 'text/plain', 'spring '.repeat(200));
+
+  it('reads its text into the words, and refuses one longer than its words take', async () => {
+    const harness = await playbookWithPaces(runsHarness({ assets: heldForATest([campaign, essay]) }));
+
+    const read = await historyAsked(harness, { campaign: campaign.reference, since: '2026-10-01' });
+    const tooLong = await historyAsked(harness, { campaign: essay.reference, since: '2026-10-01' });
+
+    expect(read).toMatchObject(
+      answered({ runs: [paceOn(5, springOnTheFifth), paceOn(1, springOnTheFirst)], more: false }, { examined: 3 }),
+    );
+    expect(tooLong).toMatchObject({ status: 'rejected', reason: 'conflict', kind: 'unworkable' });
+  });
+});
+
+describe('a lookup function whose since reads a kept text', () => {
+  const notes = keptForATest('019a5b12-0000-7000-8000-000000000043', 'text/plain', 'since '.repeat(250));
+  const day = keptForATest('019a5b12-0000-7000-8000-000000000044', 'text/plain', '2026-10-04');
+  const time = keptForATest('019a5b12-0000-7000-8000-000000000045', 'text/plain', '00:00:00Z');
+
+  it('reads the kept texts it writes into since, and refuses one longer than since reads', async () => {
+    const harness = await playbookWithPaces(runsHarness({ assets: heldForATest([notes, day, time]) }));
+    await harness.saved(
+      'lookup',
+      'parted-history',
+      runsDocument({ since: "'{{ input.day }}T{{ input.time }}'", input: [] }),
+    );
+
+    const read = await harness.ran({
+      type: 'lookup',
+      name: 'parted-history',
+      input: { campaign: 'spring-sale', day: day.reference, time: time.reference },
+      at: theDay(6),
+    });
+    const tooLong = await historyAsked(harness, { campaign: 'spring-sale', since: notes.reference });
+
+    expect(read).toMatchObject(answered({ runs: [paceOn(5, springOnTheFifth)], more: false }, {}));
+    expect(tooLong).toMatchObject({ status: 'rejected', reason: 'conflict', kind: 'unworkable' });
   });
 });

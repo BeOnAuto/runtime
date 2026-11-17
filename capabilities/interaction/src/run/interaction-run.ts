@@ -1,18 +1,9 @@
-import {
-  checkedInput,
-  functionResourceLabels,
-  type CapabilityAnswer,
-  type CapabilityRejection,
-  type RunContext,
-} from '@on.auto/definitions';
 import { momentVariables } from '@on.auto/definitions/tool-blocks';
-import type { Conflict, InvalidInput, PlaybookAddress } from '@on.auto/operations';
+import type { Conflict, InvalidInput } from '@on.auto/operations';
 import { Clock, Effect, type Schema } from 'effect';
 
 import type { RequestDocument } from '../document/interaction-document.ts';
 import { resolvedTelling, type ConversationTools } from '../tellings/telling-routes.ts';
-import { routeOf, toolsOf } from '../tool-blocks/routes.ts';
-import { checkedArguments, offered, roomFor, type InteractionPorts } from './request-reach.ts';
 import type { RequestRecord } from './request-record.ts';
 import {
   checkedAnswerer,
@@ -41,7 +32,7 @@ function answeringOf(
   }));
 }
 
-interface ProvidedPart {
+export interface ProvidedPart {
   readonly provider?: string;
   readonly part?: ConversationTools;
 }
@@ -59,7 +50,7 @@ function messageOf(
   return renderedRequest(document.render, { input, today: now.slice(0, 10), now });
 }
 
-function requestOf(
+export function requestOf(
   document: RequestDocument,
   input: Schema.Json,
   { provider, part }: ProvidedPart = {},
@@ -91,45 +82,6 @@ function requestOf(
   });
 }
 
-function partOf(
-  ports: InteractionPorts,
-  playbook: PlaybookAddress,
-  { route }: RequestDocument,
-): Effect.Effect<ProvidedPart> {
-  if (route?.replies === undefined) {
-    return Effect.succeed({});
-  }
-  const { server } = route.deliver;
-  return Effect.gen(function* () {
-    const servers = yield* ports.tools.listServers(playbook, server);
-    const provider = servers.find(({ name }) => name === server)?.provider ?? undefined;
-    const part = yield* ports.conversationsOf(provider ?? null);
-    return { ...(provider === undefined ? {} : { provider }), ...(part === undefined ? {} : { part }) };
-  });
-}
-
 export function asksLater(document: RequestDocument): boolean {
   return document.route !== undefined || document.output.schema !== undefined;
-}
-
-export function requestRun(ports: InteractionPorts) {
-  return (
-    document: RequestDocument,
-    input: Schema.Json,
-    context: RunContext,
-  ): Effect.Effect<CapabilityAnswer, CapabilityRejection> =>
-    Effect.gen(function* () {
-      const admitted = yield* checkedInput(input, document.input.schema, functionResourceLabels.interaction.singular);
-      const playbook = { org: context.org, playbook: context.playbook };
-      yield* offered(toolsOf(routeOf(document.route ?? {})), ports, playbook);
-      if (!asksLater(document)) {
-        const notified = yield* requestOf(document, admitted);
-        return { output: {}, record: notified };
-      }
-      yield* roomFor(ports, playbook);
-      const record = yield* requestOf(document, admitted, yield* partOf(ports, playbook, document));
-      const asking = { input: admitted, runId: context.id, functionName: context.definition.name };
-      yield* checkedArguments(record, asking, ports.tools.mostRequestBytesTo);
-      return { finishesLater: true, record };
-    });
 }

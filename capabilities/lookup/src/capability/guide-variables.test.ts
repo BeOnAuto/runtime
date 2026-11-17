@@ -1,4 +1,5 @@
 import { onTheStandingClock } from '@on.auto/definitions/testing';
+import { noAssetsHeld } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { toolBounds } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
@@ -11,6 +12,7 @@ import { makeLookupFunctionAdapter } from './lookup-function.ts';
 function lookupSending(mostRequestBytes: number) {
   return makeLookupFunctionAdapter({
     tools: {
+      assets: noAssetsHeld,
       listServers: () => Effect.succeed([]),
       callOnce: () => Effect.die(new Error('No call is made here')),
       mostRequestBytes,

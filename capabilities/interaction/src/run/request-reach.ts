@@ -17,7 +17,14 @@ import type { RequestRecord } from './request-record.ts';
 export interface InteractionPorts {
   readonly tools: Pick<
     ToolAccess,
-    'named' | 'configured' | 'callOnce' | 'listServers' | 'takesConnections' | 'mostRequestBytes' | 'mostRequestBytesTo'
+    | 'assets'
+    | 'named'
+    | 'configured'
+    | 'callOnce'
+    | 'listServers'
+    | 'takesConnections'
+    | 'mostRequestBytes'
+    | 'mostRequestBytesTo'
   >;
   readonly openRequests: (playbook: PlaybookAddress) => Effect.Effect<number>;
   readonly mostOpenRequests: number;

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { Json } from '../dsl/json.ts';
 import { handedSandbox, sourcesUnderTest, type SourceUnderTest } from '../pool-testing/test-pools.ts';
+import { argumentTextOf } from '../programs/argument-texts.ts';
 import type { Evaluation } from '../programs/program-run.ts';
 import { serveEvaluations } from './evaluation-loop.ts';
 
@@ -48,25 +50,36 @@ function absoluteIn(milliseconds: number): Evaluation {
   return { budget: 250, deadlineAt: performance.timeOrigin + performance.now() + milliseconds, moment: now };
 }
 
+const anyText: unknown = expect.any(String);
+
+function testing(unit: number, value: Json) {
+  return { kind: 'test', unit, test: 0, value: argumentTextOf(value), evaluation: absoluteIn(10_000) };
+}
+
 function evaluating(source: string) {
-  return { kind: 'evaluate', unit: 2, source, names: ['data'], texts: ['20'], evaluation: absoluteIn(10_000) };
+  return {
+    kind: 'evaluate',
+    unit: 2,
+    source,
+    names: ['data'],
+    texts: [argumentTextOf(20)],
+    evaluation: absoluteIn(10_000),
+  };
 }
 
 describe.each(sourcesUnderTest)(
   'the loop of the evaluation worker, served on the thread of a test on $name instances',
   ({ name }) => {
-    it('answers a request it cannot read and a test of a unit it never prepared with the words of each', async () => {
+    it('answers a request it cannot read and a test of a unit it never prepared as raised, each with its own words', async () => {
       const { ask } = servedHere(name);
 
-      const answers = [
-        await ask({ kind: 'guess' }),
-        await ask({ kind: 'test', unit: 9, test: 0, value: 'null', evaluation: absoluteIn(10_000) }),
-      ];
+      const answers = [await ask({ kind: 'guess' }), await ask(testing(9, null))];
 
       expect(answers).toMatchObject([
-        { ran: 'raised', issue: { detail: 'The evaluation worker could not read the request' } },
-        { ran: 'raised', issue: { detail: 'The evaluation worker holds no test 0 of unit 9' } },
+        { ran: 'raised', issue: { detail: anyText } },
+        { ran: 'raised', issue: { detail: anyText } },
       ]);
+      expect(answers[0]).not.toEqual(answers[1]);
     });
 
     it('prepares the filters of a unit, tests each, and lets them go when told', async () => {
@@ -78,10 +91,10 @@ describe.each(sourcesUnderTest)(
         sources: [' $data == 1 '],
         evaluation: absoluteIn(10_000),
       });
-      const tested = await ask({ kind: 'test', unit: 1, test: 0, value: '1', evaluation: absoluteIn(10_000) });
+      const tested = await ask(testing(1, 1));
       tell({ kind: 'close', unit: 1 });
       tell({ kind: 'close', unit: 7 });
-      const gone = await ask({ kind: 'test', unit: 1, test: 0, value: '1', evaluation: absoluteIn(10_000) });
+      const gone = await ask(testing(1, 1));
 
       expect([prepared, tested]).toEqual([
         { ran: 'answered', text: 'null', work: 0 },

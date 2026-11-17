@@ -23,7 +23,7 @@ function standsAt(schema: CompiledSchema, pointer: string, mediaType: unknown): 
   return stoodFor.length > 0 && (declared.length === 0 || declared.some((type) => stoodFor.includes(type)));
 }
 
-function isAtOrWithin(pointer: string, place: string): boolean {
+export function isAtOrWithin(pointer: string, place: string): boolean {
   return pointer === place || pointer.startsWith(`${place}/`);
 }
 

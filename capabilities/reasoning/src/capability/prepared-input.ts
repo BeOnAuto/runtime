@@ -21,5 +21,5 @@ export function preparedInput(
     return Effect.fail(notAnObject);
   }
   const merged: Schema.JsonObject = Object.fromEntries([...Object.entries(defaults), ...Object.entries(input)]);
-  return Effect.as(checkedInput(merged, schema, functionResourceLabels.reasoning.singular), merged);
+  return Effect.as(checkedInput(merged, schema, functionResourceLabels.reasoning.singular, 'passed_whole'), merged);
 }

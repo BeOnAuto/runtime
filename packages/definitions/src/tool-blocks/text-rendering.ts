@@ -1,9 +1,9 @@
 import { Buffer } from 'node:buffer';
 
-import { Predicate, Result, type Schema } from 'effect';
+import { Result, type Schema } from 'effect';
 import { toValue } from 'liquidjs';
 
-import { outputText } from '../template/output-text.ts';
+import { isTextToWrite, outputText } from '../template/output-text.ts';
 import type { RenderClock } from '../template/render-clock.ts';
 import { templateEngine } from '../template/template-engine.ts';
 import type { ParsedTemplate } from '../template/template-parsing.ts';
@@ -60,7 +60,7 @@ function textEmitter(mostBytes: number): TextEmitter {
     lastCodeUnit: undefined,
     write: (html) => {
       const value: unknown = toValue(html);
-      if (Predicate.isObjectOrArray(value)) {
+      if (!isTextToWrite(value, 'refused')) {
         throw new TextRefused('not_text');
       }
       const text = outputText(value);
@@ -79,6 +79,10 @@ function refusalOf(cause: unknown, line: number): TextRefusal | undefined {
   return cause instanceof TextRefused ? { reason: cause.refusal, line } : undefined;
 }
 
+function keptFileAsText(line: number): TextRefusal {
+  return { reason: 'not_text', line };
+}
+
 export function renderedText(
   parsed: ParsedTemplate,
   variables: Readonly<Record<string, Schema.Json>>,
@@ -87,7 +91,7 @@ export function renderedText(
 ): Result.Result<string, TextFailure> {
   const emitter = textEmitter(mostBytes);
   return Result.map(
-    renderedTemplate(toolBlockEngine, parsed, { variables, emitter, refusalOf, clock }),
+    renderedTemplate(toolBlockEngine, parsed, { variables, emitter, refusalOf, clock, keptFileAsText }),
     () => emitter.buffer,
   );
 }

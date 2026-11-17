@@ -16,7 +16,7 @@ export interface ReferencedAsset extends ReferenceContent {
 
 export interface ReferenceReading {
   readonly ledger: Pick<ProjectionReader, 'readProjectedRows'>;
-  readonly content: Pick<RecordedContent, 'get'>;
+  readonly content: Pick<RecordedContent, 'get' | 'getHead'>;
 }
 
 interface Referring {

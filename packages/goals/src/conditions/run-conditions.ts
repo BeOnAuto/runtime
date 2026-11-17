@@ -1,5 +1,5 @@
 import { Unavailable } from '@on.auto/operations';
-import { mostExpressionWork, mostInputMs, type FilterSandbox } from '@on.auto/workflow-engine';
+import { argumentTextOf, mostExpressionWork, mostInputMs, type FilterSandbox } from '@on.auto/workflow-engine';
 import { enclosedBody, type ProgramRun } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
 
@@ -140,7 +140,7 @@ async function answeredFrom(
     return [];
   }
   const { clock, moment, counting } = evaluating;
-  const ran = await next.test(JSON.stringify(next.value) ?? 'null', {
+  const ran = await next.test(argumentTextOf(next.value ?? null), {
     budget: allowance,
     deadlineAt: clock() + mostInputMs,
     moment,

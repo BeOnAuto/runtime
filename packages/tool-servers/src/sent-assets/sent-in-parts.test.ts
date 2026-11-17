@@ -1,12 +1,12 @@
 import { Buffer } from 'node:buffer';
 
+import { heldForATest, keptForATest } from '@on.auto/operations/testing';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { boundaryOf, framedWith, of32, operationTaking } from '../api-testing/body-documents.ts';
 import { apiRequestOf, sentBodyOf, type ApiEndpoint } from '../openapi/api-requests.ts';
 import type { ApiOperation } from '../openapi/api-tools.ts';
-import { heldForATest, keptForATest } from '../testing/held-assets.ts';
 import { plannedAssets } from './planned-assets.ts';
 
 const endpoint: ApiEndpoint = { baseUrl: 'https://files.example.com', headers: new Map(), query: new Map() };

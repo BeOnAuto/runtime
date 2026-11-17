@@ -9,6 +9,8 @@ import { unavailableOf, unavailableServerOf } from './tool-refusals.ts';
 
 export type ToolLookup = Pick<ToolAccess, 'lookUp'>;
 
+export type ToolChecking = Pick<ToolAccess, 'lookUp' | 'assets' | 'mostRequestBytesTo'>;
+
 export function listedTool({ tools }: AvailableServer, name: string): Option.Option<ServerTool> {
   return Option.fromNullishOr(tools.find((tool) => tool.name === name));
 }

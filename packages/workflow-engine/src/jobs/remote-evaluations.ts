@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 
 import type { FilterSandbox, FilterSession } from '../filters/filter-verdicts.ts';
+import type { ArgumentText } from '../programs/argument-texts.ts';
 import { namedArguments, type ExpressionUnit } from '../programs/expression-units.ts';
 import { exhaustedBy, type Evaluation, type ProgramFailure, type ProgramRun } from '../programs/program-run.ts';
 import type { MachineSandbox } from '../programs/reserved-instances.ts';
@@ -82,7 +83,7 @@ function remoteFilterSession({ asks, clock, unit }: Asked, opening: Evaluation):
   return {
     define: (source) => {
       const test = sources.push(source) - 1;
-      const tested = async (value: string, evaluation: Evaluation, waitMs: number): Promise<ProgramRun> => {
+      const tested = async (value: ArgumentText, evaluation: Evaluation, waitMs: number): Promise<ProgramRun> => {
         const frozen = await prepared();
         if (frozen.ran !== 'answered') {
           return frozen;

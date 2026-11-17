@@ -12,6 +12,7 @@ import {
   sandboxShippedRoots,
 } from '../src/dsl.ts';
 import { sandboxModuleFile } from '../src/instances/compiled-module.ts';
+import { argumentTextOf } from '../src/programs/argument-texts.ts';
 import { expressionUnitOf } from '../src/programs/expression-units.ts';
 import { filterContextOf } from '../src/programs/kept-contexts.ts';
 import { moduleRun } from '../src/programs/module-runs.ts';
@@ -132,7 +133,7 @@ async function expressionLines(): Promise<readonly string[]> {
   const freezing = millisecondsOf(() => {
     filters.freeze();
   });
-  const data = JSON.stringify(decision);
+  const data = argumentTextOf(decision);
   const reused = medianMillisecondsOf(201, () => {
     test(data, unbounded);
   });

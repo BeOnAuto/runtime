@@ -169,7 +169,11 @@ const allowances: readonly Allowance[] = [
   },
   {
     text: 'toPrimitive',
-    in: ['packages/definitions/lib/sandbox.d.ts.txt', 'packages/workflow-engine/src/programs/sandbox-prelude.ts'],
+    in: [
+      'packages/definitions/lib/sandbox.d.ts.txt',
+      'packages/definitions/src/template/kept-files.ts',
+      'packages/workflow-engine/src/programs/sandbox-prelude.ts',
+    ],
   },
 ];
 

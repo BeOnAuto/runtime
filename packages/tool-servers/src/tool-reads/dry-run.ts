@@ -11,10 +11,10 @@ import { Effect, Result, Schema } from 'effect';
 
 import type { ToolMark } from '../bounds/tool-results.ts';
 import { ArgumentsField, ServerField, ToolField } from '../names/tool-fields.ts';
-import { checkedArguments, uncheckable, type ArgumentCheck } from './argument-checks.ts';
+import { assetsRefused, checkedArguments, uncheckable, type ArgumentCheck } from './argument-checks.ts';
 import { DryRunSchema, type DryRun } from './dry-run-schema.ts';
-import { seenOn, type Seen } from './dry-run-seen.ts';
-import type { ToolLookup } from './named-tool.ts';
+import { assetsPlannedAt, seenOn, type PlannedCall, type Seen } from './dry-run-seen.ts';
+import type { ToolChecking } from './named-tool.ts';
 import { dryRunWords, readingTask, toolRead } from './read-words.ts';
 import { toolRemedies, unavailableOf } from './tool-refusals.ts';
 
@@ -33,18 +33,29 @@ const DryRunInputSchema = Schema.Struct({
 
 const executeNeeds = 'playbook:write' satisfies Permission;
 
-function argumentsOf(seen: Seen, input: Schema.JsonObject | undefined): ArgumentCheck | null {
+function argumentsOf(
+  access: ToolChecking,
+  seen: Seen,
+  { reference, input }: Pick<PlannedCall, 'reference'> & { readonly input: Schema.JsonObject | undefined },
+): Effect.Effect<ArgumentCheck | null, never, PlaybookContext> {
   if (input === undefined) {
-    return null;
+    return Effect.succeed(null);
   }
-  return 'tool' in seen ? checkedArguments(seen.tool.input_schema, input) : uncheckable(seen.unseen);
+  if (!('tool' in seen)) {
+    return Effect.succeed(uncheckable(seen.unseen));
+  }
+  const { input_schema: schema } = seen.tool;
+  return Effect.match(assetsPlannedAt(access, { reference, tool: seen.tool, input }), {
+    onFailure: assetsRefused,
+    onSuccess: (pointers) => checkedArguments(schema, input, pointers),
+  });
 }
 
 function markOf(seen: Seen): ToolMark | null {
   return 'tool' in seen ? seen.tool.mark : null;
 }
 
-export function defineDryRun(access: ToolLookup, executing: Runnable<'playbook'>) {
+export function defineDryRun(access: ToolChecking, executing: Runnable<'playbook'>) {
   return defineQuery('playbook', {
     name: 'dry_run',
     title: 'Dry run a tool call',
@@ -72,7 +83,7 @@ export function defineDryRun(access: ToolLookup, executing: Runnable<'playbook'>
         playbook_retired: retired,
         allowed,
         mark: markOf(seen),
-        arguments: argumentsOf(seen, input),
+        arguments: yield* argumentsOf(access, seen, { reference: { server, tool }, input }),
         server: seen.server,
       };
       return answer;

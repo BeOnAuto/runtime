@@ -5,7 +5,9 @@ import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 import { moduleRun } from './module-runs.ts';
 import type { Evaluation, ProgramRun } from './program-run.ts';
 import { threadStackBytes, unitMemoryBytes, workerStackBytes } from './sandbox-bounds.ts';
+import { preludeSource } from './sandbox-prelude.ts';
 import { sandboxRuntimeOf, type SandboxSettings, type Settled } from './sandbox-session.ts';
+import { vmOf, type Outcome, type Vm } from './sandbox-vm.ts';
 
 const evaluation: Evaluation = { budget: 1000, deadlineAt: Number.POSITIVE_INFINITY, moment: 0 };
 
@@ -253,5 +255,31 @@ describe.each(sourcesUnderTest)('a context whose instance breaks on $name instan
     context.close();
 
     expect(() => context.call({ fn: 0, args: [], form: 'module' }, evaluation)).toThrow('Lifetime not alive');
+  });
+});
+
+function answeredText(vm: Vm, outcome: Outcome): string {
+  return 'value' in outcome ? vm.takeText(outcome.value) : 'not answered';
+}
+
+describe.each(sourcesUnderTest)('the size the prelude writes in a refusal, on $name instances', ({ source }) => {
+  it('is grouped in threes by the prelude itself, since the sandbox has no locale data, and kept as it is unless it is a whole number', async () => {
+    const instance = await source(unitMemoryBytes);
+    const runtime = instance.module.newRuntime();
+    const vm = vmOf(() => runtime);
+    const grouped = vm.property(vm.loaded(preludeSource, 'prelude.js'), 'grouped');
+
+    const sizes = ['0', '999', '1000', '48213', '5242880', '1073741824', '1234.5', 'many'].map((digits) =>
+      answeredText(vm, vm.call(grouped, [vm.text(digits)])),
+    );
+    const locale = ['typeof Intl', '(5242880).toLocaleString()'].map((code) =>
+      answeredText(vm, vm.evaluate(code, 'locale.js', false)),
+    );
+    vm.close();
+    runtime.dispose();
+    instance.release(true);
+
+    expect(sizes).toEqual(['0', '999', '1,000', '48,213', '5,242,880', '1,073,741,824', '1234.5', 'many']);
+    expect(locale).toEqual(['undefined', '5242880']);
   });
 });

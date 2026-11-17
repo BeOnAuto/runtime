@@ -1,8 +1,10 @@
 import { stringFormats } from '@on.auto/json-schema';
 
-const mostWordsCharacters = 1000;
+export const mostWordsCharacters = 1000;
 
 const counted = new Intl.NumberFormat('en');
+
+export const sinceForms = 'a day, such as 2026-10-01, or a date and time with its offset, such as 2026-10-01T09:00:00Z';
 
 export function wordsProblem(words: string): string | undefined {
   const characters = Array.from(words).length;
@@ -21,5 +23,5 @@ export function sinceMoment(since: string): number {
 export function sinceProblem(since: string): string | undefined {
   return Number.isFinite(sinceMoment(since))
     ? undefined
-    : `runs.since takes a day, such as 2026-10-01, or a date and time with its offset, such as 2026-10-01T09:00:00Z, and ${JSON.stringify(since)} is neither`;
+    : `runs.since takes ${sinceForms}, and ${JSON.stringify(since)} is neither`;
 }

@@ -12,6 +12,7 @@
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {
+    "measure:read-inside": "node measure/read-inside-memory.ts",
     "lint": "oxlint -c ../../.oxlintrc.json",
     "typecheck": "tsc",
     "test": "vitest run --coverage"

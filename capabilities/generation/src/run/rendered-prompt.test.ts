@@ -1,7 +1,9 @@
+import { templateLimits } from '@on.auto/definitions/template';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { generationHarness, sourceWith } from '../testing/index.ts';
+import { aPageARunReturned, assetIdOf } from '../run-testing/run-outcomes.ts';
+import { alpha, generationHarness, harnessStartsAt, sourceWith } from '../testing/index.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -81,5 +83,61 @@ describe('the characters of a prompt', () => {
         )
       ).detail,
     ).toBe('Rendering the prompt with this input takes more memory than a render may');
+  });
+});
+
+describe('a kept file a prompt writes as text', () => {
+  const photo = {
+    id: assetIdOf(4),
+    media_type: 'image/png',
+    bytes: 4,
+    sha256: 'd'.repeat(64),
+    address: null,
+    address_until: null,
+  };
+
+  it('is refused at the prompt, directly or through a filter, apart from a list or an object, and the model is asked nothing', async () => {
+    const direct = await refusalOf('A {{ input.photo }}', { photo });
+    const filtered = await refusalOf('A {{ input.photo | upcase }}', { photo });
+    const listOfFiles = await refusalOf('A {{ input.photos }}', { photos: [photo] });
+    const list = await refusalOf('A {{ input.parts }}', { parts: ['a', 'b'] });
+
+    expect(direct).toMatchObject({ issues: [{ pointer: '/input' }], asked: 0 });
+    expect(filtered).toEqual(direct);
+    expect(listOfFiles).toEqual(list);
+    expect(direct).not.toEqual(list);
+  });
+
+  it('is written by one of its fields or as its description', async () => {
+    const playbook = generationHarness();
+    await playbook.define('picture', sourceWith(image, 'A {{ input.photo.media_type }}, {{ input.photo | json }}'));
+
+    expect(await playbook.run('picture', { photo }, '019a4f2e-5c1b-7d3a-8e6f-1a2b3c4d5e72')).toMatchObject({
+      status: 'succeeded',
+    });
+  });
+});
+
+describe('a kept text a prompt reads', () => {
+  it('is refused at its place past the characters the model takes, though within those a render may hold', async () => {
+    const playbook = generationHarness();
+    const page = await aPageARunReturned(playbook.ledger.service, alpha, assetIdOf(3), harnessStartsAt);
+    await playbook.define('picture', sourceWith(image, 'A lighthouse, as {{ input.page }} says'));
+    const reference = {
+      id: assetIdOf(3),
+      media_type: page.mediaType,
+      bytes: page.bytes,
+      sha256: page.sha256,
+      address: null,
+      address_until: null,
+    };
+
+    const refused = decodeRefusal(
+      await playbook.run('picture', { page: reference }, '019a4f2e-5c1b-7d3a-8e6f-1a2b3c4d5e71'),
+    );
+
+    expect(page.bytes).toBeLessThan(templateLimits.renderedCharacters);
+    expect(refused).toMatchObject({ reason: 'invalid_input', issues: [{ pointer: '/input/page' }] });
+    expect(playbook.gateway.asked()).toEqual([]);
   });
 });

@@ -1,11 +1,12 @@
 import type { RunContext } from '@on.auto/definitions';
 import { noCalledDefinitions, onTheStandingClock, recordingJournal } from '@on.auto/definitions/testing';
 import { allPermissions } from '@on.auto/operations';
-import { Effect, type Schema } from 'effect';
+import { heldForATest, keptForATest } from '@on.auto/operations/testing';
+import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { listInteractions } from '../requests/list-interactions.ts';
-import { approvalDocument, interactionHarness, notificationDocument } from '../testing/index.ts';
+import { approvalDocument, askedRunId, fakeTools, interactionHarness, notificationDocument } from '../testing/index.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -166,5 +167,50 @@ describe('a message the request cannot carry', () => {
       { reason: 'invalid_input', detail: 'The input: expected the field owner.' },
       { detail: anyWords },
     ]);
+  });
+});
+
+const page = keptForATest('019a5b12-0000-7000-8000-000000000031', 'text/markdown', 'The offer is on page one.');
+const photo = keptForATest('019a5b12-0000-7000-8000-000000000032', 'image/png', new Uint8Array([137, 80, 78, 71]));
+const full = keptForATest('019a5b12-0000-7000-8000-000000000033', 'text/plain', 'x'.repeat(8192));
+const long = keptForATest('019a5b12-0000-7000-8000-000000000034', 'text/plain', 'x'.repeat(8193));
+
+const rejectionIn = Schema.decodeUnknownSync(Schema.Struct({ output: Schema.Struct({ rejection: Schema.Json }) }));
+
+async function keptAsked(message: string, input: Readonly<Record<string, unknown>>) {
+  const holding = heldForATest([page, photo, full, long]);
+  const playbook = interactionHarness({ tools: { ...fakeTools(), assets: holding } });
+  await playbook.define('review-page', openDocument('{{ input.owner }}', message));
+  await playbook.ask('review-page', { owner: 'ada', ...input }, askedRunId);
+  return { run: await playbook.runOf(askedRunId), opened: holding.opened() };
+}
+
+describe('a kept text an interaction request’s message reads', () => {
+  it('is written into the message as its text', async () => {
+    const { run } = await keptAsked('Please review:\n\n{{ input.page }}', { page: page.reference });
+
+    expect(run).toMatchObject({
+      status: 'succeeded',
+      output: { record: { to: 'ada', message: 'Please review:\n\nThe offer is on page one.' } },
+    });
+  });
+
+  it('is read up to the bytes a request may hold, and refused past them before it is opened', async () => {
+    const fitting = await keptAsked('{{ input.page }}', { page: full.reference });
+    const tooLong = await keptAsked('{{ input.page }}', { page: long.reference });
+
+    expect([fitting, tooLong]).toMatchObject([
+      { run: { status: 'succeeded', output: { record: { message: 'x'.repeat(8192) } } }, opened: 1 },
+      { run: { output: { status: 'rejected', rejection: { reason: 'conflict', kind: 'unworkable' } } }, opened: 0 },
+    ]);
+  });
+
+  it('refuses a kept file as it refuses any value that is not text, without opening it', async () => {
+    const file = await keptAsked('See {{ input.photo }}', { photo: photo.reference });
+    const object = await keptAsked('See {{ input.photo }}', { photo: { a: 1 } });
+
+    expect(file.run).toMatchObject({ output: { status: 'rejected', rejection: { reason: 'conflict' } } });
+    expect(rejectionIn(file.run)).toEqual(rejectionIn(object.run));
+    expect(file.opened).toBe(0);
   });
 });
