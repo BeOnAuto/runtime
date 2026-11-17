@@ -523,7 +523,7 @@ An `auth` block gives an `mcp` or `openapi` server OAuth client credentials inst
 - It sends the credentials only to an authorization server whose metadata names the `issuer`.
 - An `mcp` server's authorization server is found through the server's own protected-resource metadata, unless `discovery` is `issuer`.
 - With `discovery: issuer`, an `mcp` server's authorization server is the `issuer` itself, whatever authorization servers the server's metadata names. Set it when that metadata names first an authorization server that does not issue tokens to clients, such as one for signing in through a browser. `server`, the default, finds it from the metadata.
-- With `audience`, the token request carries `audience` beside `resource`, for an authorization server that names its API by audience. Both are sent, since other authorization servers read `resource`. Left out, the request carries `resource` alone.
+- With `audience`, the token request carries `audience` in place of `resource`, for an authorization server that names its API by audience and refuses `resource`, as Auth0 does by default. Left out, the request carries `resource`, as before.
 - An `openapi` server's authorization server is the `issuer` itself. Its metadata is read by OAuth authorization server metadata or OpenID Connect discovery, since an HTTP API publishes none of its own.
 
 ### The credentials of an HTTP API
