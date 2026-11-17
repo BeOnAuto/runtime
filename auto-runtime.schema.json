@@ -205,11 +205,20 @@
               "scope": {
                 "type": "string",
                 "description": "The scopes to ask for, separated by spaces"
+              },
+              "discovery": {
+                "type": "string",
+                "enum": ["server", "issuer"],
+                "description": "How an mcp server's authorization server is found: server, the default, from the server's own metadata; issuer, the issuer itself, whatever the server's metadata names"
+              },
+              "audience": {
+                "type": "string",
+                "description": "The audience a token is asked for, sent beside the resource, for an authorization server that names its API by audience"
               }
             },
             "required": ["issuer", "client_id"],
             "additionalProperties": false,
-            "description": "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, an openapi server's from the issuer's"
+            "description": "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata unless discovery is issuer, an openapi server's from the issuer's"
           },
           "command": {
             "type": "string",
