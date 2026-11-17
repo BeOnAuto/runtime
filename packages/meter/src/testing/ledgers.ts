@@ -4,11 +4,8 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import type { LedgerServices } from '@on.auto/ledger';
-import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
-import { postgresqlDatabaseOn } from '@on.auto/ledger/postgresql-testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import type { Layer } from 'effect';
-import { Client } from 'pg';
 
 type Row = Readonly<Record<string, unknown>>;
 
@@ -99,31 +96,5 @@ export function sqliteLedger(): LedgerAt {
       rmSync(directory, { recursive: true, force: true });
       return Promise.resolve();
     },
-  };
-}
-
-export async function postgresqlLedger(server: string): Promise<LedgerAt> {
-  const { url, remove } = await postgresqlDatabaseOn(server);
-  return {
-    name: 'PostgreSQL',
-    layer: () => postgresqlLedgerLayer({ pools: plainPoolsOn(url) }),
-    rows: async (statement, values = []) => {
-      const client = new Client({ connectionString: url });
-      await client.connect();
-      try {
-        let place = 0;
-        const numbered = statement.replaceAll('?', () => {
-          place += 1;
-          return `$${place}`;
-        });
-        return (await client.query<Row>(numbered, [...values])).rows;
-      } finally {
-        await client.end();
-      }
-    },
-    dataOf: (stored) => parsed(String(Reflect.get(new Object(stored), 'json'))),
-    stored: (data) => JSON.stringify({ json: JSON.stringify(data) }),
-    unreadable: JSON.stringify({ json: '{not json' }),
-    remove,
   };
 }

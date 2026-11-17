@@ -1,9 +1,12 @@
 import { recordedContentBehaviour } from '@on.auto/content/testing';
+import { ledgerLayer } from '@on.auto/ledger/sqlite';
+import { Ledger } from '@on.auto/operations';
 import { interleavedRemovalBehaviour, unheldContentBehaviour } from '@on.auto/operations/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { Effect, ManagedRuntime } from 'effect';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { objectContentBehaviour } from '../testing/object-content-behaviour.ts';
-import { interleavedEntryOf, onSQLite, unheldEntryOf } from '../testing/object-ledgers.ts';
+import { interleavedEntryOf, unheldEntryOf, type LedgerOver } from '../testing/object-ledgers.ts';
 import { contentEntryOf, objectStoreEntry } from '../testing/object-store-entry.ts';
 import { bucketReady, testObjectStoreOf } from '../testing/test-object-store.ts';
 
@@ -14,6 +17,12 @@ const onTheServer = objectStoreEntry(async () => {
   await bucketReady(writing.bucket);
   return { writing: writing.bucket.client, reading: reading.bucket.client, bucket: writing.bucket.name };
 });
+
+const onSQLite: LedgerOver = (holders, content) => {
+  const runtime = ManagedRuntime.make(ledgerLayer({ fileName: ':memory:', holders, content }));
+  onTestFinished(() => runtime.dispose());
+  return runtime.runPromise(Effect.service(Ledger));
+};
 
 const skipped = server === '';
 

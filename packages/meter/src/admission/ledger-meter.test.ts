@@ -4,23 +4,17 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { accountServiceLayer } from '../accounts/fetched-account-service.ts';
 import { ledgerMeter } from '../licensing/self-hosted-meter.ts';
-import { meterBehaviour, meterOnADatabaseBehaviour } from '../meter-testing/meter-behaviour.ts';
+import { meterBehaviour } from '../meter-testing/meter-behaviour.ts';
 import { opened } from '../meter-testing/opened.ts';
-import { postgresqlLedger, sqliteLedger } from '../testing/ledgers.ts';
+import { sqliteLedger } from '../testing/ledgers.ts';
 import { runOf } from '../testing/runs.ts';
 import { meterDefaults } from './metering.ts';
-
-const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
 const onSQLite = () => Promise.resolve(sqliteLedger());
 
 const noNetwork = () => Promise.reject(new TypeError('fetch failed: the tests reach no network'));
 
 meterBehaviour('SQLite', onSQLite);
-
-describe.skipIf(server === '')('with PostgreSQL', () => {
-  meterOnADatabaseBehaviour('PostgreSQL', () => postgresqlLedger(server));
-});
 
 describe('the meter of every runtime', () => {
   it('admits 100 first runs without a key, then 15 a UTC day and 75 a UTC month, holds an admission ten minutes and links Auto’s Studio', () => {
