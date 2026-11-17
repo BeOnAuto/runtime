@@ -1,9 +1,11 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { PlaybookOperation, Capability, RecordWork } from '@on.auto/definitions';
+import { thingsAskedAbout } from '@on.auto/goals';
 import {
   conversationsDue,
   answerInteraction,
   listInteractions,
+  listInteractionsAbout,
   makeInteractionFunctionAdapter,
   openRequestsName,
   requestsDue,
@@ -38,6 +40,7 @@ export function interactionServedBy(
     | 'mostRequestBytes'
     | 'mostRequestBytesTo'
   >,
+  results = false,
 ): ServedInteraction {
   const ledger = runtimeLedger(runtime);
   return {
@@ -48,7 +51,7 @@ export function interactionServedBy(
       mostOpenRequests: interaction.mostOpenRequests,
       conversationsOf: (provider) => Effect.succeed(conversationsOf(providers, provider)),
     }),
-    operations: [answerInteraction, listInteractions],
+    operations: [answerInteraction, results ? listInteractionsAbout(thingsAskedAbout) : listInteractions],
     dueWorkOf: (record) => [requestsDue({ ledger, tools, record }), conversationsDue({ ledger, tools, record })],
   };
 }

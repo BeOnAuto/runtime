@@ -8,11 +8,13 @@ import {
   type DefinitionSaved,
   type LinkedInStudio,
   type Notice,
+  type PlaybookReader,
 } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { DefinitionSchema, DefinitionWithGoalsSchema, type Definition } from '../registry/definition.ts';
 import { RunDetailSchema, type RunDetail } from '../runs/run.ts';
+import { countingNotices, type StartedByHand } from './counting-runs.ts';
 
 const savedAnnotations = {
   identifier: 'SavedDefinition',
@@ -71,10 +73,15 @@ function withRunPageInStudio(run: RunDetail): Effect.Effect<RunDetail & LinkedIn
 
 export function requestedRunAnswered(
   run: RunDetail,
+  started: StartedByHand,
 ): Effect.Effect<
   RunDetail & LinkedInStudio & { readonly notices?: readonly Notice[]; readonly before_going_on?: string },
   never,
-  PlaybookContext
+  PlaybookContext | PlaybookReader
 > {
-  return Effect.map(withRunPageInStudio(run), (linked) => withNotices(linked, noticesIn(run.record)));
+  return Effect.gen(function* () {
+    const counting = yield* countingNotices(started);
+    const linked = yield* withRunPageInStudio(run);
+    return withNotices(linked, [...noticesIn(run.record), ...counting]);
+  });
 }

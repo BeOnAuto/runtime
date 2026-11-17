@@ -81,6 +81,7 @@ describe('the facts of an assessment', () => {
       'goal_notice_refused',
       'goal_summary_started',
       'goal_assessment_ended',
+      'goal_stopped',
       'goal_observation_refused',
     ]);
   });

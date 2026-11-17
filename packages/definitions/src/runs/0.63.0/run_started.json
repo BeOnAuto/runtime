@@ -1,0 +1,21 @@
+{
+  "type": "run_started",
+  "data": {
+    "input": {
+      "request": "Swap the logo on the letterhead"
+    },
+    "started_by": {
+      "id": "local",
+      "name": "ada"
+    }
+  },
+  "context": {
+    "at": "2026-11-16T21:25:00.000Z",
+    "by": "local",
+    "runId": "019a8f2e-4c1d-7b3a-9e5f-1a2b3c4d5e6f",
+    "definitionType": "workflow",
+    "definitionName": "prepare-revision",
+    "definitionVersion": 2,
+    "test": true
+  }
+}

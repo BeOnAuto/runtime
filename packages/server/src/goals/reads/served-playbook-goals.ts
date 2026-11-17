@@ -1,5 +1,5 @@
 import type { AppRuntime } from '@on.auto/api';
-import { goalStandingIn, playbookGoalsSaved, type GoalsDocument } from '@on.auto/definitions/goals';
+import { goalsSaveNoticesIn, goalStandingIn, playbookGoalsSaved, type GoalsDocument } from '@on.auto/definitions/goals';
 import type { SubjectPages } from '@on.auto/definitions/page';
 import {
   goalsAnsweredOf,
@@ -41,7 +41,14 @@ function savedIn(pages: SubjectPages, { page, goals, onlyIfNone = false }: Goals
         yield* pages.savePlaybookPage(pageSaving);
       }
       const held = yield* heldIn(pages);
-      return saved === undefined ? held : { ...held, outcome: saved.outcome, awaiting: yield* goalsAwaitingAYesIn };
+      return saved === undefined
+        ? held
+        : {
+            ...held,
+            outcome: saved.outcome,
+            awaiting: yield* goalsAwaitingAYesIn,
+            notices: yield* goalsSaveNoticesIn,
+          };
     });
   });
 }

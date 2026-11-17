@@ -89,6 +89,8 @@ export {
   type RunOfAChain,
 } from './chain-origins/chain-origins.ts';
 export { ledgerChainReads, type ChainStore, type StoredChainFact } from './chain-origins/ledger-chain-reads.ts';
+export { mostThingsOfARequest, thingsAskedAbout, type AskedThing } from './asked-things/asked-things.ts';
+export { mostRunsWalkedForAPage } from './chain-origins/outside-events.ts';
 export {
   mostOutputBytes,
   mostOutputsKept,
@@ -164,6 +166,12 @@ export { GoalsReadSchema, type GoalRead, type GoalsRead } from './reads/goals-re
 export { goalsReadOf, type AssessmentsOfGoal } from './reads/goals-read.ts';
 export { getPlaybookGoals, goalsReadIn } from './reads/get-playbook-goals.ts';
 export { goalsOperationsServed } from './reads/goals-operations.ts';
+export {
+  serverConnectedThrough,
+  type GoalConnection,
+  type ServerConnected,
+  type ToolNaming,
+} from './connections/goal-connections.ts';
 export { goalChangeNamings, goalChanges } from './reads/goal-changes.ts';
 export { goalNoticesOf, type GoalNoticePorts } from './notices/goal-notices.ts';
 export {

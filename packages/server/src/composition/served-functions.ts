@@ -1,6 +1,6 @@
 import { foldedBeforeItRuns } from '@on.auto/workflow-host';
 
-import { servedWithTheGoalsEngine } from '../goals/goals-engine-lists.ts';
+import { servedWithTheGoalsEngine, serverConnectedThrough } from '../goals/goals-engine-lists.ts';
 import type { Settings } from '../settings/settings.ts';
 import type { WorkflowParts } from '../workflows/workflows.ts';
 import { factsComposedOf } from './composed-facts.ts';
@@ -37,7 +37,7 @@ export async function functionsServedBy(
 ): Promise<ServedFunctions> {
   const { goals, results, messages } = tools;
   const toolUsers = await toolUsersServedBy(runtime, settings, tools);
-  const { reasoning, lookup, interaction, toolOperations, ...listing } = toolUsers;
+  const { reasoning, lookup, interaction, toolOperations, named, ...listing } = toolUsers;
   const generation = await generationServedBy(runtime, settings, generating);
   const { capability, folders, operations, dueWork } = prediction.provided;
   const projections = await wiring.served({ projection: settings.projection, database }, computation.pool, folders);
@@ -61,6 +61,7 @@ export async function functionsServedBy(
       goals,
       results,
       messages,
+      connected: serverConnectedThrough({ named }),
       ...orgPartsServedBy(
         runtime,
         { goals, messages, pages: projections.pages, ...listing, ...reasoning },

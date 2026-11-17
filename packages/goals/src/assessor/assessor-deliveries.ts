@@ -22,9 +22,9 @@ import {
 import { observationsName, observedEntryKeyOf } from '../goal-tables/observation-rows.ts';
 import { refusalsName, refusalStatus } from '../goal-tables/refusal-rows.ts';
 import type { RefusedObservation } from '../observations/observation.ts';
-import { refusalStreamIdOf, type AssessmentPlanned, type Planned, type RefusalPlanned } from './planned-runs.ts';
+import { refusalStreamIdOf, type AssessmentPlanned, type RefusalPlanned } from './planned-runs.ts';
 
-interface DeliveryParts {
+export interface DeliveryParts {
   readonly ledger: Ledger['Service'];
   readonly playbook: PlaybookAddress;
   readonly workflow: string;
@@ -170,12 +170,16 @@ function refused(parts: DeliveryParts, { refused: refusal, endedAt, observedKeys
   });
 }
 
-export function deliveryOf(parts: DeliveryParts, planned: Planned): Delivery {
+export function deliveryOf(parts: DeliveryParts, planned: AssessmentPlanned | RefusalPlanned): Delivery {
   const work: Effect.Effect<unknown, unknown> =
     'refused' in planned ? refused(parts, planned) : observed(parts, planned);
+  return deliveryDoing(planned.key, parts.workflow, work);
+}
+
+export function deliveryDoing(key: string, workflow: string, work: Effect.Effect<unknown, unknown>): Delivery {
   return {
-    key: planned.key,
-    workflow: parts.workflow,
+    key,
+    workflow,
     deliver: work.pipe(
       Effect.asVoid,
       Effect.catchCause((cause) => Effect.fail(failedDelivery(cause))),

@@ -35,7 +35,7 @@ For example:
 - an email provider: the tool that sends mail, and the one that lists the messages of a thread;
 - a ticketing or approvals app: the tool that adds a comment to an item, and the one that lists its comments.
 
-`deliver: agent` holds the request for an agent: an agent the person talks to reads it with `list_interactions`, and answers it with `answer_interaction` once the person says what to answer.
+`deliver: agent` holds the request for an agent: an agent the person talks to reads it with `list_interactions`, and answers it with `answer_interaction` once the person says what to answer. A member who may change the playbook can also answer it in Auto Studio, which lists the open requests, so it suits a person who answers there and wants no message anywhere else.
 
 A notification takes no answer, so no agent holds it: it goes through a connection, `deliver` naming the tool that sends it, and any connection with a tool that sends can carry it. Its run succeeds with the output `{}`, so nothing after it learns where the message landed. To post something whose replies a later step reads, write a function that [asks a system](#asking-a-system) instead: its `call` posts the message, and its output keeps the tool's answer, such as the message's `ts`, for a lookup function to read the replies by.
 

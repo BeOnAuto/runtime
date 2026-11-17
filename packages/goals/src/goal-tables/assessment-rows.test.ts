@@ -212,3 +212,12 @@ describe('the row of an assessment closed', () => {
     expect(assessmentRows.rowAfter({ state: 'unreadable' }, messageOf(overdue, 1, 'now'))).toBeUndefined();
   });
 });
+
+describe('the assessments of a goal by outcome', () => {
+  it('are kept in the order they ended, so a day, a last pass and a run of misses are each a range of one index', () => {
+    expect(assessmentRows.indexes.find(({ name }) => name === 'outcomes')).toEqual({
+      name: 'outcomes',
+      columns: ['goal', 'outcome', 'closed_at', 'row_key'],
+    });
+  });
+});

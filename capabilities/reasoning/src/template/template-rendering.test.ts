@@ -89,10 +89,10 @@ describe('the parts of a rendered template', () => {
     ).toEqual({ instructions: 'Greet Ada.', message: 'warmly' });
   });
 
-  it('writes values as Liquid does', () => {
+  it('writes a number, a boolean and nothing as Liquid does, and a list or an object as JSON through | json', () => {
     expect(
       rendered(
-        '{{ input.count }} {{ input.ok }} [{{ input.none }}] {{ input.list }} {{ input.object }} {{ input.list | json }}',
+        '{{ input.count }} {{ input.ok }} [{{ input.none }}] {{ input.list | json }} {{ input.object | json }}',
         {
           count: 3,
           ok: true,
@@ -101,7 +101,7 @@ describe('the parts of a rendered template', () => {
           object: { a: 1 },
         },
       ).message,
-    ).toBe('3 true [] a1b [object Object] ["a",1,["b"]]');
+    ).toBe('3 true [] ["a",1,["b"]] {"a":1}');
   });
 
   it('lets a template test a field the input may not have', () => {
@@ -211,7 +211,7 @@ describe('what a template reads from the input', () => {
   });
 
   it('is never a property the items inherit, named to a filter', () => {
-    expect(rendered('[{{ input.list | map: "constructor" }}]', input)).toEqual({ message: '[]' });
+    expect(rendered('{{ input.list | map: "constructor" | json }}', input)).toEqual({ message: '[null,null]' });
     expect(rendered('{{ input.list | map: "__proto__" | json }}', input)).toEqual({ message: '[null,null]' });
     expect(failureOf('{{ input.list | where: "constructor" | json }}', input)).toEqual({
       reason: 'missing_variable',
@@ -232,19 +232,52 @@ describe('a kept file a template writes as text', () => {
     address_until: null,
   };
 
-  it('fails as not text, at its part and line, written directly, through a filter or in a list, but not as JSON', () => {
+  it('fails as a kept file, at its part and line, written directly, through a filter, or in a list or an object, but not as JSON', () => {
     expect([
       failureOf('Describe\n{{ input.photo }}', { photo }),
       failureOf('{{ input.photo | upcase }}', { photo }),
       failureOf('{% system %}{{ input.photo | clip: 5 }}{% endsystem %}Go', { photo }),
       failureOf('{{ input.photos }}', { photos: [photo] }),
+      failureOf('{{ input.album }}', { album: { cover: photo } }),
       failureOf('{{ input.photo | json }} {{ input.photo.media_type }}', { photo }),
+    ]).toEqual([
+      { reason: 'kept_file', part: 'message', line: 2 },
+      { reason: 'kept_file', part: 'message', line: 1 },
+      { reason: 'kept_file', part: 'instructions', line: 1 },
+      { reason: 'kept_file', part: 'message', line: 1 },
+      { reason: 'kept_file', part: 'message', line: 1 },
+      null,
+    ]);
+  });
+});
+
+describe('a list or an object a template writes as text', () => {
+  const input = { account: { name: 'Acme', tags: ['new', 'large'] }, items: [{ name: 'a' }, { name: 'b' }] };
+
+  it('fails as not text, at its part and line, written directly, picked by a filter or in a loop', () => {
+    expect([
+      failureOf('Review\n{{ input.account }}', input),
+      failureOf('{{ input.account.tags }}', input),
+      failureOf('{% system %}{{ input.items | first }}{% endsystem %}Go', input),
+      failureOf('{% for item in input.items %}\n{{ item }}{% endfor %}', input),
+      failureOf('{{ input.items | map: "name" }}', input),
+      failureOf('{{ input.empty }}', { empty: [] }),
     ]).toEqual([
       { reason: 'not_text', part: 'message', line: 2 },
       { reason: 'not_text', part: 'message', line: 1 },
       { reason: 'not_text', part: 'instructions', line: 1 },
+      { reason: 'not_text', part: 'message', line: 2 },
       { reason: 'not_text', part: 'message', line: 1 },
-      null,
+      { reason: 'not_text', part: 'message', line: 1 },
     ]);
+  });
+
+  it('is written as JSON through | json, and by a field or a join that is text', () => {
+    expect(
+      rendered(
+        '{{ input.account | json }} {{ input.account.name }} {{ input.account.tags | join: ", " }} {% for item in input.items %}{{ item.name }}{% endfor %}',
+        input,
+      ),
+    ).toEqual({ message: '{"name":"Acme","tags":["new","large"]} Acme new, large ab' });
   });
 });

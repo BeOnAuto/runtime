@@ -30,6 +30,11 @@ export const DefinitionNameField = definitionNameFieldOf(
   'The definition name: 3 to 48 lowercase letters, digits and hyphens, starting with a letter',
 );
 
+export const TestRunField = Schema.Boolean.annotate({
+  description:
+    'true when only trying it: it and what follows count toward no goal but still do real work (call tools, ask people, send messages, change things). Without it the run counts; a judged thing cannot be taken back.',
+});
+
 export const RunsOfNameField = definitionNameFieldOf('Only the runs of the definition with this name');
 
 export const SourceField = Schema.String.annotate({

@@ -20,6 +20,7 @@ import {
   type KeyedProjection,
   type Ledger,
   type Outcome,
+  type PlaybookRequest,
   type Runnable,
 } from '@on.auto/operations';
 import {
@@ -76,9 +77,18 @@ interface PlaybookRoute {
   readonly registration: Runnable<'playbook'>;
 }
 
+interface LinkedRun {
+  readonly type: string;
+  readonly name: string;
+  readonly input: unknown;
+  readonly run_id: string;
+}
+
+export type RunLink = Pick<PlaybookRequest, 'lineage' | 'calledBy' | 'trigger'>;
+
 interface Calling {
-  (operation: PlaybookOperation, input: unknown, caller?: CallerIdentity): Promise<Outcome>;
-  (operation: PlaybookRoute, input: unknown, caller?: CallerIdentity): Promise<Outcome>;
+  (operation: PlaybookOperation, input: unknown, caller?: CallerIdentity, link?: RunLink): Promise<Outcome>;
+  (operation: PlaybookRoute, input: unknown, caller?: CallerIdentity, link?: RunLink): Promise<Outcome>;
 }
 
 export interface InteractionHarness {
@@ -93,6 +103,7 @@ export interface InteractionHarness {
   readonly ask: (name: string, input: unknown, runId: string) => Promise<Outcome>;
   readonly defineAs: (type: string, name: string, source: string) => Promise<Outcome>;
   readonly askAs: (type: string, name: string, input: unknown, runId: string) => Promise<Outcome>;
+  readonly runLinked: (run: LinkedRun, link: RunLink) => Promise<Outcome>;
   readonly cancel: (runId: string) => Promise<Outcome>;
   readonly runOf: (runId: string) => Promise<Outcome>;
   readonly performDue: (now: number) => Promise<number>;
@@ -105,12 +116,17 @@ export interface InteractionHarness {
 
 function callingIn(services: Layer.Layer<DispatcherServices>): Calling {
   const dispatcher = makeDispatcher([]);
-  function call(operation: PlaybookOperation, input: unknown, caller?: CallerIdentity): Promise<Outcome>;
-  function call(operation: PlaybookRoute, input: unknown, caller?: CallerIdentity): Promise<Outcome>;
-  function call(operation: PlaybookRoute, input: unknown, caller = acmeAdmin): Promise<Outcome> {
+  function call(
+    operation: PlaybookOperation,
+    input: unknown,
+    caller?: CallerIdentity,
+    link?: RunLink,
+  ): Promise<Outcome>;
+  function call(operation: PlaybookRoute, input: unknown, caller?: CallerIdentity, link?: RunLink): Promise<Outcome>;
+  function call(operation: PlaybookRoute, input: unknown, caller = acmeAdmin, link: RunLink = {}): Promise<Outcome> {
     return Effect.runPromise(
       dispatcher
-        .dispatchToPlaybook(operation.registration, { caller, ...alpha, input, encoding: 'json' })
+        .dispatchToPlaybook(operation.registration, { caller, ...alpha, input, encoding: 'json', ...link })
         .pipe(Effect.provide(services)),
     );
   }
@@ -174,6 +190,7 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
     ask: (name, input, runId) => askAs('interaction', name, input, runId),
     defineAs,
     askAs,
+    runLinked: (run, link) => call(defineRunDefinition(capabilities), run, acmeAdmin, link),
     cancel: (runId) => call(defineCancelRun(capabilities), { run_id: runId }),
     runOf: (runId) => call(defineGetRun(capabilities, uncheckedPages), { run_id: runId }),
     performDue,

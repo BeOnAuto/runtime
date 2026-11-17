@@ -16,6 +16,7 @@ export const gapKinds = [
   'notice_not_started',
   'notice_undelivered',
   'observation_refused',
+  'connection_missing',
 ] as const;
 
 export const GoalGapSchema = Schema.Struct({

@@ -28,6 +28,21 @@ const readOfNothing = () => Effect.die(new Error('A run on a schedule needs no r
 
 export const noReads: ChainReads<never> = { firstFactOf: readOfNothing, recordOf: readOfNothing };
 
+export function startedAs(...runs: readonly FollowedRecord[]): ChainReads<never> {
+  const facts = new Map(
+    runs.map(({ record }) => [
+      record.context.runId,
+      {
+        stream: record.stream,
+        context: record.context,
+        causationId: record.causationId,
+        correlationId: record.correlationId,
+      },
+    ]),
+  );
+  return { firstFactOf: (run) => Effect.succeed(facts.get(run)), recordOf: readOfNothing };
+}
+
 export const byHand: Partial<Context> = { by: 'person:owner' };
 
 interface Built {

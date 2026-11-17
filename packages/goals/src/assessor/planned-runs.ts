@@ -1,7 +1,28 @@
 import type { Goal } from '@on.auto/definitions/goals';
+import type { Ledger, PlaybookAddress, RecordedEvent } from '@on.auto/operations';
 
 import { assessmentIdOf, identityOfObservation } from '../assessments/assessment-identity.ts';
+import type { CallerRule } from '../chain-origins/chain-origin.ts';
+import type { ChainReads } from '../chain-origins/chain-origins.ts';
+import type { RunConditions } from '../conditions/run-conditions.ts';
 import type { Observation, RefusedObservation } from '../observations/observation.ts';
+import type { RunOutputs } from '../run-outputs/run-outputs.ts';
+import type { ContributedVersions } from './contributed-versions.ts';
+
+export interface PlanParts<E> {
+  readonly ledger: Ledger['Service'];
+  readonly chainsOf: (playbook: PlaybookAddress) => ChainReads<E>;
+  readonly callers: CallerRule;
+  readonly outputsOf: (playbook: PlaybookAddress) => RunOutputs;
+  readonly conditions: RunConditions;
+  readonly versions: ContributedVersions;
+}
+
+export interface PlannedRecord {
+  readonly playbook: PlaybookAddress;
+  readonly playbookKey: string;
+  readonly record: RecordedEvent;
+}
 
 export interface AssessmentPlanned {
   readonly key: string;
@@ -18,9 +39,19 @@ export interface RefusalPlanned {
   readonly observedKeys: readonly string[];
 }
 
+export interface StoppedPlanned {
+  readonly key: string;
+  readonly stopped: {
+    readonly assessment: string;
+    readonly run: string;
+    readonly at: number;
+    readonly reason: string;
+  };
+}
+
 export type ObservedKeysOf = (goal: string) => readonly string[];
 
-export type Planned = AssessmentPlanned | RefusalPlanned;
+export type Planned = AssessmentPlanned | RefusalPlanned | StoppedPlanned;
 
 export type RunPlan = { readonly planned: readonly Planned[] } | { readonly unread: string };
 
@@ -64,7 +95,7 @@ function assessmentsPlanned(goalsVersion: number, extracted: readonly ExtractedO
   return [...grouped.values()];
 }
 
-function byKey(planned: readonly Planned[]): RunPlan {
+export function byKey(planned: readonly Planned[]): RunPlan {
   return { planned: planned.toSorted((one, other) => (one.key < other.key ? -1 : 1)) };
 }
 

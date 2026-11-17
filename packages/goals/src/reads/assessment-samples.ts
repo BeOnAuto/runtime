@@ -11,6 +11,7 @@ import { Effect, Result, Schema } from 'effect';
 
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import { goalsLedger } from '../engine/goals-engine.ts';
+import { runStartedByAnEventIn } from './run-samples.ts';
 
 const sales = { org: 'acme', playbook: 'sales' };
 
@@ -148,6 +149,7 @@ export interface AssessmentBook {
   ) => Promise<void>;
   readonly overdue: (id: string, since: number) => Promise<void>;
   readonly ended: (id: string, reason: 'no_result' | 'goal_retired' | 'playbook_retired', at: number) => Promise<void>;
+  readonly stopped: (id: string, run: string, at: number, reason: string) => Promise<void>;
   readonly noticeStarted: (id: string, change: 'passed' | 'failed' | 'overdue', at: number) => Promise<void>;
   readonly noticeEnded: (
     change: 'passed' | 'failed' | 'overdue',
@@ -157,6 +159,7 @@ export interface AssessmentBook {
   ) => Promise<void>;
   readonly refused: (goal: string, workflow: string, at: number, detail?: string) => Promise<void>;
   readonly goalsSaved: (goals: readonly Goal[]) => Promise<void>;
+  readonly runStartedByAnEvent: (run: string, cause: string, at: number) => Promise<void>;
   readonly inThePlaybook: <A>(work: Effect.Effect<A, never, PlaybookReader | PlaybookContext>) => Promise<A>;
 }
 
@@ -239,6 +242,7 @@ export function assessmentBookOf(): AssessmentBook {
       toIt(id, 'goal_assessed', { verdict, at: instantText(at), by, told: 'now' }, at),
     overdue: (id, since) => toIt(id, 'goal_overdue', { since: instantText(since), told: 'now' }, since),
     ended: (id, reason, at) => toIt(id, 'goal_assessment_ended', { reason }, at),
+    stopped: (id, run, at, reason) => toIt(id, 'goal_stopped', { run, at: instantText(at), reason }, at),
     noticeStarted: (id, change, at) => toIt(id, 'goal_notice_started', { change, run: `notice-${change}` }, at),
     noticeEnded: (change, type, data, at) => append(`runs/notice-${change}`, type, data, at),
     refused: (goal, workflow, at, detail = refusedOutput) =>
@@ -248,6 +252,7 @@ export function assessmentBookOf(): AssessmentBook {
         { run: `refused-${String(at)}`, detail },
         at,
       ),
+    runStartedByAnEvent: runStartedByAnEventIn(service),
     goalsSaved: (goals) =>
       append('goals/playbook', 'playbook_goals_saved', { source: 'goals', goals, version: 1 }, firstDay),
     inThePlaybook: (work) =>

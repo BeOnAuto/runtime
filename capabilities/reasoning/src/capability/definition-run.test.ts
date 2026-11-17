@@ -298,6 +298,22 @@ describe('a kept file a prompt writes', () => {
   });
 });
 
+describe('a list or an object a prompt writes as text', () => {
+  it('is refused in its own words, and a kept file in the words of its own, and the model is sent nothing', async () => {
+    const { running, requests } = reasoningOver();
+
+    const [object, list, file] = await Promise.all([
+      running(documentOf(sonnet, 'Review {{ input.account }}'), { account: { name: 'Acme' } }),
+      running(documentOf(sonnet, 'Review {{ input.account }}'), { account: ['Acme', 'Globex'] }),
+      running(documentOf(sonnet, 'Review {{ input.account }}'), { account: photo.reference }),
+    ]);
+
+    expect([object, list, file]).toEqual([refusedAt(''), object, refusedAt('')]);
+    expect(file).not.toEqual(object);
+    expect(requests()).toEqual([]);
+  });
+});
+
 describe('a run whose model a gateway without structured outputs serves', () => {
   it('answers the JSON the model wrote inside a code fence, and records that the call described the schema', async () => {
     const { exit, facts } = await runAnswered('```json\n{"verdict":"approve"}\n```');

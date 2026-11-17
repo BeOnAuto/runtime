@@ -3,6 +3,7 @@ import { describe } from 'vitest';
 
 import { keptFactsWritten, recordHoldingItsPrompt } from '../testing/kept-facts-written.ts';
 import { acted, caller, onTheRun, calledByAWorkflow, usage, toolCall, modelCall } from '../testing/run-contexts.ts';
+import { startedAsATest } from '../testing/started-as-a-test.ts';
 import { RunEventSchema } from './run-events.ts';
 
 const ofTheAnswer = { result_bytes: 512, result_sha256: 'd4e5f6', shown_bytes: 256, duration_ms: 140 };
@@ -290,7 +291,7 @@ const releases: Readonly<Record<string, readonly (typeof RunEventSchema.Type)[]>
     { type: 'run_rejected', data: { rejection: { ...stoppedAtALimit, because: 'max_tool_calls' } }, context: onTheRun },
   ],
   '0.60.0': startedByAGoal,
-  '0.63.0': [{ type: 'request_answered', data: { ...inAThread, delivered: true }, context: onTheRun }],
+  '0.63.0': [startedAsATest, { type: 'request_answered', data: { ...inAThread, delivered: true }, context: onTheRun }],
 };
 
 describe('the facts a playbook records on the stream of a run', () => {

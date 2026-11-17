@@ -1,0 +1,12 @@
+{
+  "type": "goal_stopped",
+  "data": {
+    "run": "019a8f2e-7b6c-7d5e-8f40-3a2b1c0d9e8f",
+    "at": "2026-11-09T10:00:00.000Z",
+    "reason": "The lookup of the experiment failed, so nothing was measured."
+  },
+  "context": {
+    "at": "2026-11-09T18:00:00.000Z",
+    "by": "playbook:alpha"
+  }
+}

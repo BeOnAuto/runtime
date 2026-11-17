@@ -42,6 +42,12 @@ const MarkSchema = Schema.Struct({
   says: Schema.optionalKey(Schema.String.annotate({ description: 'One sentence of evidence' })),
 }).annotate({ description: 'The first mark of a milestone' });
 
+const EndedMarkSchema = Schema.Struct({
+  milestone: Schema.String.annotate({ description: 'The id of the milestone marked' }),
+  at: Instant('When it was first marked'),
+  run: Schema.String.annotate({ description: 'The id of the run that marked it' }),
+}).annotate({ description: 'The first mark of a milestone' });
+
 const MeasurementSchema = Schema.Struct({
   value: Schema.Finite.annotate({ description: 'The number' }),
   final: Schema.Boolean.annotate({ description: 'Whether the number will not change any more for its window' }),
@@ -57,6 +63,14 @@ const FinalMeasurementSchema = Schema.Struct({
   at: Instant('When the run that reported it ended'),
   run: Schema.String.annotate({ description: 'The id of the run that reported it' }),
 }).annotate({ description: 'The latest final measurement' });
+
+const StoppedSchema = Schema.Struct({
+  at: Instant('When that run ended'),
+  run: Schema.String.annotate({ description: 'The id of that run' }),
+  reason: Schema.optionalKey(Schema.String.annotate({ description: "Why, in the run's words" })),
+}).annotate({
+  description: 'Set when a run ended without the result it needs; it stays open until judged at its due time',
+});
 
 const JudgedBySchema = Schema.Literals(['crossing', 'final', 'deadline']).annotate({
   description:
@@ -90,11 +104,12 @@ export const AssessmentSchema = Schema.Struct({
   overdue_since: Schema.optionalKey(
     Instant('Since when it is overdue: its deadline passed with no final measurement that counts'),
   ),
+  stopped: Schema.optionalKey(StoppedSchema),
   goals_version: Schema.Int.annotate({ description: 'The version of the goals it opened under' }),
   notices: Schema.Array(NoticeSchema).annotate({ description: 'The notices sent of it' }),
 }).annotate({ identifier: 'GoalAssessment', description: 'One judgement of a goal' });
 
-const ClosedAssessmentSchema = Schema.Struct({
+export const ClosedAssessmentSchema = Schema.Struct({
   id: Schema.String.annotate({ description: 'The id of the assessment' }),
   outcome: Schema.Literals(['passed', 'failed', 'no_result']).annotate({
     description: 'How it ended; no_result only for what an earlier release ended with no result',
@@ -104,7 +119,51 @@ const ClosedAssessmentSchema = Schema.Struct({
   per: Schema.optionalKey(SubjectSchema),
   window: Schema.optionalKey(AssessmentWindowSchema),
   value: Schema.optionalKey(Schema.Finite.annotate({ description: 'The number it was judged on' })),
+  rule: Schema.optionalKey(
+    Schema.Struct({ settles: SettlesSchema, target: TargetSchema }).annotate({
+      description: 'How it was judged, as pinned when it opened',
+    }),
+  ),
+  milestones: Schema.optionalKey(
+    Schema.Array(MilestoneSchema).annotate({ description: 'The milestones pinned when it opened' }),
+  ),
+  marks: Schema.optionalKey(Schema.Array(EndedMarkSchema).annotate({ description: 'The milestones it had marked' })),
+  measurement: Schema.optionalKey(MeasurementSchema),
+  final_measurement: Schema.optionalKey(FinalMeasurementSchema),
 }).annotate({ description: 'An assessment that ended' });
+
+const DayCountSchema = Schema.Struct({
+  day: Schema.String.annotate({ description: 'The day, as YYYY-MM-DD in the time zone asked' }),
+  judged: Count('How many were judged that day'),
+  passed: Count('How many of them passed'),
+  says: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'The sentence of evidence of the latest judged that day on its own measurement (a final one, or the one it crossed on); left out when none was',
+    }),
+  ),
+}).annotate({ description: 'What was judged on one day' });
+
+const JudgedDaysSchema = Schema.Struct({
+  time_zone: Schema.String.annotate({ description: 'The time zone the days are counted in, as asked' }),
+  counts: Schema.Array(DayCountSchema).annotate({
+    description:
+      'Newest first: each day of the range asked, empty days too, none before the first was judged; none when nothing was',
+  }),
+}).annotate({ description: 'What was judged each day; only when the read is asked with a time_zone' });
+
+const LastPassedSchema = Schema.Struct({
+  id: Schema.String.annotate({ description: 'The id of the assessment' }),
+  at: Instant('When it passed'),
+}).annotate({ description: 'The latest assessment that passed; left out when none ever did' });
+
+const MissesSinceSchema = Schema.Struct({
+  at: Instant('When the first of them ended'),
+  count: Count('How many failed or ended with no result since the last pass'),
+}).annotate({
+  description:
+    'The run of misses since the last pass, or since the first if none passed; left out when the latest that was judged passed',
+});
 
 export const AssessmentsSchema = Schema.Struct({
   current: Schema.NullOr(AssessmentSchema).annotate({
@@ -112,6 +171,7 @@ export const AssessmentsSchema = Schema.Struct({
       'The newest open assessment that has an observation, else the newest closed, else the newest open; null when there is none',
   }),
   open_count: Count('How many assessments are open'),
+  stopped_count: Schema.optionalKey(Count('How many open ones are stopped')),
   in_flight: Schema.Array(AssessmentSchema).annotate({
     description: `The open assessments, at most ${String(mostInFlight)}: overdue first, then by due, then newest`,
   }),
@@ -129,6 +189,9 @@ export const AssessmentsSchema = Schema.Struct({
     latest: Schema.Array(ClosedAssessmentSchema).annotate({
       description: `The latest that ended, at most ${String(mostClosedShown)}`,
     }),
+    days: Schema.optionalKey(JudgedDaysSchema),
+    last_passed: Schema.optionalKey(LastPassedSchema),
+    misses_since: Schema.optionalKey(MissesSinceSchema),
   }).annotate({ description: 'The assessments that ended' }),
 }).annotate({ description: 'How the goal is being judged' });
 
@@ -137,6 +200,7 @@ export type Assessments = typeof AssessmentsSchema.Type;
 export const noAssessments: Assessments = {
   current: null,
   open_count: 0,
+  stopped_count: 0,
   in_flight: [],
   by_milestone: {},
   waiting: {},

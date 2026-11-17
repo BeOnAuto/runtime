@@ -90,7 +90,6 @@ describe('the worked examples of the goals guide, saved as the guide says on a s
       'milestone_unmarked',
       'window_never_starts',
       'milestone_unmarked',
-      'milestone_unmarked',
       'notice_function_missing',
     ]);
     expect(saves.map(({ status }) => status)).toEqual([201, 201, 201]);

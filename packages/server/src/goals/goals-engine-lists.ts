@@ -1,5 +1,11 @@
 import type { AppRuntime } from '@on.auto/api';
-import { goalsHostPartsWhere, type GoalsHostParts, type GoalsOperation, type GoalsPorts } from '@on.auto/goals';
+import {
+  goalsHostPartsWhere,
+  type GoalsHostParts,
+  type GoalsOperation,
+  type GoalsPorts,
+  serverConnectedThrough,
+} from '@on.auto/goals';
 import { Ledger, PlaybookRegistry } from '@on.auto/operations';
 import type { Evaluations } from '@on.auto/workflow-engine';
 import type { DueWork, FollowerConsumers } from '@on.auto/workflow-host';
@@ -45,3 +51,5 @@ export async function servedWithTheGoalsEngine<Operation extends GoalsOperation>
     playbookOperations: [...playbookOperations, ...engine.playbookOperations],
   };
 }
+
+export { serverConnectedThrough };

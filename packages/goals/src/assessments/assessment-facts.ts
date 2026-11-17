@@ -94,6 +94,8 @@ const GoalAssessmentEndedSchema = Schema.Struct({
   reason: Schema.Literals(['no_result', 'goal_retired', 'playbook_retired']),
 });
 
+const GoalStoppedSchema = Schema.Struct({ run: Schema.String, at: InstantText, reason: Schema.String });
+
 const GoalObservationRefusedSchema = Schema.Struct({ run: Schema.String, detail: Schema.String });
 
 export const goalFactData = {
@@ -105,6 +107,7 @@ export const goalFactData = {
   goal_notice_refused: GoalNoticeRefusedSchema,
   goal_summary_started: GoalSummaryStartedSchema,
   goal_assessment_ended: GoalAssessmentEndedSchema,
+  goal_stopped: GoalStoppedSchema,
   goal_observation_refused: GoalObservationRefusedSchema,
 } as const;
 
@@ -120,6 +123,7 @@ export const AssessmentFactSchema = Schema.Union([
   decidedOf('goal_notice_started', GoalNoticeStartedSchema),
   decidedOf('goal_notice_refused', GoalNoticeRefusedSchema),
   decidedOf('goal_assessment_ended', GoalAssessmentEndedSchema),
+  decidedOf('goal_stopped', GoalStoppedSchema),
 ]);
 
 export type AssessmentFact = typeof AssessmentFactSchema.Type;
@@ -131,3 +135,5 @@ export type GoalObserved = typeof GoalObservedSchema.Type;
 export type JudgedBy = (typeof GoalAssessedSchema.Type)['by'];
 
 export type EndReason = (typeof GoalAssessmentEndedSchema.Type)['reason'];
+
+export type GoalStopped = typeof GoalStoppedSchema.Type;

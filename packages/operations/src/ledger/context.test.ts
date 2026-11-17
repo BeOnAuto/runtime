@@ -122,6 +122,14 @@ describe('the context a fact carries', () => {
     expect(contextOf(identified)).toEqual(identified);
   });
 
+  it('holds that a run was started as a test, on the context of a run and of any recorded message, and nothing but true', () => {
+    const tried = { ...ofACall, test: true };
+
+    expect(Schema.decodeUnknownSync(RunContextSchema)(tried)).toEqual(tried);
+    expect(contextOf(tried)).toEqual(tried);
+    expect(() => contextOf({ ...ofACall, test: false })).toThrow('Expected true');
+  });
+
   it('refuses a run context without its definition, a definition context without its version, and an emitted one without its depth', () => {
     const { depth, ...withoutDepth } = ofACall;
     const { definitionVersion, ...withoutVersion } = ofACall;

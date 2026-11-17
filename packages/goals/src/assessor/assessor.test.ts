@@ -3,7 +3,17 @@ import { describe, expect, it } from 'vitest';
 
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import { assessmentsName } from '../goal-tables/assessment-rows.ts';
-import { built, byHand, experimentId, lacking, measuring, noReads, results } from './assessor-fixtures.ts';
+import {
+  built,
+  byHand,
+  calledBy,
+  experimentId,
+  lacking,
+  measuring,
+  noReads,
+  results,
+  startedAs,
+} from './assessor-fixtures.ts';
 import {
   bookOf,
   deliveredAll,
@@ -89,7 +99,7 @@ describe('the playbooks the assessor wants', () => {
 
     expect({ name: assessor.name, types: assessor.types, sweeps: assessor.skippedAfterSweeps }).toEqual({
       name: assessorName,
-      types: ['run_succeeded'],
+      types: ['run_succeeded', 'run_failed', 'run_rejected'],
       sweeps: 20,
     });
     expect([before, await wants(salesKey), await wants('org/acme/')]).toEqual([false, true, false]);
@@ -117,6 +127,31 @@ describe('a scheduled run of a contributing workflow', () => {
       'goal_assessed',
     ]);
     expect(assessor.spent()).toMatchObject({ plans: 1, versionReads: 1, conditions: { sessions: 0 } });
+  });
+});
+
+describe('a run a person began by hand', () => {
+  it('counts as a scheduled run does, and opens and observes the assessments it touches', async () => {
+    const hand = finished({ id: 'hand', data: results(0, 1), context: byHand });
+    const { book, ports } = await built(startedAs(hand));
+
+    const delivered = await deliveredAll(assessorOf(ports), hand);
+    const rows = await book.rows(assessmentsName);
+
+    expect(delivered.keys).toEqual([`a:${experimentId('MAR-41')}`, `a:${experimentId('MAR-42')}`].toSorted());
+    expect(rows[experimentId('MAR-42')]).toMatchObject({ per_id: 'MAR-42', verdict: 'passed' });
+  });
+
+  it('is delivered again later when who began it cannot be read, and opens nothing meanwhile', async () => {
+    const { book, ports } = await built();
+
+    const delivered = await deliveredAll(
+      assessorOf(ports),
+      finished({ id: 'hand', data: results(1), context: byHand }),
+    );
+
+    expect(delivered).toMatchObject({ keys: [], failed: ['!'] });
+    expect(Object.keys(await book.rows(assessmentsName))).toEqual([]);
   });
 });
 
@@ -151,11 +186,10 @@ describe('a run delivered twice, or in pages', () => {
 });
 
 describe('a run that does not count', () => {
-  it('observes nothing when a person began it, it is no workflow, or it did not succeed', async () => {
+  it('observes nothing when it is no workflow, or it did not succeed', async () => {
     const { book, ports } = await built();
     const assessor = assessorOf(ports);
     const records = [
-      finished({ id: 'hand', data: results(1), context: byHand }),
       finished({ id: 'failed', type: 'run_failed' }),
       finished({ id: 'function', context: { ...onSchedule, definitionType: 'reasoning' } }),
       lacking('unnamed', 'definitionName'),
@@ -169,6 +203,23 @@ describe('a run that does not count', () => {
     expect(delivered.map(({ keys }) => keys)).toEqual(records.map(() => []));
     expect(Object.keys(await book.rows(assessmentsName))).toEqual([]);
     expect(assessor.spent().versionReads).toBe(1);
+  });
+
+  it('observes nothing when it was started as a test, and nothing for a run it called', async () => {
+    const tried = finished({ id: 'tried', data: results(1), context: { ...byHand, test: true } });
+    const child = finished({ id: 'child', data: results(1), context: byHand });
+    const { book, ports } = await built(startedAs(tried, calledBy(child, 'run-tried')));
+    const assessor = assessorOf(ports);
+
+    const delivered = await Promise.all(
+      [tried, calledBy(child, 'run-tried')].map((record) => deliveredAll(assessor, record)),
+    );
+
+    expect(delivered.map(({ keys, failed }) => [keys, failed])).toEqual([
+      [[], []],
+      [[], []],
+    ]);
+    expect(Object.keys(await book.rows(assessmentsName))).toEqual([]);
   });
 
   it('reads a version without contributes once, and reads nothing more for it', async () => {

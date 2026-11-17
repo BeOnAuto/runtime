@@ -145,7 +145,7 @@ Rules for reading values:
 - A field the input does not have stops the run with `invalid_input`, naming the field and the line.
 - Two places may read a missing field without stopping the run: a condition of `if`, `elsif` or `unless`, and the `default` filter. So a template can test a field that may be absent: `{% if input.vip %}…{% endif %}`, `{{ input.nickname | default: "friend" }}`.
 - Only the input's own fields can be read: `input.constructor` is a missing field.
-- A list renders as its items with no separators, and an object renders as `[object Object]`. Use `{{ input.account | json }}` to render JSON.
+- A list or an object written whole stops the run with `invalid_input`, naming the line. Write one of its fields, such as `{{ input.account.name }}`, or render it as JSON with `{{ input.account | json }}`.
 
 ### The system block
 

@@ -48,9 +48,9 @@ Then write one proposal as an ordinary message to the person. Include: the goal 
 
 Create the playbook only after their yes to the proposal, and never earlier just to reach another tool; the Studio link isn't needed before it. Then record that yes as [After the create](#after-the-create-show-the-saved-goals-and-record-the-yes) says. Never change a goal to suit how you built something.
 
-1. **What the playbook should achieve for them.** Ask what change they want from it. Their words for it, in one sentence, are the goal's statement. A statement that only repeats the playbook's name or description is refused.
+1. **What the playbook should achieve for them.** Ask what change they want from it. Their words for it, in one sentence, are the goal's statement: save their sentence, not your rewording of it. A statement that only repeats the playbook's name or description is refused, so the description says what the playbook does, not this sentence.
 2. **What to call it.** A short name for the goal, two to four words from their own, such as "Catering replies" or "Daily controls". That is the goal's `name`, the title the person sees it under. Suggest one in the proposal, even when the person has said everything else.
-3. **How they will know it worked.** Ask what would convince them. That is one number and a target, such as at least one paying customer from each experiment, or no failing control in a day. When they have no number in mind, the proposal suggests one that fits what they said. Ask too what to call a pass and a fail in their words, such as "Brought a customer" and "Brought no customer". When it is judged day by day and the work happens on some days only, such as working days, ask which days.
+3. **How they will know it worked.** Ask what would convince them. That is one number and a target, such as at least one paying customer from each experiment, or no failing control in a day. The number is the one they said they would judge by, in their unit: "within 24 hours" is the hours it took, at most 24, not a count of replies. If you cannot measure that, say so and ask; never measure something easier instead. When they have no number in mind, the proposal suggests one that fits what they said. Ask too what to call a pass and a fail in their words, such as "Brought a customer" and "Brought no customer". When it is judged day by day and the work happens on some days only, such as working days, ask which days.
 
 <!-- with messages -->
 
@@ -69,10 +69,11 @@ Auto does not send messages about goals here yet. Do not ask the person whether,
 
 <!-- end -->
 
-Two more questions shape the goal when the work comes as a stream of things:
+More questions shape the goal when the work comes as a stream of things:
 
-- **Is it judged thing by thing?** Experiments, invoices, tickets and orders are each judged on their own. Ask what one of them is called. That word is the goal's `per`.
-- **What has to happen to one of them, start to finish, and which of those steps are theirs?** These are the goal's milestones, three to seven of them: the points where the person acts and the points where Auto collects something. Each one is a segment of the goal's ring in Studio.
+- **Is it judged thing by thing?** Experiments, invoices, tickets and orders are each judged on their own. Ask what one of them is called. That word is the goal's `per`. It is the person's own word, never one Auto uses for its own parts (run, workflow, step, event, function, job): they read it as the name of their thing all over Studio.
+- **How often does one happen?** Each judged thing is a row the person reads. Work that happens many times a day, such as a check every minute, is judged by the day or the week unless the person asks for each one to be judged. Say back what they will see, such as "one result a day: how many of the day's checks passed", before you save.
+- **What happens to one of them, start to finish, and which of those are theirs?** These are the goal's milestones, three to seven of them, each an event that really happens, named as what happened, such as "Launched" or "Result in". Fewer true milestones beat more hopeful ones. A milestone the person does needs a request that asks them and marks it on their answer; with nothing asking them, leave it out. They can answer any request in Studio, so one held for an agent, `deliver: agent`, asks them there with no connection. Each one is a segment of the goal's ring in Studio.
 
 <!-- with messages -->
 
@@ -138,6 +139,8 @@ The answers of create_playbook, update_playbook and get_playbook carry `goals`: 
 
 <!-- end -->
 
+The answers of create_playbook, update_playbook, create_definition and update_definition can also carry `notices`: what to double-check in what you just saved, such as a `per` that is one of Auto's own words, and what the person will see. Read each before you go on: change what you saved, or carry on as `before_going_on` says.
+
 <!-- without messages -->
 
 The same holds when you plan the work after the yes. If the person asked to be told about results, your first words about it are that Auto doesn't send messages about goals yet and that their results are in Studio. Only then ask whether they want a post built into the playbook, and where. Never ask it if they didn't ask to be told.
@@ -197,7 +200,7 @@ The goals argument is text: the list of goals alone, with no key around it, writ
 
 The window:
 
-- `after` names a milestone. The window starts when that milestone is first marked for the thing, and closes `for` later.
+- `after` names a milestone. The window starts when that milestone is first marked for the thing, and closes `for` later. A run marks as it ends, so mark the start in a run that does not wait for the person.
 - `calendar` is `day`, `week` or `month`, in `time_zone` (UTC by default; the same time zone names a workflow's `cron` takes). A week starts on Monday. A calendar window is not allowed together with `per`.
 - `days` lists the days of the week a `calendar: day` window is judged on, such as `[monday, tuesday, wednesday, thursday, friday]`. The other days have no window, so nothing is judged or missed on them. Leave it out to judge every day.
 - `grace` is how long after the close a final measurement may still arrive. It is one hour, `PT1H`, by default. Its verdict can come that much later, so put any grace you choose to the person with the window, as you would a target.
@@ -242,9 +245,8 @@ An owner runs experiments to win customers. Each experiment is judged on its own
   milestones:
     - { id: chosen, label: Idea chosen, by: person }
     - { id: prepared, label: Package prepared, by: auto }
-    - { id: live, label: Taken live, by: person }
-    - { id: measured, label: Measured, by: auto }
-    - { id: concluded, label: Lesson kept, by: person }
+    - { id: live, label: Launched, by: auto }
+    - { id: measured, label: Result in, by: auto }
 <!-- with messages -->
   notify:
     passed: now
@@ -302,7 +304,7 @@ How a judging ends:
 
 - With `on_crossing` and `at_least`, a measurement at or above the target while the window is open passes immediately. With `at_most`, a measurement above it fails immediately.
 - At the close plus its grace, the latest final measurement decides, for both kinds of `settles`.
-- When no final measurement has arrived by then, the judging becomes overdue. A final measurement that arrives later still decides it, but only when its `as_of` lies at or before the window's close. A measurement with no `as_of` is true as of when its run ended, so one from a run that ended after the close does not decide it, and no message follows. One that is still overdue one more window later fails: its deadline passed with nothing that counts, so it is a miss with no number. A late measurement is still recorded, but it never turns the miss into a pass.
+- When no final measurement has arrived by then, the judging becomes overdue. A final measurement that arrives later still decides it, but only when its `as_of` lies at or before the window's close. A measurement with no `as_of` is true as of when its run ended, so one from a run that ended after the close does not decide it, and no message follows. One that is still overdue one more window later fails: its deadline passed with nothing that counts, so it is a miss with no number. A late measurement is still recorded, but it never turns the miss into a pass. So tell the person that a thing nothing measured, such as one waiting on an answer that never came, shows overdue once its close and grace pass, and is missed only one window later.
 - A verdict is final. Later measurements change nothing, though milestones are still marked.
 
 <!-- end -->
@@ -311,7 +313,7 @@ How a judging ends:
 
 - With `on_crossing` and `at_least`, a measurement at or above the target while the window is open passes immediately. With `at_most`, a measurement above it fails immediately.
 - At the close plus its grace, the latest final measurement decides, for both kinds of `settles`.
-- When no final measurement has arrived by then, the judging becomes overdue. A final measurement that arrives later still decides it, but only when its `as_of` lies at or before the window's close. A measurement with no `as_of` is true as of when its run ended, so one from a run that ended after the close does not decide it. One that is still overdue one more window later fails: its deadline passed with nothing that counts, so it is a miss with no number. A late measurement is still recorded, but it never turns the miss into a pass.
+- When no final measurement has arrived by then, the judging becomes overdue. A final measurement that arrives later still decides it, but only when its `as_of` lies at or before the window's close. A measurement with no `as_of` is true as of when its run ended, so one from a run that ended after the close does not decide it. One that is still overdue one more window later fails: its deadline passed with nothing that counts, so it is a miss with no number. A late measurement is still recorded, but it never turns the miss into a pass. So tell the person that a thing nothing measured, such as one waiting on an answer that never came, shows overdue once its close and grace pass, and is missed only one window later.
 - A verdict is final. Later measurements change nothing, though milestones are still marked.
 
 <!-- end -->
@@ -337,10 +339,15 @@ Each entry reads the run's output when the run ends. Pointers start with a slash
 | `as_of`    | No                      | A pointer to the instant the measurement is true through, with its offset; when the run ended, if left out. Needs `measures`   |
 | `says`     | No                      | A pointer to one sentence of evidence the person reads, at most two hundred characters                                         |
 
+- `title` is the name the person would call the thing, such as "Cold email batch to dental clinics": they read it in every list and heading. Never an id, a run id or a UTC time. The same holds for `says` and for every question a request puts to the person: dates and times in words in the person's time zone, such as "Tuesday, November 17 at 9:20 AM", a name rather than an email address, and no id. A thing with no name a person would use is probably not the thing to judge.
+- `says` is what the person reads about the thing in Studio: one plain sentence, written for them and not as a log line, with the numbers and the names of what is missing or failed, such as "9 of 14 checks reported. Missing: the backup restore test and the audit trail."
+- Give `link` wherever the thing lives somewhere the person can open.
+- `marks` ticks a milestone only for a thing it really happened to, so its `when` must be true for that thing.
 - At most 8 entries. One workflow may serve several goals, or one goal several ways.
 - An entry whose `when` is false, whose `each` is empty, or whose `per_id` finds nothing, records nothing, silently.
 - `each` takes at most a hundred items, and names each thing once.
 - Every milestone of a goal, and its measure, need a workflow that marks or reports them. Until one does, the goal shows a gap.
+- A thing whose run fails, or whose final measurement can no longer meet an `on_crossing` target, shows as stopped in Studio, with the run's reason. It stays open and is judged at its due time; a later run that marks its next milestone, or a measurement that is not final, clears it. A failed run reaches only a thing marked or measured by a run it follows from, such as the run whose event started it, or, when its workflow contributes to the goal, by a run the same outside event started. So if preparing the package were its own workflow, started by an event the Monday workflow publishes once the idea is chosen, its failure would show that experiment as stopped with the reason; a run started by its schedule, or one that fails before anything marked the thing, stops nothing.
 
 ### final and as_of
 
@@ -370,14 +377,14 @@ contributes:
     marks: prepared
 ```
 
-The second starts every hour and reads the tracker; choose a schedule from how often the source changes and how soon the person needs to know. Its output holds `experiments`, one item for each experiment, with its `id`, `title`, `url`, `live`, `customers`, `closed`, `measured_through`, `evidence` and `lesson_kept`.
+The second starts every hour and reads the tracker; choose a schedule from how often the source changes and how soon the person needs to know. Its output holds `experiments`, one item for each experiment, with its `id`, `title`, `url`, `live`, `customers`, `closed`, `measured_through` and `evidence`.
 
 ```
 schedule:
   every: PT1H
 contributes:
   - goal: paying-customers
-    purpose: Sees when an experiment is taken live.
+    purpose: Sees when an experiment goes live.
     each: /experiments
     per_id: /id
     when: ${ $data.live === true }
@@ -398,12 +405,6 @@ contributes:
     per_id: /id
     when: ${ $data.closed === true }
     marks: measured
-  - goal: paying-customers
-    purpose: Sees when the owner has written down the lesson.
-    each: /experiments
-    per_id: /id
-    when: ${ $data.lesson_kept === true }
-    marks: concluded
 ```
 
 ### The contribution for the daily checks
@@ -481,21 +482,21 @@ Its other workflows keep running, and each shows as a gap until you next save it
 
 ## Which runs count
 
-A run counts as evidence only when its chain began with a schedule or with a call made with an API key: a workflow's `cron` or `every`, or a run started or an event published with an API key, and the runs, events and requests that follow from those.
+These runs count as evidence: a workflow's `cron` or `every`, a run the person starts in Studio, a run you start or an event you publish, signed in as the person or with an API key, and the runs, events and requests that follow from those. A run is a test only when started with run_definition and `test: true`; it never counts, nor anything that follows from it. A test still does real work: it calls tools, asks people, sends messages and changes things outside the playbook, as any run does. It only keeps the runs from counting.
 
 <!-- with messages -->
 
-A run that a signed-in person began counts for nothing. A run you start with run_definition while signed in as the person, one the person starts in Studio, a workflow such a run calls or triggers, and an event you publish while signed in as the person never open a judging and never send a message. A run you start or an event you publish with an API key does count: it can open a judging and send the person a message, so never test a goal's workflow with an API key. You cannot test a goal by running its workflow: tell the person the first judging opens when the schedule next runs, and show them the `studio` link to watch for it. On a laptop runtime in local mode only schedules count.
+When you run a goal's workflow to try it, pass `test: true`; to do the real job, leave it out. Without it the run counts: it can open a judging and send the person a message, and a judged thing cannot be taken back. The answer of a run you start that counts says so. A test run that succeeds shows the workflow ran, not the goal judged: tell the person the next run that counts, such as the schedule's, can open the first judging, and show them the `studio` link to watch for it.
 
 <!-- end -->
 
 <!-- without messages -->
 
-A run that a signed-in person began counts for nothing. A run you start with run_definition while signed in as the person, one the person starts in Studio, a workflow such a run calls or triggers, and an event you publish while signed in as the person never open a judging. A run you start or an event you publish with an API key does count: it can open a judging, so never test a goal's workflow with an API key. You cannot test a goal by running its workflow: tell the person the first judging opens when the schedule next runs, and show them the `studio` link to watch for it. On a laptop runtime in local mode only schedules count.
+When you run a goal's workflow to try it, pass `test: true`; to do the real job, leave it out. Without it the run counts: it can open a judging, and a judged thing cannot be taken back. The answer of a run you start that counts says so. A test run that succeeds shows the workflow ran, not the goal judged: tell the person the next run that counts, such as the schedule's, can open the first judging, and show them the `studio` link to watch for it.
 
 <!-- end -->
 
-A person's own milestone is marked when they answer a request inside a run that a schedule or an API key began. The run waits for their answer, its output then carries what they said, and the contribution's `marks` and `when` read it. That is how the experiments workflow above marks `chosen`. A milestone can also be marked when a scheduled run sees what the person did, as the hourly workflow sees an experiment taken live.
+A person's own milestone is marked when they answer a request inside a run that counts. The run waits for their answer, its output then carries what they said, and the contribution's `marks` and `when` read it. That is how the experiments workflow above marks `chosen`. A milestone Auto only sees happen, as the hourly workflow sees an experiment go live, is `by: auto`.
 
 ## Gaps, and who fixes each
 
@@ -507,6 +508,7 @@ Each gap carries `kind`, `detail` and `fixed_by`. Where `fixed_by` is `person`, 
 | ------------------------------- | ------ | --------------------------------------------------------------------------------------------------- |
 | `no_goal`                       | Person | Learn the goals with the person, send them with update_playbook and record their yes                |
 | `no_milestones`                 | Person | Ask what has to happen to one thing, start to finish, and which steps are theirs                    |
+| `connection_missing`            | Person | Put its `ask` to the person: `Connect <server> in Studio`                                           |
 | `measure_unreported`            | Agent  | Give a workflow a contribution with `measures`                                                      |
 | `measure_paused`                | Agent  | Resume a paused workflow that reports it, or let an active one report it                            |
 | `measure_never_final`           | Agent  | Give the workflow that knows the measurement is complete a `final`                                  |
@@ -527,6 +529,7 @@ Each gap carries `kind`, `detail` and `fixed_by`. Where `fixed_by` is `person`, 
 | ------------------------------- | ------ | ------------------------------------------------------------------------------------ |
 | `no_goal`                       | Person | Learn the goals with the person, send them with update_playbook and record their yes |
 | `no_milestones`                 | Person | Ask what has to happen to one thing, start to finish, and which steps are theirs     |
+| `connection_missing`            | Person | Put its `ask` to the person: `Connect <server> in Studio`                            |
 | `measure_unreported`            | Agent  | Give a workflow a contribution with `measures`                                       |
 | `measure_paused`                | Agent  | Resume a paused workflow that reports it, or let an active one report it             |
 | `measure_never_final`           | Agent  | Give the workflow that knows the measurement is complete a `final`                   |

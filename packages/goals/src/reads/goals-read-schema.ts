@@ -2,6 +2,8 @@ import { WeekdaySchema } from '@on.auto/definitions/goals';
 import { GoalGapSchema } from '@on.auto/playbooks';
 import { Schema } from 'effect';
 
+import { DaySchema, TimeZoneSchema } from '../results/day-fields.ts';
+import { defaultDays, mostDays } from '../results/judged-days.ts';
 import { AssessmentsSchema, MilestoneSchema, SettlesSchema, TargetSchema } from './assessments-schema.ts';
 
 const ToldSchema = Schema.Literals(['now', 'summary', 'quiet']).annotate({
@@ -56,6 +58,16 @@ const ContributionSchema = Schema.Struct({
   measures: Schema.Boolean.annotate({ description: 'Whether it reports the measure' }),
 }).annotate({ description: 'What one workflow does for the goal' });
 
+const ConnectionSchema = Schema.Struct({
+  server: Schema.String.annotate({ description: 'The name a function gives the server in server/tool' }),
+  name: Schema.String.annotate({ description: 'The name to show the person' }),
+  connected: Schema.Boolean.annotate({
+    description:
+      'true when it is connected and offered to this playbook, false when the person still has to connect it',
+  }),
+  workflows: Schema.Array(Schema.String).annotate({ description: 'The workflows of the goal that use it' }),
+}).annotate({ description: 'A tool server the goal needs' });
+
 export const AgreedSchema = Schema.Struct({
   at: Schema.String.annotate({ description: 'When the yes was recorded' }),
   by: Schema.String.annotate({ description: 'The id of the caller that recorded it' }),
@@ -84,6 +96,12 @@ const GoalReadSchema = Schema.Struct({
   contributions: Schema.Array(ContributionSchema).annotate({
     description: 'What the workflows that are not retired do for it',
   }),
+  connections: Schema.optionalKey(
+    Schema.Array(ConnectionSchema).annotate({
+      description:
+        "The tool servers the goal's workflows and the functions they call use, each with whether it is connected; one that is not connected is also a connection_missing gap",
+    }),
+  ),
   assessments: AssessmentsSchema,
 }).annotate({
   identifier: 'GoalRead',
@@ -106,3 +124,21 @@ export const GoalsReadSchema = Schema.Struct({
 export type GoalsRead = typeof GoalsReadSchema.Type;
 
 export type GoalRead = GoalsRead['goals'][number];
+
+export const GoalsQuerySchema = Schema.Struct({
+  time_zone: Schema.optionalKey(
+    TimeZoneSchema.annotate({
+      description: "The time zone to count each goal's judged results by day in; without it no days are counted",
+    }),
+  ),
+  days: Schema.optionalKey(
+    Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: mostDays })).annotate({
+      description: `How many days to count, from 1 to ${String(mostDays)}; ${String(defaultDays)} when left out`,
+    }),
+  ),
+  until: Schema.optionalKey(
+    DaySchema.annotate({
+      description: 'The newest day to count, as YYYY-MM-DD; today in the time zone when left out',
+    }),
+  ),
+});

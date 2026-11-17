@@ -5,6 +5,7 @@ import { Effect, Option } from 'effect';
 import { clocksName } from '../goal-tables/clock-rows.ts';
 import { deliveryOf, unreadDelivery } from './assessor-deliveries.ts';
 import { runPlannerOf, type AssessorPorts, type AssessorWork } from './run-planner.ts';
+import { stoppedDeliveryOf } from './stopped-deliveries.ts';
 
 export const assessorName = 'goal assessments';
 
@@ -36,7 +37,7 @@ export function assessorOf<E>(ports: AssessorPorts<E>): Assessor {
   const planner = runPlannerOf(ports);
   return {
     name: assessorName,
-    types: ['run_succeeded'],
+    types: ['run_succeeded', 'run_failed', 'run_rejected'],
     skippedAfterSweeps: assessorSweeps,
     wants: (playbookKey) => goalsWantedIn(ports.ledger, playbookKey),
     wantedWith: goalsWantedWith,
@@ -50,7 +51,9 @@ export function assessorOf<E>(ports: AssessorPorts<E>): Assessor {
         const page = rest.slice(0, most);
         const parts = { ledger: ports.ledger, playbook: followed.playbook, workflow, now: ports.now };
         return {
-          deliveries: page.map((planned) => deliveryOf(parts, planned)),
+          deliveries: page.map((planned) =>
+            'stopped' in planned ? stoppedDeliveryOf(parts, planned) : deliveryOf(parts, planned),
+          ),
           through: page.at(-1)?.key,
           more: rest.length > page.length,
         };

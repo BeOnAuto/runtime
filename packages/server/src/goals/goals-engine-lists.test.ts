@@ -91,8 +91,8 @@ describe('the lists a server serves with the goals engine', () => {
     };
 
     expect(await Promise.all([names(true), names(true, () => 0), names(false)])).toEqual([
-      [1, ['requests', 'the clock of the goals'], 0],
-      [1, ['requests', 'the clock of the goals'], 0],
+      [1, ['requests', 'the clock of the goals', 'the stopped things of the goals caught up'], 0],
+      [1, ['requests', 'the clock of the goals', 'the stopped things of the goals caught up'], 0],
       [0, ['requests'], 0],
     ]);
   });

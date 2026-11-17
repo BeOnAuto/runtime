@@ -88,6 +88,13 @@ function thingColumnsOf(state: AssessmentState, pinned: PinnedRule): ProjectedRo
   };
 }
 
+function stoppedColumnsOf(state: AssessmentState): ProjectedRow {
+  const { stopped } = state;
+  return stopped === undefined || !isUndecided(state)
+    ? { stopped_at: null, stopped_run: null }
+    : { stopped_at: stopped.at, stopped_run: stopped.run };
+}
+
 function columnsOf(state: AssessmentState, pinned: PinnedRule): ProjectedRow {
   return {
     ...thingColumnsOf(state, pinned),
@@ -100,6 +107,7 @@ function columnsOf(state: AssessmentState, pinned: PinnedRule): ProjectedRow {
     judging_due_at: nullWhenAbsent(judgingDueOf(state)),
     no_result_at: noResultAtOf(state),
     notice_due_at: nullWhenAbsent(noticeDueOf(state)),
+    ...stoppedColumnsOf(state),
     state: assessmentStateText(state),
   };
 }
@@ -181,7 +189,7 @@ const goalIndex = (name: string, columns: readonly string[]) => ({ name, columns
 
 export const assessmentRows: KeyedProjection = {
   name: assessmentsName,
-  version: 2,
+  version: 4,
   kinds: [assessmentsKind],
   types: [
     'goal_assessment_opened',
@@ -191,6 +199,7 @@ export const assessmentRows: KeyedProjection = {
     'goal_notice_started',
     'goal_notice_refused',
     'goal_assessment_ended',
+    'goal_stopped',
   ],
   columns: [
     { name: 'goal', kind: 'text' },
@@ -223,6 +232,8 @@ export const assessmentRows: KeyedProjection = {
     { name: 'noticed_at', kind: 'integer' },
     { name: 'notice_refusals', kind: 'text' },
     { name: 'notice_refused_at', kind: 'integer' },
+    { name: 'stopped_at', kind: 'integer' },
+    { name: 'stopped_run', kind: 'text' },
     { name: 'state', kind: 'text' },
   ],
   indexes: [
@@ -232,7 +243,8 @@ export const assessmentRows: KeyedProjection = {
     goalIndex('closed', ['open', 'closed_at']),
     goalIndex('closed_recorded', ['open', 'closed_recorded_at']),
     goalIndex('overdue_recorded', ['open', 'overdue', 'overdue_recorded_at']),
-    goalIndex('outcomes', ['outcome']),
+    goalIndex('outcomes', ['outcome', 'closed_at']),
+    goalIndex('stopped', ['open', 'stopped_at']),
     goalIndex('noticed', ['noticed_at']),
     goalIndex('refused_notices', ['notice_refused_at']),
     { name: 'judging_due', columns: ['judging_due_at'], acrossPlaybooks: true, whereSet: 'judging_due_at' },

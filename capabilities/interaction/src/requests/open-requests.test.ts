@@ -87,6 +87,8 @@ const madeOfTheRequest = {
   telling_due_at: null,
   last_said: null,
   ending: null,
+  within_run: null,
+  within_step: null,
 };
 
 describe('the open request of a run', () => {

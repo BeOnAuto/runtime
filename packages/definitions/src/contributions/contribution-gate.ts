@@ -1,8 +1,10 @@
-import { InvalidInput, type PlaybookReader } from '@on.auto/operations';
+import { InvalidInput, type Notice, type PlaybookContext, type PlaybookReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
+import { workflowSaveNoticesIn } from '../goal-notices/setup-notices-in.ts';
 import { playbookGoalsIn } from '../goals/goals-stream.ts';
 import type { DefinitionContent } from '../registry/definition-events.ts';
+import type { StoredDefinition } from '../registry/definition.ts';
 import { contributesIn } from './contributes-details.ts';
 import { contributionIssuesOf } from './contribution-entries.ts';
 import { contributionsMisfitWords, contributesWantedWords, goalsWantedAtSaveWordsOf } from './contribution-words.ts';
@@ -41,4 +43,12 @@ export function contributionsGated<E, R>(
       ? Effect.fail(goalsWantedAtSave(messages))
       : Effect.flatMap(checked, (content) => contributionsChecked(type, goals, content)),
   );
+}
+
+export function goalNoticesOfASave(
+  type: string,
+  goals: boolean,
+  stored: StoredDefinition,
+): Effect.Effect<readonly Notice[], never, PlaybookReader | PlaybookContext> {
+  return goals && type === 'workflow' ? workflowSaveNoticesIn(stored) : Effect.succeed([]);
 }

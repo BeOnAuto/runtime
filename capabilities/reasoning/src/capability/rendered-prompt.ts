@@ -34,10 +34,16 @@ function rejectionOf(failure: RenderFailure): InvalidInput {
       pointerOf(failure.variable),
     );
   }
-  if (failure.reason === 'not_text') {
+  if (failure.reason === 'kept_file') {
     return rejection(
       `The ${failure.part} of the prompt writes a kept file on line ${failure.line}, which a model does not read as text`,
       `Line ${failure.line}: write one of its fields here, such as media_type, or write | json after it`,
+    );
+  }
+  if (failure.reason === 'not_text') {
+    return rejection(
+      `The prompt writes a list or an object in its ${failure.part} on line ${failure.line}, where it writes text`,
+      `Line ${failure.line}: write one of its fields here, or write | json after it`,
     );
   }
   if (failure.reason === 'too_long') {

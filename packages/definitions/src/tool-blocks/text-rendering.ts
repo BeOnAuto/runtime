@@ -60,7 +60,7 @@ function textEmitter(mostBytes: number): TextEmitter {
     lastCodeUnit: undefined,
     write: (html) => {
       const value: unknown = toValue(html);
-      if (!isTextToWrite(value, 'refused')) {
+      if (!isTextToWrite(value)) {
         throw new TextRefused('not_text');
       }
       const text = outputText(value);

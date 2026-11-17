@@ -1,17 +1,11 @@
-import { holdsAnAsset } from '@on.auto/operations';
 import { Predicate } from 'effect';
 
 import { isAGuardedKeptFile, refusedAsText } from './kept-files.ts';
 
 const objectText = '[object Object]';
 
-export type ObjectsInText = 'refused' | 'written_as_liquid_writes';
-
-export function isTextToWrite(value: unknown, objects: ObjectsInText): boolean {
-  if (holdsAnAsset(value)) {
-    return false;
-  }
-  return objects === 'written_as_liquid_writes' || !Predicate.isObjectOrArray(value);
+export function isTextToWrite(value: unknown): boolean {
+  return !Predicate.isObjectOrArray(value);
 }
 
 export function outputText(value: unknown): string {

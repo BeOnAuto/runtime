@@ -65,7 +65,12 @@ describe('playbooks in the ledger file', () => {
       read: 200,
       secondExit: 0,
     });
-    const { before_building: _beforeBuilding, ...asRead } = withoutStudioLink(created.body);
+    const {
+      before_building: _beforeBuilding,
+      notices: _notices,
+      before_going_on: _beforeGoingOn,
+      ...asRead
+    } = withoutStudioLink(created.body);
     expect(read.body).toEqual(asRead);
   });
 });

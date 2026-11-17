@@ -1,7 +1,7 @@
 import { Effect, Struct } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { contributionsGated } from '../contributions/contribution-gate.ts';
+import { contributionsGated, goalNoticesOfASave } from '../contributions/contribution-gate.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
 import { textMemberNames, textMembersOf } from '../payloads/definition-texts.ts';
 import { textsWritten } from '../payloads/kept-texts.ts';
@@ -41,7 +41,8 @@ export const savedFrom = Effect.fnUntraced(function* (
   const checked = yield* goals ? contributionsGated(capability.type, checking, messages) : checking;
   const { content, inHand } = yield* withTheTextsKept(checked, written);
   const recorded = yield* recordInRegistry(capability, commandOf(content));
-  return { ...recorded, inHand, notices: yield* noticed.kept };
+  const noticedOfGoals = yield* goalNoticesOfASave(capability.type, goals, recorded.stored);
+  return { ...recorded, inHand, notices: [...(yield* noticed.kept), ...noticedOfGoals] };
 });
 
 export const createdFrom = Effect.fnUntraced(function* (

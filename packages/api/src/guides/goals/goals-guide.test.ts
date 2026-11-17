@@ -100,6 +100,7 @@ describe('the goals guide where messages are on', () => {
     expect(rows).toEqual([
       ['no_goal', 'Person'],
       ['no_milestones', 'Person'],
+      ['connection_missing', 'Person'],
       ['measure_unreported', 'Agent'],
       ['measure_paused', 'Agent'],
       ['measure_never_final', 'Agent'],
@@ -128,6 +129,7 @@ describe('the goals guide where messages are off', () => {
     expect(rows.map(([kind]) => kind)).toEqual([
       'no_goal',
       'no_milestones',
+      'connection_missing',
       'measure_unreported',
       'measure_paused',
       'measure_never_final',

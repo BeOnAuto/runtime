@@ -37,7 +37,7 @@ function promptEmitter(): PromptEmitter {
       if (isAssetShaped(value)) {
         throw new PromptRefused('kept_file');
       }
-      if (!isTextToWrite(value, 'refused')) {
+      if (!isTextToWrite(value)) {
         throw new PromptRefused('not_text');
       }
       emitter.buffer += outputText(value);

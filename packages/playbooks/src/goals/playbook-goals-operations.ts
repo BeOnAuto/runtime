@@ -5,7 +5,11 @@ import { createPlaybookFields, createPlaybookSentences, createPlaybookWords } fr
 import { updatePlaybookFields, updatePlaybookWords } from '../operations/update-playbook.ts';
 import { createdWithGoalsWordsOf, updatedWithGoalsWordsOf } from '../plain-language/goals-words.ts';
 import { playbookCreatedWithGoals } from './goals-created.ts';
-import { CreatedPlaybookWithGoalsSchema, playbookGoalsFieldOf, PlaybookWithGoalsSchema } from './goals-fields.ts';
+import {
+  CreatedPlaybookWithGoalsSchema,
+  playbookGoalsFieldOf,
+  UpdatedPlaybookWithGoalsSchema,
+} from './goals-fields.ts';
 import { playbookUpdatedWithGoals } from './goals-updated.ts';
 import type { CheckedGoals, PlaybookGoals } from './playbook-goals.ts';
 
@@ -66,7 +70,7 @@ export function defineUpdatePlaybookKeepingGoals<Checked extends CheckedGoals>(g
     repeatable: true,
     route: { method: 'PUT', path: '/playbooks/{playbook}' },
     inputSchema: Schema.Struct({ ...updatePlaybookFields, goals: Schema.optionalKey(playbookGoalsFieldOf(messages)) }),
-    outputSchema: PlaybookWithGoalsSchema,
+    outputSchema: UpdatedPlaybookWithGoalsSchema,
     reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
     handle: (input) => playbookUpdatedWithGoals(goals, input),
     plainLanguage: { ...updatePlaybookWords, outcome: updatedWithGoalsWordsOf(messages) },

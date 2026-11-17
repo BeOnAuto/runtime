@@ -7,7 +7,7 @@ import {
   type Capability,
 } from '@on.auto/definitions';
 import type { SubjectPages } from '@on.auto/definitions/page';
-import { goalChangeNamings, goalsOperationsServed } from '@on.auto/goals';
+import { goalChangeNamings, goalsOperationsServed, type ServerConnected } from '@on.auto/goals';
 import type { RouteRegistration } from '@on.auto/operations';
 import { defineGetEvent, defineListPlaybookChanges, defineListPlaybookEvents } from '@on.auto/playbooks';
 
@@ -22,6 +22,7 @@ export interface ServedGoals {
   readonly goals: boolean;
   readonly results: boolean;
   readonly messages: boolean;
+  readonly connected?: ServerConnected | undefined;
 }
 
 interface PlaybookOperation {
@@ -30,7 +31,15 @@ interface PlaybookOperation {
 
 export function playbookOperationsServing(
   capabilities: readonly Capability[],
-  { facts, names, pages, goals, results, messages }: Pick<ComposedFacts, 'facts' | 'names'> & ServedPages & ServedGoals,
+  {
+    facts,
+    names,
+    pages,
+    goals,
+    results,
+    messages,
+    connected,
+  }: Pick<ComposedFacts, 'facts' | 'names'> & ServedPages & ServedGoals,
 ): readonly PlaybookOperation[] {
   const presenters = makeDefinitionPresenters(capabilities, facts);
   const { holders } = factsKnownWith(facts.onRuns);
@@ -39,7 +48,7 @@ export function playbookOperationsServing(
     defineListPlaybookEvents(presenters, holders),
     defineListPlaybookChanges(presenters, [commentChanges, ...goalChangeNamings(goals)]),
     defineGetEvent(presenters, holders),
-    ...goalsOperationsServed(goals, results, messages),
+    ...goalsOperationsServed(goals, results, messages, connected),
     definePublishEvent(names),
     ...commentOperations,
   ];
@@ -51,7 +60,7 @@ interface DeclaredAndServed extends ServedPages, ServedGoals {
 
 export function directoryOperationsServing(
   capabilities: readonly Capability[],
-  { capabilities: declared, pages, goals, results, messages }: DeclaredAndServed,
+  { capabilities: declared, pages, goals, results, messages, connected }: DeclaredAndServed,
 ): readonly PlaybookOperation[] {
   return playbookOperationsServing(inTheDirectoryListing(capabilities), {
     ...directoryFactsOf(declared),
@@ -59,5 +68,6 @@ export function directoryOperationsServing(
     goals,
     results,
     messages,
+    connected,
   });
 }

@@ -34,6 +34,8 @@ export const requestColumns: KeyedProjection['columns'] = [
   { name: 'telling_due_at', kind: 'integer' },
   { name: 'last_said', kind: 'text' },
   { name: 'ending', kind: 'text' },
+  { name: 'within_run', kind: 'text' },
+  { name: 'within_step', kind: 'text' },
 ];
 
 export const requestIndexes: KeyedProjection['indexes'] = [

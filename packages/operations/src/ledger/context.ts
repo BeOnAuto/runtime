@@ -78,6 +78,7 @@ const chain = {
   depth: Schema.optionalKey(Counted),
   trigger: Schema.optionalKey(StartingTriggerSchema),
   actsFor: Schema.optionalKey(ContextText),
+  test: Schema.optionalKey(Schema.Literal(true)),
 };
 
 export const ContextSchema = Schema.Struct({

@@ -234,6 +234,18 @@
                     "studio": {
                       "type": "string",
                       "description": "The page in Studio of what was made"
+                    },
+                    "notices": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/Notice"
+                      },
+                      "maxItems": 3,
+                      "description": "What to double-check in what was just accepted; the action is done either way. Left out when there is nothing to check"
+                    },
+                    "before_going_on": {
+                      "type": "string",
+                      "description": "What to do with the notices before going on, in words; present only with notices"
                     }
                   },
                   "required": [
@@ -267,7 +279,8 @@
                             "notice_function_missing",
                             "notice_not_started",
                             "notice_undelivered",
-                            "observation_refused"
+                            "observation_refused",
+                            "connection_missing"
                           ],
                           "description": "What the goals still lack"
                         },
@@ -329,6 +342,40 @@
                       ],
                       "additionalProperties": false,
                       "description": "The playbook's goals, where it has them, and what they still lack"
+                    },
+                    "Notice": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "description": "What was noticed, as a code that stays the same"
+                        },
+                        "detail": {
+                          "type": "string",
+                          "maxLength": 400,
+                          "description": "What was noticed and what to check, in words"
+                        },
+                        "at": {
+                          "type": "string",
+                          "description": "Where it is in the document, as a JSON pointer such as /tools"
+                        },
+                        "certainty": {
+                          "type": "string",
+                          "enum": [
+                            "exact",
+                            "likely",
+                            "reminder"
+                          ],
+                          "description": "exact when the fact was checked, likely when it usually means a mistake, reminder when it could not be checked"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "detail",
+                        "certainty"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Something to double-check in what was just accepted"
                     }
                   }
                 }
@@ -700,7 +747,8 @@
                             "notice_function_missing",
                             "notice_not_started",
                             "notice_undelivered",
-                            "observation_refused"
+                            "observation_refused",
+                            "connection_missing"
                           ],
                           "description": "What the goals still lack"
                         },
@@ -957,6 +1005,18 @@
                     "before_building": {
                       "type": "string",
                       "description": "What you must do before you build anything more, in words; present only when there is something to do"
+                    },
+                    "notices": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/Notice"
+                      },
+                      "maxItems": 3,
+                      "description": "What to double-check in what was just accepted; the action is done either way. Left out when there is nothing to check"
+                    },
+                    "before_going_on": {
+                      "type": "string",
+                      "description": "What to do with the notices before going on, in words; present only with notices"
                     }
                   },
                   "required": [
@@ -970,7 +1030,7 @@
                     "goals"
                   ],
                   "additionalProperties": false,
-                  "description": "A playbook of the org, with its goals",
+                  "description": "A playbook just changed, with its goals",
                   "$defs": {
                     "GoalGap": {
                       "type": "object",
@@ -990,7 +1050,8 @@
                             "notice_function_missing",
                             "notice_not_started",
                             "notice_undelivered",
-                            "observation_refused"
+                            "observation_refused",
+                            "connection_missing"
                           ],
                           "description": "What the goals still lack"
                         },
@@ -1052,6 +1113,40 @@
                       ],
                       "additionalProperties": false,
                       "description": "The playbook's goals, where it has them, and what they still lack"
+                    },
+                    "Notice": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "description": "What was noticed, as a code that stays the same"
+                        },
+                        "detail": {
+                          "type": "string",
+                          "maxLength": 400,
+                          "description": "What was noticed and what to check, in words"
+                        },
+                        "at": {
+                          "type": "string",
+                          "description": "Where it is in the document, as a JSON pointer such as /tools"
+                        },
+                        "certainty": {
+                          "type": "string",
+                          "enum": [
+                            "exact",
+                            "likely",
+                            "reminder"
+                          ],
+                          "description": "exact when the fact was checked, likely when it usually means a mistake, reminder when it could not be checked"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "detail",
+                        "certainty"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Something to double-check in what was just accepted"
                     }
                   }
                 }
@@ -14823,6 +14918,18 @@
                       "type": "string",
                       "description": "The page in Studio of what was made"
                     },
+                    "notices": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/Notice"
+                      },
+                      "maxItems": 3,
+                      "description": "What to double-check in what was just accepted; the action is done either way. Left out when there is nothing to check"
+                    },
+                    "before_going_on": {
+                      "type": "string",
+                      "description": "What to do with the notices before going on, in words; present only with notices"
+                    },
                     "models_not_offered": {
                       "type": "array",
                       "items": {
@@ -14863,7 +14970,8 @@
                             "notice_function_missing",
                             "notice_not_started",
                             "notice_undelivered",
-                            "observation_refused"
+                            "observation_refused",
+                            "connection_missing"
                           ],
                           "description": "What the goals still lack"
                         },
@@ -14925,6 +15033,40 @@
                       ],
                       "additionalProperties": false,
                       "description": "The playbook's goals, where it has them, and what they still lack"
+                    },
+                    "Notice": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "description": "What was noticed, as a code that stays the same"
+                        },
+                        "detail": {
+                          "type": "string",
+                          "maxLength": 400,
+                          "description": "What was noticed and what to check, in words"
+                        },
+                        "at": {
+                          "type": "string",
+                          "description": "Where it is in the document, as a JSON pointer such as /tools"
+                        },
+                        "certainty": {
+                          "type": "string",
+                          "enum": [
+                            "exact",
+                            "likely",
+                            "reminder"
+                          ],
+                          "description": "exact when the fact was checked, likely when it usually means a mistake, reminder when it could not be checked"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "detail",
+                        "certainty"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Something to double-check in what was just accepted"
                     }
                   }
                 }
@@ -20328,6 +20470,10 @@
                     "description": "The run's id, a UUID in any case, kept in lowercase",
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
                     "format": "uuid"
+                  },
+                  "test": {
+                    "type": "boolean",
+                    "description": "true when only trying it: it and what follows count toward no goal but still do real work (call tools, ask people, send messages, change things). Without it the run counts; a judged thing cannot be taken back."
                   }
                 }
               }
@@ -25032,6 +25178,33 @@
           },
           {
             "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "time_zone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31,
+              "description": "How many days to count, from 1 to 31; 7 when left out"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -25094,7 +25267,8 @@
                             "notice_function_missing",
                             "notice_not_started",
                             "notice_undelivered",
-                            "observation_refused"
+                            "observation_refused",
+                            "connection_missing"
                           ],
                           "description": "What the goals still lack"
                         },
@@ -25394,6 +25568,29 @@
                         "overdue_since": {
                           "type": "string",
                           "description": "Since when it is overdue: its deadline passed with no final measurement that counts"
+                        },
+                        "stopped": {
+                          "type": "object",
+                          "properties": {
+                            "at": {
+                              "type": "string",
+                              "description": "When that run ended"
+                            },
+                            "run": {
+                              "type": "string",
+                              "description": "The id of that run"
+                            },
+                            "reason": {
+                              "type": "string",
+                              "description": "Why, in the run's words"
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "run"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Set when a run ended without the result it needs; it stays open until judged at its due time"
                         },
                         "goals_version": {
                           "type": "integer",
@@ -25767,6 +25964,42 @@
                           },
                           "description": "What the workflows that are not retired do for it"
                         },
+                        "connections": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "server": {
+                                "type": "string",
+                                "description": "The name a function gives the server in server/tool"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name to show the person"
+                              },
+                              "connected": {
+                                "type": "boolean",
+                                "description": "true when it is connected and offered to this playbook, false when the person still has to connect it"
+                              },
+                              "workflows": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "The workflows of the goal that use it"
+                              }
+                            },
+                            "required": [
+                              "server",
+                              "name",
+                              "connected",
+                              "workflows"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A tool server the goal needs"
+                          },
+                          "description": "The tool servers the goal's workflows and the functions they call use, each with whether it is connected; one that is not connected is also a connection_missing gap"
+                        },
                         "assessments": {
                           "type": "object",
                           "properties": {
@@ -25785,6 +26018,11 @@
                               "type": "integer",
                               "minimum": 0,
                               "description": "How many assessments are open"
+                            },
+                            "stopped_count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "How many open ones are stopped"
                             },
                             "in_flight": {
                               "type": "array",
@@ -25914,6 +26152,183 @@
                                       "value": {
                                         "type": "number",
                                         "description": "The number it was judged on"
+                                      },
+                                      "rule": {
+                                        "type": "object",
+                                        "properties": {
+                                          "settles": {
+                                            "type": "string",
+                                            "enum": [
+                                              "on_crossing",
+                                              "at_close"
+                                            ],
+                                            "description": "on_crossing, judged the moment a measurement crosses the target; at_close, judged at the end"
+                                          },
+                                          "target": {
+                                            "anyOf": [
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "at_least": {
+                                                    "type": "number",
+                                                    "description": "Passed at this number or more"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "at_least"
+                                                ],
+                                                "additionalProperties": false
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "at_most": {
+                                                    "type": "number",
+                                                    "description": "Passed at this number or less"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "at_most"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            ],
+                                            "description": "The number the measure is judged against"
+                                          }
+                                        },
+                                        "required": [
+                                          "settles",
+                                          "target"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "How it was judged, as pinned when it opened"
+                                      },
+                                      "milestones": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string",
+                                              "description": "The id of the milestone"
+                                            },
+                                            "label": {
+                                              "type": "string",
+                                              "description": "The words for the milestone"
+                                            },
+                                            "by": {
+                                              "type": "string",
+                                              "enum": [
+                                                "person",
+                                                "auto"
+                                              ],
+                                              "description": "Who marks it: the person or Auto"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "label",
+                                            "by"
+                                          ],
+                                          "additionalProperties": false,
+                                          "description": "A moment that matters on the way"
+                                        },
+                                        "description": "The milestones pinned when it opened"
+                                      },
+                                      "marks": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "milestone": {
+                                              "type": "string",
+                                              "description": "The id of the milestone marked"
+                                            },
+                                            "at": {
+                                              "type": "string",
+                                              "description": "When it was first marked"
+                                            },
+                                            "run": {
+                                              "type": "string",
+                                              "description": "The id of the run that marked it"
+                                            }
+                                          },
+                                          "required": [
+                                            "milestone",
+                                            "at",
+                                            "run"
+                                          ],
+                                          "additionalProperties": false,
+                                          "description": "The first mark of a milestone"
+                                        },
+                                        "description": "The milestones it had marked"
+                                      },
+                                      "measurement": {
+                                        "type": "object",
+                                        "properties": {
+                                          "value": {
+                                            "type": "number",
+                                            "description": "The number"
+                                          },
+                                          "final": {
+                                            "type": "boolean",
+                                            "description": "Whether the number will not change any more for its window"
+                                          },
+                                          "as_of": {
+                                            "type": "string",
+                                            "description": "The moment the number is true through"
+                                          },
+                                          "at": {
+                                            "type": "string",
+                                            "description": "When the run that reported it ended"
+                                          },
+                                          "run": {
+                                            "type": "string",
+                                            "description": "The id of the run that reported it"
+                                          },
+                                          "says": {
+                                            "type": "string",
+                                            "description": "One sentence of evidence"
+                                          }
+                                        },
+                                        "required": [
+                                          "value",
+                                          "final",
+                                          "as_of",
+                                          "at",
+                                          "run"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "The standing measurement, the one with the latest as_of"
+                                      },
+                                      "final_measurement": {
+                                        "type": "object",
+                                        "properties": {
+                                          "value": {
+                                            "type": "number",
+                                            "description": "The number"
+                                          },
+                                          "as_of": {
+                                            "type": "string",
+                                            "description": "The moment the number is true through"
+                                          },
+                                          "at": {
+                                            "type": "string",
+                                            "description": "When the run that reported it ended"
+                                          },
+                                          "run": {
+                                            "type": "string",
+                                            "description": "The id of the run that reported it"
+                                          }
+                                        },
+                                        "required": [
+                                          "value",
+                                          "as_of",
+                                          "at",
+                                          "run"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "The latest final measurement"
                                       }
                                     },
                                     "required": [
@@ -25925,6 +26340,94 @@
                                     "description": "An assessment that ended"
                                   },
                                   "description": "The latest that ended, at most 60"
+                                },
+                                "days": {
+                                  "type": "object",
+                                  "properties": {
+                                    "time_zone": {
+                                      "type": "string",
+                                      "description": "The time zone the days are counted in, as asked"
+                                    },
+                                    "counts": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "day": {
+                                            "type": "string",
+                                            "description": "The day, as YYYY-MM-DD in the time zone asked"
+                                          },
+                                          "judged": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "description": "How many were judged that day"
+                                          },
+                                          "passed": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "description": "How many of them passed"
+                                          },
+                                          "says": {
+                                            "type": "string",
+                                            "description": "The sentence of evidence of the latest judged that day on its own measurement (a final one, or the one it crossed on); left out when none was"
+                                          }
+                                        },
+                                        "required": [
+                                          "day",
+                                          "judged",
+                                          "passed"
+                                        ],
+                                        "additionalProperties": false,
+                                        "description": "What was judged on one day"
+                                      },
+                                      "description": "Newest first: each day of the range asked, empty days too, none before the first was judged; none when nothing was"
+                                    }
+                                  },
+                                  "required": [
+                                    "time_zone",
+                                    "counts"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "What was judged each day; only when the read is asked with a time_zone"
+                                },
+                                "last_passed": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "description": "The id of the assessment"
+                                    },
+                                    "at": {
+                                      "type": "string",
+                                      "description": "When it passed"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "at"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "The latest assessment that passed; left out when none ever did"
+                                },
+                                "misses_since": {
+                                  "type": "object",
+                                  "properties": {
+                                    "at": {
+                                      "type": "string",
+                                      "description": "When the first of them ended"
+                                    },
+                                    "count": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "description": "How many failed or ended with no result since the last pass"
+                                    }
+                                  },
+                                  "required": [
+                                    "at",
+                                    "count"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "The run of misses since the last pass, or since the first if none passed; left out when the latest that was judged passed"
                                 }
                               },
                               "required": [
@@ -26168,6 +26671,816 @@
           {
             "openIdConnect": [
               "playbook:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/goals/{goal}/days/{day}": {
+      "get": {
+        "operationId": "get_goal_day",
+        "summary": "Get goal day",
+        "description": "Reads the results of one goal that were judged on one day in a time zone, newest first, 10 a page, each with what it was judged on. `outcome` keeps the results that ended one way; `cursor` is the next_cursor of the page before.",
+        "tags": [
+          "goals"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "goal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The id of the goal"
+            }
+          },
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "time_zone",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "passed",
+                "failed",
+                "no_result"
+              ],
+              "description": "Only the results that ended this way: passed, failed or no_result"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "The next_cursor of the page before, to read on after it"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/get_goal_day/output",
+                  "type": "object",
+                  "properties": {
+                    "day": {
+                      "type": "string",
+                      "description": "The day, as YYYY-MM-DD in the time zone"
+                    },
+                    "time_zone": {
+                      "type": "string",
+                      "description": "The time zone the day is in"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "The id of the assessment"
+                          },
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "passed",
+                              "failed",
+                              "no_result"
+                            ],
+                            "description": "How it ended; no_result only for what an earlier release ended with no result"
+                          },
+                          "by": {
+                            "type": "string",
+                            "enum": [
+                              "crossing",
+                              "final",
+                              "deadline"
+                            ],
+                            "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided; deadline, the deadline passed with no final measurement that counts, so it failed with no number"
+                          },
+                          "at": {
+                            "type": "string",
+                            "description": "When it ended"
+                          },
+                          "per": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "The id of the thing it is judged for"
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "The title of the thing"
+                              },
+                              "link": {
+                                "type": "string",
+                                "description": "An address of the thing"
+                              }
+                            },
+                            "required": [
+                              "id"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The one thing an assessment judges"
+                          },
+                          "window": {
+                            "type": "object",
+                            "properties": {
+                              "opens": {
+                                "type": "string",
+                                "description": "When the window opens"
+                              },
+                              "closes": {
+                                "type": "string",
+                                "description": "When the window closes"
+                              },
+                              "due": {
+                                "type": "string",
+                                "description": "When the window is judged: its close plus the grace"
+                              }
+                            },
+                            "required": [
+                              "opens",
+                              "closes",
+                              "due"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The window an assessment judges"
+                          },
+                          "value": {
+                            "type": "number",
+                            "description": "The number it was judged on"
+                          },
+                          "rule": {
+                            "type": "object",
+                            "properties": {
+                              "settles": {
+                                "type": "string",
+                                "enum": [
+                                  "on_crossing",
+                                  "at_close"
+                                ],
+                                "description": "on_crossing, judged the moment a measurement crosses the target; at_close, judged at the end"
+                              },
+                              "target": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "at_least": {
+                                        "type": "number",
+                                        "description": "Passed at this number or more"
+                                      }
+                                    },
+                                    "required": [
+                                      "at_least"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "at_most": {
+                                        "type": "number",
+                                        "description": "Passed at this number or less"
+                                      }
+                                    },
+                                    "required": [
+                                      "at_most"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ],
+                                "description": "The number the measure is judged against"
+                              }
+                            },
+                            "required": [
+                              "settles",
+                              "target"
+                            ],
+                            "additionalProperties": false,
+                            "description": "How it was judged, as pinned when it opened"
+                          },
+                          "milestones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "The id of the milestone"
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "The words for the milestone"
+                                },
+                                "by": {
+                                  "type": "string",
+                                  "enum": [
+                                    "person",
+                                    "auto"
+                                  ],
+                                  "description": "Who marks it: the person or Auto"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "label",
+                                "by"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A moment that matters on the way"
+                            },
+                            "description": "The milestones pinned when it opened"
+                          },
+                          "marks": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "milestone": {
+                                  "type": "string",
+                                  "description": "The id of the milestone marked"
+                                },
+                                "at": {
+                                  "type": "string",
+                                  "description": "When it was first marked"
+                                },
+                                "run": {
+                                  "type": "string",
+                                  "description": "The id of the run that marked it"
+                                }
+                              },
+                              "required": [
+                                "milestone",
+                                "at",
+                                "run"
+                              ],
+                              "additionalProperties": false,
+                              "description": "The first mark of a milestone"
+                            },
+                            "description": "The milestones it had marked"
+                          },
+                          "measurement": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number",
+                                "description": "The number"
+                              },
+                              "final": {
+                                "type": "boolean",
+                                "description": "Whether the number will not change any more for its window"
+                              },
+                              "as_of": {
+                                "type": "string",
+                                "description": "The moment the number is true through"
+                              },
+                              "at": {
+                                "type": "string",
+                                "description": "When the run that reported it ended"
+                              },
+                              "run": {
+                                "type": "string",
+                                "description": "The id of the run that reported it"
+                              },
+                              "says": {
+                                "type": "string",
+                                "description": "One sentence of evidence"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "final",
+                              "as_of",
+                              "at",
+                              "run"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The standing measurement, the one with the latest as_of"
+                          },
+                          "final_measurement": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number",
+                                "description": "The number"
+                              },
+                              "as_of": {
+                                "type": "string",
+                                "description": "The moment the number is true through"
+                              },
+                              "at": {
+                                "type": "string",
+                                "description": "When the run that reported it ended"
+                              },
+                              "run": {
+                                "type": "string",
+                                "description": "The id of the run that reported it"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "as_of",
+                              "at",
+                              "run"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The latest final measurement"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "outcome",
+                          "at"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An assessment that ended"
+                      },
+                      "description": "The results judged that day, newest first, at most 10"
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The cursor that reads the page after this one, null when nothing remains"
+                    }
+                  },
+                  "required": [
+                    "day",
+                    "time_zone",
+                    "items",
+                    "next_cursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The results of a goal judged on one day"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/goals/{goal}/results": {
+      "get": {
+        "operationId": "list_goal_results",
+        "summary": "List goal results",
+        "description": "Lists the results of one goal across every day, newest first, 10 a page, each with what it was judged on. `outcome` keeps the results that ended one way, such as failed for the misses; `cursor` is the next_cursor of the page before.",
+        "tags": [
+          "goals"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "goal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The id of the goal"
+            }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "passed",
+                "failed",
+                "no_result"
+              ],
+              "description": "Only the results that ended this way: passed, failed or no_result"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "The next_cursor of the page before, to read on after it"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/list_goal_results/output",
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "The id of the assessment"
+                          },
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "passed",
+                              "failed",
+                              "no_result"
+                            ],
+                            "description": "How it ended; no_result only for what an earlier release ended with no result"
+                          },
+                          "by": {
+                            "type": "string",
+                            "enum": [
+                              "crossing",
+                              "final",
+                              "deadline"
+                            ],
+                            "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided; deadline, the deadline passed with no final measurement that counts, so it failed with no number"
+                          },
+                          "at": {
+                            "type": "string",
+                            "description": "When it ended"
+                          },
+                          "per": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "The id of the thing it is judged for"
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "The title of the thing"
+                              },
+                              "link": {
+                                "type": "string",
+                                "description": "An address of the thing"
+                              }
+                            },
+                            "required": [
+                              "id"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The one thing an assessment judges"
+                          },
+                          "window": {
+                            "type": "object",
+                            "properties": {
+                              "opens": {
+                                "type": "string",
+                                "description": "When the window opens"
+                              },
+                              "closes": {
+                                "type": "string",
+                                "description": "When the window closes"
+                              },
+                              "due": {
+                                "type": "string",
+                                "description": "When the window is judged: its close plus the grace"
+                              }
+                            },
+                            "required": [
+                              "opens",
+                              "closes",
+                              "due"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The window an assessment judges"
+                          },
+                          "value": {
+                            "type": "number",
+                            "description": "The number it was judged on"
+                          },
+                          "rule": {
+                            "type": "object",
+                            "properties": {
+                              "settles": {
+                                "type": "string",
+                                "enum": [
+                                  "on_crossing",
+                                  "at_close"
+                                ],
+                                "description": "on_crossing, judged the moment a measurement crosses the target; at_close, judged at the end"
+                              },
+                              "target": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "at_least": {
+                                        "type": "number",
+                                        "description": "Passed at this number or more"
+                                      }
+                                    },
+                                    "required": [
+                                      "at_least"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "at_most": {
+                                        "type": "number",
+                                        "description": "Passed at this number or less"
+                                      }
+                                    },
+                                    "required": [
+                                      "at_most"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ],
+                                "description": "The number the measure is judged against"
+                              }
+                            },
+                            "required": [
+                              "settles",
+                              "target"
+                            ],
+                            "additionalProperties": false,
+                            "description": "How it was judged, as pinned when it opened"
+                          },
+                          "milestones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "The id of the milestone"
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "description": "The words for the milestone"
+                                },
+                                "by": {
+                                  "type": "string",
+                                  "enum": [
+                                    "person",
+                                    "auto"
+                                  ],
+                                  "description": "Who marks it: the person or Auto"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "label",
+                                "by"
+                              ],
+                              "additionalProperties": false,
+                              "description": "A moment that matters on the way"
+                            },
+                            "description": "The milestones pinned when it opened"
+                          },
+                          "marks": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "milestone": {
+                                  "type": "string",
+                                  "description": "The id of the milestone marked"
+                                },
+                                "at": {
+                                  "type": "string",
+                                  "description": "When it was first marked"
+                                },
+                                "run": {
+                                  "type": "string",
+                                  "description": "The id of the run that marked it"
+                                }
+                              },
+                              "required": [
+                                "milestone",
+                                "at",
+                                "run"
+                              ],
+                              "additionalProperties": false,
+                              "description": "The first mark of a milestone"
+                            },
+                            "description": "The milestones it had marked"
+                          },
+                          "measurement": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number",
+                                "description": "The number"
+                              },
+                              "final": {
+                                "type": "boolean",
+                                "description": "Whether the number will not change any more for its window"
+                              },
+                              "as_of": {
+                                "type": "string",
+                                "description": "The moment the number is true through"
+                              },
+                              "at": {
+                                "type": "string",
+                                "description": "When the run that reported it ended"
+                              },
+                              "run": {
+                                "type": "string",
+                                "description": "The id of the run that reported it"
+                              },
+                              "says": {
+                                "type": "string",
+                                "description": "One sentence of evidence"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "final",
+                              "as_of",
+                              "at",
+                              "run"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The standing measurement, the one with the latest as_of"
+                          },
+                          "final_measurement": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "number",
+                                "description": "The number"
+                              },
+                              "as_of": {
+                                "type": "string",
+                                "description": "The moment the number is true through"
+                              },
+                              "at": {
+                                "type": "string",
+                                "description": "When the run that reported it ended"
+                              },
+                              "run": {
+                                "type": "string",
+                                "description": "The id of the run that reported it"
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "as_of",
+                              "at",
+                              "run"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The latest final measurement"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "outcome",
+                          "at"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An assessment that ended"
+                      },
+                      "description": "The results of the goal, newest first, at most 10"
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The cursor that reads the page after this one, null when nothing remains"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "next_cursor"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A page of the results of a goal"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
             ]
           }
         ]
@@ -28888,6 +30201,63 @@
                         "reply_refusals": {
                           "type": "integer",
                           "description": "How many replies from the answerer the playbook refused because they were not an answer the function takes, each told how to answer where its reading tells."
+                        },
+                        "within": {
+                          "type": "object",
+                          "properties": {
+                            "run_id": {
+                              "type": "string",
+                              "description": "The workflow run whose step asked"
+                            },
+                            "workflow": {
+                              "type": "string",
+                              "description": "The name of that workflow"
+                            },
+                            "step": {
+                              "type": "string",
+                              "description": "The step that asked, its reference in the workflow without its leading /, such as do/1/review"
+                            }
+                          },
+                          "required": [
+                            "run_id",
+                            "workflow",
+                            "step"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The workflow run and the step that asked; left out for a request no workflow's step asked"
+                        },
+                        "causes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The runs that led to the request, newest first: the workflow run that asked, then each run before it in its chain, through the workflow that called it or the run that published the event that started it, at most 8; left out with within"
+                        },
+                        "about": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "goal": {
+                                "type": "string",
+                                "description": "The id of the goal"
+                              },
+                              "id": {
+                                "type": "string",
+                                "description": "The id of the thing, as the goals read gives it"
+                              },
+                              "per": {
+                                "type": "string",
+                                "description": "The id of the thing in its own words"
+                              }
+                            },
+                            "required": [
+                              "goal",
+                              "id"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "The open things of the playbook’s goals the request is about: each one a run of its causes marked or measured, or a run started by the same event from outside every run that began its causes; left out with causes, and where goals are not judged"
                         },
                         "standing": {
                           "type": "string",

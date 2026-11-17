@@ -98,6 +98,7 @@ function rowsHolding(assessed: Assessing, holds: (rows: Readonly<Record<string, 
 
 const mar41 = assessmentIdOf({ goal: 'paying-customers', per: 'MAR-41' });
 
+const mar60 = assessmentIdOf({ goal: 'paying-customers', per: 'MAR-60' });
 const manyText = [
   '- id: many-things',
   '  statement: Every thing we track brings in at least one order.',
@@ -170,7 +171,7 @@ function aLedger() {
 }
 
 describe('trace B on a Node server, as far as the assessor reaches', () => {
-  it('opens an experiment its schedule takes live, passes it on the crossing, and counts nothing a person began', async () => {
+  it('opens an experiment its schedule takes live, passes it on the crossing, counts what a person began and nothing begun as a test', async () => {
     const assessed = await served(goalsText);
     const { server } = assessed;
     expect(
@@ -192,8 +193,8 @@ describe('trace B on a Node server, as far as the assessor reaches', () => {
       await savedWorkflow(server, 'on-ping', [...marksLive('/experiments'), ...onPing, 'do:', ...liveOf('MAR-60')]),
     ).toBe(201);
 
-    await server.call('POST', `${alpha}/definitions/workflow/hand-live/run`, { body: { input: {} } });
-    await server.call('POST', `${alpha}/definitions/workflow/parent/run`, { body: { input: {} } });
+    await server.call('POST', `${alpha}/definitions/workflow/hand-live/run`, { body: { input: {}, test: true } });
+    await server.call('POST', `${alpha}/definitions/workflow/parent/run`, { body: { input: {}, test: true } });
     await server.call('POST', `${alpha}/events`, {
       body: { event: { source: 'https://example.com/tests', type: 'com.example.ping', data: {} } },
     });
@@ -201,7 +202,7 @@ describe('trace B on a Node server, as far as the assessor reaches', () => {
     expect(await savedWorkflow(server, 'measure', measuring)).toBe(201);
     const rows = await rowsHolding(assessed, (held) => JSON.stringify(held[mar41]).includes('"verdict":"passed"'));
 
-    expect(Object.keys(rows)).toEqual([mar41]);
+    expect(Object.keys(rows).toSorted()).toEqual([mar41, mar60].toSorted());
     expect(rows[mar41]).toMatchObject({ per_id: 'MAR-41', verdict: 'passed', outcome: 'passed', goals_version: 1 });
     expect(typeof rows[mar41]?.['window_opens']).toBe('number');
     const leftOut = await server.call('PUT', alpha, { body: { goals: plainGoalsOnly } });

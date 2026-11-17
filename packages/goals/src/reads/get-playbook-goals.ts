@@ -1,12 +1,12 @@
 import { goalAgreementsIn, goalStandingIn } from '@on.auto/definitions/goals';
 import { defineHttpOperation } from '@on.auto/operations';
-import { Effect, Schema } from 'effect';
+import { Effect } from 'effect';
 
+import { readWithTheConnections, type ServerConnected } from '../connections/goal-connections.ts';
 import { observationGapsIn } from '../gaps/observation-gaps.ts';
 import { noticeGapsIn } from '../notices/notice-gaps.ts';
-import type { Assessments } from './assessments-schema.ts';
-import { goalAssessmentsIn } from './goal-assessments.ts';
-import { GoalsReadSchema } from './goals-read-schema.ts';
+import { goalAssessmentsIn, type GoalsAsked } from './goal-assessments.ts';
+import { GoalsQuerySchema, GoalsReadSchema } from './goals-read-schema.ts';
 import { goalsReadOf } from './goals-read.ts';
 import type { NoticesDelivered } from './notices-delivered.ts';
 
@@ -16,36 +16,32 @@ const description = [
   'A playbook with no goals answers none, and says so among its gaps.',
 ].join(' ');
 
-const NoInput = Schema.Never.annotate({ message: 'get_playbook_goals takes no query parameters; send none' });
-
-export function goalsReadWith(delivered?: NoticesDelivered) {
+export function goalsReadWith(delivered?: NoticesDelivered, connected?: ServerConnected, asked: GoalsAsked = {}) {
   return Effect.gen(function* () {
     const standing = yield* goalStandingIn;
     const assessed = yield* Effect.forEach(standing.goals, (goal) =>
-      Effect.map(
-        goalAssessmentsIn(goal, delivered, standing.version),
-        (assessments): readonly [string, Assessments] => [goal.id, assessments],
-      ),
+      goalAssessmentsIn(goal, delivered, standing.version, asked),
     );
-    const byGoal = new Map(assessed);
+    const byGoal = new Map(standing.goals.map((goal, index) => [goal.id, assessed[index]]));
     const engineGaps = [...(yield* noticeGapsIn(standing.goals)), ...(yield* observationGapsIn(standing))];
-    return goalsReadOf(standing, (goal) => byGoal.get(goal.id), engineGaps, yield* goalAgreementsIn);
+    const read = goalsReadOf(standing, (goal) => byGoal.get(goal.id), engineGaps, yield* goalAgreementsIn);
+    return yield* readWithTheConnections(read, standing.workflows, connected);
   });
 }
 
 export const goalsReadIn = goalsReadWith();
 
-function getPlaybookGoalsJudged(results: boolean) {
+export function getPlaybookGoalsJudged(results: boolean, connected?: ServerConnected) {
   return defineHttpOperation('playbook', 'query', {
     name: 'get_playbook_goals',
     title: 'Get playbook goals',
     description,
     route: { method: 'GET', path: '/goals' },
     body: { kind: 'none' },
-    inputSchema: Schema.Record(Schema.String, NoInput),
+    inputSchema: GoalsQuerySchema,
     outputSchema: GoalsReadSchema,
-    reasons: [],
-    handle: () => Effect.map(goalsReadIn, (read) => ({ ...read, results })),
+    reasons: ['invalid_input'],
+    handle: (asked) => Effect.map(goalsReadWith(undefined, connected, asked), (read) => ({ ...read, results })),
   });
 }
 

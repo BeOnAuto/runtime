@@ -40,6 +40,7 @@ function chainOfTheStart(start: RunStart): Chain {
       trigger: start.trigger,
       actsFor: start.acts_for,
     }),
+    ...(start.test === true ? { test: true } : {}),
   };
 }
 

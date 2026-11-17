@@ -2,7 +2,7 @@ import type { ProjectedKeyedRow } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
 import { nextMilestoneOf } from '../assessments/assessment-dues.ts';
-import { textOf, type AssessmentState, type PinnedRule } from '../assessments/assessment-state.ts';
+import { isUndecided, textOf, type AssessmentState, type PinnedRule } from '../assessments/assessment-state.ts';
 import { countsIn } from '../assessments/window-counting.ts';
 import type { Target, WindowSpan } from '../goal-rules/goal-rule.ts';
 import { assessmentStateOfText, NoticesStartedSchema } from '../goal-tables/assessment-row-state.ts';
@@ -100,6 +100,24 @@ function verdictOf(state: AssessmentState) {
   };
 }
 
+function stoppedOf(state: AssessmentState) {
+  const { stopped } = state;
+  if (stopped === undefined || !isUndecided(state)) {
+    return {};
+  }
+  return {
+    stopped: {
+      at: textOf(stopped.at),
+      run: stopped.run,
+      ...(stopped.reason === undefined ? {} : { reason: stopped.reason }),
+    },
+  };
+}
+
+function pinnedOf({ pinned }: HeldAssessment) {
+  return { rule: { settles: pinned.settles, target: pinned.target }, milestones: pinned.milestones };
+}
+
 export function assessmentReadOf(held: HeldAssessment): AssessmentRead {
   const { id, state, pinned, notices } = held;
   const next = nextMilestoneOf(state);
@@ -107,12 +125,12 @@ export function assessmentReadOf(held: HeldAssessment): AssessmentRead {
     id,
     ...perOf(held),
     ...windowOf(state.window),
-    rule: { settles: pinned.settles, target: pinned.target },
-    milestones: pinned.milestones,
+    ...pinnedOf(held),
     marks: state.marks.map(({ milestone, at, run, says }) => ({ milestone, at: textOf(at), run, ...saying(says) })),
     ...(next === undefined ? {} : { next }),
     ...measurementsOf(state),
     ...verdictOf(state),
+    ...stoppedOf(state),
     goals_version: pinned.goalsVersion,
     notices,
   };
@@ -133,6 +151,10 @@ function decidedByCrossing({ state, pinned }: HeldAssessment): boolean {
   return inWindow && passing && crosses(pinned.target, measurement.value);
 }
 
+export function judgedOnItsMeasurement(held: HeldAssessment): boolean {
+  return held.state.measurement?.final === true || decidedByCrossing(held);
+}
+
 function judgedValueOf(held: HeldAssessment): number | undefined {
   if (held.state.verdict === 'open') {
     return undefined;
@@ -147,6 +169,10 @@ function closedOutcomeOf({ verdict, ended }: AssessmentState): ClosedOutcome | u
     return verdict;
   }
   return ended === 'no_result' ? ended : undefined;
+}
+
+function endedMarksOf({ marks }: AssessmentState) {
+  return marks.map(({ milestone, at, run }) => ({ milestone, at: textOf(at), run }));
 }
 
 export function closedReadsOf(held: HeldAssessment, at: number): readonly ClosedRead[] {
@@ -164,6 +190,9 @@ export function closedReadsOf(held: HeldAssessment, at: number): readonly Closed
       ...windowOf(held.state.window),
       ...(value === undefined ? {} : { value }),
       ...judgedByOf(held.state),
+      ...pinnedOf(held),
+      marks: endedMarksOf(held.state),
+      ...measurementsOf(held.state),
     },
   ];
 }

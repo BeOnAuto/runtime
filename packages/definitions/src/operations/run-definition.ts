@@ -5,7 +5,7 @@ import { attemptKeyOf, LiveAttempts } from '../attempts/live-attempts.ts';
 import type { Capability } from '../capability/capability.ts';
 import { knownRunningCapabilities } from '../capability/known-capabilities.ts';
 import { runPlainLanguage } from '../plain-language/run-words.ts';
-import { RunIdInputField, InputField, DefinitionNameField } from './definition-fields.ts';
+import { RunIdInputField, InputField, DefinitionNameField, TestRunField } from './definition-fields.ts';
 import { newRunId } from './run-access.ts';
 import { requestedRun } from './run-requests.ts';
 import { RequestedRunSchema, requestedRunAnswered } from './studio-pages.ts';
@@ -35,23 +35,26 @@ export function defineRunDefinition(capabilities: readonly Capability[]) {
         name: DefinitionNameField,
         input: Schema.optionalKey(InputField),
         run_id: Schema.optionalKey(RunIdInputField),
+        test: Schema.optionalKey(TestRunField),
       }),
       outputSchema: RequestedRunSchema,
       reasons: ['not_found', 'conflict', 'invalid_input', 'unavailable', 'cancelled', 'unanswered'],
-      handle: Effect.fnUntraced(function* ({ type, name, input = {}, run_id: suppliedId }) {
+      handle: Effect.fnUntraced(function* ({ type, name, input = {}, run_id: suppliedId, test = false }) {
         const capability = yield* known.capabilityOfType(type);
         const id = suppliedId ?? (yield* newRunId);
-        const requested = requestedRun(capabilities, capability, { definition_type: capability.type, name, input }, id);
+        const request = { definition_type: capability.type, name, input, ...(test ? { test: true as const } : {}) };
+        const requested = requestedRun(capabilities, capability, request, id);
+        const { calledBy } = yield* CallLineage;
+        const started = { type: capability.type, name, test, calledByARun: calledBy !== null };
         const live = yield* Effect.serviceOption(LiveAttempts);
         if (Option.isNone(live)) {
-          return yield* requestedRunAnswered(yield* requested);
+          return yield* requestedRunAnswered(yield* requested, started);
         }
         const key = attemptKeyOf(yield* PlaybookContext, id);
-        const { calledBy } = yield* CallLineage;
         const attempted = yield* capability.resumes && calledBy === null
           ? live.value.outliving(key, requested)
           : live.value.attempt(key, requested);
-        return yield* requestedRunAnswered(attempted);
+        return yield* requestedRunAnswered(attempted, started);
       }),
       plainLanguage: runPlainLanguage(capabilities),
     }),

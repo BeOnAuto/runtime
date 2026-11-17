@@ -33,7 +33,7 @@ describe('the tables of goals', () => {
       'definition_restored',
     ]);
     expect(goalsLedger.projections.map(({ name, version }) => `${name}_${String(version)}`)).toEqual([
-      'goal_assessments_2',
+      'goal_assessments_4',
       'goal_clocks_1',
       'goal_refusals_1',
       'goal_notice_days_1',

@@ -20,9 +20,12 @@ export interface RenderedPrompt {
 
 export type PromptPart = 'instructions' | 'message';
 
+export type NotTextReason = 'kept_file' | 'not_text';
+
 export type RenderFailure =
   | EngineRenderFailure
   | { readonly reason: 'too_long'; readonly part: PromptPart; readonly line: number }
+  | { readonly reason: 'kept_file'; readonly part: PromptPart; readonly line: number }
   | { readonly reason: 'not_text'; readonly part: PromptPart; readonly line: number };
 
 export interface CompiledTemplate {

@@ -6,6 +6,7 @@ export {
   type HarnessOptions,
   type HarnessTools,
   type InteractionHarness,
+  type RunLink,
 } from './interaction-harness.ts';
 export {
   agentDelivery,

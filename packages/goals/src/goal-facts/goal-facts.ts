@@ -19,6 +19,7 @@ export const AssessmentEventSchema = Schema.Union([
   factOf('goal_notice_started', goalFactData.goal_notice_started, ActedContextSchema),
   noticeRefused,
   factOf('goal_assessment_ended', goalFactData.goal_assessment_ended, ActedContextSchema),
+  factOf('goal_stopped', goalFactData.goal_stopped, ActedContextSchema),
 ]);
 
 export type RecordedAssessmentEvent = typeof AssessmentEventSchema.Type;

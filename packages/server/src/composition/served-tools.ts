@@ -14,6 +14,7 @@ export interface ToolUsersWiring extends ProvidersOffered {
   readonly registry: CapabilityRegistry;
   readonly connections: Pick<ConnectionSource, 'takesConnections'>;
   readonly toolTiming?: Timing;
+  readonly results?: boolean | undefined;
 }
 
 export interface ServedToolUsers {
@@ -22,12 +23,13 @@ export interface ServedToolUsers {
   readonly interaction: ServedInteraction;
   readonly toolOperations: ServedToolOperations;
   readonly listServers: ToolAccess['listServers'];
+  readonly named: ToolAccess['named'];
 }
 
 export async function toolUsersServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: Settings,
-  { registry, connections, offering, goals, messages, toolTiming }: ToolUsersWiring,
+  { registry, connections, offering, goals, results, messages, toolTiming }: ToolUsersWiring,
 ): Promise<ServedToolUsers> {
   const tools = toolAccessOf(registry.tools, settings, connections, toolTiming);
   return {
@@ -36,8 +38,9 @@ export async function toolUsersServedBy(
       telemetry: registry.modelTelemetry,
     }),
     lookup: lookupServedBy(runtime, tools),
-    interaction: interactionServedBy(runtime, settings, tools),
+    interaction: interactionServedBy(runtime, settings, tools, results === true),
     toolOperations: toolOperationsOf(tools, { offering, goals, messages }),
     listServers: tools.listServers,
+    named: tools.named,
   };
 }

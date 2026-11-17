@@ -93,6 +93,16 @@ const ledger = ledgerOf([
   started('heard', onEvent, { causationId: 'from-a-child' }),
   started('noticed', { trigger: { kind: 'goal', reference: '/goals/g' } }),
   started('lost', onEvent, { causationId: 'missing' }),
+  started('tried', { by: 'person:user_one', test: true }),
+  started(
+    'tried-child',
+    { by: 'person:user_one', calledBy: { runId: 'tried', reference: '/do/0', run: 1 } },
+    { correlationId: 'tried' },
+  ),
+  emitted('from-a-test', 'tried'),
+  started('heard-a-test', onEvent, { causationId: 'from-a-test' }),
+  emitted('from-a-test-reaction', 'heard-a-test'),
+  started('heard-it-again', onEvent, { causationId: 'from-a-test-reaction' }),
 ]);
 
 function originsOf(runs: readonly string[], reads: ChainReads<never> = readsOver(ledger)) {
@@ -118,8 +128,38 @@ describe('the origin of a run’s chain, walked over the facts of a ledger', () 
     expect(['ticked', 'child', 'pinged', 'ponged'].map((run) => originsOf([run]).reads)).toEqual([1, 2, 2, 4]);
   });
 
+  it('ends at a test for a run started as a test, each run it called and each run its events triggered, two levels deep', () => {
+    expect(originsOf(['tried', 'tried-child', 'heard-a-test', 'heard-it-again']).found).toEqual([
+      'test',
+      'test',
+      'test',
+      'test',
+    ]);
+  });
+
   it('ends unknown when a run or a record it names is not in the ledger', () => {
     expect(originsOf(['gone', 'lost']).found).toEqual(['unknown', 'unknown']);
+  });
+});
+
+function outsideOf(runs: readonly string[]) {
+  const origins = chainOriginsOf(readsOver(ledger), rule);
+  return Effect.runSync(Effect.forEach(runs, (run) => Effect.map(origins.chainOf({ run }), ({ outside }) => outside)));
+}
+
+describe('the event from outside every run that began a chain', () => {
+  it('is the event a person published, for the run it started and for a run an event of that run started', () => {
+    expect(outsideOf(['pinged', 'ponged', 'pinged'])).toEqual([
+      { id: 'ping', at },
+      { id: 'ping', at },
+      { id: 'ping', at },
+    ]);
+  });
+
+  it('is none for a chain begun by a schedule, a person, a key, a call, a notice or a run missing from the ledger', () => {
+    expect(outsideOf(['ticked', 'asked', 'keyed', 'child', 'heard', 'noticed', 'gone', 'lost'])).toEqual(
+      Array.from({ length: 8 }),
+    );
   });
 });
 

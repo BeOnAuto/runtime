@@ -2530,6 +2530,23 @@
       ]
     },
     {
+      "sha256": "21fa974997b7a69af38eeef80f0d1382081470ac8ae175ee3cc0b2128844ed84",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool run_definition: argument test",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "true when only trying it: it and what follows count toward no goal but still do real work (call tools, ask people, send messages, change things). Without it the run counts; a judged thing cannot be taken back."
+      ]
+    },
+    {
       "sha256": "72349eb0991ff1f65e0475a5cc23ebb28a3a3931541fbda34881b98e33c2cfab",
       "tier": 1,
       "received": [
@@ -5574,7 +5591,7 @@
       ]
     },
     {
-      "sha256": "cd87deb7ceaccd79d5783137f10a611efa9e91e3d6ac99282ad1f7f1615f343e",
+      "sha256": "8267cd6047bf30cbce276c6afc20fe35e68f6669af07cbe0152e6176867e527b",
       "tier": 3,
       "received": [
         {
@@ -5608,16 +5625,17 @@
         "",
         "Create the playbook only after their yes to the proposal, and never earlier just to reach another tool; the Studio link isn't needed before it. Then record that yes as [After the create](#after-the-create-show-the-saved-goals-and-record-the-yes) says. Never change a goal to suit how you built something.",
         "",
-        "1. **What the playbook should achieve for them.** Ask what change they want from it. Their words for it, in one sentence, are the goal's statement. A statement that only repeats the playbook's name or description is refused.",
+        "1. **What the playbook should achieve for them.** Ask what change they want from it. Their words for it, in one sentence, are the goal's statement: save their sentence, not your rewording of it. A statement that only repeats the playbook's name or description is refused, so the description says what the playbook does, not this sentence.",
         "2. **What to call it.** A short name for the goal, two to four words from their own, such as \"Catering replies\" or \"Daily controls\". That is the goal's `name`, the title the person sees it under. Suggest one in the proposal, even when the person has said everything else.",
-        "3. **How they will know it worked.** Ask what would convince them. That is one number and a target, such as at least one paying customer from each experiment, or no failing control in a day. When they have no number in mind, the proposal suggests one that fits what they said. Ask too what to call a pass and a fail in their words, such as \"Brought a customer\" and \"Brought no customer\". When it is judged day by day and the work happens on some days only, such as working days, ask which days.",
+        "3. **How they will know it worked.** Ask what would convince them. That is one number and a target, such as at least one paying customer from each experiment, or no failing control in a day. The number is the one they said they would judge by, in their unit: \"within 24 hours\" is the hours it took, at most 24, not a count of replies. If you cannot measure that, say so and ask; never measure something easier instead. When they have no number in mind, the proposal suggests one that fits what they said. Ask too what to call a pass and a fail in their words, such as \"Brought a customer\" and \"Brought no customer\". When it is judged day by day and the work happens on some days only, such as working days, ask which days.",
         "",
         "Auto does not send messages about goals here yet. Do not ask the person whether, when or where they want to be told about results, and do not offer it. Leave `notify` out of the goals and make no notification function. They see their results in Studio. If they ask to be told, or say when they do or don't want to hear about it, first say that Auto doesn't send messages about goals yet and that their results are in Studio. Only then may you offer to build the post into the playbook as ordinary work, and build it only after they say yes to that. Ask which time zone they mean when a day or a week matters.",
         "",
-        "Two more questions shape the goal when the work comes as a stream of things:",
+        "More questions shape the goal when the work comes as a stream of things:",
         "",
-        "- **Is it judged thing by thing?** Experiments, invoices, tickets and orders are each judged on their own. Ask what one of them is called. That word is the goal's `per`.",
-        "- **What has to happen to one of them, start to finish, and which of those steps are theirs?** These are the goal's milestones, three to seven of them: the points where the person acts and the points where Auto collects something. Each one is a segment of the goal's ring in Studio.",
+        "- **Is it judged thing by thing?** Experiments, invoices, tickets and orders are each judged on their own. Ask what one of them is called. That word is the goal's `per`. It is the person's own word, never one Auto uses for its own parts (run, workflow, step, event, function, job): they read it as the name of their thing all over Studio.",
+        "- **How often does one happen?** Each judged thing is a row the person reads. Work that happens many times a day, such as a check every minute, is judged by the day or the week unless the person asks for each one to be judged. Say back what they will see, such as \"one result a day: how many of the day's checks passed\", before you save.",
+        "- **What happens to one of them, start to finish, and which of those are theirs?** These are the goal's milestones, three to seven of them, each an event that really happens, named as what happened, such as \"Launched\" or \"Result in\". Fewer true milestones beat more hopeful ones. A milestone the person does needs a request that asks them and marks it on their answer; with nothing asking them, leave it out. They can answer any request in Studio, so one held for an agent, `deliver: agent`, asks them there with no connection. Each one is a segment of the goal's ring in Studio.",
         "",
         "For example, a compliance owner says: \"Tell me at once when a daily check fails, and nothing when they pass.\" Say first that Auto doesn't send messages about goals yet and that the results will be in Studio. Then learn the goal behind the wish: every control passes its daily check, judged by the day, with at most zero failing controls. The statement says what should be achieved, never how they hear about it. One thing is still missing, so ask it: which time zone their days are in. Then suggest \"Daily controls\" as its name in the proposal. If they still want a post in their channel, offer to build it into the playbook, and build it only after their yes.",
         "",
@@ -5642,6 +5660,8 @@
         "A yes holds only for the goals as the person saw them. A save that changes a goal, its name included, drops the yes to that goal. So after the yes, put a change to the person first, save it as they agreed it, and call agree_playbook_goals again with the new version before you build on it. When the call answers that the goals changed since the version you gave, show the person the saved goals again and ask before you record a yes.",
         "",
         "The answers of create_playbook, update_playbook and get_playbook carry `goals`: the text as saved, its version and its gaps. A gap is not a refusal. It says what the goals still lack before they can be judged, such as a measure that no workflow reports yet. Most gaps close as you save the workflows. [Gaps, and who fixes each](#gaps-and-who-fixes-each) lists them.",
+        "",
+        "The answers of create_playbook, update_playbook, create_definition and update_definition can also carry `notices`: what to double-check in what you just saved, such as a `per` that is one of Auto's own words, and what the person will see. Read each before you go on: change what you saved, or carry on as `before_going_on` says.",
         "",
         "The same holds when you plan the work after the yes. If the person asked to be told about results, your first words about it are that Auto doesn't send messages about goals yet and that their results are in Studio. Only then ask whether they want a post built into the playbook, and where. Never ask it if they didn't ask to be told.",
         "",
@@ -5670,7 +5690,7 @@
         "",
         "The window:",
         "",
-        "- `after` names a milestone. The window starts when that milestone is first marked for the thing, and closes `for` later.",
+        "- `after` names a milestone. The window starts when that milestone is first marked for the thing, and closes `for` later. A run marks as it ends, so mark the start in a run that does not wait for the person.",
         "- `calendar` is `day`, `week` or `month`, in `time_zone` (UTC by default; the same time zone names a workflow's `cron` takes). A week starts on Monday. A calendar window is not allowed together with `per`.",
         "- `days` lists the days of the week a `calendar: day` window is judged on, such as `[monday, tuesday, wednesday, thursday, friday]`. The other days have no window, so nothing is judged or missed on them. Leave it out to judge every day.",
         "- `grace` is how long after the close a final measurement may still arrive. It is one hour, `PT1H`, by default. Its verdict can come that much later, so put any grace you choose to the person with the window, as you would a target.",
@@ -5699,9 +5719,8 @@
         "  milestones:",
         "    - { id: chosen, label: Idea chosen, by: person }",
         "    - { id: prepared, label: Package prepared, by: auto }",
-        "    - { id: live, label: Taken live, by: person }",
-        "    - { id: measured, label: Measured, by: auto }",
-        "    - { id: concluded, label: Lesson kept, by: person }",
+        "    - { id: live, label: Launched, by: auto }",
+        "    - { id: measured, label: Result in, by: auto }",
         "```",
         "",
         "### A goal judged on a calendar",
@@ -5731,7 +5750,7 @@
         "",
         "- With `on_crossing` and `at_least`, a measurement at or above the target while the window is open passes immediately. With `at_most`, a measurement above it fails immediately.",
         "- At the close plus its grace, the latest final measurement decides, for both kinds of `settles`.",
-        "- When no final measurement has arrived by then, the judging becomes overdue. A final measurement that arrives later still decides it, but only when its `as_of` lies at or before the window's close. A measurement with no `as_of` is true as of when its run ended, so one from a run that ended after the close does not decide it. One that is still overdue one more window later fails: its deadline passed with nothing that counts, so it is a miss with no number. A late measurement is still recorded, but it never turns the miss into a pass.",
+        "- When no final measurement has arrived by then, the judging becomes overdue. A final measurement that arrives later still decides it, but only when its `as_of` lies at or before the window's close. A measurement with no `as_of` is true as of when its run ended, so one from a run that ended after the close does not decide it. One that is still overdue one more window later fails: its deadline passed with nothing that counts, so it is a miss with no number. A late measurement is still recorded, but it never turns the miss into a pass. So tell the person that a thing nothing measured, such as one waiting on an answer that never came, shows overdue once its close and grace pass, and is missed only one window later.",
         "- A verdict is final. Later measurements change nothing, though milestones are still marked.",
         "",
         "## What a workflow contributes",
@@ -5755,10 +5774,15 @@
         "| `as_of`    | No                      | A pointer to the instant the measurement is true through, with its offset; when the run ended, if left out. Needs `measures`   |",
         "| `says`     | No                      | A pointer to one sentence of evidence the person reads, at most two hundred characters                                         |",
         "",
+        "- `title` is the name the person would call the thing, such as \"Cold email batch to dental clinics\": they read it in every list and heading. Never an id, a run id or a UTC time. The same holds for `says` and for every question a request puts to the person: dates and times in words in the person's time zone, such as \"Tuesday, November 17 at 9:20 AM\", a name rather than an email address, and no id. A thing with no name a person would use is probably not the thing to judge.",
+        "- `says` is what the person reads about the thing in Studio: one plain sentence, written for them and not as a log line, with the numbers and the names of what is missing or failed, such as \"9 of 14 checks reported. Missing: the backup restore test and the audit trail.\"",
+        "- Give `link` wherever the thing lives somewhere the person can open.",
+        "- `marks` ticks a milestone only for a thing it really happened to, so its `when` must be true for that thing.",
         "- At most 8 entries. One workflow may serve several goals, or one goal several ways.",
         "- An entry whose `when` is false, whose `each` is empty, or whose `per_id` finds nothing, records nothing, silently.",
         "- `each` takes at most a hundred items, and names each thing once.",
         "- Every milestone of a goal, and its measure, need a workflow that marks or reports them. Until one does, the goal shows a gap.",
+        "- A thing whose run fails, or whose final measurement can no longer meet an `on_crossing` target, shows as stopped in Studio, with the run's reason. It stays open and is judged at its due time; a later run that marks its next milestone, or a measurement that is not final, clears it. A failed run reaches only a thing marked or measured by a run it follows from, such as the run whose event started it, or, when its workflow contributes to the goal, by a run the same outside event started. So if preparing the package were its own workflow, started by an event the Monday workflow publishes once the idea is chosen, its failure would show that experiment as stopped with the reason; a run started by its schedule, or one that fails before anything marked the thing, stops nothing.",
         "",
         "### final and as_of",
         "",
@@ -5788,14 +5812,14 @@
         "    marks: prepared",
         "```",
         "",
-        "The second starts every hour and reads the tracker; choose a schedule from how often the source changes and how soon the person needs to know. Its output holds `experiments`, one item for each experiment, with its `id`, `title`, `url`, `live`, `customers`, `closed`, `measured_through`, `evidence` and `lesson_kept`.",
+        "The second starts every hour and reads the tracker; choose a schedule from how often the source changes and how soon the person needs to know. Its output holds `experiments`, one item for each experiment, with its `id`, `title`, `url`, `live`, `customers`, `closed`, `measured_through` and `evidence`.",
         "",
         "```",
         "schedule:",
         "  every: PT1H",
         "contributes:",
         "  - goal: paying-customers",
-        "    purpose: Sees when an experiment is taken live.",
+        "    purpose: Sees when an experiment goes live.",
         "    each: /experiments",
         "    per_id: /id",
         "    when: ${ $data.live === true }",
@@ -5816,12 +5840,6 @@
         "    per_id: /id",
         "    when: ${ $data.closed === true }",
         "    marks: measured",
-        "  - goal: paying-customers",
-        "    purpose: Sees when the owner has written down the lesson.",
-        "    each: /experiments",
-        "    per_id: /id",
-        "    when: ${ $data.lesson_kept === true }",
-        "    marks: concluded",
         "```",
         "",
         "### The contribution for the daily checks",
@@ -5851,11 +5869,11 @@
         "",
         "## Which runs count",
         "",
-        "A run counts as evidence only when its chain began with a schedule or with a call made with an API key: a workflow's `cron` or `every`, or a run started or an event published with an API key, and the runs, events and requests that follow from those.",
+        "These runs count as evidence: a workflow's `cron` or `every`, a run the person starts in Studio, a run you start or an event you publish, signed in as the person or with an API key, and the runs, events and requests that follow from those. A run is a test only when started with run_definition and `test: true`; it never counts, nor anything that follows from it. A test still does real work: it calls tools, asks people, sends messages and changes things outside the playbook, as any run does. It only keeps the runs from counting.",
         "",
-        "A run that a signed-in person began counts for nothing. A run you start with run_definition while signed in as the person, one the person starts in Studio, a workflow such a run calls or triggers, and an event you publish while signed in as the person never open a judging. A run you start or an event you publish with an API key does count: it can open a judging, so never test a goal's workflow with an API key. You cannot test a goal by running its workflow: tell the person the first judging opens when the schedule next runs, and show them the `studio` link to watch for it. On a laptop runtime in local mode only schedules count.",
+        "When you run a goal's workflow to try it, pass `test: true`; to do the real job, leave it out. Without it the run counts: it can open a judging, and a judged thing cannot be taken back. The answer of a run you start that counts says so. A test run that succeeds shows the workflow ran, not the goal judged: tell the person the next run that counts, such as the schedule's, can open the first judging, and show them the `studio` link to watch for it.",
         "",
-        "A person's own milestone is marked when they answer a request inside a run that a schedule or an API key began. The run waits for their answer, its output then carries what they said, and the contribution's `marks` and `when` read it. That is how the experiments workflow above marks `chosen`. A milestone can also be marked when a scheduled run sees what the person did, as the hourly workflow sees an experiment taken live.",
+        "A person's own milestone is marked when they answer a request inside a run that counts. The run waits for their answer, its output then carries what they said, and the contribution's `marks` and `when` read it. That is how the experiments workflow above marks `chosen`. A milestone Auto only sees happen, as the hourly workflow sees an experiment go live, is `by: auto`.",
         "",
         "## Gaps, and who fixes each",
         "",
@@ -5865,6 +5883,7 @@
         "| ------------------------------- | ------ | ------------------------------------------------------------------------------------ |",
         "| `no_goal`                       | Person | Learn the goals with the person, send them with update_playbook and record their yes |",
         "| `no_milestones`                 | Person | Ask what has to happen to one thing, start to finish, and which steps are theirs     |",
+        "| `connection_missing`            | Person | Put its `ask` to the person: `Connect <server> in Studio`                            |",
         "| `measure_unreported`            | Agent  | Give a workflow a contribution with `measures`                                       |",
         "| `measure_paused`                | Agent  | Resume a paused workflow that reports it, or let an active one report it             |",
         "| `measure_never_final`           | Agent  | Give the workflow that knows the measurement is complete a `final`                   |",
@@ -5877,7 +5896,7 @@
       ]
     },
     {
-      "sha256": "b4a174ea5a82bd94baf0a013073ee700aab42d453d3d79d93b1e19572a11520f",
+      "sha256": "2b3d2cbe00cf05edc22d95e3b59d9dadfc64ca48ce95c0a863ba650cc100dda9",
       "tier": 3,
       "received": [
         {
@@ -6031,7 +6050,7 @@
         "- A field the input does not have stops the run with `invalid_input`, naming the field and the line.",
         "- Two places may read a missing field without stopping the run: a condition of `if`, `elsif` or `unless`, and the `default` filter. So a template can test a field that may be absent: `{% if input.vip %}…{% endif %}`, `{{ input.nickname | default: \"friend\" }}`.",
         "- Only the input's own fields can be read: `input.constructor` is a missing field.",
-        "- A list renders as its items with no separators, and an object renders as `[object Object]`. Use `{{ input.account | json }}` to render JSON.",
+        "- A list or an object written whole stops the run with `invalid_input`, naming the line. Write one of its fields, such as `{{ input.account.name }}`, or render it as JSON with `{{ input.account | json }}`.",
         "",
         "### The system block",
         "",
@@ -6387,7 +6406,7 @@
       ]
     },
     {
-      "sha256": "bf76395dc4acfa51a339989a5d45842d52bbfaa4d4a005456379dbda30f17ea1",
+      "sha256": "c51fdbf84063ff1a61a4e1ca5855edff366f8077c762939aeb1da05ab95d30b7",
       "tier": 3,
       "received": [
         {
@@ -6432,7 +6451,7 @@
         "- an email provider: the tool that sends mail, and the one that lists the messages of a thread;",
         "- a ticketing or approvals app: the tool that adds a comment to an item, and the one that lists its comments.",
         "",
-        "`deliver: agent` holds the request for an agent: an agent the person talks to reads it with `list_interactions`, and answers it with `answer_interaction` once the person says what to answer.",
+        "`deliver: agent` holds the request for an agent: an agent the person talks to reads it with `list_interactions`, and answers it with `answer_interaction` once the person says what to answer. A member who may change the playbook can also answer it in Auto Studio, which lists the open requests, so it suits a person who answers there and wants no message anywhere else.",
         "",
         "A notification takes no answer, so no agent holds it: it goes through a connection, `deliver` naming the tool that sends it, and any connection with a tool that sends can carry it. Its run succeeds with the output `{}`, so nothing after it learns where the message landed. To post something whose replies a later step reads, write a function that asks a system instead: its `call` posts the message, and its output keeps the tool's answer, such as the message's `ts`, for a lookup function to read the replies by.",
         "",

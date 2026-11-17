@@ -1,43 +1,28 @@
 import { playbookGoalsIn } from '@on.auto/definitions/goals';
-import {
-  PlaybookReader,
-  playbookLedgerOf,
-  type Ledger,
-  type PlaybookAddress,
-  type RecordedEvent,
-} from '@on.auto/operations';
+import { PlaybookReader, playbookLedgerOf } from '@on.auto/operations';
 import { Cause, Context, Effect, Option, Schema } from 'effect';
 
-import { originCounts, type CallerRule } from '../chain-origins/chain-origin.ts';
-import { chainOriginsOf, type ChainReads } from '../chain-origins/chain-origins.ts';
-import type { RunConditions } from '../conditions/run-conditions.ts';
-import type { RunOutputs } from '../run-outputs/run-outputs.ts';
-import type { ContributedVersions } from './contributed-versions.ts';
-import { nothingPlanned, observedPlan, refusedPlan, type RunPlan } from './planned-runs.ts';
+import { originCounts } from '../chain-origins/chain-origin.ts';
+import { chainOriginsOf } from '../chain-origins/chain-origins.ts';
+import {
+  nothingPlanned,
+  observedPlan,
+  refusedPlan,
+  type PlanParts,
+  type PlannedRecord,
+  type RunPlan,
+} from './planned-runs.ts';
 import {
   conditionedOf,
   contributedRunOf,
   extractedOf,
+  failedRunOf,
   finishedRunOf,
   goneRefusalsOf,
   knownEntriesOf,
   observedKeysOf,
 } from './run-observations.ts';
-
-export interface PlanParts<E> {
-  readonly ledger: Ledger['Service'];
-  readonly chainsOf: (playbook: PlaybookAddress) => ChainReads<E>;
-  readonly callers: CallerRule;
-  readonly outputsOf: (playbook: PlaybookAddress) => RunOutputs;
-  readonly conditions: RunConditions;
-  readonly versions: ContributedVersions;
-}
-
-export interface PlannedRecord {
-  readonly playbook: PlaybookAddress;
-  readonly playbookKey: string;
-  readonly record: RecordedEvent;
-}
+import { stoppingPlanOf } from './stopped-runs.ts';
 
 const OutputDataSchema = Schema.Struct({
   output: Schema.optionalKey(Schema.Unknown),
@@ -47,7 +32,12 @@ const OutputDataSchema = Schema.Struct({
 
 const outputDataOf = Schema.decodeUnknownOption(OutputDataSchema);
 
-function planOf<E>(parts: PlanParts<E>, { playbook, playbookKey, record }: PlannedRecord) {
+function planOf<E>(parts: PlanParts<E>, planned: PlannedRecord) {
+  const failed = failedRunOf(planned.record);
+  return failed === undefined ? succeededPlanOf(parts, planned) : stoppingPlanOf(parts, planned, failed);
+}
+
+function succeededPlanOf<E>(parts: PlanParts<E>, { playbook, playbookKey, record }: PlannedRecord) {
   return Effect.gen(function* () {
     const run = finishedRunOf(record);
     if (run === undefined) {

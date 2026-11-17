@@ -170,52 +170,56 @@
       "sql": "CREATE INDEX generations_due_1_polls_due ON generations_due_1 (poll_due_at) WHERE poll_due_at IS NOT NULL"
     },
     {
-      "name": "goal_assessments_2",
-      "sql": "CREATE TABLE goal_assessments_2 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, goal TEXT, goals_version INTEGER, per_id TEXT, window_opens INTEGER, window_closes INTEGER, window_due INTEGER, title TEXT, link TEXT, next_milestone TEXT, mark_1 TEXT, mark_2 TEXT, mark_3 TEXT, mark_4 TEXT, mark_5 TEXT, mark_6 TEXT, mark_7 TEXT, verdict TEXT, verdict_at INTEGER, verdict_told TEXT, overdue INTEGER, overdue_since INTEGER, overdue_told TEXT, outcome TEXT, open INTEGER, opened_at INTEGER, observed_at INTEGER, closed_at INTEGER, closed_recorded_at INTEGER, overdue_recorded_at INTEGER, judging_due_at INTEGER, no_result_at INTEGER, notice_due_at INTEGER, notices TEXT, noticed_at INTEGER, notice_refusals TEXT, notice_refused_at INTEGER, state TEXT, PRIMARY KEY (playbook_key, row_key))"
+      "name": "goal_assessments_4",
+      "sql": "CREATE TABLE goal_assessments_4 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, goal TEXT, goals_version INTEGER, per_id TEXT, window_opens INTEGER, window_closes INTEGER, window_due INTEGER, title TEXT, link TEXT, next_milestone TEXT, mark_1 TEXT, mark_2 TEXT, mark_3 TEXT, mark_4 TEXT, mark_5 TEXT, mark_6 TEXT, mark_7 TEXT, verdict TEXT, verdict_at INTEGER, verdict_told TEXT, overdue INTEGER, overdue_since INTEGER, overdue_told TEXT, outcome TEXT, open INTEGER, opened_at INTEGER, observed_at INTEGER, closed_at INTEGER, closed_recorded_at INTEGER, overdue_recorded_at INTEGER, judging_due_at INTEGER, no_result_at INTEGER, notice_due_at INTEGER, notices TEXT, noticed_at INTEGER, notice_refusals TEXT, notice_refused_at INTEGER, stopped_at INTEGER, stopped_run TEXT, state TEXT, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "goal_assessments_2_closed",
-      "sql": "CREATE INDEX goal_assessments_2_closed ON goal_assessments_2 (playbook_key, goal, open, closed_at, row_key)"
+      "name": "goal_assessments_4_closed",
+      "sql": "CREATE INDEX goal_assessments_4_closed ON goal_assessments_4 (playbook_key, goal, open, closed_at, row_key)"
     },
     {
-      "name": "goal_assessments_2_closed_recorded",
-      "sql": "CREATE INDEX goal_assessments_2_closed_recorded ON goal_assessments_2 (playbook_key, goal, open, closed_recorded_at, row_key)"
+      "name": "goal_assessments_4_closed_recorded",
+      "sql": "CREATE INDEX goal_assessments_4_closed_recorded ON goal_assessments_4 (playbook_key, goal, open, closed_recorded_at, row_key)"
     },
     {
-      "name": "goal_assessments_2_in_flight",
-      "sql": "CREATE INDEX goal_assessments_2_in_flight ON goal_assessments_2 (playbook_key, goal, open, overdue, window_due, row_key)"
+      "name": "goal_assessments_4_in_flight",
+      "sql": "CREATE INDEX goal_assessments_4_in_flight ON goal_assessments_4 (playbook_key, goal, open, overdue, window_due, row_key)"
     },
     {
-      "name": "goal_assessments_2_judging_due",
-      "sql": "CREATE INDEX goal_assessments_2_judging_due ON goal_assessments_2 (judging_due_at) WHERE judging_due_at IS NOT NULL"
+      "name": "goal_assessments_4_judging_due",
+      "sql": "CREATE INDEX goal_assessments_4_judging_due ON goal_assessments_4 (judging_due_at) WHERE judging_due_at IS NOT NULL"
     },
     {
-      "name": "goal_assessments_2_newest",
-      "sql": "CREATE INDEX goal_assessments_2_newest ON goal_assessments_2 (playbook_key, goal, open, opened_at, row_key)"
+      "name": "goal_assessments_4_newest",
+      "sql": "CREATE INDEX goal_assessments_4_newest ON goal_assessments_4 (playbook_key, goal, open, opened_at, row_key)"
     },
     {
-      "name": "goal_assessments_2_notice_due",
-      "sql": "CREATE INDEX goal_assessments_2_notice_due ON goal_assessments_2 (notice_due_at) WHERE notice_due_at IS NOT NULL"
+      "name": "goal_assessments_4_notice_due",
+      "sql": "CREATE INDEX goal_assessments_4_notice_due ON goal_assessments_4 (notice_due_at) WHERE notice_due_at IS NOT NULL"
     },
     {
-      "name": "goal_assessments_2_noticed",
-      "sql": "CREATE INDEX goal_assessments_2_noticed ON goal_assessments_2 (playbook_key, goal, noticed_at, row_key)"
+      "name": "goal_assessments_4_noticed",
+      "sql": "CREATE INDEX goal_assessments_4_noticed ON goal_assessments_4 (playbook_key, goal, noticed_at, row_key)"
     },
     {
-      "name": "goal_assessments_2_outcomes",
-      "sql": "CREATE INDEX goal_assessments_2_outcomes ON goal_assessments_2 (playbook_key, goal, outcome, row_key)"
+      "name": "goal_assessments_4_outcomes",
+      "sql": "CREATE INDEX goal_assessments_4_outcomes ON goal_assessments_4 (playbook_key, goal, outcome, closed_at, row_key)"
     },
     {
-      "name": "goal_assessments_2_overdue_recorded",
-      "sql": "CREATE INDEX goal_assessments_2_overdue_recorded ON goal_assessments_2 (playbook_key, goal, open, overdue, overdue_recorded_at, row_key)"
+      "name": "goal_assessments_4_overdue_recorded",
+      "sql": "CREATE INDEX goal_assessments_4_overdue_recorded ON goal_assessments_4 (playbook_key, goal, open, overdue, overdue_recorded_at, row_key)"
     },
     {
-      "name": "goal_assessments_2_refused_notices",
-      "sql": "CREATE INDEX goal_assessments_2_refused_notices ON goal_assessments_2 (playbook_key, goal, notice_refused_at, row_key)"
+      "name": "goal_assessments_4_refused_notices",
+      "sql": "CREATE INDEX goal_assessments_4_refused_notices ON goal_assessments_4 (playbook_key, goal, notice_refused_at, row_key)"
     },
     {
-      "name": "goal_assessments_2_waiting",
-      "sql": "CREATE INDEX goal_assessments_2_waiting ON goal_assessments_2 (playbook_key, goal, open, next_milestone, row_key)"
+      "name": "goal_assessments_4_stopped",
+      "sql": "CREATE INDEX goal_assessments_4_stopped ON goal_assessments_4 (playbook_key, goal, open, stopped_at, row_key)"
+    },
+    {
+      "name": "goal_assessments_4_waiting",
+      "sql": "CREATE INDEX goal_assessments_4_waiting ON goal_assessments_4 (playbook_key, goal, open, next_milestone, row_key)"
     },
     {
       "name": "goal_clocks_1",
@@ -286,44 +290,44 @@
       "sql": "CREATE INDEX ledger_messages_by_stream ON emt_messages (stream_id, global_position)"
     },
     {
-      "name": "open_requests_18",
-      "sql": "CREATE TABLE open_requests_18 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, request_id TEXT, type TEXT, function TEXT, version INTEGER, party TEXT, delivery TEXT, replies TEXT, message TEXT, answers INTEGER, answer_schema TEXT, requested_at INTEGER, expires_at INTEGER, attempts INTEGER, next_attempt_at INTEGER, standing TEXT, open INTEGER, attempt_due_at INTEGER, ending_due_at INTEGER, ended TEXT, conversation TEXT, reading TEXT, sent_conversation TEXT, sent_id TEXT, sent_at INTEGER, answerer TEXT, reply TEXT, reply_refusals INTEGER, refusals_told INTEGER, tell TEXT, taken TEXT, telling_due_at INTEGER, last_said TEXT, ending TEXT, PRIMARY KEY (playbook_key, row_key))"
+      "name": "open_requests_19",
+      "sql": "CREATE TABLE open_requests_19 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, request_id TEXT, type TEXT, function TEXT, version INTEGER, party TEXT, delivery TEXT, replies TEXT, message TEXT, answers INTEGER, answer_schema TEXT, requested_at INTEGER, expires_at INTEGER, attempts INTEGER, next_attempt_at INTEGER, standing TEXT, open INTEGER, attempt_due_at INTEGER, ending_due_at INTEGER, ended TEXT, conversation TEXT, reading TEXT, sent_conversation TEXT, sent_id TEXT, sent_at INTEGER, answerer TEXT, reply TEXT, reply_refusals INTEGER, refusals_told INTEGER, tell TEXT, taken TEXT, telling_due_at INTEGER, last_said TEXT, ending TEXT, within_run TEXT, within_step TEXT, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "open_requests_18_attempts_due",
-      "sql": "CREATE INDEX open_requests_18_attempts_due ON open_requests_18 (attempt_due_at) WHERE attempt_due_at IS NOT NULL"
+      "name": "open_requests_19_attempts_due",
+      "sql": "CREATE INDEX open_requests_19_attempts_due ON open_requests_19 (attempt_due_at) WHERE attempt_due_at IS NOT NULL"
     },
     {
-      "name": "open_requests_18_by_conversation",
-      "sql": "CREATE INDEX open_requests_18_by_conversation ON open_requests_18 (playbook_key, open, conversation, requested_at, row_key)"
+      "name": "open_requests_19_by_conversation",
+      "sql": "CREATE INDEX open_requests_19_by_conversation ON open_requests_19 (playbook_key, open, conversation, requested_at, row_key)"
     },
     {
-      "name": "open_requests_18_by_function",
-      "sql": "CREATE INDEX open_requests_18_by_function ON open_requests_18 (playbook_key, open, function, requested_at, row_key)"
+      "name": "open_requests_19_by_function",
+      "sql": "CREATE INDEX open_requests_19_by_function ON open_requests_19 (playbook_key, open, function, requested_at, row_key)"
     },
     {
-      "name": "open_requests_18_by_open",
-      "sql": "CREATE INDEX open_requests_18_by_open ON open_requests_18 (playbook_key, open, requested_at, row_key)"
+      "name": "open_requests_19_by_open",
+      "sql": "CREATE INDEX open_requests_19_by_open ON open_requests_19 (playbook_key, open, requested_at, row_key)"
     },
     {
-      "name": "open_requests_18_by_party",
-      "sql": "CREATE INDEX open_requests_18_by_party ON open_requests_18 (playbook_key, open, party, requested_at, row_key)"
+      "name": "open_requests_19_by_party",
+      "sql": "CREATE INDEX open_requests_19_by_party ON open_requests_19 (playbook_key, open, party, requested_at, row_key)"
     },
     {
-      "name": "open_requests_18_by_sent_message",
-      "sql": "CREATE INDEX open_requests_18_by_sent_message ON open_requests_18 (playbook_key, open, sent_conversation, sent_id)"
+      "name": "open_requests_19_by_sent_message",
+      "sql": "CREATE INDEX open_requests_19_by_sent_message ON open_requests_19 (playbook_key, open, sent_conversation, sent_id)"
     },
     {
-      "name": "open_requests_18_by_type",
-      "sql": "CREATE INDEX open_requests_18_by_type ON open_requests_18 (playbook_key, open, type, requested_at, row_key)"
+      "name": "open_requests_19_by_type",
+      "sql": "CREATE INDEX open_requests_19_by_type ON open_requests_19 (playbook_key, open, type, requested_at, row_key)"
     },
     {
-      "name": "open_requests_18_endings_due",
-      "sql": "CREATE INDEX open_requests_18_endings_due ON open_requests_18 (ending_due_at) WHERE ending_due_at IS NOT NULL"
+      "name": "open_requests_19_endings_due",
+      "sql": "CREATE INDEX open_requests_19_endings_due ON open_requests_19 (ending_due_at) WHERE ending_due_at IS NOT NULL"
     },
     {
-      "name": "open_requests_18_tellings_due",
-      "sql": "CREATE INDEX open_requests_18_tellings_due ON open_requests_18 (telling_due_at) WHERE telling_due_at IS NOT NULL"
+      "name": "open_requests_19_tellings_due",
+      "sql": "CREATE INDEX open_requests_19_tellings_due ON open_requests_19 (telling_due_at) WHERE telling_due_at IS NOT NULL"
     },
     {
       "name": "page_views",

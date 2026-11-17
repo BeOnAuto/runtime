@@ -77,6 +77,7 @@ describe('the goals engine', () => {
       'goal_observation_refused',
       'goal_observed',
       'goal_overdue',
+      'goal_stopped',
       'goal_summary_started',
     ]);
     expect(goalsLedger.layoutSteps).toEqual([{ layout: 24, statements: [] }]);
@@ -86,7 +87,7 @@ describe('the goals engine', () => {
     expect(namesOf(goalsHostPartsWhere(true, portsOfAHost))).toEqual(namesOf(goalsHostParts(portsOfAHost())));
     expect(namesOf(goalsHostParts(portsOfAHost()))).toEqual({
       consumers: ['goal assessments'],
-      dueWork: ['the clock of the goals'],
+      dueWork: ['the clock of the goals', 'the stopped things of the goals caught up'],
       operations: [],
     });
     expect(asked).toEqual(['ports', 'ports', 'ports']);

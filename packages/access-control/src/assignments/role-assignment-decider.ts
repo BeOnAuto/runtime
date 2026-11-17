@@ -87,8 +87,7 @@ export function beyondYourRole(role: string): string {
   return `Your role in the org does not let you give or take away the role ${role}`;
 }
 
-export const lastAssigner =
-  'This would leave the org without an admin, so it is not done: make someone else an admin first';
+export const lastAssigner = 'An organization must have at least one admin. Make another member an admin first.';
 
 interface Named {
   readonly type: string;

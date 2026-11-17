@@ -56,9 +56,9 @@ describe('who began a chain, by the id of its caller', () => {
     ).toEqual(['unknown', 'unknown', 'unknown', 'unknown', 'machine', 'machine', 'machine']);
   });
 
-  it('counts a chain a schedule or a machine began, and no other', () => {
-    const origins: readonly ChainOrigin[] = ['schedule', 'machine', 'person', 'playbook', 'service', 'unknown'];
-    expect(origins.filter((origin) => originCounts(origin))).toEqual(['schedule', 'machine']);
+  it('counts a chain a schedule, a machine or a person began, and never one begun as a test', () => {
+    const origins: readonly ChainOrigin[] = ['schedule', 'machine', 'person', 'playbook', 'service', 'test', 'unknown'];
+    expect(origins.filter((origin) => originCounts(origin))).toEqual(['schedule', 'machine', 'person']);
   });
 });
 
@@ -89,6 +89,24 @@ describe('the next step from a fact of a run', () => {
       stepFromARunFact('r1', runFact('r1', { by: 'local' }), false, rule),
       stepFromARunFact('r1', runFact('r1', triggered, { causationId: 'm9' }), false, rule),
     ]).toEqual([{ firstFactOf: 'r1' }, { firstFactOf: 'r1' }]);
+  });
+});
+
+describe('a run started as a test', () => {
+  it('ends at a test from any fact of the run that carries the mark, whoever began it and whatever triggered it', () => {
+    const tried: Partial<Context> = { test: true };
+    expect([
+      stepFromARunFact('r1', runFact('r1', { ...tried, by: 'person:user_one' }), true, rule),
+      stepFromARunFact('r1', runFact('r1', { ...tried, by: 'local' }), false, rule),
+      stepFromARunFact(
+        'r1',
+        runFact('r1', { ...tried, trigger: { kind: 'cron', reference: '/schedule' } }),
+        false,
+        rule,
+      ),
+      stepFromARunFact('child', runFact('child', tried, { correlationId: 'top' }), false, rule),
+      stepFromACause(causeOn('events/e1', { ...tried, runId: 'emitter' }, 'top'), rule),
+    ]).toEqual([{ origin: 'test' }, { origin: 'test' }, { origin: 'test' }, { origin: 'test' }, { origin: 'test' }]);
   });
 });
 

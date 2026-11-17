@@ -149,7 +149,7 @@ describe('the playbook operations with a goals port', () => {
 
     expect(outputOf(named('create_playbook').registration, 'CreatedPlaybookWithGoals')).toContain('goals');
     expect(outputOf(named('get_playbook').registration, 'PlaybookWithGoals')).toContain('goals');
-    expect(outputOf(named('update_playbook').registration, 'PlaybookWithGoals')).toContain('goals');
+    expect(outputOf(named('update_playbook').registration, 'UpdatedPlaybookWithGoals')).toContain('goals');
     expect(outputOf(named('list_playbooks').registration, 'Playbook')).not.toContain('goals');
     expect(outputOf(named('get_playbook').registration, 'PlaybookGoals')).toEqual(['source', 'version', 'gaps']);
     expect(named('create_playbook').registration.reasons).toEqual(['conflict', 'invalid_input', 'unavailable']);

@@ -6,8 +6,8 @@ import { Effect } from 'effect';
 import { runConditionsOf, type ConditionWork } from '../conditions/run-conditions.ts';
 import { runOutputsOf } from '../run-outputs/run-outputs.ts';
 import { contributedVersionsOf } from './contributed-versions.ts';
-import type { RunPlan } from './planned-runs.ts';
-import { runPlanOf, type PlanParts, type PlannedRecord } from './run-plans.ts';
+import type { PlanParts, PlannedRecord, RunPlan } from './planned-runs.ts';
+import { runPlanOf } from './run-plans.ts';
 
 export const mostPlansKept = 4;
 

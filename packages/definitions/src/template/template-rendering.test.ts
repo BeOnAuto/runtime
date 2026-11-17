@@ -166,23 +166,15 @@ describe('a value a template writes as text', () => {
     address: null,
     address_until: null,
   };
-  const values: readonly Schema.Json[] = [asset, [asset], { photo: asset }];
+  it('is never a list or an object, nor a kept file alone or inside one', () => {
+    const values: readonly Schema.Json[] = [{ a: 1 }, ['a'], [], {}, asset, [asset], { photo: asset }];
 
-  it('is never a kept file, alone or inside a list or an object, whatever the template writes of other objects', () => {
-    expect(
-      values.flatMap((value: Schema.Json) => [
-        isTextToWrite(value, 'refused'),
-        isTextToWrite(value, 'written_as_liquid_writes'),
-      ]),
-    ).toEqual([false, false, false, false, false, false]);
+    expect(values.map((value: Schema.Json) => isTextToWrite(value))).toEqual(values.map(() => false));
   });
 
-  it('is a list or an object only where the template writes them as Liquid writes them', () => {
-    expect([
-      isTextToWrite('text', 'refused'),
-      isTextToWrite({ a: 1 }, 'refused'),
-      isTextToWrite(['a'], 'refused'),
-      isTextToWrite({ a: 1 }, 'written_as_liquid_writes'),
-    ]).toEqual([true, false, false, true]);
+  it('is text, nothing, a number or a boolean', () => {
+    const values: ReadonlyArray<Schema.Json | undefined> = ['text', '', null, undefined, 3, false];
+
+    expect(values.map((value: Schema.Json | undefined) => isTextToWrite(value))).toEqual(values.map(() => true));
   });
 });

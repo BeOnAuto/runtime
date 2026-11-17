@@ -30,7 +30,7 @@ function yamlOf(text: string): unknown {
   return read;
 }
 
-function frontMatterOf(definition: PortableDefinition): unknown {
+function frontMatterOf(definition: Pick<PortableDefinition, 'type' | 'source'>): unknown {
   if (definition.type === 'workflow') return yamlOf(definition.source);
   const parts = splitDocument(definition.source, 'The definition');
   return Result.isSuccess(parts) ? yamlOf(parts.success.frontMatter) : undefined;
@@ -48,6 +48,10 @@ function serversNamedIn(front: unknown): string[] {
       textsIn(tool).flatMap((written) => textsIn(written.split('/')[0])),
     ),
   ];
+}
+
+export function serversNamedBy(definition: Pick<PortableDefinition, 'type' | 'source'>): readonly string[] {
+  return serversNamedIn(frontMatterOf(definition));
 }
 
 interface Use {

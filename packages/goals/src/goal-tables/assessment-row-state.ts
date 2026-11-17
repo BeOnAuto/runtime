@@ -72,6 +72,9 @@ const AssessmentStateSchema = Schema.Struct({
   verdictBy: Schema.optionalKey(Schema.Literals(['crossing', 'final', 'deadline'])),
   overdueSince: Schema.optionalKey(Instant),
   ended: Schema.optionalKey(Schema.Literals(['no_result', 'goal_retired', 'playbook_retired'])),
+  stopped: Schema.optionalKey(
+    Schema.Struct({ at: Instant, run: Schema.String, reason: Schema.optionalKey(Schema.String) }),
+  ),
   sources: Schema.Array(Schema.String),
   owed: Schema.Array(Schema.Struct({ change: ChangeSchema, due: Instant, attempt: Schema.Int })),
   started: Schema.Array(Schema.Struct({ change: ChangeSchema, run: Schema.String })),

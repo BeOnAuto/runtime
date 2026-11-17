@@ -1,5 +1,6 @@
 import type { Contributes, Goal } from '@on.auto/definitions/goals';
 import type { RecordedEvent } from '@on.auto/operations';
+import { Option, Schema } from 'effect';
 
 import type { ConditionedEntry, RunVerdicts } from '../conditions/run-conditions.ts';
 import { observedEntryKeyOf } from '../goal-tables/observation-rows.ts';
@@ -19,12 +20,41 @@ interface KnownEntry {
   readonly index: number;
 }
 
-export function finishedRunOf({ type, context }: Pick<RecordedEvent, 'type' | 'context'>): FinishedRun | undefined {
+function endedOf(
+  endings: readonly string[],
+  { type, context }: Pick<RecordedEvent, 'type' | 'context'>,
+): FinishedRun | undefined {
   const { definitionType, definitionName: name, definitionVersion: version, runId: run } = context;
-  if (type !== 'run_succeeded' || definitionType !== 'workflow') {
+  if (!endings.includes(type) || definitionType !== 'workflow') {
     return undefined;
   }
   return name === undefined || version === undefined || run === undefined ? undefined : { name, version, run };
+}
+
+export function finishedRunOf(record: Pick<RecordedEvent, 'type' | 'context'>): FinishedRun | undefined {
+  return endedOf(['run_succeeded'], record);
+}
+
+export interface FailedRun extends FinishedRun {
+  readonly reason: string;
+}
+
+const mostReasonCharacters = 200;
+
+const RejectedSchema = Schema.Struct({ rejection: Schema.Struct({ detail: Schema.String }) });
+
+const rejectedOf = Schema.decodeUnknownOption(RejectedSchema);
+
+export const failedRunWords = 'The run failed before it finished.';
+
+function reasonOf({ type, data }: Pick<RecordedEvent, 'type' | 'data'>): string {
+  const detail = type === 'run_rejected' ? Option.getOrUndefined(rejectedOf(data))?.rejection.detail : undefined;
+  return (detail ?? failedRunWords).slice(0, mostReasonCharacters);
+}
+
+export function failedRunOf(record: Pick<RecordedEvent, 'type' | 'context' | 'data'>): FailedRun | undefined {
+  const ended = endedOf(['run_failed', 'run_rejected'], record);
+  return ended === undefined ? undefined : { ...ended, reason: reasonOf(record) };
 }
 
 export function knownEntriesOf(contributes: Contributes, goals: readonly Goal[]): readonly KnownEntry[] {

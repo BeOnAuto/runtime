@@ -1,4 +1,4 @@
-import { Caller, OrgContext, withStudioLink, type StudioPage } from '@on.auto/operations';
+import { Caller, OrgContext, withNotices, withStudioLink, type StudioPage } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { playbookRegistered, type Creating } from '../operations/create-playbook.ts';
@@ -43,6 +43,6 @@ export function playbookCreatedWithGoals<Checked extends CheckedGoals>(
       return yield* takenBy(registered);
     }
     const created = { ...heldOn(registered, held), before_building: beforeBuildingAfterCreateOf(goals.messages) };
-    return yield* withStudioLink(created, leadPageOf(creating.playbook, checked));
+    return withNotices(yield* withStudioLink(created, leadPageOf(creating.playbook, checked)), held.notices ?? []);
   });
 }

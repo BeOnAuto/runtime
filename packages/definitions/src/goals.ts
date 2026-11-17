@@ -24,3 +24,5 @@ export {
   type GoalsAgreed,
   type GoalsAgreeing,
 } from './goals/goal-agreements.ts';
+export { mostCallDepth, workflowServersIn } from './goals/workflow-servers.ts';
+export { goalsSaveNoticesIn } from './goal-notices/setup-notices-in.ts';

@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-import { studioLinkField } from '@on.auto/operations';
+import { noticesFields, studioLinkField } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { PlaybookSchema } from '../registry/playbook.ts';
@@ -41,9 +41,18 @@ export const PlaybookWithGoalsSchema = Schema.Struct({
 
 export type PlaybookWithGoals = typeof PlaybookWithGoalsSchema.Type;
 
+export const UpdatedPlaybookWithGoalsSchema = Schema.Struct({
+  ...PlaybookWithGoalsSchema.fields,
+  ...noticesFields(),
+}).annotate({
+  identifier: 'UpdatedPlaybookWithGoals',
+  description: 'A playbook just changed, with its goals',
+});
+
 export const CreatedPlaybookWithGoalsSchema = Schema.Struct({
   ...PlaybookWithGoalsSchema.fields,
   studio: studioLinkField('made'),
+  ...noticesFields(),
 }).annotate({
   identifier: 'CreatedPlaybookWithGoals',
   description: 'A playbook just created, with its goals and its page in Studio',

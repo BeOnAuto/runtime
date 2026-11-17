@@ -25,23 +25,30 @@ const reader: CallerIdentity = {
   playbooks: '*',
 };
 
-function readOfAnEmptyPlaybook(registration: RouteRegistration<'playbook'> = getPlaybookGoals.registration) {
+function readOfAnEmptyPlaybook(
+  registration: RouteRegistration<'playbook'> = getPlaybookGoals.registration,
+  input: Readonly<Record<string, string>> = {},
+) {
   const ledger = memoryLedger();
   const services = Layer.mergeAll(
     ledger.layer,
     memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
     recordingReporter().layer,
   );
-  const request: PlaybookRequest = { caller: reader, org: 'acme', playbook: 'alpha', input: {}, encoding: 'json' };
+  const request: PlaybookRequest = { caller: reader, org: 'acme', playbook: 'alpha', input, encoding: 'strings' };
   return Effect.runPromise(makeDispatcher([]).dispatchToPlaybook(registration, request).pipe(Effect.provide(services)));
 }
 
 describe('the goals read as an operation', () => {
-  it('is served over HTTP alone at GET /goals of a playbook beside agree_playbook_goals, and only where goals are kept', () => {
+  it('is served over HTTP alone at GET /goals of a playbook beside agree_playbook_goals, get_goal_day and list_goal_results, and only where goals are kept', () => {
     const [kept, ...beside] = goalsOperationsServed(true);
 
     expect(goalsOperationsServed(false)).toEqual([]);
-    expect(beside.map(({ registration }) => registration.name)).toEqual(['agree_playbook_goals']);
+    expect(beside.map(({ registration }) => registration.name)).toEqual([
+      'agree_playbook_goals',
+      'get_goal_day',
+      'list_goal_results',
+    ]);
     expect(kept?.registration).toMatchObject({
       name: 'get_playbook_goals',
       scope: 'playbook',
@@ -54,6 +61,32 @@ describe('the goals read as an operation', () => {
     expect(await readOfAnEmptyPlaybook()).toMatchObject({
       status: 'succeeded',
       output: { version: 0, gaps: [{ kind: 'no_goal', fixed_by: 'person' }], goals: [] },
+    });
+  });
+});
+
+describe('the query of the goals read', () => {
+  it('takes a time zone, a number of days up to thirty-one and the last day', async () => {
+    const asked = await readOfAnEmptyPlaybook(getPlaybookGoals.registration, {
+      time_zone: 'America/Los_Angeles',
+      days: '31',
+      until: '2026-11-16',
+    });
+
+    expect(asked).toMatchObject({ status: 'succeeded', output: { goals: [] } });
+  });
+
+  it.each([
+    [{ time_zone: 'Mars/Olympus' }, '/time_zone'],
+    [{ time_zone: 'UTC', days: '32' }, '/days'],
+    [{ time_zone: 'UTC', days: '0' }, '/days'],
+    [{ time_zone: 'UTC', until: '2026-02-30' }, '/until'],
+    [{ zone: 'UTC' }, '/zone'],
+  ])('refuses %o at %s', async (input: Readonly<Record<string, string>>, pointer: string) => {
+    expect(await readOfAnEmptyPlaybook(getPlaybookGoals.registration, input)).toMatchObject({
+      status: 'rejected',
+      reason: 'invalid_input',
+      issues: [{ pointer }],
     });
   });
 });

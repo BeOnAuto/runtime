@@ -1,6 +1,7 @@
 import {
   PlaybookReader,
   InvalidInput,
+  type PlaybookContext,
   PagingInputFields,
   PagingOutputFields,
   cursorOfParts,
@@ -12,10 +13,11 @@ import {
   type ProjectedValue,
 } from '@on.auto/operations';
 import { counted, plainNumber } from '@on.auto/phrasing';
-import { Effect, Option, Schema } from 'effect';
+import { Array as Arr, Effect, Option, Schema } from 'effect';
 
 import { renderedKeyOf } from '../conversations/conversation-keys.ts';
 import { openRequestsName } from './open-requests.ts';
+import { mostCauses, requestChainOf, type RequestChain } from './request-causes.ts';
 import { StandingSchema, requestRowFrom, routeOfRow, type OpenRequestRow } from './request-rows.ts';
 
 const InteractionSchema = Schema.Struct({
@@ -49,6 +51,34 @@ const InteractionSchema = Schema.Struct({
     description:
       'How many replies from the answerer the playbook refused because they were not an answer the function takes, each told how to answer where its reading tells.',
   }),
+  within: Schema.optionalKey(
+    Schema.Struct({
+      run_id: Schema.String.annotate({ description: 'The workflow run whose step asked' }),
+      workflow: Schema.String.annotate({ description: 'The name of that workflow' }),
+      step: Schema.String.annotate({
+        description: 'The step that asked, its reference in the workflow without its leading /, such as do/1/review',
+      }),
+    }).annotate({
+      description: "The workflow run and the step that asked; left out for a request no workflow's step asked",
+    }),
+  ),
+  causes: Schema.optionalKey(
+    Schema.Array(Schema.String).annotate({
+      description: `The runs that led to the request, newest first: the workflow run that asked, then each run before it in its chain, through the workflow that called it or the run that published the event that started it, at most ${mostCauses}; left out with within`,
+    }),
+  ),
+  about: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({
+        goal: Schema.String.annotate({ description: 'The id of the goal' }),
+        id: Schema.String.annotate({ description: 'The id of the thing, as the goals read gives it' }),
+        per: Schema.optionalKey(Schema.String.annotate({ description: 'The id of the thing in its own words' })),
+      }),
+    ).annotate({
+      description:
+        'The open things of the playbook’s goals the request is about: each one a run of its causes marked or measured, or a run started by the same event from outside every run that began its causes; left out with causes, and where goals are not judged',
+    }),
+  ),
   standing: StandingSchema.annotate({
     description:
       'How its delivery stands: held_for_an_agent, to_deliver, delivering, delivered, retrying, undelivered once every attempt failed, or cancelling once a cancel was asked; an answered request leaves the list',
@@ -103,28 +133,32 @@ function deliveryShown(kept: OpenRequestRow) {
   return route.kind === 'agent' ? null : route.delivery;
 }
 
-function shownOf({ key, row }: ProjectedKeyedRow) {
+interface AboutShown {
+  readonly about?: readonly RequestThing[];
+}
+
+function shownOf({ key, row }: ProjectedKeyedRow, chain: Partial<RequestChain>, about: AboutShown) {
   const kept = requestRowFrom(row);
-  return [
-    {
-      run_id: key,
-      type: kept.type,
-      function: kept.function,
-      version: kept.version,
-      to: kept.party,
-      delivery: deliveryShown(kept),
-      message: kept.message,
-      takes_answer: kept.answers,
-      answer_schema: answerSchemaFrom(kept.answer_schema),
-      requested_at: new Date(kept.requested_at).toISOString(),
-      expires_at: new Date(kept.expires_at).toISOString(),
-      attempts: kept.attempts,
-      conversation: kept.conversation === null ? null : renderedKeyOf(kept.conversation),
-      answerer: kept.conversation === null ? null : kept.answerer,
-      reply_refusals: kept.reply_refusals,
-      standing: kept.standing,
-    },
-  ];
+  return {
+    run_id: key,
+    type: kept.type,
+    function: kept.function,
+    version: kept.version,
+    to: kept.party,
+    delivery: deliveryShown(kept),
+    message: kept.message,
+    takes_answer: kept.answers,
+    answer_schema: answerSchemaFrom(kept.answer_schema),
+    requested_at: new Date(kept.requested_at).toISOString(),
+    expires_at: new Date(kept.expires_at).toISOString(),
+    attempts: kept.attempts,
+    conversation: kept.conversation === null ? null : renderedKeyOf(kept.conversation),
+    answerer: kept.conversation === null ? null : kept.answerer,
+    reply_refusals: kept.reply_refusals,
+    ...chain,
+    ...about,
+    standing: kept.standing,
+  };
 }
 
 interface Listing {
@@ -147,50 +181,87 @@ function conditionsOf({ to, type, function: name }: Listing): readonly Projected
   ];
 }
 
-const listed = Effect.fnUntraced(function* (listing: Listing) {
-  const { limit = defaultPageLimit, cursor } = listing;
-  const after = yield* afterOf(cursor);
-  const where = conditionsOf(listing);
-  const rows = yield* (yield* PlaybookReader).readProjectedRows(openRequestsName, {
-    where,
-    orderBy: ['requested_at'],
-    order: 'desc',
-    ...(after === undefined ? {} : { after }),
-    limit: limit + 1,
-  });
-  const page = rows.slice(0, limit);
-  const last = page.at(-1);
-  const hasMore = rows.length > limit && last !== undefined;
-  return {
-    interactions: page.flatMap((kept) => shownOf(kept)),
-    has_more: hasMore,
-    next_cursor: hasMore ? cursorOfParts([Number(last.row['requested_at']), last.key]) : null,
-  };
+export interface RequestThing {
+  readonly goal: string;
+  readonly id: string;
+  readonly per?: string;
+}
+
+export type RequestThings = (
+  chains: readonly (readonly string[])[],
+) => Effect.Effect<readonly (readonly RequestThing[])[], never, PlaybookReader | PlaybookContext>;
+
+const noAbout: AboutShown = {};
+
+interface Told {
+  readonly chain: Partial<RequestChain>;
+  readonly about: AboutShown;
+}
+
+const toldOf = Effect.fnUntraced(function* (
+  chains: readonly Partial<RequestChain>[],
+  things: RequestThings | undefined,
+) {
+  if (things === undefined) {
+    return chains.map((chain): Told => ({ chain, about: noAbout }));
+  }
+  const found = yield* things(chains.map(({ causes = [] }) => causes));
+  return Arr.zipWith(chains, found, (chain, about): Told => ({
+    chain,
+    about: chain.causes === undefined ? noAbout : { about },
+  }));
 });
 
-export const listInteractions = defineQuery('playbook', {
-  name: 'list_interactions',
-  title: 'List open requests',
-  description,
-  route: { method: 'GET', path: '/interactions' },
-  inputSchema: Schema.Struct({
-    to: Schema.optionalKey(FilterText.annotate({ description: 'Only the requests to this party' })),
-    type: Schema.optionalKey(FilterText.annotate({ description: 'Only the requests of functions of this type' })),
-    function: Schema.optionalKey(
-      FilterText.annotate({ description: 'Only the requests of functions of this name, of the type given if any' }),
-    ),
-    limit: PagingInputFields.limit,
-    cursor: PagingInputFields.cursor,
-  }),
-  outputSchema: Schema.Struct({ interactions: Schema.Array(InteractionSchema), ...PagingOutputFields }),
-  reasons: ['invalid_input'],
-  handle: listed,
-  plainLanguage: {
-    task: 'list the open requests',
-    attempt: () => 'list the open requests',
-    outcome: ({ interactions }) =>
-      interactions.length === 0
-        ? 'No request is waiting.'
-        : `Found ${counted(interactions.length, requestNoun)} waiting on this page.${refusedInWords(interactions)}`,
-  },
-});
+const listedWith = (things: RequestThings | undefined) =>
+  Effect.fnUntraced(function* (listing: Listing) {
+    const { limit = defaultPageLimit, cursor } = listing;
+    const after = yield* afterOf(cursor);
+    const where = conditionsOf(listing);
+    const rows = yield* (yield* PlaybookReader).readProjectedRows(openRequestsName, {
+      where,
+      orderBy: ['requested_at'],
+      order: 'desc',
+      ...(after === undefined ? {} : { after }),
+      limit: limit + 1,
+    });
+    const page = rows.slice(0, limit);
+    const last = page.at(-1);
+    const hasMore = rows.length > limit && last !== undefined;
+    const chains = yield* Effect.forEach(page, ({ row }) => requestChainOf(requestRowFrom(row)));
+    const told = yield* toldOf(chains, things);
+    return {
+      interactions: Arr.zipWith(page, told, (kept, { chain, about }) => shownOf(kept, chain, about)),
+      has_more: hasMore,
+      next_cursor: hasMore ? cursorOfParts([Number(last.row['requested_at']), last.key]) : null,
+    };
+  });
+
+export const listInteractionsAbout = (things?: RequestThings) =>
+  defineQuery('playbook', {
+    name: 'list_interactions',
+    title: 'List open requests',
+    description,
+    route: { method: 'GET', path: '/interactions' },
+    inputSchema: Schema.Struct({
+      to: Schema.optionalKey(FilterText.annotate({ description: 'Only the requests to this party' })),
+      type: Schema.optionalKey(FilterText.annotate({ description: 'Only the requests of functions of this type' })),
+      function: Schema.optionalKey(
+        FilterText.annotate({ description: 'Only the requests of functions of this name, of the type given if any' }),
+      ),
+      limit: PagingInputFields.limit,
+      cursor: PagingInputFields.cursor,
+    }),
+    outputSchema: Schema.Struct({ interactions: Schema.Array(InteractionSchema), ...PagingOutputFields }),
+    reasons: ['invalid_input'],
+    handle: listedWith(things),
+    plainLanguage: {
+      task: 'list the open requests',
+      attempt: () => 'list the open requests',
+      outcome: ({ interactions }) =>
+        interactions.length === 0
+          ? 'No request is waiting.'
+          : `Found ${counted(interactions.length, requestNoun)} waiting on this page.${refusedInWords(interactions)}`,
+    },
+  });
+
+export const listInteractions = listInteractionsAbout();

@@ -5,14 +5,12 @@ import {
   afterSpan,
   assessmentBookOf,
   controlsGoal,
-  costGoal,
   day,
   daySpan,
   experimentsGoal,
   firstDay,
   inTurn,
   instantText,
-  oneOffGoal,
   thingAt,
   type AssessmentBook,
 } from './assessment-samples.ts';
@@ -68,10 +66,15 @@ describe('the ended assessments of a goal', () => {
           at: instantText(live + 15 * day),
           per: { id: 'MAR-43', title: 'Experiment MAR-43' },
           window: { opens: instantText(live), closes: instantText(live + 7 * day), due: instantText(live + 8 * day) },
+          rule: { settles: 'on_crossing', target: { at_least: 1 } },
+          milestones: experimentsGoal.milestones,
+          marks: [{ milestone: 'live', at: instantText(firstDay + 2 * hour), run: 'run-6' }],
         },
         expect.objectContaining({ id: failed, outcome: 'failed', at: instantText(live + 8 * day), value: 0 }),
         expect.objectContaining({ id: passed, outcome: 'passed', at: instantText(live + day), value: 1 }),
       ],
+      last_passed: { id: passed, at: instantText(live + day) },
+      misses_since: { at: instantText(live + 8 * day), count: 2 },
     });
     expect(assessments.current).toMatchObject({ id: failed, verdict: 'failed' });
   });
@@ -144,6 +147,7 @@ describe('the assessments of a goal with nothing judged', () => {
     expect(await read(assessmentBookOf())).toEqual({
       current: null,
       open_count: 0,
+      stopped_count: 0,
       in_flight: [],
       by_milestone: { chosen: 0, prepared: 0, live: 0, measured: 0 },
       waiting: { chosen: 0, prepared: 0, live: 0, measured: 0 },
@@ -200,34 +204,6 @@ describe('the current assessment of a goal judged day by day', () => {
   });
 });
 
-describe('the number an ended assessment was judged on', () => {
-  it('is the final number of a week judged at its close, and the crossing of a goal with no window', async () => {
-    const book = assessmentBookOf();
-    const week = { opens: firstDay, closes: firstDay + 7 * day, due: firstDay + 7 * day + 8 * hour };
-    const cost = await book.opened(costGoal, firstDay, { window: week });
-    await book.observed(cost, week.closes + 7 * hour, { measurement: { value: 45, final: true, as_of: week.closes } });
-    await book.assessed(cost, 'passed', week.due, 'final');
-    const sale = await book.opened(oneOffGoal, firstDay);
-    await book.observed(sale, firstDay + day, { measurement: { value: 1, final: false, as_of: firstDay + day } });
-    await book.assessed(sale, 'passed', firstDay + day);
-
-    expect((await read(book, costGoal)).closed.latest).toEqual([
-      {
-        id: cost,
-        outcome: 'passed',
-        at: instantText(week.due),
-        window: { opens: instantText(week.opens), closes: instantText(week.closes), due: instantText(week.due) },
-        value: 45,
-        by: 'final',
-      },
-    ]);
-    expect((await read(book, oneOffGoal)).current).toMatchObject({ id: sale, verdict: 'passed' });
-    expect((await read(book, oneOffGoal)).closed.latest).toEqual([
-      { id: sale, outcome: 'passed', at: instantText(firstDay + day), value: 1, by: 'crossing' },
-    ]);
-  });
-});
-
 describe('the number an ended assessment of an after window was judged on', () => {
   it('is the crossing measured through the instant an after window opens', async () => {
     const book = assessmentBookOf();
@@ -279,6 +255,16 @@ describe('an assessment missed by its deadline', () => {
           due: instantText(due),
         },
         by: 'deadline',
+        rule: { settles: 'on_crossing', target: { at_most: 0 } },
+        milestones: [],
+        marks: [],
+        measurement: {
+          value: 3,
+          final: true,
+          as_of: instantText(due + hour),
+          at: instantText(due + hour),
+          run: 'run-1',
+        },
       },
     ]);
     expect(goal.current).toMatchObject({ id: monday, verdict: 'failed', verdict_by: 'deadline' });

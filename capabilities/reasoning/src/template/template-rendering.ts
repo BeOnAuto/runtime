@@ -6,13 +6,14 @@ import {
   type ParsedTemplate,
   type RenderClock,
 } from '@on.auto/definitions/template';
+import { holdsAnAsset } from '@on.auto/operations';
 import { Result } from 'effect';
 import { toValue, type Emitter } from 'liquidjs';
 
 import type { PromptPart, RenderedPrompt, RenderFailure, TemplateScope } from './compiled-template.ts';
 import { engine, instructionsBegin, instructionsEnd } from './liquid-engine.ts';
 import { PromptTooLong } from './prompt-too-long.ts';
-import { PromptWritesAFile } from './prompt-writes-a-file.ts';
+import { PromptWritesNotText } from './prompt-writes-not-text.ts';
 
 interface PromptEmitter extends Emitter {
   readonly prompt: () => RenderedPrompt;
@@ -30,8 +31,8 @@ function promptEmitter(hasInstructions: boolean): PromptEmitter {
         return;
       }
       const value: unknown = toValue(html);
-      if (!isTextToWrite(value, 'written_as_liquid_writes')) {
-        throw new PromptWritesAFile({ part });
+      if (!isTextToWrite(value)) {
+        throw new PromptWritesNotText({ part, reason: holdsAnAsset(value) ? 'kept_file' : 'not_text' });
       }
       const text = outputText(value);
       if (texts[part].length + text.length > templateLimits.renderedCharacters) {
@@ -46,8 +47,8 @@ function promptEmitter(hasInstructions: boolean): PromptEmitter {
 }
 
 function refusalOf(cause: unknown, line: number): RenderFailure | undefined {
-  if (cause instanceof PromptWritesAFile) {
-    return { reason: 'not_text', part: cause.part, line };
+  if (cause instanceof PromptWritesNotText) {
+    return { reason: cause.reason, part: cause.part, line };
   }
   return cause instanceof PromptTooLong ? { reason: 'too_long', part: cause.part, line } : undefined;
 }
@@ -60,7 +61,7 @@ export function renderTemplate(
 ): Result.Result<RenderedPrompt, RenderFailure> {
   const emitter = promptEmitter(hasInstructions);
   const variables = { input: scope.input, today: scope.today, now: scope.now };
-  const keptFileAsText = (line: number): RenderFailure => ({ reason: 'not_text', part: emitter.part(), line });
+  const keptFileAsText = (line: number): RenderFailure => ({ reason: 'kept_file', part: emitter.part(), line });
   return Result.map(renderedTemplate(engine, parsed, { variables, emitter, refusalOf, clock, keptFileAsText }), () =>
     emitter.prompt(),
   );

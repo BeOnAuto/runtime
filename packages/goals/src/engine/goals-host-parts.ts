@@ -1,8 +1,9 @@
-import type { Ledger, PlaybookRegistry, RouteRegistration } from '@on.auto/operations';
+import type { Ledger, PlaybookAddress, PlaybookRegistry, RouteRegistration } from '@on.auto/operations';
 import type { FilterSandbox } from '@on.auto/workflow-engine';
 import type { DueWork, FollowerConsumers, HostDatabase } from '@on.auto/workflow-host';
 
 import { assessorOf } from '../assessor/assessor.ts';
+import { stoppedCatchUpOf } from '../catching-up/stopped-catch-up.ts';
 import type { CallerRule } from '../chain-origins/chain-origin.ts';
 import { ledgerChainReads } from '../chain-origins/ledger-chain-reads.ts';
 import { goalsClockOf } from '../clock/goals-clock.ts';
@@ -29,16 +30,16 @@ export interface GoalsHostParts {
 export const goalsKeptNowhere: GoalsHostParts = { consumers: [], dueWork: [], playbookOperations: [] };
 
 export function goalsHostParts(ports: GoalsPorts): GoalsHostParts {
-  const assessor = assessorOf({
+  const assessorPorts = {
     ledger: ports.ledger,
-    chainsOf: (playbook) => ledgerChainReads(ports.database.store, playbook),
+    chainsOf: (playbook: PlaybookAddress) => ledgerChainReads(ports.database.store, playbook),
     callers: ports.callers,
     filters: ports.filters,
     now: ports.now,
-  });
+  };
   return {
-    consumers: [assessor],
-    dueWork: [goalsClockOf({ ledger: ports.ledger, registry: ports.registry })],
+    consumers: [assessorOf(assessorPorts)],
+    dueWork: [goalsClockOf({ ledger: ports.ledger, registry: ports.registry }), stoppedCatchUpOf(assessorPorts)],
     playbookOperations: [],
   };
 }

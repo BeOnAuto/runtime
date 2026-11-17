@@ -9,6 +9,8 @@ import type {
 } from '../goal-rules/goal-rule.ts';
 import type { AssessmentFact, AssessmentOpened, EndReason, GoalObserved, JudgedBy } from './assessment-facts.ts';
 import type { NoticeChange } from './assessment-identity.ts';
+import { refusedAfter, startedAfter } from './notice-owing.ts';
+import { stoppedAfterObserving, stoppedOf, type Stopped } from './stopping.ts';
 import { countsIn, opensInRun } from './window-counting.ts';
 
 const recentSources = 32;
@@ -67,6 +69,7 @@ export interface AssessmentState {
   readonly verdictBy?: JudgedBy;
   readonly overdueSince?: Instant;
   readonly ended?: EndReason;
+  readonly stopped?: Stopped;
   readonly sources: readonly string[];
   readonly owed: readonly OwedNotice[];
   readonly started: readonly { readonly change: NoticeChange; readonly run: string }[];
@@ -201,11 +204,15 @@ function observedAfter(state: AssessmentState, data: GoalObserved): AssessmentSt
   const opening = (data.window !== undefined && state.window === undefined) || opensInRun(state, data.source.run);
   const window = data.window === undefined || state.window !== undefined ? state.window : spanOf(data.window);
   const measured = measuredOf(data, opening);
+  const change = measured === undefined ? {} : measuredChangeOf(state, window, measured);
+  const marks = markedAfter(state, data);
+  const { stopped: _, ...unstopped } = state;
   return {
-    ...state,
+    ...unstopped,
+    ...stoppedAfterObserving(state, marks, change, data),
     ...(window === undefined ? {} : { window }),
-    marks: markedAfter(state, data),
-    ...(measured === undefined ? {} : measuredChangeOf(state, window, measured)),
+    marks,
+    ...change,
     ...(data.title === undefined ? {} : { title: data.title }),
     ...(data.link === undefined ? {} : { link: data.link }),
     sources: [...state.sources.filter((record) => record !== data.source.record), data.source.record].slice(
@@ -216,18 +223,6 @@ function observedAfter(state: AssessmentState, data: GoalObserved): AssessmentSt
 
 function owedAfter(state: AssessmentState, change: NoticeChange, told: string, at: string): readonly OwedNotice[] {
   return told === 'now' ? [...state.owed, { change, due: instantOf(at), attempt: 0 }] : state.owed;
-}
-
-function refusedAfter(
-  state: AssessmentState,
-  data: { readonly change: string; readonly attempt: number; readonly retry_at?: string },
-): readonly OwedNotice[] {
-  return state.owed.flatMap((owed) => {
-    if (owed.change !== data.change) {
-      return [owed];
-    }
-    return data.retry_at === undefined ? [] : [{ ...owed, due: instantOf(data.retry_at), attempt: data.attempt }];
-  });
 }
 
 type FactOf<Type extends AssessmentFact['type']> = Extract<AssessmentFact, { readonly type: Type }>['data'];
@@ -259,15 +254,9 @@ function overdueAfter(state: AssessmentState, data: FactOf<'goal_overdue'>): Ass
   return { ...state, overdueSince: instantOf(data.since), owed: owedAfter(state, 'overdue', data.told, data.since) };
 }
 
-function startedAfter(state: AssessmentState, data: FactOf<'goal_notice_started'>): AssessmentState {
-  return {
-    ...state,
-    owed: state.owed.filter(({ change }) => change !== data.change),
-    started: state.started.some(({ change }) => change === data.change) ? state.started : [...state.started, data],
-  };
-}
+type JudgingFact = Exclude<AssessmentFact, { readonly type: 'goal_notice_started' | 'goal_notice_refused' }>;
 
-export function assessmentAfter(state: AssessmentState, fact: AssessmentFact): AssessmentState {
+function factAfter(state: AssessmentState, fact: JudgingFact): AssessmentState {
   if (fact.type === 'goal_assessment_opened') {
     return openedAfter(state, fact.data);
   }
@@ -280,13 +269,17 @@ export function assessmentAfter(state: AssessmentState, fact: AssessmentFact): A
   if (fact.type === 'goal_overdue') {
     return overdueAfter(state, fact.data);
   }
+  if (fact.type === 'goal_stopped') {
+    return isUndecided(state) ? { ...state, stopped: stoppedOf(fact.data) } : state;
+  }
+  return isOpen(state) ? { ...state, ended: fact.data.reason } : state;
+}
+
+export function assessmentAfter(state: AssessmentState, fact: AssessmentFact): AssessmentState {
   if (fact.type === 'goal_notice_started') {
     return startedAfter(state, fact.data);
   }
-  if (fact.type === 'goal_notice_refused') {
-    return { ...state, owed: refusedAfter(state, fact.data) };
-  }
-  return isOpen(state) ? { ...state, ended: fact.data.reason } : state;
+  return fact.type === 'goal_notice_refused' ? refusedAfter(state, fact.data) : factAfter(state, fact);
 }
 
 export function assessmentOf(facts: readonly AssessmentFact[]): AssessmentState {

@@ -51,6 +51,8 @@ const OpenRequestRowSchema = Schema.Struct({
   telling_due_at: Schema.NullOr(Schema.Int),
   last_said: Schema.NullOr(Schema.String),
   ending: Schema.NullOr(Schema.String),
+  within_run: Schema.NullOr(Schema.String),
+  within_step: Schema.NullOr(Schema.String),
 });
 
 export type OpenRequestRow = typeof OpenRequestRowSchema.Type;

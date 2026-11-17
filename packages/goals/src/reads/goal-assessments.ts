@@ -2,8 +2,10 @@ import type { Goal } from '@on.auto/definitions/goals';
 import { PlaybookReader, type ProjectedCondition, type ProjectedKeyedRow } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { assessmentsName, markColumns } from '../goal-tables/assessment-rows.ts';
+import { markColumns } from '../goal-tables/assessment-rows.ts';
 import { noticesDeliveredIn } from '../notice-deliveries/notice-deliveries.ts';
+import { goalRowsOf, type GoalRows, type Rows } from '../results/goal-rows.ts';
+import { judgedDaysOf, streakOf, type DaysAsked } from '../results/judged-days.ts';
 import {
   assessmentReadOf,
   closedReadsOf,
@@ -16,28 +18,9 @@ import {
 import { mostClosedShown, mostInFlight, type Assessments } from './assessments-schema.ts';
 import type { NoticesDelivered } from './notices-delivered.ts';
 
+export type GoalsAsked = DaysAsked;
+
 const set = Number.MIN_SAFE_INTEGER;
-
-type Rows = readonly ProjectedKeyedRow[];
-
-interface GoalRows {
-  readonly read: (
-    where: readonly ProjectedCondition[],
-    orderBy: readonly string[],
-    order: 'asc' | 'desc',
-    limit: number,
-  ) => Effect.Effect<Rows>;
-  readonly count: (where: readonly ProjectedCondition[]) => Effect.Effect<number>;
-}
-
-function goalRowsOf(reader: PlaybookReader['Service'], { id }: Goal): GoalRows {
-  const ofGoal = (where: readonly ProjectedCondition[]) => [{ column: 'goal', equals: id }, ...where];
-  return {
-    read: (where, orderBy, order, limit) =>
-      reader.readProjectedRows(assessmentsName, { where: ofGoal(where), orderBy, order, limit }),
-    count: (where) => reader.countProjectedRows(assessmentsName, ofGoal(where)),
-  };
-}
 
 const open: ProjectedCondition = { column: 'open', equals: true };
 
@@ -168,21 +151,15 @@ function endedOf(rows: Rows): readonly Ended[] {
   );
 }
 
-function keyAfter(rows: Rows) {
+function positionAfter(rows: Rows) {
   const last = rows.at(-1);
-  return last === undefined ? {} : { after: [instantIn(last, 'closed_at', 0), last.key] };
+  return last === undefined ? undefined : [instantIn(last, 'closed_at', 0), last.key];
 }
 
-function latestEndedOf(reader: PlaybookReader['Service'], goal: Goal, shown: number): Effect.Effect<readonly Ended[]> {
+function latestEndedOf(rows: GoalRows, shown: number): Effect.Effect<readonly Ended[]> {
   const page = (before: Rows, kept: readonly Ended[]): Effect.Effect<readonly Ended[]> =>
     Effect.flatMap(
-      reader.readProjectedRows(assessmentsName, {
-        where: [{ column: 'goal', equals: goal.id }, closed],
-        orderBy: ['closed_at'],
-        order: 'desc',
-        limit: shown,
-        ...keyAfter(before),
-      }),
+      rows.readAfter([closed], ['closed_at'], 'desc', { limit: shown, after: positionAfter(before) }),
       (found) => {
         const more = [...kept, ...endedOf(found)];
         return found.length < shown || more.length >= shown ? Effect.succeed(more.slice(0, shown)) : page(found, more);
@@ -191,14 +168,16 @@ function latestEndedOf(reader: PlaybookReader['Service'], goal: Goal, shown: num
   return shown === 0 ? Effect.succeed([]) : page([], []);
 }
 
-function closedOf(rows: GoalRows, reader: PlaybookReader['Service'], goal: Goal) {
+function closedOf(rows: GoalRows, asked: DaysAsked) {
   return Effect.gen(function* () {
     const passed = yield* rows.count([{ column: 'outcome', equals: 'passed' }]);
     const failed = yield* rows.count([{ column: 'outcome', equals: 'failed' }]);
     const noResult = yield* rows.count([{ column: 'outcome', equals: 'no_result' }]);
     const total = passed + failed + noResult;
-    const latest = yield* latestEndedOf(reader, goal, Math.min(total, mostClosedShown));
-    return { total, passed, failed, no_result: noResult, latest };
+    const latest = yield* latestEndedOf(rows, Math.min(total, mostClosedShown));
+    const days = yield* judgedDaysOf(rows, asked);
+    const streak = total === 0 ? {} : yield* streakOf(rows);
+    return { total, passed, failed, no_result: noResult, latest, ...days, ...streak };
   });
 }
 
@@ -228,19 +207,22 @@ export function goalAssessmentsIn(
   goal: Goal,
   delivered: NoticesDelivered = noticesDeliveredIn,
   goalsVersion?: number,
+  asked: GoalsAsked = {},
 ): Effect.Effect<Assessments, never, PlaybookReader> {
   return Effect.gen(function* () {
     const reader = yield* PlaybookReader;
     const rows = goalRowsOf(reader, goal);
     const openCount = yield* rows.count([open]);
+    const stoppedCount = openCount === 0 ? 0 : yield* rows.count([open, { column: 'stopped_at', after: set }]);
     const inFlight = heldOf(yield* inFlightOf(rows, openCount));
     const counts = yield* milestoneCountsOf(rows, goal, openCount, goalsVersion);
-    const ended = yield* closedOf(rows, reader, goal);
+    const ended = yield* closedOf(rows, asked);
     const current = yield* currentOf(rows, ended.latest);
     const read = readOf(delivered);
     return {
       current: current === undefined ? null : yield* read(current),
       open_count: openCount,
+      stopped_count: stoppedCount,
       in_flight: yield* Effect.forEach(inFlight, read),
       ...counts,
       closed: { ...ended, latest: ended.latest.map(({ closed: shown }) => shown) },

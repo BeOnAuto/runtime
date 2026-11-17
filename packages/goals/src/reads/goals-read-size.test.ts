@@ -6,6 +6,7 @@ import { mostGoalsBytes } from '@on.auto/playbooks';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { mostDays } from '../results/judged-days.ts';
 import { mostClosedShown, mostInFlight, type Assessments } from './assessments-schema.ts';
 import { GoalsReadSchema } from './goals-read-schema.ts';
 import { goalsReadOf } from './goals-read.ts';
@@ -90,6 +91,7 @@ function assessmentOf({ success, milestones = [] }: Goal, index: number): Assess
     verdict_at: instant,
     verdict_by: 'deadline',
     overdue_since: instant,
+    stopped: { at: instant, run: runId, reason: widestText },
     goals_version: 1,
     notices: (['passed', 'failed', 'overdue'] as const).map((change) => ({
       change,
@@ -100,7 +102,8 @@ function assessmentOf({ success, milestones = [] }: Goal, index: number): Assess
   };
 }
 
-function closedOf(index: number): ClosedRead {
+function closedOf(goal: Goal, index: number): ClosedRead {
+  const { rule, milestones, marks, measurement, final_measurement } = assessmentOf(goal, index);
   return {
     id: `0199a3b2-7c4d-7e8f-9a0b-${String(index).padStart(12, '0')}`,
     outcome: 'no_result',
@@ -109,6 +112,11 @@ function closedOf(index: number): ClosedRead {
     window,
     value: -1.234_567_890_123_456_7e308,
     by: 'deadline',
+    rule,
+    milestones,
+    marks: marks.map(({ milestone, at, run }) => ({ milestone, at, run })),
+    ...(measurement === undefined ? {} : { measurement }),
+    ...(final_measurement === undefined ? {} : { final_measurement }),
   };
 }
 
@@ -117,6 +125,7 @@ function widestAssessmentsOf(goal: Goal): Assessments {
   return {
     current: assessmentOf(goal, 0),
     open_count: 999_999,
+    stopped_count: 999_999,
     in_flight: Array.from({ length: mostInFlight }, (_, index) => assessmentOf(goal, index + 1)),
     by_milestone: counted,
     waiting: counted,
@@ -125,7 +134,18 @@ function widestAssessmentsOf(goal: Goal): Assessments {
       passed: 999_999,
       failed: 999_999,
       no_result: 999_999,
-      latest: Array.from({ length: mostClosedShown }, (_, index) => closedOf(index)),
+      latest: Array.from({ length: mostClosedShown }, (_, index) => closedOf(goal, index)),
+      days: {
+        time_zone: 'America/Argentina/ComodRivadavia',
+        counts: Array.from({ length: mostDays }, () => ({
+          day: '2026-11-16',
+          judged: 999_999,
+          passed: 999_999,
+          says: widestText,
+        })),
+      },
+      last_passed: { id: runId, at: instant },
+      misses_since: { at: instant, count: 999_999 },
     },
   };
 }
@@ -142,7 +162,7 @@ describe('the size of the goals read', () => {
     expect(mostClosedShown).toBe(60);
   });
 
-  it('stays within the bytes a page of the ledger loads with eight goals at their widest, each with sixty closed results', () => {
+  it('stays within the bytes a page of the ledger loads with eight goals at their widest, each with sixty closed results and thirty-one days', () => {
     const text = widestGoalsText();
     const { goals } = Result.getOrThrow(goalsDocumentOf(text));
     const read = goalsReadOf(

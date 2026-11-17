@@ -148,7 +148,15 @@ export interface WatchedServer {
   readonly assessmentRows: () => Promise<readonly ProjectedRow[]>;
 }
 
-export async function servedWatched(ledger: TemporaryLedger, startsAt = Date.now()): Promise<WatchedServer> {
+export type GoalsPortsTurned = (ports: GoalsPorts) => GoalsPorts;
+
+const asTheyAre: GoalsPortsTurned = (ports) => ports;
+
+export async function servedWatched(
+  ledger: TemporaryLedger,
+  startsAt = Date.now(),
+  turned: GoalsPortsTurned = asTheyAre,
+): Promise<WatchedServer> {
   const watch = goalsWatch();
   const clock = movedClock(startsAt);
   const composed = Promise.withResolvers<Ledger['Service']>();
@@ -158,7 +166,7 @@ export async function servedWatched(ledger: TemporaryLedger, startsAt = Date.now
     goals: true,
     goalsResults: true,
     goalsMessages: true,
-    goalsPortsOver: watch.over,
+    goalsPortsOver: (ports) => watch.over(turned(ports)),
     ledgerOver: (kept) => {
       composed.resolve(kept);
       return kept;

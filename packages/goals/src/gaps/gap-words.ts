@@ -105,3 +105,15 @@ export function noticeFunctionMissingGap({ id }: Goal, through: string): GoalGap
     fixed_by: 'agent',
   };
 }
+
+export function connectionMissingGap(goal: string, server: string, workflows: readonly string[]): GoalGap {
+  const ask = `Connect ${server} in Studio`;
+  const using = workflows.length === 1 ? 'uses' : 'use';
+  return {
+    kind: 'connection_missing',
+    goal,
+    detail: `Ask the person to connect ${server} in Studio. The workflow${workflows.length === 1 ? '' : 's'} ${namesInWords(workflows)} of the goal ${goal} ${using} ${server}, which is not connected, or not offered to this playbook. Only the person can connect it; nothing you save fixes it.`,
+    fixed_by: 'person',
+    ask,
+  };
+}

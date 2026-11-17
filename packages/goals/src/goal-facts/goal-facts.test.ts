@@ -87,6 +87,16 @@ const ended = {
   context: ofThePlaybook,
 } as const;
 
+const stopped = {
+  type: 'goal_stopped',
+  data: {
+    run: '019a8f2e-7b6c-7d5e-8f40-3a2b1c0d9e8f',
+    at: '2026-11-09T10:00:00.000Z',
+    reason: 'The lookup of the experiment failed, so nothing was measured.',
+  },
+  context: ofThePlaybook,
+} as const;
+
 const summaryStarted = {
   type: 'goal_summary_started',
   data: {
@@ -112,7 +122,10 @@ describe('the facts of an assessment', () => {
   recordedFactsBehaviour({
     schema: AssessmentEventSchema,
     folder,
-    releases: { '0.57.0': [opened, observed, assessed, overdue, noticeStarted, noticeRefused, ended] },
+    releases: {
+      '0.57.0': [opened, observed, assessed, overdue, noticeStarted, noticeRefused, ended],
+      '0.63.0': [stopped],
+    },
   });
 });
 

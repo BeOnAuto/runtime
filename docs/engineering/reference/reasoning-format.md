@@ -163,7 +163,7 @@ A template reads three variables and nothing else:
 
 `today` and `now` come from the server's clock when the run starts, and have no properties. Names a template makes itself, with `assign`, `for`, `increment` or `cycle`, are fine. Any other name is rejected when the document is parsed, by the engine's static analysis of the template. When the input schema declares `properties` and sets `"additionalProperties": false`, `input.<field>` must be one of them.
 
-Reading is strict. A field the input does not have stops the run with `invalid_input`, naming the field, except in a condition of `if`, `elsif` or `unless` and in the `default` filter, so a template can test a field that may be absent: `{% if input.vip %}…{% endif %}`, `{{ input.nickname | default: "friend" }}`. Only the input's own fields can be read: `input.constructor` is a missing field. Values are written as Liquid writes them: a list as its items without separators, an object as `[object Object]`; write `{{ input.account | json }}` for JSON.
+Reading is strict. A field the input does not have stops the run with `invalid_input`, naming the field, except in a condition of `if`, `elsif` or `unless` and in the `default` filter, so a template can test a field that may be absent: `{% if input.vip %}…{% endif %}`, `{{ input.nickname | default: "friend" }}`. Only the input's own fields can be read: `input.constructor` is a missing field. Text, a number, a boolean and `null` are written as Liquid writes them. A list or an object written whole, a kept file among them, stops the run with `invalid_input` at its part and line, in words that tell a kept file apart; write one of its fields, or `{{ input.account | json }}` for JSON.
 
 ### The system block
 

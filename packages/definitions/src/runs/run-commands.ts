@@ -25,6 +25,7 @@ export interface RunRequest extends ComparedWithWhatWasRead {
   readonly definition_type: string;
   readonly name: string;
   readonly input: Schema.Json;
+  readonly test?: true;
 }
 
 export interface RunAsked extends ComparedWithWhatWasRead {

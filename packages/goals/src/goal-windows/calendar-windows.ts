@@ -17,7 +17,7 @@ const daysInAWeek = 7;
 
 const zoneClocks = new Map<string, ZoneClock>();
 
-function clockIn(timeZone: string): ZoneClock {
+export function zoneClockIn(timeZone: string): ZoneClock {
   const kept = zoneClocks.get(timeZone);
   if (kept !== undefined) {
     return kept;
@@ -49,7 +49,7 @@ function wallSpanOf(unit: CalendarUnit, wallClock: number): WallSpan {
 }
 
 export function calendarSpanAt(rule: CalendarWindowRule, instant: Instant): WindowSpan {
-  const clock = clockIn(rule.time_zone ?? universalTime);
+  const clock = zoneClockIn(rule.time_zone ?? universalTime);
   const wall = wallSpanOf(rule.calendar, clock.wallClockAt(instant));
   const closes = clock.firstInstantReaching(wall.end);
   return { opens: clock.firstInstantReaching(wall.start), closes, due: closes + graceMsOf(rule.grace) };
@@ -61,7 +61,7 @@ export function isJudgedSpan(rule: CalendarWindowRule, span: WindowSpan): boolea
   if (rule.calendar !== 'day' || rule.days === undefined) {
     return true;
   }
-  const wall = new Date(clockIn(rule.time_zone ?? universalTime).wallClockAt(span.opens));
+  const wall = new Date(zoneClockIn(rule.time_zone ?? universalTime).wallClockAt(span.opens));
   const weekday = weekdaysFromSunday[wall.getUTCDay()];
   return rule.days.some((day) => day === weekday);
 }

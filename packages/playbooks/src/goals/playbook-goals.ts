@@ -1,4 +1,4 @@
-import type { Caller, Conflict, InvalidInput, PlaybookAddress, Unavailable } from '@on.auto/operations';
+import type { Caller, Conflict, InvalidInput, Notice, PlaybookAddress, Unavailable } from '@on.auto/operations';
 import type { Effect } from 'effect';
 
 import type { PlaybookPage } from '../operations/playbook-pages.ts';
@@ -34,6 +34,7 @@ export type GoalsSaveOutcome = 'saved' | 'unchanged' | 'already_held';
 export interface PlaybookHeldSaved extends PlaybookHeld {
   readonly outcome?: GoalsSaveOutcome;
   readonly awaiting?: boolean;
+  readonly notices?: readonly Notice[];
 }
 
 export interface PlaybookGoals<Checked extends CheckedGoals = CheckedGoals> {

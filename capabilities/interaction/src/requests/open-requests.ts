@@ -48,6 +48,14 @@ function functionOf({ definitionType, definitionName, definitionVersion }: RunCo
   return { type: definitionType, function: definitionName, version: definitionVersion };
 }
 
+const leadingSlash = /^\//u;
+
+function withinOf({ calledBy }: RunContext) {
+  return calledBy === undefined
+    ? { within_run: null, within_step: null }
+    : { within_run: calledBy.runId, within_step: calledBy.reference.replace(leadingSlash, '') };
+}
+
 function jsonOf(block: Schema.JsonObject | undefined): string | null {
   return block === undefined ? null : JSON.stringify(block);
 }
@@ -90,6 +98,7 @@ function requested({ data, context }: Fact<'run_deferred'>, message: ProjectedMe
     telling_due_at: null,
     last_said: null,
     ending: null,
+    ...withinOf(context),
   });
 }
 
@@ -235,7 +244,7 @@ function keyOf(message: ProjectedMessage, { kind, id }: ProjectedStream): string
 
 export const openRequests: KeyedProjection = {
   name: openRequestsName,
-  version: 18,
+  version: 19,
   kinds: ['runs', conversationCallsKind],
   types: [
     'run_deferred',

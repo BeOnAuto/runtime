@@ -20,8 +20,23 @@ export interface RunOfAChain {
   readonly fact?: ChainFact;
 }
 
+export interface OutsideEvent {
+  readonly id: string;
+  readonly at: string;
+}
+
+interface ChainBegun {
+  readonly origin: ChainOrigin;
+  readonly outside?: OutsideEvent;
+}
+
+interface ChainWalked extends ChainBegun {
+  readonly runs: readonly string[];
+}
+
 export interface ChainOrigins<E> {
   readonly originOf: (asked: RunOfAChain) => Effect.Effect<ChainOrigin, E>;
+  readonly chainOf: (asked: RunOfAChain) => Effect.Effect<ChainWalked, E>;
   readonly reads: () => number;
 }
 
@@ -30,7 +45,7 @@ export const mostOriginReads = 2 * (mostReactionDepth + 2);
 interface Walker<E> {
   readonly chainReads: ChainReads<E>;
   readonly rule: CallerRule;
-  readonly knownOf: (run: string) => ChainOrigin | undefined;
+  readonly knownOf: (run: string) => ChainBegun | undefined;
   readonly counted: () => void;
 }
 
@@ -39,35 +54,35 @@ interface Trail {
   readonly read: readonly string[];
 }
 
-interface Walked {
-  readonly origin: ChainOrigin;
-  readonly runs: readonly string[];
-}
-
 interface Reading<E> {
   readonly key: string;
   readonly fact: Effect.Effect<ChainFact | undefined, E>;
   readonly next: (fact: ChainFact) => ChainStep;
+  readonly outside?: string;
 }
 
 function readOnce<E>(
   walker: Walker<E>,
   trail: Trail,
-  { key, fact: reading, next }: Reading<E>,
-): Effect.Effect<Walked, E> {
+  { key, fact: reading, next, outside }: Reading<E>,
+): Effect.Effect<ChainWalked, E> {
   if (trail.read.includes(key) || trail.read.length >= mostOriginReads) {
     return Effect.succeed({ origin: 'unknown', runs: trail.runs });
   }
   walker.counted();
   const further: Trail = { ...trail, read: [...trail.read, key] };
-  return Effect.flatMap(reading, (fact) =>
-    fact === undefined
-      ? Effect.succeed<Walked>({ origin: 'unknown', runs: further.runs })
-      : walked(walker, further, next(fact)),
-  );
+  return Effect.flatMap(reading, (fact) => {
+    if (fact === undefined) {
+      return Effect.succeed<ChainWalked>({ origin: 'unknown', runs: further.runs });
+    }
+    const step = next(fact);
+    return 'origin' in step && outside !== undefined
+      ? Effect.succeed<ChainWalked>({ ...step, outside: { id: outside, at: fact.context.at }, runs: further.runs })
+      : walked(walker, further, step);
+  });
 }
 
-function walked<E>(walker: Walker<E>, trail: Trail, step: ChainStep): Effect.Effect<Walked, E> {
+function walked<E>(walker: Walker<E>, trail: Trail, step: ChainStep): Effect.Effect<ChainWalked, E> {
   if ('origin' in step) {
     return Effect.succeed({ origin: step.origin, runs: trail.runs });
   }
@@ -77,12 +92,13 @@ function walked<E>(walker: Walker<E>, trail: Trail, step: ChainStep): Effect.Eff
       key: `record ${step.record}`,
       fact: chainReads.recordOf(step.record),
       next: (fact) => stepFromACause(fact, rule),
+      outside: step.record,
     });
   }
   const run = step.firstFactOf;
   const known = walker.knownOf(run);
   if (known !== undefined) {
-    return Effect.succeed({ origin: known, runs: trail.runs });
+    return Effect.succeed({ ...known, runs: trail.runs });
   }
   return readOnce(
     walker,
@@ -92,7 +108,7 @@ function walked<E>(walker: Walker<E>, trail: Trail, step: ChainStep): Effect.Eff
 }
 
 export function chainOriginsOf<E>(chainReads: ChainReads<E>, rule: CallerRule): ChainOrigins<E> {
-  const known = new Map<string, ChainOrigin>();
+  const known = new Map<string, ChainBegun>();
   const counted = { reads: 0 };
   const walker: Walker<E> = {
     chainReads,
@@ -102,16 +118,17 @@ export function chainOriginsOf<E>(chainReads: ChainReads<E>, rule: CallerRule): 
       counted.reads += 1;
     },
   };
-  const originOf = ({ run, fact }: RunOfAChain): Effect.Effect<ChainOrigin, E> => {
+  const chainOf = ({ run, fact }: RunOfAChain): Effect.Effect<ChainWalked, E> => {
     const first: ChainStep = fact === undefined ? { firstFactOf: run } : stepFromARunFact(run, fact, false, rule);
-    return Effect.map(walked(walker, { runs: [run], read: [] }, first), ({ origin, runs }) => {
-      if (origin !== 'unknown') {
-        for (const visited of runs) {
-          known.set(visited, origin);
+    return Effect.map(walked(walker, { runs: [run], read: [] }, first), (chain) => {
+      if (chain.origin !== 'unknown') {
+        for (const visited of chain.runs) {
+          known.set(visited, chain);
         }
       }
-      return origin;
+      return chain;
     });
   };
-  return { originOf, reads: () => counted.reads };
+  const originOf = (asked: RunOfAChain) => Effect.map(chainOf(asked), ({ origin }) => origin);
+  return { originOf, chainOf, reads: () => counted.reads };
 }
