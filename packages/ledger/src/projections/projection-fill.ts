@@ -1,7 +1,6 @@
 import {
   addressedStreamOf,
   keepsChildRows,
-  projectedTableOf,
   rowKeyOf,
   type ChildRowsProjection,
   type KeyedProjection,
@@ -11,6 +10,7 @@ import {
 
 import { childRowsIn, childRowsReplaced } from '../child-rows/child-row-statements.ts';
 import type { InTransaction, StatementExecutor } from '../event-store.ts';
+import { tableKept, type Preparation } from '../projection-checkpoints/projection-checkpoints.ts';
 import { writtenInChunks, writtenOfStreams } from './fill-writes.ts';
 import { inTurn } from './inline-projection.ts';
 import { foldedStreamsOf } from './projection-dialect.ts';
@@ -24,13 +24,10 @@ import {
 import {
   createdTable,
   messagesIn,
-  namesIn,
   orderedMessagesIn,
   rowIn,
   sizedPointsIn,
   streamsIn,
-  tableAnalysis,
-  tableDrop,
   type KeptRow,
   type RowPlace,
   type SizedStream,
@@ -259,35 +256,29 @@ function filled(keeping: FillKeeping, execute: StatementExecutor): Promise<void>
     : batchesFilledFrom<OrderBatch>({ listing: 1 }, (batch) => batchFilledInOrder(keeping, execute, batch));
 }
 
-async function created(keeping: FillKeeping, execute: StatementExecutor, tables: readonly string[]): Promise<void> {
-  const { dialect, projection } = keeping;
-  await inTurn(createdTable(dialect, projection), (statement) => execute.command(statement));
+async function created(keeping: FillKeeping, execute: StatementExecutor): Promise<void> {
+  await inTurn(createdTable(keeping.dialect, keeping.projection), (statement) => execute.command(statement));
   await filled(keeping, execute);
-  await inTurn(
-    tables.filter((name) => isEarlierVersion(keeping, name)),
-    (name) => execute.command(tableDrop(name)),
-  );
-  await execute.command(tableAnalysis(projection));
 }
 
-async function preparedProjection(
-  keeping: FillKeeping,
-  execute: StatementExecutor,
-  inTransaction: InTransaction,
-): Promise<void> {
-  const tables = await namesIn(execute, keeping.dialect.tableVersions(keeping.projection.name));
-  if (!tables.includes(projectedTableOf(keeping.projection))) {
-    await inTransaction((transaction) => created(keeping, transaction, tables));
-  }
+function preparedProjection(keeping: FillKeeping, preparation: Preparation): Promise<void> {
+  return tableKept(
+    {
+      dialect: keeping.dialect,
+      projection: keeping.projection,
+      isEarlier: (table) => isEarlierVersion(keeping, table),
+      made: (transaction) => created(keeping, transaction),
+    },
+    preparation,
+  );
 }
 
 export type Preparing = (execute: StatementExecutor, inTransaction: InTransaction) => Promise<void>;
 
 export async function preparedProjections(
   keepings: readonly ProjectionKeeping[],
-  execute: StatementExecutor,
-  inTransaction: InTransaction,
+  preparation: Preparation,
   mostBytes: number = mostBytesInABatch,
 ): Promise<void> {
-  await inTurn(keepings, (keeping) => preparedProjection({ ...keeping, mostBytes }, execute, inTransaction));
+  await inTurn(keepings, (keeping) => preparedProjection({ ...keeping, mostBytes }, preparation));
 }

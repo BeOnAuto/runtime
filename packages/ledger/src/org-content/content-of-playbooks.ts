@@ -1,13 +1,13 @@
 import { sha256Of, type PlaybookAddress } from '@on.auto/content';
 import { Schema } from 'effect';
 
-import { carryingTo } from '../layout/carrying-on-behaviour.ts';
+import { carryingOnToTheLayoutKept } from '../layout/carrying-on-behaviour.ts';
 import { structureIn } from '../structure/database-structure-behaviour.ts';
 import { contentTablesOfPlaybooks } from '../testing/content-tables-of-playbooks.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { orgContentLayout } from './org-content-step.ts';
 
-export const carryingToIt = carryingTo(orgContentLayout);
+export const carryingThroughIt = carryingOnToTheLayoutKept;
 
 export const note = '{"note":"kept by two playbooks of one org"}';
 

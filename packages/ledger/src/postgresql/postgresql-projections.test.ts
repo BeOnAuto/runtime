@@ -364,3 +364,34 @@ describe('the locks of a fold of a projection on PostgreSQL', () => {
     ]);
   });
 });
+
+type Folded = readonly { readonly folded_through: string | null }[];
+
+const tablesOfTheTopics = [{ name: 'topics_1' }, { name: 'topics_2' }];
+
+async function topicsStatementsWith(folded: Folded): Promise<string> {
+  const found = recordedAnswering((statement) => {
+    if (statement.startsWith('SELECT folded_through FROM projection_checkpoints')) {
+      return folded;
+    }
+    return statement.includes('relname ~ "^topics_[0-9]+$"') ? tablesOfTheTopics : [];
+  });
+  await keyed.afterTheSchema({ execute: found.execute });
+  return found.commands
+    .filter((command) => /topics_|INTO projection_checkpoints|FROM projection_checkpoints/u.test(command))
+    .map((command) => command.split(' (')[0] ?? '')
+    .join('; ');
+}
+
+const topicsMadeAgain =
+  'DROP TABLE IF EXISTS topics_2; CREATE TABLE IF NOT EXISTS topics_2; CREATE INDEX IF NOT EXISTS topics_2_due ON topics_2; INSERT INTO projection_checkpoints; DROP TABLE IF EXISTS topics_1; DELETE FROM projection_checkpoints WHERE projection = "topics" AND version < 2; ANALYZE topics_2';
+
+describe('a table of a projection on PostgreSQL that is not recorded as caught up', () => {
+  it('is dropped, made, filled, recorded as caught up, its earlier versions dropped and forgotten, and analysed, in the transaction of the migration, whether it has no row or one that holds a position, and left as it is where its row says caught up', async () => {
+    const rows: readonly Folded[] = [[], [{ folded_through: '7/9' }], [{ folded_through: null }]];
+
+    const statements = await Promise.all(rows.map((folded) => topicsStatementsWith(folded)));
+
+    expect(statements).toEqual([topicsMadeAgain, topicsMadeAgain, '']);
+  });
+});

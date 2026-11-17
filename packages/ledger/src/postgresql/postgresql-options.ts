@@ -27,4 +27,5 @@ export interface PostgreSQLOptions extends AppendListeners {
   readonly factSchemas?: readonly FactSchemaRead[];
   readonly floor?: number;
   readonly definitionNames?: DefinitionNames;
+  readonly tableMadeAgain?: (table: string) => void;
 }

@@ -214,7 +214,7 @@ export function tableDrop(name: string): SQL {
   return SQL`DROP TABLE IF EXISTS ${SQL.plain(name)}`;
 }
 
-export function tableAnalysis(projection: ProjectionDeclaration): SQL {
+export function tableAnalysis(projection: Pick<ProjectionDeclaration, 'name' | 'version'>): SQL {
   return SQL`ANALYZE ${tableOf(projection)}`;
 }
 

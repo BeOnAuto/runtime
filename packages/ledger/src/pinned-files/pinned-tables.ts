@@ -3,6 +3,7 @@ import type { DefinitionNames } from '@on.auto/operations/definition-names';
 import { labelReadModelOf, noteHolders, runTallies, runTallyRows, topicRows } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 
+import { carryingOnToTheLayoutKept } from '../layout/carrying-on-behaviour.ts';
 import type { StoreLayerOptions } from '../ledger-layer.ts';
 
 const decodeNamed = Schema.decodeUnknownSync(Schema.Struct({ detail: Schema.Struct({ name: Schema.String }) }));
@@ -27,4 +28,5 @@ export const pinnedTables: StoreLayerOptions = {
   streamProjections: [labelReadModelOf()],
   holders: noteHolders,
   definitionNames,
+  layoutSteps: carryingOnToTheLayoutKept.steps,
 };

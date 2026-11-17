@@ -29,7 +29,14 @@ export interface ProjectionParts {
 }
 
 export function projectionPartsOf(dialect: ProjectionDialect, tables: KeptTables): ProjectionParts {
-  const { runOutcomes, projections = [], streamProjections = [], holders, mostBytesFilledAtOnce } = tables;
+  const {
+    runOutcomes,
+    projections = [],
+    streamProjections = [],
+    holders,
+    mostBytesFilledAtOnce,
+    tableMadeAgain,
+  } = tables;
   const kept = keptProjections(runOutcomes, projections);
   const keepings = kept.map((projection) => ({ dialect, projection }));
   const references = contentReferencesOf(dialect, holders, mostBytesFilledAtOnce);
@@ -49,8 +56,9 @@ export function projectionPartsOf(dialect: ProjectionDialect, tables: KeptTables
     scrubs,
     registrations,
     prepare: async (execute, inTransaction) => {
-      await preparedProjections(keepings, execute, inTransaction, mostBytesFilledAtOnce);
-      await references.prepare(execute, inTransaction);
+      const preparation = { execute, inTransaction, madeAgain: tableMadeAgain };
+      await preparedProjections(keepings, preparation, mostBytesFilledAtOnce);
+      await references.prepare(preparation);
       await streams.prepare(execute, inTransaction);
     },
     readerOn: (statements) =>

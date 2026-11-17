@@ -79,6 +79,34 @@ function filledAsItOpens(entry: LedgerEntry): void {
   });
 }
 
+const checkpointOfTheHolds =
+  "SELECT projection, version, folded_through FROM projection_checkpoints WHERE projection = 'content_references'";
+
+function recordedAsCaughtUp(entry: LedgerEntry): void {
+  describe.skipIf(entry.itsOwnContractAlone === true)('recorded as caught up beside it', () => {
+    it('is recorded as caught up once its fill made it', async () => {
+      const database = await entry.aDatabase();
+
+      await aLedgerHolding(entry, noteHolders, database);
+
+      expect(await entry.queried(database, checkpointOfTheHolds)).toEqual([
+        { projection: 'content_references', version: 2, folded_through: null },
+      ]);
+    });
+
+    it('is made and filled again where the ledger finds it with no row', async () => {
+      const database = await entry.aDatabase();
+      await noted(await aLedgerHolding(entry, noteHolders, database), firstNotes, [kept(sha256Of('kept'))]);
+      await entry.queried(database, 'DELETE FROM content_references_2');
+      await entry.queried(database, "DELETE FROM projection_checkpoints WHERE projection = 'content_references'");
+
+      await aLedgerHolding(entry, noteHolders, database);
+
+      expect(await heldIn(entry, database)).toEqual([{ stream: 'notes/n1', rows: 1, held: 1 }]);
+    });
+  });
+}
+
 function keptWithoutHolders(entry: LedgerEntry): void {
   it('keeps an empty table of holds for a ledger told that no fact holds content, and holds nothing', async () => {
     const database = await entry.aDatabase();
@@ -108,6 +136,7 @@ function keptWithoutHolders(entry: LedgerEntry): void {
 export function referencesBehaviour(entry: LedgerEntry): void {
   describe('the holds on the content of a playbook, kept in the ledger', () => {
     filledAsItOpens(entry);
+    recordedAsCaughtUp(entry);
     keptWithoutHolders(entry);
   });
   payloadBytesBehaviour(entry);

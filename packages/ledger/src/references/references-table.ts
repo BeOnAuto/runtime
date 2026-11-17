@@ -11,7 +11,7 @@ import type { HeldHead } from './held-heads.ts';
 
 export const contentReferences = { name: 'content_references', version: 2 };
 
-export const referencesTable = projectedTableOf(contentReferences);
+const referencesTable = projectedTableOf(contentReferences);
 
 const table = SQL.plain(referencesTable);
 

@@ -10,7 +10,7 @@ import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
 import {
   alpha,
   aStoreOfPlaybooksContent,
-  carryingToIt,
+  carryingThroughIt,
   chunkKept,
   countedIn,
   earlier,
@@ -24,7 +24,7 @@ function refusedWhereAKeyNamesNoPlaybook(entry: LedgerEntry): void {
     const { database } = await aStoreOfPlaybooksContent(entry);
     await headKept(entry, database, { key: 'org/acme/', upload: earlier, keptAt: 10 });
 
-    await expect(entry.carriedOn(database, carryingToIt)).rejects.toThrow(
+    await expect(entry.carriedOn(database, carryingThroughIt)).rejects.toThrow(
       'The content of the store names org/acme/, which is not the key of a playbook, so it cannot be given to an org; the store stays at the layout before',
     );
     expect((await layoutIn(entry, database)).layout).toBe(orgContentLayout - 1);
@@ -73,10 +73,10 @@ function carriedFromNoContentTables(entry: LedgerEntry): void {
     await entry.queried(database, 'DROP TABLE recorded_content_chunks');
     await layoutBeforeSet(entry, database);
 
-    await entry.carriedOn(database, carryingToIt);
+    await entry.carriedOn(database, carryingThroughIt);
     await aLedger(entry, database);
 
-    expect((await layoutIn(entry, database)).layout).toBe(orgContentLayout);
+    expect((await layoutIn(entry, database)).layout).toBe(carryingThroughIt.kept);
     expect(await structureIn(entry, database)).toEqual(made);
   });
 }

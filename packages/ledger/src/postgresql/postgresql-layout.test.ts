@@ -183,7 +183,7 @@ describe('a fact as the ledger keeps it on PostgreSQL, read as it opens', () => 
 });
 
 describe("the ledger's own schema on PostgreSQL", () => {
-  it("creates the playbook's indexes, the tables of the content it keeps and their indexes, then the tables of its kept secrets, of the webhooks it received and of the names of definitions, each only when missing", async () => {
+  it("creates the playbook's indexes, the tables of the content it keeps and their indexes, then the tables of its kept secrets, of the webhooks it received, of the names of definitions and of the checkpoints of projections, each only when missing", async () => {
     const empty = executorFinding([]);
     const found = executorFinding([
       ...contentTableNames,
@@ -194,6 +194,7 @@ describe("the ledger's own schema on PostgreSQL", () => {
       'webhooks_received_kept_until',
       'definition_names_1',
       'definition_names_1_by_definition',
+      'projection_checkpoints',
     ]);
 
     await postgresqlSchemaCreated(empty.execute);
@@ -210,9 +211,12 @@ describe("the ledger's own schema on PostgreSQL", () => {
       'CREATE INDEX IF NOT EXISTS webhooks_received_kept_until ON webhooks_received',
       'CREATE TABLE IF NOT EXISTS definition_names_1',
       'CREATE UNIQUE INDEX IF NOT EXISTS definition_names_1_by_definition ON definition_names_1',
+      'CREATE TABLE IF NOT EXISTS projection_checkpoints',
     ]);
     expect(
-      found.commands.filter((command) => /content|kept_secrets|webhooks_received|definition_names/u.test(command)),
+      found.commands.filter((command) =>
+        /content|kept_secrets|webhooks_received|definition_names|projection_checkpoints/u.test(command),
+      ),
     ).toEqual([]);
   });
 });

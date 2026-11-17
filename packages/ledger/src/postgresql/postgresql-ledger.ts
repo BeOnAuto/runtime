@@ -1,8 +1,8 @@
 import type { ContentStore } from '@on.auto/content';
 import { Effect, Layer } from 'effect';
 
-import { watchFailuresLoggedWith } from '../appended/append-watch.ts';
 import type { AppendSignal } from '../appends/append-signal.ts';
+import { openingLogsWith } from '../connection/opening-logs.ts';
 import { listenersOf } from '../event-store.ts';
 import { ledgerLayerOver, type LedgerServices, type OpenedLedger } from '../ledger-layer.ts';
 import { lostConnectionsLoggedWith } from './lost-connections.ts';
@@ -66,7 +66,7 @@ export function postgresqlLedgerLayer({
           postgresqlLedgerOpened({
             ...options,
             reportLostConnection: lostConnectionsLoggedWith(context),
-            watchFailed: watchFailuresLoggedWith(context),
+            ...openingLogsWith(context),
           }),
         { appends, content },
       ),

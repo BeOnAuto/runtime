@@ -57,17 +57,17 @@ const indexes = [
 ].map((name) => ({ name }));
 
 const ownTables =
-  'recorded_content_heads_by_upload recorded_content_heads_expiring kept_secrets webhooks_received webhooks_received_kept_until definition_names_1 definition_names_1_by_definition';
+  'recorded_content_heads_by_upload recorded_content_heads_expiring kept_secrets webhooks_received webhooks_received_kept_until definition_names_1 definition_names_1_by_definition projection_checkpoints';
 
-const contentAndSecrets = [...contentTableNames, ...ownTables.split(' ')].map((name) => ({ name }));
+const ownRows = [...contentTableNames, ...ownTables.split(' ')].map((name) => ({ name, folded_through: null }));
 
 function aLedgerWithOneRun(tables: readonly string[]): Answers {
   return (statement) => {
     if (statement.includes('ledger_messages_by_playbook')) {
       return indexes;
     }
-    if (/recorded_content_chunks|_by_upload|kept_secrets|webhooks_received|definition_names/u.test(statement)) {
-      return contentAndSecrets;
+    if (/content_chunks|_by_upload|kept_secrets|webhooks_received|definition_names|checkpoints/u.test(statement)) {
+      return ownRows;
     }
     if (statement.includes('pg_class')) {
       return tables.map((name) => ({ name }));
@@ -91,7 +91,7 @@ const keptRow =
   'INSERT INTO run_outcomes_5 (playbook_key, row_key, started_day, started_at, last_started_at, definition_type, name, status, duration_ms, input_tokens, output_tokens, cached_tokens, cost_micro_usd) VALUES ("playbook/acme/alpha/", "r1", "2026-10-01", "2026-10-01T09:00:00.000Z", "2026-10-01T09:00:00.000Z", "tally", "triage", "started", null, null, null, null, null) ON CONFLICT (playbook_key, row_key) DO UPDATE SET started_day = excluded.started_day,';
 
 describe('the table of the outcomes of runs on PostgreSQL, as the ledger opens', () => {
-  it("is created after the playbook's indexes, filled from the stored run streams, and analysed", async () => {
+  it("is created after the playbook's indexes, filled from the stored run streams, recorded as caught up, and analysed", async () => {
     const { execute, commands } = recording(aLedgerWithOneRun([]));
 
     await tallied.afterTheSchema({ execute });
@@ -100,6 +100,8 @@ describe('the table of the outcomes of runs on PostgreSQL, as the ledger opens',
       'CREATE TABLE IF NOT EXISTS run_outcomes_5',
       'CREATE INDEX IF NOT EXISTS run_outcomes_5_by_playbook_and_day',
       'INSERT INTO run_outcomes_5 (playbook_key, row_key, started_day,',
+      'INSERT INTO projection_checkpoints (projection, version, folded_through)',
+      'DELETE FROM projection_checkpoints WHERE projection =',
       'ANALYZE run_outcomes_5',
     ]);
     expect(commands[2]?.startsWith(keptRow)).toBe(true);
