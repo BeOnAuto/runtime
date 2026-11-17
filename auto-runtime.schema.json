@@ -213,7 +213,7 @@
               },
               "audience": {
                 "type": "string",
-                "description": "The audience a token is asked for, sent beside the resource, for an authorization server that names its API by audience"
+                "description": "The audience a token is asked for, sent in place of the resource, for an authorization server that names its API by audience and refuses a resource"
               }
             },
             "required": ["issuer", "client_id"],
