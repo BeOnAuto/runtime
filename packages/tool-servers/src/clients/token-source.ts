@@ -71,11 +71,29 @@ function credentialsProviderOf({ issuer, client_id, scope, credential }: Minting
       });
 }
 
+function discoveryOf(settings: MintingAuth, discovery: Discovery) {
+  return discovery === 'from_the_issuer' ? { discoveryState: () => ({ authorizationServerUrl: settings.issuer }) } : {};
+}
+
+function audienceOf(audience: string | undefined) {
+  return audience === undefined
+    ? {}
+    : {
+        prepareTokenRequest: (scope?: string) =>
+          new URLSearchParams({
+            grant_type: 'client_credentials',
+            audience,
+            ...(scope === undefined ? {} : { scope }),
+          }),
+      };
+}
+
 function providerOf(settings: MintingAuth, discovery: Discovery): OAuthClientProvider {
-  const provider = credentialsProviderOf(settings);
-  return discovery === 'from_the_issuer'
-    ? Object.assign(provider, { discoveryState: () => ({ authorizationServerUrl: settings.issuer }) })
-    : provider;
+  return Object.assign(
+    credentialsProviderOf(settings),
+    discoveryOf(settings, discovery),
+    audienceOf(settings.audience),
+  );
 }
 
 function askedAfter(asking: Asking, { response }: UnauthorizedContext): Asking {
