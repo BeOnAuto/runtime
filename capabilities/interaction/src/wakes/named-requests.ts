@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { keptRequestOf, takesReplies } from '../conversations/open-in-conversation.ts';
 import { repliesSeenBy, type SeenReplies } from '../facts/work-rules.ts';
 import type { KeptRequest } from '../replies/reply-taking.ts';
-import { routeOfRequest } from '../replies/request-routes.ts';
+import { routeOfRequest, tellsTakenAndRefused } from '../replies/request-routes.ts';
 import { openRequestsName } from '../requests/open-requests.ts';
 import { requestRowFrom, type OpenRequestRow } from '../requests/request-rows.ts';
 import type { DeliveryParts } from '../schedule/delivery-parts.ts';
@@ -40,6 +40,16 @@ function rowSentAs(parts: Pick<DeliveryParts, 'ledger'>, { playbook, conversatio
   });
 }
 
+function candidateSentAs(
+  parts: Pick<DeliveryParts, 'ledger'>,
+  place: PlaceOfTheReplies,
+  id: string,
+): Effect.Effect<Candidate | undefined> {
+  return Effect.map(rowSentAs(parts, place, id), ([kept]) =>
+    kept === undefined ? undefined : candidateOf(kept.key, requestRowFrom(kept.row), place.connection),
+  );
+}
+
 function candidateOf(runId: string, row: OpenRequestRow, connection: string): Candidate | undefined {
   if (row.conversation === null) {
     return undefined;
@@ -67,22 +77,46 @@ function namedOf(
 }
 
 function namedBy(parts: DeliveryParts, place: PlaceOfTheReplies, id: string): Effect.Effect<readonly NamedRequest[]> {
-  return Effect.flatMap(rowSentAs(parts, place, id), ([kept]) => {
-    const candidate =
-      kept === undefined ? undefined : candidateOf(kept.key, requestRowFrom(kept.row), place.connection);
-    return candidate === undefined
+  return Effect.flatMap(candidateSentAs(parts, place, id), (candidate) =>
+    candidate === undefined
       ? Effect.succeed([])
-      : Effect.map(namedOf(parts, place.playbook, candidate), (named: NamedRequest) => [named]);
-  });
+      : Effect.map(namedOf(parts, place.playbook, candidate), (named: NamedRequest) => [named]),
+  );
 }
 
-export type ReplyAwaited = (place: PlaceOfTheReplies, to: string) => Effect.Effect<boolean>;
+interface RepliedTo {
+  readonly id: string;
+  readonly sender: string;
+  readonly to: string;
+}
+
+interface AwaitedReply {
+  readonly awaited: boolean;
+  readonly typing: boolean;
+}
+
+export type ReplyAwaited = (place: PlaceOfTheReplies, reply: RepliedTo) => Effect.Effect<AwaitedReply>;
+
+const notAwaited: AwaitedReply = { awaited: false, typing: false };
+
+function typingFor(
+  parts: Pick<DeliveryParts, 'ledger'>,
+  playbook: PlaybookAddress,
+  { request, answered }: Candidate,
+  reply: RepliedTo,
+): Effect.Effect<boolean> {
+  if (answered || request.row.answerer !== reply.sender || !tellsTakenAndRefused(request)) {
+    return Effect.succeed(false);
+  }
+  return Effect.map(repliesSeenBy(parts.ledger, { ...playbook, id: request.runId }), (seen) => !seen(reply.id));
+}
 
 export function replyAwaited(parts: Pick<DeliveryParts, 'ledger'>): ReplyAwaited {
-  return (place, to) =>
-    Effect.map(
-      rowSentAs(parts, place, to),
-      ([kept]) => kept !== undefined && candidateOf(kept.key, requestRowFrom(kept.row), place.connection) !== undefined,
+  return (place, reply) =>
+    Effect.flatMap(candidateSentAs(parts, place, reply.to), (candidate) =>
+      candidate === undefined
+        ? Effect.succeed(notAwaited)
+        : Effect.map(typingFor(parts, place.playbook, candidate, reply), (typing) => ({ awaited: true, typing })),
     );
 }
 

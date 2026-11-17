@@ -130,7 +130,7 @@ export type { DispatcherServices } from './dispatch/dispatcher-services.ts';
 export { makeDispatcher, type Dispatcher, type PipelineStep } from './dispatch/dispatcher.ts';
 export { reportedDifferenceMessage } from './access-control/report-only.ts';
 export { enforcedDecisionOf, undecidedMessage } from './access-control/enforcement.ts';
-export { roleRefusalDetail, tokenTypeRefusalDetail } from './access-control/enforcement.ts';
+export { roleRefusalDetail, roleRefusalKind, tokenTypeRefusalDetail } from './access-control/enforcement.ts';
 export { CallPermission, callPermissionDecidedBy, callPermissionReportedTo } from './access-control/call-permission.ts';
 export { callAdmittedBy, mayCall, type CallAsked } from './access-control/call-permission.ts';
 export { InAConversation, type OperationDeclaration } from './access-control/access-request-of-a-call.ts';

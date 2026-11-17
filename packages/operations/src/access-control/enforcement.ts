@@ -2,6 +2,7 @@ import { capitalized } from '@on.auto/phrasing';
 import { Effect } from 'effect';
 
 import { allPermissions } from '../caller/permission.ts';
+import type { ForbiddenKind } from '../outcome/forbidden.ts';
 import { rejected, type Rejected } from '../outcome/outcome.ts';
 import { roleRefusal, tokenTypeRefusal, type Explanation } from '../plain-language/plain-language.ts';
 import { askedInTime } from './asked-in-time.ts';
@@ -18,6 +19,8 @@ function detailOf({ why, remedy }: Explanation): string {
 }
 
 export const roleRefusalDetail = detailOf(roleRefusal);
+
+export const roleRefusalKind: ForbiddenKind = 'permission_denied';
 
 export const tokenTypeRefusalDetail = detailOf(tokenTypeRefusal);
 
@@ -136,7 +139,7 @@ export function enforcedBy(
       return refusedUndecided(call, enforced.errors);
     }
     if (enforced.cause === 'role') {
-      return Effect.fail(rejected('forbidden', roleRefusalDetail, undefined, 'permission_denied'));
+      return Effect.fail(rejected('forbidden', roleRefusalDetail, undefined, roleRefusalKind));
     }
     return enforced.cause === 'token_type'
       ? Effect.fail(rejected('forbidden', tokenTypeRefusalDetail, undefined, 'not_allowed_token_type'))

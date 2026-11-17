@@ -5,7 +5,9 @@ import { Cause, Context, Deferred, Effect, Exit, Function, Tracer } from 'effect
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { systemClock } from '../loop/host-clock.ts';
+import type { HostWakeUp, NextWake } from '../loop/host-wake-up.ts';
 import { followedRecordOf } from '../reaction-testing/followed-records.ts';
+import type { MovingTime } from '../reaction-testing/follower-parts.ts';
 import { alpha, definitionRecorded, eventTrigger, published, recorded } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost } from '../reaction-testing/reacting-host.ts';
 import type { Sweep } from '../sweeps/playbook-sweeps.ts';
@@ -16,7 +18,7 @@ import { parentId, waitingParent } from '../waiting-testing/waiting-parent.ts';
 import { boundTo, type Consumer, type Delivery, DeliveryFailed, type RecordConsumer } from './consumers.ts';
 import { deliveredAll } from './delivery-loop.ts';
 import { followedPlaybooksOn, type Progress } from './followed-playbooks.ts';
-import { followerWakeUpOf, type FollowerWork } from './follower-wake-up.ts';
+import { followerWakeUpOf, type FollowerWork, type Upkeep } from './follower-wake-up.ts';
 
 const followed = followedRecordOf(null);
 
@@ -143,15 +145,24 @@ const signal = { raised: Function.constVoid, renewed: Function.constVoid };
 
 const unreadStarts = new Error('The starts that wait could not be read');
 
+const unreadSchedules = new Error('The schedules could not be read');
+
+const firingBroke = new Error('The schedules broke');
+
+const holdsBroke = new Error('The held playbooks could not be read');
+
 interface Due {
-  readonly scheduleAt: number | null;
+  readonly scheduleAt: number | null | 'unread';
   readonly heldAt: number | null;
   readonly deferredAt: number | null | 'unread';
 }
 
+type BreaksAt = 'nowhere' | 'firing' | 'holds';
+
 interface WorkDue {
   readonly work: FollowerWork;
   readonly troubles: () => readonly unknown[];
+  readonly passes: () => readonly string[];
 }
 
 function roundsAMinuteLongerEachInARow(): FollowerWork['rounds'] {
@@ -169,10 +180,15 @@ function roundsAMinuteLongerEachInARow(): FollowerWork['rounds'] {
   };
 }
 
-function workDue({ scheduleAt, heldAt, deferredAt }: Due, broken: Readonly<{ now: boolean }>): WorkDue {
+function workDue({ scheduleAt, heldAt, deferredAt }: Due, broken: Readonly<{ at: BreaksAt }>): WorkDue {
   const troubles: unknown[] = [];
+  const passes: string[] = [];
   const work: FollowerWork = {
-    pass: () => Effect.succeed('caught_up'),
+    pass: (playbookKey, mode) =>
+      Effect.sync(() => {
+        passes.push(`${playbookKey} ${mode}`);
+        return 'caught_up';
+      }),
     discovery: { atStart: () => Effect.void, registriesAppended: () => Effect.void, playbookSeen: () => Effect.void },
     sweeps: {
       started: () => Effect.void,
@@ -182,12 +198,15 @@ function workDue({ scheduleAt, heldAt, deferredAt }: Due, broken: Readonly<{ now
     },
     upkeep: {
       sweep: () => Effect.void,
-      fireSchedules: () => (broken.now ? Effect.die(new Error('The schedules broke')) : Effect.void),
-      nextScheduleAt: () => Effect.succeed(scheduleAt),
+      fireSchedules: () => (broken.at === 'firing' ? Effect.die(firingBroke) : Effect.void),
+      nextScheduleAt: () => (scheduleAt === 'unread' ? Effect.die(unreadSchedules) : Effect.succeed(scheduleAt)),
       nextDeferredAt: () => (deferredAt === 'unread' ? Effect.die(unreadStarts) : Effect.succeed(deferredAt)),
     },
     appended: streamSignalOf(),
-    holds: { heldAt: () => Effect.succeed({ due: [], nextAt: heldAt }), failed: () => Effect.void },
+    holds: {
+      heldAt: () => (broken.at === 'holds' ? Effect.die(holdsBroke) : Effect.succeed({ due: [], nextAt: heldAt })),
+      failed: () => Effect.void,
+    },
     rounds: roundsAMinuteLongerEachInARow(),
     clock: { now: () => at, sleep: () => Effect.void },
     sweepEveryMs: 1000,
@@ -196,15 +215,81 @@ function workDue({ scheduleAt, heldAt, deferredAt }: Due, broken: Readonly<{ now
         troubles.push(Cause.squash(cause));
       }),
   };
-  return { work, troubles: () => troubles };
+  return { work, troubles: () => troubles, passes: () => passes };
 }
 
 async function nextDueAfterAStart(due: Due) {
-  const { work, troubles } = workDue(due, { now: false });
+  const { work, troubles } = workDue(due, { at: 'nowhere' });
   const follower = followerWakeUpOf(work, signal);
   onTestFinished(() => Effect.runPromise(follower.stop()));
   const { nextDueAt } = await Effect.runPromise(follower.wakeUp({ now: at, sweep: true }));
   return { nextDueAt, troubles: troubles() };
+}
+
+const retriedAfterTheFirstRoundThatFailed = at + 1 + 60_000;
+
+async function nextDueAfterARoundThatFailed(due: Due, breaksAt: BreaksAt) {
+  const broken: { at: BreaksAt } = { at: 'nowhere' };
+  const { work, troubles } = workDue(due, broken);
+  const follower = followerWakeUpOf(work, signal);
+  onTestFinished(() => Effect.runPromise(follower.stop()));
+  await Effect.runPromise(follower.wakeUp({ now: at, sweep: true }));
+  const troublesBefore = troubles().length;
+  broken.at = breaksAt;
+  const { nextDueAt } = await Effect.runPromise(follower.wakeUp({ now: at + 1, sweep: true }));
+  return { nextDueAt, troubles: troubles().slice(troublesBefore) };
+}
+
+const fiveMinutes = 5 * 60_000;
+
+function movingTimeFrom(start: number): MovingTime {
+  const time = { now: start };
+  return {
+    now: () => time.now,
+    moved: (milliseconds) => {
+      time.now += milliseconds;
+    },
+  };
+}
+
+interface Scheduled {
+  readonly fired: Upkeep['fireSchedules'];
+  readonly nextDueAt: Upkeep['nextScheduleAt'];
+  readonly firings: () => readonly (readonly number[])[];
+}
+
+function everyFiveMinutesFrom(firstDueAt: number, time: MovingTime): Scheduled {
+  const schedule = { nextDue: firstDueAt };
+  const firings: (readonly number[])[] = [];
+  return {
+    fired: () =>
+      Effect.sync(() => {
+        const timesDue = Math.max(0, Math.floor((time.now() - schedule.nextDue) / fiveMinutes) + 1);
+        if (timesDue > 0) {
+          firings.push(Array.from({ length: timesDue }, (_, index) => schedule.nextDue + index * fiveMinutes));
+          schedule.nextDue += timesDue * fiveMinutes;
+        }
+      }),
+    nextDueAt: () => Effect.sync(() => schedule.nextDue),
+    firings: () => firings,
+  };
+}
+
+function wokenAt(follower: HostWakeUp, time: MovingTime, now: number): Promise<NextWake> {
+  time.moved(now - time.now());
+  return Effect.runPromise(follower.wakeUp({ now, sweep: true }));
+}
+
+interface Span {
+  readonly from: number;
+  readonly through: number;
+}
+
+async function wakesAtItsAnswers(follower: HostWakeUp, time: MovingTime, { from, through }: Span): Promise<number> {
+  const { nextDueAt } = await wokenAt(follower, time, from);
+  return nextDueAt === null || nextDueAt > through
+    ? 1
+    : 1 + (await wakesAtItsAnswers(follower, time, { from: nextDueAt, through }));
 }
 
 function recordingIds(name: string, types: readonly string[], received: (id: string) => void): Consumer {
@@ -455,17 +540,119 @@ describe('the time the follower is next due, with starts that wait for a later m
 
 describe('the time the follower is next due after a round that failed', () => {
   it('is as long as the rounds failed in a row answer, though a start that waits is due, since only a round that succeeds takes one up', async () => {
-    const broken = { now: false };
+    const broken: { at: BreaksAt } = { at: 'nowhere' };
     const { work } = workDue({ scheduleAt: null, heldAt: null, deferredAt: at }, broken);
     const follower = followerWakeUpOf(work, signal);
     onTestFinished(() => Effect.runPromise(follower.stop()));
 
     await Effect.runPromise(follower.wakeUp({ now: at, sweep: true }));
-    broken.now = true;
+    broken.at = 'firing';
     const first = await Effect.runPromise(follower.wakeUp({ now: at + 1, sweep: true }));
     const second = await Effect.runPromise(follower.wakeUp({ now: at + 2, sweep: true }));
 
     expect([first, second]).toEqual([{ nextDueAt: at + 1 + 60_000 }, { nextDueAt: at + 2 + 120_000 }]);
+  });
+
+  it('is the next schedule when it is still to come before the round’s retry, and the retry when the schedule it failed to fire is still due, or the next comes at the retry or after it', async () => {
+    const answers = await Promise.all([
+      nextDueAfterARoundThatFailed({ scheduleAt: at - 60_000, heldAt: null, deferredAt: null }, 'firing'),
+      nextDueAfterARoundThatFailed({ scheduleAt: at + 1, heldAt: null, deferredAt: null }, 'firing'),
+      nextDueAfterARoundThatFailed({ scheduleAt: at + 30_000, heldAt: null, deferredAt: null }, 'firing'),
+      nextDueAfterARoundThatFailed(
+        { scheduleAt: retriedAfterTheFirstRoundThatFailed, heldAt: null, deferredAt: null },
+        'firing',
+      ),
+      nextDueAfterARoundThatFailed({ scheduleAt: at + 90_000, heldAt: null, deferredAt: null }, 'firing'),
+    ]);
+
+    expect(answers).toEqual(
+      [
+        retriedAfterTheFirstRoundThatFailed,
+        retriedAfterTheFirstRoundThatFailed,
+        at + 30_000,
+        retriedAfterTheFirstRoundThatFailed,
+        retriedAfterTheFirstRoundThatFailed,
+      ].map((nextDueAt) => ({ nextDueAt, troubles: [firingBroke] })),
+    );
+  });
+
+  it('is the next schedule when the round failed after the schedules fired and the next comes before the retry', async () => {
+    const answer = await nextDueAfterARoundThatFailed(
+      { scheduleAt: at + 30_000, heldAt: null, deferredAt: null },
+      'holds',
+    );
+
+    expect(answer).toEqual({ nextDueAt: at + 30_000, troubles: [holdsBroke] });
+  });
+
+  it('is the round’s retry when the schedules cannot be read either, which is said beside the round', async () => {
+    const answer = await nextDueAfterARoundThatFailed(
+      { scheduleAt: 'unread', heldAt: null, deferredAt: null },
+      'firing',
+    );
+
+    expect(answer).toEqual({
+      nextDueAt: retriedAfterTheFirstRoundThatFailed,
+      troubles: [firingBroke, unreadSchedules],
+    });
+  });
+
+  it('is the round’s retry, though the first start that waits comes before it, since only a round that succeeds takes one up', async () => {
+    const answer = await nextDueAfterARoundThatFailed(
+      { scheduleAt: null, heldAt: null, deferredAt: at + 30_000 },
+      'holds',
+    );
+
+    expect(answer).toEqual({ nextDueAt: retriedAfterTheFirstRoundThatFailed, troubles: [holdsBroke] });
+  });
+
+  it('keeps every time of a schedule through a fault that fails each round after the schedules fired, woken only at the time it answers, as the retries grow past the schedule’s interval', async () => {
+    const time = movingTimeFrom(at);
+    const schedule = everyFiveMinutesFrom(at + fiveMinutes, time);
+    const broken: { at: BreaksAt } = { at: 'nowhere' };
+    const { work, troubles } = workDue({ scheduleAt: null, heldAt: null, deferredAt: null }, broken);
+    const follower = followerWakeUpOf(
+      {
+        ...work,
+        clock: { now: time.now, sleep: () => Effect.void },
+        upkeep: { ...work.upkeep, fireSchedules: schedule.fired, nextScheduleAt: schedule.nextDueAt },
+      },
+      signal,
+    );
+    onTestFinished(() => Effect.runPromise(follower.stop()));
+
+    const started = await wokenAt(follower, time, at);
+    broken.at = 'holds';
+    const wakes = await wakesAtItsAnswers(follower, time, {
+      from: Number(started.nextDueAt),
+      through: at + 12 * fiveMinutes,
+    });
+
+    expect(schedule.firings()).toEqual(Array.from({ length: 12 }, (_, index) => [at + (index + 1) * fiveMinutes]));
+    expect([started, troubles().length, new Set(troubles())]).toEqual([
+      { nextDueAt: at + fiveMinutes },
+      wakes,
+      new Set([holdsBroke]),
+    ]);
+  });
+
+  it('is the round’s retry, though a playbook was signalled that the round failed before passing, and the round tried again passes it', async () => {
+    const broken: { at: BreaksAt } = { at: 'nowhere' };
+    const { work, passes } = workDue({ scheduleAt: null, heldAt: null, deferredAt: null }, broken);
+    const follower = followerWakeUpOf(work, signal);
+    onTestFinished(() => Effect.runPromise(follower.stop()));
+
+    await Effect.runPromise(follower.wakeUp({ now: at, sweep: true }));
+    broken.at = 'firing';
+    work.appended.raise(`${alphaFollowerWakeUp}events/e1`);
+    const failed = await Effect.runPromise(follower.wakeUp({ now: at + 1, sweep: false }));
+    broken.at = 'nowhere';
+    const retried = await Effect.runPromise(
+      follower.wakeUp({ now: retriedAfterTheFirstRoundThatFailed, sweep: false }),
+    );
+
+    expect([failed, retried]).toEqual([{ nextDueAt: retriedAfterTheFirstRoundThatFailed }, { nextDueAt: null }]);
+    expect(passes()).toEqual([`${alphaFollowerWakeUp} signal`]);
   });
 });
 

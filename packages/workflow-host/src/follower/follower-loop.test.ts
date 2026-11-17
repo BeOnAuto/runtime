@@ -32,6 +32,7 @@ interface Following {
   readonly sweepsFailing?: number;
   readonly followFailingOnce?: string;
   readonly firesFailing?: number;
+  readonly scheduleDueAt?: number;
   readonly startsAt?: number;
   readonly sweepTakesMs?: number;
 }
@@ -102,7 +103,7 @@ function upkeepOf(following: Following, logged: (line: string) => Effect.Effect<
   return {
     sweep: () => logged('sweep'),
     fireSchedules: failingFirst(following.firesFailing ?? 0, Effect.void),
-    nextScheduleAt: failingFirst(following.schedulesFailing ?? 0, Effect.succeed(null)),
+    nextScheduleAt: failingFirst(following.schedulesFailing ?? 0, Effect.succeed(following.scheduleDueAt ?? null)),
     nextDeferredAt: () => Effect.succeed(null),
   };
 }
@@ -286,8 +287,8 @@ describe('the follower of the playbooks, between its sweeps', () => {
     ]);
   });
 
-  it('wakes again within a minute after a round that failed before its sweep, leaving the sweep to the next interval rather than sweeping again at once', async () => {
-    const watched = followerWith({ firesFailing: 1, startsAt: 1_000_000 });
+  it('wakes again within a minute after a round that failed before its sweep, though the schedule it failed to fire is still due, leaving the sweep to the next interval rather than sweeping again at once', async () => {
+    const watched = followerWith({ firesFailing: 1, scheduleDueAt: 1_000_000 - 60_000, startsAt: 1_000_000 });
 
     const asked = await until(watched.asked, (sleeps) => sleeps.length > 0);
 
