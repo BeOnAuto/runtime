@@ -464,7 +464,7 @@ tool_servers:
 | `type`           | every type       | `mcp`, `stdio` or `openapi`. Taken from `url`, `command` or `document` when left out                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `url`            | `mcp`            | The server, spoken to over Streamable HTTP                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `headers`        | `mcp`, `openapi` | Headers sent with every request. For an `mcp` server, its credential. For an `openapi` server, only what its document's security schemes do not place, such as a tenant. The value of a reference is a secret; a value written out is not                                                                                                                                                                                                                                                                                                                                                                                            |
-| `auth`           | `mcp`, `openapi` | OAuth client credentials instead of a header: `issuer`, `client_id`, `client_secret` or `private_key` with `algorithm`, and `scope`. For an `openapi` server, what satisfies the document's `oauth2` and `openIdConnect` schemes; refused when it declares neither. See [Sign in to a server with OAuth](#sign-in-to-a-server-with-oauth)                                                                                                                                                                                                                                                                                            |
+| `auth`           | `mcp`, `openapi` | OAuth client credentials instead of a header: `issuer`, `client_id`, `client_secret` or `private_key` with `algorithm`, `scope` and `audience`, and for an `mcp` server `discovery`. For an `openapi` server, what satisfies the document's `oauth2` and `openIdConnect` schemes; refused when it declares neither. See [Sign in to a server with OAuth](#sign-in-to-a-server-with-oauth)                                                                                                                                                                                                                                            |
 | `command`        | `stdio`          | An installed, pinned command, started when a run or a listing first needs it and stopped with the server                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `args`           | `stdio`          | Its arguments                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `env`            | `stdio`          | Its whole environment. The value of a reference is a secret; a value written out is not. It inherits nothing else from the server, so give `PATH` or an absolute command                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
@@ -521,8 +521,23 @@ An `auth` block gives an `mcp` or `openapi` server OAuth client credentials inst
 - The server mints one token from the client credentials for each server, shared by every run and listing that uses the server at the same time.
 - It renews the token before it expires, and mints once more when the server responds with `401`.
 - It sends the credentials only to an authorization server whose metadata names the `issuer`.
-- An `mcp` server's authorization server is found through the server's own protected-resource metadata.
+- An `mcp` server's authorization server is found through the server's own protected-resource metadata, which must name the `issuer` first. This is `discovery: protected_resource`, the default.
+- Where that metadata names another authorization server first, such as a gateway that signs people in itself, set `discovery: issuer`. The authorization server is then the `issuer` itself, as for an `openapi` server. The server is not asked to name the `issuer`, so check that `url` is the server these credentials are for.
 - An `openapi` server's authorization server is the `issuer` itself. Its metadata is read by OAuth authorization server metadata or OpenID Connect discovery, since an HTTP API publishes none of its own.
+- Where the authorization server names the API a token is for by an audience, set `audience` to the identifier the API is registered under there, such as the identifier of an API in Auth0. Auto then asks for a token for that audience, not for this server's address. The token is sent to this server, so name the API it serves.
+
+```yaml
+tool_servers:
+  graph:
+    url: https://tools.example.com/mcp
+    auth:
+      issuer: https://login.example.com/
+      client_id: auto-runtime
+      client_secret: ${GRAPH_CLIENT_SECRET}
+      discovery: issuer
+      audience: https://graph.example.com/api
+    org: acme
+```
 
 ### The credentials of an HTTP API
 
@@ -672,7 +687,7 @@ An agent or a person can look at a server's tools, and call one, before a functi
 The server checks every entry at start. It stops at any of these, naming the setting and the place but never a value:
 
 - an entry with none of `url`, `command` and `document`, or with more than one;
-- the fields of another type;
+- the fields of another type, and `discovery` in the `auth` block of an `openapi` server;
 - a name that is not 1 to 32 lowercase letters, digits and hyphens starting with a letter;
 - a name with two hyphens together or one at the end, which would blur where the server's name ends in the `server__tool` a model sees;
 - the name of a model provider or gateway;

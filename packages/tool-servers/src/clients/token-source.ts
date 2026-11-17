@@ -11,6 +11,7 @@ import {
 import { Option, Redacted } from 'effect';
 
 import type { ConsentServed, TokenServing } from '../consent/consent-client.ts';
+import { isResourceOf } from '../consent/server-metadata.ts';
 import type { MintingAuth } from '../settings/server-settings.ts';
 
 export interface UnauthorizedContext {
@@ -60,7 +61,9 @@ export function renewalTimeOf(heldAt: number, expiresAt: number, spreadMs = 0): 
   return expiresAt - leadMs - Math.min(spreadMs, leadMs / 2);
 }
 
-function credentialsProviderOf({ issuer, client_id, scope, credential }: MintingAuth): OAuthClientProvider {
+type CredentialsProvider = ClientCredentialsProvider | PrivateKeyJwtProvider;
+
+function credentialsProviderOf({ issuer, client_id, scope, credential }: MintingAuth): CredentialsProvider {
   const common = { clientId: client_id, expectedIssuer: issuer, ...(scope === null ? {} : { scope }) };
   return credential.kind === 'client_secret'
     ? new ClientCredentialsProvider({ ...common, clientSecret: Redacted.value(credential.client_secret) })
@@ -71,11 +74,42 @@ function credentialsProviderOf({ issuer, client_id, scope, credential }: Minting
       });
 }
 
+function discoveryOf(settings: MintingAuth, discovery: Discovery) {
+  return discovery === 'from_the_issuer' ? { discoveryState: () => ({ authorizationServerUrl: settings.issuer }) } : {};
+}
+
+function resourceCheckedAndLeftOut(serverUrl: Readonly<URL> | string, resource?: string): Promise<undefined> {
+  const server = new URL(serverUrl).href;
+  return Promise.try((): undefined => {
+    if (resource !== undefined && !isResourceOf(server, resource)) {
+      throw new Error(
+        `The tool server at ${server} names ${resource} as the resource it protects, which is not its own address, so no token is asked for it`,
+      );
+    }
+  });
+}
+
+function audienceOf(preparedByTheCredentials: CredentialsProvider['prepareTokenRequest'], audience?: string) {
+  return audience === undefined
+    ? {}
+    : {
+        validateResourceURL: resourceCheckedAndLeftOut,
+        prepareTokenRequest: (scope?: string) => {
+          const parameters = preparedByTheCredentials(scope);
+          parameters.set('audience', audience);
+          return parameters;
+        },
+      };
+}
+
 function providerOf(settings: MintingAuth, discovery: Discovery): OAuthClientProvider {
   const provider = credentialsProviderOf(settings);
-  return discovery === 'from_the_issuer'
-    ? Object.assign(provider, { discoveryState: () => ({ authorizationServerUrl: settings.issuer }) })
-    : provider;
+  const preparedByTheCredentials = provider.prepareTokenRequest.bind(provider);
+  return Object.assign(
+    provider,
+    discoveryOf(settings, discovery),
+    audienceOf(preparedByTheCredentials, settings.audience),
+  );
 }
 
 function askedAfter(asking: Asking, { response }: UnauthorizedContext): Asking {

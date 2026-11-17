@@ -150,3 +150,63 @@ describe('the name of a server, checked alone', () => {
     ]);
   });
 });
+
+const clientAuth = {
+  client_id: 'playbook',
+  issuer: 'https://auth.example.com',
+  client_secret: '${GRAPH_CLIENT_SECRET}',
+};
+
+describe('the discovery and audience of an auth block', () => {
+  it('reads the discovery and the audience an auth block names', () => {
+    const { servers } = settingsOf({
+      graph: { ...graph, auth: { ...clientAuth, discovery: 'issuer', audience: 'https://graph.example.com/mcp' } },
+    });
+
+    expect(servers).toMatchObject([{ auth: { discovery: 'issuer', audience: 'https://graph.example.com/mcp' } }]);
+  });
+
+  it('leaves both out when the auth block names neither', () => {
+    const { servers } = settingsOf({ graph: { ...graph, auth: clientAuth } });
+
+    expect(servers).not.toHaveProperty('0.auth.discovery');
+    expect(servers).not.toHaveProperty('0.auth.audience');
+  });
+
+  it('refuses a discovery that is neither protected_resource nor issuer, server among them', () => {
+    expect(
+      problemsOf({
+        graph: { ...graph, auth: { ...clientAuth, discovery: 'browser' } },
+        wiki: { ...graph, auth: { ...clientAuth, discovery: 'server' } },
+      }),
+    ).toEqual(['TOOL_SERVERS/graph/auth/discovery', 'TOOL_SERVERS/wiki/auth/discovery']);
+  });
+
+  it('refuses an empty audience', () => {
+    expect(problemsOf({ graph: { ...graph, auth: { ...clientAuth, audience: '' } } })).toEqual([
+      'TOOL_SERVERS/graph/auth/audience',
+    ]);
+  });
+});
+
+describe('the discovery and audience of an auth block on a server that is not mcp', () => {
+  it('reads the audience of an openapi server, and refuses its discovery, since its issuer is its authorization server', () => {
+    const billing = { document: 'https://billing.example.com/openapi.json', org: 'acme' };
+    const audience = 'https://billing.example.com/api';
+
+    expect(settingsOf({ billing: { ...billing, auth: { ...clientAuth, audience } } }).servers).toMatchObject([
+      { type: 'openapi', auth: { audience } },
+    ]);
+    expect(problemsOf({ billing: { ...billing, auth: { ...clientAuth, discovery: 'issuer' } } })).toEqual([
+      'TOOL_SERVERS/billing/auth/discovery',
+    ]);
+  });
+
+  it('refuses both on a stdio server once, at its auth block, which a stdio server does not take', () => {
+    const auth = { ...clientAuth, discovery: 'issuer', audience: 'https://graph.example.com' };
+
+    expect(problemsOf({ notes: { command: '/usr/local/bin/notes', org: 'acme', auth } })).toEqual([
+      'TOOL_SERVERS/notes/auth',
+    ]);
+  });
+});

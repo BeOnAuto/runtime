@@ -1,16 +1,9 @@
-import { generateKeyPairSync } from 'node:crypto';
-
-import type { FetchLike } from '@modelcontextprotocol/client';
 import { Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { secretsOf } from '../bounds/secrets.ts';
-import type { MintingAuth } from '../settings/server-settings.ts';
 import { type ClientRegistration } from '../testing/index.ts';
 import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
-import { tokenSource, type UnauthorizedContext } from './token-source.ts';
-
-const clientSecret = 'graph-client-secret-81c2';
+import { askingFetch, clientSecret, refusedAt, rsaKeys, secretAuth, sourceOf } from '../testing/token-sources.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -22,61 +15,6 @@ async function authorizationServer(client: ClientRegistration): Promise<FakeMcpS
   const fake = await serveFakeMcp({ client });
   closing.push(fake.close);
   return fake;
-}
-
-function rsaKeys() {
-  return generateKeyPairSync('rsa', {
-    modulusLength: 2048,
-    publicKeyEncoding: { type: 'spki', format: 'pem' },
-    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-  });
-}
-
-function secretAuth(fake: FakeMcpServer, changes: Partial<MintingAuth> = {}): MintingAuth {
-  return {
-    issuer: fake.origin,
-    client_id: 'playbook',
-    scope: null,
-    credential: { kind: 'client_secret', client_secret: Redacted.make(clientSecret) },
-    ...changes,
-  };
-}
-
-function refusedAt(fake: FakeMcpServer, challenge = ''): UnauthorizedContext {
-  const headers = new Headers(challenge === '' ? {} : { 'www-authenticate': challenge });
-  return { response: new Response(null, { status: 401, headers }), serverUrl: new URL(fake.url), fetchFn: fetch };
-}
-
-function askingFetch() {
-  const urls: string[] = [];
-  const scopes: (string | null)[] = [];
-  const asking: FetchLike = async (...[address, init]: readonly [unknown, unknown?]) => {
-    const request = new Request(String(address), Object.assign({}, init));
-    urls.push(request.url);
-    if (request.url.endsWith('/token')) {
-      scopes.push(new URLSearchParams(await request.clone().text()).get('scope'));
-    }
-    return globalThis.fetch(request);
-  };
-  return { fetch: asking, urls: () => [...urls], scopes: () => [...scopes] };
-}
-
-function sourceOf(fake: FakeMcpServer, settings: MintingAuth, fetch: FetchLike = globalThis.fetch) {
-  const clock = { now: Date.parse('2026-10-05T09:00:00.000Z') };
-  const minted: (readonly [string, string])[] = [];
-  const secrets = secretsOf([]);
-  const source = tokenSource(settings, {
-    server: 'graph',
-    serverUrl: fake.url,
-    discovery: 'from_the_server',
-    fetch,
-    now: () => clock.now,
-    minted: (server, token) => {
-      minted.push([server, token]);
-      secrets.replace(server, token);
-    },
-  });
-  return { source, clock, minted, secrets };
 }
 
 describe('the tokens of an auth block', () => {

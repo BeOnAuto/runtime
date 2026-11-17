@@ -100,7 +100,7 @@ export function handGivenUrlOf(server: ConsentServer): string | undefined {
   return server.type === 'mcp' && server.givenByHand === true ? server.url : undefined;
 }
 
-function isResourceOf(url: string, resource: string): boolean {
+export function isResourceOf(url: string, resource: string): boolean {
   return checkResourceAllowed({ requestedResource: resourceUrlFromServerUrl(url), configuredResource: resource });
 }
 

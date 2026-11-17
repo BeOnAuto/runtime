@@ -45,6 +45,12 @@ const fieldsOfKinds = {
   openapi: ['document', 'base_url', 'headers', 'query_params', 'security', 'auth', 'failure_codes'],
 } as const satisfies Readonly<Record<ServerType, readonly (keyof ServerEntryFields)[]>>;
 
+const authFieldsOfOneKind = {
+  mcp: ['discovery'],
+  stdio: [],
+  openapi: [],
+} as const satisfies Readonly<Record<ServerType, readonly (keyof NonNullable<ServerEntryFields['auth']>)[]>>;
+
 const sourcesOfKinds = { mcp: 'url', stdio: 'command', openapi: 'document' } as const;
 
 const serverTypes: readonly ServerType[] = ['mcp', 'stdio', 'openapi'];
@@ -77,14 +83,29 @@ export function serverNameProblems(name: string, modelProviders: readonly string
   return problemsOf(checkedName(name, modelProviders));
 }
 
+function foreignOf<Field extends string>(
+  fieldsOf: Readonly<Record<ServerType, readonly Field[]>>,
+  type: ServerType,
+): readonly Field[] {
+  const own: readonly string[] = fieldsOf[type];
+  return [...new Set(serverTypes.flatMap((kind) => fieldsOf[kind]))].filter((field) => !own.includes(field));
+}
+
+function notAFieldOf(type: ServerType, name: string, ...path: readonly string[]): SettingProblem {
+  return problem(toolServersSetting, at(name, ...path), `Not a field of ${serverKinds[type]}`);
+}
+
 function foreignFieldProblems(name: string, fields: ServerEntryFields, type: ServerType): readonly SettingProblem[] {
-  const own: readonly string[] = fieldsOfKinds[type];
-  const foreign = [...new Set(serverTypes.flatMap((kind) => fieldsOfKinds[kind]))].filter(
-    (field) => !own.includes(field),
-  );
-  return foreign
-    .filter((field) => fields[field] !== undefined)
-    .map((field) => problem(toolServersSetting, at(name, field), `Not a field of ${serverKinds[type]}`));
+  const foreign = foreignOf(fieldsOfKinds, type).filter((field) => fields[field] !== undefined);
+  const { auth } = fields;
+  const foreignInAuth =
+    auth === undefined || foreign.includes('auth')
+      ? []
+      : foreignOf(authFieldsOfOneKind, type).filter((field) => auth[field] !== undefined);
+  return [
+    ...foreign.map((field) => notAFieldOf(type, name, field)),
+    ...foreignInAuth.map((field) => notAFieldOf(type, name, 'auth', field)),
+  ];
 }
 
 function isWebUrl(url: string): boolean {

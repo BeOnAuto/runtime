@@ -26,9 +26,21 @@ const AuthSchema = Schema.Struct({
     Schema.String.annotate({ description: 'The signing algorithm of private_key, such as RS256 or ES256' }),
   ),
   scope: Schema.optionalKey(Schema.String.annotate({ description: 'The scopes to ask for, separated by spaces' })),
+  discovery: Schema.optionalKey(
+    Schema.Literals(['protected_resource', 'issuer']).annotate({
+      description:
+        "How an mcp server's authorization server is found: protected_resource, the default, from the server's protected-resource metadata, which must name the issuer first; issuer, from the issuer itself, for a server whose metadata names another authorization server first, such as a gateway that signs people in itself. With issuer the server is not asked to name the issuer, so check that url is the server these credentials are for",
+    }),
+  ),
+  audience: Schema.optionalKey(
+    Schema.String.check(Schema.isMinLength(1)).annotate({
+      description:
+        "For an authorization server that names the API a token is for by an audience: the identifier the API is registered under there. Auto then asks for a token for that audience, not for this server's address. The token is sent to this server, so name the API it serves",
+    }),
+  ),
 }).annotate({
   description:
-    "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, an openapi server's from the issuer's",
+    "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, or from the issuer's where discovery is issuer; an openapi server's from the issuer's",
 });
 
 const remoteFields = {

@@ -63,6 +63,8 @@ export function checkedAuth(name: string, { auth, headers = {} }: ServerEntryFie
         issuer: auth.issuer,
         client_id: auth.client_id,
         scope: auth.scope ?? null,
+        ...(auth.discovery === undefined ? {} : { discovery: auth.discovery }),
+        ...(auth.audience === undefined ? {} : { audience: auth.audience }),
         credential: credential.value,
       })
     : rejected(problems);
