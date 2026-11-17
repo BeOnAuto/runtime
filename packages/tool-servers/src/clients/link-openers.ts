@@ -100,7 +100,8 @@ export function openerOf(settings: LinkedServerSettings, linkOptions: LinkOption
         apiClient(settings, { fetch: options.fetch, tokens, now: options.now, documents: options.documents }),
       );
   }
-  const authProvider = tokensOf({ settings, serverUrl: settings.url, discovery: 'from_the_server' }, options);
+  const discovery = settings.auth?.discovery === 'issuer' ? 'from_the_issuer' : 'from_the_server';
+  const authProvider = tokensOf({ settings, serverUrl: settings.url, discovery }, options);
   const { openMs, longestRetryWaitMs } = options.timing;
   return tracedOpener(
     () =>
