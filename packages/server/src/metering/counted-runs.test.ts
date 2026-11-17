@@ -1,12 +1,17 @@
+import { DatabaseSync } from 'node:sqlite';
+
 import { nestedRunId } from '@on.auto/definitions';
 import { answers, textResult } from '@on.auto/reasoning/testing';
+import { movedClock } from '@on.auto/workflow-host/testing';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { accountsServed, installation, licensedServedBy } from '../testing/accounts/licensed-server.ts';
-import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { runIdIn, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
+import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import type { TestResponse } from '../testing/servers/http-client.ts';
+import { alpha, noNetwork, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import { tallied, talliedTimes, tallyCreated } from '../testing/servers/tally-server.ts';
+import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const summary = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Summarize acme.'].join('\n');
@@ -28,6 +33,42 @@ const decodeHistory = Schema.decodeUnknownSync(
 async function historyOf(server: ReasoningServer, runId: string): Promise<readonly string[]> {
   const { body } = await server.call('GET', `${alpha}/runs/${runId}/history`);
   return decodeHistory(body).events.map(({ type }) => type);
+}
+
+async function servedOver(ledger: TemporaryLedger): Promise<ReasoningServer> {
+  const server = await servingReasoning([], {}, noNetwork, { ledger });
+  onTestFinished(() => server.stop());
+  return server;
+}
+
+async function settledTally(server: ReasoningServer): Promise<string> {
+  const started = await tallied(server);
+  await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);
+  return runIdIn(started.body);
+}
+
+function historyChangedIn(ledger: TemporaryLedger, run: string): void {
+  const database = new DatabaseSync(ledger.fileName);
+  const stream = `playbook/acme/alpha/runs/${run.toLowerCase()}`;
+  try {
+    database.prepare("DELETE FROM emt_messages WHERE stream_id = ? AND message_type = 'run_started'").run(stream);
+    database.prepare("UPDATE emt_messages SET message_data = '{not json' WHERE stream_id = ?").run(stream);
+  } finally {
+    database.close();
+  }
+}
+
+const aMinuteAndASecond = 61_000;
+
+const closing = workflowSource(
+  'close-the-month',
+  'schedule:\n  on: { one: { with: { type: com.acme.ledger.closed } } }\ndo:\n  - total: { set: { closed: true } }\n',
+);
+
+function closed(served: ReasoningServer): Promise<TestResponse> {
+  return served.call('POST', `${alpha}/events`, {
+    body: { event: { source: '/ledger', type: 'com.acme.ledger.closed', data: { month: 'october' } } },
+  });
 }
 
 describe('a workflow of a licensed runtime that calls a workflow that calls a function', () => {
@@ -89,4 +130,49 @@ describe('a workflow of a licensed runtime and the reasoning run it called, resu
     expect(accounts.account.reports().at(-1)).toEqual({ actions: 2, licensed: 2 });
     expect(accounts.account.chargedThrough(installation)).toBe(2);
   }, 60_000);
+});
+
+describe('a runtime whose ledger lost or garbled the history of runs it ran', () => {
+  it('goes on starting runs after it restarts, counting from its own record of what it admitted', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    const before = await servedOver(ledger);
+    await tallyCreated(before);
+    const changed = await settledTally(before);
+    await settledTally(before);
+    await before.stop();
+    historyChangedIn(ledger, changed);
+
+    const after = await servedOver(ledger);
+    const ran = await tallied(after);
+
+    expect(ran.status).toBe(200);
+    expect((await after.call('GET', '/v1/orgs/acme/license')).body).toMatchObject({
+      state: 'unregistered',
+      free_runs: { used: 3, of: 100 },
+    });
+  }, 60_000);
+});
+
+describe('a trigger of a runtime nobody registered, after its 100 free runs and the 15 of the day', () => {
+  it('starts no run, and its refusal is recorded as a refused reaction that names the license', async () => {
+    const clock = movedClock(Date.now());
+    const server = await servingWorkflows([], {}, undefined, clock);
+    onTestFinished(() => server.stop());
+    await tallyCreated(server);
+    await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'close-the-month', source: closing } });
+    await talliedTimes(server, 115);
+    const refusals = await until(
+      async () => {
+        await closed(server);
+        clock.moveTo(clock.now() + aMinuteAndASecond);
+        return server.call('GET', `${alpha}/events?type=reaction_refused`);
+      },
+      (response) => JSON.stringify(response.body).includes('reaction_refused'),
+    );
+    const runs = await server.call('GET', `${alpha}/runs?type=workflow&name=close-the-month`);
+
+    expect(JSON.stringify(refusals.body)).toContain('license');
+    expect(runs.body).toMatchObject({ runs: [] });
+  }, 120_000);
 });

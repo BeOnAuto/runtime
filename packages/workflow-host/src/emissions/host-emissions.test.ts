@@ -1,4 +1,8 @@
-import { emittedEventIdOf } from '@on.auto/workflow-engine';
+import { eventEmitter, playbookOwnNamesOf, publishedEventOf } from '@on.auto/definitions';
+import { Conflict, messageIdOf } from '@on.auto/operations';
+import { memoryLedger } from '@on.auto/operations/testing';
+import { type EmitEvent, emittedEventIdOf } from '@on.auto/workflow-engine';
+import { emitterProbes } from '@on.auto/workflow-engine/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -6,9 +10,11 @@ import { emittingInto, publishedEventIdsIn } from '../reaction-testing/ledger-em
 import { movedClock } from '../reaction-testing/moved-clock.ts';
 import { at, definitionRecorded, eventTrigger } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost } from '../reaction-testing/reacting-host.ts';
+import { runLogStreamOf } from '../runs/run-address.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { until } from '../testing/until.ts';
+import { ledgerEmitter } from './ledger-emitter.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7c';
 
@@ -23,6 +29,44 @@ const announcing = workflow(`do:
   - notify: { call: notify, with: { to: ada } }
   - announce: { emit: { event: { with: { type: com.acme.closed, source: /acme/ledger, data: { month: september } } } } }
 `);
+
+const runIdLedgerEmitter = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+const playbookOwnNames = playbookOwnNamesOf([]);
+
+const run = {
+  runId: `acme/alpha/${runIdLedgerEmitter}`,
+  attributes: {
+    definition: { name: 'close-the-month', version: 2 },
+    caller: { id: 'acme-admin' },
+    depth: 1,
+    lineage: { correlation: 'r-top' },
+  },
+};
+
+function tickingLedgerEmitter(): () => number {
+  const clock = { now: Date.parse('2026-10-01T09:00:00.000Z') };
+  return () => {
+    clock.now += 1000;
+    return clock.now;
+  };
+}
+
+const event = {
+  specversion: '1.0',
+  id: 'e1',
+  source: '/acme/ledger',
+  type: 'com.acme.closed',
+  time: '2026-10-01T09:00:00.000Z',
+};
+
+const emission: EmitEvent = {
+  kind: 'emit_event',
+  key: { runId: run.runId, reference: '/do/0/x', run: 1 },
+  event,
+};
+
+const origin = { version: 4 };
 
 describe('a workflow run by the host that emits an event', () => {
   it('hands the event to the playbook as emitted by the run and its workflow, one deeper than the run', async () => {
@@ -57,13 +101,13 @@ describe('the same event emitted in each turn of a loop by a workflow the host r
       version: 1,
       triggers: [eventTrigger({ type: 'com.acme.ticked' })],
     });
-    const idOfTurn = (run: number) =>
-      emittedEventIdOf({ runId: `acme/alpha/${runId}`, reference: '/do/0/each/do/0/tick', run });
-    const eventOfTurn = (run: number) => ({
+    const idOfTurn = (runHostEmissions: number) =>
+      emittedEventIdOf({ runId: `acme/alpha/${runId}`, reference: '/do/0/each/do/0/tick', run: runHostEmissions });
+    const eventOfTurn = (runHostEmissions: number) => ({
       type: 'com.acme.ticked',
       source: '/acme/clock',
       specversion: '1.0',
-      id: idOfTurn(run),
+      id: idOfTurn(runHostEmissions),
       time: at,
     });
 
@@ -79,5 +123,62 @@ describe('the same event emitted in each turn of a loop by a workflow the host r
       ['tally', [eventOfTurn(2)]],
     ]);
     expect(new Set(starts.map(({ runId: started }) => started)).size).toBe(2);
+  });
+});
+
+describe('the emitter of the host', () => {
+  it.each(emitterProbes)('$title', async (probe) => {
+    const emitter = ledgerEmitter(eventEmitter(memoryLedger().service, playbookOwnNames), tickingLedgerEmitter());
+
+    expect(await Effect.runPromise(probe.run({ emitter, run }))).toEqual(probe.expected);
+  });
+});
+
+describe('an event a run of the host emits', () => {
+  it('is recorded as the run emitted it, one deeper, caused by the run record and in the chain of the run', async () => {
+    const ledger = memoryLedger();
+    const emitter = ledgerEmitter(eventEmitter(ledger.service, playbookOwnNames), tickingLedgerEmitter());
+
+    await Effect.runPromise(emitter.emit(emission, run, origin));
+    const { records } = await Effect.runPromise(
+      ledger.service.readRecorded(
+        { org: 'acme', playbook: 'alpha' },
+        { kind: 'everything' },
+        { order: 'asc', limit: 10 },
+      ),
+    );
+
+    expect(records.map((record) => [record.causationId, record.correlationId, publishedEventOf(record)])).toEqual([
+      [
+        messageIdOf(runLogStreamOf(run.runId), 4),
+        'r-top',
+        {
+          type: 'event_published',
+          data: { event, filled: [] },
+          context: {
+            at: '2026-10-01T09:00:01.000Z',
+            by: 'acme-admin',
+            runId: runIdLedgerEmitter,
+            definitionType: 'workflow',
+            definitionName: 'close-the-month',
+            definitionVersion: 2,
+            depth: 2,
+          },
+        },
+      ],
+    ]);
+  });
+});
+
+describe('an event the ledger cannot record', () => {
+  it('fails its emission, to be dispatched again', async () => {
+    const emitter = ledgerEmitter(
+      () => Effect.fail(new Conflict({ detail: 'The ledger cannot be reached' })),
+      tickingLedgerEmitter(),
+    );
+
+    const failure = await Effect.runPromise(Effect.flip(emitter.emit(emission, run, origin)));
+
+    expect(failure).toMatchObject({ output: 'emit_event', detail: 'The ledger cannot be reached' });
   });
 });

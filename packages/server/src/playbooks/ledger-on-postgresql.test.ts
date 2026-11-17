@@ -8,7 +8,7 @@ import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { spawnServer } from '../testing/processes/spawned-server.ts';
-import { servingReasoning } from '../testing/servers/reasoning-server.ts';
+import { alpha, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { runIdIn, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
 
 const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
@@ -82,6 +82,42 @@ const approval = workflowSource(
   'approval',
   "do:\n  - wait: { listen: { to: { one: { with: { type: com.acme.approved } } } }, output: { as: '${ $data[0] }' } }\n",
 );
+
+const summaryHeldChangesPostgresql = [
+  '---',
+  'model: anthropic/claude-sonnet-4-5',
+  '---',
+  'Summarize: {{ input.text }}',
+].join('\n');
+
+const AnswerSchema = Schema.Struct({ cursor: Schema.String });
+
+async function administerHeldChangesPostgresql(url: string, statement: string): Promise<void> {
+  const client = new Client({ connectionString: url });
+  await client.connect();
+  try {
+    await client.query(statement);
+  } finally {
+    await client.end();
+  }
+}
+
+async function aDatabaseOfItsOwn(): Promise<string> {
+  const name = `server_${randomUUID().replaceAll('-', '')}`;
+  await administerHeldChangesPostgresql(server, `CREATE DATABASE ${name}`);
+  onTestFinished(async () => {
+    await administerHeldChangesPostgresql(server, `DROP DATABASE ${name} WITH (FORCE)`);
+  });
+  const database = new URL(server);
+  database.pathname = `/${name}`;
+  return database.href;
+}
+
+function elapsed(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 describe.skipIf(skipped)(`A server that keeps its ledger in PostgreSQL${notice}`, () => {
   it('executes a reasoning function definition of a playbook it created, and reads the run again after a restart', async () => {
@@ -162,5 +198,33 @@ describe.skipIf(skipped)(`Workflows of a server that keeps its ledger in Postgre
     expect(started).toMatchObject({ status: 200, body: { status: 'started' } });
     expect(sent.status).toBe(200);
     expect(settled).toMatchObject({ body: { status: 'succeeded', output: { by: 'Ada' } } });
+  });
+});
+
+describe.skipIf(skipped)(`A held request for the changes of a playbook on PostgreSQL${notice}`, () => {
+  it('stays held through a read of the ledger that fails, and is answered once the ledger reads again', async () => {
+    const database = await aDatabaseOfItsOwn();
+    const serving = await servingReasoning([], {
+      LEDGER_FILE: '',
+      DATABASE_URL: database,
+      SECRETS_KEY: Buffer.alloc(32, 7).toString('base64'),
+    });
+    onTestFinished(() => serving.stop());
+    await serving.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+    const now = Schema.decodeUnknownSync(AnswerSchema)((await serving.call('GET', `${alpha}/changes`)).body).cursor;
+
+    const held = serving.call('GET', `${alpha}/changes?since=${now}&wait=20`);
+    await elapsed(200);
+    await administerHeldChangesPostgresql(database, 'ALTER TABLE emt_messages RENAME TO emt_messages_away');
+    await elapsed(1500);
+    await administerHeldChangesPostgresql(database, 'ALTER TABLE emt_messages_away RENAME TO emt_messages');
+    await serving.call('POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'summary', source: summaryHeldChangesPostgresql, diagram: 'none' },
+    });
+
+    expect(await held).toMatchObject({
+      status: 200,
+      body: { changes: [{ kind: 'definition', type: 'reasoning', name: 'summary' }] },
+    });
   });
 });

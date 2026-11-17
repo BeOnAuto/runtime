@@ -3,8 +3,9 @@ import { describe, expect, it } from 'vitest';
 import type { InstanceSource } from '../instances/instance-source.ts';
 import { mostEventBytes } from '../machine/limits.ts';
 import { sourcesUnderTest, type SourceUnderTest } from '../pool-testing/test-pools.ts';
-import { expressionUnitOf, type ExpressionUnit } from '../programs/expression-units.ts';
+import { type ExpressionUnit, expressionUnitOf } from '../programs/expression-units.ts';
 import { threadStackBytes, unitMemoryBytes } from '../programs/sandbox-bounds.ts';
+import { boundedCacheOf } from './bounded-cache.ts';
 import { enclosedBody, expressionSource, runExpression } from './expressions.ts';
 import type { Json } from './json.ts';
 
@@ -164,5 +165,34 @@ describe.each(prepared)('an expression that runs out of what it may use on $name
 
     expect(runExpression(bounded, bomb, { data: null }, budget)).toMatchObject({ exhausted: true, limit: 'memory' });
     expect(runExpression(bounded, '1', { data: null }, budget)).toMatchObject({ exhausted: true, limit: 'memory' });
+  });
+});
+
+describe('a bounded cache', () => {
+  it('keeps entries while their keys fit in the characters it may hold', () => {
+    const cache = boundedCacheOf<number>(10);
+    cache.set('aaaa', 1);
+    cache.set('bbbb', 2);
+
+    expect([cache.get('aaaa'), cache.get('bbbb'), cache.characters()]).toEqual([1, 2, 8]);
+  });
+
+  it('forgets the entry used longest ago to make room, so a read keeps an entry', () => {
+    const cache = boundedCacheOf<number>(10);
+    cache.set('aaaa', 1);
+    cache.set('bbbb', 2);
+    cache.get('aaaa');
+    cache.set('cccc', 3);
+
+    expect([cache.get('aaaa'), cache.get('bbbb'), cache.get('cccc'), cache.characters()]).toEqual([1, undefined, 3, 8]);
+  });
+
+  it('counts a key set again once, and keeps nothing whose key alone is larger than all it may hold', () => {
+    const cache = boundedCacheOf<number>(10);
+    cache.set('aaaa', 1);
+    cache.set('aaaa', 2);
+    cache.set('x'.repeat(11), 3);
+
+    expect([cache.get('aaaa'), cache.get('x'.repeat(11)), cache.characters()]).toEqual([2, undefined, 4]);
   });
 });

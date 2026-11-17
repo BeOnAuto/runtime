@@ -1,12 +1,19 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { testDriverOf } from '../pool-testing/test-sandbox.ts';
-import { loadedRunOf } from '../run-log/run-fold.ts';
-import { startedOf } from '../testing/driver-inputs.ts';
+import { runCacheOf } from '../cache/run-cache.ts';
+import { pauseEnded, waitingOnItsPause } from '../kept-testing/kept-drivers.ts';
+import type { RunInput } from '../machine/run-input.ts';
+import { newRun } from '../machine/run-state.ts';
+import type { MemoryEngine } from '../memory/memory-ports.ts';
+import { countedReservedSandbox, testDriverOf } from '../pool-testing/test-sandbox.ts';
+import { evolveRun, loadedRunOf } from '../run-log/run-fold.ts';
+import { snapshotEveryBytes } from '../run-log/snapshot.ts';
+import { startedOf, testMachineOf } from '../testing/driver-inputs.ts';
 import type { MemoryDriver } from '../testing/memory-driver.ts';
-import { drivenRunId as runId, outputKindsIn, statesAlong } from '../testing/run-history.ts';
+import { drivenRunId, outputKindsIn, drivenRunId as runId, statesAlong } from '../testing/run-history.ts';
 import { workflow } from '../testing/workflows.ts';
+import { workflowEngineOf } from './engine.ts';
 
 const answeringLarge = () => ({ after: 1000, result: { status: 'succeeded', output: 'x'.repeat(300_000) } }) as const;
 
@@ -27,6 +34,48 @@ function untilTheFirstSnapshot(driver: MemoryDriver): number {
   return snapshotVersionOf(driver) === 0 && driver.clock.advance()
     ? untilTheFirstSnapshot(driver)
     : snapshotVersionOf(driver);
+}
+
+const inputs = 130;
+
+const paddingCharacters = 8000;
+
+const runIdLongRun = '0199a3c4-7d2e-7c1a-9b3f-000000003000';
+
+const ticking = workflow(`
+do:
+  - tick: { wait: PT1S }
+  - count: { set: '\${ ({ n: ($data.n ?? 0) + 1, padding: "x".repeat(${paddingCharacters}) }) }' }
+  - again: { switch: [{ more: { when: '\${ $data.n < ${inputs - 1} }', then: tick } }] }
+`);
+
+interface Counted {
+  readonly engine: MemoryEngine;
+  readonly prepared: () => number;
+  readonly failingRead: () => void;
+  readonly input: RunInput;
+}
+
+function countedEngine(): Counted {
+  const driver = waitingOnItsPause();
+  const { sandbox, prepared } = countedReservedSandbox();
+  return {
+    engine: workflowEngineOf(driver.ports, testMachineOf(sandbox), runCacheOf()),
+    prepared,
+    failingRead: () => {
+      driver.ports.payloads.failNext('read');
+    },
+    input: pauseEnded(driver.state(drivenRunId)),
+  };
+}
+
+async function failedTimes(counted: Counted, times: number): Promise<readonly number[]> {
+  if (times === 0) {
+    return [];
+  }
+  counted.failingRead();
+  await Effect.runPromiseExit(counted.engine.submit(counted.input));
+  return [counted.prepared(), ...(await failedTimes(counted, times - 1))];
 }
 
 describe('the snapshots of a run', () => {
@@ -95,5 +144,36 @@ do:
 
     expect(driver.ports.reporter.reports()).toEqual([{ run: { runId, attributes: {} }, receipt: 'unknown_run' }]);
     expect(outputKindsIn(driver.ports.runStore.events(runId))).toEqual(['settle']);
+  });
+});
+
+describe(`a run of ${inputs} inputs of ${paddingCharacters} characters each`, () => {
+  it('resumes from its last snapshot and the events after it alone, to the state its whole stream folds to', () => {
+    const driver = testDriverOf();
+    driver.start({ runId: runIdLongRun, document: ticking });
+    driver.runUntilEnded(runIdLongRun);
+    const events = driver.ports.runStore.events(runIdLongRun);
+    const stored = Effect.runSync(driver.ports.runStore.load(runIdLongRun));
+
+    const resumed = loadedRunOf(stored);
+
+    expect(events).toHaveLength(inputs);
+    expect(stored.snapshot?.snapshot.version).toBeGreaterThan(inputs / 2);
+    expect(resumed.sinceSnapshot.bytes).toBeLessThan(snapshotEveryBytes);
+    expect(resumed.version).toBe(inputs);
+    expect(resumed.state).toEqual(events.reduce((state, { event }) => evolveRun(state, event), newRun));
+  });
+});
+
+describe('an input to a run whose kept values cannot be read just now', () => {
+  it('sets no sandbox instance aside, so an outage holds none however many inputs it fails, and the input given again takes one', async () => {
+    const counted = countedEngine();
+    await Promise.resolve();
+
+    const afterEachFailure = await failedTimes(counted, 5);
+    const submitted = await Effect.runPromise(counted.engine.submit(counted.input));
+
+    expect(afterEachFailure).toEqual([1, 1, 1, 1, 1]);
+    expect([submitted.outcome, counted.prepared()]).toEqual(['applied', 2]);
   });
 });

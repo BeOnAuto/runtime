@@ -1,13 +1,23 @@
+import { statement } from '@on.auto/ledger';
 import type { ArmTimer, WorkflowEngine } from '@on.auto/workflow-engine';
 import { Deferred, Effect, Exit, Function } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { until } from '../testing/until.ts';
-import { watchedSystemClock, type WatchedClock } from '../testing/watched-clock.ts';
-import { sqlTimers, type DueTimer, type TimerTable } from '../timers/sql-timers.ts';
-import { startLoop, type HostLoop } from './host-loop.ts';
-import { hostWakeUp, type WakeUpParts } from './host-wake-up.ts';
+import { type WatchedClock, watchedSystemClock } from '../testing/watched-clock.ts';
+import { type DueTimer, sqlTimers, type TimerTable } from '../timers/sql-timers.ts';
+import { failedRoundsOn } from './failed-rounds.ts';
+import { type HostLoop, startLoop } from './host-loop.ts';
+import {
+  type FailedRounds,
+  hostWakeUp,
+  type NextWake,
+  oneWakeAtATime,
+  type WakeUpParts,
+  type Woken,
+} from './host-wake-up.ts';
 
 const runKey = 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -117,6 +127,42 @@ function failingOnce(): (timer: DueTimer) => Effect.Effect<void, Error> {
     });
 }
 
+function writesFailing(database: HostDatabase): HostDatabase {
+  return { ...database, write: () => Effect.fail(new DatabaseFailed({ detail: 'The test failed this write' })) };
+}
+
+function waitsOf(rounds: FailedRounds, failures: number): Promise<readonly number[]> {
+  return Effect.runPromise(Effect.forEach(Array.from({ length: failures }), () => rounds.failed()));
+}
+
+interface Counted {
+  readonly wakeUp: (woken: Woken) => Promise<NextWake>;
+  readonly rounds: () => readonly Woken[];
+  readonly release: () => Promise<void>;
+}
+
+function countedWakeUp(failing: boolean): Counted {
+  const rounds: Woken[] = [];
+  const holding = { gate: Deferred.makeUnsafe<void>() };
+  const wakeUp = oneWakeAtATime((woken) =>
+    Effect.suspend(() => {
+      rounds.push(woken);
+      const round = Deferred.await(holding.gate).pipe(Effect.as({ nextDueAt: woken.now + 1000 }));
+      return failing ? Effect.andThen(round, Effect.die(new Error('The round broke'))) : round;
+    }),
+  );
+  return {
+    wakeUp: (woken) => Effect.runPromise(wakeUp(woken)),
+    rounds: () => rounds,
+    release: async () => {
+      await Effect.runPromise(Deferred.done(holding.gate, Exit.void));
+      holding.gate = Deferred.makeUnsafe<void>();
+    },
+  };
+}
+
+const anError: unknown = expect.any(Error);
+
 describe('the loop of the host, firing timers', () => {
   it('fires a timer when it is due, woken from a long wait by the timer being armed', async () => {
     const loop = await looping({ sweepEveryMs: 3_600_000 });
@@ -181,5 +227,82 @@ describe('the loop of the host, sweeping and stopping', () => {
     await stopped;
 
     expect([firedBeforeFinishing, loop.fired()]).toEqual([[], ['1']]);
+  });
+});
+
+describe('the rounds of a wake-up that failed in a row', () => {
+  it('put the next round off a minute after the first, twice as long after each in a row, at most an hour', async () => {
+    const rounds = failedRoundsOn(await openedOn({ store: 'sqlite', file: aSQLiteFile() }), 'follower');
+
+    expect(await waitsOf(rounds, 9)).toEqual([
+      60_000, 120_000, 240_000, 480_000, 960_000, 1_920_000, 3_600_000, 3_600_000, 3_600_000,
+    ]);
+  });
+
+  it('are counted in the database, so a wake-up composed again over it goes on counting, and a round that succeeds starts the count again', async () => {
+    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const first = failedRoundsOn(database, 'follower');
+    const second = failedRoundsOn(database, 'follower');
+    const third = failedRoundsOn(database, 'follower');
+
+    const waits = [...(await waitsOf(first, 2)), ...(await waitsOf(second, 1))];
+    await Effect.runPromise(second.succeeded());
+    await Effect.runPromise(second.succeeded());
+    waits.push(...(await waitsOf(second, 1)));
+    await Effect.runPromise(third.succeeded());
+    const kept = await Effect.runPromise(database.read(statement`SELECT name, rounds FROM workflow_failed_rounds`));
+
+    expect(waits).toEqual([60_000, 120_000, 240_000, 60_000]);
+    expect(kept).toEqual([]);
+  });
+
+  it('are counted in memory while the database cannot be written, and a round that succeeds then fails as the write does', async () => {
+    const rounds = failedRoundsOn(writesFailing(await openedOn({ store: 'sqlite', file: aSQLiteFile() })), 'follower');
+
+    const waits = await waitsOf(rounds, 2);
+    const succeeded = await Effect.runPromiseExit(rounds.succeeded());
+
+    expect(waits).toEqual([60_000, 120_000]);
+    expect(Exit.isFailure(succeeded)).toBe(true);
+  });
+});
+
+describe('a wake-up woken while it runs', () => {
+  it('runs one round: the wake that comes while one runs waits for it and answers what it answers, and a later wake runs a round of its own', async () => {
+    const counted = countedWakeUp(false);
+
+    const together = Promise.all([counted.wakeUp({ now: 1, sweep: true }), counted.wakeUp({ now: 2, sweep: false })]);
+    await counted.release();
+    const answers = await together;
+    const later = counted.wakeUp({ now: 3, sweep: false });
+    await counted.release();
+
+    expect([answers, await later, counted.rounds()]).toEqual([
+      [{ nextDueAt: 1001 }, { nextDueAt: 1001 }],
+      { nextDueAt: 1003 },
+      [
+        { now: 1, sweep: true },
+        { now: 3, sweep: false },
+      ],
+    ]);
+  });
+
+  it('fails both wakes with the round that failed, and runs the next wake anew', async () => {
+    const counted = countedWakeUp(true);
+
+    const together = Promise.allSettled([
+      counted.wakeUp({ now: 1, sweep: true }),
+      counted.wakeUp({ now: 2, sweep: true }),
+    ]);
+    await counted.release();
+    const settled = await together;
+    const later = counted.wakeUp({ now: 3, sweep: true }).catch((error: unknown) => error);
+    await counted.release();
+
+    expect(settled.map((outcome: Readonly<PromiseSettledResult<NextWake>>) => outcome.status)).toEqual([
+      'rejected',
+      'rejected',
+    ]);
+    expect([await later, counted.rounds().length]).toEqual([anError, 2]);
   });
 });

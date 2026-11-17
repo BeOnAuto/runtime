@@ -1,9 +1,11 @@
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { plainTextIn, problemIn, withMcpSession } from '@on.auto/api/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { configFileSchemaPath } from '../config-file/config-file-schema.ts';
+import { variablesTheRuntimeReads } from '../connections/variables-the-runtime-reads.ts';
 import {
   accountsServed,
   installation,
@@ -145,5 +147,14 @@ describe('a key of an org whose account Auto says was deleted', () => {
     expect({ isError: overMcp?.isError, problem: problemIn(overMcp) }).toMatchObject({ isError: true, problem });
     expect(plainTextIn(overMcp)).toContain('Auto support can restore the organization until the date at');
     expect((await tallied(server)).status).toBe(200);
+  });
+});
+
+describe('the meter of the runtime', () => {
+  it('has no environment variable or configuration key that could turn it off', () => {
+    const named = /\bmeter(?:s|ed|ing)?\b/iu;
+
+    expect(variablesTheRuntimeReads.filter((variable) => named.test(variable))).toEqual([]);
+    expect(named.test(readFileSync(configFileSchemaPath, 'utf8'))).toBe(false);
   });
 });

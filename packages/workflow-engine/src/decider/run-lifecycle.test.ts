@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
-import { mostValueDepth, type Json, type JsonObject } from '../dsl/json.ts';
+import { type Json, type JsonObject, mostValueDepth } from '../dsl/json.ts';
 import { errorType } from '../dsl/raised-error.ts';
+import { nothingAtHand } from '../machine/held-contents.ts';
 import { mostOutputBytes, mostStepsWithoutWaiting } from '../machine/limits.ts';
+import type { RunInput } from '../machine/run-input.ts';
 import type { RunState } from '../machine/run-state.ts';
-import { testDriverOf } from '../pool-testing/test-sandbox.ts';
+import { testDriverOf, testMachine } from '../pool-testing/test-sandbox.ts';
 import { testSettings } from '../testing/driver-inputs.ts';
-import { armedTimersAlong, drivenRunId, drivenRun, outputKindsIn, outputsIn } from '../testing/run-history.ts';
+import { armedTimersAlong, drivenRun, drivenRunId, outputKindsIn, outputsIn } from '../testing/run-history.ts';
+import { at, openCall, runId, runningState, started } from '../testing/runs.ts';
 import { workflow } from '../testing/workflows.ts';
+import { deciding } from './deciding.ts';
+import { decided } from './decision.ts';
+import { endingEvent } from './run-endings.ts';
 
 function nested(depth: number): Json {
   return depth === 0 ? 1 : [nested(depth - 1)];
@@ -23,6 +29,67 @@ function endedWithRefusals(document: JsonObject): RunState {
   });
   driver.start({ runId: drivenRunId, document });
   return driver.runUntilEnded(drivenRunId);
+}
+
+type HeldValues = RunState['machine']['values'];
+
+type Held = HeldValues[string];
+
+function readingThrows(values: HeldValues): HeldValues {
+  return Object.fromEntries(
+    Object.entries(values).map(([id, { bytes }]: readonly [string, Held]) => [
+      id,
+      Object.defineProperty({ bytes, value: null }, 'value', {
+        enumerable: true,
+        get: () => {
+          throw new Error(`The value ${id} was read`);
+        },
+      }),
+    ]),
+  );
+}
+
+function digestOf(id: string): string {
+  return id.repeat(64).slice(0, 64);
+}
+
+const watched: RunState = {
+  ...runningState,
+  machine: { ...runningState.machine, values: readingThrows(runningState.machine.values) },
+};
+
+const keptEverywhere: RunState = {
+  ...runningState,
+  machine: {
+    ...runningState.machine,
+    values: Object.fromEntries(
+      Object.entries(runningState.machine.values).map(([id, { bytes }]: readonly [string, Held]) => [
+        id,
+        { sha256: digestOf(id), bytes },
+      ]),
+    ),
+  },
+};
+
+const allMissing = new Map(
+  Object.keys(runningState.machine.values).map((id) => [digestOf(id), { kind: 'missing' }] as const),
+);
+
+const inputs: readonly RunInput[] = [
+  { kind: 'timer_fired', runId, at: at + 1, timerId: '1' },
+  { kind: 'call_answered', runId, at: at + 1, key: openCall, result: { status: 'succeeded', output: 1 } },
+  { kind: 'cancel_requested', runId, at: at + 1, cancel: { by: 'a', kind: 'requested', reason: 'r' } },
+  { kind: 'event_received', runId, at: at + 1, event: { id: 'e', type: 't' } },
+];
+
+const gone = { type: 'runtime', status: 500, title: 'gone', instance: '/' };
+
+const nothing = nothingAtHand();
+
+function settledAs({ events }: ReturnType<typeof decided>): readonly string[] {
+  return events.flatMap(({ outputs }) =>
+    outputs.flatMap((output) => (output.kind === 'settle' ? [output.settlement.status] : [])),
+  );
 }
 
 describe('the output of a run that the functions it is given refuse', () => {
@@ -102,9 +169,9 @@ describe('a run that is cancelled or refused', () => {
     const cancel = { by: 'acme-admin', kind: 'requested', reason: 'Not needed any more' } as const;
     const run = drivenRun(workflow('do:\n  - ask: { call: notify, with: { to: ada } }'), {
       respond: () => 'never',
-      meanwhile: (driver, runId) => {
+      meanwhile: (driver, runIdRunLifecycle) => {
         driver.at(5, () => {
-          driver.cancel(runId, cancel);
+          driver.cancel(runIdRunLifecycle, cancel);
         });
       },
     });
@@ -233,5 +300,30 @@ do:
 
     expect(run.outcome).toMatchObject({ kind: 'completed' });
     expect(armedTimersAlong(run.events)).toEqual([['deadline /', 'wait /do/2/rest'], []]);
+  });
+});
+
+describe('the ending a decision gives a run', () => {
+  it('reads no value the run holds, whatever the input, so it can end a run whose values cannot be read', () => {
+    const endings = inputs.map((input) =>
+      deciding(testMachine, nothing, (options) => endingEvent(watched, options, input, gone)),
+    );
+
+    expect(endings.map(({ event }) => event.outputs.at(-1)?.kind)).toEqual(inputs.map(() => 'settle'));
+    expect(() =>
+      deciding(testMachine, nothing, (options) => decided(options, { ...started, at: at + 1 }, watched)),
+    ).toThrow('The value 1 was read');
+  });
+
+  it('ends a run whose every value is kept and lost, reading none, in an event of the format the run reached', () => {
+    const endings = inputs.map((input) =>
+      deciding(testMachine, { ...nothing, contents: allMissing, format: 12 }, (options) =>
+        decided(options, input, keptEverywhere),
+      ),
+    );
+
+    expect(endings.map(({ events }) => events.map(({ format }) => format))).toEqual(inputs.map(() => [12]));
+    expect(endings.map(({ payloads }) => payloads)).toEqual(inputs.map(() => []));
+    expect(endings.map((ending) => settledAs(ending))).toEqual(inputs.map(() => ['rejected']));
   });
 });

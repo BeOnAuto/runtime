@@ -5,6 +5,7 @@ import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 import { argumentTextOf } from '../programs/argument-texts.ts';
 import type { Evaluation } from '../programs/program-run.ts';
 import { filterSandboxOf, hostClock, machineSandboxOf } from './host-sandboxes.ts';
+import { sandboxAnswers } from './sandbox-probes.ts';
 
 const evaluation: Evaluation = { budget: 250, deadlineAt: Number.POSITIVE_INFINITY, moment: 0 };
 
@@ -45,5 +46,16 @@ describe.each(sourcesUnderTest)('the sandboxes of a host on the $name source', (
       { ran: 'exhausted', limit: 'memory' },
     ]);
     expect([frozen, sandbox.clock]).toEqual([undefined, hostClock]);
+  });
+});
+
+describe.each(sourcesUnderTest)('the answers of the sandbox on the $name source to probes', ({ source }) => {
+  it('answers each expression as JSON, or names how it ended', async () => {
+    expect(await sandboxAnswers(source, ['typeof eval', 'Date.now()', 'null.x', '0 / 0'])).toEqual([
+      '"undefined"',
+      '0',
+      "raised: TypeError: cannot read property 'x' of null",
+      'unfit: The answer holds NaN at $, which JSON cannot carry',
+    ]);
   });
 });

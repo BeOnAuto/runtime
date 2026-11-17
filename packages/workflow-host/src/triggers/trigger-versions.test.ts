@@ -1,7 +1,11 @@
+import type { Trigger } from '@on.auto/definitions';
+import type { LedgerStreams } from '@on.auto/ledger';
 import { messageIdOf } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
+import { about, applying, first, retired, row, rowsIn, saved } from '../reaction-testing/applied-records.ts';
 import {
+  pausesOf,
   refusalsSaid,
   runEnded,
   runStillGoing,
@@ -14,14 +18,20 @@ import {
   alpha,
   at,
   cronTrigger,
-  eventTrigger,
-  everyTrigger,
-  published,
   definitionRecordAt,
   definitionRecorded,
   definitionRetired,
+  eventTrigger,
+  everyTrigger,
+  playbookCreated,
+  published,
+  recorded,
 } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
+import { onSQLite, openedOn } from '../testing/host-files.ts';
+import { until } from '../testing/until.ts';
+import type { DefinitionRecord } from './definition-records.ts';
+import { triggerChangesOf } from './trigger-changes.ts';
 
 const activatedAt = Date.parse(at);
 
@@ -38,14 +48,56 @@ async function tickingEveryMinute() {
   const reacting = await reactingHost({ clock });
   await definitionRecorded(reacting.database.store, { name: 'tick', version: 1, triggers: [everyTrigger(aMinute)] });
   clock.moveTo(activatedAt + aMinute);
-  const [first] = await startsReaching(reacting.reactions.starts, 1);
-  await runStillGoing(reacting.database, first?.runId ?? '');
-  return { reacting, clock, running: first?.runId ?? '' };
+  const [firstTriggerVersions] = await startsReaching(reacting.reactions.starts, 1);
+  await runStillGoing(reacting.database, firstTriggerVersions?.runId ?? '');
+  return { reacting, clock, running: firstTriggerVersions?.runId ?? '' };
 }
 
 async function sentinelPassed(reacting: ReactingHost, count: number) {
   await published(reacting.database.store, { id: 'sentinel', type: 'com.acme.sentinel' });
   return startsReaching(reacting.reactions.starts, count);
+}
+
+async function definitionsOfThePlaybook(store: LedgerStreams): Promise<void> {
+  const closed = eventTrigger({ type: 'com.acme.closed' });
+  await playbookCreated(store, 'alpha');
+  await definitionRecorded(store, { name: 'close', version: 1, triggers: [closed, everyTrigger(15 * aMinute)] });
+  await definitionRecorded(store, {
+    name: 'close',
+    version: 2,
+    triggers: [closed, everyTrigger(15 * aMinute), cronTrigger('0 18 * * *')],
+    when: isoAt(1),
+  });
+  await definitionRecorded(store, {
+    name: 'close',
+    version: 3,
+    triggers: [eventTrigger({ type: 'com.acme.opened' }), everyTrigger(15 * aMinute)],
+    when: isoAt(2),
+  });
+  await definitionRecorded(store, { name: 'tick', version: 1, triggers: [everyTrigger(aMinute)] });
+  await definitionRecorded(store, { name: 'tick', version: 2, triggers: [everyTrigger(2 * aMinute)], when: isoAt(3) });
+}
+
+const restoredAt = first + 50 * aMinute;
+
+const resumedAt = first + 60 * aMinute;
+
+function restored(id: string, name: string, triggers: readonly Trigger[], atRestoredRecords: number): DefinitionRecord {
+  return {
+    id,
+    type: 'definition_restored',
+    data: { content: { source: 'schedule: {}', triggers }, restored_by: { id: 'acme-admin', name: 'acme-admin' } },
+    context: about(name, 1, new Date(atRestoredRecords).toISOString()),
+  };
+}
+
+function resumed(id: string, name: string, atRestoredRecords: number): DefinitionRecord {
+  return {
+    id,
+    type: 'definition_resumed',
+    data: {},
+    context: about(name, 1, new Date(atRestoredRecords).toISOString()),
+  };
 }
 
 describe('a version that leaves the triggers of the one before unchanged', () => {
@@ -184,5 +236,136 @@ describe('a version without a schedule, and a retirement', () => {
 
     expect(starts.map(({ workflow }) => workflow)).toEqual(['watch']);
     expect((await triggerRowsOf(reacting.database)).map(({ workflow }) => workflow)).toEqual(['watch']);
+  });
+});
+
+describe('the changes a version makes to the triggers of the version before', () => {
+  it('keep a trigger whose filters name the same attributes in another order', () => {
+    const before = eventTrigger({ type: 'com.acme.closed', data: { region: 'eu', team: 'ledger' } });
+    const after = eventTrigger({ data: { team: 'ledger', region: 'eu' }, type: 'com.acme.closed' });
+
+    expect(triggerChangesOf([before], [after])).toEqual([{ change: 'kept', trigger: after }]);
+  });
+
+  it('activate a cron schedule whose time zone changed, and keep one whose time zone did not', () => {
+    const inLondon = cronTrigger('0 9 * * *', { time_zone: 'Europe/London' });
+    const inNewYork = cronTrigger('0 9 * * *', { time_zone: 'America/New_York' });
+
+    expect([triggerChangesOf([inLondon], [inNewYork]), triggerChangesOf([inLondon], [inLondon])]).toEqual([
+      [{ change: 'activated', trigger: inNewYork }],
+      [{ change: 'kept', trigger: inLondon }],
+    ]);
+  });
+
+  it('activate a changed or added trigger, and remove a trigger the version leaves out', () => {
+    const cron = cronTrigger('0 9 * * *');
+
+    expect(
+      triggerChangesOf([everyTrigger(60_000), cron], [everyTrigger(120_000), eventTrigger({ type: 'go' })]),
+    ).toEqual([
+      { change: 'activated', trigger: everyTrigger(120_000) },
+      { change: 'activated', trigger: eventTrigger({ type: 'go' }) },
+      { change: 'removed', reference: '/schedule/cron' },
+    ]);
+  });
+});
+
+describe('the triggers of a playbook made again from the records of its definitions', () => {
+  it('are the rows the follower kept as it passed the same records one by one', async () => {
+    const live = await reactingHost({ clock: movedClock(activatedAt + 1000) });
+    await definitionsOfThePlaybook(live.database.store);
+    await untilTriggersAt(live.database, 'tick', 2);
+    const settings = await onSQLite();
+    await definitionsOfThePlaybook((await openedOn(settings)).store);
+
+    const rebuilt = await reactingHost({ settings, clock: movedClock(activatedAt + 1000) });
+    await untilTriggersAt(rebuilt.database, 'tick', 2);
+    const rows = await triggerRowsOf(rebuilt.database);
+
+    expect(rows).toEqual(await triggerRowsOf(live.database));
+    expect(
+      rows.map(({ workflow, reference, version, activated_by: by }) => [workflow, reference, version, by]),
+    ).toEqual([
+      ['close', '/schedule/every', 3, definitionRecordAt(1)],
+      ['close', '/schedule/on', 3, definitionRecordAt(3)],
+      ['tick', '/schedule/every', 2, definitionRecordAt(5)],
+    ]);
+  });
+});
+
+describe('the triggers of a playbook made again, past the records of its definitions that cannot be read', () => {
+  it('pass over a record that cannot be read, which is said', async () => {
+    const settings = await onSQLite();
+    const { store } = await openedOn(settings);
+    await playbookCreated(store, 'alpha');
+    await recorded(store, `${alpha}definitions/workflow`, {
+      type: 'definition_created',
+      data: { content: 7 },
+    });
+    await recorded(store, `${alpha}definitions/workflow`, {
+      type: 'definition_created',
+      data: { content: {} },
+    });
+    await definitionRecorded(store, { name: 'tick', version: 1, triggers: [everyTrigger(aMinute)] });
+
+    const reacting = await reactingHost({ settings, clock: movedClock(activatedAt + 1000) });
+    await untilTriggersAt(reacting.database, 'tick', 1);
+    const notes = await until(
+      () => Promise.resolve(reacting.notes()),
+      (found) => found.length >= 2,
+    );
+
+    expect(notes).toEqual([
+      {
+        kind: 'record_unreadable',
+        org: 'acme',
+        playbook: 'alpha',
+        recordId: definitionRecordAt(1),
+        type: 'definition_created',
+      },
+      {
+        kind: 'record_unreadable',
+        org: 'acme',
+        playbook: 'alpha',
+        recordId: definitionRecordAt(2),
+        type: 'definition_created',
+      },
+    ]);
+  });
+});
+
+describe('a retirement and a restoration of a workflow with triggers', () => {
+  it('bring the rows of its triggers back paused, a schedule with no next due time until a resumption sets its first time after it', async () => {
+    const { database, applied } = await applying();
+    const triggers = [eventTrigger({ type: 'com.acme.closed' }), everyTrigger(15 * aMinute)];
+    await applied(saved({ id: 's1', name: 'close', version: 1, triggers }), retired('r1', 'close'));
+    const whileRetired = [await rowsIn(database), await pausesOf(database)];
+
+    await applied(restored('b1', 'close', triggers, restoredAt));
+    const onceRestored = [await rowsIn(database), await pausesOf(database)];
+    await applied(resumed('u1', 'close', resumedAt));
+
+    expect(whileRetired).toEqual([[], []]);
+    expect(onceRestored).toEqual([
+      [
+        row({ reference: '/schedule/every', version: 1, kind: 'every', by: 'b1', at: restoredAt, due: null }),
+        row({ reference: '/schedule/on', version: 1, kind: 'event', by: 'b1', at: restoredAt, due: null }),
+      ],
+      ['close'],
+    ]);
+    expect([await rowsIn(database), await pausesOf(database)]).toEqual([
+      [
+        row({
+          reference: '/schedule/every',
+          version: 1,
+          kind: 'every',
+          by: 'b1',
+          at: restoredAt,
+          due: restoredAt + 15 * aMinute,
+        }),
+        row({ reference: '/schedule/on', version: 1, kind: 'event', by: 'b1', at: restoredAt, due: null }),
+      ],
+      [],
+    ]);
   });
 });

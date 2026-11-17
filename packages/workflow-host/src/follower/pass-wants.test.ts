@@ -1,12 +1,27 @@
+import type { RecordedEvent, RecordedPage } from '@on.auto/operations';
 import { Effect, Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import type { HostDatabase } from '../database/host-database.ts';
+import { sqlWatermark } from '../dispatch/sql-watermark.ts';
 import { factPayloadsOn } from '../ledger-testing/ledger-connections.ts';
-import { deliveringEach, finishedAt, playbookKey } from '../reaction-testing/playbook-passes.ts';
+import { insertedListener, runPassedThrough } from '../listeners/listener-rows.ts';
+import { definitionRecordsKeepingTheirOwnStops } from '../reaction-testing/own-stops.ts';
+import {
+  deliveringEach,
+  finishedAt,
+  finishesRead,
+  lastPageOf,
+  listenerFor,
+  passingOn,
+  playbookKey,
+  recordAt,
+} from '../reaction-testing/playbook-passes.ts';
+import { eventTrigger } from '../reaction-testing/playbook-writes.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import type { Consumer, FollowedRecord } from './consumers.ts';
 import { followedPlaybooksOn } from './followed-playbooks.ts';
-import { passOf } from './playbook-pass.ts';
+import { passOf, type PassParts } from './playbook-pass.ts';
 import { stepOf, type StepParts, type Stepping } from './record-steps.ts';
 
 interface Wanting {
@@ -72,6 +87,192 @@ async function passedOnce(...registered: readonly Consumer[]) {
   await Effect.runPromise(playbooks.follow(playbookKey, null));
   const end = await Effect.runPromise(pass(playbookKey, 'signal'));
   return { end, reads };
+}
+
+const playbookKeyPassData = 'playbook/acme/alpha/';
+
+interface CountedRecords {
+  readonly records: PassParts['records'];
+  readonly reads: () => readonly boolean[];
+}
+
+function recordAtPassData(stream: string, position: number): RecordedEvent {
+  return {
+    id: `record-${position}`,
+    cursor: `cursor-${position}`,
+    causationId: null,
+    correlationId: null,
+    stream: `${playbookKeyPassData}${stream}`,
+    version: 1,
+    globalPosition: position,
+    type: 'note_written',
+    data: null,
+    context: { at: '2026-10-01T09:00:00.000Z', by: 'acme-admin' },
+    recordedAt: '2026-10-01T09:00:00.000Z',
+  };
+}
+
+function countedRecords(pageAt: (read: number) => Effect.Effect<readonly RecordedEvent[]>): CountedRecords {
+  const reads: boolean[] = [];
+  return {
+    records: {
+      after: (_playbook, _cursor, delivers) =>
+        Effect.suspend(() => {
+          reads.push(delivers.size > 0);
+          return Effect.map(pageAt(reads.length), (records) => ({
+            records,
+            hasMore: true,
+            nextCursor: null,
+            lastExamined: null,
+          }));
+        }),
+    },
+    reads: () => reads,
+  };
+}
+
+function endlessNotes(): CountedRecords {
+  return countedRecords((read) => Effect.succeed([recordAtPassData(`notes/n${read}`, read)]));
+}
+
+function listening(database: HostDatabase, armedBy: number) {
+  return insertedListener(database, {
+    runKey: 'acme/alpha/r-1',
+    listener: 'listener',
+    playbookKey: playbookKeyPassData,
+    streamId: `${playbookKeyPassData}run-logs/r-1`,
+    armedBy,
+    filters: '[{"type":"com.acme.noted"}]',
+    workflow: 'wait',
+    version: 1,
+    passed: false,
+  });
+}
+
+async function passing(counted: CountedRecords) {
+  const opened = await openedOn(await onSQLite());
+  const playbooks = followedPlaybooksOn(opened);
+  const pass = passOf({
+    database: opened,
+    records: counted.records,
+    playbooks,
+    consumers: [],
+    calls: [],
+    definitionType: 'workflow',
+    applyDefinitionRecord: () => Effect.succeed('applied'),
+    unreadable: () => Effect.void,
+    contentMissing: () => Effect.void,
+    factPayloadsOf: factPayloadsOn(opened),
+    passedEarly: () => Effect.void,
+    registered: [],
+    holdsUnreadable: false,
+    now: Date.now,
+    holdNotes: { tried: () => Effect.void, failed: () => Effect.void, lifted: () => Effect.void },
+  });
+  return { database: opened, playbooks, pass };
+}
+
+function finishedPassingOn(
+  page: (database: HostDatabase) => (read: number) => Effect.Effect<readonly RecordedEvent[]>,
+  readOn: (database: HostDatabase) => Effect.Effect<void> = () => Effect.void,
+) {
+  const delivered: string[] = [];
+  const opening = passingOn((database) => ({
+    records: lastPageOf(page(database)),
+    consumers: [
+      deliveringEach((id) => {
+        delivered.push(id);
+      }),
+    ],
+    calls: [finishesRead(readOn(database))],
+    passedEarly: () => Effect.void,
+  }));
+  return { delivered, opening };
+}
+
+async function passedOncePassReactions(opening: ReturnType<typeof passingOn>) {
+  const { playbooks, pass } = await opening;
+  await Effect.runPromise(playbooks.follow(playbookKey, null));
+  const end = await Effect.runPromise(pass(playbookKey, 'signal'));
+  const followed = await Effect.runPromise(playbooks.load(playbookKey));
+  return { end, cursor: followed?.cursor };
+}
+
+function listenedBeforeTheSecondRead(database: HostDatabase) {
+  const listened = Effect.orDie(
+    runPassedThrough(database, 'acme/alpha/r-1', 1).pipe(
+      Effect.andThen(insertedListener(database, { ...listenerFor('run_succeeded'), passed: false })),
+    ),
+  );
+  return (read: number) => Effect.as(read === 1 ? Effect.void : listened, [finishedAt(1)]);
+}
+
+function armedWhileTheFirstIsRead(database: HostDatabase) {
+  return Effect.orDie(
+    insertedListener(database, { ...listenerFor('run_succeeded'), passed: false }).pipe(
+      Effect.andThen(sqlWatermark(database).advance('acme/alpha/r-1', 1)),
+    ),
+  );
+}
+
+const at = '2026-10-01T09:00:00.000Z';
+
+function triggerActivatedAt(position: number): RecordedEvent {
+  return {
+    ...recordAt('definitions/workflow', position),
+    type: 'definition_created',
+    data: {
+      content: { source: 'schedule: {}', triggers: [eventTrigger({ type: 'run_succeeded' })] },
+      created_by: { id: 'acme-admin', name: 'acme-admin' },
+    },
+    context: { at, by: 'acme-admin', definitionType: 'workflow', definitionName: 'close', definitionVersion: 1 },
+  };
+}
+
+function notedAt(position: number, delivers: ReadonlySet<string>): RecordedEvent {
+  const event = { specversion: '1.0', id: `e${position}`, source: '/acme', type: 'com.acme.noted', time: at };
+  return {
+    ...recordAt(`events/e${position}`, position),
+    type: 'event_published',
+    data: delivers.has('event_published') ? { event, filled: [] } : null,
+  };
+}
+
+function pagesOf(pageAt: (read: number, delivers: ReadonlySet<string>) => Effect.Effect<RecordedPage>) {
+  const reads = { count: 0 };
+  const records: PassParts['records'] = {
+    after: (_playbook, _cursor, delivers) =>
+      Effect.suspend(() => {
+        reads.count += 1;
+        return pageAt(reads.count, delivers);
+      }),
+  };
+  return records;
+}
+
+function pageOf(records: readonly RecordedEvent[], hasMore: boolean): RecordedPage {
+  return { records, hasMore, nextCursor: null, lastExamined: null };
+}
+
+function namedWhileTheSecondPageIsRead(database: HostDatabase) {
+  const named = Effect.orDie(insertedListener(database, listenerFor('com.acme.noted')));
+  return pagesOf((read, delivers) => {
+    if (read <= 2) {
+      return Effect.succeed(pageOf([finishedAt(1)], true));
+    }
+    const page = Effect.succeed(pageOf([notedAt(2, delivers)], false));
+    return read === 3 ? Effect.andThen(named, page) : page;
+  });
+}
+
+async function passedTwice(over: Parameters<typeof passingOn>[0]) {
+  const { playbooks, pass } = await passingOn(over);
+  await Effect.runPromise(playbooks.follow(playbookKey, null));
+  const ends = [
+    await Effect.runPromise(pass(playbookKey, 'signal')),
+    await Effect.runPromise(pass(playbookKey, 'signal')),
+  ];
+  return { ends, cursor: (await Effect.runPromise(playbooks.load(playbookKey)))?.cursor };
 }
 
 describe('a consumer that says whether it wants the records of a playbook', () => {
@@ -144,5 +345,88 @@ describe('a step over a record whose stepping has not worked out the consumers t
     );
 
     expect(always.delivered).toEqual(['noting record-1']);
+  });
+});
+
+describe('the data of the records a pass reads', () => {
+  it('is read again with it, after a glance without it, while a run of the playbook listens for a type of event', async () => {
+    const counted = endlessNotes();
+    const { database, playbooks, pass } = await passing(counted);
+    await Effect.runPromise(playbooks.follow(playbookKeyPassData, null));
+    await Effect.runPromise(Effect.orDie(listening(database, 7)));
+
+    await Effect.runPromise(pass(playbookKeyPassData, 'signal'));
+
+    expect(counted.reads().slice(0, 2)).toEqual([false, true]);
+  });
+});
+
+describe('a pass over facts that another consumer reads, of a type no trigger or listener named as it began', () => {
+  it('hands them to no consumer of the reactions while none names their type', async () => {
+    const { delivered, opening } = finishedPassingOn(() => () => Effect.succeed([finishedAt(1), finishedAt(2)]));
+
+    const passed = await passedOncePassReactions(opening);
+
+    expect([passed, delivered]).toEqual([{ end: 'caught_up', cursor: 'cursor-2' }, []]);
+  });
+
+  it('hands the next of them to the consumers of the reactions once a listener made live by its own insert names their type', async () => {
+    const { delivered, opening } = finishedPassingOn(listenedBeforeTheSecondRead);
+
+    await passedOncePassReactions(opening);
+
+    expect(delivered).toEqual(['record-1']);
+  });
+
+  it('hands the next of them to the consumers of the reactions once the pass made live a listener that names their type', async () => {
+    const { delivered, opening } = finishedPassingOn(
+      () => () => Effect.succeed([finishedAt(1), recordAt('run-logs/r-1', 2), finishedAt(3)]),
+      armedWhileTheFirstIsRead,
+    );
+
+    await passedOncePassReactions(opening);
+
+    expect(delivered).toEqual(['record-3']);
+  });
+});
+
+describe('a pass that meets a definition activating a trigger of a type it reads already', () => {
+  it('hands the next record of that type to the consumers of the reactions', async () => {
+    const delivered: string[] = [];
+    const { playbooks, pass } = await passingOn((database) => ({
+      records: lastPageOf(() => Effect.succeed([finishedAt(1), triggerActivatedAt(2), finishedAt(3)])),
+      consumers: [
+        deliveringEach((id) => {
+          delivered.push(id);
+        }),
+      ],
+      calls: [finishesRead()],
+      passedEarly: () => Effect.void,
+      applyDefinitionRecord: definitionRecordsKeepingTheirOwnStops(database),
+    }));
+    await Effect.runPromise(playbooks.follow(playbookKey, null));
+
+    await Effect.runPromise(pass(playbookKey, 'signal'));
+
+    expect(delivered).toEqual(['record-3']);
+  });
+});
+
+describe('a pass that meets an event of a type named after the page that holds it was read', () => {
+  it('reads it again with its data rather than pass over it, and hands it to the consumers of the reactions', async () => {
+    const delivered: string[] = [];
+
+    const passed = await passedTwice((database) => ({
+      records: namedWhileTheSecondPageIsRead(database),
+      consumers: [
+        deliveringEach((id) => {
+          delivered.push(id);
+        }),
+      ],
+      calls: [finishesRead()],
+      passedEarly: () => Effect.void,
+    }));
+
+    expect([passed, delivered]).toEqual([{ ends: ['more', 'caught_up'], cursor: 'cursor-2' }, ['record-2']]);
   });
 });

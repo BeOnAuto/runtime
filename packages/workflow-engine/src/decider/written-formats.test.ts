@@ -1,11 +1,17 @@
+import { CallResultSchema } from '@on.auto/operations';
+import { Arbitrary, Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { formatElevenRefusalsOf } from '../frozen-testing/format-eleven-refusals.ts';
+import { ReceivedEventSchema } from '../inbox/received-event.ts';
 import { digestsAddedIn, keptAlong } from '../kept-testing/kept-events.ts';
+import { CancelOrderSchema, RunLimitsSchema } from '../machine/run-input.ts';
 import type { Responder } from '../memory/memory-executor.ts';
+import { testSandbox } from '../pool-testing/test-sandbox.ts';
 import type { PositionedEvent } from '../run-log/run-event.ts';
 import { stateFormatKeepingPayloads } from '../run-log/state-format.ts';
-import { drivenRun, type DriveOptions } from '../testing/run-history.ts';
+import { memoryDriver } from '../testing/memory-driver.ts';
+import { drivenRun, drivenRunId, type DriveOptions } from '../testing/run-history.ts';
 import { workflow } from '../testing/workflows.ts';
 
 function sized(length: number): string {
@@ -99,6 +105,40 @@ function addedIn(events: readonly PositionedEvent[]): readonly (readonly string[
   return events.map(({ event }) => [...new Set(digestsAddedIn(event))]);
 }
 
+const SampledSchema = Schema.Struct({
+  limits: RunLimitsSchema,
+  attributes: Schema.JsonObject,
+  input: Schema.Json,
+  result: CallResultSchema,
+  event: ReceivedEventSchema,
+  cancel: CancelOrderSchema,
+});
+
+type Sampled = typeof SampledSchema.Type;
+
+const samples = Effect.runSync(Arbitrary.sampleEffect(Arbitrary.schema(SampledSchema), { count: 60, seed: 11 }));
+
+const asking = workflow(`
+do:
+  - ask: { call: notify, with: { to: ada } }
+  - await: { listen: { to: { one: { with: { type: go } } } } }
+  - pause: { wait: PT1M }
+`);
+
+function eventsOf({ limits, attributes, input, result, event, cancel }: Sampled) {
+  const driver = memoryDriver({ sandbox: testSandbox, respond: () => ({ after: 10, result }) });
+  const lasting = { ...limits, mostDurationMs: 600_000, longestCallMs: 60_000 };
+  driver.start({ runId: drivenRunId, document: asking, input, limits: lasting, attributes });
+  driver.at(20, () => {
+    driver.deliver(drivenRunId, { ...event, type: 'go' });
+  });
+  driver.at(40, () => {
+    driver.cancel(drivenRunId, cancel);
+  });
+  driver.runUntilEnded(drivenRunId);
+  return driver.ports.runStore.events(drivenRunId).map(({ event: written }) => written);
+}
+
 describe.each(cases)('the events a decider writes for $name', (example) => {
   it('are of format 11 with its engine keeping nothing outside, each event and each state they make read strictly by the frozen schemas of format 11, those of the release before', () => {
     const run = driven(example, false);
@@ -115,5 +155,16 @@ describe.each(cases)('the events a decider writes for $name', (example) => {
     expect(kept).toEqual(addedIn(run.events));
     expect(kept.flat().length).toBeGreaterThan(0);
     expect(run.outcome).toEqual(driven(example, false).outcome);
+  });
+});
+
+describe('a run decided while its engine keeps nothing outside', () => {
+  it('writes, for any limits, attributes, input, answer, event and cancel the current schemas take, events and states that the frozen schemas of format 11 read strictly', () => {
+    const refused = samples.flatMap((sample, index) =>
+      formatElevenRefusalsOf(eventsOf(sample)).map((refusal) => `sample ${index}, ${refusal}`),
+    );
+
+    expect(samples.length).toBe(60);
+    expect(refused).toEqual([]);
   });
 });

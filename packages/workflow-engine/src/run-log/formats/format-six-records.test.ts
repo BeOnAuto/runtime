@@ -4,7 +4,14 @@ import { fileURLToPath } from 'node:url';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { loadedRunOf, RunLogEventSchema, snapshotFromChunks, type RunOutput } from '../../index.ts';
+import {
+  loadedRunOf,
+  RunLogEventSchema,
+  type RunOutput,
+  snapshotFromChunks,
+  stateFormats,
+  stateInCurrentFormat,
+} from '../../index.ts';
 
 const CorpusOfFormatSixSchema = Schema.Struct({
   stream: Schema.Array(Schema.Struct({ version: Schema.Int, event: Schema.JsonObject })),
@@ -209,6 +216,28 @@ function runIdOf(output: RunOutput): string {
   return 'key' in output ? output.key.runId : output.runId;
 }
 
+const CorpusOfFormatSixSchemaFormatSix = Schema.Struct({
+  snapshot: Schema.Struct({ chunks: Schema.Array(Schema.String) }),
+});
+
+const SnapshotOfFormatSixSchema = Schema.Struct({ executionId: Schema.String, state: Schema.JsonObject });
+
+const readSnapshot = Schema.decodeUnknownSync(Schema.fromJsonString(SnapshotOfFormatSixSchema));
+
+const { snapshot: snapshotFormatSix } = Schema.decodeUnknownSync(
+  Schema.fromJsonString(CorpusOfFormatSixSchemaFormatSix),
+)(readFileSync(fileURLToPath(new URL('../../../corpus/format-6.json', import.meta.url)), 'utf8'));
+
+const snapshotTextFormatSix = snapshotFormatSix.chunks.join('');
+
+const { executionId: runIdFormatSix, state: stateOfFormatSix } = readSnapshot(snapshotTextFormatSix);
+
+const [, , , , , formatSix] = stateFormats.older;
+
+const asking = '/do/0/all/fork/branches/3/asking/try/0/ask';
+
+const heldValue = { value: { executionId: 'a value the run holds' }, bytes: 41 };
+
 describe('an event of formats 1 to 6', () => {
   it('is read with its outputs and call keys naming the run executionId, and gives them naming it runId', () => {
     const outputs = stream.flatMap(({ event }) => decoded(event).outputs);
@@ -285,5 +314,58 @@ describe('a log of format 6 of a call', () => {
       do: [{ summarize: { call: 'execute_spec', with: { primitive: 'inference', name: 'summarize' } } }, {}],
     });
     expect(state.machine.values[2]).toMatchObject({ value: heldArguments });
+  });
+});
+
+describe('a state of format 6', () => {
+  it('is read strictly as format 6 and upcast to name its run runId, in its calls, its listeners and the key of every call it waits on', () => {
+    const upcast = stateInCurrentFormat(6, stateOfFormatSix);
+
+    expect(formatSix?.format).toBe(6);
+    expect([upcast.runId, Object.values(upcast.calls), Object.values(upcast.listeners)]).toEqual([
+      runIdFormatSix,
+      [{ runId: runIdFormatSix, reference: asking, run: 1 }],
+      [{ runId: runIdFormatSix, reference: '/do/0/all/fork/branches/1/both', run: 1 }],
+    ]);
+    expect(upcast.machine.root).toMatchObject({
+      body: {
+        list: {
+          current: {
+            task: {
+              body: {
+                branches: [
+                  {},
+                  {},
+                  {},
+                  {
+                    task: {
+                      body: {
+                        phase: {
+                          list: { current: { task: { body: { key: { runId: runIdFormatSix, reference: asking } } } } },
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('keeps the names of the values it holds, which are data', () => {
+    const { state } = readSnapshot(
+      snapshotTextFormatSix.replace('"values":{', `"values":{"9":${JSON.stringify(heldValue)},`),
+    );
+
+    expect(stateInCurrentFormat(6, state).machine.values[9]).toEqual(heldValue);
+  });
+
+  it('is refused when it names its run as format 7 does', () => {
+    const { executionId: _executionId, ...withoutExecutionId } = stateOfFormatSix;
+
+    expect(() => stateInCurrentFormat(6, { ...withoutExecutionId, runId: runIdFormatSix })).toThrow(/excess property/u);
   });
 });

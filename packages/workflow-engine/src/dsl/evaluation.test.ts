@@ -4,7 +4,8 @@ import { mostExpressionWork, mostValueWork, mostWorkPerInput } from '../machine/
 import type { RunOutcome } from '../machine/run-state.ts';
 import { drivenRun } from '../testing/run-history.ts';
 import { workflow } from '../testing/workflows.ts';
-import { errorType } from './raised-error.ts';
+import { errorType, unworkableOutputOf } from './raised-error.ts';
+import { settlementOf } from './settlement.ts';
 
 const justOverTheBudget = 'x'.repeat(mostValueWork - 15);
 
@@ -90,6 +91,30 @@ describe('a duration of a task', () => {
     expect(run.outcome).toMatchObject({
       kind: 'raised',
       error: { title: 'A duration of the task, 2678400000 ms, is longer than the 2592000000 ms a workflow may run' },
+    });
+  });
+});
+
+describe('the rejection of an output that cannot work as its workflow is written', () => {
+  it('settles as a conflict of the kind unworkable, in the words of the error at the root', () => {
+    expect(
+      settlementOf({ kind: 'raised', error: unworkableOutputOf('The output does not match its shape', '/') }),
+    ).toEqual({
+      status: 'rejected',
+      reason: 'conflict',
+      kind: 'unworkable',
+      detail: 'The output does not match its shape.',
+    });
+  });
+
+  it('is of the problem type of a conflict alone, so an unworkable error of another type settles by its status', () => {
+    const unworkable = unworkableOutputOf('Mismatched', '/');
+
+    expect(settlementOf({ kind: 'raised', error: { ...unworkable, type: errorType('runtime') } })).toMatchObject({
+      reason: 'invalid_input',
+    });
+    expect(settlementOf({ kind: 'raised', error: { ...unworkable, kind: 'stalled' } })).toMatchObject({
+      reason: 'invalid_input',
     });
   });
 });

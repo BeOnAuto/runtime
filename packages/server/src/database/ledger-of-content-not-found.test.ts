@@ -1,8 +1,14 @@
 import { HeldContentUnchecked, LedgerChores, type LedgerServices } from '@on.auto/ledger';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
+import { mostInlinePayloadBytes } from '@on.auto/operations/payloads';
 import { Context, Effect, Layer, ManagedRuntime, Redacted } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { compositionRoot } from '../composition/composition-root.ts';
+import { startServer } from '../lifecycle/lifecycle.ts';
+import { everyRowSet, onTheLedgerIn } from '../testing/records/ledger-file.ts';
+import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { alpha, loopbackSettingsOver, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { ledgerOfContentNotFound, withItsContentFound } from './ledger-of-content-not-found.ts';
 import { ledgerRefusalIn } from './ledger-refusals.ts';
 
@@ -28,6 +34,54 @@ const inTheBucket = {
 const askedAt = 'Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8';
 
 const notMoved = 'Auto Runtime does not move content from one store to another.';
+
+const lookFailed = new Error('disk I/O error');
+
+function withALookThatFails(): Layer.Layer<LedgerServices> {
+  return Layer.flatMap(ledgerLayer({ fileName: ':memory:' }), (context) =>
+    Layer.succeedContext(
+      Context.add(context, LedgerChores, {
+        ...Context.get(context, LedgerChores),
+        heldContentFound: () => Effect.fail(new HeldContentUnchecked({ failure: lookFailed })),
+      }),
+    ),
+  );
+}
+
+async function startedWith(layer: Layer.Layer<LedgerServices>): Promise<unknown> {
+  const runtime = ManagedRuntime.make(layer);
+  try {
+    await runtime.runPromise(Effect.void);
+    return 'started';
+  } catch (failure) {
+    return failure;
+  } finally {
+    await runtime.dispose();
+  }
+}
+
+const longDocument = [
+  '---',
+  'model: anthropic/claude-sonnet-4-5',
+  '---',
+  `Sum up the day. ${'Keep each line short and plain. '.repeat(Math.ceil(mostInlinePayloadBytes / 32))}`,
+].join('\n');
+
+async function aDocumentOffloadedIn(ledger: TemporaryLedger): Promise<void> {
+  const saving = await servingReasoning([], {}, undefined, { ledger });
+  await saving.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+  await saving.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'summary', source: longDocument, diagram: 'none' },
+  });
+  await saving.stop();
+}
+
+function startedOver(ledger: TemporaryLedger): Promise<unknown> {
+  return startServer(loopbackSettingsOver(ledger), compositionRoot).then(
+    (server) => server.stop(),
+    (failure: unknown) => failure,
+  );
+}
 
 describe('a ledger whose records name content this server finds kept in the other store', () => {
   it('says the content is in a bucket while the server keeps content in the ledger’s database, and to set CONTENT_STORE_URL back', () => {
@@ -99,31 +153,6 @@ describe('a ledger whose records name content this server finds nowhere', () => 
   });
 });
 
-const lookFailed = new Error('disk I/O error');
-
-function withALookThatFails(): Layer.Layer<LedgerServices> {
-  return Layer.flatMap(ledgerLayer({ fileName: ':memory:' }), (context) =>
-    Layer.succeedContext(
-      Context.add(context, LedgerChores, {
-        ...Context.get(context, LedgerChores),
-        heldContentFound: () => Effect.fail(new HeldContentUnchecked({ failure: lookFailed })),
-      }),
-    ),
-  );
-}
-
-async function startedWith(layer: Layer.Layer<LedgerServices>): Promise<unknown> {
-  const runtime = ManagedRuntime.make(layer);
-  try {
-    await runtime.runPromise(Effect.void);
-    return 'started';
-  } catch (failure) {
-    return failure;
-  } finally {
-    await runtime.dispose();
-  }
-}
-
 describe('a look at the content the records name that cannot be made as the ledger opens', () => {
   it('stops the start with the failure itself where content is kept in the ledger’s database, and never counts the content missing', async () => {
     const failure = await startedWith(
@@ -149,4 +178,29 @@ describe('a look at the content the records name that cannot be made as the ledg
       'CONTENT_STORE_URL names the bucket playbook-content, which could not be reached: Error: disk I/O error',
     );
   });
+});
+
+describe('a server over a ledger whose records name content', () => {
+  it('starts where that content is where it keeps content', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    await aDocumentOffloadedIn(ledger);
+
+    expect(await startedOver(ledger)).toBeUndefined();
+  }, 60_000);
+
+  it('does not start where that content is kept elsewhere, and says where and what to do', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    await aDocumentOffloadedIn(ledger);
+    await onTheLedgerIn(ledger.fileName, (connection) =>
+      connection.write(everyRowSet('recorded_content_heads', { kept_in: 'external' })),
+    );
+
+    const refusal = ledgerRefusalIn(await startedOver(ledger));
+
+    expect(refusal?.happened).toBe(
+      `The ledger is kept in the file ${ledger.fileName}, and its records name content this server cannot find. Content is kept in the ledger's database, since CONTENT_STORE_URL is not set, but 1 of the 1 it looked for is kept on object storage.`,
+    );
+  }, 60_000);
 });

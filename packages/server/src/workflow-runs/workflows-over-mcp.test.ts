@@ -1,4 +1,4 @@
-import { listedTools, problemIn, toolNamesIn, withMcpSession, type McpSession } from '@on.auto/api/testing';
+import { listedTools, type McpSession, problemIn, toolNamesIn, withMcpSession } from '@on.auto/api/testing';
 import { answers, jsonResult, type ScriptedReply } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { toolsInsideAPlaybook as playbookTools } from '../testing/servers/served-tool-names.ts';
 import { servingWorkflows, settledOverMcp, workflowSource } from '../testing/servers/workflow-server.ts';
+import { until } from '../testing/waiting/until.ts';
 
 const verdict = [
   '---',
@@ -53,10 +54,6 @@ do:
 
 let server: ReasoningServer;
 
-afterEach(async () => {
-  await server.stop();
-});
-
 function onAlphaOf<T>(served: ReasoningServer, use: (session: McpSession) => Promise<T>): Promise<T> {
   return withMcpSession(
     'current revision',
@@ -81,72 +78,6 @@ function typesOfCreateDefinition(listing: unknown): readonly string[] {
   const createDefinition = listedTools(listing).filter(({ name }) => name === 'create_definition');
   return createDefinition.flatMap(({ inputSchema }) => typeField(inputSchema).properties.type.enum);
 }
-
-describe('workflows over MCP', () => {
-  it('lists twenty-seven tools on the endpoint of a playbook, and every capability in the definition tools', async () => {
-    const listing = await onAlpha([], (session) => session.listTools());
-
-    expect(toolNamesIn(listing)).toEqual([...playbookTools, 'get_guide']);
-    expect(typesOfCreateDefinition(listing)).toEqual([
-      'reasoning',
-      'lookup',
-      'interaction',
-      'prediction',
-      'computation',
-      'generation',
-      'workflow',
-    ]);
-  });
-
-  it('executes a workflow that calls a reasoning function definition and waits for an event the tools send', async () => {
-    const { started, sent, run } = await onAlpha([answers(jsonResult({ approve: true }))], async (session) => {
-      await session.callTool('create_definition', {
-        type: 'reasoning',
-        name: 'verdict',
-        source: verdict,
-        diagram: 'none',
-      });
-      await session.callTool('create_definition', { type: 'workflow', name: 'approval', source: approval });
-      const starting = await session.callTool('run_definition', {
-        type: 'workflow',
-        name: 'approval',
-        input: { expense: 'a taxi' },
-      });
-      const runId = String(starting.structuredContent?.['run_id']);
-      const sending = await session.callTool('send_run_event', {
-        run_id: runId,
-        event: { type: 'com.acme.approval.decided', data: 'yes' },
-      });
-      return { started: starting, sent: sending, run: await settledOverMcp(session, runId) };
-    });
-
-    expect(started.structuredContent).toMatchObject({ type: 'workflow', status: 'started' });
-    expect(sent.structuredContent).toMatchObject({ event: { type: 'com.acme.approval.decided', data: 'yes' } });
-    expect(run.structuredContent).toMatchObject({ status: 'succeeded', output: { decided: 'yes' } });
-  });
-});
-
-describe('a workflow whose input schema refuses the input, over MCP', () => {
-  it('answers the run with isError and the problem document, each issue at its field under /input', async () => {
-    const ran = await onAlpha([], async (session) => {
-      await session.callTool('create_definition', { type: 'workflow', name: 'expensing', source: expensing });
-      return session.callTool('run_definition', { type: 'workflow', name: 'expensing', input: { expense: 7 } });
-    });
-
-    expect({ isError: ran.isError, problem: problemIn(ran) }).toMatchObject({
-      isError: true,
-      problem: {
-        status: 422,
-        reason: 'invalid_input',
-        kind: 'input_schema',
-        errors: [
-          { pointer: '/input/expense', detail: 'expense, What was bought: expected text; it was given a number.' },
-        ],
-      },
-    });
-    expect(server.modelCalls()).toBe(0);
-  });
-});
 
 const EventsSchema = Schema.Struct({
   events: Schema.Array(
@@ -179,35 +110,167 @@ function causesNamedNowhereIn(events: readonly Event[]): readonly string[] {
   return events.flatMap(({ metadata: { causation_id: cause } }) => (cause === null || ids.has(cause) ? [] : [cause]));
 }
 
-describe('the graph of a workflow run over MCP', () => {
-  it('reads the whole tree of a run in the feed of its playbook, its steps with their causes and its child caused by the input that started the call', async () => {
-    const tree = await onAlpha([answers(jsonResult({ approve: true }))], async (session) => {
-      await session.callTool('create_definition', {
-        type: 'reasoning',
-        name: 'verdict',
-        source: verdict,
-        diagram: 'none',
-      });
-      await session.callTool('create_definition', { type: 'workflow', name: 'approval', source: approval });
-      const starting = await session.callTool('run_definition', {
-        type: 'workflow',
-        name: 'approval',
-        input: { expense: 'a taxi' },
-      });
-      const runId = String(starting.structuredContent?.['run_id']);
-      await session.callTool('send_run_event', {
-        run_id: runId,
-        event: { type: 'com.acme.approval.decided', data: 'yes' },
-      });
-      await settledOverMcp(session, runId);
-      return session.callTool('list_playbook_events', { run_id: runId, order: 'asc', limit: 100 });
-    });
-    const { events } = eventsOf(tree.structuredContent);
-    const waiting = stepOf(events, 'step_waiting', 'judge');
-    const childStarted = startOf(events, waiting?.data.run_id);
+const closing = workflowSource(
+  'close-the-month',
+  "schedule:\n  on: { one: { with: { type: com.acme.ledger.closed } } }\ndo:\n  - total: { set: { month: '${ $data[0].data.month }' } }\n",
+);
 
-    expect(events.filter(({ type }) => type.startsWith('step_')).length).toBeGreaterThan(0);
-    expect(causesNamedNowhereIn(events)).toEqual([]);
-    expect(childStarted?.metadata.causation_id).toBe(waiting?.id.slice(0, waiting.id.indexOf('_')));
+const ListedRuns = Schema.Struct({
+  runs: Schema.Array(
+    Schema.Struct({ status: Schema.String, started_by: Schema.Struct({ id: Schema.String, name: Schema.String }) }),
+  ),
+});
+
+const PlaybookEvents = Schema.Struct({ events: Schema.Array(Schema.Struct({ type: Schema.String })) });
+
+const runsIn = Schema.decodeUnknownSync(ListedRuns);
+
+const eventsIn = Schema.decodeUnknownSync(PlaybookEvents);
+
+async function onAlphaReactions<T>(use: (session: McpSession) => Promise<T>): Promise<T> {
+  server = await servingWorkflows([]);
+  await withMcpSession('current revision', { url: `${server.origin}/orgs/acme/mcp`, headers: {} }, (session) =>
+    session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }),
+  );
+  return withMcpSession(
+    'current revision',
+    { url: `${server.origin}/orgs/acme/playbooks/alpha/mcp`, headers: {} },
+    use,
+  );
+}
+
+function endedRuns(session: McpSession): Promise<typeof ListedRuns.Type> {
+  return until(
+    async () =>
+      runsIn((await session.callTool('list_runs', { type: 'workflow', name: 'close-the-month' })).structuredContent),
+    (listed) => listed.runs.some(({ status }) => status !== 'started'),
+  );
+}
+
+describe('workflows over mcp', () => {
+  afterEach(async () => {
+    await server.stop();
+  });
+
+  describe('workflows over MCP', () => {
+    it('lists twenty-seven tools on the endpoint of a playbook, and every capability in the definition tools', async () => {
+      const listing = await onAlpha([], (session) => session.listTools());
+
+      expect(toolNamesIn(listing)).toEqual([...playbookTools, 'get_guide']);
+      expect(typesOfCreateDefinition(listing)).toEqual([
+        'reasoning',
+        'lookup',
+        'interaction',
+        'prediction',
+        'computation',
+        'generation',
+        'workflow',
+      ]);
+    });
+
+    it('executes a workflow that calls a reasoning function definition and waits for an event the tools send', async () => {
+      const { started, sent, run } = await onAlpha([answers(jsonResult({ approve: true }))], async (session) => {
+        await session.callTool('create_definition', {
+          type: 'reasoning',
+          name: 'verdict',
+          source: verdict,
+          diagram: 'none',
+        });
+        await session.callTool('create_definition', { type: 'workflow', name: 'approval', source: approval });
+        const starting = await session.callTool('run_definition', {
+          type: 'workflow',
+          name: 'approval',
+          input: { expense: 'a taxi' },
+        });
+        const runId = String(starting.structuredContent?.['run_id']);
+        const sending = await session.callTool('send_run_event', {
+          run_id: runId,
+          event: { type: 'com.acme.approval.decided', data: 'yes' },
+        });
+        return { started: starting, sent: sending, run: await settledOverMcp(session, runId) };
+      });
+
+      expect(started.structuredContent).toMatchObject({ type: 'workflow', status: 'started' });
+      expect(sent.structuredContent).toMatchObject({ event: { type: 'com.acme.approval.decided', data: 'yes' } });
+      expect(run.structuredContent).toMatchObject({ status: 'succeeded', output: { decided: 'yes' } });
+    });
+  });
+
+  describe('a workflow whose input schema refuses the input, over MCP', () => {
+    it('answers the run with isError and the problem document, each issue at its field under /input', async () => {
+      const ran = await onAlpha([], async (session) => {
+        await session.callTool('create_definition', { type: 'workflow', name: 'expensing', source: expensing });
+        return session.callTool('run_definition', { type: 'workflow', name: 'expensing', input: { expense: 7 } });
+      });
+
+      expect({ isError: ran.isError, problem: problemIn(ran) }).toMatchObject({
+        isError: true,
+        problem: {
+          status: 422,
+          reason: 'invalid_input',
+          kind: 'input_schema',
+          errors: [
+            { pointer: '/input/expense', detail: 'expense, What was bought: expected text; it was given a number.' },
+          ],
+        },
+      });
+      expect(server.modelCalls()).toBe(0);
+    });
+  });
+
+  describe('the graph of a workflow run over MCP', () => {
+    it('reads the whole tree of a run in the feed of its playbook, its steps with their causes and its child caused by the input that started the call', async () => {
+      const tree = await onAlpha([answers(jsonResult({ approve: true }))], async (session) => {
+        await session.callTool('create_definition', {
+          type: 'reasoning',
+          name: 'verdict',
+          source: verdict,
+          diagram: 'none',
+        });
+        await session.callTool('create_definition', { type: 'workflow', name: 'approval', source: approval });
+        const starting = await session.callTool('run_definition', {
+          type: 'workflow',
+          name: 'approval',
+          input: { expense: 'a taxi' },
+        });
+        const runId = String(starting.structuredContent?.['run_id']);
+        await session.callTool('send_run_event', {
+          run_id: runId,
+          event: { type: 'com.acme.approval.decided', data: 'yes' },
+        });
+        await settledOverMcp(session, runId);
+        return session.callTool('list_playbook_events', { run_id: runId, order: 'asc', limit: 100 });
+      });
+      const { events } = eventsOf(tree.structuredContent);
+      const waiting = stepOf(events, 'step_waiting', 'judge');
+      const childStarted = startOf(events, waiting?.data.run_id);
+
+      expect(events.filter(({ type }) => type.startsWith('step_')).length).toBeGreaterThan(0);
+      expect(causesNamedNowhereIn(events)).toEqual([]);
+      expect(childStarted?.metadata.causation_id).toBe(waiting?.id.slice(0, waiting.id.indexOf('_')));
+    });
+  });
+});
+
+describe('reactions over mcp', () => {
+  afterEach(async () => {
+    await server.stop();
+  });
+
+  describe('a workflow whose trigger is an event, over MCP', () => {
+    it('runs as the playbook for an event published to the playbook, and the feed shows the event and the run', async () => {
+      const seen = await onAlphaReactions(async (session) => {
+        await session.callTool('create_definition', { type: 'workflow', name: 'close-the-month', source: closing });
+        await session.callTool('publish_event', {
+          event: { source: '/ledger', type: 'com.acme.ledger.closed', data: { month: 'september' } },
+        });
+        const runs = await endedRuns(session);
+        const feed = await session.callTool('list_playbook_events', { order: 'asc' });
+        return { runs, feed: eventsIn(feed.structuredContent).events.map(({ type }) => type) };
+      });
+
+      expect(seen.runs.runs).toEqual([{ status: 'succeeded', started_by: { id: 'playbook:alpha', name: 'alpha' } }]);
+      expect(seen.feed).toEqual(expect.arrayContaining(['event_published', 'run_started', 'run_succeeded']));
+    });
   });
 });

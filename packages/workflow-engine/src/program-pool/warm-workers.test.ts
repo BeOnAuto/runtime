@@ -1,5 +1,12 @@
+import { once } from 'node:events';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import type { FoldingView } from '../folds/fold-page.ts';
 import type {
@@ -9,8 +16,10 @@ import type {
   PoolOutcome,
   PoolSettings,
   ProgramPool,
+  ProgramRequest,
 } from '../jobs/pool-contract.ts';
 import { begun, counting, countingElsewhere, countingOnTheLoop } from '../pool-testing/counting-workers.ts';
+import { moduleOfSource } from '../pool-testing/source-modules.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { threadEnded, threadsAlive } from '../pool-testing/threads-alive.ts';
 import { longerThanTheTestMs, until } from '../pool-testing/waiting.ts';
@@ -37,10 +46,6 @@ const noted = { type: 'noted' };
 const adding = 'export function fold(view, event) {\n  return view + event.data.n;\n}';
 
 const endless = 'export default function () {\n  for (;;) {}\n}';
-
-afterEach(async () => {
-  await Promise.all(pools.splice(0).map((pool) => pool.close()));
-});
 
 function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
   const pool = programPool({ ...testPoolSettings(4), ...settings });
@@ -99,196 +104,297 @@ function foldOf(
   });
 }
 
-describe('a worker of the pool kept between jobs', () => {
-  it('takes job after job in one thread, which counts them 1, 2 and 3', async () => {
-    const pool = poolOf();
+const reading = moduleOfSource(
+  [
+    "import { parentPort } from 'node:worker_threads';",
+    "parentPort.on('message', ({ job }) => {",
+    '  const output = JSON.stringify({ environment: Object.keys(process.env), flags: process.execArgv, preloaded: globalThis.preloaded === true });',
+    "  parentPort.postMessage({ job, answer: { ran: 'answered', output, bytes: output.length, work: 0 }, keep: true });",
+    '});',
+  ].join('\n'),
+);
 
-    const ran = [await counted(pool), await counted(pool), await counted(pool)];
+const request: ProgramRequest = {
+  source: '.',
+  entry: 'default',
+  arguments: [null],
+  moment: 0,
+  budget: 500,
+  memoryBytes: 67_108_864,
+  stackBytes: 1_048_576,
+  deadlineMs: 10_000,
+  mostOutputBytes: 1000,
+};
 
-    expect(ran.map(({ jobs }) => jobs)).toEqual([1, 2, 3]);
-    expect(new Set(ran.map(({ thread }) => thread)).size).toBe(1);
+function poolReading(environment?: Readonly<Record<string, string>>): ProgramPool {
+  const pool = programPool({
+    handed: { sandbox: {} },
+    instances: 'fresh',
+    workers: 1,
+    heapMegabytes: 64,
+    worker: reading,
+    ...(environment === undefined ? {} : { environment }),
+  });
+  onTestFinished(() => pool.close());
+  return pool;
+}
+
+const server = [
+  'const [poolModule, readingWorker] = process.argv.slice(1);',
+  'const { programPool } = await import(poolModule);',
+  "const pool = programPool({ handed: { sandbox: {} }, instances: 'fresh', workers: 1, heapMegabytes: 64, worker: () => new URL(readingWorker) });",
+  "const outcome = await pool.run({ source: '.', arguments: [null], entry: 'default', moment: 0, budget: 500, memoryBytes: 67108864, stackBytes: 1048576, deadlineMs: 10000, mostOutputBytes: 1000 });",
+  'await pool.close();',
+  'process.stdout.write(JSON.stringify({ secret: process.env.WORKER_SECRET, preloaded: globalThis.preloaded === true, outcome }));',
+].join('\n');
+
+function temporaryDirectory(): string {
+  const directory = mkdtempSync(join(tmpdir(), 'worker-flags-'));
+  onTestFinished(() => {
+    rmSync(directory, { recursive: true, force: true });
+  });
+  return directory;
+}
+
+async function printedBy(nodeArguments: readonly string[]): Promise<string> {
+  const child = spawnForTheTest(process.execPath, nodeArguments, { stdio: ['ignore', 'pipe', 'inherit'] });
+  const printed = { text: '' };
+  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
+    printed.text += chunk;
+  });
+  await once(child, 'close');
+  return printed.text;
+}
+
+describe('warm workers', () => {
+  afterEach(async () => {
+    await Promise.all(pools.splice(0).map((pool) => pool.close()));
   });
 
-  it('keeps the warm worker a job takes past the time it may idle, so a job longer than that answers in the same thread', async () => {
-    const pool = poolOf({ idleMs: 100 });
-    const first = await counted(pool);
+  describe('a worker of the pool kept between jobs', () => {
+    it('takes job after job in one thread, which counts them 1, 2 and 3', async () => {
+      const pool = poolOf();
 
-    const held = await run(pool, 'hold');
+      const ran = [await counted(pool), await counted(pool), await counted(pool)];
 
-    expect(ranOf(held)).toEqual({ jobs: 2, thread: first.thread });
-  });
+      expect(ran.map(({ jobs }) => jobs)).toEqual([1, 2, 3]);
+      expect(new Set(ran.map(({ thread }) => thread)).size).toBe(1);
+    });
 
-  it('is recycled after the last of the jobs a worker takes', async () => {
-    const pool = poolOf({ jobsPerWorker: 2 });
-
-    const ran = [await counted(pool), await counted(pool), await counted(pool)];
-
-    expect(ran.map(({ jobs }) => jobs)).toEqual([1, 2, 1]);
-  });
-
-  it('is let go of once it has been idle for the time a worker may idle', async () => {
-    const pool = poolOf({ idleMs: 100 });
-    const first = await counted(pool);
-
-    await until(() => threadEnded(first.thread));
-    const next = await counted(pool);
-
-    expect([first.jobs, next.jobs]).toEqual([1, 1]);
-    expect(next.thread).not.toBe(first.thread);
-  });
-});
-
-describe('a worker of the pool after a job the pool had to stop', () => {
-  it.each<readonly [string, string, Partial<PoolSettings>, Readonly<Record<string, unknown>>]>([
-    ['its deadline stopped', 'block', {}, { ran: 'stopped', because: 'deadline' }],
-    ['ran out of memory', 'allocate', { heapMegabytes: 16 }, { ran: 'stopped', because: 'memory' }],
-    ['crashed', 'crash', {}, { ran: 'crashed', detail: 'The worker failed: broken on purpose' }],
-    ['answered a job it was not given', 'wrong job', {}, { ran: 'crashed' }],
-    ['answered that it may not be kept', 'let go', {}, { ran: 'answered' }],
-  ])(
-    'is let go of after a job it %s, so the next job starts in a fresh worker',
-    async (_why, source, settings, ended) => {
-      const pool = poolOf(settings);
+    it('keeps the warm worker a job takes past the time it may idle, so a job longer than that answers in the same thread', async () => {
+      const pool = poolOf({ idleMs: 100 });
       const first = await counted(pool);
 
-      const outcome = await run(pool, source, { deadlineMs: 2000 });
-      const next = await counted(pool);
+      const held = await run(pool, 'hold');
 
-      expect(outcome).toMatchObject(ended);
-      expect([first.jobs, next.jobs]).toEqual([1, 1]);
-      expect(next.thread).not.toBe(first.thread);
-    },
-  );
-
-  it('is let go of after a job its caller cancelled', async () => {
-    const pool = poolOf();
-    const first = await counted(pool);
-    const cancelling = new AbortController();
-    const beginning = begun(1);
-
-    const blocked = run(pool, 'block', { signal: cancelling.signal });
-    const reached = await beginning;
-    cancelling.abort();
-
-    expect(reached).toEqual([{ source: 'block', thread: first.thread }]);
-    expect(await blocked).toMatchObject({ ran: 'stopped', because: 'cancelled' });
-    expect([first.jobs, (await counted(pool)).jobs]).toEqual([1, 1]);
-  });
-});
-
-describe('a job of the pool cancelled before it has a worker', () => {
-  it('ends as cancelled a job cancelled while it waits for its seat, starting no worker for it, rather than running it to its deadline', async () => {
-    const before = threadsAlive();
-    const pool = poolOf({ workers: 1 });
-    await counted(pool);
-    const cancelling = new AbortController();
-
-    const blocked = run(pool, 'block', {
-      deadlineMs: longerThanTheTestMs,
-      signal: cancelling.signal,
-      worker: countingElsewhere,
-    });
-    setImmediate(() => {
-      cancelling.abort();
-    });
-    const ended = await blocked;
-    const afterTheCancel = threadsAlive() - before;
-
-    expect(ended).toMatchObject({ ran: 'stopped', because: 'cancelled' });
-    expect(afterTheCancel).toBe(0);
-    expect((await counted(pool)).jobs).toBe(1);
-  });
-
-  it('rests the warm worker it took for a job cancelled before the job reached it, and serves the next job there', async () => {
-    const pool = poolOf();
-    const first = await counted(pool);
-    const cancelling = new AbortController();
-
-    const cancelled = run(pool, 'count', { signal: cancelling.signal });
-    queueMicrotask(() => {
-      cancelling.abort();
+      expect(ranOf(held)).toEqual({ jobs: 2, thread: first.thread });
     });
 
-    expect(await cancelled).toMatchObject({ ran: 'stopped', because: 'cancelled' });
-    expect(await counted(pool)).toEqual({ jobs: 2, thread: first.thread });
-  });
-});
+    it('is recycled after the last of the jobs a worker takes', async () => {
+      const pool = poolOf({ jobsPerWorker: 2 });
 
-describe('a worker of the pool after a job whose answer says not to keep it', () => {
-  it('is let go of after a program its evaluator ended at the deadline', async () => {
-    const pool = poolOf();
+      const ran = [await counted(pool), await counted(pool), await counted(pool)];
 
-    const ran = [
-      await counted(pool, countingOnTheLoop),
-      await run(pool, `early:${endless}`, { worker: countingOnTheLoop }),
-      await counted(pool, countingOnTheLoop),
-    ];
-
-    expect(ran).toMatchObject([{ jobs: 1 }, { ran: 'exhausted', limit: 'deadline' }, { jobs: 1 }]);
-  });
-});
-
-describe('a fold worker of the pool after a page whose answer says not to keep it', () => {
-  it.each<readonly [string, Partial<FoldRequest>, Readonly<Record<string, unknown>>]>([
-    [
-      'a view ran past its deadline',
-      { foldDeadlineMs: 1, budget: Number.MAX_SAFE_INTEGER },
-      { ran: 'folded', views: [{ overtime: 0 }] },
-    ],
-    ['it could not read', { mostViewBytes: 0 }, { ran: 'unreadable' }],
-  ])('is let go of after a page %s', async (_why, more, ended) => {
-    const pool = poolOf();
-    const slow = { fold: 'export function fold(view) {\n  for (;;) {}\n}' };
-
-    const ran = [
-      await counted(pool, countingOnTheLoop),
-      await foldOf(pool, [slow], more),
-      await counted(pool, countingOnTheLoop),
-    ];
-
-    expect(ran).toMatchObject([{ jobs: 1 }, ended, { jobs: 1 }]);
-  });
-
-  it('keeps its worker after a page that stalled, which then folds the next page as a fresh worker does', async () => {
-    const warm = poolOf({ workers: 1 });
-    const views = [
-      {},
-      {
-        fold: 'export function fold(view, event) {\n  return [view, event.data.n];\n}',
-        view: [],
-      },
-    ];
-
-    const stalled = await foldOf(warm, [
-      {
-        fold: 'export function fold(view, event) {\n  throw new Error(`stop ${event.data.n}`);\n}',
-      },
-    ]);
-    const afterTheStall = await foldOf(warm, views);
-    const ran = await counted(warm, countingOnTheLoop);
-    const cold = await foldOf(poolOf({ workers: 1 }), views);
-
-    expect(stalled).toMatchObject({
-      ran: 'folded',
-      views: [{ stall: { kind: 'raised', message: 'Error: stop 1' } }],
+      expect(ran.map(({ jobs }) => jobs)).toEqual([1, 2, 1]);
     });
-    expect({ ...afterTheStall, milliseconds: 0 }).toEqual({ ...cold, milliseconds: 0 });
-    expect(ran.jobs).toBe(3);
-  });
-});
 
-describe('a worker of the pool that, idle, sends a message, fails or ends', () => {
-  it.each(['then message', 'then throw', 'then exit'])(
-    'is forgotten, ending no job, and the next job starts afresh (%s)',
-    async (misbehaviour) => {
-      const pool = poolOf();
-      const first = ranOf(await run(pool, misbehaviour));
+    it('is let go of once it has been idle for the time a worker may idle', async () => {
+      const pool = poolOf({ idleMs: 100 });
+      const first = await counted(pool);
 
       await until(() => threadEnded(first.thread));
       const next = await counted(pool);
 
       expect([first.jobs, next.jobs]).toEqual([1, 1]);
       expect(next.thread).not.toBe(first.thread);
-    },
-  );
+    });
+  });
+
+  describe('a worker of the pool after a job the pool had to stop', () => {
+    it.each<readonly [string, string, Partial<PoolSettings>, Readonly<Record<string, unknown>>]>([
+      ['its deadline stopped', 'block', {}, { ran: 'stopped', because: 'deadline' }],
+      ['ran out of memory', 'allocate', { heapMegabytes: 16 }, { ran: 'stopped', because: 'memory' }],
+      ['crashed', 'crash', {}, { ran: 'crashed', detail: 'The worker failed: broken on purpose' }],
+      ['answered a job it was not given', 'wrong job', {}, { ran: 'crashed' }],
+      ['answered that it may not be kept', 'let go', {}, { ran: 'answered' }],
+    ])(
+      'is let go of after a job it %s, so the next job starts in a fresh worker',
+      async (_why, source, settings, ended) => {
+        const pool = poolOf(settings);
+        const first = await counted(pool);
+
+        const outcome = await run(pool, source, { deadlineMs: 2000 });
+        const next = await counted(pool);
+
+        expect(outcome).toMatchObject(ended);
+        expect([first.jobs, next.jobs]).toEqual([1, 1]);
+        expect(next.thread).not.toBe(first.thread);
+      },
+    );
+
+    it('is let go of after a job its caller cancelled', async () => {
+      const pool = poolOf();
+      const first = await counted(pool);
+      const cancelling = new AbortController();
+      const beginning = begun(1);
+
+      const blocked = run(pool, 'block', { signal: cancelling.signal });
+      const reached = await beginning;
+      cancelling.abort();
+
+      expect(reached).toEqual([{ source: 'block', thread: first.thread }]);
+      expect(await blocked).toMatchObject({ ran: 'stopped', because: 'cancelled' });
+      expect([first.jobs, (await counted(pool)).jobs]).toEqual([1, 1]);
+    });
+  });
+
+  describe('a job of the pool cancelled before it has a worker', () => {
+    it('ends as cancelled a job cancelled while it waits for its seat, starting no worker for it, rather than running it to its deadline', async () => {
+      const before = threadsAlive();
+      const pool = poolOf({ workers: 1 });
+      await counted(pool);
+      const cancelling = new AbortController();
+
+      const blocked = run(pool, 'block', {
+        deadlineMs: longerThanTheTestMs,
+        signal: cancelling.signal,
+        worker: countingElsewhere,
+      });
+      setImmediate(() => {
+        cancelling.abort();
+      });
+      const ended = await blocked;
+      const afterTheCancel = threadsAlive() - before;
+
+      expect(ended).toMatchObject({ ran: 'stopped', because: 'cancelled' });
+      expect(afterTheCancel).toBe(0);
+      expect((await counted(pool)).jobs).toBe(1);
+    });
+
+    it('rests the warm worker it took for a job cancelled before the job reached it, and serves the next job there', async () => {
+      const pool = poolOf();
+      const first = await counted(pool);
+      const cancelling = new AbortController();
+
+      const cancelled = run(pool, 'count', { signal: cancelling.signal });
+      queueMicrotask(() => {
+        cancelling.abort();
+      });
+
+      expect(await cancelled).toMatchObject({ ran: 'stopped', because: 'cancelled' });
+      expect(await counted(pool)).toEqual({ jobs: 2, thread: first.thread });
+    });
+  });
+
+  describe('a worker of the pool after a job whose answer says not to keep it', () => {
+    it('is let go of after a program its evaluator ended at the deadline', async () => {
+      const pool = poolOf();
+
+      const ran = [
+        await counted(pool, countingOnTheLoop),
+        await run(pool, `early:${endless}`, { worker: countingOnTheLoop }),
+        await counted(pool, countingOnTheLoop),
+      ];
+
+      expect(ran).toMatchObject([{ jobs: 1 }, { ran: 'exhausted', limit: 'deadline' }, { jobs: 1 }]);
+    });
+  });
+
+  describe('a fold worker of the pool after a page whose answer says not to keep it', () => {
+    it.each<readonly [string, Partial<FoldRequest>, Readonly<Record<string, unknown>>]>([
+      [
+        'a view ran past its deadline',
+        { foldDeadlineMs: 1, budget: Number.MAX_SAFE_INTEGER },
+        { ran: 'folded', views: [{ overtime: 0 }] },
+      ],
+      ['it could not read', { mostViewBytes: 0 }, { ran: 'unreadable' }],
+    ])('is let go of after a page %s', async (_why, more, ended) => {
+      const pool = poolOf();
+      const slow = { fold: 'export function fold(view) {\n  for (;;) {}\n}' };
+
+      const ran = [
+        await counted(pool, countingOnTheLoop),
+        await foldOf(pool, [slow], more),
+        await counted(pool, countingOnTheLoop),
+      ];
+
+      expect(ran).toMatchObject([{ jobs: 1 }, ended, { jobs: 1 }]);
+    });
+
+    it('keeps its worker after a page that stalled, which then folds the next page as a fresh worker does', async () => {
+      const warm = poolOf({ workers: 1 });
+      const views = [
+        {},
+        {
+          fold: 'export function fold(view, event) {\n  return [view, event.data.n];\n}',
+          view: [],
+        },
+      ];
+
+      const stalled = await foldOf(warm, [
+        {
+          fold: 'export function fold(view, event) {\n  throw new Error(`stop ${event.data.n}`);\n}',
+        },
+      ]);
+      const afterTheStall = await foldOf(warm, views);
+      const ran = await counted(warm, countingOnTheLoop);
+      const cold = await foldOf(poolOf({ workers: 1 }), views);
+
+      expect(stalled).toMatchObject({
+        ran: 'folded',
+        views: [{ stall: { kind: 'raised', message: 'Error: stop 1' } }],
+      });
+      expect({ ...afterTheStall, milliseconds: 0 }).toEqual({ ...cold, milliseconds: 0 });
+      expect(ran.jobs).toBe(3);
+    });
+  });
+
+  describe('a worker of the pool that, idle, sends a message, fails or ends', () => {
+    it.each(['then message', 'then throw', 'then exit'])(
+      'is forgotten, ending no job, and the next job starts afresh (%s)',
+      async (misbehaviour) => {
+        const pool = poolOf();
+        const first = ranOf(await run(pool, misbehaviour));
+
+        await until(() => threadEnded(first.thread));
+        const next = await counted(pool);
+
+        expect([first.jobs, next.jobs]).toEqual([1, 1]);
+        expect(next.thread).not.toBe(first.thread);
+      },
+    );
+  });
+});
+
+describe('the flags of a worker', () => {
+  it("are none of the server's, so neither the env file nor the preload the server started with reaches a program's worker", async () => {
+    const directory = temporaryDirectory();
+    const envFile = join(directory, 'server.env');
+    const preload = join(directory, 'preload.mjs');
+    writeFileSync(envFile, 'WORKER_SECRET=x\n');
+    writeFileSync(preload, 'globalThis.preloaded = true;\n');
+
+    const printed = await printedBy([
+      `--env-file=${envFile}`,
+      `--import=${pathToFileURL(preload).href}`,
+      '--eval',
+      server,
+      new URL('program-pool.ts', import.meta.url).href,
+      reading().href,
+    ]);
+
+    expect(JSON.parse(printed)).toMatchObject({
+      secret: 'x',
+      preloaded: true,
+      outcome: { ran: 'answered', output: { environment: [], flags: [], preloaded: false } },
+    });
+  });
+});
+
+describe('the environment of a worker', () => {
+  it('is empty unless the pool is given one, so no setting of the server, such as a key, reaches a program or its worker', async () => {
+    expect(Object.keys(process.env).length).toBeGreaterThan(1);
+    expect(await poolReading().run(request)).toMatchObject({ ran: 'answered', output: { environment: [] } });
+    expect(await poolReading({ ONLY: 'this' }).run(request)).toMatchObject({ output: { environment: ['ONLY'] } });
+  });
 });

@@ -1,19 +1,21 @@
 import {
+  type McpSession,
   plainTextIn,
   technicalTextIn,
   toolNamesIn,
-  withMcpSession,
-  type McpSession,
   type ToolResult,
+  withMcpSession,
 } from '@on.auto/api/testing';
+import { createApiKey } from '@on.auto/identity';
+import { allPermissions } from '@on.auto/operations';
 import { internalTermsIn } from '@on.auto/operations/testing';
-import { ModelNotAllowed, ProviderNotConfigured, DefinitionInvalid } from '@on.auto/reasoning';
-import { answers, textResult, type ScriptedReply } from '@on.auto/reasoning/testing';
+import { DefinitionInvalid, ModelNotAllowed, ProviderNotConfigured } from '@on.auto/reasoning';
+import { answers, type ScriptedReply, textResult } from '@on.auto/reasoning/testing';
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { commentsCalled, interactionsCalled, runWhenPaused } from '../testing/interaction-servers/interaction-calls.ts';
-import { servingReasoning } from '../testing/servers/reasoning-server.ts';
+import { type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import {
   assetsCalled,
   cancelCalled,
@@ -97,10 +99,6 @@ const unofferedProvider = new ProviderNotConfigured({
 });
 
 let server: Awaited<ReturnType<typeof servingWorkflows>>;
-
-afterEach(async () => {
-  await server.stop();
-});
 
 function onMcp<T>(
   use: (session: McpSession) => Promise<T>,
@@ -243,58 +241,136 @@ const audienceWords: Readonly<Record<string, string>> = {
   'a run that did not go through': 'did not go through: something the server relies on is not available',
 };
 
-describe('the plain words that lead each result over MCP', () => {
-  it('lead every tool’s success and every kind of error, name no internal term, and come before the details', async () => {
-    const served = await servingWithAToolServer(replies);
-    server = served;
+let serverPlainEventRefusals: ReasoningServer;
 
-    const { tools, successes, errors } = await onMcp(async (session) => ({
-      tools: toolNamesIn(await session.listTools()).filter((name) => name !== 'get_guide'),
-      successes: [
-        ...(await licenseActivated(session, served)),
-        ...(await playbooksCalled(session)),
-        ...(await reasonFunctionsCalled(session)),
-        ...(await workflowsCalled(session)),
-        ...(await commentsCalled(session, server, inSales)),
-        ...(await interactionsCalled(session, inSales)),
-        ...(await toolServerToolsCalled(session, inSales, server)),
-        ...(await assetsCalled()),
-      ],
-      errors: await errorsCalled(session),
-    }));
-    const everyResult = [...successes, ...errors];
+const won = { source: '/crm', type: 'com.acme.deal.won', id: 'deal-1' };
 
-    expect(new Set(successes.map(([name]) => name))).toEqual(new Set(tools));
-    expect(successes.filter(([, result]) => result.isError === true)).toEqual([]);
-    expect(errors.map((called) => audienceOf(called))).toEqual(errors.map(([label]) => [label, true]));
-    expect(everyResult.flatMap((called) => leaked(called))).toEqual([]);
-    expect(everyResult.map(([, result]) => result.content.length)).toEqual(everyResult.map(() => 2));
+async function refusalsOfPublishing(): Promise<readonly ToolResult[]> {
+  serverPlainEventRefusals = await servingReasoning([]);
+  return withMcpSession(
+    'current revision',
+    { url: `${serverPlainEventRefusals.origin}/mcp`, headers: {} },
+    async (session) => {
+      const publishing = (event: Readonly<Record<string, unknown>>) =>
+        session.callTool('publish_event', { playbook: 'sales', event });
+      await session.callTool('create_playbook', { playbook: 'sales', name: 'Sales' });
+      await publishing(won);
+      return [
+        await publishing({ source: '/runs/1', type: 'run_succeeded' }),
+        await publishing({ ...won, data: 'lost' }),
+        await publishing({ ...won, id: 'deal-2', data: 'x'.repeat(250_000) }),
+      ];
+    },
+  );
+}
+
+describe('plain results', () => {
+  afterEach(async () => {
+    await server.stop();
+  });
+
+  describe('the plain words that lead each result over MCP', () => {
+    it('lead every tool’s success and every kind of error, name no internal term, and come before the details', async () => {
+      const served = await servingWithAToolServer(replies);
+      server = served;
+
+      const { tools, successes, errors } = await onMcp(async (session) => ({
+        tools: toolNamesIn(await session.listTools()).filter((name) => name !== 'get_guide'),
+        successes: [
+          ...(await licenseActivated(session, served)),
+          ...(await playbooksCalled(session)),
+          ...(await reasonFunctionsCalled(session)),
+          ...(await workflowsCalled(session)),
+          ...(await commentsCalled(session, server, inSales)),
+          ...(await interactionsCalled(session, inSales)),
+          ...(await toolServerToolsCalled(session, inSales, server)),
+          ...(await assetsCalled()),
+        ],
+        errors: await errorsCalled(session),
+      }));
+      const everyResult = [...successes, ...errors];
+
+      expect(new Set(successes.map(([name]) => name))).toEqual(new Set(tools));
+      expect(successes.filter(([, result]) => result.isError === true)).toEqual([]);
+      expect(errors.map((called) => audienceOf(called))).toEqual(errors.map(([label]) => [label, true]));
+      expect(everyResult.flatMap((called) => leaked(called))).toEqual([]);
+      expect(everyResult.map(([, result]) => result.content.length)).toEqual(everyResult.map(() => 2));
+    });
+  });
+
+  describe('the plain words for a reasoning function whose prompt names a model the server does not offer', () => {
+    it('say that its provider is not set up while others are, and that it can be switched to a model the server lists', async () => {
+      server = await servingReasoning([], {}, undefined, { admit: () => Effect.fail(unofferedProvider) });
+
+      const unoffered = await executedOnce();
+
+      expect(plainTextIn(unoffered)).toBe(
+        `Could not run the reasoning function “summary”: this server does not offer the model named, because its provider is not set up on this server, though others are. ${switchable}`,
+      );
+      expect(internalTermsIn(plainTextIn(unoffered))).toEqual([]);
+      expect(technicalTextIn(unoffered)).toContain('Configured providers: openai, gateway');
+    });
+
+    it('say that it is outside the models whoever runs the server allows, and that it can be switched', async () => {
+      server = await servingWorkflows([() => Effect.fail(disallowedModel)]);
+
+      const disallowed = await executedOnce();
+
+      expect(plainTextIn(disallowed)).toBe(
+        `Could not run the reasoning function “summary”: this server does not offer the model named, because it is not among the models whoever runs the server allows. ${switchable}`,
+      );
+      expect(internalTermsIn(plainTextIn(disallowed))).toEqual([]);
+      expect(technicalTextIn(disallowed)).toContain('is not one of the models this server offers');
+      expect(technicalTextIn(disallowed)).not.toContain('gateway/*');
+    });
   });
 });
 
-describe('the plain words for a reasoning function whose prompt names a model the server does not offer', () => {
-  it('say that its provider is not set up while others are, and that it can be switched to a model the server lists', async () => {
-    server = await servingReasoning([], {}, undefined, { admit: () => Effect.fail(unofferedProvider) });
-
-    const unoffered = await executedOnce();
-
-    expect(plainTextIn(unoffered)).toBe(
-      `Could not run the reasoning function “summary”: this server does not offer the model named, because its provider is not set up on this server, though others are. ${switchable}`,
-    );
-    expect(internalTermsIn(plainTextIn(unoffered))).toEqual([]);
-    expect(technicalTextIn(unoffered)).toContain('Configured providers: openai, gateway');
+describe('plain connection refusals', () => {
+  afterEach(async () => {
+    await server.stop();
   });
 
-  it('say that it is outside the models whoever runs the server allows, and that it can be switched', async () => {
-    server = await servingWorkflows([() => Effect.fail(disallowedModel)]);
+  describe('the plain words for a connection that may not do what it asked, over MCP', () => {
+    it('say plainly that a connection is not allowed to do what it asked', async () => {
+      const limited = createApiKey({
+        id: 'acme-alpha',
+        org: 'acme',
+        permissions: allPermissions,
+        playbooks: ['alpha'],
+      });
+      server = await servingWorkflows([], { API_KEYS: JSON.stringify([limited.entry]) });
 
-    const disallowed = await executedOnce();
+      const refused = await withMcpSession(
+        'current revision',
+        { url: `${server.origin}/mcp`, headers: { authorization: `Bearer ${limited.key}` } },
+        (session) => session.callTool('list_definitions', { playbook: 'beta', type: 'reasoning' }),
+      );
 
-    expect(plainTextIn(disallowed)).toBe(
-      `Could not run the reasoning function “summary”: this server does not offer the model named, because it is not among the models whoever runs the server allows. ${switchable}`,
-    );
-    expect(internalTermsIn(plainTextIn(disallowed))).toEqual([]);
-    expect(technicalTextIn(disallowed)).toContain('is not one of the models this server offers');
-    expect(technicalTextIn(disallowed)).not.toContain('gateway/*');
+      expect(plainTextIn(refused)).toBe(
+        'Could not list the reasoning functions: this connection is not allowed to do that. Whoever set up this connection can allow it.',
+      );
+    });
+  });
+});
+
+describe('plain event refusals', () => {
+  afterEach(async () => {
+    await serverPlainEventRefusals.stop();
+  });
+
+  describe('the refusals of publish_event over MCP', () => {
+    it('lead with plain words that name no internal term and say whether the caller can put it right', async () => {
+      const refused = await refusalsOfPublishing();
+      const words = refused.map((result) => plainTextIn(result));
+
+      expect(refused.map(({ isError }) => isError)).toEqual([true, true, true]);
+      expect(words.flatMap((plain) => internalTermsIn(plain))).toEqual([]);
+      expect(words).toEqual([
+        'Could not publish an event to the playbook: what was given does not fit what it needs. Nothing was changed. This can be corrected and tried again; the details below say what to change.',
+        'Could not publish the event “com.acme.deal.won” to the playbook: it clashes with something already there. Nothing was changed. The details below say what is in the way.',
+        'Could not publish the event “com.acme.deal.won” to the playbook: what was given does not fit what it needs. Nothing was changed. This can be corrected and tried again; the details below say what to change.',
+      ]);
+    });
   });
 });

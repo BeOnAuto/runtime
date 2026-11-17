@@ -1,13 +1,18 @@
-import { statement } from '@on.auto/ledger';
+import { statement, textOnPostgreSQL } from '@on.auto/ledger';
 import type { ArmListener } from '@on.auto/workflow-engine';
 import { Effect, Schema } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { Client } from 'pg';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { rowsOf } from '../database/host-database.ts';
-import { filterStops, type FilterPlace } from '../filtering/filter-matching.ts';
+import { type HostDatabase, rowsOf, WholeNumber } from '../database/host-database.ts';
+import { sqlWatermark } from '../dispatch/sql-watermark.ts';
+import { type FilterPlace, filterStops } from '../filtering/filter-matching.ts';
+import { runGateOf } from '../follower/run-gate.ts';
 import { refusalsOn } from '../reactions/refusals.ts';
 import { faultyDatabase } from '../testing/faulty-database.ts';
-import { onSQLite, openedOn } from '../testing/host-files.ts';
+import { onPostgreSQLAt, onSQLite, openedOn } from '../testing/host-files.ts';
+import { describeOnPostgreSQL } from '../testing/postgresql-databases.ts';
+import { insertedListener } from './listener-rows.ts';
 import { mostListenersInAPlaybook, sqlListeners } from './sql-listeners.ts';
 
 const attributes = { definition: { name: 'await-approval', version: 1 }, caller: { id: 'acme-admin' } };
@@ -25,6 +30,116 @@ function awaitingKeyOf(runId: string) {
 }
 
 const RefusalRow = Schema.Struct({ workflow: Schema.String, reason: Schema.String });
+
+const playbookKey = 'playbook/acme/alpha/';
+
+const runKey = 'acme/alpha/r-1';
+
+const stream = `${playbookKey}run-logs/r-1`;
+
+type RecordedEvent = Parameters<ReturnType<typeof runGateOf>['verdictOn']>[0];
+
+const PassedRow = Schema.Struct({ listener: Schema.String, passed: WholeNumber });
+
+async function connected(connectionString: string): Promise<Client> {
+  const client = new Client({ connectionString });
+  await client.connect();
+  onTestFinished(() => client.end());
+  return client;
+}
+
+const record: RecordedEvent = {
+  id: 'record-2',
+  cursor: 'cursor-2',
+  causationId: null,
+  correlationId: null,
+  stream,
+  version: 2,
+  globalPosition: 2,
+  type: 'input_applied',
+  data: null,
+  context: { at: '2026-10-01T09:00:00.000Z', by: 'acme-admin' },
+  recordedAt: '2026-10-01T09:00:00.000Z',
+};
+
+interface Holding {
+  readonly held: Readonly<Pick<Client, 'query'>>;
+  readonly insertInto: string;
+  readonly meanwhile: () => Promise<unknown>;
+}
+
+function holdingTheInsert(database: HostDatabase, { held, insertInto, meanwhile }: Holding): HostDatabase {
+  return {
+    ...database,
+    write: (written) =>
+      written.strings.join('').includes(`INSERT INTO ${insertInto}`)
+        ? Effect.promise(async () => {
+            await held.query('BEGIN');
+            await held.query(textOnPostgreSQL(written), [...written.values]);
+            await meanwhile();
+            await held.query('COMMIT');
+            return [];
+          })
+        : database.write(written),
+  };
+}
+
+function passedEarlyTests(aDatabase: () => Promise<string>): void {
+  describe('a listener kept while the gate passes its run early', () => {
+    it('is marked passed though its insert was still open when the gate marked the run passed', async () => {
+      const connectionString = await aDatabase();
+      const database = await openedOn(onPostgreSQLAt(connectionString));
+      const held = await connected(connectionString);
+      await Effect.runPromise(
+        database.write(
+          statement`INSERT INTO workflow_runs (run_key, stream_id, dispatched_through) VALUES (${runKey}, ${stream}, ${0})`,
+        ),
+      );
+      const passing = () => Effect.runPromise(runGateOf(database, playbookKey).verdictOn(record, true));
+
+      await Effect.runPromise(
+        insertedListener(holdingTheInsert(database, { held, insertInto: 'workflow_listeners', meanwhile: passing }), {
+          runKey,
+          listener: 'held',
+          playbookKey,
+          streamId: stream,
+          armedBy: 2,
+          filters: '[]',
+          workflow: 'wait',
+          version: 1,
+          passed: false,
+        }),
+      );
+      const listeners = await Effect.runPromise(
+        rowsOf(PassedRow, database.read(statement`SELECT listener, passed FROM workflow_listeners`)),
+      );
+
+      expect(listeners).toEqual([{ listener: 'held', passed: 1 }]);
+    });
+  });
+}
+
+function catchingUpTests(aDatabase: () => Promise<string>): void {
+  describe('the note of a run passed early while its dispatch catches up', () => {
+    it('is taken back when the dispatch reached the record while the note was still being written', async () => {
+      const connectionString = await aDatabase();
+      const database = await openedOn(onPostgreSQLAt(connectionString));
+      const held = await connected(connectionString);
+      await Effect.runPromise(
+        database.write(
+          statement`INSERT INTO workflow_runs (run_key, stream_id, dispatched_through) VALUES (${runKey}, ${stream}, ${0})`,
+        ),
+      );
+      const catchingUp = () => Effect.runPromise(sqlWatermark(database).advance(runKey, 2));
+      const holding = holdingTheInsert(database, { held, insertInto: 'workflow_passed_runs', meanwhile: catchingUp });
+
+      const verdict = await Effect.runPromise(runGateOf(holding, playbookKey).verdictOn(record, true));
+      const left = await Effect.runPromise(database.read(statement`SELECT run_key FROM workflow_passed_runs`));
+
+      expect([verdict, left]).toEqual(['overdue', []]);
+    });
+  });
+}
 
 describe('the listeners of a playbook', () => {
   it('are 4,096 in a playbook at most: one more is refused and said, and its run takes only the events sent to it', async () => {
@@ -108,4 +223,9 @@ describe('a listener the host tables cannot record', () => {
       expect.objectContaining({ output: 'cancel_listener' }),
     ]);
   });
+});
+
+describeOnPostgreSQL('the gate of a run', (aDatabase) => {
+  passedEarlyTests(aDatabase);
+  catchingUpTests(aDatabase);
 });

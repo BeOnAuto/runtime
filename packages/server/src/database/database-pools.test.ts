@@ -1,7 +1,13 @@
+import { readFileSync } from 'node:fs';
+
+import { ledgerLayout } from '@on.auto/ledger/testing';
 import type { ProxySettings } from '@on.auto/outbound';
 import type { DatabaseTokenRequest } from '@on.auto/outbound/aws';
+import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
+import { compositionRoot } from '../composition/composition-root.ts';
+import { startServer } from '../lifecycle/lifecycle.ts';
 import type { PostgreSQLLedgerSettings } from '../settings/ledger-settings.ts';
 import { aFakePostgreSQL } from '../testing/databases/fake-postgresql.ts';
 import { aCertificateOfTheLoopback, trustedForTheTest } from '../testing/databases/loopback-certificate.ts';
@@ -10,8 +16,11 @@ import {
   modulesOfTheSignerLoaded,
   modulesOfTheSignerLoadedInAProcessOfItsOwnBy,
 } from '../testing/databases/signer-modules.ts';
+import { catalogOfTheLedgerIn } from '../testing/records/ledger-file.ts';
+import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { loopbackSettingsOver } from '../testing/servers/reasoning-server.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
-import { databasePoolsOf, signerLoadedWithTheFirstTokenBy, type DatabaseTokenSignerOf } from './database-pools.ts';
+import { databasePoolsOf, type DatabaseTokenSignerOf, signerLoadedWithTheFirstTokenBy } from './database-pools.ts';
 
 interface Asked {
   readonly proxy: ProxySettings;
@@ -56,6 +65,17 @@ function signingLedgerOn(port: number): PostgreSQLLedgerSettings {
     DATABASE_CREDENTIALS: 'aws-iam',
     AWS_REGION: 'eu-west-1',
   });
+}
+
+const PinnedLayout = Schema.fromJsonString(
+  Schema.Struct({
+    layout: Schema.Number,
+    catalog: Schema.Array(Schema.Struct({ name: Schema.String, sql: Schema.String })),
+  }),
+);
+
+function pinned() {
+  return Schema.decodeUnknownSync(PinnedLayout)(readFileSync(new URL('database-layout.json', import.meta.url), 'utf8'));
 }
 
 describe('the pools of a ledger whose password is in DATABASE_URL', () => {
@@ -222,5 +242,21 @@ describe('a signer of the tokens that cannot be loaded', () => {
     await expect(pool.connect()).rejects.toMatchObject(notLoaded);
     await expect(pool.connect()).rejects.toMatchObject(notLoaded);
     expect(database.passwords()).toEqual([]);
+  });
+});
+
+describe('the layout of the database the server opens', () => {
+  it('is the layout of every table and index the ledger, the workflow host and the folders of its projector make, pinned in database-layout.json under the number of the ledger', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    const server = await startServer(loopbackSettingsOver(ledger), compositionRoot);
+    await server.stop();
+
+    const catalog = await catalogOfTheLedgerIn(ledger.fileName);
+
+    expect(
+      { layout: ledgerLayout, catalog },
+      "The layout of the server's database changed: raise ledgerLayout in packages/ledger/src/layout/ledger-layout.ts, register the step that leads to it with the package that owns the table, then pin in src/database/database-layout.json the layout and the catalog of every table and index the server makes",
+    ).toEqual(pinned());
   });
 });

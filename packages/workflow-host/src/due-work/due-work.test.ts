@@ -1,13 +1,20 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { describe, expect, it } from 'vitest';
+import type { WorkflowEngine } from '@on.auto/workflow-engine';
+import { Effect, Function } from 'effect';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { systemClock } from '../loop/host-clock.ts';
+import { hostWakeUp, type NextWake } from '../loop/host-wake-up.ts';
+import { aSQLiteFile } from '../testing/host-files.ts';
+import { hostedOn } from '../testing/host-runs.ts';
 import { until } from '../testing/until.ts';
 import { steppedClock, type SteppedClock } from '../views-testing/stepped-sweeps.ts';
+import { type Chore, choreWork } from './due-chores.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
 import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce } from './due-work.ts';
 import { fakeDueWork, type FakeDueWork } from './fake-due-work.ts';
+import { rowWaitBounds, rowWaits } from './row-waits.ts';
 
 function rowsDueBy(count: number, dueAt: number, { callsOut }: { readonly callsOut: boolean }): FakeDueWork {
   const rows = fakeDueWork(1);
@@ -24,6 +31,37 @@ async function aSecondLater(clock: SteppedClock, rows: FakeDueWork, sweeps: numb
   clock.step(1000);
   await until(rows.reads, (read) => read.due >= sweeps);
   await setTimeout(30);
+}
+
+const noTimers = {
+  due: () => Effect.succeed([]),
+  nextDueAt: () => Effect.succeed(null),
+  fired: () => Effect.void,
+  postponed: () => Effect.void,
+};
+
+const idleEngine: WorkflowEngine = {
+  submit: () => Effect.die(new Error('A chore submits nothing')),
+  wake: () => Effect.die(new Error('A chore wakes no run')),
+  sweep: () => Effect.succeed({ runs: 0, timersArmedAgain: 0 }),
+};
+
+function wakeUpWith(chore: Chore, clock: SteppedClock): (now: number) => Promise<NextWake> {
+  const work = hostWakeUp(
+    {
+      clock,
+      timers: noTimers,
+      dueWork: [choreWork(chore)],
+      engine: idleEngine,
+      fire: () => Effect.void,
+      resume: () => Effect.succeed(0),
+      trouble: () => Effect.void,
+      sweepEveryMs: 1000,
+    },
+    { raised: Function.constVoid, renewed: Function.constVoid },
+  );
+  onTestFinished(() => Effect.runPromise(work.stop()));
+  return (now) => Effect.runPromise(work.wakeUp({ now, sweep: false }));
 }
 
 describe('the due rows of a projection, in the loop of the host', () => {
@@ -231,6 +269,111 @@ describe('due rows that cannot be read', () => {
         'The due rows of the fake rows could not be read; the loop tries again',
         'The next due time of the fake rows could not be read; the loop waits for the next sweep',
       ]),
+    ]);
+  });
+});
+
+describe('a chore the wake-up of the host performs', () => {
+  it('is performed at the first wake-up, wakes nothing while it is under way, then waits for the time it answered', async () => {
+    const performedAt: number[] = [];
+    const held = Promise.withResolvers<void>();
+    const clock = steppedClock(5000);
+    const chore: Chore = {
+      name: 'orphans',
+      perform: (now) =>
+        Effect.andThen(
+          Effect.promise(() => held.promise),
+          Effect.sync(() => {
+            performedAt.push(now);
+            return now + 1000;
+          }),
+        ),
+    };
+    const wakeUp = wakeUpWith(chore, clock);
+
+    const underWay = await wakeUp(5000);
+    held.resolve();
+    await until(
+      () => performedAt.length,
+      (performed) => performed > 0,
+    );
+    clock.step(500);
+    const between = await wakeUp(5500);
+    clock.step(500);
+    await wakeUp(6000);
+    await until(
+      () => performedAt.length,
+      (performed) => performed > 1,
+    );
+
+    expect([underWay, between]).toEqual([{ nextDueAt: null }, { nextDueAt: 6000 }]);
+    expect(performedAt).toEqual([5000, 6000]);
+  });
+
+  it('answers the time it is next due among the work that calls out, and none among the rest', async () => {
+    const work = choreWork({ name: 'orphans', perform: (now) => Effect.succeed(now + 1000) });
+    await Effect.runPromise(
+      Effect.flatMap(work.due(5000, 1, true), (items) => Effect.forEach(items, (item) => item.perform(5000))),
+    );
+
+    const next = await Effect.runPromise(
+      Effect.all([work.nextDueAt(5000), work.nextDueAt(5000, true), work.nextDueAt(5000, false)]),
+    );
+
+    expect(next).toEqual([6000, 6000, null]);
+  });
+});
+
+describe('the due rows of a projection, across hosts of one database', () => {
+  it('are performed by the host that holds the lease alone, and by the next once it stops', async () => {
+    const database = { store: 'sqlite', file: aSQLiteFile() } as const;
+    const rows = fakeDueWork();
+    const first = await hostedOn(database, { sweepEveryMs: 50, holder: 'first', dueWork: [rows.work('first')] });
+    await hostedOn(database, { sweepEveryMs: 50, holder: 'second', dueWork: [rows.work('second')] });
+
+    rows.add('before', Date.now());
+    await until(rows.performed, (performed) => performed.length === 1);
+    await first.host.stop();
+    rows.add('after', Date.now());
+    await until(rows.performed, (performed) => performed.length === 2);
+
+    expect(rows.performed().map(({ key, by }) => [key, by])).toEqual([
+      ['before', 'first'],
+      ['after', 'second'],
+    ]);
+    expect(rows.attempts()).toHaveLength(2);
+  });
+});
+
+describe('the waits of rows that could not be performed', () => {
+  it('hold a row for a second, then twice as long each time, up to five minutes, and let it go once performed', () => {
+    const waits = rowWaits();
+    const untils: number[] = [];
+    for (const at of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((step) => step * 1_000_000)) {
+      waits.failed('row', at);
+      untils.push(waits.nextUntil(at) - at);
+    }
+
+    expect(untils).toEqual([1000, 2000, 4000, 8000, 16_000, 32_000, 64_000, 128_000, 256_000, 300_000, 300_000]);
+    expect([waits.holds('row', 10_000_000), waits.heldAt(10_000_000)]).toEqual([true, 1]);
+    waits.performed('row');
+    expect([waits.holds('row', 10_000_000), waits.heldAt(10_000_000), waits.nextUntil(0)]).toEqual([
+      false,
+      0,
+      Number.POSITIVE_INFINITY,
+    ]);
+  });
+
+  it('keep at most 4,096 rows, letting the one that failed first go', () => {
+    const waits = rowWaits();
+    for (const index of Array.from({ length: rowWaitBounds.keptRows + 1 }, (_, each) => each)) {
+      waits.failed(`row-${index}`, 0);
+    }
+
+    expect([waits.heldAt(0), waits.holds('row-0', 0), waits.holds('row-1', 0)]).toEqual([
+      rowWaitBounds.keptRows,
+      false,
+      true,
     ]);
   });
 });

@@ -13,7 +13,7 @@ const frozenFormats: readonly string[] = [
   ...['one', 'two', 'three', 'four', 'five', 'six', 'six-records', 'seven', 'seven-records'].map(
     (format) => `packages/workflow-engine/src/run-log/formats/format-${format}.ts`,
   ),
-  ...['one', 'four', 'six', 'six-records', 'seven', 'seven-records'].map(
+  ...['one', 'six-records', 'seven', 'seven-records'].map(
     (format) => `packages/workflow-engine/src/run-log/formats/format-${format}.test.ts`,
   ),
   'packages/workflow-engine/src/run-log/formats/formats-passed-on.test.ts',

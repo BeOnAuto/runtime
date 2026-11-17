@@ -1,14 +1,18 @@
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { workflowEngineOf } from '../engine/engine.ts';
 import type { RunInput } from '../machine/run-input.ts';
 import { newRun, type RunState } from '../machine/run-state.ts';
-import { testDriverOf, testWorkflowMachine } from '../pool-testing/test-sandbox.ts';
-import type { RunLogEvent } from '../run-log/run-event.ts';
-import { testCancel } from '../testing/driver-inputs.ts';
+import { testDriverOf, testMachine, testWorkflowMachine } from '../pool-testing/test-sandbox.ts';
+import { eventBytesOf, type PositionedEvent, type RunLogEvent } from '../run-log/run-event.ts';
+import { isSnapshotDue, snapshotChunks, snapshotOf } from '../run-log/snapshot.ts';
+import { stateFormat } from '../run-log/state-format.ts';
+import { startedOf, testCancel } from '../testing/driver-inputs.ts';
 import type { MemoryDriver } from '../testing/memory-driver.ts';
 import { armedTimerIds, drivenRunId, statesAlong } from '../testing/run-history.ts';
 import { workflow } from '../testing/workflows.ts';
+import { runCacheOf } from './run-cache.ts';
 
 function cancelAt(at: number): RunInput {
   return { kind: 'cancel_requested', runId: drivenRunId, at, cancel: testCancel };
@@ -68,6 +72,47 @@ function fired(timerId: string, at: number): RunInput {
   return { kind: 'timer_fired', runId: drivenRunId, at, timerId };
 }
 
+const holdingMuch = workflow(`
+do:
+  - hold: { set: {}, export: { as: '\${ ({ much: "x".repeat(1200000) }) }' } }
+  - tick: { wait: PT1S }
+  - count: { set: '\${ ({ n: ($data.n ?? 0) + 1, pad: "y".repeat(65536) }) }' }
+  - again: { switch: [{ more: { when: '\${ $data.n < 60 }', then: tick } }] }
+`);
+
+const utf8 = new TextEncoder();
+
+function snapshotsDueAlong(events: readonly PositionedEvent[]): readonly number[] {
+  const states = statesAlong(events);
+  const since = { bytes: 0, snapshotBytes: 0 };
+  return events.flatMap(({ version, event }, index) => {
+    since.bytes += eventBytesOf(event);
+    const state = states[index];
+    if (state === undefined || !isSnapshotDue(since)) {
+      return [];
+    }
+    const chunks = snapshotChunks(snapshotOf(state, version, stateFormat));
+    since.snapshotBytes = chunks.reduce((sum, chunk) => sum + utf8.encode(chunk).byteLength, 0);
+    since.bytes = 0;
+    return [version];
+  });
+}
+
+function ranToItsEnd(): MemoryDriver {
+  const driver = testDriverOf();
+  driver.start({ runId: drivenRunId, document: holdingMuch });
+  driver.runUntilEnded(drivenRunId);
+  return driver;
+}
+
+const holdingMuchKeptSnapshots = workflow(`
+do:
+  - hold: { set: {}, export: { as: '\${ ({ much: "x".repeat(1200000) }) }' } }
+  - tick: { wait: PT1S }
+  - count: { set: '\${ ({ n: ($data.n ?? 0) + 1 }) }' }
+  - again: { switch: [{ more: { when: '\${ $data.n < 5 }', then: tick } }] }
+`);
+
 describe('an input to a run the engine keeps', () => {
   it('loads neither the snapshot nor the events the inputs before it left', () => {
     const driver = startedTicking(20);
@@ -113,5 +158,44 @@ describe('an input to a run the engine keeps', () => {
 
     expect(answer).toEqual({ outcome: 'applied', version: 2 });
     expect(driver.ports.runStore.loads(drivenRunId)).toBe(2);
+  });
+});
+
+describe('a run the engine keeps between its inputs', () => {
+  it('counts the bytes of the snapshot its store holds, so each snapshot is written when it is due', () => {
+    const driver = ranToItsEnd();
+    const events = driver.ports.runStore.events(drivenRunId);
+    const saved = driver.ports.runStore.snapshotsSaved(drivenRunId);
+
+    expect(statesAlong(events).at(-1)?.outcome).toMatchObject({ kind: 'completed' });
+    expect(saved.length).toBeGreaterThan(2);
+    expect(saved).toEqual(snapshotsDueAlong(events));
+  });
+});
+
+describe('a run the engine keeps between its inputs, whose large value is kept outside', () => {
+  it('keeps the text it kept across its snapshot, so no input after the snapshot reads it back', () => {
+    const driver = testDriverOf({ payloadOffloading: true });
+    driver.start({ runId: drivenRunId, document: holdingMuchKeptSnapshots });
+
+    driver.runUntilEnded(drivenRunId);
+
+    expect(driver.ports.runStore.snapshotsSaved(drivenRunId)).toEqual([1]);
+    expect(driver.ports.runStore.events(drivenRunId).length).toBeGreaterThan(5);
+    expect(driver.ports.payloads.keeps().flat()).toHaveLength(1);
+    expect(driver.ports.payloads.reads()).toEqual([]);
+  });
+});
+
+describe('a run its engine cannot keep between its inputs', () => {
+  it('is snapshotted when it is due all the same, with nothing kept to put back', () => {
+    const driver = testDriverOf();
+    const engine = workflowEngineOf(driver.ports, testMachine, runCacheOf({ mostRuns: 0, mostBytes: 0 }));
+
+    Effect.runSync(
+      engine.submit(startedOf({ runId: drivenRunId, document: holdingMuchKeptSnapshots }, driver.clock.now())),
+    );
+
+    expect(driver.ports.runStore.snapshotsSaved(drivenRunId)).toEqual([1]);
   });
 });

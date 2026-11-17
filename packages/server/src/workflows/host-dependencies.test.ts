@@ -1,13 +1,41 @@
+import { editorRoleForEveryPerson, loadedMessage } from '@on.auto/access-control';
 import { makeAppRuntime } from '@on.auto/api';
+import { playbookOwnNamesOf } from '@on.auto/definitions';
+import { echo } from '@on.auto/definitions/testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
+import {
+  makeDispatcher,
+  type Outcome,
+  playbookCallerOf,
+  type PlaybookRequest,
+  reportedDifferenceMessage,
+} from '@on.auto/operations';
+import { capturedLogs, memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
+import {
+  filterSandboxOf,
+  freshInstances,
+  handedWorkersOf,
+  machineSandboxOf,
+  programPool,
+  sandboxModuleIn,
+  sandboxShippedRoots,
+} from '@on.auto/workflow-engine/dsl';
+import { StartRefused, StartRejected } from '@on.auto/workflow-host';
 import { Cause, Effect, Exit, Layer, Logger } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { applicationLayer } from '../composition/application-layer.ts';
+import { decisionPointServing } from '../composition/served-access-control.ts';
+import { shippedRoots } from '../server-options/shipped-roots.ts';
+import { memoryRuntime } from '../testing/records/memory-runtime.ts';
+import { type HostDispatch, hostDispatchesOf, hostOperationsOf, hostRegistrationsOf } from './host-operations.ts';
 import { hostReports } from './host-reports.ts';
+import { hostWorkOf } from './host-work.ts';
 import { inRuntime } from './in-runtime.ts';
+import { reactionsOf } from './reaction-dependencies.ts';
 
-const memoryLedger = ledgerLayer({ fileName: ':memory:' });
+const memoryLedgerHostDependencies = ledgerLayer({ fileName: ':memory:' });
 
 async function reportedLines(
   report: (reports: ReturnType<typeof hostReports>) => Promise<unknown>,
@@ -17,16 +45,62 @@ async function reportedLines(
     lines.push(line);
   });
   const runtime = await makeAppRuntime(
-    applicationLayer(memoryLedger).pipe(Layer.provideMerge(Logger.layer([capture]))),
+    applicationLayer(memoryLedgerHostDependencies).pipe(Layer.provideMerge(Logger.layer([capture]))),
   );
   await report(hostReports(runtime));
   await runtime.dispose();
   return lines;
 }
 
+const asAlphaItself: PlaybookRequest = {
+  caller: playbookCallerOf({ org: 'acme', playbook: 'alpha' }),
+  org: 'acme',
+  playbook: 'alpha',
+  input: {},
+  encoding: 'json',
+};
+
+const services = Layer.mergeAll(
+  memoryLedger().layer,
+  memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
+  recordingReporter().layer,
+);
+
+const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
+
+const sandboxModule = await sandboxModuleIn(sandboxFiles);
+
+const unknownRun = { org: 'acme', playbook: 'alpha', id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' };
+
+const lineage = { causationId: 'cancel-1', correlationId: unknownRun.id };
+
+const start = {
+  org: 'acme',
+  playbook: 'alpha',
+  workflow: 'close-the-month',
+  version: 2,
+  runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+  input: [{ type: 'com.acme.ledger.closed' }],
+  depth: 3,
+  cause: 'record-1',
+  trigger: { kind: 'event', reference: '/schedule/on' },
+} as const;
+
+async function reactingWith(answers: readonly Outcome[]) {
+  const runtime = await memoryRuntime();
+  onTestFinished(() => runtime.dispose());
+  const requests: PlaybookRequest[] = [];
+  const startVersion: HostDispatch = (request) =>
+    Effect.sync(() => {
+      requests.push(request);
+      return answers[requests.length - 1] ?? { status: 'succeeded', output: {} };
+    });
+  return { reactions: reactionsOf(runtime, startVersion, playbookOwnNamesOf([echo])), requests };
+}
+
 describe('work the workflow host hands to the runtime of the server', () => {
   it('runs on the services of the runtime, and fails as it fails there', async () => {
-    const runtime = await makeAppRuntime(applicationLayer(memoryLedger));
+    const runtime = await makeAppRuntime(applicationLayer(memoryLedgerHostDependencies));
 
     const done = await Effect.runPromise(inRuntime(runtime, Effect.succeed('done')));
     const refused = await Effect.runPromise(Effect.exit(inRuntime(runtime, Effect.fail('refused'))));
@@ -37,7 +111,9 @@ describe('work the workflow host hands to the runtime of the server', () => {
   });
 
   it('dies once the runtime is disposed, so the host performs the call again when the server next starts', async () => {
-    const runtime = await makeAppRuntime(Layer.empty.pipe(Layer.provideMerge(applicationLayer(memoryLedger))));
+    const runtime = await makeAppRuntime(
+      Layer.empty.pipe(Layer.provideMerge(applicationLayer(memoryLedgerHostDependencies))),
+    );
     await runtime.dispose();
 
     const exit = await Effect.runPromise(Effect.exit(inRuntime(runtime, Effect.succeed('too late'))));
@@ -78,5 +154,181 @@ describe('the reports of the workflow host', () => {
       expect.stringContaining('"message":"A sweep of the runs failed; the next sweep tries again","level":"WARN"'),
       expect.stringContaining('"message":"A run that could not be settled was settled at attempt 21"'),
     ]);
+  });
+});
+
+describe('the operations the workflow host is handed', () => {
+  it('are its own, the start of a version, the run of a definition, and the next attempt of a run whose holder is gone, made or refused, each the playbook operation it dispatches', () => {
+    const host = hostOperationsOf([echo]);
+
+    expect(hostRegistrationsOf(host).map(({ scope, name }) => `${scope}/${name}`)).toEqual([
+      'playbook/start_definition_version',
+      'playbook/run_definition',
+      'playbook/make_next_attempt',
+      'playbook/refuse_next_attempt',
+    ]);
+  });
+
+  it('are each declared to the decision point the server composes, so each dispatch the host is handed is decided as the check decides it', async () => {
+    const host = hostOperationsOf([echo]);
+    const reporting = makeDispatcher([], {
+      reportOnly: decisionPointServing(
+        { catalogs: [], host },
+        shippedFilesOnDisk(shippedRoots),
+        editorRoleForEveryPerson,
+      ),
+    });
+    const logs = capturedLogs();
+
+    await Effect.runPromise(
+      Effect.forEach(Object.values(hostDispatchesOf(reporting, host)), (dispatch) => dispatch(asAlphaItself)).pipe(
+        Effect.provide(logs.layer),
+        Effect.provide(services),
+      ),
+    );
+
+    expect(logs.logged().filter(({ message }) => message === reportedDifferenceMessage)).toEqual([]);
+    expect(logs.logged().filter(({ message }) => message === loadedMessage)).toMatchObject([
+      { annotations: { operations: hostRegistrationsOf(host).length } },
+    ]);
+  });
+});
+
+describe('the machine the workflow host decides runs with', () => {
+  it("is the coordination's functions, runtime and context of each record on the pool's sandbox, so no setting of the server reaches the machine's bound on tasks without waiting", async () => {
+    const runtime = await memoryRuntime();
+    const pool = programPool({
+      handed: await handedWorkersOf(sandboxFiles),
+      instances: 'fresh',
+      workers: 1,
+      heapMegabytes: 64,
+    });
+    const { machine } = hostWorkOf(runtime, hostDispatchesOf(makeDispatcher([]), hostOperationsOf([echo])), {
+      capabilities: [echo],
+      names: playbookOwnNamesOf([echo]),
+      lookAgain: () => Effect.void,
+      evaluations: pool.evaluations,
+    });
+    await Promise.all([pool.close(), runtime.dispose()]);
+
+    expect(Object.keys(machine).toSorted()).toEqual(['contextOf', 'functions', 'runtime', 'sandbox']);
+    expect(machine.sandbox).toBe(pool.evaluations.machine);
+    expect(Object.keys(machine.sandbox)).not.toContain('mostStepsWithoutWaiting');
+  });
+});
+
+describe('the cancels the workflow host hands to the runtime of the server', () => {
+  it('settle nothing for a run the ledger does not have, and record the cancel of a run that has not started yet', async () => {
+    const runtime = await memoryRuntime();
+    const { waiting } = hostWorkOf(runtime, hostDispatchesOf(makeDispatcher([]), hostOperationsOf([echo])), {
+      capabilities: [echo],
+      names: playbookOwnNamesOf([echo]),
+      lookAgain: () => Effect.void,
+      evaluations: {
+        machine: machineSandboxOf(freshInstances(sandboxModule)),
+        filters: filterSandboxOf(freshInstances(sandboxModule)),
+      },
+    });
+
+    const settled = await Effect.runPromise(
+      Effect.as(waiting.cancelDeferred(unknownRun, { kind: 'requested', reason: 'No longer needed' }, lineage), 'left'),
+    );
+    const cancelled = await Effect.runPromise(
+      waiting.cancel(unknownRun, { kind: 'parent_ended', reason: 'The run that waited for it ended' }, lineage),
+    );
+    await runtime.dispose();
+
+    expect([settled, cancelled]).toEqual(['left', 'requested']);
+  });
+});
+
+describe('a start of a workflow its trigger matched', () => {
+  it('is asked of the playbook as the playbook itself, once under the id it was given, caused by what it matched, with its trigger', async () => {
+    const { reactions, requests } = await reactingWith([]);
+
+    await Effect.runPromise(reactions.start(start));
+
+    expect(requests).toEqual([
+      {
+        caller: {
+          id: 'playbook:alpha',
+          name: 'alpha',
+          org: 'acme',
+          permissions: ['playbook:read', 'playbook:write'],
+          playbooks: ['alpha'],
+        },
+        org: 'acme',
+        playbook: 'alpha',
+        input: {
+          type: 'workflow',
+          name: 'close-the-month',
+          version: 2,
+          input: start.input,
+          run_id: start.runId,
+        },
+        encoding: 'json',
+        lineage: { causationId: 'record-1', correlationId: start.runId },
+        depth: 3,
+        trigger: { kind: 'event', reference: '/schedule/on' },
+      },
+    ]);
+  });
+});
+
+describe('a start of a workflow the playbook does not take', () => {
+  it('is tried again when the playbook cannot take it now, and not when it never will, with the kind and because of its refusal', async () => {
+    const { reactions } = await reactingWith([
+      { status: 'rejected', reason: 'unavailable', detail: 'The ledger is busy' },
+      { status: 'failed', incident: 'i-1' },
+      { status: 'rejected', reason: 'invalid_input', detail: 'The input is not what the workflow takes' },
+      {
+        status: 'rejected',
+        reason: 'conflict',
+        detail: 'The org has used today’s Free credits',
+        kind: 'credits_exhausted',
+        because: 'free_daily_limit',
+      },
+    ]);
+
+    const failures = await Effect.runPromise(Effect.forEach([1, 2, 3, 4], () => Effect.flip(reactions.start(start))));
+
+    expect(failures).toStrictEqual([
+      new StartRefused({ detail: 'The ledger is busy' }),
+      new StartRefused({ detail: 'The start failed with incident i-1' }),
+      new StartRejected({ detail: 'The input is not what the workflow takes' }),
+      new StartRejected({
+        detail: 'The org has used today’s Free credits',
+        kind: 'credits_exhausted',
+        because: 'free_daily_limit',
+      }),
+    ]);
+  });
+});
+
+describe('an event a workflow emits', () => {
+  it('is recorded in the ledger of the server', async () => {
+    const { reactions } = await reactingWith([]);
+    const emission = {
+      event: {
+        specversion: '1.0',
+        id: 'e1',
+        source: '/ledger',
+        type: 'com.acme.ledger.closed',
+        time: '2026-10-01T09:00:00.000Z',
+      },
+      emitter: { run_id: start.runId, workflow: 'announce', version: 1 },
+      depth: 1,
+      by: 'playbook:alpha',
+      at: '2026-10-01T09:00:00.000Z',
+    };
+
+    const outcome = await Effect.runPromise(
+      reactions.emit({ org: 'acme', playbook: 'alpha' }, emission, {
+        causationId: null,
+        correlationId: start.runId,
+      }),
+    );
+
+    expect(outcome).toBe('recorded');
   });
 });

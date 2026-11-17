@@ -1,9 +1,21 @@
-import type { AppendedStreams } from '@on.auto/ledger';
+import { type AppendedStreams, streamSignalOf } from '@on.auto/ledger';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
 import type { FollowedPlaybook, FollowedPlaybooks } from '../follower/followed-playbooks.ts';
-import { playbookSweepsOn, playbooksInASweep, waitingInASweep, type Sweep } from './playbook-sweeps.ts';
+import { followerOver } from '../reaction-testing/follower-over.ts';
+import {
+  byAdmin,
+  definitionRecorded,
+  eventTrigger,
+  playbookCreated,
+  published,
+} from '../reaction-testing/playbook-writes.ts';
+import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
+import { onSQLite, openedOn } from '../testing/host-files.ts';
+import { until } from '../testing/until.ts';
+import { playbooksInASweep, playbookSweepsOn, type Sweep, waitingInASweep } from './playbook-sweeps.ts';
 
 interface Swept {
   readonly sweeps: readonly Sweep[];
@@ -73,6 +85,84 @@ function keysOf(sweep: Sweep | undefined): readonly string[] {
 
 const now: AppendedStreams = { streams: [], through: ['10'], more: false };
 
+function answering(answers: readonly AppendedStreams[]) {
+  const reads = { count: 0 };
+  return {
+    readAppended: () => {
+      const answer = answers[Math.min(reads.count, answers.length - 1)] ?? now;
+      reads.count += 1;
+      return Promise.resolve(answer);
+    },
+  };
+}
+
+function followingFailingOnce(): FollowedPlaybooks {
+  const failures = { left: 1 };
+  return {
+    ...followedOf({ appended: [] }),
+    following: () =>
+      Effect.suspend(() => {
+        failures.left -= 1;
+        return failures.left < 0 ? Effect.succeed([]) : Effect.die(new Error('The playbooks could not be read'));
+      }),
+  };
+}
+
+const quiet: AppendedStreams = { streams: [], through: ['30'], more: false };
+
+function loadOf(sweep: number): AppendedStreams {
+  return {
+    streams: Array.from({ length: 200 }, (_, index) => `playbook/acme/s${sweep}b${index}/events/`),
+    through: [String(sweep)],
+    more: false,
+  };
+}
+
+const beta = 'playbook/acme/beta/';
+
+interface HeldBack {
+  readonly database: HostDatabase;
+  readonly release: () => void;
+}
+
+function sweptAtOnceAndRegistryFailing(database: HostDatabase, playbookKey: string): HeldBack {
+  const state = { released: false, swept: false };
+  const store: HostDatabase['store'] = {
+    ...database.store,
+    readAppended: (after, most) =>
+      after === undefined || state.released
+        ? database.store.readAppended(after, most)
+        : Promise.resolve({ streams: [], through: after, more: false }),
+  };
+  return {
+    database: {
+      ...database,
+      store,
+      read: (statement) =>
+        Effect.suspend(() => {
+          const text = statement.strings.join('');
+          state.swept ||= text.includes('FROM workflow_followed_playbooks') && statement.values.includes(playbookKey);
+          const registry = text.includes('FROM workflow_followed_orgs WHERE stream_id');
+          return registry && !state.swept
+            ? Effect.fail(new DatabaseFailed({ detail: 'The registry could not be read' }))
+            : database.read(statement);
+        }),
+    },
+    release: () => {
+      state.released = true;
+    },
+  };
+}
+
+const closed = eventTrigger({ type: 'com.acme.closed' });
+
+function startsReaching(reacting: ReactingHost, count: number) {
+  return until(
+    () => Promise.resolve(reacting.reactions.starts()),
+    (starts) => starts.length >= count,
+  );
+}
+
 describe('the sweeps of the follower', () => {
   it('hand out each playbook appended to since the last read once, but not one only a run appended to, and name the registries', async () => {
     const appended: AppendedStreams = {
@@ -136,39 +226,6 @@ describe('the sweeps of the follower after its start', () => {
   });
 });
 
-function answering(answers: readonly AppendedStreams[]) {
-  const reads = { count: 0 };
-  return {
-    readAppended: () => {
-      const answer = answers[Math.min(reads.count, answers.length - 1)] ?? now;
-      reads.count += 1;
-      return Promise.resolve(answer);
-    },
-  };
-}
-
-function followingFailingOnce(): FollowedPlaybooks {
-  const failures = { left: 1 };
-  return {
-    ...followedOf({ appended: [] }),
-    following: () =>
-      Effect.suspend(() => {
-        failures.left -= 1;
-        return failures.left < 0 ? Effect.succeed([]) : Effect.die(new Error('The playbooks could not be read'));
-      }),
-  };
-}
-
-const quiet: AppendedStreams = { streams: [], through: ['30'], more: false };
-
-function loadOf(sweep: number): AppendedStreams {
-  return {
-    streams: Array.from({ length: 200 }, (_, index) => `playbook/acme/s${sweep}b${index}/events/`),
-    through: [String(sweep)],
-    more: false,
-  };
-}
-
 describe('the sweeps of the follower when a read fails', () => {
   it('keep the playbooks they chose when the read of the round fails, and hand them out at the next sweep', async () => {
     const appended: AppendedStreams = { streams: ['playbook/acme/alpha/events/'], through: ['20'], more: false };
@@ -213,5 +270,52 @@ describe('the sweeps of the follower under a steady load', () => {
 
     expect(passedAt).toBeGreaterThanOrEqual(0);
     expect(passedAt).toBeLessThan(3);
+  });
+});
+
+describe('a playbook another process creates, swept before its registry could be read', () => {
+  it('is passed from its first record, so its first event starts a workflow without another append', async () => {
+    const database = await openedOn(await onSQLite());
+    const held = sweptAtOnceAndRegistryFailing(database, beta);
+    const reactions = await followerOver(held.database, 20);
+    const trigger = eventTrigger({ type: 'com.acme.closed' });
+
+    await playbookCreated(database.store, 'beta');
+    await definitionRecorded(database.store, { name: 'close', version: 1, triggers: [trigger] }, beta);
+    await published(database.store, { id: 'first', type: 'com.acme.closed' }, byAdmin, beta);
+    held.release();
+    const starts = await until(
+      () => Promise.resolve(reactions.starts()),
+      (found) => found.length > 0,
+    );
+
+    expect(starts.map(({ playbook, workflow }) => [playbook, workflow])).toEqual([['beta', 'close']]);
+  });
+});
+
+describe('the playbooks another process writes to, which raises no signal here', () => {
+  it('passes a playbook it followed at its start at the sweep after the playbook was appended to', async () => {
+    const settings = await onSQLite();
+    const { store } = await openedOn(settings);
+    await playbookCreated(store, 'alpha');
+    await definitionRecorded(store, { name: 'close', version: 1, triggers: [closed] });
+    const reacting = await reactingHost({ settings, appended: streamSignalOf(), sweepEveryMs: 20 });
+
+    await published(store, { id: 'after', type: 'com.acme.closed' });
+    const starts = await startsReaching(reacting, 1);
+
+    expect(starts.map(({ playbook, workflow }) => [playbook, workflow])).toEqual([['alpha', 'close']]);
+  });
+
+  it('follows a playbook its org creates from its first record, read from the registry the sweep names', async () => {
+    const reacting = await reactingHost({ appended: streamSignalOf(), sweepEveryMs: 20 });
+    const { store } = reacting.database;
+
+    await playbookCreated(store, 'beta');
+    await definitionRecorded(store, { name: 'close', version: 1, triggers: [closed] }, beta);
+    await published(store, { id: 'first', type: 'com.acme.closed' }, byAdmin, beta);
+    const starts = await startsReaching(reacting, 1);
+
+    expect(starts.map(({ playbook, workflow }) => [playbook, workflow])).toEqual([['beta', 'close']]);
   });
 });

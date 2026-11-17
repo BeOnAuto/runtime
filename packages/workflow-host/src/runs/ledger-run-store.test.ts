@@ -9,6 +9,7 @@ import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { ledgerRunLogStore } from './ledger-run-store.ts';
 import { runKeyOf, runLogStreamOf } from './run-address.ts';
+import { runLogContextOf } from './run-log-context.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -23,6 +24,26 @@ function ledgerOn(fileName: string): Promise<Ledger['Service']> {
   onTestFinished(() => runtime.dispose());
   return runtime.runPromise(Ledger);
 }
+
+function onlyOf<A>(items: readonly A[]): A {
+  const [only] = items;
+  if (only === undefined || items.length > 1) {
+    throw new Error(`Expected one, and there were ${items.length}`);
+  }
+  return only;
+}
+
+const at = '2026-10-01T09:00:00.000Z';
+
+const attributes = {
+  org: 'acme',
+  playbook: 'alpha',
+  run_id: 'r-1',
+  definition: { name: 'close', version: 2 },
+  caller: { id: 'acme-admin', org: 'acme', permissions: [], playbooks: '*' },
+  depth: 0,
+  call_depth: 0,
+};
 
 describe('the run store of the host, ending a run', () => {
   it('forgets how far the follower passed the log of the run ahead of its dispatch', async () => {
@@ -41,14 +62,6 @@ describe('the run store of the host, ending a run', () => {
     expect([(await Effect.runPromise(hosted.host.stateOf(run))).status, left]).toEqual(['ended', []]);
   });
 });
-
-function onlyOf<A>(items: readonly A[]): A {
-  const [only] = items;
-  if (only === undefined || items.length > 1) {
-    throw new Error(`Expected one, and there were ${items.length}`);
-  }
-  return only;
-}
 
 describe('the run store of the host, recording the end of a run', () => {
   it('records nothing of the end when the append that ends the run meets a conflict, since both are one transaction', async () => {
@@ -120,5 +133,41 @@ describe('the run store of the host, keeping a run', () => {
     expect(await Effect.runPromise(hosted.host.stateOf(run))).toEqual(
       expect.objectContaining({ status: 'running', inputs: 1 }),
     );
+  });
+});
+
+describe('the context of the records of a workflow run', () => {
+  it('names the run, its workflow and version, and the caller it acts as, with no chain at the top', () => {
+    expect(runLogContextOf(attributes, at)).toEqual({
+      at,
+      by: 'acme-admin',
+      runId: 'r-1',
+      definitionType: 'workflow',
+      definitionName: 'close',
+      definitionVersion: 2,
+    });
+  });
+
+  it('carries the call that started the run, its depths, the trigger that started it and the person it acts for', () => {
+    const chained = {
+      ...attributes,
+      depth: 2,
+      call_depth: 1,
+      called_by: { run_id: 'r-0', reference: '/do/0/check', run: 1 },
+      trigger: { kind: 'event', reference: '/schedule/on' },
+      acts_for: 'person:ada',
+    };
+
+    expect(runLogContextOf(chained, at)).toMatchObject({
+      calledBy: { runId: 'r-0', reference: '/do/0/check', run: 1 },
+      callDepth: 1,
+      depth: 2,
+      trigger: { kind: 'event', reference: '/schedule/on' },
+      actsFor: 'person:ada',
+    });
+  });
+
+  it('fails as a defect on attributes it cannot read, which the host never writes', () => {
+    expect(() => runLogContextOf({ definition: 'close' }, at)).toThrow('run_id');
   });
 });

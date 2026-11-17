@@ -2,9 +2,11 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { callKeyText } from '../executor/call-key.ts';
+import type { RunLimits } from '../machine/run-input.ts';
 import type { ArmedTimer, RunState } from '../machine/run-state.ts';
 import type { CallAnswer, Responder } from '../memory/memory-executor.ts';
 import { testSandbox } from '../pool-testing/test-sandbox.ts';
+import type { PositionedEvent } from '../run-log/run-event.ts';
 import { memoryDriver, type MemoryDriver } from '../testing/memory-driver.ts';
 import { statesAlong } from '../testing/run-history.ts';
 import { workflow } from '../testing/workflows.ts';
@@ -135,9 +137,9 @@ function openCallsAlong(states: readonly RunState[]): readonly Opened[] {
   );
 }
 
-function endedRun(driver: MemoryDriver, runId: string, document: Case['document']): RunState {
-  driver.start({ runId, document, limits: { longestCallMs } });
-  return driver.runUntilEnded(runId);
+function endedRun(driver: MemoryDriver, runIdOpenCalls: string, document: Case['document']): RunState {
+  driver.start({ runId: runIdOpenCalls, document, limits: { longestCallMs } });
+  return driver.runUntilEnded(runIdOpenCalls);
 }
 
 function hostThatDiesOnce(): DyingHost {
@@ -159,14 +161,49 @@ function hostThatDiesOnce(): DyingHost {
   };
 }
 
+const twoCalls = workflow(`
+do:
+  - both:
+      fork:
+        branches:
+          - quick: { call: notify, with: { to: ada } }
+          - slow: { call: notify, with: { to: grace } }
+`);
+
+const runId = '0199a3c4-7d2e-7c1a-9b3f-000000000061';
+
+const pausingThenAsking = workflow('do:\n  - pause: { wait: PT1M }\n  - ask: { call: notify, with: { to: ada } }');
+
+function startsIn(positioned: PositionedEvent | undefined) {
+  return (positioned?.event.outputs ?? []).flatMap((output) =>
+    output.kind === 'start_call' ? [{ reference: output.key.reference, longestMs: output.longestMs }] : [],
+  );
+}
+
+function waitOf(positioned: PositionedEvent | undefined): string {
+  const armed = (positioned?.event.outputs ?? []).flatMap((output) =>
+    output.kind === 'arm_timer' && output.purpose === 'wait' ? [output.timerId] : [],
+  );
+  return String(armed[0]);
+}
+
+function deadlinesOf(limits: Partial<RunLimits>) {
+  const driver = memoryDriver({ sandbox: testSandbox, respond: () => 'never' });
+  driver.start({ runId, document: twoCalls, limits });
+  const [first] = Effect.runSync(driver.ports.runStore.eventsAfter(runId, 0));
+  return (first?.event.outputs ?? []).flatMap((output) =>
+    output.kind === 'start_call' ? [{ reference: output.key.reference, longestMs: output.longestMs }] : [],
+  );
+}
+
 describe('every open call', () => {
   it.each(cases)(
     'has an armed call deadline no later than its start and the longest a call runs, and leaves none once it closes: $shape, $answer',
     ({ document, respond }) => {
       const driver = memoryDriver({ sandbox: testSandbox, respond });
-      const runId = '0199a3c4-7d2e-7c1a-9b3f-000000000033';
-      const ended = endedRun(driver, runId, document);
-      const states = statesAlong(driver.ports.runStore.events(runId));
+      const runIdOpenCalls = '0199a3c4-7d2e-7c1a-9b3f-000000000033';
+      const ended = endedRun(driver, runIdOpenCalls, document);
+      const states = statesAlong(driver.ports.runStore.events(runIdOpenCalls));
 
       expect(ended.status).toBe('ended');
       expect(openCallsAlong(states).filter((open) => isUnguarded(open))).toEqual([]);
@@ -178,8 +215,8 @@ describe('every open call', () => {
 
   it('is answered by its deadline when the executor never answers, as a timeout that cancels it', () => {
     const driver = memoryDriver({ sandbox: testSandbox, respond: () => 'never' });
-    const runId = '0199a3c4-7d2e-7c1a-9b3f-000000000034';
-    const ended = endedRun(driver, runId, aCall);
+    const runIdOpenCalls = '0199a3c4-7d2e-7c1a-9b3f-000000000034';
+    const ended = endedRun(driver, runIdOpenCalls, aCall);
 
     expect(driver.clock.now() - ended.startedAt).toBe(longestCallMs);
     expect(ended.outcome).toEqual({
@@ -193,7 +230,7 @@ describe('every open call', () => {
       },
     });
     expect(driver.ports.executor.cancelled()).toEqual([
-      { kind: 'cancel_call', key: { runId, reference: '/do/0/ask', run: 1 }, reason: 'deadline' },
+      { kind: 'cancel_call', key: { runId: runIdOpenCalls, reference: '/do/0/ask', run: 1 }, reason: 'deadline' },
     ]);
   });
 });
@@ -205,15 +242,55 @@ describe('a call whose host died before the dispatch of its start finished', () 
     host.onDeath(() => {
       driver.ports.faults.failNext('arm_timer');
     });
-    const runId = '0199a3c4-7d2e-7c1a-9b3f-000000000035';
-    driver.start({ runId, document: aCall, limits: { longestCallMs } });
+    const runIdOpenCalls = '0199a3c4-7d2e-7c1a-9b3f-000000000035';
+    driver.start({ runId: runIdOpenCalls, document: aCall, limits: { longestCallMs } });
 
-    const wake = Effect.runSync(driver.engine.wake(runId));
+    const wake = Effect.runSync(driver.engine.wake(runIdOpenCalls));
     const [key] = host.started();
 
     expect(wake).toEqual({ version: 1, dispatchedThrough: 1 });
     expect(host.started()).toEqual([key, key]);
-    expect(driver.runUntilEnded(runId).outcome).toEqual({ kind: 'completed', output: 'again' });
-    expect(driver.ports.recordStore.settlementOf(runId)).toEqual({ status: 'succeeded', output: 'again' });
+    expect(driver.runUntilEnded(runIdOpenCalls).outcome).toEqual({ kind: 'completed', output: 'again' });
+    expect(driver.ports.recordStore.settlementOf(runIdOpenCalls)).toEqual({ status: 'succeeded', output: 'again' });
+  });
+});
+
+describe('the deadline of a call', () => {
+  it('is the limit its task was given when the run started, and the run-wide one for a task given none', () => {
+    expect(
+      deadlinesOf({
+        longestCallMs: 600_000,
+        longestCallMsByTask: { '/do/0/both/fork/branches/0/quick': 70_000 },
+      }),
+    ).toEqual([
+      { reference: '/do/0/both/fork/branches/0/quick', longestMs: 70_000 },
+      { reference: '/do/0/both/fork/branches/1/slow', longestMs: 600_000 },
+    ]);
+  });
+
+  it('is a millisecond at the least, for a call that starts when the run has no time left', () => {
+    const driver = memoryDriver({ sandbox: testSandbox, respond: () => 'never' });
+    driver.start({
+      runId,
+      document: pausingThenAsking,
+      limits: { mostDurationMs: 60_000, longestCallMs: 600_000 },
+    });
+    const [first] = Effect.runSync(driver.ports.runStore.eventsAfter(runId, 0));
+    driver.submit({
+      kind: 'timer_fired',
+      runId,
+      at: Number(first?.event.receipt.at) + 90_000,
+      timerId: waitOf(first),
+    });
+    const [, second] = Effect.runSync(driver.ports.runStore.eventsAfter(runId, 0));
+
+    expect(startsIn(second)).toEqual([{ reference: '/do/1/ask', longestMs: 1 }]);
+  });
+
+  it('is cut to what the run has left to run', () => {
+    expect(deadlinesOf({ mostDurationMs: 45_000, longestCallMs: 600_000 })).toEqual([
+      { reference: '/do/0/both/fork/branches/0/quick', longestMs: 45_000 },
+      { reference: '/do/0/both/fork/branches/1/slow', longestMs: 45_000 },
+    ]);
   });
 });

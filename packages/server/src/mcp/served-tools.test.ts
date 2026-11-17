@@ -1,25 +1,19 @@
 import { readFileSync } from 'node:fs';
 
-import { listedTools, withMcpSession, type ListedTool, type McpSession } from '@on.auto/api/testing';
+import { type ListedTool, listedTools, type McpSession, withMcpSession } from '@on.auto/api/testing';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import { servingReasoningWithGoals } from '../testing/settings/goals-kept.ts';
 
 let server: ReasoningServer;
+
 let tools: readonly ListedTool[];
+
 function onMcp<T>(use: (session: McpSession) => Promise<T>): Promise<T> {
   return withMcpSession('current revision', { url: `${server.origin}/mcp`, headers: {} }, use);
 }
-
-beforeAll(async () => {
-  server = await servingReasoning([]);
-  tools = await onMcp(async (session) => listedTools(await session.listTools()));
-});
-
-afterAll(async () => {
-  await server.stop();
-});
 
 const addressedToTheAgent = [
   /\bMUST\b/u,
@@ -88,69 +82,13 @@ function hasNoConstraint({ keywords }: Argument): boolean {
   return keywords.length === 0;
 }
 
-describe('the descriptions of the tools of /mcp', () => {
-  it('are forty-one, each under 800 characters, in three to eight sentences', () => {
-    expect(tools).toHaveLength(41);
-    expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
-    expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
-  });
-
-  it('carry no format, no catalogue of refusals and nothing addressed to the agent but when to use the tool', () => {
-    expect(
-      tools.filter(({ description = '' }) => /Rejected with|^---$/mu.test(description)).map(({ name }) => name),
-    ).toEqual([]);
-    expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
-  });
-
-  it('leave each format to get_guide, which lists every guide', () => {
-    expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
-      properties: { guide: { enum: listingEveryFormat } },
-    });
-  });
-});
-
-describe('the descriptions of the paged tools', () => {
-  it('say in each paged tool that `cursor` is the next_cursor of the page before', () => {
-    expect(
-      ['list_runs', 'list_playbook_events', 'list_interactions'].filter(
-        (name) => !descriptionOf(name).includes('the next_cursor of the page before.'),
-      ),
-    ).toEqual([]);
-  });
-});
-
 function everyArgument(): readonly Argument[] {
   return tools.flatMap((tool) => argumentsOf(tool));
 }
 
-describe('the arguments of the tools of /mcp', () => {
-  it('each have a description under 300 characters', () => {
-    expect(everyArgument().length).toBeGreaterThan(60);
-    expect(
-      everyArgument()
-        .filter((argument) => isUndescribedOrLong(argument))
-        .map(({ where }) => where),
-    ).toEqual([]);
-  });
-
-  it('each give their constraints as keywords, an argument that takes any JSON value every JSON type', () => {
-    expect(
-      everyArgument()
-        .filter((argument) => hasNoConstraint(argument))
-        .map(({ where }) => where),
-    ).toEqual([]);
-  });
-});
-
 function titledAgainAsItsAnnotation({ title, annotations }: ListedTool): boolean {
   return title !== undefined && annotations?.['title'] === title;
 }
-
-describe('the titles of the tools of /mcp', () => {
-  it('are given again as the title annotation, which the directory listing shows as the name of each tool', () => {
-    expect(tools.filter((tool) => !titledAgainAsItsAnnotation(tool)).map(({ name }) => name)).toEqual([]);
-  });
-});
 
 type Hints = readonly [boolean, boolean, boolean, boolean];
 
@@ -221,32 +159,158 @@ function reachingOutside(listed: readonly ListedTool[]): readonly string[] {
   return listed.filter(({ annotations }) => annotations?.['openWorldHint'] === true).map(({ name }) => name);
 }
 
-describe('the open-world hint of the tools of /mcp', () => {
-  it('is set for list_models and run_definition, which reach model providers, for create_definition and update_definition, whose check of a request asks the tool servers what they offer, for the four tools over the tool servers and the one over the tools of a connection, which reach them, for activate_license, which reaches Auto, and for no other tool', () => {
-    expect(reachingOutside(tools)).toEqual([
-      'list_models',
-      'search',
-      'list_connection_tools',
-      'activate_license',
-      'create_definition',
-      'update_definition',
-      'run_definition',
-      'introspect',
-      'dry_run',
-      'query_connection',
-      'execute_connection',
-    ]);
+const InputSchema = Schema.Struct({
+  properties: Schema.optionalKey(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown))),
+  required: Schema.optionalKey(Schema.Array(Schema.String)),
+});
+
+const inputOf = Schema.decodeUnknownSync(InputSchema);
+
+const sentencesOfServedToolsWith = (text: string): number => text.split(/(?<=[.!?])\s+(?=[A-Z`])/u).length;
+
+const descriptionOfServedToolsWith = (name: string): string =>
+  tools.find((tool) => tool.name === name)?.description ?? '';
+
+const goalsArgumentOf = ({ inputSchema }: ListedTool) => inputOf(inputSchema).properties?.['goals'];
+
+const isOutsideItsBounds = ({ description = '' }: ListedTool): boolean =>
+  description.length >= 800 ||
+  sentencesOfServedToolsWith(description) < 3 ||
+  sentencesOfServedToolsWith(description) > 8;
+
+describe('served tools', () => {
+  beforeAll(async () => {
+    server = await servingReasoning([]);
+    tools = await onMcp(async (session) => listedTools(await session.listTools()));
+  });
+
+  afterAll(async () => {
+    await server.stop();
+  });
+
+  describe('the descriptions of the tools of /mcp', () => {
+    it('are forty-one, each under 800 characters, in three to eight sentences', () => {
+      expect(tools).toHaveLength(41);
+      expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
+      expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
+    });
+
+    it('carry no format, no catalogue of refusals and nothing addressed to the agent but when to use the tool', () => {
+      expect(
+        tools.filter(({ description = '' }) => /Rejected with|^---$/mu.test(description)).map(({ name }) => name),
+      ).toEqual([]);
+      expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
+    });
+
+    it('leave each format to get_guide, which lists every guide', () => {
+      expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
+        properties: { guide: { enum: listingEveryFormat } },
+      });
+    });
+  });
+
+  describe('the descriptions of the paged tools', () => {
+    it('say in each paged tool that `cursor` is the next_cursor of the page before', () => {
+      expect(
+        ['list_runs', 'list_playbook_events', 'list_interactions'].filter(
+          (name) => !descriptionOf(name).includes('the next_cursor of the page before.'),
+        ),
+      ).toEqual([]);
+    });
+  });
+
+  describe('the arguments of the tools of /mcp', () => {
+    it('each have a description under 300 characters', () => {
+      expect(everyArgument().length).toBeGreaterThan(60);
+      expect(
+        everyArgument()
+          .filter((argument) => isUndescribedOrLong(argument))
+          .map(({ where }) => where),
+      ).toEqual([]);
+    });
+
+    it('each give their constraints as keywords, an argument that takes any JSON value every JSON type', () => {
+      expect(
+        everyArgument()
+          .filter((argument) => hasNoConstraint(argument))
+          .map(({ where }) => where),
+      ).toEqual([]);
+    });
+  });
+
+  describe('the titles of the tools of /mcp', () => {
+    it('are given again as the title annotation, which the directory listing shows as the name of each tool', () => {
+      expect(tools.filter((tool) => !titledAgainAsItsAnnotation(tool)).map(({ name }) => name)).toEqual([]);
+    });
+  });
+
+  describe('the open-world hint of the tools of /mcp', () => {
+    it('is set for list_models and run_definition, which reach model providers, for create_definition and update_definition, whose check of a request asks the tool servers what they offer, for the four tools over the tool servers and the one over the tools of a connection, which reach them, for activate_license, which reaches Auto, and for no other tool', () => {
+      expect(reachingOutside(tools)).toEqual([
+        'list_models',
+        'search',
+        'list_connection_tools',
+        'activate_license',
+        'create_definition',
+        'update_definition',
+        'run_definition',
+        'introspect',
+        'dry_run',
+        'query_connection',
+        'execute_connection',
+      ]);
+    });
+  });
+
+  describe('the annotations of the tools of /mcp', () => {
+    it('say which tools only read, which cannot be undone, which may be repeated and which reach outside', () => {
+      expect(Object.fromEntries(tools.map((tool) => [tool.name, hintsOf(tool)]))).toEqual(served);
+    });
+
+    it('are those the table of the api README gives', () => {
+      expect(
+        Object.fromEntries([...apiReadme.matchAll(readmeRow)].map((row: readonly string[]) => rowOf(row))),
+      ).toEqual(served);
+    });
   });
 });
 
-describe('the annotations of the tools of /mcp', () => {
-  it('say which tools only read, which cannot be undone, which may be repeated and which reach outside', () => {
-    expect(Object.fromEntries(tools.map((tool) => [tool.name, hintsOf(tool)]))).toEqual(served);
+describe('served tools with goals', () => {
+  beforeAll(async () => {
+    server = await servingReasoningWithGoals([]);
+    tools = await withMcpSession('current revision', { url: `${server.origin}/mcp`, headers: {} }, async (session) =>
+      listedTools(await session.listTools()),
+    );
   });
 
-  it('are those the table of the api README gives', () => {
-    expect(Object.fromEntries([...apiReadme.matchAll(readmeRow)].map((row: readonly string[]) => rowOf(row)))).toEqual(
-      served,
-    );
+  afterAll(async () => {
+    await server.stop();
+  });
+
+  describe('the tools of /mcp on a server that keeps goals', () => {
+    it('stay forty-two, each under 800 characters, in three to eight sentences', () => {
+      expect(tools).toHaveLength(42);
+      expect(tools.filter((tool) => isOutsideItsBounds(tool)).map(({ name }) => name)).toEqual([]);
+    });
+
+    it('take the whole list of goals as an optional string of at most 16384 characters in create_playbook and update_playbook, and in no other tool', () => {
+      const takers = tools.filter((tool) => goalsArgumentOf(tool) !== undefined);
+
+      expect(takers.map(({ name }) => name)).toEqual(['create_playbook', 'update_playbook']);
+      expect(takers.map((tool) => goalsArgumentOf(tool))).toEqual([
+        expect.objectContaining({ type: 'string', maxLength: 16_384 }),
+        expect.objectContaining({ type: 'string', maxLength: 16_384 }),
+      ]);
+      expect(takers.map((tool) => String(goalsArgumentOf(tool)?.['description']).length < 300)).toEqual([true, true]);
+      expect(takers.map(({ inputSchema }) => inputOf(inputSchema).required?.includes('goals'))).not.toContain(true);
+    });
+
+    it('say in create_playbook, update_playbook and get_playbook that they carry goals', () => {
+      expect(
+        ['create_playbook', 'update_playbook', 'get_playbook'].map((name) =>
+          /goals/u.test(descriptionOfServedToolsWith(name)),
+        ),
+      ).toEqual([true, true, true]);
+    });
   });
 });

@@ -1,10 +1,22 @@
-import { Effect } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { streamSignalOf } from '@on.auto/ledger';
+import { messageIdOf } from '@on.auto/operations';
+import { type RecordedSpan, recordingTracer } from '@on.auto/operations/testing';
+import { Context, Deferred, Effect, Exit, Function, Tracer } from 'effect';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { systemClock } from '../loop/host-clock.ts';
 import { followedRecordOf } from '../reaction-testing/followed-records.ts';
-import { DeliveryFailed, boundTo, type RecordConsumer, type Delivery } from './consumers.ts';
+import { alpha, definitionRecorded, eventTrigger, published, recorded } from '../reaction-testing/playbook-writes.ts';
+import { reactingHost } from '../reaction-testing/reacting-host.ts';
+import type { Sweep } from '../sweeps/playbook-sweeps.ts';
+import { runAt, startOf, workflow } from '../testing/host-documents.ts';
+import { until } from '../testing/until.ts';
+import { followedThroughTheLatest } from '../waiting-testing/followed-host.ts';
+import { parentId, waitingParent } from '../waiting-testing/waiting-parent.ts';
+import { boundTo, type Consumer, type Delivery, DeliveryFailed, type RecordConsumer } from './consumers.ts';
 import { deliveredAll } from './delivery-loop.ts';
-import type { Progress } from './followed-playbooks.ts';
+import { followedPlaybooksOn, type Progress } from './followed-playbooks.ts';
+import { followerWakeUpOf } from './follower-wake-up.ts';
 
 const followed = followedRecordOf(null);
 
@@ -72,6 +84,80 @@ function counted(
     },
     delivered: () => delivered,
     skipped: () => skipped,
+  };
+}
+
+const waiting = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+const child = '0199a3c4-7d2e-7c1a-9b3f-0000000000c1';
+
+const childStream = `${alpha}runs/${child}`;
+
+function handedTheChildsEnding({ name, attributes, ending }: RecordedSpan): boolean {
+  return name === 'follow run_succeeded' && attributes['auto.on.stream'] === childStream && ending === 'succeeded';
+}
+
+const ofTheChild = {
+  by: 'playbook:alpha',
+  at: '2026-10-01T09:00:00.000Z',
+  runId: child,
+  definitionType: 'workflow',
+  definitionName: 'check',
+  definitionVersion: 1,
+  calledBy: { runId: parentId, reference: '/do/0/ask', run: 1 },
+};
+
+async function deliveredAgain(
+  database: Parameters<typeof followedPlaybooksOn>[0],
+  again: () => boolean,
+): Promise<void> {
+  let nudges = 0;
+  await until(async () => {
+    await followedThroughTheLatest(database);
+    if (again()) {
+      return true;
+    }
+    await Effect.runPromise(
+      followedPlaybooksOn(database).save(alpha, { cursor: null, delivered: null, attempts: 0, waiting: false }),
+    );
+    nudges += 1;
+    await published(database.store, { id: `nudge-${nudges}`, type: 'com.acme.c' });
+    await followedThroughTheLatest(database);
+    return again();
+  }, Boolean);
+}
+
+const alphaFollowerWakeUp = 'playbook/acme/alpha/';
+
+const handingOutAlpha: Sweep = {
+  registries: [],
+  playbooks: [{ playbookKey: alphaFollowerWakeUp, known: undefined }],
+  again: false,
+};
+
+function recordingIds(name: string, types: readonly string[], received: (id: string) => void): Consumer {
+  return {
+    name,
+    types,
+    skippedAfterSweeps: Number.POSITIVE_INFINITY,
+    batchOf: (followedFollowerRecords, after) =>
+      Effect.succeed({
+        deliveries:
+          after === undefined
+            ? [
+                {
+                  key: followedFollowerRecords.event.event.id,
+                  workflow: 'archive',
+                  deliver: Effect.sync(() => {
+                    received(followedFollowerRecords.event.event.id);
+                  }),
+                  skipped: () => Effect.void,
+                },
+              ]
+            : [],
+        through: followedFollowerRecords.event.event.id,
+        more: false,
+      }),
   };
 }
 
@@ -157,5 +243,201 @@ describe('the deliveries of one record while the content store does not answer',
 
     expect([held.attempts, held.waiting]).toEqual([0, true]);
     expect([starts.delivered(), starts.skipped()]).toEqual([['starts 0000'], []]);
+  });
+});
+
+describe('a record the follower delivers twice, as a pass that goes on from the first consumer does', () => {
+  it('is offered once to a run that listens for it, and its trigger asks again for the run it started under the same id', async () => {
+    const reacting = await reactingHost();
+    const { store } = reacting.database;
+    await definitionRecorded(store, { name: 'close', version: 1, triggers: [eventTrigger({ type: 'com.acme.a' })] });
+    const both =
+      'do:\n  - both: { listen: { to: { all: [{ with: { type: com.acme.a } }, { with: { type: com.acme.b } }] } } }';
+    await Effect.runPromise(reacting.host.start(runAt(waiting), startOf(workflow(both))));
+    await published(store, { id: 'e1', type: 'com.acme.a', data: 'first' });
+    await until(
+      () => Effect.runPromise(reacting.host.stateOf(runAt(waiting))),
+      (state) => state.inbox.received === 1,
+    );
+
+    await deliveredAgain(reacting.database, () => reacting.reactions.starts().length > 1);
+    const between = await Effect.runPromise(reacting.host.stateOf(runAt(waiting)));
+    await published(store, { id: 'e3', type: 'com.acme.b', data: 'second' });
+    const state = await until(
+      () => Effect.runPromise(reacting.host.stateOf(runAt(waiting))),
+      (found) => found.status === 'ended',
+    );
+    const runIds = reacting.reactions.starts().map(({ runId }) => runId);
+
+    expect([between.inbox.offeredIds.length, between.inbox.received]).toEqual([1, 1]);
+    expect(state.outcome).toEqual({ kind: 'completed', output: ['first', 'second'] });
+    expect(state.inbox).toMatchObject({ received: 2 });
+    expect(state.inbox.offeredIds).toHaveLength(2);
+    expect([runIds.length > 1, new Set(runIds).size]).toEqual([true, 1]);
+  });
+});
+
+describe('a run ending the follower delivers twice', () => {
+  it('answers the call that waits for it once', async () => {
+    const recording = recordingTracer();
+    const { database, settled, answeredCalls, hosted } = await waitingParent(child, {
+      context: Context.make(Tracer.Tracer, recording.tracer),
+    });
+    const handings = () => recording.spans().filter((span) => handedTheChildsEnding(span)).length;
+    await recorded(
+      database.store,
+      childStream,
+      { type: 'run_succeeded', data: { output: 'checked', record: {} } },
+      ofTheChild,
+    );
+    await settled(parentId);
+
+    await deliveredAgain(database, () => handings() > 1);
+
+    expect(await answeredCalls()).toEqual([{ state: 'answered', delivered: 1 }]);
+    expect(hosted.settlements().get(parentId)).toEqual({ status: 'succeeded', output: 'checked' });
+    expect(hosted.troubles()).toEqual([]);
+  });
+});
+
+describe('the wake-up of the follower of the playbooks', () => {
+  it('runs one wake at a time: two wakes together take its place once, find the playbooks once, sweep once and pass each playbook once', async () => {
+    const log: string[] = [];
+    const logged = (line: string) =>
+      Effect.sync(() => {
+        log.push(line);
+      });
+    const finding = Deferred.makeUnsafe<void>();
+    const work = followerWakeUpOf(
+      {
+        pass: (playbookKey, mode) => Effect.as(logged(`pass ${playbookKey} ${mode}`), 'caught_up'),
+        discovery: {
+          atStart: () => Effect.andThen(logged('start'), Deferred.await(finding)),
+          registriesAppended: () => Effect.void,
+          playbookSeen: () => Effect.void,
+        },
+        sweeps: {
+          started: () => logged('anchored'),
+          next: () => Effect.as(logged('next sweep'), handingOutAlpha),
+          passAgain: Function.constVoid,
+          registriesRead: Function.constVoid,
+        },
+        upkeep: {
+          sweep: () => logged('sweep'),
+          fireSchedules: () => Effect.void,
+          nextScheduleAt: () => Effect.succeed(null),
+        },
+        appended: streamSignalOf(),
+        holds: { heldAt: () => Effect.succeed({ due: [], nextAt: null }), failed: () => Effect.void },
+        rounds: { failed: () => Effect.succeed(60_000), succeeded: () => Effect.void },
+        clock: systemClock,
+        sweepEveryMs: 1000,
+        trouble: (what) => logged(what),
+      },
+      { raised: Function.constVoid, renewed: Function.constVoid },
+    );
+    onTestFinished(() => Effect.runPromise(work.stop()));
+    const woken = { now: Date.now(), sweep: true };
+
+    const together = Promise.all([Effect.runPromise(work.wakeUp(woken)), Effect.runPromise(work.wakeUp(woken))]);
+    await Effect.runPromise(Deferred.done(finding, Exit.void));
+    const answers = await together;
+
+    expect(log).toEqual(['anchored', 'start', 'next sweep', 'sweep', `pass ${alphaFollowerWakeUp} sweep`]);
+    expect(answers).toEqual([{ nextDueAt: null }, { nextDueAt: null }]);
+  });
+});
+
+describe('a record of a playbook the follower cannot read', () => {
+  it('is said and passed over, as an event, a fact of a run or a definition, while a workflow of the playbook reacts to its type', async () => {
+    const reacting = await reactingHost();
+    const { store } = reacting.database;
+    const trigger = eventTrigger(
+      { type: 'com.acme.sentinel' },
+      { type: 'run_started' },
+      { type: 'definition_created' },
+    );
+    await definitionRecorded(store, { name: 'watch', version: 1, triggers: [trigger] });
+    await recorded(store, `${alpha}events/bad`, { type: 'event_published', data: { event: 'not an event' } });
+    await recorded(store, `${alpha}runs/r-bad`, {
+      type: 'run_started',
+      data: { input: {}, calls_tools: 7 },
+    });
+    await recorded(store, `${alpha}definitions/workflow`, {
+      type: 'definition_created',
+      data: { content: 7 },
+    });
+
+    await published(store, { id: 's1', type: 'com.acme.sentinel' });
+    await until(
+      () => Promise.resolve(reacting.reactions.starts()),
+      (starts) => starts.some(({ cause }) => cause === messageIdOf(`${alpha}events/s1`, 1)),
+    );
+
+    expect(reacting.notes()).toMatchObject([
+      { kind: 'record_unreadable', org: 'acme', playbook: 'alpha', type: 'event_published' },
+      { kind: 'record_unreadable', org: 'acme', playbook: 'alpha', type: 'run_started' },
+      { kind: 'record_unreadable', org: 'acme', playbook: 'alpha', type: 'definition_created' },
+    ]);
+  });
+});
+
+describe('a record the consumers of waiting calls cannot read', () => {
+  it('is said once and passed over, a cancel request whose context names no run as an ending whose context names none', async () => {
+    const reacting = await reactingHost();
+    const { store } = reacting.database;
+    await definitionRecorded(store, {
+      name: 'watch',
+      version: 1,
+      triggers: [eventTrigger({ type: 'com.acme.sentinel' })],
+    });
+    const stream = `${alpha}runs/r-bad`;
+    await recorded(store, stream, { type: 'run_cancel_requested', data: { kind: 'requested', reason: 'Gone' } });
+    await recorded(store, stream, { type: 'run_succeeded', data: { output: null, record: {} } });
+
+    await published(store, { id: 's1', type: 'com.acme.sentinel' });
+    await until(
+      () => Promise.resolve(reacting.reactions.starts()),
+      (starts) => starts.some(({ cause }) => cause === messageIdOf(`${alpha}events/s1`, 1)),
+    );
+
+    expect(reacting.notes()).toEqual([
+      {
+        kind: 'record_unreadable',
+        org: 'acme',
+        playbook: 'alpha',
+        recordId: messageIdOf(stream, 1),
+        type: 'run_cancel_requested',
+      },
+      {
+        kind: 'record_unreadable',
+        org: 'acme',
+        playbook: 'alpha',
+        recordId: messageIdOf(stream, 2),
+        type: 'run_succeeded',
+      },
+    ]);
+  });
+});
+
+describe('a consumer the host is given', () => {
+  it('is offered the events of the types it names, though nothing in the playbook reacts, and one naming none is offered nothing', async () => {
+    const received: string[] = [];
+    const record = (id: string) => {
+      received.push(id);
+    };
+    const noting = recordingIds('noting', ['com.acme.noted'], record);
+    const wantingNothing = recordingIds('nothing', [], record);
+    const reacting = await reactingHost({ consumers: [noting, wantingNothing] });
+
+    await published(reacting.database.store, { id: 'e1', type: 'com.acme.noted' });
+    await published(reacting.database.store, { id: 'e2', type: 'com.acme.other' });
+    await published(reacting.database.store, { id: 'e3', type: 'com.acme.noted' });
+    const delivered = await until(
+      () => Promise.resolve<readonly string[]>([...received]),
+      (ids) => ids.length >= 2,
+    );
+
+    expect(delivered).toEqual(['e1', 'e3']);
   });
 });

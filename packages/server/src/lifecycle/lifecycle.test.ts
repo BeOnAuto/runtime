@@ -1,13 +1,19 @@
 import type { RegisterRoutes } from '@on.auto/api';
+import { shippedFileName, type ShippedFiles } from '@on.auto/shipped-files';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Effect, Layer } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { servedBy, type Served, type ServerOptions } from '../server-options/server-options.ts';
-import { optionsComposing, optionsServing, defaultServerOptions } from '../testing/entries/serving-options.ts';
+import { type Served, servedBy, type ServerOptions } from '../server-options/server-options.ts';
+import { shippedRoots } from '../server-options/shipped-roots.ts';
+import { defaultServerOptions, optionsComposing, optionsServing } from '../testing/entries/serving-options.ts';
 import { heldRequests } from '../testing/entries/test-routes.ts';
 import { isAcceptingConnections } from '../testing/processes/accepting-connections.ts';
+import { logsIn, spansIn } from '../testing/telemetry/otlp-exports.ts';
+import { type OtlpReceiver, receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
 import { longerThanTheTestMs } from '../testing/waiting/until.ts';
 import { startServer } from './lifecycle.ts';
+import { type SignalSource, stopInsistedBy, stopRequestedBy, type StopSignal } from './stop-request.ts';
 
 const loopback = { HOST: '127.0.0.1', PORT: '0' };
 
@@ -44,6 +50,45 @@ function recordingWork(record: (event: string) => void): Served {
     stopWork: () => {
       record('work stopped');
       return Promise.resolve();
+    },
+  };
+}
+
+const shippedOnDisk = shippedFilesOnDisk(shippedRoots);
+
+const withoutTypefaces: ShippedFiles = {
+  ...shippedOnDisk,
+  bytes: (file) =>
+    file.path.endsWith('.woff2')
+      ? Promise.reject(new Error(`No file is shipped at ${shippedFileName(file)}`))
+      : shippedOnDisk.bytes(file),
+};
+
+async function collector(): Promise<OtlpReceiver> {
+  const receiver = await receivingOtlp();
+  onTestFinished(receiver.close);
+  return receiver;
+}
+
+function withTelemetryTo(receiver: OtlpReceiver): Readonly<Record<string, string>> {
+  return {
+    HOST: '127.0.0.1',
+    PORT: '0',
+    OTEL_EXPORTER_OTLP_ENDPOINT: receiver.endpoint,
+    OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
+  };
+}
+
+function eventSignals(): { readonly signals: SignalSource; readonly send: (signal: StopSignal) => void } {
+  const target = new EventTarget();
+  return {
+    signals: {
+      on: (name, listener) => {
+        target.addEventListener(name, listener);
+      },
+    },
+    send: (signal) => {
+      target.dispatchEvent(new Event(signal));
     },
   };
 }
@@ -246,5 +291,73 @@ describe('stopping a started server with connections still open', () => {
     await server.stop();
 
     expect(await inFlight).toBe('cut off');
+  });
+});
+
+describe('a server whose pages cannot be styled', () => {
+  it('does not start when a typeface its pages carry cannot be read, and names the file', async () => {
+    const options = { ...defaultServerOptions, shippedFiles: withoutTypefaces };
+
+    await expect(startServer({ HOST: '127.0.0.1', PORT: '0' }, options)).rejects.toThrow(
+      /^No file is shipped at @on\.auto\/api\/.*\.woff2$/u,
+    );
+  });
+});
+
+describe('a server with telemetry', () => {
+  it('sends what it logs to the collector as well as to stderr, and flushes it as it stops', async () => {
+    const receiver = await collector();
+    const server = await startServer(withTelemetryTo(receiver), defaultServerOptions);
+    await server.stop();
+
+    const [warning, telemetryOn] = logsIn(receiver.received());
+
+    expect(warning).toMatchObject({ severityText: 'Warn' });
+    expect(warning?.body).toMatch(/^Local mode is on/u);
+    expect(telemetryOn).toMatchObject({ severityText: 'Info', body: 'Telemetry is on, exported over OTLP' });
+  });
+
+  it('stops its telemetry when it cannot start, so a server started after it exports its own', async () => {
+    const failed = await collector();
+    const failing = optionsComposing(Layer.effectDiscard(Effect.die(new Error('no ledger'))), () => servedBy([]));
+    await expect(startServer(withTelemetryTo(failed), failing)).rejects.toThrow('could not start');
+    const receiver = await collector();
+    const server = await startServer(withTelemetryTo(receiver), defaultServerOptions);
+    await fetch(`http://127.0.0.1:${server.port}/nowhere`);
+    await server.stop();
+
+    expect(spansIn(receiver.received())).toHaveLength(1);
+  });
+});
+
+describe('stopRequestedBy', () => {
+  it.each<StopSignal>(['SIGTERM', 'SIGINT'])('is requested by %s', async (signal) => {
+    const signals = new EventTarget();
+
+    const stopRequested = stopRequestedBy({
+      on: (name, listener) => {
+        signals.addEventListener(name, listener);
+      },
+    });
+    signals.dispatchEvent(new Event(signal));
+
+    await expect(stopRequested).resolves.toBeUndefined();
+  });
+});
+
+describe('stopInsistedBy', () => {
+  it('is insisted on by a second stop signal of either kind, not by the first', async () => {
+    const { signals, send } = eventSignals();
+    const insisted = stopInsistedBy(signals);
+    const settled: string[] = [];
+    void insisted.then(() => settled.push('insisted'));
+
+    send('SIGTERM');
+    await Promise.resolve();
+    const afterOne = [...settled];
+    send('SIGINT');
+    await insisted;
+
+    expect({ afterOne, afterTwo: settled }).toEqual({ afterOne: [], afterTwo: ['insisted'] });
   });
 });

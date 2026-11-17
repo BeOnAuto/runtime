@@ -4,20 +4,24 @@ import { instructionsActingAs, type McpEndpoint } from '@on.auto/api';
 import {
   danglingReferencesIn,
   guideToolName,
+  type ListedTool,
   listedTools,
+  type McpSession,
   problemIn,
   takingPlaybook,
+  toolNamesIn,
+  type ToolResult,
   withMcpSession,
-  type ListedTool,
-  type McpSession,
 } from '@on.auto/api/testing';
 import { localDeveloper } from '@on.auto/identity/testing';
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { toolsInsideAPlaybook as definitionTools } from '../testing/servers/served-tool-names.ts';
+import { servingWorkflows, workflowSource } from '../testing/servers/workflow-server.ts';
+import { until } from '../testing/waiting/until.ts';
 
 const playbookTools = [
   'create_playbook',
@@ -61,10 +65,6 @@ const summary = [
 
 let server: ReasoningServer;
 
-afterEach(async () => {
-  await server.stop();
-});
-
 function onMcp<T>(path: string, use: (session: McpSession) => Promise<T>): Promise<T> {
   return withMcpSession('current revision', { url: `${server.origin}${path}`, headers: {} }, use);
 }
@@ -83,43 +83,6 @@ const playbookArgumentIn = Schema.decodeUnknownSync(
     properties: Schema.Struct({ playbook: Schema.Struct({ type: Schema.String, pattern: Schema.String }) }),
   }),
 );
-
-describe('the playbook argument of the definition tools on /mcp', () => {
-  it('is required in every one of them that only a playbook answers, as a string with the playbook id pattern', async () => {
-    server = await servingReasoning([]);
-
-    const definition = (await listingOn('/mcp')).filter(({ name }) => insideAPlaybookAlone.includes(name));
-    const playbookArguments = definition.map(({ inputSchema }) => {
-      const { required, properties } = playbookArgumentIn(inputSchema);
-      const { type, pattern } = properties.playbook;
-      return { required: required.includes('playbook'), type, pattern };
-    });
-
-    expect(playbookArguments).toEqual(
-      insideAPlaybookAlone.map(() => ({ required: true, type: 'string', pattern: '^[a-z][a-z0-9-]{2,47}$' })),
-    );
-  });
-});
-
-describe('the tools of /mcp', () => {
-  it('are the playbook tools, list_models, search and the definition tools, the definition tools taking a playbook, with self-contained input schemas', async () => {
-    server = await servingReasoning([]);
-    await server.call('POST', '/v1/orgs/local/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-
-    const [own, org, playbook] = [
-      await listingOn('/mcp'),
-      await listingOn('/orgs/local/mcp'),
-      await listingOn('/orgs/local/playbooks/alpha/mcp'),
-    ];
-    const schemas = own.map(({ inputSchema }) => inputSchema);
-    const onlyInPlaybook = operations(playbook).filter(({ name }) => insideAPlaybookAlone.includes(name));
-
-    expect(own.map(({ name }) => name)).toEqual([...orgTools, ...insideAPlaybookAlone, guideToolName]);
-    expect(operations(own)).toEqual([...operations(org), ...onlyInPlaybook.map((tool) => takingPlaybook(tool))]);
-    expect(schemas.map((schema) => schema['type'])).toEqual(schemas.map(() => 'object'));
-    expect(schemas.flatMap((schema) => danglingReferencesIn(schema))).toEqual([]);
-  });
-});
 
 const definitionTypes = [
   { type: 'reasoning', noun: 'reasoning function', guide: 'reasoning-function' },
@@ -176,115 +139,251 @@ const connections: readonly Connection[] = [
   },
 ];
 
-describe('the instructions an agent receives when it connects', () => {
-  it.each(connections)(
-    'on $path say whom they act as in which org, what a playbook, a definition and a run are, and name only the tools the endpoint serves',
-    async ({ path, org, endpoint, served, sentence, unnamed }) => {
-      server = await servingReasoning([]);
-      await onMcp('/mcp', (session) => session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }));
+const greeting = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Greet {{ input.name }}.'].join('\n');
 
-      const instructions = await onMcp(path, (session) => Promise.resolve(session.instructions));
+const welcome = workflowSource(
+  'welcome',
+  `do:
+  - greet:
+      call: run_definition
+      with: { type: reasoning, name: greeting, input: { name: '\${ $data.name }' } }
+      output:
+        as: '\${ ({ greeting: $data }) }'
+  - await:
+      listen:
+        to:
+          one:
+            with: { type: com.acme.customer.replied }
+      output:
+        as: '\${ ({ ...$input, reply: $data[0] }) }'
+`,
+);
 
-      expect(instructions).toBe(instructionsActingAs({ caller: localDeveloper, org }, endpoint, served));
-      expect(instructions).toContain(sentence);
-      expect(unnamed.filter((name) => instructions?.includes(name) === true)).toEqual([]);
-    },
+function onMcpEndpointWorkflows<T>(use: (session: McpSession) => Promise<T>): Promise<T> {
+  return withMcpSession('current revision', { url: `${server.origin}/mcp`, headers: {} }, use);
+}
+
+function settled(session: McpSession, runId: string): Promise<ToolResult> {
+  return until(
+    () => session.callTool('get_run', { playbook: 'sales', run_id: runId }),
+    (reading) => reading.structuredContent?.['status'] !== 'started',
   );
+}
 
-  it('leave each definition type to the tools that take one, which name it by the kind the terminology page gives it, and create_definition by the workflow, the job, and the step each function type takes', async () => {
-    server = await servingReasoning([]);
+async function welcomedAfterReply(session: McpSession): Promise<ToolResult> {
+  await session.callTool('create_playbook', { playbook: 'sales', name: 'Sales' });
+  await session.callTool('create_definition', {
+    playbook: 'sales',
+    type: 'reasoning',
+    name: 'greeting',
+    source: greeting,
+    diagram: 'none',
+  });
+  await session.callTool('create_definition', {
+    playbook: 'sales',
+    type: 'workflow',
+    name: 'welcome',
+    source: welcome,
+  });
+  const started = await session.callTool('run_definition', {
+    playbook: 'sales',
+    type: 'workflow',
+    name: 'welcome',
+    input: { name: 'Ada' },
+  });
+  const runId = String(started.structuredContent?.['run_id']);
+  await session.callTool('send_run_event', {
+    playbook: 'sales',
+    run_id: runId,
+    event: { type: 'com.acme.customer.replied', data: 'Thank you!' },
+  });
+  return settled(session, runId);
+}
 
-    const tools = await onMcp('/mcp', async (session) => listedTools(await session.listTools()));
-    const createDefinition = tools.find(({ name }) => name === 'create_definition');
+describe('mcp endpoint', () => {
+  afterEach(async () => {
+    await server.stop();
+  });
 
-    expect(
-      definitionTypes.filter(({ noun }: Readonly<{ noun: string }>) => !resourcesOnTheTerminologyPage.has(noun)),
-    ).toEqual([]);
-    expect(createDefinition?.inputSchema).toMatchObject({
-      properties: { type: { enum: definitionTypes.map(({ type }: Readonly<{ type: string }>) => type) } },
+  describe('the playbook argument of the definition tools on /mcp', () => {
+    it('is required in every one of them that only a playbook answers, as a string with the playbook id pattern', async () => {
+      server = await servingReasoning([]);
+
+      const definition = (await listingOn('/mcp')).filter(({ name }) => insideAPlaybookAlone.includes(name));
+      const playbookArguments = definition.map(({ inputSchema }) => {
+        const { required, properties } = playbookArgumentIn(inputSchema);
+        const { type, pattern } = properties.playbook;
+        return { required: required.includes('playbook'), type, pattern };
+      });
+
+      expect(playbookArguments).toEqual(
+        insideAPlaybookAlone.map(() => ({ required: true, type: 'string', pattern: '^[a-z][a-z0-9-]{2,47}$' })),
+      );
     });
-    expect(createDefinition?.inputSchema).toMatchObject({
-      properties: {
-        type: {
-          description:
-            'workflow is the job; each working step, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images, audio or video.',
-        },
+  });
+
+  describe('the tools of /mcp', () => {
+    it('are the playbook tools, list_models, search and the definition tools, the definition tools taking a playbook, with self-contained input schemas', async () => {
+      server = await servingReasoning([]);
+      await server.call('POST', '/v1/orgs/local/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+
+      const [own, org, playbook] = [
+        await listingOn('/mcp'),
+        await listingOn('/orgs/local/mcp'),
+        await listingOn('/orgs/local/playbooks/alpha/mcp'),
+      ];
+      const schemas = own.map(({ inputSchema }) => inputSchema);
+      const onlyInPlaybook = operations(playbook).filter(({ name }) => insideAPlaybookAlone.includes(name));
+
+      expect(own.map(({ name }) => name)).toEqual([...orgTools, ...insideAPlaybookAlone, guideToolName]);
+      expect(operations(own)).toEqual([...operations(org), ...onlyInPlaybook.map((tool) => takingPlaybook(tool))]);
+      expect(schemas.map((schema) => schema['type'])).toEqual(schemas.map(() => 'object'));
+      expect(schemas.flatMap((schema) => danglingReferencesIn(schema))).toEqual([]);
+    });
+  });
+
+  describe('the instructions an agent receives when it connects', () => {
+    it.each(connections)(
+      'on $path say whom they act as in which org, what a playbook, a definition and a run are, and name only the tools the endpoint serves',
+      async ({ path, org, endpoint, served, sentence, unnamed }) => {
+        server = await servingReasoning([]);
+        await onMcp('/mcp', (session) => session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }));
+
+        const instructions = await onMcp(path, (session) => Promise.resolve(session.instructions));
+
+        expect(instructions).toBe(instructionsActingAs({ caller: localDeveloper, org }, endpoint, served));
+        expect(instructions).toContain(sentence);
+        expect(unnamed.filter((name) => instructions?.includes(name) === true)).toEqual([]);
       },
+    );
+
+    it('leave each definition type to the tools that take one, which name it by the kind the terminology page gives it, and create_definition by the workflow, the job, and the step each function type takes', async () => {
+      server = await servingReasoning([]);
+
+      const tools = await onMcp('/mcp', async (session) => listedTools(await session.listTools()));
+      const createDefinition = tools.find(({ name }) => name === 'create_definition');
+
+      expect(
+        definitionTypes.filter(({ noun }: Readonly<{ noun: string }>) => !resourcesOnTheTerminologyPage.has(noun)),
+      ).toEqual([]);
+      expect(createDefinition?.inputSchema).toMatchObject({
+        properties: { type: { enum: definitionTypes.map(({ type }: Readonly<{ type: string }>) => type) } },
+      });
+      expect(createDefinition?.inputSchema).toMatchObject({
+        properties: {
+          type: {
+            description:
+              'workflow is the job; each working step, by its job: reasoning interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images, audio or video.',
+          },
+        },
+      });
+      expect(tools.find(({ name }) => name === 'update_definition')?.inputSchema).toMatchObject({
+        properties: { type: { description: "The definition's type" } },
+      });
     });
-    expect(tools.find(({ name }) => name === 'update_definition')?.inputSchema).toMatchObject({
-      properties: { type: { description: "The definition's type" } },
+  });
+
+  describe('one connection to /mcp', () => {
+    it('creates a playbook, then creates, executes and reads back a reasoning function definition in it', async () => {
+      server = await servingReasoning([answers(textResult('Profits rose.'))]);
+
+      const outcome = await onMcp('/mcp', async (session) => {
+        const playbook = await session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' });
+        const definition = await session.callTool('create_definition', {
+          playbook: 'alpha',
+          type: 'reasoning',
+          name: 'summary',
+          source: summary,
+          diagram: 'none',
+        });
+        const ran = await session.callTool('run_definition', {
+          playbook: 'alpha',
+          type: 'reasoning',
+          name: 'summary',
+          input: { text: 'the quarter' },
+        });
+        const run = await session.callTool('get_run', {
+          playbook: 'alpha',
+          run_id: String(ran.structuredContent?.['run_id']),
+        });
+        return { playbook, definition, ran, run };
+      });
+
+      expect(outcome.playbook.structuredContent).toMatchObject({ id: 'alpha', status: 'active' });
+      expect(outcome.definition.structuredContent).toMatchObject({ type: 'reasoning', name: 'summary', version: 1 });
+      expect(outcome.ran.structuredContent).toMatchObject({ status: 'succeeded', output: 'Profits rose.' });
+      expect(outcome.run.structuredContent).toMatchObject({
+        run_id: outcome.ran.structuredContent?.['run_id'],
+        status: 'succeeded',
+        output: 'Profits rose.',
+        record: { prompt: { instructions: 'Be brief.', message: 'Summarize: the quarter' } },
+      });
+      expect(server.modelCalls()).toBe(1);
+    });
+  });
+
+  describe('a definition tool on /mcp', () => {
+    it('answers a call without a playbook, and with an unknown playbook, as isError', async () => {
+      server = await servingReasoning([]);
+
+      const outcome = await onMcp('/mcp', async (session) => ({
+        without: await session.callTool('list_definitions', { type: 'reasoning' }),
+        unknown: await session.callTool('list_definitions', { playbook: 'nowhere', type: 'reasoning' }),
+      }));
+
+      expect(problemIn(outcome.without)).toMatchObject({
+        reason: 'invalid_input',
+        errors: [{ detail: 'Missing key', pointer: '/playbook' }],
+      });
+      expect(problemIn(outcome.unknown)).toMatchObject({
+        reason: 'not_found',
+        detail: 'There is no playbook nowhere in this org',
+      });
+    });
+  });
+
+  describe('/mcp in local mode', () => {
+    it('acts in the org local, whose playbooks the HTTP API lists', async () => {
+      server = await servingReasoning([]);
+
+      await onMcp('/mcp', (session) => session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }));
+      const listed = await server.call('GET', '/v1/orgs/local/playbooks');
+
+      expect(listed.body).toMatchObject({
+        playbooks: [{ id: 'alpha', created_by: { id: 'local', name: localDeveloper.name } }],
+      });
     });
   });
 });
 
-describe('one connection to /mcp', () => {
-  it('creates a playbook, then creates, executes and reads back a reasoning function definition in it', async () => {
-    server = await servingReasoning([answers(textResult('Profits rose.'))]);
-
-    const outcome = await onMcp('/mcp', async (session) => {
-      const playbook = await session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' });
-      const definition = await session.callTool('create_definition', {
-        playbook: 'alpha',
-        type: 'reasoning',
-        name: 'summary',
-        source: summary,
-        diagram: 'none',
-      });
-      const ran = await session.callTool('run_definition', {
-        playbook: 'alpha',
-        type: 'reasoning',
-        name: 'summary',
-        input: { text: 'the quarter' },
-      });
-      const run = await session.callTool('get_run', {
-        playbook: 'alpha',
-        run_id: String(ran.structuredContent?.['run_id']),
-      });
-      return { playbook, definition, ran, run };
-    });
-
-    expect(outcome.playbook.structuredContent).toMatchObject({ id: 'alpha', status: 'active' });
-    expect(outcome.definition.structuredContent).toMatchObject({ type: 'reasoning', name: 'summary', version: 1 });
-    expect(outcome.ran.structuredContent).toMatchObject({ status: 'succeeded', output: 'Profits rose.' });
-    expect(outcome.run.structuredContent).toMatchObject({
-      run_id: outcome.ran.structuredContent?.['run_id'],
-      status: 'succeeded',
-      output: 'Profits rose.',
-      record: { prompt: { instructions: 'Be brief.', message: 'Summarize: the quarter' } },
-    });
-    expect(server.modelCalls()).toBe(1);
+describe('mcp endpoint workflows', () => {
+  afterEach(async () => {
+    await server.stop();
   });
-});
 
-describe('a definition tool on /mcp', () => {
-  it('answers a call without a playbook, and with an unknown playbook, as isError', async () => {
-    server = await servingReasoning([]);
+  describe('/mcp with workflows', () => {
+    it('lists forty-one tools, and the description of run_definition says how to see whether a workflow run ended', async () => {
+      server = await servingWorkflows([]);
 
-    const outcome = await onMcp('/mcp', async (session) => ({
-      without: await session.callTool('list_definitions', { type: 'reasoning' }),
-      unknown: await session.callTool('list_definitions', { playbook: 'nowhere', type: 'reasoning' }),
-    }));
+      const listing = await onMcpEndpointWorkflows((session) => session.listTools());
+      const tools = toolNamesIn(listing);
 
-    expect(problemIn(outcome.without)).toMatchObject({
-      reason: 'invalid_input',
-      errors: [{ detail: 'Missing key', pointer: '/playbook' }],
+      expect(tools).toHaveLength(41);
+      expect(tools.slice(-3)).toEqual(['get_asset', 'send_run_event', 'get_guide']);
+      expect(listedTools(listing).find(({ name }) => name === 'run_definition')?.description).toContain(
+        'one that finishes later answers started with a run_id unless it ends before its first wait; get_run shows how it ended.',
+      );
     });
-    expect(problemIn(outcome.unknown)).toMatchObject({
-      reason: 'not_found',
-      detail: 'There is no playbook nowhere in this org',
-    });
-  });
-});
 
-describe('/mcp in local mode', () => {
-  it('acts in the org local, whose playbooks the HTTP API lists', async () => {
-    server = await servingReasoning([]);
+    it('runs a workflow in a playbook it created and sends it the event it waits for, on one connection', async () => {
+      server = await servingWorkflows([answers(textResult('Hello, Ada.'))]);
 
-    await onMcp('/mcp', (session) => session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }));
-    const listed = await server.call('GET', '/v1/orgs/local/playbooks');
+      const run = await onMcpEndpointWorkflows(welcomedAfterReply);
 
-    expect(listed.body).toMatchObject({
-      playbooks: [{ id: 'alpha', created_by: { id: 'local', name: localDeveloper.name } }],
+      expect(run.structuredContent).toMatchObject({
+        status: 'succeeded',
+        output: { greeting: 'Hello, Ada.', reply: 'Thank you!' },
+      });
     });
   });
 });
