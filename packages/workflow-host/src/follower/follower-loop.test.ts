@@ -7,6 +7,7 @@ import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import type { Sweep } from '../sweeps/playbook-sweeps.ts';
 import { until } from '../testing/until.ts';
 import { startFollower } from './follower-loop.ts';
+import type { Upkeep } from './follower-wake-up.ts';
 import type { PassEnd } from './record-steps.ts';
 
 const anHour = 3_600_000;
@@ -97,6 +98,15 @@ function inTurn<A>(items: readonly A[], after: A): () => A {
   };
 }
 
+function upkeepOf(following: Following, logged: (line: string) => Effect.Effect<void>): Upkeep {
+  return {
+    sweep: () => logged('sweep'),
+    fireSchedules: failingFirst(following.firesFailing ?? 0, Effect.void),
+    nextScheduleAt: failingFirst(following.schedulesFailing ?? 0, Effect.succeed(null)),
+    nextDeferredAt: () => Effect.succeed(null),
+  };
+}
+
 const nothingHeldAndRoundsAMinuteApart = {
   holds: { heldAt: () => Effect.succeed({ due: [], nextAt: null }), failed: () => Effect.void },
   rounds: { failed: () => Effect.succeed(firstRoundRetryMs), succeeded: () => Effect.void },
@@ -137,11 +147,7 @@ function followerWith(following: Following = {}): Watched {
       },
       registriesRead: Function.constVoid,
     },
-    upkeep: {
-      sweep: () => logged('sweep'),
-      fireSchedules: failingFirst(following.firesFailing ?? 0, Effect.void),
-      nextScheduleAt: failingFirst(following.schedulesFailing ?? 0, Effect.succeed(null)),
-    },
+    upkeep: upkeepOf(following, logged),
     appended,
     ...nothingHeldAndRoundsAMinuteApart,
     clock: pace,

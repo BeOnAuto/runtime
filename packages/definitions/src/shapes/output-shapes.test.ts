@@ -4,14 +4,18 @@ import { describe, expect, it } from 'vitest';
 
 import {
   declaredShape,
+  type OutputShapeName,
   outputShapeNamed,
   outputShapeNames,
   outputShapeOf,
+  publishedOutputOf,
   shapeMismatchOf,
-  type OutputShapeName,
 } from '../index.ts';
 import { shapeNamed } from '../testing/index.ts';
 import { outputShapeOfSchema } from './output-shapes.ts';
+import { chronologically, isTime } from './period-forms.ts';
+import { shapeNameIn } from './published-output.ts';
+import { shapedViewsIn, shapedViewsSchemaOf } from './shaped-views.ts';
 
 const someWords: unknown = expect.any(String);
 
@@ -66,6 +70,10 @@ function objectSchemasIn(schema: Schema.Json): readonly Schema.JsonObject[] {
   const own = isRecord(schema) && schema['type'] === 'object' ? [schema] : [];
   return [...own, ...children.flatMap((child) => objectSchemasIn(child))];
 }
+
+const calls = { calls: [{ type: 'reasoning', name: 'summarize' }] };
+
+const { check } = shapeNamed('text');
 
 describe('the output shapes', () => {
   it('are series, categories, table, text and asset, each answered by its name and by nothing else', () => {
@@ -187,5 +195,112 @@ describe('the shape an output declares', () => {
         detail: someWords,
       }),
     );
+  });
+});
+
+describe('a time', () => {
+  it('is any form an at of a series takes: a period of any grain, or an RFC 3339 date and time', () => {
+    expect(
+      ['2026-10-15', '2026-W42', '2026-10', '2026-Q4', '2026', '2026-10-15T09:30:00+01:00'].every((at) => isTime(at)),
+    ).toBe(true);
+    expect(['soon', '2026-13', '2026-10-15T09:30'].some((at) => isTime(at))).toBe(false);
+  });
+});
+
+describe('the order of the times of a series', () => {
+  it('follows the grain of the series, and reads a grain it does not know as dates and times', () => {
+    expect(['2026-W42', '2026-W03'].toSorted(chronologically('week'))).toEqual(['2026-W03', '2026-W42']);
+    expect(chronologically('decade')('2026-10-15T10:00:00+01:00', '2026-10-15T09:30:00Z')).toBeLessThan(0);
+  });
+});
+
+describe('the output a definition publishes', () => {
+  it('is the schema of the shape it names, with the shape in its details beside the details of its own', () => {
+    const series = shapeNamed('series');
+
+    expect([
+      publishedOutputOf({ shape: series }),
+      publishedOutputOf({ schema: { type: 'object' }, shape: series, details: calls }),
+    ]).toEqual([
+      { outputSchema: series.schema, details: { shape: 'series' } },
+      { outputSchema: series.schema, details: { ...calls, shape: 'series' } },
+    ]);
+  });
+
+  it('is its own schema without a shape, and leaves out the schema and the details it does not have', () => {
+    expect([
+      publishedOutputOf({ schema: { type: 'string' } }),
+      publishedOutputOf({ details: calls }),
+      publishedOutputOf({ schema: undefined, shape: undefined, details: {} }),
+    ]).toEqual([{ outputSchema: { type: 'string' } }, { details: calls }, {}]);
+  });
+});
+
+describe('the shape named in the details of a definition', () => {
+  it('is the shape its details name, and none for details that name no shape, another name or none', () => {
+    expect([
+      shapeNameIn({ shape: 'series', calls: [] }),
+      shapeNameIn({ shape: 'chart' }),
+      shapeNameIn({ shape: 3 }),
+      shapeNameIn({}),
+      shapeNameIn(),
+    ]).toEqual(['series', undefined, undefined, undefined, undefined]);
+  });
+});
+
+describe('the schema of the views of a page', () => {
+  it('names each view and the shape it takes, and is read back as those shapes', () => {
+    const schema = shapedViewsSchemaOf({ by_day: 'series', by_channel: 'categories' });
+
+    expect(schema).toEqual({
+      $id: 'https://on.auto/shapes/views',
+      type: 'object',
+      properties: {
+        by_day: { $ref: 'https://on.auto/shapes/series' },
+        by_channel: { $ref: 'https://on.auto/shapes/categories' },
+      },
+      additionalProperties: false,
+    });
+    expect(shapedViewsIn(schema)).toEqual(
+      new Map([
+        ['by_day', outputShapeOf('series')],
+        ['by_channel', outputShapeOf('categories')],
+      ]),
+    );
+  });
+
+  it('is told apart from any other schema, and passes over a view that names no shape', () => {
+    const named = shapedViewsIn({
+      $id: 'https://on.auto/shapes/views',
+      properties: { by_day: { $ref: 'https://on.auto/shapes/series' }, by_week: { type: 'object' }, by_hour: 'series' },
+    });
+
+    expect([shapedViewsIn({ type: 'object' }), shapedViewsIn(null)]).toEqual([undefined, undefined]);
+    expect(named).toEqual(new Map([['by_day', outputShapeOf('series')]]));
+  });
+});
+
+describe('a text', () => {
+  it('is Markdown of at most 65,536 bytes as UTF-8', () => {
+    expect([check({ text: '' }), check({ text: 'x'.repeat(65_536) }), check({ text: 'é'.repeat(32_768) })]).toEqual([
+      [],
+      [],
+      [],
+    ]);
+    expect(check({ text: 'é'.repeat(32_769) })).toEqual([
+      { pointer: '/text', detail: 'Expected at most 65,536 bytes as UTF-8' },
+    ]);
+    expect(check({ text: 'x'.repeat(65_537) })).toEqual([
+      { pointer: '/text', detail: 'Expected a string with at most 65536 code points' },
+      { pointer: '/text', detail: 'Expected at most 65,536 bytes as UTF-8' },
+    ]);
+  });
+
+  it('is its one field, which it needs', () => {
+    expect([check({}), check({ text: 1 }), check({ text: 'a', title: 'b' })]).toEqual([
+      [{ pointer: '/text', detail: 'Missing key' }],
+      [{ pointer: '/text', detail: 'Expected string' }],
+      [{ pointer: '/title', detail: 'Expected no excess property' }],
+    ]);
   });
 });

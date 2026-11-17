@@ -30,6 +30,7 @@ function unstarted(start: ReactionStart, failure: FailureDetail): Refusal {
 export interface Starting {
   readonly start: (playbookKey: string, start: ReactionStart) => Effect.Effect<void, DeliveryFailed>;
   readonly startDeferred: () => Effect.Effect<number>;
+  readonly nextDeferredAt: () => Effect.Effect<number | null>;
 }
 
 interface StartingParts {
@@ -60,6 +61,8 @@ const DeferredRow = Schema.Struct({
 type Deferred = typeof DeferredRow.Type;
 
 const CountRow = Schema.Struct({ deferred: WholeNumber });
+
+const NextDueRow = Schema.Struct({ due: Schema.NullOr(WholeNumber) });
 
 function minuteOf(at: number): number {
   return Math.floor(at / aMinute) * aMinute;
@@ -228,5 +231,9 @@ export function startingOn(
         yield* Effect.forEach(due, (deferred) => startedWhenDue(parts, deferred, minute), { discard: true });
         return due.length;
       }),
+    nextDeferredAt: () =>
+      Effect.orDie(
+        rowsOf(NextDueRow, database.read(statement`SELECT MIN(due) AS due FROM workflow_reaction_backlog`)),
+      ).pipe(Effect.map((rows) => rows.reduce<number | null>((_, { due }) => due, null))),
   };
 }

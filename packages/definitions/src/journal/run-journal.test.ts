@@ -1,18 +1,23 @@
-import { Effect, Schema } from 'effect';
+import { Caller, PlaybookContext, PlaybookWriter } from '@on.auto/operations';
+import { Effect, Exit, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { RunCommand } from '../runs/run-commands.ts';
+import { modelCallAnswered, modelCallSent, modelCallTimedOut } from '../journal-testing/model-calls.ts';
+import { idAt, journalled, linksIn } from '../journal-testing/run-links.ts';
+import type { ModelCallFact, RunCommand } from '../runs/run-commands.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
 import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
-import { startOfCall, toolUser } from '../testing/capabilities/tool-user.ts';
+import { answerOfCall, startOfCall, toolUser } from '../testing/capabilities/tool-user.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
+import { testRunId as runId } from '../testing/run-facts.ts';
+import { runJournal } from './run-journal.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
-const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+const runIdRunJournal = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-const at = { runId, by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
+const at = { runId: runIdRunJournal, by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
 
 const typesOf = Schema.decodeUnknownSync(
   Schema.Struct({ output: Schema.Struct({ events: Schema.Array(Schema.Struct({ type: Schema.String })) }) }),
@@ -29,17 +34,21 @@ async function playbookWithToolUser() {
   const running = (input: object) =>
     definitions.call(
       operations.runDefinition,
-      toAlpha(acmeAdmin, { type: 'tool-user', name: 'caller', input, run_id: runId }),
+      toAlpha(acmeAdmin, { type: 'tool-user', name: 'caller', input, run_id: runIdRunJournal }),
     );
   const history = async () =>
     typesOf(
-      await definitions.call(operations.getRunHistory, toAlpha(acmeAdmin, { run_id: runId, limit: 100 })),
+      await definitions.call(operations.getRunHistory, toAlpha(acmeAdmin, { run_id: runIdRunJournal, limit: 100 })),
     ).output.events.map(({ type }) => type);
   const recordedDirectly = (...commands: readonly RunCommand[]) =>
     definitions.run(
       Effect.forEach(commands, (command) =>
         Effect.orDie(
-          definitions.ledger.service.execute(`playbook/acme/alpha/${runStreamNameOf(runId)}`, runDecider, command),
+          definitions.ledger.service.execute(
+            `playbook/acme/alpha/${runStreamNameOf(runIdRunJournal)}`,
+            runDecider,
+            command,
+          ),
         ),
       ),
     );
@@ -47,6 +56,14 @@ async function playbookWithToolUser() {
 }
 
 const calls = (count: number, type: string): readonly string[] => Array.from({ length: count }, () => type);
+
+const diskFull = () => Effect.die(new Error('The disk is full'));
+
+function modelCalled(number: number): ModelCallFact {
+  return { type: 'model_call_started', data: { number, ...modelCallSent() } };
+}
+
+const takenSecond: unknown = expect.objectContaining({ _tag: 'conflict', kind: 'taken' });
 
 describe('the journal of a run', () => {
   it('records ten calls made at once, one append at a time, each start before its answer', async () => {
@@ -69,7 +86,7 @@ describe('the journal of a run', () => {
     const { call, running, getRunHistory } = await playbookWithToolUser();
     await running({ calls: 10 });
 
-    const read = await call(getRunHistory, toAlpha(acmeAdmin, { run_id: runId, limit: 100 }));
+    const read = await call(getRunHistory, toAlpha(acmeAdmin, { run_id: runIdRunJournal, limit: 100 }));
     const { events } = Schema.decodeUnknownSync(
       Schema.Struct({
         output: Schema.Struct({
@@ -111,7 +128,7 @@ describe('the journal of a run that has finished', () => {
       type: 'tool-user',
       name: 'caller',
       input: { calls: 1, ending: 'stall' },
-      run_id: runId,
+      run_id: runIdRunJournal,
     });
 
     expect(await callCancelledWhen(user.stalled, runDefinition, request)).toEqual({ status: 'cancelled' });
@@ -161,11 +178,11 @@ describe('a run that called tools', () => {
     );
 
     expect(await running({})).toMatchObject({ status: 'rejected', reason: 'conflict', kind: 'tools_called' });
-    expect(await call(getRun, toAlpha(acmeAdmin, { run_id: runId }))).toMatchObject({
+    expect(await call(getRun, toAlpha(acmeAdmin, { run_id: runIdRunJournal }))).toMatchObject({
       output: { status: 'started' },
     });
     expect(await call(listRuns, toAlpha(acmeAdmin, { status: 'started' }))).toMatchObject({
-      output: { runs: [{ run_id: runId, status: 'started' }] },
+      output: { runs: [{ run_id: runIdRunJournal, status: 'started' }] },
     });
   });
 });
@@ -177,12 +194,95 @@ describe('a run of a definition that calls tools, still in progress', () => {
       type: 'tool-user',
       name: 'caller',
       input: { calls: 0, ending: 'stall' },
-      run_id: runId,
+      run_id: runIdRunJournal,
     });
     const retried = user.stalled.then(() => running({ calls: 0, ending: 'stall' }));
 
     expect(await callCancelledWhen(retried, runDefinition, first)).toEqual({ status: 'cancelled' });
     expect(await retried).toMatchObject({ status: 'rejected', reason: 'conflict', kind: 'tools_called' });
     expect(await history()).toEqual(['run_started', 'run_failed']);
+  });
+});
+
+describe('the journal of an attempt, given the end of a call an attempt before it started', () => {
+  it('links the end to where its attempt began, knowing no start of the call', async () => {
+    const definitions = harness();
+    const startedBefore = definitions.ledger.service.execute(
+      `playbook/acme/alpha/${runStreamNameOf(runId)}`,
+      runDecider,
+      {
+        type: 'call',
+        fact: { type: 'tool_call_started', data: startOfCall(1) },
+        fencingToken: 1,
+        runId,
+        by: 'acme-admin',
+        at: '2026-10-01T09:00:01.000Z',
+      },
+    );
+
+    expect(
+      await journalled(definitions, (journal) =>
+        Effect.andThen(Effect.orDie(startedBefore), journal.ended(1, answerOfCall(1))),
+      ),
+    ).toBe(true);
+    expect((await linksIn(definitions)).at(-1)).toEqual({
+      type: 'tool_call_answered',
+      id: idAt(3),
+      causationId: idAt(1),
+      correlationId: runId,
+    });
+  });
+});
+
+describe('a fact the ledger cannot write', () => {
+  it('fails the step that writes it as a defect, never as a call another attempt took', async () => {
+    const failing = Effect.gen(function* () {
+      const journal = yield* runJournal(
+        '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+        { startId: 'start', correlationId: 'run' },
+        { startedAt: '2026-10-01T09:00:00.000Z', modelCallsBefore: 0, calls: [] },
+        1,
+      );
+      return yield* journal.record({ type: 'model_call_started', data: { number: 1, ...modelCallSent() } });
+    }).pipe(
+      Effect.provideService(PlaybookWriter, { execute: diskFull, keepContent: diskFull }),
+      Effect.provideService(Caller, acmeAdmin),
+      Effect.provideService(PlaybookContext, { org: 'acme', playbook: 'alpha' }),
+    );
+
+    const exit = await Effect.runPromiseExit(failing);
+
+    expect([Exit.hasDies(exit), Exit.hasFails(exit)]).toEqual([true, false]);
+  });
+});
+
+describe('the journal of a run that calls its model', () => {
+  it('links each model call to the answer before it and its answer or failure to it, a tool call asked for to that answer, and the finish to the last', async () => {
+    const definitions = harness();
+    const recorded = await journalled(definitions, (journal) =>
+      Effect.orDie(
+        Effect.all([
+          journal.record(modelCalled(1)),
+          journal.record({ type: 'model_call_answered', data: { number: 1, ...modelCallAnswered() } }),
+          journal.started(startOfCall(1)),
+          journal.ended(1, answerOfCall(1)),
+          journal.record(modelCalled(2)),
+          Effect.flip(journal.record(modelCalled(2))),
+          journal.record({ type: 'model_call_failed', data: { number: 2, ...modelCallTimedOut } }),
+          journal.latest,
+        ]),
+      ),
+    );
+
+    expect(recorded).toEqual([1, 1, 1, true, 2, takenSecond, 2, idAt(7)]);
+    expect((await linksIn(definitions)).map(({ type, causationId }) => [type, causationId])).toEqual([
+      ['run_started', null],
+      ['model_call_started', idAt(1)],
+      ['model_call_answered', idAt(2)],
+      ['tool_call_started', idAt(3)],
+      ['tool_call_answered', idAt(4)],
+      ['model_call_started', idAt(5)],
+      ['model_call_failed', idAt(6)],
+    ]);
   });
 });

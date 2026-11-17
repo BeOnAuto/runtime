@@ -99,6 +99,7 @@ export async function starting() {
           starts.push(start);
         }),
       startDeferred: Function.constant(Effect.succeed(0)),
+      nextDeferredAt: Function.constant(Effect.succeed(null)),
     },
     refusals,
     workflowOfRun: (_playbookKey, runId) => Effect.succeed(topRuns.get(runId)),

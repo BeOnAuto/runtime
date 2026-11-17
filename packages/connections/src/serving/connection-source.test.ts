@@ -1,3 +1,6 @@
+import { Buffer } from 'node:buffer';
+
+import { memoryLedger } from '@on.auto/operations/testing';
 import type {
   ConnectionServer,
   ConnectionServerSettings,
@@ -5,13 +8,33 @@ import type {
   ConnectionUnready,
   OrgConnection,
 } from '@on.auto/tool-servers';
-import { pendingWords } from '@on.auto/tool-servers/testing';
-import { Effect, Option, Redacted } from 'effect';
+import { pendingWords, playbookToolCalls } from '@on.auto/tool-servers/testing';
+import { Effect, Option, Redacted, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
+import { documentDecider, documentStreamOfOrg, keptTextOf } from '../documents/document-streams.ts';
+import { type ConnectionPolicyFields, connectionPolicyOf } from '../policy/connection-policy.ts';
+import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { added, billing, crm, crmKeyHelp, crmWithTenant, notes } from '../testing/additions.ts';
-import { ada, harness, operationNamed, type Harness, fixtureServing, crmPolicy } from '../testing/harness.ts';
+import {
+  accessThrough,
+  askingThrough,
+  connected,
+  documentOf,
+  elsewhere,
+  served,
+  toolsThrough,
+} from '../testing/described-apis.ts';
+import {
+  ada,
+  crmPolicy,
+  fixtureServing,
+  harness,
+  type Harness,
+  loopbackPolicy,
+  operationNamed,
+} from '../testing/harness.ts';
+import { watchedLedger } from '../testing/watched-ledger.ts';
 import { makeConnectionSource } from './connection-source.ts';
 import type { ServingServices } from './serving-services.ts';
 
@@ -33,7 +56,11 @@ function policyOf(fields: ConnectionPolicyFields) {
   return { policy: connectionPolicyOf(fields) };
 }
 
-async function connected(h: Harness, input: unknown, given: Readonly<Record<string, string>> = {}): Promise<string> {
+async function connectedConnectionSource(
+  h: Harness,
+  input: unknown,
+  given: Readonly<Record<string, string>> = {},
+): Promise<string> {
   const { id, token } = await added(h, input);
   const operation = Object.keys(given).length === 0 ? 'approve' : 'give_credential';
   await h.call(operationNamed(h.operations, operation), ada, { id, token, ...given });
@@ -83,11 +110,43 @@ function placedOf(settings: ConnectionServerSettings) {
   };
 }
 
+const DescribedSchema = Schema.Struct({ output: Schema.Struct({ description: Schema.String }) });
+
+function descriptionIn(outcome: unknown): string {
+  return Schema.decodeUnknownSync(DescribedSchema)(outcome).output.description;
+}
+
+const anyWords: unknown = expect.any(String);
+
+interface LosingDocuments {
+  readonly registry: ServingServices['registry'];
+  readonly found: () => void;
+}
+
+function losingDocuments(h: Harness): LosingDocuments {
+  const reading = { lost: true };
+  const keptNothing = memoryLedger().service;
+  return {
+    registry: {
+      ...h.ledger.service,
+      load: (stream, fold) =>
+        reading.lost && stream.includes('/connection-documents/')
+          ? keptNothing.load(stream, fold)
+          : h.ledger.service.load(stream, fold),
+    },
+    found: () => {
+      reading.lost = false;
+    },
+  };
+}
+
+const searching = { server: 'ledgers', tool: 'search', arguments: { query: 'acme' } };
+
 describe('the connections of an org as tool servers', () => {
   it('are each that is not removed, newest first, serving the playbooks its entry names, or every one', async () => {
     const h = harness();
     await added(h, crm);
-    await connected(h, notes);
+    await connectedConnectionSource(h, notes);
     const removed = await added(h, { ...notes, name: 'docs' });
     await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id: removed.id });
 
@@ -138,7 +197,7 @@ describe('the connections of a runtime', () => {
 describe('a connected connection as a tool server', () => {
   it('holds its secret in the header it names, every value of it a secret and the credential after its scheme too', async () => {
     const h = harness({ policy: crmPolicy });
-    const id = await connected(h, crmWithTenant, { value: crmKey });
+    const id = await connectedConnectionSource(h, crmWithTenant, { value: crmKey });
 
     const settings = await settingsOf(sourceOf(h, { policy: crmPolicy }), id);
 
@@ -163,7 +222,7 @@ describe('the entry of a connected connection', () => {
     const listing = policyOf({ allowed_hosts: ['notes.example.com'] });
     const h = harness(listing);
     const entry = { ...notes.entry, headers: { 'X-Tenant': 'acme$eu$$' }, record_content: false };
-    const id = await connected(h, { ...notes, entry });
+    const id = await connectedConnectionSource(h, { ...notes, entry });
 
     const settings = await settingsOf(sourceOf(h, listing), id);
 
@@ -174,7 +233,7 @@ describe('the entry of a connected connection', () => {
 describe('a connected connection to an HTTP API as a tool server', () => {
   it('holds a secret of an HTTP API in its query or its security scheme, whole, read as the settings file reads one', async () => {
     const h = harness();
-    const inQuery = await connected(
+    const inQuery = await connectedConnectionSource(
       h,
       {
         ...billing,
@@ -183,7 +242,7 @@ describe('a connected connection to an HTTP API as a tool server', () => {
       },
       { value: 'billing-key-77a1c2' },
     );
-    const inScheme = await connected(
+    const inScheme = await connectedConnectionSource(
       h,
       {
         ...billing,
@@ -211,12 +270,16 @@ describe('a connected connection to an HTTP API as a tool server', () => {
 describe('a connected connection of client credentials as a tool server', () => {
   it('holds client credentials in its auth block, a client secret or a private key with its algorithm', async () => {
     const h = harness();
-    const withSecret = await connected(
+    const withSecret = await connectedConnectionSource(
       h,
       { ...billing, credential: { ...billing.credential, scope: 'invoices:read' } },
       { client_secret: 'billing-client-secret' },
     );
-    const withKey = await connected(h, { ...billing, name: 'billing-key' }, { private_key: 'pem', algorithm: 'ES256' });
+    const withKey = await connectedConnectionSource(
+      h,
+      { ...billing, name: 'billing-key' },
+      { private_key: 'pem', algorithm: 'ES256' },
+    );
     const source = sourceOf(h);
 
     const settings = [await settingsOf(source, withSecret), await settingsOf(source, withKey)];
@@ -241,7 +304,7 @@ describe('a connected connection of a reference as a tool server', () => {
     const listing = policyOf({ variables: ['NOTES_API_KEY'] });
     const h = harness(listing);
     const reference = { kind: 'reference', variable: 'NOTES_API_KEY', name: 'X-Api-Key', in: 'header' };
-    const id = await connected(h, { ...notes, credential: reference });
+    const id = await connectedConnectionSource(h, { ...notes, credential: reference });
     const variables = new Map([['NOTES_API_KEY', Redacted.make('notes-key-5b2e9d')]]);
 
     const set = await settingsOf(sourceOf(h, { ...listing, variables }), id);
@@ -262,7 +325,7 @@ describe('a connected connection of a reference as a tool server', () => {
     const listing = policyOf({ variables: ['NOTES_API_KEY'] });
     const h = harness(listing);
     const reference = { kind: 'reference', variable: 'NOTES_API_KEY', name: 'X-Api-Key', in: 'header' };
-    const id = await connected(h, { ...notes, credential: reference });
+    const id = await connectedConnectionSource(h, { ...notes, credential: reference });
     const variables = new Map([['NOTES_API_KEY', Redacted.make('')]]);
 
     expect(await serverOf(sourceOf(h, { ...listing, variables }), id)).toEqual({
@@ -276,7 +339,7 @@ describe('a connected connection of a reference as a tool server', () => {
 describe('the hosts a connected connection reaches', () => {
   it('are only those the rules of the moment allow', async () => {
     const h = harness();
-    const id = await connected(h, notes);
+    const id = await connectedConnectionSource(h, notes);
 
     const { reaches } = await connectedOf(sourceOf(h, policyOf({ allowed_hosts: ['*.example.com'] })), id);
 
@@ -284,5 +347,139 @@ describe('the hosts a connected connection reaches', () => {
       undefined,
       'A connection may not reach the host other.example.org on this runtime, which allows *.example.com',
     ]);
+  });
+});
+
+describe('an HTTP API given its document in document_text, once connected', () => {
+  it('is served from the document its fact keeps, its calls going to base_url alone, asking no address for its document', async () => {
+    const fake = await served();
+    const h = harness({ policy: loopbackPolicy });
+    const asking = askingThrough();
+    await connected(h, fake, documentOf());
+
+    const called = await (
+      await toolsThrough(h, asking)
+    ).call('execute_connection', {
+      server: 'ledgers',
+      tool: 'search',
+      arguments: { query: 'acme' },
+    });
+
+    expect(called).toMatchObject({ status: 'succeeded' });
+    expect(fake.seen()).toMatchObject([{ method: 'GET', path: '/v1/search', query: '?query=acme' }]);
+    expect(fake.documentReads()).toBe(0);
+    expect(asking.asked().every((url) => url.startsWith(fake.baseUrl))).toBe(true);
+  });
+});
+
+describe('the calls of an HTTP API given its document in document_text', () => {
+  it('follow no redirect its service answers a call with, sending nothing where it points', async () => {
+    const fake = await served();
+    const h = harness({ policy: loopbackPolicy });
+    const asking = askingThrough();
+    await connected(h, fake, documentOf());
+    fake.answerNextWith({ status: 302, headers: { location: `${elsewhere}/v1/search` } });
+
+    const called = await (
+      await toolsThrough(h, asking)
+    ).call('execute_connection', {
+      server: 'ledgers',
+      tool: 'search',
+      arguments: { query: 'acme' },
+    });
+
+    expect(called).toMatchObject({
+      status: 'succeeded',
+      output: {
+        outcome: 'tool_error',
+        text: 'The tool server answered a redirect, HTTP 302, which a call does not follow',
+      },
+    });
+    expect(asking.asked().filter((url) => url.startsWith(elsewhere))).toEqual([]);
+  });
+
+  it('show a model their words cut to the bound of any tool', async () => {
+    const fake = await served();
+    const h = harness({ policy: loopbackPolicy });
+    await connected(h, fake, documentOf({ description: 'The rows that match. '.repeat(400) }));
+
+    const described = await (
+      await toolsThrough(h, askingThrough())
+    ).call('introspect', {
+      server: 'ledgers',
+      tool: 'search',
+    });
+
+    expect(Buffer.byteLength(descriptionIn(described))).toBe(4_096);
+  });
+});
+
+describe('an HTTP API whose document is not where its record names it', () => {
+  it('answers as failing, with nothing sent to its service, and is prepared again at its next use', async () => {
+    const fake = await served();
+    const h = harness({ policy: loopbackPolicy });
+    await connected(h, fake, documentOf());
+    const losing = losingDocuments(h);
+    const tools = await toolsThrough(h, askingThrough(), { registry: losing.registry });
+
+    const failing = await tools.call('execute_connection', searching);
+    const seenWhileLost = fake.seen().length;
+    losing.found();
+    const called = await tools.call('execute_connection', searching);
+
+    expect(failing).toMatchObject({
+      status: 'rejected',
+      detail: anyWords,
+    });
+    expect([seenWhileLost, called]).toMatchObject([0, { status: 'succeeded' }]);
+  });
+
+  it('is never served with a document whose text is not the one its record names by its SHA-256 and size', async () => {
+    const fake = await served();
+    const h = harness({ policy: loopbackPolicy });
+    const text = documentOf();
+    const other = documentOf({ description: 'Another text kept where the first was named.' });
+    const keeping = { text: other, by: 'person:ada', at: '2026-10-15T14:00:00.000Z' };
+    await Effect.runPromise(
+      h.ledger.service.execute(documentStreamOfOrg('acme', keptTextOf(text).sha256), documentDecider, keeping),
+    );
+    await connected(h, fake, text);
+
+    const failing = await (await toolsThrough(h, askingThrough())).call('execute_connection', searching);
+
+    expect(failing).toMatchObject({
+      status: 'rejected',
+      detail:
+        'The tool server ledgers could not be used: The OpenAPI document kept for the connection ledgers is not the one it was added with',
+    });
+    expect(fake.seen()).toEqual([]);
+  });
+});
+
+describe('the run check, the calls and the listings of an HTTP API given its document in document_text', () => {
+  it('read its record through the one source of connections, its document read once, as the connection is first prepared', async () => {
+    const fake = await served();
+    const ledger = watchedLedger();
+    const h = harness({ policy: loopbackPolicy, ledger });
+    const text = documentOf();
+    await connected(h, fake, text);
+    const access = await accessThrough(h, askingThrough());
+    const tools = playbookToolCalls(access);
+    const readSince = (before: number) => ledger.asked().slice(before);
+
+    const beforeTheCheck = ledger.asked().length;
+    await Effect.runPromise(access.named({ org: 'acme', playbook: 'alpha' }, [{ server: 'ledgers', tool: 'search' }]));
+    const beforeTheCall = ledger.asked().length;
+    const called = await tools.call('execute_connection', searching);
+    const beforeTheListing = ledger.asked().length;
+    await tools.call('introspect', { server: 'ledgers', tool: 'search' });
+
+    const record = `load ${connectionsStreamOfOrg('acme')}`;
+    expect(called).toMatchObject({ status: 'succeeded' });
+    expect([
+      readSince(beforeTheCheck).slice(0, beforeTheCall - beforeTheCheck),
+      readSince(beforeTheCall).slice(0, beforeTheListing - beforeTheCall),
+      readSince(beforeTheListing),
+    ]).toEqual([[record, `load ${documentStreamOfOrg('acme', keptTextOf(text).sha256)}`], [record], [record]]);
   });
 });

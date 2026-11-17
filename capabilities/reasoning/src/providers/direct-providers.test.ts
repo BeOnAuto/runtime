@@ -1,5 +1,12 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { modulesReachedFrom } from '@on.auto/operations/testing';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { LanguageModel } from '../model/language-model.ts';
 import {
   anthropicMessage,
   anthropicToolAnswer,
@@ -8,10 +15,36 @@ import {
   openAiResponse,
 } from '../provider-testing/provider-replies.ts';
 import { jsonResponse, recordingFetch } from '../provider-testing/recording-fetch.ts';
+import { readModelSettings } from '../settings/model-settings.ts';
 import { accessFor, jsonRequest, succeeded, textRequest } from '../testing/adapter-harness.ts';
+import { loadEntraIdentity } from './installed-packages.ts';
+import { languageModelLayer } from './language-model-layer.ts';
+import { makeModelAccess } from './model-access.ts';
 
 function replying(body: object) {
   return recordingFetch(() => jsonResponse(body));
+}
+
+const sources = fileURLToPath(new URL('..', import.meta.url));
+
+const libraries: ReadonlySet<string> = new Set([
+  '@ai-sdk/google-vertex',
+  '@ai-sdk/google-vertex/anthropic',
+  '@azure/identity',
+  '@on.auto/outbound/aws',
+  'google-auth-library',
+]);
+
+const importsTheIdentityLibrary = /import\(\s*'@azure\/identity'\s*\)|from\s+'@azure\/identity'/u;
+
+function namingTheIdentityLibrary(entry: string): readonly string[] {
+  return modulesReachedFrom(sources, entry).files.filter((file) =>
+    importsTheIdentityLibrary.test(readFileSync(join(sources, file), 'utf8')),
+  );
+}
+
+function librariesReachedFrom(module: string): readonly string[] {
+  return modulesReachedFrom(sources, module).packages.filter((name) => libraries.has(name));
 }
 
 describe('the anthropic provider', () => {
@@ -160,5 +193,74 @@ describe('the google provider', () => {
       response_id: 'gemini-response-1',
       usage: { input: { total: 14, cache_read: 5 }, output: { reasoning: 8 } },
     });
+  });
+});
+
+describe('the credential libraries of the providers', () => {
+  it('are reached by no entry of the capability, and load when model access is built with their provider configured', () => {
+    expect([...librariesReachedFrom('index.ts'), ...librariesReachedFrom('testing/index.ts')]).toEqual([]);
+    expect(librariesReachedFrom('providers/vertex-providers.ts')).toEqual([
+      '@ai-sdk/google-vertex',
+      '@ai-sdk/google-vertex/anthropic',
+      'google-auth-library',
+    ]);
+  });
+
+  it('are named by no module the main and testing entries reach, so a bundle of them asks for none, and the identity library by the installed-packages entry the server passes it from', () => {
+    expect([...namingTheIdentityLibrary('index.ts'), ...namingTheIdentityLibrary('testing/index.ts')]).toEqual([]);
+    expect(namingTheIdentityLibrary('providers/installed-packages.ts')).toEqual(['providers/installed-packages.ts']);
+  });
+});
+
+describe('languageModelLayer', () => {
+  it('provides a language model built from the environment', async () => {
+    const recording = recordingFetch(() => jsonResponse(anthropicMessage('Hello')));
+    const program = Effect.gen(function* () {
+      const model = yield* LanguageModel;
+      return yield* model.generate(textRequest('anthropic/claude-sonnet-4-5'));
+    });
+
+    const result = await Effect.runPromise(
+      program.pipe(Effect.provide(languageModelLayer({ ANTHROPIC_API_KEY: 'k' }, { fetch: recording.fetch }))),
+    );
+
+    expect(result.text).toBe('Hello');
+  });
+
+  it('fails to build when the settings are invalid', async () => {
+    const program = Effect.gen(function* () {
+      return yield* LanguageModel;
+    });
+
+    const failure = await Effect.runPromise(
+      Effect.flip(program.pipe(Effect.provide(languageModelLayer({ OPENAI_API: 'assistants' })))),
+    );
+
+    expect(failure).toMatchObject({ _tag: 'model_settings_invalid' });
+  });
+});
+
+describe('makeModelAccess with its defaults', () => {
+  it('builds every provider from the default fetch and credential chains without contacting anyone, and one provider without a key only given the loader of its identity library', async () => {
+    const settings = await Effect.runPromise(
+      readModelSettings({
+        AWS_REGION: 'us-east-1',
+        GOOGLE_VERTEX_PROJECT: 'acme-ai',
+        GOOGLE_VERTEX_LOCATION: 'us-central1',
+        AZURE_RESOURCE_NAME: 'acme',
+      }),
+    );
+
+    const access = await Effect.runPromise(makeModelAccess(settings));
+    const withTheLibrary = await Effect.runPromise(makeModelAccess(settings, { loadEntraIdentity }));
+
+    expect(access.status.configured).toEqual(['bedrock', 'bedrock-anthropic', 'vertex', 'vertex-anthropic']);
+    expect(withTheLibrary.status.configured).toEqual([
+      'bedrock',
+      'bedrock-anthropic',
+      'azure',
+      'vertex',
+      'vertex-anthropic',
+    ]);
   });
 });

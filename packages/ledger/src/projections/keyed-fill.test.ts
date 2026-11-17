@@ -5,8 +5,18 @@ import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { executedOn } from '../recorded/sqlite-checks.ts';
+import { ledgerLayer } from '../sqlite.ts';
 import { postgresqlDatabasesOn } from '../testing/postgresql-databases.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
+import { keyedFillBehaviour } from './keyed-fill-behaviour.ts';
+import { sqliteProjectionsOf } from './sqlite-projections.ts';
+
+function aDatabase(): Promise<string> {
+  const { fileName, remove } = temporaryDatabase();
+  onTestFinished(remove);
+  return Promise.resolve(fileName);
+}
 
 const filledHeap = fileURLToPath(new URL('../../filled-heap.ts', import.meta.url));
 
@@ -76,6 +86,15 @@ const stores: readonly Store[] = [
     settings: async () => ({ store: 'postgresql', connectionString: await aPostgreSQLDatabase() }),
   },
 ];
+
+describe('The fills of a ledger on SQLite', () => {
+  keyedFillBehaviour({
+    aDatabase,
+    executedOn,
+    ledgerOn: (fileName, { projections, holders }) => ledgerLayer({ fileName, projections, holders }),
+    projectionsOf: sqliteProjectionsOf,
+  });
+});
 
 describe.each(stores)(
   'the fill of a projection keyed by its mapping, over a history eight times the most bytes it fills at once, on $store',

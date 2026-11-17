@@ -22,6 +22,7 @@ export interface Upkeep {
   readonly sweep: () => Effect.Effect<void>;
   readonly fireSchedules: () => Effect.Effect<void>;
   readonly nextScheduleAt: () => Effect.Effect<number | null>;
+  readonly nextDeferredAt: () => Effect.Effect<number | null>;
 }
 
 export interface FollowerWork extends Pick<WakeUpParts, 'clock' | 'sweepEveryMs' | 'trouble' | 'context'> {
@@ -167,6 +168,7 @@ function retriedAfter(parts: FollowerWork, { failedPasses, after, now }: Tries):
 interface Round {
   readonly owed: boolean;
   readonly heldUntil: number | null;
+  readonly failed: boolean;
 }
 
 function roundOf(parts: FollowerWork, wakes: Wakes, { now, sweep }: Woken): Effect.Effect<Round> {
@@ -176,7 +178,7 @@ function roundOf(parts: FollowerWork, wakes: Wakes, { now, sweep }: Woken): Effe
     const owed = sweep ? yield* swept(parts, wakes) : false;
     const heldUntil = yield* heldPassed(parts, wakes);
     yield* parts.rounds.succeeded();
-    return { owed, heldUntil };
+    return { owed, heldUntil, failed: false };
   }).pipe(
     Effect.catchCause((cause) =>
       Effect.flatMap(parts.rounds.failed(), (retryAfterMs) =>
@@ -185,7 +187,7 @@ function roundOf(parts: FollowerWork, wakes: Wakes, { now, sweep }: Woken): Effe
             'The follower of the playbooks failed; it tries again in a minute, twice as long after each round that fails in a row, at most an hour',
             cause,
           ),
-          { owed: false, heldUntil: now + retryAfterMs },
+          { owed: false, heldUntil: now + retryAfterMs, failed: true },
         ),
       ),
     ),
@@ -220,11 +222,29 @@ function nextScheduleOf({ upkeep, trouble }: FollowerWork): Effect.Effect<number
     );
 }
 
+function nextDeferredOf({ upkeep, trouble, sweepEveryMs }: FollowerWork, now: number): Effect.Effect<number | null> {
+  return upkeep.nextDeferredAt().pipe(
+    Effect.map((due) => (due === null || due > now ? due : now + sweepEveryMs)),
+    Effect.catchCause((cause) =>
+      Effect.as(
+        trouble(
+          'The next due time of the starts that wait could not be read; the follower waits for the next sweep',
+          cause,
+        ),
+        null,
+      ),
+    ),
+  );
+}
+
 function nextWakeOf(parts: FollowerWork, wakes: Wakes, round: Round, now: number): Effect.Effect<NextWake> {
   if (wakes.anyWoken() || round.owed) {
     return Effect.succeed({ nextDueAt: now });
   }
-  return Effect.map(nextScheduleOf(parts), (nextDueAt) => ({ nextDueAt: earliestOf(nextDueAt, round.heldUntil) }));
+  const deferred = round.failed ? Effect.succeed(null) : nextDeferredOf(parts, now);
+  return Effect.zipWith(nextScheduleOf(parts), deferred, (schedule, deferredAt) => ({
+    nextDueAt: earliestOf(earliestOf(schedule, deferredAt), round.heldUntil),
+  }));
 }
 
 export function followerWakeUpOf(parts: FollowerWork, signal: WakeSignal): HostWakeUp {
@@ -232,7 +252,7 @@ export function followerWakeUpOf(parts: FollowerWork, signal: WakeSignal): HostW
   const state: { started: boolean; tried: boolean; round: Round } = {
     started: false,
     tried: false,
-    round: { owed: false, heldUntil: null },
+    round: { owed: false, heldUntil: null, failed: false },
   };
   const stopListening = parts.appended.listen((stream) => {
     wakes.woken(stream);

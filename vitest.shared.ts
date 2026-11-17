@@ -10,6 +10,7 @@ export function sharedConfigSetUpBy(globalSetup: string) {
       globalSetup,
       testTimeout: 60_000,
       hookTimeout: 60_000,
+      silent: 'passed-only',
       experimental: {
         viteModuleRunner: false,
       },
@@ -17,7 +18,7 @@ export function sharedConfigSetUpBy(globalSetup: string) {
         provider: 'v8',
         include: ['src/**/*.ts'],
         exclude: ['src/**/*.test.ts'],
-        reporter: ['text', 'json-summary'],
+        reporter: ['text-summary', ['text', { skipFull: true }], 'json-summary'],
         autoAttachSubprocess: true,
         thresholds: { 100: true, perFile: true },
       },

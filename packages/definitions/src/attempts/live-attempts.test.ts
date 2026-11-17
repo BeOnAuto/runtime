@@ -1,8 +1,16 @@
-import { Conflict, IncidentReporter, type Incident } from '@on.auto/operations';
+import { Conflict, type Incident, IncidentReporter } from '@on.auto/operations';
 import { Deferred, Effect, Exit, Fiber, Scope } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { modelCallAnswered, modelCallSent } from '../journal-testing/model-calls.ts';
+import type { RecordedRunEvent } from '../runs/run-events.ts';
+import { recordedAdmin } from '../testing/callers.ts';
+import { quietMs } from '../testing/capabilities/resumer.ts';
+import { acted, momentAfter, startedAndLeft } from '../testing/resumed-runs.ts';
+import { recordedOnTheRun, recordedWith, testRunId } from '../testing/run-facts.ts';
+import { deadAttemptEnder, holdingAttemptIn } from './index.ts';
 import { attemptKeyOf, LiveAttempts, liveAttemptsClosed, liveAttemptsLayer, liveAttemptsOf } from './live-attempts.ts';
+import { recordedAttempt } from './recorded-attempt.ts';
 
 const refused = new Conflict({ detail: 'The run is refused' });
 
@@ -15,6 +23,39 @@ function reported() {
 }
 
 const { reporting } = reported();
+
+const run = { org: 'acme', playbook: 'alpha', id: acted.runId };
+
+const context = {
+  runId: testRunId,
+  by: 'acme-admin',
+  at: '2026-10-01T09:00:00.000Z',
+  definitionType: 'tool-user',
+  definitionName: 'caller',
+  definitionVersion: 1,
+};
+
+const started = recordedWith(context)({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } });
+
+const startedAgain = recordedWith({ ...context, at: '2026-10-01T09:05:00.000Z' })({
+  type: 'run_started',
+  data: { started_by: recordedAdmin, input: {} },
+});
+
+const failed = recordedWith(context)({ type: 'run_failed', data: {} });
+
+const answered = recordedOnTheRun({ type: 'model_call_answered', data: { number: 1, ...modelCallAnswered(0) } });
+
+const firstCall = recordedOnTheRun({ type: 'model_call_started', data: { number: 1, ...modelCallSent() } });
+
+const secondCall = recordedOnTheRun(
+  { type: 'model_call_started', data: { number: 2, ...modelCallSent() } },
+  '2026-10-01T09:05:01.000Z',
+);
+
+function foldedOf(events: readonly RecordedRunEvent[]) {
+  return events.reduce((attempt, event) => recordedAttempt.evolve(attempt, event), recordedAttempt.initialState);
+}
 
 describe('the attempts live in a process', () => {
   it('make an attempt asked for while one under its key is live only once that one has ended, failure and all', async () => {
@@ -184,5 +225,65 @@ describe('the close of the attempts a process holds, as the process stops', () =
 
     expect(stopped).toBe(true);
     await expect(Effect.runPromise(liveAttemptsClosed)).resolves.toBeUndefined();
+  });
+});
+
+describe('the attempt that holds a run, as the run reads', () => {
+  it('names its token and what its start recorded of whom the run is for and how it goes on', async () => {
+    const startedHoldingAttempts = await startedAndLeft();
+
+    expect(
+      await Effect.runPromise(
+        holdingAttemptIn(startedHoldingAttempts.ledger.service, { ...run, id: run.id.toUpperCase() }),
+      ),
+    ).toEqual({
+      fencingToken: 1,
+      type: 'resumer',
+      startedBy: 'acme-admin',
+      resumes: true,
+      calledBy: null,
+      trigger: null,
+      actsFor: null,
+      depth: 0,
+      callDepth: 0,
+    });
+  });
+
+  it('is nothing for a run that ended, one there is not, or an address no playbook holds', async () => {
+    const startedHoldingAttempts = await startedAndLeft();
+    await startedHoldingAttempts.running(momentAfter(quietMs + 1));
+    const holding = (address: Readonly<typeof run>) =>
+      Effect.runPromise(holdingAttemptIn(startedHoldingAttempts.ledger.service, address));
+
+    expect([
+      await holding(run),
+      await holding({ ...run, id: '0199a3c4-7d2e-7c1a-9b3f-000000000000' }),
+      await holding({ ...run, id: 'not-a-run' }),
+    ]).toEqual([undefined, undefined, undefined]);
+  });
+});
+
+describe('the attempt that holds a run that resumes, named dead by a shell that makes no next attempt of it', () => {
+  it('is ended, as the attempt of a run within its call is, while a shell that would resume it is told so', async () => {
+    const startedHoldingAttempts = await startedAndLeft();
+    const lineage = { causationId: null, correlationId: run.id };
+    const ender = deadAttemptEnder(startedHoldingAttempts.ledger.service);
+
+    const resumedElsewhere = await Effect.runPromise(ender({ run, lineage, fencingToken: 1 }));
+    const ended = await Effect.runPromise(ender({ run, lineage, fencingToken: 1, noNextAttempt: true }));
+
+    expect([resumedElsewhere, ended]).toEqual(['outlives_its_call', 'ended']);
+    expect(await Effect.runPromise(holdingAttemptIn(startedHoldingAttempts.ledger.service, run))).toBeUndefined();
+  });
+});
+
+describe('the attempt a run goes on from, folded from its stream', () => {
+  it('holds the calls since its latest start, after the model calls of the attempts before it', () => {
+    expect(foldedOf([started, firstCall, answered, failed, startedAgain, secondCall])).toEqual({
+      startedAt: '2026-10-01T09:05:00.000Z',
+      modelCallsBefore: 1,
+      lastModelCall: 2,
+      calls: [secondCall],
+    });
   });
 });

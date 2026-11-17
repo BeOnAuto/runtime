@@ -1,9 +1,17 @@
 import { fileURLToPath } from 'node:url';
 
+import { compileJsonSchema } from '@on.auto/json-schema';
+import { InvalidInput } from '@on.auto/operations';
 import { importedWithoutAnAddress, modulesReachedFrom } from '@on.auto/operations/testing';
+import { Effect, Exit, Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { outputShapeNamed, shapedViewsSchemaOf } from '../index.ts';
+import { checkedInput, outputShapeNamed, shapedViewsSchemaOf } from '../index.ts';
+import { acmeAdmin } from '../testing/callers.ts';
+import { probe } from '../testing/capabilities/probe.ts';
+import { definitionOperationsFor } from '../testing/definition-operations.ts';
+import { harness, toPlaybook } from '../testing/harness.ts';
+import { fieldWords, refusalWordsOf } from '../testing/refusal-words.ts';
 import * as checkedWorkerModule from './checked-worker.ts';
 import { outputCheckOf, valueChecks, viewCheckOf } from './value-checks.ts';
 import { checkedWorker } from './worker-url.ts';
@@ -11,6 +19,40 @@ import { checkedWorker } from './worker-url.ts';
 const someWords: unknown = expect.any(String);
 
 const categoriesSchema = outputShapeNamed('categories')?.schema ?? {};
+
+function refused(tag: string, fields: object = {}): unknown {
+  return expect.objectContaining({ _tag: tag, ...fields });
+}
+
+const toAlpha = toPlaybook('acme', 'alpha');
+
+const runId = '0199a3c4-7d2e-7c1a-9b3f-777777777772';
+
+const tooFewSeats = { pointer: '/input/seats', detail: 'seats: expected at least 1.' };
+
+const refusedRefusedInputKind = {
+  reason: 'invalid_input',
+  detail: tooFewSeats.detail,
+  issues: [tooFewSeats],
+  kind: 'input_schema',
+};
+
+async function playbookWithASeatedProbe() {
+  const operations = definitionOperationsFor([probe().capability]);
+  const definitions = harness();
+  await definitions.call(
+    operations.createDefinition,
+    toAlpha(acmeAdmin, { type: 'probe', name: 'plain', source: 'text' }),
+  );
+  const run = (seats: number) =>
+    definitions.call(
+      operations.runDefinition,
+      toAlpha(acmeAdmin, { type: 'probe', name: 'plain', input: { seats }, run_id: runId }),
+    );
+  const read = (operation: Parameters<typeof definitions.call>[0]) =>
+    definitions.call(operation, toAlpha(acmeAdmin, { run_id: runId }));
+  return { ...definitions, ...operations, run, read };
+}
 
 describe('the check of an output against the output schema', () => {
   it('names at most three issues of the output, each at its pointer', () => {
@@ -136,5 +178,142 @@ describe('the checks of values, as the value-checks entry exports them', () => {
     const { packages } = modulesReachedFrom(fileURLToPath(new URL('..', import.meta.url)), 'checking/value-checks.ts');
 
     expect(packages).toEqual(['@on.auto/json-schema', '@on.auto/workflow-engine/worker']);
+  });
+});
+
+describe('the check of the input of a run', () => {
+  const booking = Result.getOrThrow(
+    compileJsonSchema(
+      {
+        type: 'object',
+        properties: { seats: { type: 'integer', minimum: 1 }, on: { type: 'string', format: 'date' } },
+      },
+      { what: 'input', nesting: 512 },
+    ),
+  );
+  const deep = Array.from({ length: 600 }).reduce<Schema.Json>((inner) => [inner], 'x');
+
+  it('takes an input its schema takes, and any input of a function without one, as it is', () => {
+    expect([
+      Effect.runSyncExit(checkedInput({ seats: 2, on: '2026-04-01' }, booking, 'booking function')),
+      Effect.runSyncExit(checkedInput('anything', undefined, 'booking function')),
+    ]).toEqual([Exit.succeed({ seats: 2, on: '2026-04-01' }), Exit.succeed('anything')]);
+  });
+
+  it('refuses an input its schema refuses in the words of its fields, of the kind input_schema, and one nested past a value, naming the noun', () => {
+    expect([
+      Effect.runSyncExit(checkedInput({ seats: 0 }, booking, 'booking function')),
+      Effect.runSyncExit(checkedInput({ seats: 2, on: 'April' }, booking, 'booking function')),
+      Effect.runSyncExit(checkedInput(deep, undefined, 'interaction function')),
+    ]).toEqual([
+      Exit.fail(
+        new InvalidInput({
+          detail: 'seats: expected at least 1.',
+          issues: [{ pointer: '/seats', detail: 'seats: expected at least 1.' }],
+          kind: 'input_schema',
+        }),
+      ),
+      Exit.fail(
+        new InvalidInput({
+          detail: 'on: expected a date such as 2026-04-01.',
+          issues: [{ pointer: '/on', detail: 'on: expected a date such as 2026-04-01.' }],
+          kind: 'input_schema',
+        }),
+      ),
+      Exit.fail(
+        refused('invalid_input', {
+          issues: [{ pointer: '', detail: 'Expected a value nested at most 512 levels deep' }],
+        }),
+      ),
+    ]);
+  });
+});
+
+describe('the words of a string out of its form', () => {
+  it('says the form a field takes and an example of it, as the bounds are said', () => {
+    expect([
+      fieldWords({ type: 'string', format: 'date' }, 'April'),
+      fieldWords({ type: 'string', format: 'date-time' }, 'April 1st, 9:30'),
+      fieldWords({ type: 'string', format: 'time' }, 'half past nine'),
+      fieldWords({ type: 'string', format: 'email' }, 'ada'),
+      fieldWords({ type: 'string', format: 'uri' }, 'example.com'),
+      fieldWords({ type: 'string', format: 'uuid' }, '42'),
+    ]).toEqual([
+      'field: expected a date such as 2026-04-01.',
+      'field: expected a date and time such as 2026-04-01T09:30:00Z.',
+      'field: expected a time such as 09:30:00Z.',
+      'field: expected an email address such as name@example.com.',
+      'field: expected a URI such as https://example.com.',
+      'field: expected a UUID such as 0f8fad5b-d9cb-469f-a165-70867728950e.',
+    ]);
+  });
+
+  it('keeps the description and the examples of the field before the form, and says a name out of its form', () => {
+    expect([
+      fieldWords({ type: 'string', format: 'date', description: 'The day the order is due' }, 'Friday'),
+      fieldWords({ type: 'string', minLength: 12, format: 'date' }, 'Friday'),
+      fieldWords({ type: 'object', propertyNames: { format: 'date' } }, { soon: 1 }),
+    ]).toEqual([
+      'field, The day the order is due: expected a date such as 2026-04-01.',
+      'field: expected at least 12 characters. field: expected a date such as 2026-04-01.',
+      'the name soon of field: expected a date such as 2026-04-01.',
+    ]);
+  });
+
+  it('leaves the example of the form out where the field gives its own, in its examples or its description', () => {
+    expect([
+      fieldWords({ type: 'string', format: 'date', examples: ['2026-05-01'] }, 'Friday'),
+      fieldWords({ type: 'string', format: 'date', description: 'The day, such as 2026-05-01' }, 'Friday'),
+      fieldWords(
+        { type: 'object', description: 'Totals by day, such as 2026-05-01', propertyNames: { format: 'date' } },
+        { soon: 1 },
+      ),
+      refusalWordsOf({ type: 'string', format: 'date', examples: ['2026-05-01'] }, 'Friday'),
+    ]).toEqual([
+      'field, such as “2026-05-01”: expected a date.',
+      'field, The day, such as 2026-05-01: expected a date.',
+      'the name soon of field, Totals by day, such as 2026-05-01: expected a date.',
+      'The input: expected a date such as 2026-04-01.',
+    ]);
+  });
+});
+
+describe('a run whose input its input schema refused', () => {
+  it('is rejected of the kind input_schema, which get_run shows and a retry under its run id answers again', async () => {
+    const { run, read, getRun } = await playbookWithASeatedProbe();
+
+    const ran = await run(0);
+    const retried = await run(0);
+
+    expect(ran).toEqual({ status: 'rejected', ...refusedRefusedInputKind });
+    expect(retried).toEqual(ran);
+    expect(await read(getRun)).toMatchObject({ output: { status: 'rejected', rejection: refusedRefusedInputKind } });
+  });
+
+  it('is listed with the kind beside its reason, and its history shows the kind and says it in words', async () => {
+    const { run, read, call, listRuns, getRunHistory } = await playbookWithASeatedProbe();
+    await run(0);
+
+    expect(await call(listRuns, toAlpha(acmeAdmin, {}))).toMatchObject({
+      output: { runs: [{ run_id: runId, rejection: { reason: 'invalid_input', kind: 'input_schema' } }] },
+    });
+    expect(await read(getRunHistory)).toMatchObject({
+      output: {
+        events: [
+          { type: 'run_started' },
+          {
+            type: 'run_rejected',
+            summary: someWords,
+            data: { ...refusedRefusedInputKind, issue_count: 1 },
+          },
+        ],
+      },
+    });
+  });
+
+  it('runs on an input its input schema takes', async () => {
+    const { run } = await playbookWithASeatedProbe();
+
+    expect(await run(2)).toMatchObject({ output: { status: 'succeeded', output: { seats: 2 } } });
   });
 });

@@ -1,11 +1,30 @@
-import { providersOf, regions, tracker } from '@on.auto/providers/testing';
+import {
+  type AccessDecision,
+  type AccessRequest,
+  type CallerIdentity,
+  CallPermission,
+  callPermissionDecidedBy,
+  type Outcome,
+  type PolicyDecisionPoint,
+  roleRefusalDetail,
+} from '@on.auto/operations';
+import { drive, providersOf, regions, tracker } from '@on.auto/providers/testing';
 import { shippedDocumentOf } from '@on.auto/tool-servers';
-import { fakeApiDocument } from '@on.auto/tool-servers/testing';
+import { consentClientWith, fakeApiDocument, registeredAt } from '@on.auto/tool-servers/testing';
+import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { makeProviderOffering } from '../index.ts';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, adding, issuesIn } from '../testing/additions.ts';
-import { harness } from '../testing/harness.ts';
+import {
+  ada,
+  connectionServicesWith,
+  harness,
+  type Harness,
+  harnessPages,
+  operationNamed,
+} from '../testing/harness.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -38,6 +57,68 @@ const notesDocument = new TextEncoder().encode(JSON.stringify(fakeApiDocument('3
 const notesShipped = new Map([[notesApi.document, shippedDocumentOf(notesDocument)]]);
 
 const openai = { ...tracker, name: 'openai', url: 'https://openai-tools.example.com/mcp', placeholders: {} };
+
+const adaReading: CallerIdentity = { ...ada, permissions: ['org:read'] };
+
+const allowed: AccessDecision = { decision: 'allow', determiningPolicies: ['by-the-test'], errors: [] };
+
+const denied: AccessDecision = { decision: 'deny', determiningPolicies: [], errors: [] };
+
+function decidedOf(addingDecided: AccessDecision): PolicyDecisionPoint {
+  const decided = (request: AccessRequest) => (request.action.name === 'add_connection' ? addingDecided : allowed);
+  return { decide: (request) => Effect.succeed(decided(request)) };
+}
+
+const AddingSchema = Schema.Struct({
+  output: Schema.Struct({ may_add: Schema.Boolean, refusal: Schema.NullOr(Schema.String) }),
+});
+
+const addingIn = Schema.decodeUnknownSync(AddingSchema);
+
+function listedBy(addingDecided: AccessDecision, caller: CallerIdentity): Promise<Outcome> {
+  const h = harness({ decidedBy: decidedOf(addingDecided) });
+  return h.call(operationNamed(h.operations, 'list_providers'), caller);
+}
+
+function offeredTo(addingDecided: AccessDecision, caller: CallerIdentity) {
+  const offering = makeProviderOffering(
+    connectionServicesWith({ policy: connectionPolicyOf({}), pages: harnessPages, consent: consentClientWith() }),
+  );
+  return Effect.runSync(
+    offering(caller).pipe(Effect.provideService(CallPermission, callPermissionDecidedBy(decidedOf(addingDecided)))),
+  );
+}
+
+const issuer = 'https://accounts.drive.example.com';
+
+const [driveWay] = drive.credentials;
+
+const shareWords = 'Share the files of the account with other people.';
+
+const sharing = {
+  name: 'share',
+  for: 'Share your files with other people.',
+  scope: 'files.share',
+  says: { 'files.share': shareWords },
+};
+
+const files = {
+  ...drive,
+  name: 'files',
+  credentials: [{ ...driveWay, more: [sharing] }],
+};
+
+function harnessCovering(scopes?: readonly string[]): Harness {
+  const client = scopes === undefined ? registeredAt(issuer) : registeredAt(issuer, { scopes });
+  return harness({ providers: providersOf(files), consenting: { registeredClients: [client] } });
+}
+
+function waysListedBy(h: Harness) {
+  return h.call(operationNamed(h.operations, 'list_providers'), ada);
+}
+
+const notCovered =
+  'The provider files takes consent through a client whoever runs Auto registers, and no client set up here covers every scope its way asks, files.read files.write';
 
 describe('a connection added by a provider', () => {
   it('is the provider resolved, recorded with the provider and the values given, and pending with its link', async () => {
@@ -259,5 +340,73 @@ describe('the rules a connection added by a provider passes', () => {
         detail: 'People may not add connections on this runtime: its operator sets up its tool servers itself',
       },
     );
+  });
+});
+
+describe('whether a caller may add a connection, where a policy decision point decides', () => {
+  it('is what it decides of add_connection, whatever the credential grants, and its refusal for the role is said so', async () => {
+    expect([
+      addingIn(await listedBy(allowed, adaReading)).output,
+      addingIn(await listedBy(denied, ada)).output,
+    ]).toEqual([
+      { may_add: true, refusal: null },
+      { may_add: false, refusal: roleRefusalDetail },
+    ]);
+  });
+
+  it('offers search the providers to a caller it allows to add, and none to a caller it does not', () => {
+    expect(offeredTo(allowed, adaReading)).not.toHaveLength(0);
+    expect(offeredTo(denied, ada)).toBeUndefined();
+  });
+});
+
+describe('the listing of a provider whose way names what a later consent may add', () => {
+  it('answers the scopes its first consent asks and each group of more by its name, what it is for and the words of its scopes', async () => {
+    expect(await waysListedBy(harnessCovering())).toMatchObject({
+      output: {
+        providers: [
+          {
+            name: 'files',
+            credentials: [
+              {
+                kind: 'authorization',
+                scopes: [
+                  { name: 'files.read', says: 'Read the files of the account.' },
+                  { name: 'files.write', says: 'Create and change the files of the account.' },
+                ],
+                more: [{ name: 'share', for: sharing.for, scopes: [{ name: 'files.share', says: shareWords }] }],
+                offered: true,
+              },
+            ],
+          },
+        ],
+      },
+    });
+  });
+});
+
+describe('a provider whose way names more, by the clients set up for it', () => {
+  it('is offered and added where a client covers the scopes of its first consent, whether or not it covers a group of more', async () => {
+    const h = harnessCovering(['files.read', 'files.write']);
+
+    expect(await waysListedBy(h)).toMatchObject({
+      output: { providers: [{ credentials: [{ offered: true }] }] },
+    });
+    expect(await adding(h, { provider: 'files' })).toMatchObject({
+      status: 'succeeded',
+      output: { credential: { scope: 'files.read files.write' } },
+    });
+  });
+
+  it('is offered under the organization’s own OAuth client alone, in words that name its scope, where no client covers its first consent', async () => {
+    const h = harnessCovering(['files.read', 'files.share']);
+
+    expect(await waysListedBy(h)).toMatchObject({
+      output: { providers: [{ credentials: [{ offered: true, oauth_client: 'required', because: notCovered }] }] },
+    });
+    expect(await adding(h, { provider: 'files', credential: { kind: 'authorization' } })).toMatchObject({
+      status: 'succeeded',
+      output: { credential: { scope: 'files.read files.write', client_source: 'own' } },
+    });
   });
 });

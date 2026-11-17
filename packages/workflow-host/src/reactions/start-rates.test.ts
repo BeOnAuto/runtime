@@ -105,6 +105,20 @@ describe('the starts a reaction makes', () => {
 });
 
 describe('the starts that wait for a later minute', () => {
+  it('are next due when the first of them is: never while none waits, the next minute after a minute that took more than it starts, and never once that minute took them up', async () => {
+    const time = { now: minute + 1000 };
+    const { starting } = await startingAt(time);
+
+    const noneWaiting = await Effect.runPromise(starting.nextDeferredAt());
+    await startsOf(starting, mostStartsAMinute + 1);
+    const oneWaiting = await Effect.runPromise(starting.nextDeferredAt());
+    time.now = minute + aMinute;
+    await Effect.runPromise(starting.startDeferred());
+    const takenUp = await Effect.runPromise(starting.nextDeferredAt());
+
+    expect([noneWaiting, oneWaiting, takenUp]).toEqual([null, minute + aMinute, null]);
+  });
+
   it('are 1,000 at most: one more is refused, which is said once the minute ends', async () => {
     const time = { now: minute + 1000 };
     const { database, starting, refusals } = await startingAt(time);

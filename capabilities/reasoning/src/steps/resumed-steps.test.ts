@@ -1,13 +1,23 @@
+import { textOfContent } from '@on.auto/content';
 import { memoryRecordedContent } from '@on.auto/content/testing';
 import type { RecordedCall } from '@on.auto/definitions';
-import { Effect, Exit } from 'effect';
+import { Effect, Exit, Option, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { RateLimited } from '../failure/rate-limited.ts';
 import type { ToolCallAnswer } from '../jobs/jobs.ts';
 import { textResult, toolCallsResult } from '../testing/model-results.ts';
 import { answers, type ScriptedReply } from '../testing/scripted-language-model.ts';
-import { answeredWith, defaultBounds, foundRows, stepsOf, toolOf, type StepsOptions } from '../testing/step-runs.ts';
+import {
+  answeredWith,
+  defaultBounds,
+  foundRows,
+  secretOfTheServers,
+  stepsOf,
+  type StepsOptions,
+  type StepsRun,
+  toolOf,
+} from '../testing/step-runs.ts';
 import { noLongerOffered } from './asked-calls.ts';
 
 const anyWords: unknown = expect.any(String);
@@ -49,6 +59,50 @@ function resumed({ first, startedAt }: Attempts, calls: readonly RecordedCall[],
 
 function typesOf(calls: readonly { readonly type: string }[]): readonly string[] {
   return calls.map(({ type }) => type);
+}
+
+const limited: ScriptedReply = () =>
+  Effect.fail(
+    new RateLimited({ detail: 'anthropic is limiting the rate', provider: 'anthropic', retry_after_ms: 2000 }),
+  );
+
+const timedOut: ToolCallAnswer = {
+  ended: {
+    type: 'tool_call_failed',
+    data: { because: 'timed_out', detail: 'No answer in 30000 ms', duration_ms: 30_000, jsonrpc_id: 1 },
+  },
+  reply: { text: 'The tool server graph failed: No answer in 30000 ms', isError: true },
+};
+
+const failing = () => Effect.succeed(timedOut);
+
+const profile = toolOf('graph', 'profile');
+
+const twoSteps = [
+  answers(toolCallsResult([['graph__search', { query: 'acme' }]])),
+  answers(toolCallsResult([['graph__search', { query: 'globex' }]])),
+  answers(textResult('Acme and globex have 2 rows each.')),
+];
+
+function keptText({ content }: StepsRun, sha256: string): Promise<string> {
+  return Effect.runPromise(
+    content
+      .get({ org: 'acme', playbook: 'alpha' }, sha256)
+      .pipe(Effect.flatMap(Effect.fromNullishOr), Effect.flatMap(textOfContent), Effect.orDie),
+  );
+}
+
+const Digested = Schema.Struct({
+  messages_sha256: Schema.optional(Schema.String),
+  response_sha256: Schema.optional(Schema.String),
+});
+
+const KindOf = Schema.fromJsonString(Schema.Struct({ kind: Schema.String }));
+
+function digestsOf({ journal }: StepsRun, field: 'messages_sha256' | 'response_sha256'): readonly string[] {
+  return journal
+    .recorded()
+    .flatMap(({ data }) => Option.toArray(Option.fromNullishOr(Schema.decodeUnknownSync(Digested)(data)[field])));
 }
 
 describe('a run that goes on from its facts', () => {
@@ -115,21 +169,6 @@ describe('a run that goes on from a tool call never answered', () => {
   });
 });
 
-const limited: ScriptedReply = () =>
-  Effect.fail(
-    new RateLimited({ detail: 'anthropic is limiting the rate', provider: 'anthropic', retry_after_ms: 2000 }),
-  );
-
-const timedOut: ToolCallAnswer = {
-  ended: {
-    type: 'tool_call_failed',
-    data: { because: 'timed_out', detail: 'No answer in 30000 ms', duration_ms: 30_000, jsonrpc_id: 1 },
-  },
-  reply: { text: 'The tool server graph failed: No answer in 30000 ms', isError: true },
-};
-
-const failing = () => Effect.succeed(timedOut);
-
 describe('a run that goes on after a call of a tool failed', () => {
   it('tells the model the failure in the words of the server, from the fact alone', async () => {
     const attempts = await firstAttempt({ tools: [search], replies: [asking, answering], send: failing });
@@ -139,8 +178,6 @@ describe('a run that goes on after a call of a tool failed', () => {
     expect(again.requests()).toEqual([attempts.first.requests()[1]]);
   });
 });
-
-const profile = toolOf('graph', 'profile');
 
 describe('a run that goes on after its servers stopped offering a tool it asked for', () => {
   it('tells the model the tool is no longer offered, sending nothing, for a call not started or never answered', async () => {
@@ -289,5 +326,53 @@ describe('a run that goes on from its facts, whose cancel another server recorde
       ending: { type: 'cancelled', kind: 'requested' },
     });
     expect([typesOf(again.journal.recorded()), again.sends()]).toEqual([['tool_call_failed'], []]);
+  });
+});
+
+describe('the content a run keeps of its model calls', () => {
+  it('is the new messages of each step under their digest, never the conversation again, and each answer', async () => {
+    const steps = stepsOf({ tools: [search], replies: twoSteps });
+    await Effect.runPromise(steps.stepping);
+    const sent = await Promise.all(digestsOf(steps, 'messages_sha256').map((digest) => keptText(steps, digest)));
+    const answered = await Promise.all(digestsOf(steps, 'response_sha256').map((digest) => keptText(steps, digest)));
+
+    expect(sent.map((text) => Schema.decodeUnknownSync(KindOf)(text).kind)).toEqual(['prompt', 'results', 'results']);
+    expect(sent.filter((text) => text.includes('Find acme.'))).toHaveLength(1);
+    expect(sent.filter((text) => text.includes('Found 2 rows.'))).toHaveLength(2);
+    expect(answered).toHaveLength(3);
+    expect(answered.at(-1)).toContain('Acme and globex have 2 rows each.');
+  });
+
+  it('holds no secret of the servers, and the run goes on from what it kept, as a resumed run does', async () => {
+    const steps = stepsOf({
+      tools: [search],
+      prompt: { kind: 'prompt', message: `Find acme, whose key is ${secretOfTheServers}.` },
+      replies: [
+        answers(toolCallsResult([['graph__search', { query: `the key is ${secretOfTheServers}` }]])),
+        answers(textResult('Searched.')),
+      ],
+    });
+    await Effect.runPromise(steps.stepping);
+    const kept = await Promise.all(
+      [...digestsOf(steps, 'messages_sha256'), ...digestsOf(steps, 'response_sha256')].map((digest) =>
+        keptText(steps, digest),
+      ),
+    );
+
+    expect(kept.filter((text) => text.includes(secretOfTheServers))).toEqual([]);
+    expect(kept.filter((text) => text.includes('key is [redacted]'))).toHaveLength(2);
+    expect(steps.sends().map(({ input }) => input)).toEqual([{ query: 'the key is [redacted]' }]);
+    expect(JSON.stringify(steps.requests())).not.toContain(secretOfTheServers);
+  });
+
+  it('is nothing for a run whose servers keep no content, whose facts carry the sizes alone', async () => {
+    const steps = stepsOf({ tools: [search], replies: twoSteps, keepsContent: false });
+    await Effect.runPromise(steps.stepping);
+
+    expect([digestsOf(steps, 'messages_sha256'), digestsOf(steps, 'response_sha256')]).toEqual([[], []]);
+    expect(steps.journal.recorded().find(({ type }) => type === 'model_call_answered')?.data).toMatchObject({
+      tool_calls: [{ call_id: 'call-1', tool: 'search', server: 'graph' }],
+    });
+    expect(JSON.stringify(steps.journal.recorded())).not.toContain('arguments_sha256');
   });
 });

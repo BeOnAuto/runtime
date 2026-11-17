@@ -1,18 +1,20 @@
-import type { Context, RecordedFact } from '@on.auto/operations';
+import type { Context, RecordedEvent, RecordedFact } from '@on.auto/operations';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
   CloudEventSchema,
+  type DefinitionEvent,
   definitionTypeStreamOf,
   playbookEventOf,
   playbookFactOf,
-  type DefinitionEvent,
   type RunEvent,
 } from '../index.ts';
+import { jsonBytesOf } from '../runs/recorded-size.ts';
 import { runStreamNameOf } from '../runs/run-decider.ts';
 import { recordedAdmin } from '../testing/callers.ts';
 import { testRunId as runId } from '../testing/run-facts.ts';
+import { mostPublishedEventBytes } from './cloud-event.ts';
 
 const recordId = '0b1c2d3e-4f50-5a6b-8c7d-8e9fa0b1c2d3';
 
@@ -55,6 +57,96 @@ const aboutTheRun = {
   caller: 'acme-admin',
   definitionversion: 3,
 };
+
+const content = {
+  source: '---\nmodel: anthropic/claude-sonnet-4-5\n---\nSummarize.',
+};
+
+const published = {
+  specversion: '1.0',
+  id: 'm-2026-09',
+  source: '/ledger/eu',
+  type: 'com.acme.ledger.month-closed',
+  time: '2026-10-01T08:59:00Z',
+  data: { region: 'eu' },
+};
+
+function ofPublished(data: unknown, type = 'event_published'): RecordedFact {
+  return {
+    ...about,
+    causationId: 'c-1',
+    stream: 'events/0199a3c4',
+    type,
+    data,
+    context: { at, by: 'acme-admin' },
+  };
+}
+
+const ofCheck: Context = {
+  by: 'playbook:alpha',
+  at: '2026-10-01T09:00:05.000Z',
+  runId,
+  definitionType: 'workflow',
+  definitionName: 'check',
+  definitionVersion: 1,
+};
+
+const calledBy = { runId: '0199a3c4-7d2e-7c1a-9b3f-000000000001', reference: '/do/0/check', run: 1 };
+
+function ofRunRunStartFacts(event: RunEvent, context: Context): RecordedEvent {
+  return {
+    id: 'record-1',
+    cursor: 'record-1',
+    causationId: null,
+    correlationId: null,
+    stream: runStreamNameOf(runId),
+    version: 2,
+    globalPosition: 2,
+    type: event.type,
+    data: event.data,
+    context,
+    recordedAt: ofCheck.at,
+  };
+}
+
+function attributesOf(event: RunEvent, context: Context) {
+  const fact = playbookFactOf(ofRunRunStartFacts(event, context));
+  return { calledby: fact?.['calledby'], calldepth: fact?.['calldepth'], data: fact?.data };
+}
+
+function ofRunSuccessOutputFacts(event: RunEvent): RecordedEvent {
+  return {
+    id: '0b1c2d3e-4f50-5a6b-8c7d-8e9fa0b1c2d3',
+    cursor: '0b1c2d3e-4f50-5a6b-8c7d-8e9fa0b1c2d3',
+    causationId: null,
+    correlationId: null,
+    version: 1,
+    globalPosition: 1,
+    recordedAt: at,
+    stream: runStreamNameOf(runId),
+    type: event.type,
+    data: event.data,
+    context: ofSummary,
+  };
+}
+
+const aboutTheRunSuccessOutputFacts = {
+  specversion: '1.0',
+  id: '0b1c2d3e-4f50-5a6b-8c7d-8e9fa0b1c2d3',
+  source: `/runs/${runId}`,
+  subject: 'reasoning/summary',
+  time: at,
+  caller: 'acme-admin',
+  definitionversion: 3,
+};
+
+function deep(levels: number): Schema.Json {
+  return levels === 0 ? 'rose' : { profits: deep(levels - 1) };
+}
+
+function succeededWith(output: Schema.Json) {
+  return playbookFactOf(ofRunSuccessOutputFacts({ type: 'run_succeeded', data: { output, record: {} } }));
+}
 
 describe('the facts of a run as events', () => {
   it('are its start and its endings, about the run, its context as attributes and its fact as data', () => {
@@ -124,10 +216,6 @@ describe('the records of a run that are no facts', () => {
     ).toEqual([undefined, undefined, undefined, undefined, undefined]);
   });
 });
-
-const content = {
-  source: '---\nmodel: anthropic/claude-sonnet-4-5\n---\nSummarize.',
-};
 
 describe('the facts of a definition as events', () => {
   it('are its creation, its changes and its retirement, about the definition and its version, with no subject and no data', () => {
@@ -199,26 +287,6 @@ describe('the cause and the run of a fact', () => {
   });
 });
 
-const published = {
-  specversion: '1.0',
-  id: 'm-2026-09',
-  source: '/ledger/eu',
-  type: 'com.acme.ledger.month-closed',
-  time: '2026-10-01T08:59:00Z',
-  data: { region: 'eu' },
-};
-
-function ofPublished(data: unknown, type = 'event_published'): RecordedFact {
-  return {
-    ...about,
-    causationId: 'c-1',
-    stream: 'events/0199a3c4',
-    type,
-    data,
-    context: { at, by: 'acme-admin' },
-  };
-}
-
 describe('the events of a playbook', () => {
   it('are the facts of the playbook and the events published to it, as their publishers gave them', () => {
     expect([
@@ -232,5 +300,69 @@ describe('the events of a playbook', () => {
       undefined,
       undefined,
     ]);
+  });
+});
+
+describe('the facts of a run that answers a call of another run', () => {
+  it('name the run that called it as an attribute, and its ending the reason and kind it was rejected with as data', () => {
+    const called = { ...ofCheck, calledBy, callDepth: 1 };
+
+    expect([
+      attributesOf({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } }, called),
+      attributesOf(
+        {
+          type: 'run_rejected',
+          data: { rejection: { reason: 'cancelled', detail: 'Out of time', kind: 'deadline' } },
+        },
+        called,
+      ),
+    ]).toEqual([
+      { calledby: calledBy.runId, calldepth: 1, data: undefined },
+      { calledby: calledBy.runId, calldepth: 1, data: { reason: 'cancelled', kind: 'deadline' } },
+    ]);
+  });
+});
+
+describe('the facts of a run a trigger started', () => {
+  it('name the trigger, by its kind and its place in the document, on the start and on the ending', () => {
+    const triggered = { ...ofCheck, trigger: { kind: 'every' as const, reference: '/schedule/every' } };
+
+    expect(
+      [
+        playbookFactOf(
+          ofRunRunStartFacts({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } }, triggered),
+        ),
+        playbookFactOf(ofRunRunStartFacts({ type: 'run_failed', data: {} }, triggered)),
+      ].map((fact) => [fact?.['triggerkind'], fact?.['triggerreference']]),
+    ).toEqual([
+      ['every', '/schedule/every'],
+      ['every', '/schedule/every'],
+    ]);
+  });
+});
+
+describe('the output a success carries as an event', () => {
+  it('is its size when it is too large for an event, which get_run reads whole', () => {
+    const output = { summary: 'x'.repeat(mostPublishedEventBytes) };
+
+    expect(succeededWith(output)).toEqual({
+      ...aboutTheRunSuccessOutputFacts,
+      type: 'run_succeeded',
+      data: { output_bytes: jsonBytesOf(output) },
+    });
+  });
+
+  it('is its size when it nests too deep for a run to hold the event in a list', () => {
+    expect(succeededWith(deep(509))).toHaveProperty('data.output', deep(509));
+    expect(succeededWith(deep(510))).toHaveProperty('data.output_bytes', jsonBytesOf(deep(510)));
+  });
+
+  it('is the output at the bound of an event, and its size one byte past it', () => {
+    const empty = { ...aboutTheRunSuccessOutputFacts, type: 'run_succeeded', data: { output: '' } };
+    const room = mostPublishedEventBytes - jsonBytesOf(empty);
+    const fitting = 'x'.repeat(room);
+
+    expect(succeededWith(fitting)).toHaveProperty('data.output', fitting);
+    expect(succeededWith(`${fitting}x`)).toHaveProperty('data.output_bytes', room + 3);
   });
 });

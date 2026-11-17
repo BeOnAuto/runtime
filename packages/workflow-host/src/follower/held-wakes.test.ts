@@ -117,6 +117,7 @@ function workHolding(
       fireSchedules: () =>
         Effect.suspend(() => (broken.now ? Effect.die(new Error('The schedules broke')) : Effect.void)),
       nextScheduleAt: () => Effect.succeed(scheduleAt),
+      nextDeferredAt: () => Effect.succeed(null),
     },
     appended: streamSignalOf(),
     holds: holdsAnswering(answers, logged),

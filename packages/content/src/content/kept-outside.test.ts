@@ -1,3 +1,5 @@
+import { Effect } from 'effect';
+import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -11,7 +13,8 @@ import {
   refusalOf,
   resultOf,
 } from '../testing/content-samples.ts';
-import { memoryContentHeads, memoryContentStore, type HeldIn } from '../testing/memory-content.ts';
+import { keptTextOf } from '../testing/kept-text.ts';
+import { type HeldIn, memoryContentHeads, memoryContentStore } from '../testing/memory-content.ts';
 import {
   aStepFailedAtItsPause,
   defectOf,
@@ -20,8 +23,9 @@ import {
   settledWithin,
 } from '../testing/paused-store.ts';
 import { sha256Of } from './content-digest.ts';
-import { keptOutside, removalLastsMs, removalWaitMs } from './kept-outside.ts';
-import { textToKeep, type ContentToKeep } from './streamed-content.ts';
+import { erasureDeletesWithinMs, keptOutside, removalLastsMs, removalWaitMs } from './kept-outside.ts';
+import type { ContentHeads, ContentStore } from './recorded-content.ts';
+import { type ContentToKeep, textToKeep } from './streamed-content.ts';
 
 const keptAt = Date.parse('2026-11-01T09:00:00.000Z');
 
@@ -162,18 +166,23 @@ function refusedOnceItWaited(): void {
 function stoppedRemovalsFinished(): void {
   it('finishes a removal that stalled before its end once the time a removal takes has run out, for a put or for a removal after it, answers removed to one before, and lets the stalled one, failing at last, take back no mark it no longer holds', async () => {
     const { content, removedKeptBefore, paused } = outsideOf();
-    const markedAt = keptAt + 2 * removalLastsMs;
+    const markedAtKeptOutside = keptAt + 2 * removalLastsMs;
     const notes = [note, 'a second note'];
     await Promise.all(notes.map((text) => at(keptAt, content.put(alpha, textToKeep(text, json)))));
     const stalls = [paused.pausedDelete(), paused.pausedDelete()];
-    const stalled = notes.map((text) => at(markedAt, defectOf(removedKeptBefore(alpha, sha256Of(text), markedAt))));
+    const stalled = notes.map((text) =>
+      at(markedAtKeptOutside, defectOf(removedKeptBefore(alpha, sha256Of(text), markedAtKeptOutside))),
+    );
     await Promise.all(stalls.map(({ reached }) => reached));
 
-    const whileItRuns = await at(markedAt + 1, removedKeptBefore(alpha, noteDigest, markedAt + 1));
-    const put = await at(markedAt + removalLastsMs + 1, content.put(alpha, textToKeep(note, 'text/plain')));
+    const whileItRuns = await at(
+      markedAtKeptOutside + 1,
+      removedKeptBefore(alpha, noteDigest, markedAtKeptOutside + 1),
+    );
+    const put = await at(markedAtKeptOutside + removalLastsMs + 1, content.put(alpha, textToKeep(note, 'text/plain')));
     const removal = await at(
-      markedAt + removalLastsMs + 1,
-      removedKeptBefore(alpha, sha256Of('a second note'), markedAt),
+      markedAtKeptOutside + removalLastsMs + 1,
+      removedKeptBefore(alpha, sha256Of('a second note'), markedAtKeptOutside),
     );
 
     for (const stall of stalls) {
@@ -275,6 +284,29 @@ function erasedThenRemoved(): void {
   });
 }
 
+const markedAt = keptAt + 86_400_000;
+
+const noteKeptOutsideErasure = '{"note":"kept outside, until it expires"}';
+
+const noteKeptOutsideFound = '{"note":"found where a read finds it"}';
+
+const noteDigestKeptOutsideFound = sha256Of(noteKeptOutsideFound);
+
+function counted(store: ContentStore): { readonly store: ContentStore; readonly asked: () => number } {
+  let asked = 0;
+  return {
+    store: {
+      ...store,
+      holds: (place, sha256) =>
+        Effect.suspend(() => {
+          asked += 1;
+          return store.holds(place, sha256);
+        }),
+    },
+    asked: () => asked,
+  };
+}
+
 describe('the content kept outside the ledger, removed by its head', () => {
   removedByItsHead();
   touchedByItsPuts();
@@ -287,4 +319,79 @@ describe('a put of a content outside the ledger that meets its removal', () => {
   refusedOnceItWaited();
   stoppedRemovalsFinished();
   erasedThenRemoved();
+});
+
+describe('an erasure of a content kept outside the ledger that pauses between its mark and its delete', () => {
+  it('deletes nothing and lets go of its mark where it comes to delete once its mark is half the time a removal takes old, so the content stays whole and due, and the erasure after it erases it', async () => {
+    const heads = memoryContentHeads();
+    const pausing: ContentHeads = {
+      ...heads,
+      erasing: (playbook, sha256, times) =>
+        Effect.tap(heads.erasing(playbook, sha256, times), () => TestClock.adjust(erasureDeletesWithinMs)),
+    };
+    const store = memoryContentStore();
+    const kept = keptOutside(heads, store);
+    const { sha256 } = await at(
+      keptAt,
+      kept.content.put(alpha, { ...textToKeep(noteKeptOutsideErasure, json), expiresAt: markedAt }),
+    );
+
+    const late = await at(markedAt, keptOutside(pausing, store).eraseExpired(10));
+    const whole = await keptTextOf(kept.content, alpha, sha256);
+    const after = await at(markedAt + 1, kept.eraseExpired(10));
+
+    expect([late, whole, after]).toEqual([
+      { erased: 0, more: false },
+      noteKeptOutsideErasure,
+      { erased: 1, more: false },
+    ]);
+    expect(await keptTextOf(kept.content, alpha, sha256)).toBeUndefined();
+  });
+});
+
+describe('a content kept outside the ledger, as it is found', () => {
+  it('is found where a place recorded for it holds its bytes, whatever head stands, as a read reads it, and is not found where the store holds none', async () => {
+    const store = memoryContentStore();
+    const heads = memoryContentHeads();
+    const outside = keptOutside(heads, store);
+    const staged = await resultOf(store.stage(alphaPlace, textToKeep(noteKeptOutsideFound, json)));
+    await resultOf(staged.placed(json));
+    await resultOf(heads.placed(alpha, noteDigestKeptOutsideFound, alphaPlace));
+
+    const headless = await resultOf(outside.found(alpha, noteDigestKeptOutsideFound));
+    const read = await keptTextOf(outside.content, alpha, noteDigestKeptOutsideFound);
+    const never = await resultOf(outside.found(alpha, sha256Of('{"note":"never kept"}')));
+
+    expect([headless, read, never]).toEqual([true, noteKeptOutsideFound, false]);
+  });
+
+  it('is found where its bytes were erased on purpose, without asking its store, as a read answers nothing without asking it', async () => {
+    const { store, asked } = counted(memoryContentStore());
+    const outside = keptOutside(memoryContentHeads(), store);
+    const expiresAt = keptAt + 1000;
+    await at(keptAt, outside.content.put(alpha, { ...textToKeep(noteKeptOutsideFound, json), expiresAt }));
+    await at(expiresAt, outside.eraseExpired(10));
+
+    const before = asked();
+    const found = await resultOf(outside.found(alpha, noteDigestKeptOutsideFound));
+
+    expect([found, asked() - before]).toEqual([true, 0]);
+    expect(await keptTextOf(outside.content, alpha, noteDigestKeptOutsideFound)).toBeUndefined();
+  });
+
+  it('reads a content with the media type of its head whatever its bytes were placed with, and with that of its bytes where no head stands', async () => {
+    const store = memoryContentStore();
+    const heads = memoryContentHeads();
+    const { content } = keptOutside(heads, store);
+    const staged = await resultOf(store.stage(alphaPlace, textToKeep(noteKeptOutsideFound, 'text/plain')));
+    await resultOf(staged.placed('text/plain'));
+    await resultOf(heads.placed(alpha, noteDigestKeptOutsideFound, alphaPlace));
+
+    const headless = (await present(content.get(alpha, noteDigestKeptOutsideFound))).mediaType;
+    const kept = await resultOf(content.put(alpha, textToKeep(noteKeptOutsideFound, json)));
+    const read = await present(content.get(alpha, noteDigestKeptOutsideFound));
+
+    expect([headless, kept.mediaType, read.mediaType]).toEqual(['text/plain', json, json]);
+    expect(await readBack(read)).toMatchObject({ sha256: noteDigestKeptOutsideFound });
+  });
 });

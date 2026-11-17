@@ -1,20 +1,26 @@
-import { InvalidInput } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { InvalidInput, NotFound } from '@on.auto/operations';
+import { Effect, Option, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  type Capability,
+  type CapabilityDeclaration,
+  defineCapability,
   defineCreateDefinition,
   defineRunDefinition,
   defineUpdateDefinition,
-  defineCapability,
-  type Capability,
   type RunContext,
-  type CapabilityDeclaration,
 } from '../index.ts';
 import { recordingJournal } from '../journal-testing/recording-journal.ts';
 import { answeringLaterMs, answeringNowMs, asking, nudgesPresenter } from '../testing/asking.ts';
 import { noCalledDefinitions } from '../testing/called-definitions.ts';
+import { echo } from '../testing/capabilities/echo.ts';
+import { probe } from '../testing/capabilities/probe.ts';
 import { uncheckedPages } from '../testing/page-ports.ts';
+import { ExtensionManifestSchema } from './extension-manifest.ts';
+import { firstLineOf } from './first-lines.ts';
+import { knownCapabilities } from './known-capabilities.ts';
+import { type KeptViewState, lagOf, viewStandingOf } from './view-standing.ts';
 
 const parseWords = (source: string) =>
   source.trim() === ''
@@ -46,6 +52,26 @@ const run: RunContext = {
   depth: 0,
   callDepth: 0,
   ...noCalledDefinitions,
+};
+
+const decoded = Schema.decodeUnknownOption(ExtensionManifestSchema);
+
+const known = knownCapabilities([echo, probe().capability]);
+
+const decodeType = Schema.decodeUnknownResult(known.field);
+
+function refusalOf(input: unknown): string {
+  return Result.match(decodeType(input), { onFailure: String, onSuccess: () => 'accepted' });
+}
+
+const live: KeptViewState = {
+  version: 2,
+  phase: 'live',
+  view: {},
+  checkpoint: 'cursor',
+  checkpointAt: '2026-10-06T10:00:05.000Z',
+  lastEvent: { id: 'event-1', time: '2026-10-06T10:00:04.000Z' },
+  folded: 3,
 };
 
 describe('a capability', () => {
@@ -215,5 +241,118 @@ describe('the cancelling of a run', () => {
       { status: 'rejected', reason: 'cancelled', kind: 'deadline', detail: 'The step ran out of time' },
       { status: 'rejected', reason: 'conflict', detail: 'At step {"step":1}' },
     ]);
+  });
+});
+
+describe('the manifest of an extension', () => {
+  it('names the package and its version, and the point each implementation fills with the contract it was built against', () => {
+    const implementation = { answers: 'example' };
+    const manifest = {
+      name: '@example/extension',
+      version: '2.0.0',
+      provides: [{ point: 'example/point', contract: 3, implementation }],
+    };
+
+    expect(Option.getOrThrow(decoded(manifest)).provides).toEqual([
+      { point: 'example/point', contract: 3, implementation },
+    ]);
+  });
+
+  it('is refused without the points it provides, or with a contract that is not a whole number', () => {
+    expect([
+      decoded({ name: '@example/extension', version: '2.0.0' }),
+      decoded({ name: '@example/extension', version: '2.0.0', provides: [{ point: 'p', contract: 1.5 }] }),
+    ]).toEqual([Option.none(), Option.none()]);
+  });
+});
+
+describe('the words of a failure an extension throws', () => {
+  it('are the first line of its message, or of what else was thrown, trimmed', () => {
+    expect([
+      firstLineOf(new Error('  first  \nsecond')),
+      firstLineOf('plain\nrest'),
+      firstLineOf(new Error('')),
+    ]).toEqual(['first', 'plain', '']);
+  });
+});
+
+describe('the type field of the definition operations', () => {
+  it('takes a type a capability of the server serves', () => {
+    expect([refusalOf('echo'), refusalOf('probe')]).toEqual(['accepted', 'accepted']);
+  });
+
+  it('refuses a type no capability serves by naming the types of definition the server keeps, and a malformed one by its shape alone', () => {
+    expect([refusalOf('prediction'), refusalOf('Echo!')]).toEqual([expect.any(String), expect.any(String)]);
+  });
+});
+
+describe('the capability of a type', () => {
+  it('is the capability that serves it, and not found for a type none serves', () => {
+    expect(Effect.runSync(known.capabilityOfType('echo'))).toBe(echo);
+    expect(Effect.runSync(Effect.flip(known.capabilityOfType('prediction')))).toEqual(
+      new NotFound({ detail: 'There is no definition type prediction' }),
+    );
+  });
+});
+
+describe('how far a view lags the playbook', () => {
+  it('is the time between the playbook’s newest record and the record at the checkpoint, unknown until both are known', () => {
+    expect([
+      lagOf('2026-10-06T10:02:05.000Z', '2026-10-06T10:00:05.000Z'),
+      lagOf('2026-10-06T10:00:05.000Z', '2026-10-06T10:00:06.000Z'),
+      lagOf('2026-10-06T10:00:05.000Z', null),
+      lagOf(undefined, '2026-10-06T10:00:06.000Z'),
+    ]).toEqual([120_000, 0, undefined, undefined]);
+  });
+});
+
+describe('the standing of a view', () => {
+  it('is rebuilding until a view of its version is kept', () => {
+    expect([viewStandingOf(2), viewStandingOf(3, live, '2026-10-06T10:00:05.000Z')]).toEqual([
+      {
+        state: 'rebuilding',
+        version: 2,
+        checkpoint: null,
+        checkpoint_at: null,
+        folded: 0,
+        lag_ms: null,
+        newest_record_at: null,
+      },
+      {
+        state: 'rebuilding',
+        version: 3,
+        checkpoint: null,
+        checkpoint_at: null,
+        folded: 0,
+        lag_ms: null,
+        newest_record_at: '2026-10-06T10:00:05.000Z',
+      },
+    ]);
+  });
+
+  it('says where the kept view stands, and why it stalled where it did', () => {
+    const stall = {
+      event: { id: 'event-2', type: 'run_succeeded', time: '2026-10-06T10:00:06.000Z' },
+      kind: 'shape',
+      message: 'The fold returned by_week, which data.views does not declare',
+      line: null,
+    };
+
+    expect(viewStandingOf(2, live, '2026-10-06T10:00:07.000Z')).toEqual({
+      state: 'live',
+      version: 2,
+      checkpoint: 'cursor',
+      checkpoint_at: '2026-10-06T10:00:05.000Z',
+      folded: 3,
+      last_event: { id: 'event-1', time: '2026-10-06T10:00:04.000Z' },
+      lag_ms: 2000,
+      newest_record_at: '2026-10-06T10:00:07.000Z',
+    });
+    expect(viewStandingOf(2, { ...live, phase: 'stalled', lastEvent: null, stall })).toMatchObject({
+      state: 'stalled',
+      last_event: null,
+      lag_ms: null,
+      stalled: { event: stall.event, kind: 'shape', error: stall.message, line: null },
+    });
   });
 });

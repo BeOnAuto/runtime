@@ -1,12 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import { SQL } from '@event-driven-io/dumbo';
+import { pgFormatter } from '@event-driven-io/dumbo/pg';
+import { Ledger } from '@on.auto/operations';
+import { Cause, Effect } from 'effect';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { statement } from '../connection/statement.ts';
+import { contentTableNames } from '../content/content-tables.ts';
 import type { ContentConnections } from '../content/postgresql-content.ts';
+import type { StatementExecutor } from '../event-store.ts';
 import { postgresqlLayout } from '../layout/layout-dialects.ts';
 import type { LayoutStep } from '../layout/layout-steps.ts';
 import { ledgerLayout } from '../layout/ledger-layout.ts';
+import { unreachableDatabase } from '../testing/index.ts';
 import { postgresqlLayoutCarried, postgresqlLayoutKept } from './postgresql-layout.ts';
+import { plainPoolsOn, postgresqlEventStore, postgresqlLedgerLayer } from './postgresql-ledger.ts';
 import { emmettsMigrationLock } from './postgresql-run-outcomes.ts';
+import { postgresqlSchemaCreated } from './postgresql-schema.ts';
 
 interface Held {
   readonly tables: readonly string[];
@@ -69,6 +78,40 @@ const marked: LayoutStep = {
     },
   ],
 };
+
+function described(sql: SQL): string {
+  return SQL.describe(sql, pgFormatter).replaceAll(/\s+/gu, ' ').trim();
+}
+
+function executorFinding(names: readonly string[]): {
+  readonly execute: StatementExecutor;
+  readonly commands: string[];
+} {
+  const commands: string[] = [];
+  return {
+    commands,
+    execute: {
+      query: () => Promise.resolve({ rows: names.map((name) => ({ name })) }),
+      command: (sql) => {
+        commands.push(described(sql).split(' (')[0] ?? '');
+        return Promise.resolve();
+      },
+    },
+  };
+}
+
+const firstContentTable = 'CREATE TABLE IF NOT EXISTS recorded_content_chunks';
+
+const theContentTables = [
+  firstContentTable,
+  'CREATE TABLE IF NOT EXISTS recorded_content_heads',
+  'CREATE TABLE IF NOT EXISTS recorded_content_places',
+];
+
+const theContentIndexes = [
+  'CREATE INDEX IF NOT EXISTS recorded_content_heads_by_upload ON recorded_content_heads',
+  'CREATE INDEX IF NOT EXISTS recorded_content_heads_expiring ON recorded_content_heads',
+];
 
 describe('the layout of a new or kept ledger on PostgreSQL, kept in a transaction of its own before the migration', () => {
   it('takes the migration lock, lists the tables of the schema, and writes the layout into a table of one row of a database that holds none', async () => {
@@ -136,5 +179,71 @@ describe('a fact as the ledger keeps it on PostgreSQL, read as it opens', () => 
       postgresqlLayout.storedData({ json: '{"by":2}' }),
       postgresqlLayout.storedMetadata({ at: '2026-10-29T10:00:00.000Z', by: 'user-1' }),
     ]).toEqual([{ by: 2 }, { at: '2026-10-29T10:00:00.000Z', by: 'user-1' }]);
+  });
+});
+
+describe("the ledger's own schema on PostgreSQL", () => {
+  it("creates the playbook's indexes, the tables of the content it keeps and their indexes, then the tables of its kept secrets, of the webhooks it received and of the names of definitions, each only when missing", async () => {
+    const empty = executorFinding([]);
+    const found = executorFinding([
+      ...contentTableNames,
+      'recorded_content_heads_by_upload',
+      'recorded_content_heads_expiring',
+      'kept_secrets',
+      'webhooks_received',
+      'webhooks_received_kept_until',
+      'definition_names_1',
+      'definition_names_1_by_definition',
+    ]);
+
+    await postgresqlSchemaCreated(empty.execute);
+    await postgresqlSchemaCreated(found.execute);
+    const indexes = empty.commands.slice(0, empty.commands.indexOf(firstContentTable));
+
+    expect(indexes.filter((command) => command.startsWith('CREATE INDEX IF NOT EXISTS ledger_'))).toHaveLength(7);
+    expect(indexes.filter((command) => command.includes('content'))).toEqual([]);
+    expect(empty.commands.slice(indexes.length)).toEqual([
+      ...theContentTables,
+      ...theContentIndexes,
+      'CREATE TABLE IF NOT EXISTS kept_secrets',
+      'CREATE TABLE IF NOT EXISTS webhooks_received',
+      'CREATE INDEX IF NOT EXISTS webhooks_received_kept_until ON webhooks_received',
+      'CREATE TABLE IF NOT EXISTS definition_names_1',
+      'CREATE UNIQUE INDEX IF NOT EXISTS definition_names_1_by_definition ON definition_names_1',
+    ]);
+    expect(
+      found.commands.filter((command) => /content|kept_secrets|webhooks_received|definition_names/u.test(command)),
+    ).toEqual([]);
+  });
+});
+
+describe('a ledger on PostgreSQL that cannot be reached', () => {
+  it('fails to build, with a defect naming the address it tried and no credential', async () => {
+    const { url, port, password } = await unreachableDatabase();
+
+    const cause = await Effect.runPromise(
+      Effect.provide(Ledger, postgresqlLedgerLayer({ pools: plainPoolsOn(url) })).pipe(Effect.sandbox, Effect.flip),
+    );
+
+    expect({ dies: Cause.hasDies(cause), fails: Cause.hasFails(cause) }).toEqual({ dies: true, fails: false });
+    expect(Cause.pretty(cause)).toContain(`ECONNREFUSED 127.0.0.1:${port}`);
+    expect(Cause.pretty(cause)).not.toContain(password);
+  });
+
+  it('fails a read of what a playbook recorded with the error of the driver', async () => {
+    const { url, port } = await unreachableDatabase();
+    const lost: Readonly<Error>[] = [];
+    const store = postgresqlEventStore({
+      pools: plainPoolsOn(url),
+      reportLostConnection: (error) => {
+        lost.push(error);
+      },
+    });
+    onTestFinished(() => store.close());
+
+    await expect(
+      store.readRecorded('playbook/acme/alpha/', { kind: 'everything' }, { order: 'asc', limit: 1 }),
+    ).rejects.toThrow(`ECONNREFUSED 127.0.0.1:${port}`);
+    expect(lost).toEqual([]);
   });
 });

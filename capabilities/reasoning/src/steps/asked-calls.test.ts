@@ -1,14 +1,20 @@
+import { setTimeout } from 'node:timers/promises';
+
+import { actingCallsCount } from '@on.auto/tool-servers/policy';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { anthropicMessage, chatCompletion } from '../provider-testing/provider-replies.ts';
-import { jsonResponse, recordingFetch, type Responder } from '../provider-testing/recording-fetch.ts';
+import { abortedWith, jsonResponse, recordingFetch, type Responder } from '../provider-testing/recording-fetch.ts';
 import { anthropicToolCall } from '../provider-testing/tool-call-replies.ts';
-import { accessFor } from '../testing/adapter-harness.ts';
-import { textResult, toolCallsResult, type ScriptedCall } from '../testing/model-results.ts';
+import { accessFor, promptText } from '../testing/adapter-harness.ts';
+import { budgetOf } from '../testing/input-budgets.ts';
+import { type ScriptedCall, textResult, toolCallsResult } from '../testing/model-results.ts';
 import { answers } from '../testing/scripted-language-model.ts';
-import { defaultBounds, stepToolBytes, stepsOf, toolOf } from '../testing/step-runs.ts';
-import { notAnObject } from './asked-calls.ts';
+import { answeredWith, defaultBounds, foundRows, stepsOf, stepToolBytes, toolOf } from '../testing/step-runs.ts';
+import { noAsking, notAnObject } from './asked-calls.ts';
+import { admittedAgain } from './call-admission.ts';
+import type { StepTool } from './step-run.ts';
 
 const search = toolOf('graph', 'search');
 
@@ -29,6 +35,54 @@ async function stepsThrough(model: string, environment: Readonly<Record<string, 
   const steps = stepsOf({ languageModel, tools: [search], model });
   await Effect.runPromise(steps.stepping);
   return { steps, second: JSON.stringify(recording.requests()[1]?.body) };
+}
+
+function searchingThen(then: Responder): Responder {
+  return (request, attempt) =>
+    attempt === 1 ? jsonResponse(anthropicToolCall('graph__search', { query: 'acme' })) : then(request, attempt);
+}
+
+const slowly = () => Effect.promise(() => setTimeout(300, answeredWith(foundRows)));
+
+const searchSharedRoom: StepTool = {
+  name: 'graph__search',
+  description: 'Finds the rows of the graph that match a query.',
+  inputSchema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+  reference: { server: 'graph', tool: 'search' },
+  readOnly: true,
+  mostBytes: 16_777_216,
+  start: ({ callId }) =>
+    Promise.resolve({ call_id: callId, server: 'graph', tool: 'search', arguments_bytes: 2, read_only: true }),
+};
+
+function calling(reply: object) {
+  return (_request: unknown, attempt: number) => jsonResponse(attempt === 1 ? reply : anthropicMessage('Acme.'));
+}
+
+async function roomsGiven(contextWindow: number | undefined, reply: object) {
+  const { languageModel } = await accessFor(
+    { ANTHROPIC_API_KEY: 'k' },
+    { fetch: recordingFetch(calling(reply)).fetch },
+  );
+  const steps = stepsOf({
+    languageModel,
+    tools: [searchSharedRoom],
+    prompt: { kind: 'prompt', instructions: 'Answer briefly', message: promptText },
+    bounds: { ...defaultBounds, limits: { contextWindow, budget: budgetOf(2_000_000) } },
+  });
+  await Effect.runPromise(steps.stepping);
+  return steps.sends().map(({ room }) => room);
+}
+
+function threeCalls(): object {
+  const reply = anthropicToolCall('graph__search', { query: 'acme' });
+  const content = [1, 2, 3].map((call) => ({
+    type: 'tool_use',
+    id: `toolu_call_${call}`,
+    name: 'graph__search',
+    input: { query: `acme ${call}` },
+  }));
+  return { ...reply, content };
 }
 
 describe('a call the model asks for of a tool the run does not offer', () => {
@@ -153,5 +207,66 @@ describe('the calls a run may make', () => {
         },
       ],
     });
+  });
+});
+
+describe('a call its run sent of a tool it no longer offers, admitted again', () => {
+  it('keeps the answer its facts gave it, and counts it once by the mark its fact records', () => {
+    const asked = [{ callId: 'call-1', tool: 'graph__search', input: { query: 'acme' } }];
+    const answer = { type: 'tool-result', toolCallId: 'call-1', toolName: 'graph__search', output: 'Found 2 rows.' };
+    const again = admittedAgain(
+      { ...noAsking, asked, started: new Map([['call-1', false]]), results: new Map([['call-1', answer]]) },
+      { offered: new Map(), count: actingCallsCount },
+    );
+
+    expect([again.tally.counted, again.asking.results.get('call-1'), again.asking.refused.size]).toEqual([
+      1,
+      answer,
+      0,
+    ]);
+  });
+});
+
+describe('the model calls of a run that calls tools', () => {
+  it('have each their own deadline, which the time of the tools does not count against', async () => {
+    const recording = recordingFetch(searchingThen(() => jsonResponse(anthropicMessage('Done.'))));
+    const { languageModel } = await accessFor({ ANTHROPIC_API_KEY: 'k' }, { fetch: recording.fetch });
+    const steps = stepsOf({ languageModel, tools: [search], send: slowly, timeoutMs: 200 });
+
+    expect(await Effect.runPromise(steps.stepping)).toMatchObject({ ending: { type: 'answered' } });
+  });
+
+  it('end one that misses its deadline as timed out, and give the provider up', async () => {
+    const recording = recordingFetch(searchingThen(({ signal }) => abortedWith(signal)));
+    const { languageModel } = await accessFor({ ANTHROPIC_API_KEY: 'k' }, { fetch: recording.fetch });
+    const steps = stepsOf({ languageModel, tools: [search], timeoutMs: 100 });
+
+    expect(await Effect.runPromise(steps.stepping)).toMatchObject({
+      ending: { type: 'failed', data: { because: 'timed_out', number: 2 } },
+    });
+    expect(recording.requests().map(({ signal }) => signal.aborted)).toEqual([false, true]);
+  });
+});
+
+describe('a call of a run whose model has a known context window', () => {
+  it('gives the tool the room the window holds past the turn the provider counted, at the ratio the request measured, as before', async () => {
+    expect(await roomsGiven(10_000, anthropicToolCall('graph__search', { query: 'acme' }))).toEqual([112_857]);
+    expect(await roomsGiven(5021, anthropicToolCall('graph__search', { query: 'acme' }))).toEqual([56_428]);
+  });
+
+  it('gives a tool no room when the provider counted no input tokens of the turn, or the window is unknown', async () => {
+    const uncounted = {
+      ...anthropicToolCall('graph__search', { query: 'acme' }),
+      usage: { input_tokens: 0, output_tokens: 0 },
+    };
+
+    expect(await roomsGiven(10_000, uncounted)).toEqual([undefined]);
+    expect(await roomsGiven(undefined, anthropicToolCall('graph__search', { query: 'acme' }))).toEqual([undefined]);
+  });
+});
+
+describe('the calls of one turn', () => {
+  it('share the room of the turn equally, each given a third of it when there are three', async () => {
+    expect(await roomsGiven(10_000, threeCalls())).toEqual([1, 2, 3].map(() => Math.floor(112_857 / 3)));
   });
 });

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { IndexExecutor } from '../recorded/missing-indexes.ts';
 import { createPostgreSQLPlaybookIndexes, orgOfStream } from './playbook-indexes.ts';
+import { definitionStreamsStatement, postgresqlDefinitionStreams } from './postgresql-definition-streams.ts';
 import { postgresqlRecordedStore, type Query } from './postgresql-recorded.ts';
 
 interface Asked {
@@ -73,6 +74,47 @@ const playbookKey = "substring(stream_id FROM '^(?:[^/]*/){3}')";
 const kindKey = "substring(stream_id FROM '^(?:[^/]*/){4}')";
 
 const correlation = "(message_metadata ->> 'correlationId')";
+
+function executorFinding(names: readonly string[]): { readonly execute: IndexExecutor; readonly commands: string[] } {
+  const commands: string[] = [];
+  return {
+    commands,
+    execute: {
+      query: () => Promise.resolve({ rows: names.map((name) => ({ name })) }),
+      command: (sql) => {
+        commands.push(SQL.describe(sql, pgFormatter).replaceAll(/\s+/gu, ' '));
+        return Promise.resolve();
+      },
+    },
+  };
+}
+
+const context = { at, by: 'tester' };
+
+const storedRow = {
+  transaction: '11',
+  position: '21',
+  stream: `${alpha}runs/r1`,
+  version: 1,
+  type: 'run_started',
+  recorded: at,
+  id: 'message-21',
+  metadata: { ...context, causationId: null, correlationId: 'r1' },
+  correlation: 'r1',
+  size: 0,
+  data: { json: JSON.stringify({ input: {} }) },
+};
+
+function answeringNothing(): { readonly query: Query; readonly asked: Asked[] } {
+  const asked: Asked[] = [];
+  return {
+    asked,
+    query: (text, values) => {
+      asked.push({ text, values });
+      return Promise.resolve([]);
+    },
+  };
+}
 
 describe('the read of what a playbook recorded on PostgreSQL, oldest first', () => {
   it('walks the playbook index in transaction id then position, behind the oldest write open in its database, once it has looked up the writes open in others', async () => {
@@ -239,20 +281,6 @@ describe('a read of runs on PostgreSQL', () => {
   });
 });
 
-function executorFinding(names: readonly string[]): { readonly execute: IndexExecutor; readonly commands: string[] } {
-  const commands: string[] = [];
-  return {
-    commands,
-    execute: {
-      query: () => Promise.resolve({ rows: names.map((name) => ({ name })) }),
-      command: (sql) => {
-        commands.push(SQL.describe(sql, pgFormatter).replaceAll(/\s+/gu, ' '));
-        return Promise.resolve();
-      },
-    },
-  };
-}
-
 describe("the playbook's indexes on PostgreSQL", () => {
   it('index the playbook in order and by time, each stream in order, the first messages by kind, the org by correlation and by id and the definition streams by type, then analyse', async () => {
     const { execute, commands } = executorFinding([]);
@@ -294,5 +322,63 @@ describe("the playbook's indexes on PostgreSQL", () => {
         'ANALYZE emt_messages, emt_streams',
       ],
     ]);
+  });
+});
+
+describe('the definition streams of a type on PostgreSQL', () => {
+  it('are read from the table of streams by the type in their name, in the default partition, with their versions', async () => {
+    const asked: { readonly text: string; readonly values: readonly unknown[] }[] = [];
+    const store = postgresqlDefinitionStreams((text, values) => {
+      asked.push({ text, values });
+      return Promise.resolve([{ stream: 'playbook/acme/alpha/definitions/page', version: '3' }]);
+    });
+
+    const streams = await store.definitionStreams('page');
+
+    expect(streams).toEqual([{ stream: 'playbook/acme/alpha/definitions/page', version: 3 }]);
+    expect(asked).toEqual([{ text: definitionStreamsStatement, values: ['page', 'emt:default'] }]);
+  });
+});
+
+describe('one record read by its message id on PostgreSQL', () => {
+  it('reads the record through the index on the org and the message id, within the playbook, with its data and its context', async () => {
+    const { query, asked } = answering([storedRow]);
+
+    const record = await postgresqlRecordedStore(query).readRecordedEvent(alpha, 'message-21');
+
+    expect(record).toMatchObject({
+      id: 'message-21',
+      point: ['11', '21'],
+      stream: `${alpha}runs/r1`,
+      type: 'run_started',
+      data: { input: {} },
+      metadata: { context },
+    });
+    expect(asked[0]?.text).toContain(`WHERE ${orgOfStream} = $1 AND message_id = $2 AND partition = $3`);
+    expect(asked[0]?.text).toContain("WHERE substring(stream_id FROM '^(?:[^/]*/){3}') = ANY($4::text[])");
+    expect(asked[0]?.values).toEqual(['acme', 'message-21', 'emt:default', [alpha]]);
+  });
+
+  it('reads nothing for an id the playbook does not hold', async () => {
+    const { query } = answering([]);
+
+    await expect(postgresqlRecordedStore(query).readRecordedEvent(alpha, 'message-99')).resolves.toBeUndefined();
+  });
+});
+
+describe('a read of the runs of one definition on PostgreSQL', () => {
+  it('reads the definition type and name from the metadata of the first message as plain jsonb, among a thousand runs', async () => {
+    const { query, asked } = answeringNothing();
+    const ofOneDefinition = { kind: 'runs', definitionType: 'workflow', name: 'qualify-enquiry' } as const;
+
+    await postgresqlRecordedStore(query).readRecorded(alpha, ofOneDefinition, { order: 'desc', limit: 5 });
+
+    expect(asked[0]?.text).toContain(
+      "message_metadata ->> 'definitionType' = $2 AND message_metadata ->> 'definitionName' = $3 AS of_the_definition",
+    );
+    expect(asked[0]?.text).toContain('TRUE AND f.of_the_definition AS wanted');
+    expect(asked[0]?.text).not.toContain('strpos');
+    expect(asked[0]?.text).not.toContain('regexp_replace');
+    expect(asked[0]?.values).toEqual(['emt:default', 'workflow', 'qualify-enquiry', [`${alpha}runs/`], 1001, 1000, 7]);
   });
 });

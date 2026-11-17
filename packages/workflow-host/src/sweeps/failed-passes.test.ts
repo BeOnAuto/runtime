@@ -4,6 +4,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { FollowedPlaybooks } from '../follower/followed-playbooks.ts';
 import { startFollower } from '../follower/follower-loop.ts';
+import type { Upkeep } from '../follower/follower-wake-up.ts';
 import type { PassEnd } from '../follower/record-steps.ts';
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import { until } from '../testing/until.ts';
@@ -12,6 +13,12 @@ import { playbookSweepsOn } from './playbook-sweeps.ts';
 const alpha = 'playbook/acme/alpha/';
 
 const beta = 'playbook/acme/beta/';
+
+const nothingDue: Omit<Upkeep, 'sweep'> = {
+  fireSchedules: () => Effect.void,
+  nextScheduleAt: () => Effect.succeed(null),
+  nextDeferredAt: () => Effect.succeed(null),
+};
 
 const noPlaybooks: FollowedPlaybooks = {
   follow: () => Effect.void,
@@ -88,7 +95,7 @@ function followed(following: Following): Followed {
     pass,
     discovery: { atStart: () => Effect.void, registriesAppended: registries, playbookSeen },
     sweeps: playbookSweepsOn(store, noPlaybooks),
-    upkeep: { sweep: upkeep, fireSchedules: () => Effect.void, nextScheduleAt: () => Effect.succeed(null) },
+    upkeep: { sweep: upkeep, ...nothingDue },
     appended: streamSignalOf(),
     holds: { heldAt: noPlaybooks.heldAt, failed: () => Effect.void },
     rounds: { failed: () => Effect.succeed(60_000), succeeded: () => Effect.void },

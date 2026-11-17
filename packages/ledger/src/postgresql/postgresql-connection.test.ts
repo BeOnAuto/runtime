@@ -1,12 +1,22 @@
-import { Function } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
+import { Effect, Function, Logger, Result } from 'effect';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { StreamsCarrying } from '../connection/appends-with.ts';
 import type { OpenedConnection } from '../connection/ledger-connection.ts';
+import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
 import type { StatementAnswer } from '../connection/statement-answers.ts';
-import { statement, textOnPostgreSQL, type StatementValue } from '../connection/statement.ts';
+import { statement, type StatementValue, textOnPostgreSQL } from '../connection/statement.ts';
+import { emmettEventStore, type EmmettStore } from '../emmett/emmett-event-store.ts';
 import type { RecordedMessage, StoredRecord } from '../event-store.ts';
-import { postgresqlConnectionOn, type Connection } from './postgresql-connection.ts';
+import { eventAppenderOf, VersionConflict } from '../index.ts';
+import { stamped } from '../testing/happenings.ts';
+import { outcomeOf } from '../testing/open-ledger.ts';
+import { tally } from '../testing/tally.ts';
+import { until } from '../testing/until.ts';
+import { dataAsJsonText } from './json-text.ts';
+import { lostConnectionLogged, lostConnectionsLoggedWith } from './lost-connections.ts';
+import { type Connection, postgresqlConnectionOn } from './postgresql-connection.ts';
 
 interface Asked {
   readonly text: string;
@@ -77,6 +87,47 @@ const tableOfAFolder = statement`CREATE TABLE IF NOT EXISTS folder_rows (playboo
 
 const indexOfAFolder = statement`CREATE INDEX IF NOT EXISTS folder_rows_by_key ON folder_rows (playbook_key)`;
 
+const runsMoved = statement`UPDATE workflow_runs SET status = ${'ended'} WHERE run_key = ${'a'}`;
+
+const checkpointMoved = statement`UPDATE folder_rows SET checkpoint = ${'2'} WHERE playbook_key = ${'a'} AND checkpoint = ${'1'}
+  RETURNING playbook_key`;
+
+const transactionAsked: readonly Asked[] = [
+  { text: 'BEGIN', values: [] },
+  { text: textOnPostgreSQL(runsMoved), values: ['ended', 'a'] },
+  { text: textOnPostgreSQL(checkpointMoved), values: ['2', 'a', '1'] },
+];
+
+function answeringNothingTo(text: string): (asked: string) => readonly unknown[] {
+  return (asked) => (asked === text ? [] : [{ answered: asked }]);
+}
+
+const snapshotBegun = 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY';
+
+const firstRead = statement`SELECT checkpoint FROM folder_rows WHERE playbook_key = ${'a'}`;
+
+const secondRead = statement`SELECT COUNT(*) AS rows FROM folder_rows`;
+
+function bothRead({ connection }: Telling) {
+  return connection.readConsistently((read) => Promise.all([read(firstRead), read(secondRead)]));
+}
+
+function anEmmettStore(): EmmettStore {
+  const store = getSQLiteEventStore({
+    driver: nodeSqliteEventStoreDriver,
+    fileName: ':memory:',
+    schema: { autoMigration: 'None' },
+  });
+  onTestFinished(() => store.close());
+  return store;
+}
+
+const run = 'run/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+const awkward = { zeta: 'a NUL \u0000 inside', a: { y: 'half a pair \uD800 alone', x: [1, null] } };
+
+const lostConnectionWarning = `{"message":${JSON.stringify(lostConnectionLogged)},"level":"WARN"`;
+
 describe('the connection of the ledger on PostgreSQL, making the tables beside the ledger', () => {
   it('makes them in one transaction under a lock of its own, and keeps them', async () => {
     const { connection, asked, said } = telling();
@@ -126,21 +177,6 @@ describe('the connection of the ledger on PostgreSQL, open', () => {
   });
 });
 
-const runsMoved = statement`UPDATE workflow_runs SET status = ${'ended'} WHERE run_key = ${'a'}`;
-
-const checkpointMoved = statement`UPDATE folder_rows SET checkpoint = ${'2'} WHERE playbook_key = ${'a'} AND checkpoint = ${'1'}
-  RETURNING playbook_key`;
-
-const transactionAsked: readonly Asked[] = [
-  { text: 'BEGIN', values: [] },
-  { text: textOnPostgreSQL(runsMoved), values: ['ended', 'a'] },
-  { text: textOnPostgreSQL(checkpointMoved), values: ['2', 'a', '1'] },
-];
-
-function answeringNothingTo(text: string): (asked: string) => readonly unknown[] {
-  return (asked) => (asked === text ? [] : [{ answered: asked }]);
-}
-
 describe('the connection of the ledger on PostgreSQL, writing in one transaction', () => {
   it('runs the statements in order on one connection and keeps them, answering what the last answers, when the last writes a row', async () => {
     const { connection, asked, said } = telling();
@@ -185,16 +221,6 @@ describe('the connection of the ledger on PostgreSQL, telling the time', () => {
   });
 });
 
-const snapshotBegun = 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY';
-
-const firstRead = statement`SELECT checkpoint FROM folder_rows WHERE playbook_key = ${'a'}`;
-
-const secondRead = statement`SELECT COUNT(*) AS rows FROM folder_rows`;
-
-function bothRead({ connection }: Telling) {
-  return connection.readConsistently((read) => Promise.all([read(firstRead), read(secondRead)]));
-}
-
 describe('the connection of the ledger on PostgreSQL, reading in one snapshot', () => {
   it('reads on one connection in a transaction that only reads and sees one snapshot, and ends it keeping nothing', async () => {
     const told = telling();
@@ -231,5 +257,58 @@ describe('the connection of the ledger on PostgreSQL, reading in one snapshot', 
 
     await expect(bothRead(told)).rejects.toThrow(`${failingOn} failed`);
     expect(told.said().at(-1)).toBe('connection released');
+  });
+});
+
+describe('the data of an event kept as its JSON text', () => {
+  it('is stored under json, and comes back exactly, keys in order', async () => {
+    const emmett = anEmmettStore();
+    const store = emmettEventStore(emmett, { data: dataAsJsonText, mostEventsInOneAppend: 64 });
+    await store.migrate();
+
+    await store.append(run, [{ type: 'noted', data: awkward }], { expectedVersion: 0, context: stamped });
+    const read = await store.read(run);
+    const stored = await emmett.readStream(run);
+
+    expect(read).toMatchObject({ version: 1, messages: [{ data: awkward }] });
+    expect(JSON.stringify(read.messages.map(({ data }) => data))).toBe(JSON.stringify([awkward]));
+    expect(
+      stored.events.map(({ type, data }: { readonly type: string; readonly data: unknown }) => ({ type, data })),
+    ).toEqual([{ type: 'noted', data: { json: JSON.stringify(awkward) } }]);
+  });
+
+  it('is appended only at the version expected, and a wrong version meets a version conflict', async () => {
+    const store = emmettEventStore(anEmmettStore(), { data: dataAsJsonText, mostEventsInOneAppend: 64 });
+    await store.migrate();
+    await store.append(run, [{ type: 'noted', data: awkward }], { expectedVersion: 0, context: stamped });
+
+    expect(
+      await outcomeOf(
+        eventAppenderOf(store, tally.eventSchema)(run, [{ type: 'counted', data: { by: 1 } }], {
+          expectedVersion: 0,
+          context: stamped,
+        }),
+      ),
+    ).toEqual(Result.fail(new VersionConflict()));
+    expect(await store.read(run)).toMatchObject({ version: 1, messages: [{ data: awkward }] });
+  });
+});
+
+describe('a connection to the PostgreSQL database that the database ends', () => {
+  it('is logged as a warning with the message of the database, through the loggers of the runtime', async () => {
+    const logged: string[] = [];
+    const capture = Logger.map(Logger.formatJson, (line: string) => {
+      logged.push(line);
+    });
+    const context = await Effect.runPromise(Effect.context().pipe(Effect.provide(Logger.layer([capture]))));
+
+    lostConnectionsLoggedWith(context)(new Error('terminating connection due to administrator command'));
+
+    await until(
+      () => logged.length,
+      (count) => count > 0,
+    );
+    expect(logged).toEqual([expect.stringContaining(lostConnectionWarning)]);
+    expect(logged[0]).toContain('"annotations":{"error":"terminating connection due to administrator command"}');
   });
 });

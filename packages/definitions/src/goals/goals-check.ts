@@ -44,6 +44,28 @@ function refusedNodesIn(text: string): readonly GoalIssue[] {
   return issues;
 }
 
+const hashAsText = '\u{E000}';
+
+const hashAfterWords = /(?<=\S[ \t]+)#(?=\S)/gu;
+
+function withHashesAsText(text: string): string {
+  return text.includes(hashAsText) ? text : text.replace(hashAfterWords, hashAsText);
+}
+
+function hashesRestoredIn(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return value.replaceAll(hashAsText, '#');
+  }
+  if (Array.isArray(value)) {
+    return value.map((inner: unknown) => hashesRestoredIn(inner));
+  }
+  return isMapping(value)
+    ? Object.fromEntries(
+        Object.entries(value).map(([key, inner]: readonly [string, unknown]) => [key, hashesRestoredIn(inner)]),
+      )
+    : value;
+}
+
 function goalsValueOf(text: string): Result.Result<unknown, readonly GoalIssue[]> {
   if (encoder.encode(text).length > mostGoalsBytes) {
     return Result.fail([
@@ -53,8 +75,9 @@ function goalsValueOf(text: string): Result.Result<unknown, readonly GoalIssue[]
       ),
     ]);
   }
+  const marked = withHashesAsText(text);
   const lineCounter = new LineCounter();
-  const document = parseDocument(text, { ...parseOptions, lineCounter });
+  const document = parseDocument(marked, { ...parseOptions, lineCounter });
   const lineAt = (offset: number): number => lineCounter.linePos(offset).line;
   if (document.errors.length > 0) {
     return Result.fail(
@@ -63,11 +86,11 @@ function goalsValueOf(text: string): Result.Result<unknown, readonly GoalIssue[]
       ),
     );
   }
-  const refused = refusedNodesIn(text);
+  const refused = refusedNodesIn(marked);
   if (refused.length > 0) {
     return Result.fail(refused);
   }
-  const value: unknown = document.toJS();
+  const value: unknown = marked === text ? document.toJS() : hashesRestoredIn(document.toJS());
   return Result.succeed(value);
 }
 

@@ -1,8 +1,13 @@
+import { cursorOfParts } from '@on.auto/operations';
+import { Clock, Effect, Exit, Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { LatestAppends, FactScope, RecordedPoint } from '../event-store.ts';
+import type { AppendedFactsAsked, FactScope, LatestAppends, RecordedPoint } from '../event-store.ts';
+import type { Query } from '../postgresql-reads/recorded-parts.ts';
 import { streamSignalOf } from '../signal/append-signal.ts';
 import { appendWatchOf, inScope, isLater } from './append-watch.ts';
+import { appendedFactsReaderOf } from './appended-reader.ts';
+import { postgresqlAppended } from './postgresql-appended.ts';
 
 const alpha: FactScope = { kind: 'playbook', playbookKey: 'playbook/acme/alpha/' };
 
@@ -60,6 +65,51 @@ function settledWithin(promise: Promise<unknown>, ms: number): Promise<string> {
   });
   return Promise.race([promise.then(String, String), waiting]);
 }
+
+const alphaAppendedReader = { kind: 'playbook', playbook: { org: 'acme', playbook: 'alpha' } } as const;
+
+function aStoreAsked() {
+  const asked: AppendedFactsAsked[] = [];
+  const reader = appendedFactsReaderOf({
+    pointLength: 1,
+    readAppendedFacts: (_scope, request) => {
+      asked.push(request);
+      return Promise.resolve({ held: true, facts: [], last: null, through: ['7'], more: false });
+    },
+    waitForAppend: () => Promise.resolve('ended'),
+    endWaits: Function.constVoid,
+  });
+  return { asked, reader };
+}
+
+function refused(after: string): Promise<boolean> {
+  const { reader } = aStoreAsked();
+  return Effect.runPromise(
+    Effect.isFailure(reader.readAppendedFacts(alphaAppendedReader, { after, most: 1, dataOf: [] })),
+  );
+}
+
+interface Asked {
+  readonly text: string;
+  readonly values: readonly unknown[];
+}
+
+function answering(...answers: readonly (readonly unknown[])[]): { readonly query: Query; readonly asked: Asked[] } {
+  const asked: Asked[] = [];
+  return {
+    asked,
+    query: (text, values) => {
+      asked.push({ text, values });
+      return Promise.resolve(answers[asked.length - 1] ?? []);
+    },
+  };
+}
+
+function group(name: string, read: number, transaction: string, position: string) {
+  return { horizon: '90', name, read, transaction, position };
+}
+
+const theHorizon = 'pg_snapshot_xip(pg_current_snapshot())';
 
 describe('the order of the points of a ledger', () => {
   it('compares each part as a whole number, the first that differs deciding', () => {
@@ -231,5 +281,89 @@ describe('a watch of the appends to a store, when a read fails', () => {
     watch.endWaits();
 
     expect(waited).toBe('waiting');
+  });
+});
+
+describe('the cursor of the facts appended to a scope', () => {
+  it('is refused without a read when it is not a point and the id of a fact, or the start', async () => {
+    const { asked, reader } = aStoreAsked();
+
+    const fromTheStart = await Effect.runPromise(
+      reader.readAppendedFacts(alphaAppendedReader, { after: cursorOfParts([]), most: 1, dataOf: [] }),
+    );
+    const refusals = await Promise.all([
+      refused('not a cursor'),
+      refused(cursorOfParts(['x', 'message'])),
+      refused(cursorOfParts(['21', 3])),
+      refused(cursorOfParts(['21', 'message', 'beyond'])),
+      refused(cursorOfParts(['21'])),
+    ]);
+
+    expect(asked).toEqual([{ after: null, most: 1, dataOf: [] }]);
+    expect([fromTheStart.cursor, fromTheStart.through]).toEqual([cursorOfParts([]), cursorOfParts(['7'])]);
+    expect(refusals).toEqual([true, true, true, true, true]);
+  });
+
+  it('is waited after only when it is a point the ledger was read through', async () => {
+    const { reader } = aStoreAsked();
+    const deadline = (await Effect.runPromise(Clock.currentTimeMillis)) + 1000;
+
+    const exits = await Promise.all([
+      Effect.runPromise(Effect.exit(reader.waitForAppend(alphaAppendedReader, cursorOfParts(['7']), deadline))),
+      Effect.runPromise(Effect.exit(reader.waitForAppend(alphaAppendedReader, cursorOfParts(['7', '8']), deadline))),
+    ]);
+
+    expect([Exit.isSuccess(exits[0]), Exit.hasDies(exits[1])]).toEqual([true, true]);
+  });
+});
+
+describe('a read on PostgreSQL of the streams appended to after a point', () => {
+  it('walks the table in transaction id then position behind the horizon, leaving out the writes it first found open in other databases, and goes on from the horizon after it read all', async () => {
+    const { query, asked } = answering(
+      [],
+      [{ horizon: '50', name: null }],
+      [{ id: '58' }],
+      [group('playbook/acme/alpha/events/', 2, '60', '7'), group('org/acme/playbooks', 1, '61', '3')],
+    );
+    const { readAppended } = postgresqlAppended(query);
+
+    const now = await readAppended(undefined, 100);
+    const appended = await readAppended(now.through, 100);
+
+    expect(now).toEqual({ streams: [], latest: new Map(), through: ['50', '0'], more: false });
+    expect(appended).toEqual({
+      streams: ['playbook/acme/alpha/events/', 'org/acme/playbooks'],
+      latest: new Map([
+        ['playbook/acme/alpha/events/', ['60', '7']],
+        ['org/acme/playbooks', ['61', '3']],
+      ]),
+      through: ['90', '0'],
+      more: false,
+    });
+    expect(asked[1]?.values).toEqual([[], '0', '0', 'emt:default', 0]);
+    expect(asked[2]?.text).toContain('FROM pg_stat_activity');
+    expect(asked[2]?.text).toContain('datname IS DISTINCT FROM current_database()');
+    expect(asked[3]?.text).toContain('(transaction_id, global_position) > ($2::xid8, $3::bigint)');
+    expect(asked[3]?.text).toContain('AND transaction_id < (SELECT below FROM horizon)');
+    expect(asked[3]?.text).toContain('ORDER BY transaction_id, global_position');
+    expect(asked[3]?.text).toContain(theHorizon);
+    expect(asked[3]?.text).toContain('% 4294967296 <> ALL($1::bigint[])');
+    expect(asked[3]?.values).toEqual([['58'], '50', '0', 'emt:default', 100]);
+  });
+
+  it('goes on after the last message it read when it read as many as it was asked', async () => {
+    const { query } = answering(
+      [],
+      [group('playbook/acme/alpha/events/', 1, '60', '7'), group('playbook/acme/beta/events/', 2, '61', '3')],
+      [],
+      [group('playbook/acme/alpha/events/', 2, '61', '9'), group('playbook/acme/beta/events/', 1, '61', '4')],
+    );
+    const { readAppended } = postgresqlAppended(query);
+
+    const across = await readAppended(['50', '0'], 3);
+    const within = await readAppended(['50', '0'], 3);
+
+    expect([across.through, across.more]).toEqual([['61', '3'], true]);
+    expect([within.through, within.more]).toEqual([['61', '9'], true]);
   });
 });

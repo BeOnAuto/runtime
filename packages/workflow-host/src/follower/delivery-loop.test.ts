@@ -1,7 +1,7 @@
 import { streamSignalOf } from '@on.auto/ledger';
 import { messageIdOf } from '@on.auto/operations';
 import { type RecordedSpan, recordingTracer } from '@on.auto/operations/testing';
-import { Context, Deferred, Effect, Exit, Function, Tracer } from 'effect';
+import { Cause, Context, Deferred, Effect, Exit, Function, Tracer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { systemClock } from '../loop/host-clock.ts';
@@ -16,7 +16,7 @@ import { parentId, waitingParent } from '../waiting-testing/waiting-parent.ts';
 import { boundTo, type Consumer, type Delivery, DeliveryFailed, type RecordConsumer } from './consumers.ts';
 import { deliveredAll } from './delivery-loop.ts';
 import { followedPlaybooksOn, type Progress } from './followed-playbooks.ts';
-import { followerWakeUpOf } from './follower-wake-up.ts';
+import { followerWakeUpOf, type FollowerWork } from './follower-wake-up.ts';
 
 const followed = followedRecordOf(null);
 
@@ -134,6 +134,78 @@ const handingOutAlpha: Sweep = {
   playbooks: [{ playbookKey: alphaFollowerWakeUp, known: undefined }],
   again: false,
 };
+
+const nothingToSweep: Sweep = { registries: [], playbooks: [], again: false };
+
+const at = Date.parse('2026-11-11T09:00:00.000Z');
+
+const signal = { raised: Function.constVoid, renewed: Function.constVoid };
+
+const unreadStarts = new Error('The starts that wait could not be read');
+
+interface Due {
+  readonly scheduleAt: number | null;
+  readonly heldAt: number | null;
+  readonly deferredAt: number | null | 'unread';
+}
+
+interface WorkDue {
+  readonly work: FollowerWork;
+  readonly troubles: () => readonly unknown[];
+}
+
+function roundsAMinuteLongerEachInARow(): FollowerWork['rounds'] {
+  const failed = { inARow: 0 };
+  return {
+    failed: () =>
+      Effect.sync(() => {
+        failed.inARow += 1;
+        return failed.inARow * 60_000;
+      }),
+    succeeded: () =>
+      Effect.sync(() => {
+        failed.inARow = 0;
+      }),
+  };
+}
+
+function workDue({ scheduleAt, heldAt, deferredAt }: Due, broken: Readonly<{ now: boolean }>): WorkDue {
+  const troubles: unknown[] = [];
+  const work: FollowerWork = {
+    pass: () => Effect.succeed('caught_up'),
+    discovery: { atStart: () => Effect.void, registriesAppended: () => Effect.void, playbookSeen: () => Effect.void },
+    sweeps: {
+      started: () => Effect.void,
+      next: () => Effect.succeed(nothingToSweep),
+      passAgain: Function.constVoid,
+      registriesRead: Function.constVoid,
+    },
+    upkeep: {
+      sweep: () => Effect.void,
+      fireSchedules: () => (broken.now ? Effect.die(new Error('The schedules broke')) : Effect.void),
+      nextScheduleAt: () => Effect.succeed(scheduleAt),
+      nextDeferredAt: () => (deferredAt === 'unread' ? Effect.die(unreadStarts) : Effect.succeed(deferredAt)),
+    },
+    appended: streamSignalOf(),
+    holds: { heldAt: () => Effect.succeed({ due: [], nextAt: heldAt }), failed: () => Effect.void },
+    rounds: roundsAMinuteLongerEachInARow(),
+    clock: { now: () => at, sleep: () => Effect.void },
+    sweepEveryMs: 1000,
+    trouble: (_what, cause) =>
+      Effect.sync(() => {
+        troubles.push(Cause.squash(cause));
+      }),
+  };
+  return { work, troubles: () => troubles };
+}
+
+async function nextDueAfterAStart(due: Due) {
+  const { work, troubles } = workDue(due, { now: false });
+  const follower = followerWakeUpOf(work, signal);
+  onTestFinished(() => Effect.runPromise(follower.stop()));
+  const { nextDueAt } = await Effect.runPromise(follower.wakeUp({ now: at, sweep: true }));
+  return { nextDueAt, troubles: troubles() };
+}
 
 function recordingIds(name: string, types: readonly string[], received: (id: string) => void): Consumer {
   return {
@@ -326,6 +398,7 @@ describe('the wake-up of the follower of the playbooks', () => {
           sweep: () => logged('sweep'),
           fireSchedules: () => Effect.void,
           nextScheduleAt: () => Effect.succeed(null),
+          nextDeferredAt: () => Effect.succeed(null),
         },
         appended: streamSignalOf(),
         holds: { heldAt: () => Effect.succeed({ due: [], nextAt: null }), failed: () => Effect.void },
@@ -345,6 +418,54 @@ describe('the wake-up of the follower of the playbooks', () => {
 
     expect(log).toEqual(['anchored', 'start', 'next sweep', 'sweep', `pass ${alphaFollowerWakeUp} sweep`]);
     expect(answers).toEqual([{ nextDueAt: null }, { nextDueAt: null }]);
+  });
+});
+
+describe('the time the follower is next due, with starts that wait for a later minute', () => {
+  it('is the earliest of the next schedule, the next hold and the first start that waits', async () => {
+    const answers = await Promise.all([
+      nextDueAfterAStart({ scheduleAt: at + 60_000, heldAt: at + 90_000, deferredAt: at + 30_000 }),
+      nextDueAfterAStart({ scheduleAt: at + 60_000, heldAt: at + 20_000, deferredAt: at + 30_000 }),
+      nextDueAfterAStart({ scheduleAt: at + 10_000, heldAt: at + 90_000, deferredAt: at + 30_000 }),
+      nextDueAfterAStart({ scheduleAt: null, heldAt: null, deferredAt: at + 30_000 }),
+      nextDueAfterAStart({ scheduleAt: null, heldAt: null, deferredAt: null }),
+    ]);
+
+    expect(answers).toEqual(
+      [at + 30_000, at + 20_000, at + 10_000, at + 30_000, null].map((nextDueAt) => ({ nextDueAt, troubles: [] })),
+    );
+  });
+
+  it('is a sweep interval after now while a start that waits is due already, so a wake that did not sweep, or left more due than a sweep takes, is followed by the next sweep and not at once', async () => {
+    const answers = await Promise.all([
+      nextDueAfterAStart({ scheduleAt: null, heldAt: null, deferredAt: at }),
+      nextDueAfterAStart({ scheduleAt: null, heldAt: null, deferredAt: at - 60_000 }),
+      nextDueAfterAStart({ scheduleAt: at + 500, heldAt: null, deferredAt: at - 60_000 }),
+    ]);
+
+    expect(answers).toEqual([at + 1000, at + 1000, at + 500].map((nextDueAt) => ({ nextDueAt, troubles: [] })));
+  });
+
+  it('is as though none waited when the starts that wait cannot be read, which is said', async () => {
+    const answer = await nextDueAfterAStart({ scheduleAt: at + 60_000, heldAt: null, deferredAt: 'unread' });
+
+    expect(answer).toEqual({ nextDueAt: at + 60_000, troubles: [unreadStarts] });
+  });
+});
+
+describe('the time the follower is next due after a round that failed', () => {
+  it('is as long as the rounds failed in a row answer, though a start that waits is due, since only a round that succeeds takes one up', async () => {
+    const broken = { now: false };
+    const { work } = workDue({ scheduleAt: null, heldAt: null, deferredAt: at }, broken);
+    const follower = followerWakeUpOf(work, signal);
+    onTestFinished(() => Effect.runPromise(follower.stop()));
+
+    await Effect.runPromise(follower.wakeUp({ now: at, sweep: true }));
+    broken.now = true;
+    const first = await Effect.runPromise(follower.wakeUp({ now: at + 1, sweep: true }));
+    const second = await Effect.runPromise(follower.wakeUp({ now: at + 2, sweep: true }));
+
+    expect([first, second]).toEqual([{ nextDueAt: at + 1 + 60_000 }, { nextDueAt: at + 2 + 120_000 }]);
   });
 });
 

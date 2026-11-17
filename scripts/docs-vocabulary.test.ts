@@ -142,7 +142,7 @@ const allowances: readonly Allowance[] = [
     'an execution',
     'execution status',
   ].map((vendorText) => ({ text: vendorText, in: [sheetsDocument] })),
-  { text: 'execution-denied', in: ['capabilities/reasoning/src/tools/final-step.test.ts'] },
+  { text: 'execution-denied', in: ['capabilities/reasoning/src/tools/tool-endings.test.ts'] },
   ...['primitives?', 'executions?', 'inference', 'orchestration', 'recollection'].map((term) => ({
     text: String.raw`/\b${term}\b/iu`,
     in: [internalTerms],

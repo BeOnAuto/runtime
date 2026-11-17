@@ -2,13 +2,19 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { SQL } from '@event-driven-io/dumbo';
 import { sqliteFormatter } from '@event-driven-io/dumbo/sqlite';
+import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
+import type { RecordedStore, StoredRecord } from '../event-store.ts';
+import type { RecordedKeys } from '../keys/recorded-keys.ts';
 import { sqliteEventStore } from '../sqlite-event-store.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import type { IndexExecutor } from './missing-indexes.ts';
+import { recordedEventReaderOf, recordedReaderOf } from './recorded-reader.ts';
+import { executedOn, planOf } from './sqlite-checks.ts';
 import { createSQLitePlaybookIndexes, orgOfStream } from './sqlite-indexes.ts';
+import { sqliteRecordedStore } from './sqlite-recorded.ts';
 
 const playbookIndexes = [
   'ledger_definition_streams',
@@ -56,6 +62,78 @@ function executorFinding(names: readonly string[]): { readonly execute: IndexExe
 async function migratedOnce(fileName: string): Promise<void> {
   const store = sqliteEventStore(() => ({ driver: nodeSqliteEventStoreDriver, fileName }));
   await store.migrate();
+  await store.close();
+}
+
+const at = '2026-10-05T09:00:00.000Z';
+
+const context = { at, by: 'tester' };
+
+const untraced: StoredRecord = {
+  id: 'message-21',
+  causationId: null,
+  correlationId: 'r1',
+  point: ['21'],
+  stream: 'playbook/acme/alpha/runs/r1',
+  version: 1,
+  globalPosition: 21,
+  type: 'run_started',
+  data: { input: {} },
+  metadata: { context },
+  recordedAt: at,
+};
+
+interface Holding {
+  readonly store: RecordedStore;
+  readonly asked: readonly RecordedKeys[];
+}
+
+function storeHolding(record: StoredRecord): Holding {
+  const asked: RecordedKeys[] = [];
+  const store: RecordedStore = {
+    pointLength: 1,
+    readRecorded: () => Promise.reject(new Error('A read by the text of a key is not asked here')),
+    readAppended: () => Promise.resolve({ streams: [], through: ['21'], more: false }),
+    readAppendedFacts: () => Promise.resolve({ held: false }),
+    readRecordedEvent: () => Promise.reject(new Error('A read by the text of a key is not asked here')),
+    readRecordedOfKeys: (keys) => {
+      asked.push(keys);
+      return Promise.resolve({ records: [record] });
+    },
+    readRecordedEventOfKeys: (keys, id) => {
+      asked.push(keys);
+      return Promise.resolve(id === record.id ? record : undefined);
+    },
+  };
+  return { store, asked };
+}
+
+const alpha = { org: 'acme', playbook: 'alpha' };
+
+const theKeysOfAlpha: RecordedKeys = { org: 'acme', keys: ['playbook/acme/alpha/'] };
+
+const sixStreams = {
+  kind: 'streams',
+  streams: [
+    'org/acme/playbooks',
+    'org/acme/playbooks/',
+    'org/acme/connections',
+    'org/acme/connections/',
+    'org/acme/comments',
+    'org/acme/comments/',
+  ],
+} as const;
+
+async function appendedInTurn(fileName: string, streams: readonly string[]): Promise<void> {
+  const store = sqliteEventStore(() => ({ driver: nodeSqliteEventStoreDriver, fileName }));
+  await store.migrate();
+  await streams.reduce(async (before: Promise<unknown>, stream) => {
+    await before;
+    return store.append(stream, [{ type: 'noted', data: {} }], {
+      expectedVersion: 0,
+      context: { at: '2026-11-02T09:00:00.000Z', by: 'tester' },
+    });
+  }, Promise.resolve());
   await store.close();
 }
 
@@ -147,5 +225,90 @@ describe('the read of one message by its id on SQLite', () => {
       .map((row: Readonly<Record<string, unknown>>) => String(row['detail']));
 
     expect(plan.join(' ')).toContain('USING INDEX ledger_messages_by_org_and_id');
+  });
+});
+
+describe('the reads of a playbook', () => {
+  it("ask the store for the playbook's key under the org its address names", async () => {
+    const { store, asked } = storeHolding(untraced);
+
+    const page = await Effect.runPromise(
+      recordedReaderOf(store)(alpha, { kind: 'correlated', correlation: 'r1' }, { order: 'desc', limit: 5 }),
+    );
+    await Effect.runPromise(recordedEventReaderOf(store)(alpha, 'message-21'));
+
+    expect(page.records.map(({ id }) => id)).toEqual(['message-21']);
+    expect(asked).toEqual([theKeysOfAlpha, theKeysOfAlpha]);
+  });
+});
+
+describe('one record read by its id', () => {
+  it('carries no page cursor, no trace and no span when its store kept none, and is nothing for an id the store does not hold', async () => {
+    const read = recordedEventReaderOf(storeHolding(untraced).store);
+
+    const [found, missing] = await Effect.runPromise(
+      Effect.all([read(alpha, 'message-21'), read(alpha, 'message-99')]),
+    );
+
+    expect(found).toEqual({
+      id: 'message-21',
+      causationId: null,
+      correlationId: 'r1',
+      stream: 'playbook/acme/alpha/runs/r1',
+      version: 1,
+      globalPosition: 21,
+      type: 'run_started',
+      data: { input: {} },
+      context,
+      recordedAt: at,
+    });
+    expect(missing).toBeUndefined();
+  });
+});
+
+describe('a read of several streams on SQLite', () => {
+  it('reads six streams, whole names and kinds, in one select of no compound, each through its index, in the order they were appended to', async () => {
+    const fileName = aDatabaseFile();
+    await appendedInTurn(fileName, [
+      'org/acme/playbooks',
+      'org/acme/connections/first',
+      'org/acme/activity/seen',
+      'org/acme/comments/first',
+      'org/beta/comments/first',
+      'org/acme/connections',
+      'org/acme/comments/second',
+    ]);
+    const asked: string[] = [];
+
+    const read = await executedOn(fileName, (execute) =>
+      sqliteRecordedStore({
+        ...execute,
+        query: (sql) => {
+          asked.push(SQL.describe(sql, sqliteFormatter));
+          return execute.query(sql);
+        },
+      }).readAppendedFacts(sixStreams, { after: null, most: 100, dataOf: [] }),
+    );
+    const ofTheStreams = asked.filter((text) => text.includes('stream_id = '));
+    const plan = await planOf(fileName, (store) =>
+      store.readAppendedFacts(sixStreams, { after: null, most: 100, dataOf: [] }),
+    );
+
+    expect(read).toMatchObject({
+      held: true,
+      facts: [
+        { stream: 'org/acme/playbooks' },
+        { stream: 'org/acme/connections/first' },
+        { stream: 'org/acme/comments/first' },
+        { stream: 'org/acme/connections' },
+        { stream: 'org/acme/comments/second' },
+      ],
+    });
+    expect(ofTheStreams).toHaveLength(1);
+    expect(ofTheStreams.join()).not.toContain('UNION');
+    expect(ofTheStreams.join().split('FROM emt_messages')).toHaveLength(2);
+    expect(ofTheStreams.join().match(/ = "org\/acme\/[a-z]+\/?"(?: OR|\))/gu)).toHaveLength(6);
+    expect(plan).toContain('MULTI-INDEX OR');
+    expect(plan.match(/USING INDEX ledger_messages_by_(?:stream|playbook) /gu)).toHaveLength(6);
   });
 });

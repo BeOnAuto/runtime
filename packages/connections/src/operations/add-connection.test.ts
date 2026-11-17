@@ -1,12 +1,94 @@
 import { createHash } from 'node:crypto';
 
+import { servedStudio } from '@on.auto/identity/testing';
+import { fixtureProviders, providerListOf, providerOf, tracker } from '@on.auto/providers/testing';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
-import { added, adding, billing, crm, crmWithTenant, issuesIn, notes, statusesOf } from '../testing/additions.ts';
-import { acmeReader, ada, harness, operationNamed, crmPolicy } from '../testing/harness.ts';
+import { makeConnectionSource } from '../serving/connection-source.ts';
+import {
+  added,
+  adding,
+  billing,
+  crm,
+  crmWithTenant,
+  issuesIn,
+  namesIn,
+  notes,
+  statusesOf,
+} from '../testing/additions.ts';
+import { acmeReader, acmeViewer, ada, crmPolicy, harness, harnessPages, operationNamed } from '../testing/harness.ts';
 
 const anyWords: unknown = expect.any(String);
+
+const heldValues = [
+  [
+    'a credential in the query of its url',
+    { ...crm.entry, url: 'https://crm.example.com/mcp?api_key=abc123' },
+    '/entry/url',
+    "Looks like a credential, which a connection's entry never holds: the person gives it on the page the link opens",
+  ],
+  [
+    'a value that looks like a credential',
+    { ...crm.entry, headers: { Authorization: 'Bearer sk-live-0123456789abcdef' } },
+    '/entry/headers/Authorization',
+    "Looks like a credential, which a connection's entry never holds: the person gives it on the page the link opens",
+  ],
+  [
+    'a reference to an environment variable',
+    { ...crm.entry, headers: { 'X-Tenant': '${CRM_TENANT}' } },
+    '/entry/headers/X-Tenant',
+    "Holds a reference to an environment variable, which a connection's entry never holds: a reference credential names the variable",
+  ],
+] as const;
+
+const refusedEntries = [
+  ['a name of the wrong shape', { ...notes, name: 'Notes' }, '/name'],
+  ['the name of a model provider', { ...notes, name: 'openai' }, '/name'],
+  ['a url that is no web address', { ...notes, entry: { url: 'ftp://notes.example.com' } }, '/entry/url'],
+  ['an http url off the loopback', { ...notes, entry: { url: 'http://notes.example.com/mcp' } }, '/entry/url'],
+  [
+    'a field of another kind',
+    { ...notes, entry: { ...notes.entry, base_url: 'https://x.example' } },
+    '/entry/base_url',
+  ],
+  ['an mcp connection without its url', { ...notes, entry: {} }, '/entry'],
+  ['a document on the disk of the runtime', { ...billing, entry: { document: 'openapi.json' } }, '/entry/document'],
+  [
+    'a playbook that is no playbook id',
+    { ...notes, entry: { ...notes.entry, playbooks: ['Sales'] } },
+    '/entry/playbooks/0',
+  ],
+  ['a tool listed twice', { ...notes, entry: { ...notes.entry, allowed: ['search', 'search'] } }, '/entry/allowed/1'],
+] as const;
+
+function naming(variable: string) {
+  return { ...notes, credential: { kind: 'reference', variable, name: 'Authorization', in: 'header' } };
+}
+
+const marks = { reads: ['search'] };
+
+const anyRenders: unknown = expect.any(String);
+
+function withoutRenders(): unknown {
+  return expect.not.objectContaining({ renders: anyRenders });
+}
+
+const cards = providerOf({ ...tracker, renders: 'cards' });
+
+const providers = providerListOf(...fixtureProviders.providers.filter(({ entry }) => entry.name !== 'tracker'), cards);
+
+const tracked = { provider: 'tracker', placeholders: { site: 'acme' }, credential: { kind: 'none' } };
+
+const unrendered = {
+  name: 'notes',
+  type: 'mcp',
+  entry: { url: 'https://notes.example.com/mcp' },
+  credential: { kind: 'none' },
+};
+
+const earlier = '2026-10-15T13:00:00.000Z';
 
 describe('the answer to adding a connection', () => {
   it('is the connection pending, added by the caller, and the time its link expires, 24 hours on', async () => {
@@ -76,27 +158,6 @@ describe('the facts of adding a connection', () => {
   });
 });
 
-const heldValues = [
-  [
-    'a credential in the query of its url',
-    { ...crm.entry, url: 'https://crm.example.com/mcp?api_key=abc123' },
-    '/entry/url',
-    "Looks like a credential, which a connection's entry never holds: the person gives it on the page the link opens",
-  ],
-  [
-    'a value that looks like a credential',
-    { ...crm.entry, headers: { Authorization: 'Bearer sk-live-0123456789abcdef' } },
-    '/entry/headers/Authorization',
-    "Looks like a credential, which a connection's entry never holds: the person gives it on the page the link opens",
-  ],
-  [
-    'a reference to an environment variable',
-    { ...crm.entry, headers: { 'X-Tenant': '${CRM_TENANT}' } },
-    '/entry/headers/X-Tenant',
-    "Holds a reference to an environment variable, which a connection's entry never holds: a reference credential names the variable",
-  ],
-] as const;
-
 describe('an entry that holds what a connection never holds', () => {
   it.each(heldValues)('is refused for %s, without the value', async (_, entry, pointer, detail) => {
     const outcome = await adding(harness(), { ...crm, entry, credential: { kind: 'none' } });
@@ -122,26 +183,6 @@ describe('a value written beside a placeholder under the name of a credential', 
     ]);
   });
 });
-
-const refusedEntries = [
-  ['a name of the wrong shape', { ...notes, name: 'Notes' }, '/name'],
-  ['the name of a model provider', { ...notes, name: 'openai' }, '/name'],
-  ['a url that is no web address', { ...notes, entry: { url: 'ftp://notes.example.com' } }, '/entry/url'],
-  ['an http url off the loopback', { ...notes, entry: { url: 'http://notes.example.com/mcp' } }, '/entry/url'],
-  [
-    'a field of another kind',
-    { ...notes, entry: { ...notes.entry, base_url: 'https://x.example' } },
-    '/entry/base_url',
-  ],
-  ['an mcp connection without its url', { ...notes, entry: {} }, '/entry'],
-  ['a document on the disk of the runtime', { ...billing, entry: { document: 'openapi.json' } }, '/entry/document'],
-  [
-    'a playbook that is no playbook id',
-    { ...notes, entry: { ...notes.entry, playbooks: ['Sales'] } },
-    '/entry/playbooks/0',
-  ],
-  ['a tool listed twice', { ...notes, entry: { ...notes.entry, allowed: ['search', 'search'] } }, '/entry/allowed/1'],
-] as const;
 
 describe('an entry the checks of a file entry refuse', () => {
   it.each(refusedEntries)('is refused for %s, at its place', async (_, input, pointer) => {
@@ -253,10 +294,6 @@ describe('the policy of the runtime, of the hosts', () => {
   });
 });
 
-function naming(variable: string) {
-  return { ...notes, credential: { kind: 'reference', variable, name: 'Authorization', in: 'header' } };
-}
-
 describe('the policy of the runtime, of the variables a reference names', () => {
   it('takes a reference to a variable it lists, and refuses one it does not, or every one where it lists none', async () => {
     const listing = harness({ policy: connectionPolicyOf({ variables: ['NOTES_API_KEY', 'WIKI_TOKEN'] }) });
@@ -287,6 +324,145 @@ describe('the policy of the runtime, of the kinds of credential', () => {
     expect(await adding(kinds, notes)).toMatchObject({ status: 'succeeded' });
     expect(await adding(none, notes)).toMatchObject({
       detail: 'A connection may not take a none credential on this runtime, which allows no kind of credential',
+    });
+  });
+});
+
+describe('a connection added through the API', () => {
+  it('carries no marks of its own, by hand or by a provider, refused at its entry with nothing recorded', async () => {
+    const h = harness();
+
+    const byHand = await adding(h, { ...notes, entry: { ...notes.entry, marks } });
+    const byProvider = await adding(h, { provider: 'tracker', placeholders: { site: 'acme' }, entry: { marks } });
+
+    expect([byHand, byProvider]).toMatchObject([
+      { status: 'rejected', reason: 'invalid_input' },
+      { status: 'rejected', reason: 'invalid_input' },
+    ]);
+    expect([issuesIn(byHand), issuesIn(byProvider)].map((issues) => issues.map(({ pointer }) => pointer))).toEqual([
+      ['/entry/marks'],
+      ['/entry/marks'],
+    ]);
+    expect(await h.facts()).toEqual([]);
+  });
+});
+
+describe('the render target of the provider of a connection', () => {
+  it('is answered by add_connection, list_connections and get_connection, and by none for a connection given by hand', async () => {
+    const h = harness({ providers });
+    const addingRendersShown = operationNamed(h.operations, 'add_connection');
+    const addedByProvider = await h.call(addingRendersShown, ada, tracked);
+    const addedByHand = await h.call(addingRendersShown, ada, unrendered);
+    const { id } = await added(h, { ...tracked, name: 'more-tracking' });
+
+    expect([addedByProvider, addedByHand]).toMatchObject([
+      { status: 'succeeded', output: { renders: 'cards' } },
+      { status: 'succeeded', output: withoutRenders() },
+    ]);
+    expect(await h.call(operationNamed(h.operations, 'list_connections'), acmeReader, {})).toMatchObject({
+      output: {
+        connections: [
+          { name: 'more-tracking', renders: 'cards' },
+          { name: 'notes' },
+          { name: 'tracker', renders: 'cards' },
+        ],
+      },
+    });
+    expect(await h.call(operationNamed(h.operations, 'get_connection'), acmeReader, { id })).toMatchObject({
+      output: { id, renders: 'cards' },
+    });
+  });
+
+  it('is served with the connection, for the tools of its server to say', async () => {
+    const h = harness({ providers });
+    await added(h, tracked);
+    const source = makeConnectionSource({
+      registry: h.ledger.service,
+      secrets: h.secrets,
+      policy: connectionPolicyOf({}),
+      variables: new Map(),
+      modelProviders: [],
+      providers,
+      providerValues: new Map(),
+      pages: harnessPages,
+    });
+
+    const listed = await Effect.runPromise(source.connectionsOf('acme'));
+
+    expect(listed.map(({ serving }) => serving.renders)).toEqual(['cards']);
+  });
+});
+
+describe("the link to Studio's page that adding a connection answers", () => {
+  it("is the page connect of the Studio the runtime serves, under the runtime's own origin, naming the connection and its token alone, since that page knows its server and asks it for the org", async () => {
+    const runtime = 'http://127.0.0.1:5555';
+    const { id, url, token } = await added(harness({ pages: { studio: servedStudio, runtime: () => runtime } }), notes);
+
+    const page = new URL(url);
+    expect([page.origin, page.pathname, Object.fromEntries(page.searchParams)]).toEqual([
+      runtime,
+      '/studio/connect',
+      { connection: id, token },
+    ]);
+  });
+
+  it('is the page connect at the root of the Studio host the runtime names, naming the runtime and the org too, where it serves no Studio', async () => {
+    const studio = { origin: 'https://studio.example.com', served: false };
+    const runtime = 'https://runtime.example.com';
+    const { id, url, token } = await added(harness({ pages: { studio, runtime: () => runtime } }), notes);
+
+    const page = new URL(url);
+    expect([page.origin, page.pathname, [...page.searchParams]]).toEqual([
+      'https://studio.example.com',
+      '/connect',
+      [
+        ['server', runtime],
+        ['org', 'acme'],
+        ['connection', id],
+        ['token', token],
+      ],
+    ]);
+  });
+});
+
+describe('listing the connections of an org', () => {
+  it('answers them newest first, and the removed ones only when asked', async () => {
+    const h = harness();
+    await added(h, notes, { at: earlier });
+    const { id } = await added(h, billing);
+    await added(h, crm);
+    await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id });
+    const listing = operationNamed(h.operations, 'list_connections');
+
+    const names = async (input: unknown) => namesIn(await h.call(listing, acmeReader, input));
+
+    expect(await names({})).toEqual(['crm', 'notes']);
+    expect(await names({ include_removed: true })).toEqual(['crm', 'billing', 'notes']);
+  });
+
+  it('is permitted by org:read and refused to a caller who may only read playbooks', async () => {
+    const h = harness();
+
+    const outcome = await h.call(operationNamed(h.operations, 'list_connections'), acmeViewer);
+
+    expect(outcome).toMatchObject({ status: 'rejected', reason: 'forbidden' });
+  });
+});
+
+describe('reading one connection', () => {
+  it('answers its record, and an id the org does not have as not found', async () => {
+    const h = harness();
+    const { id } = await added(h, notes);
+    const getting = operationNamed(h.operations, 'get_connection');
+
+    expect(await h.call(getting, acmeReader, { id })).toMatchObject({
+      status: 'succeeded',
+      output: { id, name: 'notes', status: 'pending', credential: { kind: 'none' } },
+    });
+    expect(await h.call(getting, acmeReader, { id: 'nowhere' })).toEqual({
+      status: 'rejected',
+      reason: 'not_found',
+      detail: 'There is no connection nowhere in this org',
     });
   });
 });

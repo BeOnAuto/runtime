@@ -7,9 +7,17 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { type HostDatabase, rowsOf, WholeNumber } from '../database/host-database.ts';
 import { filterStops } from '../filtering/filter-matching.ts';
 import { deliverySweeps } from '../follower/consumers.ts';
-import { closeHostParts, followerWakeUp, type NextWake, openHostParts, openWorkflowStore } from '../index.ts';
+import {
+  closeHostParts,
+  followerWakeUp,
+  type HostWakeUp,
+  type NextWake,
+  openHostParts,
+  openWorkflowStore,
+  type WakeSignal,
+} from '../index.ts';
 import { insertedListener } from '../listeners/listener-rows.ts';
-import { systemClock } from '../loop/host-clock.ts';
+import { type HostClock, systemClock } from '../loop/host-clock.ts';
 import { subscribed } from '../reaction-testing/event-subscriptions.ts';
 import { followedRecordOf } from '../reaction-testing/followed-records.ts';
 import {
@@ -18,6 +26,7 @@ import {
   definitionRecorded,
   eventTrigger,
   published,
+  publishedInTurn,
   recorded,
 } from '../reaction-testing/playbook-writes.ts';
 import { recordedReactions } from '../reaction-testing/recorded-reactions.ts';
@@ -88,6 +97,49 @@ async function deferredCount(database: HostDatabase) {
   return row?.count;
 }
 
+const sweepEveryMs = 1000;
+
+function earliestOf(one: number | null, other: number | null): number | null {
+  return one === null ? other : Math.min(one, other ?? one);
+}
+
+interface OneAlarm {
+  readonly clock: HostClock;
+  readonly signal: WakeSignal;
+  readonly rung: (follower: HostWakeUp, rings: number) => Promise<void>;
+  readonly rungAt: () => readonly number[];
+}
+
+function oneAlarmFrom(start: number): OneAlarm {
+  const time = { now: start };
+  const alarm: { at: number | null; sweptAt: number | null } = { at: start, sweptAt: null };
+  const rungAt: number[] = [];
+  const rung = async (follower: HostWakeUp, rings: number): Promise<void> => {
+    if (alarm.at === null || rings === 0) {
+      return;
+    }
+    time.now = Math.max(time.now, alarm.at);
+    const sweep = alarm.sweptAt === null || time.now - alarm.sweptAt >= sweepEveryMs;
+    alarm.at = null;
+    rungAt.push(time.now);
+    const { nextDueAt } = await Effect.runPromise(follower.wakeUp({ now: time.now, sweep }));
+    alarm.sweptAt = sweep ? time.now : alarm.sweptAt;
+    alarm.at = earliestOf(alarm.at, nextDueAt);
+    await rung(follower, rings - 1);
+  };
+  return {
+    clock: { now: () => time.now, sleep: () => Effect.void },
+    signal: {
+      raised: () => {
+        alarm.at = earliestOf(alarm.at, time.now);
+      },
+      renewed: Function.constVoid,
+    },
+    rung,
+    rungAt: () => rungAt,
+  };
+}
+
 type Consumers = ReturnType<typeof reactionConsumersOf>;
 
 interface Declining {
@@ -142,7 +194,7 @@ function decliningEveryOffer(database: HostDatabase): Declining {
       refusals: { refuse: () => Effect.void, flush: () => Effect.succeed(0) },
       stops: filterStops(),
     },
-    { start: () => Effect.void, startDeferred: () => Effect.succeed(0) },
+    { start: () => Effect.void, startDeferred: () => Effect.succeed(0), nextDeferredAt: () => Effect.succeed(null) },
   );
   return { consumers, offered, notes };
 }
@@ -193,7 +245,7 @@ function subscriptionStartsOn(database: MeasuredReads['database']) {
       refusals: { refuse: () => Effect.void, flush: () => Effect.succeed(0) },
       stops: filterStops(),
     },
-    { start: () => Effect.void, startDeferred: () => Effect.succeed(0) },
+    { start: () => Effect.void, startDeferred: () => Effect.succeed(0), nextDeferredAt: () => Effect.succeed(null) },
   );
   const starts = consumers.find(({ name }) => name === 'subscription_starts');
   if (starts === undefined) {
@@ -278,6 +330,40 @@ describe('a start that waited for a later minute', () => {
         },
         links: [trace],
       },
+    ]);
+  });
+
+  it('is made after a burst and then silence, by a host whose alarm rings only at a signal or when its wake-up answers it is next due', async () => {
+    const alarm = oneAlarmFrom(minute + 1000);
+    const store = await openWorkflowStore(await connectedOn({ store: 'sqlite', file: aSQLiteFile() }), []);
+    const { through: placeAtOpen } = await store.database.store.readAppended(undefined, 0);
+    const { options } = recordedOptionsOf({ sweepEveryMs });
+    const reactions = recordedReactions();
+    const parts = openHostParts(store, { ...options, clock: alarm.clock }, Function.constVoid);
+    const follower = followerWakeUp(
+      { database: store.database, parts, reactions: reactions.options, reports: options.reports, placeAtOpen },
+      alarm.signal,
+    );
+    onTestFinished(async () => {
+      await Effect.runPromise(follower.stop());
+      await closeHostParts(parts);
+    });
+    await alarm.rung(follower, 1);
+
+    await definitionRecorded(store.database.store, {
+      name: 'close',
+      version: 1,
+      triggers: [eventTrigger({ type: 'com.acme.closed' })],
+    });
+    await publishedInTurn(
+      store.database.store,
+      Array.from({ length: mostStartsAMinute + 1 }, (_, index) => ({ id: `e${index}`, type: 'com.acme.closed' })),
+    );
+    await alarm.rung(follower, 20);
+
+    expect([reactions.starts().length, alarm.rungAt().filter((rung) => rung >= minute + aMinute)]).toEqual([
+      mostStartsAMinute + 1,
+      [minute + aMinute],
     ]);
   });
 });

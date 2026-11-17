@@ -1,4 +1,5 @@
 import { internalTermsIn } from '@on.auto/operations/testing';
+import { writtenByAgents } from '@on.auto/playbooks/testing';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -135,6 +136,40 @@ describe('the problems of the whole list', () => {
 
   it('refuse goals of more than 16,384 bytes before reading them', () => {
     expect(issuesOf(`# ${'é'.repeat(8192)}`)).toEqual([{ pointer: '', detail: someWords, fixed_by: 'agent' }]);
+  });
+});
+
+const hashesBeforeWords = (text: string): number => text.match(/ #\S/gu)?.length ?? 0;
+
+describe('a # written straight after a space and before a word', () => {
+  it.each(Object.entries(writtenByAgents))(
+    'is read as text in the goals of %s, in a flow map and out of one',
+    (_run, written) => {
+      const { source, goals } = Result.getOrThrow(goalsDocumentOf(written));
+
+      expect(hashesBeforeWords(JSON.stringify(goals))).toBe(hashesBeforeWords(written));
+      expect(source).toBe(written);
+    },
+  );
+
+  it('reads a # already in quotes as text too, and keeps a comment a comment', () => {
+    const quoted = textOf([changed(controls, ['success', 'label'], 'Failing controls in #compliance')]);
+    const commented = `# The daily checks\n${textOf([controls]).replace('label: Failing controls', 'label: Failing controls # each day')}`;
+
+    expect(goalsDocumentOf(quoted)).toEqual(
+      Result.succeed({
+        source: quoted,
+        goals: [changed(controls, ['success', 'label'], 'Failing controls in #compliance')],
+      }),
+    );
+    expect(goalsDocumentOf(commented)).toEqual(Result.succeed({ source: commented, goals: [controls] }));
+  });
+
+  it('reads the text by the plain rule when it already holds the private character the reading uses', () => {
+    const unusual = changed(controls, ['statement'], 'Every control passes \u{E000}');
+    const written = `${textOf([unusual])}# The daily checks #compliance`;
+
+    expect(goalsDocumentOf(written)).toEqual(Result.succeed({ source: written, goals: [unusual] }));
   });
 });
 

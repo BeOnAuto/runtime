@@ -1,11 +1,19 @@
 import { providerListOf } from '@on.auto/providers/testing';
+import type { ConsentClientOptions } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
-import { added } from '../testing/additions.ts';
-import { connectedThrough, gatewayHarnessAt, gatewayServed, removing } from '../testing/gateways.ts';
-import { ada, operationNamed, type Harness } from '../testing/harness.ts';
+import { added, reconnected } from '../testing/additions.ts';
+import {
+  allowedAt,
+  connectedThrough,
+  finishingWith,
+  gatewayHarnessAt,
+  gatewayServed,
+  removing,
+} from '../testing/gateways.ts';
+import { ada, type Harness, operationNamed } from '../testing/harness.ts';
 
 async function typesOf(h: Harness): Promise<readonly string[]> {
   return (await h.facts()).map(({ type }) => type);
@@ -19,6 +27,29 @@ const unended =
 const unreachedHost: unknown = expect.stringMatching(
   /^The key of the connection messages could not be ended at its gateway, so the connection is not removed: A connection may not reach the host 127\.0\.0\.1/u,
 );
+
+interface GatedEnds {
+  readonly fetch: ConsentClientOptions['fetch'];
+  readonly holding: () => boolean;
+  readonly release: () => void;
+}
+
+function firstEndHeld(): GatedEnds {
+  const opened = Promise.withResolvers<void>();
+  const held = { first: false };
+  return {
+    fetch: async (...[address, init]: readonly [unknown, unknown?]) => {
+      const url = String(address);
+      if (url.endsWith('/connections/remove') && !held.first) {
+        held.first = true;
+        await opened.promise;
+      }
+      return globalThis.fetch(url, Object.assign({}, init));
+    },
+    holding: () => held.first,
+    release: opened.resolve,
+  };
+}
 
 describe('the removal of a connection made through its gateway', () => {
   it('ends its key at the gateway before it records the removal, and forgets the key', async () => {
@@ -167,5 +198,34 @@ describe('the removal of a connection whose key this runtime no longer holds', (
     );
     expect(String(line)).toContain(`"annotations":{"org":"acme","connection":"${link.id}"}`);
     expect(String(line)).not.toContain('messages');
+  });
+});
+
+describe('a removal that a finish connecting the connection again overtakes', () => {
+  it('ends the newer key too, so no key the connection held is left at the gateway', async () => {
+    const gateway = await gatewayServed();
+    const gate = firstEndHeld();
+    const h = gatewayHarnessAt(gateway, { consenting: { fetch: gate.fetch } });
+    const { link } = await connectedThrough(h, gateway);
+    const [first = ''] = gateway.keys();
+    const relinked = await reconnected(h, link.id);
+    const returned = await allowedAt(h, gateway, relinked);
+
+    const removal = removing(h, link.id);
+    await vi.waitFor(() => {
+      expect(gate.holding()).toBe(true);
+    });
+    const reconnection = await finishingWith(h, relinked, returned);
+    const [second = ''] = gateway.keys();
+    gate.release();
+    const outcome = await removal;
+
+    expect([reconnection, outcome]).toMatchObject([
+      { status: 'succeeded', output: { status: 'connected' } },
+      { status: 'succeeded', output: { status: 'removed' } },
+    ]);
+    expect(gateway.keys()).toEqual([]);
+    expect(gateway.ended()).toEqual([first, second]);
+    expect(h.secrets.values().size).toBe(0);
   });
 });

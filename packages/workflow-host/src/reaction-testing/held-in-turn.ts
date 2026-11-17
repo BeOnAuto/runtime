@@ -55,7 +55,12 @@ function workInTurnOn(database: HostDatabase, playbooks: FollowedPlaybooks, dueB
       passAgain: Function.constVoid,
       registriesRead: Function.constVoid,
     },
-    upkeep: { sweep: quietly, fireSchedules: quietly, nextScheduleAt: Function.constant(Effect.succeed(null)) },
+    upkeep: {
+      sweep: quietly,
+      fireSchedules: quietly,
+      nextScheduleAt: Function.constant(Effect.succeed(null)),
+      nextDeferredAt: Function.constant(Effect.succeed(null)),
+    },
     appended: streamSignalOf(),
     holds: heldTriesOn(playbooks, holdNotes),
     rounds: failedRoundsOn(database, 'follower'),

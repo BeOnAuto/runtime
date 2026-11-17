@@ -1,15 +1,16 @@
+import { DatabaseSync } from 'node:sqlite';
 import { setTimeout } from 'node:timers/promises';
 
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { ledgerLayer } from '../sqlite.ts';
+import { ledgerLayer, sqliteLedgerReads } from '../sqlite.ts';
 import { stamped } from '../testing/happenings.ts';
-import { openConnectionWith, type OpenConnection } from '../testing/open-ledger.ts';
+import { type OpenConnection, openConnectionWith } from '../testing/open-ledger.ts';
 import { tally } from '../testing/tally.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import type { ReadRows } from './ledger-connection.ts';
-import { statement } from './statement.ts';
+import { statement, statementOf, textOnPostgreSQL } from './statement.ts';
 
 function aDatabaseFile(): string {
   const { fileName, remove } = temporaryDatabase();
@@ -40,6 +41,23 @@ async function withOneRow(fileName: string): Promise<OpenConnection> {
   await opened.connection.migrated([besideTable, added('north')]);
   return opened;
 }
+
+function heldForWriting(fileName: string): () => void {
+  const database = new DatabaseSync(fileName);
+  database.exec('BEGIN IMMEDIATE');
+  return () => {
+    database.exec('ROLLBACK');
+    database.close();
+  };
+}
+
+function readsOf(fileName: string) {
+  const reads = sqliteLedgerReads({ fileName });
+  onTestFinished(reads.close);
+  return reads;
+}
+
+const runKey = 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 describe('the connection of the ledger on SQLite', () => {
   it('runs its statements in the database of the ledger, beside its tables, and appends its streams there', async () => {
@@ -127,6 +145,62 @@ describe('the reads of the connection of the ledger in one snapshot, on SQLite',
       { amount: 1, counted: 1 },
       { amount: 1, counted: 1 },
       { amount: 2, counted: 1 },
+    ]);
+  });
+});
+
+describe('the reads of the file of a ledger', () => {
+  it('answer what the ledger keeps while another connection holds the file for writing, waiting for no lock', async () => {
+    const fileName = aDatabaseFile();
+    const { connection, dispose } = await openConnectionWith(ledgerLayer({ fileName }));
+    await connection.migrated([statement`CREATE TABLE IF NOT EXISTS probes (name TEXT NOT NULL)`]);
+    await connection.write(statement`INSERT INTO probes (name) VALUES (${'kept'})`);
+    await dispose();
+    const released = heldForWriting(fileName);
+
+    const rows = await readsOf(fileName).read(statement`SELECT name FROM probes`);
+    released();
+
+    expect(rows).toEqual([{ name: 'kept' }]);
+  });
+
+  it('migrate nothing, so a file that holds no ledger is left without a table', async () => {
+    const rows = await readsOf(aDatabaseFile()).read(statement`SELECT name FROM sqlite_master`);
+
+    expect(rows).toEqual([]);
+  });
+});
+
+describe('a statement beside the ledger', () => {
+  it('numbers its values on PostgreSQL, in the order they appear', () => {
+    const due = statement`UPDATE workflow_timers SET due_at = ${2000} WHERE run_key = ${runKey} AND timer_id = ${'1'}`;
+
+    expect([textOnPostgreSQL(due), due.values]).toEqual([
+      'UPDATE workflow_timers SET due_at = $1 WHERE run_key = $2 AND timer_id = $3',
+      [2000, runKey, '1'],
+    ]);
+  });
+
+  it('binds the same values on SQLite', async () => {
+    const { connection, dispose } = await openConnectionWith(ledgerLayer({ fileName: ':memory:' }));
+    onTestFinished(dispose);
+
+    const rows = await connection.read(statement`SELECT ${7} AS seven, ${null} AS empty`);
+
+    expect(rows).toEqual([{ seven: 7, empty: null }]);
+  });
+});
+
+describe('a statement made of the texts between its values', () => {
+  it('is the statement the tag makes of the same texts, its values bound in their order', () => {
+    const table = 'workflow_timers';
+    const made = statementOf([`UPDATE ${table} SET due_at = `, ' WHERE run_key = ', ''], [2000, runKey]);
+    const tagged = statement`UPDATE workflow_timers SET due_at = ${2000} WHERE run_key = ${runKey}`;
+
+    expect([textOnPostgreSQL(made), made.values, [...made.strings.raw]]).toEqual([
+      textOnPostgreSQL(tagged),
+      tagged.values,
+      [...tagged.strings.raw],
     ]);
   });
 });

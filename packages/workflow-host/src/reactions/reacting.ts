@@ -34,6 +34,7 @@ export function reactingOn(host: FollowerHost, use: ReactionUse): Reacting {
       sweep: () => Effect.asVoid(Effect.andThen(starting.startDeferred(), refusals.flush())),
       fireSchedules: () => Effect.asVoid(schedules.fireDue()),
       nextScheduleAt: schedules.nextDueAt,
+      nextDeferredAt: starting.nextDeferredAt,
     },
   };
 }
