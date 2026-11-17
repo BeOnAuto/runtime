@@ -28,10 +28,14 @@ describe('a statement', () => {
 
   it('lets a timer fire between statements that follow each other', async () => {
     const order: string[] = [];
-    setTimeout(() => {
-      order.push('the timer');
-    }, 1);
 
+    await onTheNextTurn(() => {
+      setTimeout(() => {
+        order.push('the timer');
+      }, 1);
+      aStatementHoldingTheThreadFor(2);
+      order.push('the first statement');
+    });
     await inTurn(
       Array.from({ length: 20 }, (_, place) => place),
       (place) =>
