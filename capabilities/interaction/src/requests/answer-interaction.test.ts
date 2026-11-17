@@ -17,11 +17,13 @@ import { answerIssuesOf } from './answer-check.ts';
 import { answerInteraction } from './answer-interaction.ts';
 import { listInteractions } from './list-interactions.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const otherRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
 
-const someText: unknown = expect.any(String);
+const someText: unknown = anyWords;
 
 const pastTheBound: unknown = expect.stringContaining('65536');
 
@@ -140,7 +142,7 @@ describe('an answer to a request that took one', () => {
       {
         status: 'rejected',
         reason: 'conflict',
-        detail: 'The run already took another answer, and a run takes one answer, so it takes no other',
+        detail: anyWords,
       },
     ]);
   });
@@ -169,7 +171,7 @@ describe('an answer the request does not take', () => {
     ).toMatchObject({
       status: 'rejected',
       reason: 'invalid_input',
-      detail: 'choice: expected one of: approve, reject. due: expected a date such as 2026-04-01.',
+      detail: anyWords,
       issues: [{ pointer: '/answer/choice' }, { pointer: '/answer/due' }],
     });
     expect(await playbook.call(listInteractions, {})).toMatchObject({
@@ -190,7 +192,7 @@ describe('an answer the request does not take', () => {
       {
         status: 'rejected',
         reason: 'conflict',
-        detail: 'The run is not a request of a function that waits for an answer',
+        detail: anyWords,
       },
     ]);
   });

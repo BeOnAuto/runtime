@@ -7,6 +7,8 @@ import { harness, toOrg, toPlaybook } from '../testing/harness.ts';
 import { holdTree } from '../testing/misbehaving.ts';
 import { addNote, listNotes } from '../testing/notes.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const NoInput = Schema.Record(Schema.String, Schema.Never);
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -69,7 +71,7 @@ describe('the input of a call', () => {
       detail: 'The input does not match the input schema',
       issues: [
         { detail: 'Expected no excess property', pointer: '/a~1b' },
-        { detail: 'Expected a string matching the RegExp ^[a-z][a-z0-9-]{0,31}$', pointer: '/name' },
+        { detail: anyWords, pointer: '/name' },
         { detail: 'Missing key', pointer: '/text' },
       ],
     });

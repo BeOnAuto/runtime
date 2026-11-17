@@ -1,7 +1,146 @@
 import { changeCatalogOf } from '@on.auto/operations';
+import { Result, Schema, SchemaIssue } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { connectionChanges } from '../index.ts';
+import { clientRegistrationsStream, connectionChanges, connectionsStream, connectionsStreamOfOrg } from '../index.ts';
+import { gatewayIssuer } from '../testing/gateway-facts.ts';
+import { ConnectionEventSchema } from './connection-events.ts';
+import { CredentialSchema } from './credential.ts';
+
+describe('the names of the streams of connections', () => {
+  it("are the stream of an org's connections, relative to the org and in full, and the stream of the runtime's client registrations, which a shell routes by them", () => {
+    expect([connectionsStream, connectionsStreamOfOrg('acme'), clientRegistrationsStream]).toEqual([
+      'connections',
+      'org/acme/connections',
+      'runtime/client-registrations',
+    ]);
+  });
+});
+
+const decoded = Schema.decodeUnknownResult(ConnectionEventSchema);
+
+function addedWith(provider: string | null, credential: Readonly<Record<string, unknown>>) {
+  return {
+    type: 'connection_added',
+    data: {
+      connection: 'connection-1',
+      name: 'messages',
+      server_type: 'openapi',
+      provider,
+      placeholders: null,
+      entry: { document: 'https://gateway.messages.example.com/openapi.json' },
+      credential,
+      says: {},
+      added_by: { id: 'person:ada', name: 'Ada Lovelace' },
+    },
+    context: { by: 'person:ada', at: '2026-10-15T14:00:00.000Z' },
+  };
+}
+
+describe('the credential of a connection through a gateway', () => {
+  it('is recorded only from a provider’s entry, never given by hand, and places its key under a security scheme', () => {
+    const throughIt = {
+      kind: 'authorization',
+      issuer: gatewayIssuer,
+      client_source: 'gateway',
+      in: 'security',
+      name: 'key',
+    };
+    const outcomes = [
+      addedWith('messages', throughIt),
+      addedWith(null, throughIt),
+      addedWith('messages', { ...throughIt, in: 'header' }),
+      addedWith('messages', { kind: 'authorization', issuer: gatewayIssuer, client_source: 'gateway' }),
+      addedWith('messages', { ...throughIt, clients: ['registered'] }),
+      addedWith('messages', { ...throughIt, scheme: 'Bearer' }),
+    ].map((fact: unknown) => Result.isSuccess(decoded(fact)));
+    const byHand = Result.match(decoded(addedWith(null, throughIt)), { onSuccess: () => '', onFailure: String });
+
+    expect(outcomes).toEqual([true, false, false, false, false, false]);
+    expect(byHand).toContain(
+      "Expected a provider, whose entry alone names the gateway a connection's consent is made through",
+    );
+  });
+});
+
+const decodeCredential = Schema.decodeUnknownResult(CredentialSchema, { errors: 'all' });
+
+const formatIssues = SchemaIssue.makeFormatterStandardSchemaV1();
+
+function problemsOf(credential: unknown): readonly (readonly [string, string])[] {
+  return Result.match(decodeCredential(credential), {
+    onSuccess: () => [],
+    onFailure: ({ issue }: { readonly issue: SchemaIssue.Issue }) =>
+      formatIssues(issue).issues.map(({ message, path = [] }): readonly [string, string] => [
+        `/${path.map(String).join('/')}`,
+        message,
+      ]),
+  });
+}
+
+const issuer = 'https://login.adverts.example.com/acme/v2.0';
+
+const pinned = 'Expected an https URL, or an http URL on a loopback address';
+
+describe('a credential of the kind authorization', () => {
+  it('takes the way of its provider, and the client the connection was made with', () => {
+    expect(
+      problemsOf({
+        kind: 'authorization',
+        issuer,
+        scope: 'adverts.manage',
+        parameters: { prompt: 'consent' },
+        authorization_endpoint: `${issuer}/authorize`,
+        token_endpoint: `${issuer}/token`,
+        revocation_endpoint: `${issuer}/revoke`,
+        clients: ['registered'],
+        client_id: '9f1c0d2e-example',
+        client_source: 'registered',
+      }),
+    ).toEqual([]);
+  });
+
+  it('refuses an issuer or an endpoint that is not pinned, and what the way of its provider refuses', () => {
+    expect(
+      problemsOf({
+        kind: 'authorization',
+        issuer: 'http://login.adverts.example.com',
+        token_endpoint: 'http://login.adverts.example.com/token',
+        parameters: { client_id: 'another' },
+      }),
+    ).toEqual([
+      ['/issuer', pinned],
+      ['/token_endpoint', pinned],
+      ['/parameters/client_id', 'Expected no client_id, which the runtime sets in every authorization request itself'],
+      [
+        '/authorization_endpoint',
+        'Expected authorization_endpoint beside token_endpoint, since a way gives its authorization and token endpoints together',
+      ],
+    ]);
+  });
+});
+
+describe('the fields of a credential of the kind authorization', () => {
+  it('are refused to another kind, and those of another kind to it', () => {
+    expect([
+      problemsOf({ kind: 'authorization', issuer, in: 'header' }),
+      problemsOf({ kind: 'secret', in: 'header', name: 'Authorization', client_source: 'dynamic' }),
+    ]).toEqual([
+      [
+        [
+          '/in',
+          'Expected no in: an authorization credential takes issuer, scope, parameters, authorization_endpoint, token_endpoint, revocation_endpoint, pkce, clients, client_id, and client_source',
+        ],
+      ],
+      [
+        [
+          '/client_source',
+          'Expected no client_source: a secret credential takes name, in, scheme, instructions, key_page, example, and pattern',
+        ],
+      ],
+    ]);
+  });
+});
 
 const context = { at: '2026-10-05T09:00:00.000Z', by: 'ada' };
 

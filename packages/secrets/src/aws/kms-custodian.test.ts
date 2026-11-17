@@ -6,6 +6,7 @@ import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 import type { Custodian } from '../custodians/custodian.ts';
 import { aClosedPort } from '../fakes/closed-port.ts';
 import { serveFakeKms, type FakeKeyState } from '../fakes/fake-kms.ts';
+import { waitedOut } from '../fakes/waited-out.ts';
 import type { KeepingFailure } from '../keepers/keeper.ts';
 import type { AwsWaits } from './aws-requests.ts';
 import { encryptionContext, kidOfKey, kmsCustodian } from './kms-custodian.ts';
@@ -228,7 +229,7 @@ describe('the custodian of a key in a KMS that throttles it', () => {
       const custodian = await custodianOf(key);
       fake.failWith(key, { type, status });
 
-      const throttled = await failureOf(custodian.wrap(aDataKey()));
+      const throttled = await waitedOut(() => failureOf(custodian.wrap(aDataKey())));
       fake.tell(key, 'enabled');
 
       expect(throttled).toMatchObject({

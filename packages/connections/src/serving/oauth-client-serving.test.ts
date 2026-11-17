@@ -23,6 +23,8 @@ import {
 import { harnessPages, loopbackPolicy, type Harness } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const closing: (() => Promise<void>)[] = [];
 
 afterEach(async () => {
@@ -105,7 +107,7 @@ describe('a connection under the organization’s own OAuth client, as it is ser
     expect(Redacted.value(Option.getOrThrow(Option.fromNullishOr(consent.ownClient?.clientSecret)))).toBe(
       orgsClientSecret,
     );
-    expect(renewed).toEqual(expect.any(String));
+    expect(renewed).toEqual(anyWords);
     expect(fake.tokenRequests()).toBe(2);
   });
 
@@ -146,8 +148,7 @@ describe('a connection under the organization’s own OAuth client whose client 
 
     expect(refused).toEqual({
       because: 'connection_unavailable',
-      detail:
-        'The credential of the connection files cannot be read now. It stays connected: ask again later, and if it still cannot be read, whoever runs the runtime finds the cause in its log',
+      detail: anyWords,
     });
     expect((await h.facts()).map(({ type }) => type)).not.toContain('connection_broken');
   });

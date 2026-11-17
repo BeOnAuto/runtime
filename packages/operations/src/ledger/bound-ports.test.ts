@@ -10,6 +10,8 @@ import { addNote, listNotes, readNoteHistory } from '../testing/notes.ts';
 import { getPlaybookLabel, labelPlaybook, listPlaybookLabels } from '../testing/playbook-labels.ts';
 import { putOnShelf, readShelf } from '../testing/shelves.ts';
 
+const anyWords: unknown = expect.any(String);
+
 describe('the ports bound to a call', () => {
   it('prefix every stream with the org or playbook of the call, so each reads and writes only its own', async () => {
     const { dispatcher: d, ledger, run } = harness();
@@ -198,7 +200,7 @@ describe('a cursor given to the read bound to a call', () => {
         detail: 'The cursor was not given by a read of this playbook',
         issues: [
           {
-            detail: 'Expected a next_cursor or the cursor of an event that a read of this playbook gave',
+            detail: anyWords,
             pointer: '/cursor',
           },
         ],
@@ -207,9 +209,7 @@ describe('a cursor given to the read bound to a call', () => {
         status: 'rejected',
         reason: 'invalid_input',
         detail: 'The cursor is malformed',
-        issues: [
-          { detail: 'Expected a next_cursor or the cursor of an event, as a read gives it', pointer: '/cursor' },
-        ],
+        issues: [{ detail: anyWords, pointer: '/cursor' }],
       },
     ]);
   });

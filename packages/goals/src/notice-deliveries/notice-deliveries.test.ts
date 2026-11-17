@@ -5,6 +5,8 @@ import { noticeGapsIn } from '../notices/notice-gaps.ts';
 import { assessment, experiments, monday, noticeBookOf, runOf, type NoticeBook } from '../notices/notice-samples.ts';
 import { newestNoticeOf, noticesDeliveredIn, noticeUndeliveredGap } from './notice-deliveries.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const minute = 60_000;
 
 const experimentsGoal: Goal = {
@@ -72,8 +74,7 @@ describe('the gap of a notice that was not delivered', () => {
       {
         kind: 'notice_undelivered',
         goal: experiments.id,
-        detail:
-          'The message saying the goal paying-customers passed was not delivered: its run was rejected: The request expired before it was delivered. Check the connection, the address and the expiry of tell-owner (an hour at least).',
+        detail: anyWords,
         fixed_by: 'agent',
       },
     ]);

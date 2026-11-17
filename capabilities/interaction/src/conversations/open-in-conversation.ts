@@ -19,13 +19,18 @@ const keptRowFrom = Schema.decodeUnknownSync(
   }),
 );
 
-function keptOf(runId: string, stored: OpenRequestRow): readonly KeptRequest[] {
-  if (!takingReplies.has(stored.standing)) {
-    return [];
-  }
+export function takesReplies({ standing }: Pick<OpenRequestRow, 'standing'>): boolean {
+  return takingReplies.has(standing);
+}
+
+export function keptRequestOf(runId: string, stored: OpenRequestRow): KeptRequest {
   const kept = keptRowFrom(stored);
   const sent = { conversation: kept.sent_conversation, id: kept.sent_id };
-  return [{ runId, row: stored, sent, rule: kept.reply, answerSchema: kept.answer_schema }];
+  return { runId, row: stored, sent, rule: kept.reply, answerSchema: kept.answer_schema };
+}
+
+function keptOf(runId: string, stored: OpenRequestRow): readonly KeptRequest[] {
+  return takesReplies(stored) ? [keptRequestOf(runId, stored)] : [];
 }
 
 export interface OpenInConversation {

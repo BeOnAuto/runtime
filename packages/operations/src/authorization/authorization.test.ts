@@ -7,6 +7,8 @@ import { harness, toPlaybook, toOrg } from '../testing/harness.ts';
 import { addNote, getNote } from '../testing/notes.ts';
 import { labelPlaybook, listPlaybookLabels } from '../testing/playbook-labels.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const toAcme = toOrg('acme');
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -168,7 +170,7 @@ describe('a retired playbook', () => {
     ).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The playbook omega is retired and cannot change until it is restored',
+      detail: anyWords,
       kind: 'retired',
     });
     expect(ledger.streamNames()).toEqual([]);

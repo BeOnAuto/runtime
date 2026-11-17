@@ -110,10 +110,25 @@ const readingRecorded: readonly (typeof InteractionRunFactSchema.Type)[] = [
   },
 ];
 
+const deliveredReplies: readonly (typeof InteractionRunFactSchema.Type)[] = [
+  {
+    type: 'reply_refused',
+    data: {
+      server: 'chat',
+      tool: 'read_replies',
+      reply: { id: 'reply-3', sender: 'sender-1' },
+      because: 'not_an_answer',
+      told: true,
+      delivered: true,
+    },
+    context: onTheRun,
+  },
+];
+
 describe('the facts an interaction function records on its run', () => {
   recordedFactsBehaviour({
     schema: InteractionRunFactSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.57.0': readingRecorded },
+    releases: { '0.46.0': baseline, '0.57.0': readingRecorded, '0.63.0': deliveredReplies },
   });
 });

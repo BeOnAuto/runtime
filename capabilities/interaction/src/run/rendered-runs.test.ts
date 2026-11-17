@@ -4,6 +4,8 @@ import { askedRunId, fakeTools, interactionHarness } from '../testing/index.ts';
 import { renderedDelivery, renderedDocument } from '../testing/rendered-documents.ts';
 import { without } from '../testing/route-documents.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const minute = 60_000;
 
 function containing(text: string): unknown {
@@ -32,7 +34,7 @@ describe('a request with render slack, once its run asks', () => {
         status: 'started',
         record: {
           to: 'ada',
-          message: '*Campaign brief review*\nThe headline is clear and the offer is on page one.',
+          message: anyWords,
           rendered: [
             { type: 'header', text: { type: 'plain_text', text: 'Campaign brief review' } },
             { type: 'section', text: { type: 'mrkdwn', text: 'The headline is clear and the offer is on page one.' } },

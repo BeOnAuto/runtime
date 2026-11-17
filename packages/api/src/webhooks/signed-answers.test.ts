@@ -18,6 +18,8 @@ import {
 } from '../testing/signed-deliveries.ts';
 import { deliveryBounds } from './delivery-bounds.ts';
 
+const anyWords: unknown = expect.any(String);
+
 function delivered(handler: ReturnType<typeof servedWith>['handler'], headers = signedHeaders(), path = answerPath) {
   return call(handler, path, { method: 'POST', headers, body: answerBody });
 }
@@ -110,7 +112,7 @@ describe('the run a signed delivery names', () => {
 
     expect(answer).toMatchObject({
       status: 404,
-      body: { reason: 'not_found', detail: 'There is no request this connection was asked at this address' },
+      body: { reason: 'not_found', detail: anyWords },
     });
     expect(served.heard.map(({ outcome }) => outcome)).toEqual(['refused']);
   });

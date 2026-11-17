@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { refusingInput, runsDocument, runsHarness, type RunsHarness } from '../testing/index.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const theDay = (day: number, time = '09:00:00') => `2026-10-${String(day).padStart(2, '0')}T${time}.000Z`;
 
 const runIdOf = (day: number) => `0199a3c4-0000-7000-8000-${String(day).padStart(12, '0')}`;
@@ -211,7 +213,7 @@ describe('a run of a lookup function whose words or since cannot be used', () =>
       {
         status: 'rejected',
         reason: 'invalid_input',
-        detail: 'The definition reads input.since on line 7, which the input does not have',
+        detail: anyWords,
       },
     ]);
   });

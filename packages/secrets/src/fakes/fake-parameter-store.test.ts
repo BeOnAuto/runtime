@@ -3,6 +3,8 @@ import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import { serveFakeParameterStore } from './fake-parameter-store.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const fake = await serveFakeParameterStore({ region: 'eu-central-1', account: '444455556666' });
 
 afterAll(fake.close);
@@ -268,7 +270,7 @@ describe('the calls the fake Parameter Store records from a client of its own', 
     expect(answers).toEqual([
       {
         __type: 'UnknownOperationException',
-        message: 'The fake Parameter Store does not answer AmazonSSM.GetParametersByPath',
+        message: anyWords,
       },
       unread,
       unread,

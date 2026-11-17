@@ -7,11 +7,121 @@ import {
   servedWithEverythingAndGoals,
   servedWithEverythingAndGoalsUntold,
 } from '../testing/guide-shelves.ts';
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
-import { mcpClientKinds, withMcpSession, type McpClientKind, type McpSession } from '../testing/mcp-clients.ts';
+import { type Listening, listenOnLoopback } from '../testing/listening.ts';
+import { type McpClientKind, mcpClientKinds, type McpSession, withMcpSession } from '../testing/mcp-clients.ts';
 import { notebookOperations } from '../testing/notebook.ts';
 import { acmeAdmin, acmeReader, operationServer, type OperationServer } from '../testing/operation-server.ts';
+import { withoutSiteMarkup } from './site-markup.ts';
 import { startingAnswerOf, startingPromptsFollowedWith } from './starting-prompts.ts';
+
+const page = [
+  '<div v-pre>',
+  '',
+  '# Page format',
+  '',
+  'This example keeps the reviews:',
+  '',
+  '<!-- prettier-ignore -->',
+  '```markdown',
+  '<!-- prettier-ignore -->',
+  '<div v-pre>',
+  '</div>',
+  '```',
+  '',
+  'The end.',
+  '',
+  '</div>',
+  '',
+].join('\n');
+
+describe('a page served as a guide', () => {
+  it('loses the wrapper and the formatter lines the documentation site needs, and keeps its code as written', () => {
+    expect(withoutSiteMarkup(page)).toBe(
+      [
+        '# Page format',
+        '',
+        'This example keeps the reviews:',
+        '',
+        '```markdown',
+        '<!-- prettier-ignore -->',
+        '<div v-pre>',
+        '</div>',
+        '```',
+        '',
+        'The end.',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  it('keeps a page without them as it is', () => {
+    expect(withoutSiteMarkup('# Workflow format\n\nA workflow runs steps.\n')).toBe(
+      '# Workflow format\n\nA workflow runs steps.\n',
+    );
+  });
+
+  it('keeps the last line of a page that has no wrapper, though it closes an element of the page', () => {
+    const marked = '# Terminology\n\n<div data-audience="operator">\n\nFor the operator.\n\n</div>\n';
+
+    expect(withoutSiteMarkup(marked)).toBe(marked);
+  });
+});
+
+describe('the front matter of a page served as a guide', () => {
+  it('is left out with the wrapper after it, since it holds the title and the description only the documentation site reads', () => {
+    const described = [
+      '---',
+      'title: Liquid templates and filters',
+      'description: "The filters of a template: the standard ones, and those Auto Runtime adds."',
+      '---',
+      '',
+      '<div v-pre>',
+      '',
+      '# Templates',
+      '',
+      'These are Liquid templates.',
+      '',
+      '</div>',
+      '',
+    ].join('\n');
+
+    expect(withoutSiteMarkup(described)).toBe('# Templates\n\nThese are Liquid templates.\n');
+  });
+
+  it('is only what opens the page, so a rule of three dashes further down stays', () => {
+    const ruled = '# Workflow format\n\nA workflow runs steps.\n\n---\n\nIts limits.\n\n---\n';
+
+    expect(withoutSiteMarkup(ruled)).toBe('# Workflow format\n\nA workflow runs steps.\n\n---\n\nIts limits.\n\n---\n');
+  });
+});
+
+describe('a table of a page served as a guide', () => {
+  it('loses the padding that aligns the columns of its tables, outside its code', () => {
+    const tables = [
+      '| Field   | Meaning      |',
+      '| ------- | ------------ |',
+      '| `name`  | Its name     |',
+      '',
+      '```text',
+      '| kept    | as written   |',
+      '```',
+      '',
+    ].join('\n');
+
+    expect(withoutSiteMarkup(tables)).toBe(
+      [
+        '| Field | Meaning |',
+        '| --- | --- |',
+        '| `name` | Its name |',
+        '',
+        '```text',
+        '| kept    | as written   |',
+        '```',
+        '',
+      ].join('\n'),
+    );
+  });
+});
 
 const making = {
   title: 'Make',

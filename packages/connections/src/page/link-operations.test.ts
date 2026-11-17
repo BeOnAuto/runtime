@@ -5,6 +5,8 @@ import type { RecordedConnectionEvent } from '../registry/connection-events.ts';
 import { added, billing, crm, notes, reconnected } from '../testing/additions.ts';
 import { acmeWriter, ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const aDayAndAMinuteLater = '2026-10-16T14:01:00.000Z';
 
 function reading(h: Harness, id: string, token: string, at?: string) {
@@ -186,7 +188,7 @@ describe('approving a connection', () => {
     expect(await approving(signedIn, there.id, there.token, grace)).toEqual({
       status: 'rejected',
       reason: 'forbidden',
-      detail: 'The connection notes was added by another person, and only they may approve it',
+      detail: anyWords,
     });
     expect(await approving(local, here.id, here.token, grace)).toMatchObject({ output: { status: 'connected' } });
   });

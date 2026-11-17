@@ -57,7 +57,12 @@ function toldAsOf({ conversation: ofTheRequest, call }: Telling, called: CalledO
   return id === undefined || conversation === undefined ? undefined : { conversation, id };
 }
 
-export function onceFor({ runId, call }: Pick<Telling, 'runId' | 'call'>): string {
+interface OnceOfARun {
+  readonly runId: string;
+  readonly call: Pick<TellingCall, 'about' | 'form'>;
+}
+
+export function onceFor({ runId, call }: OnceOfARun): string {
   return `${runId}-${call.about}-${call.form}`;
 }
 

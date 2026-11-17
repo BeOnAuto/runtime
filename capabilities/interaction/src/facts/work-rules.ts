@@ -1,5 +1,12 @@
-import type { RecordedWork, WorkRule } from '@on.auto/definitions';
-import { Conflict } from '@on.auto/operations';
+import {
+  recordedRunIn,
+  type RecordedRun,
+  type RecordedWork,
+  type RunStreamAddress,
+  type WorkRule,
+} from '@on.auto/definitions';
+import { Conflict, type StreamReader } from '@on.auto/operations';
+import { Effect } from 'effect';
 
 import { interactionFactOf, type DeliveryEvent, type ReplyRefusal } from './run-facts.ts';
 
@@ -107,10 +114,28 @@ function refusalRefused(refusal: ReplyRefusal, cancelling: boolean, worked: Inte
   return worked.refusedReplies.length >= replyBounds.refusals ? refusedEnough : undefined;
 }
 
+type RunWithItsReplies = Pick<RecordedRun, 'answer' | 'work'>;
+
+function seenIn({ answer }: RunWithItsReplies, worked: InteractionWork, replyId: string): boolean {
+  return worked.refusedReplies.includes(replyId) || answer?.reply?.id === replyId;
+}
+
+export type SeenReplies = (replyId: string) => boolean;
+
+export function repliesSeenBy(reader: StreamReader, run: RunStreamAddress): Effect.Effect<SeenReplies> {
+  return Effect.map(
+    recordedRunIn(reader, run),
+    (recorded): SeenReplies =>
+      (replyId) =>
+        recorded !== undefined && seenIn(recorded, interactionWorkOf(recorded.work), replyId),
+  );
+}
+
 export function replyRule(replyId: string, refusal?: ReplyRefusal): WorkRule {
-  return ({ cancel, answer, work }) => {
-    const worked = interactionWorkOf(work);
-    if (worked.refusedReplies.includes(replyId) || answer?.reply?.id === replyId) {
+  return (run) => {
+    const { cancel, answer } = run;
+    const worked = interactionWorkOf(run.work);
+    if (seenIn(run, worked, replyId)) {
       return replySeen;
     }
     if (answer !== null) {

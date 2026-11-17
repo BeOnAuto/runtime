@@ -3,6 +3,15 @@ export { conversations, conversationsName } from './conversations/conversation-r
 export { conversationsDue } from './conversations/conversations-due.ts';
 export { connectionWake, type ConnectionWake, type WakeParts, type WokenConnection } from './wakes/connection-wakes.ts';
 export {
+  replyDelivery,
+  type DeliveredReplies,
+  type DeliveredReply,
+  type PerformedReply,
+  type ReplyDelivery,
+  type ReplyOutcome,
+} from './wakes/delivered-replies.ts';
+export { replyAwaited, type ReplyAwaited } from './wakes/named-requests.ts';
+export {
   requestPlaceFacts,
   requestPlaceOf,
   type PlaceParts,

@@ -63,6 +63,9 @@ const unproven =
 const unowned =
   'Expected reply only beside connection, where a delivery names the account it happened in, so that a reply is taken only for the connections made in it';
 
+const unplaced =
+  "Expected reply only beside conversation, where a delivery names the conversation the reply was posted in, since a message's id may be unique only within its conversation, so that a reply is taken only for the request sent there as the message it answers";
+
 function replyIssuesOf(destination: Destination): readonly DestinationIssue[] {
   const { wake, verify, connection } = destination;
   const { reply } = wake;
@@ -74,6 +77,7 @@ function replyIssuesOf(destination: Destination): readonly DestinationIssue[] {
     ...placesOfAReply.flatMap((field) => expressionIssuesAt(['wake', 'reply', field], reply[field], place)),
     ...(verify !== undefined && provesTheBodyAndATime(verify) ? [] : [{ path: ['wake', 'reply'], issue: unproven }]),
     ...(connection === undefined ? [{ path: ['wake', 'reply'], issue: unowned }] : []),
+    ...(wake.conversation === undefined ? [{ path: ['wake', 'reply'], issue: unplaced }] : []),
   ];
 }
 

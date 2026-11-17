@@ -76,6 +76,7 @@ const ReplyRefusedSchema = Schema.Struct({
   because: ReplyRefusalSchema,
   issues: Schema.optionalKey(Schema.Array(IssueSchema)),
   told: Schema.Boolean,
+  delivered: Schema.optionalKey(Schema.Literal(true)),
 });
 
 export const InteractionRunFactSchema = Schema.Union([

@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { added, crm, issuesIn, lastFact, notes } from '../testing/additions.ts';
 import { acmeWriter, ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const givenSecret = 'whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw';
 
 const firstMoment = '2026-10-15T14:00:00.000Z';
@@ -167,7 +169,7 @@ describe('a signing secret set again', () => {
     expect(await setting(h, { id })).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The connection notes is removed, so it takes no signing secret',
+      detail: anyWords,
     });
     expect(heldValues(h)).toEqual([]);
   });

@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { aClosedPort } from '../fakes/closed-port.ts';
 import { serveFakeParameterStore } from '../fakes/fake-parameter-store.ts';
+import { waitedOut } from '../fakes/waited-out.ts';
 import type { Keeper } from '../keepers/keeper.ts';
 import type { Holding } from '../rows/secret-rows.ts';
 import type { AwsWaits } from './aws-requests.ts';
@@ -161,14 +162,14 @@ describe('the keeper of values in AWS Parameter Store, reading and deleting', ()
   });
 });
 
-describe('the keeper of values in a Parameter Store that throttles it', { timeout: 30_000 }, () => {
+describe('the keeper of values in a Parameter Store that throttles it', () => {
   it('writes a value once the adaptive retry of the SDK, its rate limiter, waited out a throttled write', async () => {
     const prefix = aPrefix();
     const keeper = keeperOn(prefix);
     const before = fake.calls().length;
     fake.throttle();
 
-    const holding = await held(keeper, 'secret-1', 'pasted-key');
+    const holding = await waitedOut(() => held(keeper, 'secret-1', 'pasted-key'));
 
     expect(holding.held).toBe(`${prefix}/secret-1:1`);
     expect(callsSince(before).map(({ answer, retryMode }) => `${answer} ${String(retryMode)}`)).toEqual([
@@ -194,7 +195,7 @@ describe('the keeper of values in a Parameter Store that throttles it', { timeou
     const keeper = keeperOn(prefix);
     fake.throttle(3);
 
-    const throttled = await failureOf(keeper.hold('secret-1', Redacted.make('pasted-key')));
+    const throttled = await waitedOut(() => failureOf(keeper.hold('secret-1', Redacted.make('pasted-key'))));
 
     expect(throttled).toMatchObject({
       _tag: 'keeper_unavailable',

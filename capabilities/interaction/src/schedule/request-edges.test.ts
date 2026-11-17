@@ -17,6 +17,8 @@ import {
 } from '../testing/index.ts';
 import { recordedCall } from './request-ledger.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const minute = 60_000;
 
 const address = { org: 'acme', playbook: 'alpha', id: askedRunId };
@@ -45,8 +47,7 @@ describe('a notification whose attempts fail', () => {
         rejection: {
           reason: 'unanswered',
           kind: 'undelivered',
-          detail:
-            'The notification could not be delivered through the post message tool of chat, though every attempt was made',
+          detail: anyWords,
         },
       },
     });

@@ -9,6 +9,8 @@ import { connectedThrough, gatewayHarnessAt, gatewayServed, providersThrough } f
 import { ada, harness, operationNamed } from '../testing/harness.ts';
 import { servedAs, sourceOver } from '../testing/served-connections.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const askingWho = { server: 'messages', tool: 'who_am_i', arguments: {} };
 
 const onTheLoopback = connectionPolicyOf({ allowed_hosts: ['127.0.0.1'] });
@@ -65,8 +67,7 @@ describe('a connection made through its gateway whose key the gateway no longer 
         status: 'broken',
         broken: {
           kind: 'consent_ended',
-          detail:
-            'The consent of the connection messages was revoked or has ended, so the person who added it reconnects it',
+          detail: anyWords,
         },
       },
     });

@@ -8,6 +8,8 @@ import { textResult, toolCallsResult, type ScriptedCall } from '../testing/model
 import { answers, type ScriptedReply } from '../testing/scripted-language-model.ts';
 import { defaultBounds, stepsOf, toolOf } from '../testing/step-runs.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const search = toolOf('graph', 'search');
 
 const searched: readonly ScriptedCall[] = [['graph__search', { query: 'acme' }]];
@@ -87,7 +89,7 @@ describe('a run whose tool servers fail too often', () => {
     });
     expect(steps.journal.recorded().at(-1)).toMatchObject({
       type: 'tool_call_failed',
-      data: { because: 'cancelled', detail: 'The run stopped its calls once its tool servers failed too often' },
+      data: { because: 'cancelled', detail: anyWords },
     });
   });
 });

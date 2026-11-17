@@ -47,6 +47,7 @@ const AnswerOfARequestSchema = Schema.Struct({
   ...payloadFields('answer', Schema.Json),
   claimed_for: Schema.optionalKey(Schema.String),
   reply: Schema.optionalKey(ReplyIdentitySchema),
+  delivered: Schema.optionalKey(Schema.Literal(true)),
   answered_by: RecordedCallerSchema,
 });
 

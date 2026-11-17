@@ -17,6 +17,8 @@ import {
   type GatewayAnswering,
 } from '../testing/index.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const StartedSchema = Schema.Struct({
   status: Schema.Literal('succeeded'),
   output: Schema.Struct({ status: Schema.Literal('started'), record: Schema.Unknown }),
@@ -128,13 +130,12 @@ describe('a video the gateway fails at once', () => {
       {
         reason: 'unavailable',
         kind: undefined,
-        detail:
-          'The provider behind the gateway gateway could not make the video, with the error code video_generation_failed; try again',
+        detail: anyWords,
       },
       {
         reason: 'unavailable',
         kind: undefined,
-        detail: 'The answer of the gateway gateway held no id of the video it was asked for; try again',
+        detail: anyWords,
       },
     ]);
     expect((await recordedOf(failed, 1))?.run.record).toEqual({

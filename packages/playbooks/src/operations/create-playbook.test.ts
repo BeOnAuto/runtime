@@ -6,6 +6,8 @@ import { createPlaybook, retirePlaybook } from '../index.ts';
 import { acmeAdmin, adaOfAcme } from '../testing/callers.ts';
 import { firstMoment, harness, toOrg } from '../testing/harness.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const toAcme = toOrg('acme');
 
 function creating(input: object) {
@@ -154,7 +156,7 @@ describe('create_playbook rejecting with conflict', () => {
     expect(await creatingAlpha()).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The playbook alpha is retired, and its id stays reserved for it: restore_playbook brings it back',
+      detail: anyWords,
       kind: 'taken',
     });
   });

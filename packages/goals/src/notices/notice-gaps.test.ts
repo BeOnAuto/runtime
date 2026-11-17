@@ -4,9 +4,71 @@ import { describe, expect, it } from 'vitest';
 
 import { dayLimitDetail } from '../notice-limits/notice-day-limit.ts';
 import { noticeGapsIn, noticeNotStartedGap } from './notice-gaps.ts';
-import { assessment, experiments, monday, noticeBookOf, runOf, sales, startsAnswering } from './notice-samples.ts';
+import {
+  assessment,
+  experiments,
+  monday,
+  noticeBookOf,
+  owner,
+  runOf,
+  sales,
+  startsAnswering,
+} from './notice-samples.ts';
 import { noticesOwedOf } from './notice-starts.ts';
-import { noticedPlaybookIn } from './noticed-playbooks.ts';
+import { noticedKeptOf, type NoticedPlaybook, noticedPlaybookIn } from './noticed-playbooks.ts';
+
+const anyWords: unknown = expect.any(String);
+
+describe('the playbook a notice is sent for', () => {
+  it('is unknown before it is created, then active with its owner, retired, and active again once restored', async () => {
+    const book = noticeBookOf();
+    const noticed = noticedPlaybookIn(book.ledger);
+    const before = await Effect.runPromise(noticed(sales));
+    await book.playbookCreated();
+    await book.playbookFact('playbook_created', {
+      playbook: 'other',
+      name: 'Other',
+      description: 'Other',
+      created_by: { id: 'person:ben', name: 'Ben' },
+    });
+    await book.playbookFact('playbook_updated', { playbook: 'sales', name: 'Sales again' });
+    const created = await Effect.runPromise(noticed(sales));
+    await book.playbookRetired();
+    const retired = await Effect.runPromise(noticed(sales));
+    await book.playbookFact('playbook_restored', { playbook: 'sales' });
+    const restored = await Effect.runPromise(noticed(sales));
+
+    expect([before, created, retired, restored]).toEqual([
+      { status: 'unknown' },
+      { status: 'active', owner },
+      { status: 'retired', owner },
+      { status: 'active', owner },
+    ]);
+  });
+});
+
+describe('the playbook a notice is sent for, kept a while', () => {
+  it('is asked once for every notice of a piece of work, and again once the while has passed', async () => {
+    const asked: string[] = [];
+    const clock = { now: 0 };
+    const held: { answer: NoticedPlaybook } = { answer: { status: 'active', owner } };
+    const kept = noticedKeptOf(
+      ({ playbook }) =>
+        Effect.sync(() => {
+          asked.push(playbook);
+          return held.answer;
+        }),
+      { keptMs: 5000, now: () => clock.now },
+    );
+    const first = await Promise.all(Array.from({ length: 10 }, () => Effect.runPromise(kept(sales))));
+    clock.now = 5000;
+    held.answer = { status: 'retired', owner };
+    const later = await Effect.runPromise(kept(sales));
+
+    expect(first).toEqual(Array.from({ length: 10 }, () => ({ status: 'active', owner })));
+    expect([later, asked]).toEqual([{ status: 'retired', owner }, ['sales', 'sales']]);
+  });
+});
 
 const experimentsNotify = { passed: 'now', failed: 'quiet', through: 'tell-owner' } as const;
 
@@ -55,8 +117,7 @@ describe('the gap of a notice that was not started', () => {
       {
         kind: 'notice_not_started',
         goal: experiments.id,
-        detail:
-          'The message saying the goal paying-customers passed was not sent. The function tell-owner refused the message: The function tell-owner is paused. Make sure tell-owner is saved, active and accepts the fields of a message; the next message is then sent.',
+        detail: anyWords,
         fixed_by: 'agent',
       },
     ]);

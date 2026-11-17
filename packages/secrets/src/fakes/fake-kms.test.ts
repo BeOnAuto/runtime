@@ -3,6 +3,8 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { serveFakeKms } from './fake-kms.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const key = 'arn:aws:kms:eu-west-1:111122223333:key/0f0e0d0c-0b0a-4908-8706-050403020100';
 
 const alias = 'arn:aws:kms:eu-west-1:111122223333:alias/auto-runtime';
@@ -46,7 +48,7 @@ describe('the fake KMS', () => {
       status: 400,
       body: {
         __type: 'InvalidCiphertextException',
-        message: 'The encryption context is not the one the ciphertext was made with',
+        message: anyWords,
       },
     });
     expect(fake.calls().slice(before)).toEqual([

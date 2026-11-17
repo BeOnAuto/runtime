@@ -290,6 +290,7 @@ const releases: Readonly<Record<string, readonly (typeof RunEventSchema.Type)[]>
     { type: 'run_rejected', data: { rejection: { ...stoppedAtALimit, because: 'max_tool_calls' } }, context: onTheRun },
   ],
   '0.60.0': startedByAGoal,
+  '0.63.0': [{ type: 'request_answered', data: { ...inAThread, delivered: true }, context: onTheRun }],
 };
 
 describe('the facts a playbook records on the stream of a run', () => {

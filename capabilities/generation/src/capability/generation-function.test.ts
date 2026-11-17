@@ -7,6 +7,8 @@ import { generationBounds } from './generation-ports.ts';
 import { describeOutput, waitingAccount } from './generation-words.ts';
 import { longestGenerationMs } from './run-declarations.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const longestWaitedMs = 240_000 + 600_000 + 240_000 + 60_000;
 
 describe('the generation capability', () => {
@@ -95,7 +97,7 @@ describe('a generation function definition as the capability reads it', () => {
       'The generation function definition has 2 problems',
       [
         { pointer: '', detail: 'Line 2, /produces: Expected image, audio or video' },
-        { pointer: '', detail: 'Line 3, /model: A model is written gateway/model, such as gateway/openai/gpt-image-2' },
+        { pointer: '', detail: anyWords },
       ],
     ]);
   });

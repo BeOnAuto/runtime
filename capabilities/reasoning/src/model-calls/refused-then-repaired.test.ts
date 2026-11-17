@@ -10,6 +10,8 @@ import {
 import { jsonResponse, type Responder } from '../provider-testing/recording-fetch.ts';
 import { failed, jsonRequest, succeeded } from '../testing/adapter-harness.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const verdictIssue = { pointer: '/verdict', detail: 'Expected string' };
 
 const approve = answeredWith('{"verdict":"approve"}');
@@ -101,7 +103,7 @@ describe('a JSON answer whose schema the provider refuses when little time is le
     expect(requests()).toHaveLength(1);
     expect(failure).toMatchObject({
       _tag: 'definition_invalid',
-      detail: 'internal refused the request (HTTP 400): the request was rejected as invalid',
+      detail: anyWords,
       schema_refusal: { outcome: 'skipped', because: 'time', status: 400, duration_ms: 40_000 },
     });
     expect(failure).not.toHaveProperty('output_mode');

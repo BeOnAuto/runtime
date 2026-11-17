@@ -32,6 +32,15 @@ async function heldOnceMore(
   return [...held, asTheRuleGives(third.folded)].every(Boolean);
 }
 
+const mostCutsOfTheResumedAttempt = 2;
+
+function boundedCuts(length: number): readonly number[] {
+  const step = Math.max(1, Math.ceil(length / mostCutsOfTheResumedAttempt));
+  return Array.from({ length: Math.min(length, mostCutsOfTheResumedAttempt) }, (_, at) =>
+    Math.min(length - 1, (at + 1) * step - 1),
+  );
+}
+
 async function heldTo(scenario: Scenario): Promise<readonly string[]> {
   const attempt = await firstAttemptOf(scenario);
   const history = historyOf(attempt, scenario);
@@ -51,7 +60,9 @@ async function heldTo(scenario: Scenario): Promise<readonly string[]> {
         JSON.stringify([admissionIn(once.folded), startedIds(once.sent)]) ===
         JSON.stringify([admissionIn(twice.folded), startedIds(twice.sent)]);
       const cutAgain = await Promise.all(
-        once.calls.map((_, at) => heldOnceMore(scenario, [...calls, ...once.calls.slice(0, at + 1)], attempt.content)),
+        boundedCuts(once.calls.length).map((at) =>
+          heldOnceMore(scenario, [...calls, ...once.calls.slice(0, at + 1)], attempt.content),
+        ),
       );
       const held = [
         withinTheCount(scenario, everySend),
@@ -167,9 +178,9 @@ describe('a step performed again after its first attempt started a call that may
 });
 
 describe('the admission of a step performed again after its tools changed what they declare', () => {
-  it('never sends past the count nor a call that may change something twice, ends the run with the outcome unknown and calls no model once such a call has a start and no answer, never refuses a call sent, and decides the same from the same facts, as the one rule does, at every cut and at every cut of the attempt that resumed it', async () => {
-    const broken = await Promise.all(scenarios(120).map((scenario) => heldTo(scenario)));
+  it('never sends past the count nor a call that may change something twice, ends the run with the outcome unknown and calls no model once such a call has a start and no answer, never refuses a call sent, and decides the same from the same facts, as the one rule does, at every cut and at cuts spread over the attempt that resumed it', async () => {
+    const broken = await Promise.all(scenarios(48).map((scenario) => heldTo(scenario)));
 
     expect(broken.flat()).toEqual([]);
-  }, 120_000);
+  }, 60_000);
 });

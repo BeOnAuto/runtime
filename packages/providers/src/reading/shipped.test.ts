@@ -1,0 +1,217 @@
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
+import { Result, Schema } from 'effect';
+import { describe, expect, it } from 'vitest';
+
+import { ProviderEntrySchema } from '../entry/provider-entry.ts';
+import {
+  eventDestinationOf,
+  joinedProviders,
+  type ProviderEntry,
+  providersShippedRoots,
+  readProviders,
+  rendersOf,
+} from '../index.ts';
+import { decodedEntry } from '../testing/entry-problems.ts';
+import { overASocket } from '../testing/event-destinations.ts';
+import { tracker } from '../testing/index.ts';
+
+const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
+
+describe('the shipped providers whose tools handle money', () => {
+  it('are Stripe alone, whose tools refund and pay out', () => {
+    expect(
+      shipped.providers.filter(({ entry }) => entry.handles_money === true).map(({ entry }) => entry.name),
+    ).toEqual(['stripe']);
+  });
+});
+
+const ways = shipped.providers.flatMap(({ entry }) => entry.credentials);
+
+describe('the ways of the shipped providers', () => {
+  it('connect through no gateway, so no connection made from a shipped entry is made through one', () => {
+    expect(ways.filter(({ gateway }) => gateway !== undefined)).toEqual([]);
+  });
+
+  it('say of none that it acts as the app, so each acts as the person who connects', () => {
+    expect(ways.filter(({ permissions }) => permissions !== undefined)).toEqual([]);
+  });
+});
+
+describe('the shipped providers a message through which can be a card', () => {
+  it('are the Slack Bot entry alone, naming the render target slack', () => {
+    expect(
+      shipped.providers
+        .filter(({ entry }) => entry.renders !== undefined)
+        .map(({ entry }) => [entry.name, entry.renders]),
+    ).toEqual([['slack-bot', 'slack']]);
+  });
+
+  it('answer by the name of the provider, and nothing for a provider that renders none or a server given by hand', () => {
+    expect(['slack-bot', 'zoom', 'unknown', null].map((provider) => rendersOf(shipped, provider))).toEqual([
+      'slack',
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it('are taken from an entry of whoever runs the runtime too', () => {
+    const own = decodedEntry({ ...tracker, renders: 'cards' });
+
+    expect(rendersOf(joinedProviders(shipped, [own]), 'tracker')).toBe('cards');
+  });
+});
+
+const declaring = shipped.providers.filter(({ entry }) => entry.events !== undefined);
+
+const hearing = (name: string) =>
+  joinedProviders(shipped, [
+    Schema.decodeUnknownSync(ProviderEntrySchema)({ ...tracker, name, events: { destinations: [overASocket] } }),
+  ]);
+
+describe('the events parts of the shipped providers', () => {
+  it('are written by none of them, so a provider that hears what its service sends is one whoever runs the runtime adds', () => {
+    expect(declaring).toEqual([]);
+  });
+});
+
+describe('the destination of a provider', () => {
+  it('is answered for a provider and a type it declares', () => {
+    expect(eventDestinationOf(hearing('team-chat'), 'team-chat', 'websocket')).toMatchObject({ type: 'websocket' });
+  });
+
+  it('is answered for a type it does not declare, a server added by hand or a provider unknown, not at all', () => {
+    const joined = hearing('team-chat');
+    const asked: readonly (readonly [string | null, 'webhook' | 'websocket' | 'queue'])[] = [
+      ['team-chat', 'webhook'],
+      ['team-chat', 'queue'],
+      [null, 'webhook'],
+      ['slack-bot', 'webhook'],
+      ['unknown', 'webhook'],
+    ];
+
+    expect(asked.map(([provider, type]) => eventDestinationOf(joined, provider, type))).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it('is that of a provider whoever runs the runtime adds, in place of a shipped one of the same name', () => {
+    const joined = hearing('slack-bot');
+
+    expect(eventDestinationOf(joined, 'slack-bot', 'websocket')).toMatchObject({ type: 'websocket' });
+    expect(eventDestinationOf(shipped, 'slack-bot', 'websocket')).toBeUndefined();
+  });
+});
+
+const readsThroughPost: ReadonlyArray<readonly [string, readonly string[]]> = [
+  ['adobe-analytics', ['runReport']],
+  [
+    'amazon-ads',
+    [
+      'QueryAdvertiserAccount',
+      'QueryCampaign',
+      'QueryAdGroup',
+      'QueryAd',
+      'QueryTarget',
+      'QueryRecommendation',
+      'AdsApiv1RetrieveReport',
+    ],
+  ],
+  ['campaign-manager-360', ['dfareporting.dimensionValues.query', 'dfareporting.reports.compatibleFields.query']],
+  [
+    'google-ads',
+    [
+      'googleads.customers.googleAds.search',
+      'googleads.customers.googleAds.searchStream',
+      'googleads.googleAdsFields.search',
+    ],
+  ],
+  [
+    'google-analytics',
+    [
+      'analyticsdata.properties.runReport',
+      'analyticsdata.properties.runPivotReport',
+      'analyticsdata.properties.batchRunReports',
+      'analyticsdata.properties.batchRunPivotReports',
+      'analyticsdata.properties.runRealtimeReport',
+      'analyticsdata.properties.checkCompatibility',
+      'analyticsdata.properties.audienceExports.query',
+    ],
+  ],
+  ['google-analytics-admin', ['analyticsadmin.properties.runAccessReport']],
+  ['google-search-console', ['webmasters.searchanalytics.query', 'searchconsole.urlInspection.index.inspect']],
+  ['search-ads-360', ['searchads360.customers.searchAds360.search', 'searchads360.searchAds360Fields.search']],
+];
+
+describe('the marks of the shipped providers', () => {
+  it('mark reads the operations of an HTTP API that only read through POST, and mark no tool acts, which its method marks', () => {
+    const marking = shipped.providers.filter(({ entry }) => entry.marks !== undefined);
+
+    expect(marking.map(({ entry }) => [entry.name, entry.type, entry.marks])).toEqual(
+      readsThroughPost.map(([name, reads]: readonly [string, readonly string[]]) => [name, 'openapi', { reads }]),
+    );
+  });
+});
+
+const bareVerbs: ReadonlySet<string> = new Set([
+  'Act',
+  'Add',
+  'Ask',
+  'Change',
+  'Create',
+  'Delete',
+  'Keep',
+  'Manage',
+  'Post',
+  'Read',
+  'Run',
+  'Search',
+  'See',
+  'Send',
+]);
+
+const personalPronouns = /\b(?:I|me|my|mine|we|us|our|ours|you|your|yours|he|him|his|she|her|hers)\b/iu;
+
+interface SaidScope {
+  readonly provider: string;
+  readonly scope: string;
+  readonly says: string | undefined;
+}
+
+interface Said {
+  readonly scope?: string | undefined;
+  readonly says?: Readonly<Record<string, string>> | undefined;
+}
+
+function scopesSaidBy(provider: string, { scope, says = {} }: Said): readonly SaidScope[] {
+  return (scope === undefined ? [] : scope.split(' ')).map((each) => ({ provider, scope: each, says: says[each] }));
+}
+
+function saidScopesOf({ name, credentials }: ProviderEntry): readonly SaidScope[] {
+  return credentials.flatMap((way) => [
+    ...scopesSaidBy(name, way),
+    ...(way.more ?? []).flatMap((group) => scopesSaidBy(name, group)),
+  ]);
+}
+
+function opensWithABareVerb(sentence: string): boolean {
+  const [verb = ''] = sentence.split(/[ ,]/u);
+  return sentence.length <= 120 && bareVerbs.has(verb) && sentence.endsWith('.');
+}
+
+function breaksTheRule({ says = '' }: SaidScope): boolean {
+  return !opensWithABareVerb(says) || personalPronouns.test(says);
+}
+
+const saidScopes = shipped.providers.flatMap(({ entry }) => saidScopesOf(entry));
+
+describe('the words of the scopes the shipped providers ask', () => {
+  it('say every scope in at most 120 characters, opening with a bare verb and naming no person by a pronoun', () => {
+    expect(saidScopes.filter((said) => breaksTheRule(said))).toEqual([]);
+    expect(saidScopes).toHaveLength(108);
+  });
+});

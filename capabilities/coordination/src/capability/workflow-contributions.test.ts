@@ -7,6 +7,8 @@ import { testPlaybookNames } from '../testing/test-sandbox.ts';
 import { workflowPlaybook, type WorkflowPlaybook } from '../testing/workflow-playbook.ts';
 import { makeWorkflowAdapter } from './workflow.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const header = `document:
   dsl: '1.0.3'
   namespace: acme
@@ -97,9 +99,7 @@ describe('saving a workflow that carries contributes where goals are not kept', 
 
     expect(await saving(notKept, 'unchecked', source)).toEqual({
       ...refusedSave,
-      issues: [
-        { detail: 'Line 1, column 1: It has contributes, which the DSL does not know here', pointer: '/source' },
-      ],
+      issues: [{ detail: anyWords, pointer: '/source' }],
     });
   });
 

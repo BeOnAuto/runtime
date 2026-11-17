@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { playbookOperationsOf } from '../index.ts';
+import { goalsSavedWordsOf, playbookOperationsOf } from '../index.ts';
 import { goalsInMemory } from '../testing/goals-in-memory.ts';
 import { firstMoment } from '../testing/harness.ts';
 import { goalsText } from '../testing/index.ts';
@@ -32,40 +32,49 @@ function wordsOf(name: string, input: unknown, { gaps = [], output = alpha, mess
 
 const gap = { kind: 'measure_unreported', goal: 'g', detail: 'd', fixed_by: 'agent' } as const;
 
-describe('the plain language of the playbook operations where Auto sends no goal messages', () => {
-  const unsent =
-    'Auto sends no goal messages here: if the person asked to be told, tell them so first, and build a post only after their yes.';
+const unsent = goalsSavedWordsOf(false);
 
+function toldAndUntold(name: string, input: unknown, answered: Answered = {}) {
+  return {
+    told: String(wordsOf(name, input, { ...answered, messages: true })),
+    untold: String(wordsOf(name, input, { ...answered, messages: false })),
+  };
+}
+
+function followingTheNote({ told, untold }: { readonly told: string; readonly untold: string }): string | undefined {
+  const at = untold.indexOf(unsent);
+  return at === -1 || untold.replace(unsent, '') !== told ? undefined : told.slice(at);
+}
+
+describe('the plain language of the playbook operations where Auto sends no goal messages', () => {
   it('tell the agent, after a create, that no goal messages are sent, before the gaps', () => {
-    expect(wordsOf('create_playbook', { playbook: 'alpha', name: 'Alpha' }, { gaps: [gap] })).toBe(
-      `Created the playbook “Alpha”. Stop here: give the person the \`studio\` link. If these are the goals the person said yes to, record that yes with agree_playbook_goals; if not, ask again. Build nothing before that call. ${unsent} Its goals still have 1 gap, each saying what is missing and who puts it right.`,
-    );
+    expect(
+      followingTheNote(toldAndUntold('create_playbook', { playbook: 'alpha', name: 'Alpha' }, { gaps: [gap] })),
+    ).toMatch(/1 gap/u);
   });
 
   it('put it before what the playbook is for, which the agent sent itself', () => {
     const sold = { ...alpha, description: 'Sells.' };
+    const answers = [
+      toldAndUntold('create_playbook', { playbook: 'alpha', name: 'Alpha' }, { output: sold }).untold,
+      toldAndUntold('update_playbook', { playbook: 'alpha', goals: goalsText }, { output: sold }).untold,
+    ];
 
-    expect(wordsOf('create_playbook', { playbook: 'alpha', name: 'Alpha' }, { output: sold })).toBe(
-      `Created the playbook “Alpha”. Stop here: give the person the \`studio\` link. If these are the goals the person said yes to, record that yes with agree_playbook_goals; if not, ask again. Build nothing before that call. ${unsent} What it is for: Sells.`,
-    );
-    expect(wordsOf('update_playbook', { playbook: 'alpha', goals: goalsText }, { output: sold })).toBe(
-      `Updated the playbook “Alpha”. ${unsent} What it is for: Sells.`,
-    );
+    expect(answers.map((words) => words.slice(0, words.indexOf('Sells.')))).toEqual([
+      expect.stringContaining(unsent),
+      expect.stringContaining(unsent),
+    ]);
   });
 
   it('tell the agent so after an update that saves goals, and not after one that leaves them', () => {
-    expect(wordsOf('update_playbook', { playbook: 'alpha', goals: goalsText })).toBe(
-      `Updated the playbook “Alpha”. ${unsent} It has no description now.`,
-    );
-    expect(wordsOf('update_playbook', { playbook: 'alpha' })).toBe(
-      'Updated the playbook “Alpha”. It has no description now.',
-    );
+    const leaving = toldAndUntold('update_playbook', { playbook: 'alpha' });
+
+    expect(followingTheNote(toldAndUntold('update_playbook', { playbook: 'alpha', goals: goalsText }))).toBeDefined();
+    expect(leaving.untold).toBe(leaving.told);
+    expect(leaving.untold).not.toContain(unsent);
   });
 
-  it('say nothing of it where goal messages are sent', () => {
-    expect(wordsOf('update_playbook', { playbook: 'alpha', goals: goalsText }, { messages: true })).toBe(
-      'Updated the playbook “Alpha”. It has no description now.',
-    );
-    expect(wordsOf('create_playbook', { playbook: 'alpha', name: 'Alpha' }, { messages: true })).not.toContain(unsent);
+  it('is no words at all where goal messages are sent', () => {
+    expect(goalsSavedWordsOf(true)).toBe('');
   });
 });

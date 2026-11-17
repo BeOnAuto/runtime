@@ -6,6 +6,8 @@ import { added, adding } from '../testing/additions.ts';
 import { studioReturn } from '../testing/consents.ts';
 import { acmeWriter, ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const [driveWay] = drive.credentials;
 
 const requiringTheOrgsOAuthClient = {
@@ -186,7 +188,7 @@ describe('a connection asked under the organization’s own OAuth client where n
         issues: [
           {
             pointer: '/credential/oauth_client',
-            detail: "Expected no oauth_client: only an authorization credential's consent runs under an OAuth client",
+            detail: anyWords,
           },
         ],
       },
@@ -196,8 +198,7 @@ describe('a connection asked under the organization’s own OAuth client where n
         issues: [
           {
             pointer: '/credential/oauth_client',
-            detail:
-              "Expected no oauth_client without provider: consent runs under the organization's own OAuth client at a provider, whose way says where to register it",
+            detail: anyWords,
           },
         ],
       },

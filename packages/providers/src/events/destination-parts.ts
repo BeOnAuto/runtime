@@ -19,7 +19,7 @@ const DeliveredReplySchema = Schema.Struct({
   time: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'Where a delivery names when the reply was written, which orders the replies that arrive together and decides nothing else',
+        'Where a delivery names when the reply was written, in seconds since the epoch or as an RFC 3339 date-time; it orders the replies that arrive together and decides nothing else',
     }),
   ),
   changed: Schema.optionalKey(

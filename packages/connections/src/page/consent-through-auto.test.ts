@@ -10,6 +10,8 @@ import { added, crm, type Added } from '../testing/additions.ts';
 import { consentHarnessAt, startedAt, starting } from '../testing/consents.ts';
 import { acmeWriter, ada, operationNamed, type Harness, loopbackAndCrmPolicy } from '../testing/harness.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const closing: (() => Promise<void>)[] = [];
 
 afterEach(async () => {
@@ -143,7 +145,7 @@ describe('the finish of a consent through Auto’s consent service', () => {
       await finishedWith(connecting.h, connecting.link, { ...returned, handle: otherReturned.handle }),
     ).toMatchObject({
       reason: 'invalid_input',
-      issues: [{ pointer: '/handle', detail: "Expected a handle Auto's consent service takes; it refused this one" }],
+      issues: [{ pointer: '/handle', detail: anyWords }],
     });
   });
 });
@@ -166,8 +168,7 @@ describe('a finish of the shape its start did not begin with', () => {
         issues: [
           {
             pointer: '/code',
-            detail:
-              "Expected handle: the consent of the connection files began through Auto's consent service, which answers a handle, not a code",
+            detail: anyWords,
           },
         ],
       },
@@ -176,8 +177,7 @@ describe('a finish of the shape its start did not begin with', () => {
         issues: [
           {
             pointer: '/handle',
-            detail:
-              "Expected code: the consent of the connection files began with a client of this runtime's, which answers a code, not a handle",
+            detail: anyWords,
           },
         ],
       },

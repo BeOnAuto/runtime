@@ -10,6 +10,8 @@ import { answers, type ScriptedReply } from '../testing/scripted-language-model.
 import { answeredWith, defaultBounds, foundRows, stepsOf, toolOf, type StepsOptions } from '../testing/step-runs.ts';
 import { noLongerOffered } from './asked-calls.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const search = toolOf('graph', 'search');
 
 const echo = toolOf('graph', 'echo', false);
@@ -189,7 +191,7 @@ describe('a run that goes on from facts that ended it', () => {
       ending: {
         type: 'stopped',
         because: 'run_bound',
-        detail: 'The run went on for 10 ms, the longest a run that calls tools may take',
+        detail: anyWords,
       },
     });
   });

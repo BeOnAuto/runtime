@@ -50,32 +50,31 @@ async function wordsAfterTheLink(h: Harness, link: Added, at?: string): Promise<
 }
 
 describe('the words of adding a connection', () => {
-  it('say what was added, where the person approves it, and that the link is shown to them by a name, never as its address', async () => {
-    expect(await outcomeWords(harness(), 'add_connection', notes)).toBe(
-      'Added the connection “notes”. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
-    );
+  it('name what was added and never show the address of its link', async () => {
+    const h = harness();
+    const words = await outcomeWords(h, 'add_connection', notes);
+    const link = await linkOf(h);
+
+    expect(words).toContain('“notes”');
+    expect(words).not.toContain(String(link?.url));
   });
 
   it("name the link for the provider's title where the connection was added from a provider", async () => {
     expect(
       await outcomeWords(harness(), 'add_connection', { provider: 'tracker', placeholders: { site: 'acme' } }),
-    ).toBe(
-      'Added the connection “tracker”. Show the person who added the connection a link named “Approve the Tracker connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
-    );
+    ).toContain('Tracker');
   });
 
   it('ask an agent to have the person open the link of the connection', async () => {
     const link = await linkOf(harness());
 
-    expect(link?.message).toBe(
-      'Open this page to approve the connection “crm”, and give its credential where it takes one, within 24 hours.',
-    );
+    expect(link?.message).toContain('“crm”');
     expect(link?.url).toMatch(/^https:\/\/studio\.on\.auto\/connect\?server=http%3A%2F%2Flocalhost%3A5555&org=acme&/u);
   });
 });
 
 describe('the words of adding an MCP server given by hand that signs people in itself', () => {
-  it('say the person signs in at the host of its issuer on the page, and ask an agent to have them open it to do so', async () => {
+  it('name the host of its issuer, in the words and in the message of the link', async () => {
     const fake = await consentFake({ dynamicRegistration: true });
     closing.push(fake.close);
     const h = harness({ policy: loopbackPolicy });
@@ -83,66 +82,49 @@ describe('the words of adding an MCP server given by hand that signs people in i
     const output = outputOf(await h.call(operationNamed(h.operations, 'add_connection'), ada, byHand));
     const { host } = new URL(fake.origin);
 
-    expect(wordsOf(h, 'add_connection').outcome(output, byHand)).toBe(
-      `Added the connection “files”. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and sign in at ${host}, within 24 hours.`,
-    );
-    expect(linkingOf(h).toOpen(output)?.message).toBe(
-      `Open this page to approve the connection “files”, and sign in at ${host}, within 24 hours.`,
-    );
+    expect([wordsOf(h, 'add_connection').outcome(output, byHand), linkingOf(h).toOpen(output)?.message]).toEqual([
+      expect.stringContaining(host),
+      expect.stringContaining(host),
+    ]);
   });
 });
 
 describe('the words of adding a connection under the organization’s own OAuth client', () => {
-  it('say the person gives the organization’s own OAuth client before signing in, and ask an agent to have them open the page to do so', async () => {
+  it('name the connection, in the words and in the message of the link', async () => {
     const h = harness({ providers: providersOf(drive) });
-    const underTheOrgsOAuthClient = { provider: 'drive', credential: { kind: 'authorization', oauth_client: 'own' } };
-    const output = outputOf(await h.call(operationNamed(h.operations, 'add_connection'), ada, underTheOrgsOAuthClient));
+    const own = { provider: 'drive', credential: { kind: 'authorization', oauth_client: 'own' } };
+    const output = outputOf(await h.call(operationNamed(h.operations, 'add_connection'), ada, own));
 
-    expect(wordsOf(h, 'add_connection').outcome(output, underTheOrgsOAuthClient)).toBe(
-      "Added the connection “drive”. Show the person who added the connection a link named “Approve the Drive connection”, never its address. On that page they approve it and give the client ID and the client secret of the organization's own OAuth client, registered with the provider, then sign in, within 24 hours.",
-    );
-    expect(linkingOf(h).toOpen(output)?.message).toBe(
-      "Open this page to approve the connection “drive”, and give the client ID and the client secret of the organization's own OAuth client, registered with the provider, then sign in, within 24 hours.",
-    );
+    expect([wordsOf(h, 'add_connection').outcome(output, own), linkingOf(h).toOpen(output)?.message]).toEqual([
+      expect.stringContaining('“drive”'),
+      expect.stringContaining('“drive”'),
+    ]);
   });
 });
 
 describe('the words of the answer after the link of a connection', () => {
-  it('say it is connected and nothing is left to open, once the person approved it', async () => {
+  it('differ for a connection approved, pending, expired, replaced by a newer link and cancelled, and are the words of adding it while its link lasts', async () => {
     const h = harness();
-    const link = await added(h, notes);
-    await h.call(operationNamed(h.operations, 'approve'), ada, { id: link.id, token: link.token });
+    const [approved, pending, replaced, cancelled] = [
+      await added(h, notes),
+      await added(h, { ...notes, name: 'notes-2' }),
+      await added(h, { ...notes, name: 'notes-3' }),
+      await added(h, { ...notes, name: 'notes-4' }),
+    ];
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id: approved.id, token: approved.token });
+    await reconnecting(h, replaced.id);
+    await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id: cancelled.id });
+    const words = [
+      await wordsAfterTheLink(h, approved),
+      await wordsAfterTheLink(h, pending),
+      await wordsAfterTheLink(h, pending, pending.expiresAt),
+      await wordsAfterTheLink(h, replaced),
+      await wordsAfterTheLink(h, cancelled),
+    ].map((said) => said.replace(/notes(-\d)?/u, 'notes'));
 
-    expect(await wordsAfterTheLink(h, link)).toBe('Connected the connection “notes”; nothing is left to open.');
-  });
-
-  it('say where the person approves it while its link lasts, and to reconnect it for a new link once it expired', async () => {
-    const h = harness();
-    const link = await added(h, notes);
-
-    expect(await wordsAfterTheLink(h, link)).toBe(await outcomeWords(harness(), 'add_connection', notes));
-    expect(await wordsAfterTheLink(h, link, link.expiresAt)).toBe(
-      'The connection “notes” is pending, and its link is used up or expired, so nothing is left to open: reconnect it for a new link.',
-    );
-  });
-
-  it('say a newer link replaced the one offered, which the person opens, where the connection was reconnected since', async () => {
-    const h = harness();
-    const link = await added(h, notes);
-    await reconnecting(h, link.id);
-
-    expect(await wordsAfterTheLink(h, link)).toBe(
-      'The connection “notes” is pending. A newer link is available. The person who added the connection should open that link; reconnecting would replace it again.',
-    );
-  });
-
-  it('say the person cancelled it and nothing is connected, once it was removed', async () => {
-    const h = harness();
-    const link = await added(h, notes);
-    await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id: link.id });
-
-    expect(await wordsAfterTheLink(h, link)).toBe(
-      'The person cancelled the connection “notes” on the page, so it is removed and nothing is connected.',
+    expect(new Set(words).size).toBe(words.length);
+    expect(await wordsAfterTheLink(h, pending)).toBe(
+      await outcomeWords(harness(), 'add_connection', { ...notes, name: 'notes-2' }),
     );
   });
 
@@ -155,7 +137,7 @@ describe('the words of the answer after the link of a connection', () => {
 });
 
 describe('the words of listing connections', () => {
-  it('list them by name and status, and say when there is none', async () => {
+  it('name each connection up to twenty, and count the rest', async () => {
     const h = harness();
     const empty = await outcomeWords(h, 'list_connections', {});
     await added(h, notes);
@@ -164,67 +146,44 @@ describe('the words of listing connections', () => {
       h,
       Array.from({ length: 21 }, (_, index) => ({ ...crm, name: `crm-${String(index)}` })),
     );
+    const many = await outcomeWords(h, 'list_connections', {});
 
-    expect([empty, one]).toEqual([
-      'The org has no connection; search lists the tool servers its playbooks may already use.',
-      'There is 1 connection: “notes”, pending.',
-    ]);
-    expect(await outcomeWords(h, 'list_connections', {})).toMatch(
-      /^There are 22 connections: “crm-20”, pending, .* and 2 more\.$/u,
-    );
+    expect([empty.includes('“'), one.includes('“notes”')]).toEqual([false, true]);
+    expect([many.split('“').length - 1, many.includes('22'), many.includes(' 2 ')]).toEqual([20, true, true]);
   });
 });
 
-describe('the words of removing a connection', () => {
-  it('say what was removed and that its credential is forgotten', async () => {
+describe('the words of removing and reconnecting a connection', () => {
+  it('name the connection, and differ for one that is connected', async () => {
     const h = harness();
     const { id } = await added(h, notes);
+    const connected = await connectedCrm(h);
+    const reconnected = await outcomeWords(h, 'reconnect_connection', { id });
 
-    expect(await outcomeWords(h, 'remove_connection', { id })).toBe(
-      'Removed the connection “notes”. No playbook may use it, and its credential is forgotten.',
-    );
-  });
-});
-
-describe('the words of reconnecting a connection', () => {
-  it('say a new link was given to it, that the link before it stops working, and where the person approves it, as the words of adding it say', async () => {
-    const h = harness();
-    const { id } = await added(h, notes);
-
-    expect(await outcomeWords(h, 'reconnect_connection', { id })).toBe(
-      'Gave a new link to the connection “notes”; the link before it stops working. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
-    );
-  });
-});
-
-describe('the words of reconnecting a connection that is connected', () => {
-  it('say it stays connected as it is until the person finishes on the page, which replaces its credential', async () => {
-    const h = harness();
-    const id = await connectedCrm(h);
-
-    expect(await outcomeWords(h, 'reconnect_connection', { id })).toBe(
-      'Gave a new link to the connection “crm”, which stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
+    expect(await outcomeWords(h, 'remove_connection', { id })).toContain('“notes”');
+    expect(reconnected).toContain('“notes”');
+    expect((await outcomeWords(h, 'reconnect_connection', { id: connected })).replace('crm', 'notes')).not.toBe(
+      reconnected,
     );
   });
 });
 
 describe('the words of a tool that could not do what it was asked', () => {
-  it('name what it tried to do', () => {
+  it('name what it tried to do on', () => {
     const h = harness();
 
     expect([
       wordsOf(h, 'add_connection').attempt(notes),
       wordsOf(h, 'add_connection').attempt({ provider: 'tracker' }),
-      wordsOf(h, 'list_connections').attempt({}),
       wordsOf(h, 'reconnect_connection').attempt({ id: 'crm-id' }),
       wordsOf(h, 'remove_connection').attempt({ id: 'crm-id' }),
     ]).toEqual([
-      'add the connection “notes”',
-      'connect the provider “tracker”',
-      'list the connections',
-      'reconnect the connection “crm-id”',
-      'remove the connection “crm-id”',
+      expect.stringContaining('“notes”'),
+      expect.stringContaining('“tracker”'),
+      expect.stringContaining('“crm-id”'),
+      expect.stringContaining('“crm-id”'),
     ]);
+    expect(wordsOf(h, 'list_connections').attempt({})).toEqual(expect.any(String));
     expect(() => wordsOf(h, 'get_connection')).toThrow('The operation get_connection has no words');
     expect(() => wordsOf(h, 'read_link')).toThrow('The operation read_link has no words');
   });

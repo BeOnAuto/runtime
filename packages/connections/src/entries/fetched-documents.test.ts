@@ -1,5 +1,5 @@
 import type { Outcome } from '@on.auto/operations';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { adding, billing, issuesIn } from '../testing/additions.ts';
 import { billingDocument, billingDocumentUrl } from '../testing/harness-services.ts';
@@ -72,10 +72,15 @@ describe('a document by its address that its service cannot give now', () => {
   });
 
   it('is unavailable where its document does not arrive whole within the time a document is read in', async () => {
+    const timeout = AbortSignal.timeout.bind(AbortSignal);
+    vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => timeout(1));
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
     const h = harness({ fetch: answeringUntilAborted });
 
     expect(await recordedAfter(h, billing)).toEqual(cannotBeReadNow('its address did not answer, or not in time'));
-  }, 30_000);
+  });
 });
 
 describe('the refusal of a document by its address', () => {

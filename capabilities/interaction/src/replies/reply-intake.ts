@@ -15,6 +15,7 @@ interface Arrival {
   readonly tool: string;
   readonly conversation: string;
   readonly causationId: string;
+  readonly delivered?: true;
 }
 
 export interface Intake {
@@ -38,6 +39,10 @@ function answeredReplyOf(reply: Reply) {
   return { ...identityOf(reply), ...(reply.to === undefined ? {} : { to: reply.to }) };
 }
 
+function howItArrived({ delivered }: Arrival) {
+  return delivered === undefined ? {} : { delivered };
+}
+
 interface Taking {
   readonly request: KeptRequest;
   readonly reply: Reply;
@@ -57,7 +62,8 @@ function toldTaken(intake: Intake, state: IntakeState, request: KeptRequest, mad
 }
 
 function taken(intake: Intake, state: IntakeState, { request, reply, answer }: Taking): Effect.Effect<IntakeState> {
-  const work = { type: 'answer', answer: { answer, reply: answeredReplyOf(reply) } } as const;
+  const given = { answer, reply: answeredReplyOf(reply), ...howItArrived(intake.arrival) };
+  const work = { type: 'answer', answer: given } as const;
   return recordedReplyWork(placeOf(intake), request, reply, { work }).pipe(
     Effect.flatMap((made) => (made === undefined ? Effect.succeed(state) : toldTaken(intake, state, request, made))),
     Effect.catchTag('unavailable', () => Effect.succeed<IntakeState>({ ...state, unrecorded: true })),
@@ -82,6 +88,7 @@ function refusalFactOf({ arrival }: Intake, { reply, because, issues }: Refusal,
       because,
       ...(kept.length === 0 ? {} : { issues: kept }),
       told: telling,
+      ...howItArrived(arrival),
     },
   };
 }

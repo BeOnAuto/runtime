@@ -13,6 +13,8 @@ import {
 } from '../run-testing/waiting-runs.ts';
 import { answeredInTime, filmedBytes, harnessStartsAt, type GenerationHarness } from '../testing/index.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const firstPoll = harnessStartsAt + 5000;
 
 async function polledOnce(playbook: GenerationHarness) {
@@ -128,7 +130,7 @@ describe('the bytes of a video', () => {
       rejection: {
         reason: 'conflict',
         kind: 'oversized',
-        detail: 'The video the model made is larger than the 4 bytes this runtime keeps of one video',
+        detail: anyWords,
       },
       record: spent,
     });

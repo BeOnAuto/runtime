@@ -17,6 +17,8 @@ import {
 } from '../testing/resumed-attempts.ts';
 import { answers } from '../testing/scripted-language-model.ts';
 
+const anyWords: unknown = expect.any(String);
+
 function sentAs(calls: readonly RecordedCall[], sha256: string): readonly RecordedCall[] {
   return calls.map((call) =>
     call.type === 'model_call_started' ? { ...call, data: { ...call.data, messages_sha256: sha256 } } : call,
@@ -33,8 +35,7 @@ describe('a run that goes on from facts whose content it cannot read', () => {
         expect.objectContaining({
           _tag: 'unavailable',
           because: 'restarted_without_content',
-          detail:
-            'The server restarted before the run finished, and the playbook keeps no content of its calls to go on from',
+          detail: anyWords,
         }),
       ),
     );

@@ -9,6 +9,7 @@ import {
   type PlaybookRequest,
 } from '@on.auto/operations';
 import { memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
+import { goalsSavedWordsOf } from '@on.auto/playbooks';
 import { goalsText, leadGoalId, plainGoalId, restatedGoalsText } from '@on.auto/playbooks/testing';
 import { Effect, Layer, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -123,8 +124,10 @@ describe('the yes where Auto sends no goal messages', () => {
   it('tells the agent, as it plans the build, that no goal messages are sent and a post needs the yes', () => {
     const words = agreePlaybookGoalsWhere(false).registration.plainLanguage;
 
+    const told = agreePlaybookGoals.registration.plainLanguage;
+
     expect(words?.outcome({ version: 1, goals: [] }, { version: 1 })).toBe(
-      "Recorded the person's yes to version 1 of the goals. Auto sends no goal messages here: if the person asked to be told, tell them so first, and build a post only after their yes.",
+      `${String(told?.outcome({ version: 1, goals: [] }, { version: 1 }))}${goalsSavedWordsOf(false)}`,
     );
     expect(agreePlaybookGoalsWhere(true)).toBe(agreePlaybookGoals);
   });
@@ -139,8 +142,7 @@ describe('before_building in the answer of a yes', () => {
 
     expect(await untold.agreed({ version: 1 })).toMatchObject({
       output: {
-        before_building:
-          'Auto sends no goal messages here: if the person asked to be told, tell them so first, and build a post only after their yes.',
+        before_building: goalsSavedWordsOf(false).trim(),
       },
     });
     expect(await told.agreed({ version: 1 })).not.toHaveProperty('output.before_building');

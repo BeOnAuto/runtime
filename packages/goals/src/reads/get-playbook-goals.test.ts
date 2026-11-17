@@ -7,6 +7,7 @@ import {
   type RouteRegistration,
 } from '@on.auto/operations';
 import { memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
+import { goalsSavedWordsOf } from '@on.auto/playbooks';
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -75,8 +76,7 @@ describe('whether the goals read says the engine judges the goals', () => {
   });
 
   it('serve the yes that says no goal messages are sent only where messages are off', () => {
-    expect(outcomeOf(false)).toContain('Auto sends no goal messages here:');
-    expect(outcomeOf(true)).toBe("Recorded the person's yes to version 1 of the goals.");
+    expect(outcomeOf(false)).toBe(`${String(outcomeOf(true))}${goalsSavedWordsOf(false)}`);
   });
 });
 

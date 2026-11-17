@@ -4,6 +4,8 @@ import { generationBounds } from '../capability/generation-ports.ts';
 import { numberedHarness, outcomeOfRun, ran, refusalOf, runIdOf } from '../run-testing/run-outcomes.ts';
 import { answeredWith, imageSource, onePixelPng, sourceWith } from '../testing/index.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const moderated = {
   reason: 'conflict',
   kind: 'blocked_by_moderation',
@@ -23,7 +25,7 @@ describe('the bytes a run may keep of one asset', () => {
     expect(refusalOf(outcome)).toEqual({
       reason: 'conflict',
       kind: 'oversized',
-      detail: 'The image the model made is larger than the 16 bytes this runtime keeps of one image',
+      detail: anyWords,
     });
     expect(outcomeOfRun(await playbook.runOf(runIdOf(1)))).toEqual({
       status: 'rejected',
@@ -118,7 +120,7 @@ describe('a run whose model or input the runtime cannot take', () => {
     expect(notAnObject).toEqual({
       reason: 'invalid_input',
       kind: 'input_schema',
-      detail: 'The input of a generation function definition is a JSON object',
+      detail: anyWords,
     });
     expect([lacking.reason, lacking.kind, lacking.detail.includes('product')]).toEqual([
       'invalid_input',

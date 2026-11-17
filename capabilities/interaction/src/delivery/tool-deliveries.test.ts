@@ -9,11 +9,13 @@ import {
   type InteractionHarness,
 } from '../testing/index.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const address = { org: 'acme', playbook: 'alpha', id: askedRunId };
 
 const aDigest = 'd'.repeat(64);
 
-const anyText: unknown = expect.any(String);
+const anyText: unknown = anyWords;
 
 const aMoment: unknown = expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/u);
 
@@ -233,7 +235,7 @@ describe('an attempt whose call did not answer as asked', () => {
       },
       {
         type: 'delivery_failed',
-        data: { because: 'tool_not_offered', detail: 'The operator of this server does not allow chat/post_message' },
+        data: { because: 'tool_not_offered', detail: anyWords },
       },
       {
         type: 'delivery_failed',

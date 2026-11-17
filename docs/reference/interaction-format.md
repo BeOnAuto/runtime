@@ -432,12 +432,12 @@ An answer with no list at `list`, or larger than 64 KiB, is a failed read. The r
 | `tell: none`        | Nothing. A refused reply is still recorded                                                                                                                             |
 | The block           | Lines go through its own tool and arguments. `when` is the provider's word when left out, or `refusals`                                                                |
 
-| Key    | Required                                            | What it holds                                                                                                                                                  |
-| ------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `when` | No                                                  | `all` or `refusals`, as the words above                                                                                                                        |
-| `tool` | No; `deliver.tool` when left out                    | The tool of `deliver.server` that posts a line                                                                                                                 |
-| `with` | Yes                                                 | Its arguments. Their templates read `to`, `sent.conversation`, `sent.id`, `message`, and `reply.id` and `reply.to`, the reply's message and the one it answers |
-| `sent` | No; `deliver.sent.id` when `tool` is `deliver.tool` | A JSON Pointer into what the tool answered, to the message it posted                                                                                           |
+| Key    | Required                                            | What it holds                                                                                                                                                    |
+| ------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `when` | No                                                  | `all` or `refusals`, as the words above                                                                                                                          |
+| `tool` | No; `deliver.tool` when left out                    | The tool of `deliver.server` that posts a line                                                                                                                   |
+| `with` | Yes                                                 | Its arguments. Their templates read `to`, `sent.conversation`, `sent.id`, `message`, and `reply.id` and `reply.to`, the reply's message and the one it answers   |
+| `sent` | No; `deliver.sent.id` when `tool` is `deliver.tool` | A JSON Pointer into what the tool answered, to the message it posted. With another `tool` and no `sent`, a reply not taken is told nothing after the first line. |
 
 - A request keeps the `tell` it was asked with, as its provider said then.
 - A reply taken is told `Auto recorded your answer: approve.`, naming the words its rule took, or `Auto recorded your answer.` where the rule takes the whole reply. The mark and the line are made after the answer is recorded, once each, even across a restart of the runtime.
@@ -452,10 +452,9 @@ An answer with no list at `list`, or larger than 64 KiB, is a failed read. The r
 | Several requests open, `each.to` names messages | `More than one request is open here. Reply in the thread of the one you're answering.`                                                                                                       |
 | Several requests open, without `each.to`        | `Two requests are open here, so Auto can't tell which one this answers. Neither was answered. Answer them in Auto, or reply here when one is left.`                                          |
 | An answer from someone else                     | `This request is waiting for someone else's answer, so Auto didn't take this reply.` Once a request, and only where the provider answers every reply, so never by mail                       |
-| After the answer, in the read that took it      | `This request was already answered, so Auto didn't take this reply.` Once                                                                                                                    |
+| After an answer taken from a reply              | `This request was already answered, so Auto didn't take this reply.` At most once                                                                                                            |
 
 - A request is told of replies not taken at most three times, never in the same words twice running. Arguments that do not render are not sent; the reply is still refused.
-- A telling whose message the playbook cannot know is the request's last: one through a tool other than `deliver.tool`, whose answer it reads no id from, or one whose tool failed after it may have posted, such as by not answering in time. A reply after it is still refused, and nobody is told.
 
 ## Answering a request
 

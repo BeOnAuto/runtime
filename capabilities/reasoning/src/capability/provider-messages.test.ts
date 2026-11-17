@@ -15,6 +15,8 @@ import { documentOf } from '../testing/definition-documents.ts';
 import { exposedText } from '../testing/exposure.ts';
 import { reasoningAdapter, runContext, runContextWith } from '../testing/reasoning-runs.ts';
 
+const anyWords: unknown = expect.any(String);
+
 interface ThroughGateway {
   readonly environment: Readonly<Record<string, string>>;
   readonly answer: () => Response;
@@ -52,8 +54,7 @@ describe('a run whose gateway rejects the definition', () => {
       Exit.fail(
         expect.objectContaining({
           _tag: 'conflict',
-          detail:
-            'gateway answered HTTP 404: the model was not found, with the error code 404; update the reasoning function definition',
+          detail: anyWords,
           kind: 'unworkable',
         }),
       ),

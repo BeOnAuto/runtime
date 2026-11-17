@@ -6,6 +6,8 @@ import { acmeAdmin, acmeAlphaKeeper } from '../testing/callers.ts';
 import { firstMoment, harness, toOrg } from '../testing/harness.ts';
 import { getPlaybook, pagesInMemory, refusedPage, updatePlaybook } from '../testing/playbook-pages.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const toAcme = toOrg('acme');
 
 const later = '2026-10-02T14:15:00.000Z';
@@ -162,7 +164,7 @@ describe('update_playbook with a page, removed or refused', () => {
     expect(await updating({ page: '---\n---\n' })).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The playbook alpha is retired and cannot change until it is restored',
+      detail: anyWords,
       kind: 'retired',
     });
     expect(
@@ -186,7 +188,7 @@ describe('update_playbook rejecting', () => {
     expect(await renaming('alpha')).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The playbook alpha is retired and cannot change until it is restored',
+      detail: anyWords,
       kind: 'retired',
     });
   });

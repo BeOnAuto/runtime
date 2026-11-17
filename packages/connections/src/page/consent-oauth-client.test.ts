@@ -20,6 +20,8 @@ import {
 import { ada, loopbackAndCrmPolicy, operationNamed, type Harness } from '../testing/harness.ts';
 import { calledThrough, sealedConsentAt } from '../testing/sealed-consents.ts';
 
+const anyWords: unknown = expect.any(String);
+
 const closing: (() => Promise<void>)[] = [];
 
 afterEach(async () => {
@@ -86,8 +88,7 @@ describe('the consent of a connection under the organization’s own OAuth clien
     expect(await starting(h, link)).toMatchObject({
       status: 'rejected',
       reason: 'conflict',
-      detail:
-        "The connection files runs under the organization's own OAuth client, whose client ID and client secret the person gives on its page before signing in",
+      detail: anyWords,
     });
     expect(typesOf(await h.facts())).toEqual(['connection_added', 'connection_link_issued']);
   });

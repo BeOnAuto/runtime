@@ -93,6 +93,9 @@ const unproven =
 const unowned =
   'Expected reply only beside connection, where a delivery names the account it happened in, so that a reply is taken only for the connections made in it';
 
+const unplaced =
+  "Expected reply only beside conversation, where a delivery names the conversation the reply was posted in, since a message's id may be unique only within its conversation, so that a reply is taken only for the request sent there as the message it answers";
+
 const fromTheBody =
   'Expected $request.body#/<pointer>, a runtime expression of OpenAPI into the request, since a reply is read from the body alone, which the proof covers';
 
@@ -166,9 +169,19 @@ describe('a destination whose deliveries carry a reply', () => {
   });
 
   it('names the account a delivery happened in, which an arrival of a subscription does not', () => {
-    const subscribed = { ...ofEachSubscription, verify: { scheme: 'standard-webhooks', secret: 'subscription' } };
+    const subscribed = {
+      ...ofEachSubscription,
+      verify: { scheme: 'standard-webhooks', secret: 'subscription' },
+      wake: { ...ofEachSubscription.wake, conversation: '$request.body#/channel' },
+    };
 
     expect(sentBy(carrying(subscribed, aReply))).toEqual([[reply, unowned]]);
+  });
+
+  it('names the conversation the reply was posted in, within which alone a message is named uniquely', () => {
+    const anywhere = { ...ofTheApp, wake: without(ofTheApp.wake, 'conversation') };
+
+    expect([sentBy(carrying(anywhere, aReply)), sentBy(carrying(ofTheApp, aReply))]).toEqual([[[reply, unplaced]], []]);
   });
 });
 

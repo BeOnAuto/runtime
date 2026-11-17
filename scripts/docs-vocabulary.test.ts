@@ -39,7 +39,7 @@ interface Allowance {
 
 const internalTerms = 'packages/operations/src/plain-language/internal-terms.ts';
 
-const internalTermsTest = 'packages/operations/src/plain-language/internal-terms.test.ts';
+const requestWordsTest = 'packages/operations/src/plain-language/request-words.test.ts';
 
 const reasoningReference = 'docs/engineering/reference/reasoning-format.md';
 
@@ -89,8 +89,8 @@ const allowances: readonly Allowance[] = [
   {
     text: 'inference-profile',
     in: [
-      'capabilities/reasoning/src/catalog/catalog-leaks.test.ts',
       'capabilities/reasoning/src/catalog/catalog-listing.test.ts',
+      'capabilities/reasoning/src/catalog/catalog.test.ts',
       'capabilities/reasoning/src/definition/definition-settings.test.ts',
       'capabilities/reasoning/src/settings/catalog-settings.test.ts',
     ],
@@ -155,7 +155,7 @@ const allowances: readonly Allowance[] = [
     "['It ran an inference.', 'inference']",
     "['An orchestration started.', 'orchestration']",
     "['It folds a recollection.', 'recollection']",
-  ].map((leak) => ({ text: leak, in: [internalTermsTest] })),
+  ].map((leak) => ({ text: leak, in: [requestWordsTest] })),
   { text: "**inference** names a model call and its provider's terms", in: ['CLAUDE.md'] },
   {
     text: 'recall_views',

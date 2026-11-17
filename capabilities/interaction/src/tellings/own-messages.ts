@@ -1,8 +1,11 @@
 import type { PlaybookAddress, ProjectedCondition, ProjectionReader } from '@on.auto/operations';
+import type { TellingForm } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
+import type { KeptRequest } from '../replies/reply-taking.ts';
 import { openRequestsName } from '../requests/open-requests.ts';
 import { tellingsName } from './telling-rows.ts';
+import { onceFor } from './tellings.ts';
 
 export type TellingsReader = Pick<ProjectionReader, 'readProjectedRows'>;
 
@@ -55,5 +58,43 @@ export function toldUnknowingly(
   return anyTelling(ledger, playbook, [
     { column: 'run_id', equals: runId },
     { column: 'known', equals: false },
+  ]);
+}
+
+const formsOfTheAnswersTelling: readonly TellingForm[] = ['mark', 'line'];
+
+function tellingsOfTheAnswer(runId: string): ReadonlySet<string> {
+  return new Set(formsOfTheAnswersTelling.map((form) => onceFor({ runId, call: { about: 'taken', form } })));
+}
+
+export function answerToldKnowingly(
+  ledger: TellingsReader,
+  playbook: PlaybookAddress,
+  { runId, row }: KeptRequest,
+): Effect.Effect<boolean> {
+  if (row.telling_due_at !== null) {
+    return Effect.succeed(false);
+  }
+  const unknown = ledger.readProjectedRows(tellingsName, playbook, {
+    where: [
+      { column: 'run_id', equals: runId },
+      { column: 'known', equals: false },
+    ],
+    orderBy: [],
+    order: 'asc',
+    limit: formsOfTheAnswersTelling.length + 1,
+  });
+  const ownTellings = tellingsOfTheAnswer(runId);
+  return Effect.map(unknown, (rows) => rows.every(({ key }) => ownTellings.has(key)));
+}
+
+export function answersMarkRefused(
+  ledger: TellingsReader,
+  playbook: PlaybookAddress,
+  runId: string,
+): Effect.Effect<boolean> {
+  return anyTelling(ledger, playbook, [
+    { column: 'row_key', equals: onceFor({ runId, call: { about: 'taken', form: 'mark' } }) },
+    { column: 'known', equals: true },
   ]);
 }
