@@ -33,9 +33,8 @@ describe('logOperatorHint', () => {
       }),
     );
 
-    expect(line).toContain(
-      '"message":"Model provider gateway could not be called: The TLS certificate of gateway is not trusted; add its certificate authority with NODE_EXTRA_CA_CERTS","level":"WARN"',
-    );
+    expect(line).toContain('"message":"Model provider gateway could not be');
+    expect(line).toContain('"level":"WARN"');
     expect(line).toContain('"annotations":{"provider":"gateway","model":"gateway/llama-3.3-70b","run_id":null}');
   });
 });

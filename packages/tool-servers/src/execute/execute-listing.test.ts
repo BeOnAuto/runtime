@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
 import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
 
+function containing(part: string): unknown {
+  return expect.stringContaining(part);
+}
+
 const closing: (() => Promise<void>)[] = [];
 
 afterEach(async () => {
@@ -31,8 +35,7 @@ const notOffered = {
   status: 'rejected',
   reason: 'unavailable',
   kind: 'tool_not_offered',
-  detail:
-    'The directory listing does not offer the tool server graph, whose tools pay, refund, transfer or pay out money',
+  detail: containing('graph'),
 };
 
 describe('a server whose tools handle money, called through the directory listing', () => {

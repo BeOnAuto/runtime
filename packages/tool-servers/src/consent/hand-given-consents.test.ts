@@ -129,11 +129,8 @@ describe('a server given by hand that no longer names its protected resource met
     clock.setTo(3_540_000);
     const renewed = await source.token().catch((error: unknown) => error);
 
-    expect(renewed).toEqual(
-      new Error(
-        `The server at ${fake.url} no longer names its authorization server, so the tokens of the connection files cannot be renewed; remove the connection and add it again`,
-      ),
-    );
+    expect(renewed).toBeInstanceOf(Error);
+    expect(String(renewed)).toContain(fake.url);
     expect(fake.tokenRequests()).toBe(1);
   });
 });

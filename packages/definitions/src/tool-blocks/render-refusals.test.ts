@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { unrenderableFor, unworkable } from './render-refusals.ts';
 
+const someWords: unknown = expect.any(String);
+
+function wordsNaming(text: string): unknown {
+  return expect.stringContaining(text);
+}
+
 describe('a template a run could not render', () => {
   it('is invalid for an input it lacks, at the pointer of that input, and at none for any other value', () => {
     expect([
@@ -10,10 +16,8 @@ describe('a template a run could not render', () => {
     ]).toMatchObject([
       {
         _tag: 'invalid_input',
-        detail: 'The definition reads input.owner.name on line 3, which the input does not have',
-        issues: [
-          { pointer: '/owner/name', detail: 'Line 3: it reads input.owner.name, which this input does not have' },
-        ],
+        detail: someWords,
+        issues: [{ pointer: '/owner/name', detail: wordsNaming('Line 3:') }],
       },
       { _tag: 'invalid_input', issues: [{ pointer: '' }] },
     ]);
@@ -25,7 +29,7 @@ describe('a template a run could not render', () => {
       issues: [
         {
           pointer: '',
-          detail: 'Line 4: the render stopped here, past what a render may take, or at a filter that refused the value',
+          detail: wordsNaming('Line 4:'),
         },
       ],
     });

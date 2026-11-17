@@ -1,50 +1,17 @@
-import { randomUUID } from 'node:crypto';
-
 import type { StreamProjection } from '@on.auto/operations';
 import { labelReadModelOf, noteHolders } from '@on.auto/operations/testing';
 import { Function } from 'effect';
-import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { EncodedEvent, LedgerStore } from '../index.ts';
 import { plainPoolsOn, postgresqlEventStore, type PostgreSQLOptions } from '../postgresql/postgresql-ledger.ts';
+import { postgresqlConnected, postgresqlDatabasesOn, postgresqlQueried } from '../testing/postgresql-databases.ts';
 import { until } from '../testing/until.ts';
 import { alpha, at, to } from './multi-stream-cases.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-const skipped = server === '';
-
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
-async function connected(connectionString: string): Promise<Client> {
-  const client = new Client({ connectionString });
-  await client.connect();
-  onTestFinished(() => client.end());
-  return client;
-}
-
-async function queried(database: string, statement: string): Promise<readonly unknown[]> {
-  const client = new Client({ connectionString: database });
-  await client.connect();
-  try {
-    const { rows } = await client.query<Readonly<Record<string, unknown>>>(statement);
-    return rows;
-  } finally {
-    await client.end();
-  }
-}
-
-async function aDatabase(): Promise<string> {
-  const name = `lock_order_${randomUUID().replaceAll('-', '')}`;
-  await queried(server, `CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await queried(server, `DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
+const { skipped, notice, anEmptyDatabase: aDatabase } = postgresqlDatabasesOn(server);
 
 type Kept = Pick<PostgreSQLOptions, 'holders' | 'streamProjections'>;
 
@@ -81,14 +48,14 @@ function settling(appended: Promise<void>): Settling {
 
 async function untilWaitingOnALock(database: string, waiting: number): Promise<void> {
   await until(
-    () => queried(database, waitingOnALock),
+    () => postgresqlQueried(database, waitingOnALock),
     (rows) => JSON.stringify(rows) === JSON.stringify([{ waiting }]),
   );
 }
 
 async function untilKeptOrWaitingOnALock(database: string, appending: Settling, waiting: number): Promise<void> {
   await until(
-    () => queried(database, waitingOnALock),
+    () => postgresqlQueried(database, waitingOnALock),
     (rows) => appending.settled() || JSON.stringify(rows) === JSON.stringify([{ waiting }]),
   );
 }
@@ -106,7 +73,7 @@ function holdsInOneOrder(): void {
     const database = await aDatabase();
     const store = await aStoreOn(database, { holders: noteHolders });
     await store.append(x, [noteKept(d2)], at(0));
-    const holding = await connected(database);
+    const holding = await postgresqlConnected(database);
     await holding.query('BEGIN');
     await holding.query(
       "SELECT 1 FROM content_references_2 WHERE playbook_key = $1 AND stream = 'notes/x' AND sha256 = $2 FOR UPDATE",
@@ -121,7 +88,7 @@ function holdsInOneOrder(): void {
 
     expect([await several.outcome, await one.outcome]).toEqual(['kept', 'kept']);
     expect(
-      await queried(
+      await postgresqlQueried(
         database,
         'SELECT stream, sha256, held::int AS held FROM content_references_2 ORDER BY stream, sha256',
       ),
@@ -146,7 +113,7 @@ function checkpointsBeforeRows(): void {
   it("locks the checkpoints of a stream projection for all its streams before any row the projection's tables fold, so it meets an append to another of the projection's streams that folds into the same rows without a deadlock", async () => {
     const database = await aDatabase();
     const store = await aStoreOn(database, { streamProjections: [ofThreeStreams] });
-    const holding = await connected(database);
+    const holding = await postgresqlConnected(database);
     await holding.query('BEGIN');
     await holding.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
       `labelled_checkpoints_1:${alpha}notes/n2`,
@@ -160,7 +127,7 @@ function checkpointsBeforeRows(): void {
 
     expect([await several.outcome, await one.outcome]).toEqual(['kept', 'kept']);
     expect(
-      await queried(
+      await postgresqlQueried(
         database,
         'SELECT stream, folded_through::int AS folded FROM labelled_checkpoints_1 ORDER BY stream',
       ),
@@ -169,7 +136,7 @@ function checkpointsBeforeRows(): void {
       { stream: 'notes/n2', folded: 1 },
       { stream: 'notes/n3', folded: 2 },
     ]);
-    expect(await queried(database, 'SELECT row_key FROM label_notes_1 ORDER BY row_key')).toEqual([
+    expect(await postgresqlQueried(database, 'SELECT row_key FROM label_notes_1 ORDER BY row_key')).toEqual([
       { row_key: 'a' },
       { row_key: 'b' },
     ]);

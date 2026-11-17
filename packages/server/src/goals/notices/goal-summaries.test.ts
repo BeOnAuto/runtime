@@ -1,10 +1,10 @@
 import { summaryRunIdOf, windowOpeningAfter } from '@on.auto/goals';
-import { movedClock } from '@on.auto/workflow-host/testing';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { tellOwner } from '../../testing/goals/notice-facts.ts';
 import { servingGoalNotices, type NoticeServer } from '../../testing/goals/notice-servers.ts';
+import { wokenClock } from '../../testing/goals/woken-clock.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
 import { createdWithGoals } from '../../testing/settings/goals-kept.ts';
 import { until } from '../../testing/waiting/until.ts';
@@ -53,7 +53,7 @@ async function gapsOf(served: NoticeServer): Promise<readonly string[]> {
 
 describe('the summary of a goal on a Node server that keeps goals', () => {
   it('is sent at the time of its schedule as a heartbeat with no lines, once, and its start is recorded', async () => {
-    const clock = movedClock(Date.now());
+    const clock = wokenClock(Date.now());
     const served = await servingGoalNotices({ clock });
     await summarisingPlaybook(served);
     const friday = nextFridayAfter(Date.now());
@@ -67,10 +67,7 @@ describe('the summary of a goal on a Node server that keeps goals', () => {
       (types) => types.includes('goal_summary_started'),
     );
     const settled = await served.server.settled(summaryRunIdOf(goal, friday));
-    clock.moveTo(friday + 2 * 60_000);
-    await new Promise((resolve) => {
-      setTimeout(resolve, 1500);
-    });
+    await clock.quietAt(friday + 2 * 60_000, served.performs);
 
     expect(posted).toMatchObject([{ text: headline }]);
     expect(facts).toEqual(['goal_summary_started']);
@@ -81,7 +78,7 @@ describe('the summary of a goal on a Node server that keeps goals', () => {
   });
 
   it('is refused through a paused function, sends nothing and shows as a gap', async () => {
-    const clock = movedClock(Date.now());
+    const clock = wokenClock(Date.now());
     const served = await servingGoalNotices({ clock });
     await summarisingPlaybook(served);
     const paused = await served.server.call('POST', `${alpha}/definitions/interaction/tell-owner/pause`, { body: {} });

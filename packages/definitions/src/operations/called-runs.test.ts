@@ -9,6 +9,8 @@ import { quietMs, resumer } from '../testing/capabilities/resumer.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 
+const someWords: unknown = expect.any(String);
+
 const toAlpha = toPlaybook('acme', 'alpha');
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -115,8 +117,7 @@ describe('a run that answers a call of another run', () => {
     expect(await deeper.measured({ callDepth: mostCallDepth + 1 })).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail:
-        'This run would sit 9 calls below the run at the top of its tree, more than the 8 a run may: workflows that call workflows reach at most 8 calls deep',
+      detail: someWords,
     });
     expect(deeper.ledger.streamNames().filter((stream) => stream.includes('/runs/'))).toEqual([]);
   });

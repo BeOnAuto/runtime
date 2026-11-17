@@ -20,6 +20,7 @@ export interface LedgerEntry {
   readonly afterClosing: string;
   readonly closedWhileWriting: string;
   readonly aDatabase: () => Promise<string>;
+  readonly anEmptyDatabase?: () => Promise<string>;
   readonly ledgerOn: (
     database: string,
     runOutcomes?: RunOutcomeMapping,
@@ -57,6 +58,7 @@ export interface LedgerEntry {
   readonly projectionIndexes: string;
   readonly topicTables: string;
   readonly labelledTables: string;
+  readonly itsOwnContractAlone?: boolean;
 }
 
 async function opened(layer: ReturnType<LedgerEntry['ledgerOn']>): Promise<Ledger['Service']> {
@@ -132,3 +134,7 @@ export function sqliteUpdatesCountingOf(table: string, column: string): readonly
 export const tallies = 'org/acme/tallies';
 
 export const changedWhileDeciding = 'The state changed while the command was decided';
+
+export function anEmptyDatabaseOf(entry: LedgerEntry): Promise<string> {
+  return (entry.anEmptyDatabase ?? entry.aDatabase)();
+}

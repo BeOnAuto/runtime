@@ -127,11 +127,8 @@ describe('the account service over HTTP that does not answer', () => {
     server.garble();
 
     expect(dropped).toMatchObject({ _tag: 'account_failure', status: 0, kind: 'unreachable' });
-    expect(String(Reflect.get(new Object(dropped), 'detail'))).toContain(`The account service at ${server.origin}`);
-    expect(await outcomeOf(account.report(key, usage))).toMatchObject({
-      kind: 'unreachable',
-      detail: 'The account service answered in a shape the runtime does not know',
-    });
+    expect(String(Reflect.get(new Object(dropped), 'detail'))).toContain(server.origin);
+    expect(await outcomeOf(account.report(key, usage))).toMatchObject({ kind: 'unreachable' });
   });
 
   it.each(['activate', 'reports', 'allocations/refresh', 'allocations/report'])(

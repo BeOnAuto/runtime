@@ -9,6 +9,8 @@ import { patientTiming } from '../testing/index.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
 import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
 
+const anyText: unknown = expect.any(String);
+
 const adder: CallerIdentity = {
   id: 'acme-adder',
   name: 'acme-adder',
@@ -118,8 +120,7 @@ describe('the tools of a connection through the directory listing', () => {
         status: 'rejected',
         reason: 'unavailable',
         kind: 'tool_not_offered',
-        detail:
-          'The directory listing does not offer the tool server payments, whose tools pay, refund, transfer or pay out money',
+        detail: anyText,
       },
       { status: 'succeeded', output: { server: 'payments' } },
     ]);

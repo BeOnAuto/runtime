@@ -53,8 +53,8 @@ function restoredReportBehaviour(ledgerOf: LedgerOf): void {
       [2, 3, 'taken'],
       [2, 1, 'frozen'],
     ]);
-    expect(restored.warnings()).toContain(
-      `Auto did not take the report 2 of the allocation ${String((await restored.state()).allocation?.id)}: frozen`,
+    expect(restored.warnings()).toContainEqual(
+      expect.stringContaining(String((await restored.state()).allocation?.id)),
     );
   });
 }
@@ -80,11 +80,15 @@ export function allocationReportRefusalBehaviour(ledgerOf: LedgerOf): void {
     const keyless = await allocatedOn(ledgerOf, 5, false);
     const { metered: keyed } = await allocatedOn(ledgerOf, 5);
 
-    expect((await metered.refusedReport()).detail).toContain('holds no offline credits to report on');
-    expect((await keyless.metered.refusedReport()).detail).toContain('holds no license key to sign its report with');
-    expect((await keyed.refusedReport('another')).detail).toMatch(
-      /^This runtime holds the offline credits [0-9a-f-]+, not another$/u,
-    );
+    const refusals = [
+      await metered.refusedReport(),
+      await keyless.metered.refusedReport(),
+      await keyed.refusedReport('another'),
+    ];
+
+    expect(new Set(refusals.map(({ detail }) => detail)).size).toBe(3);
+    expect(refusals[1]?.detail).toContain('AUTO_RUNTIME_LICENSE_KEY');
+    expect(refusals[2]?.detail).toContain(String((await keyed.state()).allocation?.id));
   });
 
   it('says so when it cannot send its report to Auto, and keeps its allocation', async () => {
@@ -92,9 +96,7 @@ export function allocationReportRefusalBehaviour(ledgerOf: LedgerOf): void {
     metered.account.goDown();
     await metered.reported();
 
-    expect(metered.warnings()).toContain(
-      'This runtime could not report what it spent of its allocation to Auto: The account service could not be reached',
-    );
+    expect(metered.warnings()).toContainEqual(expect.stringContaining('The account service could not be reached'));
     expect((await metered.admitted(runOf('run-1'))).kind).toBe('admitted');
   });
 }

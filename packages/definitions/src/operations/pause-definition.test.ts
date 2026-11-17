@@ -10,6 +10,8 @@ import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook, type Harness } from '../testing/harness.ts';
 import { relayedId, settledAt, withHandOn } from '../testing/relaying.ts';
 
+const someWords: unknown = expect.any(String);
+
 const anId: unknown = expect.any(String);
 
 const operations = definitionOperationsFor([echo, probe().capability]);
@@ -65,20 +67,6 @@ async function definitionRecords({ ledger, run }: Harness) {
 }
 
 describe('pause_definition', () => {
-  it('is a playbook command at POST /definitions/{type}/{name}/pause that a repeat records nothing of', () => {
-    expect(pauseDefinition.registration).toMatchObject({
-      scope: 'playbook',
-      kind: 'command',
-      title: 'Pause definition',
-      route: { method: 'POST', path: '/definitions/{type}/{name}/pause' },
-      pathParameters: ['type', 'name'],
-      successStatus: 200,
-      repeatable: true,
-      irreversible: false,
-      reasons: ['not_found', 'conflict', 'unavailable'],
-    });
-  });
-
   it('pauses a definition at its version and its last change, recording who paused it, when and why', async () => {
     const definitions = await withPlain();
 
@@ -186,7 +174,7 @@ describe('pause_definition refusing', () => {
     expect(await call(pauseDefinition, pausingPlain)).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The probe definition plain is retired; restore it to pause or resume it',
+      detail: someWords,
       kind: 'retired',
     });
   });

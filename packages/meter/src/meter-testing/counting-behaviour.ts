@@ -63,7 +63,21 @@ export function startedRunsBehaviour(ledgerOf: LedgerOf): void {
   }, 60_000);
 }
 
+function unreadableHistoryBehaviour(ledgerOf: LedgerOf): void {
+  it('never stops for an event of the history of its runs that can no longer be read', async () => {
+    const { metered, tampering } = await opened(ledgerOf);
+    await metered.admitted(runOf('run-1'));
+    await metered.started('run-1');
+    const [started = ''] = await tampering.idsOf('playbook/acme/alpha/runs/run-1');
+    await tampering.garbled(started);
+
+    expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
+    expect((await metered.state()).admitted.actions).toBe(2);
+  });
+}
+
 export function historyBehaviour(ledgerOf: LedgerOf): void {
+  unreadableHistoryBehaviour(ledgerOf);
   it('never stops for the history of its runs, deleted or rewritten: it admits on from its own count', async () => {
     const { metered, tampering } = await opened(ledgerOf);
     await startedOnceAdmitted(metered, 'run-1');

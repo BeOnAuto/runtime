@@ -1,4 +1,3 @@
-import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger } from '@on.auto/operations';
 import { memoryLedger, type InterleavedRemovalEntry, type UnheldContentEntry } from '@on.auto/operations/testing';
@@ -22,24 +21,6 @@ export const inMemory: LedgerOver = (holders, content) =>
 
 export const onSQLite: LedgerOver = (holders, content) =>
   serviceOf(ledgerLayer({ fileName: ':memory:', holders, content }));
-
-async function aDatabaseOn(server: string): Promise<string> {
-  const pool = plainPoolsOn(server)({ max: 1 });
-  const name = `objects_${crypto.randomUUID().replaceAll('-', '')}`;
-  await pool.query(`CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await pool.query(`DROP DATABASE ${name} WITH (FORCE)`);
-    await pool.end();
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
-
-export function onPostgreSQL(server: string): LedgerOver {
-  return async (holders, content) =>
-    serviceOf(postgresqlLedgerLayer({ pools: plainPoolsOn(await aDatabaseOn(server)), holders, content }));
-}
 
 async function objectStoreOf(entry: ObjectStoreEntry) {
   const store = await entry.aStore();

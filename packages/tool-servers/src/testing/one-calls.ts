@@ -75,6 +75,6 @@ export function failedWith(outcome: string, detail: unknown, retryAfterMs: numbe
   return { kind: 'answered', outcome, detail, retryAfterMs };
 }
 
-export function unopenedWith(refused: string, because: string, detail: string) {
+export function unopenedWith(refused: string, because: string, detail: unknown) {
   return { kind: 'unopened', refused, because, detail };
 }

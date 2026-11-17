@@ -1,56 +1,23 @@
-import { randomUUID } from 'node:crypto';
-
 import type { Ledger } from '@on.auto/operations';
 import { topicFacts, topicRows } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
-import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { openLedgerWith } from '../testing/open-ledger.ts';
+import { postgresqlConnected, postgresqlDatabasesOn, postgresqlQueried } from '../testing/postgresql-databases.ts';
 import { until } from '../testing/until.ts';
 import { plainPoolsOn, postgresqlLedgerLayer } from './postgresql-ledger.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-const skipped = server === '';
-
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
-async function connected(connectionString: string): Promise<Client> {
-  const client = new Client({ connectionString });
-  await client.connect();
-  onTestFinished(() => client.end());
-  return client;
-}
-
-async function queried(database: string, statement: string): Promise<readonly unknown[]> {
-  const client = new Client({ connectionString: database });
-  await client.connect();
-  try {
-    const { rows } = await client.query<Readonly<Record<string, unknown>>>(statement);
-    return rows;
-  } finally {
-    await client.end();
-  }
-}
-
-async function aDatabase(): Promise<string> {
-  const name = `advances_${randomUUID().replaceAll('-', '')}`;
-  await queried(server, `CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await queried(server, `DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
+const { skipped, notice, anEmptyDatabase: aDatabase } = postgresqlDatabasesOn(server);
 
 const waitingOnALock =
   "SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'";
 
 async function untilWritesWaitOnALock(database: string, waiting = 1): Promise<void> {
   await until(
-    () => queried(database, waitingOnALock),
+    () => postgresqlQueried(database, waitingOnALock),
     (rows) => JSON.stringify(rows) === JSON.stringify([{ waiting }]),
   );
 }
@@ -67,7 +34,7 @@ describe.skipIf(skipped)(`A fold beside an advance of the same row on PostgreSQL
         { type: 'topic_opened', data: { topic: 'spring', at: 1000 } },
       ]),
     );
-    const advancing = await connected(database);
+    const advancing = await postgresqlConnected(database);
     await advancing.query('BEGIN');
     await advancing.query("UPDATE topics_2 SET open = false, next_at = NULL, due_at = NULL WHERE row_key = 'spring'");
 
@@ -81,7 +48,7 @@ describe.skipIf(skipped)(`A fold beside an advance of the same row on PostgreSQL
     await folding;
 
     expect(
-      await queried(database, "SELECT note, open, next_at, due_at FROM topics_2 WHERE row_key = 'spring'"),
+      await postgresqlQueried(database, "SELECT note, open, next_at, due_at FROM topics_2 WHERE row_key = 'spring'"),
     ).toEqual([{ note: 'during', open: false, next_at: null, due_at: null }]);
   });
 });
@@ -100,8 +67,8 @@ async function aLedgerOfTopics(): Promise<{ readonly database: string; readonly 
   return { database, ledger };
 }
 
-async function aRowHeld(database: string): Promise<Client> {
-  const holding = await connected(database);
+async function aRowHeld(database: string): ReturnType<typeof postgresqlConnected> {
+  const holding = await postgresqlConnected(database);
   await holding.query('BEGIN');
   await holding.query("SELECT 1 FROM topics_2 WHERE row_key = 'spring' FOR UPDATE");
   return holding;
@@ -128,7 +95,7 @@ describe.skipIf(skipped)(`Two appends that fold into one row at once on PostgreS
     await holding.query('COMMIT');
     await Promise.all([noting, opening]);
 
-    expect(await queried(database, springOf)).toEqual([{ note: 'during', next_at: '7000' }]);
+    expect(await postgresqlQueried(database, springOf)).toEqual([{ note: 'during', next_at: '7000' }]);
   });
 });
 
@@ -161,7 +128,7 @@ describe.skipIf(skipped)(
       await holding.query('COMMIT');
       await Promise.all([scrubbing, opening]);
 
-      expect(await queried(database, springOf)).toEqual([{ note: 'a note was erased', next_at: '7000' }]);
+      expect(await postgresqlQueried(database, springOf)).toEqual([{ note: 'a note was erased', next_at: '7000' }]);
     });
   },
 );

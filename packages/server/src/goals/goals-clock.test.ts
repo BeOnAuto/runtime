@@ -239,10 +239,7 @@ async function movedThroughDays(assessed: Assessing, from: number, days: number)
   if (days === 0) {
     return;
   }
-  assessed.clock.moveTo(from + day);
-  await new Promise((resolve) => {
-    setTimeout(resolve, 500);
-  });
+  await assessed.clock.quietAt(from + day, () => assessed.asked.length);
   await movedThroughDays(assessed, from + day, days - 1);
 }
 

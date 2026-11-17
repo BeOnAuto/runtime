@@ -3,17 +3,12 @@ import { fileURLToPath } from 'node:url';
 
 import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
-import { Client } from 'pg';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { aSQLiteFile } from '../testing/host-files.ts';
+import { describeOnPostgreSQL } from '../testing/postgresql-databases.ts';
 
 const heldTexts = fileURLToPath(new URL('../../held-texts.ts', import.meta.url));
-
-const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
-
-const notice =
-  server === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
 
 const Held = Schema.fromJsonString(
   Schema.Struct({ texts: Schema.Number, characters: Schema.Number, counted: Schema.Number, heap: Schema.Number }),
@@ -37,27 +32,6 @@ async function heldIn(heldInSettings: object, shape: Shape): Promise<typeof Held
   return Schema.decodeUnknownSync(Held)(said.text.trim());
 }
 
-async function administered(statement: string): Promise<void> {
-  const client = new Client({ connectionString: server });
-  await client.connect();
-  try {
-    await client.query(statement);
-  } finally {
-    await client.end();
-  }
-}
-
-async function aPostgreSQLDatabase(): Promise<string> {
-  const name = `workflow_host_${crypto.randomUUID().replaceAll('-', '')}`;
-  await administered(`CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await administered(`DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
-
 const shapes: readonly Shape[] = ['ascii', 'two-byte'];
 
 describe('the texts the host’s store reads in, held whole by the run that reads them', () => {
@@ -77,14 +51,13 @@ describe('the texts the host’s store reads in, held whole by the run that read
     expect(held.texts).toBe(300);
     expect(held.heap).toBeLessThan(held.counted * mostHeapForTheCount);
   });
+});
 
-  it.skipIf(server === '').each(shapes)(
-    `take no more heap than the cache counts them, %s, read from the ledger on PostgreSQL${notice}`,
-    async (shape) => {
-      const held = await heldIn({ store: 'postgresql', connectionString: await aPostgreSQLDatabase() }, shape);
+describeOnPostgreSQL('the texts the host’s store reads in', (aDatabase) => {
+  it.each(shapes)(`take no more heap than the cache counts them, %s, read from the ledger`, async (shape) => {
+    const held = await heldIn({ store: 'postgresql', connectionString: await aDatabase() }, shape);
 
-      expect(held.texts).toBe(300);
-      expect(held.heap).toBeLessThan(held.counted * mostHeapForTheCount);
-    },
-  );
+    expect(held.texts).toBe(300);
+    expect(held.heap).toBeLessThan(held.counted * mostHeapForTheCount);
+  });
 });

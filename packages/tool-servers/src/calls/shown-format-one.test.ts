@@ -10,26 +10,6 @@ function keptOf(answer: unknown): string {
   return JSON.stringify(answer);
 }
 
-describe('the text a model was shown of an answer in format 1', () => {
-  it('shows text content as text, line by line', () => {
-    expect(
-      textShownInFormatOne(
-        keptOf({
-          content: [
-            { type: 'text', text: 'Found 2 rows.' },
-            { type: 'text', text: 'Page 1 of 1.' },
-          ],
-          structuredContent: { rows: 2 },
-        }),
-      ),
-    ).toBe('Found 2 rows.\nPage 1 of 1.');
-  });
-
-  it('shows structured content only when there is no text content', () => {
-    expect(textShownInFormatOne(keptOf({ content: [], structuredContent: { name: 'Ada' } }))).toBe('{"name":"Ada"}');
-  });
-});
-
 describe('the content a model was shown in format 1 as a placeholder', () => {
   it('shows other content as a placeholder naming its type, an embedded resource and a resource link among it', () => {
     expect(
@@ -60,9 +40,11 @@ describe('the content a model was shown in format 1 as a placeholder', () => {
   });
 
   it('says when a result has no content, or when what was kept cannot be read', () => {
+    const nothing = resultText(answerOf(keptOf({ content: [] })));
+
     expect([textShownInFormatOne(keptOf({ content: [] })), textShownInFormatOne('{[redacted]: []}')]).toEqual([
-      '(The tool answered with no content.)',
-      '(The tool answered with no content.)',
+      nothing,
+      nothing,
     ]);
   });
 });

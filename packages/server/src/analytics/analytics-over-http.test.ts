@@ -1,50 +1,9 @@
-import { randomUUID } from 'node:crypto';
-
 import { OutputInvalid } from '@on.auto/reasoning';
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Effect, Schema } from 'effect';
-import { Client } from 'pg';
-import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import { secretsKey } from '../testing/databases/secrets-key.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-
-const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
-
-const postgresqlNotice =
-  postgresql === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
-async function administer(statement: string): Promise<void> {
-  const client = new Client({ connectionString: postgresql });
-  await client.connect();
-  try {
-    await client.query(statement);
-  } finally {
-    await client.end();
-  }
-}
-
-async function onADatabaseOfItsOwn(): Promise<Readonly<Record<string, string>>> {
-  const name = `analytics_${randomUUID().replaceAll('-', '')}`;
-  await administer(`CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await administer(`DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(postgresql);
-  database.pathname = `/${name}`;
-  return { LEDGER_FILE: '', DATABASE_URL: database.href, SECRETS_KEY: secretsKey };
-}
-
-interface Store {
-  readonly store: string;
-  readonly skipped: boolean;
-  readonly environment: () => Promise<Readonly<Record<string, string>>>;
-}
-
-const stores: readonly Store[] = [
-  { store: 'SQLite', skipped: false, environment: () => Promise.resolve({}) },
-  { store: `PostgreSQL${postgresqlNotice}`, skipped: postgresql === '', environment: onADatabaseOfItsOwn },
-];
 
 const summary = [
   '---',
@@ -134,45 +93,42 @@ function durationOf(body: unknown): { readonly p50: number; readonly p95: number
   return decodeDuration(body).duration_ms;
 }
 
-describe.each(stores)('the analytics of a playbook over HTTP, on $store', ({ skipped, environment }) => {
-  it.skipIf(skipped)(
-    'count the runs that ended today, by how they ended, and the tokens their models used and what those cost',
-    async () => {
-      await playbookWithThreeRuns(await environment());
+describe('the analytics of a playbook over HTTP', () => {
+  it('count the runs that ended today, by how they ended, and the tokens their models used and what those cost', async () => {
+    await playbookWithThreeRuns({});
 
-      const readFrom = Date.now();
-      const read = await server.call('GET', `${alpha}/analytics`);
-      const readBy = Date.now();
-      const started = await server.call('GET', `${alpha}/runs?type=reasoning&name=summary`);
-      const filtered = await server.call('GET', `${alpha}/analytics?days=14&type=reasoning&name=summary`);
+    const readFrom = Date.now();
+    const read = await server.call('GET', `${alpha}/analytics`);
+    const readBy = Date.now();
+    const started = await server.call('GET', `${alpha}/runs?type=reasoning&name=summary`);
+    const filtered = await server.call('GET', `${alpha}/analytics?days=14&type=reasoning&name=summary`);
 
-      expect(read).toMatchObject({
-        status: 200,
-        body: {
-          days: 7,
-          runs: { total: 3, succeeded: 1, failed: 0, rejected: 2 },
-          tokens: { input: 1500, output: 100, cached: 1000 },
-          cost_usd: 0.0021,
-          by_function: [
-            {
-              type: 'reasoning',
-              name: 'summary',
-              runs: 3,
-              tokens: { input: 1500, output: 100, cached: 1000 },
-              cost_usd: 0.0021,
-            },
-          ],
-        },
-      });
-      expect([dayOf(readFrom), dayOf(readBy)]).toContain(lastDayOf(read.body));
-      expect(runsByDay(read.body)).toEqual(runsByTheDayTheyStarted(started.body));
-      expect(durationOf(read.body).p50).toBeLessThanOrEqual(durationOf(read.body).p95);
-      expect(filtered).toMatchObject({ status: 200, body: { days: 14, runs: { total: 3 } } });
-    },
-  );
+    expect(read).toMatchObject({
+      status: 200,
+      body: {
+        days: 7,
+        runs: { total: 3, succeeded: 1, failed: 0, rejected: 2 },
+        tokens: { input: 1500, output: 100, cached: 1000 },
+        cost_usd: 0.0021,
+        by_function: [
+          {
+            type: 'reasoning',
+            name: 'summary',
+            runs: 3,
+            tokens: { input: 1500, output: 100, cached: 1000 },
+            cost_usd: 0.0021,
+          },
+        ],
+      },
+    });
+    expect([dayOf(readFrom), dayOf(readBy)]).toContain(lastDayOf(read.body));
+    expect(runsByDay(read.body)).toEqual(runsByTheDayTheyStarted(started.body));
+    expect(durationOf(read.body).p50).toBeLessThanOrEqual(durationOf(read.body).p95);
+    expect(filtered).toMatchObject({ status: 200, body: { days: 14, runs: { total: 3 } } });
+  });
 
-  it.skipIf(skipped)('answer a retired playbook, and refuse a playbook that is not there', async () => {
-    await playbookWithThreeRuns(await environment());
+  it('answer a retired playbook, and refuse a playbook that is not there', async () => {
+    await playbookWithThreeRuns({});
     await server.call('POST', '/v1/orgs/acme/playbooks/alpha/retire');
 
     const retired = await server.call('GET', `${alpha}/analytics?days=30`);

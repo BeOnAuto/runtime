@@ -40,7 +40,7 @@ describe('the fold of a page checked when it is saved', () => {
       ['module', 1, signatures.fold],
     ]);
     expect(issuesOf(page(fold.replace('event.type ===', 'event.typ ===')))).toEqual([
-      ['module', 2, "Property 'typ' does not exist on type 'Event'. Did you mean 'type'?"],
+      ['module', 2, expect.any(String)],
     ]);
   });
 

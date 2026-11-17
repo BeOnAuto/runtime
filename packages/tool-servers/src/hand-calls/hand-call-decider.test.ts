@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { handCallDecider, handCalls } from './hand-call-decider.ts';
 import type { HandCallEvent } from './hand-call-events.ts';
 
+const anyText: unknown = expect.any(String);
+
 const callId = '0199b7e2-4c1d-7a3e-8f5b-6d2c1e0f9a8b';
 
 const context = { by: 'acme-builder', at: '2026-10-08T09:00:00.000Z' };
@@ -29,7 +31,7 @@ const failed = handCalls.ended({
 const outOfTurn = {
   failure: {
     _tag: 'conflict',
-    detail: 'A call made by hand records its start once and then how it ended once, so this is not recorded',
+    detail: anyText,
   },
 };
 

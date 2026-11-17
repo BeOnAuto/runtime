@@ -1,18 +1,11 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
-import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { secretsKey } from '../testing/databases/secrets-key.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, noNetwork, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-
-const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
-
-const postgresqlNotice =
-  postgresql === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -44,38 +37,6 @@ function keptPromptOf(given: string) {
 const prompt = promptOf(text);
 
 const keptPrompt = keptPromptOf(text);
-
-async function administer(statement: string): Promise<void> {
-  const client = new Client({ connectionString: postgresql });
-  await client.connect();
-  try {
-    await client.query(statement);
-  } finally {
-    await client.end();
-  }
-}
-
-async function onADatabaseOfItsOwn(): Promise<Readonly<Record<string, string>>> {
-  const name = `kept_prompts_${randomUUID().replaceAll('-', '')}`;
-  await administer(`CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await administer(`DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(postgresql);
-  database.pathname = `/${name}`;
-  return { LEDGER_FILE: '', DATABASE_URL: database.href, SECRETS_KEY: secretsKey };
-}
-
-interface Store {
-  readonly store: string;
-  readonly skipped: boolean;
-  readonly environment: () => Promise<Readonly<Record<string, string>>>;
-}
-
-const stores: readonly Store[] = [
-  { store: 'SQLite', skipped: false, environment: () => Promise.resolve({}) },
-  { store: `PostgreSQL${postgresqlNotice}`, skipped: postgresql === '', environment: onADatabaseOfItsOwn },
-];
 
 const RecordSchema = Schema.Record(Schema.String, Schema.Json);
 
@@ -141,67 +102,50 @@ async function ranWhileKeeping(store: Readonly<Record<string, string>>, ledger: 
   }
 }
 
-describe.each(stores)('a reasoning run whose prompt is past 16,384 bytes, on $store', ({ skipped, environment }) => {
-  it.skipIf(skipped)(
-    'keeps the prompt outside its ending where the server keeps large values outside, and answers and shows the run as a server that keeps it inline does',
-    async () => {
-      const keeping = await ranAndReadBack(await serving(await environment(), true));
-      const inline = await ranAndReadBack(await serving(await environment(), false));
+describe('a reasoning run whose prompt is past 16,384 bytes', () => {
+  it('keeps the prompt outside its ending where the server keeps large values outside, and answers and shows the run as a server that keeps it inline does', async () => {
+    const keeping = await ranAndReadBack(await serving({}, true));
+    const inline = await ranAndReadBack(await serving({}, false));
 
-      expect([keeping.answered['prompt'], keeping.read['prompt'], inline.read['prompt']]).toEqual([
-        prompt,
-        prompt,
-        prompt,
-      ]);
-      expect(Object.keys(keeping.read)).toEqual(Object.keys(inline.read));
-      expect(keeping.onAPage).toMatchObject({ record: keptPrompt });
-      expect(keeping.onAPage).not.toHaveProperty('record.prompt');
-      expect(keeping.whole).toMatchObject({ ...keptPrompt, prompt });
-      expect(inline.onAPage).not.toHaveProperty('record.prompt_sha256');
-      expect(inline.whole).toMatchObject({ prompt });
-      expect(inline.whole).not.toHaveProperty('prompt_sha256');
-    },
-  );
+    expect([keeping.answered['prompt'], keeping.read['prompt'], inline.read['prompt']]).toEqual([
+      prompt,
+      prompt,
+      prompt,
+    ]);
+    expect(Object.keys(keeping.read)).toEqual(Object.keys(inline.read));
+    expect(keeping.onAPage).toMatchObject({ record: keptPrompt });
+    expect(keeping.onAPage).not.toHaveProperty('record.prompt');
+    expect(keeping.whole).toMatchObject({ ...keptPrompt, prompt });
+    expect(inline.onAPage).not.toHaveProperty('record.prompt_sha256');
+    expect(inline.whole).toMatchObject({ prompt });
+    expect(inline.whole).not.toHaveProperty('prompt_sha256');
+  });
 
-  it.skipIf(skipped)(
-    'reads a prompt kept while the switch was on once it is off, whole, so turning the switch off takes no prompt from a run',
-    async () => {
-      const store = await environment();
-      const ledger = temporaryLedger();
-      onTestFinished(ledger.remove);
-      await ranWhileKeeping(store, ledger);
-      const switchedOff = await servingOver(store, false, ledger);
-      onTestFinished(switchedOff.stop);
+  it('reads a prompt kept while the switch was on once it is off, whole, so turning the switch off takes no prompt from a run', async () => {
+    const store = {};
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    await ranWhileKeeping(store, ledger);
+    const switchedOff = await servingOver(store, false, ledger);
+    onTestFinished(switchedOff.stop);
 
-      const read = decodeRun((await switchedOff.call('GET', `${alpha}/runs/${runId}`)).body).record;
-      const history = await switchedOff.call('GET', `${alpha}/runs/${runId}/history`);
-      const ending = decodeEvents(history.body).events.find(({ type }) => type === 'run_succeeded');
+    const read = decodeRun((await switchedOff.call('GET', `${alpha}/runs/${runId}`)).body).record;
+    const history = await switchedOff.call('GET', `${alpha}/runs/${runId}/history`);
+    const ending = decodeEvents(history.body).events.find(({ type }) => type === 'run_succeeded');
 
-      expect(read['prompt']).toEqual(prompt);
-      expect(ending).toMatchObject({ data: { record: keptPrompt } });
-    },
-  );
+    expect(read['prompt']).toEqual(prompt);
+    expect(ending).toMatchObject({ data: { record: keptPrompt } });
+  });
 });
 
-describe.each(stores)(
-  'a reasoning run under the payload size threshold the server is given, on $store',
-  ({ skipped, environment }) => {
-    it.skipIf(skipped)(
-      'keeps the prompt by the server’s payload size threshold, as it keeps an output: inline at 65,536 bytes, and by its digest past 2,048 for a prompt of 3 KB',
-      async () => {
-        const atTheCap = await ranAndReadBack(
-          await serving({ ...(await environment()), PAYLOAD_SIZE_THRESHOLD_BYTES: '65536' }, true),
-        );
-        const atTheFloor = await ranAndReadBack(
-          await serving({ ...(await environment()), PAYLOAD_SIZE_THRESHOLD_BYTES: '2048' }, true),
-          shortText,
-        );
+describe('a reasoning run under the payload size threshold the server is given', () => {
+  it('keeps the prompt by the server’s payload size threshold, as it keeps an output: inline at 65,536 bytes, and by its digest past 2,048 for a prompt of 3 KB', async () => {
+    const atTheCap = await ranAndReadBack(await serving({ PAYLOAD_SIZE_THRESHOLD_BYTES: '65536' }, true));
+    const atTheFloor = await ranAndReadBack(await serving({ PAYLOAD_SIZE_THRESHOLD_BYTES: '2048' }, true), shortText);
 
-        expect(atTheCap.onAPage).not.toHaveProperty('record.prompt_sha256');
-        expect(atTheCap.whole).toMatchObject({ prompt });
-        expect(atTheFloor.onAPage).toMatchObject({ record: keptPromptOf(shortText) });
-        expect(atTheFloor.read['prompt']).toEqual(promptOf(shortText));
-      },
-    );
-  },
-);
+    expect(atTheCap.onAPage).not.toHaveProperty('record.prompt_sha256');
+    expect(atTheCap.whole).toMatchObject({ prompt });
+    expect(atTheFloor.onAPage).toMatchObject({ record: keptPromptOf(shortText) });
+    expect(atTheFloor.read['prompt']).toEqual(promptOf(shortText));
+  });
+});

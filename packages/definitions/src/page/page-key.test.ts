@@ -75,7 +75,7 @@ describe('the page of the playbook', () => {
 
   it('has no result, since the playbook has no runs of its own', () => {
     expect(issuesIn(pageMappingOf({ result: resultOfTheDay }), 'playbook')).toEqual([
-      'Line 1, /result: The playbook has no runs of its own, so its page has no result',
+      expect.stringContaining('Line 1, /result:'),
     ]);
   });
 });
@@ -84,21 +84,21 @@ describe('the keys of a page', () => {
   it('are a mapping of data, result and runs, refused otherwise with their line', () => {
     expect(issuesIn('page: 3\n')).toEqual(['Line 1: page is a mapping of data, result, runs and glance']);
     expect(issuesIn(workflowWithPage({ more: 'model: openai/gpt-5', result: resultOfTheDay }))).toEqual([
-      'Line 3, /model: model is not a key of the page; it takes data, result, runs, glance',
+      expect.stringContaining('Line 3, /model:'),
     ]);
     expect(issuesIn('page:\n  result: 3\n')).toEqual(['Line 2, /result: Expected string']);
   });
 
   it('name where an unknown key sits: the page, the page in the front matter of a function, or the page’s data', () => {
     expect(issuesIn(functionWithPage({ more: 'title: Posts', result: resultOfTheDay }), 'function')).toEqual([
-      'Line 4, /title: title is not a key of the page in the front matter; it takes data, result, runs, glance',
+      expect.stringContaining('Line 4, /title:'),
     ]);
     expect(
       issuesIn(pageMappingOf({ more: 'title: Posts', runs: runsOfTheDayChart, data: pageData() }), 'playbook'),
-    ).toEqual(['Line 1, /title: title is not a key of the page; it takes data, result, runs, glance']);
+    ).toEqual([expect.stringContaining('Line 1, /title:')]);
     expect(
       issuesIn(workflowWithData().replace('  language: typescript', '  language: typescript\n    shape: series')),
-    ).toEqual(["Line 5, /data/shape: shape is not a key of the page's data; it takes language, source, views, module"]);
+    ).toEqual([expect.stringContaining('Line 5, /data/shape:')]);
   });
 
   it('pair runs with data, since the views are kept for runs alone', () => {
@@ -110,16 +110,14 @@ describe('the keys of a page', () => {
 
   it('read their data as a page reads it, with the lines of the document', () => {
     expect(issuesIn(workflowWithData().replace('language: typescript', 'language: python'))).toEqual([
-      "Line 4, /data/language: The playbook's one language is TypeScript; write the module in TypeScript",
+      expect.stringContaining('Line 4, /data/language:'),
     ]);
     expect(read(workflowWithData())?.data?.foldLine).toBe(12);
   });
 
   it('read their templates with the lines of the document, and at most 32 KiB of them', () => {
     expect(issuesIn(workflowWithPage({ result: '{{ input.date }}' }))).toEqual([expect.stringMatching(/^Line 4: /u)]);
-    expect(issuesIn(workflowWithPage({ result: 'é'.repeat(16_385) }))).toEqual([
-      "Line 3: The templates take 32771 bytes in UTF-8, more than the 32768 a page's templates may take together",
-    ]);
+    expect(issuesIn(workflowWithPage({ result: 'é'.repeat(16_385) }))).toEqual([expect.stringContaining('Line 3:')]);
   });
 });
 

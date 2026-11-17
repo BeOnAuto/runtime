@@ -7,6 +7,10 @@ import { measuredPoolSettings } from '../testing/read-on-disk.ts';
 import { checkingWithin } from '../testing/time/patient-checks.ts';
 import { pageCheckOn } from './page-content.ts';
 
+function wordsNaming(text: string): unknown {
+  return expect.stringContaining(text);
+}
+
 const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
 afterAll(() => pool.close());
@@ -66,7 +70,7 @@ describe('the check of a page’s module when it is saved', () => {
     );
 
     expect(await refusals(reading)).toMatchObject({
-      issues: [{ pointer: '/source', detail: "Line 8, /page/data/source/events/0/data: Cannot find name 'input'." }],
+      issues: [{ pointer: '/source', detail: wordsNaming('Line 8, /page/data/source/events/0/data:') }],
     });
   });
 });

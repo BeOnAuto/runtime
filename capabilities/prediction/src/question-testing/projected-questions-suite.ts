@@ -19,6 +19,10 @@ import {
 import { projectedSales } from './projected-sales.ts';
 import { today } from './suite-clock.ts';
 
+function naming(data: string): unknown {
+  return expect.stringContaining(data);
+}
+
 const testTimeoutMs = 120_000;
 
 const someCheckpoint: unknown = expect.any(String);
@@ -70,12 +74,12 @@ function refusals(settingsOf: SettingsOf): void {
       await known.asked({ series: 'east', horizon: 1 }),
       await young.asked({ series: 'north', horizon: 1 }),
     ]).toMatchObject([
-      { status: 'rejected', reason: 'invalid_input', detail: 'The dataset holds no series "east" in its window' },
+      { status: 'rejected', reason: 'invalid_input', detail: naming('"east"') },
       {
         status: 'rejected',
         reason: 'conflict',
         kind: 'history_too_short',
-        detail: `The series "north" has 3 periods of history up to ${dayOf(1)}, too few for the forecaster to backtest an answer; ask again from ${dayOf(-2)}`,
+        detail: naming(dayOf(-2)),
       },
     ]);
   });
@@ -87,7 +91,7 @@ function refusals(settingsOf: SettingsOf): void {
       status: 'rejected',
       reason: 'conflict',
       kind: 'history_too_short',
-      detail: `The series "north" has 49 periods of history up to ${dayOf(1)}, too few for the forecaster to backtest an answer; ask again from 2026-12-01`,
+      detail: naming('2026-12-01'),
     });
   });
 

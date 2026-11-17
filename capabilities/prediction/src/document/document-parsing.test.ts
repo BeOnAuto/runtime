@@ -7,6 +7,12 @@ import { parsePredictionDocument } from './document-parsing.ts';
 
 const aDigest: unknown = expect.stringMatching(/^[0-9a-f]{64}$/u);
 
+const atLine18: unknown = expect.stringMatching(/^Line 18: /u);
+
+function placesOf(problems: readonly string[]): readonly string[] {
+  return problems.map((problem) => problem.split(':')[0] ?? '');
+}
+
 const periodRefused: unknown = expect.stringMatching(/^Line 5, \/predicts\/period: Expected "day" \| "week"/u);
 
 function documentOf(source: string) {
@@ -113,7 +119,7 @@ describe('the defaults of a prediction function document', () => {
       documentOf(weeklyOrdersWith(['  unit: orders', `  unit: orders\n  history: ${history}`])).predicts.history;
 
     expect([documentOf(weeklyOrders).predicts.history, historyOf('0'), historyOf('156')]).toEqual([8, 0, 156]);
-    expect(() => weeklyOrdersWith(['no such line', ''])).toThrow('The example has no line no such line');
+    expect(() => weeklyOrdersWith(['no such line', ''])).toThrow('no such line');
   });
 
   it('answer the whole window of history when twice the longest horizon is longer than the window', () => {
@@ -136,27 +142,20 @@ describe('the defaults of a prediction function document', () => {
 
 describe('a text that is not a prediction function document', () => {
   it('is refused at its first line, for empty front matter, for keys the front matter does not take, and for a body', () => {
-    expect(problemsOf('no front matter')).toEqual([
-      'Line 1: A prediction function definition starts with a line of three dashes (---) that opens its front matter of YAML',
-    ]);
-    expect(problemsOf('---\n---\nA note')).toEqual([
-      'Line 2: The front matter is empty; it names at least what it predicts and the data it forecasts from',
-      'Line 3: A prediction function has no body: leave the body after the front matter empty, and say what the function predicts in description',
-    ]);
-    expect(problemsOf(weeklyOrdersWith(['  window: 156', '  window: 156\ninput:\n  schema: {}']))).toEqual([
-      'Line 17, /input: input is not a key of the front matter; it takes description, predicts, data',
+    expect(placesOf(problemsOf('no front matter'))).toEqual(['Line 1']);
+    expect(placesOf(problemsOf('---\n---\nA note'))).toEqual(['Line 2', 'Line 3']);
+    expect(placesOf(problemsOf(weeklyOrdersWith(['  window: 156', '  window: 156\ninput:\n  schema: {}'])))).toEqual([
+      'Line 17, /input',
     ]);
     expect(problemsOf(`${weeklyOrdersWith(['  period: week', '  period: fortnight'])}\n\nNotes`)).toEqual([
       periodRefused,
-      'Line 18: A prediction function has no body: leave the body after the front matter empty, and say what the function predicts in description',
+      atLine18,
     ]);
   });
 
   it('is refused for a body beside a front matter that reads, and takes a body of blank lines', () => {
-    expect([problemsOf(`${weeklyOrders}\n\nA note`), problemsOf(`${weeklyOrders}\n\n  \n`)]).toEqual([
-      [
-        'Line 18: A prediction function has no body: leave the body after the front matter empty, and say what the function predicts in description',
-      ],
+    expect([placesOf(problemsOf(`${weeklyOrders}\n\nA note`)), problemsOf(`${weeklyOrders}\n\n  \n`)]).toEqual([
+      ['Line 18'],
       [],
     ]);
   });

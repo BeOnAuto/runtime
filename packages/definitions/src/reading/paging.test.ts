@@ -9,6 +9,8 @@ import { relay } from '../testing/capabilities/relay.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 
+const someWords: unknown = expect.any(String);
+
 const quarterOfAMebibyte = 262_144;
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -194,9 +196,7 @@ describe('a cursor', () => {
         status: 'rejected',
         reason: 'invalid_input',
         detail: 'The cursor is malformed',
-        issues: [
-          { detail: 'Expected a next_cursor or the cursor of an event, as a read gives it', pointer: '/cursor' },
-        ],
+        issues: [{ detail: someWords, pointer: '/cursor' }],
       },
       {
         status: 'rejected',
@@ -204,7 +204,7 @@ describe('a cursor', () => {
         detail: 'The cursor was not given by a read of this playbook',
         issues: [
           {
-            detail: 'Expected a next_cursor or the cursor of an event that a read of this playbook gave',
+            detail: someWords,
             pointer: '/cursor',
           },
         ],

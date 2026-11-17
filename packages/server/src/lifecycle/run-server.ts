@@ -14,7 +14,7 @@ export interface ServerProcess {
   exit(code: number): void;
 }
 
-function sayThenExit(serverProcess: ServerProcess, line: string, exitCode: number): void {
+function sayThenExit(serverProcess: Pick<ServerProcess, 'stderr' | 'exit'>, line: string, exitCode: number): void {
   serverProcess.stderr.write(`${line}\n`, () => {
     serverProcess.exit(exitCode);
   });
@@ -65,7 +65,7 @@ function ledgerRefusalLineOf(failure: unknown): string | undefined {
 }
 
 export function exitOnStartupFailure(
-  serverProcess: ServerProcess,
+  serverProcess: Pick<ServerProcess, 'stderr' | 'exit'>,
   noticeOf: (failure: unknown) => string | undefined = ledgerRefusalLineOf,
 ): (failure: unknown) => void {
   return (failure) => {

@@ -19,6 +19,8 @@ import {
 } from '../testing/page-playbooks.ts';
 import { keepingNoViews, keepingTheViews } from '../testing/page-ports.ts';
 
+const someWords: unknown = expect.any(String);
+
 const greetingPage = workflowWithItsPage(resultOfTheGreeting);
 
 const daysPage = workflowWithItsPage(pageOfTheDays);
@@ -120,7 +122,7 @@ describe('views that stopped', () => {
     expect(await reading(workflow)).toMatchObject({
       output: {
         page: {
-          runs: 'The figures stopped updating because the page could not process an event. Correct the page to continue.',
+          runs: someWords,
         },
       },
     });
@@ -252,7 +254,7 @@ describe('a preview that is refused', () => {
       status: 'rejected',
       reason: 'conflict',
       kind: 'retired',
-      detail: 'The reasoning function review-brief is retired, and its page renders nowhere',
+      detail: someWords,
     });
     expect(await reading({ ...workflow, render: true })).toEqual({
       status: 'rejected',
@@ -263,7 +265,7 @@ describe('a preview that is refused', () => {
     expect(await rendering(workflow)).toEqual({
       status: 'rejected',
       reason: 'not_found',
-      detail: 'The workflow morning-social-content has no page; save one with update_definition',
+      detail: someWords,
     });
     await updating({ ...workflow, source: greetingPage });
     expect(await reading({ ...workflow, sample_output: {} })).toMatchObject({

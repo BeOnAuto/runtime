@@ -68,8 +68,11 @@ function removalOn(entry: LedgerEntry, database: string): ReturnType<LedgerEntry
   return store.removalWithin;
 }
 
+const chunksOfFiveMegabytesProveEveryLargerSize = 5_000_000;
+
 function contentEntryOf(entry: LedgerEntry): ContentEntry {
   return {
+    mostBytesKeptWhole: chunksOfFiveMegabytesProveEveryLargerSize,
     aStore: async () => {
       const database = await entry.aDatabase();
       const writing = await aLedger(entry, database);

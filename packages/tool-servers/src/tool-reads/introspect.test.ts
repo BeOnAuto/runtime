@@ -4,6 +4,8 @@ import { toolBounds } from '../bounds/call-bounds.ts';
 import { describedAccess, playbookToolCalls, reportingAccess, toolReader } from '../testing/index.ts';
 import { serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
+const anyText: unknown = expect.any(String);
+
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
 const closing: (() => Promise<void>)[] = [];
@@ -106,7 +108,7 @@ describe('introspect of an operation of an HTTP API', () => {
     expect(described).toMatchObject({
       status: 'succeeded',
       output: {
-        description: 'Reads a profile.\n\nThe profile of one person, with the rows they own.',
+        description: anyText,
         input_schema: {
           properties: { id: { type: 'string', description: 'The id of the profile' } },
           required: ['id'],

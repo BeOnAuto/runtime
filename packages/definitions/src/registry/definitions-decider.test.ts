@@ -1,4 +1,4 @@
-import { Conflict, NotFound, type Context, type DefinitionContext } from '@on.auto/operations';
+import { NotFound, type Context, type DefinitionContext } from '@on.auto/operations';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -7,6 +7,10 @@ import { recordedAdmin } from '../testing/callers.ts';
 import type { DefinitionCommand } from './definition-commands.ts';
 import type { DefinitionContent, RecordedDefinitionEvent } from './definition-events.ts';
 import { definitionsDecider, definitionTypeStreamOf } from './definitions-decider.ts';
+
+function refused(tag: string, fields: object = {}): unknown {
+  return expect.objectContaining({ _tag: tag, ...fields });
+}
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -136,9 +140,7 @@ describe('updating a definition', () => {
 
   it('is rejected for a retired definition', () => {
     expect(decided(updatingGreet(howdy), greetCreated, greetRetired)).toEqual(
-      Result.fail(
-        new Conflict({ detail: 'The echo definition greet is retired; restore it to change it', kind: 'retired' }),
-      ),
+      Result.fail(refused('conflict', { kind: 'retired' })),
     );
   });
 });

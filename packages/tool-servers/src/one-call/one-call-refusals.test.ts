@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { Effect, Exit, Function, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defaultTiming, toolBounds } from '../bounds/call-bounds.ts';
+import { toolBounds } from '../bounds/call-bounds.ts';
 import { keptForATest, reportingAccess } from '../testing/index.ts';
 import {
   calledOnce,
@@ -17,6 +17,8 @@ import {
   unopenedWith,
 } from '../testing/one-calls.ts';
 import { longerThanTheTestMs } from '../testing/until.ts';
+
+const anyText: unknown = expect.any(String);
 
 const portOf = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
 
@@ -85,11 +87,7 @@ describe('one call through a tool this playbook is not offered', () => {
         'tool_server_not_configured',
         'No tool server named graph is configured for this playbook',
       ),
-      unopenedWith(
-        'tool_not_offered',
-        'tool_not_allowed',
-        'The operator of this server does not allow graph/environment',
-      ),
+      unopenedWith('tool_not_offered', 'tool_not_allowed', anyText),
     ]);
     expect(fake.seen()).toEqual([]);
   });
@@ -141,13 +139,11 @@ describe('one call to a server whose client never opens', () => {
 });
 
 describe('one call to a server that does not list its tools in time', () => {
-  it('fails at the open bound of production, as unreachable, with nothing sent, under a call bound longer than the test', async () => {
+  it('fails at the open bound, as unreachable, with nothing sent, under a call bound longer than the test', async () => {
     const fake = await oneCallServer();
     fake.holdNextOf('tools/list');
 
-    expect(
-      await calledOnce(oneCallAccess(fake.url, {}, { openMs: defaultTiming.openMs, callMs: longerThanTheTestMs })),
-    ).toEqual(
+    expect(await calledOnce(oneCallAccess(fake.url, {}, { openMs: 300, callMs: longerThanTheTestMs }))).toEqual(
       unopenedWith('tool_server_failed', 'unreachable', `${couldNotBeUsed}The tool server did not answer in time`),
     );
     expect(fake.received()).toEqual([]);

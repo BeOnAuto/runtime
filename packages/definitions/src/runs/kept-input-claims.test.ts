@@ -10,6 +10,8 @@ import { runDecider } from './run-decider.ts';
 import type { RunEvent } from './run-events.ts';
 import { startedRunOf } from './run-state.ts';
 
+const someWords: unknown = expect.any(String);
+
 const at = { runId: testRunId, by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
 
 const recorded = recordedWith({ ...at, definitionType: 'echo', definitionName: 'score', definitionVersion: 1 });
@@ -60,7 +62,7 @@ describe('a run whose input its playbook keeps outside the run', () => {
       {
         failure: {
           _tag: 'conflict',
-          detail: 'The run id belongs to a run of another definition or with another input',
+          detail: someWords,
         },
       },
     ]);

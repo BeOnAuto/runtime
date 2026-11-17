@@ -1,48 +1,7 @@
-import { randomUUID } from 'node:crypto';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import { Client } from 'pg';
-import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
-
-import { secretsKey } from '../testing/databases/secrets-key.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-
-const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
-
-const postgresqlNotice =
-  postgresql === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
-async function administer(statement: string): Promise<void> {
-  const client = new Client({ connectionString: postgresql });
-  await client.connect();
-  try {
-    await client.query(statement);
-  } finally {
-    await client.end();
-  }
-}
-
-async function onADatabaseOfItsOwn(): Promise<Readonly<Record<string, string>>> {
-  const name = `nesting_${randomUUID().replaceAll('-', '')}`;
-  await administer(`CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await administer(`DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(postgresql);
-  database.pathname = `/${name}`;
-  return { LEDGER_FILE: '', DATABASE_URL: database.href, SECRETS_KEY: secretsKey };
-}
-
-interface Store {
-  readonly store: string;
-  readonly skipped: boolean;
-  readonly environment: () => Promise<Readonly<Record<string, string>>>;
-}
-
-const stores: readonly Store[] = [
-  { store: 'SQLite', skipped: false, environment: () => Promise.resolve({}) },
-  { store: `PostgreSQL${postgresqlNotice}`, skipped: postgresql === '', environment: onADatabaseOfItsOwn },
-];
 
 const waiting = workflowSource(
   'waiting',
@@ -74,9 +33,9 @@ async function playbookWithAWaitingWorkflow(environment: Readonly<Record<string,
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'waiting', source: waiting } });
 }
 
-describe.each(stores)('values nested as deep as a run holds them, over HTTP, on $store', ({ skipped, environment }) => {
-  it.skipIf(skipped)('are taken as a run input, as the data of a sent event and of a published one', async () => {
-    await playbookWithAWaitingWorkflow(await environment());
+describe('values nested as deep as a run holds them, over HTTP', () => {
+  it('are taken as a run input, as the data of a sent event and of a published one', async () => {
+    await playbookWithAWaitingWorkflow({});
 
     const started = await server.call('POST', `${alpha}/definitions/workflow/waiting/run`, {
       body: { input: nested(512), run_id: runId },
@@ -94,8 +53,8 @@ describe.each(stores)('values nested as deep as a run holds them, over HTTP, on 
     });
   });
 
-  it.skipIf(skipped)('are refused deeper than that, as invalid input, before anything is recorded', async () => {
-    await playbookWithAWaitingWorkflow(await environment());
+  it('are refused deeper than that, as invalid input, before anything is recorded', async () => {
+    await playbookWithAWaitingWorkflow({});
 
     const ran = await server.call('POST', `${alpha}/definitions/workflow/waiting/run`, {
       body: { input: nested(3000) },

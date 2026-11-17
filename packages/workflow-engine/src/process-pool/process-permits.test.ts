@@ -135,26 +135,26 @@ describe('the deadline of a job of a process', () => {
     const pool = poolOf();
     await echoed(pool, 'a');
     await echoed(pool, 'b');
-    const holding = run(pool, 'sleep', { key: 'a', long: true, payload: 1500 });
+    const holding = run(pool, 'sleep', { key: 'a', long: true, payload: 150 });
 
-    const waited = await run(pool, 'sleep', { key: 'b', long: true, payload: 2000, deadlineMs: 3000 });
+    const waited = await run(pool, 'sleep', { key: 'b', long: true, payload: 200, deadlineMs: 300 });
     await holding;
 
     expect(waited.ended).toBe('answered');
-    expect(waited.milliseconds).toBeGreaterThan(3000);
+    expect(waited.milliseconds).toBeGreaterThan(300);
   });
 
   it('still ends a job that waited for a permit once it has run for the whole of its deadline from its hold', async () => {
     const pool = poolOf();
     await echoed(pool, 'a');
     await echoed(pool, 'b');
-    const holding = run(pool, 'sleep', { key: 'a', long: true, payload: 1500 });
+    const holding = run(pool, 'sleep', { key: 'a', long: true, payload: 150 });
 
-    const waited = await run(pool, 'sleep', { key: 'b', long: true, payload: 6000, deadlineMs: 3000 });
+    const waited = await run(pool, 'sleep', { key: 'b', long: true, payload: 600, deadlineMs: 300 });
     await holding;
 
     expect(waited.ended).toBe('timed_out');
-    expect([waited.milliseconds > 3000, waited.milliseconds < 6000]).toEqual([true, true]);
+    expect([waited.milliseconds > 300, waited.milliseconds < 600]).toEqual([true, true]);
   });
 
   it('kills a warm process blocked past it, no sooner, and the next job of its key starts afresh', async () => {

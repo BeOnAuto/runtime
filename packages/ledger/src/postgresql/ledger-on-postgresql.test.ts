@@ -1,20 +1,19 @@
 import { Client, Pool } from 'pg';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { executorOn, postgresqlPlanOf } from '../content/postgresql-content.ts';
 import { postgresqlLayout } from '../layout/layout-dialects.ts';
 import { definitionStreamsPlan } from '../postgresql-reads/index-checks.ts';
 import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded.ts';
-import { databaseStructureBehaviour } from '../structure/database-structure-behaviour.ts';
 import {
   appendedFactsOnStoresBehaviour,
+  databaseStructureBehaviour,
   archivedStreamsBehaviour,
   definitionNamesBehaviour,
   appendsWithStatementsOnStoresBehaviour,
   measuredRiddenAppendsBehaviour,
   multiStreamAppendBehaviour,
   factScrubOnStoresBehaviour,
-  earlierShapesBehaviour,
   keptSecretsBehaviour,
   receivedWebhooksBehaviour,
   knownFactsBehaviour,
@@ -24,6 +23,7 @@ import {
   logBehaviour,
   type LedgerEntry,
 } from '../testing/index.ts';
+import { postgresqlDatabasesOn, postgresqlQueried } from '../testing/postgresql-databases.ts';
 import { postgresqlLayoutCarried } from './postgresql-layout.ts';
 import {
   plainPoolsOn,
@@ -35,6 +35,8 @@ import {
 } from './postgresql-ledger.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
+
+const { skipped, notice, anEmptyDatabase, aMigratedDatabase } = postgresqlDatabasesOn(server);
 
 const carriedOn: LedgerEntry['carriedOn'] = async (database, carrying) => {
   const pool = new Pool({ connectionString: database });
@@ -54,17 +56,6 @@ const executedOn: LedgerEntry['executedOn'] = async (database, work) => {
     await client.end();
   }
 };
-
-async function queried(database: string, statement: string): Promise<readonly unknown[]> {
-  const client = new Client({ connectionString: database });
-  await client.connect();
-  try {
-    const { rows } = await client.query<Readonly<Record<string, unknown>>>(statement);
-    return rows;
-  } finally {
-    await client.end();
-  }
-}
 
 async function definitionStreamsIndexed(database: string): Promise<boolean> {
   const client = new Client({ connectionString: database });
@@ -122,17 +113,6 @@ const planOf: LedgerEntry['planOf'] = async (database, read) => {
   }
 };
 
-async function aDatabase(): Promise<string> {
-  const name = `ledger_${crypto.randomUUID().replaceAll('-', '')}`;
-  await queried(server, `CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await queried(server, `DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
-
 const lostConnections: Readonly<Error>[] = [];
 
 function reportLostConnection(error: Readonly<Error>): void {
@@ -148,7 +128,9 @@ const onPostgreSQL: LedgerEntry = {
   mostEventsInOneAppend: 64,
   afterClosing: 'Cannot use a pool after calling end on the pool',
   closedWhileWriting: 'Cannot use a pool after calling end on the pool',
-  aDatabase,
+  aDatabase: aMigratedDatabase,
+  anEmptyDatabase,
+  itsOwnContractAlone: true,
   ledgerOn: (database, runOutcomes, projections = [], holders) =>
     postgresqlLedgerLayer({
       pools: plainPoolsOn(database),
@@ -162,7 +144,7 @@ const onPostgreSQL: LedgerEntry = {
   ledgerRaisingOn: (database, appended) => postgresqlLedgerLayer({ pools: plainPoolsOn(database), appended }),
   storeOn: (database) => postgresqlEventStore({ pools: plainPoolsOn(database), reportLostConnection }),
   openedOn: (database) => postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection }),
-  queried,
+  queried: postgresqlQueried,
   executedOn,
   layout: postgresqlLayout,
   carriedOn,
@@ -188,10 +170,6 @@ const onPostgreSQL: LedgerEntry = {
     "SELECT relname AS name FROM pg_class WHERE relkind IN ('r', 'p') AND relname ~ '^label' ORDER BY relname COLLATE \"C\"",
 };
 
-const skipped = server === '';
-
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
 describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   ledgerBehaviour(onPostgreSQL);
   logBehaviour(onPostgreSQL);
@@ -199,7 +177,6 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   factScrubOnStoresBehaviour(onPostgreSQL);
   appendsWithStatementsOnStoresBehaviour(onPostgreSQL);
   measuredRiddenAppendsBehaviour(onPostgreSQL);
-  earlierShapesBehaviour(onPostgreSQL);
   databaseStructureBehaviour(onPostgreSQL);
   knownFactsBehaviour(onPostgreSQL);
   archivedStreamsBehaviour(onPostgreSQL, {
@@ -238,7 +215,7 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
 
 describe.skipIf(skipped)(`A ledger on PostgreSQL given a floor of its own${notice}`, () => {
   it('carries a database forward from that floor alone, and refuses one of the layout below it as older than its floor', async () => {
-    const database = await aDatabase();
+    const database = await anEmptyDatabase();
     await carriedOn(database, { kept: ledgerLayoutFloor, floor: ledgerLayoutFloor, steps: [] });
     const { store } = postgresqlLedgerOpened({
       pools: plainPoolsOn(database),
@@ -269,7 +246,7 @@ function timesIn(plan: string, step: string): number {
 
 describe.skipIf(skipped)(`The plans of the reads over keys on PostgreSQL${notice}`, () => {
   it("walk each key asked through the key's index, and the tree of a run through the org's index", async () => {
-    const database = await aDatabase();
+    const database = await aMigratedDatabase();
     const { store } = postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection });
     await store.migrate();
     await store.close();

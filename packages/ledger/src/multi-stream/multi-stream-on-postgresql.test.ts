@@ -1,50 +1,17 @@
-import { randomUUID } from 'node:crypto';
-
 import { Conflict, type KeptProjection, type ProjectedMessage } from '@on.auto/operations';
 import { runTallyRows } from '@on.auto/operations/testing';
 import { Function, Schema } from 'effect';
-import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { isVersionConflict, type DefinitionNames, type EncodedEvent, type LedgerStore } from '../index.ts';
 import { plainPoolsOn, postgresqlEventStore } from '../postgresql/postgresql-ledger.ts';
+import { postgresqlConnected, postgresqlDatabasesOn, postgresqlQueried } from '../testing/postgresql-databases.ts';
 import { until } from '../testing/until.ts';
 import { alpha, at, began, to } from './multi-stream-cases.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-const skipped = server === '';
-
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
-async function connected(connectionString: string): Promise<Client> {
-  const client = new Client({ connectionString });
-  await client.connect();
-  onTestFinished(() => client.end());
-  return client;
-}
-
-async function queried(database: string, statement: string): Promise<readonly unknown[]> {
-  const client = new Client({ connectionString: database });
-  await client.connect();
-  try {
-    const { rows } = await client.query<Readonly<Record<string, unknown>>>(statement);
-    return rows;
-  } finally {
-    await client.end();
-  }
-}
-
-async function aDatabase(): Promise<string> {
-  const name = `streams_${randomUUID().replaceAll('-', '')}`;
-  await queried(server, `CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await queried(server, `DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
+const { skipped, notice, anEmptyDatabase: aDatabase } = postgresqlDatabasesOn(server);
 
 interface Kept {
   readonly projections?: readonly KeptProjection[];
@@ -71,7 +38,7 @@ const waitingOnALock =
 
 async function untilOneWaitsOnALock(database: string): Promise<void> {
   await until(
-    () => queried(database, waitingOnALock),
+    () => postgresqlQueried(database, waitingOnALock),
     (rows) => JSON.stringify(rows) === JSON.stringify([{ waiting: 1 }]),
   );
 }
@@ -84,7 +51,7 @@ function settled(appended: Promise<void>): Promise<unknown> {
 }
 
 async function lockedNow(database: string, stream: string): Promise<string> {
-  const client = await connected(database);
+  const client = await postgresqlConnected(database);
   await client.query('BEGIN');
   try {
     await client.query('SELECT 1 FROM emt_streams WHERE stream_id = $1 FOR UPDATE NOWAIT', [stream]);
@@ -102,7 +69,7 @@ function lockedInTheOrderOfTheirNames(): void {
     const store = await aStoreOn(database);
     const [a, b] = [`${alpha}notes/a`, `${alpha}notes/b`] as const;
     await store.multiStreamAppend([to(a, 0, noted('first')), to(b, 0, noted('first'))]);
-    const holding = await connected(database);
+    const holding = await postgresqlConnected(database);
     await holding.query('BEGIN');
     await holding.query('SELECT 1 FROM emt_streams WHERE stream_id = $1 FOR UPDATE', [b]);
 
@@ -159,7 +126,7 @@ function heldBackUntilItCommits(): void {
   it('holds back every fact of the append from a reader until it commits, and a fact committed meanwhile behind it', async () => {
     const database = await aDatabase();
     const store = await aStoreOn(database, { projections: [runTallyRows] });
-    const holding = await connected(database);
+    const holding = await postgresqlConnected(database);
     await holding.query('BEGIN');
     await holding.query(`SELECT pg_advisory_xact_lock(hashtextextended('run_tallies_2:${alpha}r1', 0))`);
 
@@ -208,7 +175,7 @@ function aDeadlockMetAsAConflict(): void {
   it('meets a deadlock PostgreSQL breaks inside its transaction as a version conflict, and keeps nothing', async () => {
     const database = await aDatabase();
     const store = await aStoreOn(database, { definitionNames: names });
-    const holding = await connected(database);
+    const holding = await postgresqlConnected(database);
     await holding.query("SET deadlock_timeout = '1min'");
     await holding.query('BEGIN');
     await holding.query(
@@ -243,7 +210,7 @@ async function metBehindAClaimOutsideTheKeeper(
   name: string,
   appended: () => Promise<void>,
 ): Promise<unknown> {
-  const claiming = await connected(database);
+  const claiming = await postgresqlConnected(database);
   await claiming.query('BEGIN');
   await claiming.query(
     `INSERT INTO definition_names_1 (playbook_key, definition_type, name, definition_key, status, has_triggers)

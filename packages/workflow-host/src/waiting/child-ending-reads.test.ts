@@ -1,6 +1,8 @@
+import { type Statement, statementOf } from '@on.auto/ledger';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import type { HostDatabase } from '../database/host-database.ts';
 import { alpha, at, recorded } from '../reaction-testing/playbook-writes.ts';
 import { readingMeasured } from '../waiting-testing/measured-reads.ts';
 import { resultOfEnding } from '../waiting-testing/recorded-waiting.ts';
@@ -49,5 +51,46 @@ describe('the ending of a run a run waits for, read before a timer of that run f
 
     expect(submitted).toMatchObject([{ kind: 'call_answered', result: { status: 'succeeded', output: 'checked' } }]);
     expect(measured.bytesRead() - readToRecord).toBe(JSON.stringify(succeeded.data).length);
+  });
+});
+
+const timedChild = '0199a3c4-7d2e-7c1a-9b3f-0000000000c1';
+
+function explained({ strings, values }: Statement): Statement {
+  const [first = '', ...rest] = strings;
+  return statementOf([`EXPLAIN QUERY PLAN ${first}`, ...rest], values);
+}
+
+function readsRecorded(database: HostDatabase) {
+  const asked: Statement[] = [];
+  const recording: HostDatabase = {
+    ...database,
+    read: (statement) =>
+      Effect.suspend(() => {
+        asked.push(statement);
+        return database.read(statement);
+      }),
+  };
+  return { recording, asked: (): readonly Statement[] => asked };
+}
+
+describe('the calls of a run, read before a timer of that run fires', () => {
+  it('are read through an index of the run’s calls, never by a scan of every call the host keeps', async () => {
+    const { database } = await waitingParent(timedChild);
+    const { recording, asked } = readsRecorded(database);
+    const endedChildren = endedChildrenOn({
+      database: recording,
+      submitted: () => Effect.die(new Error('Nothing is submitted')),
+      resultOf: resultOfEnding,
+      now: () => 1,
+      trouble: () => Effect.void,
+    });
+
+    await Effect.runPromise(endedChildren(parentRun));
+    const plans = await Effect.runPromise(Effect.forEach(asked(), (statement) => database.read(explained(statement))));
+
+    expect(asked()).toHaveLength(2);
+    expect(JSON.stringify(plans)).toContain('USING INDEX workflow_calls_unclosed_by_run');
+    expect(JSON.stringify(plans)).not.toContain('SCAN workflow_calls');
   });
 });

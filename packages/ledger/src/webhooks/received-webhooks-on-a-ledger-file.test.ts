@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   aLedgerFile,
   anOpenLedger,
+  briefWaits,
   committed,
   exitOf,
   heldUntilLetGo,
@@ -15,7 +16,7 @@ import { LedgerNotOpen } from '../secrets/sqlite-ledger-file.ts';
 import { openConnectionWith } from '../testing/open-ledger.ts';
 import type { WebhookReceipt } from './received-webhooks.ts';
 
-const longerThanSQLiteWaitsForItsLock = 5_500;
+const longerThanSQLiteWaitsForItsLock = briefWaits.forTheLock * 4;
 
 const tenMinutes = 600_000;
 
@@ -32,20 +33,16 @@ function receiptFor(takenFor: string): WebhookReceipt {
 }
 
 describe('the webhooks received of a ledger file on SQLite, as they are taken', () => {
-  it(
-    'take an id while the writer of the ledger holds the file past the 5 s a statement waits for its lock, once it lets go',
-    { timeout: 20_000 },
-    async () => {
-      const { received, appended } = await anOpenLedger(onAFile);
-      const letGo = await heldUntilLetGo(appended, committed);
+  it('take an id while the writer of the ledger holds the file past the time a statement waits for its lock, once it lets go', async () => {
+    const { received, appended } = await anOpenLedger(onAFile);
+    const letGo = await heldUntilLetGo(appended, committed);
 
-      const taken = Effect.runPromiseExit(received.taken(receiptFor('onboarding/run-1')));
-      await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
-      await letGo();
+    const taken = Effect.runPromiseExit(received.taken(receiptFor('onboarding/run-1')));
+    await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
+    await letGo();
 
-      expect(await taken).toEqual(Exit.succeed('onboarding/run-1'));
-    },
-  );
+    expect(await taken).toEqual(Exit.succeed('onboarding/run-1'));
+  });
 
   it('keep an id taken while a transaction of the ledger is open, though that transaction is rolled back', async () => {
     const { received, appended } = await anOpenLedger(onAFile);
@@ -71,8 +68,10 @@ describe('the webhooks received of a ledger file on SQLite, as they are taken', 
 
     const after = await Effect.runPromiseExit(file.receivedWebhooks);
 
-    const refusal = `The webhooks received of the ledger in ${named} run on the pool its ledger opens, and its ledger is not open`;
-    expect([before, after]).toEqual([Exit.die(new LedgerNotOpen(refusal)), Exit.die(new LedgerNotOpen(refusal))]);
+    const namingTheFile: unknown = expect.stringContaining(named);
+    const notOpen: unknown = expect.objectContaining({ constructor: LedgerNotOpen, message: namingTheFile });
+    const refusal = Exit.die(notOpen);
+    expect([before, after]).toEqual([refusal, refusal]);
   });
 });
 

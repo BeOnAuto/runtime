@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { statement } from '../connection/statement.ts';
 import { inTurn } from '../projections/inline-projection.ts';
-import type { LedgerEntry } from '../testing/ledger-entry.ts';
+import { anEmptyDatabaseOf, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { layoutFound } from './layout-found.ts';
 import { layoutWritten } from './layout-kept.ts';
 import type { LayoutStep } from './layout-steps.ts';
@@ -36,7 +36,7 @@ const derivedThenRefused: LayoutStep = {
 };
 
 async function aDatabaseWithNotes(entry: LedgerEntry, notes: string): Promise<string> {
-  const database = await entry.aDatabase();
+  const database = await anEmptyDatabaseOf(entry);
   await entry.executedOn(database, (execute) => layoutWritten(execute, 6));
   await entry.queried(database, 'CREATE TABLE source_notes (note TEXT)');
   await entry.queried(database, `INSERT INTO source_notes (note) VALUES ${notes}`);

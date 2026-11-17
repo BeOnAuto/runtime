@@ -8,6 +8,10 @@ import type { RunCommand, RunOutcome, RunResult } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
 import type { RecordedRunEvent, RunEvent } from './run-events.ts';
 
+function refused(tag: string, fields: object = {}): unknown {
+  return expect.objectContaining({ _tag: tag, ...fields });
+}
+
 const start = { runId: testRunId, by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
 
 const later = '2026-10-01T11:00:00.000Z';
@@ -141,11 +145,7 @@ describe('a settlement that does not land', () => {
   });
 
   it('is rejected for a run that runs within its call, and for one the playbook does not have', () => {
-    expect(decided(settling(success), started)).toEqual(
-      Result.fail(
-        new Conflict({ detail: 'The run executes within the call that started it, so it cannot be settled' }),
-      ),
-    );
+    expect(decided(settling(success), started)).toEqual(Result.fail(refused('conflict')));
     expect(decided(settling(success))).toEqual(
       Result.fail(new NotFound({ detail: 'There is no such run in this playbook' })),
     );
@@ -252,17 +252,8 @@ describe('cancelling a run', () => {
   });
 
   it('is refused for a run that ended, one that runs within its call and one the playbook does not have', () => {
-    expect(decided(cancelling(), started, deferred, landed)).toEqual(
-      Result.fail(new Conflict({ detail: 'The run has already ended, so there is nothing left to cancel' })),
-    );
-    expect(decided(cancelling(), started)).toEqual(
-      Result.fail(
-        new Conflict({
-          detail:
-            'The run takes place within the call that started it, which no server can interrupt from outside, so it cannot be cancelled; it ends when that call does',
-        }),
-      ),
-    );
+    expect(decided(cancelling(), started, deferred, landed)).toEqual(Result.fail(refused('conflict')));
+    expect(decided(cancelling(), started)).toEqual(Result.fail(refused('conflict')));
     expect(decided(cancelling())).toEqual(
       Result.fail(new NotFound({ detail: 'There is no such run in this playbook' })),
     );

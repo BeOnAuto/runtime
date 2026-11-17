@@ -42,7 +42,9 @@ function openedOnTheLedgersDatabase(entry: KeptSecretsEntry): void {
 export function keptSecretsBehaviour(entry: KeptSecretsEntry): void {
   describe('the secrets it keeps', () => {
     rowsBehaviour(secretsEntryOf(entry));
-    storeBehaviour(secretsEntryOf(entry));
+    describe.skipIf(entry.itsOwnContractAlone === true)('over the rows', () => {
+      storeBehaviour(secretsEntryOf(entry));
+    });
     openedOnTheLedgersDatabase(entry);
   });
 }

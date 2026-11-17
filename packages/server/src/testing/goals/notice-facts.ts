@@ -44,7 +44,7 @@ const typesFold = {
 
 const alphaStreams = 'playbook/acme/alpha/';
 
-export function appendedIn(
+function appendedIn(
   runtime: HostRuntime,
   stream: string,
   { type, data, at }: { readonly type: string; readonly data: Schema.Json; readonly at: number },
@@ -70,13 +70,12 @@ export async function factsIn(runtime: HostRuntime, stream: string): Promise<rea
   return loaded.state;
 }
 
-export async function assessedIn(runtime: HostRuntime, told: string, at: number, goal: string): Promise<void> {
-  const lead = goal === leadGoalId;
-  const stream = `assessments/${lead ? assessment : assessmentIdOf({ goal })}`;
+export async function assessedIn(runtime: HostRuntime, told: string, at: number): Promise<void> {
+  const stream = `assessments/${assessment}`;
   const opened = {
-    goal,
+    goal: leadGoalId,
     goals_version: 1,
-    ...(lead ? { per: { id: experiment } } : {}),
+    per: { id: experiment },
     rule: { settles: 'on_crossing', target: { at_least: 1 } },
     milestones: [],
   };

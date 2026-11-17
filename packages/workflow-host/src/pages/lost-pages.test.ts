@@ -39,7 +39,7 @@ function markingThen(event: number, then: string): string {
 }
 
 const quick = {
-  folding: { ...foldingOf(), foldDeadlineMs: 1, pageBudgetMs: 1 },
+  folding: { ...foldingOf(), foldDeadlineMs: 1, pageBudgetMs: 1, pageMarginMs: 50 },
   overtimesBeforeStall: 2,
   sweepEveryMs: 20,
 };

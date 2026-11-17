@@ -7,7 +7,14 @@ import { textToKeep } from '../content/streamed-content.ts';
 import type { InterleavedErasureEntry } from './content-entry.ts';
 import { alpha, at, generated, json, octets, present, readBack, resultOf } from './content-samples.ts';
 import { aDay, byItsDigest, expiringAt, headOf, keptAt, oneChunk, severalChunks, whole } from './expiring-samples.ts';
-import { aStepFailedAtItsPause, defectOf, pausableStore, settledWithin, type PausedStep } from './paused-store.ts';
+import {
+  aStepFailedAtItsPause,
+  defectOf,
+  longEnoughForAPutToSettle,
+  pausableStore,
+  settledWithin,
+  type PausedStep,
+} from './paused-store.ts';
 
 const note = '{"note":"kept outside, until it expires"}';
 
@@ -37,7 +44,7 @@ function putWhileErased(entry: InterleavedErasureEntry): void {
       const erasure = resultOf(keeping.eraseExpired(10));
       await deleting.reached;
       const put = resultOf(keeping.content.put(alpha, way(content)));
-      const settledBefore = await settledWithin(put, 300);
+      const settledBefore = await settledWithin(put, longEnoughForAPutToSettle);
       deleting.release();
 
       expect([settledBefore, await erasure, await put]).toEqual([

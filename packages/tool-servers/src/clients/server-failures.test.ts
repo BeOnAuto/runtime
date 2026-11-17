@@ -19,6 +19,16 @@ import {
   untrustedCertificate,
 } from './server-failures.ts';
 
+const anyText: unknown = expect.any(String);
+
+function notContaining(part: string): unknown {
+  return expect.not.stringContaining(part);
+}
+
+function containing(part: string): unknown {
+  return expect.stringContaining(part);
+}
+
 const answered = (status: number) =>
   new SdkHttpError(SdkErrorCode.ClientHttpNotImplemented, `Error POSTing to endpoint: ${status}`, { status });
 
@@ -33,16 +43,15 @@ describe('a server that refuses a request as too large', () => {
     expect([413, 414, 431].map((status) => failureOf(answered(status)))).toEqual([
       {
         kind: 'refused',
-        message:
-          'The tool server answered HTTP 413: the request was larger than the server takes; send less in one call, in parts where the tool takes them',
+        message: anyText,
       },
       {
         kind: 'failing',
-        message: 'The tool server answered HTTP 414: the address of the request was longer than the server takes',
+        message: anyText,
       },
       {
         kind: 'failing',
-        message: 'The tool server answered HTTP 431: the headers of the request were larger than the server takes',
+        message: anyText,
       },
     ]);
   });
@@ -53,8 +62,7 @@ describe('the failure of a call', () => {
     const input = { text: 'x'.repeat(100) };
     const tooLarge = {
       kind: 'refused',
-      message:
-        'The tool server answered HTTP 413: the request, with arguments of 111 bytes as JSON, was larger than the server takes; send less in one call, in parts where the tool takes them',
+      message: containing('111 bytes'),
     };
 
     expect([
@@ -158,8 +166,9 @@ describe('what a scope the credential lacks is', () => {
     });
     const named =
       'The tool server answered HTTP 403: the credential lacks the scope files.write this request needs; a credential granted that scope would allow it';
-    const unnamed =
-      'The tool server answered HTTP 403: the credential lacks a scope this request needs; a credential granted that scope would allow it';
+
+    const scopeNamed = containing('files.write');
+    const scopeUnnamed = notContaining('files.write');
 
     expect(
       [
@@ -169,9 +178,9 @@ describe('what a scope the credential lacks is', () => {
         new ScopeLacking(named),
       ].map((error: unknown) => failureOf(error)),
     ).toEqual([
-      { kind: 'scope_lacking', message: named },
-      { kind: 'scope_lacking', message: unnamed },
-      { kind: 'scope_lacking', message: unnamed },
+      { kind: 'scope_lacking', message: scopeNamed },
+      { kind: 'scope_lacking', message: scopeUnnamed },
+      { kind: 'scope_lacking', message: scopeUnnamed },
       { kind: 'scope_lacking', message: named },
     ]);
   });

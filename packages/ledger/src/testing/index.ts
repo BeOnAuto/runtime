@@ -1,4 +1,5 @@
 export { ledgerLayout, ledgerLayoutFloor } from '../layout/ledger-layout.ts';
+export { databaseStructureBehaviour } from '../structure/database-structure-behaviour.ts';
 export { ledgerBehaviour } from './ledger-behaviour.ts';
 export { logBehaviour } from './log-behaviour.ts';
 export { appendedFactsOnStoresBehaviour } from '../appended/appended-facts-on-stores-behaviour.ts';

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { namesFound } from '../content/content-tables.ts';
 import { structureIn } from '../structure/database-structure-behaviour.ts';
 import { contentTablesOfPlaybooks } from '../testing/content-tables-of-playbooks.ts';
-import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
+import { aLedger, anEmptyDatabaseOf, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { carryingOnToTheLayoutKept, carryingTo, theLayoutOfTheLastLedgerStep } from './carrying-on-behaviour.ts';
 import { layoutWritten } from './layout-kept.ts';
 import { layoutIn } from './ledger-layout-behaviour.ts';
@@ -19,7 +19,7 @@ const carryingToIt = {
 };
 
 async function aDatabaseOfTheLayoutBefore(entry: LedgerEntry): Promise<string> {
-  const database = await entry.aDatabase();
+  const database = await anEmptyDatabaseOf(entry);
   await entry.executedOn(database, (execute) => layoutWritten(execute, theLayoutThatDropsTheTableOfMemories - 1));
   return database;
 }
@@ -57,8 +57,8 @@ async function aDatabaseOfTheLayoutBeforeTheOrgsIndexes(entry: LedgerEntry, data
 function theOrgsIndexesBehaviour(entry: LedgerEntry): void {
   describe("the ledger's own step to layout 22", () => {
     it("drops the indexes of the tree of a run and of an event's id led by the playbook, and the ledger makes those led by the org and the table of the names of definitions as it opens, as a new database holds them", async () => {
-      const database = await entry.aDatabase();
-      const made = await entry.aDatabase();
+      const database = await anEmptyDatabaseOf(entry);
+      const made = await anEmptyDatabaseOf(entry);
       await aLedger(entry, made);
       await aDatabaseOfTheLayoutBeforeTheOrgsIndexes(entry, database);
 

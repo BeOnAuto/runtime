@@ -5,6 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import { checkedInput } from '../index.ts';
 
+function refused(tag: string, fields: object = {}): unknown {
+  return expect.objectContaining({ _tag: tag, ...fields });
+}
+
 describe('the check of the input of a run', () => {
   const booking = Result.getOrThrow(
     compileJsonSchema(
@@ -45,8 +49,7 @@ describe('the check of the input of a run', () => {
         }),
       ),
       Exit.fail(
-        new InvalidInput({
-          detail: 'The input nests more than the 512 levels an interaction function takes',
+        refused('invalid_input', {
           issues: [{ pointer: '', detail: 'Expected a value nested at most 512 levels deep' }],
         }),
       ),

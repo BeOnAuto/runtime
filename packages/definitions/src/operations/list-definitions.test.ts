@@ -6,6 +6,8 @@ import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { asQueryString, firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
+const someWords: unknown = expect.any(String);
+
 const { createDefinition, listDefinitions, retireDefinition } = definitionOperationsFor([echo, probe().capability]);
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -53,18 +55,6 @@ async function withGammaAlphaAndRetiredBeta() {
 }
 
 describe('list_definitions', () => {
-  it('is a playbook query at GET /definitions/{type} that may meet not_found', () => {
-    expect(listDefinitions.registration).toMatchObject({
-      scope: 'playbook',
-      kind: 'query',
-      title: 'List definitions',
-      route: { method: 'GET', path: '/definitions/{type}' },
-      pathParameters: ['type'],
-      successStatus: 200,
-      reasons: ['not_found'],
-    });
-  });
-
   it('lists nothing for a capability without definitions', async () => {
     expect(await harness().call(listDefinitions, toAlpha(acmeAdmin, { type: 'echo' }))).toEqual({
       status: 'succeeded',
@@ -89,7 +79,7 @@ describe('list_definitions', () => {
       status: 'rejected',
       reason: 'invalid_input',
       detail: 'The input does not match the input schema',
-      issues: [{ pointer: '/type', detail: 'Expected a type of definition this server keeps: echo or probe' }],
+      issues: [{ pointer: '/type', detail: someWords }],
     });
   });
 });

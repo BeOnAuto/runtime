@@ -1,9 +1,12 @@
+import { goalsWantedWordsOf } from '@on.auto/playbooks';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { assessing, savedWorkflow, succeededRunsOf, type Assessing } from '../../testing/goals/assessed-runs.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
-import { alpha } from '../../testing/servers/reasoning-server.ts';
+import { alpha, servingReasoning } from '../../testing/servers/reasoning-server.ts';
+import { workflowSource } from '../../testing/servers/workflow-server.ts';
+import { servingReasoningWithGoals } from '../../testing/settings/goals-kept.ts';
 import { until } from '../../testing/waiting/until.ts';
 
 const minute = 61_000;
@@ -74,17 +77,10 @@ async function failedOnce(assessed: Assessing) {
   );
 }
 
-function aWhile(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
 async function fiveMinutesOn(assessed: Assessing): Promise<void> {
   await Array.from({ length: 5 }).reduce<Promise<void>>(async (before) => {
     await before;
-    assessed.clock.moveTo(assessed.clock.now() + minute);
-    await aWhile(400);
+    await assessed.clock.quietAt(assessed.clock.now() + minute, () => assessed.asked.length);
   }, Promise.resolve());
 }
 
@@ -127,5 +123,41 @@ describe('a Node server that judges goals with messages on', () => {
 
     expect(gaps).toContain('notice_not_started');
     expect(await goalsGuideOf(assessed)).toMatch(/## The notification function/u);
+  });
+});
+
+describe('a Node server that judges goals with messages off, as its agent reads it', () => {
+  it('refuses a playbook without goals and a workflow saved in one', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(() => {
+      ledger.remove();
+    });
+    const before = await servingReasoning([], {}, undefined, { ledger });
+    await before.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+    await before.stop();
+    const server = await servingReasoningWithGoals([], {}, undefined, { ledger, goalsMessages: false });
+    onTestFinished(async () => {
+      await server.stop();
+    });
+    const created = await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'beta', name: 'Beta' } });
+    const saved = await server.call('POST', `${alpha}/definitions/workflow`, {
+      body: {
+        name: 'tally',
+        source: workflowSource(
+          'tally',
+          [
+            'contributes:',
+            '  - goal: weekly',
+            '    purpose: Counts.',
+            'do:',
+            '  - count: { set: { orders: 3 } }',
+            '',
+          ].join('\n'),
+        ),
+      },
+    });
+
+    expect(created).toMatchObject({ status: 422, body: { detail: goalsWantedWordsOf(false) } });
+    expect(saved).toMatchObject({ status: 422, body: { errors: [{ pointer: '' }] } });
   });
 });

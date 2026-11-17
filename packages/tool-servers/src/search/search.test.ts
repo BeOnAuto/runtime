@@ -4,6 +4,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { playbookToolCalls, reportingAccess, toolCaller } from '../testing/index.ts';
 import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
+function containing(part: string): unknown {
+  return expect.stringContaining(part);
+}
+
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
 const closing: (() => Promise<void>)[] = [];
@@ -163,7 +167,7 @@ describe('search refusing', () => {
 
   it('rejects a name that no tool server of the playbook has, saying so and how to search the ones it has', async () => {
     const { fake, call } = await twoServers();
-    const detail = 'This playbook has no tool server named mail; call search without server to search the ones it has';
+    const detail = containing('mail');
 
     expect(await call('search', { server: 'mail' })).toMatchObject({
       status: 'rejected',

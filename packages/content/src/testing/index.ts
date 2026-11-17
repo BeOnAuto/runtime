@@ -2,6 +2,7 @@ export { memoryContentHeads, memoryContentStore, memoryRecordedContent, type Hel
 export {
   aStepFailedAtItsPause,
   defectOf,
+  longEnoughForAPutToSettle,
   pausableStore,
   settledWithin,
   type PausableStore,

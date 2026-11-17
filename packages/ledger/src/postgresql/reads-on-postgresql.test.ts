@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import { Clock, Effect } from 'effect';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -7,35 +5,12 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { postgresqlRecordedStore, type Query } from '../postgresql-reads/postgresql-recorded.ts';
 import { details, happenings } from '../testing/happenings.ts';
 import { openLedgerWith, type OpenLedger } from '../testing/open-ledger.ts';
+import { postgresqlDatabasesOn } from '../testing/postgresql-databases.ts';
 import { plainPoolsOn, postgresqlLedgerLayer } from './postgresql-ledger.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-async function queried(database: string, statement: string): Promise<readonly unknown[]> {
-  const client = new Client({ connectionString: database });
-  await client.connect();
-  try {
-    const { rows } = await client.query<Readonly<Record<string, unknown>>>(statement);
-    return rows;
-  } finally {
-    await client.end();
-  }
-}
-
-async function aDatabase(): Promise<string> {
-  const name = `ledger_${randomUUID().replaceAll('-', '')}`;
-  await queried(server, `CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await queried(server, `DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
-
-const skipped = server === '';
-
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
+const { skipped, notice, anEmptyDatabase: aDatabase } = postgresqlDatabasesOn(server);
 
 type RecordedSelection = Parameters<OpenLedger['ledger']['readRecorded']>[1];
 

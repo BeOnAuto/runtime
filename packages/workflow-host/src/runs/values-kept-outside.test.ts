@@ -3,12 +3,12 @@ import { contentHoldersOf } from '@on.auto/operations';
 import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { RunLogRecordSchema, mostInlineHeldValueBytes, stateFormatKeepingPayloads } from '@on.auto/workflow-engine';
 import { Context, Effect, Schema } from 'effect';
-import { Client } from 'pg';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, onPostgreSQLAt, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
+import { describeOnPostgreSQL } from '../testing/postgresql-databases.ts';
 
 const run = runAt(crypto.randomUUID());
 
@@ -24,33 +24,7 @@ do:
 
 const holders = contentHoldersOf([RunLogRecordSchema]);
 
-const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
-
-const notice =
-  server === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
 type DatabaseSettings = Parameters<typeof openedOn>[0];
-
-async function administered(statementText: string): Promise<void> {
-  const client = new Client({ connectionString: server });
-  await client.connect();
-  try {
-    await client.query(statementText);
-  } finally {
-    await client.end();
-  }
-}
-
-async function aPostgreSQLDatabase(): Promise<DatabaseSettings> {
-  const name = `workflow_host_${crypto.randomUUID().replaceAll('-', '')}`;
-  await administered(`CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await administered(`DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return onPostgreSQLAt(database.href);
-}
 
 const LogRows = Schema.Array(Schema.Struct({ data: Schema.String }));
 
@@ -90,9 +64,11 @@ describe('the engine the host composes where payloads are kept outside', () => {
     expect(log.join('')).not.toContain(large);
     expect(await heldOn(settings)).toEqual([{ stream: runLog, held: 1 }]);
   });
+});
 
-  it.skipIf(server === '')(`keeps it outside and holds it the same way on PostgreSQL${notice}`, async () => {
-    const settings = { ...(await aPostgreSQLDatabase()), holders };
+describeOnPostgreSQL('the engine the host composes where payloads are kept outside', (aDatabase) => {
+  it('keeps it outside and holds it the same way', async () => {
+    const settings = { ...onPostgreSQLAt(await aDatabase()), holders };
     await startedKeeping(settings);
 
     const log = await runLogOn(settings);

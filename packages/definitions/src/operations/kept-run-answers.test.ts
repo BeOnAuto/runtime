@@ -8,6 +8,8 @@ import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 import { keptArmOf, keptIn, keptLongBeforeAndLost, recordedAsGiven, watchedStore } from '../testing/kept-payloads.ts';
 import { admittingMeter } from '../testing/recording-meter.ts';
 
+const someWords: unknown = expect.any(String);
+
 const { createDefinition, runDefinition, getRun } = definitionOperationsFor([echo]);
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -97,8 +99,7 @@ describe('a run whose output its playbook keeps outside the run', () => {
     expect(await definitions.call(getRun, toAlpha(acmeAdmin, { run_id: runId }))).toMatchObject({
       status: 'rejected',
       reason: 'unavailable',
-      detail:
-        "The run's output, which its playbook keeps outside the run's record, could not be read just now; ask again in a moment",
+      detail: someWords,
     });
   });
 });

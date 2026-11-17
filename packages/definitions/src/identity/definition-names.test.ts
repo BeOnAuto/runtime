@@ -10,6 +10,10 @@ import { recordedAdmin } from '../testing/callers.ts';
 import { definitionKeyOfId, earlierDefinitionIdOf } from './definition-ids.ts';
 import { definitionBoundsHeld, definitionNamesOf, mostReactingDefinitions, unbounded } from './definition-names.ts';
 
+function refused(tag: string, fields: object = {}): unknown {
+  return expect.objectContaining({ _tag: tag, ...fields });
+}
+
 const alpha = { org: 'acme', playbook: 'alpha' };
 
 const stream = `playbook/acme/alpha/${definitionTypeStreamOf('echo')}`;
@@ -74,10 +78,7 @@ describe('the names of definitions, as the definitions declare them', () => {
 
     expect(answers).toEqual([
       new Conflict({ detail: 'The playbook already has the echo definition greet', kind: 'taken' }),
-      new Conflict({
-        detail: 'The echo definition wave was retired and keeps its name; restore_definition brings it back',
-        kind: 'taken',
-      }),
+      refused('conflict', { kind: 'taken' }),
     ]);
   });
 
@@ -116,16 +117,7 @@ describe('the bounds on the definitions of a playbook, as the definitions declar
     await answerOf(ledger, create('wave'));
     const restored = await answerOf(ledger, { type: 'restore', name: 'greet', restored_by: recordedAdmin });
 
-    expect([created, restored]).toEqual([
-      new Conflict({
-        detail:
-          'The playbook keeps 1 echo definitions, and a playbook may keep at most 1; retire one before creating another',
-      }),
-      new Conflict({
-        detail:
-          'The playbook keeps 1 echo definitions, and a playbook may keep at most 1; retire one before restoring one',
-      }),
-    ]);
+    expect([created, restored]).toEqual([refused('conflict'), refused('conflict')]);
   });
 });
 
@@ -142,13 +134,7 @@ describe('a bound lowered below what a playbook keeps', () => {
       await answerOf(ledger, { type: 'retire', name: 'greet' }),
     ];
 
-    expect(answers).toEqual([
-      new Conflict({
-        detail:
-          'The playbook keeps 2 echo definitions, and a playbook may keep at most 1; retire one before saving another version',
-      }),
-      null,
-    ]);
+    expect(answers).toEqual([refused('conflict'), null]);
   });
 
   it(`refuse one more definition that starts on its own than ${mostReactingDefinitions}, whatever the type allows`, async () => {

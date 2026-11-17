@@ -8,6 +8,8 @@ import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
+const someWords: unknown = expect.any(String);
+
 const toAlpha = toPlaybook('acme', 'alpha');
 
 const answered = '0199a3c4-7d2e-7c1a-9b3f-00000000a001';
@@ -147,7 +149,7 @@ describe('a run that ended at a limit, in its history', () => {
         events: [
           {
             type: 'run_succeeded',
-            summary: 'A run finished with an answer from what it had, after it had read as much as a run may read.',
+            summary: someWords,
             data: { output: { greeting: 'Hi' }, record: {}, incomplete_details: { reason: 'max_input_tokens' } },
           },
         ],

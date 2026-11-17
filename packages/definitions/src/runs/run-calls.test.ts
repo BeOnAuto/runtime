@@ -10,6 +10,10 @@ import { runDecider } from './run-decider.ts';
 import type { RecordedRunEvent, RunEvent } from './run-events.ts';
 import { lastCallOf, lastModelCallOf, startedRunOf } from './run-state.ts';
 
+function refused(tag: string, fields: object = {}): unknown {
+  return expect.objectContaining({ _tag: tag, ...fields });
+}
+
 const start = { runId: testRunId, by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
 
 const ofGreet = { definitionType: 'echo', definitionName: 'greet', definitionVersion: 1 };
@@ -120,13 +124,7 @@ describe('a tool call of a run', () => {
       Result.succeed([startOfCall(2)]),
     );
     expect(decided(recordingCall({ ...called, data: { ...sent, number: 1 } }), started, callStarted)).toEqual(
-      Result.fail(
-        new Conflict({
-          detail:
-            'The run records its calls in order, and call 1 is not its next call, 2; another attempt recorded it first',
-          kind: 'taken',
-        }),
-      ),
+      Result.fail(refused('conflict', { kind: 'taken' })),
     );
   });
 

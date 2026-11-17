@@ -1,4 +1,4 @@
-import { Conflict, NotFound, RunCancelled } from '@on.auto/operations';
+import { NotFound, RunCancelled } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -7,6 +7,10 @@ import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts'
 import type { RunCommand } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
 import type { RecordedRunEvent, RunEvent } from './run-events.ts';
+
+function refused(tag: string, fields: object = {}): unknown {
+  return expect.objectContaining({ _tag: tag, ...fields });
+}
 
 const start = { runId: testRunId, by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
 
@@ -93,14 +97,7 @@ describe('a cancel from the caller of a run within its call', () => {
 
   it('is recorded, where a cancel from anyone else is refused, since nothing outside can interrupt the run', () => {
     expect(decided(cancelling(true), started)).toStrictEqual(Result.succeed([cancelAsked]));
-    expect(decided(cancelling(false), started)).toStrictEqual(
-      Result.fail(
-        new Conflict({
-          detail:
-            'The run takes place within the call that started it, which no server can interrupt from outside, so it cannot be cancelled; it ends when that call does',
-        }),
-      ),
-    );
+    expect(decided(cancelling(false), started)).toStrictEqual(Result.fail(refused('conflict')));
   });
 
   it('turns the interruption of the run into its cancellation, and an interruption nobody asked for into a failure', () => {

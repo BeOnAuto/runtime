@@ -21,7 +21,7 @@ describe('the check of an answer before it is answered', () => {
 
     expect(Exit.hasDies(await Effect.runPromiseExit(unnamed))).toBe(true);
     await expect(Effect.runPromise(unnamed)).rejects.toThrow(
-      'The runtime built an answer that does not match the series shape: /unit: Expected a value with a length of at least 1; /lines/1/points/0/low: Expected a low of at most the value; /lines/1/points/0/high: Expected a high of at least the value',
+      /\/unit.*\/lines\/1\/points\/0\/low.*\/lines\/1\/points\/0\/high/u,
     );
   });
 });

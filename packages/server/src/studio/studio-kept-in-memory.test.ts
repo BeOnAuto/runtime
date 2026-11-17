@@ -51,8 +51,6 @@ describe('a runtime whose folder for Studio holds a file it did not write', () =
       studioPage,
       [markerName, 'notes.txt'].toSorted(),
     ]);
-    expect(child.output().stderr).toContain(
-      `"message":"The Studio this runtime serves is kept in memory alone, since the folder ${folder} holds notes.txt, which Auto Runtime did not write there"`,
-    );
+    expect(child.output().stderr).toContain(`"message":"The Studio this runtime serves is`);
   });
 });

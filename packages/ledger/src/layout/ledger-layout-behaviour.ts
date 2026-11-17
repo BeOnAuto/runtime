@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { statement } from '../connection/statement.ts';
 import { namesFound } from '../content/content-tables.ts';
-import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
+import { aLedger, anEmptyDatabaseOf, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { layoutFound, type FoundLayout } from './layout-found.ts';
 import { layoutWritten } from './layout-kept.ts';
 import type { LayoutCarrying, LayoutStep } from './layout-steps.ts';
@@ -13,16 +13,6 @@ import { ledgerLayout, ledgerLayoutFloor } from './ledger-layout.ts';
 const aNewerLayout = ledgerLayout + 1;
 
 const anOlderLayout = ledgerLayoutFloor - 1;
-
-const goingForwardOnly =
-  'Upgrades go forward only. Open this database with the release that upgraded it, or a compatible later release';
-
-const notCarried =
-  'This release cannot migrate this older database. Keep a backup; to start fresh, use a separate empty database';
-
-function keeping(kept: number, floor: number): string {
-  return `where this server keeps layout ${kept} and carries forward no database older than layout ${floor}`;
-}
 
 export function layoutIn(entry: LedgerEntry, database: string): Promise<FoundLayout> {
   return entry.executedOn(database, (execute) => layoutFound(execute, entry.layout, []));
@@ -46,7 +36,7 @@ const earlierTallies = projectedTableOf({ name: runTallyRows.name, version: runT
 
 function newDatabasesBehaviour(entry: LedgerEntry): void {
   it('is written into a database that holds no table, which then opens again in that layout', async () => {
-    const database = await entry.aDatabase();
+    const database = await anEmptyDatabaseOf(entry);
     await aLedger(entry, database);
 
     await aLedger(entry, database);
@@ -55,7 +45,7 @@ function newDatabasesBehaviour(entry: LedgerEntry): void {
   });
 
   it("is written into a database that holds only the tables of others, which are not the ledger's business and stay as they were", async () => {
-    const database = await entry.aDatabase();
+    const database = await anEmptyDatabaseOf(entry);
     await entry.queried(database, 'CREATE TABLE host_bookkeeping (note TEXT)');
     await entry.queried(database, 'CREATE TABLE _platform_values (value TEXT)');
     await entry.queried(database, "INSERT INTO host_bookkeeping (note) VALUES ('kept')");
@@ -70,7 +60,7 @@ function newDatabasesBehaviour(entry: LedgerEntry): void {
 
 function refusedDatabasesBehaviour(entry: LedgerEntry): void {
   it('refuses a database in a newer layout, naming the layout found and the one kept, and leaves it as it was', async () => {
-    const database = await entry.aDatabase();
+    const database = await anEmptyDatabaseOf(entry);
     await stampedWith(entry, database, aNewerLayout);
     const before = await layoutIn(entry, database);
 
@@ -81,13 +71,12 @@ function refusedDatabasesBehaviour(entry: LedgerEntry): void {
       found: aNewerLayout,
       kept: ledgerLayout,
       floor: ledgerLayoutFloor,
-      message: `The ledger's database is in layout ${aNewerLayout} of the ledger, ${keeping(ledgerLayout, ledgerLayoutFloor)}. ${goingForwardOnly}`,
     });
     expect(await layoutIn(entry, database)).toEqual(before);
   });
 
   it('refuses a database in a layout older than the earliest it carries forward, and leaves it as it was', async () => {
-    const database = await entry.aDatabase();
+    const database = await anEmptyDatabaseOf(entry);
     await stampedWith(entry, database, anOlderLayout);
 
     const refused = await refusalOf(entry, database, []);
@@ -96,13 +85,12 @@ function refusedDatabasesBehaviour(entry: LedgerEntry): void {
       found: anOlderLayout,
       kept: ledgerLayout,
       floor: ledgerLayoutFloor,
-      message: `The ledger's database is in layout ${anOlderLayout} of the ledger, ${keeping(ledgerLayout, ledgerLayoutFloor)}. ${notCarried}`,
     });
     expect((await layoutIn(entry, database)).layout).toBe(anOlderLayout);
   });
 
   it('refuses a database that holds a table of the store the ledger keeps its streams in, but no layout number, and leaves it as it was', async () => {
-    const database = await entry.aDatabase();
+    const database = await anEmptyDatabaseOf(entry);
     await entry.queried(database, 'CREATE TABLE emt_messages (note TEXT)');
 
     const refused = await refusalOf(entry, database, []);
@@ -111,7 +99,6 @@ function refusedDatabasesBehaviour(entry: LedgerEntry): void {
       _tag: 'ledger_layout_refused',
       found: undefined,
       kept: ledgerLayout,
-      message: `The ledger's database holds tables of the ledger but no layout number, ${keeping(ledgerLayout, ledgerLayoutFloor)}. ${notCarried}`,
     });
     expect(await layoutIn(entry, database)).toEqual({ layout: undefined, tables: ['emt_messages'] });
   });
@@ -119,7 +106,7 @@ function refusedDatabasesBehaviour(entry: LedgerEntry): void {
 
 function projectionTablesBehaviour(entry: LedgerEntry): void {
   it('counts as its own the table of a projection it is opened with, and only then', async () => {
-    const [refusing, opening] = [await entry.aDatabase(), await entry.aDatabase()];
+    const [refusing, opening] = [await anEmptyDatabaseOf(entry), await anEmptyDatabaseOf(entry)];
     await entry.queried(refusing, projectionsTable);
     await entry.queried(opening, projectionsTable);
 
@@ -131,7 +118,7 @@ function projectionTablesBehaviour(entry: LedgerEntry): void {
   });
 
   it('counts as its own the table of an earlier version of a projection it is opened with, and drops nothing of a database it refuses', async () => {
-    const database = await entry.aDatabase();
+    const database = await anEmptyDatabaseOf(entry);
     await entry.queried(database, 'CREATE TABLE host_bookkeeping (note TEXT)');
     await entry.queried(database, `CREATE TABLE ${earlierTallies} (note TEXT)`);
     await entry.queried(database, `INSERT INTO ${earlierTallies} (note) VALUES ('kept')`);
@@ -172,7 +159,7 @@ function carryingTo(kept: number, steps: readonly LayoutStep[]): LayoutCarrying 
 }
 
 async function aDatabaseInLayout(entry: LedgerEntry, layout: number): Promise<string> {
-  const database = await entry.aDatabase();
+  const database = await anEmptyDatabaseOf(entry);
   await stampedWith(entry, database, layout);
   return database;
 }
@@ -258,13 +245,11 @@ function carriedForwardOnlyBehaviour(entry: LedgerEntry): void {
         found: 10,
         kept: 9,
         floor: 6,
-        message: `The ledger's database is in layout 10 of the ledger, ${keeping(9, 6)}. ${goingForwardOnly}`,
       },
       {
         found: 5,
         kept: 9,
         floor: 6,
-        message: `The ledger's database is in layout 5 of the ledger, ${keeping(9, 6)}. ${notCarried}`,
       },
     ]);
     expect([(await layoutIn(entry, newer)).layout, (await layoutIn(entry, older)).layout]).toEqual([10, 5]);

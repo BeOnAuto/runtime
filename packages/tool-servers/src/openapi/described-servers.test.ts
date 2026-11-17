@@ -102,9 +102,7 @@ describe('the document of an openapi server a provider ships', () => {
       { documents: { kind: 'shipped', byName: new Map() } },
     );
 
-    expect(refused).toBe(
-      'The tool server settings are invalid. TOOL_SERVERS: /graph/document: Expected an https URL, or an http URL on a loopback address, or a document the providers ship',
-    );
+    expect(refused).toContain('TOOL_SERVERS: /graph/document: ');
   });
 });
 

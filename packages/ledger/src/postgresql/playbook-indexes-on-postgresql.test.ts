@@ -1,39 +1,14 @@
-import { randomUUID } from 'node:crypto';
-
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { thePlaybookIndexes } from '../postgresql-reads/index-checks.ts';
 import { openLedgerWith } from '../testing/open-ledger.ts';
+import { postgresqlDatabasesOn, postgresqlQueried } from '../testing/postgresql-databases.ts';
 import { plainPoolsOn, postgresqlLedgerLayer } from './postgresql-ledger.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-const skipped = server === '';
-
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
-async function queried(database: string, statement: string): Promise<readonly unknown[]> {
-  const client = new Client({ connectionString: database });
-  await client.connect();
-  try {
-    const { rows } = await client.query<Readonly<Record<string, unknown>>>(statement);
-    return rows;
-  } finally {
-    await client.end();
-  }
-}
-
-async function aDatabase(): Promise<string> {
-  const name = `ledger_${randomUUID().replaceAll('-', '')}`;
-  await queried(server, `CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await queried(server, `DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
+const { skipped, notice, anEmptyDatabase: aDatabase } = postgresqlDatabasesOn(server);
 
 async function aLedgerOnItsOwnDatabase(): Promise<string> {
   const database = await aDatabase();
@@ -68,7 +43,7 @@ describe.skipIf(skipped)(`The playbook's indexes on PostgreSQL${notice}`, () => 
     await second.dispose();
 
     expect(
-      await queried(
+      await postgresqlQueried(
         database,
         "SELECT indexname, indexdef FROM pg_indexes WHERE tablename IN ('emt_messages', 'emt_streams') AND indexname LIKE 'ledger%' ORDER BY indexname",
       ),
@@ -84,7 +59,7 @@ describe.skipIf(skipped)(`The playbook's indexes on PostgreSQL${notice}`, () => 
     await open.query('COMMIT');
 
     expect(
-      await queried(
+      await postgresqlQueried(
         database,
         "SELECT count(*)::int AS indexes FROM pg_indexes WHERE tablename IN ('emt_messages', 'emt_streams') AND indexname LIKE 'ledger%'",
       ),

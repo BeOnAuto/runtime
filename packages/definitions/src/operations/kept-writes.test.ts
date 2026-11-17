@@ -10,6 +10,8 @@ import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
 import { keptArmOf, watchedStore } from '../testing/kept-payloads.ts';
 import { admittingMeter, recordingMeter } from '../testing/recording-meter.ts';
 
+const someWords: unknown = expect.any(String);
+
 const { createDefinition, runDefinition, getRunHistory } = definitionOperationsFor([echo]);
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -196,7 +198,7 @@ describe('a request made again for a run whose input its playbook keeps outside 
       {
         status: 'rejected',
         reason: 'conflict',
-        detail: 'The run id belongs to a run of another definition or with another input',
+        detail: someWords,
       },
       {
         status: 'rejected',

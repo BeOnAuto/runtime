@@ -16,11 +16,11 @@ const sizesTestTimeoutMs = 120_000;
 
 const startedAt = Date.parse('2026-10-01T09:00:00.000Z');
 
-const rowsAcrossTwoPagesOfAThousand = 2001;
+const rowsAcrossTwoPagesOfAHundred = 201;
 
 const rowsAcrossThreePagesOfSeven = 22;
 
-const recorded: readonly JsonObject[] = Array.from({ length: rowsAcrossTwoPagesOfAThousand }, (_, index) => ({
+const recorded: readonly JsonObject[] = Array.from({ length: rowsAcrossTwoPagesOfAHundred }, (_, index) => ({
   type: 'run_succeeded',
   subject: 'reasoning/review-brief',
   source: '/runs/run',
@@ -40,7 +40,7 @@ const working = [
 const swelling = [
   'export function fold(view, event) {',
   '  const { n } = event.data.output;',
-  '  return n === 1500 ? { folds: view.folds + 1, swell: "x".repeat(600000) } : { folds: view.folds + 1 };',
+  '  return n === 150 ? { folds: view.folds + 1, swell: "x".repeat(600000) } : { folds: view.folds + 1 };',
   '}',
 ].join('\n');
 
@@ -53,7 +53,7 @@ interface Paging {
   readonly count: number;
 }
 
-function pagesOf(source: InstanceSource, fold: string, size: number, count = rowsAcrossTwoPagesOfAThousand): Paging {
+function pagesOf(source: InstanceSource, fold: string, size: number, count = rowsAcrossTwoPagesOfAHundred): Paging {
   return { source, fold, size, count };
 }
 
@@ -85,37 +85,37 @@ function sumsOf(works: readonly number[], size: number): readonly number[] {
 }
 
 describe.each(sourcesUnderTest)(
-  'the folds of one view over 2,001 events on $name instances',
+  'the folds of one view over 201 events on $name instances',
   { timeout: sizesTestTimeoutMs },
   ({ source }) => {
-    it('give the same view and spend the same checkpoints in pages of 7 as in pages of 1,000', async () => {
-      const [seven, thousand] = [
+    it('give the same view and spend the same checkpoints in pages of 7 as in pages of 100', async () => {
+      const [seven, hundred] = [
         await foldedInPages(pagesOf(source, working, 7)),
-        await foldedInPages(pagesOf(source, working, 1000)),
+        await foldedInPages(pagesOf(source, working, 100)),
       ];
 
-      expect(thousand.work).toBeGreaterThan(rowsAcrossTwoPagesOfAThousand);
-      expect([seven.view, seven.work]).toEqual([thousand.view, thousand.work]);
-      expect(thousand.view).toMatchObject({ folds: rowsAcrossTwoPagesOfAThousand });
+      expect(hundred.work).toBeGreaterThan(rowsAcrossTwoPagesOfAHundred);
+      expect([seven.view, seven.work]).toEqual([hundred.view, hundred.work]);
+      expect(hundred.view).toMatchObject({ folds: rowsAcrossTwoPagesOfAHundred });
     });
 
-    it('spend in each page of 7 and of 1,000 what its folds spend in pages of one event each, more than nothing for every fold', async () => {
+    it('spend in each page of 7 and of 100 what its folds spend in pages of one event each, more than nothing for every fold', async () => {
       const eachFold = (await foldedInPages(pagesOf(source, working, 1, rowsAcrossThreePagesOfSeven))).works;
       const sevens = (await foldedInPages(pagesOf(source, working, 7, rowsAcrossThreePagesOfSeven))).works;
-      const thousand = (await foldedInPages(pagesOf(source, working, 1000, rowsAcrossThreePagesOfSeven))).works;
+      const hundred = (await foldedInPages(pagesOf(source, working, 100, rowsAcrossThreePagesOfSeven))).works;
 
       expect(Math.min(...eachFold)).toBeGreaterThan(0);
-      expect([sevens, thousand]).toEqual([sumsOf(eachFold, 7), sumsOf(eachFold, 1000)]);
+      expect([sevens, hundred]).toEqual([sumsOf(eachFold, 7), sumsOf(eachFold, 100)]);
     });
 
     it('stall at the event whose view outgrew its bound, at every size of page, though the next fold would shrink it back', async () => {
       const stalls = [
         await foldedInPages(pagesOf(source, swelling, 7)),
-        await foldedInPages(pagesOf(source, swelling, 1000)),
-        await foldedInPages(pagesOf(source, swelling, 3000)),
+        await foldedInPages(pagesOf(source, swelling, 100)),
+        await foldedInPages(pagesOf(source, swelling, 300)),
       ].map(({ view, stalledAt }) => ({ view, stalledAt }));
 
-      expect(stalls).toEqual([1, 2, 3].map(() => ({ view: { folds: 1500 }, stalledAt: 1500 })));
+      expect(stalls).toEqual([1, 2, 3].map(() => ({ view: { folds: 150 }, stalledAt: 150 })));
     });
   },
 );

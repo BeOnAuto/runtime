@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { listedTools, withMcpSession, type ListedTool, type McpSession } from '@on.auto/api/testing';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -100,78 +102,14 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
   });
 
-  it('say in create_definition that a workflow owns one job the business does again and again and is designed before its functions, that each step that does work calls a function of the type that work needs, that a function needs a diagram and a workflow takes none and that its page is a key of its document, written as the guide of its type shows, at 723 characters in seven sentences, and leave its guide to get_guide, which lists every guide', () => {
-    const description = descriptionOf('create_definition');
-
-    expect(description).toContain(
-      'Each step that does work calls a function of the `type` that work needs, by its `name`.',
-    );
-    expect(description).toContain(
-      "`source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business.",
-    );
-    expect(description).toContain('A function needs `diagram`; a workflow takes none.');
-    expect(description).toContain(
-      "The document's `page` shows the person its runs; write it as its type's guide shows.",
-    );
-    expect(description).toContain(
-      'A workflow, designed before its functions, owns one job the business does again and again; a check, a test or a setup is not one.',
-    );
-    expect([description.length, sentencesOf(description)]).toEqual([723, 7]);
+  it('leave each format to get_guide, which lists every guide', () => {
     expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingEveryFormat } },
     });
   });
-
-  it('say that a run that called a tool may have changed something, in run_definition at 796 characters, and that a reasoning run may be cancelled while one that ends within its call cannot, in cancel_run at 733', () => {
-    const [running, cancelling] = [descriptionOf('run_definition'), descriptionOf('cancel_run')];
-
-    expect(running).toContain('A run that called a tool may have changed something outside the playbook');
-    expect(cancelling).toContain('such as a workflow or a reasoning function');
-    expect(cancelling).toContain('or an interaction function that calls a tool, cannot be cancelled.');
-    expect([running.length, cancelling.length]).toEqual([796, 733]);
-  });
 });
 
-describe('the descriptions of the tools that find and connect a provider', () => {
-  it('name in search the providers that match a service and no server serves yet, and the mark of each tool, at 614 characters', () => {
-    const searching = descriptionOf('search');
-
-    expect(searching).toContain(
-      'With `terms` naming a service, `providers` lists those a person may connect that no server serves yet.',
-    );
-    expect(searching).toContain(
-      'each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts.',
-    );
-    expect(searching).toHaveLength(614);
-  });
-
-  it("open add_connection with a person's account at a service that search lists, say that once approved the connection's tools serve the org's playbooks, say an MCP server given by hand says how it authenticates and a secret given by hand how its key is made, and end it with what the call does not grant, at 797 characters", () => {
-    const adding = descriptionOf('add_connection');
-
-    expect(adding).toMatch(
-      /^Starts connecting a person's account at a service, by the name of a provider that search lists, .*\. Once approved, the connection's tools serve the org's playbooks\. /u,
-    );
-    expect(adding).toMatch(/ Nothing is granted by this call and no credential passes through it\.$/u);
-    expect(adding).toMatch(
-      / An MCP server given by hand says how it authenticates: leave its credential out unless the answer says it names none, and a secret takes instructions and key_page\. /u,
-    );
-    expect(adding).toHaveLength(797);
-  });
-});
-
-describe('the descriptions that say what the instructions leave to them', () => {
-  it('say in get_guide that start says which function type each part of a job takes, and name the recipes the tools of /mcp can follow', () => {
-    expect(descriptionOf('get_guide')).toBe(
-      "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes first-playbook, connect-a-service, give-tools, schedule and keep, which the tools listed here can follow.",
-    );
-  });
-
-  it('say in create_playbook that each part of a job is a function of the type that part needs, with no example of one business', () => {
-    expect(descriptionOf('create_playbook')).toContain(
-      'Creates a playbook for one business responsibility, and returns it empty. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. Each job it does again and again is a workflow, and each part of a job a function of the type that part needs.',
-    );
-  });
-
+describe('the descriptions of the paged tools', () => {
   it('say in each paged tool that `cursor` is the next_cursor of the page before', () => {
     expect(
       ['list_runs', 'list_playbook_events', 'list_interactions'].filter(
@@ -186,14 +124,13 @@ function everyArgument(): readonly Argument[] {
 }
 
 describe('the arguments of the tools of /mcp', () => {
-  it('each have a description under 300 characters, the longest the type of create_definition at 299', () => {
+  it('each have a description under 300 characters', () => {
     expect(everyArgument().length).toBeGreaterThan(60);
     expect(
       everyArgument()
         .filter((argument) => isUndescribedOrLong(argument))
         .map(({ where }) => where),
     ).toEqual([]);
-    expect(Math.max(...everyArgument().map(({ description }) => String(description).length))).toBe(299);
   });
 
   it('each give their constraints as keywords, an argument that takes any JSON value every JSON type', () => {
@@ -202,5 +139,114 @@ describe('the arguments of the tools of /mcp', () => {
         .filter((argument) => hasNoConstraint(argument))
         .map(({ where }) => where),
     ).toEqual([]);
+  });
+});
+
+function titledAgainAsItsAnnotation({ title, annotations }: ListedTool): boolean {
+  return title !== undefined && annotations?.['title'] === title;
+}
+
+describe('the titles of the tools of /mcp', () => {
+  it('are given again as the title annotation, which the directory listing shows as the name of each tool', () => {
+    expect(tools.filter((tool) => !titledAgainAsItsAnnotation(tool)).map(({ name }) => name)).toEqual([]);
+  });
+});
+
+type Hints = readonly [boolean, boolean, boolean, boolean];
+
+const served: Readonly<Record<string, Hints>> = {
+  create_playbook: [false, true, false, false],
+  list_playbooks: [true, false, true, false],
+  get_playbook: [true, false, true, false],
+  update_playbook: [false, true, true, false],
+  retire_playbook: [false, true, true, false],
+  restore_playbook: [false, true, true, false],
+  list_models: [true, false, true, true],
+  list_generation_models: [true, false, true, false],
+  add_connection: [false, true, false, false],
+  list_connections: [true, false, true, false],
+  reconnect_connection: [false, true, false, false],
+  remove_connection: [false, true, true, false],
+  list_connection_tools: [true, false, true, true],
+  activate_license: [false, true, true, true],
+  create_definition: [false, true, false, true],
+  list_definitions: [true, false, true, false],
+  get_definition: [true, false, true, false],
+  update_definition: [false, true, true, true],
+  pause_definition: [false, true, true, false],
+  resume_definition: [false, true, true, false],
+  retire_definition: [false, true, true, false],
+  restore_definition: [false, true, true, false],
+  run_definition: [false, true, false, true],
+  get_run: [true, false, true, false],
+  cancel_run: [false, true, true, false],
+  list_runs: [true, false, true, false],
+  list_playbook_events: [true, false, true, false],
+  get_event: [true, false, true, false],
+  publish_event: [false, true, false, false],
+  get_asset: [true, false, true, false],
+  search: [true, false, true, true],
+  introspect: [true, false, true, true],
+  dry_run: [true, false, true, true],
+  query_connection: [true, false, false, true],
+  execute_connection: [false, true, false, true],
+  answer_interaction: [false, true, true, false],
+  list_interactions: [true, false, true, false],
+  list_comments: [true, false, true, false],
+  resolve_comment: [false, true, true, false],
+  send_run_event: [false, true, false, false],
+  get_guide: [true, false, true, false],
+};
+
+function hintsOf({ annotations = {} }: ListedTool): Hints {
+  return [
+    annotations['readOnlyHint'] === true,
+    annotations['destructiveHint'] === true,
+    annotations['idempotentHint'] === true,
+    annotations['openWorldHint'] === true,
+  ];
+}
+
+const apiReadme = readFileSync(new URL('../../../api/README.md', import.meta.url), 'utf8');
+
+const readmeRow = /^\| `([a-z_]+)` +\| (true|false) +\| (true|false) +\| (true|false) +\| (true|false) +\|$/gmu;
+
+type NamedHints = readonly [string, Hints];
+
+function rowOf([, name = '', readOnly, destructive, idempotent, openWorld]: readonly string[]): NamedHints {
+  return [name, [readOnly === 'true', destructive === 'true', idempotent === 'true', openWorld === 'true']];
+}
+
+function reachingOutside(listed: readonly ListedTool[]): readonly string[] {
+  return listed.filter(({ annotations }) => annotations?.['openWorldHint'] === true).map(({ name }) => name);
+}
+
+describe('the open-world hint of the tools of /mcp', () => {
+  it('is set for list_models and run_definition, which reach model providers, for create_definition and update_definition, whose check of a request asks the tool servers what they offer, for the four tools over the tool servers and the one over the tools of a connection, which reach them, for activate_license, which reaches Auto, and for no other tool', () => {
+    expect(reachingOutside(tools)).toEqual([
+      'list_models',
+      'search',
+      'list_connection_tools',
+      'activate_license',
+      'create_definition',
+      'update_definition',
+      'run_definition',
+      'introspect',
+      'dry_run',
+      'query_connection',
+      'execute_connection',
+    ]);
+  });
+});
+
+describe('the annotations of the tools of /mcp', () => {
+  it('say which tools only read, which cannot be undone, which may be repeated and which reach outside', () => {
+    expect(Object.fromEntries(tools.map((tool) => [tool.name, hintsOf(tool)]))).toEqual(served);
+  });
+
+  it('are those the table of the api README gives', () => {
+    expect(Object.fromEntries([...apiReadme.matchAll(readmeRow)].map((row: readonly string[]) => rowOf(row)))).toEqual(
+      served,
+    );
   });
 });

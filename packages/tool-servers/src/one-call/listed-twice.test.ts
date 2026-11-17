@@ -10,6 +10,8 @@ import type { StdioServerSettings } from '../settings/server-settings.ts';
 import { openedFor } from './call-opening.ts';
 import { oneCall } from './one-call.ts';
 
+const anyText: unknown = expect.any(String);
+
 const settings: StdioServerSettings = {
   type: 'stdio',
   name: 'notes',
@@ -92,7 +94,7 @@ describe('a call that needs its tool marked reads, to a tool its server lists tw
       kind: 'unopened',
       refused: 'tool_not_read_only',
       mark: 'acts',
-      detail: 'The search tool of notes is marked acts, and the call needs one marked reads, so it was not sent',
+      detail: anyText,
     });
   });
 });

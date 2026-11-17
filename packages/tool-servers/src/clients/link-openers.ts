@@ -83,7 +83,13 @@ export function openerOf(settings: LinkedServerSettings, linkOptions: LinkOption
   };
   if (settings.type === 'stdio') {
     return tracedOpener(
-      () => openedStdio(settings, { clientInfo: options.clientInfo, timeoutMs: options.timing.openMs, output }),
+      () =>
+        openedStdio(settings, {
+          clientInfo: options.clientInfo,
+          timeoutMs: options.timing.openMs,
+          stopMs: options.timing.stopMs,
+          output,
+        }),
       options.traceMeta,
     );
   }

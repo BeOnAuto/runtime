@@ -10,11 +10,12 @@ import {
   type OutputReport,
 } from './mcp-client.ts';
 import type { ServedClient } from './server-client.ts';
-import { StdioProcessTransport } from './stdio-transport.ts';
+import { StdioProcessTransport, stopPatienceMs } from './stdio-transport.ts';
 
 export interface StdioOpening {
   readonly clientInfo: ClientInfo;
   readonly timeoutMs: number;
+  readonly stopMs: number | undefined;
   readonly output: OutputReport;
 }
 
@@ -31,7 +32,12 @@ export async function openStdio(settings: StdioServerSettings, opening: StdioOpe
     boundedReport(opening.output, errorsNoLongerReported),
   );
   const transport = new StdioProcessTransport(
-    { command: settings.command, args: settings.args, env: environmentOf(settings) },
+    {
+      command: settings.command,
+      args: settings.args,
+      env: environmentOf(settings),
+      stopMs: opening.stopMs ?? stopPatienceMs,
+    },
     sdk.observations,
     opening.output,
   );

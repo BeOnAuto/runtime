@@ -2,11 +2,12 @@ import { Cause, Deferred, Effect, Exit } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
-import { modestConnections } from '../sqlite.ts';
 import { openConnectionWith } from '../testing/open-ledger.ts';
 import {
   aLedgerFile,
   anOpenLedger,
+  briefWaits,
+  connectionOptionsWaiting,
   causeOf,
   committed,
   exitOf,
@@ -18,11 +19,11 @@ import {
 import { LedgerNotOpen } from './sqlite-ledger-file.ts';
 import { sqliteSecretRowsOn } from './sqlite-secret-rows.ts';
 
-const longerThanSQLiteWaitsForItsLock = 5_500;
+const longerThanSQLiteWaitsForItsLock = briefWaits.forTheLock * 4;
 
 const longEnoughForAStatementToRun = 100;
 
-const theLimitAWriteWaitsForItsTurn = 30_000;
+const theLimitAWriteWaitsForItsTurn = 300;
 
 const holding = { keptBy: 'ledger', held: 'sealed' };
 
@@ -33,21 +34,17 @@ function aMoment(): Promise<void> {
 }
 
 describe('the secret rows of a ledger file on SQLite, as they are written', () => {
-  it(
-    'keep a secret written while the writer of the ledger holds the file past the 5 s a statement waits for its lock, once it lets go',
-    { timeout: 20_000 },
-    async () => {
-      const { rows, appended } = await anOpenLedger(onAFile);
-      const letGo = await heldUntilLetGo(appended, committed);
+  it('keep a secret written while the writer of the ledger holds the file past the time a statement waits for its lock, once it lets go', async () => {
+    const { rows, appended } = await anOpenLedger(onAFile);
+    const letGo = await heldUntilLetGo(appended, committed);
 
-      const kept = Effect.runPromiseExit(rows.keep(id, holding));
-      await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
-      await letGo();
+    const kept = Effect.runPromiseExit(rows.keep(id, holding));
+    await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
+    await letGo();
 
-      expect(await kept).toEqual(Exit.void);
-      expect(await Effect.runPromise(rows.read(id))).toMatchObject({ holding: { ...holding }, version: 1 });
-    },
-  );
+    expect(await kept).toEqual(Exit.void);
+    expect(await Effect.runPromise(rows.read(id))).toMatchObject({ holding: { ...holding }, version: 1 });
+  });
 
   it('keep a secret written while a transaction of the ledger is open, though that transaction is rolled back', async () => {
     const { rows, appended } = await anOpenLedger(onAFile);
@@ -62,31 +59,27 @@ describe('the secret rows of a ledger file on SQLite, as they are written', () =
 });
 
 describe('secret rows on a pool of their own, beside the ledger of a file on SQLite', () => {
-  it(
-    'fail with SQLITE_BUSY where the rows are opened on a pool of their own and the writer of the ledger holds the file past 5 s',
-    { timeout: 20_000 },
-    async () => {
-      const { appended, named } = await anOpenLedger(onAFile);
-      const rowsOfTheirOwn = await Effect.runPromise(
-        sqliteSecretRowsOn(() => ({
-          driver: nodeSqliteEventStoreDriver,
-          fileName: named,
-          connectionOptions: modestConnections,
-        })),
-      );
-      onTestFinished(rowsOfTheirOwn.close);
-      const letGo = await heldUntilLetGo(appended, committed);
+  it('fail with SQLITE_BUSY where the rows are opened on a pool of their own and the writer of the ledger holds the file past the time a statement waits for its lock', async () => {
+    const { appended, named } = await anOpenLedger(onAFile);
+    const rowsOfTheirOwn = await Effect.runPromise(
+      sqliteSecretRowsOn(() => ({
+        driver: nodeSqliteEventStoreDriver,
+        fileName: named,
+        connectionOptions: connectionOptionsWaiting(briefWaits),
+      })),
+    );
+    onTestFinished(rowsOfTheirOwn.close);
+    const letGo = await heldUntilLetGo(appended, committed);
 
-      const refused = causeOf(rowsOfTheirOwn.keep(id, holding));
-      await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
-      await letGo();
-      const cause = await refused;
+    const refused = causeOf(rowsOfTheirOwn.keep(id, holding));
+    await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
+    await letGo();
+    const cause = await refused;
 
-      expect(Cause.hasDies(cause)).toBe(true);
-      expect(Cause.pretty(cause)).toContain('SQLITE_BUSY: database is locked');
-      expect(await Effect.runPromise(rowsOfTheirOwn.read(id))).toBeUndefined();
-    },
-  );
+    expect(Cause.hasDies(cause)).toBe(true);
+    expect(Cause.pretty(cause)).toContain('SQLITE_BUSY: database is locked');
+    expect(await Effect.runPromise(rowsOfTheirOwn.read(id))).toBeUndefined();
+  });
 });
 
 describe.each(places)(
@@ -113,30 +106,26 @@ describe.each(places)(
       expect(order).toEqual(['the transaction ends', 'the write settles']);
     });
 
-    it(
-      'refuse a secret whose write a transaction of the ledger waits for, at the limit a write waits for its turn, and keep nothing of it',
-      { timeout: 45_000 },
-      async () => {
-        const { rows, appended } = await anOpenLedger(place);
-        const refused = Promise.withResolvers<Cause.Cause<never>>();
-        const began = performance.now();
+    it('refuse a secret whose write a transaction of the ledger waits for, at the limit a write waits for its turn, and keep nothing of it', async () => {
+      const { rows, appended } = await anOpenLedger(place, { ...briefWaits, forATurn: theLimitAWriteWaitsForItsTurn });
+      const refused = Promise.withResolvers<Cause.Cause<never>>();
+      const began = performance.now();
 
-        const transaction = await exitOf(
-          appended(async () => {
-            const refusal = causeOf(rows.keep(id, holding));
-            refused.resolve(refusal);
-            await refusal;
-          }),
-        );
-        const waited = performance.now() - began;
-        const cause = await refused.promise;
+      const transaction = await exitOf(
+        appended(async () => {
+          const refusal = causeOf(rows.keep(id, holding));
+          refused.resolve(refusal);
+          await refusal;
+        }),
+      );
+      const waited = performance.now() - began;
+      const cause = await refused.promise;
 
-        expect([transaction, Cause.hasDies(cause)]).toEqual([Exit.void, true]);
-        expect(Cause.pretty(cause)).toContain('Task was not started within the maximum waiting time');
-        expect(waited).toBeGreaterThanOrEqual(theLimitAWriteWaitsForItsTurn);
-        expect(await Effect.runPromise(rows.read(id))).toBeUndefined();
-      },
-    );
+      expect([transaction, Cause.hasDies(cause)]).toEqual([Exit.void, true]);
+      expect(Cause.pretty(cause)).toContain('Task was not started within the maximum waiting time');
+      expect(waited).toBeGreaterThanOrEqual(theLimitAWriteWaitsForItsTurn);
+      expect(await Effect.runPromise(rows.read(id))).toBeUndefined();
+    });
   },
 );
 
@@ -211,7 +200,9 @@ describe('the secret rows of a ledger file on SQLite, as they are read and opene
 
     const after = await Effect.runPromiseExit(file.secretRows);
 
-    const refusal = `The secret rows of the ledger in ${named} run on the pool its ledger opens, and its ledger is not open`;
-    expect([before, after]).toEqual([Exit.die(new LedgerNotOpen(refusal)), Exit.die(new LedgerNotOpen(refusal))]);
+    const namingTheFile: unknown = expect.stringContaining(named);
+    const notOpen: unknown = expect.objectContaining({ constructor: LedgerNotOpen, message: namingTheFile });
+    const refusal = Exit.die(notOpen);
+    expect([before, after]).toEqual([refusal, refusal]);
   });
 });

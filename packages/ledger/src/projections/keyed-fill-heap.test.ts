@@ -3,17 +3,16 @@ import { fileURLToPath } from 'node:url';
 
 import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
-import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { postgresqlDatabasesOn } from '../testing/postgresql-databases.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 
 const filledHeap = fileURLToPath(new URL('../../filled-heap.ts', import.meta.url));
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-const notice =
-  server === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
+const { notice, anEmptyDatabase: aPostgreSQLDatabase } = postgresqlDatabasesOn(server);
 
 const mebibyte = 1024 * 1024;
 
@@ -55,25 +54,6 @@ async function filledIn(filledInSettings: object): Promise<typeof Filled.Type> {
   });
   await once(child, 'exit');
   return Schema.decodeUnknownSync(Filled)(said.text.trim());
-}
-
-async function administered(statement: string): Promise<void> {
-  const client = new Client({ connectionString: server });
-  await client.connect();
-  try {
-    await client.query(statement);
-  } finally {
-    await client.end();
-  }
-}
-
-async function aPostgreSQLDatabase(): Promise<string> {
-  const name = `ledger_${crypto.randomUUID().replaceAll('-', '')}`;
-  await administered(`CREATE DATABASE ${name}`);
-  onTestFinished(() => administered(`DROP DATABASE ${name} WITH (FORCE)`));
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
 }
 
 function aSQLiteFile(): string {

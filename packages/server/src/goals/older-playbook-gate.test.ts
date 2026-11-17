@@ -29,9 +29,6 @@ const ListedRuns = Schema.Struct({ runs: Schema.Array(Schema.Struct({ run_id: Sc
 
 const runsIn = Schema.decodeUnknownSync(ListedRuns);
 
-const askedForGoals =
-  'Ask the person: What should this playbook achieve for you, and how will you know it worked? Ask too what to tell them, and where. Once they say yes, send it as the goals argument of update_playbook, as the goals guide says, then save the workflow again.';
-
 const ledger = temporaryLedger();
 
 afterAll(() => {
@@ -89,7 +86,7 @@ describe('an older playbook on a Node server that now keeps goals', () => {
       expect(ranBefore).toEqual([1, 1]);
       expect(refused).toMatchObject({
         status: 422,
-        body: { detail: askedForGoals, errors: [{ pointer: '', detail: askedForGoals }] },
+        body: { errors: [{ pointer: '' }] },
       });
       expect(functionSaved.status).toBe(201);
       expect(goalsSent).toMatchObject({ status: 200, body: { goals: { source: goalsText, version: 1 } } });

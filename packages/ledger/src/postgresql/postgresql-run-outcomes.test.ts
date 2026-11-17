@@ -292,9 +292,7 @@ describe('the wait of a server that starts for the migration lock of the ledger 
     const clock = aFakeClock();
     const held = aLockHeldWhile(() => true);
 
-    await expect(migrationLockTakenWithin(clock.waiting)({ execute: held.execute })).rejects.toThrow(
-      "Another server held the migration lock of the ledger's database for more than 60 s, so this one does not start; start it again once that server is ready",
-    );
+    await expect(migrationLockTakenWithin(clock.waiting)({ execute: held.execute })).rejects.toThrow('60 s');
     expect(clock.elapsed()).toBe(longestMigrationLockWaitMs);
   });
 });

@@ -30,6 +30,7 @@ export interface Timing {
   readonly callMs: number;
   readonly openMs: number;
   readonly longestRetryWaitMs: number;
+  readonly stopMs?: number;
 }
 
 export const defaultTiming: Timing = {

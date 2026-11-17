@@ -119,9 +119,9 @@ describe.skipIf(skipped)(`A server that keeps its ledger in PostgreSQL${notice}`
     child.signal('SIGTERM');
 
     expect(await child.exited).toBe(0);
-    expect(child.output().stderr).toContain(
-      `"message":"The ledger is kept in PostgreSQL, in the database ${pathname.slice(1)} on ${host}"`,
-    );
+    expect(child.output().stderr).toContain(`"message":"The ledger is kept in PostgreSQL`);
+    expect(child.output().stderr).toContain(pathname.slice(1));
+    expect(child.output().stderr).toContain(host);
     expect(child.output().stderr).not.toContain(String(environment['DATABASE_URL']));
     expect(child.output().stderr).not.toContain(`:${password}@`);
   });

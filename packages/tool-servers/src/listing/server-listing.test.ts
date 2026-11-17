@@ -50,7 +50,7 @@ describe('listing the tools of a server as a run opens them', () => {
     const server = await silentOnListing();
     const { access } = reportingAccess(
       { graph: { url: `${server.origin}/mcp`, org: 'acme' } },
-      { timing: { ...defaultTiming, callMs: longerThanTheTestMs } },
+      { timing: { ...defaultTiming, openMs: 300, callMs: longerThanTheTestMs } },
     );
     closing.push(access.close);
 

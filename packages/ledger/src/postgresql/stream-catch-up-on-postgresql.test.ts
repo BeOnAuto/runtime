@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import type { Ledger } from '@on.auto/operations';
 import { labelFacts, labelReadModelOf, type LabelFact } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
@@ -7,14 +5,13 @@ import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { openLedgerWith } from '../testing/open-ledger.ts';
+import { postgresqlConnected, postgresqlDatabasesOn } from '../testing/postgresql-databases.ts';
 import { until } from '../testing/until.ts';
 import { plainPoolsOn, postgresqlLedgerLayer } from './postgresql-ledger.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-const skipped = server === '';
-
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
+const { skipped, notice, anEmptyDatabase: aDatabase } = postgresqlDatabasesOn(server);
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -25,13 +22,6 @@ const everyRow = { where: [], orderBy: [], order: 'asc', limit: 1000 } as const;
 const theCheckpointLock =
   "SELECT pg_advisory_xact_lock(hashtextextended('labelled_checkpoints_1:playbook/acme/alpha/notes/n1', 0))";
 
-async function connected(connectionString: string): Promise<Client> {
-  const client = new Client({ connectionString });
-  await client.connect();
-  onTestFinished(() => client.end());
-  return client;
-}
-
 async function queried(database: string, statement: string): Promise<readonly unknown[]> {
   const client = new Client({ connectionString: database });
   await client.connect();
@@ -40,17 +30,6 @@ async function queried(database: string, statement: string): Promise<readonly un
   } finally {
     await client.end();
   }
-}
-
-async function aDatabase(): Promise<string> {
-  const name = `catch_up_${randomUUID().replaceAll('-', '')}`;
-  await queried(server, `CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await queried(server, `DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
 }
 
 async function aLedger(database: string, kept: boolean): Promise<Ledger['Service']> {
@@ -92,7 +71,7 @@ describe.skipIf(skipped)(`An append that meets a catch-up of its stream on Postg
     const database = await aDatabase();
     await labelled(await aLedger(database, false), set('a'));
     const ledger = await aLedger(database, true);
-    const catchingUp = await connected(database);
+    const catchingUp = await postgresqlConnected(database);
     await catchingUp.query('BEGIN');
     await catchingUp.query(theCheckpointLock);
 
@@ -113,7 +92,7 @@ describe.skipIf(skipped)(`An append that meets a catch-up leaving its checkpoint
     const database = await aDatabase();
     await labelled(await aLedger(database, false), set('a'));
     const ledger = await aLedger(database, true);
-    const catchingUp = await connected(database);
+    const catchingUp = await postgresqlConnected(database);
     await catchingUp.query('BEGIN');
     await catchingUp.query(theCheckpointLock);
 

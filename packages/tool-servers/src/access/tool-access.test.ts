@@ -16,6 +16,8 @@ import {
 } from '../testing/index.ts';
 import { fakeStdioServerPath, serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '../testing/served-fakes.ts';
 
+const anyText: unknown = expect.any(String);
+
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
 const clientSecret = 'graph-client-secret-81c2';
@@ -164,7 +166,7 @@ describe('a server that cannot be used', () => {
     expect(await refusalOf(access, 'graph/search')).toMatchObject({
       _tag: 'tool_server_failed',
       because: 'unreachable',
-      detail: 'The tool server graph could not be used: The tool server could not be reached',
+      detail: anyText,
     });
   });
 

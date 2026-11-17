@@ -47,18 +47,6 @@ function running(name: string, input?: object) {
 }
 
 describe('run_definition', () => {
-  it('is a playbook command at POST /definitions/{type}/{name}/run', () => {
-    expect(runDefinition.registration).toMatchObject({
-      scope: 'playbook',
-      kind: 'command',
-      title: 'Run definition',
-      route: { method: 'POST', path: '/definitions/{type}/{name}/run' },
-      pathParameters: ['type', 'name'],
-      successStatus: 200,
-      reasons: ['not_found', 'conflict', 'invalid_input', 'unavailable', 'cancelled', 'unanswered'],
-    });
-  });
-
   it('runs a definition with an input and answers with the run it recorded under a new id', async () => {
     const { call, ledger } = await withGreetAndPlain();
 

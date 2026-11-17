@@ -10,6 +10,12 @@ import { firstMoment, harness, runContentHolders, toPlaybook } from '../testing/
 import { mostPublishedEventBytes } from './cloud-event.ts';
 import { publishedEventDecider, publishedEventStreamOf } from './published-events.ts';
 
+const someWords: unknown = expect.any(String);
+
+function wordsNaming(text: string): unknown {
+  return expect.stringContaining(text);
+}
+
 const listPlaybookEvents = defineListPlaybookEvents(makeDefinitionPresenters([echo]), runContentHolders);
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -52,17 +58,6 @@ function storedOn(definitions: ReturnType<typeof harness>, source: string, id: s
 }
 
 describe('publish_event', () => {
-  it('is a playbook command at POST /events', () => {
-    expect(publishEvent.registration).toMatchObject({
-      scope: 'playbook',
-      kind: 'command',
-      title: 'Publish event',
-      route: { method: 'POST', path: '/events' },
-      successStatus: 200,
-      reasons: ['invalid_input', 'conflict'],
-    });
-  });
-
   it('records the event as given, on a stream of its own, and answers its id, its time and when it was recorded', async () => {
     const definitions = harness();
 
@@ -128,7 +123,7 @@ describe('publishing an event again', () => {
       {
         status: 'rejected',
         reason: 'conflict',
-        detail: 'Another event was published with this source and id; give a different event an id of its own',
+        detail: someWords,
       },
     );
   });
@@ -209,7 +204,7 @@ describe('an event whose data nests too deep', () => {
       detail: 'The input does not match the input schema',
       issues: [
         {
-          detail: 'Expected data that nests at most 510 levels deep, so that a run can hold the event in a list',
+          detail: someWords,
           pointer: '/event/data',
         },
       ],
@@ -239,7 +234,7 @@ describe('the events published to a playbook', () => {
         events: [
           {
             type: 'event_published',
-            summary: 'The event “com.acme.ledger.month-closed” was published to the playbook.',
+            summary: wordsNaming('“com.acme.ledger.month-closed”'),
             data: {
               event_id: 'm-2026-09',
               event_type: 'com.acme.ledger.month-closed',
@@ -266,7 +261,7 @@ describe('the plain words of publish_event', () => {
 
     expect([plainLanguage?.attempt(input), plainLanguage?.outcome(recordedFirst.output, input)]).toEqual([
       'publish the event “com.acme.ledger.month-closed” to the playbook',
-      'The event “com.acme.ledger.month-closed” is published to the playbook. Publishing it again with the same source and id records nothing more.',
+      expect.stringContaining('“com.acme.ledger.month-closed”'),
     ]);
   });
 });

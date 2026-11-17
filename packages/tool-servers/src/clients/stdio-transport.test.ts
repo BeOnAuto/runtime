@@ -51,7 +51,7 @@ function stdioSettings(args: readonly string[], changes: Partial<StdioServerSett
   };
 }
 
-function linkTo(settings: StdioServerSettings, openMs = patientMs) {
+function linkTo(settings: StdioServerSettings, openMs = patientMs, stopMs?: number) {
   const lines: string[] = [];
   const link = serverLink(settings, {
     clientInfo: testClientInfo,
@@ -59,7 +59,7 @@ function linkTo(settings: StdioServerSettings, openMs = patientMs) {
     consent: consentClientWith(),
     secrets: secretsOf([Redacted.make('fake MCP server')]),
     now: Date.now,
-    timing: { callMs: patientMs, openMs, longestRetryWaitMs: 1000 },
+    timing: { callMs: patientMs, openMs, longestRetryWaitMs: 1000, ...(stopMs === undefined ? {} : { stopMs }) },
     reportOutput: (server, line) => {
       lines.push(`${server}: ${line}`);
     },
@@ -68,8 +68,8 @@ function linkTo(settings: StdioServerSettings, openMs = patientMs) {
   return { link, lines };
 }
 
-function linked(settings: StdioServerSettings, openMs = patientMs) {
-  const made = linkTo(settings, openMs);
+function linked(settings: StdioServerSettings, openMs = patientMs, stopMs?: number) {
+  const made = linkTo(settings, openMs, stopMs);
   closing.push(made.link.stop);
   return made;
 }
@@ -192,7 +192,12 @@ describe('draining the stdio transport', () => {
     const batch = JSON.stringify(`${JSON.stringify(notification)}\n{}\n`);
     const output: string[] = [];
     const transport = new StdioProcessTransport(
-      { command: process.execPath, args: ['--eval', `process.stdout.write(${batch}.repeat(20000))`], env: {} },
+      {
+        command: process.execPath,
+        args: ['--eval', `process.stdout.write(${batch}.repeat(20000))`],
+        env: {},
+        stopMs: 100,
+      },
       observations(null, Infinity),
       {
         scrub: String,
@@ -238,7 +243,7 @@ describe('a stdio server that does not start or stop', () => {
   });
 
   it('kills a process that does not answer in time, nor end when its input does', async () => {
-    const { link } = linked(stdioSettings([], { args: ['--eval', 'setInterval(() => {}, 1000)'] }), 200);
+    const { link } = linked(stdioSettings([], { args: ['--eval', 'setInterval(() => {}, 1000)'] }), 200, 100);
 
     expect(await failureOfTaking(link)).toEqual({
       kind: 'timed_out',
@@ -247,13 +252,13 @@ describe('a stdio server that does not start or stop', () => {
   });
 
   it('kills a process that does not end when its input does, once it has been patient', async () => {
-    const { link } = linked(stdioSettings(['--linger-ms', '60000']));
+    const { link } = linked(stdioSettings(['--linger-ms', '60000']), patientMs, 300);
     const client = await link.take();
 
     const began = performance.now();
     await link.stop();
     await client.closed;
 
-    expect(performance.now() - began).toBeGreaterThanOrEqual(1900);
+    expect(performance.now() - began).toBeGreaterThanOrEqual(290);
   });
 });

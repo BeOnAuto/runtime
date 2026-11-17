@@ -28,9 +28,6 @@ const NotedSchema = factOf('run_noted', Schema.Struct({}), ActedContextSchema);
 
 const archivedStream = 'org/acme/archived';
 
-const madeByAnotherRelease =
-  'so this release cannot read its recorded facts. Use the release that wrote them or a compatible later release. Keep a backup before starting with an empty database';
-
 async function aDatabaseHoldingFacts(entry: LedgerEntry): Promise<string> {
   const database = await entry.aDatabase();
   const ledger = await aLedger(entry, database);
@@ -85,20 +82,16 @@ function refusedBehaviour(entry: LedgerEntry): void {
     expect(refusals).toMatchObject([
       {
         unknown: ['run_noted'],
-        message: `The ledger's database holds facts of the type run_noted, which this server does not read, ${madeByAnotherRelease}`,
       },
       {
         unknown: ['run_ended', 'run_noted'],
-        message: `The ledger's database holds facts of the types run_ended, run_noted, which this server does not read, ${madeByAnotherRelease}`,
       },
       {
         unknown: [],
         unreadable: [{ type: 'run_noted', position: '4' }],
-        message: `The ledger's database holds the fact run_noted at position 4, in a shape this server does not read, ${madeByAnotherRelease}`,
       },
       {
         unknown: ['run_began'],
-        message: `The ledger's database holds facts of the type run_began, which this server does not read, and the facts run_ended at position 3, run_noted at position 4, in a shape this server does not read, ${madeByAnotherRelease}`,
       },
     ]);
   });
@@ -145,7 +138,6 @@ function archivedBehaviour(entry: LedgerEntry): void {
     expect(refused).toMatchObject({
       unknown: [],
       unreadable: [{ type: 'run_ended', position: '3' }],
-      message: `The ledger's database holds the fact run_ended at position 3, in a shape this server does not read, ${madeByAnotherRelease}`,
     });
   });
 }

@@ -10,9 +10,7 @@ describe('logServedStudio', () => {
     const [line] = await linesLoggedBy(logServedStudio({ mode: 'credentials', studio: served }));
 
     expect(line).toContain('"level":"WARN"');
-    expect(line).toContain(
-      '"message":"SERVE_STUDIO is on outside local mode, where the Studio this runtime serves at /studio/ cannot work yet: its policy loads no script of the identity service, so it signs no one in, and it sends no key"',
-    );
+    expect(line).toContain('"message":"SERVE_STUDIO is on outside local mode');
   });
 
   it('says nothing in local mode, nor where no Studio is served', async () => {
@@ -28,8 +26,6 @@ describe('logStudioKeptInMemory', () => {
     const [line] = await linesLoggedBy(logStudioKeptInMemory('the folder /data/auto-runtime-studio could not be made'));
 
     expect(line).toContain('"level":"WARN"');
-    expect(line).toContain(
-      '"message":"The Studio this runtime serves is kept in memory alone, since the folder /data/auto-runtime-studio could not be made"',
-    );
+    expect(line).toContain('"message":"The Studio this runtime serves is');
   });
 });

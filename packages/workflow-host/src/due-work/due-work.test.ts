@@ -1,9 +1,10 @@
-import { Effect } from 'effect';
+import { setTimeout } from 'node:timers/promises';
+
 import { describe, expect, it } from 'vitest';
 
 import { systemClock } from '../loop/host-clock.ts';
 import { until } from '../testing/until.ts';
-import { steppedClock } from '../views-testing/stepped-sweeps.ts';
+import { steppedClock, type SteppedClock } from '../views-testing/stepped-sweeps.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
 import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce } from './due-work.ts';
 import { fakeDueWork, type FakeDueWork } from './fake-due-work.ts';
@@ -17,6 +18,12 @@ function rowsDueBy(count: number, dueAt: number, { callsOut }: { readonly callsO
     }
   }
   return rows;
+}
+
+async function aSecondLater(clock: SteppedClock, rows: FakeDueWork, sweeps: number): Promise<void> {
+  clock.step(1000);
+  await until(rows.reads, (read) => read.due >= sweeps);
+  await setTimeout(30);
 }
 
 describe('the due rows of a projection, in the loop of the host', () => {
@@ -126,8 +133,12 @@ describe('due rows in flight', () => {
         rows.hanging(key);
       }
 
-      await dueLooping(rows, systemClock, 1000);
-      await Effect.runPromise(Effect.sleep(3000));
+      const clock = steppedClock(now);
+      await dueLooping(rows, clock, 1000);
+      await until(rows.attempts, (made) => made.length === duePerformedAtOnce);
+      await aSecondLater(clock, rows, 1);
+      await aSecondLater(clock, rows, 2);
+      await aSecondLater(clock, rows, 3);
 
       expect(rows.reads().due).toBeLessThanOrEqual(10);
       expect(rows.attempts()).toHaveLength(duePerformedAtOnce);

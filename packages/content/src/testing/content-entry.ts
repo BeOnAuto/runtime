@@ -10,6 +10,7 @@ export interface ContentStoreUnderTest {
 
 export interface ContentEntry {
   readonly aStore: () => Promise<ContentStoreUnderTest>;
+  readonly mostBytesKeptWhole?: number;
 }
 
 export interface ErasingContent {

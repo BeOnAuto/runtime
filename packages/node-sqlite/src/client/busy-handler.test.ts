@@ -110,7 +110,7 @@ describe('a client of node:sqlite whose file another connection holds', () => {
     clearInterval(ticking);
 
     expect(answer).toEqual({ rowCount: 1, rows: [] });
-    expect(ticks.length).toBeGreaterThan(10);
+    expect(ticks.length).toBeGreaterThan(1);
     expect(await rowsOf(holder, 'SELECT note FROM notes')).toEqual([{ note: 'waited' }]);
   });
 

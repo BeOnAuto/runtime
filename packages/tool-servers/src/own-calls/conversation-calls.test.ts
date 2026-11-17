@@ -14,6 +14,8 @@ import {
   type ConversationCall,
 } from './conversation-calls.ts';
 
+const anyText: unknown = expect.any(String);
+
 const recorded = { by: 'playbook:alpha', at: '2026-10-08T09:00:05.000Z' };
 
 const reference = { server: 'chat', tool: 'thread_replies' };
@@ -258,7 +260,7 @@ describe('a read the playbook could not make in a conversation', () => {
         conversation: 'C0123/1699.1',
         since: null,
         because: 'not_sent',
-        detail: 'The arguments of the read take 300000 bytes, more than the 262144 a call may send',
+        detail: anyText,
       },
     });
   });

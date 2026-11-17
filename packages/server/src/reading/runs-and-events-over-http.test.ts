@@ -37,17 +37,6 @@ async function onADatabaseOfItsOwn(): Promise<Readonly<Record<string, string>>> 
   return { LEDGER_FILE: '', DATABASE_URL: database.href, SECRETS_KEY: secretsKey };
 }
 
-interface Store {
-  readonly store: string;
-  readonly skipped: boolean;
-  readonly environment: () => Promise<Readonly<Record<string, string>>>;
-}
-
-const stores: readonly Store[] = [
-  { store: 'SQLite', skipped: false, environment: () => Promise.resolve({}) },
-  { store: `PostgreSQL${postgresqlNotice}`, skipped: postgresql === '', environment: onADatabaseOfItsOwn },
-];
-
 const summary = [
   '---',
   'model: anthropic/claude-sonnet-4-5',
@@ -108,9 +97,9 @@ function nextPageOf({ body }: TestResponse): string {
   return `${alpha}/runs?cursor=${String(runsOf(body).next_cursor)}`;
 }
 
-describe.each(stores)('the runs of a playbook over HTTP, on $store', ({ skipped, environment }) => {
-  it.skipIf(skipped)('are listed newest first, filtered, and paged through', async () => {
-    await playbookWithTwoRuns(await environment());
+describe('the runs of a playbook over HTTP', () => {
+  it('are listed newest first, filtered, and paged through', async () => {
+    await playbookWithTwoRuns({});
 
     const listed = await eventually(`${alpha}/runs`, holding(2));
     const filtered = await server.call('GET', `${alpha}/runs?status=succeeded&type=reasoning&name=summary`);
@@ -136,9 +125,9 @@ describe.each(stores)('the runs of a playbook over HTTP, on $store', ({ skipped,
   });
 });
 
-describe.each(stores)('the history of a run over HTTP, on $store', ({ skipped, environment }) => {
-  it.skipIf(skipped)('reads a run whose input and output hold U+0000', async () => {
-    await playbookWithTwoRuns(await environment());
+describe('the history of a run over HTTP', () => {
+  it('reads a run whose input and output hold U+0000', async () => {
+    await playbookWithTwoRuns({});
 
     expect(await eventually(`${alpha}/runs/${succeeded}/history`, holding(4))).toMatchObject({
       status: 200,
@@ -160,9 +149,9 @@ describe.each(stores)('the history of a run over HTTP, on $store', ({ skipped, e
   });
 });
 
-describe.each(stores)('the events of a playbook over HTTP, on $store', ({ skipped, environment }) => {
-  it.skipIf(skipped)('follow what happened in the playbook, in plain words, by type', async () => {
-    await playbookWithTwoRuns(await environment());
+describe('the events of a playbook over HTTP', () => {
+  it('follow what happened in the playbook, in plain words, by type', async () => {
+    await playbookWithTwoRuns({});
 
     const feed = eventsOf((await eventually(`${alpha}/events`, holding(7))).body);
     const created = eventsOf((await server.call('GET', `${alpha}/events?type=definition_created`)).body);
@@ -191,9 +180,9 @@ function publishing(event: object): Promise<TestResponse> {
   return server.call('POST', `${alpha}/events`, { body: { event } });
 }
 
-describe.each(stores)('the events published to a playbook over HTTP, on $store', ({ skipped, environment }) => {
-  it.skipIf(skipped)('are recorded once for a source and id, refused when they clash, and in the feed', async () => {
-    server = await servingReasoning([], await environment());
+describe('the events published to a playbook over HTTP', () => {
+  it('are recorded once for a source and id, refused when they clash, and in the feed', async () => {
+    server = await servingReasoning([], {});
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
 
     const published = await publishing(monthClosed);
@@ -224,9 +213,9 @@ describe.each(stores)('the events published to a playbook over HTTP, on $store',
   });
 });
 
-describe.each(stores)('a retired playbook over HTTP, on $store', ({ skipped, environment }) => {
-  it.skipIf(skipped)('keeps its runs and events readable, while a change is refused', async () => {
-    await playbookWithTwoRuns(await environment());
+describe('a retired playbook over HTTP', () => {
+  it('keeps its runs and events readable, while a change is refused', async () => {
+    await playbookWithTwoRuns({});
     await server.call('POST', '/v1/orgs/acme/playbooks/alpha/retire');
 
     const reads = await Promise.all(
@@ -245,8 +234,8 @@ describe.each(stores)('a retired playbook over HTTP, on $store', ({ skipped, env
     });
   });
 
-  it.skipIf(skipped)('refuse a cursor the playbook did not give', async () => {
-    await playbookWithTwoRuns(await environment());
+  it('refuse a cursor the playbook did not give', async () => {
+    await playbookWithTwoRuns({});
 
     expect(await server.call('GET', `${alpha}/events?cursor=not-a-cursor`)).toMatchObject({
       status: 422,

@@ -27,6 +27,20 @@ export const onAFile: APlace = { place: 'a file', fileName: aTemporaryFile, inMe
 
 export const places: readonly APlace[] = [onAFile, { place: ':memory:', fileName: () => ':memory:', inMemory: true }];
 
+export interface Waits {
+  readonly forTheLock: number;
+  readonly forATurn?: number;
+}
+
+export const briefWaits: Waits = { forTheLock: 50 };
+
+export function connectionOptionsWaiting({ forTheLock, forATurn }: Waits) {
+  return {
+    pragmaOptions: { ...modestConnections.pragmaOptions, busy_timeout: forTheLock },
+    ...(forATurn === undefined ? {} : { maxTaskIdleTime: forATurn }),
+  };
+}
+
 type InsideTheTransaction = () => Promise<void>;
 
 export const committed: InsideTheTransaction = () => Promise.resolve();
@@ -40,7 +54,7 @@ interface ALedgerFile {
   readonly inside: { work: InsideTheTransaction };
 }
 
-export function aLedgerFile({ fileName, inMemory }: APlace): ALedgerFile {
+export function aLedgerFile({ fileName, inMemory }: APlace, waits: Waits = briefWaits): ALedgerFile {
   const named = fileName();
   const inside = { work: committed };
   return {
@@ -49,7 +63,7 @@ export function aLedgerFile({ fileName, inMemory }: APlace): ALedgerFile {
         optionsOf: () => ({
           driver: nodeSqliteEventStoreDriver,
           fileName: named,
-          connectionOptions: modestConnections,
+          connectionOptions: connectionOptionsWaiting(waits),
           hooks: { onBeforeCommit: () => inside.work() },
         }),
         inMemory,
@@ -70,8 +84,8 @@ interface AnOpenLedger {
   readonly named: string;
 }
 
-export async function anOpenLedger(place: APlace): Promise<AnOpenLedger> {
-  const { file, named, inside } = aLedgerFile(place);
+export async function anOpenLedger(place: APlace, waits: Waits = briefWaits): Promise<AnOpenLedger> {
+  const { file, named, inside } = aLedgerFile(place, waits);
   const { connection, dispose } = await openConnectionWith(file.ledgerLayer());
   onTestFinished(dispose);
   return {

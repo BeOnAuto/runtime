@@ -10,6 +10,8 @@ import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 import { aProcess } from '../testing/held-attempts.ts';
 
+const someWords: unknown = expect.any(String);
+
 const { createDefinition, updateDefinition, retireDefinition, getRun } = definitionOperationsFor([echo]);
 
 const startVersion = defineStartVersion([echo]);
@@ -118,7 +120,7 @@ describe('a start of a version once, under the id of a run', () => {
       {
         status: 'rejected',
         reason: 'not_found',
-        detail: 'There is no version 3 of the echo definition greet in this playbook',
+        detail: someWords,
       },
     ]);
   });

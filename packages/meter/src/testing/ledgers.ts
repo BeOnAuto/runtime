@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import type { LedgerServices } from '@on.auto/ledger';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
+import { postgresqlDatabaseOn } from '@on.auto/ledger/postgresql-testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import type { Layer } from 'effect';
 import { Client } from 'pg';
@@ -102,26 +102,13 @@ export function sqliteLedger(): LedgerAt {
   };
 }
 
-async function administered(server: string, statement: string): Promise<void> {
-  const client = new Client({ connectionString: server });
-  await client.connect();
-  try {
-    await client.query(statement);
-  } finally {
-    await client.end();
-  }
-}
-
 export async function postgresqlLedger(server: string): Promise<LedgerAt> {
-  const name = `meter_${randomUUID().replaceAll('-', '')}`;
-  await administered(server, `CREATE DATABASE ${name}`);
-  const database = new URL(server);
-  database.pathname = `/${name}`;
+  const { url, remove } = await postgresqlDatabaseOn(server);
   return {
     name: 'PostgreSQL',
-    layer: () => postgresqlLedgerLayer({ pools: plainPoolsOn(database.href) }),
+    layer: () => postgresqlLedgerLayer({ pools: plainPoolsOn(url) }),
     rows: async (statement, values = []) => {
-      const client = new Client({ connectionString: database.href });
+      const client = new Client({ connectionString: url });
       await client.connect();
       try {
         let place = 0;
@@ -137,6 +124,6 @@ export async function postgresqlLedger(server: string): Promise<LedgerAt> {
     dataOf: (stored) => parsed(String(Reflect.get(new Object(stored), 'json'))),
     stored: (data) => JSON.stringify({ json: JSON.stringify(data) }),
     unreadable: JSON.stringify({ json: '{not json' }),
-    remove: () => administered(server, `DROP DATABASE ${name} WITH (FORCE)`),
+    remove,
   };
 }

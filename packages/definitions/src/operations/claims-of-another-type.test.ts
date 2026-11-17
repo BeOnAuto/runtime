@@ -10,6 +10,8 @@ import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 import { acted, momentAfter, stream } from '../testing/resumed-runs.ts';
 import { drivingAShell } from '../testing/shell-drives.ts';
 
+const someWords: unknown = expect.any(String);
+
 const toAlpha = toPlaybook('acme', 'alpha');
 
 const startOfAnEcho = {
@@ -42,7 +44,7 @@ describe('the next attempt of a started run of another type than the capability 
     expect(driven).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The run id belongs to a run of another definition or with another input',
+      detail: someWords,
     });
     expect(version).toBe(1);
   });

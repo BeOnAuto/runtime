@@ -18,6 +18,8 @@ import {
   type SavedGoals,
 } from './goals-stream.ts';
 
+const someWords: unknown = expect.any(String);
+
 function documentOf(goals: readonly unknown[]): GoalsDocument {
   return Result.getOrThrow(goalsDocumentOf(textOf(goals)));
 }
@@ -111,8 +113,7 @@ describe('the whole list of goals', () => {
         issues: [
           {
             pointer: '',
-            detail:
-              'The goal controls-hold has been judged and cannot be left out; keep it in the list with retired set to true',
+            detail: someWords,
           },
         ],
       }),

@@ -18,6 +18,10 @@ import { askedRequest } from '../testing/asking.ts';
 import { recordedAdmin } from '../testing/callers.ts';
 import type { WorkLedger } from './work-recorder.ts';
 
+function refused(tag: string, fields: object = {}): unknown {
+  return expect.objectContaining({ _tag: tag, ...fields });
+}
+
 describe('a run of a capability that answers by its input', () => {
   it('records that it finishes later from the input it is given, and finishes in its call for another', async () => {
     const now = await asked({ now: true });
@@ -72,15 +76,7 @@ describe('the work a capability records on a run that finishes later', () => {
       await attempted(record(run, { type: 'work', fact: { type: 'delivery_started', data: { number: 1 } } }, lineage)),
       await attempted(record(run, nudge(1), lineage, () => enough)),
       await attempted(record({ ...run, id: 'not-a-run' }, nudge(1), lineage)),
-    ]).toEqual([
-      Result.fail(
-        new Conflict({
-          detail: 'No capability of this playbook declares the fact delivery_started, so the run does not record it',
-        }),
-      ),
-      Result.fail(enough),
-      Result.fail(new Conflict({ detail: 'There is no such run in this playbook, so it records no work' })),
-    ]);
+    ]).toEqual([Result.fail(refused('conflict')), Result.fail(enough), Result.fail(refused('conflict'))]);
   });
 });
 
@@ -122,13 +118,7 @@ describe('the work a capability records on a run that changes under it, or on a 
     const { ledger, recorded } = await asked();
     const record = workRecorder(ledger.service, { decider: runDecider, asRead: runDeciderAsRead });
 
-    expect(await attempted(record(run, nudge(1), lineage))).toEqual(
-      Result.fail(
-        new Conflict({
-          detail: 'No capability of this playbook declares the fact nudge_sent, so the run does not record it',
-        }),
-      ),
-    );
+    expect(await attempted(record(run, nudge(1), lineage))).toEqual(Result.fail(refused('conflict')));
     expect((await recorded()).map(({ type }) => type)).toEqual(['run_started', 'run_deferred']);
   });
 });

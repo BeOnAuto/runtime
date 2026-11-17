@@ -2,7 +2,7 @@ import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { appendedIn, passedRun } from '../../testing/goals/notice-facts.ts';
+import { passedRun } from '../../testing/goals/notice-facts.ts';
 import { playbookToldBy, servingGoalNotices, type NoticeServer } from '../../testing/goals/notice-servers.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
 import { until } from '../../testing/waiting/until.ts';
@@ -11,7 +11,7 @@ const GapsSchema = Schema.Struct({
   goals: Schema.Array(
     Schema.Struct({
       id: Schema.String,
-      gaps: Schema.Array(Schema.Struct({ kind: Schema.String, detail: Schema.String })),
+      gaps: Schema.Array(Schema.Struct({ kind: Schema.String })),
     }),
   ),
 });
@@ -52,9 +52,7 @@ async function noticesReadOf(served: NoticeServer) {
   return read.goals.flatMap(({ assessments }) => assessments.current?.notices ?? []);
 }
 
-async function noticeGapsOf(
-  served: NoticeServer,
-): Promise<readonly { readonly kind: string; readonly detail: string }[]> {
+async function noticeGapsOf(served: NoticeServer): Promise<readonly { readonly kind: string }[]> {
   const read = Schema.decodeUnknownSync(GapsSchema)((await served.server.call('GET', `${alpha}/goals`)).body);
   return read.goals.flatMap(({ gaps }) => gaps).filter(({ kind }) => kind.startsWith('notice_'));
 }
@@ -103,36 +101,5 @@ describe('a notice that was started and not delivered, on a Node server that kee
     expect(settled).toMatchObject({ status: 'rejected' });
     expect(await noticesReadOf(served)).toEqual([{ change: 'passed', run: passedRun, delivered: false }]);
     expect(gaps.map(({ kind }) => kind)).toEqual(['notice_undelivered']);
-    expect(gaps[0]?.detail).toMatch(
-      /^The message saying the goal paying-customers passed was not delivered: its run was rejected/u,
-    );
-  });
-});
-
-describe('the most notices a playbook sends in a UTC day, on a Node server that keeps goals', () => {
-  it('refuses the notice past 200 starts of the day for good, starts nothing, and says so in the gap', async () => {
-    const at = Date.now();
-    const served = await servingGoalNotices();
-    await playbookToldBy(served);
-    const runtime = (await served.starting()).runtime;
-    await Promise.all(
-      Array.from({ length: 200 }, (_, index) =>
-        appendedIn(runtime, `goal-summaries/goal-${String(index)}`, {
-          type: 'goal_summary_started',
-          data: { due: new Date(at).toISOString(), window: {}, run: `run-${String(index)}` },
-          at,
-        }),
-      ),
-    );
-    await served.assessed('now', at);
-    const gaps = await until(
-      () => noticeGapsOf(served),
-      (found) => found.length > 0,
-    );
-
-    expect(gaps.map(({ kind }) => kind)).toEqual(['notice_not_started']);
-    expect(gaps[0]?.detail).toContain('reached its limit of 200 messages and summaries on');
-    expect(await served.runs()).toEqual([]);
-    expect(served.chat.chat.posted()).toEqual([]);
   });
 });

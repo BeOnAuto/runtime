@@ -32,7 +32,7 @@ const taken: EventMatch = { kind: 'taken' };
 
 const notTaken: EventMatch = { kind: 'not_taken' };
 
-const unjudged: EventMatch = {
+export const unjudged: EventMatch = {
   kind: 'stopped',
   detail: 'The filters that test the page were stopped before they judged this event',
 };

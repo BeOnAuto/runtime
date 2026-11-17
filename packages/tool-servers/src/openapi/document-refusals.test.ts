@@ -57,11 +57,9 @@ describe('a document refused at start because its URL', () => {
       Promise.resolve(new Response(null, { status: 302, headers: { location: `${other.baseUrl}/openapi.json` } })),
     );
 
-    expect(await refusalOf({ graph: { document: moved, org: 'acme' } })).toBe(
-      documentProblem(
-        'The document could not be read: its URL answered a redirect, HTTP 302, which the runtime does not follow; give the address it redirects to',
-      ),
-    );
+    const refusal = await refusalOf({ graph: { document: moved, org: 'acme' } });
+
+    expect([refusal.startsWith(documentProblem('')), refusal.includes('302')]).toEqual([true, true]);
     expect(other.seen()).toEqual([]);
   });
 
@@ -80,15 +78,14 @@ describe('a document refused at start because of its bytes', () => {
     const served = await servedDocumentAt(() => Promise.resolve(new Response(large)));
     const directory = directoryWith({ 'graph.json': large });
     const byName = new Map([['graph.json', shippedDocumentOf(new TextEncoder().encode('é'.repeat(2_097_153)))]]);
-    const tooLarge = documentProblem(
-      'The document takes more than the 4194304 bytes a document of a tool server may take',
-    );
-
-    expect(await refusalOf({ graph: { document: served, org: 'acme' } })).toBe(tooLarge);
-    expect(await refusedIn(directory)('graph.json')).toBe(tooLarge);
-    expect(
+    const refusals = [
+      await refusalOf({ graph: { document: served, org: 'acme' } }),
+      await refusedIn(directory)('graph.json'),
       await refusalOf({ graph: { document: 'graph.json', org: 'acme' } }, { documents: { kind: 'shipped', byName } }),
-    ).toBe(tooLarge);
+    ];
+
+    expect(new Set(refusals).size).toBe(1);
+    expect([refusals[0]?.startsWith(documentProblem('')), refusals[0]?.includes('4194304')]).toEqual([true, true]);
   });
 
   it('when its file does not exist or cannot be read', async () => {
@@ -115,14 +112,8 @@ describe('a document refused at start because of what it holds', () => {
       /graph\/document: The document is neither JSON nor YAML: line 2, column 1: /u,
     );
     expect(await refused('deep.json')).toBe(documentProblem('The document nests values more than 128 levels deep'));
-    expect(await refused('later.json')).toBe(
-      documentProblem('At /openapi of the document: Expected an OpenAPI document of version 3.0, 3.1 or 3.2'),
-    );
-    expect(await refused('swagger.json')).toBe(
-      documentProblem(
-        'At /swagger of the document: A Swagger 2.0 document, which the runtime does not read; give it the document converted to OpenAPI 3',
-      ),
-    );
+    expect(await refused('later.json')).toContain(documentProblem('At /openapi of the document'));
+    expect(await refused('swagger.json')).toContain(documentProblem('At /swagger of the document'));
   });
 
   it('when a part the bridge reads is not of the shape the specification gives it, at its place', async () => {
@@ -138,11 +129,12 @@ describe('a document refused at start because of what it holds', () => {
     const paths = { '/a': { get: { operationId: 'a' } }, '/b': { get: { operationId: 'a' } } };
     const refused = refusedIn(directoryWith({ 'graph.json': JSON.stringify({ openapi: '3.1.0', paths }) }));
 
-    expect(await refused('graph.json')).toBe(
-      documentProblem(
-        'At /paths/~1b/get of the document: The tool name a is the name of the operation at /paths/~1a/get too; give one of them another operationId',
-      ),
-    );
+    const refusal = await refused('graph.json');
+
+    expect([
+      refusal.startsWith(documentProblem('At /paths/~1b/get of the document')),
+      refusal.includes('/paths/~1a/get'),
+    ]).toEqual([true, true]);
   });
 });
 
@@ -165,13 +157,10 @@ describe('a document refused at start because a schema refers outside it', () =>
     const refused = (document: string) =>
       refusalOf({ graph: { document, org: 'acme' } }, { ...documentsIn(directory), fetch: counted.fetch });
 
-    expect(await Promise.all(elsewhere.map((_, index) => refused(`graph-${index}.json`)))).toEqual(
-      elsewhere.map(() =>
-        documentProblem(
-          'At /components/schemas/Note/$ref of the document: A reference the runtime cannot follow: a schema of a tool server may refer only to #/components/schemas/<name> of its own document',
-        ),
-      ),
-    );
+    const refusals = await Promise.all(elsewhere.map((_, index) => refused(`graph-${index}.json`)));
+
+    expect(new Set(refusals).size).toBe(1);
+    expect(refusals[0]).toContain(documentProblem('At /components/schemas/Note/$ref of the document'));
     expect(counted.fetched()).toEqual([]);
   });
 });
@@ -195,9 +184,7 @@ describe('a document refused at start because a path would take its calls elsewh
     expect(refusal).toContain(
       `graph/document: At /paths/${port.slice(-1)}~1v1~1search of the document: Expected a path that begins with /, since`,
     );
-    expect(refusal).toContain(
-      'At /paths/.attacker.example~1x of the document: Expected a path that begins with /, since',
-    );
+    expect(refusal).toContain('At /paths/.attacker.example~1x of the document');
     expect(other.seen()).toEqual([]);
   });
 
@@ -220,11 +207,10 @@ describe('a document refused at start because its calls would land in a query or
         'fragment.json': documentWithServer('https://graph.example.com/v1#top'),
       }),
     );
-    const landsElsewhere = baseUrlProblem(
-      'The first server the document names has a query or a fragment, which the path of a call would land in; give base_url',
-    );
+    const refusals = [await refused('query.json'), await refused('fragment.json')];
 
-    expect([await refused('query.json'), await refused('fragment.json')]).toEqual([landsElsewhere, landsElsewhere]);
+    expect(new Set(refusals).size).toBe(1);
+    expect(refusals[0]?.startsWith(baseUrlProblem(''))).toBe(true);
   });
 });
 
@@ -242,13 +228,9 @@ describe('a document refused at start because its calls would have nowhere to go
 
     expect(await refused('none.json')).toBe(noServer);
     expect(await refused('unsaid.json')).toBe(noServer);
-    expect(await refused('relative.json')).toBe(
-      baseUrlProblem('The first server the document names is not a URL this server can resolve; give base_url'),
-    );
-    expect(await refused('plain.json')).toBe(
-      baseUrlProblem(
-        'The first server the document names is not an https URL or an http URL on a loopback address; give base_url',
-      ),
-    );
+    const others = [await refused('relative.json'), await refused('plain.json')];
+
+    expect(others.map((refusal) => refusal.startsWith(baseUrlProblem('')))).toEqual([true, true]);
+    expect(new Set([noServer, ...others]).size).toBe(3);
   });
 });

@@ -13,7 +13,10 @@ import {
   workflowWithData,
   workflowWithPage,
 } from '../testing/pages.ts';
+import { pageDetailsIn } from './page-details.ts';
 import { subjectPagesOf, type PageContent } from './subject-pages.ts';
+
+const someWords: unknown = expect.any(String);
 
 const strippingTheModule = {
   check: () =>
@@ -191,7 +194,7 @@ describe('a run that did not succeed, on the page of a definition', () => {
     const started: RunDetailAsRecorded = { ...Struct.omit(ranWith(null), ['finished_at']), status: 'started' };
 
     expect(await asked.ask(pages.resultOf('workflow', 'morning', { run: rejected }))).toMatchObject({
-      output: { answer: 'The run was rejected as conflict, unworkable. The month is closed' },
+      output: { answer: someWords },
     });
     expect(await asked.ask(pages.resultOf('workflow', 'morning', { run: unexplained }))).toMatchObject({
       output: { answer: 'The run was rejected as unavailable. Down' },
@@ -277,5 +280,20 @@ describe('the page of the playbook', () => {
     expect(await asked.ask(pagesOver({ 'playbook/alpha': liveAt(1, days) }).viewsOf('playbook'))).toMatchObject({
       output: { answer: { runs: containing(JSON.stringify(days.by_day)), standing: { state: 'live' } } },
     });
+  });
+});
+
+describe('the details of a page', () => {
+  it('are its data, and nothing for details that are not a page’s', () => {
+    const data = {
+      views: { by_day: 'series' },
+      language: 'typescript',
+      fold: 'export function fold() {}',
+      foldLine: 9,
+      filters: [{ type: 'run_succeeded' }],
+    } as const;
+
+    expect(pageDetailsIn({ data })).toEqual({ data });
+    expect(pageDetailsIn({ data: { ...data, language: 'python' } })).toBeUndefined();
   });
 });

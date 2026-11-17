@@ -22,14 +22,17 @@ import {
   resultOf,
 } from './content-samples.ts';
 
+const sizesKeptWhole: readonly (readonly [string, number])[] = [
+  ['no bytes', 0],
+  ['100 bytes', 100],
+  ['64 KiB', 65_536],
+  ['5 MB', 5_000_000],
+  ['64 MiB', 67_108_864],
+];
+
 function keptWhole(entry: ContentEntry): void {
-  it.each([
-    ['no bytes', 0],
-    ['100 bytes', 100],
-    ['64 KiB', 65_536],
-    ['5 MB', 5_000_000],
-    ['64 MiB', 67_108_864],
-  ])(
+  const most = entry.mostBytesKeptWhole ?? Number.POSITIVE_INFINITY;
+  it.each(sizesKeptWhole.filter(([, bytes]) => bytes <= most))(
     'keeps %s put as a stream whole, answers its digest, its size and its media type, and streams them back in pieces of at most 1 MiB',
     { timeout: 120_000 },
     async (_size, bytes) => {

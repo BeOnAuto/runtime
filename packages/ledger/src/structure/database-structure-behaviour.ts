@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Dialect } from '../connection/ledger-connection.ts';
 import { inTurn } from '../projections/inline-projection.ts';
-import type { LedgerEntry } from '../testing/ledger-entry.ts';
+import { anEmptyDatabaseOf, type LedgerEntry } from '../testing/ledger-entry.ts';
 import type { DatabaseStructure, StructureRead } from './database-structure.ts';
 import { postgresqlStructureOf } from './postgresql-structure.ts';
 import { sqliteStructureOf } from './sqlite-structure.ts';
@@ -17,7 +17,7 @@ export function structureIn(entry: LedgerEntry, database: string): Promise<Datab
 }
 
 async function aDatabaseMadeBy(entry: LedgerEntry, statements: readonly string[]): Promise<DatabaseStructure> {
-  const database = await entry.aDatabase();
+  const database = await anEmptyDatabaseOf(entry);
   await inTurn(statements, (statement) => entry.queried(database, statement));
   return structureIn(entry, database);
 }

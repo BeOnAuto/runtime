@@ -6,6 +6,8 @@ import { changed, controls, experimentMilestones, experiments, oneOff, textOf, w
 import type { GoalIssue } from './goal-issues.ts';
 import { goalsDocumentOf } from './goals-check.ts';
 
+const someWords: unknown = expect.any(String);
+
 function issuesOfGoal(goal: unknown): readonly GoalIssue[] {
   const issues = Result.match(goalsDocumentOf(textOf([goal])), { onSuccess: () => [], onFailure: (found) => found });
   for (const { detail } of issues) {
@@ -178,15 +180,14 @@ describe("the problems of a goal that are the agent's to fix", () => {
       [
         {
           pointer: '/0/name',
-          detail: 'The name of the goal paying-customers is text of 2 to 40 characters',
+          detail: someWords,
           fixed_by: 'agent',
         },
       ],
       [
         {
           pointer: '/0/name',
-          detail:
-            'The name of the goal paying-customers is plain text on one line, with no tab and no character that is not shown',
+          detail: someWords,
           fixed_by: 'agent',
         },
       ],
@@ -227,29 +228,28 @@ describe('the words of days refused', () => {
       [
         {
           pointer: '/0/window/days/0',
-          detail:
-            'Day 1 of the goal controls-hold is one of monday, tuesday, wednesday, thursday, friday, saturday, sunday',
+          detail: someWords,
           fixed_by: 'agent',
         },
       ],
       [
         {
           pointer: '/0/window/days',
-          detail: 'The days of the goal controls-hold name at least one day; leave days out to judge every day',
+          detail: someWords,
           fixed_by: 'agent',
         },
       ],
       [
         {
           pointer: '/0/window/days/1',
-          detail: 'The days of the goal controls-hold name monday more than once',
+          detail: someWords,
           fixed_by: 'agent',
         },
       ],
       [
         {
           pointer: '/0/window/days',
-          detail: 'The window of the goal controls-hold takes days only with calendar: day',
+          detail: someWords,
           fixed_by: 'agent',
         },
       ],

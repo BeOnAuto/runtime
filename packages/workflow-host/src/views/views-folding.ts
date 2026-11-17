@@ -8,6 +8,7 @@ export interface FoldingSettings {
   readonly pageBudgetMs: number;
   readonly mostViewBytes: number;
   readonly worker?: ModuleAddress;
+  readonly pageMarginMs?: number;
 }
 
 export interface ViewsFolding {
@@ -22,8 +23,12 @@ export const waitForAWorkerMs = 10_000;
 
 const marginOfAPageMs = 5000;
 
-export function pageDeadlineMs({ foldDeadlineMs, pageBudgetMs }: FoldingSettings): number {
-  return pageBudgetMs + foldDeadlineMs + marginOfAPageMs;
+export function pageDeadlineMs({
+  foldDeadlineMs,
+  pageBudgetMs,
+  pageMarginMs = marginOfAPageMs,
+}: FoldingSettings): number {
+  return pageBudgetMs + foldDeadlineMs + pageMarginMs;
 }
 
 export function shareOfThePool({ workers }: Pick<ProgramPool, 'workers'>): number {

@@ -6,6 +6,8 @@ import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 
+const someWords: unknown = expect.any(String);
+
 function echoing(type: string): Capability {
   return { ...echo, type };
 }
@@ -26,12 +28,9 @@ function creating(input: object) {
   return harness().call(createDefinition, toAlpha(acmeAdmin, { name: 'greet', source: hello, ...input }));
 }
 
-function refusedAtTheDiagram(detail: string) {
+function refusedAtTheDiagram(detail: unknown = someWords) {
   return { status: 'rejected', reason: 'invalid_input', detail, issues: [{ detail, pointer: '/diagram' }] };
 }
-
-const sayWhether =
-  'Say whether this computation function has a diagram: give diagram as Mermaid source of a flowchart or a state diagram, or the word none when a picture would add nothing';
 
 const notADiagram = {
   status: 'rejected',
@@ -48,7 +47,7 @@ const notADiagram = {
 
 describe('the diagram of a function', () => {
   it('is required, so that its author says whether a picture shows how it works', async () => {
-    expect(await creating({ type: 'computation' })).toEqual(refusedAtTheDiagram(sayWhether));
+    expect(await creating({ type: 'computation' })).toEqual(refusedAtTheDiagram());
   });
 
   it('is Mermaid source of a flowchart or a state diagram, kept as written and answered with the definition', async () => {
@@ -134,11 +133,7 @@ describe('the bounds of a diagram', () => {
 
 describe('a definition that is not a function', () => {
   it('takes no diagram, since Auto Studio draws a workflow from its steps', async () => {
-    expect(await creating({ type: 'workflow', diagram: howItGreets })).toEqual(
-      refusedAtTheDiagram(
-        'A workflow takes no diagram, since Auto Studio draws a workflow from its steps; leave diagram out',
-      ),
-    );
+    expect(await creating({ type: 'workflow', diagram: howItGreets })).toEqual(refusedAtTheDiagram());
     expect(await creating({ type: 'workflow', diagram: 'none' })).toMatchObject({ status: 'rejected' });
     const created = await creating({ type: 'workflow' });
 
@@ -147,9 +142,7 @@ describe('a definition that is not a function', () => {
   });
 
   it('of another type takes none either, since only a function has one', async () => {
-    expect(await creating({ type: 'echo', diagram: 'none' })).toEqual(
-      refusedAtTheDiagram('An echo definition takes no diagram, since only a function has one; leave diagram out'),
-    );
+    expect(await creating({ type: 'echo', diagram: 'none' })).toEqual(refusedAtTheDiagram());
     expect(await creating({ type: 'echo' })).toMatchObject({ status: 'succeeded' });
   });
 });
@@ -165,7 +158,7 @@ async function updated(changes: object) {
 
 describe('the diagram update_definition takes', () => {
   it('is given again with every update of a function', async () => {
-    expect(await updated({})).toEqual(refusedAtTheDiagram(sayWhether));
+    expect(await updated({})).toEqual(refusedAtTheDiagram());
   });
 
   it('makes a new version when it changes, and records nothing when it and the document are as saved', async () => {

@@ -1,10 +1,10 @@
 import { runTallyRows } from '@on.auto/operations/testing';
-import { Client } from 'pg';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { ledgerLayout } from '../layout/ledger-layout.ts';
 import { plainPoolsOn, postgresqlLedgerLayer } from '../postgresql/postgresql-ledger.ts';
 import { openLedgerWith } from '../testing/open-ledger.ts';
+import { postgresqlDatabasesOn } from '../testing/postgresql-databases.ts';
 import {
   aPostgreSQLDatabaseFrom,
   aPostgreSQLDatabaseOfTheStore,
@@ -14,30 +14,7 @@ import {
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-const skipped = server === '';
-
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
-async function administered(statement: string): Promise<void> {
-  const client = new Client({ connectionString: server });
-  await client.connect();
-  try {
-    await client.query(statement);
-  } finally {
-    await client.end();
-  }
-}
-
-async function aDatabase(): Promise<string> {
-  const name = `ledger_${crypto.randomUUID().replaceAll('-', '')}`;
-  await administered(`CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await administered(`DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
+const { skipped, notice, anEmptyDatabase: aDatabase } = postgresqlDatabasesOn(server);
 
 async function aLedgerOpenedOn(database: string): Promise<void> {
   const { dispose } = await openLedgerWith(

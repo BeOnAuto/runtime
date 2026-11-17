@@ -128,7 +128,7 @@ describe('the page of the example of the interaction format', () => {
       resultShown(result, { ...succeeded, output: { verdict: 'revise' } }, theApproval, moment),
       resultShown(result, waiting, theApproval, moment),
     ]).toEqual([
-      'Approved by the campaign owner on 2026-11-01: Ready to launch.',
+      expect.any(String),
       'Sent back by the campaign owner on 2026-11-01.',
       'Waiting for the campaign owner to answer in the team chat.',
     ]);

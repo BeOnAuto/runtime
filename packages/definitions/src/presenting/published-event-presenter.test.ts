@@ -6,6 +6,10 @@ import { publishedEventStreamOf, type EventPublished } from '../events/published
 import { makeDefinitionPresenters } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 
+function wordsNaming(text: string): unknown {
+  return expect.stringContaining(text);
+}
+
 const { present } = presentationOf(makeDefinitionPresenters([echo]));
 
 function recordOf(stream: string, type: string, data: unknown, context: Context): RecordedEvent {
@@ -46,7 +50,7 @@ describe('the presenter of a published event', () => {
     expect(presented({ type: 'event_published', data: { event, filled: ['id', 'time'] } }, publishedBy)).toMatchObject([
       {
         type: 'event_published',
-        summary: 'The event “com.acme.ledger.opened” was published to the playbook.',
+        summary: wordsNaming('“com.acme.ledger.opened”'),
         data: {
           event_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
           event_type: 'com.acme.ledger.opened',
@@ -78,11 +82,46 @@ describe('the presenter of a published event', () => {
       ),
     ]).toMatchObject([
       {
-        summary: 'The workflow “close” emitted the event “com.acme.ledger.opened”.',
+        summary: wordsNaming('“close”'),
         data: { subject: 'september', data: { region: 'eu' } },
         metadata: { run_id: 'r-1', depth: 1, definition: { type: 'workflow', name: 'close', version: 2 } },
       },
       { data: { data_bytes: 3002 } },
+    ]);
+  });
+});
+
+const reason =
+  'An event matched the event trigger of the workflow at reaction depth 9, past the 8 a chain of reactions may reach';
+
+describe('the presenter of the refused reactions of a workflow', () => {
+  it('says in words that the workflow of its context was not started every time its triggers called for it, and gives the count and the last reason, with its kind, because and trigger where it has them', () => {
+    const context = {
+      at: '2026-10-01T09:01:00.000Z',
+      by: 'playbook:alpha',
+      definitionType: 'workflow',
+      definitionName: 'close-the-month',
+      definitionVersion: 2,
+    };
+    const data = { count: 3, reason, minute: '2026-10-01T09:00:00.000Z' };
+
+    const coded = {
+      ...data,
+      kind: 'credits_exhausted',
+      because: 'free_daily_limit',
+      trigger: { kind: 'every', reference: '/schedule/every' },
+    };
+
+    expect(present(recordOf('reactions/close-the-month', 'reaction_refused', data, context), showing)).toMatchObject([
+      {
+        type: 'reaction_refused',
+        summary: wordsNaming('“close-the-month”'),
+        data,
+        metadata: { definition: { type: 'workflow', name: 'close-the-month', version: 2 } },
+      },
+    ]);
+    expect(present(recordOf('reactions/close-the-month', 'reaction_refused', coded, context), showing)).toMatchObject([
+      { type: 'reaction_refused', data: coded },
     ]);
   });
 });

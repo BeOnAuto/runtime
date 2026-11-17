@@ -1,5 +1,5 @@
 import { memoryRecordedContent } from '@on.auto/content/testing';
-import { PlaybookContext, Unavailable, playbookLedgerOf } from '@on.auto/operations';
+import { PlaybookContext, playbookLedgerOf } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -15,6 +15,10 @@ import {
   withItsOutputShown,
   type PayloadAsRead,
 } from './run-payloads.ts';
+
+function refused(tag: string, fields: object = {}): unknown {
+  return expect.objectContaining({ _tag: tag, ...fields });
+}
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -104,14 +108,7 @@ describe('the output of a run, as an operation answers it', () => {
   });
 
   it('is unavailable, to be asked again, where the store did not answer', async () => {
-    expect(await shown({ unread: 'unavailable', kept })).toStrictEqual(
-      Exit.fail(
-        new Unavailable({
-          detail:
-            "The run's output, which its playbook keeps outside the run's record, could not be read just now; ask again in a moment",
-        }),
-      ),
-    );
+    expect(await shown({ unread: 'unavailable', kept })).toStrictEqual(Exit.fail(refused('unavailable')));
   });
 });
 

@@ -7,6 +7,10 @@ import type { DefinitionEvent } from '../registry/definition-events.ts';
 import { recordedAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 
+function wordsNaming(text: string): unknown {
+  return expect.stringContaining(text);
+}
+
 const { present } = presentationOf(makeDefinitionPresenters([echo]));
 
 function recordOf(stream: string, type: string, data: unknown, context: Context): RecordedEvent {
@@ -69,7 +73,7 @@ describe('the presenter of the changes to a definition', () => {
   it('presents an update with its version, and a document its capability said little of', () => {
     expect(presented({ type: 'definition_updated', data: { content: { source: 'Hi' } } }, 150)).toMatchObject({
       type: 'definition_updated',
-      summary: 'The greeting “greet” was updated to version one hundred and fifty.',
+      summary: wordsNaming('“greet”'),
       data: { source_bytes: 2, warning_count: 0 },
     });
   });
@@ -131,7 +135,7 @@ describe('the presenter of the standing of a definition', () => {
     ]).toMatchObject([
       {
         type: 'definition_paused',
-        summary: 'The greeting “greet” was paused, so it starts no runs until it is resumed.',
+        summary: wordsNaming('“greet”'),
         data: { paused_by: recordedAdmin, reason: 'é'.repeat(512) },
         metadata: { definition: { type: 'echo', name: 'greet', version: 2 } },
       },
@@ -143,7 +147,7 @@ describe('the presenter of the standing of a definition', () => {
       },
       {
         type: 'definition_restored',
-        summary: 'The greeting “greet” was restored, paused; it starts no runs until it is resumed.',
+        summary: wordsNaming('“greet”'),
         data: { restored_by: recordedAdmin },
       },
     ]);

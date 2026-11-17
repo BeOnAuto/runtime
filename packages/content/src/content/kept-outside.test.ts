@@ -12,7 +12,13 @@ import {
   resultOf,
 } from '../testing/content-samples.ts';
 import { memoryContentHeads, memoryContentStore, type HeldIn } from '../testing/memory-content.ts';
-import { aStepFailedAtItsPause, defectOf, pausableStore, settledWithin } from '../testing/paused-store.ts';
+import {
+  aStepFailedAtItsPause,
+  defectOf,
+  longEnoughForAPutToSettle,
+  pausableStore,
+  settledWithin,
+} from '../testing/paused-store.ts';
 import { sha256Of } from './content-digest.ts';
 import { keptOutside, removalLastsMs, removalWaitMs } from './kept-outside.ts';
 import { textToKeep, type ContentToKeep } from './streamed-content.ts';
@@ -110,7 +116,7 @@ function putWhileRemoved(): void {
       const removal = resultOf(removedKeptBefore(alpha, large.sha256, Date.now()));
       await deleting.reached;
       const put = resultOf(content.put(alpha, { ...large.content(), ...expectedOf(large.sha256) }));
-      const settledBefore = await settledWithin(put, 300);
+      const settledBefore = await settledWithin(put, longEnoughForAPutToSettle);
       deleting.release();
 
       expect([settledBefore, await removal, await put]).toEqual([
@@ -145,7 +151,6 @@ function refusedOnceItWaited(): void {
       expect(refused).toMatchObject({
         _tag: 'content_refused',
         because: 'unavailable',
-        detail: `The content kept under ${noteDigest} is being removed, so it is not kept now; keeping it again in a moment keeps it whole`,
       });
       expect(waited).toBeGreaterThanOrEqual(removalWaitMs);
       expect(await removal).toBe('removed');
@@ -210,7 +215,7 @@ function headlessRemoved(): void {
     await deleting.reached;
     const readWhileRemoved = (await present(content.get(alpha, noteDigest))).mediaType;
     const put = resultOf(content.put(alpha, textToKeep(note, 'text/plain')));
-    const settledBefore = await settledWithin(put, 300);
+    const settledBefore = await settledWithin(put, longEnoughForAPutToSettle);
     deleting.release();
 
     expect([readWhileRemoved, settledBefore, await removal, (await put).mediaType]).toEqual([

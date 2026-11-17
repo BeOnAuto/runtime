@@ -6,7 +6,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { DatasetData } from './dataset-data.ts';
-import { datasetMatchingOf } from './dataset-matching.ts';
+import { datasetMatchingOf, unjudged as stoppedBeforeItsVerdict } from './dataset-matching.ts';
 
 const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
@@ -129,7 +129,7 @@ describe('the matching of a page of a dataset the host’s filters were stopped 
     ]);
     expect(unjudged.map(({ placed: { record }, match }) => [record, match])).toEqual([
       ['r-1', { kind: 'taken' }],
-      ['r-2', { kind: 'stopped', detail: 'The filters that test the page were stopped before they judged this event' }],
+      ['r-2', stoppedBeforeItsVerdict],
     ]);
   });
 });

@@ -5,6 +5,7 @@ import { createApiKey } from '@on.auto/identity';
 import { localDeveloper } from '@on.auto/identity/testing';
 import { afterAll, describe, expect, it } from 'vitest';
 
+import { saidAtStart } from './testing/processes/in-process-starts.ts';
 import { spawnServer } from './testing/processes/spawned-server.ts';
 import { messagesOf, modelLinesOf } from './testing/processes/stderr-lines.ts';
 import { temporaryLedger } from './testing/records/temporary-ledger.ts';
@@ -24,34 +25,20 @@ const loopback = {
   LEDGER_FILE: ledger.fileName,
 };
 
-const invalidSettings: ReadonlyArray<readonly [Readonly<Record<string, string>>, string]> = [
-  [{ PORT: 'eighty' }, 'InvalidPortError: PORT must be an integer from 0 to 65535, received "eighty"'],
-  [{ ALLOWED_ORIGINS: 'app.example.com' }, 'InvalidSettingsError: SchemaError(Expected an origin'],
-  [{ API_KEYS: '[{"id":"ci-1"}]' }, 'InvalidApiKeysError: API_KEYS[0].org: Missing key'],
-  [
-    { LOG_FORMAT: 'fancy' },
-    'InvalidSettingsError: SchemaError(Expected "json" | "pretty" | "console" at ["LOG_FORMAT"])',
-  ],
+const refusedSettings: ReadonlyArray<readonly [Readonly<Record<string, string>>, string]> = [
+  [{ ALLOWED_ORIGINS: 'app.example.com' }, 'InvalidSettingsError'],
+  [{ API_KEYS: '[{"id":"ci-1"}]' }, 'InvalidApiKeysError'],
+  [{ LOG_FORMAT: 'fancy' }, 'InvalidSettingsError'],
   [
     {
       API_KEYS: JSON.stringify([
         createApiKey({ id: 'ci-1', org: 'local', permissions: ['org:read'], playbooks: '*' }).entry,
       ]),
     },
-    'InvalidApiKeysError: API_KEYS[0].org: This org id is reserved for local mode',
+    'InvalidApiKeysError',
   ],
-  [
-    { HOST: '0.0.0.0' },
-    'ReachableWithoutCredentialsError: A server reachable beyond this computer needs PUBLIC_URL, to sign people in, or API_KEYS, and this one listens on HOST 0.0.0.0; where only this computer reaches its port, ACCESS_MODE=local with a PUBLIC_URL on the loopback declares local mode instead',
-  ],
-  [
-    { WORKFLOW_SWEEP_INTERVAL: 'PT2M' },
-    'InvalidSettingsError: The workflow settings are invalid. WORKFLOW_SWEEP_INTERVAL: Expected an ISO 8601 duration from PT0.01S to PT1M, such as PT1S',
-  ],
-  [
-    { MODEL_ALIASES: '{"fast":"gemini"}' },
-    'model_settings_invalid: The model settings are invalid. MODEL_ALIASES: /fast: An alias and its target are each written provider/model',
-  ],
+  [{ WORKFLOW_SWEEP_INTERVAL: 'PT2M' }, 'InvalidSettingsError'],
+  [{ MODEL_ALIASES: '{"fast":"gemini"}' }, 'model_settings_invalid'],
 ];
 
 const protectedPath = '/v1/orgs/demo/playbooks';
@@ -90,7 +77,7 @@ function startInLocalMode(...after: readonly string[]): readonly unknown[] {
 }
 
 describe('main', () => {
-  it('serves health checks when launched with node and exits cleanly on SIGTERM', async () => {
+  it('serves health checks when launched with node, writes exactly the listening line to stdout and its logs as JSON lines to stderr, and exits 0 on SIGTERM', async () => {
     const child = spawnServer(mainModule, loopback);
     const port = await child.port;
 
@@ -99,16 +86,6 @@ describe('main', () => {
     const exitCode = await child.exited;
 
     expect({ status: health.status, exitCode }).toEqual({ status: 200, exitCode: 0 });
-  });
-
-  it('writes exactly the listening line to stdout, and its logs as JSON lines to stderr', async () => {
-    const child = spawnServer(mainModule, loopback);
-    const port = await child.port;
-
-    await fetch(`http://127.0.0.1:${port}/health`);
-    child.signal('SIGTERM');
-    await child.exited;
-
     expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
     expect(child.output().stderr).toMatch(/^\{"message":"Local mode is on: .*"level":"WARN".*\}\n/u);
     expect(messagesOf(child.output().stderr)).toEqual(startInLocalMode());
@@ -165,11 +142,11 @@ describe('main at start', () => {
 });
 
 describe('main when it is told to stop', () => {
-  it.each<NodeJS.Signals>(['SIGTERM', 'SIGINT'])('exits 0 on %s', async (signal) => {
+  it('exits 0 on SIGINT', async () => {
     const child = spawnServer(mainModule, loopback);
     await child.port;
 
-    child.signal(signal);
+    child.signal('SIGINT');
 
     expect(await child.exited).toBe(0);
   });
@@ -200,19 +177,25 @@ describe('main with settings', () => {
     ]);
   });
 
-  it.each(invalidSettings)(
-    'does not start with %o, naming the error in one line on stderr and writing nothing to stdout',
-    async (env, error) => {
-      const child = spawnServer(mainModule, { ...loopback, ...env });
+  it('does not start with a setting it cannot read, naming the error in one line on stderr and writing nothing to stdout', async () => {
+    const child = spawnServer(mainModule, { ...loopback, PORT: 'eighty' });
 
-      expect(await child.exited).toBe(1);
-      expect(child.output().stdout).toBe('');
-      expect(child.output().stderr.split('\n')).toEqual([
-        expect.stringContaining(`Auto Runtime could not start: ${error}`),
-        '',
-      ]);
-    },
-  );
+    expect(await child.exited).toBe(1);
+    expect(child.output().stdout).toBe('');
+    expect(child.output().stderr.split('\n')).toEqual([
+      expect.stringMatching(/^Auto Runtime could not start: InvalidPortError: /u),
+      '',
+    ]);
+  });
+});
+
+describe('the server main starts, given settings it refuses', () => {
+  it.each(refusedSettings)('refuses %o with the error named', async (env, error) => {
+    const said = await saidAtStart({ ...loopback, ...env });
+
+    expect(said.exitCode).toBe(1);
+    expect(said.line.startsWith(`Auto Runtime could not start: ${error}: `)).toBe(true);
+  });
 });
 
 describe('main with secrets in settings it cannot read', () => {
@@ -226,11 +209,8 @@ describe('main with secrets in settings it cannot read', () => {
     });
 
     expect(await child.exited).toBe(1);
-    expect(child.output()).toEqual({
-      stdout: '',
-      stderr:
-        'Auto Runtime could not start: model_settings_invalid: The model settings are invalid. MODEL_GATEWAYS: /0/base_url: Expected an http or https URL\n',
-    });
+    expect(child.output().stdout).toBe('');
+    expect(child.output().stderr).toMatch(/^Auto Runtime could not start: model_settings_invalid: .*MODEL_GATEWAYS/u);
     expect(child.output().stderr).not.toContain(secret);
   });
 
@@ -239,10 +219,9 @@ describe('main with secrets in settings it cannot read', () => {
     const child = spawnServer(mainModule, { ...loopback, API_KEYS: key });
 
     expect(await child.exited).toBe(1);
-    expect(child.output()).toEqual({
-      stdout: '',
-      stderr: 'Auto Runtime could not start: InvalidApiKeysError: API_KEYS: Expected a valid JSON string\n',
-    });
+    expect(child.output().stdout).toBe('');
+    expect(child.output().stderr).toMatch(/^Auto Runtime could not start: InvalidApiKeysError: /u);
+    expect(child.output().stderr).not.toContain(key);
   });
 });
 

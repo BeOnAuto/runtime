@@ -4,7 +4,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { accountServiceLayer } from '../accounts/fetched-account-service.ts';
 import { ledgerMeter } from '../licensing/self-hosted-meter.ts';
-import { meterBehaviour } from '../meter-testing/meter-behaviour.ts';
+import { meterBehaviour, meterOnADatabaseBehaviour } from '../meter-testing/meter-behaviour.ts';
 import { opened } from '../meter-testing/opened.ts';
 import { postgresqlLedger, sqliteLedger } from '../testing/ledgers.ts';
 import { runOf } from '../testing/runs.ts';
@@ -19,7 +19,7 @@ const noNetwork = () => Promise.reject(new TypeError('fetch failed: the tests re
 meterBehaviour('SQLite', onSQLite);
 
 describe.skipIf(server === '')('with PostgreSQL', () => {
-  meterBehaviour('PostgreSQL', () => postgresqlLedger(server));
+  meterOnADatabaseBehaviour('PostgreSQL', () => postgresqlLedger(server));
 });
 
 describe('the meter of every runtime', () => {
@@ -55,16 +55,5 @@ describe('the meter of every runtime', () => {
     metered.executesFail('defect');
 
     expect((await metered.admitted(runOf('run-1'))).kind).toBe('meter_unavailable');
-  });
-
-  it('never stops for an event of the history of its runs that can no longer be read', async () => {
-    const { metered, tampering } = await opened(onSQLite);
-    await metered.admitted(runOf('run-1'));
-    await metered.started('run-1');
-    const [started = ''] = await tampering.idsOf('playbook/acme/alpha/runs/run-1');
-    await tampering.garbled(started);
-
-    expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
-    expect((await metered.state()).admitted.actions).toBe(2);
   });
 });

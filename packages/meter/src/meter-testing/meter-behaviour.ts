@@ -15,6 +15,14 @@ import { releasedFactsBehaviour } from './released-facts-behaviour.ts';
 import { earlyReportBehaviour, reportBehaviour, restoredReportBehaviour } from './report-behaviour.ts';
 import { statusBehaviour } from './status-behaviour.ts';
 
+export function meterOnADatabaseBehaviour(name: string, ledgerOf: LedgerOf): void {
+  describe(`the meter on ${name}, as replicas and their clocks meet in one database, and as its rows are changed under it`, () => {
+    laggingClockBehaviour(ledgerOf);
+    concurrencyBehaviour(ledgerOf);
+    historyBehaviour(ledgerOf);
+  });
+}
+
 export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
   describe(`the meter on ${name}`, () => {
     describe('counting', () => {

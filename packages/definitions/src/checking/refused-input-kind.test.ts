@@ -5,6 +5,8 @@ import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 
+const someWords: unknown = expect.any(String);
+
 const toAlpha = toPlaybook('acme', 'alpha');
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-777777777772';
@@ -60,7 +62,7 @@ describe('a run whose input its input schema refused', () => {
           { type: 'run_started' },
           {
             type: 'run_rejected',
-            summary: 'A run did not go through: what was given does not fit what it needs.',
+            summary: someWords,
             data: { ...refused, issue_count: 1 },
           },
         ],

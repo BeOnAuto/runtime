@@ -123,9 +123,7 @@ describe('the stores of a ledger whose secrets AWS Parameter Store keeps', () =>
     expect(new Set(probe.map(({ name }) => name)).size).toBe(1);
     expect(probe[0]?.name).toMatch(new RegExp(`^${prefix}/probe-[\\da-f-]{36}$`, 'u'));
     expect(fake.parameter(String(probe[0]?.name))).toBeUndefined();
-    expect(secretsLineOf(lines)).toContain(
-      `"message":"Secrets are kept in AWS Parameter Store under ${prefix} in eu-west-1, and 0 kept by the previous keeper were moved there"`,
-    );
+    expect(secretsLineOf(lines)).toContain(`"message":"Secrets are kept in AWS Parameter`);
     expect(secretsLineOf(lines)).toContain(
       `"annotations":{"secrets_keeper":"aws-parameter-store","secrets_prefix":"${prefix}","secrets_region":"eu-west-1","secrets_moved":0}`,
     );

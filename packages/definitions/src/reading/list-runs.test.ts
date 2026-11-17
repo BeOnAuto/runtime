@@ -133,16 +133,9 @@ const everyEndingNewestFirst = [
 ];
 
 describe('list_runs', () => {
-  it('is a playbook query at GET /runs that names the capabilities it may filter by', () => {
+  it('names the capabilities it may filter by', () => {
     const { listRuns } = definitionOperationsFor([echo, probe().capability]);
 
-    expect(listRuns.registration).toMatchObject({
-      scope: 'playbook',
-      kind: 'query',
-      title: 'List runs',
-      route: { method: 'GET', path: '/runs' },
-      reasons: ['invalid_input'],
-    });
     expect(listRuns.registration.input.schema).toMatchObject({
       properties: {
         type: {

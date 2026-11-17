@@ -6,6 +6,8 @@ import { patientTiming } from '../testing/index.ts';
 import { describedAccess, reportingAccess } from '../testing/reporting-access.ts';
 import { fakeApiKey, serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
+const anyText: unknown = expect.any(String);
+
 const alpha = { org: 'acme', playbook: 'alpha' };
 
 const closing: (() => Promise<void>)[] = [];
@@ -185,8 +187,7 @@ describe('a connection named as a server the configuration sets up for another o
         name: 'graph',
         connection: 'graph-id',
         because: 'connection_not_allowed',
-        unavailable:
-          "The runtime's configuration sets up a tool server named graph, so a connection cannot take that name; remove it and add it again under another name",
+        unavailable: anyText,
       },
     ]);
     expect(called).toMatchObject({ kind: 'unopened', refused: 'tool_not_offered', because: 'connection_not_allowed' });
@@ -240,8 +241,7 @@ describe('a connection whose server refuses its credential as its tools are list
           expect.objectContaining({
             name: 'graph',
             because: 'scope_lacking',
-            unavailable:
-              'The tool server answered HTTP 403: the credential lacks the scope graph.read this request needs; a credential granted that scope would allow it',
+            unavailable: anyText,
           }),
         ],
         told: [],

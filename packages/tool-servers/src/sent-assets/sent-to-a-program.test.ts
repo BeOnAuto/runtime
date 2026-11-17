@@ -5,7 +5,7 @@ import { Effect, Function } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { observations } from '../clients/observed-requests.ts';
-import { StdioProcessTransport } from '../clients/stdio-transport.ts';
+import { StdioProcessTransport, stopPatienceMs } from '../clients/stdio-transport.ts';
 import { until } from '../testing/until.ts';
 import type { SentAsset } from './planned-assets.ts';
 import { argumentsSent, sendingWith } from './spliced-bodies.ts';
@@ -21,7 +21,7 @@ const echoed = 'process.stdin.pipe(process.stdout)';
 function echoingProgram() {
   const received: unknown[] = [];
   const transport = new StdioProcessTransport(
-    { command: process.execPath, args: ['--eval', echoed], env: {} },
+    { command: process.execPath, args: ['--eval', echoed], env: {}, stopMs: stopPatienceMs },
     observations(null, Infinity),
     { scrub: String, report: Function.constVoid },
   );

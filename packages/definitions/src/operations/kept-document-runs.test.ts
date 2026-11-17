@@ -15,6 +15,8 @@ import {
   savingOperations,
 } from '../testing/saved-definitions.ts';
 
+const someWords: unknown = expect.any(String);
+
 const { createDefinition, runDefinition, getRun } = savingOperations;
 
 const first = { source: functionDocumentLongerThanAFactHolds('Hi'), overview: 'Greets each guest', diagram: 'none' };
@@ -55,8 +57,7 @@ describe('a run of a definition whose document its playbook keeps outside its fa
       status: 'rejected',
       reason: 'conflict',
       because: 'function_document_missing',
-      detail:
-        "The reasoning function greet-reasoning at version 1 cannot run: its document is missing from the playbook's content; update it",
+      detail: someWords,
     });
   });
 

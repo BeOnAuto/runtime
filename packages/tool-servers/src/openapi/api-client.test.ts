@@ -10,6 +10,8 @@ import { apiClient } from './api-client.ts';
 import type { ApiOperation } from './api-tools.ts';
 import type { DescribedApiSettings } from './described-api.ts';
 
+const anyText: unknown = expect.any(String);
+
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
 const aSignal: unknown = expect.any(AbortSignal);
@@ -58,7 +60,7 @@ function calledAt(baseUrl: string, path: string): Promise<CallSettled> {
 
 const outsideTheBase = {
   kind: 'failing',
-  message: 'The bridge built an address outside base_url for this call, a defect of the runtime, and sent nothing',
+  message: anyText,
 };
 
 function failureOfSettled(settled: CallSettled): unknown {

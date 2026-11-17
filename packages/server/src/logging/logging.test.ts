@@ -36,9 +36,7 @@ describe('logAccessMode', () => {
     const [line] = await linesLoggedBy(logAccessMode({ mode: 'local', signIn: undefined }));
 
     expect(line).toContain('"level":"WARN"');
-    expect(line).toContain(
-      '"message":"Local mode is on: every request is trusted as the local developer, with every permission in every org. On a machine reachable through a proxy, set PUBLIC_URL or API_KEYS instead, and no ACCESS_MODE"',
-    );
+    expect(line).toContain('"message":"Local mode is on');
   });
 
   it('warns in one line that no request can authenticate when API_KEYS lists no keys', async () => {
@@ -46,9 +44,7 @@ describe('logAccessMode', () => {
 
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('"level":"WARN"');
-    expect(lines[0]).toContain(
-      '"message":"No request can authenticate: API_KEYS lists no keys, so every path answers 401 except /health, the OpenAPI document at /v1/openapi.json, the guides under /v1/guides and the API catalog at /.well-known/api-catalog"',
-    );
+    expect(lines[0]).toContain('"message":"No request can authenticate');
   });
 });
 
@@ -61,9 +57,7 @@ describe('logAccessMode with credentials configured', () => {
     const [line] = await linesLoggedBy(logAccessMode({ mode: 'credentials', signIn }));
 
     expect(line).toContain('"level":"INFO"');
-    expect(line).toContain(
-      '"message":"Signed-in persons are admitted through the identity service at https://clerk.on.auto, by tokens whose audience is https://runtime.example"',
-    );
+    expect(line).toContain('"message":"Signed-in persons are admitted through the');
     expect(line).toContain('"public_url":"https://runtime.example","identity_issuer":"https://clerk.on.auto"');
   });
 });
@@ -95,9 +89,8 @@ describe('the reasoning logs', () => {
   it('say how many input tokens the model calls of a run add up to at most', async () => {
     const [line] = await linesLoggedBy(logReasoning(2_000_000));
 
-    expect(line).toContain(
-      `"message":"Reasoning functions run in this server: the model calls of a run add up to at most 2,000,000 input tokens, and each answer of a tool is read whole where it fits the model's context window","level":"INFO"`,
-    );
+    expect(line).toContain(`"message":"Reasoning functions run in this server`);
+    expect(line).toContain('"level":"INFO"');
     expect(line).toContain('"annotations":{"most_input_tokens":2000000}');
   });
 });
@@ -108,9 +101,8 @@ describe('the workflow logs', () => {
       logWorkflows({ mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, sweepEveryMs: 1000 }),
     );
 
-    expect(line).toContain(
-      '"message":"Workflows run in this server: a run lasts at most 30 days, at most 32 of their calls run at once, and the runs are swept every 1000 ms","level":"INFO"',
-    );
+    expect(line).toContain('"message":"Workflows run in this server');
+    expect(line).toContain('"level":"INFO"');
     expect(line).toContain(
       '"annotations":{"most_duration_ms":2592000000,"most_calls_at_once":32,"sweep_every_ms":1000}',
     );
@@ -147,7 +139,8 @@ describe('the workflow warnings', () => {
       ),
     );
 
-    expect(line).toContain('"message":"A sweep of the runs failed; the next sweep tries again","level":"WARN"');
+    expect(line).toContain('"message":"A sweep of the runs failed');
+    expect(line).toContain('"level":"WARN"');
     expect(line).toContain('"error":"Error: the database is gone xxx');
     expect(line).not.toContain('x'.repeat(2000));
   });

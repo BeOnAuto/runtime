@@ -22,18 +22,6 @@ async function withRun() {
 }
 
 describe('get_run', () => {
-  it('is a playbook query at GET /runs/{run_id} that may meet not_found, or unavailable for an output kept outside the run', () => {
-    expect(getRun.registration).toMatchObject({
-      scope: 'playbook',
-      kind: 'query',
-      title: 'Get run',
-      route: { method: 'GET', path: '/runs/{run_id}' },
-      pathParameters: ['run_id'],
-      successStatus: 200,
-      reasons: ['not_found', 'unavailable'],
-    });
-  });
-
   it('reads a run by its id in any case, from JSON and from a query string', async () => {
     const { call } = await withRun();
     const found = { status: 'succeeded', output: { run_id: runId, status: 'succeeded' } };

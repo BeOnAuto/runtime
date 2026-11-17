@@ -1,45 +1,20 @@
 import { Effect, Function, Layer, Logger, Schema } from 'effect';
-import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { endingOf, sweepsWatched } from '../content/watched-sweeps.ts';
 import { openChoresWith, openLedgerWith } from '../testing/open-ledger.ts';
+import { postgresqlConnected, postgresqlDatabasesOn, postgresqlQueried } from '../testing/postgresql-databases.ts';
 import { tally } from '../testing/tally.ts';
 import { until } from '../testing/until.ts';
-import { lostConnectionsLoggedWith } from './lost-connections.ts';
+import { lostConnectionLogged, lostConnectionsLoggedWith } from './lost-connections.ts';
 import { plainPoolsOn, postgresqlLedgerLayer, postgresqlLedgerOpened } from './postgresql-ledger.ts';
 import { emmettsMigrationLock } from './postgresql-run-outcomes.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-const skipped = server === '';
+const { skipped, notice, anEmptyDatabase: aDatabase } = postgresqlDatabasesOn(server);
 
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
-async function queried(database: string, statement: string): Promise<readonly unknown[]> {
-  const client = new Client({ connectionString: database });
-  await client.connect();
-  try {
-    const { rows } = await client.query<Readonly<Record<string, unknown>>>(statement);
-    return rows;
-  } finally {
-    await client.end();
-  }
-}
-
-async function aDatabase(): Promise<string> {
-  const name = `ledger_${crypto.randomUUID().replaceAll('-', '')}`;
-  await queried(server, `CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await queried(server, `DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
-
-const lostConnection =
-  '"message":"A connection to the PostgreSQL database of the ledger was lost; the ledger opens another when it needs one","level":"WARN"';
+const lostConnection = `"message":${JSON.stringify(lostConnectionLogged)},"level":"WARN"`;
 
 function otherConnectionsTo(database: string): string {
   return `FROM pg_stat_activity WHERE datname = '${new URL(database).pathname.slice(1)}' AND pid <> pg_backend_pid()`;
@@ -57,7 +32,7 @@ function endingConnectionsTo(database: string): string {
   return `SELECT pg_terminate_backend(pid) AS ended ${otherConnectionsTo(database)}`;
 }
 
-const migratorsOwnWaitMs = 10_000;
+const severalTriesOfTheLock = 300;
 
 const decodeLastTry = Schema.decodeUnknownSync(
   Schema.Tuple([Schema.Struct({ tried_at: Schema.NullOr(Schema.Number) })]),
@@ -67,7 +42,7 @@ async function untilTriedAgainPast(database: string, pastMs: number): Promise<vo
   const tries: number[] = [];
   await until(
     async () => {
-      const [{ tried_at: triedAt }] = decodeLastTry(await queried(database, lastLockTryOn(database)));
+      const [{ tried_at: triedAt }] = decodeLastTry(await postgresqlQueried(database, lastLockTryOn(database)));
       tries.push(...(triedAt === null ? [] : [triedAt]));
       return tries;
     },
@@ -76,16 +51,11 @@ async function untilTriedAgainPast(database: string, pastMs: number): Promise<vo
 }
 
 async function untilNoneOpen(database: string): Promise<void> {
-  const client = new Client({ connectionString: database });
-  await client.connect();
-  try {
-    await until(
-      async () => (await client.query<Readonly<Record<string, unknown>>>(connectionsTo(database))).rows,
-      (rows: readonly unknown[]) => JSON.stringify(rows) === JSON.stringify([{ open: 0 }]),
-    );
-  } finally {
-    await client.end();
-  }
+  const client = await postgresqlConnected(database);
+  await until(
+    async () => (await client.query<Readonly<Record<string, unknown>>>(connectionsTo(database))).rows,
+    (rows: readonly unknown[]) => JSON.stringify(rows) === JSON.stringify([{ open: 0 }]),
+  );
 }
 
 function sweptOn(database: string, held?: Promise<void>) {
@@ -117,7 +87,7 @@ describe.skipIf(skipped)(`A ledger on a PostgreSQL database of its own${notice}`
     await sweptAt(Date.now());
     await watched.finished;
     await Effect.runPromise(ledger.load('org/acme/tallies', tally));
-    const whileOpen = await queried(database, connectionsTo(database));
+    const whileOpen = await postgresqlQueried(database, connectionsTo(database));
 
     await dispose();
 
@@ -145,11 +115,9 @@ describe.skipIf(skipped)(`A ledger on PostgreSQL whose runtime is disposed while
 });
 
 describe.skipIf(skipped)(`A ledger whose PostgreSQL database another server is filling${notice}`, () => {
-  it('waits past the 10 s the migrator itself waits for the migration lock, and builds once the fill is done', async () => {
+  it('tries the migration lock again and again while the fill holds it, and builds once the fill is done', async () => {
     const database = await aDatabase();
-    const filling = new Client({ connectionString: database });
-    await filling.connect();
-    onTestFinished(() => filling.end());
+    const filling = await postgresqlConnected(database);
     await filling.query('SELECT pg_advisory_lock($1)', [emmettsMigrationLock]);
     const fill = { done: false };
 
@@ -157,7 +125,7 @@ describe.skipIf(skipped)(`A ledger whose PostgreSQL database another server is f
       opened,
       afterTheFill: fill.done,
     }));
-    await untilTriedAgainPast(database, migratorsOwnWaitMs);
+    await untilTriedAgainPast(database, severalTriesOfTheLock);
     fill.done = true;
     await filling.query('SELECT pg_advisory_unlock($1)', [emmettsMigrationLock]);
     const { opened, afterTheFill } = await opening;
@@ -196,7 +164,7 @@ describe.skipIf(skipped)(`A ledger whose PostgreSQL database ends its connection
     expect(await firstSweep).toBe('swept');
     await Effect.runPromise(ledger.execute('org/acme/tallies', tally, [1]));
 
-    const ended = await queried(database, endingConnectionsTo(database));
+    const ended = await postgresqlQueried(database, endingConnectionsTo(database));
     await until(
       () => logged.length,
       (count) => count === ended.length,
@@ -220,7 +188,7 @@ describe.skipIf(skipped)(`A ledger whose PostgreSQL database ends its connection
     await dispose();
 
     expect(
-      await queried(
+      await postgresqlQueried(
         database,
         "SELECT stream_id, stream_position::int, message_type, message_data, message_metadata ->> 'by' AS by FROM emt_messages",
       ),

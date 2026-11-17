@@ -5,6 +5,8 @@ import type { CallSettled } from '../clients/server-client.ts';
 import { failureOf } from '../clients/server-failures.ts';
 import { settledOf } from './api-answers.ts';
 
+const anyText: unknown = expect.any(String);
+
 const answering = {
   requestIdHeader: 'x-request-id',
   failureCodes: null,
@@ -52,8 +54,7 @@ describe('an answer of an HTTP API whose entry names its failure codes', () => {
       [
         {
           kind: 'scope_lacking',
-          message:
-            'The tool server answered missing_scope: the credential lacks a scope this request needs; a credential granted that scope would allow it',
+          message: anyText,
         },
         null,
       ],

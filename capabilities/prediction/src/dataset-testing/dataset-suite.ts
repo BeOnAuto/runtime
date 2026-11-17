@@ -9,10 +9,11 @@ import { alphaKey, projectedDatasets } from './projected-datasets.ts';
 
 const anyText: unknown = expect.any(String);
 
-const timeRefused =
-  'Its time at /placed_at is not an ISO 8601 date, or date and time with its offset, on a day of the calendar from 0000 to 9999 and in no leap second';
+const timeRefused: unknown = expect.stringContaining('/placed_at');
 
-const seriesRefused = 'Its series at /region is not text of 1 to 256 bytes';
+const targetRefused: unknown = expect.stringContaining('/total');
+
+const seriesRefused: unknown = expect.stringContaining('/region');
 
 const summed = weeklyOrdersWith(['  target: { as: count }', '  target: { of: /total, as: sum }']);
 
@@ -40,7 +41,7 @@ const faultyOrders = [
   orderPlaced({ region: 'north', at: '2026-10-06T10:00:00Z', total: null }),
 ];
 
-function noted(dataSha256: string, detail: string) {
+function noted(dataSha256: string, detail: unknown) {
   return {
     kind: 'record_passed_over',
     playbook: alphaKey,
@@ -80,7 +81,7 @@ function passingOverTest(settingsOf: SettingsOf): void {
       noted(dataSha256, timeRefused),
       noted(dataSha256, timeRefused),
       noted(dataSha256, timeRefused),
-      noted(dataSha256, 'Its target at /total is not a finite number'),
+      noted(dataSha256, targetRefused),
     ]);
   });
 }

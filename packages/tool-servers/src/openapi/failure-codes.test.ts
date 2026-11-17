@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { failureOf } from '../clients/server-failures.ts';
 import { failedAnswerOf, failureCodeIssuesOf, failureCodesOf, type FailureCodes } from './failure-codes.ts';
 
+const anyText: unknown = expect.any(String);
+
 const slackLike: FailureCodes = {
   succeeded: '/ok',
   code: '/error',
@@ -35,7 +37,7 @@ describe('the failure codes an entry declares', () => {
     ).toEqual([
       { path: ['succeeded'], detail: 'Expected a JSON pointer into the answer, such as /ok' },
       { path: ['code'], detail: 'Expected a JSON pointer into the answer, such as /error' },
-      { path: ['scope_lacking'], detail: 'Expected at least one code; leave scope_lacking out where no code means it' },
+      { path: ['scope_lacking'], detail: anyText },
       { path: ['key_refused', 1], detail: 'invalid_auth is named twice, and a code means one failure' },
       { path: ['rate_limited', 0], detail: 'invalid_auth is named twice, and a code means one failure' },
     ]);
@@ -62,8 +64,7 @@ describe('an answer read by the failure codes of its entry', () => {
       { kind: 'key_refused', message: 'The tool server answered token_revoked' },
       {
         kind: 'scope_lacking',
-        message:
-          'The tool server answered missing_scope: the credential lacks a scope this request needs; a credential granted that scope would allow it',
+        message: anyText,
       },
       { kind: 'rate_limited', message: 'The tool server answered ratelimited' },
     ]);

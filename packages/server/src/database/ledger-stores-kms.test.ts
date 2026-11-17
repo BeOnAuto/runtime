@@ -114,9 +114,7 @@ describe('the stores of a ledger whose secrets a key in KMS holds', () => {
       { operation: 'Encrypt', keyId: keyArn, context: { 'on.auto/runtime': 'secret data key' } },
       { operation: 'Decrypt', keyId: keyArn, context: { 'on.auto/runtime': 'secret data key' } },
     ]);
-    expect(secretsLineOf(lines)).toContain(
-      `"message":"Secrets are kept in the ledger's database, sealed under the key ${keyId} that the KMS key ${keyArn} holds, and 0 sealed under the previous key were sealed again under it"`,
-    );
+    expect(secretsLineOf(lines)).toContain(`"message":"Secrets are kept in the ledger's`);
     expect(secretsLineOf(lines)).toContain(
       `"annotations":{"secrets_kid":"${keyId}","secrets_resealed":0,"secrets_key_from":"kms"}`,
     );

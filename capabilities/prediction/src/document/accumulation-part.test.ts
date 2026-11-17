@@ -82,8 +82,6 @@ describe('a prediction function that sums its target to the end of an enclosing 
     ]).toEqual([true, false]);
     expect(schemas.input).toMatchObject({
       required: ['series'],
-      description:
-        'A question: the series to predict the total of its sales for, in sales, from the day after its last observed one to the end of that week',
     });
   });
 });

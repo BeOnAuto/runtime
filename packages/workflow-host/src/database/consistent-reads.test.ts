@@ -1,18 +1,10 @@
-import { randomUUID } from 'node:crypto';
-
 import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
-import { Client } from 'pg';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { aSQLiteFile, onPostgreSQLAt, openedOn, type SettingsOf } from '../testing/host-files.ts';
+import { describeOnPostgreSQL } from '../testing/postgresql-databases.ts';
 import { rowsOf, WholeNumber, type HostDatabase, type ReadStatement } from './host-database.ts';
-
-const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
-
-const skipped = server === '';
-
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
 
 const rowsTable = statement`CREATE TABLE IF NOT EXISTS read_rows (name TEXT NOT NULL PRIMARY KEY, amount BIGINT NOT NULL)`;
 
@@ -27,27 +19,6 @@ function figuresOf(read: ReadStatement) {
 const raised = statement`UPDATE read_rows SET amount = ${2} WHERE name = ${'north'}`;
 
 const added = statement`INSERT INTO read_rows (name, amount) VALUES (${'south'}, ${5})`;
-
-async function administered(text: string): Promise<void> {
-  const client = new Client({ connectionString: server });
-  await client.connect();
-  try {
-    await client.query(text);
-  } finally {
-    await client.end();
-  }
-}
-
-const onPostgreSQL: SettingsOf = async () => {
-  const name = `workflow_host_${randomUUID().replaceAll('-', '')}`;
-  await administered(`CREATE DATABASE ${name}`);
-  onTestFinished(async () => {
-    await administered(`DROP DATABASE ${name} WITH (FORCE)`);
-  });
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return onPostgreSQLAt(database.href);
-};
 
 const inAFile: SettingsOf = () => Promise.resolve({ store: 'sqlite', file: aSQLiteFile() });
 
@@ -123,6 +94,6 @@ describe('the reads of the host database in one snapshot, on SQLite in memory', 
   });
 });
 
-describe.skipIf(skipped)(`the reads of the host database in one snapshot, on PostgreSQL${notice}`, () => {
-  readsBesideWrites(onPostgreSQL);
+describeOnPostgreSQL('the reads of the host database in one snapshot', (aDatabase) => {
+  readsBesideWrites(async () => onPostgreSQLAt(await aDatabase()));
 });

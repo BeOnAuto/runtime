@@ -4,14 +4,7 @@ import { describe } from 'vitest';
 
 import { fakeBucket, type FakeBucketOptions } from '../testing/fake-bucket.ts';
 import { objectContentBehaviour } from '../testing/object-content-behaviour.ts';
-import {
-  inMemory,
-  interleavedEntryOf,
-  onPostgreSQL,
-  onSQLite,
-  unheldEntryOf,
-  type LedgerOver,
-} from '../testing/object-ledgers.ts';
+import { inMemory, interleavedEntryOf, unheldEntryOf } from '../testing/object-ledgers.ts';
 import { contentEntryOf, objectStoreEntry } from '../testing/object-store-entry.ts';
 
 function onAFakeBucket(options: FakeBucketOptions) {
@@ -22,32 +15,17 @@ function onAFakeBucket(options: FakeBucketOptions) {
   });
 }
 
-const stores: readonly (readonly [string, FakeBucketOptions])[] = [
-  ['that honours a conditional copy', { pageSize: 2 }],
-  ['that ignores a conditional copy', { pageSize: 2, honoursConditionalCopy: false }],
+const stores: readonly (readonly [string, FakeBucketOptions, number])[] = [
+  ['that honours a conditional copy', { pageSize: 2 }, Number.POSITIVE_INFINITY],
+  ['that ignores a conditional copy', { pageSize: 2, honoursConditionalCopy: false }, 5_000_000],
 ];
 
-const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
-
-const ledgers: readonly (readonly [string, LedgerOver])[] = [
-  ['in memory', inMemory],
-  ['on SQLite', onSQLite],
-];
-
-function keptByALedger(ledgerOver: LedgerOver): void {
-  unheldContentBehaviour(unheldEntryOf(onAFakeBucket({ pageSize: 2 }), ledgerOver));
-  interleavedRemovalBehaviour(interleavedEntryOf(onAFakeBucket({ pageSize: 2 }), ledgerOver));
-}
-
-describe.each(stores)('The content kept on a fake object store %s', (_store, options) => {
-  recordedContentBehaviour(contentEntryOf(onAFakeBucket(options)));
+describe.each(stores)('The content kept on a fake object store %s', (_store, options, mostBytesKeptWhole) => {
+  recordedContentBehaviour({ ...contentEntryOf(onAFakeBucket(options)), mostBytesKeptWhole });
   objectContentBehaviour(onAFakeBucket(options));
 });
 
-describe.each(ledgers)('The content a ledger %s keeps on a fake object store', (_ledger, ledgerOver) => {
-  keptByALedger(ledgerOver);
-});
-
-describe.skipIf(server === '')('The content a ledger on PostgreSQL keeps on a fake object store', () => {
-  keptByALedger(onPostgreSQL(server));
+describe('The content a ledger in memory keeps on a fake object store', () => {
+  unheldContentBehaviour(unheldEntryOf(onAFakeBucket({ pageSize: 2 }), inMemory));
+  interleavedRemovalBehaviour(interleavedEntryOf(onAFakeBucket({ pageSize: 2 }), inMemory));
 });

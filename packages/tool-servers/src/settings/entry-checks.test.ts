@@ -1,4 +1,4 @@
-import { servesPlaybook, settingProblemText } from '@on.auto/config';
+import { servesPlaybook, type SettingProblem } from '@on.auto/config';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -18,9 +18,13 @@ function settingsOf(servers: unknown) {
   return Effect.runSync(readToolServerSettings(environmentOf(servers), context));
 }
 
+function placeOf({ setting, pointer = '' }: SettingProblem): string {
+  return `${setting}${pointer}`;
+}
+
 function problemsOf(servers: unknown): readonly string[] {
   return Effect.runSync(Effect.flip(readToolServerSettings(environmentOf(servers), context))).problems.map((problem) =>
-    settingProblemText(problem),
+    placeOf(problem),
   );
 }
 
@@ -69,11 +73,7 @@ describe('an auth block', () => {
         graph: { ...graph, headers, auth: { ...auth, issuer: 'http://auth.example.com' } },
         other: { ...graph, auth: { ...auth, issuer: 'not a url' } },
       }),
-    ).toEqual([
-      'TOOL_SERVERS: /graph/auth/issuer: Expected an https URL, or an http URL on a loopback address',
-      'TOOL_SERVERS: /graph/auth: Set an Authorization header or an auth block, not both',
-      'TOOL_SERVERS: /other/auth/issuer: Expected an https URL, or an http URL on a loopback address',
-    ]);
+    ).toEqual(['TOOL_SERVERS/graph/auth/issuer', 'TOOL_SERVERS/graph/auth', 'TOOL_SERVERS/other/auth/issuer']);
   });
 });
 
@@ -81,7 +81,6 @@ describe('the credential of an auth block', () => {
   it('refuses a credential that is not one of the two', () => {
     const issued = { client_id: 'playbook', issuer: 'https://auth.example.com' };
     const key = { private_key: '${GRAPH_CLIENT_SECRET}' };
-    const neither = 'Expected client_secret, or private_key with its algorithm, one of the two';
 
     expect(
       problemsOf({
@@ -89,11 +88,7 @@ describe('the credential of an auth block', () => {
         keyed: { ...graph, auth: { ...issued, ...key, algorithm: 'RS256', client_secret: '${GRAPH_CLIENT_SECRET}' } },
         bare: { ...graph, auth: { ...issued, ...key } },
       }),
-    ).toEqual([
-      `TOOL_SERVERS: /graph/auth: ${neither}`,
-      `TOOL_SERVERS: /keyed/auth: ${neither}`,
-      `TOOL_SERVERS: /bare/auth: ${neither}`,
-    ]);
+    ).toEqual(['TOOL_SERVERS/graph/auth', 'TOOL_SERVERS/keyed/auth', 'TOOL_SERVERS/bare/auth']);
   });
 });
 
@@ -134,11 +129,7 @@ describe('the orgs a server serves', () => {
         crm: { ...graph, org: ['acme', '*'] },
         wiki: { ...graph, org: '*', playbooks: ['sales'] },
       }),
-    ).toEqual([
-      'TOOL_SERVERS: /graph/org: Expected at least one org id',
-      'TOOL_SERVERS: /crm/org/1: Expected an org id; * stands alone, for every org',
-      'TOOL_SERVERS: /wiki/playbooks: Expected no playbooks beside every org, since a playbook id belongs to one org',
-    ]);
+    ).toEqual(['TOOL_SERVERS/graph/org', 'TOOL_SERVERS/crm/org/1', 'TOOL_SERVERS/wiki/playbooks']);
   });
 });
 

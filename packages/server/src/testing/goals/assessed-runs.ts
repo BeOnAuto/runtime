@@ -1,6 +1,5 @@
 import type { Ledger, ProjectedRow } from '@on.auto/operations';
 import type { FilterSandbox } from '@on.auto/workflow-engine';
-import { movedClock, type MovedClock } from '@on.auto/workflow-host/testing';
 import { Effect, Schema } from 'effect';
 
 import type { TemporaryLedger } from '../records/temporary-ledger.ts';
@@ -9,6 +8,7 @@ import { patientWorkerPool } from '../servers/worker-pools.ts';
 import { workflowSource } from '../servers/workflow-server.ts';
 import { createdWithGoals, servingReasoningWithGoals } from '../settings/goals-kept.ts';
 import { until } from '../waiting/until.ts';
+import { wokenClock, type WokenClock } from './woken-clock.ts';
 
 const aMinuteAndASecond = 61_000;
 
@@ -18,7 +18,7 @@ interface Watched {
 
 export interface Assessing {
   readonly server: ReasoningServer;
-  readonly clock: MovedClock;
+  readonly clock: WokenClock;
   readonly asked: readonly string[];
   readonly watched: Watched;
   readonly rowsOf: (table: string, playbook?: string) => Promise<Readonly<Record<string, ProjectedRow>>>;
@@ -87,7 +87,7 @@ export async function assessing({ ledger, goals, watching = '', ...switches }: S
     },
   };
   const composed = Promise.withResolvers<Ledger['Service']>();
-  const clock = movedClock(Date.now());
+  const clock = wokenClock(Date.now());
   const server = await servingReasoningWithGoals([], {}, undefined, {
     ledger,
     clock,

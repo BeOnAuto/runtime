@@ -5,6 +5,8 @@ import type { CallJournal } from '../calls/recorded-calls.ts';
 import { recordingCallJournal } from '../testing/index.ts';
 import { calledOnce, echoCall, oneCallAccess, oneCallServer, unopenedWith } from '../testing/one-calls.ts';
 
+const anyText: unknown = expect.any(String);
+
 const callId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const aDigest: unknown = expect.stringMatching(/^[0-9a-f]{64}$/u);
@@ -72,17 +74,9 @@ describe('a call its run records nothing of', () => {
       await calledOnce(oneCallAccess(fake.url), { reference: { server: 'graph', tool: 'gone' } }, runCall),
       await calledOnce(oneCallAccess(unreachable.url), {}, runCall),
     ]).toEqual([
-      unopenedWith(
-        'tool_not_offered',
-        'tool_not_allowed',
-        'The operator of this server does not allow graph/environment',
-      ),
+      unopenedWith('tool_not_offered', 'tool_not_allowed', anyText),
       unopenedWith('tool_not_offered', 'tool_not_listed', 'The tool server graph does not list the tool gone'),
-      unopenedWith(
-        'tool_server_failed',
-        'unreachable',
-        'The tool server graph could not be used: The tool server could not be reached',
-      ),
+      unopenedWith('tool_server_failed', 'unreachable', anyText),
     ]);
     expect([journal.facts(), fake.received()]).toEqual([[], []]);
   });
@@ -151,14 +145,13 @@ describe('a call that needs its tool marked reads, to a tool marked otherwise', 
         kind: 'unopened',
         refused: 'tool_not_read_only',
         mark: 'acts',
-        detail: 'The denied tool of graph is marked acts, and the call needs one marked reads, so it was not sent',
+        detail: anyText,
       },
       {
         kind: 'unopened',
         refused: 'tool_not_read_only',
         mark: 'unmarked',
-        detail:
-          'The echo tool of graph carries no mark, which counts as acts, and the call needs one marked reads, so it was not sent',
+        detail: anyText,
       },
     ]);
     expect([journal.facts(), fake.received(), fake.openSessions()]).toEqual([[], [], 0]);

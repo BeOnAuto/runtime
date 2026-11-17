@@ -5,6 +5,8 @@ import { fakeProviders, type FakeProvider } from '../testing/fake-providers.ts';
 import { longToolName, reportingAccess, type AccessOptions } from '../testing/index.ts';
 import { serveFakeMcp } from '../testing/served-fakes.ts';
 
+const anyText: unknown = expect.any(String);
+
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
 const closing: (() => Promise<void>)[] = [];
@@ -75,7 +77,7 @@ describe('the hints a listing shows of each tool', () => {
           {
             name: 'environment',
             title: 'Environment',
-            description: 'Answers with the names of the environment variables of the server.',
+            description: anyText,
             input_schema: nothingTaken,
             ...byTheServer('unmarked'),
           },

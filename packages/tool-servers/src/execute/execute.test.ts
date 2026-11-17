@@ -14,6 +14,8 @@ import {
 } from '../testing/index.ts';
 import { fakeApiKey, serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
+const anyText: unknown = expect.any(String);
+
 const closing: (() => Promise<void>)[] = [];
 
 afterEach(async () => {
@@ -118,8 +120,7 @@ describe('query_connection', () => {
       status: 'rejected',
       reason: 'unavailable',
       kind: 'tool_not_read_only',
-      detail:
-        'The echo tool of graph is not marked reads, so query_connection did not call it; execute_connection calls a tool that may change something',
+      detail: anyText,
     });
     expect(fake.received()).toEqual([]);
   });

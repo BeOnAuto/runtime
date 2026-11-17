@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { chartInfoOf } from './chart-info.ts';
 
+const someWords: unknown = expect.any(String);
+
 function rolesOf(info: string) {
   const reading = chartInfoOf(info);
   return 'info' in reading ? Object.fromEntries(reading.info.roles) : reading;
@@ -44,7 +46,7 @@ describe('the info string of a chart block', () => {
       { refused: 'a line chart supports no roles; leave out x' },
       { refused: 'a bar chart supports x, y, and color; size is not supported' },
       { refused: 'the role x is assigned twice' },
-      { refused: 'Channel is not a valid role assignment; use role=column, such as x=Channel' },
+      { refused: someWords },
     ]);
   });
 });

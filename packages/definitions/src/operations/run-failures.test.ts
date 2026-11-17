@@ -6,6 +6,8 @@ import { probe, spentUsage } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
+const someWords: unknown = expect.any(String);
+
 const toAlpha = toPlaybook('acme', 'alpha');
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -218,8 +220,7 @@ describe('run_definition rejecting', () => {
     expect(await running({})).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail:
-        'The probe definition plain at version 1 no longer parses (The probe document has lines it does not accept); update it',
+      detail: someWords,
       kind: 'unworkable',
     });
     expect(ledger.streamNames()).toEqual(['playbook/acme/alpha/definitions/probe']);

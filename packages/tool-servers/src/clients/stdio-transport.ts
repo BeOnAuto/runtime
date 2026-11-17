@@ -14,11 +14,12 @@ export interface StdioParameters {
   readonly command: string;
   readonly args: readonly string[];
   readonly env: Readonly<Record<string, string>>;
+  readonly stopMs: number;
 }
 
 const mostPendingCharacters = 65_536;
 
-const patienceMs = 2000;
+export const stopPatienceMs = 2000;
 
 export const outputNoLongerReported = 'The MCP server wrote more to stderr than is reported; the rest is not shown';
 
@@ -43,6 +44,7 @@ export class StdioProcessTransport implements Transport {
   readonly #readBuffer = new ReadBuffer({ maxBufferSize: toolBounds.stdioOutputBytes });
   readonly #spawned: Promise<unknown>;
   readonly #closed: Promise<unknown>;
+  readonly #stopMs: number;
   #writing: Promise<void> = Promise.resolve();
   #pending = 0;
 
@@ -53,6 +55,7 @@ export class StdioProcessTransport implements Transport {
       shell: false,
     });
     this.#child = child;
+    this.#stopMs = parameters.stopMs;
     this.#observations = observed;
     this.#spawned = once(child, 'spawn');
     this.#closed = new Promise((resolve) => {
@@ -145,7 +148,7 @@ export class StdioProcessTransport implements Transport {
       return;
     }
     child.stdin.end();
-    const stopped = await Promise.race([this.#closed.then(() => true), setTimeout(patienceMs, false)]);
+    const stopped = await Promise.race([this.#closed.then(() => true), setTimeout(this.#stopMs, false)]);
     if (!stopped) {
       child.kill('SIGKILL');
       await this.#closed;

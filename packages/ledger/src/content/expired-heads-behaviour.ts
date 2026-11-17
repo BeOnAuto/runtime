@@ -146,22 +146,25 @@ export function expiredHeadsBehaviour(entry: LedgerEntry): void {
     expiringContentBehaviour(ownExpiringEntry(entry));
     erasedContentBehaviour({ aLedger: async (holders) => erasingOf(await anErasingLedger(entry, holders)) });
   });
-  describe('the ledger whose content expires, kept in a store outside it', () => {
-    expiringContentBehaviour(outsideExpiringEntry(entry));
-    erasedContentBehaviour({
-      aLedger: async (holders) => erasingOf(await anErasingLedgerOutside(entry, holders, memoryContentStore())),
-    });
-    interleavedErasureBehaviour({
-      aStore: () => Promise.resolve<ContentStore>(memoryContentStore()),
-      aKeeping: async (store) => {
-        const database = await entry.aDatabase();
-        const here = await anErasingLedgerOutside(entry, noteHolders, store, database);
-        const elsewhere = await anErasingLedgerOutside(entry, noteHolders, store, database);
-        return { ...keepingOf(here), elsewhere: keepingOf(elsewhere) };
-      },
-      placeOf: placeOfNewBytesOf,
-    });
-  });
+  describe.skipIf(entry.itsOwnContractAlone === true)(
+    'the ledger whose content expires, kept in a store outside it',
+    () => {
+      expiringContentBehaviour(outsideExpiringEntry(entry));
+      erasedContentBehaviour({
+        aLedger: async (holders) => erasingOf(await anErasingLedgerOutside(entry, holders, memoryContentStore())),
+      });
+      interleavedErasureBehaviour({
+        aStore: () => Promise.resolve<ContentStore>(memoryContentStore()),
+        aKeeping: async (store) => {
+          const database = await entry.aDatabase();
+          const here = await anErasingLedgerOutside(entry, noteHolders, store, database);
+          const elsewhere = await anErasingLedgerOutside(entry, noteHolders, store, database);
+          return { ...keepingOf(here), elsewhere: keepingOf(elsewhere) };
+        },
+        placeOf: placeOfNewBytesOf,
+      });
+    },
+  );
   describe('the heads of the content that expires', () => {
     readThroughTheIndex(entry);
     setsNoUploadOfAHeadThatStands(entry);

@@ -10,6 +10,10 @@ import { at } from '../multi-stream/multi-stream-cases.ts';
 import type { DefinitionNamesEntry } from './definition-names-behaviour.ts';
 import { definitionNamesFilledBy } from './names-filled.ts';
 
+function anEmptyDatabaseOf(entry: DefinitionNamesEntry): Promise<string> {
+  return (entry.anEmptyDatabase ?? entry.aDatabase)();
+}
+
 const Claimed = Schema.Struct({ definition: Schema.String, name: Schema.String, starts: Schema.Boolean });
 
 const claimedIn = Schema.decodeUnknownSync(Claimed);
@@ -79,7 +83,7 @@ async function aStoreAt22Holding(
   entry: DefinitionNamesEntry,
   ...appends: readonly (readonly [string, readonly EncodedEvent[]])[]
 ) {
-  const database = await entry.aDatabase();
+  const database = await anEmptyDatabaseOf(entry);
   const store = entry.storeOn(database);
   onTestFinished(() => store.close());
   await store.migrate();
@@ -137,7 +141,7 @@ function layoutAfter(entry: DefinitionNamesEntry, database: string): Promise<num
 
 function refusalsOfTheFill(entry: DefinitionNamesEntry): void {
   it('leaves out a bound the keeper of the same declaration applies to an append', async () => {
-    const database = await entry.aDatabase();
+    const database = await anEmptyDatabaseOf(entry);
     const bounded = entry.storeKeepingNames(database, names);
     onTestFinished(() => bounded.close());
     await bounded.migrate();
@@ -170,7 +174,7 @@ function refusalsOfTheFill(entry: DefinitionNamesEntry): void {
 export function namesStepBehaviour(entry: DefinitionNamesEntry): void {
   describe('layout step 23, which fills the names of definitions from the facts', () => {
     it('fills the table the keeper would have kept over the same facts, page by page, applying no bound', async () => {
-      const database = await entry.aDatabase();
+      const database = await anEmptyDatabaseOf(entry);
       const keeping = entry.storeKeepingNames(database, { ...names, bounds: [] });
       onTestFinished(() => keeping.close());
       await keeping.migrate();
@@ -184,7 +188,7 @@ export function namesStepBehaviour(entry: DefinitionNamesEntry): void {
     });
 
     it('opens a store whose first opening never made the tables of its facts', async () => {
-      const unmade = await entry.aDatabase();
+      const unmade = await anEmptyDatabaseOf(entry);
       await stampedAt(entry, unmade, 22);
 
       await entry.carriedOn(unmade, carryingTo23(1));
@@ -193,7 +197,7 @@ export function namesStepBehaviour(entry: DefinitionNamesEntry): void {
     });
 
     it('opens a store carried from before the table of names, in one opening', async () => {
-      const before22 = await entry.aDatabase();
+      const before22 = await anEmptyDatabaseOf(entry);
       await stampedAt(entry, before22, 21);
 
       await entry.carriedOn(before22, carryingTo23(1));

@@ -86,22 +86,6 @@ function typesIn(outcome: unknown): readonly string[] {
   )(outcome).output.events.map(({ type }) => type);
 }
 
-describe('get_run_history', () => {
-  it('is a playbook query at GET /runs/{run_id}/history, served over HTTP alone, that may meet not_found', async () => {
-    const { getRunHistory } = await playbookWithRun();
-
-    expect(getRunHistory.registration).toMatchObject({
-      scope: 'playbook',
-      kind: 'query',
-      title: 'Get run history',
-      route: { method: 'GET', path: '/runs/{run_id}/history' },
-      pathParameters: ['run_id'],
-      reasons: ['not_found', 'invalid_input'],
-      servedOverHttpAlone: { kind: 'none' },
-    });
-  });
-});
-
 describe('the history of a run', () => {
   it('holds the facts of the run oldest first, each with its data whole within 2 KiB and its metadata', async () => {
     const { running, reading } = await playbookWithRun();

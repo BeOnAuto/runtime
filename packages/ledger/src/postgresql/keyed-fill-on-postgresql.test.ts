@@ -1,49 +1,21 @@
 import { topicFacts, topicRows } from '@on.auto/operations/testing';
 import { Effect, Schema } from 'effect';
-import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { executorOn } from '../content/postgresql-content.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { keyedFillBehaviour, type FillEntry } from '../projections/keyed-fill-behaviour.ts';
 import { openLedgerWith } from '../testing/open-ledger.ts';
+import { postgresqlConnected, postgresqlDatabasesOn } from '../testing/postgresql-databases.ts';
 import { plainPoolsOn, postgresqlLedgerLayer } from './postgresql-ledger.ts';
 import { postgresqlProjectionsOf } from './postgresql-projections.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-const skipped = server === '';
+const { skipped, notice, anEmptyDatabase: aDatabase } = postgresqlDatabasesOn(server);
 
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
-const executedOn: FillEntry['executedOn'] = async (database, work) => {
-  const client = new Client({ connectionString: database });
-  await client.connect();
-  try {
-    return await work(executorOn(client));
-  } finally {
-    await client.end();
-  }
-};
-
-async function onTheServer(statement: string): Promise<void> {
-  const client = new Client({ connectionString: server });
-  await client.connect();
-  try {
-    await client.query(statement);
-  } finally {
-    await client.end();
-  }
-}
-
-async function aDatabase(): Promise<string> {
-  const name = `ledger_${crypto.randomUUID().replaceAll('-', '')}`;
-  await onTheServer(`CREATE DATABASE ${name}`);
-  onTestFinished(() => onTheServer(`DROP DATABASE ${name} WITH (FORCE)`));
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
+const executedOn: FillEntry['executedOn'] = async (database, work) =>
+  work(executorOn(await postgresqlConnected(database)));
 
 describe.skipIf(skipped)(`The fills of a ledger on PostgreSQL${notice}`, () => {
   keyedFillBehaviour({
@@ -85,13 +57,6 @@ function committedOnTheListingOf(execute: StatementExecutor, point: string, comm
   return landing;
 }
 
-async function connected(database: string): Promise<Client> {
-  const client = new Client({ connectionString: database });
-  await client.connect();
-  onTestFinished(() => client.end());
-  return client;
-}
-
 describe.skipIf(skipped)(`A fill on PostgreSQL that a fact lands in between a listing and its read${notice}`, () => {
   it('reads through the last fact it listed, so the fact that landed is read too and the last listed is not dropped', async () => {
     const database = await aDatabase();
@@ -102,7 +67,7 @@ describe.skipIf(skipped)(`A fill on PostgreSQL that a fact lands in between a li
         { type: 'topic_opened', data: { topic: 'autumn', at: 1000 } },
       ]),
     );
-    const late = await connected(database);
+    const late = await postgresqlConnected(database);
     await late.query('BEGIN');
     await late.query(landedInsert);
     await Effect.runPromise(
@@ -110,7 +75,7 @@ describe.skipIf(skipped)(`A fill on PostgreSQL that a fact lands in between a li
         { type: 'topic_noted', data: { topic: 'autumn', note: 'last' } },
       ]),
     );
-    const reading = await connected(database);
+    const reading = await postgresqlConnected(database);
     const { rows: lastPoints } = await reading.query<Readonly<{ point: string }>>(
       "SELECT transaction_id::text || '/' || global_position::text AS point FROM emt_messages WHERE stream_id = $1",
       ['playbook/acme/alpha/notes/last'],

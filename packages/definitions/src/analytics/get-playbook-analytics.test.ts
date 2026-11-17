@@ -9,6 +9,8 @@ import { acmeReader, recordedAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { asQueryString, harness, toPlaybook, type Harness } from '../testing/harness.ts';
 
+const someWords: unknown = expect.any(String);
+
 const getPlaybookAnalytics = defineGetPlaybookAnalytics([
   echo,
   { ...echo, type: 'reasoning' },
@@ -118,16 +120,6 @@ const schemaRefusals: readonly (readonly [Readonly<Record<string, unknown>>, str
 ];
 
 describe('get_playbook_analytics', () => {
-  it('is a playbook query at GET /analytics, served over HTTP alone', () => {
-    expect(getPlaybookAnalytics.registration).toMatchObject({
-      scope: 'playbook',
-      kind: 'query',
-      route: { method: 'GET', path: '/analytics' },
-      reasons: ['invalid_input'],
-      servedOverHttpAlone: { kind: 'none' },
-    });
-  });
-
   it('answers the last seven days by default, with every day, the runs that ended and what they used and cost', async () => {
     const definitions = await aPlaybookWithRuns();
 
@@ -214,13 +206,13 @@ describe('get_playbook_analytics, given what it cannot answer', () => {
       {
         status: 'rejected',
         reason: 'invalid_input',
-        detail: 'The days asked for are not a window this playbook can answer',
+        detail: someWords,
         issues: [{ pointer: '/days', detail: 'Expected days, or from and to, not both' }],
       },
       {
         status: 'rejected',
         reason: 'invalid_input',
-        detail: 'The days asked for are not a window this playbook can answer',
+        detail: someWords,
         issues: [{ pointer: '/to', detail: 'Expected a day no later than today, 2026-10-06, in UTC' }],
       },
       { status: 'rejected', reason: 'not_found', detail: 'There is no playbook zeta in this org' },

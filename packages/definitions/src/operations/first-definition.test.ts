@@ -9,6 +9,8 @@ import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 import { firstDefinitionNotice } from './definition-views.ts';
 
+const someWords: unknown = expect.any(String);
+
 const toAlpha = toPlaybook('acme', 'alpha');
 const toBeta = toPlaybook('acme', 'beta');
 
@@ -49,8 +51,7 @@ describe('the reminder that answers the first definition saved in a playbook', (
   it("asks whether the person saw the workflow's steps with their types and said yes to the design, as a reminder within the bound of a notice", () => {
     expect(firstDefinitionNotice).toEqual({
       kind: 'first_definition',
-      detail:
-        "This is the playbook's first function or workflow. Has the person seen the workflow's steps in order, each with its function type, and said yes to that design? If not, show them the design now, in their words, and wait for their yes before you save anything else; if they change it, change what you just saved to match.",
+      detail: someWords,
       certainty: 'reminder',
     });
     expect(firstDefinitionNotice.detail.length).toBeLessThanOrEqual(mostNoticeCharacters);

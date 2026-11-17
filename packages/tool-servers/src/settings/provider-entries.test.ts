@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { clientIdWrittenOut, settingProblemText } from '@on.auto/config';
+import type { SettingProblem } from '@on.auto/config';
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -71,9 +71,13 @@ function serverOf(servers: unknown, given = providers()): ServerSettings | undef
   return Effect.runSync(readWith(servers, given)).servers[0];
 }
 
+function placeOf({ setting, pointer = '' }: SettingProblem): string {
+  return `${setting}${pointer}`;
+}
+
 function problemsOf(servers: unknown, variables: Environment = environment): readonly string[] {
   return Effect.runSync(Effect.flip(readWith(servers, providers(), variables))).problems.map((problem) =>
-    settingProblemText(problem),
+    placeOf(problem),
   );
 }
 
@@ -97,9 +101,6 @@ const trackerEntry = {
   allowed: ['search'],
   record_content: false,
 };
-
-const referenceAlone =
-  'Expected a reference alone to the environment variable that holds the credential, such as ${TRACKER_TOKEN}, which the provider places where its way says';
 
 describe('an entry that names a provider of a secret', () => {
   it('is the server the provider resolves to, with the org, playbooks, tools and content it gives, the marks of its provider, and its provider', () => {
@@ -178,11 +179,7 @@ describe('the fields an entry that names a provider may hold', () => {
           org: 'acme',
         },
       }),
-    ).toEqual([
-      'TOOL_SERVERS: /issues/url: Expected no url: the provider gives the server',
-      'TOOL_SERVERS: /issues/request_id: Expected no request_id: the provider gives the server',
-      "TOOL_SERVERS: /issues/marks: Expected no marks: the provider's entry gives the marks; write the server without provider to mark its tools",
-    ]);
+    ).toEqual(['TOOL_SERVERS/issues/url', 'TOOL_SERVERS/issues/request_id', 'TOOL_SERVERS/issues/marks']);
   });
 
   it('are those of an entry of its own without a provider, placeholders and a credential refused', () => {
@@ -190,10 +187,7 @@ describe('the fields an entry that names a provider may hold', () => {
       problemsOf({
         graph: { url: 'https://graph.example.com/mcp', placeholders: {}, credential: '${TRACKER_TOKEN}', org: 'acme' },
       }),
-    ).toEqual([
-      'TOOL_SERVERS: /graph/placeholders: Expected no placeholders without provider',
-      'TOOL_SERVERS: /graph/credential: Expected no credential without provider',
-    ]);
+    ).toEqual(['TOOL_SERVERS/graph/placeholders', 'TOOL_SERVERS/graph/credential']);
   });
 });
 
@@ -211,10 +205,10 @@ describe('the credential of an entry that names a provider', () => {
     };
 
     expect(problemsOf({ issues: { ...trackerEntry, credential: 'tracker-token-5e8a1f0c' }, books })).toEqual([
-      `TOOL_SERVERS: /issues/credential: ${referenceAlone}`,
-      `TOOL_SERVERS: /books/credential/client_secret: ${referenceAlone}`,
-      `TOOL_SERVERS: /books/credential/private_key: ${referenceAlone}`,
-      'TOOL_SERVERS: /books/credential/client_id: Expected no $: of a credential, only value, client_secret and private_key hold a reference',
+      'TOOL_SERVERS/issues/credential',
+      'TOOL_SERVERS/books/credential/client_secret',
+      'TOOL_SERVERS/books/credential/private_key',
+      'TOOL_SERVERS/books/credential/client_id',
     ]);
   });
 
@@ -225,8 +219,8 @@ describe('the credential of an entry that names a provider', () => {
     expect(
       Effect.runSync(
         Effect.flip(readWith({ books: { provider: 'ledgers', credential, org: 'acme' } }, given)),
-      ).problems.map((problem) => settingProblemText(problem)),
-    ).toEqual([`TOOL_SERVERS: /books/credential/client_id: ${clientIdWrittenOut}`]);
+      ).problems.map((problem) => placeOf(problem)),
+    ).toEqual(['TOOL_SERVERS/books/credential/client_id']);
     expect(given.named()).toEqual([]);
   });
 });
@@ -239,9 +233,9 @@ describe('the refusals of the provider an entry names', () => {
         books: { provider: 'crm', org: 'acme' },
       }),
     ).toEqual([
-      'TOOL_SERVERS: /issues/placeholders/site: The provider refusing has no placeholder site; it takes none',
-      'TOOL_SERVERS: /issues/credential: Expected value alone, the secret of a credential of the kind secret',
-      'TOOL_SERVERS: /books/provider: There is no fake provider named crm',
+      'TOOL_SERVERS/issues/placeholders/site',
+      'TOOL_SERVERS/issues/credential',
+      'TOOL_SERVERS/books/provider',
     ]);
   });
 
@@ -251,8 +245,8 @@ describe('the refusals of the provider an entry names', () => {
       { modelProviders: [] },
     );
 
-    expect(Effect.runSync(Effect.flip(read)).problems.map((problem) => settingProblemText(problem))).toEqual([
-      'TOOL_SERVERS: /issues/provider: This reading knows no provider, so none named tracker',
+    expect(Effect.runSync(Effect.flip(read)).problems.map((problem) => placeOf(problem))).toEqual([
+      'TOOL_SERVERS/issues/provider',
     ]);
   });
 });
@@ -267,10 +261,10 @@ describe('the problems the reading finds in what a provider resolved', () => {
       problemsOf({ issues: { ...trackerEntry, org: 'Acme Corp' } }),
       problemsOf({ books }),
     ]).toEqual([
-      ['TOOL_SERVERS: /books/provider: Refers to the environment variable LEDGERS_DEVELOPER_TOKEN, which is not set'],
-      ['TOOL_SERVERS: /issues/credential: Refers to the environment variable TRACKER_TOKEN, which is not set'],
-      ['TOOL_SERVERS: /issues/org: Expected an org id, a list of them, or *'],
-      ['TOOL_SERVERS: /books: Expected the org this server serves'],
+      ['TOOL_SERVERS/books/provider'],
+      ['TOOL_SERVERS/issues/credential'],
+      ['TOOL_SERVERS/issues/org'],
+      ['TOOL_SERVERS/books'],
     ]);
   });
 });

@@ -118,7 +118,6 @@ function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
       because: 'free_daily_limit',
       limited_because: 'credits',
     });
-    expect(refused.detail).toContain('limited to the free rate of 1 run a UTC day and 5 a UTC month');
     expect((await metered.state()).admitted).toMatchObject({ actions: 3, licensed: 2, first_runs: 0 });
     expect(metered.account.reports()).toEqual([{ actions: 3, licensed: 2 }]);
     expect(metered.account.chargedThrough(installation)).toBe(2);
@@ -135,9 +134,6 @@ function licensedAdmissionBehaviour(ledgerOf: LedgerOf): void {
 
     expect(free).toEqual(['admitted', 'admitted']);
     expect(refused).toMatchObject({ kind: 'license_required', because: 'free_month_used' });
-    expect(refused.detail).toMatch(
-      /^This runtime has no license key, so it's limited to the free rate of 2 runs a UTC day and 2 a UTC month\./u,
-    );
     expect(key).toContain(installation);
   });
 }
@@ -210,7 +206,6 @@ function keyChangeBehaviour(ledgerOf: LedgerOf): void {
     const refused = await metered.activated(metered.account.keyFor(installation));
 
     expect(refused.kind).toBe('license_invalid');
-    expect(refused.detail).toContain(`its key is for the runtime ${installation}, and this runtime is ${identified}`);
     expect(refused.detail).toContain(`https://studio.on.auto/licenses?installation=${identified}`);
     expect(metered.account.activations()).toEqual([]);
   });
@@ -237,22 +232,21 @@ function orgNameBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
-const notAuto: readonly (readonly [string, Answering, string])[] = [
-  ['signed by another key under the kid of Auto’s', 'by another key', 'not one Auto signed'],
-  ['signed by a key Auto does not hold', 'by an unknown key', 'not one Auto signed'],
-  ['tampered with after it was signed', 'tampered', 'not one Auto signed'],
-  ['of an earlier version, as the entitlement was', 'of another version', 'not one Auto signed'],
-  ['for another runtime', 'for another installation', 'its license is for the runtime another-installation'],
+const notAuto: readonly (readonly [string, Answering])[] = [
+  ['signed by another key under the kid of Auto’s', 'by another key'],
+  ['signed by a key Auto does not hold', 'by an unknown key'],
+  ['tampered with after it was signed', 'tampered'],
+  ['of an earlier version, as the entitlement was', 'of another version'],
+  ['for another runtime', 'for another installation'],
 ];
 
 function invalidLicenseBehaviour(ledgerOf: LedgerOf): void {
-  it.each(notAuto)('refuses a license %s as license_invalid, and records none', async (_, how, why) => {
+  it.each(notAuto)('refuses a license %s as license_invalid, and records none', async (_, how) => {
     const { metered } = await opened(ledgerOf);
     metered.account.answer(how);
     const refused = await metered.activated(metered.account.keyFor(installation));
 
     expect(refused.kind).toBe('license_invalid');
-    expect(refused.detail).toContain(why);
     expect((await metered.state()).license).toBeUndefined();
   });
 

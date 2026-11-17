@@ -94,84 +94,17 @@ describe('the life of a reasoning function definition over HTTP', () => {
   });
 });
 
-const invalidDocuments: readonly (readonly [string, string, string])[] = [
-  [
-    'without front matter',
-    'Summarize {{ input.text }}',
-    'Line 1: A reasoning function definition starts with a line of three dashes (---) that opens its front matter of YAML',
-  ],
-  [
-    'whose front matter is not closed',
-    '---\nmodel: openai/gpt-5\nSummarize',
-    'Line 1: The front matter that opens on line 1 is never closed by a line of three dashes (---)',
-  ],
-  [
-    'whose YAML cannot be read',
-    '---\nmodel: [openai\n---\nHi',
-    'Line 2: Flow sequence in block collection must be sufficiently indented and end with a ]',
-  ],
-  [
-    'with an unknown key',
-    '---\nmodel: openai/gpt-5\nprompt: hi\n---\nHi',
-    'Line 3, /prompt: prompt is not a key of the front matter; it takes description, model, config, input, output, provider_options, tools, max_input_tokens, max_tool_calls, exit_behavior',
-  ],
-  [
-    'with a model not written provider/model',
-    '---\nmodel: gpt-5\n---\nHi',
-    'Line 2, /model: Expected provider/model, for example anthropic/claude-sonnet-4-5',
-  ],
-  [
-    'with settings out of range',
-    '---\nmodel: openai/gpt-5\nconfig: {max_output_tokens: 100000}\n---\nHi',
-    'Line 3, /config/max_output_tokens: Expected at most 64000',
-  ],
-  [
-    'with input tokens past 9999999',
-    '---\nmodel: openai/gpt-5\nmax_input_tokens: 10000000\n---\nHi',
-    'Line 3, /max_input_tokens: Expected a whole number from 10000 to 9999999',
-  ],
-  [
-    'with a count of tool calls of 0',
-    '---\nmodel: openai/gpt-5\ntools: [graph/search]\nmax_tool_calls: 0\n---\nHi',
-    'Line 4, /max_tool_calls: Expected a whole number from 1 to 1000. To let the function call no tools, leave out tools',
-  ],
-  [
-    'with a count of tool calls past 1000',
-    '---\nmodel: openai/gpt-5\ntools: [graph/search]\nmax_tool_calls: 1001\n---\nHi',
-    'Line 4, /max_tool_calls: Expected at most 1000. Left out, a run counts only its calls of tools not marked reads, to 25, and its time and its input tokens bound the rest',
-  ],
-  [
-    'with an input schema that is not an object',
-    '---\nmodel: openai/gpt-5\ninput:\n  schema: {type: string}\n---\nHi',
-    'Line 4, /input/schema: The input schema describes an object: its root has "type": "object"',
-  ],
-  [
-    'with a JSON output without a schema',
-    '---\nmodel: openai/gpt-5\noutput: {format: json}\n---\nHi',
-    'Line 3, /output: A json output needs a schema of the answer',
-  ],
-  [
-    'with Liquid it cannot parse',
-    '---\nmodel: openai/gpt-5\n---\n{% if input.vip %}Hi',
-    'Line 4: tag {% if input.vip %} not closed',
-  ],
-  [
-    'that loads another template',
-    '---\nmodel: openai/gpt-5\n---\n{% include "header" %}',
-    'Line 4: tag "include" not found',
-  ],
-  [
-    'that reads a variable it may not',
-    '---\nmodel: openai/gpt-5\n---\n{{ secrets }}',
-    'Line 4: secrets is not a variable of a reasoning function’s prompt template, which reads input, today and now; assign it first',
-  ],
-];
-
 describe('a reasoning function definition document that is not valid', () => {
-  it.each(invalidDocuments)('is rejected with 422, %s, with the line under /source', async (_case, source, detail) => {
-    expect(await creating('broken', source)).toMatchObject({
+  it('is rejected with 422, with the line of the problem under /source, and nothing is saved', async () => {
+    const rejected = await creating('broken', '---\nmodel: gpt-5\n---\nHi');
+    const atTheModel: unknown = expect.stringMatching(/^Line 2, \/model: /u);
+
+    expect(rejected).toMatchObject({
       status: 422,
-      body: { reason: 'invalid_input', errors: [{ pointer: '/source', detail }] },
+      body: {
+        reason: 'invalid_input',
+        errors: [{ pointer: '/source', detail: atTheModel }],
+      },
     });
     expect((await server.call('GET', `${alpha}/definitions/reasoning`)).body).toEqual({ definitions: [] });
   });

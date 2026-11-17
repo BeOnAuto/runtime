@@ -1,38 +1,15 @@
-import { randomUUID } from 'node:crypto';
-
 import type { RunOutcomeMapping } from '@on.auto/operations';
 import { runTallies } from '@on.auto/operations/testing';
-import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { plainPoolsOn, postgresqlLedgerLayer } from '../postgresql/postgresql-ledger.ts';
 import { openLedgerWith } from '../testing/open-ledger.ts';
+import { postgresqlDatabasesOn } from '../testing/postgresql-databases.ts';
 import { fourRuns, fourRunsKept, reading } from './run-outcomes-behaviour.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-const skipped = server === '';
-
-const notice = skipped ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
-
-async function administered(statement: string): Promise<void> {
-  const client = new Client({ connectionString: server });
-  await client.connect();
-  try {
-    await client.query(statement);
-  } finally {
-    await client.end();
-  }
-}
-
-async function aDatabase(): Promise<string> {
-  const name = `outcomes_${randomUUID().replaceAll('-', '')}`;
-  await administered(`CREATE DATABASE ${name}`);
-  onTestFinished(() => administered(`DROP DATABASE ${name} WITH (FORCE)`));
-  const database = new URL(server);
-  database.pathname = `/${name}`;
-  return database.href;
-}
+const { skipped, notice, anEmptyDatabase: aDatabase } = postgresqlDatabasesOn(server);
 
 interface Counting {
   readonly mapping: RunOutcomeMapping;

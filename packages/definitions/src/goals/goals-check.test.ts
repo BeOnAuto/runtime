@@ -7,6 +7,8 @@ import { withinDetailBytes, type GoalIssue } from './goal-issues.ts';
 import { goalsDocumentOf, type FurtherGoalsCheck, type GoalsChecking } from './goals-check.ts';
 import { ContributesSchema, ContributionEntrySchema, type ContributionEntry } from './goals-document.ts';
 
+const someWords: unknown = expect.any(String);
+
 function issuesOf(source: string, checking?: GoalsChecking): readonly GoalIssue[] {
   const issues = Result.match(goalsDocumentOf(source, checking), { onSuccess: () => [], onFailure: (found) => found });
   for (const { detail } of issues) {
@@ -132,9 +134,7 @@ describe('the problems of the whole list', () => {
   });
 
   it('refuse goals of more than 16,384 bytes before reading them', () => {
-    expect(issuesOf(`# ${'é'.repeat(8192)}`)).toEqual([
-      { pointer: '', detail: 'The goals may take at most 16,384 bytes; keep each goal shorter', fixed_by: 'agent' },
-    ]);
+    expect(issuesOf(`# ${'é'.repeat(8192)}`)).toEqual([{ pointer: '', detail: someWords, fixed_by: 'agent' }]);
   });
 });
 

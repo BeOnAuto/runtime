@@ -83,6 +83,8 @@ export function pausableStore(store: ContentStore): PausableStore {
   };
 }
 
+export const longEnoughForAPutToSettle = 50;
+
 export function settledWithin(work: Promise<unknown>, ms: number): Promise<boolean> {
   const waited = new Promise<boolean>((resolve) => {
     setTimeout(() => {

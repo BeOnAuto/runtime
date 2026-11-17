@@ -58,17 +58,20 @@ function saving(name: string, source: string) {
 }
 
 describe('a computation function checked when it is saved, over HTTP', () => {
-  it.each(checkRefusals)(
-    'is refused for %s, at its line, in the compiler’s words or the runtime’s',
-    async (_, program, details) => {
-      await serving();
+  it('is refused for each refusal of the check, at its line, in the compiler’s words or the runtime’s', async () => {
+    await serving();
+    const refused = await checkRefusals.reduce<Promise<readonly unknown[]>>(
+      async (before, [, program], index) => [...(await before), await saving(`refused-${index}`, documentOf(program))],
+      Promise.resolve([]),
+    );
 
-      expect(await saving('refused', documentOf(program))).toMatchObject({
+    expect(refused).toMatchObject(
+      checkRefusals.map(([, , details]) => ({
         status: 422,
         body: { reason: 'invalid_input', errors: details.map((detail) => ({ pointer: '/source', detail })) },
-      });
-    },
-  );
+      })),
+    );
+  });
 });
 
 describe('the language of a computation function, checked when it is saved, over HTTP', () => {
