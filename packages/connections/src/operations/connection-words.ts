@@ -48,7 +48,7 @@ function shortly({ name, status }: Connection): string {
 
 export function connectionsListed(connections: readonly Connection[]): string {
   if (connections.length === 0) {
-    return 'The org has no connection.';
+    return 'The org has no connection; search lists the tool servers its playbooks may already use.';
   }
   const named = connections.slice(0, mostNamed).map((connection) => shortly(connection));
   const others = connections.length - named.length;

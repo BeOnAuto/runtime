@@ -30,11 +30,11 @@ describe('the goals guide', () => {
 });
 
 describe('the goals guide where messages are on', () => {
-  it('has the agent learn what to be told and where, and say it back before the create', () => {
+  it('has the agent learn what to be told and where, and put it in the one proposal before the create', () => {
     const learning = sectionOf(withMessages, '## Before you build anything, learn the goals with the person');
 
     expect(learning).toContain(
-      'Before the create, say all of it back in one message: the goal and its name, the number and target that judge it with the words for a pass and a fail, and what you will tell them, when and where.',
+      'Then write one proposal as an ordinary message to the person. Include: the goal in their words and its name; each measure with its target and the words for a pass and a fail; how and when it is measured; what you will tell them about results, when and where; what the work itself will post or send, and where; and the services it needs, saying which are connected.',
     );
     expect(learning).toContain('whether they want to be told immediately, in a summary on a schedule, or not at all');
     expect(
@@ -122,10 +122,10 @@ describe('the goals guide where messages are off', () => {
       "The same holds when you plan the work after the yes. If the person asked to be told about results, your first words about it are that Auto doesn't send messages about goals yet and that their results are in Studio. Only then ask whether they want a post built into the playbook, and where. Never ask it if they didn't ask to be told.",
     ]);
     expect(learning).toContain(
-      'Before the create, say all of it back in one message: the goal and its name, and the number and target that judge it with the words for a pass and a fail.',
+      'Then write one proposal as an ordinary message to the person. Include: the goal in their words and its name; each measure with its target and the words for a pass and a fail; how and when it is measured; what the work itself will post or send, and where; and the services it needs, saying which are connected.',
     );
     expect(learning).toContain(
-      'Two things are still missing, so ask them: which time zone their days are in, and whether "Daily controls" is the name they want for it.',
+      'One thing is still missing, so ask it: which time zone their days are in. Then suggest "Daily controls" as its name in the proposal.',
     );
     expect(learning).toContain(
       "Say first that Auto doesn't send messages about goals yet and that the results will be in Studio. Then learn the goal behind the wish",

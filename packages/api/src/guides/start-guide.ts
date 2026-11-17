@@ -262,7 +262,7 @@ const connectingAService: Lines = () => [
   '',
   '## Connecting a service',
   '',
-  "search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links. Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
+  "Once the person has answered your first questions, check with search what is connected, so that what you propose names the services the work needs. search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links. Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
 ];
 
 const aCardMessage =

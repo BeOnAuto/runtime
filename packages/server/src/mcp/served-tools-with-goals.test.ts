@@ -93,7 +93,7 @@ describe('the words of the goals an agent reads first on a server that keeps goa
     const gaps = `Its goals still have ${String(goalsTextGaps.length)} gaps, each saying what is missing and who puts it right.`;
 
     expect(created).toBe(
-      `Created the playbook “Worded”. Stop here: show the person its goals through the studio link and change them with update_playbook until they say yes to them as saved; build no function or workflow before that yes. ${gaps}`,
+      `Created the playbook “Worded”. Stop here: give the person the \`studio\` link. If these are the goals the person said yes to, record that yes with agree_playbook_goals; if not, ask again. Build nothing before that call. ${gaps}`,
     );
     expect(read).toBe(`Found the playbook “Worded”. ${gaps}`);
   });

@@ -10,7 +10,7 @@ import { createdWithGoals, goalsText, leadGoalId, restatedGoalsText } from '../t
 import { pagesInMemory, refusedPage } from '../testing/playbook-pages.ts';
 import { defineCreatePlaybookKeepingGoals } from './playbook-goals-operations.ts';
 
-const untilTheYes: unknown = expect.stringMatching(/^Stop here: show the person /u);
+const untilTheYes: unknown = expect.stringMatching(/^Stop here[:.] /u);
 
 const leadLink = `studio:goal/alpha/${leadGoalId}`;
 

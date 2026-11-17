@@ -23,7 +23,7 @@
       ]
     },
     {
-      "sha256": "7840ed1e77ad1262f627a5434f9766b3753bdbf935706a32a8d00148acf5f2ab",
+      "sha256": "3d8c5bb322fef5738cb4a01d8c5877fdc8e2d974ffaf72b802449fdc6ffc5f7e",
       "tier": 1,
       "received": [
         {
@@ -35,7 +35,7 @@
         }
       ],
       "lines": [
-        "Before you build or change anything, read the guide start with get_guide: it says which function type each part of a job takes. Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order. A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. The org is the caller's own: list_playbooks shows its playbooks and create_playbook makes one. Ask the person each question through your client's question tool where it has one. A tool that cannot do what was asked says why and what to change."
+        "Before you build or change anything, read the guide start with get_guide: it says which function type each part of a job takes. Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order. A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. The org is the caller's own: list_playbooks shows its playbooks and create_playbook makes one. After the guides, ask your first round of questions, through your question tool if you have one, before any other call. A tool that cannot do what was asked says why and what to change."
       ]
     },
     {
@@ -56,7 +56,7 @@
       ]
     },
     {
-      "sha256": "d6e211ccc5e59758d3402de3867e2ed8fd16a320dbf0cea72715322b4b3b6871",
+      "sha256": "c99baa6b9cc5ecdcfdc798d7aebc40eca80e6cee40ca8c1b17fc35dbc5361ace",
       "tier": 1,
       "received": [
         {
@@ -69,7 +69,7 @@
         }
       ],
       "lines": [
-        "First ask the person what this playbook should achieve for them and how they will know it worked (a number, a target, their words for a pass and a fail). Say the goals back and send them as `goals` only after their yes, as the goals guide says; without goals it is refused with the question to ask. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words. It starts empty: show the person the `studio` link it answers and change the goals with update_playbook until they say yes to them as saved; build nothing before that yes."
+        "First ask the person what this playbook should achieve for them and how they will know it worked (a number, a target, their words for a pass and a fail). Propose the goals once and send them as `goals` only after their yes, as the goals guide says; without goals it is refused with the question to ask. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words. It starts empty: give the person the `studio` link it answers; when the saved goals are those they agreed, record their yes with agree_playbook_goals before you build anything."
       ]
     },
     {
@@ -299,7 +299,7 @@
       ]
     },
     {
-      "sha256": "db9f81dce12e660a608d2f6db04c14d5f75da09ae5f3514ac0cf4bcec3c6f29d",
+      "sha256": "b82a46a8669348de2919a0d35e4f6441472dad0558327ca7c7e76735b4945368",
       "tier": 1,
       "received": [
         {
@@ -312,7 +312,7 @@
         }
       ],
       "lines": [
-        "Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack. Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says. Once the person has said yes to the saved goals, change them only after their yes to the change, and never change how success is judged to suit what you built. Use it too when the person renames a playbook, changes what it is for or gives it a dashboard. An argument you leave out keeps its saved value. `goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`."
+        "Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack. Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says. Once the person's yes to the goals is recorded, change them only after their yes to the change, and never change how success is judged to suit what you built. Use it too when the person renames a playbook, changes what it is for or gives it a dashboard. An argument you leave out keeps its saved value. `goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`."
       ]
     },
     {
@@ -3887,7 +3887,7 @@
       ]
     },
     {
-      "sha256": "14bc45b565e8be7071bce2a2dc28edc8e0bb83a91135c2b1a27833ea133a49e3",
+      "sha256": "5e9b48599c90e56f887ca7cac6db5e489a83ea00aa7abc1ecd824a4d295106f1",
       "tier": 2,
       "received": [
         {
@@ -3905,10 +3905,10 @@
         "",
         "A first playbook is built in the order of the start guide's Build from the job: what the person wants it to achieve, the workflow that achieves it, then its steps as functions. Read the start guide with get_guide if you have not yet. Read a type's guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. Give the person the `studio` link that each create or run answers, to its page in Studio. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
         "",
-        "1. Call list_playbooks, and list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first.",
-        "2. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\" or \"whenever one arrives\", take that as the answer rather than asking again. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run. Where a person must approve or decide, ask once where they want to be asked, as the start guide's Asking a person says. Where the job itself sends a notice, ask once where it goes: a channel or their direct messages.",
-        "3. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
-        "4. Design the workflow that achieves what the playbook is for, as the start guide's Build from the job says, before you write any function. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. A step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists. A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those. Then show the person the design and get their yes before you write anything.",
+        "1. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\" or \"whenever one arrives\", take that as the answer rather than asking again. Where a person must approve or decide, ask once where they want to be asked, as the start guide's Asking a person says. Where the job itself sends a notice, ask once where it goes: a channel or their direct messages.",
+        "2. Call list_playbooks.",
+        "3. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person in the same round as step 1: What should this playbook achieve for you, and how will you know it worked? Propose the goals once, as the goals guide says, and after their yes send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Then give the person the `studio` link it answers, record their yes with agree_playbook_goals when the saved goals are the ones they agreed, and make nothing else before that call. Every workflow you save then says, in its `contributes`, what it does for a goal.",
+        "4. Call list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run. Design the workflow that achieves what the playbook is for, as the start guide's Build from the job says, before you write any function. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. A step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists. A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those. Then show the person the design and get their yes before you write anything.",
         "5. Write the function of each step of the design, in the format of its type's guide, each with its `page` in the same document. For a step that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a step would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a step that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
         "6. Once they agree, save each with create_definition, with its `type`, its `diagram` and, where it helps, its `overview`, as the arguments say: a workflow takes no `diagram`. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
         "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of one held for you waits for its answer: list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs, so run it only once the person agrees. A prediction function answers once the playbook has history.",
@@ -5327,7 +5327,7 @@
       ]
     },
     {
-      "sha256": "847785dd421eada0eecd6d2a487f78b2654a3b482bb2b6f6a0362b15fe15c532",
+      "sha256": "5bcce290f14889069b7d03d604cafa719d4e56c9afc72ed97e82792a97c265df",
       "tier": 2,
       "received": [
         {
@@ -5396,7 +5396,7 @@
         "",
         "A goal is what the playbook is for, in the person's own words: what it should achieve for them and how they will know it worked. A playbook here cannot be made without its goals: create_playbook refuses one that has none, and a workflow saved in a playbook that has none is refused too.",
         "",
-        "So your first step, before you make anything, is to ask the person, through your client's question tool where it has one: What should this playbook achieve for you, and how will you know it worked? Say their answer back in their words, learn the rest as the goals guide says, and send it as the goals argument of create_playbook, or of update_playbook for a playbook that has no goals yet. Then show them the saved goals at the `studio` link the answer holds, and wait for their yes before you make anything else. Every workflow you save then says what it does for a goal.",
+        "So your first step, before you make anything, is to ask the person, through your client's question tool where it has one: What should this playbook achieve for you, and how will you know it worked? Learn the rest in the same round, propose the goals once as the goals guide says, and after their yes send them as the goals argument of create_playbook, or of update_playbook for a playbook that has no goals yet. Then give them the `studio` link the answer holds and, when the saved goals are the ones they agreed, record their yes with agree_playbook_goals before you make anything else. Every workflow you save then says what it does for a goal.",
         "",
         "## What a workflow owns",
         "",
@@ -5423,7 +5423,7 @@
         "",
         "## Connecting a service",
         "",
-        "search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links. Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
+        "Once the person has answered your first questions, check with search what is connected, so that what you propose names the services the work needs. search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links. Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
         "",
         "## Asking a person",
         "",
@@ -5574,7 +5574,7 @@
       ]
     },
     {
-      "sha256": "6c45ae976cd104ac0d58bf4ed9bd1e7bdf9787eae8441f9f54f6668a5555eb7f",
+      "sha256": "c42b99b8b584b6e75ed7552a150d358f4fad105f4b7955bc94972c49a69c4154",
       "tier": 3,
       "received": [
         {
@@ -5590,7 +5590,7 @@
       "lines": [
         "# Goals",
         "",
-        "The goals of a playbook say what it should achieve for the person and how they will know it worked. A playbook here needs its goals before anything else is made in it. You learn them from the person, you send them as the goals argument of create_playbook or update_playbook, you record the person's yes to them as saved with agree_playbook_goals, and every workflow you save then says what it does for them.",
+        "The goals of a playbook say what it should achieve for the person and how they will know it worked. A playbook here needs its goals before anything else is made in it. You learn them from the person, you send them as the goals argument of create_playbook or update_playbook, you record the person's yes to them with agree_playbook_goals, and every workflow you save then says what it does for them.",
         "",
         "Auto does not send messages about goals here yet. Whenever the person asks to be told about results, say that first, and that their results are in Studio, before you ask or offer anything about telling them. Say it even when a post in their channel is part of the work they ask for.",
         "",
@@ -5598,19 +5598,19 @@
         "",
         "## Before you build anything, learn the goals with the person",
         "",
-        "Ask the person and wait for each answer. Use plain words and the person's own terms. Do not create the playbook, a function or a workflow until you have every answer below and the person has said yes to what you will save.",
+        "Ask the person and wait for their answers. Use plain words and the person's own terms. Do not create the playbook, a function or a workflow until you have every answer below and the person has said yes to what you will save.",
         "",
-        "A person who says little at first gets one question at a time. A person who says much of it at once is not asked it again: say back what you heard, in their words, ask only what is still missing, and wait for their yes.",
+        "Ask first, then propose once. Put everything that is still missing to the person in one round of questions, and do not say a goal or a measure back to them while you ask. A person who has already said some of it is not asked it again.",
         "",
-        "When your client has a tool for asking the person a question, ask through it, one question at a time. In Claude Code, for example, that tool is AskUserQuestion, and in Codex it is request_user_input; other clients name theirs differently. Offer the two to four answers you would suggest, drawn from what the person has said about their business, and leave room for an answer in their own words. A question with no likely answers, such as what the business is called, may be asked in text, and so may every question when your client has no such tool.",
+        "When your client has a tool for asking the person a question, ask every question of the round through it, up to as many in a call as the tool takes, and more calls for the rest. In Claude Code that tool is AskUserQuestion, which takes up to four questions, and in Codex it is request_user_input, which takes up to three; other clients name theirs differently. Offer two or three answers you would suggest for each, drawn from what the person has said about their business, even for a question only they can answer, such as which time zone their days are in, and leave room for an answer in their own words. Only when your client has no such tool, ask the round in text, in one message as a short numbered list.",
         "",
-        "Before the create, say all of it back in one message: the goal and its name, and the number and target that judge it with the words for a pass and a fail.",
+        "Then write one proposal as an ordinary message to the person. Include: the goal in their words and its name; each measure with its target and the words for a pass and a fail; how and when it is measured; what the work itself will post or send, and where; and the services it needs, saying which are connected. Say which name or number is your suggestion: their yes to the proposal takes it. Then ask: Did I get all that right? Yes, or tell me what to change. Where your client has a question tool, ask that question through it right after the message, with nothing of the proposal in the question; otherwise end the message with it.",
         "",
-        "Create the playbook only after their yes to that message, and never earlier just to reach another tool. That yes allows the create and nothing else; the Studio link and connections aren't needed before it. Once the playbook is created, stop: say back the goals as saved, give the person the `studio` link its answer holds, ask whether the saved goals are what they want, and wait for their yes. Then record that yes with agree_playbook_goals, giving the `version` of the goals they saw, before you make any function or workflow. After that yes, put any change to the saved goals to the person first, save it only after their yes, and record that yes with a new call of agree_playbook_goals and the new version. Never change a goal to suit how you built something.",
+        "Create the playbook only after their yes to the proposal, and never earlier just to reach another tool; the Studio link isn't needed before it. Then record that yes as [After the create](#after-the-create-show-the-saved-goals-and-record-the-yes) says. Never change a goal to suit how you built something.",
         "",
-        "1. **What the playbook should achieve for them.** Ask what change they want from it. Then say it back in their words, in one sentence, and ask whether that is right. Their yes to that sentence is the goal's statement. A statement that only repeats the playbook's name or description is refused.",
-        "2. **What to call it.** Suggest a short name for the goal, two to four words from their own, such as \"Catering replies\" or \"Daily controls\", and ask whether it fits. That is the goal's `name`, the title the person sees it under. Ask it even when the person has said everything else.",
-        "3. **How they will know it worked.** Ask what would convince them. That is one number and a target, such as at least one paying customer from each experiment, or no failing control in a day. When they have no number in mind, suggest one that fits what they said, and ask whether it would convince them. Ask too what to call a pass and a fail in their words, such as \"Brought a customer\" and \"Brought no customer\". When it is judged day by day and the work happens on some days only, such as working days, ask which days.",
+        "1. **What the playbook should achieve for them.** Ask what change they want from it. Their words for it, in one sentence, are the goal's statement. A statement that only repeats the playbook's name or description is refused.",
+        "2. **What to call it.** A short name for the goal, two to four words from their own, such as \"Catering replies\" or \"Daily controls\". That is the goal's `name`, the title the person sees it under. Suggest one in the proposal, even when the person has said everything else.",
+        "3. **How they will know it worked.** Ask what would convince them. That is one number and a target, such as at least one paying customer from each experiment, or no failing control in a day. When they have no number in mind, the proposal suggests one that fits what they said. Ask too what to call a pass and a fail in their words, such as \"Brought a customer\" and \"Brought no customer\". When it is judged day by day and the work happens on some days only, such as working days, ask which days.",
         "",
         "Auto does not send messages about goals here yet. Do not ask the person whether, when or where they want to be told about results, and do not offer it. Leave `notify` out of the goals and make no notification function. They see their results in Studio. If they ask to be told, or say when they do or don't want to hear about it, first say that Auto doesn't send messages about goals yet and that their results are in Studio. Only then may you offer to build the post into the playbook as ordinary work, and build it only after they say yes to that. Ask which time zone they mean when a day or a week matters.",
         "",
@@ -5619,7 +5619,7 @@
         "- **Is it judged thing by thing?** Experiments, invoices, tickets and orders are each judged on their own. Ask what one of them is called. That word is the goal's `per`.",
         "- **What has to happen to one of them, start to finish, and which of those steps are theirs?** These are the goal's milestones, three to seven of them: the points where the person acts and the points where Auto collects something. Each one is a segment of the goal's ring in Studio.",
         "",
-        "For example, a compliance owner says: \"Tell me at once when a daily check fails, and nothing when they pass.\" Say first that Auto doesn't send messages about goals yet and that the results will be in Studio. Then learn the goal behind the wish: every control passes its daily check, judged by the day, with at most zero failing controls. The statement says what should be achieved, never how they hear about it. Two things are still missing, so ask them: which time zone their days are in, and whether \"Daily controls\" is the name they want for it. If they still want a post in their channel, offer to build it into the playbook, and build it only after their yes.",
+        "For example, a compliance owner says: \"Tell me at once when a daily check fails, and nothing when they pass.\" Say first that Auto doesn't send messages about goals yet and that the results will be in Studio. Then learn the goal behind the wish: every control passes its daily check, judged by the day, with at most zero failing controls. The statement says what should be achieved, never how they hear about it. One thing is still missing, so ask it: which time zone their days are in. Then suggest \"Daily controls\" as its name in the proposal. If they still want a post in their channel, offer to build it into the playbook, and build it only after their yes.",
         "",
         "## Never invent a goal",
         "",
@@ -5633,11 +5633,11 @@
         "",
         "## After the create, show the saved goals and record the yes",
         "",
-        "The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with their `version`. Say the saved goals back to the person in their words, give them the link, and ask whether that is what they want. When you ask through a question tool, put the link in the question itself or in a message just before it: the person needs it to see the saved goals.",
+        "The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with their `version`. Give the person the link, so that they can see what was saved. When the saved goals are the ones they said yes to, unchanged, record that yes with agree_playbook_goals and the `version` saved, without asking again. When anything changed, show them what changed and ask again; through a question tool, put the link in the question itself or in a message just before it.",
         "",
-        "Change the goals with update_playbook until they say yes. A save that changes them answers with a new `version`, and update_playbook's answer carries no `studio` link, so say the changed goals back in their words. The yes before the create allows the create and nothing more; the yes you record is the one to the goals as saved.",
+        "Change the goals with update_playbook until they say yes. A save that changes them answers with a new `version`, and update_playbook's answer carries no `studio` link, so say the changed goals back in their words.",
         "",
-        "Once they say yes, call agree_playbook_goals with the `version` they saw, before you make anything else. It records their yes to every goal that is not retired; name goals by id in `ids` only when they said yes to some and not the others. Build nothing before that call: no function and no workflow.",
+        "agree_playbook_goals records their yes to every goal that is not retired; name goals by id in `ids` only when they said yes to some and not the others. Build nothing before that call: no function and no workflow.",
         "",
         "A yes holds only for the goals as the person saw them. A save that changes a goal, its name included, drops the yes to that goal. So after the yes, put a change to the person first, save it as they agreed it, and call agree_playbook_goals again with the new version before you build on it. When the call answers that the goals changed since the version you gave, show the person the saved goals again and ask before you record a yes.",
         "",
@@ -5653,20 +5653,20 @@
         "- A goal that has been judged cannot be left out. Stop it with `retired: true`, which keeps its id and record and can be undone. A goal that was never judged may simply be left out.",
         "- A goal's `per`, the kind of its window, a calendar window's unit and time zone, and `settles` cannot change once saved under that id. A different shape is a new goal with a new id. Anything else may change, and a change applies to judgings that open afterward.",
         "",
-        "| Key               | Required               | What it holds                                                                                                                                     |",
-        "| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |",
-        "| `id`              | Yes                    | A lowercase letter, then 2 to 47 lowercase letters, digits and hyphens; unique in the playbook. Make it from the name, such as `catering-replies` |",
-        "| `name`            | No; always ask for one | The goal's short name in the person's words, two to four words, 2 to 40 characters                                                                |",
-        "| `statement`       | Yes                    | The person's words for what it should achieve, 12 to two hundred characters                                                                       |",
-        "| `per`             | No                     | What one thing is called, a singular noun of 2 to 40 characters; the goal is then judged thing by thing                                           |",
-        "| `window`          | No                     | The stretch of time one judging covers: `after` with `for`, or `calendar`; see below                                                              |",
-        "| `success.label`   | Yes                    | The words for the number, 2 to two hundred characters                                                                                             |",
-        "| `success.settles` | Yes                    | `on_crossing` or `at_close`; see [Choosing settles](#choosing-settles)                                                                            |",
-        "| `success.target`  | Yes                    | Exactly one of `at_least` and `at_most`, a finite number                                                                                          |",
-        "| `success.passed`  | Yes                    | The person's word for a pass, 2 to 40 characters                                                                                                  |",
-        "| `success.failed`  | Yes                    | The person's word for a fail, 2 to 40 characters                                                                                                  |",
-        "| `milestones`      | No                     | None, or 3 to 7, each `id`, `label` (2 to 80 characters) and `by`, `person` or `auto`                                                             |",
-        "| `retired`         | No                     | `true` stops the goal and ends its open judgings without a verdict                                                                                |",
+        "| Key               | Required                        | What it holds                                                                                                                                     |",
+        "| ----------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |",
+        "| `id`              | Yes                             | A lowercase letter, then 2 to 47 lowercase letters, digits and hyphens; unique in the playbook. Make it from the name, such as `catering-replies` |",
+        "| `name`            | No; suggest one in the proposal | The goal's short name in the person's words, two to four words, 2 to 40 characters                                                                |",
+        "| `statement`       | Yes                             | The person's words for what it should achieve, 12 to two hundred characters                                                                       |",
+        "| `per`             | No                              | What one thing is called, a singular noun of 2 to 40 characters; the goal is then judged thing by thing                                           |",
+        "| `window`          | No                              | The stretch of time one judging covers: `after` with `for`, or `calendar`; see below                                                              |",
+        "| `success.label`   | Yes                             | The words for the number, 2 to two hundred characters                                                                                             |",
+        "| `success.settles` | Yes                             | `on_crossing` or `at_close`; see [Choosing settles](#choosing-settles)                                                                            |",
+        "| `success.target`  | Yes                             | Exactly one of `at_least` and `at_most`, a finite number                                                                                          |",
+        "| `success.passed`  | Yes                             | The person's word for a pass, 2 to 40 characters                                                                                                  |",
+        "| `success.failed`  | Yes                             | The person's word for a fail, 2 to 40 characters                                                                                                  |",
+        "| `milestones`      | No                              | None, or 3 to 7, each `id`, `label` (2 to 80 characters) and `by`, `person` or `auto`                                                             |",
+        "| `retired`         | No                              | `true` stops the goal and ends its open judgings without a verdict                                                                                |",
         "",
         "The window:",
         "",
@@ -5844,7 +5844,7 @@
         "A playbook made before goals keeps running as it is. The next time you save one of its workflows, create_definition or update_definition refuses it with \"Ask the person: What should this playbook achieve for you, and how will you know it worked?\" Then:",
         "",
         "1. Learn the goals with the person, as above.",
-        "2. Send the goals with update_playbook, tell the person in their words what you saved, and change the goals until they say yes. Its answer carries no `studio` link. Record their yes with agree_playbook_goals and the version saved.",
+        "2. Send the goals with update_playbook once they say yes to the proposal, and record that yes with agree_playbook_goals and the version saved, as above. update_playbook's answer carries no `studio` link.",
         "3. Save the workflow again, with its `contributes`.",
         "",
         "Its other workflows keep running, and each shows as a gap until you next save it with a contribution.",
@@ -9882,7 +9882,7 @@
       ]
     },
     {
-      "sha256": "2e9c0e5bd099c8bb1dba1ed855919054ff5e48075255d56226d7ac21468080de",
+      "sha256": "e4ecb5d14fa80b390718a4a2b339cf1e08a17d72310ba5bb86a6a347d3ed17af",
       "tier": 2,
       "received": [
         {
@@ -9900,10 +9900,10 @@
         "",
         "A first playbook is built in the order of the start guide's Build from the job: what the person wants it to achieve, the workflow that achieves it, then its steps as functions. Read the start guide with get_guide if you have not yet. Read a type's guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. Give the person the `studio` link that each create or run answers, to its page in Studio. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
         "",
-        "1. Call list_playbooks, and list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first.",
-        "2. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\" or \"whenever one arrives\", take that as the answer rather than asking again. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run. Where a person must approve or decide, ask once where they want to be asked, as the start guide's Asking a person says. Where the job itself sends a notice, ask once where it goes: a channel or their direct messages.",
-        "3. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.",
-        "4. Design the workflow that achieves what the playbook is for, as the start guide's Build from the job says, before you write any function. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. A step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists. A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those. Then show the person the design and get their yes before you write anything.",
+        "1. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\" or \"whenever one arrives\", take that as the answer rather than asking again. Where a person must approve or decide, ask once where they want to be asked, as the start guide's Asking a person says. Where the job itself sends a notice, ask once where it goes: a channel or their direct messages.",
+        "2. Call list_playbooks.",
+        "3. Create the playbook with create_playbook, with the person's words on what it is for, or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person in the same round as step 1: What should this playbook achieve for you, and how will you know it worked? Propose the goals once, as the goals guide says, and after their yes send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Then give the person the `studio` link it answers, record their yes with agree_playbook_goals when the saved goals are the ones they agreed, and make nothing else before that call. Every workflow you save then says, in its `contributes`, what it does for a goal.",
+        "4. Call list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run. Design the workflow that achieves what the playbook is for, as the start guide's Build from the job says, before you write any function. Four shapes show the range. A job that only judges what the person gives is one reasoning function. A job that only calculates is one computation function. A job that reads, calculates and writes is a lookup function, a computation function and a reasoning function. A job that reads, judges, asks and then acts is a lookup function, a reasoning function and two interaction functions. A step that reads or searches a service is a lookup function, whether the run's input or an earlier step says what to read; a `for` runs it once for each item an earlier step lists. A reasoning step judges or writes from what was read, and names `tools` only where what it looks for next depends on what it just read: a step with no tools chooses what to look for, what to open or which hits to read; lookups read those. Then show the person the design and get their yes before you write anything.",
         "5. Write the function of each step of the design, in the format of its type's guide, each with its `page` in the same document. For a step that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe. Or build without it for now, so that the person sees a run today. Let the workflow take what a step would read as its input, pasted by the person. Ask a person through you (`deliver: agent`). Leave a step that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet. Show the person the documents and ask whether to save them.",
         "6. Once they agree, save each with create_definition, with its `type`, its `diagram` and, where it helps, its `overview`, as the arguments say: a workflow takes no `diagram`. A name that is taken is refused. Choose another with the person rather than change the function that has it.",
         "7. Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words. These need no connection: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). A test of one held for you waits for its answer: list_interactions shows the request, and answer_interaction answers it once the person says what to answer. A function that has a service act really acts when it runs, so run it only once the person agrees. A prediction function answers once the playbook has history.",
@@ -10069,7 +10069,7 @@
       ]
     },
     {
-      "sha256": "ceb561518e01a32a01be3ce17c27f23bef87f3318bbd96a2792167be18111008",
+      "sha256": "39d187fb922d94ec81866eb679a59920241135ca70ff45790a2542faa9429a0d",
       "tier": 1,
       "received": [
         {
@@ -10080,7 +10080,7 @@
         }
       ],
       "lines": [
-        "Before you build or change anything, read the guide start with get_guide: it says which function type each part of a job takes. Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order. A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. This connection acts inside one playbook. Ask the person each question through your client's question tool where it has one. A tool that cannot do what was asked says why and what to change."
+        "Before you build or change anything, read the guide start with get_guide: it says which function type each part of a job takes. Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order. A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. This connection acts inside one playbook. Ask your first questions in one round, through your client's question tool where it has one. A tool that cannot do what was asked says why and what to change."
       ]
     },
     {
@@ -10159,7 +10159,7 @@
       ]
     },
     {
-      "sha256": "44fbb02df8c89db3ac5537958d6af457724cc35c4e885c9f174fd87fde87fae3",
+      "sha256": "2989120596fe5b0454649b0f0dee29ab3e1c4afac2a1a2cc3aeda2407b9277cd",
       "tier": 2,
       "received": [
         {
@@ -10225,7 +10225,7 @@
         "",
         "A goal is what the playbook is for, in the person's own words: what it should achieve for them and how they will know it worked. A playbook here cannot be made without its goals: create_playbook refuses one that has none, and a workflow saved in a playbook that has none is refused too.",
         "",
-        "So your first step, before you make anything, is to ask the person, through your client's question tool where it has one: What should this playbook achieve for you, and how will you know it worked? Say their answer back in their words, learn the rest as the goals guide says, and send it as the goals argument of create_playbook, or of update_playbook for a playbook that has no goals yet. Then show them the saved goals at the `studio` link the answer holds, and wait for their yes before you make anything else. Every workflow you save then says what it does for a goal.",
+        "So your first step, before you make anything, is to ask the person, through your client's question tool where it has one: What should this playbook achieve for you, and how will you know it worked? Learn the rest in the same round, propose the goals once as the goals guide says, and after their yes send them as the goals argument of create_playbook, or of update_playbook for a playbook that has no goals yet. Then give them the `studio` link the answer holds and, when the saved goals are the ones they agreed, record their yes with agree_playbook_goals before you make anything else. Every workflow you save then says what it does for a goal.",
         "",
         "## What a workflow owns",
         "",
@@ -10252,7 +10252,7 @@
         "",
         "## Connecting a service",
         "",
-        "search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links. Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
+        "Once the person has answered your first questions, check with search what is connected, so that what you propose names the services the work needs. search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links. Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
         "",
         "## Asking a person",
         "",

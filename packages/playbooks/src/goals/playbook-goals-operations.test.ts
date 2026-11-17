@@ -71,11 +71,11 @@ describe('the descriptions of the playbook operations with a goals port', () => 
   it('lead create_playbook with the goals it needs, where they come from and the refusal without them', () => {
     expect(sentencesOf(descriptionOf('create_playbook'))).toEqual([
       'First ask the person what this playbook should achieve for them, how they will know it worked (a number, a target, their words for a pass and a fail), and what to tell them, when and where.',
-      'Say the goals back and send them as `goals` only after their yes, as the goals guide says; without goals it is refused with the question to ask.',
+      'Propose the goals once and send them as `goals` only after their yes, as the goals guide says; without goals it is refused with the question to ask.',
       'Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it.',
       'An id that is taken or retired is refused.',
       "`playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words.",
-      'It starts empty: show the person the `studio` link it answers and change the goals with update_playbook until they say yes to them as saved; build nothing before that yes.',
+      'It starts empty: give the person the `studio` link it answers; when the saved goals are those they agreed, record their yes with agree_playbook_goals before you build anything.',
     ]);
   });
 
@@ -83,7 +83,7 @@ describe('the descriptions of the playbook operations with a goals port', () => 
     expect(sentencesOf(descriptionOf('update_playbook'))).toEqual([
       'Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack.',
       'Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says.',
-      'Once the person has said yes to the saved goals, change them only after their yes to the change, and never change what they are told or how success is judged to suit what you built.',
+      "Once the person's yes to the goals is recorded, change them only after their yes to the change, and never change what they are told or how success is judged to suit what you built.",
       'Use it too when the person renames a playbook, changes what it is for or gives it a dashboard.',
       'An argument you leave out keeps its saved value.',
       '`goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`.',
@@ -220,13 +220,13 @@ describe('the plain language of the playbook operations with a goals port', () =
   it('tell the agent, after a create, to show the person the goals and build nothing before the yes', () => {
     expect(wordsOf('create_playbook', [], { playbook: 'alpha', name: 'Alpha' })).toEqual([
       'create the playbook “alpha”',
-      'Created the playbook “Alpha”. Stop here: show the person its goals through the studio link and change them with update_playbook until they say yes to them as saved; build no function or workflow before that yes.',
+      'Created the playbook “Alpha”. Stop here: give the person the `studio` link. If these are the goals the person said yes to, record that yes with agree_playbook_goals; if not, ask again. Build nothing before that call.',
     ]);
     expect(
       wordsOf('create_playbook', [gap, gap], { playbook: 'alpha', name: 'Alpha' }, { ...alpha, description: 'Sells.' }),
     ).toEqual([
       'create the playbook “alpha”',
-      'Created the playbook “Alpha”. What it is for: Sells. Stop here: show the person its goals through the studio link and change them with update_playbook until they say yes to them as saved; build no function or workflow before that yes. Its goals still have 2 gaps, each saying what is missing and who puts it right.',
+      'Created the playbook “Alpha”. What it is for: Sells. Stop here: give the person the `studio` link. If these are the goals the person said yes to, record that yes with agree_playbook_goals; if not, ask again. Build nothing before that call. Its goals still have 2 gaps, each saying what is missing and who puts it right.',
     ]);
   });
 

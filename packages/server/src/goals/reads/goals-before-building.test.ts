@@ -12,9 +12,9 @@ afterEach(async () => {
   server = undefined;
 });
 
-const untilTheYes = /^Stop here: show the person its goals through the studio link/u;
+const untilTheYes = /^Stop here: give the person the `studio` link/u;
 
-const untilTheNewYes = /^Stop here: show the person the goals as saved now/u;
+const untilTheNewYes = /^Stop here\. If these are the goals/u;
 
 const unsent =
   'Auto sends no goal messages here: if the person asked to be told, tell them so first, and build a post only after their yes.';

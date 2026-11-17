@@ -1,6 +1,6 @@
 # Goals
 
-The goals of a playbook say what it should achieve for the person and how they will know it worked. A playbook here needs its goals before anything else is made in it. You learn them from the person, you send them as the goals argument of create_playbook or update_playbook, you record the person's yes to them as saved with agree_playbook_goals, and every workflow you save then says what it does for them.
+The goals of a playbook say what it should achieve for the person and how they will know it worked. A playbook here needs its goals before anything else is made in it. You learn them from the person, you send them as the goals argument of create_playbook or update_playbook, you record the person's yes to them with agree_playbook_goals, and every workflow you save then says what it does for them.
 
 <!-- with messages -->
 
@@ -18,39 +18,39 @@ This guide is in the order you need it: the conversation first, then the format.
 
 ## Before you build anything, learn the goals with the person
 
-Ask the person and wait for each answer. Use plain words and the person's own terms. Do not create the playbook, a function or a workflow until you have every answer below and the person has said yes to what you will save.
+Ask the person and wait for their answers. Use plain words and the person's own terms. Do not create the playbook, a function or a workflow until you have every answer below and the person has said yes to what you will save.
 
 <!-- with messages -->
 
-A person who says little at first gets one question at a time. A person who says much of it at once is not asked it again: say back what you heard, in their words, ask only what is still missing, and wait for their yes. What is missing is most often what to tell them when it passes, fails or becomes overdue, or where and when to tell them.
+Ask first, then propose once. Put everything that is still missing to the person in one round of questions, and do not say a goal or a measure back to them while you ask. A person who has already said some of it is not asked it again. What is missing is most often what to tell them when it passes, fails or becomes overdue, or where and when to tell them.
 
 <!-- end -->
 
 <!-- without messages -->
 
-A person who says little at first gets one question at a time. A person who says much of it at once is not asked it again: say back what you heard, in their words, ask only what is still missing, and wait for their yes.
+Ask first, then propose once. Put everything that is still missing to the person in one round of questions, and do not say a goal or a measure back to them while you ask. A person who has already said some of it is not asked it again.
 
 <!-- end -->
 
-When your client has a tool for asking the person a question, ask through it, one question at a time. In Claude Code, for example, that tool is AskUserQuestion, and in Codex it is request_user_input; other clients name theirs differently. Offer the two to four answers you would suggest, drawn from what the person has said about their business, and leave room for an answer in their own words. A question with no likely answers, such as what the business is called, may be asked in text, and so may every question when your client has no such tool.
+When your client has a tool for asking the person a question, ask every question of the round through it, up to as many in a call as the tool takes, and more calls for the rest. In Claude Code that tool is AskUserQuestion, which takes up to four questions, and in Codex it is request_user_input, which takes up to three; other clients name theirs differently. Offer two or three answers you would suggest for each, drawn from what the person has said about their business, even for a question only they can answer, such as which time zone their days are in, and leave room for an answer in their own words. Only when your client has no such tool, ask the round in text, in one message as a short numbered list.
 
 <!-- with messages -->
 
-Before the create, say all of it back in one message: the goal and its name, the number and target that judge it with the words for a pass and a fail, and what you will tell them, when and where.
+Then write one proposal as an ordinary message to the person. Include: the goal in their words and its name; each measure with its target and the words for a pass and a fail; how and when it is measured; what you will tell them about results, when and where; what the work itself will post or send, and where; and the services it needs, saying which are connected. Say which name or number is your suggestion: their yes to the proposal takes it. Then ask: Did I get all that right? Yes, or tell me what to change. Where your client has a question tool, ask that question through it right after the message, with nothing of the proposal in the question; otherwise end the message with it.
 
 <!-- end -->
 
 <!-- without messages -->
 
-Before the create, say all of it back in one message: the goal and its name, and the number and target that judge it with the words for a pass and a fail.
+Then write one proposal as an ordinary message to the person. Include: the goal in their words and its name; each measure with its target and the words for a pass and a fail; how and when it is measured; what the work itself will post or send, and where; and the services it needs, saying which are connected. Say which name or number is your suggestion: their yes to the proposal takes it. Then ask: Did I get all that right? Yes, or tell me what to change. Where your client has a question tool, ask that question through it right after the message, with nothing of the proposal in the question; otherwise end the message with it.
 
 <!-- end -->
 
-Create the playbook only after their yes to that message, and never earlier just to reach another tool. That yes allows the create and nothing else; the Studio link and connections aren't needed before it. Once the playbook is created, stop: say back the goals as saved, give the person the `studio` link its answer holds, ask whether the saved goals are what they want, and wait for their yes. Then record that yes with agree_playbook_goals, giving the `version` of the goals they saw, before you make any function or workflow. After that yes, put any change to the saved goals to the person first, save it only after their yes, and record that yes with a new call of agree_playbook_goals and the new version. Never change a goal to suit how you built something.
+Create the playbook only after their yes to the proposal, and never earlier just to reach another tool; the Studio link isn't needed before it. Then record that yes as [After the create](#after-the-create-show-the-saved-goals-and-record-the-yes) says. Never change a goal to suit how you built something.
 
-1. **What the playbook should achieve for them.** Ask what change they want from it. Then say it back in their words, in one sentence, and ask whether that is right. Their yes to that sentence is the goal's statement. A statement that only repeats the playbook's name or description is refused.
-2. **What to call it.** Suggest a short name for the goal, two to four words from their own, such as "Catering replies" or "Daily controls", and ask whether it fits. That is the goal's `name`, the title the person sees it under. Ask it even when the person has said everything else.
-3. **How they will know it worked.** Ask what would convince them. That is one number and a target, such as at least one paying customer from each experiment, or no failing control in a day. When they have no number in mind, suggest one that fits what they said, and ask whether it would convince them. Ask too what to call a pass and a fail in their words, such as "Brought a customer" and "Brought no customer". When it is judged day by day and the work happens on some days only, such as working days, ask which days.
+1. **What the playbook should achieve for them.** Ask what change they want from it. Their words for it, in one sentence, are the goal's statement. A statement that only repeats the playbook's name or description is refused.
+2. **What to call it.** A short name for the goal, two to four words from their own, such as "Catering replies" or "Daily controls". That is the goal's `name`, the title the person sees it under. Suggest one in the proposal, even when the person has said everything else.
+3. **How they will know it worked.** Ask what would convince them. That is one number and a target, such as at least one paying customer from each experiment, or no failing control in a day. When they have no number in mind, the proposal suggests one that fits what they said. Ask too what to call a pass and a fail in their words, such as "Brought a customer" and "Brought no customer". When it is judged day by day and the work happens on some days only, such as working days, ask which days.
 
 <!-- with messages -->
 
@@ -82,7 +82,7 @@ For example, a compliance owner says: "Tell me nothing when the daily checks pas
 
 <!-- without messages -->
 
-For example, a compliance owner says: "Tell me at once when a daily check fails, and nothing when they pass." Say first that Auto doesn't send messages about goals yet and that the results will be in Studio. Then learn the goal behind the wish: every control passes its daily check, judged by the day, with at most zero failing controls. The statement says what should be achieved, never how they hear about it. Two things are still missing, so ask them: which time zone their days are in, and whether "Daily controls" is the name they want for it. If they still want a post in their channel, offer to build it into the playbook, and build it only after their yes.
+For example, a compliance owner says: "Tell me at once when a daily check fails, and nothing when they pass." Say first that Auto doesn't send messages about goals yet and that the results will be in Studio. Then learn the goal behind the wish: every control passes its daily check, judged by the day, with at most zero failing controls. The statement says what should be achieved, never how they hear about it. One thing is still missing, so ask it: which time zone their days are in. Then suggest "Daily controls" as its name in the proposal. If they still want a post in their channel, offer to build it into the playbook, and build it only after their yes.
 
 <!-- end -->
 
@@ -118,11 +118,11 @@ Never record a yes the person did not give. agree_playbook_goals is their answer
 
 ## After the create, show the saved goals and record the yes
 
-The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with their `version`. Say the saved goals back to the person in their words, give them the link, and ask whether that is what they want. When you ask through a question tool, put the link in the question itself or in a message just before it: the person needs it to see the saved goals.
+The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with their `version`. Give the person the link, so that they can see what was saved. When the saved goals are the ones they said yes to, unchanged, record that yes with agree_playbook_goals and the `version` saved, without asking again. When anything changed, show them what changed and ask again; through a question tool, put the link in the question itself or in a message just before it.
 
-Change the goals with update_playbook until they say yes. A save that changes them answers with a new `version`, and update_playbook's answer carries no `studio` link, so say the changed goals back in their words. The yes before the create allows the create and nothing more; the yes you record is the one to the goals as saved.
+Change the goals with update_playbook until they say yes. A save that changes them answers with a new `version`, and update_playbook's answer carries no `studio` link, so say the changed goals back in their words.
 
-Once they say yes, call agree_playbook_goals with the `version` they saw, before you make anything else. It records their yes to every goal that is not retired; name goals by id in `ids` only when they said yes to some and not the others. Build nothing before that call: no function and no workflow.
+agree_playbook_goals records their yes to every goal that is not retired; name goals by id in `ids` only when they said yes to some and not the others. Build nothing before that call: no function and no workflow.
 
 A yes holds only for the goals as the person saw them. A save that changes a goal, its name included, drops the yes to that goal. So after the yes, put a change to the person first, save it as they agreed it, and call agree_playbook_goals again with the new version before you build on it. When the call answers that the goals changed since the version you gave, show the person the saved goals again and ask before you record a yes.
 
@@ -157,7 +157,7 @@ The goals argument is text: the list of goals alone, with no key around it, writ
 | Key               | Required                                      | What it holds                                                                                                                                     |
 | ----------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`              | Yes                                           | A lowercase letter, then 2 to 47 lowercase letters, digits and hyphens; unique in the playbook. Make it from the name, such as `catering-replies` |
-| `name`            | No; always ask for one                        | The goal's short name in the person's words, two to four words, 2 to 40 characters                                                                |
+| `name`            | No; suggest one in the proposal               | The goal's short name in the person's words, two to four words, 2 to 40 characters                                                                |
 | `statement`       | Yes                                           | The person's words for what it should achieve, 12 to two hundred characters                                                                       |
 | `per`             | No                                            | What one thing is called, a singular noun of 2 to 40 characters; the goal is then judged thing by thing                                           |
 | `window`          | No                                            | The stretch of time one judging covers: `after` with `for`, or `calendar`; see below                                                              |
@@ -178,20 +178,20 @@ The goals argument is text: the list of goals alone, with no key around it, writ
 
 <!-- without messages -->
 
-| Key               | Required               | What it holds                                                                                                                                     |
-| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`              | Yes                    | A lowercase letter, then 2 to 47 lowercase letters, digits and hyphens; unique in the playbook. Make it from the name, such as `catering-replies` |
-| `name`            | No; always ask for one | The goal's short name in the person's words, two to four words, 2 to 40 characters                                                                |
-| `statement`       | Yes                    | The person's words for what it should achieve, 12 to two hundred characters                                                                       |
-| `per`             | No                     | What one thing is called, a singular noun of 2 to 40 characters; the goal is then judged thing by thing                                           |
-| `window`          | No                     | The stretch of time one judging covers: `after` with `for`, or `calendar`; see below                                                              |
-| `success.label`   | Yes                    | The words for the number, 2 to two hundred characters                                                                                             |
-| `success.settles` | Yes                    | `on_crossing` or `at_close`; see [Choosing settles](#choosing-settles)                                                                            |
-| `success.target`  | Yes                    | Exactly one of `at_least` and `at_most`, a finite number                                                                                          |
-| `success.passed`  | Yes                    | The person's word for a pass, 2 to 40 characters                                                                                                  |
-| `success.failed`  | Yes                    | The person's word for a fail, 2 to 40 characters                                                                                                  |
-| `milestones`      | No                     | None, or 3 to 7, each `id`, `label` (2 to 80 characters) and `by`, `person` or `auto`                                                             |
-| `retired`         | No                     | `true` stops the goal and ends its open judgings without a verdict                                                                                |
+| Key               | Required                        | What it holds                                                                                                                                     |
+| ----------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | Yes                             | A lowercase letter, then 2 to 47 lowercase letters, digits and hyphens; unique in the playbook. Make it from the name, such as `catering-replies` |
+| `name`            | No; suggest one in the proposal | The goal's short name in the person's words, two to four words, 2 to 40 characters                                                                |
+| `statement`       | Yes                             | The person's words for what it should achieve, 12 to two hundred characters                                                                       |
+| `per`             | No                              | What one thing is called, a singular noun of 2 to 40 characters; the goal is then judged thing by thing                                           |
+| `window`          | No                              | The stretch of time one judging covers: `after` with `for`, or `calendar`; see below                                                              |
+| `success.label`   | Yes                             | The words for the number, 2 to two hundred characters                                                                                             |
+| `success.settles` | Yes                             | `on_crossing` or `at_close`; see [Choosing settles](#choosing-settles)                                                                            |
+| `success.target`  | Yes                             | Exactly one of `at_least` and `at_most`, a finite number                                                                                          |
+| `success.passed`  | Yes                             | The person's word for a pass, 2 to 40 characters                                                                                                  |
+| `success.failed`  | Yes                             | The person's word for a fail, 2 to 40 characters                                                                                                  |
+| `milestones`      | No                              | None, or 3 to 7, each `id`, `label` (2 to 80 characters) and `by`, `person` or `auto`                                                             |
+| `retired`         | No                              | `true` stops the goal and ends its open judgings without a verdict                                                                                |
 
 <!-- end -->
 
@@ -474,7 +474,7 @@ Keep the function active. A paused or retired one sends nothing, and the goal sh
 A playbook made before goals keeps running as it is. The next time you save one of its workflows, create_definition or update_definition refuses it with "Ask the person: What should this playbook achieve for you, and how will you know it worked?" Then:
 
 1. Learn the goals with the person, as above.
-2. Send the goals with update_playbook, tell the person in their words what you saved, and change the goals until they say yes. Its answer carries no `studio` link. Record their yes with agree_playbook_goals and the version saved.
+2. Send the goals with update_playbook once they say yes to the proposal, and record that yes with agree_playbook_goals and the version saved, as above. update_playbook's answer carries no `studio` link.
 3. Save the workflow again, with its `contributes`.
 
 Its other workflows keep running, and each shows as a gap until you next save it with a contribution.

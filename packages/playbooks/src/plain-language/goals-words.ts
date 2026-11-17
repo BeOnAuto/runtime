@@ -74,11 +74,12 @@ export function goalsSavedWordsOf(messages: boolean): string {
   return messages ? '' : ` ${noGoalMessagesWords}`;
 }
 
-const untilTheYesWords =
-  'Stop here: show the person its goals through the studio link and change them with update_playbook until they say yes to them as saved; build no function or workflow before that yes.';
+const theYesRecordedWords =
+  'If these are the goals the person said yes to, record that yes with agree_playbook_goals; if not, ask again. Build nothing before that call.';
 
-const untilTheNewYesWords =
-  'Stop here: show the person the goals as saved now and change them with update_playbook until they say yes to them; build no function or workflow before that yes.';
+const untilTheYesWords = `Stop here: give the person the \`studio\` link. ${theYesRecordedWords}`;
+
+const untilTheNewYesWords = `Stop here. ${theYesRecordedWords}`;
 
 function joinedOrNone(sentences: readonly string[]): string | undefined {
   return sentences.length === 0 ? undefined : sentences.join(' ');

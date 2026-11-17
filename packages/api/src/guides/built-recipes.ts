@@ -23,12 +23,12 @@ export const modelsOfAServer =
 export const goalsInsertedAfter = 'or use the playbook they name when list_playbooks shows it.';
 
 const goalsAsked =
-  'Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked?';
+  'Here a playbook is made only with its goals, so before you create it, ask the person in the same round as step 1: What should this playbook achieve for you, and how will you know it worked?';
 
 const toldAsked = 'Learn too what they want to be told when it passes, fails or becomes overdue, and where.';
 
 const goalsSavedAndAgreed =
-  'Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.';
+  'Propose the goals once, as the goals guide says, and after their yes send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Then give the person the `studio` link it answers, record their yes with agree_playbook_goals when the saved goals are the ones they agreed, and make nothing else before that call. Every workflow you save then says, in its `contributes`, what it does for a goal.';
 
 export function sentences(...given: readonly (readonly string[])[]): string {
   return given.flat().join(' ');
@@ -56,10 +56,11 @@ function opening(carried: Carried): string {
   );
 }
 
-function listingTheModels(carried: Carried): string {
-  return serves(carried, 'reasoning')
-    ? 'Call list_playbooks, and list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first.'
-    : 'Call list_playbooks.';
+function choosingAModel(carried: Carried): readonly string[] {
+  return where(
+    serves(carried, 'reasoning'),
+    'Call list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run.',
+  );
 }
 
 function askingForTheJob(carried: Carried): string {
@@ -70,10 +71,6 @@ function askingForTheJob(carried: Carried): string {
     where(
       serves(carried, 'workflow'),
       'Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as "every morning" or "whenever one arrives", take that as the answer rather than asking again.',
-    ),
-    where(
-      serves(carried, 'reasoning'),
-      'When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run.',
     ),
     where(
       serves(carried, 'interaction'),
@@ -105,6 +102,7 @@ function shapesOf(carried: Carried): readonly string[] {
 
 function designingTheWorkflow(carried: Carried): string {
   return sentences(
+    choosingAModel(carried),
     [
       "Design the workflow that achieves what the playbook is for, as the start guide's Build from the job says, before you write any function.",
     ],
@@ -116,6 +114,7 @@ function designingTheWorkflow(carried: Carried): string {
 
 function partsAndTheirTypes(carried: Carried): string {
   return sentences(
+    choosingAModel(carried),
     [
       'Say the job back to the person as its parts, in the order they happen, and give each part its function type by what the part does, from the list in Build from the job.',
     ],
@@ -254,8 +253,8 @@ function creatingThePlaybook(carried: Carried): string {
 function firstPlaybookText(carried: Carried): string {
   const workflows = serves(carried, 'workflow');
   const steps = [
-    listingTheModels(carried),
     askingForTheJob(carried),
+    'Call list_playbooks.',
     creatingThePlaybook(carried),
     workflows ? designingTheWorkflow(carried) : partsAndTheirTypes(carried),
     writingEachFunction(carried),

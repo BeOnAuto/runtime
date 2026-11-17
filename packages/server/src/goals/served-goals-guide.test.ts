@@ -60,7 +60,7 @@ const startsItsGoals = "\n## Its goals\n\nA goal is what the playbook is for, in
 const termsOfGoals = "\nGoals:\n\n- Goal: What a playbook is for, in the person's own words,";
 
 const asksBeforeTheCreate =
-  'or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked?';
+  'or use the playbook they name when list_playbooks shows it. Here a playbook is made only with its goals, so before you create it, ask the person in the same round as step 1: What should this playbook achieve for you, and how will you know it worked?';
 
 const endpoints = ['/mcp', '/directory', '/orgs/local/mcp', '/orgs/local/playbooks/alpha/mcp'] as const;
 

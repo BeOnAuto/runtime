@@ -97,11 +97,11 @@ describe('what the guide start of that server says of workflows, of the agent an
 
   it('says how a service is connected and set up, and how a person is asked, and ends there', () => {
     expect(text).toMatch(
-      /## Connecting a service\n\nsearch finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links\. Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected\.\n\n## Asking a person\n\nWhere a person must approve or decide, ask once where they want to be asked: through a connection that sends them a request and reads their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`\. An interaction function makes the request and waits; answer_interaction answers one held for an agent, once the person says what to answer; the interaction-function guide says how\.\n$/u,
+      /## Connecting a service\n\nOnce the person has answered your first questions, check with search what is connected, so that what you propose names the services the work needs\. search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links\. Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected\.\n\n## Asking a person\n\nWhere a person must approve or decide, ask once where they want to be asked: through a connection that sends them a request and reads their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`\. An interaction function makes the request and waits; answer_interaction answers one held for an agent, once the person says what to answer; the interaction-function guide says how\.\n$/u,
     );
   });
 
-  it('has its eight sections in that order, takes 7,898 bytes, and uses no term of the internal vocabulary', () => {
+  it('has its eight sections in that order, takes 8,046 bytes, and uses no term of the internal vocabulary', () => {
     expect(headings(text)).toEqual([
       '## Build from the job',
       '## Where to go',
@@ -111,7 +111,7 @@ describe('what the guide start of that server says of workflows, of the agent an
       '## Connecting a service',
       '## Asking a person',
     ]);
-    expect(byteLengthOf(text)).toBe(7898);
+    expect(byteLengthOf(text)).toBe(8046);
     expect(internalTermsIn(text)).toEqual([]);
   });
 });

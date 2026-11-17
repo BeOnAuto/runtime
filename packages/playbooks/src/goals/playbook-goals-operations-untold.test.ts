@@ -38,7 +38,7 @@ describe('the plain language of the playbook operations where Auto sends no goal
 
   it('tell the agent, after a create, that no goal messages are sent, before the gaps', () => {
     expect(wordsOf('create_playbook', { playbook: 'alpha', name: 'Alpha' }, { gaps: [gap] })).toBe(
-      `Created the playbook “Alpha”. Stop here: show the person its goals through the studio link and change them with update_playbook until they say yes to them as saved; build no function or workflow before that yes. ${unsent} Its goals still have 1 gap, each saying what is missing and who puts it right.`,
+      `Created the playbook “Alpha”. Stop here: give the person the \`studio\` link. If these are the goals the person said yes to, record that yes with agree_playbook_goals; if not, ask again. Build nothing before that call. ${unsent} Its goals still have 1 gap, each saying what is missing and who puts it right.`,
     );
   });
 
@@ -46,7 +46,7 @@ describe('the plain language of the playbook operations where Auto sends no goal
     const sold = { ...alpha, description: 'Sells.' };
 
     expect(wordsOf('create_playbook', { playbook: 'alpha', name: 'Alpha' }, { output: sold })).toBe(
-      `Created the playbook “Alpha”. Stop here: show the person its goals through the studio link and change them with update_playbook until they say yes to them as saved; build no function or workflow before that yes. ${unsent} What it is for: Sells.`,
+      `Created the playbook “Alpha”. Stop here: give the person the \`studio\` link. If these are the goals the person said yes to, record that yes with agree_playbook_goals; if not, ask again. Build nothing before that call. ${unsent} What it is for: Sells.`,
     );
     expect(wordsOf('update_playbook', { playbook: 'alpha', goals: goalsText }, { output: sold })).toBe(
       `Updated the playbook “Alpha”. ${unsent} What it is for: Sells.`,

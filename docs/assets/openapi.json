@@ -99,7 +99,7 @@
       "post": {
         "operationId": "create_playbook",
         "summary": "Create playbook",
-        "description": "First ask the person what this playbook should achieve for them and how they will know it worked (a number, a target, their words for a pass and a fail). Say the goals back and send them as `goals` only after their yes, as the goals guide says; without goals it is refused with the question to ask. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words. It starts empty: show the person the `studio` link it answers and change the goals with update_playbook until they say yes to them as saved; build nothing before that yes.",
+        "description": "First ask the person what this playbook should achieve for them and how they will know it worked (a number, a target, their words for a pass and a fail). Propose the goals once and send them as `goals` only after their yes, as the goals guide says; without goals it is refused with the question to ask. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words. It starts empty: give the person the `studio` link it answers; when the saved goals are those they agreed, record their yes with agree_playbook_goals before you build anything.",
         "tags": [
           "playbooks"
         ],
@@ -813,7 +813,7 @@
       "put": {
         "operationId": "update_playbook",
         "summary": "Update playbook",
-        "description": "Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack. Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says. Once the person has said yes to the saved goals, change them only after their yes to the change, and never change how success is judged to suit what you built. Use it too when the person renames a playbook, changes what it is for or gives it a dashboard. An argument you leave out keeps its saved value. `goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`.",
+        "description": "Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack. Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says. Once the person's yes to the goals is recorded, change them only after their yes to the change, and never change how success is judged to suit what you built. Use it too when the person renames a playbook, changes what it is for or gives it a dashboard. An argument you leave out keeps its saved value. `goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`.",
         "tags": [
           "playbooks"
         ],

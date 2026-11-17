@@ -41,27 +41,28 @@ describe('the goals guide file', () => {
 
 describe('the goals guide', () => {
   it.each(renditions)(
-    'has the agent learn the goal, its name and how they will know it worked, say it back and wait for a yes before the create (%s)',
+    'has the agent learn the goal, its name and how they will know it worked, and wait for a yes to one proposal before the create (%s)',
     (_, guide) => {
       const learning = sectionOf(guide, '## Before you build anything, learn the goals with the person');
 
       expect(learning).toContain(
         'Do not create the playbook, a function or a workflow until you have every answer below and the person has said yes to what you will save.',
       );
-      expect(learning).toContain('Then say it back in their words, in one sentence, and ask whether that is right.');
+      expect(learning).toContain("Their words for it, in one sentence, are the goal's statement.");
       expect(learning).toContain(
-        '2. **What to call it.** Suggest a short name for the goal, two to four words from their own, such as "Catering replies" or "Daily controls", and ask whether it fits. That is the goal\'s `name`, the title the person sees it under. Ask it even when the person has said everything else.',
-      );
-      expect(learning).toContain('When they have no number in mind, suggest one that fits what they said');
-      expect(learning).toContain('A person who says little at first gets one question at a time.');
-      expect(learning).toContain(
-        'A person who says much of it at once is not asked it again: say back what you heard, in their words, ask only what is still missing, and wait for their yes.',
+        '2. **What to call it.** A short name for the goal, two to four words from their own, such as "Catering replies" or "Daily controls". That is the goal\'s `name`, the title the person sees it under. Suggest one in the proposal, even when the person has said everything else.',
       );
       expect(learning).toContain(
-        'Create the playbook only after their yes to that message, and never earlier just to reach another tool.',
+        'When they have no number in mind, the proposal suggests one that fits what they said.',
       );
       expect(learning).toContain(
-        "That yes allows the create and nothing else; the Studio link and connections aren't needed before it.",
+        'Ask first, then propose once. Put everything that is still missing to the person in one round of questions, and do not say a goal or a measure back to them while you ask. A person who has already said some of it is not asked it again.',
+      );
+      expect(learning).toContain(
+        "Create the playbook only after their yes to the proposal, and never earlier just to reach another tool; the Studio link isn't needed before it.",
+      );
+      expect(learning).toContain(
+        'Say which name or number is your suggestion: their yes to the proposal takes it. Then ask: Did I get all that right? Yes, or tell me what to change. Where your client has a question tool, ask that question through it right after the message, with nothing of the proposal in the question; otherwise end the message with it.',
       );
       expect(learning).toContain("A statement that only repeats the playbook's name or description is refused.");
       expect(learning).toContain("That word is the goal's `per`.");
@@ -72,28 +73,23 @@ describe('the goals guide', () => {
 
 describe('the goals guide', () => {
   it.each(renditions)(
-    'has the agent show the saved goals and the link, wait for a yes, and record it with agree_playbook_goals at the version the person saw before building anything (%s)',
+    'has the agent give the link after the create and record the yes to the proposal with agree_playbook_goals at the version saved, asking again only when something changed, before building anything (%s)',
     (_, guide) => {
       const learning = sectionOf(guide, '## Before you build anything, learn the goals with the person');
       const agreeing = sectionOf(guide, '## After the create, show the saved goals and record the yes');
 
       expect(learning).toContain(
-        'Once the playbook is created, stop: say back the goals as saved, give the person the `studio` link its answer holds, ask whether the saved goals are what they want, and wait for their yes. Then record that yes with agree_playbook_goals, giving the `version` of the goals they saw, before you make any function or workflow.',
-      );
-      expect(learning).toContain(
-        'After that yes, put any change to the saved goals to the person first, save it only after their yes, and record that yes with a new call of agree_playbook_goals and the new version. Never change a goal to suit how you built something.',
+        'Then record that yes as [After the create](#after-the-create-show-the-saved-goals-and-record-the-yes) says. Never change a goal to suit how you built something.',
       );
       expect(agreeing).toContain('`studio`, a link that opens the lead goal in Studio');
+      expect(agreeing).toContain(
+        'When the saved goals are the ones they said yes to, unchanged, record that yes with agree_playbook_goals and the `version` saved, without asking again.',
+      );
+      expect(agreeing).toContain(
+        'When anything changed, show them what changed and ask again; through a question tool, put the link in the question itself or in a message just before it.',
+      );
       expect(agreeing).toContain('Change the goals with update_playbook until they say yes.');
-      expect(agreeing).toContain(
-        'When you ask through a question tool, put the link in the question itself or in a message just before it: the person needs it to see the saved goals.',
-      );
-      expect(agreeing).toContain(
-        'The yes before the create allows the create and nothing more; the yes you record is the one to the goals as saved.',
-      );
-      expect(agreeing).toContain(
-        'Once they say yes, call agree_playbook_goals with the `version` they saw, before you make anything else.',
-      );
+      expect(agreeing).not.toContain('The yes before the create allows the create');
       expect(agreeing).toContain('Build nothing before that call: no function and no workflow.');
       expect(agreeing).toContain('A save that changes a goal, its name included, drops the yes to that goal.');
       expect(agreeing).toContain(
@@ -138,7 +134,7 @@ describe('the goals guide', () => {
       expect(guide).toContain('Stop it with `retired: true`');
       expect(guide).toContain('A different shape is a new goal with a new id.');
       expect(guide).toMatch(
-        /\| `name` +\| No; always ask for one +\| The goal's short name in the person's words, two to four words, 2 to 40 characters +\|/u,
+        /\| `name` +\| No; suggest one in the proposal +\| The goal's short name in the person's words, two to four words, 2 to 40 characters +\|/u,
       );
       expect(guide).toContain('Make it from the name, such as `catering-replies`');
       expect(guide).toContain('  name: Paying customers\n');
@@ -176,10 +172,8 @@ describe('the goals guide', () => {
 
       expect(older).toContain('create_definition or update_definition refuses it');
       expect(older).toContain('1. Learn the goals with the person, as above.');
-      expect(older).toContain('2. Send the goals with update_playbook');
-      expect(older).toContain('tell the person in their words what you saved');
       expect(older).toContain(
-        'Its answer carries no `studio` link. Record their yes with agree_playbook_goals and the version saved.',
+        "2. Send the goals with update_playbook once they say yes to the proposal, and record that yes with agree_playbook_goals and the version saved, as above. update_playbook's answer carries no `studio` link.",
       );
       expect(older).toContain('3. Save the workflow again, with its `contributes`.');
     },

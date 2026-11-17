@@ -87,12 +87,21 @@ export interface InstructionsKept {
   readonly goals?: boolean;
 }
 
-const howToAskThePerson = "Ask the person each question through your client's question tool where it has one.";
+const howToAskThePerson =
+  'After the guides, ask your first round of questions, through your question tool if you have one, before any other call.';
 
-const endpointsThatSayHowToAsk: ReadonlySet<McpEndpoint> = new Set(['own org', 'directory', 'playbook']);
+const howToAskInAPlaybook =
+  "Ask your first questions in one round, through your client's question tool where it has one.";
+
+const howToAskOn: Readonly<Partial<Record<McpEndpoint, string>>> = {
+  'own org': howToAskThePerson,
+  directory: howToAskThePerson,
+  playbook: howToAskInAPlaybook,
+};
 
 function askingWhereGoalsAreKept(endpoint: McpEndpoint, { goals = false }: InstructionsKept): readonly string[] {
-  return goals && endpointsThatSayHowToAsk.has(endpoint) ? [howToAskThePerson] : [];
+  const asking = howToAskOn[endpoint];
+  return goals && asking !== undefined ? [asking] : [];
 }
 
 function sentencesFor(endpoint: McpEndpoint, tools: ServedTools): readonly string[] {

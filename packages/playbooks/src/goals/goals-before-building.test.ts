@@ -11,10 +11,10 @@ import { pagesInMemory } from '../testing/playbook-pages.ts';
 const toAcme = toOrg('acme');
 
 const untilTheYes =
-  'Stop here: show the person its goals through the studio link and change them with update_playbook until they say yes to them as saved; build no function or workflow before that yes.';
+  'Stop here: give the person the `studio` link. If these are the goals the person said yes to, record that yes with agree_playbook_goals; if not, ask again. Build nothing before that call.';
 
 const untilTheNewYes =
-  'Stop here: show the person the goals as saved now and change them with update_playbook until they say yes to them; build no function or workflow before that yes.';
+  'Stop here. If these are the goals the person said yes to, record that yes with agree_playbook_goals; if not, ask again. Build nothing before that call.';
 
 const unsent =
   'Auto sends no goal messages here: if the person asked to be told, tell them so first, and build a post only after their yes.';

@@ -18,7 +18,7 @@ A playbook is where Auto keeps one area of your team's work, and its goals say w
 
 > Create an Auto playbook called "Campaign review tutorial". Its goal: every campaign brief we send gets a review that recommends Ready or Revise against our criteria, and we know it works when each brief we send has its review. If one with that name already exists, use it. Don't change any other playbooks.
 
-Your agent says the goal back in its own words and asks a few questions about it, such as what to call it. Answer them, and say yes when the goal reads right. It then creates the playbook, shows you the goal as saved with a link to the playbook in Studio, and asks again. Reply yes once the saved goal reads right; your agent builds nothing in the playbook before that.
+Your agent first asks what it still needs to know, in one round of questions. Then it proposes the goal in one message: its name, how it's measured, the services it needs and, when the work posts or sends something, what and where. Say yes when the proposal reads right, or tell it what to change. It then creates the playbook and gives you a link to it in Studio. When the saved goal is the one you said yes to, your agent records that yes without asking again; when anything changed, it shows you what and asks. It builds nothing in the playbook before your yes is recorded.
 
 ## 2. Describe the review
 

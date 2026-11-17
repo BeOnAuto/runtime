@@ -165,7 +165,10 @@ describe('the words of listing connections', () => {
       Array.from({ length: 21 }, (_, index) => ({ ...crm, name: `crm-${String(index)}` })),
     );
 
-    expect([empty, one]).toEqual(['The org has no connection.', 'There is 1 connection: “notes”, pending.']);
+    expect([empty, one]).toEqual([
+      'The org has no connection; search lists the tool servers its playbooks may already use.',
+      'There is 1 connection: “notes”, pending.',
+    ]);
     expect(await outcomeWords(h, 'list_connections', {})).toMatch(
       /^There are 22 connections: “crm-20”, pending, .* and 2 more\.$/u,
     );

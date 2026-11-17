@@ -168,7 +168,7 @@ describe('the first-playbook prompt of the server', () => {
 
     expect(asked.content.text).toBe(`Create my first playbook.\n\n${recipe}`);
     expect(recipe).toContain(
-      "\n4. Design the workflow that achieves what the playbook is for, as the start guide's Build from the job says, before you write any function",
+      "a model to run. Design the workflow that achieves what the playbook is for, as the start guide's Build from the job says, before you write any function",
     );
     expect(recipe).toContain(
       "\n8. Write the workflow's document from the design the person agreed, as the workflow guide says: its steps call the functions you saved",

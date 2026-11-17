@@ -219,7 +219,7 @@ describe('the recipes that give a playbook tools', () => {
       'For a step that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe.',
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3010, 5133,
+      3010, 5134,
     ]);
   });
 });
@@ -241,8 +241,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [5724, 3825, 3564],
-      [5133, 3010, 3564],
+      [5725, 3825, 3564],
+      [5134, 3010, 3564],
     ]);
   });
 });
@@ -274,7 +274,7 @@ describe('the tools a recipe calls', () => {
     expect(onEveryServer.map(({ name, text }) => [name, toolsNamedIn(text).toSorted()])).toEqual(
       onEveryServer.map(({ name, calls }) => [name, calls.filter((call) => !calledWhereListed.has(call)).toSorted()]),
     );
-    expect(recipes[0]?.text).toContain('list_models where this connection has it');
+    expect(recipes[0]?.text).toContain('Call list_models where this connection has it');
     expect(recipes.find(({ name }) => name === 'connect-a-service')?.text).toContain(
       'and search answers `providers`, call add_connection with the name of the provider that serves what the person wants',
     );

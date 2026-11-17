@@ -28,7 +28,7 @@ const goalsSection = [
   '',
   "A goal is what the playbook is for, in the person's own words: what it should achieve for them, how they will know it worked, and what they want to be told about, and where. A playbook here cannot be made without its goals: create_playbook refuses one that has none, and a workflow saved in a playbook that has none is refused too.",
   '',
-  "So your first step, before you make anything, is to ask the person, through your client's question tool where it has one: What should this playbook achieve for you, and how will you know it worked? Say their answer back in their words, learn the rest as the goals guide says, and send it as the goals argument of create_playbook, or of update_playbook for a playbook that has no goals yet. Then show them the saved goals at the `studio` link the answer holds, and wait for their yes before you make anything else. Every workflow you save then says what it does for a goal.",
+  "So your first step, before you make anything, is to ask the person, through your client's question tool where it has one: What should this playbook achieve for you, and how will you know it worked? Learn the rest in the same round, propose the goals once as the goals guide says, and after their yes send them as the goals argument of create_playbook, or of update_playbook for a playbook that has no goals yet. Then give them the `studio` link the answer holds and, when the saved goals are the ones they agreed, record their yes with agree_playbook_goals before you make anything else. Every workflow you save then says what it does for a goal.",
 ].join('\n');
 
 const goalsInWhereToGo =
@@ -37,7 +37,7 @@ const goalsInWhereToGo =
 const whereToGoBeginsWith = '## Where to go\n\n- What the words of a playbook mean: the guide terminology.';
 
 const goalsInFirstPlaybook =
-  ' Here a playbook is made only with its goals, so before you create it, ask the person: What should this playbook achieve for you, and how will you know it worked? Learn too what they want to be told when it passes, fails or becomes overdue, and where. Say the goals back in their words, write them as the goals guide says, and send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Their yes to what you said back allows the create and nothing else: then show the person the saved goals at the `studio` link it answers, change them with update_playbook until they say yes to them as saved, and make nothing else before that yes. Every workflow you save then says, in its `contributes`, what it does for a goal.';
+  ' Here a playbook is made only with its goals, so before you create it, ask the person in the same round as step 1: What should this playbook achieve for you, and how will you know it worked? Learn too what they want to be told when it passes, fails or becomes overdue, and where. Propose the goals once, as the goals guide says, and after their yes send them as the goals argument of create_playbook; a playbook they name that has no goals yet takes them through update_playbook. Then give the person the `studio` link it answers, record their yes with agree_playbook_goals when the saved goals are the ones they agreed, and make nothing else before that call. Every workflow you save then says, in its `contributes`, what it does for a goal.';
 
 const toldInFirstPlaybook = ' Learn too what they want to be told when it passes, fails or becomes overdue, and where.';
 
@@ -90,7 +90,7 @@ describe('the guides of a server that keeps goals', () => {
     expect(withGoals).toContain(`${whereToGoBeginsWith}${goalsInWhereToGo}\n- To build a playbook from nothing`);
     expect(withGoals).toContain(`results, run by run and over time.\n${goalsSection}\n\n## What a workflow owns`);
     expect(without).toContain(whereToGoBeginsWith);
-    expect([byteLengthOf(withGoals), byteLengthOf(without)]).toEqual([8931, 7898]);
+    expect([byteLengthOf(withGoals), byteLengthOf(without)]).toEqual([9153, 8046]);
     expect(internalTermsIn(withGoals)).toEqual([]);
   });
 });
@@ -110,9 +110,11 @@ describe('the terminology and recipes of a server that keeps goals', () => {
 
     expect(withGoals.replace(goalsInFirstPlaybook, '')).toBe(without);
     expect(createStep.endsWith(goalsInsertedAfter)).toBe(true);
-    expect(without).toContain(`\n${createStep}\n4. Design the workflow`);
-    expect(withGoals).toContain(`\n${createStep}${goalsInFirstPlaybook}\n4. Design the workflow`);
-    expect([byteLengthOf(without), byteLengthOf(withGoals)]).toEqual([6317, 7103]);
+    expect(without).toContain(`\n${createStep}\n4. Call list_models where this connection has it`);
+    expect(withGoals).toContain(
+      `\n${createStep}${goalsInFirstPlaybook}\n4. Call list_models where this connection has it`,
+    );
+    expect([byteLengthOf(without), byteLengthOf(withGoals)]).toEqual([6318, 7060]);
     expect(byteLengthOf(withGoals)).toBeLessThanOrEqual(mostRecipeBytes);
     expect(byteLengthOf(withGoals)).toBeLessThanOrEqual(mostRecipeBytesWhere(true));
     expect(internalTermsIn(goalsInFirstPlaybook)).toEqual([]);

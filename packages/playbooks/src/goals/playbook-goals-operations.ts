@@ -18,16 +18,16 @@ const firstAsked = {
 };
 
 const createSentences = [
-  'Say the goals back and send them as `goals` only after their yes, as the goals guide says; without goals it is refused with the question to ask.',
+  'Propose the goals once and send them as `goals` only after their yes, as the goals guide says; without goals it is refused with the question to ask.',
   whenToUse,
   ...whatItTakes,
-  'It starts empty: show the person the `studio` link it answers and change the goals with update_playbook until they say yes to them as saved; build nothing before that yes.',
+  'It starts empty: give the person the `studio` link it answers; when the saved goals are those they agreed, record their yes with agree_playbook_goals before you build anything.',
 ];
 
 const changedOnlyAfterTheYes = {
-  told: 'Once the person has said yes to the saved goals, change them only after their yes to the change, and never change what they are told or how success is judged to suit what you built.',
+  told: "Once the person's yes to the goals is recorded, change them only after their yes to the change, and never change what they are told or how success is judged to suit what you built.",
   untold:
-    'Once the person has said yes to the saved goals, change them only after their yes to the change, and never change how success is judged to suit what you built.',
+    "Once the person's yes to the goals is recorded, change them only after their yes to the change, and never change how success is judged to suit what you built.",
 };
 
 function wordsWhere(words: { readonly told: string; readonly untold: string }, messages: boolean): string {
