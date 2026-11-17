@@ -200,6 +200,7 @@ describe.each(stores)('the cursors of the readings of a conversation on $store',
     const place = await aPlace();
     const playbook = await chatHarness({ ledger: await place.open(), document: inOneChannel });
     await playbook.askInThread(runId);
+    await playbook.performDue(Date.now());
     await playbook.askInThread(answeredId);
     await playbook.performDue(Date.now());
     const thread = await threadOfRun(playbook.ledger, answeredId);
