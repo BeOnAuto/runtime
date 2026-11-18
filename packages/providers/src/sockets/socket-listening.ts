@@ -105,7 +105,7 @@ function oneSocket(listening: SocketListening, opened: Effect.Effect<void>): Eff
   );
 }
 
-function waitAfter(endsInARow: number): Effect.Effect<number> {
+export function waitAfter(endsInARow: number): Effect.Effect<number> {
   const { firstWaitMs, multiplier, longestWaitMs, spread } = socketBackoff;
   const backoffMs = Math.min(firstWaitMs * multiplier ** endsInARow, longestWaitMs);
   return Effect.map(Random.nextBetween(1 - spread, 1 + spread), (jitter) => Math.round(backoffMs * jitter));

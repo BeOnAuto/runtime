@@ -76,21 +76,36 @@ export {
 } from './resolution/provider-addition.ts';
 export { requestOriginsOf } from './events/event-destinations.ts';
 export { subscriptionCallsOf } from './subscriptions/subscription-calls.ts';
+export { subscriptionLoopOf } from './subscriptions/subscription-loop.ts';
 export {
   SubscriptionCallFailed,
   type SubscriptionFailedBecause,
   type SubscriptionFailureKind,
 } from './subscriptions/subscription-failed.ts';
 export type {
+  Asker,
+  Asking,
+  Generation,
   HeldSubscription,
+  KeptSecret,
+  LoopConnection,
+  MadeSubscription,
+  Positions,
+  Reconciled,
+  RecordedFailure,
+  RecordedSubscription,
   Renewed,
   Renewing,
   Subscribed,
   Subscribing,
   SubscriptionCalls,
+  SubscriptionKey,
+  SubscriptionLoopPorts,
   SubscriptionPlace,
   SubscriptionPorts,
+  SubscriptionRecords,
   SubscriptionSecret,
+  SubscriptionSecrets,
   ThroughTheConnection,
   Unsubscribing,
 } from './subscriptions/subscription-ports.ts';

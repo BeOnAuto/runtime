@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@on.auto/config": "workspace:*",
+    "@on.auto/content": "workspace:*",
     "@on.auto/definitions": "workspace:*",
     "@on.auto/json-schema": "workspace:*",
     "@on.auto/operations": "workspace:*",

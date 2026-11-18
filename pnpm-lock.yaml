@@ -1181,6 +1181,9 @@ importers:
       '@on.auto/config':
         specifier: workspace:*
         version: link:../config
+      '@on.auto/content':
+        specifier: workspace:*
+        version: link:../content
       '@on.auto/definitions':
         specifier: workspace:*
         version: link:../definitions
