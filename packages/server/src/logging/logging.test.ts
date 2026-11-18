@@ -31,9 +31,13 @@ import { logOperatorHint, logProviderMessage } from './provider-logging.ts';
 import {
   logFirstAdmin,
   logFirstSignInAwaited,
+  logClientNotRegistered,
+  logClientRegistered,
+  logClientRegisteredElsewhereFirst,
   logSignInFailed,
   logSignInRefused,
   logSignInRefusedForTheClaim,
+  signInReportTo,
 } from './sign-in-logging.ts';
 import { colorDepthOf, linkerFor, painterFor } from './terminal.ts';
 import { logLeftOutOperation, logMarkUnlisted, logServerMessage } from './tool-server-logging.ts';
@@ -103,8 +107,7 @@ describe('logAccessMode with credentials configured', () => {
 
 const companySignIn = {
   issuer: 'https://login.example.com/acme',
-  clientId: 'auto-runtime',
-  clientSecret: Redacted.make('a-client-secret-of-the-test'),
+  client: { clientId: 'auto-runtime', clientSecret: Redacted.make('a-client-secret-of-the-test') },
   scopes: ['openid'],
   tokenEndpointAuthMethod: undefined,
   publicUrl: 'https://auto.example.com',
@@ -168,6 +171,38 @@ describe("the logs of a sign-in through the company's identity provider", () => 
     expect(lines.map((line) => line.includes('"level":"INFO"'))).toEqual([true, true]);
     expect(lines[0]).toContain('"annotations":{"org":"default"}');
     expect(lines[1]).toContain('"annotations":{"org":"default","person":"a-person-id"}');
+  });
+
+  it('tell of a client the server registered, in place of another or after another server, by its issuer and client ids alone, and warn of one it could not', async () => {
+    const lines = await linesLoggedBy(
+      Effect.all(
+        [
+          logClientRegistered(companySignIn.issuer, 'client-1'),
+          logClientRegistered(companySignIn.issuer, 'client-2', 'client-1'),
+          logClientRegisteredElsewhereFirst(companySignIn.issuer, 'client-3', 'client-4'),
+          logClientNotRegistered(companySignIn.issuer, 'invalid_client_metadata'),
+        ],
+        { discard: true },
+      ),
+    );
+
+    expect(lines.map((line) => /"level":"(\w+)"/u.exec(line)?.[1])).toEqual(['INFO', 'INFO', 'INFO', 'WARN']);
+    expect(lines.map((line) => /"annotations":(\{[^}]*\})/u.exec(line)?.[1])).toEqual([
+      '{"oidc_issuer":"https://login.example.com/acme","oidc_client_id":"client-1"}',
+      '{"oidc_issuer":"https://login.example.com/acme","oidc_client_id":"client-2","oidc_replaced_client_id":"client-1"}',
+      '{"oidc_issuer":"https://login.example.com/acme","oidc_client_id":"client-3","oidc_unused_client_id":"client-4"}',
+      '{"oidc_issuer":"https://login.example.com/acme","failure":"invalid_client_metadata"}',
+    ]);
+  });
+
+  it('are what the report of a sign-in logs of its client', () => {
+    const logged: unknown[] = [];
+
+    signInReportTo((log) => {
+      logged.push(log);
+    }, companySignIn.issuer).registeredElsewhereFirst('client-3', 'client-4');
+
+    expect(logged).toHaveLength(1);
   });
 });
 

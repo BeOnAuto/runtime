@@ -14,14 +14,14 @@ import {
 } from '@on.auto/identity';
 
 import type { RunningServer, ServerOptions } from '../server-options/server-options.ts';
-import type { IdentityKeySet } from '../settings/access-settings.ts';
 import { readShippedSettings } from '../settings/served-settings.ts';
 import { readSettings, type Settings } from '../settings/settings.ts';
-import { companySignInOf, signedInApiOf, signInRoutesOf, type CompanySignIn } from '../sign-in/company-sign-in.ts';
+import { companySignInOf, type CompanySignIn } from '../sign-in/company-client.ts';
+import { signedInApiOf, signInRoutesOf } from '../sign-in/company-sign-in.ts';
 import { startTelemetry } from '../telemetry/start-telemetry.ts';
 import { started } from './server-start.ts';
 
-function issuerKeysOf(keySet: IdentityKeySet): IssuerKeySource {
+function issuerKeysOf(keySet: Settings['identityKeySet']): IssuerKeySource {
   if (keySet.from === 'given') {
     return issuerKeysGiven(keySet.keySet);
   }

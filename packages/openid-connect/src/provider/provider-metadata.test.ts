@@ -2,9 +2,10 @@ import { Predicate, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { fakeProvider, type Claims, type FakeProvider } from '../testing/fake-provider.ts';
+import { UnusableIdentityProviderError } from './client-configuration.ts';
 import { metadataAddressOf } from './provider-metadata.ts';
 import type { ProviderRequests } from './provider-requests.ts';
-import { relyingPartyOf, UnusableIdentityProviderError, type RelyingPartySettings } from './relying-party.ts';
+import { relyingPartyOf, type RelyingPartySettings } from './relying-party.ts';
 
 const issuer = 'https://login.example.com/tenant/v2.0';
 

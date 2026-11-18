@@ -1,88 +1,26 @@
-import { personIdOf, UnusableIdentityProviderError, type RelyingParty } from '@on.auto/openid-connect';
-import { Function } from 'effect';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import type { ApiEnv, Routes } from '@on.auto/api';
+import {
+  ClientRegistrationError,
+  personIdOf,
+  UnusableIdentityProviderError,
+  type RelyingParty,
+} from '@on.auto/openid-connect';
+import { sessionRowsInMemory, type FakeProviderOptions } from '@on.auto/openid-connect/testing';
+import { Context, Function } from 'effect';
+import { Hono } from 'hono';
+import { describe, expect, it } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
-import { startServer } from '../lifecycle/lifecycle.ts';
-import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
-import { rowsOfTheLedgerIn } from '../testing/records/ledger-file.ts';
-import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { signInRoutesOf } from './company-sign-in.ts';
-import { providerOverHttps } from './issuer-over-https.ts';
-
-const subject = 'AItOawmwtWwcT0k51BayewNvutrJUqsvl6qs7A4';
-
-interface Asking {
-  readonly method?: string;
-  readonly headers?: Readonly<Record<string, string>>;
-}
-
-type FakeProvider = Awaited<ReturnType<typeof providerOverHttps>>;
-
-interface SigningIn {
-  readonly provider: FakeProvider;
-  readonly server: Awaited<ReturnType<typeof startServer>>;
-  readonly address: string;
-  readonly at: (path: string, init?: Asking) => Promise<Response>;
-  readonly sessionsKept: () => Promise<readonly unknown[]>;
-  readonly peopleKept: () => Promise<readonly unknown[]>;
-}
-
-function environmentOf(provider: FakeProvider, port: number): Readonly<Record<string, string>> {
-  return {
-    HOST: '127.0.0.1',
-    PORT: String(port),
-    PUBLIC_URL: `http://localhost:${port}`,
-    OIDC_ISSUER: provider.issuer,
-    OIDC_CLIENT_ID: provider.clientId,
-    OIDC_CLIENT_SECRET: provider.clientSecret,
-  };
-}
-
-async function signingIn(
-  options: Parameters<typeof providerOverHttps>[1] = {},
-  settings: Readonly<Record<string, string>> = {},
-): Promise<SigningIn> {
-  const provider = await providerOverHttps('/tenant/v2.0', options);
-  const port = await aPortNothingListensOn();
-  const ledger = temporaryLedger();
-  const environment = { ...environmentOf(provider, port), ...settings, LEDGER_FILE: ledger.fileName };
-  const server = await startServer(environment, compositionRoot);
-  onTestFinished(async () => {
-    await server.stop();
-    ledger.remove();
-  });
-  const at = (path: string, init: Asking = {}) =>
-    fetch(`http://127.0.0.1:${port}${path}`, { redirect: 'manual', ...init });
-  const sessionsKept = () => rowsOfTheLedgerIn(ledger.fileName, 'auth_sessions');
-  const peopleKept = () => rowsOfTheLedgerIn(ledger.fileName, 'auth_people');
-  return { provider, server, address: `http://localhost:${port}`, at, sessionsKept, peopleKept };
-}
-
-function cookiesOf(answer: Readonly<Response>): Readonly<Record<string, string>> {
-  return Object.fromEntries(
-    answer.headers.getSetCookie().map((cookie) => {
-      const [pair = '', ...attributes] = cookie.split('; ');
-      const [name = '', value = ''] = pair.split('=');
-      const kept = attributes.filter((attribute) => !attribute.startsWith('Expires='));
-      return [name, [value === '' ? 'ended' : 'set', ...kept.toSorted()].join('; ')];
-    }),
-  );
-}
-
-function cookieValueOf(answer: Readonly<Response>, name: string): string {
-  const named = answer.headers.getSetCookie().find((cookie) => cookie.startsWith(`${name}=`));
-  return String(named?.split(';')[0]);
-}
+import { callbackFor, cookiesOf, cookieValueOf, signingIn, startOf, subject } from './signing-in.ts';
 
 describe('a runtime whose people sign in through the identity provider OIDC_ISSUER names', () => {
   it('sends a person to the provider, keeps their session in the store when they come back, and ends it when they sign out', async () => {
     const { provider, server, address, at, sessionsKept } = await signingIn();
 
-    const started = await at('/auth/oidc');
-    const location = String(started.headers.get('location'));
+    const begun = await at('/auth/oidc');
+    const location = String(begun.headers.get('location'));
     const callback = await at(`/auth/oidc/callback?${provider.signedIn(location, subject)}`, {
-      headers: { cookie: cookieValueOf(started, '__Host-sign-in') },
+      headers: { cookie: cookieValueOf(begun, '__Host-sign-in') },
     });
     const session = cookieValueOf(callback, '__Host-session');
     const keptOnceSignedIn = await sessionsKept();
@@ -92,10 +30,10 @@ describe('a runtime whose people sign in through the identity provider OIDC_ISSU
     });
     const signedOut = await at('/auth/sign-out', { method: 'POST', headers: { cookie: session, origin: address } });
 
-    expect(server.signIn).toEqual({ issuer: provider.issuer, publicUrl: address });
-    expect([started.status, location.startsWith(`${provider.issuer}/authorize?`)]).toEqual([302, true]);
+    expect(server().signIn).toEqual({ issuer: provider.issuer, publicUrl: address });
+    expect([begun.status, location.startsWith(`${provider.issuer}/authorize?`)]).toEqual([302, true]);
     expect(new URL(location).searchParams.get('redirect_uri')).toBe(`${address}/auth/oidc/callback`);
-    expect(cookiesOf(started)).toEqual({
+    expect(cookiesOf(begun)).toEqual({
       '__Host-sign-in': 'set; HttpOnly; Max-Age=600; Path=/; SameSite=Lax; Secure',
     });
     expect([callback.status, callback.headers.get('location'), callback.headers.get('cache-control')]).toEqual([
@@ -122,12 +60,12 @@ describe('a runtime whose people sign in through the identity provider OIDC_ISSU
 describe('a runtime whose people sign in through the identity provider OIDC_ISSUER names, as it refuses', () => {
   it('refuses a callback that no sign-in started here, or one the provider refused, and takes no token of another issuer', async () => {
     const { provider, at } = await signingIn();
-    const started = await at('/auth/oidc');
-    const location = String(started.headers.get('location'));
+    const begun = await at('/auth/oidc');
+    const location = String(begun.headers.get('location'));
 
     const unstarted = await at(`/auth/oidc/callback?${provider.signedIn(location, subject)}`);
     const refused = await at(`/auth/oidc/callback?${provider.refused(location, 'access_denied')}`, {
-      headers: { cookie: cookieValueOf(started, '__Host-sign-in') },
+      headers: { cookie: cookieValueOf(begun, '__Host-sign-in') },
     });
     const restarted = await at('/auth/oidc');
     const tampered = provider
@@ -149,35 +87,24 @@ describe('a runtime whose people sign in through the identity provider OIDC_ISSU
   });
 
   it('refuses to start where the provider cannot be used', async () => {
-    const provider = await providerOverHttps('/tenant/v2.0', { metadata: { token_endpoint: undefined } });
-    const port = await aPortNothingListensOn();
-    const ledger = temporaryLedger();
-    onTestFinished(() => {
-      ledger.remove();
-    });
+    expect(await startOf({ metadata: { token_endpoint: undefined } }, false)).toBeInstanceOf(
+      UnusableIdentityProviderError,
+    );
+  });
 
-    await expect(
-      startServer({ ...environmentOf(provider, port), LEDGER_FILE: ledger.fileName }, compositionRoot),
-    ).rejects.toBeInstanceOf(UnusableIdentityProviderError);
+  it.each<[string, string, FakeProviderOptions]>([
+    ['offers no registration', 'OIDC_CLIENT_ID', { metadata: { registration_endpoint: undefined } }],
+    ['refuses the registration', 'OIDC_ISSUER', { registrationError: 'invalid_client_metadata' }],
+  ])('refuses to start with no client given, where the provider %s, naming %s', async (_case, setting, options) => {
+    const refusal = await startOf(options, true);
+
+    expect(/^([A-Z_]+):/u.exec(String(Reflect.get(new Object(refusal), 'message')))?.[1]).toBe(setting);
   });
 });
 
-async function callbackFor(
-  { provider, at }: SigningIn,
-  who: string,
-  idToken: Readonly<Record<string, unknown>> = {},
-  cookie = '',
-): Promise<Response> {
-  const started = await at('/auth/oidc');
-  const pending = cookieValueOf(started, '__Host-sign-in');
-  return at(`/auth/oidc/callback?${provider.signedIn(String(started.headers.get('location')), who, idToken)}`, {
-    headers: { cookie: [pending, cookie].filter((value) => value !== '').join('; ') },
-  });
-}
-
 describe('a runtime whose people sign in through the identity provider OIDC_ISSUER names, as it decides who each is to it', () => {
   it('makes the first person to sign in the admin and the next a viewer before their sessions, keeps each by id, and gives one an admin removed no session', async () => {
-    const signingInHere = await signingIn({ idToken: { name: 'A colleague' } });
+    const signingInHere = await signingIn({ provider: { idToken: { name: 'A colleague' } } });
     const { provider, at, peopleKept } = signingInHere;
     const [ada, priya] = ['Ada', 'Priya'].map((who) => personIdOf({ issuer: provider.issuer, subject: who }));
 
@@ -222,7 +149,7 @@ describe('a runtime whose people sign in through the identity provider OIDC_ISSU
 
 describe('a runtime whose people sign in through the identity provider OIDC_ISSUER names, as it requires the claim OIDC_REQUIRED_CLAIM names', () => {
   it('refuses a person whose ID Token lacks the claim or carries another value before any role, record or session, and ends the session the browser held', async () => {
-    const signingInHere = await signingIn({}, { OIDC_REQUIRED_CLAIM: 'tenant=acme' });
+    const signingInHere = await signingIn({ settings: { OIDC_REQUIRED_CLAIM: 'tenant=acme' } });
     const { provider, at, sessionsKept, peopleKept } = signingInHere;
     const ada = personIdOf({ issuer: provider.issuer, subject: 'Ada' });
 
@@ -245,20 +172,97 @@ describe('a runtime whose people sign in through the identity provider OIDC_ISSU
   });
 });
 
-function notAsked(): Promise<never> {
-  return Promise.reject(new Error('Not asked'));
+function clientIdOf(answer: Readonly<Response>): string | null {
+  return new URL(String(answer.headers.get('location'))).searchParams.get('client_id');
 }
 
+describe('a runtime whose people sign in through the identity provider OIDC_ISSUER names, with no client given', () => {
+  it('registers itself as it starts, signs people in as that client, and keeps using it after a restart', async () => {
+    const signingInHere = await signingIn({ registered: true });
+    const { provider, at, restarted } = signingInHere;
+    const asked = provider.registrationsAsked().length;
+
+    const first = await callbackFor(signingInHere, 'Ada');
+    const before = await at('/auth/oidc');
+    await restarted();
+    const after = await at('/auth/oidc');
+    const unstarted = await at(
+      `/auth/oidc/callback?${provider.signedIn(String(after.headers.get('location')), 'Ada')}`,
+    );
+
+    expect([asked, provider.registrationsAsked().length]).toEqual([1, 1]);
+    expect([first.status, unstarted.status]).toEqual([303, 400]);
+    expect(clientIdOf(after)).toBe(clientIdOf(before));
+    expect(clientIdOf(after)).not.toBe(provider.clientId);
+  });
+
+  it('registers anew once the provider refuses the client it used, so the person signs in at the next try', async () => {
+    const signingInHere = await signingIn({ registered: true });
+    const { provider, at } = signingInHere;
+    const begun = await at('/auth/oidc');
+    provider.withdraw(String(clientIdOf(begun)));
+
+    const refused = await callbackFor(signingInHere, 'Ada');
+    const again = await callbackFor(signingInHere, 'Ada');
+
+    expect([refused.status, again.status]).toEqual([400, 303]);
+    expect(provider.registrationsAsked()).toHaveLength(2);
+  });
+});
+
+const relyingParty: RelyingParty = {
+  issuer: 'https://login.example.com/tenant/v2.0',
+  redirectUri: 'https://auto.example.com/auth/oidc/callback',
+  signInStarted: () => Promise.reject(new Error('Not asked')),
+  signInFinished: () => Promise.reject(new Error('Not asked')),
+};
+
+const served = {
+  sessionRows: sessionRowsInMemory(),
+  peopleRows: { kept: () => Promise.resolve(), listed: () => Promise.resolve([]), deleted: () => Promise.resolve() },
+  enrolling: {
+    enrolled: () => Promise.reject(new Error('Not asked')),
+    firstAdminAwaited: () => Promise.resolve(false),
+  },
+};
+
+async function startAnsweredWhen(signInStarted: RelyingParty['signInStarted']): Promise<number> {
+  const app = new Hono<ApiEnv>();
+  const signIn = { relyingParty: { ...relyingParty, signInStarted }, publicUrl: 'https://auto.example.com' };
+  const routes: Routes = {
+    add: Function.constVoid,
+    addPublic: (method, path, handler) => {
+      app.on(method, path, handler);
+    },
+    onClose: Function.constVoid,
+    reportThrown: (thrown) => {
+      throw thrown;
+    },
+    resource: undefined,
+    callContext: () => Context.empty(),
+  };
+  for (const register of await signInRoutesOf({ ...signIn, requiredClaim: undefined })(Function.constVoid, served)) {
+    register(routes);
+  }
+  return (await app.request('/auth/oidc')).status;
+}
+
+describe('the start of a sign-in that cannot register its client', () => {
+  it('answers that the person is not signed in, and leaves any other failure to the incident it is', async () => {
+    const refusal = { issuer: relyingParty.issuer, redirectUri: relyingParty.redirectUri, message: 'Refused' };
+    const unregistered = new ClientRegistrationError({ ...refusal, refusal: { refused: 'invalid_client_metadata' } });
+
+    expect([
+      await startAnsweredWhen(() => Promise.reject(unregistered)),
+      await startAnsweredWhen(() => Promise.reject(new Error('A fault of the test'))),
+    ]).toEqual([400, 500]);
+  });
+});
+
 describe('the sign-in routes of a composition that opens no sign-in store', () => {
-  it('are refused as a defect of that composition, since it keeps no session', () => {
-    const relyingParty: RelyingParty = {
-      issuer: 'https://login.example.com/tenant/v2.0',
-      redirectUri: 'https://auto.example.com/auth/oidc/callback',
-      signInStarted: notAsked,
-      signInFinished: notAsked,
-    };
+  it('are refused as a defect of that composition, since it keeps no session', async () => {
     const routesOf = signInRoutesOf({ relyingParty, publicUrl: 'https://auto.example.com', requiredClaim: undefined });
 
-    expect(() => routesOf(Function.constVoid)).toThrow(Error);
+    await expect(routesOf(Function.constVoid)).rejects.toThrow(Error);
   });
 });

@@ -6,6 +6,7 @@ import type { Layer } from 'effect';
 
 import type { Settings } from '../settings/settings.ts';
 import type { Enrolling } from '../sign-in/admission.ts';
+import type { SignInClientRegistrations } from '../sign-in/client-registrations.ts';
 import type { Telemetry } from '../telemetry/start-telemetry.ts';
 
 export interface Install {
@@ -41,6 +42,7 @@ export interface Served {
   readonly sessionRows?: SessionRows;
   readonly peopleRows?: PeopleRows;
   readonly enrolling?: Enrolling;
+  readonly signInClientRegistrations?: SignInClientRegistrations;
 }
 
 export type ServedClosing = (served: Served) => Served;

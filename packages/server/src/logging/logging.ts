@@ -56,11 +56,14 @@ function requiredClaimNotice({ issuer, requiredClaim }: OpenIdConnectSettings): 
       ).pipe(Effect.annotateLogs({ oidc_issuer: issuer, oidc_required_claim: requiredClaim.claim }));
 }
 
+function companySignInWords({ issuer, redirectUri, client }: OpenIdConnectSettings): string {
+  const signedIn = `People sign in through the identity provider at ${issuer}.`;
+  return client === undefined ? signedIn : `${signedIn} The redirect URI to register with it is ${redirectUri}`;
+}
+
 function companySignInNotice(settings: OpenIdConnectSettings): Effect.Effect<void> {
   const { issuer, publicUrl, redirectUri } = settings;
-  return Effect.logInfo(
-    `People sign in through the identity provider at ${issuer}. The redirect URI to register with it is ${redirectUri}`,
-  ).pipe(
+  return Effect.logInfo(companySignInWords(settings)).pipe(
     Effect.annotateLogs({ public_url: publicUrl, oidc_issuer: issuer, redirect_uri: redirectUri }),
     Effect.andThen(requiredClaimNotice(settings)),
   );

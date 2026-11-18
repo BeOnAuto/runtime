@@ -1,0 +1,13 @@
+{
+  "type": "sign_in_client_registered",
+  "data": {
+    "issuer": "https://login.example.com/tenant/v2.0",
+    "redirect_uri": "https://auto.example.com/auth/oidc/callback",
+    "client_id": "a-client-of-the-test",
+    "secret_id": "019a5d2e-6b1c-7e4a-9f3b-2c1d0e9f8a7b"
+  },
+  "context": {
+    "at": "2026-11-18T09:00:00.000Z",
+    "by": "runtime"
+  }
+}

@@ -1,33 +1,22 @@
-import { Data, Redacted, Result, Schema } from 'effect';
+import { Schema, type Redacted } from 'effect';
 import {
   AuthorizationResponseError,
-  authorizationCodeGrant,
-  buildAuthorizationUrl,
   calculatePKCECodeChallenge,
-  clockTolerance,
-  ClientSecretBasic,
-  ClientSecretJwt,
-  ClientSecretPost,
-  Configuration,
-  customFetch,
-  enableNonRepudiationChecks,
   randomNonce,
   randomPKCECodeVerifier,
   randomState,
   ResponseBodyError,
-  type ClientAuth,
+  WWWAuthenticateChallengeError,
 } from 'openid-client';
 
-import { providerMetadataOf, type ClientAuthenticationMethod } from './provider-metadata.ts';
+import { usableProviderOf, type PendingChecks, type SignInsAs } from './client-configuration.ts';
+import type { ClientAuthenticationMethod } from './provider-metadata.ts';
 import {
-  boundedFetchOf,
   failureOfAnAnswer,
-  providerAnswerSeconds,
+  isAnErrorCode,
   providerRequestsOverTheNetwork,
   type ProviderRequests,
 } from './provider-requests.ts';
-
-export const leewaySeconds = 60;
 
 export interface RequiredClaim {
   readonly claim: string;
@@ -44,10 +33,8 @@ export interface RelyingPartySettings {
   readonly requiredClaim?: Pick<RequiredClaim, 'claim'> | undefined;
 }
 
-export interface PendingSignIn {
-  readonly state: string;
-  readonly nonce: string;
-  readonly codeVerifier: string;
+export interface PendingSignIn extends PendingChecks {
+  readonly clientId?: string;
 }
 
 export interface StartedSignIn {
@@ -77,25 +64,22 @@ export interface RelyingParty {
   readonly signInFinished: (callbackQuery: string, pending: PendingSignIn) => Promise<FinishedSignIn>;
 }
 
-export class UnusableIdentityProviderError extends Data.TaggedError('UnusableIdentityProviderError')<{
-  readonly message: string;
-}> {}
-
-const authenticationOf: Record<ClientAuthenticationMethod, (secret: string) => ClientAuth> = {
-  client_secret_basic: ClientSecretBasic,
-  client_secret_post: ClientSecretPost,
-  client_secret_jwt: (secret) => ClientSecretJwt(secret),
-};
-
 const IdTokenClaims = Schema.Struct({ iss: Schema.String, sub: Schema.String });
 
 const decodeClaims = Schema.decodeUnknownSync(IdTokenClaims);
 
-const codeOfAnError = /^[\u0020\u0021\u0023-\u005B\u005D-\u007E]+$/u;
+const unauthorized = 401;
 
 function refusalCodeOf(error: unknown): string | undefined {
   const isRefusal = error instanceof AuthorizationResponseError || error instanceof ResponseBodyError;
-  return isRefusal && codeOfAnError.test(error.error) ? error.error : undefined;
+  return isRefusal && isAnErrorCode(error.error) ? error.error : undefined;
+}
+
+function isTheClientRefused(error: unknown): boolean {
+  return (
+    (error instanceof ResponseBodyError && error.error === 'invalid_client') ||
+    (error instanceof WWWAuthenticateChallengeError && error.status === unauthorized)
+  );
 }
 
 function textClaim(claims: object, name: keyof StandardClaims): StandardClaims {
@@ -130,25 +114,10 @@ function finishedAfter(error: unknown): FinishedSignIn {
   return { failed: failureOfAnAnswer(error) ?? codeOf(error) };
 }
 
-async function configurationOf(settings: RelyingPartySettings, requests: ProviderRequests): Promise<Configuration> {
-  const { issuer, clientId, clientSecret, tokenEndpointAuthMethod } = settings;
-  const read = await providerMetadataOf(issuer, tokenEndpointAuthMethod, requests);
-  if (Result.isFailure(read)) {
-    throw new UnusableIdentityProviderError({
-      message: `The identity provider at ${issuer} cannot be used: ${read.failure}`,
-    });
-  }
-  const { server, method } = read.success;
-  const authentication = authenticationOf[method](Redacted.value(clientSecret));
-  const configuration = new Configuration(server, clientId, { [clockTolerance]: leewaySeconds }, authentication);
-  configuration[customFetch] = boundedFetchOf(requests);
-  configuration.timeout = providerAnswerSeconds;
-  enableNonRepudiationChecks(configuration);
-  return configuration;
-}
+type SignInSettings = Pick<RelyingPartySettings, 'issuer' | 'redirectUri' | 'scopes' | 'requiredClaim'>;
 
 function authorizationParametersOf(
-  { redirectUri, scopes }: RelyingPartySettings,
+  { redirectUri, scopes }: SignInSettings,
   { state, nonce }: PendingSignIn,
   codeChallenge: string,
 ): Readonly<Record<string, string>> {
@@ -162,55 +131,87 @@ function authorizationParametersOf(
   };
 }
 
-function callbackAt(redirectUri: string, callbackQuery: string): URL {
-  const callback = new URL(redirectUri);
-  callback.search = callbackQuery;
-  return callback;
-}
-
-function checksOf({ state, nonce, codeVerifier }: PendingSignIn) {
-  return { pkceCodeVerifier: codeVerifier, expectedState: state, expectedNonce: nonce, idTokenExpected: true };
-}
-
 function freshPendingSignIn(): PendingSignIn {
   return { state: randomState(), nonce: randomNonce(), codeVerifier: randomPKCECodeVerifier() };
 }
 
-export async function relyingPartyOf(
-  settings: RelyingPartySettings,
-  requests: ProviderRequests = providerRequestsOverTheNetwork,
-): Promise<RelyingParty> {
-  const configuration = await configurationOf(settings, requests);
+interface StartingAs {
+  readonly signIns: SignInsAs;
+  readonly noted?: string;
+}
+
+interface FinishingAs {
+  readonly signIns: SignInsAs;
+  readonly refused: () => Promise<void>;
+}
+
+export interface SigningInAs {
+  readonly starting: () => Promise<StartingAs>;
+  readonly finishing: (pending: PendingSignIn) => Promise<FinishingAs | undefined>;
+}
+
+const notItsClient = 'the client its sign-in began with is not one this server keeps';
+
+function notedBy({ noted }: StartingAs): Pick<PendingSignIn, 'clientId'> {
+  return noted === undefined ? {} : { clientId: noted };
+}
+
+async function finishedAs(
+  { requiredClaim }: SignInSettings,
+  { signIns, refused }: FinishingAs,
+  callbackQuery: string,
+  pending: PendingSignIn,
+): Promise<FinishedSignIn> {
+  try {
+    const claims = await signIns.claimsOf(callbackQuery, pending);
+    const { iss, sub } = decodeClaims(claims);
+    return {
+      signedIn: { issuer: iss, subject: sub },
+      claims: standardClaimsIn(claims),
+      ...requiredClaimIn(claims, requiredClaim),
+    };
+  } catch (error) {
+    if (isTheClientRefused(error)) {
+      await refused();
+    }
+    return finishedAfter(error);
+  }
+}
+
+export function relyingPartyAs(settings: SignInSettings, signingInAs: SigningInAs): RelyingParty {
   const { issuer, redirectUri } = settings;
   return {
     issuer,
     redirectUri,
     signInStarted: async () => {
-      const pending = freshPendingSignIn();
+      const starting = await signingInAs.starting();
+      const pending = { ...freshPendingSignIn(), ...notedBy(starting) };
       const challenge = await calculatePKCECodeChallenge(pending.codeVerifier);
-      const authorizationUrl = buildAuthorizationUrl(
-        configuration,
+      const authorizationUrl = starting.signIns.authorizationUrlOf(
         authorizationParametersOf(settings, pending, challenge),
       );
-      return { authorizationUrl: authorizationUrl.href, pending };
+      return { authorizationUrl, pending };
     },
     signInFinished: async (callbackQuery, pending) => {
-      try {
-        const tokens = await authorizationCodeGrant(
-          configuration,
-          callbackAt(redirectUri, callbackQuery),
-          checksOf(pending),
-        );
-        const claims = tokens.claims();
-        const { iss, sub } = decodeClaims(claims);
-        return {
-          signedIn: { issuer: iss, subject: sub },
-          claims: standardClaimsIn(claims),
-          ...requiredClaimIn(claims, settings.requiredClaim),
-        };
-      } catch (error) {
-        return finishedAfter(error);
-      }
+      const finishing = await signingInAs.finishing(pending);
+      return finishing === undefined
+        ? { failed: notItsClient }
+        : finishedAs(settings, finishing, callbackQuery, pending);
     },
   };
+}
+
+const nothingToDo = (): Promise<void> => Promise.resolve();
+
+export async function relyingPartyOf(
+  settings: RelyingPartySettings,
+  requests: ProviderRequests = providerRequestsOverTheNetwork,
+): Promise<RelyingParty> {
+  const provider = await usableProviderOf(settings, requests);
+  const { clientId, clientSecret } = settings;
+  const signIns = provider.signInsAs({ clientId, clientSecret, tokenEndpointAuthMethod: provider.method });
+  return relyingPartyAs(settings, {
+    starting: () => Promise.resolve({ signIns }),
+    finishing: () => Promise.resolve({ signIns, refused: nothingToDo }),
+  });
 }

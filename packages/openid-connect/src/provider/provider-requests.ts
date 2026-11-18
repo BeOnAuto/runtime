@@ -13,6 +13,12 @@ export const providerAnswerSeconds = 10;
 
 export const mostAnswerBytes = 65_536;
 
+const errorCodeSyntax = /^[\u0020\u0021\u0023-\u005B\u005D-\u007E]+$/u;
+
+export function isAnErrorCode(text: string): boolean {
+  return errorCodeSyntax.test(text);
+}
+
 export class UnreadAnswer extends Data.TaggedError('UnreadAnswer')<{ readonly message: string }> {}
 
 const redirected = 'answers a redirect, which the runtime does not follow';

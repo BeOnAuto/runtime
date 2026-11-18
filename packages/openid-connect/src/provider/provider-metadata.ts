@@ -10,9 +10,10 @@ export type ClientAuthenticationMethod = (typeof clientAuthenticationMethods)[nu
 
 const methodWhereNoneIsDeclared: ClientAuthenticationMethod = 'client_secret_basic';
 
-interface ProviderMetadata {
+export interface ProviderMetadata {
   readonly server: ServerMetadata;
   readonly method: ClientAuthenticationMethod;
+  readonly registrationEndpoint: string | undefined;
 }
 
 const MetadataDocument = Schema.Record(Schema.String, Schema.MutableJson);
@@ -23,6 +24,7 @@ const DeclaredMetadata = Schema.Struct({
   token_endpoint: Schema.optionalKey(Schema.Unknown),
   jwks_uri: Schema.optionalKey(Schema.Unknown),
   token_endpoint_auth_methods_supported: Schema.optionalKey(Schema.Array(Schema.String)),
+  registration_endpoint: Schema.optionalKey(Schema.Unknown),
 });
 
 type Declared = typeof DeclaredMetadata.Type;
@@ -31,12 +33,23 @@ const decodeDocument = Schema.decodeUnknownOption(MetadataDocument);
 
 const decodeDeclared = Schema.decodeUnknownOption(DeclaredMetadata);
 
+const notFound = 404;
+
 export function metadataAddressOf(issuer: string): string {
   return `${issuer.replace(/\/$/u, '')}/.well-known/openid-configuration`;
 }
 
-function isAnHttpsUrl(address: unknown): boolean {
+export function authorizationServerMetadataAddressOf(issuer: string): string {
+  const { origin, pathname } = new URL(issuer);
+  return `${origin}/.well-known/oauth-authorization-server${pathname.replace(/\/$/u, '')}`;
+}
+
+function isAnHttpsUrl(address: unknown): address is string {
   return typeof address === 'string' && URL.parse(address)?.protocol === 'https:';
+}
+
+function httpsEndpointIn(declared: Pick<Declared, 'registration_endpoint'>): string | undefined {
+  return isAnHttpsUrl(declared.registration_endpoint) ? declared.registration_endpoint : undefined;
 }
 
 function endpointRefusalOf(declared: Declared): string | undefined {
@@ -80,6 +93,7 @@ function metadataIn(
   return Result.map(methodOf(asked, declared.value.token_endpoint_auth_methods_supported), (method) => ({
     server: { ...document.value, issuer },
     method,
+    registrationEndpoint: httpsEndpointIn(declared.value),
   }));
 }
 
@@ -87,12 +101,18 @@ function jsonIn(text: string): Result.Result<unknown, string> {
   return Result.try({ try: (): unknown => JSON.parse(text), catch: () => 'answers no JSON' });
 }
 
-async function documentAt(address: string, requests: ProviderRequests): Promise<Result.Result<unknown, string>> {
+type DocumentRead = Result.Result<unknown, string> | 'not_found';
+
+async function documentAt(address: string, requests: ProviderRequests): Promise<DocumentRead> {
   const answer = await answerAt(requests, address, { headers: { accept: 'application/json' }, method: 'GET' });
   if (Result.isFailure(answer)) {
     return Result.fail(answer.failure);
   }
-  return answer.success.ok ? jsonIn(await answer.success.text()) : Result.fail(`answers ${answer.success.status}`);
+  const { ok, status } = answer.success;
+  if (status === notFound) {
+    return 'not_found';
+  }
+  return ok ? jsonIn(await answer.success.text()) : Result.fail(`answers ${status}`);
 }
 
 export async function providerMetadataOf(
@@ -101,6 +121,41 @@ export async function providerMetadataOf(
   requests: ProviderRequests,
 ): Promise<Result.Result<ProviderMetadata, string>> {
   const address = metadataAddressOf(issuer);
-  const read = Result.flatMap(await documentAt(address, requests), (json) => metadataIn(json, issuer, asked));
+  const document = await documentAt(address, requests);
+  const found = document === 'not_found' ? Result.fail(`answers ${notFound}`) : document;
+  const read = Result.flatMap(found, (json) => metadataIn(json, issuer, asked));
   return Result.mapError(read, (failure) => `${address} ${failure}`);
+}
+
+export type RegistrationEndpointRead = Result.Result<string, string> | 'not_declared';
+
+function declaredOrNot(endpoint: string | undefined): RegistrationEndpointRead {
+  return endpoint === undefined ? 'not_declared' : Result.succeed(endpoint);
+}
+
+function registrationEndpointIn(json: unknown, issuer: string): RegistrationEndpointRead {
+  const declared = decodeDeclared(json);
+  if (Option.isNone(declared)) {
+    return Result.fail('answers no metadata with an issuer');
+  }
+  return declared.value.issuer === issuer
+    ? declaredOrNot(httpsEndpointIn(declared.value))
+    : Result.fail(`names the issuer ${declared.value.issuer}`);
+}
+
+export async function registrationEndpointOf(
+  issuer: string,
+  declaredBeside: string | undefined,
+  requests: ProviderRequests,
+): Promise<RegistrationEndpointRead> {
+  if (declaredBeside !== undefined) {
+    return Result.succeed(declaredBeside);
+  }
+  const address = authorizationServerMetadataAddressOf(issuer);
+  const document = await documentAt(address, requests);
+  if (document === 'not_found') {
+    return 'not_declared';
+  }
+  const read = Result.isSuccess(document) ? registrationEndpointIn(document.success, issuer) : document;
+  return read === 'not_declared' || Result.isSuccess(read) ? read : Result.fail(`${address} ${read.failure}`);
 }

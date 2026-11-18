@@ -1,6 +1,19 @@
 export type { PeopleRows, PersonRow, PersonSignedIn } from './people/people-rows.ts';
 export { defaultOrg, personIdOf, personSignedInOf } from './people/signed-in-people.ts';
 export {
+  ClientRegistrationError,
+  isLastingAt,
+  type RegisteredClient,
+  type RegistrationRefusal,
+  type RelyingPartyClient,
+} from './provider/client-registration.ts';
+export {
+  registeringProviderOf,
+  type RegisteringProvider,
+  type RegisteringSettings,
+  type RelyingPartyClients,
+} from './provider/registered-relying-party.ts';
+export {
   clientAuthenticationMethods,
   metadataAddressOf,
   type ClientAuthenticationMethod,
@@ -12,10 +25,9 @@ export {
   type ProviderFetch,
   type ProviderRequests,
 } from './provider/provider-requests.ts';
+export { leewaySeconds, UnusableIdentityProviderError } from './provider/client-configuration.ts';
 export {
-  leewaySeconds,
   relyingPartyOf,
-  UnusableIdentityProviderError,
   type FinishedSignIn,
   type PendingSignIn,
   type RelyingParty,

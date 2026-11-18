@@ -77,13 +77,25 @@ function meterOf(
   };
 }
 
+type Opening = Parameters<typeof signInOpened>[0] & Parameters<typeof storesAndConnectionsOf>[0];
+
+async function signInAndStoresOpened(
+  runtime: Opening,
+  { settings, database }: Pick<Serving, 'settings' | 'database'>,
+  ownOrigin: () => string,
+) {
+  const { clientRegistrationsWith, ...signIn } = await signInOpened(runtime, settings);
+  const opened = await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
+  const signInClientRegistrations = clientRegistrationsWith(opened.stores.secrets);
+  return { ...opened, signIn: { ...signIn, signInClientRegistrations } };
+}
+
 function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'] {
-  const { modelAccessOf, wiring, settings, telemetry, shippedFiles, database, made, holding } = serving;
+  const { modelAccessOf, wiring, settings, telemetry, shippedFiles, made, holding } = serving;
   return async (runtime, ownOrigin) => {
-    const signIn = await signInOpened(runtime, settings);
     const { ledger, workflows, identityIssuer } = settings;
-    const { stores, consent, connections, source, offering, clientMetadata, license, ...ownKeys } =
-      await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
+    const { signIn, stores, consent, connections, source, offering, clientMetadata, license, ...ownKeys } =
+      await signInAndStoresOpened(runtime, serving, ownOrigin);
     const registry = await made.registry.openedIn(runtime, settings, {
       ...wiring,
       modelAccessOf,

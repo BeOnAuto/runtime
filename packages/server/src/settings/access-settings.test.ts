@@ -179,8 +179,8 @@ function secretFileHolding(text: string, mode = 0o600): string {
 }
 
 function clientSecretOf(environment: Environment): string | undefined {
-  const { openIdConnect } = readSettingsOf(environment);
-  return openIdConnect === undefined ? undefined : Redacted.value(openIdConnect.clientSecret);
+  const client = readSettingsOf(environment).openIdConnect?.client;
+  return client === undefined ? undefined : Redacted.value(client.clientSecret);
 }
 
 describe("readSettings signing people in through the company's identity provider", () => {
@@ -190,7 +190,7 @@ describe("readSettings signing people in through the company's identity provider
     expect(settings.signIn).toEqual({ issuer: company.OIDC_ISSUER, publicUrl: company.PUBLIC_URL });
     expect(settings.openIdConnect).toMatchObject({
       issuer: company.OIDC_ISSUER,
-      clientId: 'auto-runtime',
+      client: { clientId: 'auto-runtime' },
       scopes: ['openid', 'profile', 'email'],
       tokenEndpointAuthMethod: 'client_secret_post',
       publicUrl: company.PUBLIC_URL,
@@ -210,7 +210,9 @@ describe("readSettings signing people in through the company's identity provider
     expect(readSettingsOf(environment).openIdConnect).toMatchObject({ scopes: ['openid', 'email'] });
   });
 
-  it('leaves every setting as it is without OIDC_ISSUER, OIDC_CLIENT_ID and a secret', () => {
+  it('reads no client with OIDC_ISSUER alone, so the server registers one, and leaves every setting as it is without OIDC_ISSUER', () => {
+    const { OIDC_CLIENT_ID: _id, OIDC_CLIENT_SECRET: _secret, ...issuerAlone } = company;
+    expect(readSettingsOf(issuerAlone).openIdConnect).toMatchObject({ issuer: company.OIDC_ISSUER, client: undefined });
     expect(readSettingsOf({ PUBLIC_URL: company.PUBLIC_URL, OIDC_SCOPES: 'email' })).toMatchObject({
       signIn: { issuer: 'https://clerk.on.auto', publicUrl: company.PUBLIC_URL },
       openIdConnect: undefined,
@@ -220,10 +222,10 @@ describe("readSettings signing people in through the company's identity provider
 
 describe("readSettings refusing the company's identity provider", () => {
   it.each<[string, Environment]>([
-    ['OIDC_ISSUER', { OIDC_ISSUER: company.OIDC_ISSUER, PUBLIC_URL: company.PUBLIC_URL }],
     ['OIDC_ISSUER', { OIDC_CLIENT_ID: 'auto-runtime', OIDC_CLIENT_SECRET: 'secret', PUBLIC_URL: company.PUBLIC_URL }],
+    ['OIDC_ISSUER', { OIDC_CLIENT_ID: 'auto-runtime', PUBLIC_URL: company.PUBLIC_URL }],
     [
-      'OIDC_ISSUER',
+      'OIDC_CLIENT_SECRET',
       { OIDC_ISSUER: company.OIDC_ISSUER, OIDC_CLIENT_ID: 'auto-runtime', PUBLIC_URL: company.PUBLIC_URL },
     ],
     ['OIDC_CLIENT_SECRET', { ...company, OIDC_CLIENT_SECRET_FILE: '/run/secrets/oidc' }],
@@ -235,7 +237,7 @@ describe("readSettings refusing the company's identity provider", () => {
     ['OIDC_ISSUER', { ...company, OIDC_ISSUER: 'http://login.example.com/acme' }],
     ['OIDC_ISSUER', { ...company, OIDC_ISSUER: 'https://login.example.com/acme?tenant=1' }],
     ['OIDC_ISSUER', { ...company, OIDC_ISSUER: 'https://login.example.com/acme#top' }],
-    ['OIDC_ISSUER', { ...company, OIDC_CLIENT_ID: '' }],
+    ['OIDC_CLIENT_ID', { ...company, OIDC_CLIENT_ID: '' }],
     ['OIDC_TOKEN_ENDPOINT_AUTH_METHOD', { ...company, OIDC_TOKEN_ENDPOINT_AUTH_METHOD: 'private_key_jwt' }],
   ])('refuses to start, naming %s', (setting, environment) => {
     expect(settingNamedBy(environment)).toBe(setting);

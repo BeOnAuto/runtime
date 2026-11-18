@@ -9,11 +9,23 @@ import {
   type SignedInPerson,
   type StandardClaims,
 } from '@on.auto/openid-connect';
-import { Ledger, OrgWriter, signedInPersonPrefix, streamPrefixOfOrg } from '@on.auto/operations';
+import {
+  Ledger,
+  OrgWriter,
+  signedInPersonPrefix,
+  streamPrefixOfOrg,
+  type DispatcherServices,
+} from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
+import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import { logFirstSignInAwaited } from '../logging/sign-in-logging.ts';
 import { inRuntime } from '../workflows/in-runtime.ts';
+import {
+  signInClientRegistrationsOf,
+  type RegistrationServices,
+  type SignInClientRegistrations,
+} from './client-registrations.ts';
 
 type Enrolment = { readonly enrolled: Enrolled } | { readonly failed: string };
 
@@ -55,6 +67,12 @@ export function enrollingIn(runtime: AppRuntime<Ledger>): Enrolling {
     enrolled: (person) => Effect.runPromise(inRuntime(runtime, enrolledNow(person))),
     firstAdminAwaited: () => Effect.runPromise(inRuntime(runtime, firstAdminAwaitedNow)),
   };
+}
+
+export function clientRegistrationsIn(
+  runtime: AppRuntime<DispatcherServices>,
+): (secrets: RegistrationServices['secrets']) => SignInClientRegistrations {
+  return (secrets) => signInClientRegistrationsOf({ registry: runtimeLedger(runtime), secrets });
 }
 
 export interface Admitting {

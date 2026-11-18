@@ -9,18 +9,13 @@ import {
 } from '@on.auto/api';
 import { signedInPersonOf, type Principal } from '@on.auto/identity';
 import {
+  ClientRegistrationError,
   defaultOrg,
   mostLifetimeMs,
   personIdOf,
-  providerRequestsOverTheNetwork,
-  relyingPartyOf,
   sessionsOf,
   type FinishedSignIn,
   type PeopleRows,
-  type PendingSignIn,
-  type ProviderRequests,
-  type RelyingParty,
-  type RequiredClaim,
   type SessionRows,
   type Sessions,
   type SignedInPerson,
@@ -30,7 +25,7 @@ import type { Effect } from 'effect';
 import { deleteCookie, generateCookie, getCookie, setCookie } from 'hono/cookie';
 
 import { signInReportTo, type SignInReport } from '../logging/sign-in-logging.ts';
-import { callbackPath, type OpenIdConnectSettings } from '../settings/openid-connect-settings.ts';
+import { callbackPath } from '../settings/openid-connect-settings.ts';
 import {
   admittedAfter,
   firstSignInNoticed,
@@ -39,23 +34,17 @@ import {
   type Enrolling,
   type RefusedForTheClaim,
 } from './admission.ts';
+import {
+  asItsClient,
+  issuerOf,
+  type AsItsClient,
+  type ClientsServed,
+  type CompanySignIn,
+  type SignInAt,
+} from './company-client.ts';
 
-export interface CompanySignIn {
-  readonly relyingParty: RelyingParty;
-  readonly publicUrl: string;
-  readonly requiredClaim: RequiredClaim | undefined;
-}
-
-interface SigningIn extends CompanySignIn, Admitting {
+interface SigningIn extends SignInAt, Admitting, AsItsClient {
   readonly sessions: Sessions;
-}
-
-export async function companySignInOf(
-  settings: OpenIdConnectSettings,
-  requests: ProviderRequests = providerRequestsOverTheNetwork,
-): Promise<CompanySignIn> {
-  const { publicUrl, requiredClaim } = settings;
-  return { relyingParty: await relyingPartyOf(settings, requests), publicUrl, requiredClaim };
 }
 
 const signInPath = '/auth/oidc';
@@ -71,8 +60,6 @@ const hostOnly = { prefix: 'host', path: '/', secure: true, httpOnly: true } as 
 const pendingSignInAttributes = { ...hostOnly, sameSite: 'Lax' } as const;
 
 const sessionAttributes = { ...hostOnly, sameSite: 'Strict' } as const;
-
-const pendingValue = /^([\w-]+)\.([\w-]+)\.([\w-]+)$/u;
 
 const notSignedIn = problemOf(
   'bad_request',
@@ -95,13 +82,6 @@ type NotSignedIn = FinishedSignIn | { readonly failed: string } | undefined;
 
 type ApiContext = Parameters<RouteHandler>[0];
 
-function pendingIn(value: string | undefined): PendingSignIn | undefined {
-  const match = pendingValue.exec(String(value));
-  return match === null
-    ? undefined
-    : { state: String(match[1]), nonce: String(match[2]), codeVerifier: String(match[3]) };
-}
-
 const pendingSignInEnded = generateCookie(pendingSignInCookie, '', { ...pendingSignInAttributes, maxAge: 0 });
 
 function seeOther(c: ApiContext, location: string, status: 302 | 303): Response {
@@ -109,12 +89,25 @@ function seeOther(c: ApiContext, location: string, status: 302 | 303): Response 
   return c.redirect(location, status);
 }
 
-function signInStarted({ relyingParty }: CompanySignIn): RouteHandler {
+function startedBy({ relyingParty }: SigningIn) {
+  return relyingParty.signInStarted().catch((failure: unknown) => {
+    if (failure instanceof ClientRegistrationError) {
+      return failure;
+    }
+    throw failure;
+  });
+}
+
+function signInStarted(signIn: SigningIn, report: SignInReport): RouteHandler {
   return async (c) => {
-    const { authorizationUrl, pending } = await relyingParty.signInStarted();
-    const value = `${pending.state}.${pending.nonce}.${pending.codeVerifier}`;
+    const started = await startedBy(signIn);
+    if (started instanceof ClientRegistrationError) {
+      report.notRegistered(started.message);
+      return problemResponse(notSignedIn);
+    }
+    const value = signIn.pending.valueOf(started.pending);
     setCookie(c, pendingSignInCookie, value, { ...pendingSignInAttributes, maxAge: pendingSignInSeconds });
-    return seeOther(c, authorizationUrl, 302);
+    return seeOther(c, started.authorizationUrl, 302);
   };
 }
 
@@ -134,8 +127,8 @@ async function sessionEndedIn(c: ApiContext, { sessions }: SigningIn): Promise<v
   }
 }
 
-function finishedIn(c: ApiContext, { relyingParty }: CompanySignIn): Promise<FinishedSignIn> | undefined {
-  const pending = pendingIn(getCookie(c, pendingSignInCookie, 'host'));
+function finishedIn(c: ApiContext, { relyingParty, pending: cookie }: SigningIn): Promise<FinishedSignIn> | undefined {
+  const pending = cookie.pendingIn(getCookie(c, pendingSignInCookie, 'host'));
   return pending === undefined ? undefined : relyingParty.signInFinished(new URL(c.req.url).search, pending);
 }
 
@@ -210,7 +203,7 @@ function signedOut(signIn: SigningIn): RouteHandler {
 
 function companySignInRoutes(signIn: SigningIn, report: SignInReport): RegisterRoutes {
   return (routes) => {
-    routes.addPublic('GET', signInPath, signInStarted(signIn));
+    routes.addPublic('GET', signInPath, signInStarted(signIn, report));
     routes.addPublic('GET', callbackPath, signInFinished(signIn, report));
     routes.addPublic('POST', signOutPath, signedOut(signIn));
   };
@@ -229,6 +222,7 @@ interface SignInServed {
   readonly sessionRows?: SessionRows;
   readonly peopleRows?: PeopleRows;
   readonly enrolling?: Enrolling;
+  readonly signInClientRegistrations?: ReturnType<ClientsServed['registrations']>;
 }
 
 function principalOfThe(person: SignedInPerson): Principal {
@@ -259,18 +253,22 @@ export function signedInApiOf(
 
 export function signInRoutesOf(
   signIn: CompanySignIn | undefined,
-): (logged: (log: Effect.Effect<void>) => void, served?: SignInServed) => readonly RegisterRoutes[] {
+): (logged: (log: Effect.Effect<void>) => void, served?: SignInServed) => Promise<readonly RegisterRoutes[]> {
   if (signIn === undefined) {
-    return () => [];
+    return () => Promise.resolve([]);
   }
-  return (logged, { sessionRows, peopleRows, enrolling } = {}) => {
+  return async (logged, { sessionRows, peopleRows, enrolling, signInClientRegistrations } = {}) => {
+    const report = signInReportTo(logged, issuerOf(signIn));
+    const { publicUrl, requiredClaim } = signIn;
     const signingIn: SigningIn = {
-      ...signIn,
+      publicUrl,
+      requiredClaim,
       sessions: sessionsOf(keptIn(sessionRows)),
       people: keptIn(peopleRows),
       enrolling: keptIn(enrolling),
+      ...(await asItsClient(signIn, { registrations: () => keptIn(signInClientRegistrations), report })),
     };
     logged(firstSignInNoticed(signingIn.enrolling));
-    return [companySignInRoutes(signingIn, signInReportTo(logged, signIn.relyingParty.issuer))];
+    return [companySignInRoutes(signingIn, report)];
   };
 }

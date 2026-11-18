@@ -41,8 +41,8 @@ class StartupError extends Data.TaggedError('StartupError')<{
 
 type SignInRoutes = (
   logged: (log: Effect.Effect<void>) => void,
-  served?: Pick<Served, 'sessionRows' | 'peopleRows' | 'enrolling'>,
-) => readonly RegisterRoutes[];
+  served?: Pick<Served, 'sessionRows' | 'peopleRows' | 'enrolling' | 'signInClientRegistrations'>,
+) => Promise<readonly RegisterRoutes[]>;
 
 type SignedInApi = (sessionRows?: Served['sessionRows']) => Pick<ApiOptions, 'sessions' | 'publicUrl'>;
 
@@ -101,7 +101,7 @@ function telemetryServing(telemetry: Telemetry, local: LocalServing | undefined)
 interface Answering<R> {
   readonly settings: Settings;
   readonly authenticator: Authenticator;
-  readonly signInRoutes: SignInRoutes;
+  readonly signInRoutes: readonly RegisterRoutes[];
   readonly signedInApi: SignedInApi;
   readonly served: Served;
   readonly runtime: AppRuntime<R>;
@@ -114,10 +114,7 @@ interface Answering<R> {
 function apiOf<R>(answering: Answering<R>): ApiHandler {
   const { settings, authenticator, served, runtime, telemetry, local, startPing, pageStyle } = answering;
   const { licenseNotice } = served;
-  const signInRoutes = answering.signInRoutes((log) => {
-    void runtime.run(log);
-  }, served);
-  const routes = [...served.routes, ...signInRoutes];
+  const routes = [...served.routes, ...answering.signInRoutes];
   return createApiHandler({
     allowedOrigins: settings.allowedOrigins,
     studio: servedStudioOf(settings, {
@@ -137,6 +134,29 @@ function apiOf<R>(answering: Answering<R>): ApiHandler {
     installId: startPing.installId,
     ...(authenticator.mode === 'local' && licenseNotice !== undefined ? { licenseNotice } : {}),
   });
+}
+
+interface Serving<R> {
+  readonly composed: Composed<R>;
+  readonly runtime: AppRuntime<R>;
+  readonly ownOrigin: () => string;
+}
+
+async function servedSigningIn<R>(
+  { signInRoutes }: Pick<Starting<R>, 'signInRoutes'>,
+  { composed, runtime, ownOrigin }: Serving<R>,
+): Promise<{ readonly served: Served; readonly signInRoutes: readonly RegisterRoutes[] }> {
+  const served = await servedOf(composed, runtime, ownOrigin);
+  try {
+    const routes = await signInRoutes((log) => {
+      void runtime.run(log);
+    }, served);
+    return { served, signInRoutes: routes };
+  } catch (failure) {
+    await served.stopWork();
+    await runtime.dispose();
+    throw failure;
+  }
 }
 
 const noStartPing: StartPing = {
@@ -163,9 +183,9 @@ export async function started<R>(starting: Starting<R>): Promise<RunningServer> 
   await runtime.run(logTelemetry(settings.telemetry));
   const listening = { port: settings.port };
   const ownOrigin = (): string => settings.publicUrl ?? ownOriginOf(settings.host, listening.port);
-  const served = await servedOf(composed, runtime, ownOrigin);
+  const { served, signInRoutes } = await servedSigningIn(starting, { composed, runtime, ownOrigin });
   const startPing = options.usagePing?.(settings) ?? noStartPing;
-  const api = apiOf({ ...starting, served, runtime, local, startPing });
+  const api = apiOf({ ...starting, signInRoutes, served, runtime, local, startPing });
   const server = createHttpServer(api.listener);
   try {
     await listen(server, settings.port, settings.host);

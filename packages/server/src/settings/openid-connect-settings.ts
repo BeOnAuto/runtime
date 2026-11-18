@@ -23,10 +23,14 @@ export const openIdConnectVariables: readonly string[] = [
 
 export const callbackPath = '/auth/oidc/callback';
 
-export interface OpenIdConnectSettings {
-  readonly issuer: string;
+interface GivenClient {
   readonly clientId: string;
   readonly clientSecret: Redacted.Redacted;
+}
+
+export interface OpenIdConnectSettings {
+  readonly issuer: string;
+  readonly client: GivenClient | undefined;
   readonly scopes: readonly string[];
   readonly tokenEndpointAuthMethod: ClientAuthenticationMethod | undefined;
   readonly publicUrl: string;
@@ -87,12 +91,14 @@ type Given = typeof settingsGiven extends Config.Config<infer A> ? A : never;
 
 interface Complete extends Given {
   readonly issuer: string;
-  readonly clientId: string;
-  readonly secret: Redacted.Redacted | string;
+  readonly given: { readonly clientId: string; readonly secret: Redacted.Redacted | string } | undefined;
 }
 
 const together =
   'OIDC_ISSUER: Set OIDC_ISSUER and OIDC_CLIENT_ID together with OIDC_CLIENT_SECRET or OIDC_CLIENT_SECRET_FILE';
+
+const halfAClient = (missing: string) =>
+  `${missing}: Set OIDC_CLIENT_ID together with OIDC_CLIENT_SECRET or OIDC_CLIENT_SECRET_FILE, or leave them all out to let Auto register itself with the identity provider`;
 
 const secretGivenTwice = 'OIDC_CLIENT_SECRET: Set one of OIDC_CLIENT_SECRET and OIDC_CLIENT_SECRET_FILE, not more';
 
@@ -115,12 +121,18 @@ function isAnyGiven({ issuer, clientId, clientSecret, clientSecretFile }: Given)
   return [issuer, clientId, clientSecret, clientSecretFile].some((value) => value !== undefined);
 }
 
-function completeOf(read: Given): Complete | undefined {
-  const { issuer, clientId, clientSecret, clientSecretFile } = read;
+function completeOf(read: Given, issuer: string): Complete {
+  const { clientId, clientSecret, clientSecretFile } = read;
   const secret = clientSecret ?? clientSecretFile;
-  return issuer === undefined || clientId === undefined || secret === undefined
-    ? undefined
-    : { ...read, issuer, clientId, secret };
+  if (clientId === undefined && secret === undefined) {
+    return { ...read, issuer, given: undefined };
+  }
+  if (clientId === undefined || secret === undefined) {
+    throw new InvalidSettingsError({
+      message: halfAClient(clientId === undefined ? 'OIDC_CLIENT_ID' : 'OIDC_CLIENT_SECRET'),
+    });
+  }
+  return { ...read, issuer, given: { clientId, secret } };
 }
 
 function identityServiceRefusalOf({ identityIssuer, identityKeySet, identityKeySetUrl }: Given): string | undefined {
@@ -170,12 +182,20 @@ function secretIn(file: string): Redacted.Redacted {
   return Redacted.make(secret);
 }
 
+function clientOf(given: Complete['given']): GivenClient | undefined {
+  return given === undefined
+    ? undefined
+    : {
+        clientId: given.clientId,
+        clientSecret: typeof given.secret === 'string' ? secretIn(given.secret) : given.secret,
+      };
+}
+
 function settingsOf(read: Complete, publicUrl: string): OpenIdConnectSettings {
-  const { issuer, clientId, secret, scopes, tokenEndpointAuthMethod, requiredClaim } = read;
+  const { issuer, given, scopes, tokenEndpointAuthMethod, requiredClaim } = read;
   return {
     issuer,
-    clientId,
-    clientSecret: typeof secret === 'string' ? secretIn(secret) : secret,
+    client: clientOf(given),
     scopes: scopesIn(scopes),
     tokenEndpointAuthMethod,
     publicUrl,
@@ -195,10 +215,13 @@ export function readOpenIdConnectSettings(
   if (!isAnyGiven(read)) {
     return undefined;
   }
-  const complete = completeOf(read);
-  const refusal = complete === undefined ? together : refusalOf(complete, deciding.accessMode);
-  if (refusal !== undefined || complete === undefined) {
-    throw new InvalidSettingsError({ message: String(refusal) });
+  if (read.issuer === undefined) {
+    throw new InvalidSettingsError({ message: together });
+  }
+  const complete = completeOf(read, read.issuer);
+  const refusal = refusalOf(complete, deciding.accessMode);
+  if (refusal !== undefined) {
+    throw new InvalidSettingsError({ message: refusal });
   }
   if (deciding.publicUrl === undefined) {
     throw new InvalidSettingsError({ message: withoutAnAddress });

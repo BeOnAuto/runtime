@@ -6,7 +6,7 @@ import { Effect, Layer } from 'effect';
 import { ledgerConnectionIn, type LedgerDatabase } from '../database/ledger-database.ts';
 import { withItsContentFound } from '../database/ledger-of-content-not-found.ts';
 import { signInStoreRefusalExplained } from '../database/sign-in-store-of-a-newer-version.ts';
-import { enrollingIn, type Enrolling } from '../sign-in/admission.ts';
+import { clientRegistrationsIn, enrollingIn, type Enrolling } from '../sign-in/admission.ts';
 import { contentStoreOf, type ContentStoreSettings } from './content-store.ts';
 import { keptByTheLedgerWith } from './kept-by-the-ledger.ts';
 
@@ -56,14 +56,18 @@ export function ledgerLayerFor(
 
 export interface SignInOpened extends AuthStore {
   readonly enrolling: Enrolling;
+  readonly clientRegistrationsWith: ReturnType<typeof clientRegistrationsIn>;
 }
 
 export async function signInOpened(
-  runtime: Parameters<typeof ledgerConnectionIn>[0] & Parameters<typeof enrollingIn>[0],
+  runtime: Parameters<typeof ledgerConnectionIn>[0] &
+    Parameters<typeof enrollingIn>[0] &
+    Parameters<typeof clientRegistrationsIn>[0],
   settings: Parameters<typeof signInStoreRefusalExplained>[1],
 ): Promise<SignInOpened> {
   try {
-    return { ...(await authStoreOpened(await ledgerConnectionIn(runtime))), enrolling: enrollingIn(runtime) };
+    const store = await authStoreOpened(await ledgerConnectionIn(runtime));
+    return { ...store, enrolling: enrollingIn(runtime), clientRegistrationsWith: clientRegistrationsIn(runtime) };
   } catch (failure) {
     throw signInStoreRefusalExplained(failure, settings);
   }

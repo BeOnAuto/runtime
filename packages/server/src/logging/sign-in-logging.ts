@@ -31,7 +31,42 @@ export function logFirstAdmin(org: string, person: string): Effect.Effect<void> 
   );
 }
 
-export interface SignInReport {
+export function logClientRegistered(issuer: string, clientId: string, replacing?: string): Effect.Effect<void> {
+  const inPlaceOf = replacing === undefined ? '' : `, in place of the client ${replacing}`;
+  return Effect.logInfo(
+    `This server registered itself with the identity provider at ${issuer} as the client ${clientId}${inPlaceOf}`,
+  ).pipe(
+    Effect.annotateLogs({
+      oidc_issuer: issuer,
+      oidc_client_id: clientId,
+      ...(replacing === undefined ? {} : { oidc_replaced_client_id: replacing }),
+    }),
+  );
+}
+
+export function logClientRegisteredElsewhereFirst(
+  issuer: string,
+  clientId: string,
+  unused: string,
+): Effect.Effect<void> {
+  return Effect.logInfo(
+    `Another server of this database registered with the identity provider at ${issuer} at the same moment, so this one signs people in as its client ${clientId}. The client ${unused} this one registered stays unused there`,
+  ).pipe(Effect.annotateLogs({ oidc_issuer: issuer, oidc_client_id: clientId, oidc_unused_client_id: unused }));
+}
+
+export function logClientNotRegistered(issuer: string, failure: string): Effect.Effect<void> {
+  return Effect.logWarning(
+    `A sign-in could not go on, since this server could not register itself again with the identity provider at ${issuer}: ${failure}`,
+  ).pipe(Effect.annotateLogs({ oidc_issuer: issuer, failure }));
+}
+
+export interface ClientsReport {
+  readonly registered: (clientId: string, replacing: string | undefined) => void;
+  readonly registeredElsewhereFirst: (clientId: string, unused: string) => void;
+  readonly notRegistered: (failure: string) => void;
+}
+
+export interface SignInReport extends ClientsReport {
   readonly refused: (code: string) => void;
   readonly refusedForTheClaim: (claim: string) => void;
   readonly failed: (failure: string) => void;
@@ -51,6 +86,15 @@ export function signInReportTo(logged: (log: Effect.Effect<void>) => void, issue
     },
     firstAdmin: (person) => {
       logged(logFirstAdmin(defaultOrg, person));
+    },
+    registered: (clientId, replacing) => {
+      logged(logClientRegistered(issuer, clientId, replacing));
+    },
+    registeredElsewhereFirst: (clientId, unused) => {
+      logged(logClientRegisteredElsewhereFirst(issuer, clientId, unused));
+    },
+    notRegistered: (failure) => {
+      logged(logClientNotRegistered(issuer, failure));
     },
   };
 }

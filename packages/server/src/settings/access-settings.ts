@@ -53,7 +53,7 @@ export function readAccessSettings(environment: Environment): Effect.Effect<Acce
   return asInvalidSettings(accessSettings.parse(ConfigProvider.fromEnvRecord(environment)));
 }
 
-export type IdentityKeySet =
+type IdentityKeySet =
   | { readonly from: 'discovery' }
   | { readonly from: 'given'; readonly keySet: IssuerKeySet }
   | { readonly from: 'url'; readonly url: string };
