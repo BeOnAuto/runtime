@@ -22,6 +22,7 @@ export {
 export { isPinnableTemplate, pinnedTemplateShape } from './entry/entry-values.ts';
 export { aliasesTakenIn, providerNamesOf, type AliasTaken } from './entry/provider-names.ts';
 export { ConversationsSchema, conversationTemplates, type Conversations } from './entry/conversation-parts.ts';
+export { arrivalReadingOf, type Arrival, type ArrivalReading } from './events/arrival-readings.ts';
 export {
   asNamedIn,
   conversationsOf,

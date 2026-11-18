@@ -9,6 +9,16 @@ export type ExpressionPlace =
   | { readonly transport: 'request'; readonly sources: readonly RequestSource[]; readonly because?: string }
   | { readonly transport: 'message'; readonly sources: readonly MessageSource[]; readonly because?: string };
 
+export type RequestReference =
+  | { readonly transport: 'request'; readonly source: 'header' | 'query'; readonly name: string }
+  | { readonly transport: 'request'; readonly source: 'body'; readonly pointer: string };
+
+export interface MessageReference {
+  readonly transport: 'message';
+  readonly source: MessageSource;
+  readonly pointer: string;
+}
+
 const jsonPointer = String.raw`(?:/(?:[^~/]|~[01])*)+`;
 
 const requestExpression = new RegExp(
@@ -16,7 +26,10 @@ const requestExpression = new RegExp(
   'u',
 );
 
-const messageExpression = new RegExp(String.raw`^\$message\.(?<source>header|payload)#${jsonPointer}$`, 'u');
+const messageExpression = new RegExp(
+  String.raw`^\$message\.(?<source>header|payload)#(?<pointer>${jsonPointer})$`,
+  'u',
+);
 
 const requestShapes: Readonly<Record<RequestSource, string>> = {
   header: '$request.header.<name>',
@@ -29,21 +42,27 @@ const messageShapes: Readonly<Record<MessageSource, string>> = {
   payload: '$message.payload#/<pointer>',
 };
 
-function requestSourceOf(expression: string): RequestSource | undefined {
+export function requestReferenceOf(expression: string): RequestReference | undefined {
   const found = requestExpression.exec(expression)?.groups ?? {};
   const header = found['header'];
   if (header !== undefined) {
-    return headerNamePattern.test(header) ? 'header' : undefined;
+    return headerNamePattern.test(header) ? { transport: 'request', source: 'header', name: header } : undefined;
   }
-  if (found['query'] !== undefined) {
-    return 'query';
+  const query = found['query'];
+  if (query !== undefined) {
+    return { transport: 'request', source: 'query', name: query };
   }
-  return found['body'] === undefined ? undefined : 'body';
+  const body = found['body'];
+  return body === undefined ? undefined : { transport: 'request', source: 'body', pointer: body };
 }
 
-function messageSourceOf(expression: string): MessageSource | undefined {
-  const source = messageExpression.exec(expression)?.groups?.['source'];
-  return source === 'header' || source === 'payload' ? source : undefined;
+export function messageReferenceOf(expression: string): MessageReference | undefined {
+  const found = messageExpression.exec(expression)?.groups ?? {};
+  const source = found['source'];
+  const pointer = found['pointer'];
+  return (source === 'header' || source === 'payload') && pointer !== undefined
+    ? { transport: 'message', source, pointer }
+    : undefined;
 }
 
 function expectedOf(place: ExpressionPlace): string {
@@ -56,11 +75,11 @@ function expectedOf(place: ExpressionPlace): string {
 
 function isOfItsPlace(expression: string, place: ExpressionPlace): boolean {
   if (place.transport === 'request') {
-    const source = requestSourceOf(expression);
-    return source !== undefined && place.sources.includes(source);
+    const reference = requestReferenceOf(expression);
+    return reference !== undefined && place.sources.includes(reference.source);
   }
-  const source = messageSourceOf(expression);
-  return source !== undefined && place.sources.includes(source);
+  const reference = messageReferenceOf(expression);
+  return reference !== undefined && place.sources.includes(reference.source);
 }
 
 export function expressionIssueOf(expression: string, place: ExpressionPlace): string | undefined {

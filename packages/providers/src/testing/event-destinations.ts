@@ -116,3 +116,32 @@ export const intoAQueue = {
   unsubscribe: { tool: 'delete_subscription', with: { id: '{{ subscription.id }}' } },
   wake: { when: { '$message.payload#/changeType': ['created'] }, subscription: '$message.payload#/subscriptionId' },
 };
+
+export const inHeadersAndTheQuery = {
+  ...ofEachSubscription,
+  handshake: {
+    when: { '$request.query.hub.mode': ['subscribe', 'unsubscribe'] },
+    challenge: '$request.query.hub.challenge',
+    signed: false,
+  },
+  wake: {
+    when: { '$request.header.X-Tracker-Event': ['comment', 'review'] },
+    subscription: '$request.header.X-Tracker-Hook',
+    conversation: '$request.body#/comment/thread',
+    automatic: '$request.body#/sender/app',
+  },
+};
+
+const answeringItsChallenge = {
+  ...ofTheApp,
+  handshake: { ...ofTheApp.handshake, response: { challenge: 'challenge' } },
+};
+
+export const asSlackSends = carrying(answeringItsChallenge, {
+  id: '$request.body#/event/ts',
+  sender: '$request.body#/event/user',
+  text: '$request.body#/event/text',
+  to: '$request.body#/event/thread_ts',
+  time: '$request.body#/event/ts',
+  changed: '$request.body#/event/hidden',
+});
