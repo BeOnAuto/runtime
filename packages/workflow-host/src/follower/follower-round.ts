@@ -1,7 +1,8 @@
 import { Effect, type Cause } from 'effect';
 
 import { failedTryRetryMs, type HeldTries } from '../holds/playbook-holds.ts';
-import type { FailedRounds, WakeUpParts, Woken } from '../loop/host-wake-up.ts';
+import { earliestOf, type FailedRounds } from '../loop/failed-rounds.ts';
+import type { WakeUpParts, Woken } from '../loop/host-wake-up.ts';
 import type { PlaybookSweeps } from '../sweeps/playbook-sweeps.ts';
 import type { Wakes } from '../sweeps/wakes.ts';
 import type { Mode } from './delivery-loop.ts';
@@ -114,10 +115,6 @@ function swept(parts: RoundParts, wakes: Wakes): Effect.Effect<boolean> {
 }
 
 const heldPlaybooksInARound = 64;
-
-export function earliestOf(one: number | null, other: number | null): number | null {
-  return one === null ? other : Math.min(one, other ?? one);
-}
 
 interface TriedPass {
   readonly playbookKey: string;

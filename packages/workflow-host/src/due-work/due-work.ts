@@ -2,6 +2,13 @@ import { Effect, Semaphore } from 'effect';
 
 import { background } from '../calls/background.ts';
 import type { Trouble } from '../calls/host-executor.ts';
+import {
+  earliestOf,
+  earliestOfReads,
+  failedNextDueRead,
+  nextDueRead,
+  type NextDueRead,
+} from '../loop/failed-rounds.ts';
 import type { HostContext } from '../loop/forked-fibers.ts';
 import { rowWaits, type RowWaits } from './row-waits.ts';
 
@@ -19,7 +26,7 @@ export interface DueWork {
 
 export interface DuePerformer {
   readonly performed: (now: number) => Effect.Effect<void>;
-  readonly wakeAt: (now: number) => Effect.Effect<number>;
+  readonly wakeAt: (now: number) => Effect.Effect<NextDueRead>;
   readonly stop: () => Effect.Effect<void>;
 }
 
@@ -64,8 +71,13 @@ function awaitedAtMost(handedOut: Effect.Effect<void>, { sleep }: DueParts): Eff
   return Effect.interruptible(Effect.raceFirst(handedOut, sleep(dueAwaitedMs)));
 }
 
-function laterThan(now: number, next: number | null): number {
-  return next === null || next <= now ? Number.POSITIVE_INFINITY : next;
+function laterThan(now: number, next: number | null): number | null {
+  return next !== null && next > now ? next : null;
+}
+
+function waitedUntil(waits: RowWaits, now: number): number | null {
+  const until = waits.nextUntil(now);
+  return Number.isFinite(until) ? until : null;
 }
 
 interface Lane {
@@ -107,13 +119,16 @@ function laneOf({ performed, finished, mostInFlight, context }: LaneParts): Lane
   };
 }
 
-function nextWakeOf(work: DueWork, waits: RowWaits, { trouble }: DueParts, now: number): Effect.Effect<number> {
+function nextWakeOf(work: DueWork, waits: RowWaits, { trouble }: DueParts, now: number): Effect.Effect<NextDueRead> {
   return work.nextDueAt(now).pipe(
-    Effect.map((next) => Math.min(laterThan(now, next), waits.nextUntil(now))),
+    Effect.map((next) => nextDueRead(earliestOf(laterThan(now, next), waitedUntil(waits, now)))),
     Effect.catchCause((cause) =>
-      Effect.as(
-        trouble(`The next due time of ${work.name} could not be read; the loop waits for the next sweep`, cause),
-        Number.POSITIVE_INFINITY,
+      Effect.andThen(
+        trouble(
+          `The next due time of ${work.name} could not be read; the loop reads it again within a minute, twice as long after each failure in a row, at most an hour`,
+          cause,
+        ),
+        Effect.sync(() => failedNextDueRead(waitedUntil(waits, now))),
       ),
     ),
   );
@@ -155,7 +170,9 @@ function workPerformer(work: DueWork, parts: DueParts): DuePerformer {
         ),
       ),
     wakeAt: (now) =>
-      lanes.some((lane) => lane.leftWithRoom()) ? Effect.succeed(now) : nextWakeOf(work, waits, parts, now),
+      lanes.some((lane) => lane.leftWithRoom())
+        ? Effect.succeed(nextDueRead(now))
+        : nextWakeOf(work, waits, parts, now),
     stop: () => Effect.all([outbound.stop(), local.stop()], { discard: true }),
   };
 }
@@ -168,7 +185,7 @@ export function duePerformer(works: readonly DueWork[], parts: DueParts): DuePer
     wakeAt: (now) =>
       Effect.map(
         Effect.forEach(performers, ({ wakeAt }) => wakeAt(now)),
-        (wakes: readonly number[]) => Math.min(Number.POSITIVE_INFINITY, ...wakes),
+        earliestOfReads,
       ),
     stop: () => Effect.forEach(performers, ({ stop }) => stop(), { discard: true }),
   };

@@ -2,6 +2,16 @@ import type { StreamSignal } from '@on.auto/ledger';
 import { Effect } from 'effect';
 
 import {
+  earliestOf,
+  earliestOfReads,
+  failedNextDueRead,
+  failedRoundsInMemory,
+  nextDueAfter,
+  nextDueRead,
+  type FailedRounds,
+  type NextDueRead,
+} from '../loop/failed-rounds.ts';
+import {
   oneWakeAtATime,
   type HostWakeUp,
   type NextWake,
@@ -10,7 +20,7 @@ import {
   type Woken,
 } from '../loop/host-wake-up.ts';
 import { wakesOf, type Wakes } from '../sweeps/wakes.ts';
-import { earliestOf, failedAt, roundOf, type Round, type RoundParts, type RoundUpkeep } from './follower-round.ts';
+import { failedAt, roundOf, type Round, type RoundParts, type RoundUpkeep } from './follower-round.ts';
 
 export interface Upkeep extends RoundUpkeep {
   readonly nextScheduleAt: () => Effect.Effect<number | null>;
@@ -46,39 +56,53 @@ function startDue({ started, round }: Following, { now, sweep }: Woken): boolean
   return !started && (sweep || !round.failed || now >= round.heldUntil);
 }
 
-function nextScheduleOf({ upkeep, trouble }: FollowerWork): Effect.Effect<number | null> {
-  return upkeep
-    .nextScheduleAt()
-    .pipe(
-      Effect.catchCause((cause) =>
-        Effect.as(
-          trouble('The next due time of the schedules could not be read; the follower waits for the next sweep', cause),
-          null,
-        ),
-      ),
-    );
-}
-
-function nextScheduleToComeOf(parts: FollowerWork, now: number): Effect.Effect<number | null> {
-  return Effect.map(nextScheduleOf(parts), (due) => (due !== null && due > now ? due : null));
-}
-
-function nextDeferredOf({ upkeep, trouble, sweepEveryMs }: FollowerWork, now: number): Effect.Effect<number | null> {
-  return upkeep.nextDeferredAt().pipe(
-    Effect.map((due) => (due === null || due > now ? due : now + sweepEveryMs)),
+function nextScheduleOf({ upkeep, trouble }: FollowerWork): Effect.Effect<NextDueRead> {
+  return upkeep.nextScheduleAt().pipe(
+    Effect.map(nextDueRead),
     Effect.catchCause((cause) =>
       Effect.as(
         trouble(
-          'The next due time of the starts that wait could not be read; the follower waits for the next sweep',
+          'The next due time of the schedules could not be read; the follower reads it again within a minute, twice as long after each failure in a row, at most an hour',
           cause,
         ),
-        null,
+        failedNextDueRead(null),
       ),
     ),
   );
 }
 
-function nextWakeOf(parts: FollowerWork, wakes: Wakes, round: Round, now: number): Effect.Effect<NextWake> {
+function nextScheduleToComeOf(parts: FollowerWork, now: number): Effect.Effect<number | null> {
+  return Effect.map(nextScheduleOf(parts), ({ nextDueAt }) =>
+    nextDueAt !== null && nextDueAt > now ? nextDueAt : null,
+  );
+}
+
+function nextDeferredOf({ upkeep, trouble, sweepEveryMs }: FollowerWork, now: number): Effect.Effect<NextDueRead> {
+  return upkeep.nextDeferredAt().pipe(
+    Effect.map((due) => nextDueRead(due === null || due > now ? due : now + sweepEveryMs)),
+    Effect.catchCause((cause) =>
+      Effect.as(
+        trouble(
+          'The next due time of the starts that wait could not be read; the follower reads it again within a minute, twice as long after each failure in a row, at most an hour',
+          cause,
+        ),
+        failedNextDueRead(null),
+      ),
+    ),
+  );
+}
+
+interface KeptBetweenWakes {
+  readonly wakes: Wakes;
+  readonly failedReads: FailedRounds;
+}
+
+function nextWakeOf(
+  parts: FollowerWork,
+  { wakes, failedReads }: KeptBetweenWakes,
+  round: Round,
+  now: number,
+): Effect.Effect<NextWake> {
   if (round.failed) {
     return Effect.map(nextScheduleToComeOf(parts, now), (toCome) => ({
       nextDueAt: earliestOf(toCome, round.heldUntil),
@@ -86,19 +110,22 @@ function nextWakeOf(parts: FollowerWork, wakes: Wakes, round: Round, now: number
   }
   return wakes.anyWoken() || round.owed
     ? Effect.succeed({ nextDueAt: now })
-    : Effect.zipWith(nextScheduleOf(parts), nextDeferredOf(parts, now), (schedule, deferredAt) => ({
-        nextDueAt: earliestOf(earliestOf(schedule, deferredAt), round.heldUntil),
-      }));
+    : Effect.zipWith(nextScheduleOf(parts), nextDeferredOf(parts, now), (schedule, deferred) =>
+        earliestOfReads([schedule, deferred]),
+      ).pipe(
+        Effect.flatMap((read) => nextDueAfter(read, { failedReads, clock: parts.clock })),
+        Effect.map((due) => ({ nextDueAt: earliestOf(due, round.heldUntil) })),
+      );
 }
 
 export function followerWakeUpOf(parts: FollowerWork, signal: WakeSignal): HostWakeUp {
-  const wakes = wakesOf();
+  const kept: KeptBetweenWakes = { wakes: wakesOf(), failedReads: failedRoundsInMemory() };
   const state: { started: boolean; round: Round } = {
     started: false,
     round: { owed: false, heldUntil: null, failed: false },
   };
   const stopListening = parts.appended.listen((stream) => {
-    wakes.woken(stream);
+    kept.wakes.woken(stream);
     signal.raised();
   });
   const startedNow = (woken: Woken): Effect.Effect<void> =>
@@ -115,7 +142,7 @@ export function followerWakeUpOf(parts: FollowerWork, signal: WakeSignal): HostW
           Effect.suspend(() =>
             state.started
               ? Effect.map(
-                  Effect.uninterruptible(roundOf(parts, wakes, { now, sweep: sweep || state.round.owed })),
+                  Effect.uninterruptible(roundOf(parts, kept.wakes, { now, sweep: sweep || state.round.owed })),
                   (round) => {
                     state.round = round;
                   },
@@ -130,7 +157,7 @@ export function followerWakeUpOf(parts: FollowerWork, signal: WakeSignal): HostW
         ),
         Effect.andThen(() =>
           state.started
-            ? nextWakeOf(parts, wakes, state.round, now)
+            ? nextWakeOf(parts, kept, state.round, now)
             : Effect.succeed({ nextDueAt: state.round.heldUntil }),
         ),
       ),

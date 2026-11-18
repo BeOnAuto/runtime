@@ -2,7 +2,12 @@ import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
 import { oneRowOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import type { FailedRounds } from './host-wake-up.ts';
+import type { HostClock } from './host-clock.ts';
+
+export interface FailedRounds {
+  readonly failed: () => Effect.Effect<number>;
+  readonly succeeded: () => Effect.Effect<void>;
+}
 
 export const firstRoundRetryMs = 60_000;
 
@@ -48,4 +53,57 @@ export function failedRoundsOn(database: HostDatabase, name: string): FailedRoun
             ),
       ),
   };
+}
+
+export function failedRoundsInMemory(): FailedRounds {
+  const counted = { rounds: 0 };
+  return {
+    failed: () =>
+      Effect.sync(() => {
+        counted.rounds += 1;
+        return roundRetryAfter(counted.rounds);
+      }),
+    succeeded: () =>
+      Effect.sync(() => {
+        counted.rounds = 0;
+      }),
+  };
+}
+
+export function earliestOf(one: number | null, other: number | null): number | null {
+  return one === null ? other : Math.min(one, other ?? one);
+}
+
+export interface NextDueRead {
+  readonly nextDueAt: number | null;
+  readonly failed: boolean;
+}
+
+export function nextDueRead(nextDueAt: number | null): NextDueRead {
+  return { nextDueAt, failed: false };
+}
+
+export function failedNextDueRead(knownAt: number | null): NextDueRead {
+  return { nextDueAt: knownAt, failed: true };
+}
+
+export function earliestOfReads(reads: readonly NextDueRead[]): NextDueRead {
+  return {
+    nextDueAt: reads.reduce<number | null>((earliest, { nextDueAt }) => earliestOf(earliest, nextDueAt), null),
+    failed: reads.some(({ failed }) => failed),
+  };
+}
+
+interface ReadsInARow {
+  readonly failedReads: FailedRounds;
+  readonly clock: Pick<HostClock, 'now'>;
+}
+
+export function nextDueAfter(
+  { nextDueAt, failed }: NextDueRead,
+  { failedReads, clock }: ReadsInARow,
+): Effect.Effect<number | null> {
+  return failed
+    ? Effect.map(failedReads.failed(), (retryAfterMs) => earliestOf(nextDueAt, clock.now() + retryAfterMs))
+    : Effect.as(failedReads.succeeded(), nextDueAt);
 }

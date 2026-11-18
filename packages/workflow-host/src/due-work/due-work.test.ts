@@ -12,7 +12,7 @@ import { until } from '../testing/until.ts';
 import { steppedClock, type SteppedClock } from '../views-testing/stepped-sweeps.ts';
 import { type Chore, choreWork } from './due-chores.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
-import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce } from './due-work.ts';
+import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce, type DueWork } from './due-work.ts';
 import { fakeDueWork, type FakeDueWork } from './fake-due-work.ts';
 import { rowWaitBounds, rowWaits } from './row-waits.ts';
 
@@ -46,12 +46,28 @@ const idleEngine: WorkflowEngine = {
   sweep: () => Effect.succeed({ runs: 0, timersArmedAgain: 0 }),
 };
 
-function wakeUpWith(chore: Chore, clock: SteppedClock): (now: number) => Promise<NextWake> {
+const fiveMinutes = 5 * 60_000;
+
+function nextDueFailingFirst(work: DueWork, times: number): DueWork {
+  const failures = { left: times };
+  return {
+    ...work,
+    nextDueAt: (after, callsOut) =>
+      Effect.suspend(() => {
+        failures.left -= 1;
+        return failures.left < 0
+          ? work.nextDueAt(after, callsOut)
+          : Effect.fail(new Error('The rows are out of reach'));
+      }),
+  };
+}
+
+function wakeUpWith(dueWork: DueWork, clock: SteppedClock): (now: number) => Promise<NextWake> {
   const work = hostWakeUp(
     {
       clock,
       timers: noTimers,
-      dueWork: [choreWork(chore)],
+      dueWork: [dueWork],
       engine: idleEngine,
       fire: () => Effect.void,
       resume: () => Effect.succeed(0),
@@ -267,9 +283,38 @@ describe('due rows that cannot be read', () => {
       1,
       new Set([
         'The due rows of the fake rows could not be read; the loop tries again',
-        'The next due time of the fake rows could not be read; the loop waits for the next sweep',
+        'The next due time of the fake rows could not be read; the loop reads it again within a minute, twice as long after each failure in a row, at most an hour',
       ]),
     ]);
+  });
+
+  it('whose next due time could not be read are answered a retry a minute after the read when nothing else is due, so a host woken only at the times it answers performs the next at its time', async () => {
+    const now = Date.now();
+    const clock = steppedClock(now);
+    const rows = fakeDueWork();
+    rows.add('later', now + fiveMinutes);
+    rows.local('later');
+    const wakeUp = wakeUpWith(nextDueFailingFirst(rows.work('host'), 1), clock);
+
+    const first = await wakeUp(now);
+    clock.step(60_000);
+    const second = await wakeUp(now + 60_000);
+    clock.step(fiveMinutes - 60_000);
+    const third = await wakeUp(now + fiveMinutes);
+
+    expect([first, second, third]).toEqual([now + 60_000, now + fiveMinutes, null].map((nextDueAt) => ({ nextDueAt })));
+    expect(rows.performed()).toEqual([{ key: 'later', at: now + fiveMinutes, by: 'host' }]);
+  });
+
+  it('keep the wait of a row that could not be performed, though the next due time of its work could not be read', async () => {
+    const now = Date.now();
+    const rows = fakeDueWork();
+    rows.add('stuck', now);
+    rows.local('stuck');
+    rows.failing('stuck');
+    const wakeUp = wakeUpWith(nextDueFailingFirst(rows.work('host'), 1), steppedClock(now));
+
+    await expect(wakeUp(now)).resolves.toEqual({ nextDueAt: now + rowWaitBounds.firstMs });
   });
 });
 
@@ -289,7 +334,7 @@ describe('a chore the wake-up of the host performs', () => {
           }),
         ),
     };
-    const wakeUp = wakeUpWith(chore, clock);
+    const wakeUp = wakeUpWith(choreWork(chore), clock);
 
     const underWay = await wakeUp(5000);
     held.resolve();

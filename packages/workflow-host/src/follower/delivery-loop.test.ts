@@ -291,6 +291,41 @@ function startFailing(times: number): FollowerWork['discovery']['atStart'] {
     });
 }
 
+function readFailingFirst(
+  times: number,
+  read: () => Effect.Effect<number | null>,
+  broken: Readonly<Error>,
+): () => Effect.Effect<number | null> {
+  const failures = { left: times };
+  return () =>
+    Effect.suspend(() => {
+      failures.left -= 1;
+      return failures.left < 0 ? read() : Effect.die(broken);
+    });
+}
+
+interface StartWaiting {
+  readonly swept: Upkeep['sweep'];
+  readonly nextDueAt: Upkeep['nextDeferredAt'];
+  readonly started: () => readonly number[];
+}
+
+function aStartWaitingUntil(dueAt: number, time: MovingTime): StartWaiting {
+  const deferred: { dueAt: number | null } = { dueAt };
+  const started: number[] = [];
+  return {
+    swept: () =>
+      Effect.sync(() => {
+        if (deferred.dueAt !== null && time.now() >= deferred.dueAt) {
+          started.push(time.now());
+          deferred.dueAt = null;
+        }
+      }),
+    nextDueAt: () => Effect.sync(() => deferred.dueAt),
+    started: () => started,
+  };
+}
+
 interface Span {
   readonly from: number;
   readonly through: number;
@@ -542,10 +577,18 @@ describe('the time the follower is next due, with starts that wait for a later m
     expect(answers).toEqual([at + 1000, at + 1000, at + 500].map((nextDueAt) => ({ nextDueAt, troubles: [] })));
   });
 
-  it('is as though none waited when the starts that wait cannot be read, which is said', async () => {
-    const answer = await nextDueAfterAStart({ scheduleAt: at + 60_000, heldAt: null, deferredAt: 'unread' });
+  it('is the earliest of what was read and a retry a minute after the wake when the starts that wait cannot be read, which is said', async () => {
+    const answers = await Promise.all([
+      nextDueAfterAStart({ scheduleAt: at + 90_000, heldAt: null, deferredAt: 'unread' }),
+      nextDueAfterAStart({ scheduleAt: at + 30_000, heldAt: null, deferredAt: 'unread' }),
+      nextDueAfterAStart({ scheduleAt: 'unread', heldAt: at + 20_000, deferredAt: null }),
+    ]);
 
-    expect(answer).toEqual({ nextDueAt: at + 60_000, troubles: [unreadStarts] });
+    expect(answers).toEqual([
+      { nextDueAt: at + 60_000, troubles: [unreadStarts] },
+      { nextDueAt: at + 30_000, troubles: [unreadStarts] },
+      { nextDueAt: at + 20_000, troubles: [unreadSchedules] },
+    ]);
   });
 });
 
@@ -708,6 +751,73 @@ describe('the time the follower is next due after a start that failed', () => {
       [at + 60_000, at + 60_000, at + 180_000, at + 241_000].map((nextDueAt) => ({ nextDueAt })),
     );
     expect(troubles()).toEqual([startBroke, startBroke, startBroke]);
+  });
+});
+
+describe('the time the follower is next due after a read of it that failed', () => {
+  it('is a retry when the schedules could not be read, so a follower woken only at the times it answers reads them again then and fires the next at its time', async () => {
+    const time = movingTimeFrom(at);
+    const schedule = everyFiveMinutesFrom(at + fiveMinutes, time);
+    const { work, troubles } = workDue({ scheduleAt: null, heldAt: null, deferredAt: null }, { at: 'nowhere' });
+    const follower = followerWakeUpOf(
+      {
+        ...work,
+        clock: { now: time.now, sleep: () => Effect.void },
+        upkeep: {
+          ...work.upkeep,
+          fireSchedules: schedule.fired,
+          nextScheduleAt: readFailingFirst(1, schedule.nextDueAt, unreadSchedules),
+        },
+      },
+      signal,
+    );
+    onTestFinished(() => Effect.runPromise(follower.stop()));
+
+    const wakes = await wakesAtItsAnswers(follower, time, { from: at, through: at + fiveMinutes });
+
+    expect([wakes, schedule.firings(), troubles()]).toEqual([3, [[at + fiveMinutes]], [unreadSchedules]]);
+  });
+
+  it('is a retry when the starts that wait could not be read, so a follower woken only at the times it answers takes up the first at its minute', async () => {
+    const time = movingTimeFrom(at);
+    const deferred = aStartWaitingUntil(at + fiveMinutes, time);
+    const { work, troubles } = workDue({ scheduleAt: null, heldAt: null, deferredAt: null }, { at: 'nowhere' });
+    const follower = followerWakeUpOf(
+      {
+        ...work,
+        clock: { now: time.now, sleep: () => Effect.void },
+        upkeep: {
+          ...work.upkeep,
+          sweep: deferred.swept,
+          nextDeferredAt: readFailingFirst(1, deferred.nextDueAt, unreadStarts),
+        },
+      },
+      signal,
+    );
+    onTestFinished(() => Effect.runPromise(follower.stop()));
+
+    const wakes = await wakesAtItsAnswers(follower, time, { from: at, through: at + fiveMinutes });
+
+    expect([wakes, deferred.started(), troubles()]).toEqual([3, [at + fiveMinutes], [unreadStarts]]);
+  });
+
+  it('is the round’s retry alone after a round that failed, a read that failed beside it neither waking the follower sooner nor counted in a row', async () => {
+    const time = movingTimeFrom(at);
+    const broken: { at: BreaksAt } = { at: 'nowhere' };
+    const { work, troubles } = workDue({ scheduleAt: 'unread', heldAt: null, deferredAt: null }, broken);
+    const follower = followerWakeUpOf({ ...work, clock: { now: time.now, sleep: () => Effect.void } }, signal);
+    onTestFinished(() => Effect.runPromise(follower.stop()));
+
+    const readFailed = await wokenAt(follower, time, at);
+    broken.at = 'holds';
+    const roundFailed = await wokenAt(follower, time, at + 60_000);
+    broken.at = 'nowhere';
+    const readFailedAgain = await wokenAt(follower, time, at + 120_000);
+
+    expect([readFailed, roundFailed, readFailedAgain]).toEqual(
+      [at + 60_000, at + 120_000, at + 240_000].map((nextDueAt) => ({ nextDueAt })),
+    );
+    expect(troubles()).toEqual([unreadSchedules, holdsBroke, unreadSchedules, unreadSchedules]);
   });
 });
 

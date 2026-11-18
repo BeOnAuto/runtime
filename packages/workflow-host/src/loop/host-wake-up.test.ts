@@ -278,7 +278,9 @@ describe('a wake-up of the host, answering when it is next due', () => {
 
     expect([next, host.troubles()]).toEqual([
       { nextDueAt: now + 3000 },
-      ['The next due time of the timers could not be read; the loop waits for the next sweep'],
+      [
+        'The next due time of the timers could not be read; the loop reads it again within a minute, twice as long after each failure in a row, at most an hour',
+      ],
     ]);
   });
 });

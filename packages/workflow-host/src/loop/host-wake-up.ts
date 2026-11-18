@@ -4,6 +4,15 @@ import { Deferred, Effect } from 'effect';
 import type { Trouble } from '../calls/host-executor.ts';
 import { duePerformer, type DuePerformer, type DueWork } from '../due-work/due-work.ts';
 import type { DueTimer, TimerTable } from '../timers/sql-timers.ts';
+import {
+  earliestOfReads,
+  failedNextDueRead,
+  failedRoundsInMemory,
+  nextDueAfter,
+  nextDueRead,
+  type FailedRounds,
+  type NextDueRead,
+} from './failed-rounds.ts';
 import type { HostContext } from './forked-fibers.ts';
 import type { HostClock } from './host-clock.ts';
 
@@ -36,11 +45,6 @@ export interface WakeSignal {
 export interface HostWakeUp {
   readonly wakeUp: (woken: Woken) => Effect.Effect<NextWake>;
   readonly stop: () => Effect.Effect<void>;
-}
-
-export interface FailedRounds {
-  readonly failed: () => Effect.Effect<number>;
-  readonly succeeded: () => Effect.Effect<void>;
 }
 
 type WakeUp = HostWakeUp['wakeUp'];
@@ -107,24 +111,31 @@ function roundOf(parts: WakeUpParts, due: DuePerformer, { now, sweep }: Woken): 
   );
 }
 
-function nextTimerOf({ timers, trouble }: WakeUpParts): Effect.Effect<number | null> {
-  return timers
-    .nextDueAt()
-    .pipe(
-      Effect.catchCause((cause) =>
-        Effect.as(
-          trouble('The next due time of the timers could not be read; the loop waits for the next sweep', cause),
-          null,
+function nextTimerOf({ timers, trouble }: WakeUpParts): Effect.Effect<NextDueRead> {
+  return timers.nextDueAt().pipe(
+    Effect.map(nextDueRead),
+    Effect.catchCause((cause) =>
+      Effect.as(
+        trouble(
+          'The next due time of the timers could not be read; the loop reads it again within a minute, twice as long after each failure in a row, at most an hour',
+          cause,
         ),
+        failedNextDueRead(null),
       ),
-    );
+    ),
+  );
 }
 
-function nextWakeOf(parts: WakeUpParts, due: DuePerformer, now: number): Effect.Effect<NextWake> {
-  return Effect.zipWith(nextTimerOf(parts), due.wakeAt(now), (timer, row) => {
-    const nextDueAt = Math.min(timer ?? Number.POSITIVE_INFINITY, row);
-    return { nextDueAt: Number.isFinite(nextDueAt) ? nextDueAt : null };
-  });
+function nextWakeOf(
+  parts: WakeUpParts,
+  due: DuePerformer,
+  failedReads: FailedRounds,
+  now: number,
+): Effect.Effect<NextWake> {
+  return Effect.zipWith(nextTimerOf(parts), due.wakeAt(now), (timer, rows) => earliestOfReads([timer, rows])).pipe(
+    Effect.flatMap((read) => nextDueAfter(read, { failedReads, clock: parts.clock })),
+    Effect.map((nextDueAt) => ({ nextDueAt })),
+  );
 }
 
 export function hostWakeUp(parts: WakeUpParts, signal: WakeSignal): HostWakeUp {
@@ -136,6 +147,7 @@ export function hostWakeUp(parts: WakeUpParts, signal: WakeSignal): HostWakeUp {
     wake: signal.raised,
     context,
   });
+  const failedReads = failedRoundsInMemory();
   const renewed = Effect.sync(() => {
     signal.renewed();
   });
@@ -143,7 +155,7 @@ export function hostWakeUp(parts: WakeUpParts, signal: WakeSignal): HostWakeUp {
     wakeUp: oneWakeAtATime((woken) =>
       Effect.uninterruptible(roundOf(parts, due, woken)).pipe(
         Effect.andThen(renewed),
-        Effect.andThen(() => nextWakeOf(parts, due, woken.now)),
+        Effect.andThen(() => nextWakeOf(parts, due, failedReads, woken.now)),
       ),
     ),
     stop: due.stop,
