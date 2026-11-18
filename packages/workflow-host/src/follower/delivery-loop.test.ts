@@ -151,6 +151,8 @@ const firingBroke = new Error('The schedules broke');
 
 const holdsBroke = new Error('The held playbooks could not be read');
 
+const startBroke = new Error('The playbooks could not be found');
+
 interface Due {
   readonly scheduleAt: number | null | 'unread';
   readonly heldAt: number | null;
@@ -278,6 +280,15 @@ function everyFiveMinutesFrom(firstDueAt: number, time: MovingTime): Scheduled {
 function wokenAt(follower: HostWakeUp, time: MovingTime, now: number): Promise<NextWake> {
   time.moved(now - time.now());
   return Effect.runPromise(follower.wakeUp({ now, sweep: true }));
+}
+
+function startFailing(times: number): FollowerWork['discovery']['atStart'] {
+  const failures = { left: times };
+  return () =>
+    Effect.suspend(() => {
+      failures.left -= 1;
+      return failures.left < 0 ? Effect.void : Effect.die(startBroke);
+    });
 }
 
 interface Span {
@@ -653,6 +664,50 @@ describe('the time the follower is next due after a round that failed', () => {
 
     expect([failed, retried]).toEqual([{ nextDueAt: retriedAfterTheFirstRoundThatFailed }, { nextDueAt: null }]);
     expect(passes()).toEqual([`${alphaFollowerWakeUp} signal`]);
+  });
+});
+
+describe('the time the follower is next due after a start that failed', () => {
+  it('is the start’s retry, so a follower woken only at the times it answers finds the playbooks again then and fires the schedule due after it', async () => {
+    const time = movingTimeFrom(at);
+    const schedule = everyFiveMinutesFrom(at + fiveMinutes, time);
+    const { work, troubles } = workDue({ scheduleAt: null, heldAt: null, deferredAt: null }, { at: 'nowhere' });
+    const follower = followerWakeUpOf(
+      {
+        ...work,
+        discovery: { ...work.discovery, atStart: startFailing(1) },
+        clock: { now: time.now, sleep: () => Effect.void },
+        upkeep: { ...work.upkeep, fireSchedules: schedule.fired, nextScheduleAt: schedule.nextDueAt },
+      },
+      signal,
+    );
+    onTestFinished(() => Effect.runPromise(follower.stop()));
+
+    const wakes = await wakesAtItsAnswers(follower, time, { from: at, through: at + fiveMinutes });
+
+    expect([wakes, schedule.firings(), troubles()]).toEqual([3, [[at + fiveMinutes]], [startBroke]]);
+  });
+
+  it('is as long as the starts failed in a row answer and never a time already past, though work is due and a playbook was signalled, the start tried again at a wake that sweeps or comes at the retry', async () => {
+    const due = { scheduleAt: at - 60_000, heldAt: at - 60_000, deferredAt: at - 60_000 };
+    const { work, troubles } = workDue(due, { at: 'nowhere' });
+    const follower = followerWakeUpOf(
+      { ...work, discovery: { ...work.discovery, atStart: startFailing(Number.POSITIVE_INFINITY) } },
+      signal,
+    );
+    onTestFinished(() => Effect.runPromise(follower.stop()));
+    const wokenWith = (now: number, sweep: boolean) => Effect.runPromise(follower.wakeUp({ now, sweep }));
+
+    const first = await wokenWith(at, true);
+    work.appended.raise(`${alphaFollowerWakeUp}events/e1`);
+    const beforeTheRetry = await wokenWith(at + 30_000, false);
+    const atTheRetry = await wokenWith(at + 60_000, false);
+    const swept = await wokenWith(at + 61_000, true);
+
+    expect([first, beforeTheRetry, atTheRetry, swept]).toEqual(
+      [at + 60_000, at + 60_000, at + 180_000, at + 241_000].map((nextDueAt) => ({ nextDueAt })),
+    );
+    expect(troubles()).toEqual([startBroke, startBroke, startBroke]);
   });
 });
 

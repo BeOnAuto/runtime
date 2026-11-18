@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import { Effect, type Cause } from 'effect';
 
 import { failedTryRetryMs, type HeldTries } from '../holds/playbook-holds.ts';
 import type { FailedRounds, WakeUpParts, Woken } from '../loop/host-wake-up.ts';
@@ -23,11 +23,19 @@ export interface RoundParts extends Pick<WakeUpParts, 'clock' | 'trouble'> {
   readonly rounds: FailedRounds;
 }
 
-export interface Round {
+interface RoundThrough {
   readonly owed: boolean;
   readonly heldUntil: number | null;
-  readonly failed: boolean;
+  readonly failed: false;
 }
+
+interface RoundFailed {
+  readonly owed: false;
+  readonly heldUntil: number;
+  readonly failed: true;
+}
+
+export type Round = RoundThrough | RoundFailed;
 
 interface Passing {
   readonly playbookKey: string;
@@ -159,6 +167,17 @@ function retriedAfter(parts: RoundParts, { failedPasses, after, now }: Tries): E
   );
 }
 
+export function failedAt(
+  { rounds, trouble }: Pick<RoundParts, 'rounds' | 'trouble'>,
+  now: number,
+  what: string,
+): (cause: Cause.Cause<unknown>) => Effect.Effect<Round> {
+  return (cause) =>
+    Effect.flatMap(rounds.failed(), (retryAfterMs) =>
+      Effect.as(trouble(what, cause), { owed: false, heldUntil: now + retryAfterMs, failed: true }),
+    );
+}
+
 export function roundOf(parts: RoundParts, wakes: Wakes, { now, sweep }: Woken): Effect.Effect<Round> {
   return Effect.gen(function* () {
     yield* parts.upkeep.fireSchedules();
@@ -166,17 +185,14 @@ export function roundOf(parts: RoundParts, wakes: Wakes, { now, sweep }: Woken):
     const owed = sweep ? yield* swept(parts, wakes) : false;
     const heldUntil = yield* heldPassed(parts, wakes);
     yield* parts.rounds.succeeded();
-    return { owed, heldUntil, failed: false };
+    const through: Round = { owed, heldUntil, failed: false };
+    return through;
   }).pipe(
-    Effect.catchCause((cause) =>
-      Effect.flatMap(parts.rounds.failed(), (retryAfterMs) =>
-        Effect.as(
-          parts.trouble(
-            'The follower of the playbooks failed; it tries again in a minute, twice as long after each round that fails in a row, at most an hour',
-            cause,
-          ),
-          { owed: false, heldUntil: now + retryAfterMs, failed: true },
-        ),
+    Effect.catchCause(
+      failedAt(
+        parts,
+        now,
+        'The follower of the playbooks failed; it tries again in a minute, twice as long after each round that fails in a row, at most an hour',
       ),
     ),
   );
