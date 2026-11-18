@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.58.0](https://github.com/BeOnAuto/runtime/compare/v0.57.0...v0.58.0) (2026-11-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **providers:** in a provider entry, the calls `subscribe`, `renew` and `unsubscribe` of `events.destinations` no longer read `with`, `sent.conversation` or `sent.id`. They read `topic`, the topic the destination renders: put what the call needs into `topic` and read `{{ topic }}`. A call written as a request places `{{ secret }}` in its `body`, not in its `url`, and needs an entry whose credential is a bearer token. A websocket destination's `open` is a request, `method`, `url` and `address`, sent with the app's `credential`; `open.tool` and a `wss` address written in `open.url` are no longer read. A destination's `wake` is renamed `filter`, with the same keys inside it. An entry you added that uses one of these is refused when the runtime starts.
+* **reasoning:** a run of a reasoning function whose prompt writes a list or an object whole, such as {{ input.account }} where account is an object, is now rejected as invalid_input with the part and the line of the prompt, where it used to send the model the items run together or [object Object] and succeed. Write one of its fields, or {{ input.account | json }} to send it as JSON.
+* **tool-servers:** an operator who runs the server, the image or the auto-runtime command changes nothing. A program that composes the core gives the most one tool call may send: every ToolAccess answers mostRequestBytesTo(server), which makeToolAccess gives from its option mostRequestBytes, 16 MiB unless given; toolBounds.argumentBytes is gone, with requestBytes, stdioRequestBytes and handArgumentBytes in its place; admission of @on.auto/tool-servers/policy takes each call's mostBytes; renderedArguments of @on.auto/definitions/tool-blocks takes the bound as its fourth argument; DocumentReading takes mostRequestBytesTo, and so do the tools of CallPorts, InteractionPorts and LookupPorts. a program that composes the core and implements ToolAccess itself also answers mostRequestBytes, the most one call may send to a server that is not started as a program; makeToolAccess answers it from its option mostRequestBytes, 16 MiB unless given.
+
+### Features
+
+* **definitions:** a kept text is read within its reader's bound, and a workflow passes it whole ([341fcd1](https://github.com/BeOnAuto/runtime/commit/341fcd16659a3c34ccf7cfa5fe19c3b8c2d73d04))
+* **generation:** current image, speech and video models, and OpenAI's speech retires on its day ([9f0f398](https://github.com/BeOnAuto/runtime/commit/9f0f3989e3a8353eba8ab22fc2d3b2be1acc1b2f))
+* **goals:** goal cards, owner pages say what and why ([6027488](https://github.com/BeOnAuto/runtime/commit/602748811f0c3af85a7c3ba84ad32c889a7fa4a4))
+* **interaction:** a shell can show the typing indicator for a delivered reply a request awaits ([a06a500](https://github.com/BeOnAuto/runtime/commit/a06a5004bbe54f490e6325309e8fd6345127152e))
+* **interaction:** a shell keeps a delivered reply only where a request waits for its message ([d70b407](https://github.com/BeOnAuto/runtime/commit/d70b407a2bb53027e1afb43dfa00ac035396ee70))
+* **ledger:** each projection table is recorded as caught up, and one that is not is made again ([17168c2](https://github.com/BeOnAuto/runtime/commit/17168c27e9be7f8974646e714e1bb7603cd97f00))
+* **providers:** an entry may say where its deliveries carry the reply ([d1e0419](https://github.com/BeOnAuto/runtime/commit/d1e04190becf874fece64276c5ab30ace1f3a4ca))
+* **providers:** an entry's events declare each request one way, and wake is renamed filter ([78d8224](https://github.com/BeOnAuto/runtime/commit/78d822424bedcd0fbbfa0050d91b5c815643066c))
+* **tool-servers:** a tool call sends what TOOL_CALL_MAX_REQUEST_MIB sets, and a run takes 1 MiB ([5e34f05](https://github.com/BeOnAuto/runtime/commit/5e34f05254b9bced0cffd950196f7f4cc0bba7c3))
+* **tool-servers:** an asset passed whole is written into a tool's request a piece at a time ([c8c508e](https://github.com/BeOnAuto/runtime/commit/c8c508ec000253ad4d1b9aa27f418ce58d646ee0))
+* **tool-servers:** an auth block may name discovery issuer and the audience of its token ([5fc0995](https://github.com/BeOnAuto/runtime/commit/5fc0995cd2bcdafbdfc9c5b136df1c688f8690fa))
+
+
+### Bug Fixes
+
+* **access-control:** the refusal that keeps an org's last admin says what to do ([6027488](https://github.com/BeOnAuto/runtime/commit/602748811f0c3af85a7c3ba84ad32c889a7fa4a4))
+* **api:** an agent asks one round of questions, proposes once, and takes one yes ([f27ad74](https://github.com/BeOnAuto/runtime/commit/f27ad74eb04e5d54e9e9e3177e0cc60bbbc99de0))
+* **api:** the proposal ends with its closing question, and a changed proposal is asked again ([346ff5a](https://github.com/BeOnAuto/runtime/commit/346ff5a67324a49d6f3262d0ccc4d1795ffe80c9))
+* **definitions:** goals read a # written straight before a word as text ([c280ddb](https://github.com/BeOnAuto/runtime/commit/c280ddb54111f625f4f1e95512c55dbe8617633e))
+* **interaction:** a reply taken is told before a later reply is told it was not taken ([d1e0419](https://github.com/BeOnAuto/runtime/commit/d1e04190becf874fece64276c5ab30ace1f3a4ca))
+* **reasoning:** a prompt that writes a list or an object as text stops the run, naming the line ([6027488](https://github.com/BeOnAuto/runtime/commit/602748811f0c3af85a7c3ba84ad32c889a7fa4a4))
+* **workflow-host:** a failed round of the host, or read of its due rows, is tried again at a retry ([41eb366](https://github.com/BeOnAuto/runtime/commit/41eb366c5543f17b588abb0b830946a748f8cfad))
+* **workflow-host:** a follower whose start fails asks to be woken at its retry and tries again ([f703335](https://github.com/BeOnAuto/runtime/commit/f703335486dc68dd45ead781dd24c8b5c8f4d024))
+* **workflow-host:** a read of when work is next due that fails asks to be woken at a retry ([7afbf2d](https://github.com/BeOnAuto/runtime/commit/7afbf2d92350954ef1061bff707f91d7c2b34037))
+* **workflow-host:** a start that waits for a later minute wakes the host when it is due ([c280ddb](https://github.com/BeOnAuto/runtime/commit/c280ddb54111f625f4f1e95512c55dbe8617633e))
+* **workflow-host:** after a failed round the follower waits for its retry or a schedule yet to come ([a06a500](https://github.com/BeOnAuto/runtime/commit/a06a5004bbe54f490e6325309e8fd6345127152e))
+
 ## [0.57.0](https://github.com/BeOnAuto/runtime/compare/v0.56.0...v0.57.0) (2026-11-16)
 
 
