@@ -42,3 +42,19 @@ export const EventsSchema = EventsFieldsSchema.check(
 });
 
 export type Events = typeof EventsSchema.Type;
+
+type Call = NonNullable<Destination['unsubscribe']>;
+
+function requestOriginOf(call: Call | undefined): readonly string[] {
+  const url = call?.url === undefined ? null : URL.parse(call.url);
+  return url === null ? [] : [url.origin];
+}
+
+export function requestOriginsOf({ events }: { readonly events?: Events | undefined }): readonly string[] {
+  const calls = (events?.destinations ?? []).flatMap(({ subscribe, renew, unsubscribe }) => [
+    subscribe,
+    renew,
+    unsubscribe,
+  ]);
+  return [...new Set(calls.flatMap((call) => requestOriginOf(call)))];
+}

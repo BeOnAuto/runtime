@@ -6,7 +6,7 @@ import { Effect, Exit, Function, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
-import { reportingAccess } from '../testing/index.ts';
+import { refusedConnections, reportingAccess } from '../testing/index.ts';
 import {
   calledOnce,
   closedAfter,
@@ -43,10 +43,10 @@ describe('a server that cannot take one call now', () => {
     const fake = await oneCallServer();
     fake.answerNextOf('tools/list', 503);
     const listingRefused = await calledOnce(oneCallAccess(fake.url));
-    const { url } = fake;
+    const { url, origin } = fake;
     await fake.close();
 
-    expect([listingRefused, await calledOnce(oneCallAccess(url))]).toEqual([
+    expect([listingRefused, await calledOnce(oneCallAccess(url, {}, {}, refusedConnections([origin]).fetch))]).toEqual([
       unopenedWith('tool_server_failed', 'failing', `${couldNotBeUsed}The tool server answered HTTP 503`),
       unopenedWith('tool_server_failed', 'unreachable', `${couldNotBeUsed}The tool server could not be reached`),
     ]);

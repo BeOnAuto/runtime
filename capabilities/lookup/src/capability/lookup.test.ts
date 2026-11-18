@@ -1,7 +1,7 @@
 import { onTheStandingClock } from '@on.auto/definitions/testing';
 import { noAssetsHeld } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import { deniedText, patientTiming, threadReplies } from '@on.auto/tool-servers/testing';
+import { deniedText, patientTiming, refusedConnections, threadReplies } from '@on.auto/tool-servers/testing';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -122,8 +122,10 @@ describe('a run of a lookup function that could not finish', () => {
 
   it('is unavailable, sending nothing, when its server does not serve the playbook or cannot be reached', async () => {
     const elsewhere = await lookupRuns({ entry: { org: 'globex' } });
-    const { fake, run } = await lookupRuns();
+    const network = refusedConnections();
+    const { fake, run } = await lookupRuns({ fetch: network.fetch });
     await fake.close();
+    network.refuse(fake.origin);
 
     expect([await elsewhere.run(lookupDocument()), await run(lookupDocument())]).toEqual([
       rejectedWith({ kind: 'tool_not_offered', because: 'tool_server_not_configured' }),

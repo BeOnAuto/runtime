@@ -20,6 +20,7 @@ export interface FakeConnection {
   readonly environment?: Environment;
   readonly reaches?: ConnectionServer['reaches'];
   readonly auth?: AuthSettings;
+  readonly requestOrigins?: readonly string[];
 }
 
 type Standing =
@@ -129,6 +130,7 @@ function preparedOf(held: Held, { connection, settings }: Kept): Effect.Effect<C
           settings,
           reaches: connection.reaches ?? everyAddress,
           refused: (answered) => brokenByItsServer(held, connection, answered),
+          requestOrigins: connection.requestOrigins ?? [],
         })
       : Effect.fail(refusal);
   });

@@ -4,7 +4,7 @@ import { decodeToolResult } from '../bounds/tool-results.ts';
 import { retryAfterMsOf, type Observed } from '../clients/observed-requests.ts';
 import type { CallSettled } from '../clients/server-client.ts';
 import { fileBytesOf, fileTextOf, shownTextIn, shownTextOf, unreadFiles, type AnsweredFile } from './answer-bodies.ts';
-import { AnsweredStatus, answeredToACall } from './answered-status.ts';
+import { AnsweredStatus, answeredToACall, failsByItsStatus, isARedirect } from './answered-status.ts';
 import { headersCarriedBy, unschemedAnswers, type AnswerSchemas } from './api-parameters.ts';
 import { answerAsDescribed } from './described-answers.ts';
 import { DocumentTooLarge } from './document-too-large.ts';
@@ -30,14 +30,6 @@ interface Answer {
 }
 
 const jsonMediaType = /^application\/(?:[\w.-]+\+)?json$/u;
-
-function failed(status: number): boolean {
-  return status === 401 || status === 429 || status >= 500;
-}
-
-function redirected(status: number): boolean {
-  return status >= 300 && status < 400;
-}
 
 function mediaTypeOf(response: Readonly<Response>): string | undefined {
   const written = response.headers.get('content-type')?.split(';', 1).join('').trim().toLowerCase();
@@ -161,7 +153,7 @@ function shownOrRefused(response: Readonly<Response>, shown: Shown, observed: Ob
 async function unreadSettled(response: Readonly<Response>, answering: Answering): Promise<CallSettled> {
   await response.body?.cancel();
   const observed = observedOf(response, answering, false);
-  return failed(response.status)
+  return failsByItsStatus(response.status)
     ? { error: new AnsweredStatus(response.status), observed }
     : settled(redirectAnswer(response.status), observed);
 }
@@ -172,7 +164,7 @@ export async function settledOf(
   answers: AnswerSchemas = unschemedAnswers,
   file: AnsweredFile = unreadFiles,
 ): Promise<CallSettled> {
-  if (failed(response.status) || redirected(response.status)) {
+  if (failsByItsStatus(response.status) || isARedirect(response.status)) {
     return unreadSettled(response, answering);
   }
   const mediaType = mediaTypeOf(response);

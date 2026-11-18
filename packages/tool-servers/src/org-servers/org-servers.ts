@@ -4,6 +4,7 @@ import { Effect, Order } from 'effect';
 import type { ToolNotOffered } from '../access/tool-not-offered.ts';
 import type { ToolServerFailed } from '../access/tool-server-failed.ts';
 import type { ServerLink } from '../clients/server-links.ts';
+import type { ConnectionRequests } from '../declared-requests/declared-requests.ts';
 import type { LinkedServerSettings } from '../openapi/described-api.ts';
 import type { ConnectionUnready } from './connection-source.ts';
 import { refusalOf, type Unusable } from './server-refusals.ts';
@@ -23,7 +24,9 @@ export type Served = Pick<
   | 'renders'
 >;
 
-export type Linked = { readonly link: ServerLink } | { readonly refused: Unusable };
+export type Linked =
+  | { readonly link: ServerLink; readonly requests?: ConnectionRequests }
+  | { readonly refused: Unusable };
 
 export interface OrgServer {
   readonly settings: Served;

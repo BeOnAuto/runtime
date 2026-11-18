@@ -7,7 +7,7 @@ import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, type Added } from '../testing/additions.ts';
-import { consentHarnessAt, startedAt, starting } from '../testing/consents.ts';
+import { consentFetchRefusing, consentHarnessAt, startedAt, starting } from '../testing/consents.ts';
 import { acmeWriter, ada, operationNamed, type Harness, loopbackAndCrmPolicy } from '../testing/harness.ts';
 
 const anyWords: unknown = expect.any(String);
@@ -218,13 +218,15 @@ describe('the removal of a connection connected through Auto’s consent service
   });
 
   it('goes on where the service no longer knows its key or does not answer, saying so in words of the service', async () => {
-    const [forgotten, gone] = await Promise.all([throughAuto(), throughAuto()]);
+    const network = consentFetchRefusing();
+    const [forgotten, gone] = await Promise.all([throughAuto(), throughAuto({ fetch: network.fetch })]);
     const tokens = await connectedAt(forgotten);
     await connectedAt(gone);
     const connectionKey = String(tokens.connection_key);
     const { origin: issuer } = forgotten.serving.fake;
     await Effect.runPromise(serviceCallsAt(forgotten.serving.service).revoke({ issuer, tokens, connectionKey }));
     await gone.serving.service.close();
+    network.refuse(gone.serving.service.url);
 
     expect([await loggedRemovalOf(forgotten), await loggedRemovalOf(gone)]).toEqual([
       expect.stringContaining(

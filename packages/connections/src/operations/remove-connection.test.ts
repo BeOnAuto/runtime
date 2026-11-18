@@ -5,7 +5,7 @@ import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, notes } from '../testing/additions.ts';
-import { consentedOf, consentFake, consentHarnessAt, finishing } from '../testing/consents.ts';
+import { consentedOf, consentFake, consentFetchRefusing, consentHarnessAt, finishing } from '../testing/consents.ts';
 import { acmeReader, ada, harness, operationNamed, type Harness } from '../testing/harness.ts';
 import { sealedInMemory } from '../testing/sealed-connections.ts';
 import { calledThrough, sealedConsentAt, type SealedHarness } from '../testing/sealed-consents.ts';
@@ -146,11 +146,13 @@ describe('a removal whose revocation does not happen', () => {
   it('goes on where the authorization server does not answer at all, or refuses the revocation', async () => {
     const gone = await consentFake();
     const refusing = await consentServed();
-    const unanswering = await connectedByConsentAt(gone);
+    const network = consentFetchRefusing();
+    const unanswering = await connectedByConsentAt(gone, { fetch: network.fetch });
     const refused = await connectedByConsentAt(refusing, {
       fetch: revocationsAnswering(() => Promise.resolve(new Response(null, { status: 503 }))),
     });
     await gone.close();
+    network.refuse(gone.origin);
 
     const loggedUnanswered = await loggedRemovalOf(unanswering.h, unanswering.id);
     const loggedRefused = await loggedRemovalOf(refused.h, refused.id);

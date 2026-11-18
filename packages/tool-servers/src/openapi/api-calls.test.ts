@@ -12,7 +12,7 @@ import {
   fakeApi,
   keyed,
 } from '../api-testing/api-calls.ts';
-import { describedAccess, type ClientRegistration } from '../testing/index.ts';
+import { describedAccess, refusedConnections, type ClientRegistration } from '../testing/index.ts';
 import { serveFakeApi } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
@@ -219,7 +219,10 @@ describe('a call of a tool of an HTTP API that fails', () => {
     const fake = await fakeApi();
     const gone = await serveFakeApi();
     await gone.close();
-    const access = await accessTo({ ...keyed(fake), base_url: gone.baseUrl });
+    const access = await accessTo(
+      { ...keyed(fake), base_url: gone.baseUrl },
+      { fetch: refusedConnections([gone.origin]).fetch },
+    );
 
     expect(answerOf(await called(access, 'search', { query: 'acme' }))).toMatchObject({
       outcome: 'server_failure',

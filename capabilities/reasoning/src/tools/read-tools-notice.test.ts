@@ -1,6 +1,6 @@
 import type { PlaybookAddress } from '@on.auto/operations';
 import { serveFakeMcp, type FakeMcpServer, type FakeTool } from '@on.auto/tool-servers/served-fakes';
-import { noToolServers } from '@on.auto/tool-servers/testing';
+import { noToolServers, refusedConnections } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -88,8 +88,10 @@ describe('no notice of tools marked reads, at a save', () => {
   it('is given when what a tool is cannot be known: its server not configured, the tool not listed, or the server not answering', async () => {
     const fake = await aGraphOf(reads);
     const closed = await aGraphOf(reads);
-    const closedAccess = graphAccessTo(closed.url);
+    const network = refusedConnections();
+    const closedAccess = graphAccessTo(closed.url, {}, network.fetch);
     await closed.close();
+    network.refuse(closed.origin);
 
     expect([
       await noticesAtSave(noToolServers, naming('graph/search_code')),

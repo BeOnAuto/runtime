@@ -1,5 +1,5 @@
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { reportingAccess } from '@on.auto/tool-servers/testing';
+import { refusedConnections, reportingAccess, type AccessOptions } from '@on.auto/tool-servers/testing';
 import { Effect, Exit } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -26,10 +26,10 @@ async function graphServer(): Promise<FakeMcpServer> {
   return fake;
 }
 
-function accessTo(fake: FakeMcpServer, org = 'acme') {
+function accessTo(fake: FakeMcpServer, org = 'acme', fetch?: AccessOptions['fetch']) {
   const { access } = reportingAccess(
     { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org } },
-    { environment: { GRAPH_API_KEY: apiKey } },
+    { environment: { GRAPH_API_KEY: apiKey }, ...(fetch === undefined ? {} : { fetch }) },
   );
   closing.push(access.close);
   return access;
@@ -138,7 +138,7 @@ describe('a tool a reasoning function names that is not offered', () => {
   it('rejects the run as unavailable when its server cannot be used', async () => {
     const fake = await serveFakeMcp();
     await fake.close();
-    const run = reasoningWithTools(accessTo(fake));
+    const run = reasoningWithTools(accessTo(fake, 'acme', refusedConnections([fake.origin]).fetch));
 
     expect(await run.running(naming('graph/search'))).toEqual(
       Exit.fail(expect.objectContaining({ kind: 'tool_server_failed', because: 'unreachable' })),

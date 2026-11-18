@@ -9,7 +9,7 @@ import { allPermissions } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
 import type { Timing } from '@on.auto/tool-servers';
 import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { reportingAccess } from '@on.auto/tool-servers/testing';
+import { reportingAccess, type AccessOptions } from '@on.auto/tool-servers/testing';
 import { Effect, type Exit, type Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -25,6 +25,7 @@ export interface LookupRunOptions {
   readonly server?: FakeMcpOptions;
   readonly entry?: Readonly<Record<string, unknown>>;
   readonly timing?: Timing;
+  readonly fetch?: AccessOptions['fetch'];
 }
 
 export interface LookupRuns {
@@ -55,7 +56,11 @@ export async function lookupRuns(options: LookupRunOptions = {}): Promise<Lookup
   const chat = { url: fake.url, headers: { Authorization: 'Bearer ${CHAT_KEY}' }, org: 'acme', ...options.entry };
   const { access } = reportingAccess(
     { chat },
-    { environment: { CHAT_KEY: chatKey }, ...(options.timing === undefined ? {} : { timing: options.timing }) },
+    {
+      environment: { CHAT_KEY: chatKey },
+      ...(options.timing === undefined ? {} : { timing: options.timing }),
+      ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
+    },
   );
   onTestFinished(access.close);
   const capability = makeLookupFunctionAdapter({ tools: access, runs: memoryLedger().service });

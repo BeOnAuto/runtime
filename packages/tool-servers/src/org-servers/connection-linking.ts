@@ -2,9 +2,9 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import { fetchWithin, HostUnresolved } from '@on.auto/outbound';
 import { Effect, Predicate, Result } from 'effect';
 
-import type { LinkOptions } from '../clients/link-openers.ts';
+import { tokensOfTheLink, type LinkOptions } from '../clients/link-openers.ts';
 import { failureOf } from '../clients/server-failures.ts';
-import { serverLink } from '../clients/server-links.ts';
+import { serverLink, type CredentialRefused } from '../clients/server-links.ts';
 import type { Describing, LinkedServerSettings } from '../openapi/described-api.ts';
 import type { Linking } from './connection-links.ts';
 import type { ConnectionServer, ConnectionServerSettings } from './connection-source.ts';
@@ -69,8 +69,15 @@ export async function connectionLinkOf(
   const fetch = fetchWithin(linking.options.fetch, server.reaches);
   const settings: ConnectionServerSettings = { ...server.settings, connection: id };
   const described = await describedConnection(settings, { server, fetch, linking });
-  const refused = (answered: string) => Effect.runPromise(server.refused(answered));
-  return 'settings' in described
-    ? { link: serverLink(described.settings, { ...linking.options, fetch }, refused) }
-    : described;
+  if (!('settings' in described)) {
+    return described;
+  }
+  const options = { ...linking.options, fetch };
+  const tokens = tokensOfTheLink(described.settings, options);
+  const refused: CredentialRefused = (answered) => Effect.runPromise(server.refused(answered));
+  const { reaches, requestOrigins: origins } = server;
+  return {
+    link: serverLink(described.settings, options, refused, tokens),
+    requests: { origins, tokens, fetch: linking.options.fetch, reaches, refused },
+  };
 }

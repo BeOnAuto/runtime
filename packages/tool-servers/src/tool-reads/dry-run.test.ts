@@ -3,7 +3,15 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { servedDocumentAt } from '../api-testing/described-documents.ts';
-import { describedAccess, playbookToolCalls, reportingAccess, toolCaller, toolReader } from '../testing/index.ts';
+import {
+  describedAccess,
+  playbookToolCalls,
+  refusedConnections,
+  reportingAccess,
+  toolCaller,
+  toolReader,
+  type AccessOptions,
+} from '../testing/index.ts';
 import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
@@ -26,8 +34,15 @@ function remote(fake: FakeMcpServer, entry: Readonly<Record<string, unknown>> = 
   return { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry };
 }
 
-function callsOn(servers: Readonly<Record<string, unknown>>, decidedBy?: PolicyDecisionPoint) {
-  const { access } = reportingAccess(servers, { environment: { GRAPH_API_KEY: apiKey } });
+interface Calling extends Pick<AccessOptions, 'fetch'> {
+  readonly decidedBy?: PolicyDecisionPoint;
+}
+
+function callsOn(servers: Readonly<Record<string, unknown>>, { decidedBy, fetch }: Calling = {}) {
+  const { access } = reportingAccess(servers, {
+    environment: { GRAPH_API_KEY: apiKey },
+    ...(fetch === undefined ? {} : { fetch }),
+  });
   closing.push(access.close);
   return playbookToolCalls(access, decidedBy === undefined ? {} : { decidedBy });
 }
@@ -123,7 +138,7 @@ describe('dry_run of a call that would not be made', () => {
 });
 
 async function dryRunDecided(decision: AccessDecision['decision'], caller: CallerIdentity) {
-  const { call } = callsOn({ graph: remote(await fakeServer()) }, decidingExecuteConnection(decision));
+  const { call } = callsOn({ graph: remote(await fakeServer()) }, { decidedBy: decidingExecuteConnection(decision) });
   return call('dry_run', { server: 'graph', tool: 'echo' }, { caller });
 }
 
@@ -155,7 +170,7 @@ describe('dry_run of a server that cannot be asked', () => {
   it('answers that a server that cannot be asked would not be called, saying why', async () => {
     const gone = await serveFakeMcp();
     await gone.close();
-    const { call } = callsOn({ graph: remote(gone) });
+    const { call } = callsOn({ graph: remote(gone) }, { fetch: refusedConnections([gone.origin]).fetch });
 
     expect(await call('dry_run', { server: 'graph', tool: 'search', arguments: { query: 7 } })).toMatchObject({
       output: {

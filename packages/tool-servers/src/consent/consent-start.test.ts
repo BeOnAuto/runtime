@@ -7,6 +7,7 @@ import {
   consentClientWith,
   everyHost,
   failingAt,
+  refusedConnections,
   registeredAt,
   returnAddress,
   startAskedAt,
@@ -228,7 +229,7 @@ describe('a start that cannot ask the server', () => {
     const failing = await served();
 
     expect([
-      await refused(consentClientWith(), startAskedAt(gone)),
+      await refused(consentClientWith({ fetch: refusedConnections([gone.origin]).fetch }), startAskedAt(gone)),
       await refused(
         consentClientWith({ fetch: failingAt('/.well-known/oauth-protected-resource/mcp') }),
         startAskedAt(failing),

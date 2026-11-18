@@ -1,3 +1,4 @@
+import { refusedConnections } from '@on.auto/tool-servers/testing';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -34,7 +35,8 @@ describe('a resumed attempt whose tool servers cannot be opened, after a call of
   it('is a conflict whose effect is unknown, with the spending of its model calls, its open model call ended', async () => {
     const { fake, first, attempt } = await cutOffAfterCalling('echo');
     await fake.close();
-    const again = reasoningOf({ tools: graphAccessTo(fake.url), attempt, content: first.content });
+    const tools = graphAccessTo(fake.url, {}, refusedConnections([fake.origin]).fetch);
+    const again = reasoningOf({ tools, attempt, content: first.content });
 
     expect(await again.running(withGraphTools)).toEqual(
       Exit.fail(
@@ -49,7 +51,8 @@ describe('a resumed attempt whose tool servers cannot be opened, after calls of 
   it('is unavailable as unfinished because a server failed, with the spending of its model calls', async () => {
     const { fake, first, attempt } = await cutOffAfterCalling('search');
     await fake.close();
-    const again = reasoningOf({ tools: graphAccessTo(fake.url), attempt, content: first.content });
+    const tools = graphAccessTo(fake.url, {}, refusedConnections([fake.origin]).fetch);
+    const again = reasoningOf({ tools, attempt, content: first.content });
 
     expect(await again.running(withGraphTools)).toEqual(
       Exit.fail(

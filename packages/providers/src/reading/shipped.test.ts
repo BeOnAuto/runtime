@@ -10,9 +10,10 @@ import {
   providersShippedRoots,
   readProviders,
   rendersOf,
+  requestOriginsOf,
 } from '../index.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
-import { overASocket } from '../testing/event-destinations.ts';
+import { intoAQueue, ofEachSubscription, overASocket } from '../testing/event-destinations.ts';
 import { tracker } from '../testing/index.ts';
 
 const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
@@ -106,6 +107,49 @@ describe('the destination of a provider', () => {
     expect(eventDestinationOf(shipped, 'slack-bot', 'websocket')).toBeUndefined();
   });
 });
+
+function sending(...destinations: readonly unknown[]): ProviderEntry {
+  return decodedEntry({ ...tracker, events: { destinations } });
+}
+
+describe('the origins of the requests a provider declares', () => {
+  it('are the origin each call of a subscription written as a request is written out to, each once', () => {
+    const renew = { method: 'PATCH', url: 'https://hooks.tracker.example.com/{{ subscription.id }}' };
+
+    expect(requestOriginsOf(sending({ ...ofEachSubscription, renew, lease_seconds: 3600 }))).toEqual([
+      'https://api.tracker.example.com',
+      'https://hooks.tracker.example.com',
+    ]);
+  });
+
+  it("are none for calls that are tools, for a socket, whose request carries the app's value, and for an entry that hears nothing", () => {
+    expect([
+      requestOriginsOf(sending(intoAQueue)),
+      requestOriginsOf(sending(overASocket)),
+      requestOriginsOf(tracker),
+    ]).toEqual([[], [], []]);
+  });
+
+  it.each([
+    ['a port past 65535', 'https://api.tracker.example.com:99999/hooks'],
+    ['an IPv4 address with a part past 255', 'https://999.1.1.1/hooks'],
+    ['an IPv4 address written as one number past 32 bits', 'https://0x100000000/hooks'],
+  ])('are none for a URL the format takes that no URL parser reads, %s, so no credential goes to it', (_kind, url) => {
+    expect(requestOriginsOf(subscribingAt(url))).toEqual([]);
+  });
+
+  it('are at most the origin a URL parser reads of an IDNA label it may refuse, and reading them never throws', () => {
+    const url = 'https://xn--a.example.com/hooks';
+
+    expect(['https://xn--a.example.com']).toEqual(expect.arrayContaining([...requestOriginsOf(subscribingAt(url))]));
+  });
+});
+
+function subscribingAt(url: string): ProviderEntry {
+  const subscribe = { ...ofEachSubscription.subscribe, url };
+  const unsubscribe = { ...ofEachSubscription.unsubscribe, url: `${url}/{{ subscription.id }}` };
+  return sending({ ...ofEachSubscription, subscribe, unsubscribe });
+}
 
 const readsThroughPost: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['adobe-analytics', ['runReport']],

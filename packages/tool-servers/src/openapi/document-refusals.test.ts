@@ -14,7 +14,7 @@ import {
   servedDocumentAt,
 } from '../api-testing/described-documents.ts';
 import { shippedDocumentOf } from '../settings/server-settings.ts';
-import { fakeApiDocument } from '../testing/index.ts';
+import { fakeApiDocument, refusedConnections } from '../testing/index.ts';
 import { serveFakeApi } from '../testing/served-fakes.ts';
 
 const brokenFetch: typeof globalThis.fetch = () =>
@@ -42,9 +42,12 @@ describe('a document refused at start because its URL', () => {
     expect(await refusalOf({ graph: { document: missing, org: 'acme' } })).toBe(
       documentProblem('The document could not be read: its URL answered HTTP 404'),
     );
-    expect(await refusalOf({ graph: { document: gone.documentUrl, org: 'acme' } })).toBe(
-      documentProblem('The document could not be read: fetch failed'),
-    );
+    expect(
+      await refusalOf(
+        { graph: { document: gone.documentUrl, org: 'acme' } },
+        { fetch: refusedConnections([gone.origin]).fetch },
+      ),
+    ).toBe(documentProblem('The document could not be read: fetch failed'));
     expect(await refusalOf({ graph: { document: silent, org: 'acme' } }, { readMs: 50 })).toBe(
       documentProblem('The document was not read within 50 ms'),
     );

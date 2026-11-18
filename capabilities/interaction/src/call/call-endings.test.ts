@@ -1,5 +1,5 @@
 import { recordingJournal } from '@on.auto/definitions/testing';
-import { deniedText, patientTiming } from '@on.auto/tool-servers/testing';
+import { deniedText, patientTiming, refusedConnections } from '@on.auto/tool-servers/testing';
 import { Cause, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -44,9 +44,11 @@ describe('a run that asks a system and sends nothing', () => {
   });
 
   it('is unavailable when its server does not list the tool or cannot be reached, and records no call', async () => {
-    const { fake, journal, run } = await callRuns();
+    const network = refusedConnections();
+    const { fake, journal, run } = await callRuns({ fetch: network.fetch });
     const unlisted = await run(callDocument({ tool: 'gone', read: null }));
     await fake.close();
+    network.refuse(fake.origin);
 
     expect([unlisted, await run(callDocument())]).toEqual([
       rejectedWith({

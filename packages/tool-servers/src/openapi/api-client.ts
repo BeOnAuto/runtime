@@ -4,7 +4,7 @@ import { Result } from 'effect';
 
 import { unobserved, type CallSettled, type ServedClient } from '../clients/server-client.ts';
 import { isCredentialRefused } from '../clients/server-failures.ts';
-import type { TokenSource } from '../clients/token-source.ts';
+import type { TokenSource, UnauthorizedContext } from '../clients/token-source.ts';
 import { settledOf, type Answering } from './api-answers.ts';
 import { apiRequestOf, isUnderBase, sentBodyOf, type ApiEndpoint, type ApiRequest } from './api-requests.ts';
 import { ArgumentsRefused } from './arguments-refused.ts';
@@ -23,7 +23,9 @@ class AddressOutsideBase extends Error {
   }
 }
 
-async function authorizationOf(tokens: TokenSource | undefined): Promise<Readonly<Record<string, string>>> {
+type Authorization = Readonly<Record<string, string>>;
+
+async function authorizationOf(tokens: TokenSource | undefined): Promise<Authorization> {
   return tokens === undefined ? {} : { authorization: `Bearer ${await tokens.token()}` };
 }
 
@@ -39,25 +41,45 @@ function refusesTheCredential(settled: CallSettled): boolean {
   return 'error' in settled && isCredentialRefused(settled.error);
 }
 
-async function settledCall(request: ApiRequest, sending: Sending, mintedAgain = false): Promise<CallSettled> {
-  const { endpoint, meta, opening, signal, settle } = sending;
-  const tokens = request.usesToken ? opening.tokens : undefined;
-  const response = await opening.fetch(
-    request.url,
-    {
-      method: request.method,
-      ...sentBodyOf(request, { ...request.headers, ...(await authorizationOf(tokens)) }),
-      redirect: 'manual',
-      signal,
-    },
-    meta,
-  );
-  const settled = await settle(response);
-  if (tokens === undefined || mintedAgain || !refusesTheCredential(settled)) {
+interface SentWith<Settled> {
+  readonly response: Readonly<Response>;
+  readonly settled: Settled;
+}
+
+export async function settledWithOneNewToken<Settled>(
+  tokens: TokenSource | undefined,
+  sentWith: (authorization: Authorization) => Promise<SentWith<Settled>>,
+  refuses: (settled: Settled) => boolean,
+  refusedAt: Omit<UnauthorizedContext, 'response'>,
+): Promise<Settled> {
+  const { response, settled } = await sentWith(await authorizationOf(tokens));
+  if (tokens === undefined || !refuses(settled)) {
     return settled;
   }
-  await tokens.onUnauthorized({ response, serverUrl: new URL(endpoint.baseUrl), fetchFn: opening.fetch });
-  return settledCall(request, sending, true);
+  await tokens.onUnauthorized({ ...refusedAt, response });
+  return (await sentWith(await authorizationOf(tokens))).settled;
+}
+
+function settledCall(request: ApiRequest, sending: Sending): Promise<CallSettled> {
+  const { endpoint, meta, opening, signal, settle } = sending;
+  return settledWithOneNewToken(
+    request.usesToken ? opening.tokens : undefined,
+    async (authorization) => {
+      const response = await opening.fetch(
+        request.url,
+        {
+          method: request.method,
+          ...sentBodyOf(request, { ...request.headers, ...authorization }),
+          redirect: 'manual',
+          signal,
+        },
+        meta,
+      );
+      return { response, settled: await settle(response) };
+    },
+    refusesTheCredential,
+    { serverUrl: new URL(endpoint.baseUrl), fetchFn: opening.fetch },
+  );
 }
 
 function listingOf({ operations }: DescribedApiSettings['api']): ServedClient['listTools'] {

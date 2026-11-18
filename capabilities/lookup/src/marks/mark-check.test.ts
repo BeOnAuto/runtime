@@ -1,6 +1,7 @@
 import { standingRenderClock } from '@on.auto/definitions/testing';
 import { toolBounds } from '@on.auto/tool-servers';
 import type { ServerTool, ToolServer } from '@on.auto/tool-servers';
+import { refusedConnections } from '@on.auto/tool-servers/testing';
 import { Effect, Exit, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -143,10 +144,15 @@ const savedAgainLater: unknown = expect.stringContaining('save it again once cha
 
 describe('the check of a lookup function against its server', () => {
   it('reads the mark the server lists its tool with, and is unavailable once the server is gone', async () => {
-    const { fake, saved } = await lookupRuns({ server: { hints: { profile: { readOnlyHint: false } } } });
+    const network = refusedConnections();
+    const { fake, saved } = await lookupRuns({
+      server: { hints: { profile: { readOnlyHint: false } } },
+      fetch: network.fetch,
+    });
     const reading = await saved(lookupDocument());
     const acting = await saved(lookupDocument({ tool: 'profile', with: [] }));
     await fake.close();
+    network.refuse(fake.origin);
 
     expect([reading, acting, await saved(lookupDocument())]).toEqual([
       Exit.succeed({}),

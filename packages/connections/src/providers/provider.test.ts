@@ -3,13 +3,19 @@ import {
   fixtureProviders,
   ledgers,
   metrics,
+  ofEachSubscription,
   providerListOf,
   providerOf,
   providersOf,
   regions,
   tracker,
 } from '@on.auto/providers/testing';
-import { type ConnectionServerSettings, type ConnectionUnready, readToolServerSettings } from '@on.auto/tool-servers';
+import {
+  type ConnectionServer,
+  type ConnectionServerSettings,
+  type ConnectionUnready,
+  readToolServerSettings,
+} from '@on.auto/tool-servers';
 import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -55,11 +61,11 @@ describe('a provider the settings file names by another name its entry declares'
 
 const marking = providersOf(ledgers, metrics, regions, { ...tracker, marks: { reads: ['search_issues'] } });
 
-async function settingsOf(
+async function preparedIn(
   h: Harness,
   id: string,
   providers: ProviderList,
-): Promise<ConnectionServerSettings | ConnectionUnready> {
+): Promise<ConnectionServer | ConnectionUnready> {
   const source = makeConnectionSource({
     registry: h.ledger.service,
     secrets: h.secrets,
@@ -75,11 +81,25 @@ async function settingsOf(
   return state.status === 'connected'
     ? Effect.runPromise(
         Effect.match(state.server, {
-          onSuccess: ({ settings }): ConnectionServerSettings | ConnectionUnready => settings,
+          onSuccess: (server): ConnectionServer | ConnectionUnready => server,
           onFailure: (unready) => unready,
         }),
       )
     : state.unready;
+}
+
+async function settingsOf(
+  h: Harness,
+  id: string,
+  providers: ProviderList,
+): Promise<ConnectionServerSettings | ConnectionUnready> {
+  const prepared = await preparedIn(h, id, providers);
+  return 'settings' in prepared ? prepared.settings : prepared;
+}
+
+async function requestOriginsIn(h: Harness, id: string, providers: ProviderList) {
+  const prepared = await preparedIn(h, id, providers);
+  return 'requestOrigins' in prepared ? prepared.requestOrigins : prepared;
 }
 
 function marksInTheSettings(providers: ProviderList) {
@@ -182,5 +202,29 @@ describe('the marks of a connection added by a provider', () => {
       { provider: 'tracker', marks: { reads: ['search_issues'], acts: [] } },
       { provider: null, marks: { reads: [], acts: [] } },
     ]);
+  });
+});
+
+describe('the origins of the requests of a connection added by a provider', () => {
+  it("are those its provider's entry declares, whatever its placeholders were given, and none for a connection given by hand", async () => {
+    const hearing = providersOf(ledgers, metrics, regions, {
+      ...tracker,
+      events: { destinations: [ofEachSubscription] },
+    });
+    const h = harness({ providers: hearing });
+    const tracked = await added(h, {
+      provider: 'tracker',
+      placeholders: { site: 'elsewhere' },
+      credential: { kind: 'none' },
+    });
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id: tracked.id, token: tracked.token });
+    const byHand = await added(h, notes);
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id: byHand.id, token: byHand.token });
+
+    expect([
+      await requestOriginsIn(h, tracked.id, hearing),
+      await requestOriginsIn(h, byHand.id, hearing),
+      await requestOriginsIn(h, tracked.id, fixtureProviders),
+    ]).toEqual([['https://api.tracker.example.com'], [], []]);
   });
 });

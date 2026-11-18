@@ -14,3 +14,4 @@ export {
   regions,
   tracker,
 } from './fixture-providers.ts';
+export { ofEachSubscription } from './event-destinations.ts';

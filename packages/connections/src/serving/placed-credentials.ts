@@ -199,6 +199,7 @@ export interface Providing {
   readonly gateway?: WayGateway;
   readonly handles_money?: true;
   readonly renders?: string;
+  readonly requestOrigins?: readonly string[];
 }
 
 interface Reading {

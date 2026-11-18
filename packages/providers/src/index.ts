@@ -31,6 +31,17 @@ export {
 } from './events/arrival-readings.ts';
 export type { Destination as EventDestination } from './events/destination-fields.ts';
 export { provesTheBodyAndATime } from './events/event-proofs.ts';
+export { receivingOverASocket, type SocketListening } from './sockets/socket-listening.ts';
+export {
+  SocketEnded,
+  type Arrived,
+  type OpenSocket,
+  type OpensASocket,
+  type SocketArrival,
+  type SocketEnd,
+  type SocketFrame,
+  type SocketOpening,
+} from './sockets/socket-ports.ts';
 export {
   asNamedIn,
   conversationsOf,
@@ -60,3 +71,4 @@ export {
   type ProviderConnectionEntry,
   type ProviderCredential,
 } from './resolution/provider-addition.ts';
+export { requestOriginsOf } from './events/event-destinations.ts';

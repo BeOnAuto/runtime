@@ -50,6 +50,7 @@ export function preparedServer(serving: Serving): Effect.Effect<ConnectionServer
       settings: auth === undefined ? settings : { ...settings, auth },
       reaches: reachesUnder(policy, serving.services.resolve),
       refused: credentialRefusedOf(serving, yield* Effect.context()),
+      requestOrigins: checking.providing?.requestOrigins ?? [],
     };
   });
 }

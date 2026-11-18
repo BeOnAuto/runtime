@@ -4,7 +4,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { ToolAccess } from '../access/tool-access.ts';
 import { fakeConnections } from '../testing/fake-connections.ts';
-import { describedAccess, patientTiming, playbookToolCalls } from '../testing/index.ts';
+import {
+  describedAccess,
+  patientTiming,
+  playbookToolCalls,
+  refusedConnections,
+  type AccessOptions,
+} from '../testing/index.ts';
 import { closedAfter, echoCall, oneCallKey, oneCallServer } from '../testing/one-calls.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
 import { fakeApiKey, serveFakeApi } from '../testing/served-fakes.ts';
@@ -20,10 +26,15 @@ const toolAttributes = {
 
 const echoedBody = { body: { said: 'hello' } };
 
-function tracedAccess(url: string): ToolAccess {
+function tracedAccess(url: string, fetch?: AccessOptions['fetch']): ToolAccess {
   const { access } = reportingAccess(
     { graph: { url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', allowed: ['echo'] } },
-    { environment: { GRAPH_API_KEY: oneCallKey }, timing: patientTiming, traceMeta: () => ({ traceparent }) },
+    {
+      environment: { GRAPH_API_KEY: oneCallKey },
+      timing: patientTiming,
+      traceMeta: () => ({ traceparent }),
+      ...(fetch === undefined ? {} : { fetch }),
+    },
   );
   closedAfter(access.close);
   return access;
@@ -71,9 +82,9 @@ describe('one call of a tool of an MCP server, traced', () => {
     const fake = await oneCallServer();
     fake.answerNextOf('tools/call', 503);
     const failed = await spansOfOneCall(tracedAccess(fake.url));
-    const { url } = fake;
+    const { url, origin } = fake;
     await fake.close();
-    const unopened = await spansOfOneCall(tracedAccess(url));
+    const unopened = await spansOfOneCall(tracedAccess(url, refusedConnections([origin]).fetch));
 
     expect([...failed, ...unopened].map(({ attributes }) => attributes)).toEqual([
       { ...toolAttributes, 'error.type': 'server_failure' },
@@ -98,9 +109,9 @@ describe('a call of a tool of an MCP server made by hand with execute, traced', 
     const fake = await oneCallServer();
     fake.answerNextOf('tools/call', 503);
     const failed = await spansOfExecute(tracedAccess(fake.url));
-    const { url } = fake;
+    const { url, origin } = fake;
     await fake.close();
-    const unopened = await spansOfExecute(tracedAccess(url));
+    const unopened = await spansOfExecute(tracedAccess(url, refusedConnections([origin]).fetch));
 
     expect(toolCallsAmong(failed).map(({ attributes }) => attributes)).toEqual([
       { ...toolAttributes, 'error.type': 'server_failure' },

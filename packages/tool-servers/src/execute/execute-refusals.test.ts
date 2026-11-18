@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
-import { patientTiming, playbookToolCalls, reportingAccess, toolReader, type AccessOptions } from '../testing/index.ts';
+import {
+  patientTiming,
+  playbookToolCalls,
+  refusedConnections,
+  reportingAccess,
+  toolReader,
+  type AccessOptions,
+} from '../testing/index.ts';
 import { fakeApiKey, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -78,7 +85,7 @@ describe('a tool server that cannot be used', () => {
     const execute = executingOn(fake);
     const asked = { server: 'graph', tool: 'search', arguments: { query: 'acme' } };
 
-    const unreachable = await executingOn(gone)(asked);
+    const unreachable = await executingOn(gone, {}, { fetch: refusedConnections([gone.origin]).fetch })(asked);
     fake.answerNextWith(503);
     const failing = await execute(asked);
     fake.answerNextWith(429);

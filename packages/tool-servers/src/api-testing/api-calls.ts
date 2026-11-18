@@ -3,7 +3,7 @@ import { afterEach } from 'vitest';
 
 import { resultText, type ToolResult } from '../bounds/tool-results.ts';
 import type { CalledOnce } from '../one-call/called-once.ts';
-import { describedAccess } from '../testing/reporting-access.ts';
+import { describedAccess, type AccessOptions } from '../testing/reporting-access.ts';
 import { serveFakeApi, type FakeApiOptions, type FakeApiServer } from '../testing/served-fakes.ts';
 
 export const apiKey = 'graph-api-key-4f1d9a7c2b';
@@ -24,10 +24,14 @@ export async function fakeApi(options: FakeApiOptions = {}): Promise<FakeApiServ
   return fake;
 }
 
-export async function accessTo(entry: Readonly<Record<string, unknown>>) {
+export async function accessTo(entry: Readonly<Record<string, unknown>>, { fetch }: Pick<AccessOptions, 'fetch'> = {}) {
   const reporting = await describedAccess(
     { graph: { org: 'acme', ...entry } },
-    { environment: { GRAPH_API_KEY: apiKey, GRAPH_CLIENT_SECRET: clientSecret }, timing: apiTiming },
+    {
+      environment: { GRAPH_API_KEY: apiKey, GRAPH_CLIENT_SECRET: clientSecret },
+      timing: apiTiming,
+      ...(fetch === undefined ? {} : { fetch }),
+    },
   );
   closing.push(reporting.access.close);
   return reporting.access;

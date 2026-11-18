@@ -218,7 +218,7 @@ describe('a start refused where the server cannot proceed', () => {
     const gone = await consentFake();
     await gone.close();
     const h = consentHarnessAt(fake, { way: { clients: ['dynamic'] } });
-    const unanswering = consentHarnessAt(gone);
+    const unanswering = consentHarnessAt(gone, { refusedAt: [gone.origin] });
 
     expect([
       await starting(h, await added(h, { provider: 'files' })),

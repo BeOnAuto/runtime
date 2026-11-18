@@ -73,8 +73,28 @@ function tracedOpener(open: () => Promise<ServedClient>, traceMeta?: TraceMeta):
   return traceMeta === undefined ? open : async () => tracedClient(await open(), traceMeta);
 }
 
-export function openerOf(settings: LinkedServerSettings, linkOptions: LinkOptions): () => Promise<ServedClient> {
-  const options: Linking = { ...linkOptions, timer: linkOptions.timer ?? systemTimer };
+function linkingOf(linkOptions: LinkOptions): Linking {
+  return { ...linkOptions, timer: linkOptions.timer ?? systemTimer };
+}
+
+export function tokensOfTheLink(settings: LinkedServerSettings, linkOptions: LinkOptions): TokenSource | undefined {
+  const options = linkingOf(linkOptions);
+  if (settings.type === 'stdio') {
+    return undefined;
+  }
+  if (settings.type === 'openapi') {
+    return tokensOf({ settings, serverUrl: settings.api.baseUrl, discovery: 'from_the_issuer' }, options);
+  }
+  const discovery = settings.auth?.discovery === 'issuer' ? 'from_the_issuer' : 'from_the_server';
+  return tokensOf({ settings, serverUrl: settings.url, discovery }, options);
+}
+
+export function openerOf(
+  settings: LinkedServerSettings,
+  linkOptions: LinkOptions,
+  tokens = tokensOfTheLink(settings, linkOptions),
+): () => Promise<ServedClient> {
+  const options = linkingOf(linkOptions);
   const output: OutputReport = {
     scrub: options.secrets.scrub,
     report: (line) => {
@@ -94,21 +114,18 @@ export function openerOf(settings: LinkedServerSettings, linkOptions: LinkOption
     );
   }
   if (settings.type === 'openapi') {
-    const tokens = tokensOf({ settings, serverUrl: settings.api.baseUrl, discovery: 'from_the_issuer' }, options);
     return () =>
       Promise.resolve(
         apiClient(settings, { fetch: options.fetch, tokens, now: options.now, documents: options.documents }),
       );
   }
-  const discovery = settings.auth?.discovery === 'issuer' ? 'from_the_issuer' : 'from_the_server';
-  const authProvider = tokensOf({ settings, serverUrl: settings.url, discovery }, options);
   const { openMs, longestRetryWaitMs } = options.timing;
   return tracedOpener(
     () =>
       openHttp(settings, {
         clientInfo: options.clientInfo,
         fetch: options.fetch,
-        authProvider,
+        authProvider: tokens,
         timeoutMs: openMs,
         longestRetryWaitMs,
         reportError: boundedReport(output, errorsNoLongerReported),

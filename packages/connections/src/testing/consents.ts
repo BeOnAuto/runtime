@@ -1,10 +1,18 @@
 import type { Outcome } from '@on.auto/operations';
 import { audiences, providerListOf, providerOf } from '@on.auto/providers/testing';
 import { servedForConsent, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { consentedAt, registeredAt, type ClientRegistration, type Consented } from '@on.auto/tool-servers/testing';
+import {
+  consentedAt,
+  refusedConnections,
+  registeredAt,
+  type ClientRegistration,
+  type Consented,
+  type RefusedConnections,
+} from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 
 import { reconnected, type Added } from './additions.ts';
+import { serversOffTheLoopback } from './harness-services.ts';
 import { ada, harness, operationNamed, type Harness, type HarnessOptions, loopbackPolicy } from './harness.ts';
 
 export const studioReturn = 'https://studio.on.auto/connect-return';
@@ -72,12 +80,23 @@ export function filesAt(fake: FakeMcpServer, way: Readonly<Record<string, unknow
 
 export interface ConsentHarnessOptions extends HarnessOptions {
   readonly way?: Readonly<Record<string, unknown>>;
+  readonly refusedAt?: readonly string[];
 }
 
-export function consentHarnessAt(fake: FakeMcpServer, { way, ...options }: ConsentHarnessOptions = {}): Harness {
+export function consentFetchRefusing(origins: readonly string[] = []): RefusedConnections {
+  return refusedConnections(origins, serversOffTheLoopback);
+}
+
+export function consentHarnessAt(
+  fake: FakeMcpServer,
+  { way, refusedAt, ...options }: ConsentHarnessOptions = {},
+): Harness {
   return harness({
     providers: providerListOf(filesAt(fake, way)),
-    consenting: { registeredClients: [registeredAt(fake.origin)] },
+    consenting: {
+      registeredClients: [registeredAt(fake.origin)],
+      ...(refusedAt === undefined ? {} : { fetch: consentFetchRefusing(refusedAt).fetch }),
+    },
     mostSecretCharacters: 4096,
     policy: loopbackPolicy,
     ...options,

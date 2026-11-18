@@ -1,6 +1,6 @@
 import type { RecordedCall, RunAttempt } from '@on.auto/definitions';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { reportingAccess } from '@on.auto/tool-servers/testing';
+import { reportingAccess, type AccessOptions } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -20,10 +20,14 @@ export async function aGraph(): Promise<FakeMcpServer> {
   return fake;
 }
 
-export function graphAccessTo(url: string, entry: Readonly<Record<string, unknown>> = {}) {
+export function graphAccessTo(
+  url: string,
+  entry: Readonly<Record<string, unknown>> = {},
+  fetch?: AccessOptions['fetch'],
+) {
   const { access } = reportingAccess(
     { graph: { url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry } },
-    { environment: { GRAPH_API_KEY: graphKey } },
+    { environment: { GRAPH_API_KEY: graphKey }, ...(fetch === undefined ? {} : { fetch }) },
   );
   onTestFinished(() => access.close());
   return access;

@@ -11,6 +11,7 @@ import {
   consentClientAt,
   gatedRequests,
   hostOf,
+  refusedConnections,
   registeredAt,
   rowOf,
   servedOf,
@@ -53,6 +54,10 @@ async function connectedAt(changes: Partial<ClientRegistration> = {}): Promise<C
 
 function sourceOf({ fake, clock, served }: Connected, consent: ConsentClient = consentClientAt(fake)) {
   return servedTokensOf(served, clock.now, consent).source;
+}
+
+function consentClientRefusedAt({ fake }: Connected): ConsentClient {
+  return consentClientAt(fake, { fetch: refusedConnections([fake.origin]).fetch });
 }
 
 function renewed({ clock }: Connected, source: ReturnType<typeof sourceOf>): Promise<unknown> {
@@ -172,7 +177,7 @@ describe('a renewal that fails otherwise', () => {
     closing.push(elsewhere.close);
     const server: ConsentServer = { type: 'mcp', url: elsewhere.url };
     const movedAway = { ...moved, served: { ...moved.served, server } };
-    const unansweredSource = sourceOf(gone);
+    const unansweredSource = sourceOf(gone, consentClientRefusedAt(gone));
     await gone.fake.close();
     closing.splice(closing.indexOf(gone.fake.close), 1);
 

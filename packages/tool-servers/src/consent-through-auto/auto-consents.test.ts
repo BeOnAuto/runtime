@@ -8,6 +8,7 @@ import {
   autoClientsOf,
   consentClientWith,
   cuttingTimeouts,
+  refusedConnections,
   returnAddress,
   startAskedAt,
   studioBase,
@@ -152,13 +153,15 @@ describe('a start for a Studio neither hosted nor on this computer', () => {
 describe('a start the consent service refuses or does not answer', () => {
   it('is refused as a start the service will not make where it refuses it, and unanswered where it is gone', async () => {
     const [refusing, gone] = await Promise.all([throughAuto(), throughAuto()]);
+    const network = refusedConnections();
     const asking = [refusing, gone].map((serving): Asking => ({
       asked: startAskedAt(serving.fake),
-      client: consentClientWith({ autoClients: autoClientsOf(serving.service) }),
+      client: consentClientWith({ autoClients: autoClientsOf(serving.service), fetch: network.fetch }),
     }));
     await Effect.runPromise(Effect.all(asking.map(({ client }) => client.hadSources(studioBase))));
     refusing.service.refuseNext('start');
     await gone.service.close();
+    network.refuse(gone.service.url);
 
     const answers = await Promise.all(asking.map(({ client, asked }) => refused(client, asked)));
 

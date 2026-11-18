@@ -8,7 +8,7 @@ import {
 import { allPermissions } from '@on.auto/operations';
 import type { Timing } from '@on.auto/tool-servers';
 import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { reportingAccess } from '@on.auto/tool-servers/testing';
+import { reportingAccess, type AccessOptions } from '@on.auto/tool-servers/testing';
 import { Effect, Function, type Exit, type Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -28,6 +28,7 @@ export interface CallRunOptions {
   readonly entry?: Readonly<Record<string, unknown>>;
   readonly timing?: Timing;
   readonly journal?: RecordingJournal;
+  readonly fetch?: AccessOptions['fetch'];
 }
 
 export interface CallRuns {
@@ -61,6 +62,7 @@ export async function callRuns(options: CallRunOptions = {}): Promise<CallRuns> 
       environment: { CHAT_KEY: chatCallKey },
       mostRequestBytes: leastRequestBytes,
       ...(options.timing === undefined ? {} : { timing: options.timing }),
+      ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
     },
   );
   onTestFinished(access.close);

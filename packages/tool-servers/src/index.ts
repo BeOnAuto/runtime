@@ -30,6 +30,15 @@ export type { SentReply, ToolSending } from './calls/tool-caller.ts';
 export type { AnsweredFields, StartedFields } from './calls/recorded-calls.ts';
 export type { AnsweredOnce, AssetNotSentOnce, CallAnswer, CalledOnce, UnopenedOnce } from './one-call/called-once.ts';
 export type { OneCall, RunCall } from './one-call/one-call.ts';
+export { bearerRequestOnce, type RequestOnce, type RequestWays } from './declared-requests/request-ways.ts';
+export type { BearerSending } from './declared-requests/bearer-requests.ts';
+export type { Bearer } from './declared-requests/carried-credentials.ts';
+export type {
+  ConnectionRequest,
+  DeclaredRequest,
+  RequestMethod,
+  RequestedOnce,
+} from './declared-requests/declared-requests.ts';
 export {
   answerDocument,
   marksMeant,

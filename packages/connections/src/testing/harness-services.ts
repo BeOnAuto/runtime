@@ -35,7 +35,9 @@ function answeredAsAServerTakingASecret({ method }: Readonly<Request>): Promise<
 export const serversTakingASecret: ConsentClientOptions['fetch'] = (...[address, init]: readonly [unknown, unknown?]) =>
   answeredAsAServerTakingASecret(new Request(String(address), Object.assign({}, init)));
 
-const serversOffTheLoopback: ConsentClientOptions['fetch'] = (...[address, init]: readonly [unknown, unknown?]) => {
+export const serversOffTheLoopback: ConsentClientOptions['fetch'] = (
+  ...[address, init]: readonly [unknown, unknown?]
+) => {
   const request = new Request(String(address), Object.assign({}, init));
   return loopbackHostOf(new URL(request.url).hostname)
     ? globalThis.fetch(request)

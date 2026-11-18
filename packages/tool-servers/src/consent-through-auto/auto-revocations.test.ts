@@ -9,6 +9,7 @@ import {
   consentClientThrough,
   consentClientWith,
   everyHost,
+  refusedConnections,
   returnAddress,
   type ConsentConnected,
 } from '../testing/index.ts';
@@ -81,7 +82,10 @@ describe('a revocation through Auto’s consent service that does not happen', (
 
     expect([
       await revokedBy(consentClientThrough(connected), revokeAskedOf(connected)),
-      await revokedBy(consentClientThrough(gone), revokeAskedOf(gone)),
+      await revokedBy(
+        consentClientThrough(gone, { fetch: refusedConnections([gone.service.url]).fetch }),
+        revokeAskedOf(gone),
+      ),
       await revokedBy(consentClientWith(), revokeAskedOf(connected)),
     ]).toEqual([{ refused: 'not_revoked', status: 503 }, { refused: 'unanswered' }, { refused: 'client_gone' }]);
     expect(await admitted(connected.fake, connected.first.access_token)).toBe(true);

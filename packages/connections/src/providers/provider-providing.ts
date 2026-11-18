@@ -1,4 +1,10 @@
-import { documentServerOf, providerNamed, type Provider, type ProviderList } from '@on.auto/providers';
+import {
+  documentServerOf,
+  providerNamed,
+  requestOriginsOf,
+  type Provider,
+  type ProviderList,
+} from '@on.auto/providers';
 import { failureCodesOf } from '@on.auto/tool-servers';
 import { Result, type Redacted } from 'effect';
 
@@ -30,6 +36,7 @@ function providedBy(provider: Provider): Omit<Providing, 'documents' | 'values'>
     ...(consenting?.ending_codes === undefined ? {} : { ending_codes: consenting.ending_codes }),
     ...(entry.handles_money === true ? handlingMoney : {}),
     ...(entry.renders === undefined ? {} : { renders: entry.renders }),
+    requestOrigins: requestOriginsOf(entry),
   };
 }
 

@@ -7,6 +7,14 @@ const meanings: ReadonlyMap<number, string> = new Map([
   [431, 'the headers of the request were larger than the server takes'],
 ]);
 
+export function failsByItsStatus(status: number): boolean {
+  return status === 401 || status === 429 || status >= 500;
+}
+
+export function isARedirect(status: number): boolean {
+  return status >= 300 && status < 400;
+}
+
 export function answeredHttpWords(status: number): string {
   const meaning = meanings.get(status);
   return meaning === undefined

@@ -3,7 +3,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { defaultTiming, secretsOf } from '../index.ts';
 import type { AuthSettings, McpServerSettings } from '../settings/server-settings.ts';
-import { consentClientWith, fetchWithDeletion, manualTimer, recordingTimer, testClientInfo } from '../testing/index.ts';
+import {
+  consentClientWith,
+  fetchWithDeletion,
+  manualTimer,
+  recordingTimer,
+  refusedConnections,
+  testClientInfo,
+} from '../testing/index.ts';
 import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '../testing/served-fakes.ts';
 import { errorsNoLongerReported } from './mcp-client.ts';
 import type { CallSettled, ServerClient } from './server-client.ts';
@@ -142,7 +149,7 @@ describe('opening a session', () => {
   it('cannot reach a server that is not listening', async () => {
     const fake = await serveFakeMcp();
     await fake.close();
-    const { link } = linked(httpSettings(fake.url));
+    const { link } = linked(httpSettings(fake.url), { fetch: refusedConnections([fake.origin]).fetch });
 
     expect(await failureOfTaking(link)).toEqual({
       kind: 'unreachable',

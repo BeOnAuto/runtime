@@ -7,7 +7,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { CallJournal } from '../calls/recorded-calls.ts';
-import { recordingCallJournal } from '../testing/index.ts';
+import { recordingCallJournal, refusedConnections } from '../testing/index.ts';
 import { calledOnce, echoCall, oneCallAccess, oneCallServer, unopenedWith } from '../testing/one-calls.ts';
 
 const anyText: unknown = expect.any(String);
@@ -172,7 +172,11 @@ describe('a call its run records nothing of', () => {
     expect([
       await calledOnce(oneCallAccess(fake.url), { reference: { server: 'graph', tool: 'environment' } }, runCall),
       await calledOnce(oneCallAccess(fake.url), { reference: { server: 'graph', tool: 'gone' } }, runCall),
-      await calledOnce(oneCallAccess(unreachable.url), {}, runCall),
+      await calledOnce(
+        oneCallAccess(unreachable.url, {}, {}, refusedConnections([unreachable.origin]).fetch),
+        {},
+        runCall,
+      ),
     ]).toEqual([
       unopenedWith('tool_not_offered', 'tool_not_allowed', anyText),
       unopenedWith('tool_not_offered', 'tool_not_listed', 'The tool server graph does not list the tool gone'),

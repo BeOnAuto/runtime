@@ -45,6 +45,7 @@ export interface ConnectionServer {
   readonly settings: ConnectionServerSettings;
   readonly reaches: Reaches;
   readonly refused: (answered: string) => Effect.Effect<string>;
+  readonly requestOrigins: readonly string[];
 }
 
 export type ConnectionState =

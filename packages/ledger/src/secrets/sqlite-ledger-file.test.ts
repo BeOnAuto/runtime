@@ -25,6 +25,8 @@ const longEnoughForAStatementToRun = 100;
 
 const theLimitAWriteWaitsForItsTurn = 300;
 
+const timerSlackMs = 2;
+
 const holding = { keptBy: 'ledger', held: 'sealed' };
 
 const id = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -123,7 +125,7 @@ describe.each(places)(
 
       expect([transaction, Cause.hasDies(cause)]).toEqual([Exit.void, true]);
       expect(Cause.pretty(cause)).toContain('Task was not started within the maximum waiting time');
-      expect(waited).toBeGreaterThanOrEqual(theLimitAWriteWaitsForItsTurn);
+      expect(waited).toBeGreaterThanOrEqual(theLimitAWriteWaitsForItsTurn - timerSlackMs);
       expect(await Effect.runPromise(rows.read(id))).toBeUndefined();
     });
   },

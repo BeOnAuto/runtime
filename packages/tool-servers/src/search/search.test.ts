@@ -1,7 +1,13 @@
 import type { CallerIdentity } from '@on.auto/operations';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { playbookToolCalls, reportingAccess, toolCaller } from '../testing/index.ts';
+import {
+  playbookToolCalls,
+  refusedConnections,
+  reportingAccess,
+  toolCaller,
+  type AccessOptions,
+} from '../testing/index.ts';
 import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 function containing(part: string): unknown {
@@ -26,8 +32,11 @@ function remote(fake: FakeMcpServer, entry: Readonly<Record<string, unknown>>) {
   return { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry };
 }
 
-function searchingOn(servers: Readonly<Record<string, unknown>>) {
-  const { access } = reportingAccess(servers, { environment: { GRAPH_API_KEY: apiKey } });
+function searchingOn(servers: Readonly<Record<string, unknown>>, { fetch }: Pick<AccessOptions, 'fetch'> = {}) {
+  const { access } = reportingAccess(servers, {
+    environment: { GRAPH_API_KEY: apiKey },
+    ...(fetch === undefined ? {} : { fetch }),
+  });
   closing.push(access.close);
   return playbookToolCalls(access);
 }
@@ -122,10 +131,10 @@ describe('search across servers that cannot all be asked', () => {
     const fake = await fakeServer();
     const gone = await serveFakeMcp();
     await gone.close();
-    const { call } = searchingOn({
-      graph: remote(fake, { allowed: ['echo'] }),
-      vault: remote(gone, {}),
-    });
+    const { call } = searchingOn(
+      { graph: remote(fake, { allowed: ['echo'] }), vault: remote(gone, {}) },
+      { fetch: refusedConnections([gone.origin]).fetch },
+    );
 
     expect(await call('search', {})).toMatchObject({
       output: {

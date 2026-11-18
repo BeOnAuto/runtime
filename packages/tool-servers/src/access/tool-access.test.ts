@@ -10,9 +10,11 @@ import {
   noToolServers,
   patientTiming,
   recordingCallJournal,
+  refusedConnections,
   reportingAccess,
   toolRun,
   toolRunId,
+  type AccessOptions,
 } from '../testing/index.ts';
 import { fakeStdioServerPath, serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '../testing/served-fakes.ts';
 
@@ -34,7 +36,7 @@ async function fakeServer(options?: FakeMcpOptions): Promise<FakeMcpServer> {
   return fake;
 }
 
-function accessTo(servers: Readonly<Record<string, unknown>>) {
+function accessTo(servers: Readonly<Record<string, unknown>>, { fetch }: Pick<AccessOptions, 'fetch'> = {}) {
   const reporting = reportingAccess(servers, {
     environment: {
       GRAPH_API_KEY: apiKey,
@@ -42,6 +44,7 @@ function accessTo(servers: Readonly<Record<string, unknown>>) {
       NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'],
     },
     timing: patientTiming,
+    ...(fetch === undefined ? {} : { fetch }),
   });
   closing.push(reporting.access.close);
   return reporting;
@@ -161,7 +164,7 @@ describe('a server that cannot be used', () => {
   it('cannot be reached', async () => {
     const fake = await serveFakeMcp();
     await fake.close();
-    const { access } = accessTo({ graph: graphOf(fake) });
+    const { access } = accessTo({ graph: graphOf(fake) }, { fetch: refusedConnections([fake.origin]).fetch });
 
     expect(await refusalOf(access, 'graph/search')).toMatchObject({
       _tag: 'tool_server_failed',

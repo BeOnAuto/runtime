@@ -1,12 +1,12 @@
 import { ignored } from '../clients/ignored.ts';
 import type { LinkOptions } from '../clients/link-openers.ts';
+import { requestWaysOf, type RequestWays } from '../declared-requests/request-ways.ts';
 import { listingWaysOf, type ListingWays } from '../listing/listing-ways.ts';
 import type { Describing, ToolServers } from '../openapi/described-api.ts';
 import { noConnections, type ConnectionSource } from '../org-servers/connection-source.ts';
-import { orgAccessOf, type OrgAccess } from '../org-servers/org-access.ts';
+import { orgAccessOf, type Load, type OrgAccess } from '../org-servers/org-access.ts';
 import type { ServerMessage } from './caller-context.ts';
 import { recordingPartsOf, type ContentStore, type RecordingParts, type SecretValues } from './entry-reads.ts';
-import type { LinkedAccess } from './linked-access.ts';
 import { runWaysOf, type RunWays } from './run-ways.ts';
 
 export interface ToolAccessOptions {
@@ -34,6 +34,8 @@ export interface ToolAccess extends RunWays, ListingWays {
   readonly close: () => Promise<void>;
 }
 
+type LinkedAccess = Awaited<ReturnType<Load>>;
+
 type Links = LinkedAccess['fileLinks'];
 
 type LinksLent = () => Promise<Links>;
@@ -44,7 +46,7 @@ export interface LinkedOptions extends Omit<ToolAccessOptions, 'assets'>, Record
   readonly borrowed: Links;
 }
 
-interface LendingAccess extends ToolAccess {
+interface LendingAccess extends ToolAccess, RequestWays {
   readonly linksSendingNoRequest: LinksLent;
   readonly listingsKept: OrgAccess['listingsKept'];
 }
@@ -97,6 +99,7 @@ export function toolAccessOf(
       most: options.mostRequestBytes,
     }),
     ...listingWaysOf(access),
+    ...requestWaysOf(access, { timing: options.timing, most: options.mostRequestBytes }),
     linksSendingNoRequest: async () => sendingNoRequest((await linkedOnUse()).fileLinks),
     listingsKept: access.listingsKept,
     close: async () => {

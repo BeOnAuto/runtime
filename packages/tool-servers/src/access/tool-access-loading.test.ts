@@ -45,6 +45,34 @@ describe('the modules an access loads when it is first used', () => {
   });
 });
 
+const loadedOnFirstUse = [
+  'clients/http-client.ts',
+  'clients/mcp-client.ts',
+  'clients/token-source.ts',
+  'clients/link-openers.ts',
+  'openapi/api-client.ts',
+  'declared-requests/bearer-requests.ts',
+  'declared-requests/carried-credentials.ts',
+  'declared-requests/requested-answers.ts',
+];
+
+describe('the modules an access loads when it is made', () => {
+  it('hold no client, token source or code that sends a request an entry declares, which load on first use', () => {
+    const source = join(import.meta.dirname, '..');
+    const reached = new Set(
+      ['access/tool-access.ts', 'index.ts'].flatMap((entry) => modulesReachedFrom(source, entry).files),
+    );
+
+    expect(loadedOnFirstUse.filter((file) => reached.has(file))).toEqual([]);
+    expect(modulesReachedFrom(source, 'access/linked-access.ts').files).toEqual(
+      expect.arrayContaining(loadedOnFirstUse.slice(0, 5)),
+    );
+    expect(modulesReachedFrom(source, 'declared-requests/bearer-requests.ts').files).toEqual(
+      expect.arrayContaining(loadedOnFirstUse),
+    );
+  });
+});
+
 describe('an access to the tool servers of connections alone', () => {
   it('may reach outside where people may add connections, and not where nothing serves a playbook', async () => {
     const { access } = reportingAccess({}, { connections: fakeConnections() });

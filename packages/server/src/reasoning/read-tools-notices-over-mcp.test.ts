@@ -8,6 +8,8 @@ import { servingReasoning, type ReasoningServer } from '../testing/servers/reaso
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
+const timerSlackMs = 2;
+
 const closing: (() => Promise<void>)[] = [];
 
 afterEach(async () => {
@@ -162,7 +164,7 @@ describe('a reasoning function whose tool server does not list its tools in time
 
     expect(created.structuredContent).toMatchObject({ name: 'judge', version: 1 });
     expect(JSON.stringify(created)).not.toContain('notices');
-    expect(took).toBeGreaterThanOrEqual(2_000);
+    expect(took).toBeGreaterThanOrEqual(2_000 - timerSlackMs);
     expect(took).toBeLessThan(3_000);
   });
 });

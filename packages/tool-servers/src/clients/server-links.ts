@@ -4,6 +4,7 @@ import { ignored } from './ignored.ts';
 import { openerOf, type LinkOptions } from './link-openers.ts';
 import type { ServedClient, ServerClient } from './server-client.ts';
 import { ConnectionBroken, failureOf } from './server-failures.ts';
+import type { TokenSource } from './token-source.ts';
 
 export type CredentialRefused = (answered: string) => Promise<string>;
 
@@ -55,7 +56,7 @@ async function usedOrForgotten(held: HeldClient): Promise<ServerClient> {
   }
 }
 
-async function brokenOrAsIs(refused: CredentialRefused, error: unknown): Promise<unknown> {
+export async function brokenOrAsIs(refused: CredentialRefused, error: unknown): Promise<unknown> {
   const { kind, message } = failureOf(error);
   return kind === 'key_refused' ? new ConnectionBroken(await refused(message)) : error;
 }
@@ -112,8 +113,9 @@ export function serverLink(
   settings: LinkedServerSettings,
   options: LinkOptions,
   credentialRefused?: CredentialRefused,
+  tokens?: TokenSource,
 ): ServerLink {
-  const marking = markingListings(openerOf(settings, options), settings, options.reportMarkUnlisted);
+  const marking = markingListings(openerOf(settings, options, tokens), settings, options.reportMarkUnlisted);
   const held = heldClient(refusalsTold(marking, credentialRefused));
   let holders = 0;
   return {

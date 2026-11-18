@@ -2,7 +2,7 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
-import { reportingAccess, type AccessOptions } from '../testing/index.ts';
+import { refusedConnections, reportingAccess, type AccessOptions } from '../testing/index.ts';
 import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
@@ -51,7 +51,10 @@ describe('a tool server that cannot be asked for its tools', () => {
     const gone = await serveFakeMcp();
     await gone.close();
 
-    const listing = await listed({ graph: remote(gone), wiki: remote(fake, { allowed: ['echo'] }) });
+    const listing = await listed(
+      { graph: remote(gone), wiki: remote(fake, { allowed: ['echo'] }) },
+      { fetch: refusedConnections([gone.origin]).fetch },
+    );
 
     expect(listing).toEqual([
       {
