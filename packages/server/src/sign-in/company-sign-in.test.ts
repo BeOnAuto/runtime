@@ -39,11 +39,15 @@ function environmentOf(provider: FakeProvider, port: number): Readonly<Record<st
   };
 }
 
-async function signingIn(options: Parameters<typeof providerOverHttps>[1] = {}): Promise<SigningIn> {
+async function signingIn(
+  options: Parameters<typeof providerOverHttps>[1] = {},
+  settings: Readonly<Record<string, string>> = {},
+): Promise<SigningIn> {
   const provider = await providerOverHttps('/tenant/v2.0', options);
   const port = await aPortNothingListensOn();
   const ledger = temporaryLedger();
-  const server = await startServer({ ...environmentOf(provider, port), LEDGER_FILE: ledger.fileName }, compositionRoot);
+  const environment = { ...environmentOf(provider, port), ...settings, LEDGER_FILE: ledger.fileName };
+  const server = await startServer(environment, compositionRoot);
   onTestFinished(async () => {
     await server.stop();
     ledger.remove();
@@ -158,10 +162,16 @@ describe('a runtime whose people sign in through the identity provider OIDC_ISSU
   });
 });
 
-async function callbackFor({ provider, at }: SigningIn, who: string): Promise<Response> {
+async function callbackFor(
+  { provider, at }: SigningIn,
+  who: string,
+  idToken: Readonly<Record<string, unknown>> = {},
+  cookie = '',
+): Promise<Response> {
   const started = await at('/auth/oidc');
-  return at(`/auth/oidc/callback?${provider.signedIn(String(started.headers.get('location')), who)}`, {
-    headers: { cookie: cookieValueOf(started, '__Host-sign-in') },
+  const pending = cookieValueOf(started, '__Host-sign-in');
+  return at(`/auth/oidc/callback?${provider.signedIn(String(started.headers.get('location')), who, idToken)}`, {
+    headers: { cookie: [pending, cookie].filter((value) => value !== '').join('; ') },
   });
 }
 
@@ -210,6 +220,31 @@ describe('a runtime whose people sign in through the identity provider OIDC_ISSU
   });
 });
 
+describe('a runtime whose people sign in through the identity provider OIDC_ISSUER names, as it requires the claim OIDC_REQUIRED_CLAIM names', () => {
+  it('refuses a person whose ID Token lacks the claim or carries another value before any role, record or session, and ends the session the browser held', async () => {
+    const signingInHere = await signingIn({}, { OIDC_REQUIRED_CLAIM: 'tenant=acme' });
+    const { provider, at, sessionsKept, peopleKept } = signingInHere;
+    const ada = personIdOf({ issuer: provider.issuer, subject: 'Ada' });
+
+    const lacking = await callbackFor(signingInHere, 'Priya');
+    const another = await callbackFor(signingInHere, 'Priya', { tenant: 'Acme' });
+    const keptOnceRefused = [await peopleKept(), await sessionsKept()];
+    const carrying = await callbackFor(signingInHere, 'Ada', { tenant: 'acme' });
+    const asAda = { cookie: cookieValueOf(carrying, '__Host-session'), 'x-csrf': '1' };
+    const listed = await at('/v1/orgs/default/role-assignments', { headers: asAda });
+    const elsewhere = await callbackFor(signingInHere, 'Ada', { tenant: 'another' }, asAda.cookie);
+
+    expect([lacking.status, another.status, carrying.status, elsewhere.status]).toEqual([403, 403, 303, 403]);
+    expect(await another.json()).toMatchObject({ status: 403, reason: 'forbidden' });
+    expect(Object.keys(cookiesOf(another))).toEqual(['__Host-sign-in']);
+    expect(keptOnceRefused).toEqual([[], []]);
+    expect(await listed.json()).toMatchObject({
+      role_assignments: [expect.objectContaining({ principal: { type: 'person', id: ada }, source: 'bootstrap' })],
+    });
+    expect(await sessionsKept()).toEqual([]);
+  });
+});
+
 function notAsked(): Promise<never> {
   return Promise.reject(new Error('Not asked'));
 }
@@ -222,7 +257,7 @@ describe('the sign-in routes of a composition that opens no sign-in store', () =
       signInStarted: notAsked,
       signInFinished: notAsked,
     };
-    const routesOf = signInRoutesOf({ relyingParty, publicUrl: 'https://auto.example.com' });
+    const routesOf = signInRoutesOf({ relyingParty, publicUrl: 'https://auto.example.com', requiredClaim: undefined });
 
     expect(() => routesOf(Function.constVoid)).toThrow(Error);
   });

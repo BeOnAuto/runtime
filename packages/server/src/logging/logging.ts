@@ -48,10 +48,22 @@ function signInNotice(signIn: SignInSettings | undefined): Effect.Effect<void> {
       ).pipe(Effect.annotateLogs({ public_url: signIn.publicUrl, identity_issuer: signIn.issuer }));
 }
 
-function companySignInNotice({ issuer, publicUrl, redirectUri }: OpenIdConnectSettings): Effect.Effect<void> {
+function requiredClaimNotice({ issuer, requiredClaim }: OpenIdConnectSettings): Effect.Effect<void> {
+  return requiredClaim === undefined
+    ? Effect.void
+    : Effect.logInfo(
+        `Only a person whose ID Token carries the claim ${requiredClaim.claim} with the value OIDC_REQUIRED_CLAIM gives can sign in`,
+      ).pipe(Effect.annotateLogs({ oidc_issuer: issuer, oidc_required_claim: requiredClaim.claim }));
+}
+
+function companySignInNotice(settings: OpenIdConnectSettings): Effect.Effect<void> {
+  const { issuer, publicUrl, redirectUri } = settings;
   return Effect.logInfo(
     `People sign in through the identity provider at ${issuer}. The redirect URI to register with it is ${redirectUri}`,
-  ).pipe(Effect.annotateLogs({ public_url: publicUrl, oidc_issuer: issuer, redirect_uri: redirectUri }));
+  ).pipe(
+    Effect.annotateLogs({ public_url: publicUrl, oidc_issuer: issuer, redirect_uri: redirectUri }),
+    Effect.andThen(requiredClaimNotice(settings)),
+  );
 }
 
 export function logAccessMode({ mode, signIn, openIdConnect }: AccessReport): Effect.Effect<void> {
@@ -62,30 +74,6 @@ export function logAccessMode({ mode, signIn, openIdConnect }: AccessReport): Ef
     return companySignInNotice(openIdConnect);
   }
   return mode === 'closed' ? closedNotice : signInNotice(signIn);
-}
-
-export function logSignInRefused(issuer: string, code: string): Effect.Effect<void> {
-  return Effect.logWarning(`A sign-in came back from the identity provider at ${issuer} with the error ${code}`).pipe(
-    Effect.annotateLogs({ oidc_issuer: issuer, error: code }),
-  );
-}
-
-export function logSignInFailed(issuer: string, failure: string): Effect.Effect<void> {
-  return Effect.logWarning(
-    `A sign-in through the identity provider at ${issuer} could not be completed: ${failure}`,
-  ).pipe(Effect.annotateLogs({ oidc_issuer: issuer, failure }));
-}
-
-export function logFirstSignInAwaited(org: string): Effect.Effect<void> {
-  return Effect.logInfo(
-    'No one has signed in yet. The first person to sign in becomes the admin of this organization.',
-  ).pipe(Effect.annotateLogs({ org }));
-}
-
-export function logFirstAdmin(org: string, person: string): Effect.Effect<void> {
-  return Effect.logInfo('The first person to sign in is now the admin of this organization').pipe(
-    Effect.annotateLogs({ org, person }),
-  );
 }
 
 export interface StudioReport {

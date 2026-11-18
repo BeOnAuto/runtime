@@ -18,7 +18,7 @@ export interface FakeProvider {
   readonly clientSecret: string;
   readonly answer: (request: Readonly<Request>) => Promise<Response>;
   readonly requests: ProviderRequests;
-  readonly signedIn: (authorizationUrl: string, subject: string) => string;
+  readonly signedIn: (authorizationUrl: string, subject: string, idToken?: Claims) => string;
   readonly refused: (authorizationUrl: string, error: string) => string;
   readonly rotate: () => void;
   readonly keySetReads: () => number;
@@ -29,6 +29,7 @@ interface Granted {
   readonly nonce: string;
   readonly challenge: string;
   readonly redirectUri: string;
+  readonly idToken: Claims;
 }
 
 interface SigningKey {
@@ -168,7 +169,7 @@ async function tokensOf(state: ProviderState, grant: Granted): Promise<Response>
     exp: now + 300,
     nonce: grant.nonce,
   };
-  const idToken = await state.keys.current().sign({ ...claims, ...state.options.idToken });
+  const idToken = await state.keys.current().sign({ ...claims, ...state.options.idToken, ...grant.idToken });
   return json({ access_token: randomUUID(), token_type: 'Bearer', expires_in: 300, id_token: idToken });
 }
 
@@ -203,7 +204,7 @@ function backTo(issuer: string, authorizationUrl: string, answered: Readonly<Rec
 }
 
 function signedInBy({ issuer, grants }: ProviderState): FakeProvider['signedIn'] {
-  return (authorizationUrl, subject) => {
+  return (authorizationUrl, subject, idToken = {}) => {
     const asked = new URL(authorizationUrl).searchParams;
     const code = randomUUID();
     grants.granted(code, {
@@ -211,6 +212,7 @@ function signedInBy({ issuer, grants }: ProviderState): FakeProvider['signedIn']
       nonce: String(asked.get('nonce')),
       challenge: String(asked.get('code_challenge')),
       redirectUri: String(asked.get('redirect_uri')),
+      idToken,
     });
     return backTo(issuer, authorizationUrl, { code });
   };

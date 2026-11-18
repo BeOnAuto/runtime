@@ -134,13 +134,23 @@ describe('the end of a sign-in, as the ID Token is checked', () => {
 });
 
 describe('the end of a sign-in, as the person is named', () => {
-  it('answers the name and the email of the ID Token where each is text, and no other claim of it', async () => {
+  it('answers the name and the email of the ID Token where each is text, and of its other claims only the one the settings require, where it is text, as given', async () => {
     const named = providerWith({ idToken: { name: 'Ada Lovelace', email: 'ada@example.com', groups: ['admins'] } });
     const numbered = providerWith({ idToken: { name: 1815, email: ['ada@example.com'] } });
+    const party = await partyOf(numbered, { requiredClaim: { claim: 'tenant' } });
+    const carrying = async (idToken: Claims): Promise<FinishedSignIn> => {
+      const { authorizationUrl, pending } = await party.signInStarted();
+      return party.signInFinished(numbered.signedIn(authorizationUrl, subject, idToken), pending);
+    };
 
     expect([await signedInThrough(named), await signedInThrough(numbered)]).toEqual([
       { ...signedIn, claims: { name: 'Ada Lovelace', email: 'ada@example.com' } },
       signedIn,
+    ]);
+    const tenants: readonly Claims[] = [{ tenant: ' Acme' }, { tenant: 3 }, { tenant: ['acme'] }, { tenant: null }, {}];
+    expect(await Promise.all(tenants.map((idToken) => carrying(idToken)))).toEqual([
+      { ...signedIn, valueOfTheRequiredClaim: ' Acme' },
+      ...tenants.slice(1).map(() => signedIn),
     ]);
   });
 });

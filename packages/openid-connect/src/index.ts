@@ -20,6 +20,7 @@ export {
   type PendingSignIn,
   type RelyingParty,
   type RelyingPartySettings,
+  type RequiredClaim,
   type SignedInPerson,
   type StandardClaims,
   type StartedSignIn,

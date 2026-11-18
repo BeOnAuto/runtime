@@ -29,6 +29,11 @@ import {
 
 export const leewaySeconds = 60;
 
+export interface RequiredClaim {
+  readonly claim: string;
+  readonly requiredValue: string;
+}
+
 export interface RelyingPartySettings {
   readonly issuer: string;
   readonly clientId: string;
@@ -36,6 +41,7 @@ export interface RelyingPartySettings {
   readonly scopes: readonly string[];
   readonly tokenEndpointAuthMethod: ClientAuthenticationMethod | undefined;
   readonly redirectUri: string;
+  readonly requiredClaim?: Pick<RequiredClaim, 'claim'> | undefined;
 }
 
 export interface PendingSignIn {
@@ -60,7 +66,7 @@ export interface StandardClaims {
 }
 
 export type FinishedSignIn =
-  | { readonly signedIn: SignedInPerson; readonly claims: StandardClaims }
+  | { readonly signedIn: SignedInPerson; readonly claims: StandardClaims; readonly valueOfTheRequiredClaim?: string }
   | { readonly refusedByTheProvider: string }
   | { readonly failed: string };
 
@@ -100,6 +106,16 @@ function textClaim(claims: object, name: keyof StandardClaims): StandardClaims {
 function standardClaimsIn(claims: unknown): StandardClaims {
   const fields = new Object(claims);
   return { ...textClaim(fields, 'name'), ...textClaim(fields, 'email') };
+}
+
+function requiredClaimIn(
+  claims: unknown,
+  required: RelyingPartySettings['requiredClaim'],
+): { readonly valueOfTheRequiredClaim?: string } {
+  const fields = new Object(claims);
+  const value: unknown =
+    required !== undefined && Object.hasOwn(fields, required.claim) ? Reflect.get(fields, required.claim) : undefined;
+  return typeof value === 'string' ? { valueOfTheRequiredClaim: value } : {};
 }
 
 function codeOf(error: unknown): string {
@@ -187,7 +203,11 @@ export async function relyingPartyOf(
         );
         const claims = tokens.claims();
         const { iss, sub } = decodeClaims(claims);
-        return { signedIn: { issuer: iss, subject: sub }, claims: standardClaimsIn(claims) };
+        return {
+          signedIn: { issuer: iss, subject: sub },
+          claims: standardClaimsIn(claims),
+          ...requiredClaimIn(claims, settings.requiredClaim),
+        };
       } catch (error) {
         return finishedAfter(error);
       }

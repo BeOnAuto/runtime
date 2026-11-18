@@ -2,7 +2,11 @@ import { accessSync, constants, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import type { Environment } from '@on.auto/config';
-import { clientAuthenticationMethods, type ClientAuthenticationMethod } from '@on.auto/openid-connect';
+import {
+  clientAuthenticationMethods,
+  type ClientAuthenticationMethod,
+  type RequiredClaim,
+} from '@on.auto/openid-connect';
 import { Config, ConfigProvider, Effect, Option, Redacted, Schema } from 'effect';
 
 import { asInvalidSettings, InvalidSettingsError } from './invalid-settings-error.ts';
@@ -14,6 +18,7 @@ export const openIdConnectVariables: readonly string[] = [
   'OIDC_CLIENT_SECRET_FILE',
   'OIDC_SCOPES',
   'OIDC_TOKEN_ENDPOINT_AUTH_METHOD',
+  'OIDC_REQUIRED_CLAIM',
 ];
 
 export const callbackPath = '/auth/oidc/callback';
@@ -26,6 +31,7 @@ export interface OpenIdConnectSettings {
   readonly tokenEndpointAuthMethod: ClientAuthenticationMethod | undefined;
   readonly publicUrl: string;
   readonly redirectUri: string;
+  readonly requiredClaim: RequiredClaim | undefined;
 }
 
 export interface OpenIdConnectDeciding {
@@ -41,6 +47,21 @@ const IssuerUrl = Schema.String.check(
   ),
 );
 
+const requiredClaimForm = /^([^=\s](?:[^=]*[^=\s])?)=(\S(?:.*\S)?)$/su;
+
+const RequiredClaimText = Schema.String.check(
+  Schema.makeFilter(
+    (text: string) =>
+      requiredClaimForm.test(text) ||
+      'Expected claim=value: the name of a claim of the ID Token, then the value it must carry, with no space at the start or the end of either',
+  ),
+);
+
+function requiredClaimOf(text: string | undefined): RequiredClaim | undefined {
+  const [, claim, requiredValue] = requiredClaimForm.exec(String(text)) ?? [];
+  return claim === undefined || requiredValue === undefined ? undefined : { claim, requiredValue };
+}
+
 const defaultScopes = 'openid profile email';
 
 const settingsGiven = Config.all({
@@ -51,6 +72,10 @@ const settingsGiven = Config.all({
   scopes: Config.String('OIDC_SCOPES').pipe(Config.withDefault(defaultScopes)),
   tokenEndpointAuthMethod: Config.map(
     Config.option(Config.Literals(clientAuthenticationMethods, 'OIDC_TOKEN_ENDPOINT_AUTH_METHOD')),
+    Option.getOrUndefined,
+  ),
+  requiredClaim: Config.map(
+    Config.option(Config.schema(RequiredClaimText, 'OIDC_REQUIRED_CLAIM')),
     Option.getOrUndefined,
   ),
   identityIssuer: Config.map(Config.option(Config.String('IDENTITY_ISSUER')), Option.getOrUndefined),
@@ -78,6 +103,9 @@ const withoutAnAddress =
   'OIDC_ISSUER: needs PUBLIC_URL, the URL at which people reach the runtime, since the redirect URI is under it';
 
 const withoutOpenId = 'OIDC_SCOPES: must include openid';
+
+const requiredClaimWithoutAnIssuer =
+  'OIDC_REQUIRED_CLAIM: needs OIDC_ISSUER, the identity provider whose ID Tokens carry the claim';
 
 function scopesIn(text: string): readonly string[] {
   return text.split(' ').filter((scope) => scope !== '');
@@ -143,7 +171,7 @@ function secretIn(file: string): Redacted.Redacted {
 }
 
 function settingsOf(read: Complete, publicUrl: string): OpenIdConnectSettings {
-  const { issuer, clientId, secret, scopes, tokenEndpointAuthMethod } = read;
+  const { issuer, clientId, secret, scopes, tokenEndpointAuthMethod, requiredClaim } = read;
   return {
     issuer,
     clientId,
@@ -152,6 +180,7 @@ function settingsOf(read: Complete, publicUrl: string): OpenIdConnectSettings {
     tokenEndpointAuthMethod,
     publicUrl,
     redirectUri: `${publicUrl}${callbackPath}`,
+    requiredClaim: requiredClaimOf(requiredClaim),
   };
 }
 
@@ -160,6 +189,9 @@ export function readOpenIdConnectSettings(
   deciding: OpenIdConnectDeciding,
 ): OpenIdConnectSettings | undefined {
   const read = Effect.runSync(asInvalidSettings(settingsGiven.parse(ConfigProvider.fromEnvRecord(environment))));
+  if (read.requiredClaim !== undefined && read.issuer === undefined) {
+    throw new InvalidSettingsError({ message: requiredClaimWithoutAnIssuer });
+  }
   if (!isAnyGiven(read)) {
     return undefined;
   }

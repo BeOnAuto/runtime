@@ -20,6 +20,7 @@ import {
   type PendingSignIn,
   type ProviderRequests,
   type RelyingParty,
+  type RequiredClaim,
   type SessionRows,
   type Sessions,
   type SignedInPerson,
@@ -28,13 +29,21 @@ import { allPermissions } from '@on.auto/operations';
 import type { Effect } from 'effect';
 import { deleteCookie, generateCookie, getCookie, setCookie } from 'hono/cookie';
 
-import { logFirstAdmin, logSignInFailed, logSignInRefused } from '../logging/logging.ts';
+import { signInReportTo, type SignInReport } from '../logging/sign-in-logging.ts';
 import { callbackPath, type OpenIdConnectSettings } from '../settings/openid-connect-settings.ts';
-import { admittedAfter, firstSignInNoticed, type Admitted, type Admitting, type Enrolling } from './admission.ts';
+import {
+  admittedAfter,
+  firstSignInNoticed,
+  type Admitted,
+  type Admitting,
+  type Enrolling,
+  type RefusedForTheClaim,
+} from './admission.ts';
 
 export interface CompanySignIn {
   readonly relyingParty: RelyingParty;
   readonly publicUrl: string;
+  readonly requiredClaim: RequiredClaim | undefined;
 }
 
 interface SigningIn extends CompanySignIn, Admitting {
@@ -45,7 +54,8 @@ export async function companySignInOf(
   settings: OpenIdConnectSettings,
   requests: ProviderRequests = providerRequestsOverTheNetwork,
 ): Promise<CompanySignIn> {
-  return { relyingParty: await relyingPartyOf(settings, requests), publicUrl: settings.publicUrl };
+  const { publicUrl, requiredClaim } = settings;
+  return { relyingParty: await relyingPartyOf(settings, requests), publicUrl, requiredClaim };
 }
 
 const signInPath = '/auth/oidc';
@@ -74,13 +84,12 @@ const noAccess = problemOf(
   'You don’t have access to this organization. Ask an admin of the organization to give you a role.',
 );
 
-const anotherOrigin = problemOf('origin_not_allowed', 'The origin of this request is not allowed');
+const notThatAccount = problemOf(
+  'forbidden',
+  'You can’t sign in here with that account. Try again and choose a different account or organization, or ask whoever runs Auto at your company.',
+);
 
-interface SignInReport {
-  readonly refused: (code: string) => void;
-  readonly failed: (failure: string) => void;
-  readonly firstAdmin: (person: string) => void;
-}
+const anotherOrigin = problemOf('origin_not_allowed', 'The origin of this request is not allowed');
 
 type NotSignedIn = FinishedSignIn | { readonly failed: string } | undefined;
 
@@ -135,9 +144,9 @@ function notSignedInAfter(finished: NotSignedIn, report: SignInReport): Response
   return problemResponse(notSignedIn, { 'set-cookie': pendingSignInEnded });
 }
 
-async function refusedAccess(c: ApiContext, signIn: SigningIn): Promise<Response> {
+async function refusedAccess(c: ApiContext, signIn: SigningIn, problem = noAccess): Promise<Response> {
   await sessionEndedIn(c, signIn);
-  return problemResponse(noAccess, { 'set-cookie': pendingSignInEnded });
+  return problemResponse(problem, { 'set-cookie': pendingSignInEnded });
 }
 
 async function signedInAs(c: ApiContext, signIn: SigningIn, person: SignedInPerson): Promise<Response> {
@@ -165,14 +174,22 @@ const answeredAs: Readonly<Record<Admitted['enrolled'], (answering: Answering) =
   removed: ({ c, signIn }) => refusedAccess(c, signIn),
 };
 
-async function admittedIn(c: ApiContext, signIn: SigningIn): Promise<Admitted | NotSignedIn> {
+async function admittedIn(c: ApiContext, signIn: SigningIn): Promise<Admitted | RefusedForTheClaim | NotSignedIn> {
   const finished = await finishedIn(c, signIn);
   return finished !== undefined && 'signedIn' in finished ? admittedAfter(signIn, finished, Date.now()) : finished;
+}
+
+function refusedForTheClaim(c: ApiContext, signIn: SigningIn, claim: string, report: SignInReport): Promise<Response> {
+  report.refusedForTheClaim(claim);
+  return refusedAccess(c, signIn, notThatAccount);
 }
 
 function signInFinished(signIn: SigningIn, report: SignInReport): RouteHandler {
   return async (c) => {
     const admitted = await admittedIn(c, signIn);
+    if (admitted !== undefined && 'refusedForTheClaim' in admitted) {
+      return refusedForTheClaim(c, signIn, admitted.refusedForTheClaim, report);
+    }
     return admitted !== undefined && 'enrolled' in admitted
       ? answeredAs[admitted.enrolled]({ c, signIn, admitted, report })
       : notSignedInAfter(admitted, report);
@@ -240,20 +257,6 @@ export function signedInApiOf(
   });
 }
 
-function reportTo(logged: (log: Effect.Effect<void>) => void, issuer: string): SignInReport {
-  return {
-    refused: (code) => {
-      logged(logSignInRefused(issuer, code));
-    },
-    failed: (failure) => {
-      logged(logSignInFailed(issuer, failure));
-    },
-    firstAdmin: (person) => {
-      logged(logFirstAdmin(defaultOrg, person));
-    },
-  };
-}
-
 export function signInRoutesOf(
   signIn: CompanySignIn | undefined,
 ): (logged: (log: Effect.Effect<void>) => void, served?: SignInServed) => readonly RegisterRoutes[] {
@@ -268,6 +271,6 @@ export function signInRoutesOf(
       enrolling: keptIn(enrolling),
     };
     logged(firstSignInNoticed(signingIn.enrolling));
-    return [companySignInRoutes(signingIn, reportTo(logged, signIn.relyingParty.issuer))];
+    return [companySignInRoutes(signingIn, signInReportTo(logged, signIn.relyingParty.issuer))];
   };
 }

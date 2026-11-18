@@ -5,13 +5,14 @@ import {
   defaultOrg,
   personSignedInOf,
   type PeopleRows,
+  type RequiredClaim,
   type SignedInPerson,
   type StandardClaims,
 } from '@on.auto/openid-connect';
 import { Ledger, OrgWriter, signedInPersonPrefix, streamPrefixOfOrg } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
-import { logFirstSignInAwaited } from '../logging/logging.ts';
+import { logFirstSignInAwaited } from '../logging/sign-in-logging.ts';
 import { inRuntime } from '../workflows/in-runtime.ts';
 
 type Enrolment = { readonly enrolled: Enrolled } | { readonly failed: string };
@@ -59,11 +60,13 @@ export function enrollingIn(runtime: AppRuntime<Ledger>): Enrolling {
 export interface Admitting {
   readonly enrolling: Enrolling;
   readonly people: PeopleRows;
+  readonly requiredClaim: RequiredClaim | undefined;
 }
 
 export interface SignedInWith {
   readonly signedIn: SignedInPerson;
   readonly claims: StandardClaims;
+  readonly valueOfTheRequiredClaim?: string;
 }
 
 export interface Admitted {
@@ -72,11 +75,29 @@ export interface Admitted {
   readonly enrolled: Enrolled;
 }
 
+export interface RefusedForTheClaim {
+  readonly refusedForTheClaim: string;
+}
+
+function requiredClaimNotCarried(
+  requiredClaim: RequiredClaim | undefined,
+  { valueOfTheRequiredClaim }: SignedInWith,
+): string | undefined {
+  return requiredClaim === undefined || valueOfTheRequiredClaim === requiredClaim.requiredValue
+    ? undefined
+    : requiredClaim.claim;
+}
+
 export async function admittedAfter(
-  { enrolling, people }: Admitting,
-  { signedIn, claims }: SignedInWith,
+  { enrolling, people, requiredClaim }: Admitting,
+  signedInWith: SignedInWith,
   at: number,
-): Promise<Admitted | { readonly failed: string }> {
+): Promise<Admitted | RefusedForTheClaim | { readonly failed: string }> {
+  const notCarried = requiredClaimNotCarried(requiredClaim, signedInWith);
+  if (notCarried !== undefined) {
+    return { refusedForTheClaim: notCarried };
+  }
+  const { signedIn, claims } = signedInWith;
   const kept = personSignedInOf(signedIn, claims, at);
   const enrolment = await enrolling.enrolled(kept.person);
   if ('failed' in enrolment) {

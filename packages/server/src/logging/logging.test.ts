@@ -15,16 +15,12 @@ import {
   logAccessMode,
   logConfigFile,
   logContentStore,
-  logFirstAdmin,
-  logFirstSignInAwaited,
   logIncident,
   logLedger,
   logMcpError,
   logPayloadOffloading,
   logReasoning,
   logServedStudio,
-  logSignInFailed,
-  logSignInRefused,
   logStudioKeptInMemory,
   logTelemetry,
   logUnsettled,
@@ -32,6 +28,13 @@ import {
   logWorkflowTrouble,
 } from './logging.ts';
 import { logOperatorHint, logProviderMessage } from './provider-logging.ts';
+import {
+  logFirstAdmin,
+  logFirstSignInAwaited,
+  logSignInFailed,
+  logSignInRefused,
+  logSignInRefusedForTheClaim,
+} from './sign-in-logging.ts';
 import { colorDepthOf, linkerFor, painterFor } from './terminal.ts';
 import { logLeftOutOperation, logMarkUnlisted, logServerMessage } from './tool-server-logging.ts';
 
@@ -106,32 +109,55 @@ const companySignIn = {
   tokenEndpointAuthMethod: undefined,
   publicUrl: 'https://auto.example.com',
   redirectUri: 'https://auto.example.com/auth/oidc/callback',
+  requiredClaim: undefined,
 };
 
 describe("the logs of a sign-in through the company's identity provider", () => {
   it('name at start the provider and the redirect URI to register at it, and never the client secret', async () => {
-    const [line] = await linesLoggedBy(logAccessMode({ mode: 'credentials', signIn, openIdConnect: companySignIn }));
+    const lines = await linesLoggedBy(logAccessMode({ mode: 'credentials', signIn, openIdConnect: companySignIn }));
 
-    expect(line).toContain('"level":"INFO"');
-    expect(line).toContain(
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('"level":"INFO"');
+    expect(lines[0]).toContain(
       '"annotations":{"public_url":"https://auto.example.com","oidc_issuer":"https://login.example.com/acme","redirect_uri":"https://auto.example.com/auth/oidc/callback"}',
     );
-    expect(line).not.toContain('a-client-secret-of-the-test');
+    expect(lines[0]).not.toContain('a-client-secret-of-the-test');
   });
 
-  it('warn of a sign-in the provider refused with its error code, and of one that could not be completed', async () => {
+  it('name at start, in a line of its own, the claim a person must carry to sign in, and never the value required', async () => {
+    const requiredClaim = { claim: 'tenant', requiredValue: 'a-tenant-of-the-test' };
+
     const lines = await linesLoggedBy(
-      Effect.andThen(
-        logSignInRefused(companySignIn.issuer, 'invalid_client'),
-        logSignInFailed(companySignIn.issuer, 'OAUTH_JWT_CLAIM_COMPARISON_FAILED'),
+      logAccessMode({ mode: 'credentials', signIn, openIdConnect: { ...companySignIn, requiredClaim } }),
+    );
+
+    expect(lines.map((line) => line.includes('"level":"INFO"'))).toEqual([true, true]);
+    expect(lines[1]).toContain(
+      '"annotations":{"oidc_issuer":"https://login.example.com/acme","oidc_required_claim":"tenant"}',
+    );
+    expect(lines.join('\n')).not.toContain('a-tenant-of-the-test');
+  });
+
+  it('warn of a sign-in the provider refused with its error code, of one refused for the claim it lacked, and of one that could not be completed', async () => {
+    const lines = await linesLoggedBy(
+      Effect.all(
+        [
+          logSignInRefused(companySignIn.issuer, 'invalid_client'),
+          logSignInRefusedForTheClaim(companySignIn.issuer, 'tenant'),
+          logSignInFailed(companySignIn.issuer, 'OAUTH_JWT_CLAIM_COMPARISON_FAILED'),
+        ],
+        { discard: true },
       ),
     );
 
-    expect(lines.map((line) => line.includes('"level":"WARN"'))).toEqual([true, true]);
+    expect(lines.map((line) => line.includes('"level":"WARN"'))).toEqual([true, true, true]);
     expect(lines[0]).toContain(
       '"annotations":{"oidc_issuer":"https://login.example.com/acme","error":"invalid_client"}',
     );
-    expect(lines[1]).toContain('"failure":"OAUTH_JWT_CLAIM_COMPARISON_FAILED"');
+    expect(lines[1]).toContain(
+      '"annotations":{"oidc_issuer":"https://login.example.com/acme","oidc_required_claim":"tenant"}',
+    );
+    expect(lines[2]).toContain('"failure":"OAUTH_JWT_CLAIM_COMPARISON_FAILED"');
   });
 
   it('say until someone has signed in that the first person to do so becomes its admin, and once they did, by their id alone', async () => {

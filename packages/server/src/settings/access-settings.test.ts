@@ -256,3 +256,42 @@ describe("readSettings refusing the company's identity provider", () => {
     ]);
   });
 });
+
+function requiredClaimOf(environment: Environment): unknown {
+  return readSettingsOf(environment).openIdConnect?.requiredClaim;
+}
+
+describe('readSettings given the claim OIDC_REQUIRED_CLAIM requires of the ID Token', () => {
+  it('reads the claim and the value, split at the first =, each exactly as written, and nothing where it is empty or not set', () => {
+    expect([
+      requiredClaimOf({ ...company, OIDC_REQUIRED_CLAIM: 'tenant=acme' }),
+      requiredClaimOf({ ...company, OIDC_REQUIRED_CLAIM: 'https://example.com/claims/team=Sales and Support=EU' }),
+      requiredClaimOf({ ...company, OIDC_REQUIRED_CLAIM: '' }),
+      requiredClaimOf({ PUBLIC_URL: company.PUBLIC_URL, OIDC_REQUIRED_CLAIM: '' }),
+      requiredClaimOf(company),
+    ]).toEqual([
+      { claim: 'tenant', requiredValue: 'acme' },
+      { claim: 'https://example.com/claims/team', requiredValue: 'Sales and Support=EU' },
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it.each<[string, Environment]>([
+    ['without =', { ...company, OIDC_REQUIRED_CLAIM: 'tenant' }],
+    ['with no value', { ...company, OIDC_REQUIRED_CLAIM: 'tenant=' }],
+    ['with no claim', { ...company, OIDC_REQUIRED_CLAIM: '=acme' }],
+    ['with a space after the claim', { ...company, OIDC_REQUIRED_CLAIM: 'tenant =acme' }],
+    ['with a space before the claim', { ...company, OIDC_REQUIRED_CLAIM: ' tenant=acme' }],
+    ['with a space before the value', { ...company, OIDC_REQUIRED_CLAIM: 'tenant= acme' }],
+    ['with a line ending after the value', { ...company, OIDC_REQUIRED_CLAIM: 'tenant=acme\n' }],
+    ['without OIDC_ISSUER', { PUBLIC_URL: company.PUBLIC_URL, OIDC_REQUIRED_CLAIM: 'tenant=acme' }],
+    [
+      'without OIDC_ISSUER, beside the client and IDENTITY_ISSUER',
+      { ...company, OIDC_ISSUER: '', IDENTITY_ISSUER: 'https://identity.example', OIDC_REQUIRED_CLAIM: 'tenant=acme' },
+    ],
+  ])('refuses to start %s, naming OIDC_REQUIRED_CLAIM', (_case, environment) => {
+    expect(settingNamedBy(environment)).toBe('OIDC_REQUIRED_CLAIM');
+  });
+});

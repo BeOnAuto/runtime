@@ -8,7 +8,7 @@ import { Effect, Layer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { linesLoggedBy } from '../testing/records/logged-lines.ts';
-import { admittedAfter, enrollingIn, firstSignInNoticed, type Enrolling } from './admission.ts';
+import { admittedAfter, enrollingIn, firstSignInNoticed, type Enrolling, type SignedInWith } from './admission.ts';
 
 async function enrollingOver(layer: Layer.Layer<Ledger>): Promise<Enrolling> {
   const runtime = await makeAppRuntime(layer);
@@ -98,12 +98,12 @@ describe('a person admitted at sign-in', () => {
     const undecided = peopleKept();
 
     const admitted = await admittedAfter(
-      { enrolling: enrollingAs({ enrolled: 'enrolment' }), people: decided.rows },
+      { enrolling: enrollingAs({ enrolled: 'enrolment' }), people: decided.rows, requiredClaim: undefined },
       signedInWith,
       1,
     );
     const failed = await admittedAfter(
-      { enrolling: enrollingAs({ failed: 'contended' }), people: undecided.rows },
+      { enrolling: enrollingAs({ failed: 'contended' }), people: undecided.rows, requiredClaim: undefined },
       signedInWith,
       1,
     );
@@ -116,6 +116,47 @@ describe('a person admitted at sign-in', () => {
       [{ person: ada, name: 'Ada Lovelace', emailAddress: 'ada@example.com', updatedAt: 1 }],
       [],
     ]);
+  });
+});
+
+function enrollingNoted(): { readonly enrolling: Enrolling; readonly decided: readonly string[] } {
+  const decided: string[] = [];
+  return {
+    decided,
+    enrolling: {
+      enrolled: (person) => {
+        decided.push(person);
+        return Promise.resolve({ enrolled: 'enrolment' });
+      },
+      firstAdminAwaited: () => Promise.resolve(false),
+    },
+  };
+}
+
+describe('a person admitted at sign-in where the server requires a claim', () => {
+  it('is decided and kept only where their ID Token carries the claim with exactly the value required, and is otherwise refused for that claim before any decision', async () => {
+    const { enrolling, decided } = enrollingNoted();
+    const people = peopleKept();
+    const admitting = { enrolling, people: people.rows, requiredClaim: { claim: 'tenant', requiredValue: 'acme' } };
+    const carrying: readonly SignedInWith[] = [
+      signedInWith,
+      { ...signedInWith, valueOfTheRequiredClaim: 'ACME' },
+      { ...signedInWith, valueOfTheRequiredClaim: 'acme ' },
+      { ...signedInWith, valueOfTheRequiredClaim: 'another' },
+      { ...signedInWith, valueOfTheRequiredClaim: 'acme' },
+    ];
+
+    const answered = await Promise.all(carrying.map((signedIn) => admittedAfter(admitting, signedIn, 1)));
+
+    const refused = { refusedForTheClaim: 'tenant' };
+    expect(answered).toEqual([
+      refused,
+      refused,
+      refused,
+      refused,
+      { signedIn: signedInWith.signedIn, person: ada, enrolled: 'enrolment' },
+    ]);
+    expect([decided, people.kept.length]).toEqual([[ada], 1]);
   });
 });
 
