@@ -128,7 +128,7 @@ The pages of Settings, by the tool that reads or changes what each shows:
 - `connections`: the tools of a connection, as above.
 - `tool-servers`: `search`, which lists the tool servers and the tools of each. The servers of the configuration are the operator's to change, so the agent reports to the person what a comment asks of them.
 - `runtime`: `activate_license` with the key the person gives, for a self-hosted runtime's license. The runtime's address, its status, who Studio acts as there and the voice model are the operator's and Studio's, and the agent reports what a comment asks of them.
-- `members`: `list_members`, and `invite_member` to invite a person as a member, where the endpoint offers them. Roles, removals and invitations of admins are a person's, in Studio.
+- `members`: `list_members`, and `invite_member` to invite a person as an editor or a viewer, where the endpoint offers them. Roles, removals and invitations of admins are a person's, in Studio.
 - `organisation`, `email-domains`, `billing`, `plans`, `credits`, `credit-history`, `licenses` and `mcp`: no tool. The agent reports what the comment asks to the person, who changes it in Studio.
 
 `get_definition` reads the definition as it stands, at its current `version`. An address that names an earlier version says the comment was made before the definition last changed: read the comment against the current document, and act only where it still applies.
