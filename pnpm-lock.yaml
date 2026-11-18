@@ -1184,6 +1184,9 @@ importers:
       '@on.auto/definitions':
         specifier: workspace:*
         version: link:../definitions
+      '@on.auto/json-schema':
+        specifier: workspace:*
+        version: link:../json-schema
       '@on.auto/operations':
         specifier: workspace:*
         version: link:../operations

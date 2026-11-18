@@ -72,3 +72,22 @@ export {
   type ProviderCredential,
 } from './resolution/provider-addition.ts';
 export { requestOriginsOf } from './events/event-destinations.ts';
+export { subscriptionCallsOf } from './subscriptions/subscription-calls.ts';
+export {
+  SubscriptionCallFailed,
+  type SubscriptionFailedBecause,
+  type SubscriptionFailureKind,
+} from './subscriptions/subscription-failed.ts';
+export type {
+  HeldSubscription,
+  Renewed,
+  Renewing,
+  Subscribed,
+  Subscribing,
+  SubscriptionCalls,
+  SubscriptionPlace,
+  SubscriptionPorts,
+  SubscriptionSecret,
+  ThroughTheConnection,
+  Unsubscribing,
+} from './subscriptions/subscription-ports.ts';
