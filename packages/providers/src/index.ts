@@ -32,11 +32,14 @@ export {
 export type { Destination as EventDestination } from './events/destination-fields.ts';
 export { provesTheBodyAndATime } from './events/event-proofs.ts';
 export { receivingOverASocket, type SocketListening } from './sockets/socket-listening.ts';
+export { opensAsDeclared, type OpeningWays } from './sockets/socket-openings.ts';
 export {
   SocketEnded,
   type Arrived,
+  type ConstructsASocket,
   type OpenSocket,
   type OpensASocket,
+  type SendsABearerRequest,
   type SocketArrival,
   type SocketEnd,
   type SocketFrame,

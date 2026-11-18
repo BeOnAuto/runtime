@@ -1,3 +1,4 @@
+import type { BearerSending, DeclaredRequest, RequestedOnce } from '@on.auto/tool-servers';
 import { Data, type Effect, type Redacted, type Scope } from 'effect';
 
 import type { ArrivalReading } from '../events/arrival-readings.ts';
@@ -24,6 +25,10 @@ export interface SocketOpening {
 }
 
 export type OpensASocket = (opening: SocketOpening) => Effect.Effect<OpenSocket, SocketEnded, Scope.Scope>;
+
+export type SendsABearerRequest = (request: DeclaredRequest, sending: BearerSending) => Effect.Effect<RequestedOnce>;
+
+export type ConstructsASocket = (address: Redacted.Redacted) => Effect.Effect<OpenSocket, SocketEnded, Scope.Scope>;
 
 export interface SocketArrival {
   readonly reading: ArrivalReading;
