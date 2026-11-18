@@ -8,7 +8,7 @@ import { patientWorkerPool } from '../servers/worker-pools.ts';
 import { workflowSource } from '../servers/workflow-server.ts';
 import { createdWithGoals, servingReasoningWithGoals } from '../settings/goals-kept.ts';
 import { until } from '../waiting/until.ts';
-import { wokenClock, type WokenClock } from './woken-clock.ts';
+import { wallClockGivenBack, wallClockTaken, wokenClock, type WokenClock } from './woken-clock.ts';
 
 const aMinuteAndASecond = 61_000;
 
@@ -77,6 +77,16 @@ function countedOver(ledger: Ledger['Service'], told: (asked: string) => void): 
   };
 }
 
+function givingTheWallClockBackOnStop(server: ReasoningServer): ReasoningServer {
+  return {
+    ...server,
+    stop: async () => {
+      await server.stop();
+      wallClockGivenBack();
+    },
+  };
+}
+
 export async function assessing({ ledger, goals, watching = '', ...switches }: Serving): Promise<Assessing> {
   const asked: string[] = [];
   const counts = { tests: 0 };
@@ -87,7 +97,7 @@ export async function assessing({ ledger, goals, watching = '', ...switches }: S
     },
   };
   const composed = Promise.withResolvers<Ledger['Service']>();
-  const clock = wokenClock(Date.now());
+  const clock = wokenClock(wallClockTaken());
   const server = await servingReasoningWithGoals([], {}, undefined, {
     ledger,
     clock,
@@ -107,7 +117,7 @@ export async function assessing({ ledger, goals, watching = '', ...switches }: S
   });
   await createdWithGoals(server, { goals });
   return {
-    server,
+    server: givingTheWallClockBackOnStop(server),
     clock,
     asked,
     watched: { tests: () => counts.tests },

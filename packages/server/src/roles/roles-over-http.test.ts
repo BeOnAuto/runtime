@@ -3,8 +3,9 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { issuerOverHttps } from '../sign-in/issuer-over-https.ts';
+import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { aPortNothingListensOn, importedBeforeTheRelease, tokenOf } from './roles-of-an-org.ts';
+import { importedBeforeTheRelease, tokenOf } from './roles-of-an-org.ts';
 
 async function signingIn() {
   const ledger = temporaryLedger();

@@ -1,24 +1,12 @@
-import { once } from 'node:events';
-import { createServer } from 'node:net';
-
 import { signInScopes } from '@on.auto/identity';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
-import { tcpPort } from '../lifecycle/http-server.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
+import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { accessTokenOf, issuerOverHttps } from './issuer-over-https.ts';
-
-async function aPortNothingListensOn(): Promise<number> {
-  const probe = createServer().listen(0, '127.0.0.1');
-  await once(probe, 'listening');
-  const port = tcpPort(probe.address());
-  probe.close();
-  await once(probe, 'close');
-  return port;
-}
 
 async function startedOn(port: number, environment: Readonly<Record<string, string>>): Promise<RunningServer> {
   const ledger = temporaryLedger();

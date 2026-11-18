@@ -3,6 +3,7 @@ import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { assessing, savedWorkflow, type Assessing } from '../../testing/goals/assessed-runs.ts';
+import { wallClockGivenBack, wallClockTaken } from '../../testing/goals/woken-clock.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
 import { until } from '../../testing/waiting/until.ts';
@@ -141,7 +142,8 @@ const allDaysBut = (dayOff: number) =>
 describe('the goals read of a Node server whose daily goal names its days', () => {
   it('opens no window on a day it does not judge and opens the next day, and the read names the days', async () => {
     const ledger = temporaryLedger();
-    const dayOff = (Math.floor(Date.now() / day) + 1) * day;
+    onTestFinished(wallClockGivenBack);
+    const dayOff = (Math.floor(wallClockTaken() / day) + 1) * day;
     const assessed = await assessing({ ledger, goals: allDaysBut(dayOff) });
     onTestFinished(async () => {
       await assessed.server.stop();

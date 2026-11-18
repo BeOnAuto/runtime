@@ -38,73 +38,82 @@ function markingThen(event: number, then: string): string {
   return `import { parentPort } from "node:worker_threads"; parentPort.on("message", ({ progress }) => { const place = new Int32Array(progress); Atomics.store(place, 0, ${event}); Atomics.store(place, 1, 0); ${then} });`;
 }
 
-const quick = {
-  folding: { ...foldingOf(), foldDeadlineMs: 1, pageBudgetMs: 1, pageMarginMs: 50 },
-  overtimesBeforeStall: 2,
-  sweepEveryMs: 20,
-};
+function triesWithADeadlineOf(foldDeadlineMs: number) {
+  return {
+    folding: { ...foldingOf(), foldDeadlineMs, pageBudgetMs: 1, pageMarginMs: 50 },
+    overtimesBeforeStall: 2,
+    sweepEveryMs: 20,
+  };
+}
 
-const workersThatStop: readonly (readonly [string, string, StallCause, string])[] = [
+const aDeadlineNoFoldReaches = 2 * viewTestTimeoutMs;
+
+type Stall = Readonly<{ kind: StallCause; message: string }>;
+
+const workersThatStop: readonly (readonly [string, string, Stall, number])[] = [
   [
     'stops at its deadline',
     markingThen(0, 'while (true) {}'),
-    'time',
-    'The fold was stopped by its deadline of 1 ms 2 times',
+    { kind: 'time', message: 'The fold was stopped by its deadline of 1 ms 2 times' },
+    1,
   ],
   [
     'runs out of memory',
     markingThen(0, 'const kept = []; while (true) { kept.push(new Array(100000).fill(kept.length)); }'),
-    'memory',
-    'The fold was stopped by its memory 2 times',
+    { kind: 'memory', message: 'The fold was stopped by its memory 2 times' },
+    aDeadlineNoFoldReaches,
   ],
   [
     'crashes',
     markingThen(0, 'throw new Error("broken on purpose");'),
-    'crash',
-    'The fold was stopped by its crash 2 times',
+    { kind: 'crash', message: 'The fold was stopped by its crash 2 times' },
+    aDeadlineNoFoldReaches,
   ],
 ];
 
-const workersThatNameNoFold: readonly (readonly [string, string, string])[] = [
+const workersThatNameNoFold: readonly (readonly [string, string, string, number])[] = [
   [
     'crashes before it names a fold',
     'throw new Error("before any fold");',
     'A page of folds crashed before it named a fold: The worker failed: before any fold',
+    aDeadlineNoFoldReaches,
   ],
   [
     'is stopped by its deadline before it names a fold',
     'while (true) {}',
     'A page of folds was stopped by its deadline before it named a fold',
+    1,
   ],
   [
     'answers what the projector cannot read',
     'import { parentPort } from "node:worker_threads"; parentPort.on("message", ({ job }) => { parentPort.postMessage({ job, answer: { ran: "unreadable" }, keep: false }); });',
     'A worker answered a page of folds with something it could not read',
+    aDeadlineNoFoldReaches,
   ],
 ];
 
 describe('a page of folds the pool cannot finish', () => {
   it.each(workersThatStop)(
     'counts against the fold that was going when it %s, and stalls it after its tries',
-    async (_way, source, kind, message) => {
+    async (_way, source, stall, foldDeadlineMs) => {
       const views = await viewHarness(await onSQLite(), { foldWorker: moduleOfSource(source), heapMegabytes: 16 });
       await views.saved('runs', counting);
       await views.ran('reasoning/runs', 1);
-      views.start(quick);
+      views.start(triesWithADeadlineOf(foldDeadlineMs));
 
       const kept = await views.until('runs', isStalled);
 
-      expect(kept).toMatchObject({ view: 0, folded: 0, stall: { kind, message, line: null } });
+      expect(kept).toMatchObject({ view: 0, folded: 0, stall: { ...stall, line: null } });
     },
   );
 
   it.each(workersThatNameNoFold)(
     'is reported and tried again, counting against no fold, when its worker %s',
-    async (_way, source, trouble) => {
+    async (_way, source, trouble, foldDeadlineMs) => {
       const views = await viewHarness(await onSQLite(), { foldWorker: moduleOfSource(source) });
       await views.saved('runs', counting);
       await views.ran('reasoning/runs', 1);
-      views.start(quick);
+      views.start(triesWithADeadlineOf(foldDeadlineMs));
 
       const troubles = await until(views.reports.troubles, (reported) => reported.length > 1);
       const kept = await views.viewOf('runs');
@@ -133,7 +142,7 @@ describe('a page of folds lost twice', () => {
     const views = await viewHarness(await onSQLite(), { foldWorker: moduleOfSource(atTheSecondRun) });
     await views.saved('runs', counting);
     await views.ranEach('reasoning/runs', [1, 2]);
-    views.start(quick);
+    views.start(triesWithADeadlineOf(aDeadlineNoFoldReaches));
 
     const kept = await views.until('runs', isStalled);
 

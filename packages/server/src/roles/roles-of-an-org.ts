@@ -1,23 +1,9 @@
-import { once } from 'node:events';
-import { createServer } from 'node:net';
-
 import { rolesImported } from '@on.auto/access-control';
 import { signInScopes } from '@on.auto/identity';
 import type { FakeIssuer } from '@on.auto/identity/testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { Ledger, OrgWriter, streamPrefixOfOrg } from '@on.auto/operations';
 import { Effect, ManagedRuntime } from 'effect';
-
-import { tcpPort } from '../lifecycle/http-server.ts';
-
-export async function aPortNothingListensOn(): Promise<number> {
-  const probe = createServer().listen(0, '127.0.0.1');
-  await once(probe, 'listening');
-  const port = tcpPort(probe.address());
-  probe.close();
-  await once(probe, 'close');
-  return port;
-}
 
 export async function importedBeforeTheRelease(fileName: string): Promise<void> {
   const runtime = ManagedRuntime.make(ledgerLayer({ fileName }));
