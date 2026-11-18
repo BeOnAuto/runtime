@@ -3,7 +3,7 @@ import { Data, Schema } from 'effect';
 
 import type { AuthDatabase } from './auth-database.ts';
 
-export const authLayout = 1;
+export const authLayout = 2;
 
 export const authTablePrefix = 'auth_';
 
@@ -16,7 +16,7 @@ export interface AuthLayoutStep {
   readonly statements: readonly Statement[];
 }
 
-export const authLayoutSteps: readonly AuthLayoutStep[] = [];
+export const authLayoutSteps: readonly AuthLayoutStep[] = [{ layout: 2, statements: [] }];
 
 export interface AuthLayoutCarrying {
   readonly kept: number;

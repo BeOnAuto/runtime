@@ -1,10 +1,11 @@
 import type { AppRuntime, RegisterRoutes, RuntimeControl } from '@on.auto/api';
 import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identity';
-import type { SessionRows } from '@on.auto/openid-connect';
+import type { PeopleRows, SessionRows } from '@on.auto/openid-connect';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { Layer } from 'effect';
 
 import type { Settings } from '../settings/settings.ts';
+import type { Enrolling } from '../sign-in/admission.ts';
 import type { Telemetry } from '../telemetry/start-telemetry.ts';
 
 export interface Install {
@@ -38,6 +39,8 @@ export interface Served {
   readonly stopWork: () => Promise<void>;
   readonly licenseNotice?: LicenseNotice;
   readonly sessionRows?: SessionRows;
+  readonly peopleRows?: PeopleRows;
+  readonly enrolling?: Enrolling;
 }
 
 export type ServedClosing = (served: Served) => Served;

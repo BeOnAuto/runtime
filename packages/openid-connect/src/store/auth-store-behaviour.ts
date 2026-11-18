@@ -2,6 +2,7 @@ import { LedgerConnection, statement, type ConnectionPorts, type Dialect, type L
 import { Effect, ManagedRuntime, Schema, type Layer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { peopleRowsBehaviour } from '../people/people-rows-behaviour.ts';
 import type { SessionRow } from '../sessions/session-rows.ts';
 import { sessionRowsBehaviour } from '../testing/session-rows-behaviour.ts';
 import { authLayout, authLayoutKept, authTablePrefix, type AuthLayoutStep } from './auth-layout.ts';
@@ -266,6 +267,10 @@ export function authStoreBehaviour(entry: AuthStoreEntry): void {
   sessionRowsBehaviour({
     name: `in the sign-in's store ${entry.name}`,
     rowsOf: async () => (await authStoreOpened(await aConnectionOf(entry)())).sessionRows,
+  });
+  peopleRowsBehaviour({
+    name: `in the sign-in's store ${entry.name}`,
+    rowsOf: async () => (await authStoreOpened(await aConnectionOf(entry)())).peopleRows,
   });
   sessionsEndedBehaviour(entry);
 }

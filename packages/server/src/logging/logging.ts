@@ -76,6 +76,18 @@ export function logSignInFailed(issuer: string, failure: string): Effect.Effect<
   ).pipe(Effect.annotateLogs({ oidc_issuer: issuer, failure }));
 }
 
+export function logFirstSignInAwaited(org: string): Effect.Effect<void> {
+  return Effect.logInfo(
+    'No one has signed in yet. The first person to sign in becomes the admin of this organization.',
+  ).pipe(Effect.annotateLogs({ org }));
+}
+
+export function logFirstAdmin(org: string, person: string): Effect.Effect<void> {
+  return Effect.logInfo('The first person to sign in is now the admin of this organization').pipe(
+    Effect.annotateLogs({ org, person }),
+  );
+}
+
 export interface StudioReport {
   readonly mode: AccessMode;
   readonly studio: StudioSettings;

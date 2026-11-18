@@ -2,12 +2,22 @@ import { Conflict, Forbidden, type Decider, type PrincipalReference, type Reject
 import { HashMap, Option, Result } from 'effect';
 
 import {
-  builtInRoleIds,
   builtInRoles,
+  builtInRolesAtSignIn,
   mayAssign,
-  type BuiltInRoleId,
+  type RolesAtSignIn,
   type RoleTable,
 } from '../roles/built-in-roles.ts';
+import {
+  assignedOf,
+  evolvedBy,
+  holdsAnAssigner,
+  noneHeld,
+  rolesHeldBy,
+  unassignedOf,
+  type HeldAssignment,
+  type HeldAssignments,
+} from './held-assignments.ts';
 import {
   RoleAssignmentEventSchema,
   principalKeyOf,
@@ -18,23 +28,6 @@ import {
   type RecordedRoleAssignmentEvent,
   type RoleAssignmentEvent,
 } from './role-assignment-facts.ts';
-
-export interface HeldAssignment {
-  readonly principal: AssignedPrincipal;
-  readonly role: AssignedRole;
-}
-
-interface HeldBy {
-  readonly principal: AssignedPrincipal;
-  readonly roles: readonly AssignedRole[];
-}
-
-export interface HeldAssignments {
-  readonly byPrincipal: HashMap.HashMap<string, HeldBy>;
-  readonly holders: Readonly<Record<BuiltInRoleId, number>>;
-}
-
-const noneHeld: HeldAssignments = { byPrincipal: HashMap.empty(), holders: { admin: 0, editor: 0, viewer: 0 } };
 
 interface Asked {
   readonly scope: AssignmentScope;
@@ -52,7 +45,7 @@ export interface RoleTaken extends Asked, HeldAssignment {
   readonly actor: PrincipalReference;
 }
 
-export type ProvisioningSource = Exclude<AssignmentSource, 'manual'>;
+export type ProvisioningSource = Exclude<AssignmentSource, 'manual' | 'bootstrap'>;
 
 export interface RolesProvisioned extends Asked {
   readonly kind: 'provision';
@@ -68,7 +61,14 @@ export interface RolesDeprovisioned extends Asked {
   readonly principal: AssignedPrincipal;
 }
 
-export type RoleAssignmentCommand = RoleGiven | RoleTaken | RolesProvisioned | RolesDeprovisioned;
+export interface PersonEnrolled extends Asked {
+  readonly kind: 'enrol';
+  readonly principal: AssignedPrincipal;
+}
+
+export type RoleAssignmentCommand = RoleGiven | RoleTaken | RolesProvisioned | RolesDeprovisioned | PersonEnrolled;
+
+export type Enrolled = 'bootstrap' | 'enrolment' | 'member' | 'removed';
 
 type RoleAssignmentRefusal = 'forbidden' | 'conflict';
 
@@ -89,54 +89,6 @@ export function beyondYourRole(role: string): string {
 
 export const lastAssigner = 'An organization must have at least one admin. Make another member an admin first.';
 
-interface Named {
-  readonly type: string;
-  readonly id: string;
-}
-
-export function rolesHeldBy(state: HeldAssignments, principal: Named): readonly AssignedRole[] {
-  return Option.match(HashMap.get(state.byPrincipal, principalKeyOf(principal)), {
-    onNone: () => [],
-    onSome: ({ roles }) => roles,
-  });
-}
-
-export function heldAssignmentsIn(state: HeldAssignments): readonly HeldAssignment[] {
-  return [...HashMap.values(state.byPrincipal)].flatMap(({ principal, roles }) =>
-    roles.map((role) => ({ principal, role })),
-  );
-}
-
-function evolvedBy(state: HeldAssignments, { type, data }: RoleAssignmentEvent): HeldAssignments {
-  const key = principalKeyOf(data.principal);
-  const held = rolesHeldBy(state, data.principal);
-  const others = held.filter(({ id }) => id !== data.role.id);
-  const roles = type === 'role_assigned' ? [...others, data.role] : others;
-  return {
-    byPrincipal:
-      roles.length === 0
-        ? HashMap.remove(state.byPrincipal, key)
-        : HashMap.set(state.byPrincipal, key, { principal: data.principal, roles }),
-    holders: { ...state.holders, [data.role.id]: state.holders[data.role.id] + roles.length - held.length },
-  };
-}
-
-function assignedOf(
-  { principal, role }: HeldAssignment,
-  scope: AssignmentScope,
-  source: AssignmentSource,
-): RoleAssignmentEvent {
-  return { type: 'role_assigned', data: { principal, role, scope, source } };
-}
-
-function unassignedOf(
-  { principal, role }: HeldAssignment,
-  scope: AssignmentScope,
-  source: AssignmentSource,
-): RoleAssignmentEvent {
-  return { type: 'role_unassigned', data: { principal, role, scope, source } };
-}
-
 function actorRefusal(
   table: RoleTable,
   state: HeldAssignments,
@@ -149,10 +101,6 @@ function actorRefusal(
   }
   const beyond = changed.find((asked) => !held.some(({ id }) => mayAssign(table, id, asked.id)));
   return beyond === undefined ? undefined : new Forbidden({ detail: beyondYourRole(beyond.id) });
-}
-
-function holdsAnAssigner(table: RoleTable, { holders }: HeldAssignments): boolean {
-  return builtInRoleIds.some((id) => table[id].assignsRoles && holders[id] > 0);
 }
 
 function keepingAnAssigner(table: RoleTable, state: HeldAssignments, events: readonly RoleAssignmentEvent[]): Decision {
@@ -234,26 +182,88 @@ function decidedDeprovisioning(table: RoleTable, command: RolesDeprovisioned, st
   return membershipEndedAlready[command.source] ? Result.succeed(ended) : keepingAnAssigner(table, state, ended);
 }
 
-function decided(table: RoleTable, command: RoleAssignmentCommand, state: HeldAssignments): Decision {
-  if (command.kind === 'assign') {
-    return decidedGiving(table, command, state);
-  }
-  if (command.kind === 'unassign') {
-    return decidedTaking(table, command, state);
-  }
-  return command.kind === 'provision'
-    ? decidedProvisioning(table, command, state)
-    : decidedDeprovisioning(table, command, state);
+function mayBeEnrolled({ lastEndedBy }: HeldAssignments, principal: AssignedPrincipal): boolean {
+  return Option.match(HashMap.get(lastEndedBy, principalKeyOf(principal)), {
+    onNone: () => true,
+    onSome: (source) => source !== 'manual',
+  });
 }
 
-export function roleAssignmentDeciderOver(table: RoleTable): RoleAssignmentDecider {
+function enrolledOver(table: RoleTable, state: HeldAssignments, principal: AssignedPrincipal): Enrolled {
+  if (!holdsAnAssigner(table, state)) {
+    return 'bootstrap';
+  }
+  if (rolesHeldBy(state, principal).length > 0) {
+    return 'member';
+  }
+  return mayBeEnrolled(state, principal) ? 'enrolment' : 'removed';
+}
+
+export function enrolledAs(state: HeldAssignments, principal: AssignedPrincipal): Enrolled {
+  return enrolledOver(builtInRoles, state, principal);
+}
+
+export function awaitsItsFirstAdmin(state: HeldAssignments): boolean {
+  return !holdsAnAssigner(builtInRoles, state);
+}
+
+interface Enrolling {
+  readonly atSignIn: RolesAtSignIn;
+  readonly command: PersonEnrolled;
+  readonly state: HeldAssignments;
+}
+
+function givenAtSignIn(
+  { atSignIn, command: { principal, scope } }: Enrolling,
+  source: keyof RolesAtSignIn,
+): RoleAssignmentEvent {
+  return assignedOf({ principal, role: { type: 'built_in', id: atSignIn[source] } }, scope, source);
+}
+
+const enrolledWith: Readonly<Record<Enrolled, (enrolling: Enrolling) => readonly RoleAssignmentEvent[]>> = {
+  bootstrap: (enrolling) => [
+    ...rolesHeldBy(enrolling.state, enrolling.command.principal).map((role) =>
+      unassignedOf({ principal: enrolling.command.principal, role }, enrolling.command.scope, 'bootstrap'),
+    ),
+    givenAtSignIn(enrolling, 'bootstrap'),
+  ],
+  enrolment: (enrolling) => [givenAtSignIn(enrolling, 'enrolment')],
+  member: () => [],
+  removed: () => [],
+};
+
+interface Deciding {
+  readonly table: RoleTable;
+  readonly atSignIn: RolesAtSignIn;
+}
+
+function decidedEnrolment({ table, atSignIn }: Deciding, command: PersonEnrolled, state: HeldAssignments): Decision {
+  return Result.succeed(enrolledWith[enrolledOver(table, state, command.principal)]({ atSignIn, command, state }));
+}
+
+function decided(deciding: Deciding, command: RoleAssignmentCommand, state: HeldAssignments): Decision {
+  if (command.kind === 'assign') {
+    return decidedGiving(deciding.table, command, state);
+  }
+  if (command.kind === 'unassign') {
+    return decidedTaking(deciding.table, command, state);
+  }
+  if (command.kind === 'enrol') {
+    return decidedEnrolment(deciding, command, state);
+  }
+  return command.kind === 'provision'
+    ? decidedProvisioning(deciding.table, command, state)
+    : decidedDeprovisioning(deciding.table, command, state);
+}
+
+export function roleAssignmentDeciderOver(table: RoleTable, atSignIn: RolesAtSignIn): RoleAssignmentDecider {
   return {
     initialState: noneHeld,
     evolve: evolvedBy,
-    decide: (command, state) => decided(table, command, state),
+    decide: (command, state) => decided({ table, atSignIn }, command, state),
     context: ({ at, by }) => ({ at, by }),
     eventSchema: RoleAssignmentEventSchema,
   };
 }
 
-export const roleAssignmentDecider = roleAssignmentDeciderOver(builtInRoles);
+export const roleAssignmentDecider = roleAssignmentDeciderOver(builtInRoles, builtInRolesAtSignIn);

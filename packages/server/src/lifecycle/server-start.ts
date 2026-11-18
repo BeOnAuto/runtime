@@ -41,7 +41,7 @@ class StartupError extends Data.TaggedError('StartupError')<{
 
 type SignInRoutes = (
   logged: (log: Effect.Effect<void>) => void,
-  sessionRows?: Served['sessionRows'],
+  served?: Pick<Served, 'sessionRows' | 'peopleRows' | 'enrolling'>,
 ) => readonly RegisterRoutes[];
 
 type SignedInApi = (sessionRows?: Served['sessionRows']) => Pick<ApiOptions, 'sessions' | 'publicUrl'>;
@@ -116,7 +116,7 @@ function apiOf<R>(answering: Answering<R>): ApiHandler {
   const { licenseNotice } = served;
   const signInRoutes = answering.signInRoutes((log) => {
     void runtime.run(log);
-  }, served.sessionRows);
+  }, served);
   const routes = [...served.routes, ...signInRoutes];
   return createApiHandler({
     allowedOrigins: settings.allowedOrigins,

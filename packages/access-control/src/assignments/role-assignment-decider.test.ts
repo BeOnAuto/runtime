@@ -3,7 +3,7 @@ import { Conflict, Forbidden } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { builtInRoles } from '../roles/built-in-roles.ts';
+import { builtInRoles, builtInRolesAtSignIn } from '../roles/built-in-roles.ts';
 import {
   aStreamAnotherWriterAppendsTo,
   acted,
@@ -20,6 +20,7 @@ import {
 } from '../testing/role-assignment-states.ts';
 import {
   beyondYourRole,
+  enrolledAs,
   lastAssigner,
   noRoleThatAssigns,
   roleAssignmentDecider,
@@ -92,10 +93,10 @@ describe('a role taken away', () => {
 });
 
 describe('a role beyond the giver’s own', () => {
-  const viewersAssign = roleAssignmentDeciderOver({
-    ...builtInRoles,
-    viewer: { ...builtInRoles.viewer, assignsRoles: true },
-  });
+  const viewersAssign = roleAssignmentDeciderOver(
+    { ...builtInRoles, viewer: { ...builtInRoles.viewer, assignsRoles: true } },
+    builtInRolesAtSignIn,
+  );
 
   it('is never given, taken away or replaced by someone whose role permits less than it does', () => {
     const state = held([dana, 'viewer'], [priya, 'editor']);
@@ -131,6 +132,19 @@ describe('the state the decider folds', () => {
       ['user_priya', 'viewer'],
     ]);
     expect(roleAssignmentDecider.context(given(ada, priya, 'viewer'), folded)).toEqual(acted);
+  });
+
+  it('keeps how the last role of a person who now holds none was ended, and nothing of one who never held a role', () => {
+    const folded = stateOf(
+      recordedNow(
+        change('role_assigned', ada, 'admin'),
+        change('role_assigned', priya, 'editor'),
+        change('role_unassigned', priya, 'editor'),
+        change('role_unassigned', dana, 'viewer'),
+      ),
+    );
+
+    expect([enrolledAs(folded, priya), enrolledAs(folded, dana)]).toEqual(['removed', 'enrolment']);
   });
 });
 

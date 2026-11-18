@@ -30,7 +30,7 @@ import {
   runDefinition,
   type TestOperation,
 } from '../testing/access-testing.ts';
-import { builtInRoleIds, builtInRoles, mayAssign } from './built-in-roles.ts';
+import { builtInRoleIds, builtInRoles, builtInRolesAtSignIn, mayAssign } from './built-in-roles.ts';
 import { assignmentsReadAtOnce, roleAssignmentsFrom, roleAssignmentsRecordedIn } from './recorded-role-assignments.ts';
 import { editorRoleForEveryPerson } from './role-assignments.ts';
 
@@ -115,6 +115,16 @@ describe('the built-in roles the decider reads', () => {
     expect(
       builtInRoleIds.flatMap((held) => builtInRoleIds.map((asked) => mayAssign(builtInRoles, held, asked))),
     ).toEqual([true, true, true, false, false, false, false, false, false]);
+  });
+});
+
+describe('the roles given at sign-in', () => {
+  it('give the first person to sign in a role that gives roles, and a newcomer the role that permits least', () => {
+    const { bootstrap, enrolment } = builtInRolesAtSignIn;
+    const fewest = Math.min(...builtInRoleIds.map((role) => builtInRoles[role].permits.length));
+
+    expect([builtInRoles[bootstrap].assignsRoles, builtInRoles[enrolment].permits.length]).toEqual([true, fewest]);
+    expect(builtInRoleIds.filter((role) => builtInRoles[role].permits.length === fewest)).toEqual([enrolment]);
   });
 });
 

@@ -3675,7 +3675,7 @@
                               },
                               "id": {
                                 "type": "string",
-                                "description": "The person’s id, as their sign-in names them"
+                                "description": "The person’s id, which assign_role and unassign_role take"
                               }
                             },
                             "required": [
@@ -3738,9 +3738,10 @@
                               "enrolment",
                               "import",
                               "command",
-                              "identity_service"
+                              "identity_service",
+                              "bootstrap"
                             ],
-                            "description": "How it was given: manual, by a person; invitation; enrolment, by joining from a claimed domain; import, from the roles people held when roles were first kept; command, by the runtime’s command; or identity_service"
+                            "description": "How it was given: manual, by a person; invitation; enrolment, by joining without an invitation; import, from the roles people held when roles were first kept; command, by the runtime’s command; identity_service; or bootstrap, to the first person to sign in"
                           },
                           "assigned_at": {
                             "type": "string",
@@ -3851,7 +3852,7 @@
             "schema": {
               "type": "string",
               "minLength": 1,
-              "description": "The person’s id, as their sign-in names them and list_role_assignments answers it"
+              "description": "The person’s id, as list_role_assignments answers it"
             }
           },
           {
@@ -3891,7 +3892,7 @@
                         },
                         "id": {
                           "type": "string",
-                          "description": "The person’s id, as their sign-in names them"
+                          "description": "The person’s id, which assign_role and unassign_role take"
                         }
                       },
                       "required": [
@@ -4024,7 +4025,7 @@
             "schema": {
               "type": "string",
               "minLength": 1,
-              "description": "The person’s id, as their sign-in names them and list_role_assignments answers it"
+              "description": "The person’s id, as list_role_assignments answers it"
             }
           },
           {
@@ -4064,7 +4065,7 @@
                         },
                         "id": {
                           "type": "string",
-                          "description": "The person’s id, as their sign-in names them"
+                          "description": "The person’s id, which assign_role and unassign_role take"
                         }
                       },
                       "required": [

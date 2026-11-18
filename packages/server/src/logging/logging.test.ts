@@ -15,6 +15,8 @@ import {
   logAccessMode,
   logConfigFile,
   logContentStore,
+  logFirstAdmin,
+  logFirstSignInAwaited,
   logIncident,
   logLedger,
   logMcpError,
@@ -130,6 +132,16 @@ describe("the logs of a sign-in through the company's identity provider", () => 
       '"annotations":{"oidc_issuer":"https://login.example.com/acme","error":"invalid_client"}',
     );
     expect(lines[1]).toContain('"failure":"OAUTH_JWT_CLAIM_COMPARISON_FAILED"');
+  });
+
+  it('say until someone has signed in that the first person to do so becomes its admin, and once they did, by their id alone', async () => {
+    const lines = await linesLoggedBy(
+      Effect.andThen(logFirstSignInAwaited('default'), logFirstAdmin('default', 'a-person-id')),
+    );
+
+    expect(lines.map((line) => line.includes('"level":"INFO"'))).toEqual([true, true]);
+    expect(lines[0]).toContain('"annotations":{"org":"default"}');
+    expect(lines[1]).toContain('"annotations":{"org":"default","person":"a-person-id"}');
   });
 });
 

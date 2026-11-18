@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { personIdOf } from './signed-in-people.ts';
+import { personIdOf, personSignedInOf } from './signed-in-people.ts';
 
 const pinned: ReadonlyArray<readonly [string, string, string]> = [
   [
@@ -28,4 +28,19 @@ describe("the id of a person who signed in at the company's identity provider", 
       expect(personIdOf({ issuer, subject })).toBe(id);
     },
   );
+});
+
+describe('what a sign-in keeps of the person', () => {
+  it('is their id, and the name and the address their ID Token gave, where it gave them, with the time of the sign-in', () => {
+    const person = { issuer: 'https://login.example.com/acme', subject: '248289761001' };
+    const id = '83f8bacd8d76fa75e99f5c9f61599419c6647d9aebe50b453a89da169899d6e1';
+
+    expect([
+      personSignedInOf(person, { name: 'Ada Lovelace', email: 'ada@example.com' }, 1),
+      personSignedInOf(person, {}, 2),
+    ]).toEqual([
+      { person: id, name: 'Ada Lovelace', emailAddress: 'ada@example.com', updatedAt: 1 },
+      { person: id, updatedAt: 2 },
+    ]);
+  });
 });

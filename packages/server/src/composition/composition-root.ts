@@ -10,7 +10,7 @@ import { serverOptionsComposing, type ComposedServerOptions } from '../server-op
 import { serveWorkflows, type WorkflowParts } from '../workflows/workflows.ts';
 import { applicationLayer, withLiveAttemptsClosedFirst } from './application-layer.ts';
 import { functionWiringOf, type FunctionWiring, type ServedWiring } from './function-wiring.ts';
-import { ledgerLayerFor, signInStoreOpened } from './ledger-store.ts';
+import { ledgerLayerFor, signInOpened } from './ledger-store.ts';
 import { functionsServedBy } from './served-functions.ts';
 import { loggedModelAccess, type ModelAccessOf } from './served-reasoning.ts';
 
@@ -80,7 +80,7 @@ function meterOf(
 function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'] {
   const { modelAccessOf, wiring, settings, telemetry, shippedFiles, database, made, holding } = serving;
   return async (runtime, ownOrigin) => {
-    const { sessionRows } = await signInStoreOpened(runtime, settings);
+    const signIn = await signInOpened(runtime, settings);
     const { ledger, workflows, identityIssuer } = settings;
     const { stores, consent, connections, source, offering, clientMetadata, license, ...ownKeys } =
       await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
@@ -124,7 +124,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       runtime,
       license.withALastReport({ ...served, routes: [...served.routes, clientMetadata] }),
     );
-    return { ...withLiveAttemptsClosedFirst(runtime, closing), licenseNotice: license.notice, sessionRows };
+    return { ...withLiveAttemptsClosedFirst(runtime, closing), licenseNotice: license.notice, ...signIn };
   };
 }
 

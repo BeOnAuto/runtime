@@ -54,8 +54,13 @@ export interface SignedInPerson {
   readonly subject: string;
 }
 
+export interface StandardClaims {
+  readonly name?: string;
+  readonly email?: string;
+}
+
 export type FinishedSignIn =
-  | { readonly signedIn: SignedInPerson }
+  | { readonly signedIn: SignedInPerson; readonly claims: StandardClaims }
   | { readonly refusedByTheProvider: string }
   | { readonly failed: string };
 
@@ -85,6 +90,16 @@ const codeOfAnError = /^[\u0020\u0021\u0023-\u005B\u005D-\u007E]+$/u;
 function refusalCodeOf(error: unknown): string | undefined {
   const isRefusal = error instanceof AuthorizationResponseError || error instanceof ResponseBodyError;
   return isRefusal && codeOfAnError.test(error.error) ? error.error : undefined;
+}
+
+function textClaim(claims: object, name: keyof StandardClaims): StandardClaims {
+  const value: unknown = Reflect.get(claims, name);
+  return typeof value === 'string' ? { [name]: value } : {};
+}
+
+function standardClaimsIn(claims: unknown): StandardClaims {
+  const fields = new Object(claims);
+  return { ...textClaim(fields, 'name'), ...textClaim(fields, 'email') };
 }
 
 function codeOf(error: unknown): string {
@@ -170,8 +185,9 @@ export async function relyingPartyOf(
           callbackAt(redirectUri, callbackQuery),
           checksOf(pending),
         );
-        const { iss, sub } = decodeClaims(tokens.claims());
-        return { signedIn: { issuer: iss, subject: sub } };
+        const claims = tokens.claims();
+        const { iss, sub } = decodeClaims(claims);
+        return { signedIn: { issuer: iss, subject: sub }, claims: standardClaimsIn(claims) };
       } catch (error) {
         return finishedAfter(error);
       }

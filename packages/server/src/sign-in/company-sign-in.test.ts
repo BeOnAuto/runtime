@@ -1,4 +1,4 @@
-import { UnusableIdentityProviderError, type RelyingParty } from '@on.auto/openid-connect';
+import { personIdOf, UnusableIdentityProviderError, type RelyingParty } from '@on.auto/openid-connect';
 import { Function } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -25,6 +25,7 @@ interface SigningIn {
   readonly address: string;
   readonly at: (path: string, init?: Asking) => Promise<Response>;
   readonly sessionsKept: () => Promise<readonly unknown[]>;
+  readonly peopleKept: () => Promise<readonly unknown[]>;
 }
 
 function environmentOf(provider: FakeProvider, port: number): Readonly<Record<string, string>> {
@@ -38,8 +39,8 @@ function environmentOf(provider: FakeProvider, port: number): Readonly<Record<st
   };
 }
 
-async function signingIn(): Promise<SigningIn> {
-  const provider = await providerOverHttps('/tenant/v2.0');
+async function signingIn(options: Parameters<typeof providerOverHttps>[1] = {}): Promise<SigningIn> {
+  const provider = await providerOverHttps('/tenant/v2.0', options);
   const port = await aPortNothingListensOn();
   const ledger = temporaryLedger();
   const server = await startServer({ ...environmentOf(provider, port), LEDGER_FILE: ledger.fileName }, compositionRoot);
@@ -50,7 +51,8 @@ async function signingIn(): Promise<SigningIn> {
   const at = (path: string, init: Asking = {}) =>
     fetch(`http://127.0.0.1:${port}${path}`, { redirect: 'manual', ...init });
   const sessionsKept = () => rowsOfTheLedgerIn(ledger.fileName, 'auth_sessions');
-  return { provider, server, address: `http://localhost:${port}`, at, sessionsKept };
+  const peopleKept = () => rowsOfTheLedgerIn(ledger.fileName, 'auth_people');
+  return { provider, server, address: `http://localhost:${port}`, at, sessionsKept, peopleKept };
 }
 
 function cookiesOf(answer: Readonly<Response>): Readonly<Record<string, string>> {
@@ -153,6 +155,58 @@ describe('a runtime whose people sign in through the identity provider OIDC_ISSU
     await expect(
       startServer({ ...environmentOf(provider, port), LEDGER_FILE: ledger.fileName }, compositionRoot),
     ).rejects.toBeInstanceOf(UnusableIdentityProviderError);
+  });
+});
+
+async function callbackFor({ provider, at }: SigningIn, who: string): Promise<Response> {
+  const started = await at('/auth/oidc');
+  return at(`/auth/oidc/callback?${provider.signedIn(String(started.headers.get('location')), who)}`, {
+    headers: { cookie: cookieValueOf(started, '__Host-sign-in') },
+  });
+}
+
+describe('a runtime whose people sign in through the identity provider OIDC_ISSUER names, as it decides who each is to it', () => {
+  it('makes the first person to sign in the admin and the next a viewer before their sessions, keeps each by id, and gives one an admin removed no session', async () => {
+    const signingInHere = await signingIn({ idToken: { name: 'A colleague' } });
+    const { provider, at, peopleKept } = signingInHere;
+    const [ada, priya] = ['Ada', 'Priya'].map((who) => personIdOf({ issuer: provider.issuer, subject: who }));
+
+    const first = await callbackFor(signingInHere, 'Ada');
+    const asAda = { cookie: cookieValueOf(first, '__Host-session'), 'x-csrf': '1' };
+    const next = await callbackFor(signingInHere, 'Priya');
+    const again = await callbackFor(signingInHere, 'Ada');
+    const listed = await at('/v1/orgs/default/role-assignments', { headers: asAda });
+    const removed = await at(`/v1/orgs/default/role-assignments/${String(priya)}/viewer`, {
+      method: 'DELETE',
+      headers: asAda,
+    });
+    const refused = await callbackFor(signingInHere, 'Priya');
+
+    expect([first.status, next.status, again.status, removed.status, refused.status]).toEqual([
+      303, 303, 303, 200, 403,
+    ]);
+    const bothRecorded: unknown = expect.arrayContaining([
+      expect.objectContaining({
+        principal: { type: 'person', id: ada },
+        role: { type: 'built_in', id: 'admin' },
+        source: 'bootstrap',
+        assigned_by: `person:${String(ada)}`,
+      }),
+      expect.objectContaining({
+        principal: { type: 'person', id: priya },
+        role: { type: 'built_in', id: 'viewer' },
+        source: 'enrolment',
+        assigned_by: `person:${String(priya)}`,
+      }),
+    ]);
+    expect(await listed.json()).toMatchObject({ role_assignments: bothRecorded });
+    expect(await refused.json()).toMatchObject({ status: 403, reason: 'forbidden' });
+    expect(Object.keys(cookiesOf(refused))).toEqual(['__Host-sign-in']);
+    const bothKept: unknown = expect.arrayContaining([
+      expect.objectContaining({ person: ada, name: 'A colleague', email_address: null }),
+      expect.objectContaining({ person: priya, name: 'A colleague' }),
+    ]);
+    expect(await peopleKept()).toEqual(bothKept);
   });
 });
 

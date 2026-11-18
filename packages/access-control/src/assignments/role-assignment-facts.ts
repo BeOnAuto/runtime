@@ -54,6 +54,7 @@ export const AssignmentSourceSchema = Schema.Literals([
   'import',
   'command',
   'identity_service',
+  'bootstrap',
 ]);
 
 export type AssignmentSource = typeof AssignmentSourceSchema.Type;

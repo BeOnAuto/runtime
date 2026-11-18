@@ -3,21 +3,17 @@ import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { heldAssignmentsIn, type HeldAssignment, type HeldAssignments } from './held-assignments.ts';
 import {
   mostImportedInOneAppend,
   rolesImported,
   rolesProvisioned,
   type DeclaredMember,
 } from './imported-role-assignments.ts';
-import {
-  heldAssignmentsIn,
-  roleAssignmentDecider,
-  type HeldAssignment,
-  type HeldAssignments,
-  type ProvisioningSource,
-} from './role-assignment-decider.ts';
+import { roleAssignmentDecider, type ProvisioningSource } from './role-assignment-decider.ts';
 import { roleAssignmentsStreamOf, roleOfIdentityServiceKey } from './role-assignment-facts.ts';
 import { roleAssignmentRows } from './role-assignment-rows.ts';
+import { enrolledAtSignIn } from './role-assignments-at-sign-in.ts';
 
 const importedAs = { at: '2026-11-14T09:00:00.000Z', by: 'runtime' };
 
@@ -41,6 +37,7 @@ function importing() {
     imported: (members: readonly DeclaredMember[]) => run(rolesImported('acme', members, importedAs)),
     provisioned: (source: ProvisioningSource, assignments: readonly HeldAssignment[]) =>
       run(rolesProvisioned('acme', source, assignments, importedAs)),
+    enrolled: (person: string) => run(enrolledAtSignIn('acme', person, { ...importedAs, by: `person:${person}` })),
     sources: () =>
       Effect.runPromise(
         Effect.map(
@@ -139,5 +136,17 @@ describe('the roles provisioned from a source', () => {
 
     expect([given, again, appends.made]).toEqual([9, 1, 3]);
     expect((await sources()).slice(-2)).toEqual(['user_8 invitation', 'user_new identity_service']);
+  });
+});
+
+describe('the roles given at sign-in', () => {
+  it('are decided in the org named, and answer how each person was taken: the first an admin, the next a viewer, both members after', async () => {
+    const { enrolled, sources } = importing();
+
+    const first = [await enrolled('user_ada'), await enrolled('user_priya')];
+    const again = [await enrolled('user_ada'), await enrolled('user_priya')];
+
+    expect([...first, ...again]).toEqual(['bootstrap', 'enrolment', 'member', 'member']);
+    expect(await sources()).toEqual(['user_ada bootstrap', 'user_priya enrolment']);
   });
 });

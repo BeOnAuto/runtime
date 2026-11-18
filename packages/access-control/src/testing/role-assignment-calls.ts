@@ -11,7 +11,8 @@ import { memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.aut
 import { DateTime, Effect, Layer, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 
-import { roleAssignmentDecider, type HeldAssignment } from '../assignments/role-assignment-decider.ts';
+import type { HeldAssignment } from '../assignments/held-assignments.ts';
+import { roleAssignmentDecider } from '../assignments/role-assignment-decider.ts';
 import { roleAssignmentsStreamOf } from '../assignments/role-assignment-facts.ts';
 import { roleAssignmentRows } from '../assignments/role-assignment-rows.ts';
 import type { BuiltInRoleId } from '../roles/built-in-roles.ts';

@@ -17,12 +17,16 @@ import {
   pairsIn,
   priya,
   recordedNow,
+  taken,
   type Pair,
 } from '../testing/role-assignment-states.ts';
 import {
+  awaitsItsFirstAdmin,
+  enrolledAs,
   lastAssigner,
   roleAssignmentDecider,
   type DeprovisioningSource,
+  type PersonEnrolled,
   type ProvisioningSource,
   type RolesDeprovisioned,
   type RolesProvisioned,
@@ -37,6 +41,10 @@ function provisioned(source: ProvisioningSource, ...pairs: readonly Pair[]): Rol
 
 function deprovisioned(source: DeprovisioningSource, principal: AssignedPrincipal): RolesDeprovisioned {
   return { kind: 'deprovision', source, principal, scope: acme, ...acted };
+}
+
+function enrolled(principal: AssignedPrincipal): PersonEnrolled {
+  return { kind: 'enrol', principal, scope: acme, ...acted };
 }
 
 describe('the roles provisioned to people who hold none', () => {
@@ -163,6 +171,79 @@ describe('a removal asked through Auto and a change of role made at once', () =>
     expect(pairsIn(stream.state())).toEqual([
       ['user_ada', 'admin'],
       ['user_priya', 'editor'],
+    ]);
+  });
+});
+
+describe('a person who signs in, where nobody holds a role that gives roles', () => {
+  it('is given the role that gives roles, by bootstrap, in place of any role they hold there, and the org then holds its first admin', () => {
+    const bootstrapped = Result.getOrThrow(decide(enrolled(priya), held([priya, 'viewer'])));
+
+    expect(decide(enrolled(ada), held())).toEqual(Result.succeed([change('role_assigned', ada, 'admin', 'bootstrap')]));
+    expect(bootstrapped).toEqual([
+      change('role_unassigned', priya, 'viewer', 'bootstrap'),
+      change('role_assigned', priya, 'admin', 'bootstrap'),
+    ]);
+    expect(
+      [held(), afterward(held([priya, 'viewer']), bootstrapped)].map((state) => awaitsItsFirstAdmin(state)),
+    ).toEqual([true, false]);
+  });
+});
+
+describe('a person who signs in, where someone gives roles', () => {
+  it('is given the lowest role, by enrolment, the first time, and nothing at every later sign-in, whatever they hold', () => {
+    const state = held([ada, 'admin'], [dana, 'editor']);
+    const first = Result.getOrThrow(decide(enrolled(priya), state));
+
+    expect(first).toEqual([change('role_assigned', priya, 'viewer', 'enrolment')]);
+    expect(
+      [enrolled(priya), enrolled(dana), enrolled(ada)].map((command) => decide(command, afterward(state, first))),
+    ).toEqual([Result.succeed([]), Result.succeed([]), Result.succeed([])]);
+    expect([priya, dana].map((principal) => enrolledAs(state, principal))).toEqual(['enrolment', 'member']);
+  });
+
+  it('is given nothing once an admin removed them, by a removal or by taking away the role they held, until an admin gives them a role again', () => {
+    const state = held([ada, 'admin'], [priya, 'editor'], [dana, 'viewer']);
+    const removed = afterward(state, [
+      ...Result.getOrThrow(decide(deprovisioned('manual', priya), state)),
+      ...Result.getOrThrow(decide(taken(ada, dana, 'viewer'), state)),
+    ]);
+    const givenAgain = afterward(removed, Result.getOrThrow(decide(given(ada, priya, 'viewer'), removed)));
+
+    expect([enrolled(priya), enrolled(dana)].map((command) => decide(command, removed))).toEqual([
+      Result.succeed([]),
+      Result.succeed([]),
+    ]);
+    expect([enrolledAs(removed, priya), enrolledAs(removed, dana), enrolledAs(givenAgain, priya)]).toEqual([
+      'removed',
+      'removed',
+      'member',
+    ]);
+  });
+
+  it('is given the lowest role where the identity service, not an admin, ended the role they held', () => {
+    const state = held([ada, 'admin'], [priya, 'editor']);
+    const left = afterward(state, Result.getOrThrow(decide(deprovisioned('identity_service', priya), state)));
+
+    expect(decide(enrolled(priya), left)).toEqual(
+      Result.succeed([change('role_assigned', priya, 'viewer', 'enrolment')]),
+    );
+  });
+});
+
+describe('two people signing in at once where nobody holds a role that gives roles', () => {
+  it('give exactly one admin: the second meets the first in the stream, is decided again on what it wrote, and is given the lowest role', async () => {
+    const stream = aStreamAnotherWriterAppendsTo([]);
+    stream.landsFirst(Result.getOrThrow(decide(enrolled(ada), stream.state())));
+    const loop = decisionLoop(stream.load, stream.append, roleAssignmentDecider);
+
+    const priyas = await Effect.runPromise(loop('role-assignments/acme', enrolled(priya)));
+
+    expect(enrolledAs(priyas.loaded.state, priya)).toBe('enrolment');
+    expect(priyas.events.map(({ data }) => data.source)).toEqual(['enrolment']);
+    expect(pairsIn(stream.state())).toEqual([
+      ['user_ada', 'admin'],
+      ['user_priya', 'viewer'],
     ]);
   });
 });

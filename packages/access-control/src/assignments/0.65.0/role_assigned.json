@@ -1,0 +1,22 @@
+{
+  "type": "role_assigned",
+  "data": {
+    "principal": {
+      "type": "person",
+      "id": "user_7kLm2"
+    },
+    "role": {
+      "type": "built_in",
+      "id": "admin"
+    },
+    "scope": {
+      "type": "org",
+      "id": "acme"
+    },
+    "source": "bootstrap"
+  },
+  "context": {
+    "at": "2026-11-14T15:20:00.000Z",
+    "by": "person:user_7kLm2"
+  }
+}

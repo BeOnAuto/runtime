@@ -7,7 +7,7 @@ import {
 } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { rolesHeldBy, type HeldAssignments } from '../assignments/role-assignment-decider.ts';
+import { rolesHeldBy, type HeldAssignments } from '../assignments/held-assignments.ts';
 import {
   AssignmentSourceSchema,
   type AssignedPrincipal,
@@ -17,7 +17,7 @@ import {
 import { builtInRoleIds, type BuiltInRoleId } from '../roles/built-in-roles.ts';
 
 export const PersonField = ContextReference.check(Schema.isMinLength(1)).annotate({
-  description: 'The person’s id, as their sign-in names them and list_role_assignments answers it',
+  description: 'The person’s id, as list_role_assignments answers it',
 });
 
 export const RoleField = Schema.Literals(builtInRoleIds).annotate({
@@ -27,7 +27,7 @@ export const RoleField = Schema.Literals(builtInRoleIds).annotate({
 
 const PrincipalSchema = Schema.Struct({
   type: Schema.Literal('person').annotate({ description: 'person, a person signed in' }),
-  id: Schema.String.annotate({ description: 'The person’s id, as their sign-in names them' }),
+  id: Schema.String.annotate({ description: 'The person’s id, which assign_role and unassign_role take' }),
 }).annotate({ description: 'Who holds the role' });
 
 const RoleSchema = Schema.Struct({
@@ -52,7 +52,7 @@ export const ListedAssignmentSchema = Schema.Struct({
   scope: ScopeSchema,
   source: AssignmentSourceSchema.annotate({
     description:
-      'How it was given: manual, by a person; invitation; enrolment, by joining from a claimed domain; import, from the roles people held when roles were first kept; command, by the runtime’s command; or identity_service',
+      'How it was given: manual, by a person; invitation; enrolment, by joining without an invitation; import, from the roles people held when roles were first kept; command, by the runtime’s command; identity_service; or bootstrap, to the first person to sign in',
   }),
   assigned_at: Schema.String.annotate({ description: 'When it was given, in ISO 8601' }),
   assigned_by: Schema.String.annotate({ description: 'The id of the caller who gave it' }),

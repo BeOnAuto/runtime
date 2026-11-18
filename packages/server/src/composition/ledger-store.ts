@@ -1,5 +1,4 @@
 import type { ContentStore } from '@on.auto/content';
-import type { DeclaredFact } from '@on.auto/definitions';
 import type { AppendSignal, LedgerServices } from '@on.auto/ledger';
 import { authStoreOpened, type AuthStore } from '@on.auto/openid-connect';
 import { Effect, Layer } from 'effect';
@@ -7,11 +6,14 @@ import { Effect, Layer } from 'effect';
 import { ledgerConnectionIn, type LedgerDatabase } from '../database/ledger-database.ts';
 import { withItsContentFound } from '../database/ledger-of-content-not-found.ts';
 import { signInStoreRefusalExplained } from '../database/sign-in-store-of-a-newer-version.ts';
+import { enrollingIn, type Enrolling } from '../sign-in/admission.ts';
 import { contentStoreOf, type ContentStoreSettings } from './content-store.ts';
 import { keptByTheLedgerWith } from './kept-by-the-ledger.ts';
 
+type DeclaredFacts = Parameters<typeof keptByTheLedgerWith>[0];
+
 interface LedgerOpening {
-  readonly declared?: readonly DeclaredFact[];
+  readonly declared?: DeclaredFacts;
   readonly mostActiveOf?: (type: string) => number;
   readonly appends?: AppendSignal;
   readonly content?: ContentStore;
@@ -29,7 +31,7 @@ export function ledgerLayerOf(
 }
 
 interface LedgerOpeningOfTheServer {
-  readonly declared: readonly DeclaredFact[];
+  readonly declared: DeclaredFacts;
   readonly mostActiveOf?: (type: string) => number;
   readonly appends?: AppendSignal;
 }
@@ -52,12 +54,16 @@ export function ledgerLayerFor(
       );
 }
 
-export async function signInStoreOpened(
-  runtime: Parameters<typeof ledgerConnectionIn>[0],
+export interface SignInOpened extends AuthStore {
+  readonly enrolling: Enrolling;
+}
+
+export async function signInOpened(
+  runtime: Parameters<typeof ledgerConnectionIn>[0] & Parameters<typeof enrollingIn>[0],
   settings: Parameters<typeof signInStoreRefusalExplained>[1],
-): Promise<AuthStore> {
+): Promise<SignInOpened> {
   try {
-    return await authStoreOpened(await ledgerConnectionIn(runtime));
+    return { ...(await authStoreOpened(await ledgerConnectionIn(runtime))), enrolling: enrollingIn(runtime) };
   } catch (failure) {
     throw signInStoreRefusalExplained(failure, settings);
   }

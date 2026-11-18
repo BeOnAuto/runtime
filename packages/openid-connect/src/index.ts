@@ -1,4 +1,5 @@
-export { defaultOrg, personIdOf } from './people/signed-in-people.ts';
+export type { PeopleRows, PersonRow, PersonSignedIn } from './people/people-rows.ts';
+export { defaultOrg, personIdOf, personSignedInOf } from './people/signed-in-people.ts';
 export {
   clientAuthenticationMethods,
   metadataAddressOf,
@@ -20,6 +21,7 @@ export {
   type RelyingParty,
   type RelyingPartySettings,
   type SignedInPerson,
+  type StandardClaims,
   type StartedSignIn,
 } from './provider/relying-party.ts';
 export type { SessionRow, SessionRows, SessionUse } from './sessions/session-rows.ts';

@@ -19,6 +19,13 @@ export const builtInRoles: RoleTable = {
   viewer: { permits: ['org:read', 'playbook:read'], assignsRoles: false },
 };
 
+export interface RolesAtSignIn {
+  readonly bootstrap: BuiltInRoleId;
+  readonly enrolment: BuiltInRoleId;
+}
+
+export const builtInRolesAtSignIn: RolesAtSignIn = { bootstrap: 'admin', enrolment: 'viewer' };
+
 export function mayAssign(table: RoleTable, held: BuiltInRoleId, asked: BuiltInRoleId): boolean {
   const holder = table[held];
   return holder.assignsRoles && table[asked].permits.every((permission) => holder.permits.includes(permission));

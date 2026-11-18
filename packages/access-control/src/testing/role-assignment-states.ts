@@ -2,14 +2,8 @@ import { VersionConflict, type DecidedPlace } from '@on.auto/ledger';
 import { recordingOf, type PrincipalReference } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import {
-  heldAssignmentsIn,
-  roleAssignmentDecider,
-  type HeldAssignment,
-  type HeldAssignments,
-  type RoleGiven,
-  type RoleTaken,
-} from '../assignments/role-assignment-decider.ts';
+import { heldAssignmentsIn, type HeldAssignment, type HeldAssignments } from '../assignments/held-assignments.ts';
+import { roleAssignmentDecider, type RoleGiven, type RoleTaken } from '../assignments/role-assignment-decider.ts';
 import {
   RoleAssignmentEventSchema,
   type AssignedPrincipal,

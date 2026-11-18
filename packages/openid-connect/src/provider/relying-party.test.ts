@@ -13,7 +13,7 @@ const redirectUri = 'https://auto.example.com/auth/oidc/callback';
 
 const subject = 'AItOawmwtWwcT0k51BayewNvutrJUqsvl6qs7A4';
 
-const signedIn: FinishedSignIn = { signedIn: { issuer, subject } };
+const signedIn: FinishedSignIn = { signedIn: { issuer, subject }, claims: {} };
 
 function settingsOf(provider: FakeProvider, changes: Partial<RelyingPartySettings> = {}): RelyingPartySettings {
   return {
@@ -130,6 +130,18 @@ describe('the end of a sign-in, as the ID Token is checked', () => {
       await signedInThrough(provider, {}, withoutIss),
     ]).toEqual([{ failed: 'OAUTH_INVALID_RESPONSE' }, { failed: 'OAUTH_INVALID_RESPONSE' }]);
     expect(await signedInThrough(silent, {}, withoutIss)).toEqual(signedIn);
+  });
+});
+
+describe('the end of a sign-in, as the person is named', () => {
+  it('answers the name and the email of the ID Token where each is text, and no other claim of it', async () => {
+    const named = providerWith({ idToken: { name: 'Ada Lovelace', email: 'ada@example.com', groups: ['admins'] } });
+    const numbered = providerWith({ idToken: { name: 1815, email: ['ada@example.com'] } });
+
+    expect([await signedInThrough(named), await signedInThrough(numbered)]).toEqual([
+      { ...signedIn, claims: { name: 'Ada Lovelace', email: 'ada@example.com' } },
+      signedIn,
+    ]);
   });
 });
 

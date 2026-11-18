@@ -48,6 +48,14 @@ const baseline: readonly RecordedRoleAssignmentEvent[] = [
   },
 ];
 
+const firstAdmin: readonly RecordedRoleAssignmentEvent[] = [
+  {
+    type: 'role_assigned',
+    data: { principal: priya, role: { type: 'built_in', id: 'admin' }, scope: acme, source: 'bootstrap' },
+    context: { at: acted.at, by: `person:${priya.id}` },
+  },
+];
+
 const decoded = Schema.decodeUnknownResult(RoleAssignmentEventSchema);
 
 type Changed = Readonly<Record<string, unknown>>;
@@ -69,6 +77,7 @@ const read: readonly Changed[] = [
   { source: 'enrolment' },
   { source: 'command' },
   { source: 'identity_service' },
+  { source: 'bootstrap' },
 ];
 
 const refused: readonly Changed[] = [
@@ -237,7 +246,7 @@ describe('the facts of role assignments', () => {
   recordedFactsBehaviour({
     schema: RoleAssignmentEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.57.0': baseline },
+    releases: { '0.57.0': baseline, '0.65.0': firstAdmin },
   });
 });
 
