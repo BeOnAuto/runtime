@@ -703,6 +703,9 @@ importers:
       '@on.auto/phrasing':
         specifier: workspace:*
         version: link:../phrasing
+      '@on.auto/providers':
+        specifier: workspace:*
+        version: link:../providers
       '@on.auto/shipped-files':
         specifier: workspace:*
         version: link:../shipped-files

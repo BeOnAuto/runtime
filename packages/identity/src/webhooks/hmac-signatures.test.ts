@@ -4,7 +4,7 @@ import { createHmac } from 'node:crypto';
 import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { checkedProof, type DeclaredProof, type PresentedProof, type ProofCheck } from '../index.ts';
+import { checkedProof, hmacOf, type DeclaredProof, type PresentedProof, type ProofCheck } from '../index.ts';
 
 const utf8 = new TextEncoder();
 
@@ -208,6 +208,28 @@ describe('the hash of an hmac', () => {
     const sha256 = ofRfc4231('sha256', 'hex');
 
     await expect(checkOf(declaredAs(sha256, { hash: 'sha512' }))).resolves.toBe('unsigned');
+  });
+});
+
+describe('the hmac a handshake is answered with', () => {
+  it('is made as RFC 4231 computes it, in the declared hash and encoding without the prefix, and nothing without them', () => {
+    const vectors = (['sha256', 'sha384', 'sha512'] as const).flatMap((hash) => [
+      ofRfc4231(hash, 'hex'),
+      ofRfc4231(hash, 'base64'),
+    ]);
+    const challenge = 'what do ya want for nothing?';
+    const without: readonly DeclaredProof[] = [
+      { scheme: 'hmac', encoding: 'hex' },
+      { scheme: 'hmac', hash: 'sha256' },
+    ];
+
+    expect(
+      vectors.map(({ declared, secret }) => hmacOf({ ...declared, prefix: 'v0=' }, Redacted.make(secret), challenge)),
+    ).toEqual(vectors.map(({ presented }) => presented.signature));
+    expect(without.map((declared) => hmacOf(declared, Redacted.make('Jefe'), challenge))).toEqual([
+      undefined,
+      undefined,
+    ]);
   });
 });
 

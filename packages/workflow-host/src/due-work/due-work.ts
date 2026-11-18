@@ -2,13 +2,7 @@ import { Effect, Semaphore } from 'effect';
 
 import { background } from '../calls/background.ts';
 import type { Trouble } from '../calls/host-executor.ts';
-import {
-  earliestOf,
-  earliestOfReads,
-  failedNextDueRead,
-  nextDueRead,
-  type NextDueRead,
-} from '../loop/failed-rounds.ts';
+import { earliestOf, failedNextDueRead, laterThan, nextDueRead, type NextDueRead } from '../loop/failed-rounds.ts';
 import type { HostContext } from '../loop/forked-fibers.ts';
 import { rowWaits, type RowWaits } from './row-waits.ts';
 
@@ -26,8 +20,12 @@ export interface DueWork {
 
 export interface DuePerformer {
   readonly performed: (now: number) => Effect.Effect<void>;
-  readonly wakeAt: (now: number) => Effect.Effect<NextDueRead>;
+  readonly wakeAt: (now: number) => Effect.Effect<readonly NextDueRead[]>;
   readonly stop: () => Effect.Effect<void>;
+}
+
+interface WorkPerformer extends Omit<DuePerformer, 'wakeAt'> {
+  readonly wakeAt: (now: number) => Effect.Effect<NextDueRead>;
 }
 
 export interface DueParts {
@@ -69,10 +67,6 @@ function itemPerformer(work: DueWork, waits: RowWaits, { trouble, now }: DuePart
 
 function awaitedAtMost(handedOut: Effect.Effect<void>, { sleep }: DueParts): Effect.Effect<void> {
   return Effect.interruptible(Effect.raceFirst(handedOut, sleep(dueAwaitedMs)));
-}
-
-function laterThan(now: number, next: number | null): number | null {
-  return next !== null && next > now ? next : null;
 }
 
 function waitedUntil(waits: RowWaits, now: number): number | null {
@@ -125,7 +119,7 @@ function nextWakeOf(work: DueWork, waits: RowWaits, { trouble }: DueParts, now: 
     Effect.catchCause((cause) =>
       Effect.andThen(
         trouble(
-          `The next due time of ${work.name} could not be read; the loop reads it again within a minute, twice as long after each failure in a row, at most an hour`,
+          `The next due time of ${work.name} could not be read; the loop reads it again at its next wake, at the latest a minute later, twice as long after each wake in a row that failed since the host started, at most an hour`,
           cause,
         ),
         Effect.sync(() => failedNextDueRead(waitedUntil(waits, now))),
@@ -134,7 +128,31 @@ function nextWakeOf(work: DueWork, waits: RowWaits, { trouble }: DueParts, now: 
   );
 }
 
-function workPerformer(work: DueWork, parts: DueParts): DuePerformer {
+interface LastRead {
+  readonly failed: () => boolean;
+  readonly noted: <A>(read: Effect.Effect<A, unknown>) => Effect.Effect<A, unknown>;
+  readonly carriedInto: (nextDue: Effect.Effect<NextDueRead>) => Effect.Effect<NextDueRead>;
+}
+
+function lastReadOf(): LastRead {
+  const last = { failed: false };
+  const noted = (failed: boolean) =>
+    Effect.sync(() => {
+      last.failed = failed;
+    });
+  return {
+    failed: () => last.failed,
+    noted: (read) =>
+      read.pipe(
+        Effect.tapCause(() => noted(true)),
+        Effect.tap(() => noted(false)),
+      ),
+    carriedInto: (nextDue) =>
+      last.failed ? Effect.map(nextDue, ({ nextDueAt }) => failedNextDueRead(nextDueAt)) : nextDue,
+  };
+}
+
+function workPerformer(work: DueWork, parts: DueParts): WorkPerformer {
   const waits = rowWaits();
   const performedItem = itemPerformer(work, waits, parts);
   const finished = Effect.sync(() => {
@@ -159,20 +177,25 @@ function workPerformer(work: DueWork, parts: DueParts): DuePerformer {
   };
   const readOf = (now: number, lane: Lane, callsOut: boolean) =>
     work.due(now, 2 * lane.mostInFlight + 1 + waits.heldAt(now) + outbound.size() + local.size(), callsOut);
+  const itemsRead = lastReadOf();
   return {
     performed: (now) =>
-      Effect.zipWith(readOf(now, outbound, true), readOf(now, local, false), (outward, inward) =>
-        handedOut([...outward, ...inward], now),
-      ).pipe(
-        Effect.flatMap((keys) => awaitedAtMost(local.awaited(keys), parts)),
-        Effect.catchCause((cause) =>
-          parts.trouble(`The due rows of ${work.name} could not be read; the loop tries again`, cause),
+      itemsRead
+        .noted(
+          Effect.zipWith(readOf(now, outbound, true), readOf(now, local, false), (outward, inward) =>
+            handedOut([...outward, ...inward], now),
+          ),
+        )
+        .pipe(
+          Effect.flatMap((keys) => awaitedAtMost(local.awaited(keys), parts)),
+          Effect.catchCause((cause) =>
+            parts.trouble(`The due rows of ${work.name} could not be read; the loop tries again`, cause),
+          ),
         ),
-      ),
     wakeAt: (now) =>
-      lanes.some((lane) => lane.leftWithRoom())
+      !itemsRead.failed() && lanes.some((lane) => lane.leftWithRoom())
         ? Effect.succeed(nextDueRead(now))
-        : nextWakeOf(work, waits, parts, now),
+        : itemsRead.carriedInto(nextWakeOf(work, waits, parts, now)),
     stop: () => Effect.all([outbound.stop(), local.stop()], { discard: true }),
   };
 }
@@ -182,11 +205,7 @@ export function duePerformer(works: readonly DueWork[], parts: DueParts): DuePer
   return {
     performed: (now) =>
       Effect.forEach(performers, ({ performed }) => performed(now), { concurrency: 'unbounded', discard: true }),
-    wakeAt: (now) =>
-      Effect.map(
-        Effect.forEach(performers, ({ wakeAt }) => wakeAt(now)),
-        earliestOfReads,
-      ),
+    wakeAt: (now) => Effect.forEach(performers, ({ wakeAt }) => wakeAt(now)),
     stop: () => Effect.forEach(performers, ({ stop }) => stop(), { discard: true }),
   };
 }

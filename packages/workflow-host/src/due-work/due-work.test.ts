@@ -283,7 +283,7 @@ describe('due rows that cannot be read', () => {
       1,
       new Set([
         'The due rows of the fake rows could not be read; the loop tries again',
-        'The next due time of the fake rows could not be read; the loop reads it again within a minute, twice as long after each failure in a row, at most an hour',
+        'The next due time of the fake rows could not be read; the loop reads it again at its next wake, at the latest a minute later, twice as long after each wake in a row that failed since the host started, at most an hour',
       ]),
     ]);
   });
@@ -315,6 +315,37 @@ describe('due rows that cannot be read', () => {
     const wakeUp = wakeUpWith(nextDueFailingFirst(rows.work('host'), 1), steppedClock(now));
 
     await expect(wakeUp(now)).resolves.toEqual({ nextDueAt: now + rowWaitBounds.firstMs });
+  });
+
+  it('due already, which could not be read though their next due time was, are answered a retry a minute after the read, so a host woken only at the times it answers performs them then', async () => {
+    const now = Date.now();
+    const clock = steppedClock(now);
+    const rows = rowsDueBy(1, now - 1000, { callsOut: false });
+    rows.failReads(1);
+    const wakeUp = wakeUpWith(rows.work('host'), clock);
+
+    const failed = await wakeUp(now);
+    clock.step(60_000);
+    const read = await wakeUp(now + 60_000);
+
+    expect([failed, read]).toEqual([now + 60_000, null].map((nextDueAt) => ({ nextDueAt })));
+    expect(rows.performed()).toEqual([{ key: 'row-0', at: now + 60_000, by: 'host' }]);
+  });
+
+  it('that a lane had room for at the wake before are answered a retry, not at once, so the host is not woken again and again while the read fails', async () => {
+    const now = Date.now();
+    const clock = steppedClock(now);
+    const rows = rowsDueBy(dueInOneWakeUp + 44, now - 1000, { callsOut: false });
+    const wakeUp = wakeUpWith(rows.work('host'), clock);
+
+    const behind = await wakeUp(now);
+    rows.failReads(1);
+    const failed = await wakeUp(now);
+    clock.step(60_000);
+    const read = await wakeUp(now + 60_000);
+
+    expect([behind, failed, read]).toEqual([now, now + 60_000, null].map((nextDueAt) => ({ nextDueAt })));
+    expect(rows.performed()).toHaveLength(dueInOneWakeUp + 44);
   });
 });
 

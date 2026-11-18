@@ -42,6 +42,8 @@ export type {
   WebhookTaken,
 } from './webhooks/delivery-ports.ts';
 export type { DeliveryOutcome } from './webhooks/delivery-problems.ts';
+export { deliveredEventRoutes } from './webhooks/delivered-events.ts';
+export type { ArrivedEvent, EventAddress, EventOutcome, EventServing, HeardEvent } from './webhooks/event-ports.ts';
 export { apiCatalogRoutes } from './discovery/api-catalog.ts';
 export { clientMetadataRoutes, type ClientMetadataDocument } from './discovery/client-metadata.ts';
 export {

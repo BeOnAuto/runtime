@@ -112,6 +112,13 @@ function macOf(hash: Hash, secret: Redacted.Redacted, signed: readonly Readonly<
   return mac.digest();
 }
 
+export function hmacOf(declared: DeclaredProof, secret: Redacted.Redacted, text: string): string | undefined {
+  const { hash, encoding } = declared;
+  return hash === undefined || encoding === undefined
+    ? undefined
+    : macOf(hash, secret, [utf8.encode(text)]).toString(encoding);
+}
+
 export function hmacCheckOf({ declared, presented, secrets, body, nowMs }: ProofCase): ProofCheck {
   const hmac = declaredHmacOf(declared);
   const proof = hmac === undefined ? 'unsigned' : presentedHmacOf(hmac, presented, body);

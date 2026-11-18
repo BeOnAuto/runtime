@@ -227,7 +227,7 @@ describe('the follower of the playbooks, when a read fails', () => {
       'anchored',
       'start',
       'sweep',
-      'The next due time of the schedules could not be read; the follower reads it again within a minute, twice as long after each failure in a row, at most an hour',
+      'The next due time of the schedules could not be read; the follower reads it again after its next round that succeeds, waking at the latest a minute later, twice as long after each wake in a row whose reads failed since it started, at most an hour',
       'sweep',
     ]);
   });

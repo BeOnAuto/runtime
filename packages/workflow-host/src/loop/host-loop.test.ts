@@ -25,16 +25,21 @@ interface Looping {
   readonly sweeps: () => number;
 }
 
+interface TimerReadsFailing {
+  readonly due: number;
+  readonly next: number;
+}
+
 interface LoopingOptions {
   readonly sweepEveryMs: number;
   readonly fire?: (timer: DueTimer) => Effect.Effect<void, unknown>;
   readonly sweep?: () => Effect.Effect<void>;
-  readonly readsFailing?: number;
+  readonly readsFailing?: TimerReadsFailing;
 }
 
-function failingReadsOf(timers: TimerTable, readsFailing: number): TimerTable {
-  const dueFailing = failingFirst(readsFailing);
-  const nextDueFailing = failingFirst(readsFailing);
+function failingReadsOf(timers: TimerTable, { due, next }: TimerReadsFailing): TimerTable {
+  const dueFailing = failingFirst(due);
+  const nextDueFailing = failingFirst(next);
   return {
     ...timers,
     due: (now, limit) => dueFailing(timers.due(now, limit)),
@@ -62,7 +67,7 @@ const noEngine: WorkflowEngine = {
 };
 
 async function looping(options: LoopingOptions): Promise<Looping> {
-  const { sweepEveryMs, fire = firedAtOnce, sweep = sweptAtOnce, readsFailing = 0 } = options;
+  const { sweepEveryMs, fire = firedAtOnce, sweep = sweptAtOnce, readsFailing = { due: 0, next: 0 } } = options;
   const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
   const fired: string[] = [];
   const troubles: string[] = [];
@@ -132,16 +137,19 @@ const at = Date.parse('2026-11-18T09:00:00.000Z');
 
 const fiveMinutes = 5 * 60_000;
 
+type Read = 'timers' | 'rows' | 'due';
+
 interface FailingReads {
   readonly timers: <A>(read: Effect.Effect<A>) => Effect.Effect<A>;
   readonly rows: <A>(read: Effect.Effect<A>) => Effect.Effect<A>;
-  readonly failNext: (times: Readonly<Partial<Record<'timers' | 'rows', number>>>) => void;
+  readonly due: <A>(read: Effect.Effect<A>) => Effect.Effect<A>;
+  readonly failNext: (times: Readonly<Partial<Record<Read, number>>>) => void;
 }
 
-function failingReads(times: Readonly<Record<'timers' | 'rows', number>>): FailingReads {
-  const left = { ...times };
+function failingReads(times: Readonly<Partial<Record<Read, number>>>): FailingReads {
+  const left = { timers: 0, rows: 0, due: 0, ...times };
   const failing =
-    (which: 'timers' | 'rows') =>
+    (which: Read) =>
     <A>(read: Effect.Effect<A>): Effect.Effect<A> =>
       Effect.suspend(() => {
         left[which] -= 1;
@@ -150,6 +158,7 @@ function failingReads(times: Readonly<Record<'timers' | 'rows', number>>): Faili
   return {
     timers: failing('timers'),
     rows: failing('rows'),
+    due: failing('due'),
     failNext: (next) => {
       Object.assign(left, next);
     },
@@ -163,22 +172,47 @@ interface Answering {
   readonly troubles: () => readonly string[];
 }
 
-async function answering(reads: FailingReads, fireTakesMs = 0): Promise<Answering> {
+interface AnsweringOptions {
+  readonly fireTakesMs?: number;
+  readonly firesFailing?: number;
+  readonly postponesFailing?: number;
+  readonly rowsDueAt?: number;
+}
+
+async function answering(
+  reads: FailingReads,
+  { fireTakesMs = 0, firesFailing = 0, postponesFailing = 0, rowsDueAt }: AnsweringOptions = {},
+): Promise<Answering> {
   const timers = sqlTimers(await openedOn({ store: 'sqlite', file: aSQLiteFile() }), Function.constVoid);
+  const fireFailing = failingFirst(firesFailing);
+  const postponeFailing = failingFirst(postponesFailing);
   const time = { now: at };
   const fired: string[] = [];
   const troubles: string[] = [];
   const work = hostWakeUp(
     {
       clock: { now: () => time.now, sleep: () => Effect.void },
-      timers: { ...timers, nextDueAt: () => reads.timers(timers.nextDueAt()) },
-      dueWork: [{ name: 'the rows', due: () => Effect.succeed([]), nextDueAt: () => reads.rows(Effect.succeed(null)) }],
+      timers: {
+        ...timers,
+        due: (now, limit) => reads.due(timers.due(now, limit)),
+        nextDueAt: () => reads.timers(timers.nextDueAt()),
+        postponed: (timer, dueAt) => postponeFailing(timers.postponed(timer, dueAt)),
+      },
+      dueWork: [
+        {
+          name: 'the rows',
+          due: () => Effect.succeed([]),
+          nextDueAt: () => reads.rows(Effect.succeed(rowsDueAt ?? null)),
+        },
+      ],
       engine: noEngine,
       fire: (timer) =>
-        Effect.sync(() => {
-          fired.push(timer.timerId);
-          time.now += fireTakesMs;
-        }),
+        fireFailing(
+          Effect.sync(() => {
+            fired.push(timer.timerId);
+            time.now += fireTakesMs;
+          }),
+        ),
       resume: () => Effect.succeed(0),
       trouble: (what) => Effect.sync(() => troubles.push(what)),
       sweepEveryMs: 1000,
@@ -262,7 +296,7 @@ describe('the loop of the host, sweeping and stopping', () => {
   });
 
   it('reports a read of its timers that failed, and fires them once the reads come back', async () => {
-    const loop = await looping({ sweepEveryMs: 20, readsFailing: 1 });
+    const loop = await looping({ sweepEveryMs: 20, readsFailing: { due: 1, next: 1 } });
 
     await loop.arm('1', 0);
     const fired = await until(loop.fired, (timers) => timers.length > 0);
@@ -271,7 +305,7 @@ describe('the loop of the host, sweeping and stopping', () => {
       ['1'],
       new Set([
         'The timers of the runs could not be read; the loop tries again',
-        'The next due time of the timers could not be read; the loop reads it again within a minute, twice as long after each failure in a row, at most an hour',
+        'The next due time of the timers could not be read; the loop reads it again at its next wake, at the latest a minute later, twice as long after each wake in a row that failed since the host started, at most an hour',
       ]),
     ]);
   });
@@ -375,12 +409,87 @@ describe('a wake-up of the host whose read of when it is next due failed', () =>
   });
 
   it('answers the retry from the moment the read failed, so a wake that took longer than the retry never answers a time already past', async () => {
-    const host = await answering(failingReads({ timers: 1, rows: 0 }), 90_000);
+    const host = await answering(failingReads({ timers: 1, rows: 0 }), { fireTakesMs: 90_000 });
     await host.arm('1', at);
 
     const answer = await host.wokenAt(at);
 
     expect(answer).toEqual({ nextDueAt: at + 90_000 + 60_000 });
+  });
+});
+
+describe('a wake-up of the host whose round failed', () => {
+  it('answers a retry a minute after the round when the timers due could not be read, never the time of the timer it could not fire, and fires that timer then', async () => {
+    const host = await answering(failingReads({ due: 1 }));
+    await host.arm('1', at);
+
+    const failed = await host.wokenAt(at);
+    const retried = await host.wokenAt(Number(failed.nextDueAt));
+
+    expect([failed, retried]).toEqual([at + 60_000, null].map((nextDueAt) => ({ nextDueAt })));
+    expect([host.fired(), host.troubles().length]).toEqual([['1'], 1]);
+  });
+
+  it('answers a retry a minute after the round when a timer that could not fire could not be put off either, and fires that timer then', async () => {
+    const host = await answering(failingReads({}), { firesFailing: 1, postponesFailing: 1 });
+    await host.arm('1', at);
+
+    const failed = await host.wokenAt(at);
+    const retried = await host.wokenAt(Number(failed.nextDueAt));
+
+    expect([failed, retried]).toEqual([at + 60_000, null].map((nextDueAt) => ({ nextDueAt })));
+    expect([host.fired(), host.troubles().length]).toEqual([['1'], 1]);
+  });
+
+  it('answers a timer still to come before the retry at its time', async () => {
+    const host = await answering(failingReads({ due: 1 }));
+    await host.arm('1', at + 30_000);
+
+    const failed = await host.wokenAt(at);
+    const due = await host.wokenAt(Number(failed.nextDueAt));
+
+    expect([failed, due]).toEqual([at + 30_000, null].map((nextDueAt) => ({ nextDueAt })));
+    expect(host.fired()).toEqual(['1']);
+  });
+
+  it('answers a due row still to come before the retry at its time, though a timer it could not fire is due', async () => {
+    const host = await answering(failingReads({ due: 1 }), { rowsDueAt: at + 20_000 });
+    await host.arm('1', at);
+
+    const failed = await host.wokenAt(at);
+    const due = await host.wokenAt(Number(failed.nextDueAt));
+
+    expect([failed, due]).toEqual([at + 20_000, null].map((nextDueAt) => ({ nextDueAt })));
+    expect(host.fired()).toEqual(['1']);
+  });
+
+  it('counts the round with the reads of the same wake, once a wake, and starts the count again after a wake whose round and reads succeed', async () => {
+    const reads = failingReads({ due: 2, timers: 1 });
+    const host = await answering(reads);
+    await host.arm('1', at);
+
+    const first = await host.wokenAt(at);
+    const second = await host.wokenAt(at + 60_000);
+    const through = await host.wokenAt(at + 180_000);
+    await host.arm('2', at + 181_000);
+    reads.failNext({ due: 1 });
+    const failedAgain = await host.wokenAt(at + 181_000);
+
+    expect([first, second, through, failedAgain]).toEqual(
+      [at + 60_000, at + 180_000, null, at + 241_000].map((nextDueAt) => ({ nextDueAt })),
+    );
+    expect([host.fired(), host.troubles().length]).toEqual([['1'], 4]);
+  });
+
+  it('puts the loop of the server to sleep until the retry, not woken again at once while a timer is due', async () => {
+    const loop = await looping({ sweepEveryMs: 3_600_000, readsFailing: { due: Number.POSITIVE_INFINITY, next: 0 } });
+    await until(loop.clock.asked, (asked) => asked.length > 0);
+
+    await loop.arm('1', 0);
+    const asked = await until(loop.clock.asked, (sleeps) => sleeps.length > 1);
+
+    expect(asked.slice(0, 2).map((milliseconds) => Math.round(milliseconds / 60_000))).toEqual([1, 2]);
+    expect(loop.fired()).toEqual([]);
   });
 });
 

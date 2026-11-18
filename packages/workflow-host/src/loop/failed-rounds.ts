@@ -74,6 +74,10 @@ export function earliestOf(one: number | null, other: number | null): number | n
   return one === null ? other : Math.min(one, other ?? one);
 }
 
+export function laterThan(now: number, at: number | null): number | null {
+  return at !== null && at > now ? at : null;
+}
+
 export interface NextDueRead {
   readonly nextDueAt: number | null;
   readonly failed: boolean;
@@ -94,16 +98,30 @@ export function earliestOfReads(reads: readonly NextDueRead[]): NextDueRead {
   };
 }
 
-interface ReadsInARow {
-  readonly failedReads: FailedRounds;
+interface WakesInARow {
+  readonly failedWakes: FailedRounds;
   readonly clock: Pick<HostClock, 'now'>;
 }
 
-export function nextDueAfter(
-  { nextDueAt, failed }: NextDueRead,
-  { failedReads, clock }: ReadsInARow,
+function retriedBeside(
+  { failedWakes, clock }: WakesInARow,
+  knownAt: (now: number) => number | null,
 ): Effect.Effect<number | null> {
-  return failed
-    ? Effect.map(failedReads.failed(), (retryAfterMs) => earliestOf(nextDueAt, clock.now() + retryAfterMs))
-    : Effect.as(failedReads.succeeded(), nextDueAt);
+  return Effect.map(failedWakes.failed(), (retryAfterMs) => {
+    const now = clock.now();
+    return earliestOf(knownAt(now), now + retryAfterMs);
+  });
+}
+
+export function nextDueAfter({ nextDueAt, failed }: NextDueRead, inARow: WakesInARow): Effect.Effect<number | null> {
+  return failed ? retriedBeside(inARow, () => nextDueAt) : Effect.as(inARow.failedWakes.succeeded(), nextDueAt);
+}
+
+export function nextDueAfterAFailedRound(
+  reads: readonly NextDueRead[],
+  inARow: WakesInARow,
+): Effect.Effect<number | null> {
+  return retriedBeside(inARow, (now) =>
+    reads.reduce<number | null>((earliest, { nextDueAt }) => earliestOf(earliest, laterThan(now, nextDueAt)), null),
+  );
 }

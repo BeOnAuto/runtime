@@ -29,6 +29,8 @@ export {
   type ArrivalReading,
   type PresentedProof,
 } from './events/arrival-readings.ts';
+export type { Destination as EventDestination } from './events/destination-fields.ts';
+export { provesTheBodyAndATime } from './events/event-proofs.ts';
 export {
   asNamedIn,
   conversationsOf,

@@ -42,6 +42,7 @@ export {
   type WebhookRefusal,
 } from './webhooks/standard-webhooks.ts';
 export { checkedProof } from './webhooks/declared-proofs.ts';
+export { hmacOf } from './webhooks/hmac-signatures.ts';
 export type { DeclaredProof, PresentedProof, ProofCheck, Received } from './webhooks/proof-parts.ts';
 export {
   isKeyHolder,
