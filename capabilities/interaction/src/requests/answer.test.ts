@@ -80,20 +80,33 @@ describe('an answer sent as JSON text', () => {
     );
   });
 
-  it('is refused as it was given when the text is not JSON, holds a value the schema does not take, or holds one past the bounds of an answer', async () => {
+  it('is refused as it was given when the text holds a value past the bounds of an answer', async () => {
     const { playbook } = await askedApproval();
     const answering = (answer: string) => playbook.call(answerInteraction, { run_id: runId, answer });
     const refusedAsGiven = { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/answer' }] };
 
     expect([
-      await answering('approve'),
-      await answering('{"choice":"maybe"}'),
       await answering(JSON.stringify({ choice: 'approve', extra: nestedLevels(interactionBounds.answerDepth) })),
       await answering(JSON.stringify({ choice: 'approve', extra: 'x'.repeat(interactionBounds.answerBytes) })),
-    ]).toMatchObject([refusedAsGiven, refusedAsGiven, refusedAsGiven, refusedAsGiven]);
+    ]).toMatchObject([refusedAsGiven, refusedAsGiven]);
     expect(await playbook.call(listInteractions, {})).toMatchObject({
       output: { interactions: [{ run_id: runId }] },
     });
+  });
+
+  it('answers as before once its run has ended when it holds the answer the run took, and is a conflict when it holds another or is not JSON', async () => {
+    const { playbook } = await askedApproval();
+    const first = await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'approve' } });
+    await playbook.performDue(Date.now());
+    const answering = (answer: string) => playbook.call(answerInteraction, { run_id: runId, answer });
+    const conflict = { status: 'rejected', reason: 'conflict' };
+
+    expect(await playbook.runOf(runId)).toMatchObject({ output: { status: 'succeeded' } });
+    expect([
+      await answering(JSON.stringify({ choice: 'approve' })),
+      await answering(JSON.stringify({ choice: 'reject' })),
+      await answering('approve'),
+    ]).toMatchObject([first, conflict, conflict]);
   });
 });
 
@@ -134,20 +147,6 @@ describe('the claim an answer makes', () => {
       { status: 'rejected', reason: 'invalid_input' },
     ]);
     expect(taken).toMatchObject({ status: 'succeeded', output: { answer: 'yes' } });
-  });
-});
-
-describe('an answer whose schema takes text', () => {
-  it('keeps text that holds JSON as the text it was given', async () => {
-    const playbook = await asked();
-
-    const answered = await playbook.call(answerInteraction, { run_id: runId, answer: '{"choice":"approve"}' });
-    await playbook.performDue(Date.now());
-
-    expect(answered).toMatchObject({ status: 'succeeded', output: { answer: '{"choice":"approve"}' } });
-    expect(await playbook.runOf(runId)).toMatchObject({
-      output: { status: 'succeeded', output: '{"choice":"approve"}' },
-    });
   });
 });
 

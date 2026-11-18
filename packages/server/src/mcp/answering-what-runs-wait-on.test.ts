@@ -133,6 +133,27 @@ function draftFor(session: McpSession, month: string): Promise<string> {
     .then(({ structuredContent }) => runIdIn(structuredContent));
 }
 
+function deliveredRequestFor(session: McpSession, month: string): Promise<OpenRequest | undefined> {
+  return until(async () => {
+    const delivered = (await openRequestsIn(session)).find(
+      ({ message, standing }) => standing === 'delivered' && message.includes(month),
+    );
+    expect(delivered).toBeDefined();
+    return delivered;
+  });
+}
+
+async function approvedAsText(session: McpSession) {
+  const november = await draftFor(session, 'November');
+  const asked = await deliveredRequestFor(session, 'November');
+  const answered = await session.callTool('answer_interaction', {
+    ...inMeetings,
+    run_id: String(asked?.run_id),
+    answer: JSON.stringify({ decision: 'approve' }),
+  });
+  return { answered, ended: await endedIn(session, november) };
+}
+
 async function approvedThenNextMonth(session: McpSession) {
   const september = await draftFor(session, 'September');
   const [asked] = await deliveredRequestsIn(session, 1);
@@ -205,5 +226,14 @@ describe('the shape of the answer an open request takes, as the agent reads it',
       "`answer` takes the shape of the request's answer_schema, which list_interactions shows,",
     );
     expect([description.length, sentencesOf(description).length]).toEqual([762, 5]);
+  });
+});
+
+describe('an answer an agent sends as JSON text', () => {
+  it('is taken over MCP as the value the text holds, and ends the run that waited with that value', async () => {
+    const { answered, ended } = await meetings.onMcp(approvedAsText);
+
+    expect(answered.structuredContent).toMatchObject({ answer: { decision: 'approve' } });
+    expect(ended).toMatchObject({ status: 'succeeded', output: { decision: 'approve' } });
   });
 });

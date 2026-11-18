@@ -8,7 +8,7 @@ import type { ResultOver, SubjectPages } from '../page/subject-pages-port.ts';
 import { stagedDefinitionRead, type DefinitionReadAt } from '../read-model-staging/staged-reads.ts';
 import { isRetired, type StoredDefinition } from '../registry/definition.ts';
 import { withTheTextsRead } from './definition-reading.ts';
-import { overOf, runOfThePage, runWithSample, viewsRead } from './page-runs.ts';
+import { overOf, runOfThePage, runWithSample, sampleTakenFromText, viewsRead } from './page-runs.ts';
 
 interface DefinitionAsked {
   readonly type: string;
@@ -24,6 +24,11 @@ export interface PageMissing {
 }
 
 type MissingPageRefusal = (missing: PageMissing) => InvalidInput | NotFound;
+
+interface PageReadIn {
+  readonly operation: string;
+  readonly refusedWithoutAPage: MissingPageRefusal;
+}
 
 interface Reading {
   readonly pages: SubjectPages;
@@ -98,15 +103,13 @@ const withItsTriggersSince = Effect.fnUntraced(function* (read: ReadOn) {
   return { ...definition, triggers_since: since };
 });
 
-const readOn = Effect.fnUntraced(function* (
-  capability: Capability,
-  read: ReadOn,
-  { pages, asked, refusedWithoutAPage }: Asking,
-) {
+const readOn = Effect.fnUntraced(function* (capability: Capability, read: ReadOn, { pages, asked, readIn }: Asking) {
   const { stored } = read;
-  const { name, render = false, sample_output: sample, run_id: runId } = asked;
+  const { operation, refusedWithoutAPage } = readIn;
+  const { name, render = false, sample_output: given, run_id: runId } = asked;
   const reading = { pages, type: capability.type, stored };
   const run = runId === undefined ? undefined : yield* runOfThePage(reading, runId);
+  const sample = typeof given === 'string' ? yield* sampleTakenFromText(operation, stored, given) : given;
   const result = render ? yield* resultOfAPreview(reading, overOf(sample, run), refusedWithoutAPage) : undefined;
   const definition = yield* withItsTriggersSince(read);
   const { org, playbook } = yield* PlaybookContext;
@@ -125,13 +128,13 @@ const readOn = Effect.fnUntraced(function* (
 interface Asking {
   readonly pages: SubjectPages;
   readonly asked: DefinitionAsked;
-  readonly refusedWithoutAPage: MissingPageRefusal;
+  readonly readIn: PageReadIn;
 }
 
 export function definitionRead(
   capabilities: readonly Capability[],
   pages: SubjectPages,
-  refusedWithoutAPage: MissingPageRefusal,
+  readIn: PageReadIn,
   goals = false,
 ) {
   const known = knownCapabilities(capabilities);
@@ -139,6 +142,6 @@ export function definitionRead(
     yield* askedRightly(asked);
     const capability = yield* known.capabilityOfType(asked.type);
     const read = yield* stagedDefinitionRead(capability, known.types, asked.name, goals);
-    return yield* withTheTextsRead(read, readOn(capability, read, { pages, asked, refusedWithoutAPage }));
+    return yield* withTheTextsRead(read, readOn(capability, read, { pages, asked, readIn }));
   });
 }

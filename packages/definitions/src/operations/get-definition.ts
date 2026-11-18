@@ -23,6 +23,8 @@ const description = [
   "`type` is the definition's type and `name` its name.",
 ].join(' ');
 
+const operationName = 'get_definition';
+
 function readingVerbOf({ render }: Pick<OfferedDefinition, 'render'>): string {
   return render === true ? 'render' : 'look up';
 }
@@ -37,7 +39,7 @@ export function defineGetDefinition(capabilities: readonly Capability[], pages: 
   const words = definitionWordsFor(capabilities);
   return known.publish(
     defineQuery('playbook', {
-      name: 'get_definition',
+      name: operationName,
       title: 'Get definition',
       description,
       route: { method: 'GET', path: '/definitions/{type}/{name}' },
@@ -49,7 +51,12 @@ export function defineGetDefinition(capabilities: readonly Capability[], pages: 
       }),
       outputSchema: definitionSchemaOf(goals),
       reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
-      handle: definitionRead(capabilities, pages, noPageToRender, goals),
+      handle: definitionRead(
+        capabilities,
+        pages,
+        { operation: operationName, refusedWithoutAPage: noPageToRender },
+        goals,
+      ),
       plainLanguage: {
         task: `look up a ${words.kinds}`,
         attempt: (asked) => `${readingVerbOf(asked)} ${words.named(asked.type, asked.name)}`,

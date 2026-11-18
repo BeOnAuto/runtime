@@ -6,8 +6,8 @@ import type { Capability } from '../capability/capability.ts';
 import { knownRunningCapabilities } from '../capability/known-capabilities.ts';
 import { runPlainLanguage } from '../plain-language/run-words.ts';
 import { RunIdInputField, InputField, DefinitionNameField, TestRunField } from './definition-fields.ts';
+import { requestedRunAsMeant } from './given-inputs.ts';
 import { newRunId } from './run-access.ts';
-import { requestedRun } from './run-requests.ts';
 import { RequestedRunSchema, requestedRunAnswered } from './studio-pages.ts';
 
 const description = [
@@ -43,7 +43,7 @@ export function defineRunDefinition(capabilities: readonly Capability[]) {
         const capability = yield* known.capabilityOfType(type);
         const id = suppliedId ?? (yield* newRunId);
         const request = { definition_type: capability.type, name, input, ...(test ? { test: true as const } : {}) };
-        const requested = requestedRun(capabilities, capability, request, id);
+        const requested = requestedRunAsMeant(capabilities, capability, request, id);
         const { calledBy } = yield* CallLineage;
         const started = { type: capability.type, name, test, calledByARun: calledBy !== null };
         const live = yield* Effect.serviceOption(LiveAttempts);

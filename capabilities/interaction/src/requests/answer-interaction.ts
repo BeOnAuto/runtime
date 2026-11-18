@@ -5,9 +5,11 @@ import {
   playbookBoundAnswerer,
   recordedRunInPlaybook,
   type RecordedRun,
+  refusedInput,
   refusingBlankText,
   refusingForbiddenCharacters,
 } from '@on.auto/definitions';
+import { normalizedArgument } from '@on.auto/definitions/given-values';
 import type { InvalidInput } from '@on.auto/operations';
 import {
   PlaybookReader,
@@ -18,11 +20,12 @@ import {
   defineCommand,
   recordedCallerOf,
 } from '@on.auto/operations';
-import { Effect, Schema } from 'effect';
+import { Effect, Option, Schema } from 'effect';
 
 import { interactionBounds } from '../run/run-bounds.ts';
-import { answerFor } from './answering.ts';
+import { answerIssuesOf } from './answer-check.ts';
 import { answerTakenBy, correlationOfRun, openRequestRowIn, type AnswerTaken } from './request-reads.ts';
+import type { OpenRequestRow } from './request-rows.ts';
 
 const ClaimedForField = Schema.String.annotate({
   description: `Whom the caller says it answers for, kept with the answer as a claim and never checked, at most ${interactionBounds.claimBytes} bytes`,
@@ -58,7 +61,13 @@ const AnsweredRequestSchema = Schema.Struct({
   answered_at: Schema.String.annotate({ description: 'When the answer was recorded, in ISO 8601 UTC' }),
 }).annotate({ identifier: 'AnsweredRequest', description: 'The answer a request took, as its run recorded it' });
 
+const operationName = 'answer_interaction';
+
+const givenAnswer = { operation: operationName, argument: 'answer' };
+
 const answerSchemaOf = Schema.decodeUnknownSync(Schema.Struct({ answer_schema: Schema.JsonObject }));
+
+const recordedAnswerSchemaIn = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.JsonObject));
 
 const notARequest = new Conflict({ detail: 'The run is not a request of a function that waits for an answer' });
 
@@ -70,10 +79,22 @@ interface Answering {
   readonly claimedFor: string | undefined;
 }
 
-function checkedFor(run: RecordedRun, answer: Schema.Json): Effect.Effect<Schema.Json, InvalidInput | Conflict> {
-  return run.awaitsSettlement
-    ? answerFor(answer, answerSchemaOf(run.run.record).answer_schema)
-    : Effect.succeed(answer);
+function answerUnder(schema: Schema.JsonObject, answer: Schema.Json) {
+  return normalizedArgument(givenAnswer, answer, (value) => answerIssuesOf(value, schema));
+}
+
+function checkedWhileItWaits(run: RecordedRun, answer: Schema.Json): Effect.Effect<Schema.Json, InvalidInput> {
+  return Effect.flatMap(answerUnder(answerSchemaOf(run.run.record).answer_schema, answer), (taken) =>
+    'value' in taken ? Effect.succeed(taken.value) : Effect.fail(refusedInput(taken.issues)),
+  );
+}
+
+function takenAfterItEnded(row: OpenRequestRow, answer: Schema.Json): Effect.Effect<Schema.Json> {
+  const recorded = typeof answer === 'string' ? recordedAnswerSchemaIn(row.answer_schema) : Option.none();
+  return Option.match(recorded, {
+    onNone: () => Effect.succeed(answer),
+    onSome: (schema) => Effect.map(answerUnder(schema, answer), (taken) => ('value' in taken ? taken.value : answer)),
+  });
 }
 
 function shownOf(id: string, { id: answerId, answer, claimedFor, reply, by, at }: AnswerTaken, given: Schema.Json) {
@@ -101,7 +122,7 @@ const answered = Effect.fnUntraced(function* ({ id, answer, claimedFor }: Answer
   if (!row.answers) {
     return yield* takesNoAnswer;
   }
-  const checked = yield* checkedFor(run, answer);
+  const checked = yield* run.awaitsSettlement ? checkedWhileItWaits(run, answer) : takenAfterItEnded(row, answer);
   yield* playbookBoundAnswerer(
     id,
     { answer: checked, ...(claimedFor === undefined ? {} : { claimed_for: claimedFor }) },
@@ -112,7 +133,7 @@ const answered = Effect.fnUntraced(function* ({ id, answer, claimedFor }: Answer
 });
 
 export const answerInteraction = defineCommand('playbook', {
-  name: 'answer_interaction',
+  name: operationName,
   title: 'Answer a request',
   description,
   route: { method: 'POST', path: '/runs/{run_id}/answer' },

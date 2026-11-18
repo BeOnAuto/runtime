@@ -5,6 +5,7 @@ import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { asQueryString, firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { playbookWithTheWorkflow, resultOfTheGreeting, workflowWithItsPage } from '../testing/page-playbooks.ts';
 
 const someWords: unknown = expect.any(String);
 
@@ -76,5 +77,29 @@ describe('get_definition rejecting', () => {
     expect(
       await harness().call(getDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'no_where', verbose: true })),
     ).toMatchObject({ reason: 'invalid_input', issues: [{ pointer: '/verbose' }, { pointer: '/name' }] });
+  });
+});
+
+function sampleOf(greeting: string): string {
+  return JSON.stringify({ greeting, input: {} });
+}
+
+describe('a sample output given as JSON text', () => {
+  it('is rendered over as the value it holds where the output schema of the definition takes it, and refused as given where not', async () => {
+    const { updating, reading, rendering, ready } = playbookWithTheWorkflow();
+    await ready;
+    const workflow = { type: 'workflow', name: 'morning-social-content' };
+    await updating({ ...workflow, source: workflowWithItsPage(resultOfTheGreeting) });
+    const rendered = { status: 'succeeded', output: { page: { result: 'Good morning from version 2' } } };
+
+    expect([
+      await reading({ ...workflow, render: true, sample_output: sampleOf('Good morning') }),
+      await rendering({ ...workflow, sample_output: sampleOf('Good morning') }),
+      await rendering({ ...workflow, sample_output: sampleOf('Hi') }),
+    ]).toMatchObject([
+      rendered,
+      rendered,
+      { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/sample_output' }] },
+    ]);
   });
 });

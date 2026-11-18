@@ -16,16 +16,18 @@ const description = [
   '`run_id`, optional in place of sample_output, renders the page as it stood when that run ended, with runs and standing over the views folded again up to the last event of the run.',
 ].join(' ');
 
+const operationName = 'render_page';
+
 function noPage({ label, name }: PageMissing): NotFound {
   return new NotFound({ detail: `The ${label} ${name} has no page; save one with update_definition` });
 }
 
 export function defineRenderPage(capabilities: readonly Capability[], pages: SubjectPages, goals = false) {
   const known = knownCapabilities(capabilities);
-  const read = definitionRead(capabilities, pages, noPage, goals);
+  const read = definitionRead(capabilities, pages, { operation: operationName, refusedWithoutAPage: noPage }, goals);
   return known.publish(
     defineHttpOperation('playbook', 'query', {
-      name: 'render_page',
+      name: operationName,
       title: 'Render page',
       description,
       route: { method: 'POST', path: '/definitions/{type}/{name}/render' },

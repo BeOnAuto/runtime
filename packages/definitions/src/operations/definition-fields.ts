@@ -1,11 +1,14 @@
 import { Buffer } from 'node:buffer';
 
+import { schemaCheckOf, type FurtherCheck, type SchemaIssue } from '@on.auto/json-schema';
 import { sizeBoundCheck } from '@on.auto/operations';
 import { sizeInWords } from '@on.auto/phrasing';
+import { mostValueDepth } from '@on.auto/workflow-engine/worker';
 import { Schema, SchemaTransformation } from 'effect';
 
 import { refusingBlankText, refusingForbiddenCharacters } from '../events/cloud-event.ts';
 import { jsonBytesOf, mostInputBytes, mostInputDepth, nestsWithin } from '../runs/recorded-size.ts';
+import { outputShapeOfSchema } from '../shapes/output-shapes.ts';
 
 const mostSourceBytes = 65_536;
 
@@ -86,6 +89,37 @@ function sampleOutputWithinItsBound(output: Schema.Json): true | string {
   return bytes <= mostInputBytes
     ? true
     : `The sample output takes ${bytes} bytes as JSON, more than the ${mostInputInWords} it may take; give a smaller one`;
+}
+
+function issuesPast(within: (value: Schema.Json) => true | string): FurtherCheck {
+  return (value) => {
+    const said = within(value);
+    return said === true ? [] : [{ pointer: '', detail: said }];
+  };
+}
+
+export const inputBytesIssues = issuesPast(inputWithinItsBound);
+
+const sampleOutputBytesIssues = issuesPast(sampleOutputWithinItsBound);
+
+function outputIssues(schema: Schema.JsonObject, output: Schema.Json): readonly SchemaIssue[] {
+  const shape = outputShapeOfSchema(schema);
+  const further = shape === undefined ? {} : { further: shape.further };
+  return schemaCheckOf(schema, { what: 'output', nesting: mostValueDepth, ...further })(output);
+}
+
+function noIssues(): readonly SchemaIssue[] {
+  return [];
+}
+
+export function sampleIssuesOf({ output_schema: schema }: { readonly output_schema?: Schema.JsonObject }) {
+  if (schema === undefined) {
+    return noIssues;
+  }
+  return (sample: Schema.Json): readonly SchemaIssue[] => {
+    const issues = outputIssues(schema, sample);
+    return issues.length > 0 ? issues : sampleOutputBytesIssues(sample);
+  };
 }
 
 export const InputField = Schema.Json.annotate({

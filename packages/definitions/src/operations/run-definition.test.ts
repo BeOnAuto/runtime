@@ -1,5 +1,6 @@
 import {
   CallLineage,
+  type CallLink,
   defineCommand,
   type IncidentReporter,
   playbookCallerOf,
@@ -14,6 +15,7 @@ import { LiveAttempts, liveAttemptsLayer, liveAttemptsOf, type RunRefusal } from
 import { attemptEnded, type Capability, defineStartVersion, nextAttemptOf } from '../index.ts';
 import { linksIn } from '../journal-testing/run-links.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { startedRunOf } from '../runs/run-state.ts';
 import type { RunDetail } from '../runs/run.ts';
 import { asking } from '../testing/asking.ts';
 import { acmeAdmin, adaOfAcme, recordedAdmin } from '../testing/callers.ts';
@@ -21,7 +23,7 @@ import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { quietMs, resumer } from '../testing/capabilities/resumer.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { firstMoment, harness, toPlaybook, type Harness } from '../testing/harness.ts';
 import { aProcess } from '../testing/held-attempts.ts';
 import {
   acted,
@@ -371,6 +373,64 @@ describe('run_definition rejected by the capability', () => {
 
     expect(await call(runDefinition, running('greet', { input: 'Ada' }))).toEqual(notAnObject);
     expect(await call(runDefinition, running('greet', { input: ['Ada'] }))).toEqual(notAnObject);
+  });
+});
+
+async function recordedInputOf({ ledger, run }: Harness) {
+  const { state } = await run(ledger.service.load(stream, runDecider));
+  return startedRunOf(state)?.input;
+}
+
+const aWorkflowsCall: CallLink = { run_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b70', reference: '/do/0/step', run: 1 };
+
+const refusedByTheEcho = { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/input' }] };
+
+describe('an input given as JSON text', () => {
+  it('is recorded and run as the value it holds when the input schema of the definition takes it, and asked again as that value is the same run', async () => {
+    const definitions = await withGreetAndPlain();
+
+    const asText = await definitions.call(runDefinition, running('greet', { input: '{"who":"Ada"}', run_id: runId }));
+    const asTheValue = await definitions.call(
+      runDefinition,
+      running('greet', { input: { who: 'Ada' }, run_id: runId }),
+    );
+
+    expect(asText).toMatchObject({
+      status: 'succeeded',
+      output: { output: { greeting: 'Hello', input: { who: 'Ada' } } },
+    });
+    expect(asTheValue).toEqual(asText);
+    expect(await recordedInputOf(definitions)).toEqual({ inline: { who: 'Ada' } });
+  });
+
+  it('is recorded and run as given in a call a run makes', async () => {
+    const definitions = await withGreetAndPlain();
+
+    const called = await definitions.call(runDefinition, {
+      ...running('greet', { input: '{"who":"Ada"}', run_id: runId }),
+      calledBy: aWorkflowsCall,
+    });
+
+    expect(called).toMatchObject(refusedByTheEcho);
+    expect(await recordedInputOf(definitions)).toEqual({ inline: '{"who":"Ada"}' });
+  });
+
+  it('is run as given when the value it holds is past the bounds of an input, the definition declares no input schema, or there is no such definition', async () => {
+    const definitions = await withGreetAndPlain();
+    const pastTheBounds = JSON.stringify({ n: Array.from({ length: 50_000 }, () => 1e20) }).replaceAll(
+      '100000000000000000000',
+      '1e20',
+    );
+
+    expect([
+      await definitions.call(runDefinition, running('greet', { input: pastTheBounds })),
+      await definitions.call(runDefinition, running('plain', { input: '{"seats":2}' })),
+      await definitions.call(runDefinition, running('absent', { input: '{"seats":2}' })),
+    ]).toMatchObject([
+      refusedByTheEcho,
+      { status: 'succeeded', output: { output: { input: '{"seats":2}' } } },
+      { status: 'rejected', reason: 'not_found' },
+    ]);
   });
 });
 

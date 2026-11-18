@@ -1,18 +1,20 @@
 import { fileURLToPath } from 'node:url';
 
-import { compileJsonSchema } from '@on.auto/json-schema';
+import { compileJsonSchema, schemaCheckOf, type SchemaIssue } from '@on.auto/json-schema';
 import { InvalidInput } from '@on.auto/operations';
-import { importedWithoutAnAddress, modulesReachedFrom } from '@on.auto/operations/testing';
+import { capturedLogs, importedWithoutAnAddress, modulesReachedFrom } from '@on.auto/operations/testing';
 import { Effect, Exit, Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { checkedInput, outputShapeNamed, shapedViewsSchemaOf } from '../index.ts';
+import { jsonBytesOf } from '../runs/recorded-size.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 import { fieldWords, refusalWordsOf } from '../testing/refusal-words.ts';
 import * as checkedWorkerModule from './checked-worker.ts';
+import { normalizedArgument } from './given-values.ts';
 import { outputCheckOf, valueChecks, viewCheckOf } from './value-checks.ts';
 import { checkedWorker } from './worker-url.ts';
 
@@ -315,5 +317,94 @@ describe('a run whose input its input schema refused', () => {
     const { run } = await playbookWithASeatedProbe();
 
     expect(await run(2)).toMatchObject({ output: { status: 'succeeded', output: { seats: 2 } } });
+  });
+});
+
+const mostChoiceBytes = 64;
+
+const choiceIssues = schemaCheckOf(
+  {
+    type: 'object',
+    required: ['choice'],
+    properties: { choice: { enum: ['approve', 'reject'] }, note: { type: 'string' } },
+    additionalProperties: false,
+  },
+  { what: 'answer', nesting: 4 },
+);
+
+function choiceIssuesOf(value: Schema.Json): readonly SchemaIssue[] {
+  return jsonBytesOf(value) > mostChoiceBytes ? [{ pointer: '', detail: 'Too large' }] : choiceIssues(value);
+}
+
+const textIssues = schemaCheckOf({ type: 'string' }, { what: 'answer', nesting: 4 });
+
+function valuesIn(value: Schema.Json): number {
+  return typeof value === 'object' && value !== null
+    ? Object.values(value).reduce((count: number, item: Schema.Json) => count + valuesIn(item), 1)
+    : 1;
+}
+
+function walkingIssuesOf(value: Schema.Json): readonly SchemaIssue[] {
+  return valuesIn(value) > mostChoiceBytes ? [{ pointer: '', detail: 'Too many values' }] : choiceIssuesOf(value);
+}
+
+const givenAnswer = { operation: 'answer_interaction', argument: 'answer' };
+
+function normalized(value: Schema.Json, issuesOf: (value: Schema.Json) => readonly SchemaIssue[] = choiceIssuesOf) {
+  return Effect.runSync(normalizedArgument(givenAnswer, value, issuesOf));
+}
+
+const approving = { choice: 'approve' };
+
+describe('a value an outside caller gives an operation, normalized by the check of its argument', () => {
+  it('is taken as given when the check takes it, so text the check takes stays text, even text that holds JSON', () => {
+    expect([normalized(approving), normalized(JSON.stringify(approving), textIssues)]).toEqual([
+      { value: approving, from: 'value' },
+      { value: JSON.stringify(approving), from: 'value' },
+    ]);
+  });
+
+  it('is taken as the value its text holds when the check refuses the text and takes that value, which is taken as given after', () => {
+    expect([
+      normalized(JSON.stringify(approving)),
+      normalized(' {"choice": "approve"} '),
+      normalized(approving),
+    ]).toEqual([
+      { value: approving, from: 'text' },
+      { value: approving, from: 'text' },
+      { value: approving, from: 'value' },
+    ]);
+  });
+
+  it('answers the issues of the value as given when its text is not JSON, holds a value the check refuses or one past its bounds, or holds text that holds JSON', () => {
+    const notTaken: readonly Schema.Json[] = [
+      'approve',
+      JSON.stringify({ choice: 'maybe' }),
+      JSON.stringify({ ...approving, note: 'x'.repeat(mostChoiceBytes) }),
+      JSON.stringify(JSON.stringify(approving)),
+      { choice: 'maybe' },
+    ];
+
+    expect(notTaken.map((value) => normalized(value))).toEqual(
+      notTaken.map((value) => ({ issues: choiceIssuesOf(value) })),
+    );
+  });
+
+  it('answers the issues of the value as given, and no fault, when the value its text holds is nested so deep that its check overflows the stack', () => {
+    const deep = `${'['.repeat(100_000)}${']'.repeat(100_000)}`;
+
+    expect(normalized(deep, walkingIssuesOf)).toEqual({ issues: walkingIssuesOf(deep) });
+  });
+
+  it('logs the operation and the argument it took a value from text for, and never the value', () => {
+    const logs = capturedLogs();
+    const normalizing = (value: Schema.Json) =>
+      Effect.runSync(normalizedArgument(givenAnswer, value, choiceIssuesOf).pipe(Effect.provide(logs.layer)));
+
+    normalizing(approving);
+    normalizing(JSON.stringify({ choice: 'reject' }));
+
+    expect(logs.logged().map(({ annotations }) => annotations)).toEqual([givenAnswer]);
+    expect(logs.text()).not.toContain('reject');
   });
 });

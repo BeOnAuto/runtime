@@ -2,9 +2,11 @@ import { InvalidInput } from '@on.auto/operations';
 import { Effect } from 'effect';
 import type { Schema } from 'effect';
 
+import { normalizedArgument } from '../checking/given-values.ts';
 import type { ResultOver, SubjectPages } from '../page/subject-pages-port.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
 import type { RunDetailAsRecorded } from '../runs/run.ts';
+import { sampleIssuesOf } from './definition-fields.ts';
 import { foundRun } from './get-run.ts';
 
 interface Reading {
@@ -36,6 +38,13 @@ export const runOfThePage = Effect.fnUntraced(function* ({ type, stored }: Readi
 export function viewsRead({ pages, type, stored }: Reading, run: RunDetailAsRecorded | undefined) {
   const subject = { type, name: stored.name };
   return run === undefined || run.status === 'started' ? pages.viewsOf(subject) : pages.asOfRun(subject, run.run_id);
+}
+
+export function sampleTakenFromText(operation: string, stored: StoredDefinition, sample: string) {
+  return Effect.map(
+    normalizedArgument({ operation, argument: 'sample_output' }, sample, sampleIssuesOf(stored)),
+    (normalized) => ('value' in normalized ? normalized.value : sample),
+  );
 }
 
 export function overOf(sample: Schema.Json | undefined, run: RunDetailAsRecorded | undefined): ResultOver {
