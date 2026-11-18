@@ -36,6 +36,7 @@ const CallRowSchema = Schema.Struct({
   state: Schema.Literals(['running', 'waiting', 'answered', 'cancelled', 'closed']),
   result: Schema.NullOr(ResultText),
   child: Schema.NullOr(Schema.String),
+  call: Schema.NullOr(CallText),
 });
 
 const StartedCallRow = Schema.Struct({
@@ -202,7 +203,7 @@ export function deliveredRow(database: HostDatabase, key: string): Effect.Effect
 export function callRowOf(database: HostDatabase, key: string): Effect.Effect<CallRow | undefined, DatabaseFailed> {
   return rowsOf(
     CallRowSchema,
-    database.read(statement`SELECT state, result, child FROM workflow_calls WHERE call_key = ${key}`),
+    database.read(statement`SELECT state, result, child, call FROM workflow_calls WHERE call_key = ${key}`),
   ).pipe(Effect.map((rows) => rows.at(0)));
 }
 

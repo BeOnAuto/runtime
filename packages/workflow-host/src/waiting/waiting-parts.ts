@@ -36,7 +36,7 @@ export function executorWaitingOf(
         arguments: call.arguments,
         attributes: run.attributes,
       }) ?? null,
-    cancelChild: childCancelsOn(waiting.cancel),
+    cancelChild: childCancelsOn(waiting.cancel, (call) => machine.functions.calledOf?.(call)),
   };
 }
 

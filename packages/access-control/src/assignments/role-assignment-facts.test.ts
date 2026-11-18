@@ -11,7 +11,7 @@ import {
   type ProjectedRowsQuery,
   streamPrefixOfOrg,
 } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
+import { memoryLedger, streamAddressed } from '@on.auto/operations/testing';
 import { Effect, ManagedRuntime, Result, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -340,7 +340,9 @@ describe('the read model of role assignments', () => {
       context: { at: '2026-11-14T10:30:00.000Z', by: 'person:user_ada' },
     };
 
-    expect(roleAssignmentRows.keyOf?.(message, { kind: 'role-assignments', id: 'x' })).toBe('person:user_priya');
+    expect(roleAssignmentRows.keyOf?.(message, streamAddressed('org/acme/role-assignments/x'))).toBe(
+      'person:user_priya',
+    );
     expect(roleAssignmentRows.rowsAfter(new Map(), message)).toBeUndefined();
   });
 });

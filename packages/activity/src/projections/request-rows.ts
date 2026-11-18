@@ -84,6 +84,7 @@ function rowAfterFact(row: ProjectedRow | undefined, fact: ActivityFact): Projec
 export const requestRows: KeyedProjection = {
   name: requestsName,
   version: 5,
+  scopes: ['definition'],
   kinds: ['runs'],
   types: ['run_started', 'run_deferred', 'request_answered', 'run_succeeded', 'run_rejected', 'run_failed'],
   columns: [

@@ -4,20 +4,22 @@ import { describe, expect, it } from 'vitest';
 
 import { rowsOf, type HostDatabase } from '../database/host-database.ts';
 import { applying, first, retired, row, rowsIn, runningSet, saved } from '../reaction-testing/applied-records.ts';
-import { cronTrigger, eventTrigger, everyTrigger } from '../reaction-testing/playbook-writes.ts';
+import { cronTrigger, definitionKeyNamed, eventTrigger, everyTrigger } from '../reaction-testing/playbook-writes.ts';
 import { definitionRecordsIn } from './definition-records.ts';
 
 const aMinute = 60_000;
 
 const nineTomorrow = Date.parse('2026-10-02T09:00:00.000Z');
 
-const TypeRow = Schema.Struct({ workflow: Schema.String, type: Schema.String });
+const TypeRow = Schema.Struct({ definition_key: Schema.String, type: Schema.String });
 
 function typesIn(database: HostDatabase) {
   return Effect.runPromise(
     rowsOf(
       TypeRow,
-      database.read(statement`SELECT workflow, type FROM workflow_subscription_types ORDER BY workflow, type`),
+      database.read(
+        statement`SELECT definition_key, type FROM workflow_subscription_types ORDER BY definition_key, type`,
+      ),
     ),
   );
 }
@@ -43,8 +45,8 @@ describe('the records of the definitions of a playbook, applied to its triggers'
     const rows = await rowsIn(database);
 
     expect(outcomes).toEqual(['applied', 'applied', 'applied', 'applied', 'applied', 'applied', 'unreadable']);
-    expect(rows.map(({ workflow, reference, kind }) => [workflow, reference, kind])).toEqual([
-      ['tick', '/schedule/every', 'every'],
+    expect(rows.map(({ definition_key: key, reference, kind }) => [key, reference, kind])).toEqual([
+      [definitionKeyNamed('tick'), '/schedule/every', 'every'],
     ]);
     expect(await typesIn(database)).toEqual([]);
   });
@@ -70,8 +72,8 @@ describe('the triggers of a version', () => {
       row({ reference: '/schedule/on', version: 1, kind: 'event', by: 's1', at: first, due: null }),
     ]);
     expect(await typesIn(database)).toEqual([
-      { workflow: 'close', type: 'com.acme.closed' },
-      { workflow: 'close', type: 'com.acme.reopened' },
+      { definition_key: definitionKeyNamed('close'), type: 'com.acme.closed' },
+      { definition_key: definitionKeyNamed('close'), type: 'com.acme.reopened' },
     ]);
   });
 });
@@ -134,7 +136,7 @@ describe('a new version of a workflow that changes its triggers', () => {
       },
       row({ reference: '/schedule/on', version: 2, kind: 'event', by: 's2', at: later, due: null }),
     ]);
-    expect(await typesIn(database)).toEqual([{ workflow: 'close', type: 'com.acme.opened' }]);
+    expect(await typesIn(database)).toEqual([{ definition_key: definitionKeyNamed('close'), type: 'com.acme.opened' }]);
 
     await applied(
       saved({ id: 's3', name: 'close', version: 3, triggers: [cronTrigger('0 9 * * *')], at: later + aMinute }),

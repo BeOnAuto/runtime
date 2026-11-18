@@ -1,14 +1,16 @@
 import type { ContentHolders, JsonPointer } from '../held-content/content-declaration.ts';
+import { streamAddressed } from '../projections-testing/streams-addressed.ts';
 import {
   keepsChildRows,
   projectedTableOf,
+  scopesOf,
   type KeptProjection,
   type ProjectedMessage,
   type ProjectedRow,
   type ProjectedRows,
+  type StreamScope,
 } from '../projections/keyed-projection.ts';
 import type { RunOutcome, RunOutcomeMapping } from '../run-outcomes/run-outcomes.ts';
-import type { StreamProjection } from '../stream-projections/stream-projection.ts';
 import { inlineMembersOf, sampledInline, twinsOf, type SampledFact } from './payload-twins.ts';
 
 export type { SampledFact } from './payload-twins.ts';
@@ -16,7 +18,6 @@ export type { SampledFact } from './payload-twins.ts';
 export interface KeptTables {
   readonly projections: readonly KeptProjection[];
   readonly runOutcomes?: RunOutcomeMapping;
-  readonly streamProjections?: readonly StreamProjection[];
 }
 
 export type PayloadReadBecause = 'folded' | 'unsampled';
@@ -74,8 +75,15 @@ function rowsFoldedBy(projection: KeptProjection, messages: readonly ProjectedMe
   return rows === undefined ? undefined : [...rows];
 }
 
+const sampledKeys: Readonly<Record<StreamScope, string>> = {
+  playbook: 'playbook/acme/alpha/',
+  definition: 'definition/acme/sampled/',
+  org: 'org/acme/',
+};
+
 function keyedFold(projection: KeptProjection): TableFold {
-  const stream = { kind: String(projection.kinds.at(0)), id: 'sampled' };
+  const [scope = 'playbook'] = scopesOf(projection);
+  const stream = streamAddressed(`${sampledKeys[scope]}${String(projection.kinds.at(0))}/sampled`);
   const keyOf = (message: ProjectedMessage) =>
     projection.keyOf === undefined ? stream.id : projection.keyOf(message, stream);
   return {
@@ -98,10 +106,9 @@ function outcomesFold(mapping: RunOutcomeMapping): TableFold {
   };
 }
 
-function foldsOf({ projections, runOutcomes, streamProjections = [] }: KeptTables): readonly TableFold[] {
+function foldsOf({ projections, runOutcomes }: KeptTables): readonly TableFold[] {
   return [
     ...projections.map((projection) => keyedFold(projection)),
-    ...streamProjections.flatMap(({ tables }) => tables.map((projection) => keyedFold(projection))),
     ...(runOutcomes === undefined ? [] : [outcomesFold(runOutcomes)]),
   ];
 }

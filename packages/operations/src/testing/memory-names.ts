@@ -13,6 +13,8 @@ import {
   type DefinitionNames,
   type HeldName,
   type NamedMessage,
+  type NameInAPlaybook,
+  type NamesOfAKind,
   type Refusal,
 } from '../definition-names/name-judgement.ts';
 import { Conflict } from '../outcome/conflict.ts';
@@ -22,6 +24,10 @@ type StagedNames = { readonly refused: Conflict } | { readonly commit: () => voi
 export interface MemoryNames {
   readonly staged: (messages: readonly NamedMessage[]) => StagedNames;
   readonly held: () => readonly HeldName[];
+  readonly holderOf: (named: NameInAPlaybook) => HeldName | undefined;
+  readonly heldBy: (definitionKey: string) => HeldName | undefined;
+  readonly heldIn: (kind: NamesOfAKind) => readonly HeldName[];
+  readonly definitionsIn: (playbookKey: string) => readonly string[];
 }
 
 function conflictOf({ conflict: { detail, kind } }: Refusal): Conflict {
@@ -66,12 +72,18 @@ const nothingToKeep: StagedNames = { commit: Function.constVoid };
 
 export function memoryNames(names: DefinitionNames | undefined): MemoryNames {
   const rows = new Map<string, HeldName>();
+  const held = (): readonly HeldName[] =>
+    [...rows.keys()]
+      .toSorted()
+      .map((key) => rows.get(key))
+      .filter((row) => row !== undefined);
   return {
-    held: () =>
-      [...rows.keys()]
-        .toSorted()
-        .map((key) => rows.get(key))
-        .filter((row) => row !== undefined),
+    held,
+    heldIn: (kind) => held().filter((row) => isOfTheKind(row, kind)),
+    holderOf: (named) => [...rows.values()].find((row) => isTheSameName(row, named)),
+    heldBy: (definitionKey) => rows.get(definitionKey),
+    definitionsIn: (playbookKey) =>
+      [...rows.values()].filter((row) => row.playbookKey === playbookKey).map(({ definitionKey }) => definitionKey),
     staged: (messages) => {
       if (names === undefined) {
         return nothingToKeep;

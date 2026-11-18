@@ -1,10 +1,11 @@
 import { textToKeep, type ContentKept, type RecordedContent } from '@on.auto/content';
 import { at } from '@on.auto/content/testing';
 import type { Outcome, PlaybookAddress, StreamWriter } from '@on.auto/operations';
-import { Schema } from 'effect';
+import { runFacts } from '@on.auto/operations/testing';
+import { Effect, Schema } from 'effect';
 
 import { AssetKeptSchema, type AssetEvent, type AssetKeptData } from '../assets/asset-facts.ts';
-import { generationHarness, type GenerationHarness } from '../testing/index.ts';
+import { generationHarness, harnessStartsAt, imageSource, type GenerationHarness } from '../testing/index.ts';
 import { keptAsRead } from './kept-as-read.ts';
 
 const IssueSchema = Schema.Struct({ pointer: Schema.String, detail: Schema.String });
@@ -77,6 +78,17 @@ export function numberedHarness(options: Parameters<typeof generationHarness>[0]
   });
 }
 
+export async function aRunIn(playbook: GenerationHarness, runId: string): Promise<string> {
+  await playbook.define('look', imageSource);
+  const definitionKey = await playbook.definitionKeyOf('look');
+  await Effect.runPromise(
+    playbook.ledger.service.execute(`${definitionKey}runs/${runId}`, runFacts, [
+      { type: 'run_began', data: { at: new Date(harnessStartsAt).toISOString(), fn: 'look' } },
+    ]),
+  );
+  return definitionKey;
+}
+
 export function ran(playbook: GenerationHarness, name: string, input: unknown, index = 1): Promise<Outcome> {
   return playbook.run(name, input, runIdOf(index));
 }
@@ -125,7 +137,7 @@ const ninetyDays = 90 * 86_400_000;
 
 export async function aPageARunReturned(
   ledger: LedgerOfPages,
-  playbook: PlaybookAddress,
+  { playbook, definitionKey }: { readonly playbook: PlaybookAddress; readonly definitionKey: string },
   id: string,
   keptAt: number,
 ): Promise<ContentKept> {
@@ -137,7 +149,7 @@ export async function aPageARunReturned(
   await at(
     keptAt,
     keptAsRead(ledger, {
-      playbook,
+      definitionKey,
       id,
       data: {
         media_type: page.mediaType,

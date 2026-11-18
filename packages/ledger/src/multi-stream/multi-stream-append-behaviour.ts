@@ -91,7 +91,10 @@ const HeldPage = Schema.Struct({
 
 async function factPagesFrom(store: LedgerStore, after: FactPlace | null): Promise<readonly string[]> {
   const page = Schema.decodeUnknownSync(HeldPage)(
-    await store.readAppendedFacts({ kind: 'playbook', playbookKey: alpha }, { after, most: 1, dataOf: [] }),
+    await store.readAppendedFacts(
+      { kind: 'playbook', playbookKey: alpha, definitionKeys: [] },
+      { after, most: 1, dataOf: [] },
+    ),
   );
   const facts = page.facts.map(({ stream, version }) => `${stream} ${version}`);
   return page.more ? [...facts, ...(await factPagesFrom(store, page.last))] : facts;

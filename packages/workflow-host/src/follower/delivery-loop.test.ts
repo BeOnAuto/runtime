@@ -8,16 +8,26 @@ import { systemClock } from '../loop/host-clock.ts';
 import type { HostWakeUp, NextWake } from '../loop/host-wake-up.ts';
 import { followedRecordOf } from '../reaction-testing/followed-records.ts';
 import type { MovingTime } from '../reaction-testing/follower-parts.ts';
-import { alpha, definitionRecorded, eventTrigger, published, recorded } from '../reaction-testing/playbook-writes.ts';
+import {
+  alpha,
+  byAdmin,
+  childStarted,
+  childStreamOf,
+  definitionRecorded,
+  definitionStreamNamed,
+  eventTrigger,
+  published,
+  recorded,
+} from '../reaction-testing/playbook-writes.ts';
 import { reactingHost } from '../reaction-testing/reacting-host.ts';
-import type { Sweep } from '../sweeps/playbook-sweeps.ts';
+import type { Sweep } from '../sweeps/org-sweeps.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { until } from '../testing/until.ts';
 import { followedThroughTheLatest } from '../waiting-testing/followed-host.ts';
 import { parentId, waitingParent } from '../waiting-testing/waiting-parent.ts';
 import { boundTo, type Consumer, type Delivery, DeliveryFailed, type RecordConsumer } from './consumers.ts';
 import { deliveredAll } from './delivery-loop.ts';
-import { followedPlaybooksOn, type Progress } from './followed-playbooks.ts';
+import { followedOrgsOn, type HeldPlaybook, type Progress } from './followed-orgs.ts';
 import { followerWakeUpOf, type FollowerWork, type Upkeep } from './follower-wake-up.ts';
 
 const followed = followedRecordOf(null);
@@ -93,7 +103,7 @@ const waiting = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const child = '0199a3c4-7d2e-7c1a-9b3f-0000000000c1';
 
-const childStream = `${alpha}runs/${child}`;
+const childStream = childStreamOf(child);
 
 function handedTheChildsEnding({ name, attributes, ending }: RecordedSpan): boolean {
   return name === 'follow run_succeeded' && attributes['auto.on.stream'] === childStream && ending === 'succeeded';
@@ -109,10 +119,7 @@ const ofTheChild = {
   calledBy: { runId: parentId, reference: '/do/0/ask', run: 1 },
 };
 
-async function deliveredAgain(
-  database: Parameters<typeof followedPlaybooksOn>[0],
-  again: () => boolean,
-): Promise<void> {
+async function deliveredAgain(database: Parameters<typeof followedOrgsOn>[0], again: () => boolean): Promise<void> {
   let nudges = 0;
   await until(async () => {
     await followedThroughTheLatest(database);
@@ -120,7 +127,7 @@ async function deliveredAgain(
       return true;
     }
     await Effect.runPromise(
-      followedPlaybooksOn(database).save(alpha, { cursor: null, delivered: null, attempts: 0, waiting: false }),
+      followedOrgsOn(database).save('acme', { cursor: null, delivered: null, attempts: 0, waiting: false }),
     );
     nudges += 1;
     await published(database.store, { id: `nudge-${nudges}`, type: 'com.acme.c' });
@@ -129,15 +136,60 @@ async function deliveredAgain(
   }, Boolean);
 }
 
-const alphaFollowerWakeUp = 'playbook/acme/alpha/';
+const handingOutAcme: Sweep = { orgs: [{ org: 'acme', known: undefined }], again: false };
 
-const handingOutAlpha: Sweep = {
-  registries: [],
-  playbooks: [{ playbookKey: alphaFollowerWakeUp, known: undefined }],
-  again: false,
+const parkedAlpha: HeldPlaybook = {
+  playbookKey: 'playbook/acme/alpha/',
+  org: 'acme',
+  progress: { cursor: 'c-1', delivered: null, attempts: 3, waiting: false },
+  hold: { heldFor: 'delivery', since: 1, until: 1, holds: 3 },
 };
 
-const nothingToSweep: Sweep = { registries: [], playbooks: [], again: false };
+interface Logging {
+  readonly atStart?: Effect.Effect<void>;
+  readonly parked?: readonly HeldPlaybook[];
+}
+
+function wakeUpLogging({ atStart = Effect.void, parked = [] }: Logging) {
+  const log: string[] = [];
+  const logged = (line: string) =>
+    Effect.sync(() => {
+      log.push(line);
+    });
+  const work: FollowerWork = {
+    passes: {
+      org: (org, mode) => Effect.as(logged(`pass ${org} ${mode}`), 'caught_up'),
+      held: ({ playbookKey }) => Effect.as(logged(`try ${playbookKey}`), 'caught_up'),
+    },
+    discovery: { atStart: () => Effect.andThen(logged('start'), atStart), orgSeen: () => Effect.void },
+    sweeps: {
+      started: () => logged('anchored'),
+      next: () => Effect.as(logged('next sweep'), handingOutAcme),
+      passAgain: Function.constVoid,
+    },
+    upkeep: {
+      sweep: () => logged('sweep'),
+      fireSchedules: () => Effect.void,
+      nextScheduleAt: () => Effect.succeed(null),
+      nextDeferredAt: () => Effect.succeed(null),
+    },
+    appended: streamSignalOf(),
+    holds: {
+      heldAt: () => Effect.succeed({ due: [], nextAt: null }),
+      parkedForDelivery: () => Effect.succeed(parked),
+      failed: () => Effect.void,
+    },
+    rounds: { failed: () => Effect.succeed(60_000), succeeded: () => Effect.void },
+    clock: systemClock,
+    sweepEveryMs: 1000,
+    trouble: (what) => logged(what),
+  };
+  const wake = followerWakeUpOf(work, { raised: Function.constVoid, renewed: Function.constVoid });
+  onTestFinished(() => Effect.runPromise(wake.stop()));
+  return { wake, log: () => log };
+}
+
+const nothingToSweep: Sweep = { orgs: [], again: false };
 
 const at = Date.parse('2026-11-11T09:00:00.000Z');
 
@@ -186,17 +238,19 @@ function workDue({ scheduleAt, heldAt, deferredAt }: Due, broken: Readonly<{ at:
   const troubles: unknown[] = [];
   const passes: string[] = [];
   const work: FollowerWork = {
-    pass: (playbookKey, mode) =>
-      Effect.sync(() => {
-        passes.push(`${playbookKey} ${mode}`);
-        return 'caught_up';
-      }),
-    discovery: { atStart: () => Effect.void, registriesAppended: () => Effect.void, playbookSeen: () => Effect.void },
+    passes: {
+      org: (org, mode) =>
+        Effect.sync(() => {
+          passes.push(`${org} ${mode}`);
+          return 'caught_up';
+        }),
+      held: () => Effect.succeed('caught_up'),
+    },
+    discovery: { atStart: () => Effect.void, orgSeen: () => Effect.void },
     sweeps: {
       started: () => Effect.void,
       next: () => Effect.succeed(nothingToSweep),
       passAgain: Function.constVoid,
-      registriesRead: Function.constVoid,
     },
     upkeep: {
       sweep: () => Effect.void,
@@ -207,6 +261,7 @@ function workDue({ scheduleAt, heldAt, deferredAt }: Due, broken: Readonly<{ at:
     appended: streamSignalOf(),
     holds: {
       heldAt: () => (broken.at === 'holds' ? Effect.die(holdsBroke) : Effect.succeed({ due: [], nextAt: heldAt })),
+      parkedForDelivery: () => Effect.succeed([]),
       failed: () => Effect.void,
     },
     rounds: roundsAMinuteLongerEachInARow(),
@@ -489,7 +544,7 @@ describe('a run ending the follower delivers twice', () => {
     const handings = () => recording.spans().filter((span) => handedTheChildsEnding(span)).length;
     await recorded(
       database.store,
-      childStream,
+      await childStarted(database.store, child, ofTheChild),
       { type: 'run_succeeded', data: { output: 'checked', record: {} } },
       ofTheChild,
     );
@@ -504,51 +559,28 @@ describe('a run ending the follower delivers twice', () => {
 });
 
 describe('the wake-up of the follower of the playbooks', () => {
-  it('runs one wake at a time: two wakes together take its place once, find the playbooks once, sweep once and pass each playbook once', async () => {
-    const log: string[] = [];
-    const logged = (line: string) =>
-      Effect.sync(() => {
-        log.push(line);
-      });
+  it('runs one wake at a time: two wakes together take its place once, place the orgs once, sweep once and pass each org once', async () => {
     const finding = Deferred.makeUnsafe<void>();
-    const work = followerWakeUpOf(
-      {
-        pass: (playbookKey, mode) => Effect.as(logged(`pass ${playbookKey} ${mode}`), 'caught_up'),
-        discovery: {
-          atStart: () => Effect.andThen(logged('start'), Deferred.await(finding)),
-          registriesAppended: () => Effect.void,
-          playbookSeen: () => Effect.void,
-        },
-        sweeps: {
-          started: () => logged('anchored'),
-          next: () => Effect.as(logged('next sweep'), handingOutAlpha),
-          passAgain: Function.constVoid,
-          registriesRead: Function.constVoid,
-        },
-        upkeep: {
-          sweep: () => logged('sweep'),
-          fireSchedules: () => Effect.void,
-          nextScheduleAt: () => Effect.succeed(null),
-          nextDeferredAt: () => Effect.succeed(null),
-        },
-        appended: streamSignalOf(),
-        holds: { heldAt: () => Effect.succeed({ due: [], nextAt: null }), failed: () => Effect.void },
-        rounds: { failed: () => Effect.succeed(60_000), succeeded: () => Effect.void },
-        clock: systemClock,
-        sweepEveryMs: 1000,
-        trouble: (what) => logged(what),
-      },
-      { raised: Function.constVoid, renewed: Function.constVoid },
-    );
-    onTestFinished(() => Effect.runPromise(work.stop()));
+    const { wake, log } = wakeUpLogging({ atStart: Deferred.await(finding) });
     const woken = { now: Date.now(), sweep: true };
 
-    const together = Promise.all([Effect.runPromise(work.wakeUp(woken)), Effect.runPromise(work.wakeUp(woken))]);
+    const together = Promise.all([Effect.runPromise(wake.wakeUp(woken)), Effect.runPromise(wake.wakeUp(woken))]);
     await Effect.runPromise(Deferred.done(finding, Exit.void));
     const answers = await together;
 
-    expect(log).toEqual(['anchored', 'start', 'next sweep', 'sweep', `pass ${alphaFollowerWakeUp} sweep`]);
+    expect(log()).toEqual(['anchored', 'start', 'next sweep', 'sweep', 'pass acme sweep']);
     expect(answers).toEqual([{ nextDueAt: null }, { nextDueAt: null }]);
+  });
+});
+
+describe('the playbooks parked for a delivery that waits to be tried again', () => {
+  it('are tried at a wake that sweeps, after the orgs it passes, and at no other', async () => {
+    const { wake, log } = wakeUpLogging({ parked: [parkedAlpha] });
+
+    await Effect.runPromise(wake.wakeUp({ now: Date.now(), sweep: true }));
+    await Effect.runPromise(wake.wakeUp({ now: Date.now(), sweep: false }));
+
+    expect(log()).toEqual(['anchored', 'start', 'next sweep', 'sweep', 'pass acme sweep', 'try playbook/acme/alpha/']);
   });
 });
 
@@ -698,7 +730,7 @@ describe('the time the follower is next due after a round that failed', () => {
 
     await Effect.runPromise(follower.wakeUp({ now: at, sweep: true }));
     broken.at = 'firing';
-    work.appended.raise(`${alphaFollowerWakeUp}events/e1`);
+    work.appended.raise(`${alpha}events/e1`);
     const failed = await Effect.runPromise(follower.wakeUp({ now: at + 1, sweep: false }));
     broken.at = 'nowhere';
     const retried = await Effect.runPromise(
@@ -706,7 +738,7 @@ describe('the time the follower is next due after a round that failed', () => {
     );
 
     expect([failed, retried]).toEqual([{ nextDueAt: retriedAfterTheFirstRoundThatFailed }, { nextDueAt: null }]);
-    expect(passes()).toEqual([`${alphaFollowerWakeUp} signal`]);
+    expect(passes()).toEqual(['acme signal']);
   });
 });
 
@@ -742,7 +774,7 @@ describe('the time the follower is next due after a start that failed', () => {
     const wokenWith = (now: number, sweep: boolean) => Effect.runPromise(follower.wakeUp({ now, sweep }));
 
     const first = await wokenWith(at, true);
-    work.appended.raise(`${alphaFollowerWakeUp}events/e1`);
+    work.appended.raise(`${alpha}events/e1`);
     const beforeTheRetry = await wokenWith(at + 30_000, false);
     const atTheRetry = await wokenWith(at + 60_000, false);
     const swept = await wokenWith(at + 61_000, true);
@@ -836,10 +868,12 @@ describe('a record of a playbook the follower cannot read', () => {
       type: 'run_started',
       data: { input: {}, calls_tools: 7 },
     });
-    await recorded(store, `${alpha}definitions/workflow`, {
-      type: 'definition_created',
-      data: { content: 7 },
-    });
+    await recorded(
+      store,
+      definitionStreamNamed('watch'),
+      { type: 'definition_updated', data: { content: 7 } },
+      { ...byAdmin, definitionType: 'workflow', definitionName: 'watch', definitionVersion: 2 },
+    );
 
     await published(store, { id: 's1', type: 'com.acme.sentinel' });
     await until(
@@ -850,7 +884,7 @@ describe('a record of a playbook the follower cannot read', () => {
     expect(reacting.notes()).toMatchObject([
       { kind: 'record_unreadable', org: 'acme', playbook: 'alpha', type: 'event_published' },
       { kind: 'record_unreadable', org: 'acme', playbook: 'alpha', type: 'run_started' },
-      { kind: 'record_unreadable', org: 'acme', playbook: 'alpha', type: 'definition_created' },
+      { kind: 'record_unreadable', org: 'acme', playbook: 'alpha', type: 'definition_updated' },
     ]);
   });
 });

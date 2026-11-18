@@ -32,7 +32,10 @@ function ranBy(runId: string) {
   };
 }
 
-const started = { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } };
+const started = {
+  type: 'run_started',
+  data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha', input: {} },
+};
 
 function succeeded(output: number) {
   return { type: 'run_succeeded', data: { output, record: {} } };

@@ -11,6 +11,7 @@ import { StartRejected } from './start-rejected.ts';
 export interface ReactionStart {
   readonly org: string;
   readonly playbook: string;
+  readonly definitionKey: string;
   readonly workflow: string;
   readonly version: number;
   readonly runId: string;

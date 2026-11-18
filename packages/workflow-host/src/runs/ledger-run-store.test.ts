@@ -1,8 +1,6 @@
 import { statement, VersionConflict } from '@on.auto/ledger';
-import { ledgerLayer } from '@on.auto/ledger/sqlite';
-import { Ledger } from '@on.auto/operations';
-import { Effect, ManagedRuntime, Result } from 'effect';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { Effect, Result } from 'effect';
+import { describe, expect, it } from 'vitest';
 
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
@@ -18,12 +16,6 @@ const run = runAt(runId);
 const waiting = workflow('do:\n  - pause: { wait: PT1H }');
 
 const largeInput = { text: 'é'.repeat(700_000) };
-
-function ledgerOn(fileName: string): Promise<Ledger['Service']> {
-  const runtime = ManagedRuntime.make(ledgerLayer({ fileName }));
-  onTestFinished(() => runtime.dispose());
-  return runtime.runPromise(Ledger);
-}
 
 function onlyOf<A>(items: readonly A[]): A {
   const [only] = items;
@@ -96,21 +88,6 @@ describe('the run store of the host, recording the end of a run', () => {
 });
 
 describe('the run store of the host, keeping a run', () => {
-  it('keeps the log of a run on the ledger, under the playbook, where the history of the run reads it', async () => {
-    const file = aSQLiteFile();
-    const hosted = await hostedOn({ store: 'sqlite', file });
-    await Effect.runPromise(hosted.host.start(run, startOf(waiting)));
-    const ledger = await ledgerOn(file);
-
-    const history = await Effect.runPromise(
-      ledger.readRecorded({ org: 'acme', playbook: 'alpha' }, { kind: 'run', run: runId }, { order: 'asc', limit: 10 }),
-    );
-
-    expect(history.records.map(({ stream, type }) => [stream, type])).toEqual([
-      [`playbook/acme/alpha/run-logs/${runId}`, 'input_applied'],
-    ]);
-  });
-
   it('keeps a snapshot larger than a chunk in chunks outside the ledger, and loads the run from it', async () => {
     const file = aSQLiteFile();
     const hosted = await hostedOn({ store: 'sqlite', file });

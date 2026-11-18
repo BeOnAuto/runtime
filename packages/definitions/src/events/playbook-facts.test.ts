@@ -1,3 +1,4 @@
+import { runStreamNameOf } from '@on.auto/operations';
 import type { Context, RecordedEvent, RecordedFact } from '@on.auto/operations';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -11,8 +12,7 @@ import {
   type RunEvent,
 } from '../index.ts';
 import { jsonBytesOf } from '../runs/recorded-size.ts';
-import { runStreamNameOf } from '../runs/run-decider.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { testRunId as runId } from '../testing/run-facts.ts';
 import { mostPublishedEventBytes } from './cloud-event.ts';
 
@@ -151,7 +151,10 @@ function succeededWith(output: Schema.Json) {
 describe('the facts of a run as events', () => {
   it('are its start and its endings, about the run, its context as attributes and its fact as data', () => {
     const facts = [
-      ofRun({ type: 'run_started', data: { started_by: recordedAdmin, input: { text: 'the quarter' } } }),
+      ofRun({
+        type: 'run_started',
+        data: { ...startedInAlpha, input: { text: 'the quarter' } },
+      }),
       ofRun({ type: 'run_rejected', data: { rejection: { reason: 'unavailable', detail: 'Busy' } } }),
       ofRun({ type: 'run_rejected', data: { rejection: { reason: 'cancelled', kind: 'requested', detail: 'No' } } }),
       ofRun({ type: 'run_failed', data: {} }),
@@ -255,7 +258,10 @@ describe('the records that are no facts of the playbook', () => {
         ...ofDefinitions({ type: 'definition_created', data: { content, created_by: recordedAdmin } }, ofSummary),
         data: 'not an event',
       },
-      { ...ofRun({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } }), data: null },
+      {
+        ...ofRun({ type: 'run_started', data: { ...startedInAlpha, input: {} } }),
+        data: null,
+      },
     ];
 
     expect(unreadable.map((record) => playbookFactOf(record))).toEqual([undefined, undefined, undefined]);
@@ -308,7 +314,7 @@ describe('the facts of a run that answers a call of another run', () => {
     const called = { ...ofCheck, calledBy, callDepth: 1 };
 
     expect([
-      attributesOf({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } }, called),
+      attributesOf({ type: 'run_started', data: { ...startedInAlpha, input: {} } }, called),
       attributesOf(
         {
           type: 'run_rejected',
@@ -329,9 +335,7 @@ describe('the facts of a run a trigger started', () => {
 
     expect(
       [
-        playbookFactOf(
-          ofRunRunStartFacts({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } }, triggered),
-        ),
+        playbookFactOf(ofRunRunStartFacts({ type: 'run_started', data: { ...startedInAlpha, input: {} } }, triggered)),
         playbookFactOf(ofRunRunStartFacts({ type: 'run_failed', data: {} }, triggered)),
       ].map((fact) => [fact?.['triggerkind'], fact?.['triggerreference']]),
     ).toEqual([

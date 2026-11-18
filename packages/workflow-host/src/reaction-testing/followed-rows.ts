@@ -14,8 +14,7 @@ const HoldRow = Schema.Struct({
   holds: WholeNumber,
   held_for: Schema.NullOr(Schema.String),
   attempts: WholeNumber,
-  waiting: WholeNumber,
-  checked: WholeNumber,
+  place: Schema.NullOr(Schema.String),
 });
 
 export type HoldState = typeof HoldRow.Type;
@@ -30,8 +29,11 @@ export function holdStateOf({ reacting }: Holding): Promise<HoldState> {
     oneRowOf(
       HoldRow,
       reacting.database.read(
-        statement`SELECT held_since, held_until, holds, held_for, attempts, waiting, checked
-          FROM workflow_followed_playbooks WHERE playbook_key = ${alpha}`,
+        statement`SELECT held.held_since, held.held_until, COALESCE(held.holds, 0) AS holds, held.held_for,
+            COALESCE(held.attempts, 0) AS attempts, followed.cursor AS place
+          FROM workflow_followed_orgs AS followed
+          LEFT JOIN workflow_held_playbooks AS held ON held.playbook_key = ${alpha}
+          WHERE followed.org = 'acme'`,
       ),
     ),
   );

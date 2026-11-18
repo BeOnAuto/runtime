@@ -1,12 +1,11 @@
 import type { RecordWork } from '@on.auto/definitions';
 import { PayloadOffloading } from '@on.auto/operations/payloads';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { readings } from '../readings/reading-rows.ts';
 import { openRequests } from '../requests/open-requests.ts';
-import { answererId, chatHarness, farAhead, recordsOf } from '../testing/index.ts';
+import { answererId, chatHarness, farAhead, ledgerKeepingNames, recordsOf } from '../testing/index.ts';
 import { replyWaitMsOf, waitBefore, waitBeforeRead } from './cadence.ts';
 import { conversations } from './conversation-rows.ts';
 
@@ -21,7 +20,7 @@ function keepingOutside(record: RecordWork): RecordWork {
 
 describe('a long reply, where its playbook keeps large values outside its runs', () => {
   it('is taken at its first read and recorded inline, its store never asked, as an answer of 3 KiB is within what a fact keeps', async () => {
-    const kept = memoryLedger(undefined, [openRequests, conversations, readings]);
+    const kept = ledgerKeepingNames([openRequests, conversations, readings]);
     const puts: string[] = [];
     const failingPut = {
       ...kept.service.content,

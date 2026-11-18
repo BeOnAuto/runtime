@@ -1,7 +1,6 @@
-import type { DefinitionContext, PlaybookAddress } from '@on.auto/operations';
+import type { DefinitionContext } from '@on.auto/operations';
 import { Struct } from 'effect';
 
-import { earlierDefinitionIdOf } from '../identity/definition-ids.ts';
 import type { PageContent } from '../page/page-facts.ts';
 import { isTheSameText, textMemberNames, textMembersOf, textsOf } from '../payloads/definition-texts.ts';
 import type {
@@ -18,7 +17,7 @@ export type RegisteredDefinition = StoredDefinition & { readonly page?: PageCont
 
 export type DefinitionRegistry = ReadonlyMap<string, RegisteredDefinition>;
 
-export const initialRegistry: DefinitionRegistry = new Map();
+export type DefinitionState = RegisteredDefinition | undefined;
 
 const whilePaused = ['paused_at', 'paused_by', 'reason'] as const;
 
@@ -50,12 +49,12 @@ export function storedContentOf(content: DefinitionContent) {
   return { ...apartFromItsTexts, ...textsOf(content) };
 }
 
-function createdDefinition(address: PlaybookAddress, { data, context }: DefinitionCreated): RegisteredDefinition {
-  const { at, definitionType: type, definitionName: name, definitionVersion: version } = context;
-  const { content, created_by, definition_id: given } = data;
+function createdDefinition(definition: string, { data, context }: DefinitionCreated): RegisteredDefinition {
+  const { at, definitionName: name, definitionVersion: version } = context;
+  const { content, created_by } = data;
   return {
     name,
-    definition_id: given ?? earlierDefinitionIdOf({ ...address, type, name }),
+    definition_id: definition,
     version,
     ...standingAtCreation(data, at),
     ...storedContentOf(content),
@@ -124,19 +123,14 @@ function evolvedDefinition(
     : retiredDefinition(definition, event.context);
 }
 
-function withDefinition(registry: DefinitionRegistry, definition: RegisteredDefinition): DefinitionRegistry {
-  return new Map(registry).set(definition.name, definition);
-}
-
-export function registryEvolvedIn(
-  address: PlaybookAddress,
-): (registry: DefinitionRegistry, event: RecordedDefinitionEvent) => DefinitionRegistry {
-  return (registry, event) => {
+export function definitionEvolvedIn(
+  definition: string,
+): (state: DefinitionState, event: RecordedDefinitionEvent) => DefinitionState {
+  return (state, event) => {
     if (event.type === 'definition_created') {
-      return withDefinition(registry, createdDefinition(address, event));
+      return createdDefinition(definition, event);
     }
-    const definition = registry.get(event.context.definitionName);
-    return definition === undefined ? registry : withDefinition(registry, evolvedDefinition(definition, event));
+    return state === undefined ? undefined : evolvedDefinition(state, event);
   };
 }
 

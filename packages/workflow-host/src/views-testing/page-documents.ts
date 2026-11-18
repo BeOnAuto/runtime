@@ -44,7 +44,7 @@ export function folds(returned: string): string {
 }
 
 export function reconciledPages(views: ViewHarness, rebuildsAtOnce = 4) {
-  const kept = { database: views.store.database, definitions: definitionsByType().of };
+  const kept = { database: views.store.database, definitions: definitionsByType() };
   const folder = pageViewsFolder({ pool: views.pool, rebuildsAtOnce, folding: checkedFolding });
   return Effect.runPromise(reconciledRows(folder, kept, alphaKey));
 }

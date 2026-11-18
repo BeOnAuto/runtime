@@ -19,7 +19,7 @@ export function registeredFromTheReadModel(type: string, name: string): Reading<
   return Effect.flatMap(rowAndSaveOf(type, name), (found) =>
     found === undefined
       ? Effect.undefined
-      : Effect.map(savedByOf(type, found.row.saved_position), (savedBy) => ({
+      : Effect.map(savedByOf(type, found.row), (savedBy) => ({
           stored: storedOf(found),
           row: found.row,
           savedBy,

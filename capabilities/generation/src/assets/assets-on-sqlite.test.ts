@@ -6,7 +6,7 @@ import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import type { KeyedProjection } from '@on.auto/operations';
 import { describe, onTestFinished } from 'vitest';
 
-import { assetsOnStoresSuite } from '../store-testing/assets-on-stores.ts';
+import { assetsOnStoresSuite, definitionsPlacedApart } from '../store-testing/assets-on-stores.ts';
 import { waitingOnStoresSuite } from '../store-testing/waiting-on-stores.ts';
 
 function onSQLite(projections: readonly KeyedProjection[]) {
@@ -14,7 +14,9 @@ function onSQLite(projections: readonly KeyedProjection[]) {
   onTestFinished(() => {
     rmSync(directory, { recursive: true, force: true });
   });
-  return Promise.resolve(ledgerLayer({ fileName: join(directory, 'ledger.db'), projections }));
+  return Promise.resolve(
+    ledgerLayer({ fileName: join(directory, 'ledger.db'), projections, definitionNames: definitionsPlacedApart }),
+  );
 }
 
 describe('the assets of playbooks on SQLite', () => {

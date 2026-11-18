@@ -1,5 +1,5 @@
 {
-  "layout": 26,
+  "layout": 27,
   "catalog": [
     {
       "name": "activity_1",
@@ -142,28 +142,24 @@
       "sql": "CREATE UNIQUE INDEX definition_names_1_by_definition ON definition_names_1 (definition_key)"
     },
     {
-      "name": "definition_references_3",
-      "sql": "CREATE TABLE definition_references_3 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, child_key TEXT NOT NULL, user_type TEXT, user_name TEXT, used_type TEXT, used_name TEXT, relation TEXT, places TEXT, PRIMARY KEY (playbook_key, row_key, child_key))"
+      "name": "definition_references_4",
+      "sql": "CREATE TABLE definition_references_4 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, child_key TEXT NOT NULL, user_type TEXT, user_name TEXT, used_type TEXT, used_name TEXT, relation TEXT, places TEXT, PRIMARY KEY (playbook_key, row_key, child_key))"
     },
     {
-      "name": "definition_references_3_by_used",
-      "sql": "CREATE INDEX definition_references_3_by_used ON definition_references_3 (playbook_key, used_type, used_name, row_key, child_key)"
+      "name": "definition_references_4_by_used",
+      "sql": "CREATE INDEX definition_references_4_by_used ON definition_references_4 (playbook_key, used_type, used_name, row_key, child_key)"
     },
     {
-      "name": "definition_versions_3",
-      "sql": "CREATE TABLE definition_versions_3 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, definition_type TEXT, name TEXT, version INTEGER, position INTEGER, put_in_place_by TEXT, PRIMARY KEY (playbook_key, row_key))"
+      "name": "definition_versions_4",
+      "sql": "CREATE TABLE definition_versions_4 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, definition_type TEXT, name TEXT, version INTEGER, position INTEGER, put_in_place_by TEXT, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "definitions_3",
-      "sql": "CREATE TABLE definitions_3 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, definition_type TEXT, name TEXT, definition_id TEXT, version INTEGER, status TEXT, description TEXT, input_schema TEXT, output_schema TEXT, warnings TEXT, shape TEXT, contributes TEXT, triggers TEXT, created_at TEXT, created_by_id TEXT, created_by_name TEXT, updated_at TEXT, paused_at TEXT, paused_by_id TEXT, paused_by_name TEXT, reason TEXT, retired_at TEXT, saved_position INTEGER, PRIMARY KEY (playbook_key, row_key))"
+      "name": "definitions_4",
+      "sql": "CREATE TABLE definitions_4 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, definition_type TEXT, name TEXT, version INTEGER, status TEXT, description TEXT, input_schema TEXT, output_schema TEXT, warnings TEXT, shape TEXT, contributes TEXT, triggers TEXT, created_at TEXT, created_by_id TEXT, created_by_name TEXT, updated_at TEXT, paused_at TEXT, paused_by_id TEXT, paused_by_name TEXT, reason TEXT, retired_at TEXT, saved_position INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "definitions_3_by_type",
-      "sql": "CREATE INDEX definitions_3_by_type ON definitions_3 (playbook_key, definition_type, row_key)"
-    },
-    {
-      "name": "definitions_checkpoints_3",
-      "sql": "CREATE TABLE definitions_checkpoints_3 (playbook_key TEXT NOT NULL, stream TEXT NOT NULL, folded_through INTEGER NOT NULL, PRIMARY KEY (playbook_key, stream))"
+      "name": "definitions_4_by_type",
+      "sql": "CREATE INDEX definitions_4_by_type ON definitions_4 (playbook_key, definition_type, row_key)"
     },
     {
       "name": "generations_due_1",
@@ -282,6 +278,10 @@
       "sql": "CREATE TABLE ledger_layout (one_row BOOLEAN NOT NULL PRIMARY KEY DEFAULT TRUE CHECK (one_row), layout INTEGER NOT NULL)"
     },
     {
+      "name": "ledger_messages_by_org",
+      "sql": "CREATE INDEX ledger_messages_by_org ON emt_messages (CASE WHEN instr(stream_id, '/') > 0 AND instr(substr(stream_id, instr(stream_id, '/') + 1), '/') > 0 THEN substr(stream_id, instr(stream_id, '/') + 1, instr(substr(stream_id, instr(stream_id, '/') + 1), '/') - 1) END, global_position)"
+    },
+    {
       "name": "ledger_messages_by_org_and_correlation",
       "sql": "CREATE INDEX ledger_messages_by_org_and_correlation ON emt_messages (CASE WHEN instr(stream_id, '/') > 0 AND instr(substr(stream_id, instr(stream_id, '/') + 1), '/') > 0 THEN substr(stream_id, instr(stream_id, '/') + 1, instr(substr(stream_id, instr(stream_id, '/') + 1), '/') - 1) END, json_extract(message_metadata, '$.correlationId'), global_position)"
     },
@@ -386,6 +386,10 @@
       "sql": "CREATE TABLE role_assignments_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, child_key TEXT NOT NULL, principal_type TEXT, principal_id TEXT, role_type TEXT, role_id TEXT, scope_type TEXT, scope_id TEXT, source TEXT, assigned_at TEXT, assigned_by TEXT, PRIMARY KEY (playbook_key, row_key, child_key))"
     },
     {
+      "name": "run_ids_1",
+      "sql": "CREATE TABLE run_ids_1 (org_key TEXT NOT NULL, run_id TEXT NOT NULL, definition_key TEXT NOT NULL, PRIMARY KEY (org_key, run_id))"
+    },
+    {
       "name": "run_outcomes_5",
       "sql": "CREATE TABLE run_outcomes_5 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, started_day TEXT, started_at TEXT, last_started_at TEXT, definition_type TEXT, name TEXT, status TEXT, duration_ms INTEGER, input_tokens INTEGER, output_tokens INTEGER, cached_tokens INTEGER, cost_micro_usd INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },
@@ -451,23 +455,23 @@
     },
     {
       "name": "workflow_followed_orgs",
-      "sql": "CREATE TABLE workflow_followed_orgs (stream_id TEXT NOT NULL PRIMARY KEY, position BIGINT NOT NULL)"
+      "sql": "CREATE TABLE workflow_followed_orgs (org TEXT NOT NULL PRIMARY KEY, cursor TEXT, delivered TEXT, attempts INTEGER NOT NULL DEFAULT 0, waiting INTEGER NOT NULL DEFAULT 0, checked BIGINT NOT NULL DEFAULT 0)"
     },
     {
-      "name": "workflow_followed_playbooks",
-      "sql": "CREATE TABLE workflow_followed_playbooks (playbook_key TEXT NOT NULL PRIMARY KEY, cursor TEXT, delivered TEXT, attempts INTEGER NOT NULL DEFAULT 0, waiting INTEGER NOT NULL DEFAULT 0, checked BIGINT NOT NULL DEFAULT 0, held_since BIGINT, held_until BIGINT, holds INTEGER NOT NULL DEFAULT 0, held_for TEXT)"
-    },
-    {
-      "name": "workflow_followed_playbooks_by_check",
-      "sql": "CREATE INDEX workflow_followed_playbooks_by_check ON workflow_followed_playbooks (waiting, checked)"
-    },
-    {
-      "name": "workflow_followed_playbooks_held",
-      "sql": "CREATE INDEX workflow_followed_playbooks_held ON workflow_followed_playbooks (held_until) WHERE held_until IS NOT NULL"
+      "name": "workflow_followed_orgs_by_check",
+      "sql": "CREATE INDEX workflow_followed_orgs_by_check ON workflow_followed_orgs (waiting, checked)"
     },
     {
       "name": "workflow_followed_scans",
       "sql": "CREATE TABLE workflow_followed_scans (name TEXT NOT NULL PRIMARY KEY)"
+    },
+    {
+      "name": "workflow_held_playbooks",
+      "sql": "CREATE TABLE workflow_held_playbooks (playbook_key TEXT NOT NULL PRIMARY KEY, org TEXT NOT NULL, cursor TEXT NOT NULL, held_since BIGINT NOT NULL, held_until BIGINT NOT NULL, holds INTEGER NOT NULL, held_for TEXT NOT NULL, delivered TEXT, attempts INTEGER NOT NULL DEFAULT 0)"
+    },
+    {
+      "name": "workflow_held_playbooks_due",
+      "sql": "CREATE INDEX workflow_held_playbooks_due ON workflow_held_playbooks (held_until)"
     },
     {
       "name": "workflow_leases",
@@ -495,7 +499,7 @@
     },
     {
       "name": "workflow_pauses",
-      "sql": "CREATE TABLE workflow_pauses (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, PRIMARY KEY (playbook_key, workflow))"
+      "sql": "CREATE TABLE workflow_pauses (definition_key TEXT NOT NULL PRIMARY KEY)"
     },
     {
       "name": "workflow_pending_cancels",
@@ -503,7 +507,7 @@
     },
     {
       "name": "workflow_reaction_backlog",
-      "sql": "CREATE TABLE workflow_reaction_backlog (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, run_id TEXT NOT NULL, start TEXT NOT NULL, due BIGINT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (playbook_key, run_id))"
+      "sql": "CREATE TABLE workflow_reaction_backlog (definition_key TEXT NOT NULL, run_id TEXT NOT NULL, start TEXT NOT NULL, due BIGINT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (definition_key, run_id))"
     },
     {
       "name": "workflow_reaction_backlog_due",
@@ -511,15 +515,15 @@
     },
     {
       "name": "workflow_reaction_rates",
-      "sql": "CREATE TABLE workflow_reaction_rates (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, minute BIGINT NOT NULL, starts INTEGER NOT NULL, PRIMARY KEY (playbook_key, workflow))"
+      "sql": "CREATE TABLE workflow_reaction_rates (definition_key TEXT NOT NULL PRIMARY KEY, minute BIGINT NOT NULL, starts INTEGER NOT NULL)"
     },
     {
       "name": "workflow_reaction_refusals",
-      "sql": "CREATE TABLE workflow_reaction_refusals (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, version INTEGER NOT NULL, minute BIGINT NOT NULL, count INTEGER NOT NULL, reason TEXT NOT NULL, recorded INTEGER NOT NULL DEFAULT 0, kind TEXT, because TEXT, trigger_kind TEXT NOT NULL, trigger_reference TEXT NOT NULL, PRIMARY KEY (playbook_key, workflow, trigger_kind, trigger_reference))"
+      "sql": "CREATE TABLE workflow_reaction_refusals (definition_key TEXT NOT NULL, playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, version INTEGER NOT NULL, minute BIGINT NOT NULL, count INTEGER NOT NULL, reason TEXT NOT NULL, recorded INTEGER NOT NULL DEFAULT 0, kind TEXT, because TEXT, trigger_kind TEXT NOT NULL, trigger_reference TEXT NOT NULL, PRIMARY KEY (definition_key, trigger_kind, trigger_reference))"
     },
     {
       "name": "workflow_runs",
-      "sql": "CREATE TABLE workflow_runs (run_key TEXT NOT NULL PRIMARY KEY, stream_id TEXT NOT NULL, dispatched_through BIGINT NOT NULL DEFAULT 0, ended_at BIGINT, taken BIGINT NOT NULL DEFAULT 0, ended_time BIGINT, closed_at BIGINT)"
+      "sql": "CREATE TABLE workflow_runs (run_key TEXT NOT NULL PRIMARY KEY, stream_id TEXT NOT NULL, playbook_key TEXT, dispatched_through BIGINT NOT NULL DEFAULT 0, ended_at BIGINT, taken BIGINT NOT NULL DEFAULT 0, ended_time BIGINT, closed_at BIGINT)"
     },
     {
       "name": "workflow_runs_closing",
@@ -539,15 +543,15 @@
     },
     {
       "name": "workflow_subscription_types",
-      "sql": "CREATE TABLE workflow_subscription_types (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, type TEXT NOT NULL, PRIMARY KEY (playbook_key, workflow, type))"
+      "sql": "CREATE TABLE workflow_subscription_types (definition_key TEXT NOT NULL, type TEXT NOT NULL, playbook_key TEXT NOT NULL, PRIMARY KEY (definition_key, type))"
     },
     {
       "name": "workflow_subscription_types_by_type",
-      "sql": "CREATE INDEX workflow_subscription_types_by_type ON workflow_subscription_types (playbook_key, type, workflow)"
+      "sql": "CREATE INDEX workflow_subscription_types_by_type ON workflow_subscription_types (playbook_key, type, definition_key)"
     },
     {
       "name": "workflow_subscriptions",
-      "sql": "CREATE TABLE workflow_subscriptions (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, reference TEXT NOT NULL, version BIGINT NOT NULL, kind TEXT NOT NULL, rule TEXT NOT NULL, activated_by TEXT NOT NULL, activated_at BIGINT NOT NULL, next_due BIGINT, running TEXT, held_due BIGINT, PRIMARY KEY (playbook_key, workflow, reference))"
+      "sql": "CREATE TABLE workflow_subscriptions (definition_key TEXT NOT NULL, reference TEXT NOT NULL, playbook_key TEXT NOT NULL, version BIGINT NOT NULL, kind TEXT NOT NULL, rule TEXT NOT NULL, activated_by TEXT NOT NULL, activated_at BIGINT NOT NULL, next_due BIGINT, running TEXT, held_due BIGINT, PRIMARY KEY (definition_key, reference))"
     },
     {
       "name": "workflow_subscriptions_due",

@@ -13,7 +13,7 @@ import { Context, Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { generationBounds, type GenerationBounds } from '../capability/generation-ports.ts';
-import { day } from '../run-testing/run-outcomes.ts';
+import { aRunIn, day } from '../run-testing/run-outcomes.ts';
 import { alpha, generationHarness, harnessStartsAt, type GenerationHarness } from '../testing/index.ts';
 import { assetIdOfAValue, valuesKeptAsAssets } from './kept-values.ts';
 
@@ -29,6 +29,12 @@ const run = {
   },
   lineage: { causationId: 'start-1', correlationId: '019a5b12-3d4e-7a5f-8b6c-9d0e1f2a3b4d' },
 };
+
+/** A playbook holding the run that keeps the values, started under its definition, where its assets are filed. */
+async function withTheRun(playbook: GenerationHarness): Promise<GenerationHarness> {
+  await aRunIn(playbook, run.context.runId);
+  return playbook;
+}
 
 const aDigest: unknown = expect.stringMatching(/^[0-9a-f]{64}$/u);
 
@@ -74,7 +80,7 @@ async function keptAs(playbook: GenerationHarness, value: ValueToKeep): Promise<
 
 describe('a value a run returned, kept as an asset of its playbook', () => {
   it('is kept as text made by the output of the run at its place, for as long as the playbook keeps an asset, under an id of the run, the place and the bytes', async () => {
-    const playbook = generationHarness();
+    const playbook = await withTheRun(generationHarness());
 
     const kept = await keptAs(playbook, page);
 
@@ -102,7 +108,7 @@ describe('a value a run returned, kept as an asset of its playbook', () => {
   });
 
   it('is the same asset when the same run keeps the same bytes at the same place again, as an attempt after a crash does', async () => {
-    const playbook = generationHarness();
+    const playbook = await withTheRun(generationHarness());
 
     const first = await keptAs(playbook, page);
     const again = await keptAs(playbook, page);
@@ -117,7 +123,7 @@ describe('a value a run returned, kept as an asset of its playbook', () => {
 
 describe('a value a run returned whose bytes the playbook keeps already', () => {
   it('is kept under its own media type where the playbook keeps the same bytes under another', async () => {
-    const playbook = generationHarness();
+    const playbook = await withTheRun(generationHarness());
     const asText = { pointer: '/export', text: rows.text, mediaType: 'text/plain; charset=utf-8' };
 
     const json = await keptAs(playbook, rows);
@@ -132,7 +138,7 @@ describe('a value a run returned whose bytes the playbook keeps already', () => 
 
 describe('a value a run returned that is not kept', () => {
   it('is kept whole as JSON where the output was a list or an object', async () => {
-    const playbook = generationHarness();
+    const playbook = await withTheRun(generationHarness());
 
     const kept = await keptAs(playbook, rows);
 
@@ -142,7 +148,7 @@ describe('a value a run returned that is not kept', () => {
   });
 
   it('is refused as too large, keeping nothing, past what the playbook keeps of one file or once its storage quota is reached', async () => {
-    const playbook = generationHarness();
+    const playbook = await withTheRun(generationHarness());
     const oneFileOfFewBytes = { ...generationBounds, mostFileBytes: 16 };
     const quotaReached = { ...generationBounds, mostPlaybookBytes: 1 };
 
@@ -159,10 +165,20 @@ describe('a value a run returned that is not kept', () => {
     expect(await playbook.totals()).toEqual({ bytes: first.bytes, assets: 1 });
   });
 
-  it('ends with the refusal of the ledger that would record it, such as a store that keeps all it may', async () => {
+  it('is never kept for a run the playbook holds none of, since a run keeps its values under its own definition', async () => {
     const playbook = generationHarness();
+
+    expect(Exit.hasDies(await keptIn(playbook, page))).toBe(true);
+  });
+
+  it('ends with the refusal of the ledger that would record it, such as a store that keeps all it may', async () => {
+    const playbook = await withTheRun(generationHarness());
     const refusal = new Conflict({ detail: 'The store keeps all it may', kind: 'oversized' });
-    const refusing = { ...writerOf(playbook), execute: () => Effect.fail(refusal) };
+    const writer = writerOf(playbook);
+    const refusing: PlaybookWriter['Service'] = {
+      ...writer,
+      ofDefinition: (definition) => ({ ...writer.ofDefinition(definition), execute: () => Effect.fail(refusal) }),
+    };
 
     expect(await keptIn(playbook, page, generationBounds, refusing)).toEqual(Exit.fail(refusal));
   });
@@ -170,7 +186,7 @@ describe('a value a run returned that is not kept', () => {
 
 describe('every reader of the assets of a playbook', () => {
   it('reads a kept value as it reads any asset: get_asset, and its expiry, which removes its content', async () => {
-    const playbook = generationHarness();
+    const playbook = await withTheRun(generationHarness());
     const kept = await keptAs(playbook, page);
 
     const read = await playbook.assetOf(kept.id);

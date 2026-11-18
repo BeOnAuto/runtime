@@ -16,16 +16,23 @@ const decodeObject = Schema.decodeUnknownSync(Schema.JsonObject);
 
 const header = { dsl: '1.0.3', namespace: 'acme', name: 'test', version: '1.0.0' };
 
-export const testMachine: MachineOptions = testMachineOf(
-  machineSandboxOf(freshInstances(await sandboxModuleIn(sandboxFiles))),
-);
+const machineOfTheEngine = testMachineOf(machineSandboxOf(freshInstances(await sandboxModuleIn(sandboxFiles))));
+
+export const testMachine: MachineOptions = {
+  ...machineOfTheEngine,
+  functions: { ...machineOfTheEngine.functions, calledOf: ({ function: name }) => ({ type: 'notifier', name }) },
+};
 
 export function workflow(source: string): JsonObject {
   return { document: header, ...decodeObject(parse(source)) };
 }
 
+export const definitionOfTheTests = '0199a3c4-7d2e-7c1a-9b3f-00000000de01';
+
+export const definitionKeyOfTheTests = `definition/acme/${definitionOfTheTests}/`;
+
 export function runAt(runId: string): RunAddress {
-  return { org: 'acme', playbook: 'alpha', runId };
+  return { org: 'acme', playbook: 'alpha', definition: definitionOfTheTests, runId };
 }
 
 const testAttributes: JsonObject = {

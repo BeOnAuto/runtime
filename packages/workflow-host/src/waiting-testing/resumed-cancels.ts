@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import { alpha, at, recorded } from '../reaction-testing/playbook-writes.ts';
+import { at, recorded } from '../reaction-testing/playbook-writes.ts';
 import { faultyDatabase, type FaultyDatabase } from '../testing/faulty-database.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
 import { passedOverRow, pendingCancelRowsAfter } from '../waiting/pending-cancel-rows.ts';
@@ -86,9 +86,14 @@ export function endedRunSuite(settingsOf: SettingsOf): void {
   describe('a cancel kept for a run that finished without ever reaching the host', () => {
     it('is cleared by the newest head of the run, read first, and given to no run', async () => {
       const resumed = await resumedWith(settingsOf, ['acme/alpha/finished-unstarted', 'acme/alpha/stranded']);
-      await recorded(resumed.database.store, `${alpha}runs/finished-unstarted`, asked, ofTheRun);
-      await recorded(resumed.database.store, `${alpha}runs/finished-unstarted`, rejectedUnstarted, ofTheRun);
-      await recorded(resumed.database.store, `${alpha}runs/stranded`, asked, ofTheRun);
+      await recorded(resumed.database.store, `definition/acme/alpha/runs/finished-unstarted`, asked, ofTheRun);
+      await recorded(
+        resumed.database.store,
+        `definition/acme/alpha/runs/finished-unstarted`,
+        rejectedUnstarted,
+        ofTheRun,
+      );
+      await recorded(resumed.database.store, `definition/acme/alpha/runs/stranded`, asked, ofTheRun);
 
       await resumed.resume();
 

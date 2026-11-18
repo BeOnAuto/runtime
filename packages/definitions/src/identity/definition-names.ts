@@ -1,4 +1,5 @@
 import { Conflict } from '@on.auto/operations';
+import { streamPrefixOfPlaybook } from '@on.auto/operations';
 import type {
   DefinitionName,
   DefinitionNames,
@@ -12,7 +13,6 @@ import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import { definitionFactOf } from '../read-model/definition-rows.ts';
 import { definitionFactTypes, type RecordedDefinitionEvent } from '../registry/definition-events.ts';
 import { hasTriggers } from '../registry/definition-triggers.ts';
-import { definitionKeyOfId, earlierDefinitionIdOf } from './definition-ids.ts';
 
 export const mostReactingDefinitions = 1024;
 
@@ -20,30 +20,21 @@ export function unbounded(): number {
   return Number.POSITIVE_INFINITY;
 }
 
-const aDefinitionStream = /^(playbook\/([^/]+)\/([^/]+)\/)definitions\/([^/]+)$/u;
+const aDefinitionStream = /^(definition\/([^/]+)\/[^/]+\/)definitions\/([^/]+)$/u;
 
 interface DefinitionPlace {
-  readonly prefix: string;
+  readonly definitionKey: string;
   readonly org: string;
-  readonly playbook: string;
   readonly type: string;
 }
 
 function definitionStreamOf(types: readonly string[], stream: string): DefinitionPlace | undefined {
-  const [, prefix = '', org = '', playbook = '', type = ''] = aDefinitionStream.exec(stream) ?? [];
-  return types.includes(type) ? { prefix, org, playbook, type } : undefined;
+  const [, definitionKey = '', org = '', type = ''] = aDefinitionStream.exec(stream) ?? [];
+  return types.includes(type) ? { definitionKey, org, type } : undefined;
 }
 
-function definitionKeyOf(types: readonly string[], { stream, context }: NamedMessage): string | undefined {
-  const place = definitionStreamOf(types, stream);
-  if (place === undefined || context.definitionName === undefined) {
-    return undefined;
-  }
-  const { org, playbook, type } = place;
-  return definitionKeyOfId(
-    org,
-    context.definitionId ?? earlierDefinitionIdOf({ org, playbook, type, name: context.definitionName }),
-  );
+function definitionKeyOf(types: readonly string[], { stream }: NamedMessage): string | undefined {
+  return definitionStreamOf(types, stream)?.definitionKey;
 }
 
 function createdName(
@@ -52,10 +43,11 @@ function createdName(
   fact: Extract<RecordedDefinitionEvent, { type: 'definition_created' }>,
 ): NameAfter {
   const addressed = definitionStreamOf(types, stream);
-  return addressed === undefined
+  const { playbook } = fact.data;
+  return addressed === undefined || playbook === undefined
     ? undefined
     : {
-        playbookKey: addressed.prefix,
+        playbookKey: streamPrefixOfPlaybook({ org: addressed.org, playbook }),
         definitionType: addressed.type,
         name: fact.context.definitionName,
         status: 'active',

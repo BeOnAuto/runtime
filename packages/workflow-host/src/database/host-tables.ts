@@ -1,6 +1,9 @@
 import { statement, type ConnectionPorts, type Statement } from '@on.auto/ledger';
 
-export const reactionRefusalsTable = statement`CREATE TABLE IF NOT EXISTS workflow_reaction_refusals (
+import { orgFollowerTables, subscriptionTables } from './org-follower-tables.ts';
+
+const reactionRefusalsTable = statement`CREATE TABLE IF NOT EXISTS workflow_reaction_refusals (
+    definition_key TEXT NOT NULL,
     playbook_key TEXT NOT NULL,
     workflow TEXT NOT NULL,
     version INTEGER NOT NULL,
@@ -12,29 +15,11 @@ export const reactionRefusalsTable = statement`CREATE TABLE IF NOT EXISTS workfl
     because TEXT,
     trigger_kind TEXT NOT NULL,
     trigger_reference TEXT NOT NULL,
-    PRIMARY KEY (playbook_key, workflow, trigger_kind, trigger_reference)
+    PRIMARY KEY (definition_key, trigger_kind, trigger_reference)
   )`;
 
 const followerTables: readonly Statement[] = [
-  statement`CREATE TABLE IF NOT EXISTS workflow_followed_playbooks (
-    playbook_key TEXT NOT NULL PRIMARY KEY,
-    cursor TEXT,
-    delivered TEXT,
-    attempts INTEGER NOT NULL DEFAULT 0,
-    waiting INTEGER NOT NULL DEFAULT 0,
-    checked BIGINT NOT NULL DEFAULT 0,
-    held_since BIGINT,
-    held_until BIGINT,
-    holds INTEGER NOT NULL DEFAULT 0,
-    held_for TEXT
-  )`,
-  statement`CREATE INDEX IF NOT EXISTS workflow_followed_playbooks_by_check ON workflow_followed_playbooks (waiting, checked)`,
-  statement`CREATE INDEX IF NOT EXISTS workflow_followed_playbooks_held ON workflow_followed_playbooks (held_until)
-    WHERE held_until IS NOT NULL`,
-  statement`CREATE TABLE IF NOT EXISTS workflow_followed_orgs (
-    stream_id TEXT NOT NULL PRIMARY KEY,
-    position BIGINT NOT NULL
-  )`,
+  ...orgFollowerTables,
   statement`CREATE TABLE IF NOT EXISTS workflow_followed_scans (name TEXT NOT NULL PRIMARY KEY)`,
   statement`CREATE TABLE IF NOT EXISTS workflow_failed_rounds (
     name TEXT NOT NULL PRIMARY KEY,
@@ -65,50 +50,18 @@ const followerTables: readonly Statement[] = [
     listener TEXT NOT NULL,
     PRIMARY KEY (playbook_key, type, run_key, listener)
   )`,
-  statement`CREATE TABLE IF NOT EXISTS workflow_subscriptions (
-    playbook_key TEXT NOT NULL,
-    workflow TEXT NOT NULL,
-    reference TEXT NOT NULL,
-    version BIGINT NOT NULL,
-    kind TEXT NOT NULL,
-    rule TEXT NOT NULL,
-    activated_by TEXT NOT NULL,
-    activated_at BIGINT NOT NULL,
-    next_due BIGINT,
-    running TEXT,
-    held_due BIGINT,
-    PRIMARY KEY (playbook_key, workflow, reference)
-  )`,
-  statement`CREATE INDEX IF NOT EXISTS workflow_subscriptions_due ON workflow_subscriptions (next_due)
-    WHERE next_due IS NOT NULL`,
-  statement`CREATE TABLE IF NOT EXISTS workflow_pauses (
-    playbook_key TEXT NOT NULL,
-    workflow TEXT NOT NULL,
-    PRIMARY KEY (playbook_key, workflow)
-  )`,
-  statement`CREATE TABLE IF NOT EXISTS workflow_subscription_types (
-    playbook_key TEXT NOT NULL,
-    workflow TEXT NOT NULL,
-    type TEXT NOT NULL,
-    PRIMARY KEY (playbook_key, workflow, type)
-  )`,
-  statement`CREATE INDEX IF NOT EXISTS workflow_subscription_types_by_type
-    ON workflow_subscription_types (playbook_key, type, workflow)`,
   statement`CREATE TABLE IF NOT EXISTS workflow_reaction_rates (
-    playbook_key TEXT NOT NULL,
-    workflow TEXT NOT NULL,
+    definition_key TEXT NOT NULL PRIMARY KEY,
     minute BIGINT NOT NULL,
-    starts INTEGER NOT NULL,
-    PRIMARY KEY (playbook_key, workflow)
+    starts INTEGER NOT NULL
   )`,
   statement`CREATE TABLE IF NOT EXISTS workflow_reaction_backlog (
-    playbook_key TEXT NOT NULL,
-    workflow TEXT NOT NULL,
+    definition_key TEXT NOT NULL,
     run_id TEXT NOT NULL,
     start TEXT NOT NULL,
     due BIGINT NOT NULL,
     attempts INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (playbook_key, run_id)
+    PRIMARY KEY (definition_key, run_id)
   )`,
   statement`CREATE INDEX IF NOT EXISTS workflow_reaction_backlog_due ON workflow_reaction_backlog (due)`,
   reactionRefusalsTable,
@@ -118,6 +71,7 @@ const hostTables: readonly Statement[] = [
   statement`CREATE TABLE IF NOT EXISTS workflow_runs (
     run_key TEXT NOT NULL PRIMARY KEY,
     stream_id TEXT NOT NULL,
+    playbook_key TEXT,
     dispatched_through BIGINT NOT NULL DEFAULT 0,
     ended_at BIGINT,
     taken BIGINT NOT NULL DEFAULT 0,
@@ -195,6 +149,7 @@ const hostTables: readonly Statement[] = [
     expires_at BIGINT NOT NULL
   )`,
   ...followerTables,
+  ...subscriptionTables,
 ];
 
 export function hostTablesMadeOn(connection: ConnectionPorts, tables: readonly Statement[]): Promise<void> {

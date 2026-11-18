@@ -9,7 +9,7 @@ export interface RunImage {
   readonly playbook: PlaybookAddress;
   readonly bytes: Readonly<Uint8Array>;
   readonly call: ImageCall;
-  readonly context: Omit<Context, 'at'>;
+  readonly context: Omit<Context, 'at'> & { readonly runId: string };
   readonly lineage: Lineage;
 }
 

@@ -18,20 +18,23 @@ const messageOf = (type: string, data: unknown, at: string, position = 0): Proje
   context: { at, by: 'playbook:alpha' },
 });
 
+const observationStream = {
+  kind: 'assessments',
+  id: 'assessment',
+  scope: 'playbook',
+  prefix: 'playbook/acme/alpha/',
+  address: { org: 'acme', playbook: 'alpha' },
+} as const;
+
 describe('the tables of goals', () => {
-  it('fold the facts of goals and nothing else, but the saves and resumes of workflows that arm the clock', () => {
+  it('fold the facts of goals and nothing else', () => {
     const goalTypes = new Set(
       [...goalsLedger.factSchemas, GoalsEventSchema].flatMap((schema: { readonly ast: SchemaAST.AST }) =>
         factTypesOf(schema),
       ),
     );
 
-    expect(goalsLedger.projections.flatMap(({ types }) => types).filter((type) => !goalTypes.has(type))).toEqual([
-      'definition_created',
-      'definition_updated',
-      'definition_resumed',
-      'definition_restored',
-    ]);
+    expect(goalsLedger.projections.flatMap(({ types }) => types).filter((type) => !goalTypes.has(type))).toEqual([]);
     expect(goalsLedger.projections.map(({ name, version }) => `${name}_${String(version)}`)).toEqual([
       'goal_assessments_5',
       'goal_clocks_1',
@@ -76,7 +79,7 @@ describe('the refused observations of a goal and a workflow', () => {
 
 describe('the notices and summaries started in a day', () => {
   it('are counted in one row a UTC day, by the moment each start was seen', () => {
-    const stream = { kind: 'assessments', id: 'assessment' };
+    const stream = observationStream;
     const started = [
       messageOf('goal_notice_started', {}, '2026-11-09T23:59:59.000Z'),
       messageOf('goal_summary_started', {}, '2026-11-09T00:00:00.000Z', 1),
@@ -91,8 +94,6 @@ describe('the notices and summaries started in a day', () => {
     ]).toEqual(['2026-11-09', '2026-11-09', undefined, undefined, { started: 2 }, '2026-11-10']);
   });
 });
-
-const observationStream = { kind: 'assessments', id: 'assessment' };
 
 const observed = (at: string, run: string, position: number) =>
   messageOf(

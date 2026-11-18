@@ -4,7 +4,7 @@ import type { HostDatabase } from '../database/host-database.ts';
 import { followerWorkOn, type FollowerAssembly } from '../follower/follower-assembly.ts';
 import { startFollower, type Follower } from '../follower/follower-loop.ts';
 import { followerWakeUpOf, type FollowerWork } from '../follower/follower-wake-up.ts';
-import { playbookRecordsOf } from '../follower/playbook-records.ts';
+import { orgRecordsOf } from '../follower/org-records.ts';
 import type { HostParts } from '../host/host-parts.ts';
 import type { HostReports } from '../host/host-reports.ts';
 import { systemClock } from '../loop/host-clock.ts';
@@ -45,7 +45,7 @@ function followerWorkOf({
       stops: reacting.stops,
       consumers,
       calls,
-      records: playbookRecordsOf(database.store),
+      records: orgRecordsOf(database.store),
       appended: reactions.appended ?? streamAppends,
     },
   );

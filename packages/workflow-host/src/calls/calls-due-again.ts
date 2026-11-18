@@ -3,8 +3,7 @@ import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import type { DueItem, DueWork } from '../due-work/due-work.ts';
-import { addressOfRun } from '../runs/run-address.ts';
-import { childStreamOf } from '../waiting/child-endings.ts';
+import { runStreamOfAChild } from '../runs/run-places.ts';
 import { dueAgainRow, soonestDueAfter, waitingDueBy, type WaitingCallOfARun } from './call-rows.ts';
 import type { HostExecutor } from './host-executor.ts';
 
@@ -12,7 +11,11 @@ const nothingDue: readonly DueItem[] = [];
 
 export function callsDueAgainOf(database: HostDatabase, executor: Pick<HostExecutor, 'dispatchedAgain'>): DueWork {
   const quietOf = ({ run, child }: WaitingCallOfARun) =>
-    Effect.promise(() => database.store.ageOfLastAppend(childStreamOf(addressOfRun(run.runId), child)));
+    Effect.flatMap(runStreamOfAChild(database, run.runId, child), (stream) =>
+      stream === undefined
+        ? Effect.succeed(Number.POSITIVE_INFINITY)
+        : Effect.promise(() => database.store.ageOfLastAppend(stream)),
+    );
   const performed = (call: WaitingCallOfARun, at: number) =>
     Effect.flatMap(quietOf(call), (quietMs) =>
       attemptIsLive(quietMs, call.resumesAfterMs)

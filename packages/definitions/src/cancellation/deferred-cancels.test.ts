@@ -1,4 +1,4 @@
-import { Conflict, type StreamReader, type StreamWriter } from '@on.auto/operations';
+import { Conflict, type Ledger, type StreamReader, type StreamWriter } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -197,7 +197,7 @@ describe('a cancel whose run changes between its read and its settlement', () =>
       record(relayed, { type: 'work', fact: { type: 'nudge_sent', data: { number: 2 } } }, lineage),
     ]);
     const turns = { next: (): Effect.Effect<unknown, unknown> => nudged };
-    const changedOnce: StreamReader & StreamWriter = {
+    const changedOnce: StreamReader & StreamWriter & Pick<Ledger['Service'], 'holderOfStream'> = {
       ...ledger.service,
       execute: (stream, decider, command, given) => {
         const turn = Effect.orDie(turns.next());

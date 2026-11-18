@@ -207,7 +207,7 @@ export function logIncident({ id, original, call }: Incident): Effect.Effect<voi
 
 export interface UnsettledReport {
   readonly org: string;
-  readonly playbook: string;
+  readonly definition: string;
   readonly runId: string;
   readonly reason: string;
 }
@@ -250,9 +250,9 @@ export function logReasoning(mostInputTokens: number): Effect.Effect<void> {
   ).pipe(Effect.annotateLogs({ most_input_tokens: mostInputTokens }));
 }
 
-export function logUnsettled({ org, playbook, runId, reason }: UnsettledReport): Effect.Effect<void> {
+export function logUnsettled({ org, definition, runId, reason }: UnsettledReport): Effect.Effect<void> {
   return Effect.logError('A run stays started because settling it failed').pipe(
-    Effect.annotateLogs({ org, playbook, run_id: runId, reason }),
+    Effect.annotateLogs({ org, definition, run_id: runId, reason }),
   );
 }
 

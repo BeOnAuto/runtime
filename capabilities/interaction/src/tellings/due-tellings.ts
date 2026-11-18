@@ -1,10 +1,9 @@
-import type { PlaybookProjectedRow, Unavailable } from '@on.auto/operations';
+import { addressOfTheRow, type PlaybookProjectedRow, type Unavailable } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import type { RequestAddress } from '../delivery/attempt-end.ts';
 import { openRequestsName } from '../requests/open-requests.ts';
 import type { DeliveryParts } from '../schedule/delivery-parts.ts';
-import { playbookOf, toldThrough } from './row-tellings.ts';
+import { toldThrough, type FiledRequest } from './row-tellings.ts';
 
 export interface DueTelling {
   readonly key: string;
@@ -18,7 +17,7 @@ export interface TellingHold {
 }
 
 interface AnswerTold {
-  readonly address: RequestAddress;
+  readonly address: FiledRequest;
   readonly answeredAt: number;
   readonly hold: TellingHold;
 }
@@ -27,16 +26,15 @@ export function toldOnceAnswered(
   parts: DeliveryParts,
   { address, answeredAt, hold }: AnswerTold,
 ): Effect.Effect<boolean> {
-  const playbook = playbookOf(address);
   const held = { set: { telling_due_at: hold.until }, when: [{ column: 'telling_due_at', equals: answeredAt }] };
   const released = { set: { telling_due_at: answeredAt }, when: [{ column: 'telling_due_at', equals: hold.until }] };
   return Effect.gen(function* () {
-    yield* parts.ledger.advanceRow(openRequestsName, playbook, address.id, held);
+    yield* parts.ledger.advanceRow(openRequestsName, address.filedIn, address.id, held);
     const made = yield* toldThrough(parts, address, hold.until, hold.room).pipe(
       Effect.catchTag('unavailable', () => Effect.succeed(false)),
     );
     if (!made) {
-      yield* parts.ledger.advanceRow(openRequestsName, playbook, address.id, released);
+      yield* parts.ledger.advanceRow(openRequestsName, address.filedIn, address.id, released);
     }
     return made;
   });
@@ -45,7 +43,7 @@ export function toldOnceAnswered(
 const everyCallNow = Effect.succeed(true);
 
 export function dueTellingOf(parts: DeliveryParts, kept: PlaybookProjectedRow): DueTelling {
-  const address = { org: kept.org, playbook: kept.playbook, id: kept.key };
+  const address = { org: kept.org, playbook: kept.playbook, id: kept.key, filedIn: addressOfTheRow(kept) };
   return {
     key: `${kept.org}/${kept.playbook}/${kept.key}/telling`,
     callsOut: true,

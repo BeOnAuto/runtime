@@ -160,23 +160,28 @@ describe('the in-memory read of the runs of one definition', () => {
   });
 });
 
+const noDefinitions = (): readonly string[] => [];
+
 describe('the in-memory read of the runs of one definition, over a first record whose context names none', () => {
   it('lists the run when no definition is asked, and finds it of none when one is', async () => {
-    const readOneRecord = memoryRecordedReader([
-      {
-        position: 1,
-        id: 'message-1',
-        causationId: null,
-        correlationId: null,
-        stream: 'playbook/acme/alpha/runs/r1',
-        streamPosition: 1,
-        type: 'run_started',
-        data: 'workflow',
-        context: { at: '2026-10-07T09:00:00.000Z', by: 'tester' },
-        payloadBytes: undefined,
-        recordedAt: '2026-10-07T09:00:00.000Z',
-      },
-    ]);
+    const readOneRecord = memoryRecordedReader(
+      [
+        {
+          position: 1,
+          id: 'message-1',
+          causationId: null,
+          correlationId: null,
+          stream: 'playbook/acme/alpha/runs/r1',
+          streamPosition: 1,
+          type: 'run_started',
+          data: 'workflow',
+          context: { at: '2026-10-07T09:00:00.000Z', by: 'tester' },
+          payloadBytes: undefined,
+          recordedAt: '2026-10-07T09:00:00.000Z',
+        },
+      ],
+      noDefinitions,
+    );
     const reading = (selection: RecordedSelection) =>
       readOneRecord
         .readRecorded({ org: 'acme', playbook: 'alpha' }, selection, newestHundred)
@@ -210,14 +215,17 @@ describe('the in-memory read of the runs no step started', () => {
       payloadBytes: undefined,
       recordedAt: at,
     });
-    const readTwoRuns = memoryRecordedReader([
-      firstRecordOf('close-the-week', 1, { at, by: 'tester' }),
-      firstRecordOf('total-the-week', 2, {
-        at,
-        by: 'playbook:alpha',
-        calledBy: { runId: 'close-the-week', reference: '/do/0/total', run: 1 },
-      }),
-    ]);
+    const readTwoRuns = memoryRecordedReader(
+      [
+        firstRecordOf('close-the-week', 1, { at, by: 'tester' }),
+        firstRecordOf('total-the-week', 2, {
+          at,
+          by: 'playbook:alpha',
+          calledBy: { runId: 'close-the-week', reference: '/do/0/total', run: 1 },
+        }),
+      ],
+      noDefinitions,
+    );
     const reading = (selection: RecordedSelection) =>
       readTwoRuns
         .readRecorded({ org: 'acme', playbook: 'alpha' }, selection, newestHundred)

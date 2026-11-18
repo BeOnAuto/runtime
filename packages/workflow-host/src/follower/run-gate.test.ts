@@ -11,7 +11,11 @@ import { runGateOf } from './run-gate.ts';
 
 const playbookKey = 'playbook/acme/alpha/';
 
-const stream = `${playbookKey}run-logs/r-1`;
+const definitionKey = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-00000000de01/';
+
+const runKey = 'acme/0199a3c4-7d2e-7c1a-9b3f-00000000de01/r-1';
+
+const stream = `${definitionKey}run-logs/r-1`;
 
 const PassedRow = Schema.Struct({ listener: Schema.String, passed: WholeNumber });
 
@@ -68,7 +72,7 @@ function runRecord(version: number): RecordedEvent {
 function dispatchedThrough(database: HostDatabase, through: number) {
   return Effect.runPromise(
     database.write(
-      statement`INSERT INTO workflow_runs (run_key, stream_id, dispatched_through) VALUES (${'acme/alpha/r-1'}, ${stream}, ${through})
+      statement`INSERT INTO workflow_runs (run_key, stream_id, dispatched_through) VALUES (${runKey}, ${stream}, ${through})
         ON CONFLICT (run_key) DO UPDATE SET dispatched_through = excluded.dispatched_through`,
     ),
   );
@@ -77,7 +81,7 @@ function dispatchedThrough(database: HostDatabase, through: number) {
 function armedAt(database: HostDatabase, listener: string, armedBy: number) {
   return Effect.runPromise(
     insertedListener(database, {
-      runKey: 'acme/alpha/r-1',
+      runKey,
       listener,
       playbookKey,
       streamId: stream,
@@ -93,7 +97,7 @@ function armedAt(database: HostDatabase, listener: string, armedBy: number) {
 describe('the gate the records of a run pass through to the follower', () => {
   it('holds a record until its outputs are dispatched, and passes the listeners it armed when it passes it', async () => {
     const database = await openedOn(await onSQLite());
-    const gate = runGateOf(database, playbookKey);
+    const gate = runGateOf(database);
     await dispatchedThrough(database, 0);
     const held = await Effect.runPromise(gate.verdictOn(runRecord(1), false));
     await dispatchedThrough(database, 2);
@@ -116,7 +120,7 @@ describe('the gate the records of a run pass through to the follower', () => {
 
   it('passes a record held too long, and the listeners it armed, even those kept after it passed', async () => {
     const database = await openedOn(await onSQLite());
-    const gate = runGateOf(database, playbookKey);
+    const gate = runGateOf(database);
     await dispatchedThrough(database, 0);
     await armedAt(database, 'before', 2);
 
@@ -139,7 +143,7 @@ describe('the gate the records of a run pass through to the follower', () => {
 describe('the gate passing a record of a run held too long', () => {
   it('passes a listener the dispatch keeps after the gate read the listeners and before it marked the run passed', async () => {
     const database = await openedOn(await onSQLite());
-    const gate = runGateOf(armingWhilePassing(database), playbookKey);
+    const gate = runGateOf(armingWhilePassing(database));
     await dispatchedThrough(database, 0);
 
     const verdict = await Effect.runPromise(gate.verdictOn(runRecord(2), true));
@@ -150,19 +154,19 @@ describe('the gate passing a record of a run held too long', () => {
 
   it('forgets how far it passed a run once the dispatch of the run reaches that far', async () => {
     const database = await openedOn(await onSQLite());
-    const gate = runGateOf(database, playbookKey);
+    const gate = runGateOf(database);
     const watermark = sqlWatermark(database);
     await dispatchedThrough(database, 0);
     await Effect.runPromise(gate.verdictOn(runRecord(2), true));
     const kept = await passedRuns(database);
 
-    await Effect.runPromise(watermark.advance('acme/alpha/r-1', 1));
+    await Effect.runPromise(watermark.advance(runKey, 1));
     const behind = await passedRuns(database);
-    await Effect.runPromise(watermark.advance('acme/alpha/r-1', 2));
+    await Effect.runPromise(watermark.advance(runKey, 2));
 
     expect([kept, behind]).toEqual([
-      [{ run_key: 'acme/alpha/r-1', passed_through: 2 }],
-      [{ run_key: 'acme/alpha/r-1', passed_through: 2 }],
+      [{ run_key: runKey, passed_through: 2 }],
+      [{ run_key: runKey, passed_through: 2 }],
     ]);
     expect(await passedRuns(database)).toEqual([]);
   });
@@ -172,17 +176,15 @@ describe('the gate noting how far it passed a run', () => {
   it('notes nothing of a run whose dispatch reached the record, or that ended, after the gate read its watermark', async () => {
     const reached = await openedOn(await onSQLite());
     const ended = await openedOn(await onSQLite());
-    const caughtUp = sqlWatermark(reached).advance('acme/alpha/r-1', 2);
-    const finished = ended.write(
-      statement`UPDATE workflow_runs SET ended_at = ${2} WHERE run_key = ${'acme/alpha/r-1'}`,
-    );
+    const caughtUp = sqlWatermark(reached).advance(runKey, 2);
+    const finished = ended.write(statement`UPDATE workflow_runs SET ended_at = ${2} WHERE run_key = ${runKey}`);
     await dispatchedThrough(reached, 0);
     await dispatchedThrough(ended, 0);
 
     const verdicts = await Effect.runPromise(
       Effect.all([
-        runGateOf(beforePassing(reached, caughtUp), playbookKey).verdictOn(runRecord(2), true),
-        runGateOf(beforePassing(ended, Effect.orDie(finished)), playbookKey).verdictOn(runRecord(2), true),
+        runGateOf(beforePassing(reached, caughtUp)).verdictOn(runRecord(2), true),
+        runGateOf(beforePassing(ended, Effect.orDie(finished))).verdictOn(runRecord(2), true),
       ]),
     );
 

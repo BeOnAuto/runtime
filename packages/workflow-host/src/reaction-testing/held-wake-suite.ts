@@ -13,8 +13,8 @@ const startedAt = Date.parse(at) + 1000;
 
 async function wokenUntilHeld(follower: WokenFollower, wakes: number): Promise<number | null> {
   const dueAt = await follower.woken(startedAt, wakes === 0);
-  const place = await follower.place();
-  return place?.hold !== undefined || wakes >= 4 ? dueAt : wokenUntilHeld(follower, wakes + 1);
+  const held = await follower.held();
+  return held?.hold !== undefined || wakes >= 4 ? dueAt : wokenUntilHeld(follower, wakes + 1);
 }
 
 async function heldFollowerOn(settingsOf: SettingsOf) {
@@ -24,10 +24,10 @@ async function heldFollowerOn(settingsOf: SettingsOf) {
   return { follower, heldDueAt, unread };
 }
 
-const heldRead = (text: string): boolean => text.includes('held_until IS NOT NULL');
+const heldRead = (text: string): boolean => text.includes('FROM workflow_held_playbooks WHERE held_for <>');
 
 function triedAgainAfterFailedRounds(settingsOf: SettingsOf) {
-  it('asks to be woken a minute after a round that failed and twice as long after the next, through a restart whose sweep tries its hold, tries it again at the wake after one that succeeds, and a minute again after the next that fails', async () => {
+  it('asks to be woken a minute after a round that failed and twice as long after the next, through a restart whose sweep passes its org over it, tries it again at the wake after one that succeeds, and a minute again after the next that fails', async () => {
     const { follower } = await heldFollowerOn(settingsOf);
     const failedAt = startedAt + 10;
 
@@ -44,7 +44,7 @@ function triedAgainAfterFailedRounds(settingsOf: SettingsOf) {
       60_000, 120_000, 60_000,
     ]);
     expect(follower.troubles()).toContain(roundFailed);
-    expect((await follower.place())?.hold).toMatchObject({ holds: 3, heldFor: 'content' });
+    expect((await follower.held())?.hold).toMatchObject({ holds: 2, heldFor: 'content' });
   });
 }
 
@@ -64,7 +64,7 @@ function triedAgainAfterAFailedTry(settingsOf: SettingsOf) {
       { org: 'acme', playbook: 'alpha', heldFor: 'content', holds: 1, retryAt: heldDueAt + failedTryRetryMs },
     ]);
     expect([startsWhileFailing, follower.starts()]).toEqual([[], [messageIdOf(`${alpha}events/s1`, 1)]]);
-    expect((await follower.place())?.hold).toBeUndefined();
+    expect((await follower.held())?.hold).toBeUndefined();
   });
 }
 
@@ -83,14 +83,14 @@ function triedAfterTheClockWentBack(settingsOf: SettingsOf) {
     const dueAt = await follower.woken(heldDueAt - anHour, false);
 
     expect([follower.starts(), dueAt]).toEqual([[messageIdOf(`${alpha}events/s1`, 1)], null]);
-    expect((await follower.place())?.hold).toBeUndefined();
+    expect((await follower.held())?.hold).toBeUndefined();
   });
 }
 
 function triedForAReasonOfALaterRelease(settingsOf: SettingsOf) {
   it('reads a hold a later release wrote for a reason this release does not know, tries it at its time and lifts it once the content is read, saying the reason it was held for', async () => {
     const { follower, heldDueAt, unread } = await heldFollowerOn(settingsOf);
-    const held = await follower.place();
+    const held = await follower.held();
     await follower.heldAs({
       ...Option.getOrThrow(Option.fromNullishOr(held?.hold)),
       heldFor: 'a reason of a later release',
@@ -113,7 +113,7 @@ function heldAgainByATryThatTookAMinute(settingsOf: SettingsOf) {
 
     follower.startsTake(aMinute);
     const dueAt = await follower.woken(heldDueAt, false);
-    const hold = (await follower.place())?.hold;
+    const hold = (await follower.held())?.hold;
 
     expect(follower.notes().filter(({ kind }) => kind === 'content_hold_try_failed')).toEqual([]);
     expect(hold).toMatchObject({ holds: 2 });

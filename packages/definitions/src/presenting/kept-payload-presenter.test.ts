@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionPresenters } from '../index.ts';
 import type { RunEvent } from '../runs/run-events.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { keptArmOf } from '../testing/kept-payloads.ts';
 import { testRunId } from '../testing/run-facts.ts';
@@ -73,7 +73,7 @@ function presented(event: RunEvent, content: KeptContent, view: EventView) {
 
 const started: RunEvent = {
   type: 'run_started',
-  data: { input_sha256: inputKept.sha256, input_bytes: inputKept.bytes, started_by: recordedAdmin },
+  data: { input_sha256: inputKept.sha256, input_bytes: inputKept.bytes, ...startedInAlpha },
 };
 
 const succeeded: RunEvent = {

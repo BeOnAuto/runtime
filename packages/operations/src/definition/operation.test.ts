@@ -2,12 +2,7 @@ import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { PlaybookReader, PlaybookWriter, InvalidInput, NotFound, defineCommand, defineQuery } from '../index.ts';
-import {
-  playbookBoundAppendedFactsReader,
-  playbookBoundProjectionReader,
-  playbookBoundRecordedReader,
-  playbookBoundRunOutcomesReader,
-} from '../ledger/bound-ports.ts';
+import { playbookReaderOf, playbookWriterOf } from '../ledger/playbook-ledger.ts';
 import { publishDraft } from '../testing/drafts.ts';
 import { memoryLedger, type MemoryLedger } from '../testing/memory-ledger.ts';
 import { misreport, overshare } from '../testing/misbehaving.ts';
@@ -215,21 +210,15 @@ describe('a definition', () => {
   });
 });
 
+const alpha = { org: 'acme', playbook: 'alpha' };
+
 function readerOf({ service }: MemoryLedger): PlaybookReader['Service'] {
-  const alpha = { org: 'acme', playbook: 'alpha' };
-  return {
-    ...service,
-    ...playbookBoundRecordedReader(service, alpha),
-    ...playbookBoundAppendedFactsReader(service, alpha),
-    ...playbookBoundRunOutcomesReader(service, alpha),
-    ...playbookBoundProjectionReader(service, alpha),
-    readContent: (sha256) => service.content.get(alpha, sha256),
-    readContentHead: (sha256) => service.content.getHead(alpha, sha256),
-  };
+  const { load, factAt, ageOfLastAppend } = service;
+  return { ...playbookReaderOf(service, alpha), load, factAt, ageOfLastAppend };
 }
 
 function writerOf({ service }: MemoryLedger): PlaybookWriter['Service'] {
-  return { ...service, keepContent: (content) => service.content.put({ org: 'acme', playbook: 'alpha' }, content) };
+  return { ...playbookWriterOf(service, alpha), execute: service.execute };
 }
 
 describe('the typed call', () => {

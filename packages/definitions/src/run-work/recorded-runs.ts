@@ -3,17 +3,18 @@ import {
   PlaybookIdSchema,
   OrgIdSchema,
   recordedDecoder,
-  streamPrefixOfPlaybook,
+  type PlaybookReader,
   type RecordedPageRequest,
   type RecordedReader,
   type RunCancelled,
   type StreamReader,
+  runStreamNameOf,
 } from '@on.auto/operations';
 import type { Payload } from '@on.auto/operations/payloads';
 import { Effect, Option, Schema } from 'effect';
 
 import { cancelledBeforeItsStart } from '../runs/run-claims.ts';
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { runDecider, runStreamIn, type RunPlacing } from '../runs/run-decider.ts';
 import { RunEventSchema, type RecordedRunEvent } from '../runs/run-events.ts';
 import { runDetailOf } from '../runs/run-lookup.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
@@ -61,30 +62,45 @@ function recordedOf(id: string, state: RunStreamState): Effect.Effect<RecordedRu
       }));
 }
 
-export function recordedRunIn(reader: StreamReader, address: RunStreamAddress): Effect.Effect<RecordedRun | undefined> {
-  if (!isWellFormed(address)) {
-    return Effect.undefined;
-  }
+function stateOfTheRunIn(reader: StreamReader & RunPlacing, address: RunStreamAddress) {
   const id = address.id.toLowerCase();
-  return reader
-    .load(`${streamPrefixOfPlaybook(address)}${runStreamNameOf(id)}`, runDecider)
-    .pipe(Effect.flatMap(({ state }) => recordedOf(id, state)));
+  return Effect.flatMap(runStreamIn(reader, { ...address, id }), (stream) =>
+    stream === undefined ? Effect.undefined : Effect.map(reader.load(stream, runDecider), ({ state }) => state),
+  );
+}
+
+export function recordedRunIn(
+  reader: StreamReader & RunPlacing,
+  address: RunStreamAddress,
+): Effect.Effect<RecordedRun | undefined> {
+  return isWellFormed(address)
+    ? Effect.flatMap(stateOfTheRunIn(reader, address), (state) => recordedOf(address.id.toLowerCase(), state))
+    : Effect.undefined;
 }
 
 export function cancelledBeforeItsStartIn(
-  reader: StreamReader,
+  reader: StreamReader & RunPlacing,
   address: RunStreamAddress,
 ): Effect.Effect<RunCancelled | undefined> {
-  if (!isWellFormed(address)) {
-    return Effect.undefined;
-  }
-  const stream = `${streamPrefixOfPlaybook(address)}${runStreamNameOf(address.id.toLowerCase())}`;
-  return Effect.map(reader.load(stream, runDecider), ({ state }) => cancelledBeforeItsStart(state));
+  return isWellFormed(address)
+    ? Effect.map(stateOfTheRunIn(reader, address), cancelledBeforeItsStart)
+    : Effect.undefined;
 }
 
-export function recordedRunInPlaybook(reader: StreamReader, id: string): Effect.Effect<RecordedRun | undefined> {
+export function recordedRunInPlaybook(
+  reader: Pick<PlaybookReader['Service'], 'definitionHolding' | 'ofDefinition'>,
+  id: string,
+): Effect.Effect<RecordedRun | undefined> {
   const run = id.toLowerCase();
-  return reader.load(runStreamNameOf(run), runDecider).pipe(Effect.flatMap(({ state }) => recordedOf(run, state)));
+  const stream = runStreamNameOf(run);
+  return Effect.flatMap(reader.definitionHolding(stream), (definition) =>
+    definition === undefined
+      ? Effect.undefined
+      : reader
+          .ofDefinition(definition)
+          .load(stream, runDecider)
+          .pipe(Effect.flatMap(({ state }) => recordedOf(run, state))),
+  );
 }
 
 const RunFirstSchema = Schema.Struct({ correlationId: Schema.String, cursor: Schema.String });

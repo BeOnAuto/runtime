@@ -4,7 +4,7 @@ import type { FollowerHost } from './follower-host.ts';
 import { playbookOfKey, type StepParts } from './record-steps.ts';
 
 type PassReports = Pick<StepParts, 'unreadable' | 'contentMissing' | 'passedEarly' | 'holdsUnreadable'> &
-  Omit<HoldParts, 'playbooks'>;
+  Omit<HoldParts, 'orgs' | 'sweepEveryMs'>;
 
 export function passReportsOf({
   reports,

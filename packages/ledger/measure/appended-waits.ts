@@ -30,7 +30,7 @@ function filled({ name }: MeasuredStore): string {
 }
 
 function playbook(index: number): FactScope {
-  return { kind: 'playbook', playbookKey: `playbook/acme/b${index % playbooks}/` };
+  return { kind: 'playbook', playbookKey: `playbook/acme/b${index % playbooks}/`, definitionKeys: [] };
 }
 
 function held(read: StoredAppendedFacts): Extract<StoredAppendedFacts, { readonly held: true }> {

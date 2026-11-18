@@ -1,5 +1,4 @@
 import { cancelledUnanswered, deferredCanceller } from '@on.auto/definitions';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -13,6 +12,7 @@ import {
   recordedReply,
   takenReply,
   type InteractionHarness,
+  ledgerKeepingNames,
 } from '../testing/index.ts';
 import { cancelledRequest } from './request-cancels.ts';
 
@@ -150,7 +150,7 @@ describe('a cancel asked before a reply is read', () => {
 
 describe('a cancel whose notification is delivered between its read of the run and its settlement', () => {
   it('reads the run again, as it changed, and succeeds it as delivered', async () => {
-    const racing = broughtBeforeDeciding(memoryLedger(undefined, [openRequests]));
+    const racing = broughtBeforeDeciding(ledgerKeepingNames([openRequests]));
     const delivering = await askedThroughChat({ notification: true, ledger: racing.ledger });
     await racing.started();
 

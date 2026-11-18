@@ -1,3 +1,4 @@
+import { streamAddressed } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { activityStreamOf } from '../facts/activity-seen.ts';
@@ -137,7 +138,7 @@ describe('the marks a caller keeps', () => {
     expect(
       seenRows.keyOf?.(
         { id: 'm', position: 1, type: 'activity_seen', data: {}, context: { at: iso(0), by: ada } },
-        { kind: 'activity', id: 'x' },
+        streamAddressed('playbook/acme/alpha/activity/x'),
       ),
     ).toBe(ada);
   });

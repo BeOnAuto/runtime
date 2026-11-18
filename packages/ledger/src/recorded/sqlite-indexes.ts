@@ -40,8 +40,8 @@ export function dataBytesOf(message?: string): string {
 
 export const dataBytesOfMessage = SQL.plain(dataBytesOf());
 
-export function storedBytesOf(message?: string): string {
-  return `(octet_length(${message === undefined ? 'message_data' : `${message}.message_data`}))`;
+export function storedBytesOf(): string {
+  return '(octet_length(message_data))';
 }
 
 const NameRows = Schema.Array(Schema.Struct({ name: Schema.String }));
@@ -66,6 +66,11 @@ const playbookIndexes: readonly PlaybookIndex[] = [
     name: 'ledger_first_messages_by_kind',
     create: () => SQL`CREATE INDEX IF NOT EXISTS ledger_first_messages_by_kind
       ON emt_messages (${kindKeyOfStream}, global_position) WHERE stream_position = 1`,
+  },
+  {
+    name: 'ledger_messages_by_org',
+    create: () =>
+      SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_org ON emt_messages (${orgOfStream}, global_position)`,
   },
   {
     name: 'ledger_messages_by_org_and_correlation',

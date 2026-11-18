@@ -1,5 +1,11 @@
-import type { PlaybookContext } from '@on.auto/operations';
-import { InvalidInput, PlaybookReader, PlaybookWriter, type Decided, type Decider } from '@on.auto/operations';
+import {
+  InvalidInput,
+  PlaybookReader,
+  PlaybookWriter,
+  type Decided,
+  type Decider,
+  type PlaybookContext,
+} from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 
 import { contributesIn, type Contributes } from '../contributions/contributes-details.ts';
@@ -9,6 +15,7 @@ import type { RegisteredDefinition } from '../registry/definition-registry.ts';
 import { agentIssue, type GoalIssue } from './goal-issues.ts';
 import { isCalendarWindow, type Goal, type Goals, type GoalsDocument } from './goals-document.ts';
 import { GoalsEventSchema, type RecordedGoalsEvent } from './goals-facts.ts';
+import { workflowsArmed } from './workflows-armed.ts';
 
 export const goalsStream = 'goals/playbook';
 
@@ -178,10 +185,11 @@ interface StandingWorkflow {
 export interface GoalStanding extends PlaybookGoals {
   readonly workflows: readonly StandingWorkflow[];
   readonly notifiers: ReadonlySet<string>;
+  readonly armedAt?: number;
 }
 
-function notRetiredIn(registered: ReadonlyMap<string, RegisteredDefinition>): readonly RegisteredDefinition[] {
-  return [...registered.values()].filter(({ status }) => status !== 'retired');
+function notRetired(definitions: Iterable<RegisteredDefinition>): readonly RegisteredDefinition[] {
+  return [...definitions].filter(({ status }) => status !== 'retired');
 }
 
 function standingWorkflowOf({ name, version, status, details }: RegisteredDefinition): StandingWorkflow {
@@ -195,9 +203,10 @@ function isNotification({ output_schema: answer, details }: RegisteredDefinition
 export const goalStandingIn: Effect.Effect<GoalStanding, never, PlaybookReader | PlaybookContext> = Effect.gen(
   function* () {
     const goals = yield* playbookGoalsIn;
-    const workflows = notRetiredIn(yield* loadRegistry('workflow')).map((stored) => standingWorkflowOf(stored));
-    const interactions = notRetiredIn(yield* loadRegistry('interaction'));
+    const { workflows: registered, ...armed } = yield* workflowsArmed;
+    const workflows = notRetired(registered).map((stored) => standingWorkflowOf(stored));
+    const interactions = notRetired((yield* loadRegistry('interaction')).values());
     const notifiers = new Set(interactions.filter((stored) => isNotification(stored)).map(({ name }) => name));
-    return { ...goals, workflows, notifiers };
+    return { ...goals, workflows, notifiers, ...armed };
   },
 );

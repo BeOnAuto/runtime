@@ -1,6 +1,7 @@
 import {
   type Capability,
   capabilityContract,
+  earliestCapabilityContractServed,
   type PlaybookOperation,
   type PreparedDefinition,
   type RunContext,
@@ -12,8 +13,8 @@ import { defaultLimits } from '@on.auto/workflow-engine/testing';
 import { Context, Effect, Exit, Function, Schema, Tracer } from 'effect';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
-import { waitingCallsOf } from '../calls/call-rows.ts';
 import { closingBounds } from '../closing/closed-runs.ts';
+import type { ContractSix } from '../contract-testing/contract-six.ts';
 import type {
   Change,
   ContractFive,
@@ -50,10 +51,15 @@ import type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 import { skippingClock } from '../loop/host-clock.ts';
 import { someFolder } from '../projector/folder.ts';
 import { heldStart, type HeldStart } from '../reaction-testing/held-start.ts';
-import { definitionRecorded, eventTrigger, published } from '../reaction-testing/playbook-writes.ts';
+import {
+  definitionRecorded,
+  eventTrigger,
+  published,
+  runOfTheTestsStarted,
+} from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { settleAttemptsBeforeBackingOff, settleBackOffMs } from '../settlement/settle-attempts.ts';
-import { runAt, startOf, workflow } from '../testing/host-documents.ts';
+import { definitionOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, connectedOn, leaseHoldersOn, onSQLite, openedOn } from '../testing/host-files.ts';
 import { hostedOn, recordedOptionsOf } from '../testing/host-runs.ts';
 import { until } from '../testing/until.ts';
@@ -98,6 +104,7 @@ async function ownClocked(clock: HostClock): Promise<OwnClocked> {
     armed.push(dueAt);
   });
   const work = hostWakeUp(parts, { raised: Function.constVoid, renewed: Function.constVoid });
+  const requests = runRequestsOf({ database: store.database, clock, serving: () => parts });
   return {
     store,
     armed: () => armed,
@@ -106,11 +113,9 @@ async function ownClocked(clock: HostClock): Promise<OwnClocked> {
     started: (runIdHostParts, duration) => {
       recorded.know(runIdHostParts);
       const start = startOf(workflow(`do:\n  - pause: { wait: ${duration} }`));
-      return Effect.runPromise(
-        parts.submitted({ ...start, kind: 'started', runId: runKeyOf(runAt(runIdHostParts)), at: clock.now() }),
-      );
+      return Effect.runPromise(requests.start(runAt(runIdHostParts), start));
     },
-    requests: runRequestsOf({ database: store.database, clock, serving: () => parts }),
+    requests,
     wakeUp: (woken) => Effect.runPromise(work.wakeUp(woken)),
     closed: async () => {
       await Effect.runPromise(work.stop());
@@ -153,8 +158,6 @@ async function startingAReaction(
   return reacting;
 }
 
-const runKey = runKeyOf(runAt(runId));
-
 const playbook = { org: 'acme', playbook: 'alpha' };
 
 const calledBy = { runId, reference: '/do/0/ask', run: 1 };
@@ -184,20 +187,19 @@ async function partsAnswering(answer: () => Effect.Effect<CallAnswer>) {
   const recorded = recordedOptionsOf({ answer });
   const parts = openHostParts(store, { ...recorded.options, clock }, Function.constVoid);
   recorded.know(runId);
-  await Effect.runPromise(parts.submitted({ ...startOf(asking), kind: 'started', runId: runKey, at: clock.now() }));
+  await runOfTheTestsStarted(store.database.store, runId);
+  await Effect.runPromise(
+    runRequestsOf({ database: store.database, clock, serving: () => parts }).start(runAt(runId), startOf(asking)),
+  );
   const callStates = () =>
     Effect.runPromise(rowsOf(CallState, store.database.read(statement`SELECT state, delivered FROM workflow_calls`)));
-  const waiting = () =>
-    until(
-      () => Effect.runPromise(waitingCallsOf(store.database, runKey)),
-      (calls) => calls.length > 0,
-    );
+  const waiting = () => until(callStates, (calls) => calls.some(({ state }) => state === 'waiting'));
   return { clock, parts, recorded, callStates, waiting };
 }
 
 const pausedASecond = workflow('do:\n  - pause: { wait: PT1S }');
 
-const runAttributes = { 'auto.on.org': 'acme', 'auto.on.playbook': 'alpha', 'auto.on.run_id': runId };
+const runAttributes = { 'auto.on.org': 'acme', 'auto.on.definition.id': definitionOfTheTests, 'auto.on.run_id': runId };
 
 function named(spans: readonly RecordedSpan[], name: string): RecordedSpan | undefined {
   return spans.find((span) => span.name === name);
@@ -207,31 +209,25 @@ function settledIn(spans: readonly RecordedSpan[]): boolean {
   return spans.some(({ name, ending: endingWorkflowHost }) => name === 'settle' && endingWorkflowHost !== 'open');
 }
 
-type CapabilityOfContractFive = ContractFive['capability'];
+type RunOfContractSix = ContractSix['runContext'];
 
-interface ContractSix extends Omit<ContractFive, 'capability'> {
-  readonly capability: {
-    readonly type: CapabilityOfContractFive['type'];
-    readonly title: CapabilityOfContractFive['title'];
-    readonly guide: {
-      readonly name: string;
-      readonly onThisServer?: string;
-      readonly variables?: Readonly<Record<string, { readonly value: string; readonly default: string }>>;
-    };
-    readonly noun: CapabilityOfContractFive['noun'];
-    readonly describeOutput: CapabilityOfContractFive['describeOutput'];
-    readonly mediaType: CapabilityOfContractFive['mediaType'];
-    readonly longestAnyRunMs: CapabilityOfContractFive['longestAnyRunMs'];
-    readonly reachesOutside: CapabilityOfContractFive['reachesOutside'];
-    readonly mayChangeOutside: CapabilityOfContractFive['mayChangeOutside'];
-    readonly outsideTheDirectoryListing?: true;
-    readonly mostActive: CapabilityOfContractFive['mostActive'];
-    readonly standing: CapabilityOfContractFive['standing'];
-    readonly cancel: CapabilityOfContractFive['cancel'];
-    readonly runWords: CapabilityOfContractFive['runWords'];
-    readonly facts: CapabilityOfContractFive['facts'];
-    readonly resumes: CapabilityOfContractFive['resumes'];
-    readonly prepare: CapabilityOfContractFive['prepare'];
+interface ContractSeven extends Omit<ContractSix, 'runContext'> {
+  readonly runContext: {
+    readonly id: string;
+    readonly org: string;
+    readonly playbook: string;
+    readonly caller: RunOfContractSix['caller'];
+    readonly definition: { readonly id: string; readonly name: string; readonly version: number };
+    readonly journal: RunOfContractSix['journal'];
+    readonly lineage: RunOfContractSix['lineage'];
+    readonly depth: number;
+    readonly callDepth: number;
+    readonly calledBy?: NonNullable<RunOfContractSix['calledBy']>;
+    readonly trigger?: NonNullable<RunOfContractSix['trigger']>;
+    readonly actsFor?: string;
+    readonly longestRunOf: RunOfContractSix['longestRunOf'];
+    readonly longestRunFor: RunOfContractSix['longestRunFor'];
+    readonly resumesAfterOf: RunOfContractSix['resumesAfterOf'];
   };
 }
 
@@ -242,6 +238,7 @@ interface TypesOfEachContract {
   readonly 4: ContractFour;
   readonly 5: ContractFive;
   readonly 6: ContractSix;
+  readonly 7: ContractSeven;
 }
 
 type ThisContract = TypesOfEachContract[typeof capabilityContract];
@@ -294,7 +291,12 @@ describe('the host keeping no run loaded', () => {
 
     expect(atStart).toBe(0);
     expect(hosted.notes()).toMatchObject([
-      { kind: 'run_reloaded', run: { org: 'acme', playbook: 'alpha', runId }, snapshot: false, events: 1 },
+      {
+        kind: 'run_reloaded',
+        run: { org: 'acme', definition: definitionOfTheTests, runId },
+        snapshot: false,
+        events: 1,
+      },
     ]);
   });
 });
@@ -684,6 +686,15 @@ describe('the contract by which a capability is made and served', () => {
     expectTypeOf<DueWork>().toEqualTypeOf<ThisContract['dueWork']>();
     expectTypeOf<DueItem>().toEqualTypeOf<ThisContract['dueItem']>();
     expectTypeOf<PlaybookOperation>().toEqualTypeOf<ThisContract['playbookOperation']>();
-    expect(capabilityContract).toBe(6);
+    expect(capabilityContract).toBe(7);
+  });
+
+  it('hands the run of a capability built against any contract it serves every member of the run that contract named, unchanged', () => {
+    expectTypeOf<RunContext>().toExtend<ContractTwo['runContext']>();
+    expectTypeOf<RunContext>().toExtend<ContractThree['runContext']>();
+    expectTypeOf<RunContext>().toExtend<ContractFour['runContext']>();
+    expectTypeOf<RunContext>().toExtend<ContractFive['runContext']>();
+    expectTypeOf<RunContext>().toExtend<ContractSix['runContext']>();
+    expect(earliestCapabilityContractServed).toBe(2);
   });
 });

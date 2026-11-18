@@ -1,11 +1,11 @@
 import { cancelRequestOf } from '@on.auto/definitions';
-import { recordedReaderOf } from '@on.auto/ledger';
-import { messageIdOf, streamPrefixOfPlaybook, type Conflict } from '@on.auto/operations';
+import { messageIdOf, type Conflict } from '@on.auto/operations';
 import type { CancelOrder, ContentUnavailable, RunInput, Submission } from '@on.auto/workflow-engine';
 import { Effect, type Cause } from 'effect';
 
 import type { DatabaseFailed, HostDatabase } from '../database/host-database.ts';
-import { addressOfRun, runKeyOf, type RunAddress } from '../runs/run-address.ts';
+import { runKeyOf, type FiledRun } from '../runs/run-address.ts';
+import { runStreamOfTheKey } from '../runs/run-places.ts';
 import { clearedPendingRow, pendingCancelRowsAfter, type PendingCancelRow } from './pending-cancel-rows.ts';
 
 interface PendingCancel {
@@ -17,8 +17,8 @@ function isCancelRequest(message: unknown): boolean {
   return cancelRequestOf(message) !== undefined;
 }
 
-function pendingCancelOf(database: HostDatabase, run: RunAddress): Effect.Effect<PendingCancel | undefined> {
-  const stream = `${streamPrefixOfPlaybook(run)}runs/${run.runId}`;
+function pendingCancelOf(database: HostDatabase, run: FiledRun): Effect.Effect<PendingCancel | undefined> {
+  const stream = runStreamOfTheKey(runKeyOf(run));
   return Effect.map(
     Effect.promise(() => database.store.read(stream, 0)),
     ({ messages }): PendingCancel | undefined => {
@@ -43,7 +43,7 @@ export interface PendingParts {
 
 export function cancelledIfAsked(
   parts: PendingParts,
-  run: RunAddress,
+  run: FiledRun,
 ): Effect.Effect<void, Conflict | ContentUnavailable> {
   return Effect.flatMap(pendingCancelOf(parts.database, run), (pending) =>
     pending === undefined
@@ -61,14 +61,9 @@ const cancelsGivenAtOnce = 4;
 const finishTypes: ReadonlySet<string> = new Set(['run_succeeded', 'run_rejected', 'run_failed']);
 
 function hasEnded(database: HostDatabase, runKey: string): Effect.Effect<boolean> {
-  const { org, playbook, runId } = addressOfRun(runKey);
-  return recordedReaderOf(database.store)(
-    { org, playbook },
-    { kind: 'run', run: runId },
-    { order: 'desc', limit: 1, dataOf: [] },
-  ).pipe(
-    Effect.orDie,
-    Effect.map(({ records: [newest] }) => newest !== undefined && finishTypes.has(newest.type)),
+  return Effect.map(
+    Effect.promise(() => database.store.lastMessageOf(runStreamOfTheKey(runKey))),
+    (newest) => newest !== undefined && finishTypes.has(newest.type),
   );
 }
 

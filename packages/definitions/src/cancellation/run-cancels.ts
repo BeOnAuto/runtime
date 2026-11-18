@@ -14,8 +14,7 @@ import { loadRunStream } from '../operations/run-access.ts';
 import { endedBeforeCancelling } from '../runs/run-decisions.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
 import { runOf } from '../runs/run-lookup.ts';
-import type { RunStreamAddress } from '../runs/run-settler.ts';
-import { cancelRecorded, type CancelLedger } from './dead-attempts.ts';
+import { cancelRecorded, streamToCancel, type CancelLedger, type Cancelling } from './dead-attempts.ts';
 
 export interface CancelRequest {
   readonly kind: CancelRequestKind;
@@ -26,13 +25,13 @@ export interface CancelRequest {
 export type CancelReceipt = 'requested' | 'ended' | 'unknown_run';
 
 export type CancelRun = (
-  run: RunStreamAddress,
+  run: Cancelling['run'],
   request: CancelRequest,
   lineage: Lineage,
 ) => Effect.Effect<CancelReceipt, Conflict>;
 
 export interface CancelOfALiveAttempt {
-  readonly run: RunStreamAddress;
+  readonly run: Cancelling['run'];
   readonly request: CancelRequest;
   readonly lineage: Lineage;
   readonly quietForMs: number;
@@ -71,12 +70,15 @@ export function runCanceller(
         return 'unknown_run';
       }
       const runId = run.id.toLowerCase();
+      const stream = yield* streamToCancel(ledger, run, runId);
+      if (stream === undefined) {
+        return 'unknown_run';
+      }
       const at = DateTime.formatIso(yield* DateTime.now);
       const { kind, reason, by = playbookCallerOf(run).id } = request;
       const mayBeLive = (quietForMs: number) => lookAgain({ run, request, lineage, quietForMs });
       return yield* cancelRecorded(
-        { ledger, capabilities, mayBeLive },
-        run,
+        { ledger, capabilities, mayBeLive, run, stream },
         { kind, reason, runId, by, at },
         lineage,
       ).pipe(

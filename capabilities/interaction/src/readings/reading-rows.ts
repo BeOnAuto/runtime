@@ -51,6 +51,8 @@ function keyOf(read: ReadOfAReading): string {
 export const readings: KeyedProjection = {
   name: readingsName,
   version: 1,
+  scopes: ['definition'],
+  partition: 'org',
   kinds: [conversationCallsKind],
   types: ['replies_read', 'reading_failed'],
   columns: [

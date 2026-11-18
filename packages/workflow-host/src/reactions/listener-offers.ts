@@ -32,7 +32,7 @@ import {
   type ListenerPlace,
   type MatchedListener,
 } from '../listeners/listener-rows.ts';
-import { addressOfRun } from '../runs/run-address.ts';
+import { addressOfRun, definitionKeyOfRun } from '../runs/run-address.ts';
 import type { FailureDetail, RefuseReaction } from './refusals.ts';
 
 interface ListenerVerdict {
@@ -111,6 +111,7 @@ function reportedStops(parts: OfferParts, playbookKey: string, { row, stopped }:
     stopped,
     (error) =>
       parts.refusals.refuse(playbookKey, {
+        definitionKey: definitionKeyOfRun(row.run_key),
         workflow: row.workflow,
         version: row.version,
         reason: `The filter of a listen task of the workflow was stopped by its deadline or its memory ${stopsInARowBeforeTheVersion} times in a row, so the playbook's events are not offered through it again for this version of the workflow; events sent to its runs still reach them: ${describeError(error)}`,
@@ -122,6 +123,7 @@ function reportedStops(parts: OfferParts, playbookKey: string, { row, stopped }:
 function skippedOffer(parts: OfferParts, row: MatchedListener, { playbookKey }: FollowedRecord) {
   return ({ detail }: FailureDetail) =>
     parts.refusals.refuse(playbookKey, {
+      definitionKey: definitionKeyOfRun(row.run_key),
       workflow: row.workflow,
       version: row.version,
       reason: `An event could not be offered to a run waiting for it: ${detail}`,

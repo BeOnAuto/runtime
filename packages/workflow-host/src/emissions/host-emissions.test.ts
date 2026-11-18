@@ -6,12 +6,13 @@ import { emitterProbes } from '@on.auto/workflow-engine/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { runsOfAlpha } from '../payload-testing/kept-payloads.ts';
 import { emittingInto, publishedEventIdsIn } from '../reaction-testing/ledger-emissions.ts';
 import { movedClock } from '../reaction-testing/moved-clock.ts';
 import { at, definitionRecorded, eventTrigger } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost } from '../reaction-testing/reacting-host.ts';
 import { runLogStreamOf } from '../runs/run-address.ts';
-import { runAt, startOf, workflow } from '../testing/host-documents.ts';
+import { definitionOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { until } from '../testing/until.ts';
 import { ledgerEmitter } from './ledger-emitter.ts';
@@ -102,7 +103,11 @@ describe('the same event emitted in each turn of a loop by a workflow the host r
       triggers: [eventTrigger({ type: 'com.acme.ticked' })],
     });
     const idOfTurn = (runHostEmissions: number) =>
-      emittedEventIdOf({ runId: `acme/alpha/${runId}`, reference: '/do/0/each/do/0/tick', run: runHostEmissions });
+      emittedEventIdOf({
+        runId: `acme/${definitionOfTheTests}/${runId}`,
+        reference: '/do/0/each/do/0/tick',
+        run: runHostEmissions,
+      });
     const eventOfTurn = (runHostEmissions: number) => ({
       type: 'com.acme.ticked',
       source: '/acme/clock',
@@ -128,7 +133,11 @@ describe('the same event emitted in each turn of a loop by a workflow the host r
 
 describe('the emitter of the host', () => {
   it.each(emitterProbes)('$title', async (probe) => {
-    const emitter = ledgerEmitter(eventEmitter(memoryLedger().service, playbookOwnNames), tickingLedgerEmitter());
+    const emitter = ledgerEmitter(
+      eventEmitter(memoryLedger().service, playbookOwnNames),
+      runsOfAlpha,
+      tickingLedgerEmitter(),
+    );
 
     expect(await Effect.runPromise(probe.run({ emitter, run }))).toEqual(probe.expected);
   });
@@ -137,7 +146,7 @@ describe('the emitter of the host', () => {
 describe('an event a run of the host emits', () => {
   it('is recorded as the run emitted it, one deeper, caused by the run record and in the chain of the run', async () => {
     const ledger = memoryLedger();
-    const emitter = ledgerEmitter(eventEmitter(ledger.service, playbookOwnNames), tickingLedgerEmitter());
+    const emitter = ledgerEmitter(eventEmitter(ledger.service, playbookOwnNames), runsOfAlpha, tickingLedgerEmitter());
 
     await Effect.runPromise(emitter.emit(emission, run, origin));
     const { records } = await Effect.runPromise(
@@ -174,6 +183,7 @@ describe('an event the ledger cannot record', () => {
   it('fails its emission, to be dispatched again', async () => {
     const emitter = ledgerEmitter(
       () => Effect.fail(new Conflict({ detail: 'The ledger cannot be reached' })),
+      runsOfAlpha,
       tickingLedgerEmitter(),
     );
 

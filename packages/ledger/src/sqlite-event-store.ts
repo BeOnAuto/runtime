@@ -4,10 +4,9 @@ import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 import { dataAsWritten, emmettEventStore, type RiddenAppends } from './emmett/emmett-event-store.ts';
 import { inTransactionOf, type AppendListeners, type LedgerStore } from './event-store.ts';
 import { sqliteLayoutKept, sqliteSchemaCreated } from './layout/sqlite-schema.ts';
-import { sqliteLogOn } from './log/sqlite-log.ts';
-import { sqliteRunOutcomesOf } from './outcomes/sqlite-run-outcomes.ts';
 import type { KeptTables, ProjectionParts } from './projections/projection-parts.ts';
 import { preparedOn, sqliteProjectionsOf, sqliteSizesAfter } from './projections/sqlite-projections.ts';
+import { sqliteReadsOn } from './recorded/sqlite-reads.ts';
 import { sqliteRecordedStoreOn } from './recorded/sqlite-recorded.ts';
 
 export type AnyDriver = Parameters<typeof getSQLiteEventStore>[0]['driver'];
@@ -94,10 +93,9 @@ export function sqliteEventStore<Driver extends AnyDriver>(
     ...recorded,
     ...projections.readerOn(statements),
     ...projections.scrubs.storeOver(streams, query),
-    readRunOutcomes: sqliteRunOutcomesOf(kept.runOutcomes, pool.execute),
+    ...sqliteReadsOn(kept, pool.execute),
     unlessHeld: projections.references.unlessHeldOn(inTransactionOf(pool)),
     heldHeads: projections.references.heldHeadsOn(query),
-    log: sqliteLogOn(pool.execute),
     migrate: async () => {
       await sqliteLayoutKept(pool, projections.named, kept);
       await streams.migrate();

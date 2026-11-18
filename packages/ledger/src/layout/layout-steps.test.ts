@@ -10,7 +10,7 @@ import { executedOn } from '../recorded/sqlite-checks.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { sqliteLayout } from './layout-dialects.ts';
 import { layoutFound } from './layout-found.ts';
-import { layoutCarryingBy, type LayoutStep, layoutStepsInSequence, sqlOn, stepsFrom } from './layout-steps.ts';
+import { layoutCarryingBy, type LayoutStep, sqlOn, stepsFrom } from './layout-steps.ts';
 import { factsReadBy } from './ledger-facts-refused.ts';
 import { ledgerLayout, ledgerLayoutFloor } from './ledger-layout.ts';
 import { aSQLiteFileInLayout } from './sqlite-file-in-layout.ts';
@@ -117,14 +117,8 @@ describe('the steps of a layout, as their statements run and as they are put in 
     ]);
   });
 
-  it('are put in sequence from the earliest layout carried forward to the layout kept, leaving out a step to any other number', () => {
-    const steps = Array.from({ length: ledgerLayout - ledgerLayoutFloor }, (_, at) =>
-      aStepTo(ledgerLayoutFloor + at + 1),
-    );
-    const beyond = aStepTo(ledgerLayout + 1);
-
+  it('carry a database from the floor of the ledger to the layout it keeps, given no step of their own', () => {
     expect(layoutCarryingBy()).toEqual({ kept: ledgerLayout, floor: ledgerLayoutFloor, steps: [] });
-    expect(layoutStepsInSequence([beyond, ...steps.toReversed()])).toEqual(steps);
   });
 
   it('are carried forward from the floor a store is given in place of the floor of the ledger', () => {

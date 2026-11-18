@@ -44,8 +44,16 @@ const tallyStream = definitionStreamOf(alphaKey, tallyType);
 
 const rebuildsByDefault = 4;
 
-function contextOf(name: string, version: number) {
-  return { by: 'acme-admin', at: savedAt, definitionType: tallyType, definitionName: name, definitionVersion: version };
+function contextOf(name: string, version: number, at: string) {
+  return { by: 'acme-admin', at, definitionType: tallyType, definitionName: name, definitionVersion: version };
+}
+
+function savesInTurn(): () => string {
+  const made = { saves: 0 };
+  return () => {
+    made.saves += 1;
+    return new Date(Date.parse(savedAt) + made.saves * 1000).toISOString();
+  };
 }
 
 function watchingTallies(): TallyWatch {
@@ -69,6 +77,7 @@ function watchingTallies(): TallyWatch {
 export async function tallyHarness(settings: DatabaseSettings): Promise<TallyHarness> {
   const views = await viewHarness(settings, {}, [someFolder(tallyFolderOf(rebuildsByDefault))]);
   const versions = new Map<string, number>();
+  const next = savesInTurn();
   const tallies = () => Effect.runPromise(talliesOf(views.store.database, alphaKey));
   const named = async (details: TallyDetails) => (await tallies()).find(({ tally }) => tally === tallyOf(details));
   return {
@@ -81,13 +90,13 @@ export async function tallyHarness(settings: DatabaseSettings): Promise<TallyHar
         version === 1
           ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
           : { type: 'definition_updated', data: { content } };
-      await views.append(tallyStream, [saving], contextOf(name, version));
+      await views.append(tallyStream, [saving], contextOf(name, version, next()));
     },
     retiredTally: async (name) => {
       await views.append(
         tallyStream,
         [{ type: 'definition_retired', data: {} }],
-        contextOf(name, Number(versions.get(name))),
+        contextOf(name, Number(versions.get(name)), next()),
       );
     },
     tallies,

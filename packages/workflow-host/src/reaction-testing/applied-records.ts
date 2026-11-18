@@ -6,13 +6,14 @@ import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-databas
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import type { DefinitionRecord } from '../triggers/definition-records.ts';
 import { definitionRecordsKeepingTheirOwnStops } from './own-stops.ts';
+import { definitionKeyNamed } from './playbook-writes.ts';
 
 const playbookKey = 'playbook/acme/alpha/';
 
 export const first = Date.parse('2026-10-01T09:00:00.000Z');
 
 const TriggerRow = Schema.Struct({
-  workflow: Schema.String,
+  definition_key: Schema.String,
   reference: Schema.String,
   version: WholeNumber,
   kind: Schema.String,
@@ -57,7 +58,11 @@ export async function applying(through: (database: HostDatabase) => HostDatabase
   return {
     database,
     applied: (...records: readonly DefinitionRecord[]) =>
-      Effect.runPromise(Effect.forEach(records, (record) => apply(playbookKey, record))),
+      Effect.runPromise(
+        Effect.forEach(records, (record) =>
+          apply({ playbookKey, definitionKey: definitionKeyNamed(record.context.definitionName ?? '') }, record),
+        ),
+      ),
   };
 }
 
@@ -66,8 +71,8 @@ export function rowsIn(database: HostDatabase) {
     rowsOf(
       TriggerRow,
       database.read(
-        statement`SELECT workflow, reference, version, kind, activated_by, activated_at, next_due, running
-          FROM workflow_subscriptions ORDER BY workflow, reference`,
+        statement`SELECT definition_key, reference, version, kind, activated_by, activated_at, next_due, running
+          FROM workflow_subscriptions ORDER BY definition_key, reference`,
       ),
     ),
   );
@@ -86,11 +91,12 @@ interface Row {
   readonly by: string;
   readonly at: number;
   readonly due: number | null;
+  readonly workflow?: string;
 }
 
-export function row({ reference, version, kind, by, at, due }: Row) {
+export function row({ reference, version, kind, by, at, due, workflow = 'close' }: Row) {
   return {
-    workflow: 'close',
+    definition_key: definitionKeyNamed(workflow),
     reference,
     version,
     kind,

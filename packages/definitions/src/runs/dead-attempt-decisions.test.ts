@@ -2,7 +2,7 @@ import { Conflict, type Context } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand, RunOutcome, RunResult } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -18,7 +18,10 @@ const ofGreet = { definitionType: 'echo', definitionName: 'greet', definitionVer
 
 const greeting = { definition_type: 'echo', name: 'greet', input: { who: 'Ada' } };
 
-const started: RunEvent = { type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input } };
+const started: RunEvent = {
+  type: 'run_started',
+  data: { ...startedInAlpha, input: greeting.input },
+};
 
 const callingTools: RunEvent = { type: 'run_started', data: { ...started.data, calls_tools: true } };
 
@@ -63,7 +66,14 @@ function callStartedBy(fencingToken: number): RunCommand {
   };
 }
 
-const asked = { ...greeting, started_by: recordedAdmin, definition_version: 1, calls_tools: true, ...start };
+const asked = {
+  ...greeting,
+  started_by: recordedAdmin,
+  playbook: 'alpha',
+  definition_version: 1,
+  calls_tools: true,
+  ...start,
+};
 
 const startingAgain: RunCommand = { type: 'start', ...asked };
 

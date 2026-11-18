@@ -30,7 +30,7 @@ export interface RunContext {
   readonly org: string;
   readonly playbook: string;
   readonly caller: CallerIdentity;
-  readonly definition: { readonly name: string; readonly version: number };
+  readonly definition: { readonly id: string; readonly name: string; readonly version: number };
   readonly journal: RunJournal;
   readonly lineage: RunLineage;
   readonly depth: number;

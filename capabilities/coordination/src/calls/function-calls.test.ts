@@ -12,8 +12,10 @@ const anyWords: unknown = expect.any(String);
 
 const workflowRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
+const triage = '0199a3c4-7d2e-7c1a-9b3f-00000000de01';
+
 const run = {
-  runId: `acme/alpha/${workflowRun}`,
+  runId: `acme/${triage}/${workflowRun}`,
   attributes: {
     org: 'acme',
     playbook: 'alpha',
@@ -45,7 +47,7 @@ const origin = { version: 3 };
 
 const firstAttempt = { attemptDied: false };
 
-const waitingOfTheCall = messageIdOf(`playbook/acme/alpha/run-logs/${workflowRun}`, origin.version);
+const waitingOfTheCall = messageIdOf(`definition/acme/${triage}/run-logs/${workflowRun}`, origin.version);
 
 function answering(result: DefinitionRunResult) {
   const asked: DefinitionRunRequest[] = [];

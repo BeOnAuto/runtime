@@ -1,13 +1,46 @@
 import type { Trigger } from '@on.auto/definitions';
 import { eventAppenderOf, type LedgerStreams } from '@on.auto/ledger';
-import { ContextSchema, messageIdOf, noLineage, type Context, type Decided, type Lineage } from '@on.auto/operations';
+import {
+  ContextSchema,
+  messageIdOf,
+  noLineage,
+  uuidV5,
+  type Context,
+  type Decided,
+  type Lineage,
+} from '@on.auto/operations';
 import { playbooksStreamOfOrg } from '@on.auto/playbooks';
 import type { Json } from '@on.auto/workflow-engine';
 import { Effect, Schema } from 'effect';
 
+import { definitionKeyOfTheTests } from '../testing/host-documents.ts';
+
 export const alpha = 'playbook/acme/alpha/';
 
 export const at = '2026-10-01T09:00:00.000Z';
+
+const definitionsOfTheTests = '9b2f6c1e-4d3a-5e7b-8c90-1a2b3c4d5e6f';
+
+const namesOfKeys = new Map<string, string>();
+
+export function definitionKeyOfType(type: string, name: string, playbookKey = alpha): string {
+  const [, org = ''] = playbookKey.split('/');
+  const definitionKey = `definition/${org}/${uuidV5(definitionsOfTheTests, JSON.stringify([playbookKey, type, name]))}/`;
+  namesOfKeys.set(definitionKey, name);
+  return definitionKey;
+}
+
+export function definitionKeyNamed(name: string, playbookKey = alpha): string {
+  return definitionKeyOfType('workflow', name, playbookKey);
+}
+
+export function nameOfKey(definitionKey: string): string | undefined {
+  return namesOfKeys.get(definitionKey);
+}
+
+export function definitionStreamNamed(name: string, playbookKey = alpha): string {
+  return `${definitionKeyNamed(name, playbookKey)}definitions/workflow`;
+}
 
 const AnyRecordSchema = Schema.Struct({ type: Schema.String, data: Schema.JsonObject, context: ContextSchema });
 
@@ -98,18 +131,22 @@ export function definitionRecorded(
   playbookKey = alpha,
 ) {
   const content = triggers.length === 0 ? { source: 'do: []' } : { source: 'schedule: {}', triggers };
+  const [, , playbook = ''] = playbookKey.split('/');
   return recorded(
     store,
-    `${playbookKey}definitions/workflow`,
+    definitionStreamNamed(name, playbookKey),
     version === 1
-      ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
+      ? {
+          type: 'definition_created',
+          data: { content, playbook, created_by: { id: 'acme-admin', name: 'acme-admin' } },
+        }
       : { type: 'definition_updated', data: { content } },
     { ...byAdmin, at: when, definitionType: 'workflow', definitionName: name, definitionVersion: version },
   );
 }
 
-export function definitionRecordAt(position: number, playbookKey = alpha): string {
-  return messageIdOf(`${playbookKey}definitions/workflow`, position);
+export function definitionRecordAt(name: string, position: number, playbookKey = alpha): string {
+  return messageIdOf(definitionStreamNamed(name, playbookKey), position);
 }
 
 export function eventRecordOf(id: string, playbookKey = alpha): string {
@@ -119,7 +156,7 @@ export function eventRecordOf(id: string, playbookKey = alpha): string {
 export function definitionRetired(store: LedgerStreams, name: string, version: number) {
   return recorded(
     store,
-    `${alpha}definitions/workflow`,
+    definitionStreamNamed(name),
     { type: 'definition_retired', data: {} },
     { ...byAdmin, definitionType: 'workflow', definitionName: name, definitionVersion: version },
   );
@@ -134,7 +171,7 @@ export interface StandingChange {
 export function definitionPaused(store: LedgerStreams, { name, version, when }: StandingChange) {
   return recorded(
     store,
-    `${alpha}definitions/workflow`,
+    definitionStreamNamed(name),
     { type: 'definition_paused', data: { paused_by: { id: 'acme-admin', name: 'acme-admin' } } },
     { ...byAdmin, at: when, definitionType: 'workflow', definitionName: name, definitionVersion: version },
   );
@@ -143,7 +180,7 @@ export function definitionPaused(store: LedgerStreams, { name, version, when }: 
 export function definitionResumed(store: LedgerStreams, { name, version, when }: StandingChange) {
   return recorded(
     store,
-    `${alpha}definitions/workflow`,
+    definitionStreamNamed(name),
     { type: 'definition_resumed', data: {} },
     { ...byAdmin, at: when, definitionType: 'workflow', definitionName: name, definitionVersion: version },
   );
@@ -156,13 +193,6 @@ export function playbookCreated(store: LedgerStreams, playbook: string) {
   });
 }
 
-export function playbookRenamed(store: LedgerStreams, playbook: string) {
-  return recorded(store, playbooksStreamOfOrg('acme'), {
-    type: 'playbook_updated',
-    data: { playbook, name: 'Renamed' },
-  });
-}
-
 export interface RunOf {
   readonly runId: string;
   readonly type: string;
@@ -171,9 +201,30 @@ export interface RunOf {
   readonly correlation?: string;
 }
 
+export async function definedOnce(store: LedgerStreams, definitionKey: string, type: string, name: string) {
+  const stream = `${definitionKey}definitions/${type}`;
+  if ((await store.read(stream)).version === 0) {
+    await recorded(
+      store,
+      stream,
+      {
+        type: 'definition_created',
+        data: {
+          content: { source: 'do: []' },
+          playbook: 'alpha',
+          created_by: { id: 'acme-admin', name: 'acme-admin' },
+        },
+      },
+      { ...byAdmin, definitionType: type, definitionName: name, definitionVersion: 1 },
+    );
+  }
+}
+
 export async function runRecorded(store: LedgerStreams, run: RunOf, ending?: 'run_succeeded') {
   const { runId, type, name, depth, correlation = runId } = run;
-  const stream = `${alpha}runs/${runId}`;
+  const definitionKey = definitionKeyOfType(type, name);
+  await definedOnce(store, definitionKey, type, name);
+  const stream = `${definitionKey}runs/${runId}`;
   const context: Context = {
     ...byAdmin,
     runId,
@@ -186,10 +237,49 @@ export async function runRecorded(store: LedgerStreams, run: RunOf, ending?: 'ru
   await recordedWith(
     store,
     stream,
-    { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } },
+    {
+      type: 'run_started',
+      data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha', input: {} },
+    },
     { context, lineage },
   );
   if (ending !== undefined) {
     await recordedWith(store, stream, { type: ending, data: { output: 'done', record: {} } }, { context, lineage });
   }
+}
+
+const definitionOfTheChildren = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-00000000c4ec/';
+
+export function childStreamOf(child: string): string {
+  return `${definitionOfTheChildren}runs/${child}`;
+}
+
+const startedByAdmin = {
+  type: 'run_started',
+  data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha', input: {} },
+};
+
+export async function testDefinitionsPlaced(store: LedgerStreams): Promise<void> {
+  await definedOnce(store, definitionKeyOfTheTests, 'workflow', 'test');
+  await definedOnce(store, definitionOfTheChildren, 'workflow', 'check');
+}
+
+export async function childStarted(store: LedgerStreams, child: string, context: Context = byAdmin): Promise<string> {
+  const stream = childStreamOf(child);
+  if ((await store.read(stream)).version === 0) {
+    await recorded(store, stream, startedByAdmin, context);
+  }
+  return stream;
+}
+
+export async function runOfTheTestsStarted(store: LedgerStreams, runId: string): Promise<string> {
+  const stream = `${definitionKeyOfTheTests}runs/${runId}`;
+  await recorded(store, stream, startedByAdmin, {
+    ...byAdmin,
+    runId,
+    definitionType: 'workflow',
+    definitionName: 'test',
+    definitionVersion: 1,
+  });
+  return stream;
 }

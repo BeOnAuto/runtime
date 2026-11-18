@@ -2,9 +2,9 @@ import { streamSignalOf } from '@on.auto/ledger';
 import { Effect, Function } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import type { FollowedPlaybooks } from '../follower/followed-playbooks.ts';
+import type { FollowedOrgs } from '../follower/followed-orgs.ts';
 import type { FollowerWork } from '../follower/follower-wake-up.ts';
-import { followedPlaybooksKnowingHolds, heldTriesOn } from '../holds/known-holds.ts';
+import { followedOrgsKnowingHolds, heldTriesOn } from '../holds/known-holds.ts';
 import type { HoldNotes } from '../holds/playbook-holds.ts';
 import { failedRoundsOn } from '../loop/failed-rounds.ts';
 import { skippingClock } from '../loop/host-clock.ts';
@@ -23,7 +23,7 @@ interface InTurn {
   readonly failedTries: readonly string[];
 }
 
-function workInTurnOn(database: HostDatabase, playbooks: FollowedPlaybooks, dueBy: number): InTurn {
+function workInTurnOn(database: HostDatabase, orgs: FollowedOrgs, dueBy: number): InTurn {
   const passed: string[] = [];
   const failedTries: string[] = [];
   const quietly = Function.constant(Effect.void);
@@ -36,24 +36,26 @@ function workInTurnOn(database: HostDatabase, playbooks: FollowedPlaybooks, dueB
     lifted: quietly,
   };
   const work: FollowerWork = {
-    pass: (playbookKey) =>
-      failingFirst.includes(playbookKey)
-        ? Effect.die(new Error('The test failed this pass'))
-        : Effect.as(
-            Effect.andThen(
-              playbooks.lifted(playbookKey),
-              Effect.sync(() => {
-                passed.push(playbookKey);
-              }),
+    passes: {
+      org: Function.constant(Effect.succeed('caught_up')),
+      held: ({ playbookKey }) =>
+        failingFirst.includes(playbookKey)
+          ? Effect.die(new Error('The test failed this pass'))
+          : Effect.as(
+              Effect.andThen(
+                orgs.lifted(playbookKey),
+                Effect.sync(() => {
+                  passed.push(playbookKey);
+                }),
+              ),
+              'caught_up',
             ),
-            'caught_up',
-          ),
-    discovery: { atStart: quietly, registriesAppended: quietly, playbookSeen: quietly },
+    },
+    discovery: { atStart: quietly, orgSeen: quietly },
     sweeps: {
       started: quietly,
-      next: Function.constant(Effect.succeed({ registries: [], playbooks: [], again: false })),
+      next: Function.constant(Effect.succeed({ orgs: [], again: false })),
       passAgain: Function.constVoid,
-      registriesRead: Function.constVoid,
     },
     upkeep: {
       sweep: quietly,
@@ -62,7 +64,7 @@ function workInTurnOn(database: HostDatabase, playbooks: FollowedPlaybooks, dueB
       nextDeferredAt: Function.constant(Effect.succeed(null)),
     },
     appended: streamSignalOf(),
-    holds: heldTriesOn(playbooks, holdNotes),
+    holds: heldTriesOn(orgs, holdNotes),
     rounds: failedRoundsOn(database, 'follower'),
     clock: skippingClock(dueBy),
     sweepEveryMs: 1000,
@@ -73,22 +75,19 @@ function workInTurnOn(database: HostDatabase, playbooks: FollowedPlaybooks, dueB
 
 export async function heldInTurnOn(settingsOf: SettingsOf, dueBy: number): Promise<InTurn> {
   const database = await openedOn(await settingsOf());
-  const playbooks = followedPlaybooksKnowingHolds(database);
+  const orgs = followedOrgsKnowingHolds(database);
   await Effect.runPromise(
     Effect.forEach(
       [...failingFirst, dueAfterThem],
       (playbookKey, index) =>
-        Effect.andThen(
-          playbooks.follow(playbookKey, null),
-          playbooks.held(playbookKey, {
-            heldFor: 'content',
-            since: dueBy - 60_000,
-            until: dueBy - 100 + index,
-            holds: 1,
-          }),
-        ),
+        orgs.parked({
+          playbookKey,
+          org: 'acme',
+          progress: { cursor: 'c-0', delivered: null, attempts: 0, waiting: false },
+          hold: { heldFor: 'content', since: dueBy - 60_000, until: dueBy - 100 + index, holds: 1 },
+        }),
       { discard: true },
     ),
   );
-  return workInTurnOn(database, playbooks, dueBy);
+  return workInTurnOn(database, orgs, dueBy);
 }

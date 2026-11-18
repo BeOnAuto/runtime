@@ -52,6 +52,7 @@ function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): Pro
 export const tellings: KeyedProjection = {
   name: tellingsName,
   version: 1,
+  scopes: ['definition'],
   kinds: [conversationCallsKind],
   types: ['telling_started', 'telling_succeeded', 'telling_failed'],
   columns: [

@@ -14,7 +14,8 @@ function runContextAt(at: string, name = 'triage', type = 'reasoning'): Context 
 const startedBy = { id: 'acme-admin', name: 'Acme Admin' };
 
 function startedAt(at: string, name = 'triage', type = 'reasoning'): ProjectedMessage {
-  return messageOf('run_started', { input: {}, started_by: startedBy }, runContextAt(at, name, type));
+  const data = { input: {}, started_by: startedBy, playbook: 'alpha' };
+  return messageOf('run_started', data, runContextAt(at, name, type));
 }
 
 function endedAt(at: string, type: string, data: object = {}): ProjectedMessage {
@@ -250,7 +251,7 @@ const { definitionName: _name, ...withoutItsDefinition } = runContextAt('2026-10
 
 const unreadableRunEvents: readonly (readonly [ProjectedMessage, string])[] = [
   [
-    messageOf('run_started', { input: {}, started_by: startedBy }, withoutItsDefinition),
+    messageOf('run_started', { input: {}, started_by: startedBy, playbook: 'alpha' }, withoutItsDefinition),
     'Missing key\n  at ["context"]["definitionName"]',
   ],
   [

@@ -63,9 +63,6 @@ export function clockWorkAt(moment: ClockMoment): ClockWork {
   if (moment.playbookRetired) {
     return { nextAt: utcMidnightAtOrAfter(Math.max(span.closes, moment.now + 1)) };
   }
-  if (!moment.reporting) {
-    return { nextAt: null };
-  }
   const nextAt = judgedSpanFrom(rule, span.closes).opens;
   if (!isJudgedSpan(rule, span) || !isOpenable(moment, span.opens)) {
     return { nextAt };

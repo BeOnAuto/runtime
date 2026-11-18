@@ -35,7 +35,7 @@ function partsOf(views: ViewHarness, database: PassParts['database'], pagesPerWa
     database,
     note: () => Effect.void,
     settings: views.settingsOf({ pagesPerWake, folding: { ...foldingOf(), pageBudgetMs: 60_000 } }),
-    definitions: definitionsByType().of,
+    definitions: definitionsByType(),
     resting: { isResting: () => false, rest: Function.constVoid },
     firstSeen: () => true,
     trouble: () => Effect.void,

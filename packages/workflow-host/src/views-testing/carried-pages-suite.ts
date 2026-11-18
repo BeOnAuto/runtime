@@ -104,6 +104,9 @@ function givingWayTests(settingsOf: SettingsOf): void {
       { of: 'reasoning/noon' },
       savedAsADefinition.replace(morning, 'reasoning/noon'),
     );
+    await views.subjectSaved(morning, 1);
+    await views.subjectSaved('reasoning/evening', 1);
+    await views.subjectSaved('reasoning/noon', 1);
     await views.pageSaved(morning, 2, pageDetails(folds("{ by_channel: { values: [{ name: 'X', value: 9 }] } }")));
     await views.subjectRetired('reasoning/evening');
     await views.subjectSaved('reasoning/noon', 2);

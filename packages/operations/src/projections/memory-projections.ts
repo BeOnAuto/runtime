@@ -2,13 +2,12 @@ import { Effect, Function } from 'effect';
 
 import type { Context } from '../ledger/context.ts';
 import { messageIdOf } from '../ledger/message-lineage.ts';
-import { streamChecksOf } from '../stream-projections/memory-checks.ts';
-import { inlineTablesOf, isStreamProjection, type StreamProjection } from '../stream-projections/stream-projection.ts';
 import {
   addressedStreamOf,
   advancedColumnsLeftBy,
   advancedColumnsOf,
   keepsChildRows,
+  partitionOfTheRow,
   requireAdvancedColumns,
   rowKeyOf,
   streamPrefixOfAddress,
@@ -34,6 +33,9 @@ import {
   keyedRowOf,
   nothingKept,
   pageIn,
+  placementsOf,
+  type DefinitionsOfAPlaybook,
+  type PlaybookOfADefinition,
   type Table,
   type TableOf,
 } from './memory-rows.ts';
@@ -116,8 +118,9 @@ function stagedChildRows(
   });
 }
 
-function staged(table: Table, named: AddressedStream, messages: readonly ProjectedMessage[]): readonly Staged[] {
+function staged(table: Table, stream: AddressedStream, messages: readonly ProjectedMessage[]): readonly Staged[] {
   const { projection, rows } = table;
+  const named = partitionOfTheRow(projection, stream);
   return keepsChildRows(projection)
     ? stagedChildRows({ projection, rows }, named, messages)
     : stagedRows({ projection, rows }, named, messages);
@@ -160,7 +163,10 @@ function messagesOfTheRow(
     const named = addressedStreamOf(stream);
     const message = { id: messageIdOf(stream, streamPosition), position: streamPosition, type, data, context };
     const folds =
-      named?.prefix === prefix && projection.types.includes(type) && rowKeyOf(projection, message, named) === key;
+      named !== undefined &&
+      partitionOfTheRow(projection, named).prefix === prefix &&
+      projection.types.includes(type) &&
+      rowKeyOf(projection, message, named) === key;
     return folds ? [message] : [];
   });
 }
@@ -211,7 +217,7 @@ function refoldedOn(tables: readonly Table[]): MemoryProjections['refold'] {
     for (const table of tables.filter(({ projection }) => projection.types.includes(before.type))) {
       const keys = new Set([rowKeyOf(table.projection, before, named), rowKeyOf(table.projection, after, named)]);
       for (const key of [...keys].filter((each) => each !== undefined)) {
-        refoldedIn(table, log, named, key);
+        refoldedIn(table, log, partitionOfTheRow(table.projection, named), key);
       }
     }
   };
@@ -239,44 +245,33 @@ function advancedIn(table: Table | undefined, { address, key, advance }: Advance
 }
 
 export function memoryProjections(
-  given: readonly (KeptProjection | StreamProjection)[],
-  logOf: () => readonly LoggedFact[],
+  given: readonly KeptProjection[],
+  definitionsOf: DefinitionsOfAPlaybook,
+  playbookOf: PlaybookOfADefinition,
 ): MemoryProjections {
-  const streamProjections = given.filter((each) => isStreamProjection(each));
-  const tables: readonly Table[] = given
-    .flatMap((each) => (isStreamProjection(each) ? inlineTablesOf(each) : [each]))
-    .map((projection) => ({ projection: checkedProjection(projection), rows: new Map() }));
+  const { placed, placedIn } = placementsOf(definitionsOf, playbookOf);
+  const tables: readonly Table[] = given.map((projection) => ({
+    projection: checkedProjection(projection),
+    rows: new Map(),
+  }));
   const tableNamed = (name: string): Table | undefined => tables.find(({ projection }) => projection.name === name);
   const rowsOf = (name: string): ReadonlyMap<string, ProjectedKeyedRow> => tableNamed(name)?.rows ?? nothingKept;
-  const checks = streamChecksOf({
-    tables,
-    streamProjections,
-    logOf,
-    restaged: (rebuilding, { stream, streamPosition, ...fact }) => {
-      projectedOn(rebuilding)(stream, [fact], streamPosition)();
-    },
-  });
   return {
     staged: projectedOn(tables),
     refold: refoldedOn(tables),
-    resetStreamProjection: (projection, address) =>
-      Effect.sync(() => {
-        checks.reset(projection, address);
-      }),
     advanceRow: (projection, address, key, advance) => advancedIn(tableNamed(projection), { address, key, advance }),
     readProjectedRows: (projection, address, query) =>
       Effect.sync(() => {
-        checks.verified(projection, address);
         const table = tableNamed(projection);
-        return table === undefined ? [] : pageIn(table, address, query);
+        return table === undefined ? [] : pageIn(table, placed(address), query).map((row) => placedIn(row));
       }),
     countProjectedRows: (projection, address, where) =>
       Effect.sync(() => {
-        checks.verified(projection, address);
         const table = tableNamed(projection);
-        return table === undefined ? 0 : countIn(table, address, where);
+        return table === undefined ? 0 : countIn(table, placed(address), where);
       }),
-    readDueRows: (projection, query) => Effect.sync(() => dueRowsIn(rowsOf(projection), query)),
+    readDueRows: (projection, query) =>
+      Effect.sync(() => dueRowsIn(rowsOf(projection), query).map((row) => placedIn(row))),
     nextDueOf: (projection, column, after) =>
       Effect.sync(() => {
         const due = [...rowsOf(projection).values()].flatMap((kept) => dueOf(kept, column)).filter((at) => at > after);

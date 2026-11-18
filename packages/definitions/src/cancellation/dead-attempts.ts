@@ -1,23 +1,31 @@
 import {
   streamPrefixOfPlaybook,
+  type LedgerPorts,
   type Lineage,
   type ProjectionReader,
   type StreamAges,
   type StreamReader,
   type StreamWriter,
+  runStreamNameOf,
 } from '@on.auto/operations';
 import { Effect, Option } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
 import type { KeptContentReader } from '../payloads/run-payloads.ts';
 import type { RunCancel } from '../runs/run-commands.ts';
-import { isChangedSinceRead, runDecider, runDeciderAsRead, runStreamNameOf } from '../runs/run-decider.ts';
+import { isChangedSinceRead, runDecider, runDeciderAsRead, runStreamIn, type RunPlacing } from '../runs/run-decider.ts';
 import { attemptIsLive } from '../runs/run-decisions.ts';
-import type { RunStreamAddress } from '../runs/run-settler.ts';
+import type { CalledRun } from '../runs/run-settler.ts';
 import { endsWithinItsCall, startedRunOf, type RunStreamState } from '../runs/run-state.ts';
 import { longestRunOf } from './longest-runs.ts';
 
-export type CancelLedger = StreamReader & StreamAges & StreamWriter & ProjectionReader & KeptContentReader;
+export type CancelLedger = StreamReader &
+  StreamAges &
+  StreamWriter &
+  ProjectionReader &
+  KeptContentReader &
+  RunPlacing &
+  Pick<LedgerPorts, 'holderOfName'>;
 
 interface CancellingParts {
   readonly ledger: CancelLedger;
@@ -30,8 +38,8 @@ interface Judged {
   readonly longestRunMs: number;
 }
 
-interface Cancelling extends CancellingParts {
-  readonly run: RunStreamAddress;
+export interface Cancelling extends CancellingParts {
+  readonly run: CalledRun;
   readonly stream: string;
 }
 
@@ -54,23 +62,31 @@ function judgedWithinItsCall(cancelling: Cancelling, state: RunStreamState): Eff
 
 type CallerCancel = Pick<RunCancel, 'kind' | 'reason' | 'runId' | 'by' | 'at'>;
 
+export const streamToCancel = Effect.fnUntraced(function* (ledger: CancelLedger, run: CalledRun, runId: string) {
+  const placed = yield* runStreamIn(ledger, { ...run, id: runId });
+  if (placed !== undefined) {
+    return placed;
+  }
+  const { definitionType, name } = run;
+  const held = yield* ledger.holderOfName({ playbookKey: streamPrefixOfPlaybook(run), definitionType, name });
+  return held === undefined ? undefined : `${held.definitionKey}${runStreamNameOf(runId)}`;
+});
+
 export const cancelRecorded = Effect.fnUntraced(function* (
-  parts: CancellingParts,
-  run: RunStreamAddress,
+  cancelling: Cancelling,
   asked: CallerCancel,
   lineage: Lineage,
 ) {
   const cancel: RunCancel = { type: 'cancel', ...asked, byItsCaller: true };
-  const stream = `${streamPrefixOfPlaybook(run)}${runStreamNameOf(cancel.runId)}`;
-  const { ledger } = parts;
+  const { ledger, stream } = cancelling;
   const recorded = Effect.asVoid(ledger.execute(stream, runDecider, cancel, lineage));
   const read = (yield* ledger.load(stream, runDeciderAsRead)).state;
-  const judged = yield* judgedWithinItsCall({ ...parts, run, stream }, read.state);
+  const judged = yield* judgedWithinItsCall(cancelling, read.state);
   if (Option.isNone(judged)) {
     return yield* recorded;
   }
   const { died, longestRunMs } = judged.value;
-  const lookedAtAgain = Effect.andThen(recorded, parts.mayBeLive(longestRunMs));
+  const lookedAtAgain = Effect.andThen(recorded, cancelling.mayBeLive(longestRunMs));
   if (!died) {
     return yield* lookedAtAgain;
   }

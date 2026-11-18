@@ -1,11 +1,10 @@
-import { memoryLedger } from '@on.auto/operations/testing';
 import type { Json } from '@on.auto/workflow-engine';
 import { HostElsewhere } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { testExpressionCheck } from '../testing/expression-checks.ts';
-import { playbookOn } from '../testing/playbook.ts';
+import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { testPlaybookNames } from '../testing/test-sandbox.ts';
 import { makeWorkflowAdapter, type WorkflowAdapterDependencies } from './workflow.ts';
 
@@ -26,7 +25,7 @@ function nested(depth: number): Json {
 }
 
 async function running(input: Json) {
-  const playbook = playbookOn(memoryLedger(), [makeWorkflowAdapter(neverStarted)]);
+  const playbook = playbookOn(namingLedger(), [makeWorkflowAdapter(neverStarted)]);
   await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'flow', source: flow });
   return playbook.call(playbook.runDefinition, { type: 'workflow', name: 'flow', input });
 }
@@ -41,7 +40,7 @@ describe('running a workflow definition with an input a workflow may not hold', 
   });
 
   it('checks its document against the most a workflow may run that it was set with', async () => {
-    const playbook = playbookOn(memoryLedger(), [makeWorkflowAdapter({ ...neverStarted, mostDurationMs: 10_800_000 })]);
+    const playbook = playbookOn(namingLedger(), [makeWorkflowAdapter({ ...neverStarted, mostDurationMs: 10_800_000 })]);
     const source = `document: { dsl: '1.0.3', namespace: acme, name: flow, version: '1.0.0' }\ndo: [{ pause: { wait: PT4H } }]\n`;
 
     expect(await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'flow', source })).toMatchObject({
@@ -66,7 +65,7 @@ describe('running a workflow definition while another server runs the workflows 
       ...neverStarted,
       runs: { start: () => Effect.fail(new HostElsewhere({ detail })) },
     });
-    const playbook = playbookOn(memoryLedger(), [elsewhere]);
+    const playbook = playbookOn(namingLedger(), [elsewhere]);
     await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'flow', source: flow });
 
     expect(await playbook.call(playbook.runDefinition, { type: 'workflow', name: 'flow' })).toMatchObject({

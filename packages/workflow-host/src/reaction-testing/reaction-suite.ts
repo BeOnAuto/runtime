@@ -8,12 +8,15 @@ import { firstFollowSuite } from './first-follow-suite.ts';
 import { movedClock } from './moved-clock.ts';
 import { at, cronTrigger, eventTrigger, everyTrigger, published, definitionRecorded } from './playbook-writes.ts';
 import { reactingHost } from './reacting-host.ts';
+import { refusalPlacesSuite } from './refusal-places-suite.ts';
 
 const waiting = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7d';
 
 const listening = workflow('do:\n  - await: { listen: { to: { one: { with: { type: com.acme.decided } } } } }');
 
 export function reactionSuite(settings: SettingsOf): void {
+  refusalPlacesSuite(settings);
+
   it('starts a workflow whose trigger an event matches', async () => {
     const reacting = await reactingHost({ settings: await settings() });
     const trigger = eventTrigger({ type: 'com.acme.closed' });

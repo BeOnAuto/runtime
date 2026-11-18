@@ -146,7 +146,9 @@ describe('a reasoning run whose server was killed while the run called its model
 
 const sleeping = ['---', 'model: stub/writer', 'tools: [graph/sleep]', '---', 'Wait for acme.'].join('\n');
 
-const historyOf = (port: number) => requestTo(port, 'GET', `/delta/runs/${reasoningRun}/history`);
+const stoppedRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
+
+const historyOf = (port: number) => requestTo(port, 'GET', `/delta/runs/${stoppedRun}/history`);
 
 function typesIn({ body }: { readonly body: unknown }): readonly string[] {
   return decodeHistory(body).events.map(({ type }) => type);
@@ -171,7 +173,7 @@ describe('a reasoning run whose server stops while the run calls a tool', () => 
     });
     const asked = requestTo(port, 'POST', '/delta/definitions/reasoning/waiting/run', {
       input: {},
-      run_id: reasoningRun,
+      run_id: stoppedRun,
     });
     await until(
       () => historyOf(port),

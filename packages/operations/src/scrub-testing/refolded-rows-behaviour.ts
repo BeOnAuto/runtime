@@ -2,6 +2,7 @@ import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { messageIdOf, type FactScrub, type LedgerPorts } from '../index.ts';
+import { placedIn } from '../projections-testing/definition-rows-behaviour.ts';
 import { labelFacts, labelRows, LabelFactSchema } from '../projections/label-rows.ts';
 import { remarkRows } from '../projections/remark-rows.ts';
 import { topicFacts, topicRows, topicWaitMs, type TopicFact } from '../projections/topic-rows.ts';
@@ -131,6 +132,40 @@ function rowsOfAnOrgKeyRefolded(entry: FactScrubEntry): void {
   });
 }
 
+function rowsOfADefinitionKeyRefolded(entry: FactScrubEntry): void {
+  describe('the row of a projection keyed by its mapping over the streams of a definition', () => {
+    it('is folded again from the facts of the definition alone', async () => {
+      const ledger = await entry.aLedger([{ ...topicRows, scopes: ['definition'] }]);
+      await placedIn(ledger, 'd1', 'alpha');
+      await topics(ledger, 'definition/acme/d1/runs/r1', opened);
+      await topics(ledger, 'definition/acme/d1/notes/n1', noted('call me on 0123'));
+      await topics(ledger, 'definition/acme/d2/notes/n1', noted('of d2'));
+
+      await scrubbedTopic(ledger, 'definition/acme/d1/notes/n1', { topic: 'spring', note: 'a note was erased' });
+
+      expect((await rowsOf(ledger, 'topics', alpha)).map(({ key, row }) => [key, row['note'], row['open']])).toEqual([
+        ['spring', 'a note was erased', true],
+      ]);
+    });
+  });
+
+  describe('the row of a projection that keeps its rows at the org of the streams it folds', () => {
+    it("is folded again from the facts of every definition of the org, in the store's order, and of no other org", async () => {
+      const ledger = await entry.aLedger([{ ...topicRows, scopes: ['definition'], partition: 'org' }]);
+      await topics(ledger, 'definition/acme/d1/runs/r1', opened);
+      await topics(ledger, 'definition/acme/d2/notes/n1', noted('call me on 0123'));
+      await topics(ledger, 'definition/acme/d1/notes/n2', noted('of d1'));
+      await topics(ledger, 'definition/umbrella/d3/notes/n3', noted('of umbrella'));
+
+      await scrubbedTopic(ledger, 'definition/acme/d2/notes/n1', { topic: 'spring', note: 'a note was erased' });
+
+      expect((await rowsOf(ledger, 'topics', acme)).map(({ key, row }) => [key, row['note'], row['open']])).toEqual([
+        ['spring', 'of d1', true],
+      ]);
+    });
+  });
+}
+
 function childRowsRefolded(entry: FactScrubEntry): void {
   describe('the rows of a key of a projection that keeps several under it, which a scrubbed fact folded into', () => {
     it('are folded again from nothing over the facts of the key, the rows the scrubbed fact no longer answers dropped', async () => {
@@ -168,7 +203,8 @@ function runOutcomeRefolded(entry: FactScrubEntry): void {
   describe('the outcome of a run whose fact is scrubbed', () => {
     it('is folded again from the facts of the run', async () => {
       const ledger = await entry.aLedger([], runTallies);
-      const run = 'playbook/acme/alpha/runs/r1';
+      await placedIn(ledger, 'd1', 'alpha');
+      const run = 'definition/acme/d1/runs/r1';
       await Effect.runPromise(ledger.execute(run, runFacts, [began('call me on 0123')]));
 
       await Effect.runPromise(
@@ -192,6 +228,7 @@ export function refoldedRowsBehaviour(entry: FactScrubEntry): void {
   rowsOfAStreamRefolded(entry);
   rowsOfAKeyRefolded(entry);
   rowsOfAnOrgKeyRefolded(entry);
+  rowsOfADefinitionKeyRefolded(entry);
   childRowsRefolded(entry);
   runOutcomeRefolded(entry);
 }

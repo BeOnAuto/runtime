@@ -11,23 +11,32 @@ import {
   type RecordWork,
   type WorkLedger,
 } from '@on.auto/definitions';
-import { admittingMeter, runContentHolders, standingClock, uncheckedPages } from '@on.auto/definitions/testing';
+import {
+  admittingMeter,
+  definitionNamesWith,
+  runContentHolders,
+  standingClock,
+  uncheckedPages,
+} from '@on.auto/definitions/testing';
 import {
   allPermissions,
   makeDispatcher,
   type CallerIdentity,
+  type ContentHolders,
   type DispatcherServices,
   type KeyedProjection,
   type Ledger,
   type Outcome,
+  type PlaybookAddress,
   type PlaybookRequest,
   type Runnable,
 } from '@on.auto/operations';
 import {
   memoryPlaybookRegistry,
-  memoryLedger,
+  memoryLedgerWith,
   recordingReporter,
   type MemoryLedger,
+  type MemoryLedgerOptions,
 } from '@on.auto/operations/testing';
 import { Clock, Effect, Layer } from 'effect';
 
@@ -54,6 +63,8 @@ export const acmeAdmin: CallerIdentity = {
 };
 
 export const alpha = { org: 'acme', playbook: 'alpha' };
+
+export const beta = { org: 'acme', playbook: 'beta' };
 
 type RequestLedger = Parameters<typeof requestsDue>[0]['ledger'] & WorkLedger;
 
@@ -86,9 +97,18 @@ interface LinkedRun {
 
 export type RunLink = Pick<PlaybookRequest, 'lineage' | 'calledBy' | 'trigger'>;
 
+/** Where a call is made: the playbook it is made in, and how the run it starts is linked to the runs before it. */
+type CalledAt = PlaybookAddress & RunLink;
+
 interface Calling {
-  (operation: PlaybookOperation, input: unknown, caller?: CallerIdentity, link?: RunLink): Promise<Outcome>;
-  (operation: PlaybookRoute, input: unknown, caller?: CallerIdentity, link?: RunLink): Promise<Outcome>;
+  (operation: PlaybookOperation, input: unknown, caller?: CallerIdentity, at?: CalledAt): Promise<Outcome>;
+  (operation: PlaybookRoute, input: unknown, caller?: CallerIdentity, at?: CalledAt): Promise<Outcome>;
+}
+
+interface PlaybookCalls {
+  readonly define: (name: string, source: string) => Promise<Outcome>;
+  readonly ask: (name: string, input: unknown, runId: string) => Promise<Outcome>;
+  readonly runOf: (runId: string) => Promise<Outcome>;
 }
 
 export interface InteractionHarness {
@@ -112,21 +132,17 @@ export interface InteractionHarness {
   readonly dueItems: (now: number, due?: RequestsDue) => Promise<readonly DueRequestItem[]>;
   readonly performAll: (items: readonly DueRequestItem[], now: number) => Promise<void>;
   readonly performEach: (times: readonly number[]) => Promise<void>;
+  readonly inPlaybook: (at: PlaybookAddress) => PlaybookCalls;
 }
 
 function callingIn(services: Layer.Layer<DispatcherServices>): Calling {
   const dispatcher = makeDispatcher([]);
-  function call(
-    operation: PlaybookOperation,
-    input: unknown,
-    caller?: CallerIdentity,
-    link?: RunLink,
-  ): Promise<Outcome>;
-  function call(operation: PlaybookRoute, input: unknown, caller?: CallerIdentity, link?: RunLink): Promise<Outcome>;
-  function call(operation: PlaybookRoute, input: unknown, caller = acmeAdmin, link: RunLink = {}): Promise<Outcome> {
+  function call(operation: PlaybookOperation, input: unknown, caller?: CallerIdentity, at?: CalledAt): Promise<Outcome>;
+  function call(operation: PlaybookRoute, input: unknown, caller?: CallerIdentity, at?: CalledAt): Promise<Outcome>;
+  function call(operation: PlaybookRoute, input: unknown, caller = acmeAdmin, at: CalledAt = alpha): Promise<Outcome> {
     return Effect.runPromise(
       dispatcher
-        .dispatchToPlaybook(operation.registration, { caller, ...alpha, input, encoding: 'json', ...link })
+        .dispatchToPlaybook(operation.registration, { caller, ...at, input, encoding: 'json' })
         .pipe(Effect.provide(services)),
     );
   }
@@ -137,7 +153,7 @@ function servicesOf(ledger: HarnessLedger, payloadOffloading: boolean): Layer.La
   return Layer.mergeAll(
     ledger.layer,
     payloadOffloadingOf(payloadOffloading),
-    memoryPlaybookRegistry([alpha]),
+    memoryPlaybookRegistry([alpha, beta]),
     recordingReporter().layer,
     Layer.succeed(Clock.Clock, standingClock),
     admittingMeter,
@@ -149,8 +165,38 @@ function savingAnInteraction(call: Calling, capabilities: readonly Capability[])
     call(defineCreateDefinition(capabilities, uncheckedPages), { type: 'interaction', name, source, diagram: 'none' });
 }
 
+export const namesOfTheTests = definitionNamesWith(['nudging']);
+
+export function ledgerKeepingNames(
+  projections: readonly KeyedProjection[],
+  holders?: ContentHolders,
+  store?: MemoryLedgerOptions['store'],
+): MemoryLedger {
+  return memoryLedgerWith({
+    projections,
+    holders,
+    ...(store === undefined ? {} : { store }),
+    definitionNames: namesOfTheTests,
+  });
+}
+
 export function ledgerHoldingRuns(projections: readonly KeyedProjection[]): MemoryLedger {
-  return memoryLedger(undefined, projections, runContentHolders);
+  return ledgerKeepingNames(projections, runContentHolders);
+}
+
+function callsIn(call: Calling, capabilities: readonly Capability[]): InteractionHarness['inPlaybook'] {
+  return (at) => ({
+    define: (name, source) =>
+      call(
+        defineCreateDefinition(capabilities, uncheckedPages),
+        { type: 'interaction', name, source, diagram: 'none' },
+        acmeAdmin,
+        at,
+      ),
+    ask: (name, input, runId) =>
+      call(defineRunDefinition(capabilities), { type: 'interaction', name, input, run_id: runId }, acmeAdmin, at),
+    runOf: (runId) => call(defineGetRun(capabilities, uncheckedPages), { run_id: runId }, acmeAdmin, at),
+  });
 }
 
 export function interactionHarness(options: HarnessOptions = {}): InteractionHarness {
@@ -190,7 +236,7 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
     ask: (name, input, runId) => askAs('interaction', name, input, runId),
     defineAs,
     askAs,
-    runLinked: (run, link) => call(defineRunDefinition(capabilities), run, acmeAdmin, link),
+    runLinked: (run, link) => call(defineRunDefinition(capabilities), run, acmeAdmin, { ...alpha, ...link }),
     cancel: (runId) => call(defineCancelRun(capabilities), { run_id: runId }),
     runOf: (runId) => call(defineGetRun(capabilities, uncheckedPages), { run_id: runId }),
     performDue,
@@ -199,5 +245,6 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
     performAll: performedAll,
     performEach: (times) => performedEach(times, performDue),
     firstOpen: () => firstOpenOf(call),
+    inPlaybook: callsIn(call, capabilities),
   };
 }

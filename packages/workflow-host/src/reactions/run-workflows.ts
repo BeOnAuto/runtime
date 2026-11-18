@@ -8,8 +8,13 @@ const mostRunsRemembered = 4096;
 
 const firstVersion = 1;
 
+async function firstOf(store: Pick<LedgerStreams, 'messageAt' | 'holderOfStream'>, playbookKey: string, runId: string) {
+  const definitionKey = await store.holderOfStream({ playbookKey, stream: `runs/${runId}` });
+  return definitionKey === undefined ? undefined : store.messageAt(`${definitionKey}runs/${runId}`, firstVersion);
+}
+
 export function workflowsOfRuns(
-  store: Pick<LedgerStreams, 'messageAt'>,
+  store: Pick<LedgerStreams, 'messageAt' | 'holderOfStream'>,
   type: string,
   mostRemembered = mostRunsRemembered,
 ): WorkflowOfRun {
@@ -19,17 +24,17 @@ export function workflowsOfRuns(
     return started?.definitionType === type ? started.definitionName : undefined;
   };
   return (playbookKey, runId) => {
-    const stream = `${playbookKey}runs/${runId}`;
-    if (remembered.has(stream)) {
-      return Effect.succeed(remembered.get(stream));
+    const run = JSON.stringify([playbookKey, runId]);
+    if (remembered.has(run)) {
+      return Effect.succeed(remembered.get(run));
     }
-    return Effect.promise(() => store.messageAt(stream, firstVersion)).pipe(
+    return Effect.promise(() => firstOf(store, playbookKey, runId)).pipe(
       Effect.map((first) => {
         const workflow = workflowOf(first);
         if (remembered.size >= mostRemembered) {
           remembered.clear();
         }
-        remembered.set(stream, workflow);
+        remembered.set(run, workflow);
         return workflow;
       }),
     );

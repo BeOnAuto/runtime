@@ -25,7 +25,6 @@ import {
   checkpointsOfTheTallies,
   projectionCheckpointsBehaviour,
 } from '../projection-checkpoints/projection-checkpoints-behaviour.ts';
-import { streamProjectionBehaviour } from '../stream-projections/stream-projection-behaviour.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { projectionsBehaviour, topicsOf } from './projections-behaviour.ts';
 
@@ -294,5 +293,4 @@ export function projectionTableBehaviour(entry: LedgerEntry): void {
   aKeyedTableNotThereYet(entry);
   aTableOfOrgsNotThereYet(entry);
   aTableOfChildRowsNotThereYet(entry);
-  streamProjectionBehaviour(entry);
 }

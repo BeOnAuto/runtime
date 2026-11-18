@@ -236,6 +236,8 @@ async function flood(runId: string, count: number, data: string): Promise<readon
 
 const playbookKey = 'playbook/acme/alpha/';
 
+const definitionsOfTheOrg = 'definition/acme/';
+
 const summaryRunLogStreams = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Summarize: {{ input.text }}'].join(
   '\n',
 );
@@ -248,6 +250,8 @@ const workflows: Readonly<Record<string, string>> = {
   listening: 'do:\n  - hold: { listen: { to: { one: { with: { type: com.acme.go } } } } }\n',
   telling:
     'do:\n  - tell: { emit: { event: { with: { type: com.acme.told, source: https://acme.example/told, data: { to: ada } } } } }\n',
+  reacting:
+    'schedule:\n  on: { one: { with: { type: com.acme.told } } }\ndo:\n  - reacted: { set: { reacted: true } }\n',
   forking:
     'do:\n  - both:\n      fork:\n        branches:\n          - a: { set: { a: 1 } }\n          - b: { set: { b: 2 } }\n',
   guarding: `do:
@@ -269,28 +273,53 @@ const decodeFirstMessages = Schema.decodeUnknownSync(FirstMessages);
 
 let ledger: TemporaryLedger;
 
-async function firstMessagesOfThePlaybook(): Promise<readonly FirstMessage[]> {
+async function firstMessagesOfTheOrg(): Promise<readonly FirstMessage[]> {
   return decodeFirstMessages(
     await readOfTheLedgerIn(
       ledger.fileName,
-      statement`SELECT stream_id AS stream, message_type AS type FROM emt_messages WHERE stream_position = 1 AND substr(stream_id, 1, ${playbookKey.length}) = ${playbookKey}`,
+      statement`SELECT stream_id AS stream, message_type AS type FROM emt_messages WHERE stream_position = 1
+        AND (substr(stream_id, 1, ${playbookKey.length}) = ${playbookKey}
+          OR substr(stream_id, 1, ${definitionsOfTheOrg.length}) = ${definitionsOfTheOrg})`,
     ),
   );
 }
 
-function kindKeyOf(stream: string): string {
-  return `${stream.split('/').slice(0, 4).join('/')}/`;
+function keyOf(stream: string): string {
+  return `${stream.split('/').slice(0, 3).join('/')}/`;
+}
+
+function kindOf(stream: string): string {
+  return stream.split('/')[3] ?? '';
 }
 
 function streamsOfKind(messages: readonly FirstMessage[], kind: string): readonly FirstMessage[] {
-  return messages.filter(({ stream }) => kindKeyOf(stream) === `${playbookKey}${kind}/`);
+  return messages.filter(({ stream }) => kindOf(stream) === kind);
 }
 
-function holdsTheLogOfEvery(runIds: readonly string[]) {
-  return (messages: readonly FirstMessage[]): boolean => {
-    const logged = new Set(streamsOfKind(messages, 'run-logs').map(({ stream }) => stream));
-    return runIds.every((runId) => logged.has(`${playbookKey}run-logs/${runId}`));
-  };
+function runsOfTheLogs(messages: readonly FirstMessage[]): readonly string[] {
+  return streamsOfKind(messages, 'run-logs').map(({ stream }) => stream.replace('/run-logs/', '/runs/'));
+}
+
+function underThePlaybook(messages: readonly FirstMessage[]): readonly FirstMessage[] {
+  return messages.filter(({ stream }) => keyOf(stream) === playbookKey);
+}
+
+function logsUnderNoWorkflow(messages: readonly FirstMessage[]): readonly FirstMessage[] {
+  const defined = new Set(streamsOfKind(messages, 'definitions').map(({ stream }) => stream));
+  return streamsOfKind(messages, 'run-logs').filter(
+    ({ stream }) => !defined.has(`${keyOf(stream)}definitions/workflow`),
+  );
+}
+
+function runsWithNoLog(messages: readonly FirstMessage[], runIds: readonly string[]): readonly string[] {
+  const logged = new Set(
+    streamsOfKind(messages, 'run-logs').map(({ stream }) => stream.slice(stream.lastIndexOf('/') + 1)),
+  );
+  return runIds.filter((runId) => !logged.has(runId));
+}
+
+function holdsTheLogsOf(runs: number) {
+  return (messages: readonly FirstMessage[]): boolean => streamsOfKind(messages, 'run-logs').length >= runs;
 }
 
 async function definedInTurn(entries: readonly (readonly [string, string])[]): Promise<void> {
@@ -396,7 +425,9 @@ describe('workflows over http', () => {
       const history = await server.call('GET', `${alpha}/runs/${runId}/history`);
 
       const { events } = historyOf(history.body);
-      const callKey = JSON.stringify([`acme/alpha/${runId}`, '/do/0/judge', 1]);
+      const callKey: unknown = expect.stringMatching(
+        new RegExp(String.raw`^\["acme/[0-9a-f-]{36}/${runId}","/do/0/judge",1\]$`, 'u'),
+      );
 
       expect(events.map(({ type }) => type).toSorted()).toEqual(typesOfTheDeclinedReview);
       expect(events.filter(({ type }) => type === 'workflow_input_applied')).toEqual([
@@ -572,7 +603,7 @@ describe('run log streams', () => {
   });
 
   describe('the run log of a workflow', () => {
-    it('is kept under its own kind, so no stream of the kind of a run begins with an input the engine applied', async () => {
+    it('is kept under its own kind and under the definition of its run, so no stream of the kind of a run begins with an input the engine applied, and no run or log lies under the playbook', async () => {
       ledger = temporaryLedger();
       server = await servingWorkflows([answers(textResult('Short.'))], {
         LEDGER_FILE: ledger.fileName,
@@ -582,14 +613,22 @@ describe('run log streams', () => {
         body: { name: 'summary', source: summaryRunLogStreams, diagram: 'none' },
       });
       await definedInTurn(Object.entries(workflows));
-      const runIds = await startedInTurn(Object.keys(workflows));
+      const startedByAPerson = await startedInTurn(Object.keys(workflows).filter((name) => name !== 'reacting'));
+      const startedByACallAndByAnEvent = 2;
 
-      const messages = await until(firstMessagesOfThePlaybook, holdsTheLogOfEvery(runIds));
-
-      expect(streamsOfKind(messages, 'runs').filter(({ type }) => type === 'input_applied')).toEqual([]);
-      expect(streamsOfKind(messages, 'runs').map(({ stream }) => stream)).toEqual(
-        expect.arrayContaining(runIds.map((runId) => `${playbookKey}runs/${runId}`)),
+      const messages = await until(
+        firstMessagesOfTheOrg,
+        holdsTheLogsOf(startedByAPerson.length + startedByACallAndByAnEvent),
       );
+      const streams = new Set(messages.map(({ stream }) => stream));
+
+      expect(streamsOfKind(underThePlaybook(messages), 'runs')).toEqual([]);
+      expect(streamsOfKind(underThePlaybook(messages), 'run-logs')).toEqual([]);
+      expect(streamsOfKind(messages, 'run-logs')).toHaveLength(startedByAPerson.length + startedByACallAndByAnEvent);
+      expect(runsOfTheLogs(messages).filter((run) => !streams.has(run))).toEqual([]);
+      expect(logsUnderNoWorkflow(messages)).toEqual([]);
+      expect(runsWithNoLog(messages, startedByAPerson)).toEqual([]);
+      expect(streamsOfKind(messages, 'runs').filter(({ type }) => type === 'input_applied')).toEqual([]);
       expect(new Set(streamsOfKind(messages, 'run-logs').map(({ type }) => type))).toEqual(new Set(['input_applied']));
     });
   });

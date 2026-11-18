@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { inThePlaybook } from '../read-model-testing/in-the-playbook.ts';
 import { aReader, executedIn } from '../read-model-testing/read-model-histories.ts';
 import { readModelLedgerOf } from '../read-model-testing/read-model-ledger.ts';
-import { answeringAsTheReleaseBefore } from '../read-model-testing/saved-before-ids.ts';
+import { answeringAsTheReleaseBefore } from '../read-model-testing/release-before.ts';
 import { echoingWorkflow } from '../testing/capabilities/paged.ts';
 import { listFromTheReadModel } from './read-model-lists.ts';
 

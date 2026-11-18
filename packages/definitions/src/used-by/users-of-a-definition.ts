@@ -14,22 +14,15 @@ type UsersToday = Effect.Effect<readonly DefinitionUser[], never, PlaybookReader
 
 type Users = Effect.Effect<readonly DefinitionUser[], never, PlaybookReader | PlaybookContext>;
 
-function registriesWith(
-  types: readonly string[],
-  type: string,
-  registry: DefinitionRegistry,
-): Effect.Effect<PlaybookRegistries, never, PlaybookReader | PlaybookContext> {
+function registriesOf(types: readonly string[]): Effect.Effect<PlaybookRegistries, never, PlaybookReader> {
   return Effect.map(
-    Effect.forEach(
-      types.filter((other) => other !== type),
-      (other) => Effect.map(loadRegistry(other), (loaded) => [other, loaded] as const),
-    ),
-    (others: readonly (readonly [string, DefinitionRegistry])[]) => new Map([[type, registry], ...others]),
+    Effect.forEach(types, (type) => Effect.map(loadRegistry(type), (loaded) => [type, loaded] as const)),
+    (registries: readonly (readonly [string, DefinitionRegistry])[]) => new Map(registries),
   );
 }
 
-export function usersToday(types: readonly string[], registry: DefinitionRegistry, used: NamedDefinition): UsersToday {
-  return Effect.map(registriesWith(types, used.type, registry), (registries) => usersOf(registries, used));
+export function usersToday(types: readonly string[], used: NamedDefinition): UsersToday {
+  return Effect.map(registriesOf([...new Set([used.type, ...types])]), (registries) => usersOf(registries, used));
 }
 
 export function usersCompared(today: readonly DefinitionUser[], candidate: readonly DefinitionUser[]): Comparison {
@@ -53,6 +46,6 @@ function stagedUsers(
   });
 }
 
-export function usersAnswered(types: readonly string[], registry: DefinitionRegistry, used: NamedDefinition): Users {
-  return stagedUsers(types, used, usersToday(types, registry, used));
+export function usersAnswered(types: readonly string[], used: NamedDefinition): Users {
+  return stagedUsers(types, used, usersToday(types, used));
 }

@@ -1,9 +1,8 @@
 import {
   playbookBoundProjectionReader,
-  playbookBoundStreamReader,
+  definitionBoundStreamReader,
   type PlaybookAddress,
   type ProjectionReader,
-  type StreamReader,
 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
@@ -14,6 +13,7 @@ import { comparisonOf, stagedRead } from '../read-model-staging/shadow-compariso
 import {
   definitionVersionIn,
   type DefinitionVersionAddress,
+  type DefinitionVersionReader,
   type RecordedVersion,
 } from '../registry/definition-versions.ts';
 
@@ -29,12 +29,12 @@ function versionToPrepareOf({ source, stripped, putInPlaceBy }: VersionFound): V
   return { source, stripped, putInPlaceBy };
 }
 
-type RunVersionLedger = StreamReader & ProjectionReader;
+type RunVersionLedger = DefinitionVersionReader & ProjectionReader;
 
 function readModelReaderIn(ledger: RunVersionLedger, address: PlaybookAddress): ReadModelReader {
   return {
-    ...playbookBoundStreamReader(ledger, address),
     ...playbookBoundProjectionReader(ledger, address),
+    ofDefinition: (definition) => definitionBoundStreamReader(ledger, { org: address.org, definition }),
     playbook: address,
   };
 }

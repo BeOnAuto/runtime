@@ -19,6 +19,7 @@ export function runtimeLedger(runtime: AppRuntime<DispatcherServices>): RuntimeL
     factAt: (stream, position, eventSchema) => viaLedger((ledger) => ledger.factAt(stream, position, eventSchema)),
     execute: (stream, decider, command, lineage) =>
       viaLedger((ledger) => ledger.execute(stream, decider, command, lineage)),
+    holderOfStream: (named) => viaLedger((ledger) => ledger.holderOfStream(named)),
     removeUnheld: (playbook, sha256) => viaLedger((ledger) => ledger.removeUnheld(playbook, sha256)),
     readRecorded: (playbook, selection, page) => viaLedger((ledger) => ledger.readRecorded(playbook, selection, page)),
     readProjectedRows: (projection, playbook, query) =>

@@ -1,7 +1,7 @@
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -28,6 +28,7 @@ function starting(options: StartOptions): RunCommand {
     type: 'start',
     ...greeting,
     started_by: recordedAdmin,
+    playbook: 'alpha',
     calls_tools: false,
     definition_version: 1,
     ...start,
@@ -35,7 +36,10 @@ function starting(options: StartOptions): RunCommand {
   };
 }
 
-const started: RunEvent = { type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input } };
+const started: RunEvent = {
+  type: 'run_started',
+  data: { ...startedInAlpha, input: greeting.input },
+};
 
 const startedDeep = recordedWith({ ...start, ...ofGreet, depth: 2 })(started);
 

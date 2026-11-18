@@ -74,7 +74,9 @@ const workflow: Capability = defineCapability({
 });
 
 function withIdsAside(answers: unknown): string {
-  return JSON.stringify(answers).replaceAll(/"definition_id":"[^"]+"/gu, '"definition_id":"made at its creation"');
+  return JSON.stringify(answers)
+    .replaceAll(/"definition_id":"[^"]+"/gu, '"definition_id":"made at its creation"')
+    .replaceAll(/"triggers_since":"[^"]+"/gu, '"triggers_since":"the id of a fact on the stream of that definition"');
 }
 
 interface Keeping {

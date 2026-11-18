@@ -146,8 +146,7 @@ function blindToEventsOnceAsked(blind: { readonly now: boolean }): GoalsPortsTur
         ...ports.database,
         store: {
           ...store,
-          readRecordedEvent: (playbookKey, id) =>
-            store.readRecordedEvent(playbookKey, blind.now ? 'no-such-record' : id),
+          readRecordedEventOfKeys: (keys, id) => store.readRecordedEventOfKeys(keys, blind.now ? 'no-such-record' : id),
         },
       },
     };

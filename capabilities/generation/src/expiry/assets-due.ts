@@ -1,6 +1,9 @@
 import {
+  addressOfTheRow,
   playbookRowsOf,
+  streamPrefixOfAddress,
   type PlaybookProjectedRow,
+  type ProjectedAddress,
   type ProjectionReader,
   type StreamWriter,
   type UnheldContentRemover,
@@ -37,18 +40,19 @@ const expiringColumn = 'expires_at';
 
 interface Expiring {
   readonly playbook: PlaybookAddress;
+  readonly filedIn: ProjectedAddress;
   readonly id: string;
   readonly row: AssetRow;
 }
 
 function recorded(
   { ledger }: ExpiryParts,
-  { playbook, id }: Expiring,
+  { filedIn, id }: Expiring,
   event: AssetCommand['event'],
   now: number,
 ): Effect.Effect<boolean> {
   return ledger
-    .execute(assetStreamIn(playbook, id), assetDecider, {
+    .execute(assetStreamIn(streamPrefixOfAddress(filedIn), id), assetDecider, {
       event,
       context: { at: new Date(now).toISOString(), by: byTheRuntime },
     })
@@ -84,12 +88,18 @@ function expired(parts: ExpiryParts, expiring: Expiring, now: number): Effect.Ef
   );
 }
 
-function itemOf(parts: ExpiryParts, { org, playbook, key, row }: PlaybookProjectedRow): AssetsDueItem {
-  const asset = assetRowFrom(row);
+function itemOf(parts: ExpiryParts, kept: PlaybookProjectedRow): AssetsDueItem {
+  const { org, playbook, key } = kept;
+  const expiring = {
+    playbook: { org, playbook },
+    filedIn: addressOfTheRow(kept),
+    id: key,
+    row: assetRowFrom(kept.row),
+  };
   return {
     key: `${org}/${playbook}/${key}`,
     callsOut: false,
-    perform: (now) => Effect.suspend(() => expired(parts, { playbook: { org, playbook }, id: key, row: asset }, now)),
+    perform: (now) => Effect.suspend(() => expired(parts, expiring, now)),
   };
 }
 

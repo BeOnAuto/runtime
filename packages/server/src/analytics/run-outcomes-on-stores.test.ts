@@ -89,7 +89,7 @@ function ofTheRun(name: string, type: string, at: string): Context {
 function started(name: string, at: string, type = 'reasoning'): Written {
   const startedBy = { id: 'acme-admin', name: 'acme-admin' };
   return {
-    fact: { type: 'run_started', data: { input: {}, started_by: startedBy } },
+    fact: { type: 'run_started', data: { input: {}, started_by: startedBy, playbook: 'alpha' } },
     context: ofTheRun(name, type, at),
   };
 }
@@ -103,7 +103,7 @@ function finished(
   return { fact: { type, data }, context: ofTheRun(name, kind, at) };
 }
 
-const runs: readonly (readonly [string, readonly Written[]])[] = [
+const runs: readonly (readonly [string, readonly [Written, ...Written[]]])[] = [
   [
     'started-twice',
     [
@@ -157,14 +157,49 @@ const runs: readonly (readonly [string, readonly Written[]])[] = [
   ['still-going', [started('draft', '2026-10-02T10:00:00.000Z')]],
 ];
 
-function written(ledger: Ledger['Service']): Promise<void> {
+const definitionsRun = [
+  ['reasoning', 'triage'],
+  ['workflow', 'approval'],
+  ['reasoning', 'draft'],
+] as const;
+
+function runStreamOf(run: string, [{ context }]: readonly [Written, ...Written[]]): string {
+  return `definition/acme/${context.definitionType ?? ''}-${context.definitionName ?? ''}/runs/${run}`;
+}
+
+function creationOf(type: string, name: string): Written {
+  return {
+    fact: {
+      type: 'definition_created',
+      data: { content: { source: '{}' }, created_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha' },
+    },
+    context: {
+      by: 'acme-admin',
+      at: '2026-09-30T09:00:00.000Z',
+      definitionType: type,
+      definitionName: name,
+      definitionVersion: 1,
+    },
+  };
+}
+
+function defined(ledger: Ledger['Service']): Promise<void> {
+  return Effect.runPromise(
+    Effect.forEach(
+      definitionsRun,
+      ([type, name]) =>
+        ledger.execute(`definition/acme/${type}-${name}/definitions/${type}`, facts, creationOf(type, name)),
+      { discard: true },
+    ),
+  );
+}
+
+function ran(ledger: Ledger['Service']): Promise<void> {
   return Effect.runPromise(
     Effect.forEach(
       runs,
       ([run, given]) =>
-        Effect.forEach(given, (each) => ledger.execute(`playbook/acme/alpha/runs/${run}`, facts, each), {
-          discard: true,
-        }),
+        Effect.forEach(given, (each) => ledger.execute(runStreamOf(run, given), facts, each), { discard: true }),
       { discard: true },
     ),
   );
@@ -213,8 +248,11 @@ describe.each(stores)('the outcomes of runs the composed ledger keeps, on $store
     async () => {
       const appended = await aLedger();
       const replayed = await aLedger();
-      await written(await opened(ledgerLayerOf(appended)));
-      await written(await opened(withoutTheProjection(replayed)));
+      const keptInline = await opened(ledgerLayerOf(appended));
+      await defined(keptInline);
+      await ran(keptInline);
+      await ran(await opened(withoutTheProjection(replayed)));
+      await defined(await opened(ledgerLayerOf(replayed)));
 
       const inline = await outcomesIn(await opened(ledgerLayerOf(appended)));
       const filled = await outcomesIn(await opened(ledgerLayerOf(replayed)));

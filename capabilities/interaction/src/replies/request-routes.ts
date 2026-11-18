@@ -2,7 +2,7 @@ import { Schema } from 'effect';
 
 import { DeliverySchema } from '../requests/request-rows.ts';
 import { tellsALine } from '../tellings/telling-calls.ts';
-import { tellingWrittenBefore, TellingRouteSchema, type TellingRoute } from '../tellings/telling-routes.ts';
+import { TellingRouteSchema, type TellingRoute } from '../tellings/telling-routes.ts';
 import { RepliesSchema, type Replies } from '../tool-blocks/tool-block-schemas.ts';
 import type { KeptRequest } from './reply-taking.ts';
 
@@ -17,14 +17,13 @@ const routeRowFrom = Schema.decodeUnknownSync(
   Schema.Struct({
     delivery: Schema.fromJsonString(DeliverySchema),
     replies: Schema.fromJsonString(RepliesSchema),
-    tell: Schema.NullOr(Schema.fromJsonString(TellingRouteSchema)),
+    tell: Schema.fromJsonString(TellingRouteSchema),
   }),
 );
 
 export function routeOfRequest({ row }: KeptRequest): RepliesRoute {
   const { delivery, replies, tell } = routeRowFrom(row);
-  const telling = tell ?? tellingWrittenBefore(replies, delivery);
-  return { server: delivery.server, delivering: delivery.tool, replies, telling };
+  return { server: delivery.server, delivering: delivery.tool, replies, telling: tell };
 }
 
 export function tellsTakenAndRefused(request: KeptRequest): boolean {

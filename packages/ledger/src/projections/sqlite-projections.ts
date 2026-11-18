@@ -5,7 +5,7 @@ import { sizedPositionsOf, type SizesAfter } from '../appends/stream-pages.ts';
 import { itemsInAStatement, mostValuesTheLedgerBindsOnSQLite } from '../connection/bound-values.ts';
 import { inTransactionOf, type StatementExecutor, type TransactionalPool } from '../event-store.ts';
 import { sqliteCatchUp } from '../projection-catch-up/sqlite-catch-up.ts';
-import { dataBytesOf, playbookKeyOfStream, storedBytesOf } from '../recorded/sqlite-indexes.ts';
+import { dataBytesOf, orgOfStream, playbookKeyOfStream, storedBytesOf } from '../recorded/sqlite-indexes.ts';
 import {
   type HeldRead,
   type HeldTypes,
@@ -37,6 +37,7 @@ function heldTypesIn({ holding, measured }: HeldTypes): SQL {
 const keyOfALane: Readonly<Record<MessageLane['by'], ReturnType<typeof SQL.plain>>> = {
   stream: SQL.plain('stream_id'),
   prefix: playbookKeyOfStream,
+  org: orgOfStream,
 };
 
 interface LaneRead {
@@ -131,7 +132,6 @@ const sqliteProjectionDialect: ProjectionDialect = {
       : SQL`json_set(message_metadata, '$.payloadBytes', ${payloadBytes})`,
   booleanOf: (value) => (value ? 1 : 0),
   listed: (values) => SQL`SELECT value FROM json_each(${JSON.stringify(values)})`,
-  storedBytesOfMessage: storedBytesOf('m'),
   forUpdate: '',
   catchUp: sqliteCatchUp,
 };

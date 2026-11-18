@@ -2,7 +2,7 @@ import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { comparedWithoutItsValue, type ValuesRead } from '../payloads/payload-comparisons.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { keptArmOf } from '../testing/kept-payloads.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand, RunResult } from './run-commands.ts';
@@ -22,7 +22,10 @@ const answer = { approved: true, notes: 'n'.repeat(3000) };
 
 const keptAnswer = keptArmOf(answer);
 
-const started: RunEvent = { type: 'run_started', data: { input: {}, started_by: recordedAdmin, finishes_later: true } };
+const started: RunEvent = {
+  type: 'run_started',
+  data: { input: {}, ...startedInAlpha, finishes_later: true },
+};
 
 const succeededKept: RunEvent = {
   type: 'run_succeeded',

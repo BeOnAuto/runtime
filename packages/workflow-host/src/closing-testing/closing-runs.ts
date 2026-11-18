@@ -36,6 +36,7 @@ export interface Closing extends ClosingHost {
 function endedBy(host: ClosingHost, clock: SteppedClock, recorded: RecordedOptions): () => Promise<End> {
   return async () => {
     const started: Started = { ...twoCalls, kind: 'started', runId: runKey, at: clock.now() };
+    await host.placed();
     await Effect.runPromise(host.parts().submitted(started));
     await until(
       () => Promise.resolve(recorded.settleAttempts()),

@@ -1,5 +1,5 @@
 import type { RecordWork } from '@on.auto/definitions';
-import type { PlaybookAddress, ProjectionAdvancer, ProjectionReader } from '@on.auto/operations';
+import type { ProjectedAddress, ProjectionAdvancer, ProjectionReader } from '@on.auto/operations';
 import type { ToolAccess } from '@on.auto/tool-servers';
 import type { Effect } from 'effect';
 
@@ -16,17 +16,17 @@ export interface ConversationParts {
 }
 
 export interface ConversationPlace {
-  readonly playbook: PlaybookAddress;
+  readonly address: ProjectedAddress;
   readonly key: string;
   readonly row: ConversationRow;
 }
 
 export function advanced(
   parts: ConversationParts,
-  { playbook, key, row }: ConversationPlace,
+  { address, key, row }: ConversationPlace,
   cadence: Cadence,
 ): Effect.Effect<void> {
-  return parts.ledger.advanceRow(conversationsName, playbook, key, {
+  return parts.ledger.advanceRow(conversationsName, address, key, {
     set: advancedOf(cadence),
     when: [{ column: 'joined_by', equals: row.joined_by }],
   });

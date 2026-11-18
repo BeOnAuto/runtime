@@ -1,28 +1,32 @@
 import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
-import { describe } from 'vitest';
+import { Schema } from 'effect';
+import { describe, expect, it } from 'vitest';
 
 import { keptFactsWritten, recordHoldingItsPrompt } from '../testing/kept-facts-written.ts';
 import { acted, caller, onTheRun, calledByAWorkflow, usage, toolCall, modelCall } from '../testing/run-contexts.ts';
-import { startedAsATest } from '../testing/started-as-a-test.ts';
 import { RunEventSchema } from './run-events.ts';
 
 const ofTheAnswer = { result_bytes: 512, result_sha256: 'd4e5f6', shown_bytes: 256, duration_ms: 140 };
 
 const toolCallAnswered = { number: 1, is_error: false, ...ofTheAnswer, jsonrpc_id: 7, server_request_id: 'request-1' };
 
-const baseline: readonly (typeof RunEventSchema.Type)[] = [
+const startedWithItsPlaybook: readonly (typeof RunEventSchema.Type)[] = [
   {
     type: 'run_started',
     data: {
       input: { lead: 'lead-1' },
       started_by: caller,
+      playbook: 'alpha',
       calls_tools: true,
       finishes_later: true,
       resumes: true,
       output_shape: 'table',
     },
-    context: calledByAWorkflow,
+    context: { ...calledByAWorkflow, test: true },
   },
+];
+
+const baseline: readonly (typeof RunEventSchema.Type)[] = [
   { type: 'run_deferred', data: { record: { waiting_for: 'reply' } }, context: onTheRun },
   { type: 'attempt_resumed', data: { attempt: 2 }, context: onTheRun },
   { type: 'run_succeeded', data: { output: { score: 0.8 }, record: { steps: 3 } }, context: onTheRun },
@@ -130,53 +134,6 @@ const baseline: readonly (typeof RunEventSchema.Type)[] = [
   },
 ];
 
-const actingForAPerson: readonly (typeof RunEventSchema.Type)[] = [
-  {
-    type: 'run_started',
-    data: {
-      input: { schedule: { due: '2026-11-02T09:00:00.000Z' } },
-      started_by: { id: 'playbook:sales', name: 'sales' },
-      finishes_later: true,
-    },
-    context: {
-      at: '2026-11-02T09:00:00.214Z',
-      by: 'playbook:sales',
-      runId: '019a4b2c-1d3e-7f40-8a51-6b7c8d9e0f1a',
-      definitionType: 'workflow',
-      definitionName: 'weekly-stock-check',
-      definitionVersion: 4,
-      depth: 1,
-      trigger: { kind: 'cron', reference: '/schedule/cron' },
-      actsFor: 'person:user_7kLm2',
-    },
-  },
-];
-
-const startedByAGoal: readonly (typeof RunEventSchema.Type)[] = [
-  {
-    type: 'run_started',
-    data: {
-      input: { notice: { goal: 'weekly-stock-health' } },
-      started_by: { id: 'playbook:sales', name: 'sales' },
-      finishes_later: true,
-    },
-    context: {
-      at: '2026-11-02T09:00:00.214Z',
-      by: 'playbook:sales',
-      runId: '019a4b2c-1d3e-7f40-8a51-6b7c8d9e0f1a',
-      definitionType: 'interaction',
-      definitionName: 'tell-the-owner',
-      definitionVersion: 4,
-      depth: 1,
-      trigger: {
-        kind: 'goal',
-        reference: 'goals/weekly-stock-health/assessments/019a4b2c-1d3e-7f40-8a51-6b7c8d9e0f1b',
-      },
-      actsFor: 'person:user_7kLm2',
-    },
-  },
-];
-
 const approvalAsked = {
   request: 'approval-1',
   tool: 'browser_click',
@@ -279,7 +236,7 @@ const stoppedAtALimit = { reason: 'conflict', detail: 'It stopped at a limit', k
 
 const releases: Readonly<Record<string, readonly (typeof RunEventSchema.Type)[]>> = {
   '0.46.0': baseline,
-  '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...declinedASignInAtAStep, ...answeredInEachMode],
+  '0.57.0': [...askedToApproveAnAction, ...declinedASignInAtAStep, ...answeredInEachMode],
   ...(await keptFactsWritten()),
   '0.59.0': [
     { type: 'request_answered', data: inAThread, context: onTheRun },
@@ -290,10 +247,27 @@ const releases: Readonly<Record<string, readonly (typeof RunEventSchema.Type)[]>
     { type: 'run_succeeded', data: { output: { score: 0.6 }, record: {}, ...answeredAtALimit }, context: onTheRun },
     { type: 'run_rejected', data: { rejection: { ...stoppedAtALimit, because: 'max_tool_calls' } }, context: onTheRun },
   ],
-  '0.60.0': startedByAGoal,
-  '0.63.0': [startedAsATest, { type: 'request_answered', data: { ...inAThread, delivered: true }, context: onTheRun }],
+  '0.63.0': [
+    ...startedWithItsPlaybook,
+    { type: 'request_answered', data: { ...inAThread, delivered: true }, context: onTheRun },
+  ],
 };
 
 describe('the facts a playbook records on the stream of a run', () => {
   recordedFactsBehaviour({ schema: RunEventSchema, folder: new URL('.', import.meta.url), releases });
+});
+
+describe('the start of a run read from a store', () => {
+  it('names the playbook the run was started in, and a start that names none is read as no fact of a run', () => {
+    const withoutAPlaybook = { input: { lead: 'lead-1' }, started_by: caller };
+
+    expect(Schema.decodeUnknownResult(RunEventSchema)(startedWithItsPlaybook[0])).toMatchObject({ _tag: 'Success' });
+    expect(
+      Schema.decodeUnknownResult(RunEventSchema)({
+        type: 'run_started',
+        data: withoutAPlaybook,
+        context: calledByAWorkflow,
+      }),
+    ).toMatchObject({ _tag: 'Failure' });
+  });
 });

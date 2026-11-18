@@ -1,5 +1,5 @@
 import { defineCancelRun, defineCreateDefinition, defineRunDefinition, type Capability } from '@on.auto/definitions';
-import { admittingMeter, uncheckedPages } from '@on.auto/definitions/testing';
+import { admittingMeter, definitionNamesWith, uncheckedPages } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   Ledger,
@@ -8,7 +8,7 @@ import {
   type Outcome,
   type Registration,
 } from '@on.auto/operations';
-import { memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
+import { memoryLedgerWith, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
 import { Effect, Layer, Predicate } from 'effect';
 
 interface Operation {
@@ -38,7 +38,7 @@ function runOfTheStream(stream: string): string {
 }
 
 export function cancelsInACall(capability: Capability): CancelsInACall {
-  const memory = memoryLedger();
+  const memory = memoryLedgerWith({ definitionNames: definitionNamesWith([capability.type]) });
   const cancelled: Outcome[] = [];
   const cancelRun = defineCancelRun([capability]);
   const dispatcher = makeDispatcher([]);

@@ -7,7 +7,7 @@ import { acmeAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { firstMoment, harness, toPlaybook, runStreamIn } from '../testing/harness.ts';
 import { aProcess } from '../testing/held-attempts.ts';
 
 const someWords: unknown = expect.any(String);
@@ -62,7 +62,7 @@ describe('a start of one version of a definition, once', () => {
       },
     });
     expect(definitions.ledger.streamNames().filter((stream) => stream.endsWith(runId))).toEqual([
-      `playbook/acme/alpha/runs/${runId}`,
+      runStreamIn(definitions.ledger, { type: 'echo', name: 'greet' }, runId),
     ]);
   });
 });
@@ -203,9 +203,10 @@ describe('the definitions of a playbook that start on their own', () => {
     const plain = await definitions.call(getDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'plain' }));
     const listed = await definitions.call(listDefinitions, toAlpha(acmeAdmin, { type: 'echo' }));
 
+    const greet = definitions.ledger.names().find(({ name }) => name === 'greet')?.definitionKey;
     expect(read).toMatchObject({
       status: 'succeeded',
-      output: { triggers, triggers_since: messageIdOf('playbook/acme/alpha/definitions/echo', 1) },
+      output: { triggers, triggers_since: messageIdOf(`${String(greet)}definitions/echo`, 1) },
     });
     expect(plain).not.toMatchObject({ output: { triggers } });
     expect(listed).toMatchObject({

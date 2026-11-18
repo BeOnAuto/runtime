@@ -2,9 +2,8 @@ import type { Resting } from './folder-pass.ts';
 import type { PlaybookDefinitions } from './playbook-definitions.ts';
 import type { KeptDefinitions } from './reconciled-rows.ts';
 
-export interface DefinitionsByType {
-  readonly of: KeptDefinitions;
-  readonly knows: (playbook: string) => boolean;
+export interface DefinitionsByType extends KeptDefinitions {
+  readonly playbookOf: (key: string) => string | undefined;
 }
 
 export interface Schedule {
@@ -37,13 +36,17 @@ function restingUntilSwept(): Resting & { readonly wakeAll: () => void } {
 
 export function definitionsByType(): DefinitionsByType {
   const byType = new Map<string, Map<string, PlaybookDefinitions>>();
+  const playbooks = new Map<string, string>();
   return {
     of: (definitionType) => {
       const kept = byType.get(definitionType) ?? new Map<string, PlaybookDefinitions>();
       byType.set(definitionType, kept);
       return kept;
     },
-    knows: (playbook) => [...byType.values()].some((kept) => kept.has(playbook)),
+    placed: (key, playbook) => {
+      playbooks.set(key, playbook);
+    },
+    playbookOf: (key) => playbooks.get(key),
   };
 }
 

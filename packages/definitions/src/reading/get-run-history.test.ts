@@ -16,11 +16,11 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionPresenters, runCanceller, runSettler } from '../index.ts';
 import { runStartCursorIn } from '../run-work/recorded-runs.ts';
 import type { RunCommand, RunResult } from '../runs/run-commands.ts';
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { runDecider } from '../runs/run-decider.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { asQueryString, firstMoment, harness, type LedgerRead, toPlaybook } from '../testing/harness.ts';
+import { asQueryString, firstMoment, harness, type LedgerRead, runStreamIn, toPlaybook } from '../testing/harness.ts';
 import { relayedId, settledAt, withHandOn } from '../testing/relaying.ts';
 import { succeededRunsPageOf, type SucceededRunsReader } from './succeeded-runs.ts';
 
@@ -246,7 +246,7 @@ async function playbookWithRunsEndedAtALimit() {
     toAlpha(acmeAdmin, { type: 'echo', name: 'greet', source: '{"greeting":"Hi"}' }),
   );
   const ended = (runIdRunsAtLimit: string, result: RunResult) => {
-    const stream = `playbook/acme/alpha/${runStreamNameOf(runIdRunsAtLimit)}`;
+    const stream = runStreamIn(definitions.ledger, { type: 'echo', name: 'greet' }, runIdRunsAtLimit);
     const execute = (command: RunCommand) => definitions.ledger.service.execute(stream, runDecider, command);
     const start: RunCommand = {
       type: 'start',
@@ -254,6 +254,7 @@ async function playbookWithRunsEndedAtALimit() {
       name: 'greet',
       input: {},
       started_by: { id: acmeAdmin.id, name: acmeAdmin.name },
+      playbook: 'alpha',
       definition_version: 1,
       calls_tools: false,
       runId: runIdRunsAtLimit,
@@ -458,7 +459,7 @@ describe('a page of the history of a run', () => {
     const handed = await withHandOn();
     await Effect.runPromise(
       runCanceller(handed.ledger.service)(
-        { org: 'acme', playbook: 'alpha', id: childId },
+        { org: 'acme', playbook: 'alpha', id: childId, definitionType: 'relay', name: 'hand-on' },
         { kind: 'parent_ended', reason: 'The run that waited for it ended first' },
         lineage,
       ),

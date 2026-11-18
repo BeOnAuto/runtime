@@ -10,7 +10,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { generationBounds } from '../capability/generation-ports.ts';
-import { aPageARunReturned, assetIdOf, day } from '../run-testing/run-outcomes.ts';
+import { aPageARunReturned, aRunIn, assetIdOf, day } from '../run-testing/run-outcomes.ts';
 import {
   alpha,
   beta,
@@ -24,14 +24,15 @@ import { toolImagesKept } from './tool-images.ts';
 
 const notKept = `The content of the asset ${assetIdOf(1)} is no longer kept; run again what made it, for a fresh copy`;
 
-function keptImage(playbook: GenerationHarness): Promise<string | undefined> {
+async function keptImage(playbook: GenerationHarness): Promise<string> {
+  const definitionKey = await aRunIn(playbook, 'run-1');
   const keep = toolImagesKept({
     ledger: playbook.ledger.service,
     content: playbook.ledger.service.content,
     bounds: generationBounds,
     newAssetId: () => assetIdOf(1),
   });
-  return at(
+  await at(
     harnessStartsAt,
     keep({
       playbook: alpha,
@@ -47,6 +48,7 @@ function keptImage(playbook: GenerationHarness): Promise<string | undefined> {
       lineage: { causationId: 'start-1', correlationId: 'run-1' },
     }),
   );
+  return definitionKey;
 }
 
 async function referenceOf(playbook: GenerationHarness, id: string): Promise<AssetReference> {
@@ -88,8 +90,13 @@ function withHead(playbook: GenerationHarness, head: { readonly erasedAt?: numbe
 describe('an asset a step names', () => {
   it('is held by its playbook as the file or text it is', async () => {
     const playbook = generationHarness();
-    await keptImage(playbook);
-    const page = await aPageARunReturned(playbook.ledger.service, alpha, assetIdOf(2), harnessStartsAt);
+    const definitionKey = await keptImage(playbook);
+    const page = await aPageARunReturned(
+      playbook.ledger.service,
+      { playbook: alpha, definitionKey },
+      assetIdOf(2),
+      harnessStartsAt,
+    );
     const reading = readingOf(playbook);
 
     expect(await heldAt(reading, harnessStartsAt, alpha, await referenceOf(playbook, assetIdOf(1)))).toMatchObject({

@@ -29,7 +29,7 @@ export function hostPortsOn(
   database: HostDatabase,
   { settle, reports, timers, executor, listeners, emitter, context, now }: PortParts,
 ): HostPorts {
-  const payloads = hostPayloadsOf({ content: database.content, context, note: reports.note });
+  const payloads = hostPayloadsOf({ content: database.content, context, runs: database, note: reports.note });
   return {
     runStore: ledgerRunLogStore(database),
     payloads: payloads.runs,

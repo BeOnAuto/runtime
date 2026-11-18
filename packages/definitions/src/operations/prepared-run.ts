@@ -5,6 +5,7 @@ import {
   PlaybookContext,
   recordedCallerOf,
   type GivenLineage,
+  type PlaybookAddress,
   type RecordedCaller,
 } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
@@ -15,7 +16,7 @@ import { payloadWritten, type PayloadWritten } from '../payloads/payload-writing
 import type { RunRequest, RunStart } from '../runs/run-commands.ts';
 import { shapeNameIn } from '../shapes/published-output.ts';
 import { answeredAttempt } from './attempt-endings.ts';
-import { contextOf, type Called, type Prepared } from './run-contexts.ts';
+import { contextOf, type Called, type PreparedToStart } from './run-contexts.ts';
 import { startRecorded } from './start-recording.ts';
 
 export const mostCallDepth = 8;
@@ -32,9 +33,7 @@ function outputShapeOf(prepared: PreparedDefinition, input: Schema.Json) {
 
 function startOf(
   request: RunRequest & Pick<RunStart, 'inputKept'>,
-  { definition, prepared, createOnly }: Prepared,
-  given: GivenLineage,
-  startedBy: RecordedCaller,
+  { run: { definition, prepared, createOnly }, given, startedBy, place }: StartOfARun,
 ) {
   const { depth, callDepth, calledBy, trigger, actsFor } = given;
   const shape = outputShapeOf(prepared, request.input);
@@ -42,6 +41,7 @@ function startOf(
     type: 'start' as const,
     ...request,
     started_by: startedBy,
+    playbook: place.playbook,
     definition_version: definition.version,
     calls_tools: prepared.callsTools,
     finishes_later: prepared.finishesLaterFor(request.input),
@@ -59,17 +59,27 @@ function startOf(
 interface StartOfARun {
   readonly id: string;
   readonly request: RunRequest;
-  readonly run: Prepared;
+  readonly run: PreparedToStart;
   readonly given: GivenLineage;
   readonly correlationId: string;
   readonly startedBy: RecordedCaller;
+  readonly place: PlaybookAddress;
 }
 
-function meteredRunOf({ id, request, run: { definition }, given, correlationId, startedBy }: StartOfARun) {
-  return Effect.map(PlaybookContext, ({ org, playbook }): MeteredRun => ({
-    org,
-    playbook,
+function meteredRunOf({
+  id,
+  request,
+  run: { definition },
+  given,
+  correlationId,
+  startedBy,
+  place,
+}: StartOfARun): MeteredRun {
+  return {
+    org: place.org,
+    playbook: place.playbook,
     run_id: id,
+    definition_id: definition.definition_id,
     definition_type: request.definition_type,
     definition_name: request.name,
     definition_version: definition.version,
@@ -77,7 +87,7 @@ function meteredRunOf({ id, request, run: { definition }, given, correlationId, 
     called_by: given.calledBy?.run_id ?? null,
     trigger: given.trigger,
     started_by: startedBy.id,
-  }));
+  };
 }
 
 function inputKeptIn(request: RunRequest, { payload }: PayloadWritten): RunRequest & Pick<RunStart, 'inputKept'> {
@@ -88,7 +98,7 @@ export const runPrepared = Effect.fnUntraced(function* (
   capabilities: readonly Capability[],
   id: string,
   request: RunRequest,
-  run: Prepared,
+  run: PreparedToStart,
 ) {
   const given: Called = { ...(yield* CallLineage), capabilities };
   if (given.callDepth > mostCallDepth) {
@@ -97,12 +107,14 @@ export const runPrepared = Effect.fnUntraced(function* (
   const correlationId = given.lineage?.correlationId ?? id;
   const startedBy = recordedCallerOf(yield* Caller);
   const written = inputKeptIn(request, yield* payloadWritten({ inline: request.input }));
-  yield* admittedByTheMeter(yield* meteredRunOf({ id, request, run, given, correlationId, startedBy }));
+  const { org, playbook } = yield* PlaybookContext;
+  const starting: StartOfARun = { id, request, run, given, correlationId, startedBy, place: { org, playbook } };
+  yield* admittedByTheMeter(meteredRunOf(starting));
   return yield* Effect.uninterruptibleMask((restore) =>
     Effect.gen(function* () {
       const { messageId, startedAt, modelCallsBefore, fencingToken } = yield* startRecorded(
         id,
-        startOf(written, run, given, startedBy),
+        startOf(written, starting),
         {
           causationId: given.lineage?.causationId ?? null,
           correlationId,

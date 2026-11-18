@@ -61,6 +61,7 @@ export const RunStartedSchema = factOf(
     Schema.Struct({
       ...payloadFields('input', Schema.Json),
       started_by: RecordedCallerSchema,
+      playbook: Schema.String,
       calls_tools: Schema.optionalKey(Schema.Literal(true)),
       finishes_later: Schema.optionalKey(Schema.Literal(true)),
       resumes: Schema.optionalKey(Schema.Literal(true)),
@@ -236,9 +237,7 @@ export function runEventSchemaOf(isDeclared: IsDeclared) {
   return Schema.Union([...coreFactSchemas, declared.pipe(Schema.decodeTo(WorkSchema, asWork))]);
 }
 
-function declaredByAnyCapability(): boolean {
-  return true;
-}
+const declaredByAnyCapability: IsDeclared = () => true;
 
 export const RunEventSchema = runEventSchemaOf(declaredByAnyCapability);
 

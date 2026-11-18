@@ -5,7 +5,7 @@ import type { KeyedProjection } from '@on.auto/operations';
 import { Client } from 'pg';
 import { describe, onTestFinished } from 'vitest';
 
-import { assetsOnStoresSuite } from '../store-testing/assets-on-stores.ts';
+import { assetsOnStoresSuite, definitionsPlacedApart } from '../store-testing/assets-on-stores.ts';
 import { waitingOnStoresSuite } from '../store-testing/waiting-on-stores.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
@@ -32,7 +32,11 @@ async function onPostgreSQL(projections: readonly KeyedProjection[]) {
   });
   const database = new URL(server);
   database.pathname = `/${name}`;
-  return postgresqlLedgerLayer({ pools: plainPoolsOn(database.href), projections });
+  return postgresqlLedgerLayer({
+    pools: plainPoolsOn(database.href),
+    projections,
+    definitionNames: definitionsPlacedApart,
+  });
 }
 
 describe.skipIf(skipped)(`the assets of playbooks on PostgreSQL${notice}`, () => {

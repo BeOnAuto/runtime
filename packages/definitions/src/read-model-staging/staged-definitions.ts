@@ -1,7 +1,7 @@
 import type { PlaybookContext, PlaybookReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { loadRegistry } from '../operations/registry-access.ts';
+import { loadDefinition } from '../operations/registry-access.ts';
 import { registeredFromTheReadModel, type RegisteredInTheReadModel } from '../read-model-reads/read-model-stored.ts';
 import type { RegisteredDefinition } from '../registry/definition-registry.ts';
 import { definitionNotFound } from '../registry/registry-lookup.ts';
@@ -41,7 +41,7 @@ export function stagedRegistered(
     reading,
     definitionType: type,
     involved: [type],
-    today: Effect.map(loadRegistry(type), (registry) => registry.get(name)),
+    today: loadDefinition(type, name),
     fromTheReadModel: registeredFromTheReadModel(type, name),
     answerOf: (found) => found?.stored,
     compared: (today, candidate) => Effect.succeed(registeredCompared(today, candidate)),

@@ -133,7 +133,12 @@ describe('a run whose holder is gone, which the shell does not resume', () => {
   });
 
   it('makes no attempt of a run that finishes later', async () => {
-    const started = { started_by: { id: writer.id, name: writer.name }, input: {}, finishes_later: true } as const;
+    const started = {
+      started_by: { id: writer.id, name: writer.name },
+      playbook: 'alpha',
+      input: {},
+      finishes_later: true,
+    } as const;
 
     expect(await attemptsMadeOf({ events: [{ type: 'run_started', data: started }] })).toEqual(noAttempt);
   });

@@ -8,7 +8,7 @@ import type { WorkflowHost } from '../src/host/workflow-host.ts';
 import { workflowHostOnALedger, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import type { HostClock } from '../src/loop/host-clock.ts';
 import { recordedReactions } from '../src/reaction-testing/recorded-reactions.ts';
-import { startOf as testStartOf, testMachine } from '../src/testing/host-documents.ts';
+import { definitionOfTheTests, startOf as testStartOf, testMachine } from '../src/testing/host-documents.ts';
 import { recordedWaiting } from '../src/waiting-testing/recorded-waiting.ts';
 
 export interface MeasuredHost {
@@ -33,8 +33,13 @@ export function startOf(document: Schema.JsonObject, input: Schema.Json = {}): R
   return { ...testStartOf(document), input, attributes: {} };
 }
 
-export function runAt(index: number): { readonly org: string; readonly playbook: string; readonly runId: string } {
-  return { org: 'acme', playbook: 'alpha', runId: `0199a3c4-7d2e-7c1a-9b3f-${String(index).padStart(12, '0')}` };
+export function runAt(index: number): Parameters<WorkflowHost['start']>[0] {
+  return {
+    org: 'acme',
+    playbook: 'alpha',
+    definition: definitionOfTheTests,
+    runId: `0199a3c4-7d2e-7c1a-9b3f-${String(index).padStart(12, '0')}`,
+  };
 }
 
 export async function measuredHost(database: DatabaseSettings, clock?: HostClock): Promise<MeasuredHost> {

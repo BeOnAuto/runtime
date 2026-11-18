@@ -1,10 +1,10 @@
-import { Layer } from 'effect';
+import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin } from '../testing/callers.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { harness, toPlaybook } from '../testing/harness.ts';
+import { definitionIdIn, harness, toPlaybook } from '../testing/harness.ts';
 import { recordingMeter } from '../testing/recording-meter.ts';
 import { relayedId, withHandOn } from '../testing/relaying.ts';
 
@@ -33,6 +33,8 @@ async function meteredBy(meter: Layer.Layer<never> | ReturnType<typeof recording
   return { ...definitions, meter: recording, prober, running };
 }
 
+const plain = { type: 'probe', name: 'plain' };
+
 const admittedPlain = {
   org: 'acme',
   playbook: 'alpha',
@@ -48,15 +50,15 @@ const admittedPlain = {
 
 describe('a run under a meter', () => {
   it('is admitted once, before it starts, with its definition, who started it and the top of its tree', async () => {
-    const { meter, running } = await meteredBy();
+    const { meter, running, ledger } = await meteredBy();
 
     expect(await running()).toMatchObject({ status: 'succeeded' });
     expect(await running()).toMatchObject({ status: 'succeeded' });
-    expect(meter.admitted()).toStrictEqual([admittedPlain]);
+    expect(meter.admitted()).toStrictEqual([{ ...admittedPlain, definition_id: definitionIdIn(ledger, plain) }]);
   });
 
   it('is admitted as the call of the run above it, at the top of that run’s tree', async () => {
-    const { meter, running } = await meteredBy();
+    const { meter, running, ledger } = await meteredBy();
     const trigger = { kind: 'cron', reference: '/schedule/cron' } as const;
 
     await running({
@@ -67,7 +69,13 @@ describe('a run under a meter', () => {
     });
 
     expect(meter.admitted()).toStrictEqual([
-      { ...admittedPlain, correlation_id: parentId, called_by: parentId, trigger },
+      {
+        ...admittedPlain,
+        definition_id: definitionIdIn(ledger, plain),
+        correlation_id: parentId,
+        called_by: parentId,
+        trigger,
+      },
     ]);
   });
 
@@ -124,5 +132,25 @@ describe('a run that finishes after its call returns, under a meter', () => {
     await settling({ status: 'succeeded', output: { handed: true } });
 
     expect(meter.admitted().map(({ run_id: id }) => id)).toStrictEqual([relayedId]);
+  });
+});
+
+describe('the start of a run under a meter', () => {
+  it('records the playbook it was admitted under, from the one place the request names', async () => {
+    const { meter, running, ledger } = await meteredBy();
+
+    await running();
+    const { records } = await Effect.runPromise(
+      ledger.service.readRecorded(
+        { org: 'acme', playbook: 'alpha' },
+        { kind: 'run', run: runId },
+        { order: 'asc', limit: 1 },
+      ),
+    );
+
+    expect([records.map(({ type, data }) => [type, data]), meter.admitted()]).toMatchObject([
+      [['run_started', { playbook: 'alpha' }]],
+      [{ playbook: 'alpha', definition_id: definitionIdIn(ledger, plain) }],
+    ]);
   });
 });

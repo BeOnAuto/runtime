@@ -1,9 +1,10 @@
+import { attemptKeyOf } from '@on.auto/definitions/attempts';
 import { statement, type ConnectionPorts } from '@on.auto/ledger';
 import { Effect } from 'effect';
 
 import { hostDatabaseOn, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
-import { addressOfRun, type RunAddress } from '../runs/run-address.ts';
+import type { RunInAPlaybook } from '../runs/run-address.ts';
 import { nowOn } from './host-lease.ts';
 
 const sweepsBeforeAnAttemptLeaseLapses = 3;
@@ -36,7 +37,7 @@ export interface AttemptLeases {
 }
 
 export interface LeasedAttempt {
-  readonly run: RunAddress;
+  readonly run: RunInAPlaybook;
   readonly fencingToken: number | undefined;
 }
 
@@ -55,9 +56,14 @@ export function tokenAfter(name: string, ofTheRun: string): number | undefined {
   return named === null ? undefined : Number(named[1]);
 }
 
+export function attemptKeyOfRun({ org, playbook, runId }: RunInAPlaybook): string {
+  return attemptKeyOf({ org, playbook }, runId);
+}
+
 export function leasedAttemptOf(name: string): LeasedAttempt {
-  const runKey = name.slice(attemptLeasePrefix.length).split('/').slice(0, 3).join('/');
-  return { run: addressOfRun(runKey), fencingToken: tokenAfter(name, leasesOfTheRun(runKey)) };
+  const [org = '', playbook = '', runId = ''] = name.slice(attemptLeasePrefix.length).split('/');
+  const run = { org, playbook, runId };
+  return { run, fencingToken: tokenAfter(name, leasesOfTheRun(attemptKeyOfRun(run))) };
 }
 
 export function attemptLeasesRenewed(

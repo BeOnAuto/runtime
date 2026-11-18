@@ -28,10 +28,10 @@ export function databaseTracking(): DatabaseTracking {
       write: (statement) => busyWhile(database.write(statement)),
       store: {
         ...database.store,
-        readRecorded: async (playbookKey, selection, page) => {
+        readRecordedOfKeys: async (keys, selection, page) => {
           counts.busy += 1;
           try {
-            return await database.store.readRecorded(playbookKey, selection, page);
+            return await database.store.readRecordedOfKeys(keys, selection, page);
           } finally {
             counts.busy -= 1;
           }

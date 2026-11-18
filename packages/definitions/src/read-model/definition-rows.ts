@@ -61,7 +61,6 @@ function createdRow(fact: DefinitionCreated, position: number) {
   return {
     definition_type: definitionType,
     name: definitionName,
-    definition_id: fact.data.definition_id ?? null,
     version: definitionVersion,
     status: fact.data.paused === undefined ? 'active' : 'paused',
     ...contentColumns(content),
@@ -115,7 +114,8 @@ function definitionRowAfter(row: ProjectedRow | undefined, message: ProjectedMes
 
 export const definitionRows: KeyedProjection = {
   name: 'definitions',
-  version: 3,
+  version: 4,
+  scopes: ['definition'],
   kinds: ['definitions'],
   types: [
     'definition_created',
@@ -128,7 +128,6 @@ export const definitionRows: KeyedProjection = {
   columns: [
     { name: 'definition_type', kind: 'text' },
     { name: 'name', kind: 'text' },
-    { name: 'definition_id', kind: 'text' },
     { name: 'version', kind: 'integer' },
     { name: 'status', kind: 'text' },
     { name: 'description', kind: 'text' },

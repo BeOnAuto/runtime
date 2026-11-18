@@ -7,7 +7,7 @@ import {
   type Capability,
   type SettleRun,
 } from '@on.auto/definitions';
-import { admittingMeter, uncheckedPages } from '@on.auto/definitions/testing';
+import { admittingMeter, definitionNamesWith, uncheckedPages } from '@on.auto/definitions/testing';
 import {
   makeDispatcher,
   settle as settleCall,
@@ -16,7 +16,12 @@ import {
   type Registration,
   type Settled,
 } from '@on.auto/operations';
-import { memoryPlaybookRegistry, recordingReporter, type MemoryLedger } from '@on.auto/operations/testing';
+import {
+  memoryLedgerWith,
+  memoryPlaybookRegistry,
+  recordingReporter,
+  type MemoryLedger,
+} from '@on.auto/operations/testing';
 import { Effect, Layer } from 'effect';
 
 import { definitionRunResultOf } from '../calls/function-results.ts';
@@ -40,6 +45,10 @@ export interface Playbook {
   ) => Promise<Settled>;
   readonly executeNested: RunDefinition;
   readonly settle: SettleRun;
+}
+
+export function namingLedger(types: readonly string[] = []): MemoryLedger {
+  return memoryLedgerWith({ definitionNames: definitionNamesWith(['echo', ...types]) });
 }
 
 export function playbookOn(ledger: MemoryLedger, capabilities: readonly Capability[]): Playbook {

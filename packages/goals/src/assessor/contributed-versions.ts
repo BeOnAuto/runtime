@@ -5,8 +5,8 @@ import {
   type RecordedDefinitionEvent,
 } from '@on.auto/definitions';
 import { contributesIn, type Contributes } from '@on.auto/definitions/goals';
-import type { Fold, StreamReader } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { definitionOfStreamPrefix, type Fold, type PlaybookReader } from '@on.auto/operations';
+import { Effect, Option } from 'effect';
 
 export const mostVersionsKept = 64;
 
@@ -16,22 +16,32 @@ interface WorkflowVersion {
   readonly version: number;
 }
 
+type WorkflowReader = Pick<PlaybookReader['Service'], 'holderOfName' | 'ofDefinition'>;
+
 export interface ContributedVersions {
-  readonly contributesOf: (reader: StreamReader, version: WorkflowVersion) => Effect.Effect<Contributes>;
+  readonly contributesOf: (reader: WorkflowReader, version: WorkflowVersion) => Effect.Effect<Contributes>;
   readonly reads: () => number;
 }
 
 const workflowStream = definitionTypeStreamOf('workflow');
 
-function versionFold(name: string, version: number): Fold<Contributes, RecordedDefinitionEvent> {
+function versionFold(version: number): Fold<Contributes, RecordedDefinitionEvent> {
   return {
     initialState: [],
     evolve: (found, event) =>
-      carriesContent(event) && event.context.definitionName === name && event.context.definitionVersion === version
+      carriesContent(event) && event.context.definitionVersion === version
         ? (contributesIn(event.data.content.details) ?? [])
         : found,
     eventSchema: DefinitionEventSchema,
   };
+}
+
+function workflowNamed(reader: WorkflowReader, name: string): Effect.Effect<string | undefined> {
+  return Effect.map(reader.holderOfName('workflow', name), (held) =>
+    held === undefined
+      ? undefined
+      : Option.getOrUndefined(Option.map(definitionOfStreamPrefix(held.definitionKey), ({ definition }) => definition)),
+  );
 }
 
 export function contributedVersionsOf(): ContributedVersions {
@@ -54,8 +64,12 @@ export function contributedVersionsOf(): ContributedVersions {
           return Effect.succeed(remembered(key, held));
         }
         counted.reads += 1;
-        return Effect.map(reader.load(workflowStream, versionFold(name, version)), ({ state }) =>
-          remembered(key, state),
+        return Effect.flatMap(workflowNamed(reader, name), (definition) =>
+          definition === undefined
+            ? Effect.succeed([])
+            : Effect.map(reader.ofDefinition(definition).load(workflowStream, versionFold(version)), ({ state }) =>
+                remembered(key, state),
+              ),
         );
       }),
     reads: () => counted.reads,

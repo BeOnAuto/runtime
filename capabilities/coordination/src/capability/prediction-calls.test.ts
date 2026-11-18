@@ -1,5 +1,4 @@
 import { measuredPoolSettings } from '@on.auto/definitions/testing';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { makePredictionFunctionAdapter } from '@on.auto/prediction';
 import { weeklyOrders } from '@on.auto/prediction/testing';
 import { pageFiltersOn, programPool } from '@on.auto/workflow-engine/dsl';
@@ -7,7 +6,7 @@ import { Effect } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { callMarginMs } from '../runs/call-limits.ts';
-import { playbookOn } from '../testing/playbook.ts';
+import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { recordingStarts, recordingWorkflows } from '../testing/recording-starts.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-555555555553';
@@ -40,7 +39,7 @@ const predicting = [
 describe('the calls of a workflow to a prediction function', () => {
   it('wait 10 s for a question, written out or computed at run time, since the forecaster answers within its call', async () => {
     const { starts, recording } = recordingStarts();
-    const playbook = playbookOn(memoryLedger(), [recordingWorkflows(recording), prediction]);
+    const playbook = playbookOn(namingLedger(), [recordingWorkflows(recording), prediction]);
     await playbook.call(playbook.createDefinition, {
       type: 'prediction',
       name: 'weekly-orders',

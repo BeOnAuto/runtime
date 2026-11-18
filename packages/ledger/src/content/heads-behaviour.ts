@@ -2,11 +2,9 @@ import { memoryContentStore } from '@on.auto/content/testing';
 import { interleavedRemovalBehaviour, unheldContentBehaviour } from '@on.auto/operations/testing';
 import { describe } from 'vitest';
 
-import { orgContentStepBehaviour } from '../org-content/org-content-step-behaviour.ts';
 import { aLedgerOutside, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { erasedPutsBehaviour } from './erased-puts-behaviour.ts';
 import { expiredHeadsBehaviour } from './expired-heads-behaviour.ts';
-import { headsStepBehaviour } from './heads-step-behaviour.ts';
 import { heldContentFoundBehaviour } from './held-content-found-behaviour.ts';
 import { switchedStoresBehaviour } from './switched-stores-behaviour.ts';
 
@@ -19,8 +17,6 @@ export function headsBehaviour(entry: LedgerEntry): void {
     });
   });
   switchedStoresBehaviour(entry);
-  headsStepBehaviour(entry);
-  orgContentStepBehaviour(entry);
   expiredHeadsBehaviour(entry);
   erasedPutsBehaviour(entry);
   heldContentFoundBehaviour(entry);

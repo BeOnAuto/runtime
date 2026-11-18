@@ -3,7 +3,7 @@ import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { modelCallSent } from '../journal-testing/model-calls.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { startedInAlpha } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand, RunOutcome } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -16,7 +16,10 @@ const atTheStart: Context = { ...acted, definitionType: 'resumer', definitionNam
 
 const recorded = recordedWith(atTheStart);
 
-const resumable: RunEvent = { type: 'run_started', data: { started_by: recordedAdmin, input: {}, resumes: true } };
+const resumable: RunEvent = {
+  type: 'run_started',
+  data: { ...startedInAlpha, input: {}, resumes: true },
+};
 
 function resumingAs(attempt: number): RunCommand {
   return { type: 'resume', attempt, ...acted };
@@ -47,7 +50,10 @@ describe('the resume of a run by an attempt after the one that died', () => {
     expect([
       decided(resumingAs(2)),
       decided(resumingAs(2), resumable, { type: 'run_succeeded', data: { output: null, record: {} } }),
-      decided(resumingAs(2), { type: 'run_started', data: { started_by: recordedAdmin, input: {} } }),
+      decided(resumingAs(2), {
+        type: 'run_started',
+        data: { ...startedInAlpha, input: {} },
+      }),
       decided(resumingAs(2), resumable, { type: 'attempt_resumed', data: { attempt: 2 } }),
     ]).toStrictEqual([
       Result.fail(stillRunning),

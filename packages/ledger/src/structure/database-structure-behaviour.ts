@@ -12,7 +12,7 @@ const structureReads: Readonly<Record<Dialect, StructureRead>> = {
   postgresql: postgresqlStructureOf,
 };
 
-export function structureIn(entry: LedgerEntry, database: string): Promise<DatabaseStructure> {
+function structureIn(entry: LedgerEntry, database: string): Promise<DatabaseStructure> {
   return entry.executedOn(database, structureReads[entry.layout.dialect]);
 }
 

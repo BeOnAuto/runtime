@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionPresenters } from '../index.ts';
 import type { RunEvent } from '../runs/run-events.ts';
 import { askedRequest, asking } from '../testing/asking.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { testRunId } from '../testing/run-facts.ts';
 
@@ -54,7 +54,7 @@ function presented(event: RunEvent, context: Context = ofGreet) {
 
 describe('the presenter of the events of a run', () => {
   it('presents a start with its input and who started it as its data, and the definition that ran, who and when as its metadata', () => {
-    expect(presented({ type: 'run_started', data: { started_by: recordedAdmin, input: { who: 'Ada' } } })).toEqual({
+    expect(presented({ type: 'run_started', data: { ...startedInAlpha, input: { who: 'Ada' } } })).toEqual({
       id: '0b1c2d3e-4f50-5a6b-8c7d-8e9fa0b1c2d3',
       type: 'run_started',
       summary: 'A run of the greeting “greet” started.',
@@ -74,7 +74,7 @@ describe('the presenter of the events of a run', () => {
   });
 
   it('presents an input past 2 KiB as its size', () => {
-    const started = presented({ type: 'run_started', data: { started_by: recordedAdmin, input: 'x'.repeat(3000) } });
+    const started = presented({ type: 'run_started', data: { ...startedInAlpha, input: 'x'.repeat(3000) } });
 
     expect(started).toMatchObject({ data: { input_bytes: 3002 } });
   });
@@ -83,7 +83,7 @@ describe('the presenter of the events of a run', () => {
     const { by, at } = ofGreet;
 
     expect(() =>
-      presented({ type: 'run_started', data: { started_by: recordedAdmin, input: {} } }, { runId: testRunId, by, at }),
+      presented({ type: 'run_started', data: { ...startedInAlpha, input: {} } }, { runId: testRunId, by, at }),
     ).toThrow('definitionType');
   });
 

@@ -1,3 +1,4 @@
+import type { RecordedKeys } from '@on.auto/ledger';
 import { streamPrefixOfPlaybook, type Context, type PlaybookAddress } from '@on.auto/operations';
 import { DatabaseFailed } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
@@ -13,12 +14,13 @@ export interface StoredChainFact {
 }
 
 export interface ChainStore {
-  readonly readRecorded: (
-    playbookKey: string,
+  readonly definitionsIn: (playbookKey: string) => Promise<readonly string[]>;
+  readonly readRecordedOfKeys: (
+    keys: RecordedKeys,
     selection: { readonly kind: 'run'; readonly run: string },
     page: { readonly order: 'asc'; readonly limit: number; readonly dataOf: readonly string[] },
   ) => Promise<{ readonly records: readonly StoredChainFact[] }>;
-  readonly readRecordedEvent: (playbookKey: string, id: string) => Promise<StoredChainFact | undefined>;
+  readonly readRecordedEventOfKeys: (keys: RecordedKeys, id: string) => Promise<StoredChainFact | undefined>;
 }
 
 function chainFactOf(stored: StoredChainFact | undefined): ChainFact | undefined {
@@ -43,16 +45,20 @@ function asked(
 
 export function ledgerChainReads(store: ChainStore, playbook: PlaybookAddress): ChainReads<DatabaseFailed> {
   const playbookKey = streamPrefixOfPlaybook(playbook);
+  const keysOfThePlaybook = async (): Promise<RecordedKeys> => ({
+    org: playbook.org,
+    keys: [playbookKey, ...(await store.definitionsIn(playbookKey))],
+  });
   return {
     firstFactOf: (run) =>
       asked(async () => {
-        const { records } = await store.readRecorded(
-          playbookKey,
+        const { records } = await store.readRecordedOfKeys(
+          await keysOfThePlaybook(),
           { kind: 'run', run },
           { order: 'asc', limit: 1, dataOf: [] },
         );
         return records[0];
       }),
-    recordOf: (id) => asked(() => store.readRecordedEvent(playbookKey, id)),
+    recordOf: (id) => asked(async () => store.readRecordedEventOfKeys(await keysOfThePlaybook(), id)),
   };
 }

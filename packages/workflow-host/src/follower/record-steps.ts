@@ -1,4 +1,10 @@
-import { playbookOfStreamPrefix, streamKindOf, type PlaybookAddress, type RecordedEvent } from '@on.auto/operations';
+import {
+  addressedStreamOf,
+  playbookOfStreamPrefix,
+  streamKindOf,
+  type PlaybookAddress,
+  type RecordedEvent,
+} from '@on.auto/operations';
 import { Effect, Option } from 'effect';
 
 import { followSpanOf } from '../runs/run-spans.ts';
@@ -7,6 +13,7 @@ import {
   boundTo,
   deliverySweeps,
   type CallConsumer,
+  type CallRecord,
   type Consumer,
   type FollowedRecord,
   type Reading,
@@ -14,14 +21,14 @@ import {
 } from './consumers.ts';
 import { deliveredAll, type Mode } from './delivery-loop.ts';
 import { followedEventOf, isDefinitionFact, type EventRead } from './followed-events.ts';
-import type { HeldFor, Progress } from './followed-playbooks.ts';
-import { relativeRecord } from './playbook-records.ts';
+import type { HeldAtTheRecordFor, Progress } from './followed-orgs.ts';
+import { keyOfTheStream, relativeRecord } from './playbook-records.ts';
 import type { RunGate } from './run-gate.ts';
 
 export type PassEnd = 'caught_up' | 'more' | 'waiting';
 
-export interface Held {
-  readonly heldFor: HeldFor;
+interface Held {
+  readonly heldFor: HeldAtTheRecordFor;
   readonly record: Pick<RecordedEvent, 'id' | 'type'>;
 }
 
@@ -65,11 +72,11 @@ export function playbookOfKey(playbookKey: string): PlaybookAddress {
   );
 }
 
-function passedOver(record: RecordedEvent): Progress {
+export function passedOver(record: Pick<RecordedEvent, 'cursor'>): Progress {
   return { cursor: record.cursor, delivered: null, attempts: 0, waiting: false };
 }
 
-function heldAt(heldFor: HeldFor, { id, type }: Held['record']): Held {
+function heldAt(heldFor: HeldAtTheRecordFor, { id, type }: Held['record']): Held {
   return { heldFor, record: { id, type } };
 }
 
@@ -133,8 +140,8 @@ function boundToTheRead(
   );
 }
 
-function followedReadingsOf(parts: StepParts, stepping: Stepping, relative: RecordedEvent): Effect.Effect<Readings> {
-  const { playbookKey } = stepping;
+function followedReadingsOf(parts: StepParts, stepping: Stepping, call: CallRecord): Effect.Effect<Readings> {
+  const { record: relative } = call;
   const event = followedEventOf(relative, parts.definitionType);
   if (event === 'none') {
     return Effect.succeed(nothingFollowed);
@@ -142,7 +149,7 @@ function followedReadingsOf(parts: StepParts, stepping: Stepping, relative: Reco
   if (event === 'unreadable') {
     return Effect.succeed({ readings: ['unreadable'], content: 'read' });
   }
-  const followed = { playbook: playbookOfKey(playbookKey), playbookKey, record: relative, event };
+  const followed = { ...call, event };
   const wanting = (stepping.registered?.() ?? parts.registered).filter(({ types }) => types.includes(event.event.type));
   return Effect.flatMap(stepping.reactsTo(event.event.type), (reacting) => {
     const consumers = [...(reacting ? parts.consumers : []), ...wanting];
@@ -153,9 +160,14 @@ function followedReadingsOf(parts: StepParts, stepping: Stepping, relative: Reco
 function readingsOf(parts: StepParts, stepping: Stepping, record: RecordedEvent): Effect.Effect<Readings> {
   const { playbookKey } = stepping;
   const relative = relativeRecord(playbookKey, record);
-  const call = { playbook: playbookOfKey(playbookKey), playbookKey, record: relative };
+  const call = {
+    playbook: playbookOfKey(playbookKey),
+    playbookKey,
+    filedUnder: keyOfTheStream(playbookKey, record.stream),
+    record: relative,
+  };
   const calls = parts.calls.filter(({ types }) => types.includes(record.type)).map((consumer) => consumer.read(call));
-  return Effect.map(followedReadingsOf(parts, stepping, relative), ({ readings, content }) => ({
+  return Effect.map(followedReadingsOf(parts, stepping, call), ({ readings, content }) => ({
     readings: [...calls, ...readings],
     content,
   }));
@@ -205,6 +217,13 @@ function deliveredStep(
   });
 }
 
+function definitionKeyOf({ stream }: RecordedEvent, definitionType: string): string | undefined {
+  const addressed = addressedStreamOf(stream);
+  return addressed?.scope === 'definition' && addressed.kind === 'definitions' && addressed.id === definitionType
+    ? addressed.prefix
+    : undefined;
+}
+
 export function stepOf(
   parts: StepParts,
   stepping: Stepping,
@@ -212,7 +231,7 @@ export function stepOf(
   record: RecordedEvent,
 ): Effect.Effect<Step> {
   const { playbookKey } = stepping;
-  if (streamKindOf(record.stream.slice(playbookKey.length)) === 'run-logs') {
+  if (streamKindOf(relativeRecord(playbookKey, record).stream) === 'run-logs') {
     return runRecordStep(parts, stepping, progress, record);
   }
   const step: Effect.Effect<Step> = stepping.readWithData(record.type)
@@ -220,9 +239,10 @@ export function stepOf(
     : Effect.map(stepping.delivers(record.type), (namedSince): Step =>
         namedSince ? { progress, end: 'more' } : { progress: passedOver(record) },
       );
-  if (record.stream === `${playbookKey}definitions/${parts.definitionType}`) {
+  const definitionKey = definitionKeyOf(record, parts.definitionType);
+  if (definitionKey !== undefined) {
     const readAgain: Effect.Effect<Step> = Effect.succeed({ progress, end: 'more' });
-    return Effect.flatMap(parts.applyDefinitionRecord(playbookKey, record), (applied) => {
+    return Effect.flatMap(parts.applyDefinitionRecord({ playbookKey, definitionKey }, record), (applied) => {
       if (applied === 'applied') {
         return Effect.flatMap(stepping.wantsMore(), (more) => (more ? readAgain : step));
       }

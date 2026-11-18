@@ -66,6 +66,14 @@ function requireStreamsFolded(projection: ProjectionDeclaration): void {
   }
 }
 
+function requireKeyedAcrossStreams(projection: ProjectionDeclaration): void {
+  if (projection.partition === 'org' && projection.keyOf === undefined) {
+    throw new Error(
+      `The projection ${projection.name} keeps its rows at the org of the streams it folds, so it must key them by a mapping over those streams`,
+    );
+  }
+}
+
 function requireOneRowAdvanced(projection: KeptProjection, advanced: readonly string[]): void {
   if (keepsChildRows(projection) && advanced.length > 0) {
     throw new Error(
@@ -74,20 +82,13 @@ function requireOneRowAdvanced(projection: KeptProjection, advanced: readonly st
   }
 }
 
-export function requireProjectionNamed(name: string): void {
-  requireNamed('projection', name, projectionName);
-}
-
-export function requireStreamKindNamed(kind: string): void {
-  requireNamed('stream kind', kind, streamKind);
-}
-
 export function checkedProjection<Projection extends KeptProjection>(projection: Projection): Projection {
   requireNamed('projection', projection.name, projectionName);
   if (!Number.isSafeInteger(projection.version) || projection.version < 1) {
     throw new Error(`The projection ${projection.name} has a version that is not a whole number from 1`);
   }
   requireStreamsFolded(projection);
+  requireKeyedAcrossStreams(projection);
   for (const { name } of projection.columns) {
     requireNamed('column', name, columnName);
     if (keyColumns.has(name)) {

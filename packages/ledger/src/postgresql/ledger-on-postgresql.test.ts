@@ -10,6 +10,7 @@ import {
   databaseStructureBehaviour,
   archivedStreamsBehaviour,
   definitionNamesBehaviour,
+  definitionProjectionsOnStoresBehaviour,
   appendsWithStatementsOnStoresBehaviour,
   measuredRiddenAppendsBehaviour,
   multiStreamAppendBehaviour,
@@ -18,7 +19,6 @@ import {
   receivedWebhooksBehaviour,
   knownFactsBehaviour,
   ledgerBehaviour,
-  ledgerStepsBehaviour,
   ledgerLayoutFloor,
   logBehaviour,
   type LedgerEntry,
@@ -131,14 +131,13 @@ const onPostgreSQL: LedgerEntry = {
   aDatabase: aMigratedDatabase,
   anEmptyDatabase,
   itsOwnContractAlone: true,
-  ledgerOn: (database, runOutcomes, projections = [], holders) =>
+  ledgerOn: (database, runOutcomes, projections = [], kept = {}) =>
     postgresqlLedgerLayer({
       pools: plainPoolsOn(database),
       projections,
+      ...kept,
       ...(runOutcomes === undefined ? {} : { runOutcomes }),
-      ...(holders === undefined ? {} : { holders }),
     }),
-  streamLedgerOn: (database, kept) => postgresqlLedgerLayer({ pools: plainPoolsOn(database), ...kept }),
   ledgerOutsideOn: (database, holders, content) =>
     postgresqlLedgerLayer({ pools: plainPoolsOn(database), holders, content }),
   ledgerRaisingOn: (database, appended) => postgresqlLedgerLayer({ pools: plainPoolsOn(database), appended }),
@@ -187,7 +186,6 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
       { archived: 1, facts: 2 },
     ],
   });
-  ledgerStepsBehaviour(onPostgreSQL);
   keptSecretsBehaviour({
     ...onPostgreSQL,
     secretRowsOn: (database) => postgresqlSecretRows({ pools: plainPoolsOn(database) }),
@@ -211,16 +209,22 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
     storeKeepingNames: (database, definitionNames) =>
       postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection, definitionNames }).store,
   });
+  definitionProjectionsOnStoresBehaviour({
+    aDatabase: aMigratedDatabase,
+    storeOn: (database, projections, definitionNames) =>
+      postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection, definitionNames, projections })
+        .store,
+  });
 });
 
 describe.skipIf(skipped)(`A ledger on PostgreSQL given a floor of its own${notice}`, () => {
-  it('carries a database forward from that floor alone, and refuses one of the layout below it as older than its floor', async () => {
+  it('refuses a database of the layout below that floor as older than its floor, whatever the floor of the ledger', async () => {
     const database = await anEmptyDatabase();
-    await carriedOn(database, { kept: ledgerLayoutFloor, floor: ledgerLayoutFloor, steps: [] });
+    await carriedOn(database, { kept: ledgerLayoutFloor - 2, floor: ledgerLayoutFloor - 2, steps: [] });
     const { store } = postgresqlLedgerOpened({
       pools: plainPoolsOn(database),
       reportLostConnection,
-      floor: ledgerLayoutFloor + 1,
+      floor: ledgerLayoutFloor - 1,
     });
 
     const refused = await store.migrate().catch((error: unknown) => error);
@@ -228,8 +232,8 @@ describe.skipIf(skipped)(`A ledger on PostgreSQL given a floor of its own${notic
 
     expect(refused).toMatchObject({
       _tag: 'ledger_layout_refused',
-      found: ledgerLayoutFloor,
-      floor: ledgerLayoutFloor + 1,
+      found: ledgerLayoutFloor - 2,
+      floor: ledgerLayoutFloor - 1,
     });
   });
 });
@@ -240,12 +244,14 @@ const throughTheKeyIndex = `Index Cond: ("substring"(stream_id, '^(?:[^/]*/){3}'
 
 const throughTheKindIndex = `Index Cond: (("substring"(stream_id, '^(?:[^/]*/){4}'::text) = ANY`;
 
+const throughTheOrgIndex = `Index Cond: ((${theOrgInAPlan} = ANY ('{acme}'::text[])) AND (transaction_id < `;
+
 function timesIn(plan: string, step: string): number {
   return plan.split(step).length - 1;
 }
 
 describe.skipIf(skipped)(`The plans of the reads over keys on PostgreSQL${notice}`, () => {
-  it("walk each key asked through the key's index, and the tree of a run through the org's index", async () => {
+  it("walk each key asked through the key's index, and the tree of a run and an org's records through the org's indexes", async () => {
     const database = await aMigratedDatabase();
     const { store } = postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection });
     await store.migrate();
@@ -260,9 +266,11 @@ describe.skipIf(skipped)(`The plans of the reads over keys on PostgreSQL${notice
     const tree = await planOf(database, (read) =>
       read.readRecordedOfKeys(ofTwoKeys, { kind: 'correlated', correlation: 'r1' }, { order: 'desc', limit: 5 }),
     );
+    const org = await planOf(database, (read) => read.readRecordedOfOrg('acme', { order: 'asc', limit: 5 }));
 
     expect(timesIn(everything, throughTheKeyIndex)).toBe(2);
     expect(timesIn(runs, throughTheKindIndex)).toBe(2);
     expect(tree).toContain(throughTheTreeIndex);
+    expect(org).toContain(throughTheOrgIndex);
   });
 });

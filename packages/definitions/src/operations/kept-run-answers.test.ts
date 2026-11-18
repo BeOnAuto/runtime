@@ -6,10 +6,10 @@ import { describe, expect, it } from 'vitest';
 import type { Capability } from '../capability/capability.ts';
 import { defineCapability, defineStartVersion, type RunContext } from '../index.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
-import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
+import { acmeAdmin, startedInAlpha } from '../testing/callers.ts';
 import { echo, echoDeclaration } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { firstMoment, harness, type Harness, toPlaybook } from '../testing/harness.ts';
+import { firstMoment, harness, type Harness, runStreamIn, toPlaybook } from '../testing/harness.ts';
 import {
   askedAt,
   keepingPlaybook,
@@ -68,9 +68,9 @@ async function withAKeptOutput(keeps: boolean) {
         : keptLongBeforeAndLost(service.content, watched.store, alpha, output),
       recordedAsGiven(
         service,
-        `playbook/acme/alpha/runs/${runId}`,
+        runStreamIn(definitions.ledger, { type: 'echo', name: 'greet' }, runId),
         [
-          { type: 'run_started', data: { input, started_by: recordedAdmin } },
+          { type: 'run_started', data: { input, ...startedInAlpha } },
           { type: 'run_succeeded', data: { output_sha256: kept.sha256, output_bytes: kept.bytes, record: {} } },
         ],
         onTheRun,
@@ -241,14 +241,14 @@ async function endedUnworkedWithAKeptInput() {
   await Effect.runPromise(
     recordedAsGiven(
       service,
-      `playbook/acme/alpha/runs/${runId}`,
+      runStreamIn(definitions.ledger, { type: 'echo', name: 'greet' }, runId),
       [
         {
           type: 'run_started',
           data: {
             input_sha256: keptKeptStartOnce.sha256,
             input_bytes: keptKeptStartOnce.bytes,
-            started_by: recordedAdmin,
+            ...startedInAlpha,
           },
         },
         { type: 'run_rejected', data: { rejection: { reason: 'unavailable', detail: 'Busy' } } },
@@ -347,7 +347,7 @@ describe('a run whose capability answers with the limit its answer was shaped by
       output: { run_id: runId, status: 'succeeded', output: { greeting: 'Hi' }, ...answered },
     });
     expect(await factsOf(definitions)).toEqual([
-      { type: 'run_started', data: { input: { who: 'Ada' }, started_by: recordedAdmin } },
+      { type: 'run_started', data: { input: { who: 'Ada' }, ...startedInAlpha } },
       {
         type: 'run_succeeded',
         data: { output: { greeting: 'Hi', input: { who: 'Ada' } }, record: { greeting: 'Hi' }, ...answered },
@@ -514,7 +514,6 @@ describe('a start made once of a run that ended unworked with an input its playb
   it('loads the stream of the run only where the decider cannot tell, so a start it can tell loads none', async () => {
     const told = await endedUnworkedWithAKeptInput();
     const untold = await endedUnworkedWithAKeptInput();
-    const loadOfTheRun = { loaded: `playbook/acme/alpha/runs/${runId}` };
 
     await told.definitions.call(startVersion, startedOnceWith(inputKeptStartOnce));
     await untold.definitions.call(
@@ -522,8 +521,12 @@ describe('a start made once of a run that ended unworked with an input its playb
       startedOnceWith({ notes: inputKeptStartOnce.notes, who: inputKeptStartOnce.who }),
     );
 
-    expect(told.definitions.ledgerReads()).not.toContainEqual(loadOfTheRun);
-    expect(untold.definitions.ledgerReads()).toContainEqual(loadOfTheRun);
+    expect(told.definitions.ledgerReads()).not.toContainEqual({
+      loaded: runStreamIn(told.definitions.ledger, { type: 'echo', name: 'greet' }, runId),
+    });
+    expect(untold.definitions.ledgerReads()).toContainEqual({
+      loaded: runStreamIn(untold.definitions.ledger, { type: 'echo', name: 'greet' }, runId),
+    });
   });
 });
 

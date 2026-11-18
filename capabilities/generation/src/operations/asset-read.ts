@@ -1,7 +1,7 @@
 import { NotFound, PlaybookContext, PlaybookReader } from '@on.auto/operations';
 import { Clock, Effect, Schema, SchemaTransformation } from 'effect';
 
-import { assetDecider } from '../assets/asset-decider.ts';
+import { assetDecider, type AssetStanding } from '../assets/asset-decider.ts';
 import { assetStreamOf } from '../assets/asset-facts.ts';
 import { assetRowOf, assetsName, hasExpired, rowKeyed } from '../assets/asset-projections.ts';
 import { addressOf, noAddress } from '../assets/asset-reference.ts';
@@ -46,12 +46,20 @@ function momentOf(milliseconds: number | null): string | null {
   return milliseconds === null ? null : new Date(milliseconds).toISOString();
 }
 
+function standingOf(reader: PlaybookReader['Service'], id: string): Effect.Effect<AssetStanding> {
+  return Effect.flatMap(reader.definitionHolding(assetStreamOf(id)), (definition) =>
+    definition === undefined
+      ? Effect.succeed(assetDecider.initialState)
+      : Effect.map(reader.ofDefinition(definition).load(assetStreamOf(id), assetDecider), ({ state }) => state),
+  );
+}
+
 const noSuchAsset = new NotFound({ detail: 'There is no such asset in this playbook' });
 
 export function assetRead(addresses: AssetAddresses | undefined, id: string) {
   return Effect.gen(function* () {
     const reader = yield* PlaybookReader;
-    const { state: standing } = yield* reader.load(assetStreamOf(id), assetDecider);
+    const standing = yield* standingOf(reader, id);
     const [kept] = yield* reader.readProjectedRows(assetsName, rowKeyed(id));
     const row = assetRowOf(kept?.row);
     if (row === undefined) {

@@ -9,6 +9,7 @@ import {
   recordedReply,
   type HarnessLedger,
   type InteractionHarness,
+  namesOfTheTests,
 } from '@on.auto/interaction/testing';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
@@ -48,7 +49,9 @@ async function opened(layer: Layer.Layer<Ledger>): Promise<HarnessLedger> {
 function onSQLite(): Promise<HarnessLedger> {
   const ledger = temporaryLedger();
   onTestFinished(ledger.remove);
-  return opened(ledgerLayer({ fileName: ledger.fileName, projections: [openRequests] }));
+  return opened(
+    ledgerLayer({ fileName: ledger.fileName, projections: [openRequests], definitionNames: namesOfTheTests }),
+  );
 }
 
 async function onPostgreSQL(): Promise<HarnessLedger> {
@@ -61,6 +64,7 @@ async function onPostgreSQL(): Promise<HarnessLedger> {
     postgresqlLedgerLayer({
       pools: plainPoolsOn(url.href),
       projections: [openRequests],
+      definitionNames: namesOfTheTests,
     }),
   );
 }

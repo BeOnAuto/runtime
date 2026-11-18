@@ -1,5 +1,5 @@
 import { runEndingOf, type RunEnding } from '@on.auto/definitions';
-import { streamPrefixOfPlaybook, type PlaybookAddress, type CalledBy, type Conflict } from '@on.auto/operations';
+import type { PlaybookAddress, CalledBy, Conflict } from '@on.auto/operations';
 import {
   callKeyText,
   type CallAnsweredResult,
@@ -14,7 +14,7 @@ import { answeredRow, callRowOf, deliveredRow, waitingCallsOf } from '../calls/c
 import { undeliveredAnswersOf } from '../calls/undelivered-answers.ts';
 import type { HostDatabase } from '../database/host-database.ts';
 import { callConsumerOf, DeliveryFailed, type CallConsumer, type CallRecord } from '../follower/consumers.ts';
-import { addressOfRun, runKeyOf } from '../runs/run-address.ts';
+import { runKeyOfAnId, runStreamOfAChild } from '../runs/run-places.ts';
 import type { WaitingOptions } from './waiting-options.ts';
 
 export interface EndingParts {
@@ -66,13 +66,12 @@ function laterIfItFails(parts: EndingParts): Deliver {
     );
 }
 
-function answeredWith(
+function answeredIn(
   { parts, deliver }: Answering,
-  playbook: PlaybookAddress,
+  runId: string,
   calledBy: CalledBy,
   result: CallAnsweredResult,
 ): Effect.Effect<boolean, DeliveryFailed> {
-  const runId = runKeyOf({ ...playbook, runId: calledBy.runId });
   const key = { runId, reference: calledBy.reference, run: calledBy.run };
   const answered = answeredRow(parts.database, callKeyText(key), result).pipe(
     Effect.mapError(failedWith),
@@ -84,12 +83,27 @@ function answeredWith(
   );
 }
 
+function answeredWith(
+  answering: Answering,
+  { org }: Pick<PlaybookAddress, 'org'>,
+  calledBy: CalledBy,
+  result: CallAnsweredResult,
+): Effect.Effect<boolean, DeliveryFailed> {
+  return Effect.flatMap(runKeyOfAnId(answering.parts.database, org, calledBy.runId), (runId) =>
+    runId === undefined ? Effect.succeed(false) : answeredIn(answering, runId, calledBy, result),
+  );
+}
+
 interface Answering {
   readonly parts: EndingParts;
   readonly deliver: Deliver;
 }
 
-function answeredByItsEnding(answering: Answering, playbook: PlaybookAddress, { ending, calledBy }: CalledEnding) {
+function answeredByItsEnding(
+  answering: Answering,
+  playbook: Pick<PlaybookAddress, 'org'>,
+  { ending, calledBy }: CalledEnding,
+) {
   return answeredWith(answering, playbook, calledBy, answering.parts.resultOf(ending));
 }
 
@@ -104,14 +118,14 @@ export function waitingCallAnsweredOn(parts: EndingParts): WaitingCallAnswered {
   return (playbook, calledBy, result) => answeredWith(answering, playbook, calledBy, result);
 }
 
-export function childStreamOf(playbook: PlaybookAddress, child: string): string {
-  return `${streamPrefixOfPlaybook(playbook)}runs/${child}`;
-}
-
-function childEndingOf(database: HostDatabase, playbook: PlaybookAddress, child: string) {
-  return Effect.map(
-    Effect.promise(() => database.store.lastMessageOf(childStreamOf(playbook, child))),
-    (last) => calledEndingOf(runEndingOf(last)),
+function childEndingOf(database: HostDatabase, runKey: string, child: string) {
+  return Effect.flatMap(runStreamOfAChild(database, runKey, child), (stream) =>
+    stream === undefined
+      ? Effect.undefined
+      : Effect.map(
+          Effect.promise(() => database.store.lastMessageOf(stream)),
+          (last) => calledEndingOf(runEndingOf(last)),
+        ),
   );
 }
 
@@ -120,8 +134,7 @@ export function childAnswersOn(
   resultOf: WaitingOptions['resultOf'],
 ): (runKey: string, child: string) => Effect.Effect<CallAnsweredResult | undefined> {
   return (runKey, child) => {
-    const { org, playbook } = addressOfRun(runKey);
-    return Effect.map(childEndingOf(database, { org, playbook }, child), (called) =>
+    return Effect.map(childEndingOf(database, runKey, child), (called) =>
       called === undefined ? undefined : resultOf(called.ending),
     );
   };
@@ -166,15 +179,14 @@ export function endedChildrenOn(parts: EndingParts): (runKey: string) => Effect.
   const answering = { parts, deliver: strictly(parts) };
   return (runKey) =>
     Effect.gen(function* () {
-      const { org, playbook } = addressOfRun(runKey);
       for (const { call, result } of yield* Effect.mapError(undeliveredAnswersOf(database, runKey), failedWith)) {
         yield* answering.deliver(call.key, result);
       }
       const waiting = yield* Effect.mapError(waitingCallsOf(database, runKey), failedWith);
       for (const { child } of waiting) {
-        const called = yield* childEndingOf(database, { org, playbook }, child);
+        const called = yield* childEndingOf(database, runKey, child);
         if (called !== undefined) {
-          yield* answeredByItsEnding(answering, { org, playbook }, called);
+          yield* answeredIn(answering, runKey, called.calledBy, parts.resultOf(called.ending));
         }
       }
     });

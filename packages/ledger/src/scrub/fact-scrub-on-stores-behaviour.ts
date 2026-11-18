@@ -6,24 +6,25 @@ import {
   type ProjectedRowsQuery,
 } from '@on.auto/operations';
 import {
-  RemarkFactSchema,
+  definitionsPlaced,
   factScrubBehaviour,
+  type RemarkFact,
   remarkFacts,
+  RemarkFactSchema,
   remarkRows,
+  type RunFact,
   runFacts,
   tallyRowsOf,
+  type TopicFact,
   topicFacts,
   topicRows,
-  type RemarkFact,
-  type RunFact,
-  type TopicFact,
 } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { FactScrubStore, LedgerStore } from '../event-store.ts';
 import { makeLedger } from '../ledger-service.ts';
-import { aLedger, aStore, type LedgerEntry } from '../testing/ledger-entry.ts';
+import { aLedger, aLedgerKeepingNames, aStore, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { factScrubberOf } from './fact-scrub.ts';
 
 type AnyLedger = Ledger['Service'];
@@ -236,7 +237,9 @@ function refoldedOverManyKinds(entry: LedgerEntry): void {
 }
 
 export function factScrubOnStoresBehaviour(entry: LedgerEntry): void {
-  factScrubBehaviour({ aLedger: (projections, runOutcomes) => aLedger(entry, undefined, runOutcomes, projections) });
+  factScrubBehaviour({
+    aLedger: (projections, runOutcomes) => aLedgerKeepingNames(entry, definitionsPlaced, { runOutcomes, projections }),
+  });
   storedInPlace(entry);
   scrubAtomic(entry);
   scrubRetried(entry);

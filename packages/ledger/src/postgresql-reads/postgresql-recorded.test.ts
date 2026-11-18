@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { IndexExecutor } from '../recorded/missing-indexes.ts';
 import { createPostgreSQLPlaybookIndexes, orgOfStream } from './playbook-indexes.ts';
-import { definitionStreamsStatement, postgresqlDefinitionStreams } from './postgresql-definition-streams.ts';
+import { definitionStreamsStatement, postgresqlDefinitionReads } from './postgresql-definition-reads.ts';
 import { postgresqlRecordedStore, type Query } from './postgresql-recorded.ts';
 
 interface Asked {
@@ -282,7 +282,7 @@ describe('a read of runs on PostgreSQL', () => {
 });
 
 describe("the playbook's indexes on PostgreSQL", () => {
-  it('index the playbook in order and by time, each stream in order, the first messages by kind, the org by correlation and by id and the definition streams by type, then analyse', async () => {
+  it('index the playbook in order and by time, each stream in order, the first messages by kind, the org in order, by correlation and by id and the definition streams by type, then analyse', async () => {
     const { execute, commands } = executorFinding([]);
 
     await createPostgreSQLPlaybookIndexes({ execute });
@@ -292,6 +292,7 @@ describe("the playbook's indexes on PostgreSQL", () => {
       "CREATE INDEX IF NOT EXISTS ledger_messages_by_playbook_and_time ON emt_messages ((substring(stream_id FROM '^(?:[^/]*/){3}')), created, transaction_id, global_position)",
       'CREATE INDEX IF NOT EXISTS ledger_messages_by_stream ON emt_messages (stream_id, transaction_id, global_position)',
       "CREATE INDEX IF NOT EXISTS ledger_first_messages_by_kind ON emt_messages ((substring(stream_id FROM '^(?:[^/]*/){4}')), stream_position, transaction_id, global_position)",
+      `CREATE INDEX IF NOT EXISTS ledger_messages_by_org ON emt_messages ((${orgOfStream}), transaction_id, global_position)`,
       `CREATE INDEX IF NOT EXISTS ledger_messages_by_org_and_correlation ON emt_messages ((${orgOfStream}), (message_metadata ->> 'correlationId'), transaction_id, global_position)`,
       "CREATE INDEX IF NOT EXISTS ledger_definition_streams ON emt_streams ((substring(stream_id FROM '^(?:[^/]*/){3}definitions/([^/]+)$'))) WHERE (substring(stream_id FROM '^(?:[^/]*/){3}definitions/([^/]+)$')) IS NOT NULL",
       `CREATE INDEX IF NOT EXISTS ledger_messages_by_org_and_id ON emt_messages ((${orgOfStream}), message_id)`,
@@ -305,6 +306,7 @@ describe("the playbook's indexes on PostgreSQL", () => {
       'ledger_messages_by_playbook_and_time',
       'ledger_messages_by_stream',
       'ledger_first_messages_by_kind',
+      'ledger_messages_by_org',
       'ledger_messages_by_org_and_correlation',
       'ledger_definition_streams',
       'ledger_messages_by_org_and_id',
@@ -326,16 +328,23 @@ describe("the playbook's indexes on PostgreSQL", () => {
 });
 
 describe('the definition streams of a type on PostgreSQL', () => {
-  it('are read from the table of streams by the type in their name, in the default partition, with their versions', async () => {
+  it('are read from the table of streams by the type in their name, in the default partition, with their versions and the playbook each is in', async () => {
     const asked: { readonly text: string; readonly values: readonly unknown[] }[] = [];
-    const store = postgresqlDefinitionStreams((text, values) => {
+    const store = postgresqlDefinitionReads((text, values) => {
       asked.push({ text, values });
-      return Promise.resolve([{ stream: 'playbook/acme/alpha/definitions/page', version: '3' }]);
+      return Promise.resolve([
+        { stream: 'playbook/acme/alpha/definitions/page', version: '3', placed_in: null },
+        { stream: 'definition/acme/d1/definitions/page', version: '2', placed_in: 'playbook/acme/beta/' },
+        { stream: 'definition/acme/d2/definitions/page', version: '1', placed_in: null },
+      ]);
     });
 
     const streams = await store.definitionStreams('page');
 
-    expect(streams).toEqual([{ stream: 'playbook/acme/alpha/definitions/page', version: 3 }]);
+    expect(streams).toEqual([
+      { stream: 'playbook/acme/alpha/definitions/page', version: 3, playbookKey: 'playbook/acme/alpha/' },
+      { stream: 'definition/acme/d1/definitions/page', version: 2, playbookKey: 'playbook/acme/beta/' },
+    ]);
     expect(asked).toEqual([{ text: definitionStreamsStatement, values: ['page', 'emt:default'] }]);
   });
 });

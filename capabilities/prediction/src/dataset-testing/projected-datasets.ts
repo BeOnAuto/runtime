@@ -57,15 +57,19 @@ function contextOf(name: string, version: number) {
 
 function definitionsOf(folders: ProjectedFolders): Pick<ProjectedDatasets, 'saved' | 'keptWith' | 'retired'> {
   const versions = new Map<string, number>();
-  const stream = `${alphaKey}definitions/prediction`;
+  const ids = new Map<string, string>();
+  const streamOf = (name: string) => {
+    const id = ids.get(name) ?? `0199a3c4-7d2e-7c1a-9b3f-${String(ids.size + 1).padStart(12, '0')}`;
+    ids.set(name, id);
+    return `definition/acme/${id}/definitions/prediction`;
+  };
   const kept = async (name: string, content: Schema.JsonObject) => {
     const version = (versions.get(name) ?? 0) + 1;
     versions.set(name, version);
+    const created = { content, created_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha' };
     const saving =
-      version === 1
-        ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
-        : { type: 'definition_updated', data: { content } };
-    await folders.append(stream, [saving], contextOf(name, version));
+      version === 1 ? { type: 'definition_created', data: created } : { type: 'definition_updated', data: { content } };
+    await folders.append(streamOf(name), [saving], contextOf(name, version));
   };
   return {
     saved: async (name, source) => {
@@ -76,7 +80,7 @@ function definitionsOf(folders: ProjectedFolders): Pick<ProjectedDatasets, 'save
     keptWith: (name, details) => kept(name, { source: '', details }),
     retired: async (name) => {
       const ended = [{ type: 'definition_retired', data: {} }];
-      await folders.append(stream, ended, contextOf(name, Number(versions.get(name))));
+      await folders.append(streamOf(name), ended, contextOf(name, Number(versions.get(name))));
     },
   };
 }

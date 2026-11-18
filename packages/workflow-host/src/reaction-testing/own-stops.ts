@@ -8,7 +8,7 @@ import { zoneClockOf } from '../schedules/zone-clock.ts';
 import { definitionRecordsOn, type ApplyDefinitionRecord } from '../triggers/definition-records.ts';
 
 export function listenersKeepingTheirOwnStops(database: HostDatabase): Listeners {
-  return sqlListeners(database, refusalsOn(database, Date.now), filterStops());
+  return sqlListeners(database, refusalsOn(database, 'workflow', Date.now), filterStops());
 }
 
 export function definitionRecordsKeepingTheirOwnStops(database: HostDatabase): ApplyDefinitionRecord {

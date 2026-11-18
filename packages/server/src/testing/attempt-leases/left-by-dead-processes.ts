@@ -1,11 +1,11 @@
 import type { RunEvent } from '@on.auto/definitions';
-import { recordedAsGiven } from '@on.auto/definitions/testing';
 import { LedgerConnection, statement } from '@on.auto/ledger';
 import { Ledger } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { HostRuntime, StartingWork } from '../../workflows/host-dependencies.ts';
 import { inRuntime } from '../../workflows/in-runtime.ts';
+import { recordedUnderItsDefinition } from './recorded-runtime.ts';
 
 export const now = Date.parse('2026-11-15T09:00:00.000Z');
 
@@ -26,7 +26,7 @@ export function startOf(
   data: Readonly<Partial<Record<'calls_tools' | 'resumes', true>>> = {},
   by: Readonly<typeof startedBy> = startedBy,
 ): RunEvent {
-  return { type: 'run_started', data: { started_by: by, input: {}, ...data } };
+  return { type: 'run_started', data: { started_by: by, playbook: 'alpha', input: {}, ...data } };
 }
 
 function leasesWritten(leases: Left['leases']) {
@@ -56,7 +56,7 @@ export function leftByAProcessThatDied(left: Left, heard: (runtime: HostRuntime)
       definitionVersion: 1,
     };
     const recorded = Effect.flatMap(Effect.service(Ledger), (ledger) =>
-      recordedAsGiven(ledger, `playbook/acme/alpha/runs/${runId}`, left.events, context),
+      recordedUnderItsDefinition(ledger, { type: left.type, name: left.name }, left.events, context),
     );
     await Effect.runPromise(inRuntime(runtime, Effect.andThen(recorded, leasesWritten(left.leases))));
     return { dueWork: [], consumers: [] };

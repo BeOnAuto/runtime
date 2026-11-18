@@ -7,6 +7,8 @@ import { logsFrom } from './log-formats.ts';
 
 const run = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' };
 
+const filed = { org: 'acme', definition: 'alpha-definition', runId: run.runId };
+
 describe('the notes of the workflow host', () => {
   it('warn that another server runs the workflows of the database, and until when it holds them', async () => {
     const [line] = await linesLoggedBy(
@@ -28,9 +30,9 @@ describe('the notes of the workflow host', () => {
   it('warn once when a settlement backs off, and once when it is settled at last, naming only the run', async () => {
     const lines = [
       ...(await linesLoggedBy(
-        logHostNote({ kind: 'settle_backing_off', run, attempts: 20, detail: 'The ledger cannot be reached' }),
+        logHostNote({ kind: 'settle_backing_off', run: filed, attempts: 20, detail: 'The ledger cannot be reached' }),
       )),
-      ...(await linesLoggedBy(logHostNote({ kind: 'settled_after_back_off', run, attempts: 22 }))),
+      ...(await linesLoggedBy(logHostNote({ kind: 'settled_after_back_off', run: filed, attempts: 22 }))),
     ];
 
     expect(lines).toEqual([
@@ -40,7 +42,7 @@ describe('the notes of the workflow host', () => {
       expect.stringContaining('"message":"A run that could not be settled was settled at attempt 22","level":"WARN"'),
     ]);
     expect(lines[0]).toContain(
-      '"annotations":{"org":"acme","playbook":"alpha","run_id":"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a","error":"The ledger cannot be reached"}',
+      '"annotations":{"org":"acme","definition":"alpha-definition","run_id":"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a","error":"The ledger cannot be reached"}',
     );
   });
 });
@@ -129,7 +131,7 @@ describe('the note of a record of a run passed before its outputs were dispatche
 describe('the notes of the reactions of the workflow host', () => {
   it('warn of an event a waiting run did not take because its filter failed, and of a record the triggers could not read', async () => {
     const lines = [
-      ...(await linesLoggedBy(logHostNote({ kind: 'offer_declined', run, detail: 'An expression failed' }))),
+      ...(await linesLoggedBy(logHostNote({ kind: 'offer_declined', run: filed, detail: 'An expression failed' }))),
       ...(await linesLoggedBy(
         logHostNote({
           kind: 'record_unreadable',
@@ -205,7 +207,7 @@ describe('the note of an output a record keeps outside that its playbook holds n
 
 describe('the note of a run loaded again', () => {
   it('is logged at the debug level alone, with the run, whether it began at a snapshot, its events and the bytes it is kept as', async () => {
-    const reloaded = logHostNote({ kind: 'run_reloaded', run, snapshot: true, events: 12, keptBytes: 524_288 });
+    const reloaded = logHostNote({ kind: 'run_reloaded', run: filed, snapshot: true, events: 12, keptBytes: 524_288 });
     const atInfo = await linesLoggedBy(reloaded);
     const [line] = await linesLoggedBy(reloaded.pipe(Effect.provide(logsFrom('debug'))));
 
@@ -213,7 +215,7 @@ describe('the note of a run loaded again', () => {
     expect(line).toContain('"message":"A run was loaded from the');
     expect(line).toContain('"level":"DEBUG"');
     expect(line).toContain(
-      '"annotations":{"org":"acme","playbook":"alpha","run_id":"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a","from_snapshot":true,"events":12,"kept_bytes":524288}',
+      '"annotations":{"org":"acme","definition":"alpha-definition","run_id":"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a","from_snapshot":true,"events":12,"kept_bytes":524288}',
     );
   });
 });

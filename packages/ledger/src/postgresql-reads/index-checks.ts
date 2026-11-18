@@ -1,4 +1,4 @@
-import { definitionStreamsStatement } from './postgresql-definition-streams.ts';
+import { definitionStreamsStatement } from './postgresql-definition-reads.ts';
 
 export const definitionStreamsPlan = {
   explained: `EXPLAIN ${definitionStreamsStatement}`,
@@ -16,6 +16,10 @@ export const thePlaybookIndexes = [
   {
     indexname: 'ledger_first_messages_by_kind',
     indexdef: `CREATE INDEX ledger_first_messages_by_kind ON ONLY public.emt_messages USING btree ("substring"(stream_id, '^(?:[^/]*/){4}'::text), stream_position, transaction_id, global_position)`,
+  },
+  {
+    indexname: 'ledger_messages_by_org',
+    indexdef: `CREATE INDEX ledger_messages_by_org ON ONLY public.emt_messages USING btree (${theOrgOfAStream}, transaction_id, global_position)`,
   },
   {
     indexname: 'ledger_messages_by_org_and_correlation',

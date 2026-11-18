@@ -6,8 +6,8 @@ import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-databas
 import { closeHostParts, openHostParts } from '../host/host-parts.ts';
 import { systemClock } from '../loop/host-clock.ts';
 import { startOf, workflow } from '../testing/host-documents.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { recordedOptionsOf } from '../testing/host-runs.ts';
+import { openedWithRuns, runKeyAt, runLogAt } from '../testing/started-runs.ts';
 import { until } from '../testing/until.ts';
 
 const calling = workflow('do:\n  - notify: { call: notify, with: { to: ada } }');
@@ -31,7 +31,7 @@ const RunSeen = Schema.Struct({
 
 export type EndedCallRow = typeof CallSeen.Type;
 
-export const keyOfTheRun = (runId: string): string => `acme/alpha/${runId}`;
+export const keyOfTheRun = runKeyAt;
 
 export function callsIn(database: HostDatabase): Promise<readonly EndedCallRow[]> {
   return Effect.runPromise(
@@ -58,7 +58,7 @@ export function bytesOf({ call, attributes, result }: EndedCallRow): number {
 }
 
 export async function ranOn(calls: readonly string[], paused: readonly string[] = []): Promise<HostDatabase> {
-  const store = { database: await openedOn({ store: 'sqlite', file: aSQLiteFile() }) };
+  const store = { database: await openedWithRuns([...calls, ...paused]) };
   const recorded = recordedOptionsOf();
   const parts = openHostParts(store, { ...recorded.options, clock: systemClock }, Function.constVoid);
   onTestFinished(() => closeHostParts(parts));
@@ -81,7 +81,7 @@ export async function ranOn(calls: readonly string[], paused: readonly string[] 
 }
 
 export function endOfTheLog(database: HostDatabase, runId: string): Promise<number> {
-  return database.store.read(`playbook/acme/alpha/run-logs/${runId}`).then(({ version }) => version);
+  return database.store.read(runLogAt(runId)).then(({ version }) => version);
 }
 
 export function openingACallAfterItsRead(database: HostDatabase, runId: string): HostDatabase {

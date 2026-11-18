@@ -1,4 +1,4 @@
-import { playbookRowsOf, type PlaybookProjectedRow } from '@on.auto/operations';
+import { addressOfTheRow, type ProjectedKeyedRow } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { turnBounds } from '../readings/turn-readings.ts';
@@ -14,14 +14,10 @@ function conversationRead(parts: ConversationParts, place: ConversationPlace, no
   );
 }
 
-function itemOf(parts: ConversationParts, kept: PlaybookProjectedRow): DueRequestItem {
-  const place = {
-    playbook: { org: kept.org, playbook: kept.playbook },
-    key: kept.key,
-    row: conversationRowFrom(kept.row),
-  };
+function itemOf(parts: ConversationParts, kept: ProjectedKeyedRow): DueRequestItem {
+  const place = { address: addressOfTheRow(kept), key: kept.key, row: conversationRowFrom(kept.row) };
   return {
-    key: `${kept.org}/${kept.playbook}/${kept.key}`,
+    key: `${kept.org}/${kept.key}`,
     callsOut: true,
     perform: (now) => Effect.suspend(() => conversationRead(parts, place, now)),
   };
@@ -36,7 +32,7 @@ export function conversationsDue(parts: ConversationParts): RequestsDue {
       callsOut
         ? Effect.map(
             parts.ledger.readDueRows(conversationsName, { column: 'due_at', through: now, limit: most }),
-            (rows) => playbookRowsOf(conversationsName, rows).map((kept) => itemOf(parts, kept)),
+            (rows) => rows.map((kept) => itemOf(parts, kept)),
           )
         : Effect.succeed(callsNothing),
     nextDueAt: (after, callsOut = true) =>

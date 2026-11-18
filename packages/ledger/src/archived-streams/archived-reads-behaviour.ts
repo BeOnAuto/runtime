@@ -44,7 +44,7 @@ const pages: readonly StoredPageRequest[] = [
 ];
 
 const scopes: readonly FactScope[] = [
-  { kind: 'playbook', playbookKey },
+  { kind: 'playbook', playbookKey, definitionKeys: [] },
   { kind: 'streams', streams: everyStream },
   { kind: 'streams', streams: [`${playbookKey}runs`, `${playbookKey}runs/`] },
 ];
@@ -101,6 +101,14 @@ const recordedReads: readonly PortRead[] = [
   {
     port: 'readRecordedOfKeys, of every selection and every kind of page',
     read: ({ store }) => everyPageOf((selection, page) => store.readRecordedOfKeys(ofBothKeys, selection, page)),
+  },
+  {
+    port: 'readRecordedOfOrg, of every kind of page',
+    read: ({ store }) =>
+      eachOf(
+        pages.filter(({ since }) => since === undefined),
+        (page) => store.readRecordedOfOrg(ofBothKeys.org, page),
+      ),
   },
   {
     port: 'readRecordedEvent, of the id of every fact written',

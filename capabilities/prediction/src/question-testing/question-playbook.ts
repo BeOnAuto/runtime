@@ -5,8 +5,8 @@ import {
   runOutcomeMapping,
   type PlaybookOperation,
 } from '@on.auto/definitions';
-import { uncheckedPages } from '@on.auto/definitions/testing';
-import { memoryLedger } from '@on.auto/operations/testing';
+import { definitionNamesWith, uncheckedPages } from '@on.auto/definitions/testing';
+import { memoryLedgerWith } from '@on.auto/operations/testing';
 import type { HostDatabase } from '@on.auto/workflow-host';
 import type { Clock } from 'effect';
 
@@ -36,7 +36,10 @@ export function questionPlaybook({ clock, database, datasets }: QuestionPlaybook
   const prediction = predictionFunctionOf({ pool: poolOf(), database, datasets: datasetsPortOn(datasets) });
   const capabilities = [prediction];
   return {
-    call: playbookCalls(memoryLedger(runOutcomeMapping), clock),
+    call: playbookCalls(
+      memoryLedgerWith({ runOutcomes: runOutcomeMapping, definitionNames: definitionNamesWith([prediction.type]) }),
+      clock,
+    ),
     operations: {
       create: defineCreateDefinition(capabilities, uncheckedPages),
       run: defineRunDefinition(capabilities),

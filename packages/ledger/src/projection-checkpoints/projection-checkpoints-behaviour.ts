@@ -12,7 +12,6 @@ import { describe, expect, it } from 'vitest';
 
 import { topicsOf } from '../projections/projections-behaviour.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
-import { checkpointsStepBehaviour } from './checkpoints-step-behaviour.ts';
 import { aLedgerLogging } from './logged-opening.ts';
 
 type AnyLedger = Ledger['Service'];
@@ -110,5 +109,4 @@ export function projectionCheckpointsBehaviour(entry: LedgerEntry): void {
     aTableTrustedByItsRow(entry);
     aTableFilledOrLeftWhole(entry);
   });
-  checkpointsStepBehaviour(entry);
 }

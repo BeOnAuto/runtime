@@ -1,11 +1,11 @@
 import type { RenderClock } from '@on.auto/definitions/template';
 import { longestCallRunMs } from '@on.auto/definitions/tool-blocks';
 import type { ToolAccess } from '@on.auto/tool-servers';
-import { Clock, Effect, Result } from 'effect';
+import { Clock, Effect } from 'effect';
 
 import type { KeptRequest } from '../replies/reply-taking.ts';
 import { routeOfRequest } from '../replies/request-routes.ts';
-import { readingOf, readNamesItsMessage } from './request-readings.ts';
+import { readNamesItsMessage } from './request-readings.ts';
 
 export const turnBounds = {
   readsEachTurn: 10,
@@ -36,40 +36,25 @@ interface TurnRendering {
 function renderingOf(request: KeptRequest, { clock, mostRequestBytesTo }: TurnRendering) {
   return { clock, mostBytes: mostRequestBytesTo(routeOfRequest(request).server) };
 }
-
-function readingOfKept(request: KeptRequest, key: string, rendering: TurnRendering): string | undefined {
-  const recorded = request.row.reading;
-  if (recorded !== null) {
-    return recorded;
-  }
-  const rendered = readingOf(routeOfRequest(request).replies, askedBy(request, key), renderingOf(request, rendering));
-  return Result.isSuccess(rendered) ? rendered.success : undefined;
-}
-
 type Requests = readonly [KeptRequest, ...KeptRequest[]];
 
-type Grouped = ReadonlyMap<string, Requests>;
+export type ReadingsOfTheTurn = readonly [ReadingOfATurn, ...ReadingOfATurn[]];
 
-function joined(grouped: Grouped, request: KeptRequest, reading: string): Grouped {
-  const known = grouped.get(reading);
-  return new Map(grouped).set(reading, known === undefined ? [request] : [...known, request]);
+function readingOfRequests(requests: Requests, key: string, rendering: TurnRendering): ReadingOfATurn {
+  const [first] = requests;
+  const asked = askedBy(first, key);
+  const namesItsMessage = readNamesItsMessage(routeOfRequest(first).replies, asked, renderingOf(first, rendering));
+  return { reading: first.reading, first, requests, namesItsMessage };
 }
 
 export function readingsOfTheTurn(
-  kept: readonly KeptRequest[],
+  [first, ...later]: Requests,
   key: string,
   rendering: TurnRendering,
-): readonly ReadingOfATurn[] {
-  const grouped = kept.reduce<Grouped>((readings, request) => {
-    const reading = readingOfKept(request, key, rendering);
-    return reading === undefined ? readings : joined(readings, request, reading);
-  }, new Map());
-  return [...grouped].map(([reading, requests]: readonly [string, Requests]) => {
-    const [first] = requests;
-    const asked = askedBy(first, key);
-    const namesItsMessage = readNamesItsMessage(routeOfRequest(first).replies, asked, renderingOf(first, rendering));
-    return { reading, first, requests, namesItsMessage };
-  });
+): ReadingsOfTheTurn {
+  const own = readingOfRequests([first, ...later.filter(({ reading }) => reading === first.reading)], key, rendering);
+  const [next, ...rest] = later.filter(({ reading }) => reading !== first.reading);
+  return next === undefined ? [own] : [own, ...readingsOfTheTurn([next, ...rest], key, rendering)];
 }
 
 export function readingsInTurn(readings: readonly ReadingOfATurn[], from: number): readonly ReadingOfATurn[] {

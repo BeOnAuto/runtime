@@ -37,7 +37,10 @@ describe('the definitions and runs of a playbook', () => {
     expect(await call(getRun, toGamma(globexAdmin, { run_id: runId }))).toMatchObject({
       reason: 'not_found',
     });
-    expect(ledger.streamNames()).toEqual(['playbook/acme/alpha/definitions/echo', `playbook/acme/alpha/runs/${runId}`]);
+    expect(ledger.streamNames()).toEqual([
+      expect.stringMatching(/^definition\/acme\/[^/]+\/definitions\/echo$/u),
+      expect.stringMatching(new RegExp(`^definition/acme/[^/]+/runs/${runId}$`, 'u')),
+    ]);
   });
 
   it('are apart from those of another playbook that uses the same names and run ids', async () => {

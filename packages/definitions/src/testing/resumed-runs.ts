@@ -2,17 +2,19 @@ import type { CallLink } from '@on.auto/operations';
 import { Deferred, Effect } from 'effect';
 
 import { modelCallAnswered, modelCallSent } from '../journal-testing/model-calls.ts';
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { runDecider } from '../runs/run-decider.ts';
 import { isRunning, startedRunOf } from '../runs/run-state.ts';
 import { acmeAdmin } from './callers.ts';
 import { resumer, type ResumerOptions } from './capabilities/resumer.ts';
 import { definitionOperationsFor } from './definition-operations.ts';
-import { firstMoment, harness, toPlaybook, type Harness } from './harness.ts';
+import { firstMoment, harness, toPlaybook, runStreamIn, type Harness } from './harness.ts';
 import { testRunId } from './run-facts.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
-export const stream = `playbook/acme/alpha/${runStreamNameOf(testRunId)}`;
+export function stepStreamIn(ledger: Harness['ledger']): string {
+  return runStreamIn(ledger, { type: 'resumer', name: 'step' }, testRunId);
+}
 
 const aWorkflowsCall: CallLink = { run_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b70', reference: '/do/0/step', run: 1 };
 
@@ -26,6 +28,7 @@ export const startOfTheStep = {
   name: 'step',
   input: {},
   started_by: { id: acmeAdmin.id, name: acmeAdmin.name },
+  playbook: 'alpha',
   definition_version: 1,
   calls_tools: true,
   resumes: true,
@@ -56,8 +59,8 @@ export async function startedAndLeft(options: ResumerOptions = {}) {
   await definitions.run(
     Effect.orDie(
       Effect.all([
-        definitions.ledger.service.execute(stream, runDecider, startOfTheStep),
-        definitions.ledger.service.execute(stream, runDecider, {
+        definitions.ledger.service.execute(stepStreamIn(definitions.ledger), runDecider, startOfTheStep),
+        definitions.ledger.service.execute(stepStreamIn(definitions.ledger), runDecider, {
           type: 'call',
           fact: { type: 'model_call_started', data: { number: 1, ...modelCallSent() } },
           fencingToken: 1,
@@ -83,7 +86,7 @@ export async function startedAndLeft(options: ResumerOptions = {}) {
 }
 
 export function endedIn({ ledger }: Harness): Effect.Effect<void> {
-  const going = Effect.map(ledger.service.load(stream, runDecider), ({ state }) => {
+  const going = Effect.map(ledger.service.load(stepStreamIn(ledger), runDecider), ({ state }) => {
     const recorded = startedRunOf(state);
     return recorded !== undefined && isRunning(recorded);
   });
@@ -91,7 +94,10 @@ export function endedIn({ ledger }: Harness): Effect.Effect<void> {
 }
 
 export function cancelRecordedIn({ ledger }: Harness): Effect.Effect<void> {
-  const asked = Effect.map(ledger.service.load(stream, runDecider), ({ state }) => startedRunOf(state)?.cancel);
+  const asked = Effect.map(
+    ledger.service.load(stepStreamIn(ledger), runDecider),
+    ({ state }) => startedRunOf(state)?.cancel,
+  );
   return Effect.asVoid(
     Effect.repeat(Effect.andThen(Effect.yieldNow, asked), { until: (cancel) => cancel !== undefined }),
   );
@@ -108,7 +114,7 @@ export function answeredOnceMeanwhile() {
         const fact = { type: 'model_call_answered', data: { number: 2, ...modelCallAnswered() } } as const;
         Effect.runSync(
           Effect.orDie(
-            held.definitions.ledger.service.execute(stream, runDecider, {
+            held.definitions.ledger.service.execute(stepStreamIn(held.definitions.ledger), runDecider, {
               type: 'call',
               fact,
               fencingToken: 1,

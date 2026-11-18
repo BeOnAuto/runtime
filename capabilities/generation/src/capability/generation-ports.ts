@@ -1,6 +1,6 @@
 import type { RecordedContent } from '@on.auto/content';
 import type { SignedContentAddress } from '@on.auto/identity';
-import type { ProjectionReader, StreamWriter } from '@on.auto/operations';
+import type { LedgerPorts, ProjectionReader, StreamWriter } from '@on.auto/operations';
 
 import type { GenerationKind } from '../catalog/catalog-entry.ts';
 import type { GenerationCatalog } from '../catalog/generation-catalog.ts';
@@ -28,7 +28,8 @@ export const generationBounds: GenerationBounds = {
   waitMs: 10 * minute,
 };
 
-interface AssetLedger extends StreamWriter, Pick<ProjectionReader, 'readProjectedRows'> {}
+interface AssetLedger
+  extends StreamWriter, Pick<ProjectionReader, 'readProjectedRows'>, Pick<LedgerPorts, 'holderOfStream'> {}
 
 export interface AssetAddresses {
   readonly signedContentAddress: SignedContentAddress;

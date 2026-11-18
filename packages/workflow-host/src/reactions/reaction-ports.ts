@@ -15,11 +15,11 @@ export interface ReactionPorts {
 }
 
 export function reactionPortsOn(database: HostDatabase, options: ReactionOptions, now: () => number): ReactionPorts {
-  const refusals = refusalsOn(database, now);
+  const refusals = refusalsOn(database, options.definitionType, now);
   const stops = filterStops();
   return {
     listeners: sqlListeners(database, refusals, stops),
-    emitter: ledgerEmitter(options.emit, now),
+    emitter: ledgerEmitter(options.emit, database, now),
     refusals,
     stops,
   };

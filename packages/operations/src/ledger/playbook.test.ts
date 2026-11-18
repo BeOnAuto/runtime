@@ -5,13 +5,16 @@ import { describe, expect, it } from 'vitest';
 
 import { type PlaybookAddress, PlaybookContext } from '../caller/playbook-context.ts';
 import { messageIdOf, streamPrefixOfPlaybook } from '../index.ts';
+import { answerOf, fact, made, shared as namesShared, unbounded } from '../names-testing/noted-names.ts';
 import { PayloadOffloading, textBytesOf, textPayloadText } from '../payloads/payload-texts.ts';
 import { PayloadsShared, sharedPayloadsWithin } from '../payloads/shared-payloads.ts';
 import { remarkedContext, remarkFacts, RemarkFactSchema } from '../projections/remark-rows.ts';
+import { cursorOfParts } from '../reading/cursor-parts.ts';
 import { acmeAdmin, globexAdmin } from '../testing/callers.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
-import { memoryLedger } from '../testing/memory-ledger.ts';
+import { memoryLedger, memoryLedgerWith } from '../testing/memory-ledger.ts';
 import { addNote, notebook, readNoteContent, readNoteEvent } from '../testing/notes.ts';
+import { definitionBoundStreamReader } from './bound-ports.ts';
 import type { Ledger } from './ledger.ts';
 import { playbookLedgerOf, playbookReaderOf } from './playbook-ledger.ts';
 import { playbookPayloadReader, PlaybookReader } from './playbook-reader.ts';
@@ -118,6 +121,103 @@ describe('the ledger of one playbook, for code that holds the whole ledger', () 
       state: [{ name: 'anvil', text: 'heavy' }],
     });
     expect(await Effect.runPromise(Effect.provideContext(read, inGamma))).toMatchObject({ state: [] });
+  });
+});
+
+describe('the definitions of one playbook, for code that holds the whole ledger', () => {
+  it("reads and writes the streams of a definition of the playbook's org under the definition's key", async () => {
+    const ledger = memoryLedger();
+    const inAlpha = playbookLedgerOf(ledger.service, { org: 'acme', playbook: 'alpha' });
+    const noted = PlaybookWriter.use((writer) =>
+      writer.ofDefinition('d1').execute('notes', notebook, { name: 'anvil', text: 'heavy' }),
+    );
+    const read = PlaybookReader.use((reader) =>
+      Effect.all([
+        reader.ofDefinition('d1').load('notes', notebook),
+        reader.ofDefinition('d2').load('notes', notebook),
+      ]),
+    );
+    const age = PlaybookReader.use((reader) => reader.ofDefinition('d1').ageOfLastAppend('notes'));
+
+    await Effect.runPromise(Effect.provideContext(noted, inAlpha));
+
+    expect(ledger.streamNames()).toEqual(['definition/acme/d1/notes']);
+    expect(await Effect.runPromise(Effect.provideContext(read, inAlpha))).toMatchObject([
+      { state: [{ name: 'anvil', text: 'heavy' }] },
+      { state: [] },
+    ]);
+    expect(Number.isFinite(await Effect.runPromise(Effect.provideContext(age, inAlpha)))).toBe(true);
+    expect(
+      await Effect.runPromise(
+        definitionBoundStreamReader(ledger.service, { org: 'acme', definition: 'd1' }).load('notes', notebook),
+      ),
+    ).toMatchObject({ state: [{ name: 'anvil', text: 'heavy' }] });
+  });
+});
+
+describe('the names of one playbook, for code that holds the whole ledger', () => {
+  it('reads the names its definitions hold in that playbook alone', async () => {
+    const ledger = memoryLedgerWith({ definitionNames: unbounded });
+    await answerOf(
+      { ledger: ledger.service, names: () => Promise.resolve([]) },
+      namesShared,
+      made('a', 'triage'),
+      made('b', 'brief'),
+      made('c', 'triage', { playbook: 'beta' }),
+    );
+    const inAlpha = playbookLedgerOf(ledger.service, { org: 'acme', playbook: 'alpha' });
+    const read = PlaybookReader.use((reader) =>
+      Effect.all([
+        reader.holderOfName('reasoning', 'triage'),
+        reader.holderOfName('workflow', 'triage'),
+        reader.namesHeldIn('reasoning'),
+      ]),
+    );
+
+    const [holder, none, held] = await Effect.runPromise(Effect.provideContext(read, inAlpha));
+
+    expect([holder?.definitionKey, none, held.map(({ definitionKey }) => definitionKey)]).toEqual([
+      'definition/acme/a/',
+      undefined,
+      ['definition/acme/a/', 'definition/acme/b/'],
+    ]);
+  });
+
+  it('reads the id of the definition of that playbook under which a stream lies', async () => {
+    const ledger = memoryLedgerWith({ definitionNames: unbounded });
+    const port = { ledger: ledger.service, names: () => Promise.resolve([]) };
+    await answerOf(port, namesShared, made('a', 'triage'), made('c', 'triage', { playbook: 'beta' }));
+    await answerOf(port, 'definition/acme/a/runs/first', fact('remarked', 'first'));
+    await answerOf(port, 'definition/acme/c/runs/second', fact('remarked', 'second'));
+    const inAlpha = playbookLedgerOf(ledger.service, { org: 'acme', playbook: 'alpha' });
+    const read = PlaybookReader.use((reader) =>
+      Effect.all([reader.definitionHolding('runs/first'), reader.definitionHolding('runs/second')]),
+    );
+
+    expect(await Effect.runPromise(Effect.provideContext(read, inAlpha))).toEqual(['a', undefined]);
+  });
+});
+
+describe('the facts of one playbook, read by code that holds the whole ledger', () => {
+  it("name each stream within the key it lies under, the playbook's own or a definition's that holds a name in it", async () => {
+    const ledger = memoryLedgerWith({ definitionNames: unbounded });
+    const port = { ledger: ledger.service, names: () => Promise.resolve([]) };
+    await answerOf(port, 'playbook/acme/alpha/notes', fact('remarked', 'kept'));
+    await answerOf(port, 'definition/acme/a/notes', made('a', 'triage'));
+    const inAlpha = playbookLedgerOf(ledger.service, { org: 'acme', playbook: 'alpha' });
+    const read = PlaybookReader.use((reader) =>
+      Effect.all([
+        reader.readRecorded({ kind: 'everything' }, { order: 'asc', limit: 10 }),
+        Effect.orDie(reader.readAppendedFacts({ after: cursorOfParts([]), most: 10, dataOf: [] })),
+      ]),
+    );
+
+    const [recorded, appended] = await Effect.runPromise(Effect.provideContext(read, inAlpha));
+
+    expect([recorded.records.map(({ stream }) => stream), appended.facts.map(({ stream }) => stream)]).toEqual([
+      ['notes', 'notes'],
+      ['notes', 'notes'],
+    ]);
   });
 });
 

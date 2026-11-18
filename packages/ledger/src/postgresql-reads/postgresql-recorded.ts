@@ -6,7 +6,6 @@ import {
   isAKind,
   type AppendListeners,
   type AppendWaitsStore,
-  type DefinitionStreamsStore,
   type LastMessagesStore,
   type OwnContentStore,
   type RecordedStore,
@@ -27,7 +26,7 @@ import {
   type RecordsSelected,
 } from '../recorded/recorded-statements.ts';
 import { playbookKeyOfStream, correlationOfMessage, orgOfStream } from './playbook-indexes.ts';
-import { postgresqlDefinitionStreams } from './postgresql-definition-streams.ts';
+import { postgresqlDefinitionReads } from './postgresql-definition-reads.ts';
 import { examineRuns } from './postgresql-runs.ts';
 import {
   binding,
@@ -116,6 +115,9 @@ function recordsIn(selected: RecordsSelected, records: RecordsScope): string {
   }
   if (selected.kind === 'run') {
     return ofEachStream(selected.streams, records);
+  }
+  if (selected.kind === 'org') {
+    return recordsWhere([{ key: orgOfStream, value: selected.org }], records);
   }
   if (selected.kind === 'correlated') {
     const org = { key: orgOfStream, value: selected.org };
@@ -245,7 +247,7 @@ export function postgresqlRecordedStore(
   query: Query,
   listeners: AppendListeners = {},
 ): RecordedStore &
-  DefinitionStreamsStore &
+  ReturnType<typeof postgresqlDefinitionReads> &
   KeptStreamAges &
   StreamVersionsStore &
   LastMessagesStore &
@@ -258,7 +260,7 @@ export function postgresqlRecordedStore(
     dataAt: dataAt(query),
   };
   return {
-    ...postgresqlDefinitionStreams(query),
+    ...postgresqlDefinitionReads(query),
     ...appended,
     pointLength: 2,
     ...recordedReadsOver(statements, recordWithId(query)),
@@ -271,7 +273,7 @@ export function postgresqlRecordedStoreOn(
   connections: ContentConnections,
   listeners: AppendListeners,
 ): RecordedStore &
-  DefinitionStreamsStore &
+  ReturnType<typeof postgresqlDefinitionReads> &
   KeptStreamAges &
   StreamVersionsStore &
   LastMessagesStore &

@@ -4,6 +4,7 @@ import type { AppendSignal, EncodedEvent, LedgerStreams } from '@on.auto/ledger'
 import { streamPrefixOfPlaybook, type Context } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
+import { definitionKeyOfType } from '../reaction-testing/playbook-writes.ts';
 import type { ViewDetails } from '../views/view-details.ts';
 import { alpha, alphaKey, viewedType, type Playbook } from './view-documents.ts';
 
@@ -62,7 +63,10 @@ function ranBy(append: Append): Ran {
     await append(
       `${streamPrefixOfPlaybook(playbook)}runs/${id}`,
       [
-        { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } },
+        {
+          type: 'run_started',
+          data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha', input: {} },
+        },
         { type: 'run_succeeded', data: { output, record: {} } },
       ],
       { ...ranContext(subject, at), runId: id },
@@ -73,7 +77,7 @@ function ranBy(append: Append): Ran {
 
 type Saved = (name: string, details?: Schema.JsonObject, playbook?: Playbook, source?: string) => Promise<void>;
 
-function savedBy(append: Append, definitions: Map<string, number>, definitionType: string): Saved {
+function savedBy(append: Append, definitions: Map<string, number>, definitionType: string, next: () => string): Saved {
   return async (name, details, playbook = alpha, source?: string) => {
     const key = `${streamPrefixOfPlaybook(playbook)}${definitionType}/${name}`;
     const version = (definitions.get(key) ?? 0) + 1;
@@ -88,7 +92,7 @@ function savedBy(append: Append, definitions: Map<string, number>, definitionTyp
         : { type: 'definition_updated', data: { content } };
     await append(`${streamPrefixOfPlaybook(playbook)}definitions/${definitionType}`, [saving], {
       by: 'acme-admin',
-      at: savedAt,
+      at: next(),
       definitionType,
       definitionName: name,
       definitionVersion: version,
@@ -96,14 +100,14 @@ function savedBy(append: Append, definitions: Map<string, number>, definitionTyp
   };
 }
 
-function retiredBy(append: Append, definitions: Map<string, number>, definitionType: string) {
+function retiredBy(append: Append, definitions: Map<string, number>, definitionType: string, next: () => string) {
   return async (name: string) => {
     await append(
       `${streamPrefixOfPlaybook(alpha)}definitions/${definitionType}`,
       [{ type: 'definition_retired', data: {} }],
       {
         by: 'acme-admin',
-        at: savedAt,
+        at: next(),
         definitionType,
         definitionName: name,
         definitionVersion: Number(definitions.get(`${streamPrefixOfPlaybook(alpha)}${definitionType}/${name}`)),
@@ -123,7 +127,7 @@ function inTurn(): () => string {
 function onTheSubject(append: Append, at: string, subject: string, version = 1) {
   const [type = '', name = ''] = subject.split('/');
   return (events: readonly EncodedEvent[]) =>
-    append(`${alphaKey}definitions/${type}`, events, {
+    append(`${definitionKeyOfType(type, name, alphaKey)}definitions/${type}`, events, {
       by: 'acme-admin',
       at,
       definitionType: type,
@@ -135,7 +139,10 @@ function onTheSubject(append: Append, at: string, subject: string, version = 1) 
 function savedWith(version: number, page: Schema.Json | undefined): EncodedEvent {
   const content = { source: `version ${version}`, ...(page === undefined ? {} : { page }) };
   return version === 1
-    ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
+    ? {
+        type: 'definition_created',
+        data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: alpha.playbook },
+      }
     : { type: 'definition_updated', data: { content } };
 }
 
@@ -169,13 +176,14 @@ export function playbookAppends(store: LedgerStreams, appends: AppendSignal): Pl
   const append = appendOn(store, appends);
   const ran = ranBy(append);
   const definitions = new Map<string, number>();
+  const saves = inTurn();
   return {
     append,
-    saved: savedBy(append, definitions, viewedType),
-    retired: retiredBy(append, definitions, viewedType),
-    savedPage: (name, details, source) => savedBy(append, definitions, 'page')(name, details, alpha, source),
+    saved: savedBy(append, definitions, viewedType, saves),
+    retired: retiredBy(append, definitions, viewedType, saves),
+    savedPage: (name, details, source) => savedBy(append, definitions, 'page', saves)(name, details, alpha, source),
     ...pageAppendsOf(append),
-    retiredPage: retiredBy(append, definitions, 'page'),
+    retiredPage: retiredBy(append, definitions, 'page', saves),
     ran,
     ranInOneStream: async (subject, outputs) => {
       const id = randomUUID();

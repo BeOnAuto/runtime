@@ -18,7 +18,7 @@ type RecordedRunFact = typeof RunEventSchema.Type;
 
 const recordedRunFactOf = Schema.decodeUnknownSync(RunEventSchema);
 
-const keptTypes: ReadonlySet<string> = new Set(['run_started', 'run_succeeded', 'request_answered']);
+const keptTypes: ReadonlySet<string> = new Set(['run_succeeded', 'request_answered']);
 
 const toAlpha = toPlaybook('acme', 'alpha');
 

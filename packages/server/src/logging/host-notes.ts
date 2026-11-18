@@ -18,12 +18,12 @@ function tookOver({ holder }: NoteOf<'took_over'>): Effect.Effect<void> {
 function backingOff({ run, attempts, detail }: NoteOf<'settle_backing_off'>): Effect.Effect<void> {
   return Effect.logWarning(
     `A run could not be settled in ${attempts} attempts; it is tried again once a minute until it is`,
-  ).pipe(Effect.annotateLogs({ org: run.org, playbook: run.playbook, run_id: run.runId, error: detail }));
+  ).pipe(Effect.annotateLogs({ org: run.org, definition: run.definition, run_id: run.runId, error: detail }));
 }
 
 function settledAfterBackingOff({ run, attempts }: NoteOf<'settled_after_back_off'>): Effect.Effect<void> {
   return Effect.logWarning(`A run that could not be settled was settled at attempt ${attempts}`).pipe(
-    Effect.annotateLogs({ org: run.org, playbook: run.playbook, run_id: run.runId }),
+    Effect.annotateLogs({ org: run.org, definition: run.definition, run_id: run.runId }),
   );
 }
 
@@ -60,7 +60,7 @@ function scheduleStopped(note: NoteOf<'schedule_stopped'>): Effect.Effect<void> 
 function offerDeclined({ run, detail }: NoteOf<'offer_declined'>): Effect.Effect<void> {
   return Effect.logWarning(
     'A run waiting for an event of its playbook did not take one, since its filter failed on the event',
-  ).pipe(Effect.annotateLogs({ org: run.org, playbook: run.playbook, run_id: run.runId, error: detail }));
+  ).pipe(Effect.annotateLogs({ org: run.org, definition: run.definition, run_id: run.runId, error: detail }));
 }
 
 function recordUnreadable({ org, playbook, recordId, type }: NoteOf<'record_unreadable'>): Effect.Effect<void> {
@@ -164,7 +164,7 @@ function runReloaded({ run, snapshot, events, keptBytes }: NoteOf<'run_reloaded'
   ).pipe(
     Effect.annotateLogs({
       org: run.org,
-      playbook: run.playbook,
+      definition: run.definition,
       run_id: run.runId,
       from_snapshot: snapshot,
       events,
@@ -179,7 +179,7 @@ function payloadsRead({ run, texts, bytes, unread }: NoteOf<'payloads_read'>): E
   ).pipe(
     Effect.annotateLogs({
       org: run.org,
-      playbook: run.playbook,
+      definition: run.definition,
       run_id: run.runId,
       texts,
       bytes,

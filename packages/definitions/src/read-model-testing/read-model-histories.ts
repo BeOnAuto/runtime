@@ -1,11 +1,12 @@
 import type { Ledger } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
+import { loadRegistry } from '../operations/registry-access.ts';
 import type { DefinitionCommand, DefinitionCommandData } from '../registry/definition-commands.ts';
 import type { DefinitionContent } from '../registry/definition-events.ts';
 import type { DefinitionRegistry, RegisteredDefinition } from '../registry/definition-registry.ts';
 import { definitionVersionIn, type DefinitionVersionAddress } from '../registry/definition-versions.ts';
-import { definitionsDecider, definitionsFoldIn, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
+import { decidedIn, inPlaybookOf } from './in-the-playbook.ts';
 
 interface TypedCommand {
   readonly type: string;
@@ -138,15 +139,8 @@ function generatedCommands(
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
-function appliedTo(ledger: Ledger['Service'], prefix: string, commands: readonly TypedCommand[]): Effect.Effect<void> {
-  return Effect.forEach(
-    commands,
-    ({ type, command }) =>
-      Effect.ignore(
-        ledger.execute(`${prefix}${definitionTypeStreamOf(type)}`, definitionsDecider(type, alpha), command),
-      ),
-    { discard: true },
-  );
+function appliedTo(ledger: Ledger['Service'], commands: readonly TypedCommand[]): Effect.Effect<void> {
+  return Effect.forEach(commands, ({ type, command }) => decidedIn(ledger, alpha, type, command), { discard: true });
 }
 
 function named(type: string): readonly NamedUse[] {
@@ -155,15 +149,14 @@ function named(type: string): readonly NamedUse[] {
 
 export function registriesIn(
   ledger: Ledger['Service'],
-  prefix: string,
   types: readonly string[],
 ): Effect.Effect<ReadonlyMap<string, DefinitionRegistry>> {
   return Effect.map(
     Effect.forEach(types, (type) =>
-      Effect.map(
-        ledger.load(`${prefix}${definitionTypeStreamOf(type)}`, definitionsFoldIn(alpha)),
-        ({ state }): readonly [string, DefinitionRegistry] => [type, state],
-      ),
+      Effect.map(inPlaybookOf(ledger, alpha, loadRegistry(type)), (registry): readonly [string, DefinitionRegistry] => [
+        type,
+        registry,
+      ]),
     ),
     (loaded: readonly (readonly [string, DefinitionRegistry])[]) => new Map(loaded),
   );
@@ -190,7 +183,7 @@ export async function aGeneratedHistory(
   seed: number,
   types: readonly [string, ...string[]],
 ): Promise<void> {
-  await Effect.runPromise(appliedTo(ledger, 'playbook/acme/alpha/', generatedCommands(seed, 160, types)));
+  await Effect.runPromise(appliedTo(ledger, generatedCommands(seed, 160, types)));
 }
 
 export interface TypedDefinition {
@@ -202,7 +195,7 @@ export async function definitionsIn(
   ledger: Ledger['Service'],
   types: readonly string[],
 ): Promise<readonly TypedDefinition[]> {
-  const registries = await Effect.runPromise(registriesIn(ledger, 'playbook/acme/alpha/', types));
+  const registries = await Effect.runPromise(registriesIn(ledger, types));
   return [...registries].flatMap(([type, registry]: readonly [string, DefinitionRegistry]) =>
     [...registry.values()].map((registered): TypedDefinition => ({ type, registered })),
   );
@@ -238,17 +231,7 @@ export function executedIn(
   playbook = 'alpha',
 ): Promise<void> {
   return Effect.runPromise(
-    Effect.ignore(
-      ledger.execute(
-        `playbook/acme/${playbook}/${definitionTypeStreamOf(type)}`,
-        definitionsDecider(type, { org: 'acme', playbook }),
-        {
-          ...command,
-          by: someone.id,
-          at: savedAt,
-        },
-      ),
-    ),
+    decidedIn(ledger, { org: 'acme', playbook }, type, { ...command, by: someone.id, at: savedAt }),
   );
 }
 

@@ -1,3 +1,4 @@
+import { definitionNamesWith } from '@on.auto/definitions/testing';
 import {
   Ledger,
   StudioLinks,
@@ -11,7 +12,7 @@ import {
   type Runnable,
   type StudioPage,
 } from '@on.auto/operations';
-import { memoryLedger, recordingReporter } from '@on.auto/operations/testing';
+import { memoryLedgerWith, recordingReporter } from '@on.auto/operations/testing';
 import {
   createPlaybook,
   defineUpdatePlaybook,
@@ -127,7 +128,10 @@ export interface ActivityServed {
 const servedToday: ActivityServed = { listActivity: listedToday, markActivitySeen: markedToday, projections: [] };
 
 export function activityHarness(reads: LedgerReads = asItReads, served: ActivityServed = servedToday) {
-  const ledger = memoryLedger(undefined, [...activityProjections, ...served.projections]);
+  const ledger = memoryLedgerWith({
+    projections: [...activityProjections, ...served.projections],
+    definitionNames: definitionNamesWith([]),
+  });
   const { listActivity, markActivitySeen } = served;
   const services = Layer.mergeAll(
     Layer.succeed(Ledger, reads(ledger.service)),

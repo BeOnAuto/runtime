@@ -7,13 +7,17 @@ import { definitionsAfter, keptDefinitionsOf, noDefinitions } from './playbook-d
 
 const fold = 'export function fold(view: number): number { return view + 1; }';
 
+const savedAt = '2026-10-06T09:00:00.000Z';
+
+const laterAt = '2026-10-06T10:00:00.000Z';
+
 function savedAs(name: string, content: object) {
   return {
     type: 'definition_created',
     data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } },
     context: {
       by: 'acme-admin',
-      at: '2026-10-06T09:00:00.000Z',
+      at: savedAt,
       definitionType: 'view',
       definitionName: name,
       definitionVersion: 1,
@@ -27,13 +31,15 @@ describe('the definitions a playbook keeps', () => {
       noDefinitions,
       [
         savedAs('runs', { source: 'the runs document', details: { fold } }),
-        { type: 'definition_renamed', data: {}, context: { by: 'acme-admin', at: 'now', definitionName: 'runs' } },
+        { type: 'definition_renamed', data: {}, context: { by: 'acme-admin', at: laterAt, definitionName: 'runs' } },
       ],
       runnableDetailsOf,
     );
 
     expect(definitions.version).toBe(2);
-    expect([...definitions.functions]).toEqual([['runs', { version: 1, saved: 1, details: { fold } }]]);
+    expect([...definitions.functions]).toEqual([
+      ['runs', { version: 1, saved: Date.parse(savedAt), details: { fold } }],
+    ]);
   });
 
   it('takes a function away at its retirement', () => {
@@ -46,7 +52,7 @@ describe('the definitions a playbook keeps', () => {
           data: {},
           context: {
             by: 'acme-admin',
-            at: 'now',
+            at: laterAt,
             definitionType: 'view',
             definitionName: 'runs',
             definitionVersion: 1,
@@ -61,10 +67,10 @@ describe('the definitions a playbook keeps', () => {
 });
 
 describe('the definitions a playbook keeps through a retirement and a restoration', () => {
-  it('brings a function back at its restoration, with the details its content carries', () => {
+  it('brings a function back at its restoration, with the details its content carries, saved at its time', () => {
     const ofTheRuns = {
       by: 'acme-admin',
-      at: 'now',
+      at: laterAt,
       definitionType: 'view',
       definitionName: 'runs',
       definitionVersion: 1,
@@ -88,7 +94,7 @@ describe('the definitions a playbook keeps through a retirement and a restoratio
 
     expect([definitions.version, [...definitions.functions]]).toEqual([
       3,
-      [['runs', { version: 1, saved: 3, details: { fold } }]],
+      [['runs', { version: 1, saved: Date.parse(laterAt), details: { fold } }]],
     ]);
   });
 });
@@ -97,7 +103,7 @@ describe('the definitions a playbook keeps through a pause and a resumption', ()
   it('keeps a function as it was through its pause and its resumption, each a version of the stream', () => {
     const ofTheRuns = {
       by: 'acme-admin',
-      at: 'now',
+      at: laterAt,
       definitionType: 'view',
       definitionName: 'runs',
       definitionVersion: 1,
@@ -118,7 +124,7 @@ describe('the definitions a playbook keeps through a pause and a resumption', ()
 
     expect([definitions.version, [...definitions.functions]]).toEqual([
       3,
-      [['runs', { version: 1, saved: 1, details: { fold } }]],
+      [['runs', { version: 1, saved: Date.parse(savedAt), details: { fold } }]],
     ]);
   });
 });

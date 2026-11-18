@@ -1,7 +1,6 @@
-import type { StreamProjection } from '@on.auto/operations';
 import { Context, Layer } from 'effect';
 
-import { definitionsReadModel } from '../read-model/definitions-read-model.ts';
+import { definitionTypeOrder } from '../capability/function-terminology.ts';
 
 export const readModelStages = ['off', 'shadow', 'reads', 'on'] as const;
 
@@ -16,12 +15,12 @@ export const DefinitionsReadModel = Context.Reference<StagedReadModel>('@on.auto
   defaultValue: () => ({ stage: 'off', folds: [] }),
 });
 
-export function stagedOver(stage: ReadModelStage, { streams }: Pick<StreamProjection, 'streams'>): StagedReadModel {
-  return { stage, folds: streams };
+export function stagedOver(stage: ReadModelStage, folds: readonly string[]): StagedReadModel {
+  return { stage, folds };
 }
 
 export function definitionsReadModelAt(stage: ReadModelStage): Layer.Layer<never> {
-  return Layer.succeed(DefinitionsReadModel, stagedOver(stage, definitionsReadModel));
+  return Layer.succeed(DefinitionsReadModel, stagedOver(stage, definitionTypeOrder));
 }
 
 export type StagedReading = 'answers' | 'run_starts';

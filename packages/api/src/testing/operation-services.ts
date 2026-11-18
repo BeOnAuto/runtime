@@ -1,7 +1,7 @@
-import { admittingMeter } from '@on.auto/definitions/testing';
+import { admittingMeter, definitionNamesWith, echo } from '@on.auto/definitions/testing';
 import type { DispatcherServices } from '@on.auto/operations';
 import {
-  memoryLedger,
+  memoryLedgerWith,
   memoryPlaybookRegistry,
   recordingReporter,
   type ReportedIncident,
@@ -27,7 +27,7 @@ export function operationServices(tracer: Tracer.Tracer | undefined): OperationS
   const recording = recordingReporter();
   return {
     layer: Layer.mergeAll(
-      memoryLedger().layer,
+      memoryLedgerWith({ definitionNames: definitionNamesWith([echo.type]) }).layer,
       memoryPlaybookRegistry(knownPlaybooks),
       recording.layer,
       admittingMeter,

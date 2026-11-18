@@ -1,6 +1,6 @@
 import { triggerNamed } from '@on.auto/definitions';
 import { statement } from '@on.auto/ledger';
-import { StartingTriggerSchema } from '@on.auto/operations';
+import { StartingTriggerSchema, streamPrefixOfPlaybook } from '@on.auto/operations';
 import { Effect, Schema, type Tracer } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
@@ -15,8 +15,12 @@ export const mostDeferredStarts = 1000;
 
 const aMinute = 60_000;
 
-function refusalOf({ workflow, version, trigger }: ReactionStart, reason: string, codes: RejectionCodes = {}): Refusal {
-  return { workflow, version, trigger, reason, ...codesOf(codes) };
+function refusalOf(
+  { definitionKey, workflow, version, trigger }: ReactionStart,
+  reason: string,
+  codes: RejectionCodes = {},
+): Refusal {
+  return { definitionKey, workflow, version, trigger, reason, ...codesOf(codes) };
 }
 
 function unstarted(start: ReactionStart, failure: FailureDetail): Refusal {
@@ -42,6 +46,7 @@ interface StartingParts {
 const ReactionStartSchema = Schema.Struct({
   org: Schema.String,
   playbook: Schema.String,
+  definitionKey: Schema.String,
   workflow: Schema.String,
   version: Schema.Int,
   runId: Schema.String,
@@ -53,7 +58,6 @@ const ReactionStartSchema = Schema.Struct({
 });
 
 const DeferredRow = Schema.Struct({
-  playbook_key: Schema.String,
   start: Schema.fromJsonString(ReactionStartSchema),
   attempts: WholeNumber,
 });
@@ -68,12 +72,12 @@ function minuteOf(at: number): number {
   return Math.floor(at / aMinute) * aMinute;
 }
 
-function admitted(database: HostDatabase, playbookKey: string, workflow: string, minute: number) {
+function admitted(database: HostDatabase, definitionKey: string, minute: number) {
   return Effect.orDie(
     database.write(
-      statement`INSERT INTO workflow_reaction_rates (playbook_key, workflow, minute, starts)
-        VALUES (${playbookKey}, ${workflow}, ${minute}, 1)
-        ON CONFLICT (playbook_key, workflow) DO UPDATE SET
+      statement`INSERT INTO workflow_reaction_rates (definition_key, minute, starts)
+        VALUES (${definitionKey}, ${minute}, 1)
+        ON CONFLICT (definition_key) DO UPDATE SET
           starts = CASE WHEN workflow_reaction_rates.minute = excluded.minute
             THEN workflow_reaction_rates.starts + 1 ELSE 1 END,
           minute = excluded.minute
@@ -83,13 +87,12 @@ function admitted(database: HostDatabase, playbookKey: string, workflow: string,
   ).pipe(Effect.map((rows) => rows.length > 0));
 }
 
-function deferredOf(database: HostDatabase, playbookKey: string, workflow: string) {
+function deferredOf(database: HostDatabase, definitionKey: string) {
   return Effect.orDie(
     rowsOf(
       CountRow,
       database.read(
-        statement`SELECT count(*) AS deferred FROM workflow_reaction_backlog
-          WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
+        statement`SELECT count(*) AS deferred FROM workflow_reaction_backlog WHERE definition_key = ${definitionKey}`,
       ),
     ),
   ).pipe(Effect.map((rows) => rows.reduce((sum, { deferred }) => sum + deferred, 0)));
@@ -123,7 +126,7 @@ function deferredStart(
   start: ReactionStart,
   minute: number,
 ) {
-  return Effect.flatMap(deferredOf(database, playbookKey, start.workflow), (deferred) =>
+  return Effect.flatMap(deferredOf(database, start.definitionKey), (deferred) =>
     deferred >= mostDeferredStarts
       ? refusals.refuse(
           playbookKey,
@@ -135,21 +138,21 @@ function deferredStart(
       : Effect.asVoid(
           Effect.orDie(
             database.write(
-              statement`INSERT INTO workflow_reaction_backlog (playbook_key, workflow, run_id, start, due)
-                VALUES (${playbookKey}, ${start.workflow}, ${start.runId}, ${JSON.stringify(start)}, ${minute + aMinute})
-                ON CONFLICT (playbook_key, run_id) DO NOTHING`,
+              statement`INSERT INTO workflow_reaction_backlog (definition_key, run_id, start, due)
+                VALUES (${start.definitionKey}, ${start.runId}, ${JSON.stringify(start)}, ${minute + aMinute})
+                ON CONFLICT (definition_key, run_id) DO NOTHING`,
             ),
           ),
         ),
   );
 }
 
-function withoutDeferred(database: HostDatabase, { playbook_key: playbookKey, start }: Deferred) {
+function withoutDeferred(database: HostDatabase, { start }: Deferred) {
   return Effect.asVoid(
     Effect.orDie(
       database.write(
         statement`DELETE FROM workflow_reaction_backlog
-          WHERE playbook_key = ${playbookKey} AND run_id = ${start.runId}`,
+          WHERE definition_key = ${start.definitionKey} AND run_id = ${start.runId}`,
       ),
     ),
   );
@@ -160,7 +163,7 @@ function deferredAgain({ database }: StartingParts, deferred: Deferred, minute: 
     Effect.orDie(
       database.write(
         statement`UPDATE workflow_reaction_backlog SET due = ${minute + aMinute}, attempts = ${attempts}
-          WHERE playbook_key = ${deferred.playbook_key} AND run_id = ${deferred.start.runId}`,
+          WHERE definition_key = ${deferred.start.definitionKey} AND run_id = ${deferred.start.runId}`,
       ),
     ),
   );
@@ -171,7 +174,7 @@ function failedWhenDue(parts: StartingParts, deferred: Deferred, minute: number,
   return attempts < deliverySweeps
     ? deferredAgain(parts, deferred, minute, attempts)
     : Effect.andThen(
-        parts.refusals.refuse(deferred.playbook_key, unstarted(deferred.start, failure)),
+        parts.refusals.refuse(streamPrefixOfPlaybook(deferred.start), unstarted(deferred.start, failure)),
         withoutDeferred(parts.database, deferred),
       );
 }
@@ -190,10 +193,10 @@ function deferredSpanOf({ org, playbook, runId, workflow, trigger, trace }: Reac
 }
 
 function startedWhenDue(parts: StartingParts, deferred: Deferred, minute: number) {
-  const { playbook_key: playbookKey, start } = deferred;
-  return Effect.flatMap(admitted(parts.database, playbookKey, start.workflow, minute), (admits) =>
+  const { start } = deferred;
+  return Effect.flatMap(admitted(parts.database, start.definitionKey, minute), (admits) =>
     admits
-      ? started(parts, playbookKey, start).pipe(
+      ? started(parts, streamPrefixOfPlaybook(start), start).pipe(
           Effect.withSpan('deferred_start', deferredSpanOf(start)),
           Effect.andThen(withoutDeferred(parts.database, deferred)),
           Effect.catch((failure: FailureDetail) => failedWhenDue(parts, deferred, minute, failure)),
@@ -212,7 +215,7 @@ export function startingOn(
   return {
     start: (playbookKey, start) => {
       const minute = minuteOf(now());
-      return Effect.flatMap(admitted(database, playbookKey, start.workflow, minute), (admits) =>
+      return Effect.flatMap(admitted(database, start.definitionKey, minute), (admits) =>
         admits ? started(parts, playbookKey, start) : deferredStart(parts, playbookKey, start, minute),
       );
     },
@@ -223,7 +226,7 @@ export function startingOn(
           rowsOf(
             DeferredRow,
             database.read(
-              statement`SELECT playbook_key, start, attempts FROM workflow_reaction_backlog WHERE due <= ${now()}
+              statement`SELECT start, attempts FROM workflow_reaction_backlog WHERE due <= ${now()}
                 ORDER BY due, run_id LIMIT ${mostStartsAMinute}`,
             ),
           ),

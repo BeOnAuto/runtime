@@ -2,7 +2,7 @@ import { Conflict } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -18,7 +18,10 @@ const atTheFinish = recordedWith({ ...start, ...ofGreet, at: '2026-10-01T09:00:0
 
 const greeting = { definition_type: 'echo', name: 'greet', input: { who: 'Ada', tags: ['a', 'b'] } };
 
-const started = atTheStart({ type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input } });
+const started = atTheStart({
+  type: 'run_started',
+  data: { ...startedInAlpha, input: greeting.input },
+});
 
 const succeeded = atTheFinish({ type: 'run_succeeded', data: { output: 'Hello Ada', record: {} } });
 
@@ -46,6 +49,7 @@ function starting(request: object = {}): RunCommand {
     type: 'start',
     ...greeting,
     started_by: recordedAdmin,
+    playbook: 'alpha',
     calls_tools: false,
     ...request,
     definition_version: 1,
@@ -64,7 +68,7 @@ describe('starting a run whose definition calls tools', () => {
 
   const startOfTools: RunEvent = {
     type: 'run_started',
-    data: { started_by: recordedAdmin, input: greeting.input, calls_tools: true },
+    data: { ...startedInAlpha, input: greeting.input, calls_tools: true },
   };
 
   const startedWithTools = atTheStart(startOfTools);

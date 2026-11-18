@@ -5,7 +5,7 @@ import { acquiredHere } from '../attempts/live-attempts.ts';
 import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import type { RunAttempt, RunContext, RunLineage } from '../capability/run-context.ts';
 import { runJournal, type LedgerJournal } from '../journal/run-journal.ts';
-import { preparedDefinition, type VersionToRun } from './definition-preparation.ts';
+import { preparedDefinition, type DefinitionToStart, type VersionToRun } from './definition-preparation.ts';
 
 export interface Called extends GivenLineage {
   readonly capabilities: readonly Capability[];
@@ -16,6 +16,10 @@ export interface Prepared {
   readonly definition: VersionToRun;
   readonly prepared: PreparedDefinition;
   readonly createOnly?: true;
+}
+
+export interface PreparedToStart extends Prepared {
+  readonly definition: DefinitionToStart;
 }
 
 export interface JournalledRun extends RunContext {
@@ -70,7 +74,7 @@ export const contextOf = Effect.fnUntraced(function* (
     org,
     playbook,
     caller: yield* Caller,
-    definition: { name: definition.name, version: definition.version },
+    definition: { id: journal.definition, name: definition.name, version: definition.version },
     journal,
     lineage,
     depth: given.depth,

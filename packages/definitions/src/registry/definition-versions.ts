@@ -1,4 +1,10 @@
-import { streamPrefixOfPlaybook, type Fold, type PlaybookAddress, type StreamReader } from '@on.auto/operations';
+import {
+  streamPrefixOfPlaybook,
+  type Fold,
+  type LedgerPorts,
+  type PlaybookAddress,
+  type StreamReader,
+} from '@on.auto/operations';
 import { payloadOf, type Payload } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
@@ -18,9 +24,8 @@ export interface VersionSearch {
   readonly found: RecordedVersion | undefined;
 }
 
-function isOfTheVersion(event: RecordedDefinitionEvent, name: string, version: number): boolean {
-  const { definitionName, definitionVersion } = event.context;
-  return definitionName === name && definitionVersion === version;
+function isOfTheVersion(event: RecordedDefinitionEvent, version: number): boolean {
+  return event.context.definitionVersion === version;
 }
 
 function foundAfter(
@@ -43,20 +48,17 @@ function foundAfter(
     : found;
 }
 
-function evolvedSearch(
-  name: string,
-  version: number,
-): (search: VersionSearch, event: RecordedDefinitionEvent) => VersionSearch {
+function evolvedSearch(version: number): (search: VersionSearch, event: RecordedDefinitionEvent) => VersionSearch {
   return ({ position, found }, event) => {
     const at = position + 1;
-    return { position: at, found: isOfTheVersion(event, name, version) ? foundAfter(found, event, at) : found };
+    return { position: at, found: isOfTheVersion(event, version) ? foundAfter(found, event, at) : found };
   };
 }
 
-export function definitionVersionFold(name: string, version: number): Fold<VersionSearch, RecordedDefinitionEvent> {
+export function definitionVersionFold(version: number): Fold<VersionSearch, RecordedDefinitionEvent> {
   return {
     initialState: { position: 0, found: undefined },
-    evolve: evolvedSearch(name, version),
+    evolve: evolvedSearch(version),
     eventSchema: DefinitionEventSchema,
   };
 }
@@ -67,11 +69,20 @@ export interface DefinitionVersionAddress {
   readonly version: number;
 }
 
+export type DefinitionVersionReader = StreamReader & Pick<LedgerPorts, 'holderOfName'>;
+
 export function definitionVersionIn(
-  reader: StreamReader,
+  reader: DefinitionVersionReader,
   playbook: PlaybookAddress,
   { type, name, version }: DefinitionVersionAddress,
 ): Effect.Effect<RecordedVersion | undefined> {
-  const stream = `${streamPrefixOfPlaybook(playbook)}${definitionTypeStreamOf(type)}`;
-  return Effect.map(reader.load(stream, definitionVersionFold(name, version)), ({ state }) => state.found);
+  const named = { playbookKey: streamPrefixOfPlaybook(playbook), definitionType: type, name };
+  return Effect.flatMap(reader.holderOfName(named), (held) =>
+    held === undefined
+      ? Effect.undefined
+      : Effect.map(
+          reader.load(`${held.definitionKey}${definitionTypeStreamOf(type)}`, definitionVersionFold(version)),
+          ({ state }) => state.found,
+        ),
+  );
 }

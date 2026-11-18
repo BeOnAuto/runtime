@@ -4,7 +4,7 @@ import { definitionsReadModel } from '@on.auto/definitions';
 import { assets, assetTotals, generationsWaiting } from '@on.auto/generation';
 import { goalsLedger } from '@on.auto/goals';
 import { conversations, openRequests, readings, tellings } from '@on.auto/interaction';
-import type { KeptProjection, StreamProjection } from '@on.auto/operations';
+import type { KeptProjection } from '@on.auto/operations';
 
 export const keptProjections: readonly KeptProjection[] = [
   openRequests,
@@ -17,6 +17,5 @@ export const keptProjections: readonly KeptProjection[] = [
   generationsWaiting,
   ...goalsLedger.projections,
   roleAssignmentRows,
+  ...definitionsReadModel,
 ];
-
-export const keptStreamProjections: readonly StreamProjection[] = [definitionsReadModel];

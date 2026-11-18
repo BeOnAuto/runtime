@@ -18,6 +18,7 @@ export function followedRecordOf(data: Json, about: Partial<FollowedEvent> = {})
   return {
     playbook: { org: 'acme', playbook: 'alpha' },
     playbookKey: 'playbook/acme/alpha/',
+    filedUnder: 'playbook/acme/alpha/',
     record: {
       id: 'record-1',
       cursor: 'c1',

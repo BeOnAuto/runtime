@@ -1,13 +1,14 @@
-import { echo, recordedAsGiven } from '@on.auto/definitions/testing';
+import { definitionNamesWith, echo } from '@on.auto/definitions/testing';
 import { Ledger, makeDispatcher, playbookCallerOf, type PlaybookRequest } from '@on.auto/operations';
-import { memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
+import { memoryLedgerWith, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { recordedUnderItsDefinition } from '../testing/attempt-leases/recorded-runtime.ts';
 import { defineNextAttempt, defineRefusedAttempt } from './next-attempts.ts';
 
 const services = Layer.mergeAll(
-  memoryLedger().layer,
+  memoryLedgerWith({ definitionNames: definitionNamesWith(['echo']) }).layer,
   memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
   recordingReporter().layer,
 );
@@ -68,11 +69,11 @@ describe('the next attempt of a run that has ended', () => {
   it('is no attempt, the run answered as it stands', async () => {
     const at = '2026-11-15T09:00:00.000Z';
     const context = { runId, by: 'playbook:alpha', at, definitionType: 'echo', definitionName: 'greet' };
-    const started = { started_by: { id: 'playbook:alpha', name: 'alpha' }, input: {} };
+    const started = { started_by: { id: 'playbook:alpha', name: 'alpha' }, playbook: 'alpha', input: {} };
     const ran = Effect.gen(function* () {
-      yield* recordedAsGiven(
+      yield* recordedUnderItsDefinition(
         yield* Ledger,
-        `playbook/acme/alpha/runs/${runId}`,
+        { type: 'echo', name: 'greet' },
         [
           { type: 'run_started', data: started },
           { type: 'run_succeeded', data: { output: 'Hello', record: {} } },

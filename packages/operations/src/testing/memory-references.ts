@@ -15,8 +15,9 @@ export interface MemoryReferences {
   readonly removalOver: (outside: KeptOutside) => UnheldContentRemover['removeUnheld'];
 }
 
-function ofAPlaybook(stream: string): boolean {
-  return addressedStreamOf(stream)?.scope === 'playbook';
+function holdsContent(stream: string): boolean {
+  const scope = addressedStreamOf(stream)?.scope;
+  return scope !== undefined && scope !== 'org';
 }
 
 function heldAmong(held: ReadonlyMap<string, HeldDigests>, { org }: ContentOwner, sha256: string): boolean {
@@ -29,7 +30,7 @@ function heldAmong(held: ReadonlyMap<string, HeldDigests>, { org }: ContentOwner
 function referencesBy(holders: ContentHolders): MemoryReferences {
   const held = new Map<string, HeldDigests>();
   const folded = (stream: string, facts: readonly TypedEvent[], from?: HeldDigests): (() => void) => {
-    if (!ofAPlaybook(stream)) {
+    if (!holdsContent(stream)) {
       return Function.constVoid;
     }
     const after = heldOver(holders, facts, from);

@@ -2,7 +2,7 @@ import { Conflict, NotFound } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand, RunOutcome, RunResult } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -22,7 +22,10 @@ const ofHandOn = { definitionType: 'relay', definitionName: 'hand-on', definitio
 
 const atTheStart = recordedWith({ ...start, ...ofHandOn });
 
-const started = atTheStart({ type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input } });
+const started = atTheStart({
+  type: 'run_started',
+  data: { ...startedInAlpha, input: greeting.input },
+});
 
 const deferral: RunOutcome = { type: 'run_deferred', data: { record: { run: 'r-1' } } };
 
@@ -59,6 +62,7 @@ const starting: RunCommand = {
   type: 'start',
   ...greeting,
   started_by: recordedAdmin,
+  playbook: 'alpha',
   definition_version: 1,
   calls_tools: false,
   ...start,
@@ -160,7 +164,7 @@ describe('a settlement that does not land', () => {
 
   it('as unavailable lets a call with its id start it again', () => {
     expect(decided(starting, started, deferred, unavailable)).toStrictEqual(
-      Result.succeed([{ type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input } }]),
+      Result.succeed([{ type: 'run_started', data: { ...startedInAlpha, input: greeting.input } }]),
     );
     expect(stateAfter(started, deferred, unavailable, started)).toMatchObject({ deferred: false });
   });
@@ -168,14 +172,17 @@ describe('a settlement that does not land', () => {
 
 const startedLater = atTheStart({
   type: 'run_started',
-  data: { started_by: recordedAdmin, input: greeting.input, finishes_later: true },
+  data: { ...startedInAlpha, input: greeting.input, finishes_later: true },
 });
 
 describe('a run whose start says it finishes later', () => {
   it('is recorded with that on its start', () => {
     expect(decided({ ...starting, finishes_later: true })).toStrictEqual(
       Result.succeed([
-        { type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input, finishes_later: true } },
+        {
+          type: 'run_started',
+          data: { ...startedInAlpha, input: greeting.input, finishes_later: true },
+        },
       ]),
     );
     expect(stateAfter(startedLater)).toMatchObject({ finishesLater: true, deferred: false });

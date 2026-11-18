@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { runDecider } from '../runs/run-decider.ts';
 import { asked, askedRun } from '../testing/asked-runs.ts';
-import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
+import { acmeAdmin, startedInAlpha } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
@@ -25,7 +25,7 @@ describe('the text a run fact is stored as while the switch is off, as the relea
     const definitions = harness();
     const start = { type: 'start', definition_type: 'echo', name: 'greet', input: { lead: 'lead-1' } } as const;
     const options = { calls_tools: true, finishes_later: true, resumes: true, output_shape: 'table' } as const;
-    const command = { ...start, ...options, started_by: recordedAdmin, definition_version: 1 };
+    const command = { ...start, ...options, ...startedInAlpha, definition_version: 1 };
     await Effect.runPromise(
       definitions.ledger.service.execute(`playbook/acme/alpha/runs/${runId}`, runDecider, {
         ...command,
@@ -36,7 +36,7 @@ describe('the text a run fact is stored as while the switch is off, as the relea
     );
 
     expect(await storedTextOf(definitions, runId)).toBe(
-      '{"input":{"lead":"lead-1"},"started_by":{"id":"acme-admin","name":"acme-admin"},"calls_tools":true,"finishes_later":true,"resumes":true,"output_shape":"table"}',
+      '{"input":{"lead":"lead-1"},"started_by":{"id":"acme-admin","name":"acme-admin"},"playbook":"alpha","calls_tools":true,"finishes_later":true,"resumes":true,"output_shape":"table"}',
     );
   });
 

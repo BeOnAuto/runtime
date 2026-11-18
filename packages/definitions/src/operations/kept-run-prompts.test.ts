@@ -2,10 +2,10 @@ import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
+import { acmeAdmin, startedInAlpha } from '../testing/callers.ts';
 import { prompted } from '../testing/capabilities/prompted.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { firstMoment, harness, toPlaybook, runStreamIn } from '../testing/harness.ts';
 import { keptArmOf, keptIn, keptLongBeforeAndLost, recordedAsGiven, watchedStore } from '../testing/kept-payloads.ts';
 import { admittingMeter } from '../testing/recording-meter.ts';
 
@@ -47,9 +47,9 @@ async function withAKeptPrompt(keeps: boolean) {
         : keptLongBeforeAndLost(service.content, watched.store, alpha, prompt),
       recordedAsGiven(
         service,
-        `playbook/acme/alpha/runs/${runId}`,
+        runStreamIn(definitions.ledger, { type: 'prompted', name: 'ask' }, runId),
         [
-          { type: 'run_started', data: { input, started_by: recordedAdmin } },
+          { type: 'run_started', data: { input, ...startedInAlpha } },
           {
             type: 'run_succeeded',
             data: {

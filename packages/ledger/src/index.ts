@@ -30,7 +30,6 @@ export type {
   NameBound,
   NamedMessage,
 } from './definition-names/definition-names.ts';
-export { definitionNamesFilledBy } from './definition-names/names-filled.ts';
 export type { RecordedKeys } from './keys/recorded-keys.ts';
 export { LedgerLog, samePoint, type LoggedEvent, type LogPage, type LogPorts } from './log/ledger-log.ts';
 export { UnreadableEvent } from './log/unreadable-event.ts';
@@ -48,6 +47,7 @@ export {
   type MultiStreamAppender,
 } from './multi-stream/multi-stream-appender.ts';
 export { StreamRefused } from './multi-stream/stream-refused.ts';
+export { appendRefusedAs, conflictOfARefusal } from './refusals/append-refused.ts';
 export type {
   AppendedStreams,
   AppendObserver,
@@ -71,7 +71,6 @@ export type {
 } from './event-store.ts';
 export { sqliteLayout, type LayoutDialect } from './layout/layout-dialects.ts';
 export {
-  layoutStepsInSequence,
   type LayoutStep,
   type StatementInEachDialect,
   type StepInCode,
@@ -79,9 +78,8 @@ export {
   type StepStatement,
 } from './layout/layout-steps.ts';
 export { LedgerFactsRefused, type FactSchemaRead, type UnreadableFact } from './layout/ledger-facts-refused.ts';
+export { ledgerLayout } from './layout/ledger-layout.ts';
 export { LedgerLayoutRefused } from './layout/ledger-layout-refused.ts';
-export { ledgerLayoutSteps } from './layout/ledger-steps.ts';
-export { orgContentLayout } from './org-content/org-content-step.ts';
 export type { LedgerServices, OpenedLedger } from './ledger-layer.ts';
 export { cursorOf as recordedCursorOf } from './recorded/cursor.ts';
 export {
@@ -98,7 +96,7 @@ export { sqliteEventStore, type SQLiteStoreOptions } from './sqlite-event-store.
 export { sqliteSecretRowsOn } from './secrets/sqlite-secret-rows.ts';
 export { sqliteReceivedWebhooksOn } from './webhooks/sqlite-received-webhooks.ts';
 export type { ReceivedWebhooks, WebhookReceipt } from './webhooks/received-webhooks.ts';
-export { recordedReaderOf } from './recorded/recorded-reader.ts';
+export { orgRecordedReaderOf, recordedReaderOf, type OrgPageRequest } from './recorded/recorded-reader.ts';
 export { sqliteDefinitionStreamsIndexed, sqlitePlanOf, sqliteStatementPlanOf } from './recorded/sqlite-plans.ts';
 export { isVersionConflict, retriedOnVersionConflict, VersionConflict } from './version-conflict.ts';
 export { streamAppends, streamSignalOf, type StreamAppended, type StreamSignal } from './signal/append-signal.ts';

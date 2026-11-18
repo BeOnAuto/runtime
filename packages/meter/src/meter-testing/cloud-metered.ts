@@ -5,7 +5,7 @@ import type { AdmissionAuthority, AuthorityAnswer } from '../admission/authority
 import { meterOver } from '../admission/ledger-meter.ts';
 import { sqliteLedger, tamperingOn } from '../testing/ledgers.ts';
 import { meterRuntimeOn } from '../testing/meter-runtime.ts';
-import { answerOf, runOf, runStreamOf, starts } from '../testing/runs.ts';
+import { answerOf, runOf, startedIn } from '../testing/runs.ts';
 
 export interface Asked {
   readonly authority: AdmissionAuthority;
@@ -36,7 +36,8 @@ export async function cloudMetered({ authority }: Asked) {
   return {
     ...runtime,
     tampering: tamperingOn(at),
-    admitted: (run: string) => runtime.timed(answerOf(meter.admit(runOf(run)), 'admitted')),
-    started: (run: string) => runtime.onTheLedger((ledger) => ledger.execute(runStreamOf(run), starts, null)),
+    admitted: (run: string, playbook?: string) =>
+      runtime.timed(answerOf(meter.admit(runOf(run, playbook)), 'admitted')),
+    started: (run: string, playbook?: string) => runtime.onTheLedger((ledger) => startedIn(ledger, run, playbook)),
   };
 }

@@ -24,6 +24,15 @@ async function posted(port: number, path: string, body: object): Promise<unknown
   return answer;
 }
 
+async function keysOfTheDefinitionIn(ledgerFile: string): Promise<readonly string[]> {
+  return namesIn(
+    await readOfTheLedgerIn(
+      ledgerFile,
+      statement`SELECT definition_key AS name FROM definition_names_1 WHERE playbook_key = 'playbook/local/alpha/' AND definition_type = 'workflow' AND name = 'tally'`,
+    ),
+  );
+}
+
 async function admittedByTheMeterIn(ledgerFile: string): Promise<readonly string[]> {
   return namesIn(
     await readOfTheLedgerIn(
@@ -52,6 +61,10 @@ describe('a runtime the auto-runtime command started', () => {
     runtime.interrupt();
     await runtime.exited;
 
-    expect(await admittedByTheMeterIn(`${home}/.auto-runtime/ledger.db`)).toEqual([`playbook/local/alpha/runs/${run}`]);
+    const ledgerFile = `${home}/.auto-runtime/ledger.db`;
+    const definitionKeys = await keysOfTheDefinitionIn(ledgerFile);
+
+    expect(definitionKeys).toEqual([expect.stringMatching(/^definition\/local\/[^/]+\/$/u)]);
+    expect(await admittedByTheMeterIn(ledgerFile)).toEqual([`org/local/runs/${run}`]);
   });
 });

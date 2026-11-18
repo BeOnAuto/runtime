@@ -7,10 +7,11 @@ import { rowsOf } from '../database/host-database.ts';
 import {
   alpha,
   at,
-  eventTrigger,
-  published,
+  definitionKeyNamed,
   definitionRecorded,
   definitionRetired,
+  eventTrigger,
+  published,
 } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { refusedWhile, rejectedFor } from '../reaction-testing/recorded-reactions.ts';
@@ -60,9 +61,10 @@ describe('a workflow whose trigger is an event', () => {
       {
         org: 'acme',
         playbook: 'alpha',
+        definitionKey: definitionKeyNamed('close'),
         workflow: 'close',
         version: 1,
-        runId: reactionRunIdOf('close', 1, '/schedule/on', cause),
+        runId: reactionRunIdOf(definitionKeyNamed('close'), 1, '/schedule/on', cause),
         input: [
           { specversion: '1.0', source: '/acme', time: at, id: 'e1', type: 'com.acme.closed', data: { region: 'eu' } },
         ],

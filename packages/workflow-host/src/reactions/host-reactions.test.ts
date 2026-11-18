@@ -21,8 +21,8 @@ import { type HostClock, systemClock } from '../loop/host-clock.ts';
 import { subscribed } from '../reaction-testing/event-subscriptions.ts';
 import { followedRecordOf } from '../reaction-testing/followed-records.ts';
 import {
-  alpha,
   byAdmin,
+  definitionKeyNamed,
   definitionRecorded,
   eventTrigger,
   published,
@@ -53,6 +53,7 @@ function startNumber(index: number): ReactionStart {
   return {
     org: 'acme',
     playbook: 'alpha',
+    definitionKey: 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-0000000c105e/',
     workflow: 'close',
     version: 1,
     runId: `run-${index}`,
@@ -207,7 +208,9 @@ function named(consumers: Consumers, name: string): Consumers[number] {
   return found;
 }
 
-const ofClose = { workflow: 'close', version: 3 };
+const closing = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-0000000c105e/';
+
+const ofClose = { definitionKey: closing, workflow: 'close', version: 3 };
 
 const daily = { kind: 'cron', reference: '/schedule/cron' } as const;
 
@@ -222,7 +225,7 @@ const ofTheWorkflow = {
   definitionVersion: 3,
 };
 
-const started = { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} };
+const started = { started_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha', input: {} };
 
 const ofTheRun = {
   ...byAdmin,
@@ -382,7 +385,7 @@ describe('a start that waited for a later minute', () => {
     const starting = startingOn(
       database,
       () => Effect.void,
-      refusalsOn(database, () => time.now),
+      refusalsOn(database, 'workflow', () => time.now),
       () => time.now,
     );
     const recording = recordingTracer();
@@ -447,7 +450,7 @@ describe('a start that waited for a later minute, refused because its workflowâ€
     const unread = { now: false };
     const { start, started: startedDeferredStarts } = startedUnlessUnread(unread);
     const database = await openedOn(await onSQLite());
-    const refusals = refusalsOn(database, () => time.now);
+    const refusals = refusalsOn(database, 'workflow', () => time.now);
     const starting = startingOn(database, start, refusals, () => time.now);
     await aMinuteOfStartsAndOneMore(starting);
     unread.now = true;
@@ -495,7 +498,7 @@ describe('the consumers of the reactions of a host', () => {
     expect(notes).toEqual([
       {
         kind: 'offer_declined',
-        run: { org: 'acme', playbook: 'alpha', runId },
+        run: { org: 'acme', definition: 'alpha', runId },
         detail: 'The run took no event of this kind',
       },
     ]);
@@ -506,8 +509,8 @@ describe('the refusals of the reactions of a workflow', () => {
   it('are recorded through their decider once a minute ends, one record a trigger and minute, counted, with the last reason, its kind and its because, and the version of the workflow, at the next refusal of that trigger or the next flush', async () => {
     const database = await openedOn(await onSQLite());
     const time = { now: minute + 1000 };
-    const refusals = refusalsOn(database, () => time.now);
-    const refuse = (refusal: Omit<Refusal, 'workflow' | 'version'>) =>
+    const refusals = refusalsOn(database, 'workflow', () => time.now);
+    const refuse = (refusal: Omit<Refusal, 'definitionKey' | 'workflow' | 'version'>) =>
       Effect.runPromise(refusals.refuse(playbookKey, { ...ofClose, ...refusal }));
 
     await refuse({ reason: 'first', trigger: onEvent });
@@ -522,7 +525,7 @@ describe('the refusals of the reactions of a workflow', () => {
     const flushedAgain = await Effect.runPromise(refusals.flush());
     time.now = minute + 3 * aMinute;
     await refuse({ reason: 'sixth', trigger: onEvent, kind: 'meter_unavailable' });
-    const { messages } = await database.store.read(reactionsStreamOf(playbookKey, 'close'));
+    const { messages } = await database.store.read(reactionsStreamOf(closing, 'workflow'));
 
     expect([flushedEarly, flushed, flushedAgain]).toEqual([0, 3, 0]);
     expect(messages.map(({ type, data, context }) => ({ type, data, context }))).toEqual([
@@ -554,7 +557,7 @@ describe('the refusals recorded on the stream of a workflow', () => {
   it('are appended after the facts the stream holds, which are not read to learn its version', async () => {
     const measured = readingMeasured(await openedOn(await onSQLite()));
     const time = { now: minute + 1000 };
-    const refusals = refusalsOn(measured.database, () => time.now);
+    const refusals = refusalsOn(measured.database, 'workflow', () => time.now);
     const refusedAt = async (at: number) => {
       time.now = at;
       await Effect.runPromise(refusals.refuse(playbookKey, { ...ofClose, reason: 'r'.repeat(10 * 1024) }));
@@ -567,7 +570,7 @@ describe('the refusals recorded on the stream of a workflow', () => {
 
     await Effect.runPromise(refusals.flush());
     const readToRecord = measured.bytesRead() - readBefore;
-    const { messages } = await measured.database.store.read(reactionsStreamOf(playbookKey, 'close'));
+    const { messages } = await measured.database.store.read(reactionsStreamOf(closing, 'workflow'));
 
     expect([readToRecord, messages.length]).toEqual([0, 3]);
   });
@@ -576,7 +579,7 @@ describe('the refusals recorded on the stream of a workflow', () => {
 describe('the workflow a run began, as the starts of an event trigger learn it', () => {
   it('is read from the first fact of the run alone, and nothing of the output of 100 KiB its end holds', async () => {
     const measured = readingMeasured(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
-    const stream = `${alpha}runs/r-close`;
+    const stream = `${definitionKeyNamed('close')}runs/r-close`;
     const output = { text: 'x'.repeat(100 * 1024) };
     await recorded(measured.database.store, stream, { type: 'run_started', data: started }, ofTheRun);
     await recorded(measured.database.store, stream, { type: 'run_succeeded', data: { output, record: {} } }, ofTheRun);

@@ -17,7 +17,7 @@ import {
   type WorkflowRun,
 } from '../index.ts';
 import { modelCallAnswered, modelCallSent } from '../journal-testing/model-calls.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { startedInAlpha } from '../testing/callers.ts';
 import { settledAt, withHandOn } from '../testing/relaying.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { CallFact, ModelCallFact, RunCommand } from './run-commands.ts';
@@ -67,9 +67,15 @@ function decided(fact: CallFact, ...history: readonly RecordedRunEvent[]) {
 
 const input = { who: 'Ada' };
 
-const startedToResume = atTheStart({ type: 'run_started', data: { started_by: recordedAdmin, input, resumes: true } });
+const startedToResume = atTheStart({
+  type: 'run_started',
+  data: { ...startedInAlpha, input, resumes: true },
+});
 
-const startedInItsCall = atTheStart({ type: 'run_started', data: { started_by: recordedAdmin, input } });
+const startedInItsCall = atTheStart({
+  type: 'run_started',
+  data: { ...startedInAlpha, input },
+});
 
 const cancelAsked = meanwhile({ type: 'run_cancel_requested', data: { kind: 'requested', reason: 'Not needed' } });
 
@@ -178,7 +184,7 @@ const context = {
   calledBy,
 };
 
-const started = { type: 'run_started', data: { started_by: recordedAdmin, input: {} }, context };
+const started = { type: 'run_started', data: { ...startedInAlpha, input: {} }, context };
 
 const succeeded = { type: 'run_succeeded', data: { output: 'done', record: {} }, context };
 
@@ -344,7 +350,7 @@ describe('the start of a run read from its record', () => {
     expect([
       runStartedOf({
         type: 'run_started',
-        data: { started_by: recordedAdmin, input: {} },
+        data: { ...startedInAlpha, input: {} },
         context: { ...contextRunStarts, depth: 2 },
       }),
       runStartedOf({ type: 'run_failed', data: {}, context: contextRunStarts }),
@@ -359,7 +365,7 @@ describe('the start of a run read from its record', () => {
     expect(() =>
       runStartedOf({
         type: 'run_started',
-        data: { started_by: recordedAdmin, input: {} },
+        data: { ...startedInAlpha, input: {} },
         context: withoutItsDefinition,
       }),
     ).toThrow('Missing key');

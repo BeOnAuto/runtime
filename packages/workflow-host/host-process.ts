@@ -7,7 +7,7 @@ import { Effect, Schema } from 'effect';
 
 import { workflowHostOnALedger } from './src/ledger-testing/ledger-connections.ts';
 import { recordedReactions } from './src/reaction-testing/recorded-reactions.ts';
-import { startOf, testMachine } from './src/testing/host-documents.ts';
+import { definitionOfTheTests, startOf, testMachine } from './src/testing/host-documents.ts';
 import { databaseSettingsOf, type ProcessDatabase } from './src/testing/host-processes.ts';
 import { recordedWaiting } from './src/waiting-testing/recorded-waiting.ts';
 
@@ -22,7 +22,12 @@ const database: ProcessDatabase = Schema.decodeUnknownSync(
   ),
 )(settingsText);
 
-const run = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' };
+const run = {
+  org: 'acme',
+  playbook: 'alpha',
+  definition: definitionOfTheTests,
+  runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+};
 
 const notifying = {
   document: { dsl: '1.0.3', namespace: 'acme', name: 'notifying', version: '1.0.0' },

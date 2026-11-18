@@ -50,7 +50,7 @@ describe('the in-memory ledger whose outcomes of runs or whose projection throws
       rowAfter: breakingOnNotes,
     };
     const ledgers: readonly AppendingLedger[] = [
-      { ledger: memoryLedger(throwingMapping, [], noteHolders).service, stream: 'playbook/acme/alpha/runs/r1' },
+      { ledger: memoryLedger(throwingMapping, [], noteHolders).service, stream: 'definition/acme/d1/runs/r1' },
       { ledger: memoryLedger(undefined, [throwingProjection], noteHolders).service, stream: firstNotes },
     ];
 

@@ -26,7 +26,7 @@ export {
 export { changesTimers, nextDueAtOf, runDueOf } from './dispatch/run-due.ts';
 export { workflowMachine } from './decider/workflow-machine.ts';
 export { fitsInOneEvent } from './decider/run-bounds.ts';
-export type { CallFunctions, ChildCall } from './dsl/call-functions.ts';
+export type { CalledDefinition, CallFunctions, ChildCall } from './dsl/call-functions.ts';
 export { durationLimitRejections } from './dsl/duration-limits.ts';
 export { readDuration } from './dsl/durations.ts';
 export {

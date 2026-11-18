@@ -13,7 +13,7 @@ import {
   type Refusals,
   type RejectionCodes,
 } from '../reactions/refusals.ts';
-import { dueSchedules, nextScheduleDue, scheduleHeld, scheduleMovedOn, type Schedule } from './schedule-rows.ts';
+import { dueSchedules, nextScheduleDue, scheduleHeld, scheduleMovedOn, type NamedSchedule } from './schedule-rows.ts';
 import { dueTimesOf } from './schedule-times.ts';
 
 export interface ScheduleFiring {
@@ -28,7 +28,7 @@ export interface FiringParts extends Pick<FollowerHost, 'database' | 'reports'> 
 }
 
 interface Firing {
-  readonly subscription: Schedule;
+  readonly subscription: NamedSchedule;
   readonly next: number | null;
   readonly latest: number;
 }
@@ -61,8 +61,13 @@ function namedOf({ subscription }: Firing): string {
   return scheduleNamed(subscription.trigger);
 }
 
-function refusalOf({ workflow, version, trigger }: Schedule, reason: string, codes: RejectionCodes = {}): Refusal {
+function refusalOf(
+  { definitionKey, workflow, version, trigger }: NamedSchedule,
+  reason: string,
+  codes: RejectionCodes = {},
+): Refusal {
   return {
+    definitionKey,
     workflow,
     version,
     trigger: { kind: trigger.kind, reference: trigger.reference },
@@ -124,13 +129,14 @@ function heldTimeSkipped({ refusals }: FiringParts, firing: Firing, heldDue: num
 }
 
 function startOf(firing: Firing): ReactionStart {
-  const { playbookKey, workflow, version, trigger, activatedBy } = firing.subscription;
+  const { playbookKey, definitionKey, workflow, version, trigger, activatedBy } = firing.subscription;
   const due = dueAtOf(firing);
   return {
     ...playbookOf(playbookKey),
+    definitionKey,
     workflow,
     version,
-    runId: reactionRunIdOf(workflow, version, trigger.reference, due),
+    runId: reactionRunIdOf(definitionKey, version, trigger.reference, due),
     input: { schedule: { due } },
     depth: 1,
     cause: activatedBy,
@@ -173,7 +179,7 @@ function ran(parts: FiringParts, firing: Firing) {
   );
 }
 
-function stopped(parts: FiringParts, subscription: Schedule, detail: string) {
+function stopped(parts: FiringParts, subscription: NamedSchedule, detail: string) {
   const { playbookKey, workflow, version, trigger, running } = subscription;
   return Effect.andThen(
     Effect.andThen(
@@ -197,7 +203,7 @@ function stopped(parts: FiringParts, subscription: Schedule, detail: string) {
   );
 }
 
-function firingFrom(parts: FiringParts, subscription: Schedule, due: number): Result.Result<Firing, string> {
+function firingFrom(parts: FiringParts, subscription: NamedSchedule, due: number): Result.Result<Firing, string> {
   const moments = { anchor: subscription.activatedAt, due, now: parts.clock.now() };
   return Result.map(dueTimesOf(subscription.trigger, moments, parts.clock.inZone), ({ latest, next }) => ({
     subscription,
@@ -206,7 +212,7 @@ function firingFrom(parts: FiringParts, subscription: Schedule, due: number): Re
   }));
 }
 
-function heldPlanOf(parts: FiringParts, subscription: Schedule, heldDue: number): Result.Result<Plan, string> {
+function heldPlanOf(parts: FiringParts, subscription: NamedSchedule, heldDue: number): Result.Result<Plan, string> {
   const atTheHeldTime = { anchor: subscription.activatedAt, due: heldDue, now: heldDue };
   return Result.flatMap(
     dueTimesOf(subscription.trigger, atTheHeldTime, parts.clock.inZone),
@@ -220,13 +226,13 @@ function heldPlanOf(parts: FiringParts, subscription: Schedule, heldDue: number)
   );
 }
 
-function planOf(parts: FiringParts, subscription: Schedule): Result.Result<Plan, string> {
+function planOf(parts: FiringParts, subscription: NamedSchedule): Result.Result<Plan, string> {
   return subscription.heldDue === null
     ? Result.map(firingFrom(parts, subscription, subscription.nextDue), (firing) => ({ firing, heldSkipped: null }))
     : heldPlanOf(parts, subscription, subscription.heldDue);
 }
 
-function fired(parts: FiringParts, subscription: Schedule) {
+function fired(parts: FiringParts, subscription: NamedSchedule) {
   return Result.match(planOf(parts, subscription), {
     onFailure: (detail) => stopped(parts, subscription, detail),
     onSuccess: ({ firing, heldSkipped }) =>

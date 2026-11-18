@@ -12,13 +12,17 @@ import {
   triggersRemoved,
   triggersResumed,
   triggersRetired,
+  type DefinitionPlace,
 } from './trigger-rows.ts';
 
 export type DefinitionRecord = Pick<RecordedEvent, 'id' | 'type' | 'data' | 'context'>;
 
 type DefinitionApplied = 'applied' | 'unreadable';
 
-export type ApplyDefinitionRecord = (playbookKey: string, record: DefinitionRecord) => Effect.Effect<DefinitionApplied>;
+export type ApplyDefinitionRecord = (
+  place: DefinitionPlace,
+  record: DefinitionRecord,
+) => Effect.Effect<DefinitionApplied>;
 
 type Activation = Extract<DefinitionChange, { readonly triggers: unknown }>;
 
@@ -27,32 +31,30 @@ function isActivation(change: DefinitionChange): change is Activation {
 }
 
 export function definitionRecordsOn(database: HostDatabase, stops: FilterStops, inZone: InZone): ApplyDefinitionRecord {
-  return (playbookKey, record) => {
+  return (place, record) => {
     const { id } = record;
+    const { playbookKey } = place;
     const change = definitionChangeOf(record);
     if (isActivation(change)) {
       const { name: workflow, version, triggers, at } = change;
-      const activation = { workflow, version, triggers, activatedBy: id, activatedAt: Date.parse(at) };
+      const activation = { version, triggers, activatedBy: id, activatedAt: Date.parse(at) };
       stops.activated(playbookKey, workflow, version);
-      const activated = triggersActivated(database, playbookKey, activation, inZone);
+      const activated = triggersActivated(database, place, activation, inZone);
       return Effect.as(
-        change.kind === 'activated'
-          ? activated
-          : Effect.andThen(triggersPaused(database, playbookKey, workflow), activated),
+        change.kind === 'activated' ? activated : Effect.andThen(triggersPaused(database, place), activated),
         'applied',
       );
     }
     if (change.kind === 'deactivated' || change.kind === 'retired') {
       stops.retired(playbookKey, change.name);
       const removed = change.kind === 'retired' ? triggersRetired : triggersRemoved;
-      return Effect.as(removed(database, playbookKey, change.name), 'applied');
+      return Effect.as(removed(database, place), 'applied');
     }
     if (change.kind === 'paused') {
-      return Effect.as(triggersPaused(database, playbookKey, change.name), 'applied');
+      return Effect.as(triggersPaused(database, place), 'applied');
     }
     if (change.kind === 'resumed') {
-      const resumption = { workflow: change.name, resumedAt: Date.parse(change.at) };
-      return Effect.as(triggersResumed(database, playbookKey, resumption, inZone), 'applied');
+      return Effect.as(triggersResumed(database, place, Date.parse(change.at), inZone), 'applied');
     }
     return Effect.succeed(change.kind === 'unreadable' ? 'unreadable' : 'applied');
   };

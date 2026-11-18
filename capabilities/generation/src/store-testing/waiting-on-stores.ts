@@ -1,11 +1,6 @@
 import { RunEventSchema, type RecordedRunEvent, type RunEvent } from '@on.auto/definitions';
-import {
-  Ledger,
-  playbookRowsOf,
-  streamPrefixOfPlaybook,
-  type Decider,
-  type PlaybookAddress,
-} from '@on.auto/operations';
+import { Ledger, playbookRowsOf, type Decider } from '@on.auto/operations';
+import { placedIn } from '@on.auto/operations/testing';
 import { Effect, Result, type Layer } from 'effect';
 import { expect, it } from 'vitest';
 
@@ -14,9 +9,9 @@ import { generationsWaiting, generationsWaitingName } from '../waiting/waiting-r
 
 export type WaitingLedgerOn = (projections: readonly (typeof generationsWaiting)[]) => Promise<Layer.Layer<Ledger>>;
 
-const alpha = { org: 'acme', playbook: 'alpha' };
+const flightOfAlpha = { org: 'acme', definition: 'flight-of-alpha' };
 
-const beta = { org: 'acme', playbook: 'beta' };
+const flightOfBeta = { org: 'acme', definition: 'flight-of-beta' };
 
 const deferredAt = Date.parse('2026-11-01T10:00:00.000Z');
 
@@ -50,9 +45,16 @@ const recording: Decider<null, RunEvent, RecordedRunEvent> = {
   eventSchema: RunEventSchema,
 };
 
-function recorded(playbook: PlaybookAddress, run: string, event: RunEvent) {
+const placed = Effect.flatMap(Effect.service(Ledger), (ledger) =>
+  Effect.promise(async () => {
+    await placedIn(ledger, flightOfAlpha.definition, 'alpha');
+    await placedIn(ledger, flightOfBeta.definition, 'beta');
+  }),
+);
+
+function recorded({ definition }: Readonly<typeof flightOfAlpha>, run: string, event: RunEvent) {
   return Effect.flatMap(Effect.service(Ledger), (ledger) =>
-    ledger.execute(`${streamPrefixOfPlaybook(playbook)}runs/${run}`, recording, event),
+    ledger.execute(`definition/acme/${definition}/runs/${run}`, recording, event),
   );
 }
 
@@ -70,7 +72,7 @@ const readings = Effect.gen(function* () {
 
 const advancing = (deferredId: string, open: boolean) =>
   Effect.flatMap(Effect.service(Ledger), (ledger) =>
-    ledger.advanceRow(generationsWaitingName, alpha, 'one', {
+    ledger.advanceRow(generationsWaitingName, flightOfAlpha, 'one', {
       set: {
         polls: 1,
         progress: 40,
@@ -86,7 +88,7 @@ const advancing = (deferredId: string, open: boolean) =>
   );
 
 const rowOfOne = Effect.flatMap(Effect.service(Ledger), (ledger) =>
-  ledger.readProjectedRows(generationsWaitingName, alpha, {
+  ledger.readProjectedRows(generationsWaitingName, flightOfAlpha, {
     where: [{ column: 'row_key', equals: 'one' }],
     orderBy: [],
     order: 'asc',
@@ -98,15 +100,16 @@ export function waitingOnStoresSuite(ledgerOn: WaitingLedgerOn): void {
   it('keeps the generations each playbook waits for, due to be asked and to end across playbooks, advanced only while the deferral that made the row stands open', async () => {
     const layer = await ledgerOn([generationsWaiting]);
     const program = Effect.gen(function* () {
-      yield* recorded(alpha, 'one', {
+      yield* placed;
+      yield* recorded(flightOfAlpha, 'one', {
         type: 'run_deferred',
         data: { record: waitOf('video_1', deferredAt + 600_000) },
       });
-      yield* recorded(alpha, 'two', {
+      yield* recorded(flightOfAlpha, 'two', {
         type: 'run_deferred',
         data: { record: waitOf('video_2', deferredAt + 120_000) },
       });
-      yield* recorded(beta, 'three', {
+      yield* recorded(flightOfBeta, 'three', {
         type: 'run_deferred',
         data: { record: waitOf('video_3', deferredAt + 300_000) },
       });
@@ -118,7 +121,7 @@ export function waitingOnStoresSuite(ledgerOn: WaitingLedgerOn): void {
       const unmoved = (yield* rowOfOne)[0]?.row['polls'];
       yield* advancing(deferredId, true);
       const advanced = (yield* rowOfOne)[0]?.row;
-      yield* recorded(alpha, 'two', { type: 'run_failed', data: {} });
+      yield* recorded(flightOfAlpha, 'two', { type: 'run_failed', data: {} });
       return { before, unmoved, advanced, after: yield* readings };
     });
 

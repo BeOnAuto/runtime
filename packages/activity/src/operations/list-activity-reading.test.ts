@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ada, listedOf, localDeveloper, priya, salesReader } from '../testing/harness.ts';
 import { runFailed } from '../testing/recorded-facts.ts';
-import { financeAndSales, runs } from '../testing/scenario.ts';
+import { definitionStreamOf, filed, financeAndSales, runStreamOf, runs } from '../testing/scenario.ts';
 
 const addresses = (rows: readonly { readonly address: string }[]) => rows.map(({ address }) => address);
 
@@ -37,7 +37,7 @@ describe('the filters of list_activity', () => {
       `finance/${runs.askedAnyone.runId}`,
       'finance/reasoning/categorize-invoice',
     ]);
-    expect(addresses(listedOf(await list(ada, { playbook: 'sales', kind: 'new' })).rows)).toHaveLength(3);
+    expect(addresses(listedOf(await list(ada, { playbook: 'sales', kind: 'new' })).rows)).toHaveLength(4);
     expect(addresses(listedOf(await list(ada, { mine: 'true' })).rows)).toEqual([
       `sales/runs/${runs.sold.runId}`,
       `finance/${runs.askedDana.runId}`,
@@ -92,7 +92,9 @@ describe('the playbooks of list_activity', () => {
       name: 'sum-invoices',
       version: 1,
     };
-    await record(`playbook/acme/finance/runs/${failed.runId}`, runFailed(failed, '2026-11-01T15:00:00.000Z'));
+    const sumInvoices = { id: '019a3f00-0000-7000-8000-0000000000ff', ...failed, playbook: 'finance' };
+    await record(definitionStreamOf(sumInvoices), filed(sumInvoices, '2026-11-01T14:59:00.000Z', priya.id));
+    await record(runStreamOf(sumInvoices, failed), runFailed(failed, '2026-11-01T15:00:00.000Z'));
 
     expect(listedOf(await list(ada, { kind: 'broken' })).rows).toMatchObject([
       { address: 'finance/computation/sum-invoices', by: 'playbook:finance' },

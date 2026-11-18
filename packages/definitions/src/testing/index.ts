@@ -10,6 +10,7 @@ export {
 export { recordedOnTheRun } from './run-facts.ts';
 export { playbookContentHolders, runContentHolders } from './harness.ts';
 export {
+  definedWithItsId,
   erasingReader,
   keptArmOf,
   keptIn,
@@ -27,3 +28,4 @@ export { shapeNamed } from './shapes.ts';
 export { uncheckedPages } from './page-ports.ts';
 export { aGeneratedHistory } from '../read-model-testing/read-model-histories.ts';
 export { definitionsReadModelOf } from '../read-model/definitions-read-model.ts';
+export { definitionNamesWith } from '../read-model-testing/staged-ledger.ts';

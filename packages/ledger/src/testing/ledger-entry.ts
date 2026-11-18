@@ -1,4 +1,4 @@
-import type { ContentHolders, Ledger, RunOutcomeMapping, KeptProjection, StreamProjection } from '@on.auto/operations';
+import type { ContentHolders, Ledger, RunOutcomeMapping, KeptProjection } from '@on.auto/operations';
 import type { Layer } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -6,14 +6,14 @@ import type { LedgerConnection } from '../connection/ledger-connection.ts';
 import type { LedgerStore, RecordedStore, StatementExecutor } from '../event-store.ts';
 import type { LayoutDialect } from '../layout/layout-dialects.ts';
 import type { LayoutCarrying } from '../layout/layout-steps.ts';
-import type { LedgerServices, OpenedLedger, OpenedWith } from '../ledger-layer.ts';
+import type { LedgerServices, OpenedLedger, OpenedWith, StoreLayerOptions } from '../ledger-layer.ts';
 import type { StreamSignal } from '../signal/append-signal.ts';
 import { openChoresWith, openLedgerWith, type OpenChores } from './open-ledger.ts';
 
-export interface StreamKept {
-  readonly streamProjections: readonly StreamProjection[];
+interface EntryKept {
+  readonly holders?: ContentHolders;
+  readonly definitionNames?: NonNullable<StoreLayerOptions['definitionNames']>;
   readonly mostBytesFilledAtOnce?: number;
-  readonly projections?: readonly KeptProjection[];
 }
 
 export interface LedgerEntry {
@@ -26,11 +26,7 @@ export interface LedgerEntry {
     database: string,
     runOutcomes?: RunOutcomeMapping,
     projections?: readonly KeptProjection[],
-    holders?: ContentHolders,
-  ) => Layer.Layer<Exclude<LedgerServices, LedgerConnection>>;
-  readonly streamLedgerOn: (
-    database: string,
-    kept: StreamKept,
+    kept?: EntryKept,
   ) => Layer.Layer<Exclude<LedgerServices, LedgerConnection>>;
   readonly ledgerOutsideOn: (
     database: string,
@@ -77,12 +73,26 @@ export async function aLedger(
   return opened(entry.ledgerOn(database ?? (await entry.aDatabase()), runOutcomes, projections));
 }
 
+interface PlacingLedger {
+  readonly database?: string | undefined;
+  readonly runOutcomes?: RunOutcomeMapping | undefined;
+  readonly projections?: readonly KeptProjection[] | undefined;
+}
+
+export async function aLedgerKeepingNames(
+  entry: LedgerEntry,
+  definitionNames: NonNullable<EntryKept['definitionNames']>,
+  { database, runOutcomes, projections }: PlacingLedger = {},
+): Promise<Ledger['Service']> {
+  return opened(entry.ledgerOn(database ?? (await entry.aDatabase()), runOutcomes, projections, { definitionNames }));
+}
+
 export async function aLedgerHolding(
   entry: LedgerEntry,
   holders: ContentHolders,
   database?: string,
 ): Promise<Ledger['Service']> {
-  return opened(entry.ledgerOn(database ?? (await entry.aDatabase()), undefined, [], holders));
+  return opened(entry.ledgerOn(database ?? (await entry.aDatabase()), undefined, [], { holders }));
 }
 
 export async function aLedgerOutside(
@@ -105,7 +115,7 @@ export async function anErasingLedger(
   holders: ContentHolders,
   database?: string,
 ): Promise<OpenChores> {
-  return openedErasing(entry.ledgerOn(database ?? (await entry.aDatabase()), undefined, [], holders));
+  return openedErasing(entry.ledgerOn(database ?? (await entry.aDatabase()), undefined, [], { holders }));
 }
 
 export async function anErasingLedgerOutside(

@@ -4,6 +4,7 @@ import {
   contextOf,
   keepsChildRows,
   messageIdOf,
+  partitionOfTheRow,
   rowKeyOf,
   type ChildRowsProjection,
   type Context,
@@ -88,10 +89,12 @@ function keptAfter(
 function placeOf(projection: KeptProjection, message: StoredMessage): RowPlace | undefined {
   const named = addressedStreamOf(message.stream);
   const key = named === undefined ? undefined : rowKeyOf(projection, projectedOf(message), named);
-  return named === undefined || key === undefined ? undefined : { prefix: named.prefix, key };
+  return named === undefined || key === undefined
+    ? undefined
+    : { prefix: partitionOfTheRow(projection, named).prefix, key };
 }
 
-export interface PlacedMessage {
+interface PlacedMessage {
   readonly message: StoredMessage;
   readonly place: RowPlace;
 }
@@ -110,7 +113,7 @@ function placedOf({ dialect, projection }: ProjectionKeeping, messages: readonly
   );
 }
 
-export async function keptInTurn(
+async function keptInTurn(
   keeping: ProjectionKeeping,
   execute: StatementExecutor,
   placed: readonly PlacedMessage[],

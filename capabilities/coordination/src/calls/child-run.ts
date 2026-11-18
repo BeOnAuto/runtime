@@ -1,5 +1,5 @@
 import { nestedRunId } from '@on.auto/definitions';
-import { textField, type ChildCall } from '@on.auto/workflow-engine';
+import { textField, type CalledDefinition, type ChildCall } from '@on.auto/workflow-engine';
 
 import { isArgumentsProblem, definitionArgumentsOf } from '../document/definition-arguments.ts';
 import { runDefinitionFunction } from '../document/workflow-functions.ts';
@@ -16,4 +16,14 @@ export function childRunOf({
     return undefined;
   }
   return nestedRunId(workflow, reference, run);
+}
+
+export function calledDefinitionOf({
+  function: name,
+  arguments: given,
+}: Pick<ChildCall, 'function' | 'arguments'>): CalledDefinition | undefined {
+  const asked = definitionArgumentsOf(given);
+  return name !== runDefinitionFunction || isArgumentsProblem(asked)
+    ? undefined
+    : { type: asked.type, name: asked.name };
 }

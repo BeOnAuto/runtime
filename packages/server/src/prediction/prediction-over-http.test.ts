@@ -1,15 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
 import { plainTextIn, withMcpSession } from '@on.auto/api/testing';
-import { ledgerLayout, ledgerLayoutFloor } from '@on.auto/ledger/testing';
 import { internalTermsIn } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import { secretsKey } from '../testing/databases/secrets-key.ts';
-import { databaseDumpOf } from '../testing/records/database-floor.ts';
-import { aPredictionFunctionAtTheFloor } from '../testing/records/prediction-at-the-floor.ts';
-import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { blocksInOrderOf } from '../testing/servers/tutorial-calls.ts';
 import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
@@ -67,24 +62,6 @@ function orderPlaced(weeksAgo: number): OrderPlaced {
     type: 'order.placed',
     time: placedAt,
     data: { region: 'north', placed_at: placedAt },
-  };
-}
-
-function aLedgerOfTheTest(): TemporaryLedger {
-  const ledger = temporaryLedger();
-  onTestFinished(ledger.remove);
-  return ledger;
-}
-
-function served(ledger: TemporaryLedger): Promise<ReasoningServer> {
-  return servingReasoning([], { SECRETS_KEY: secretsKey }, undefined, { ledger });
-}
-
-function stoppedOnce({ stop }: ReasoningServer): () => Promise<void> {
-  let stopped: Promise<void> | undefined;
-  return () => {
-    stopped ??= stop();
-    return stopped;
   };
 }
 
@@ -369,48 +346,6 @@ describe('documented page', () => {
       expect(decodeRuns(definition).page.runs).toMatch(
         /^```chart line\n\{"unit":"orders","period":"week","lines":\[\{"name":"Forecast","points":\[\{"at":"\d{4}-W\d{2}","value":[\d.]+\}\]\},\{"name":"Orders","points":\[\{"at":"\d{4}-W\d{2}","value":1\}\]\}\]\}\n```$/u,
       );
-    });
-  });
-});
-
-describe('a ledger of the floor that holds a prediction function, its events and a dataset an earlier release folded', () => {
-  it('is carried forward to the layout kept, folds the dataset again from the events and answers a question with the forecaster', async () => {
-    const [made, carried] = [aLedgerOfTheTest(), aLedgerOfTheTest()];
-    const visits = visitsToday();
-    const making = await served(made);
-    await making.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await savedVisits(making);
-    await publishedVisits(making, visits, { north: 8 });
-    await making.stop();
-    aPredictionFunctionAtTheFloor(made.fileName, carried.fileName);
-    const atTheFloor = databaseDumpOf(carried.fileName).layout;
-
-    const serverPredictionCarriedForward = await served(carried);
-    const stopped = stoppedOnce(serverPredictionCarriedForward);
-    onTestFinished(stopped);
-    await until(async () => {
-      const { body } = await serverPredictionCarriedForward.call('GET', `${alpha}/definitions/prediction/daily-visits`);
-      expect(body).toMatchObject({ standing: { dataset: { phase: 'live', events_folded: 8 } } });
-    });
-    const answer = await serverPredictionCarriedForward.call(
-      'POST',
-      `${alpha}/definitions/prediction/daily-visits/run`,
-      {
-        body: { input: { series: 'north' } },
-      },
-    );
-    await stopped();
-
-    expect([atTheFloor, databaseDumpOf(carried.fileName).layout]).toEqual([ledgerLayoutFloor, ledgerLayout]);
-    expect(answer).toMatchObject({
-      status: 200,
-      body: {
-        status: 'succeeded',
-        record: {
-          method: 'persistence',
-          history: { periods: 8, first_period: visits.dayOf(8), last_period: visits.dayOf(1), origins: 6 },
-        },
-      },
     });
   });
 });

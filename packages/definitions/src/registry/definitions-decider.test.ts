@@ -2,11 +2,10 @@ import { NotFound, type Context, type DefinitionContext } from '@on.auto/operati
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { earlierDefinitionIdOf } from '../identity/definition-ids.ts';
 import { recordedAdmin } from '../testing/callers.ts';
 import type { DefinitionCommand } from './definition-commands.ts';
 import type { DefinitionContent, RecordedDefinitionEvent } from './definition-events.ts';
-import { definitionsDecider, definitionTypeStreamOf } from './definitions-decider.ts';
+import { definitionDecider, definitionTypeStreamOf } from './definitions-decider.ts';
 
 function refused(tag: string, fields: object = {}): unknown {
   return expect.objectContaining({ _tag: tag, ...fields });
@@ -14,9 +13,9 @@ function refused(tag: string, fields: object = {}): unknown {
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
-const echoDefinitions = definitionsDecider('echo', alpha);
+const greetId = '019a5f00-0000-7000-8000-000000000001';
 
-const greetId = earlierDefinitionIdOf({ ...alpha, type: 'echo', name: 'greet' });
+const echoDefinitions = definitionDecider('echo', alpha, greetId);
 
 function identified(context: Context): Context {
   return { ...context, definitionId: greetId };
@@ -102,8 +101,8 @@ describe('creating a definition', () => {
     expect(contextOf(creatingGreet)).toStrictEqual(identified(greetCreated.context));
   });
 
-  it('leaves to the names of definitions whether its name is free', () => {
-    expect(decided(creatingGreet, greetCreated)).toStrictEqual(decided(creatingGreet));
+  it('is refused as taken on the stream of a definition that already exists, as the names of definitions refuse a name', () => {
+    expect(decided(creatingGreet, greetCreated)).toEqual(Result.fail(refused('conflict', { kind: 'taken' })));
   });
 });
 
@@ -186,50 +185,43 @@ describe('retiring a definition', () => {
   });
 });
 
-describe('the definitions of a capability', () => {
-  it('start empty and live in one stream named after the capability', () => {
-    expect(echoDefinitions.initialState.size).toBe(0);
-    expect(definitionTypeStreamOf('echo')).toBe('definitions/echo');
-  });
+describe('pausing or resuming a definition', () => {
+  it('is rejected for a definition the playbook does not have', () => {
+    const notFound = Result.fail(new NotFound({ detail: 'There is no echo definition greet in this playbook' }));
 
-  it('hold each definition as its events left it, its content and its overview replaced by every update', () => {
-    const registry = registryAfter(
-      greetCreated,
-      created('wave', howdy),
-      greetUpdated,
-      retired('greet', '2026-10-03T08:00:00.000Z', 2),
-    );
-
-    expect([...registry.values()]).toStrictEqual([
-      {
-        name: 'greet',
-        definition_id: greetId,
-        version: 2,
-        status: 'retired',
-        source: { inline: '{"greeting": "Howdy"}' },
-        overview: { inline: 'Greets with a howdy.' },
-        created_at: '2026-10-01T09:00:00.000Z',
-        created_by: { id: 'acme-admin', name: 'acme-admin' },
-        updated_at: '2026-10-03T08:00:00.000Z',
-        retired_at: '2026-10-03T08:00:00.000Z',
-      },
-      {
-        name: 'wave',
-        definition_id: earlierDefinitionIdOf({ ...alpha, type: 'echo', name: 'wave' }),
-        version: 1,
-        status: 'active',
-        source: { inline: '{"greeting": "Howdy"}' },
-        overview: { inline: 'Greets with a howdy.' },
-        created_at: '2026-10-01T09:00:00.000Z',
-        created_by: { id: 'acme-admin', name: 'acme-admin' },
-        updated_at: '2026-10-01T09:00:00.000Z',
-      },
-    ]);
+    expect([
+      decided({ type: 'pause', name: 'greet', paused_by: recordedAdmin, ...change }),
+      decided({ type: 'resume', name: 'greet', ...change }),
+    ]).toEqual([notFound, notFound]);
   });
 });
 
-describe('the definitions of a capability, from what their facts say', () => {
-  it('refuse a fact recorded without the definition and version it is about', () => {
+describe('a definition of a capability', () => {
+  it('starts as nothing, on a stream of its own named after its capability', () => {
+    expect(echoDefinitions.initialState).toBeUndefined();
+    expect(definitionTypeStreamOf('echo')).toBe('definitions/echo');
+  });
+
+  it('is what its events left it, with the id of its stream, its content and its overview replaced by every update', () => {
+    const definition = registryAfter(greetCreated, greetUpdated, retired('greet', '2026-10-03T08:00:00.000Z', 2));
+
+    expect(definition).toStrictEqual({
+      name: 'greet',
+      definition_id: greetId,
+      version: 2,
+      status: 'retired',
+      source: { inline: '{"greeting": "Howdy"}' },
+      overview: { inline: 'Greets with a howdy.' },
+      created_at: '2026-10-01T09:00:00.000Z',
+      created_by: { id: 'acme-admin', name: 'acme-admin' },
+      updated_at: '2026-10-03T08:00:00.000Z',
+      retired_at: '2026-10-03T08:00:00.000Z',
+    });
+  });
+});
+
+describe('a definition of a capability, from what its facts say', () => {
+  it('refuses a fact recorded without the definition and version it is about', () => {
     const decode = Schema.decodeUnknownSync(echoDefinitions.eventSchema);
     const { definitionVersion: _version, ...unversioned } = greetUpdated.context;
 
@@ -237,15 +229,15 @@ describe('the definitions of a capability, from what their facts say', () => {
     expect(() => decode({ ...greetUpdated, context: unversioned })).toThrow('definitionVersion');
   });
 
-  it('ignore an event about a definition they never saw created', () => {
-    expect(registryAfter(greetUpdated, greetRetired).size).toBe(0);
+  it('ignores an event that comes before its creation', () => {
+    expect(registryAfter(greetUpdated, greetRetired)).toBeUndefined();
   });
 
-  it('leave the registry they evolve from untouched', () => {
+  it('leaves the state it evolves from untouched', () => {
     const before = registryAfter(greetCreated);
 
     echoDefinitions.evolve(before, greetRetired);
 
-    expect(before.get('greet')?.status).toBe('active');
+    expect(before?.status).toBe('active');
   });
 });

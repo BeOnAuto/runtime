@@ -9,7 +9,10 @@ import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
 
 const anId: unknown = expect.any(String);
 
-const { createDefinition, runDefinition, retireDefinition } = definitionOperationsFor([echo, probe().capability]);
+const { createDefinition, pauseDefinition, runDefinition, retireDefinition } = definitionOperationsFor([
+  echo,
+  probe().capability,
+]);
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -74,14 +77,18 @@ describe('retire_definition rejecting', () => {
     });
   });
 
-  it('with conflict when another change to the definitions of the capability landed at the same moment', async () => {
+  it('with conflict when another change to the same definition landed at the same moment, and none for another definition', async () => {
     const { call, dispatch, run } = await withPlain();
     await call(createDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'other', source: 'text' }));
     const retiring = (name: string) => dispatch(retireDefinition, toAlpha(acmeAdmin, { type: 'probe', name }));
+    const pausing = dispatch(pauseDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'plain' }));
 
-    expect(await run(Effect.all([retiring('plain'), retiring('other')], { concurrency: 'unbounded' }))).toMatchObject([
+    expect(
+      await run(Effect.all([retiring('plain'), pausing, retiring('other')], { concurrency: 'unbounded' })),
+    ).toMatchObject([
       { status: 'succeeded', output: { name: 'plain', status: 'retired' } },
       { status: 'rejected', reason: 'conflict' },
+      { status: 'succeeded', output: { name: 'other', status: 'retired' } },
     ]);
   });
 });

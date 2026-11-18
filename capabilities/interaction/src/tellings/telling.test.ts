@@ -14,7 +14,7 @@ import {
 } from '../testing/index.ts';
 import { flatReplies } from '../testing/reading-documents.ts';
 import type { DeliverBlock, Replies } from '../tool-blocks/tool-block-schemas.ts';
-import { resolvedTelling, tellingWrittenBefore } from './telling-routes.ts';
+import { resolvedTelling } from './telling-routes.ts';
 import { tellings } from './telling-rows.ts';
 
 const ended = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -205,17 +205,5 @@ describe('the read limit a request keeps', () => {
       resolvedTelling(deliver, replies, chatConversations).readLimit,
       resolvedTelling(deliver, replies).readLimit,
     ]).toEqual([readLimit, readLimit, readLimit, undefined, undefined]);
-  });
-});
-
-describe('the telling of a request asked before a request kept one', () => {
-  it('is its own tell block for refusals alone, or nothing where it wrote none', () => {
-    expect([
-      tellingWrittenBefore({ ...replies, tell: ownLine }, deliver),
-      tellingWrittenBefore(replies, deliver),
-    ]).toEqual([
-      { when: 'refusals', line: { tool: 'post_message', ...ownLine, sent: '/ts', conversationAt: '/channel' } },
-      { when: 'none' },
-    ]);
   });
 });

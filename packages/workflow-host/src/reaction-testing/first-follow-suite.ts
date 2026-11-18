@@ -4,10 +4,12 @@ import type { SettingsOf } from '../testing/host-files.ts';
 import { until } from '../testing/until.ts';
 import { followedThroughTheLatest } from '../waiting-testing/followed-host.ts';
 import { heldFollower } from '../waiting-testing/held-follower.ts';
+import { parkedDeliveriesSuite } from './parked-deliveries-suite.ts';
 import { definitionRecorded, eventRecordOf, eventTrigger, published } from './playbook-writes.ts';
 import { recordedReactions } from './recorded-reactions.ts';
 
 export function firstFollowSuite(settings: SettingsOf): void {
+  parkedDeliveriesSuite(settings);
   it('starts no run for an event recorded before the trigger that matches it was activated, both after the host opened and before its follower first passed the playbook, and starts one for the event after it', async () => {
     const reactions = recordedReactions();
     const { database, release } = await heldFollower({ reactions: reactions.options }, await settings());

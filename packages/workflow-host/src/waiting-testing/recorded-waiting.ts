@@ -1,20 +1,20 @@
-import type { CancelReceipt, CancelRequest, RunStreamAddress, RunEnding } from '@on.auto/definitions';
+import type { CalledRun, CancelReceipt, CancelRequest, RunStreamAddress, RunEnding } from '@on.auto/definitions';
 import type { CallResult, Lineage } from '@on.auto/operations';
 import { outputPayloadOf } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
 import type { WaitingOptions } from '../waiting/waiting-options.ts';
 
-interface RecordedCancel {
-  readonly run: RunStreamAddress;
+interface RecordedCancel<Run> {
+  readonly run: Run;
   readonly request: CancelRequest;
   readonly lineage: Lineage;
 }
 
 export interface RecordedWaiting {
   readonly options: WaitingOptions;
-  readonly cancels: () => readonly RecordedCancel[];
-  readonly deferredCancels: () => readonly RecordedCancel[];
+  readonly cancels: () => readonly RecordedCancel<CalledRun>[];
+  readonly deferredCancels: () => readonly RecordedCancel<RunStreamAddress>[];
 }
 
 export function resultOfEnding(ending: RunEnding): CallResult {
@@ -30,8 +30,8 @@ export function resultOfEnding(ending: RunEnding): CallResult {
 }
 
 export function recordedWaiting(receipt: CancelReceipt = 'requested'): RecordedWaiting {
-  const cancels: RecordedCancel[] = [];
-  const deferredCancels: RecordedCancel[] = [];
+  const cancels: RecordedCancel<CalledRun>[] = [];
+  const deferredCancels: RecordedCancel<RunStreamAddress>[] = [];
   return {
     options: {
       resultOf: resultOfEnding,

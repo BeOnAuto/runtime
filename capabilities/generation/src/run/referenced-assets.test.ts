@@ -98,8 +98,10 @@ describe('a reference to an asset of another playbook', () => {
     const playbook = await withAPicture();
     const kept = keptFactOf(await playbook.factsOf(assetIdOf(1)));
     const beta = { org: alpha.org, playbook: 'beta' };
+    await playbook.define('picture', imageSource, beta);
+    const definitionKey = await playbook.definitionKeyOf('picture', beta);
     await Effect.runPromise(
-      keptAsRead(playbook.ledger.service, { playbook: beta, id: assetIdOf(9), data: kept.data, context: kept.context }),
+      keptAsRead(playbook.ledger.service, { definitionKey, id: assetIdOf(9), data: kept.data, context: kept.context }),
     );
 
     expect(await issuesAt(playbook, { photo: assetIdOf(9) })).toEqual([

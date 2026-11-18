@@ -81,18 +81,18 @@ describe('a ledger on a database file', () => {
 });
 
 describe('a ledger on a database file given a floor of its own', () => {
-  it('carries a database forward from that floor alone, and refuses one of the layout below it as older than its floor', async () => {
+  it('refuses a database of the layout below that floor as older than its floor, whatever the floor of the ledger', async () => {
     const fileName = aDatabaseFile();
-    await aSQLiteFileInLayout(fileName, ledgerLayoutFloor);
+    await aSQLiteFileInLayout(fileName, ledgerLayoutFloor - 2);
 
-    const refused = await openLedgerWith(ledgerLayer({ fileName, floor: ledgerLayoutFloor + 1 })).catch(
+    const refused = await openLedgerWith(ledgerLayer({ fileName, floor: ledgerLayoutFloor - 1 })).catch(
       (error: unknown) => error,
     );
 
     expect(refused).toMatchObject({
       _tag: 'ledger_layout_refused',
-      found: ledgerLayoutFloor,
-      floor: ledgerLayoutFloor + 1,
+      found: ledgerLayoutFloor - 2,
+      floor: ledgerLayoutFloor - 1,
     });
   });
 });

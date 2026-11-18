@@ -1,10 +1,15 @@
 import { Ledger } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Layer, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { openRequests } from '../requests/open-requests.ts';
-import { askedRunId, askedThroughChat, type HarnessLedger, type InteractionHarness } from '../testing/index.ts';
+import {
+  askedRunId,
+  askedThroughChat,
+  type HarnessLedger,
+  type InteractionHarness,
+  ledgerKeepingNames,
+} from '../testing/index.ts';
 
 const minute = 60_000;
 
@@ -106,7 +111,7 @@ describe('a delivery that fails for a while', () => {
 
 describe('a delivery whose arguments grew past what a call may send', () => {
   it('is refused once without a call, even by two hosts, not tried again, and a notification ends undelivered', async () => {
-    const ledger = recordedWith(memoryLedger(undefined, [openRequests]), grownArguments);
+    const ledger = recordedWith(ledgerKeepingNames([openRequests]), grownArguments);
     const { playbook, tools, askedAt } = await askedThroughChat({ notification: true, ledger });
     const items = await playbook.dueItems(askedAt);
 
@@ -124,7 +129,7 @@ describe('a delivery whose arguments grew past what a call may send', () => {
   });
 
   it('is refused as unworkable, with what went wrong, when its recorded arguments cannot be rendered', async () => {
-    const ledger = recordedWith(memoryLedger(undefined, [openRequests]), { text: '{{ nothing }}' });
+    const ledger = recordedWith(ledgerKeepingNames([openRequests]), { text: '{{ nothing }}' });
     const { playbook, tools, askedAt } = await askedThroughChat({ notification: true, ledger });
 
     await playbook.performDue(askedAt);

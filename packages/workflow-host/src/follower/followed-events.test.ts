@@ -8,8 +8,8 @@ import { describe, expect, it } from 'vitest';
 import { waitingCallsOf } from '../calls/call-rows.ts';
 import type { HostDatabase } from '../database/host-database.ts';
 import {
-  alpha,
   at,
+  childStarted,
   definitionRecordAt,
   definitionRecorded,
   eventTrigger,
@@ -18,7 +18,7 @@ import {
   recorded,
 } from '../reaction-testing/playbook-writes.ts';
 import { recordedReactions } from '../reaction-testing/recorded-reactions.ts';
-import { runAt, startOf, workflow } from '../testing/host-documents.ts';
+import { definitionKeyOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { until } from '../testing/until.ts';
@@ -70,7 +70,10 @@ function runFact(runId: string, [type, name]: readonly [string, string], correla
   return followedEventOf(
     recordOf(
       `runs/${runId}`,
-      { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } },
+      {
+        type: 'run_started',
+        data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha', input: {} },
+      },
       context,
       correlationId,
     ),
@@ -345,7 +348,7 @@ describe('the ending of a run a call waits for, appended after the host opened a
     );
     await recorded(
       database.store,
-      `${alpha}runs/${child}`,
+      await childStarted(database.store, child, ofTheChild),
       { type: 'run_succeeded', data: { output: 'checked', record: {} } },
       ofTheChild,
     );
@@ -363,7 +366,7 @@ describe('a cancel request appended after the host opened and before its followe
     await Effect.runPromise(hosted.host.start(runAt(parentId), startOf(pausing)));
     await recorded(
       database.store,
-      `${alpha}runs/${parentId}`,
+      `${definitionKeyOfTheTests}runs/${parentId}`,
       { type: 'run_cancel_requested', data: { kind: 'requested', reason: 'Not needed any more' } },
       ofTheRun,
     );
@@ -391,7 +394,7 @@ describe('a definition record whose place the first follow of its playbook canno
     });
     const reactions = recordedReactions();
     const hosted = await hostedOn(
-      { database: withoutThePlaceOf(database, definitionRecordAt(1)) },
+      { database: withoutThePlaceOf(database, definitionRecordAt('close', 1)) },
       {
         reactions: reactions.options,
       },
@@ -410,7 +413,7 @@ describe('a definition record whose place the first follow of its playbook canno
           kind: 'record_unreadable',
           org: 'acme',
           playbook: 'alpha',
-          recordId: definitionRecordAt(1),
+          recordId: definitionRecordAt('close', 1),
           type: 'definition_created',
         },
       ],

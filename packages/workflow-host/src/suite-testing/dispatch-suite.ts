@@ -6,10 +6,13 @@ import type { CallAttempt } from '../calls/call-starts.ts';
 import { callsDueAgainOf } from '../calls/calls-due-again.ts';
 import { hostExecutor, type CallAnswer } from '../calls/host-executor.ts';
 import type { DueItem } from '../due-work/due-work.ts';
-import { alpha, recorded } from '../reaction-testing/playbook-writes.ts';
+import { childStarted } from '../reaction-testing/playbook-writes.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
+import { runKeyAt, startedIn } from '../testing/started-runs.ts';
 
-const runKey = 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+const runKey = runKeyAt(runId);
 
 const run = { runId: runKey, attributes: { lineage: { start: 'start-1', correlation: runKey } } };
 
@@ -43,7 +46,7 @@ function callAt(reference: string): StartCall {
 const [quick, slow, notResuming] = [callAt('/do/0/a'), callAt('/do/1/b'), callAt('/do/2/c')];
 
 async function dispatching(settings: SettingsOf, againAnswers: (call: StartCall) => CallAnswer) {
-  const database = await openedOn(await settings());
+  const database = await startedIn(await openedOn(await settings()), runId);
   const attempts: (CallAttempt & { readonly reference: string })[] = [];
   const answered: CallAnsweredResult[] = [];
   const executor = hostExecutor({
@@ -69,7 +72,7 @@ async function dispatching(settings: SettingsOf, againAnswers: (call: StartCall)
   const dueAt = (now: number, callsOut = true) => Effect.runPromise(work.due(now, 16, callsOut));
   return {
     executor,
-    factOfTheChild: () => recorded(database.store, `${alpha}runs/${child}`, { type: 'run_started', data: {} }),
+    factOfTheChild: () => childStarted(database.store, child),
     attempts: () => attempts,
     answered: () => answered,
     dueAt: async (now: number) => keysOf(await dueAt(now)),

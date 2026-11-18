@@ -30,10 +30,9 @@ function sentRead(
   const route = routeOfRequest(read.request);
   const callId = randomUUIDv7();
   const reference = { server: route.server, tool: route.replies.tool };
-  const call = { ...place.playbook, reference, input, meta: { [conversationCallIdKey]: callId } };
+  const call = { ...read.request.playbook, reference, input, meta: { [conversationCallIdKey]: callId } };
   const intake: Intake = {
     parts,
-    playbook: place.playbook,
     candidates,
     arrival: { ...reference, conversation: read.request.sent.conversation, causationId: place.row.last_fact },
     roomForATelling: roomForACall,
@@ -51,7 +50,8 @@ function sentRead(
     );
     if (recordable(answer, place.row.waited_after)) {
       const since = state.unrecorded ? read.since : cursorOf(route.replies.read.order, answer.ids, read.since);
-      yield* recordedRead(parts.ledger, place, { start, called, answer, state, callId, reading: read.reading, since });
+      const record = { start, called, answer, state, callId, reading: read.reading, since };
+      yield* recordedRead(parts.ledger, { request: read.request, row: place.row }, record);
     }
     return { answer, state };
   });

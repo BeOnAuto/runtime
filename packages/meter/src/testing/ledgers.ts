@@ -3,9 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+import { runIds } from '@on.auto/definitions';
 import type { LedgerServices } from '@on.auto/ledger';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import type { Layer } from 'effect';
+
+import { placedDefinitions } from './runs.ts';
 
 type Row = Readonly<Record<string, unknown>>;
 
@@ -77,7 +80,7 @@ export function sqliteLedger(): LedgerAt {
   const fileName = join(directory, 'ledger.db');
   return {
     name: 'SQLite',
-    layer: () => ledgerLayer({ fileName }),
+    layer: () => ledgerLayer({ fileName, definitionNames: placedDefinitions, runIds }),
     rows: (statement, values = []) => {
       const database = new DatabaseSync(fileName);
       try {

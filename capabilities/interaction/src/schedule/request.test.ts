@@ -1,4 +1,3 @@
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -11,6 +10,7 @@ import {
   broughtBeforeDeciding,
   noTools,
   recordedReply,
+  ledgerKeepingNames,
 } from '../testing/index.ts';
 import { requestsDue } from './due-requests.ts';
 import { recordedCall } from './request-ledger.ts';
@@ -193,7 +193,7 @@ describe('an answer a reply brought and another one given meanwhile', () => {
   });
 
   it('refuses the other when a reply is taken between the read of the request and the settlement', async () => {
-    const racing = broughtBeforeDeciding(memoryLedger(undefined, [openRequests]), { choice: 'approve' });
+    const racing = broughtBeforeDeciding(ledgerKeepingNames([openRequests]), { choice: 'approve' });
     const asked = await askedThroughChat({ ledger: racing.ledger });
     await racing.started();
 

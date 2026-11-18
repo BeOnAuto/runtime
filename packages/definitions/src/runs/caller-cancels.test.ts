@@ -2,7 +2,7 @@ import { NotFound, RunCancelled } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
@@ -24,7 +24,7 @@ const ofPlain = { definitionType: 'probe', definitionName: 'plain', definitionVe
 
 const started = recordedWith({ ...start, ...ofPlain })({
   type: 'run_started',
-  data: { started_by: recordedAdmin, input: {} },
+  data: { ...startedInAlpha, input: {} },
 });
 
 const reason = 'The run that waited for it ended first';
@@ -55,6 +55,7 @@ const starting: RunCommand = {
   type: 'start',
   ...greeting,
   started_by: recordedAdmin,
+  playbook: 'alpha',
   definition_version: 1,
   calls_tools: false,
   ...start,

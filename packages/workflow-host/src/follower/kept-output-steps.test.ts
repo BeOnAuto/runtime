@@ -17,7 +17,7 @@ import { until } from '../testing/until.ts';
 import { callConsumerOf, type Consumer, deliverySweeps, type FollowedRecord } from './consumers.ts';
 import type { Mode } from './delivery-loop.ts';
 import type { EventRead } from './followed-events.ts';
-import type { Progress } from './followed-playbooks.ts';
+import type { Progress } from './followed-orgs.ts';
 import { stepOf, type StepParts, type Stepping } from './record-steps.ts';
 
 const playbookKey = 'playbook/acme/alpha/';

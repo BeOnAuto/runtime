@@ -6,7 +6,7 @@ import type {
   RunOutcomeSelection,
   RunOutcomeWindow,
 } from '@on.auto/operations';
-import { runFacts, runTallies, type RunFact } from '@on.auto/operations/testing';
+import { placedIn, runFacts, runTallies, type RunFact } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -56,12 +56,19 @@ export function runsOf(groups: readonly RunOutcomeGroup[]): readonly string[] {
   return groups.map(({ day, name, status, runs }) => `${day} ${name} ${status} ${runs}`);
 }
 
+export const runsOfAlpha = 'definition/acme/d1/runs/';
+
+export async function alphaPlaced(ledger: AnyLedger): Promise<void> {
+  await placedIn(ledger, 'd1', 'alpha');
+}
+
 export async function fourRuns(ledger: AnyLedger): Promise<void> {
-  await noting(ledger, 'playbook/acme/alpha/runs/r1', began('triage'), ended('succeeded', 120, 40, 1500));
-  await noting(ledger, 'playbook/acme/alpha/runs/r2', began('triage'));
-  await noting(ledger, 'playbook/acme/alpha/runs/r2', ended('succeeded', 80, 2));
-  await noting(ledger, 'playbook/acme/alpha/runs/r3', began('triage'), ended('rejected', null));
-  await noting(ledger, 'playbook/acme/alpha/runs/r4', began('draft', '2026-10-02T23:59:59.999Z'));
+  await alphaPlaced(ledger);
+  await noting(ledger, `${runsOfAlpha}r1`, began('triage'), ended('succeeded', 120, 40, 1500));
+  await noting(ledger, `${runsOfAlpha}r2`, began('triage'));
+  await noting(ledger, `${runsOfAlpha}r2`, ended('succeeded', 80, 2));
+  await noting(ledger, `${runsOfAlpha}r3`, began('triage'), ended('rejected', null));
+  await noting(ledger, `${runsOfAlpha}r4`, began('draft', '2026-10-02T23:59:59.999Z'));
 }
 
 export const fourRunsKept: readonly RunOutcomeGroup[] = [
@@ -114,11 +121,15 @@ function theRowOfEachRun(aLedger: LedgerKeeping): void {
 
     it('keep to the days of the window, the selection, and the playbook matched exactly', async () => {
       const ledger = await aLedger(runTallies);
-      await noting(ledger, 'playbook/acme/alpha/runs/r1', began('triage', '2026-09-30T23:59:59.999Z'));
-      await noting(ledger, 'playbook/acme/alpha/runs/r2', began('triage', '2026-10-01T00:00:00.000Z'));
-      await noting(ledger, 'playbook/acme/alpha/runs/r3', began('draft', '2026-10-01T00:00:00.000Z'));
+      await alphaPlaced(ledger);
+      await placedIn(ledger, 'd2', 'alpha2');
+      await placedIn(ledger, 'd3', 'Alpha');
+      await placedIn(ledger, 'd4', 'alph_');
+      await noting(ledger, `${runsOfAlpha}r1`, began('triage', '2026-09-30T23:59:59.999Z'));
+      await noting(ledger, `${runsOfAlpha}r2`, began('triage', '2026-10-01T00:00:00.000Z'));
+      await noting(ledger, `${runsOfAlpha}r3`, began('draft', '2026-10-01T00:00:00.000Z'));
       await Promise.all(
-        ['playbook/acme/alpha2/runs/r4', 'playbook/acme/Alpha/runs/r5', 'playbook/acme/alph_/runs/r6'].map((stream) =>
+        ['definition/acme/d2/runs/r4', 'definition/acme/d3/runs/r5', 'definition/acme/d4/runs/r6'].map((stream) =>
           noting(ledger, stream, began('triage', '2026-10-01T00:00:00.000Z')),
         ),
       );
@@ -141,12 +152,18 @@ function theRowOfEachRun(aLedger: LedgerKeeping): void {
         ['2026-10-01 triage started 1'],
       ]);
     });
+  });
+}
 
+function whatIsLeftOut(aLedger: LedgerKeeping): void {
+  describe('the outcomes of runs', () => {
     it('leave out other streams, a stream nested under a run, other types, and what the mapping keeps nothing of', async () => {
       const ledger = await aLedger(runTallies);
-      await noting(ledger, 'playbook/acme/alpha/run-logs/r1', began('triage'));
-      await noting(ledger, 'playbook/acme/alpha/runs/r2/nested', began('triage'));
-      await noting(ledger, 'playbook/acme/alpha/runs/r3', ended('failed', 5), { type: 'run_noted', data: {} });
+      await alphaPlaced(ledger);
+      await noting(ledger, 'playbook/acme/alpha/runs/r0', began('triage'));
+      await noting(ledger, 'definition/acme/d1/run-logs/r1', began('triage'));
+      await noting(ledger, `${runsOfAlpha}r2/nested`, began('triage'));
+      await noting(ledger, `${runsOfAlpha}r3`, ended('failed', 5), { type: 'run_noted', data: {} });
 
       expect(await reading(ledger)).toEqual([]);
     });
@@ -155,4 +172,5 @@ function theRowOfEachRun(aLedger: LedgerKeeping): void {
 
 export function runOutcomesBehaviour(aLedger: LedgerKeeping): void {
   theRowOfEachRun(aLedger);
+  whatIsLeftOut(aLedger);
 }

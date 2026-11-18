@@ -1,5 +1,4 @@
 import type { ContentHolders } from '@on.auto/operations';
-import type { DefinitionNames } from '@on.auto/operations/definition-names';
 import { memoryLedgerWith, type MemoryLedger, type MemoryLedgerOptions } from '@on.auto/operations/testing';
 import { Layer, Logger } from 'effect';
 
@@ -8,7 +7,10 @@ import { definitionTypeOrder } from '../capability/function-terminology.ts';
 import { definitionNamesOf, unbounded } from '../identity/definition-names.ts';
 import { DefinitionsReadModel, stagedOver, type ReadModelStage } from '../read-model-staging/read-model-stage.ts';
 import { definitionsReadModelOf } from '../read-model/definitions-read-model.ts';
+import { runIds } from '../runs/run-starts.ts';
 import { capturedLogs, type CapturedLog } from './captured-logs.ts';
+
+type DefinitionNames = NonNullable<MemoryLedgerOptions['definitionNames']>;
 
 export interface ReadModelStaged {
   readonly stage: ReadModelStage;
@@ -21,10 +23,37 @@ export interface StagedLedger {
   readonly logged: () => readonly CapturedLog[];
 }
 
-const harnessNames = definitionNamesOf(
-  [...definitionTypeOrder, 'echo', 'probe', 'relay', 'paged', 'resumer', 'tool-user'],
-  unbounded,
-);
+const typesOfTheTests = [
+  'acting',
+  'asking',
+  'checked',
+  'echo',
+  'keeper',
+  'limited',
+  'measuring',
+  'noticed',
+  'outside',
+  'paged',
+  'paid-call',
+  'pending',
+  'posting',
+  'probe',
+  'prompted',
+  'prompted-limited',
+  'recorded',
+  'relay',
+  'resumer',
+  'system-call',
+  'texts',
+  'tool-user',
+  'words',
+];
+
+export function definitionNamesWith(types: readonly string[]): DefinitionNames {
+  return definitionNamesOf([...definitionTypeOrder, ...types], unbounded);
+}
+
+const harnessNames = definitionNamesWith(typesOfTheTests);
 
 export function stagedLedgerOf(
   holders: ContentHolders,
@@ -37,15 +66,15 @@ export function stagedLedgerOf(
     runOutcomes: runOutcomeMapping,
     holders,
     definitionNames,
+    runIds,
     ...(store === undefined ? {} : { store }),
   };
   if (readModel === undefined) {
     return { ledger: memoryLedgerWith(kept), staged: Layer.empty, logged: logs.logged };
   }
-  const projection = definitionsReadModelOf(readModel.folds);
-  const staged = Layer.succeed(DefinitionsReadModel, stagedOver(readModel.stage, projection));
+  const staged = Layer.succeed(DefinitionsReadModel, stagedOver(readModel.stage, readModel.folds));
   return {
-    ledger: memoryLedgerWith({ ...kept, projections: [projection] }),
+    ledger: memoryLedgerWith({ ...kept, projections: definitionsReadModelOf(readModel.folds) }),
     staged: Layer.mergeAll(staged, Logger.layer([logs.logger])),
     logged: logs.logged,
   };

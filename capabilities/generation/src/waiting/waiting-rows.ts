@@ -80,6 +80,7 @@ const setByTheDeferralAndTheEnd = ['run_deferred', ...endings];
 export const generationsWaiting: KeyedProjection = {
   name: generationsWaitingName,
   version: 1,
+  scopes: ['definition'],
   kinds: ['runs'],
   types: ['run_deferred', ...endings],
   columns: [

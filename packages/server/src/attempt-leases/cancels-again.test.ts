@@ -6,7 +6,13 @@ import { describe, expect, it } from 'vitest';
 
 import { cancelsAgainOf } from './cancels-again.ts';
 
-const run = { org: 'acme', playbook: 'alpha', id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' };
+const run = {
+  org: 'acme',
+  playbook: 'alpha',
+  id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+  definitionType: 'echo',
+  name: 'greet',
+};
 
 const request = { kind: 'deadline', reason: 'The step that waited for this run ran out of time' } as const;
 

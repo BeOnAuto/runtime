@@ -7,7 +7,7 @@ import { goalsReadWith } from '../reads/get-playbook-goals.ts';
 import { goalsOperationsServed } from '../reads/goals-operations.ts';
 import { serverConnectedThrough, type ServerConnected } from './goal-connections.ts';
 
-const created = { created_by: { id: 'person:owner', name: 'Owner' } };
+const created = { created_by: { id: 'person:owner', name: 'Owner' }, playbook: sales.playbook };
 
 function calling(...calls: readonly (readonly [string, string])[]) {
   return { calls: calls.map(([type, name]) => ({ type, name, steps: [{ number: 1, name: 'step' }] })) };
@@ -21,8 +21,8 @@ interface Saved {
 }
 
 function functionSaved(book: Book, { type, name, front, details = {} }: Saved) {
-  return book.append(
-    `definitions/${type}`,
+  return book.definitionChanged(
+    { type, name },
     'definition_created',
     { content: { source: `---\n${front}\n---\nDoes its part.`, details }, ...created },
     { definitionType: type, definitionName: name, definitionVersion: 1 },
@@ -31,8 +31,8 @@ function functionSaved(book: Book, { type, name, front, details = {} }: Saved) {
 
 function workflowSaved(book: Book, name: string, goal: string, details = {}) {
   const contributes = [{ goal, purpose: 'Does its part.', per_id: '/id', measures: '/n' }];
-  return book.append(
-    'definitions/workflow',
+  return book.definitionChanged(
+    { type: 'workflow', name },
     'definition_created',
     { content: { source: `document: ${name}\n`, details: { ...details, contributes } }, ...created },
     { definitionType: 'workflow', definitionName: name, definitionVersion: 1 },
@@ -133,6 +133,22 @@ describe('a server two workflows of a goal use', () => {
     expect(tracked?.gaps.find(({ kind }) => kind === 'connection_missing')?.detail).toContain(
       'The workflows track-customers and welcome-customers of the goal paying-customers use chat,',
     );
+  });
+});
+
+describe('the servers of two workflows of a goal', () => {
+  it('are listed by the server, whichever workflow comes first', async () => {
+    const book = await playbookWithTwoGoals();
+    await functionSaved(book, { type: 'lookup', name: 'ticket-rows', front: 'call:\n  server: tickets\n  tool: rows' });
+    await workflowSaved(book, 'audit-customers', experiments.id, calling(['lookup', 'ticket-rows']));
+
+    const [tracked] = (await readOf(book, connectedOnly('crm-api'))).goals;
+
+    expect(tracked?.connections?.map(({ server, workflows }) => [server, workflows])).toEqual([
+      ['chat', ['track-customers']],
+      ['crm-api', ['track-customers']],
+      ['tickets', ['audit-customers']],
+    ]);
   });
 });
 

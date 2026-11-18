@@ -28,8 +28,8 @@ function inPagesOf(database: HostDatabase, size: number): HostDatabase {
     ...database,
     store: {
       ...database.store,
-      readRecorded: (playbookKey, selection, page) =>
-        database.store.readRecorded(playbookKey, selection, { ...page, limit: Math.min(page.limit, size) }),
+      readRecordedOfKeys: (keys, selection, page) =>
+        database.store.readRecordedOfKeys(keys, selection, { ...page, limit: Math.min(page.limit, size) }),
     },
   };
 }
@@ -174,8 +174,8 @@ function keptAndUnreadable(database: HostDatabase): HostDatabase {
     content: { ...database.content, get: () => Effect.die(new Error('connect ECONNREFUSED')) },
     store: {
       ...database.store,
-      readRecorded: async (playbookKey, selection, page) => {
-        const read = await database.store.readRecorded(playbookKey, selection, page);
+      readRecordedOfKeys: async (keys, selection, page) => {
+        const read = await database.store.readRecordedOfKeys(keys, selection, page);
         return {
           ...read,
           records: read.records.map((record) => withItsOutputKept(record)),

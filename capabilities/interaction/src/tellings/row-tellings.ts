@@ -14,11 +14,15 @@ const decodeDelivery = Schema.decodeUnknownSync(Schema.fromJsonString(DeliverySc
 
 const toldAll = { set: { telling_due_at: null }, when: [] };
 
-export function playbookOf({ org, playbook }: RequestAddress) {
+export interface FiledRequest extends RequestAddress {
+  readonly filedIn: Telling['filedIn'];
+}
+
+function playbookOf({ org, playbook }: RequestAddress) {
   return { org, playbook };
 }
 
-function callsMade(parts: DeliveryParts, address: RequestAddress, row: OpenRequestRow, room: Effect.Effect<boolean>) {
+function callsMade(parts: DeliveryParts, address: FiledRequest, row: OpenRequestRow, room: Effect.Effect<boolean>) {
   return Effect.gen(function* () {
     const correlationId = yield* runCorrelationIn(parts.ledger, address);
     const withItsWords = yield* rowTellingItsWords(parts, address, row);
@@ -27,6 +31,7 @@ function callsMade(parts: DeliveryParts, address: RequestAddress, row: OpenReque
     const { cause, conversation, calls } = dueCallsOf(withItsWords, rendering);
     const tellingOf = (call: DueCalls['calls'][number]): Telling => ({
       playbook: playbookOf(address),
+      filedIn: address.filedIn,
       server,
       runId: address.id,
       definition: { definitionType: 'interaction', definitionName: row.function, definitionVersion: row.version },
@@ -44,20 +49,15 @@ function callsMade(parts: DeliveryParts, address: RequestAddress, row: OpenReque
   });
 }
 
-function toldOfTheRow(
-  parts: DeliveryParts,
-  address: RequestAddress,
-  row: OpenRequestRow,
-  room: Effect.Effect<boolean>,
-) {
+function toldOfTheRow(parts: DeliveryParts, address: FiledRequest, row: OpenRequestRow, room: Effect.Effect<boolean>) {
   return Effect.tap(callsMade(parts, address, row, room), (made) =>
-    made ? parts.ledger.advanceRow(openRequestsName, playbookOf(address), address.id, toldAll) : Effect.void,
+    made ? parts.ledger.advanceRow(openRequestsName, address.filedIn, address.id, toldAll) : Effect.void,
   );
 }
 
-function rowsDueOf(parts: DeliveryParts, address: RequestAddress, through: number) {
+function rowsDueOf(parts: DeliveryParts, address: FiledRequest, through: number) {
   const query = { where: [{ column: 'row_key', equals: address.id }], orderBy: [], order: 'asc', limit: 1 } as const;
-  return Effect.map(parts.ledger.readProjectedRows(openRequestsName, playbookOf(address), query), (rows) =>
+  return Effect.map(parts.ledger.readProjectedRows(openRequestsName, address.filedIn, query), (rows) =>
     rows
       .map(({ row }) => requestRowFrom(row))
       .filter(({ telling_due_at: dueAt }) => dueAt !== null && dueAt <= through),
@@ -66,7 +66,7 @@ function rowsDueOf(parts: DeliveryParts, address: RequestAddress, through: numbe
 
 export function toldThrough(
   parts: DeliveryParts,
-  address: RequestAddress,
+  address: FiledRequest,
   through: number,
   room: Effect.Effect<boolean>,
 ) {

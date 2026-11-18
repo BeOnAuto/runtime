@@ -1,5 +1,5 @@
 import { type Statement, statementOf } from '@on.auto/ledger';
-import { ContentUnavailable } from '@on.auto/workflow-engine';
+import { ContentUnavailable, type StartCall } from '@on.auto/workflow-engine';
 import { defaultLimits } from '@on.auto/workflow-engine/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -7,13 +7,13 @@ import { describe, expect, it } from 'vitest';
 import type { HostDatabase } from '../database/host-database.ts';
 import type { BoundConsumer, CallConsumer } from '../follower/consumers.ts';
 import { movedClock } from '../reaction-testing/moved-clock.ts';
-import { alpha, at, recorded } from '../reaction-testing/playbook-writes.ts';
+import { alpha, at, childStarted, childStreamOf, recorded } from '../reaction-testing/playbook-writes.ts';
 import { faultyDatabase } from '../testing/faulty-database.ts';
 import { until } from '../testing/until.ts';
 import { readingMeasured } from '../waiting-testing/measured-reads.ts';
 import { recordedWaiting, resultOfEnding } from '../waiting-testing/recorded-waiting.ts';
 import { parentId, parentRun, waitingParent } from '../waiting-testing/waiting-parent.ts';
-import { childCancelsOn } from './child-cancels.ts';
+import { type CalledOf, childCancelsOn } from './child-cancels.ts';
 import { childEndings, endedChildrenOn } from './child-endings.ts';
 
 const child = '0199a3c4-7d2e-7c1a-9b3f-0000000000c1';
@@ -33,6 +33,7 @@ const succeeded = { type: 'run_succeeded', data: { output: 'checked', record: {}
 const endingRecord = {
   playbook: { org: 'acme', playbook: 'alpha' },
   playbookKey: alpha,
+  filedUnder: 'definition/acme/check/',
   record: {
     id: 'record-1',
     cursor: 'record-1',
@@ -47,6 +48,48 @@ const endingRecord = {
     recordedAt: at,
   },
 };
+
+describe('the ending of a run that answers a call', () => {
+  it('is delivered by the follower to the step that waits for it, as its answer, and the call is answered', async () => {
+    const { database, settled, answeredCalls } = await waitingParent(child);
+
+    await recorded(database.store, await childStarted(database.store, child), succeeded, ofTheChild);
+
+    expect(await settled(parentId)).toEqual({ status: 'succeeded', output: 'checked' });
+    expect(await answeredCalls()).toEqual([{ state: 'answered', delivered: 1 }]);
+  });
+
+  it('is a receipt and no failure when it reaches a call that is closed, as when it is delivered again', async () => {
+    const mapped: string[] = [];
+    const waiting = recordedWaiting();
+    const { database, hosted, settled } = await waitingParent(child, {
+      waiting: {
+        ...waiting.options,
+        resultOf: (ending) => {
+          mapped.push(ending.type);
+          return resultOfEnding(ending);
+        },
+      },
+    });
+
+    await recorded(database.store, await childStarted(database.store, child), succeeded, ofTheChild);
+    await recorded(database.store, await childStarted(database.store, child), succeeded, ofTheChild);
+    await recorded(
+      database.store,
+      await childStarted(database.store, `${child}x`),
+      { type: 'run_failed', data: {} },
+      ofTheChild,
+    );
+    await settled(parentId);
+    await until(
+      (): readonly string[] => mapped,
+      (types) => types.includes('run_failed'),
+    );
+
+    expect(mapped).toContain('run_failed');
+    expect(hosted.troubles()).toEqual([]);
+  });
+});
 
 function endingReadBy(consumer: CallConsumer): BoundConsumer {
   const reading = consumer.read(endingRecord);
@@ -97,6 +140,25 @@ const lineage = { causationId: 'step-1', correlationId: 'root-1' };
 
 const childChildCancels = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-0000000000c1' };
 
+const callChildCancels: StartCall = {
+  kind: 'start_call',
+  key: { runId: 'acme/alpha/root-1', reference: '/do/0/ask', run: 1 },
+  function: 'notify',
+  arguments: { to: 'ada' },
+  longestMs: 60_000,
+};
+
+const calledOf: CalledOf = ({ function: name, arguments: given }) =>
+  typeof given === 'object' ? { type: 'notifier', name } : undefined;
+
+const called = {
+  org: 'acme',
+  playbook: 'alpha',
+  id: childChildCancels.runId,
+  definitionType: 'notifier',
+  name: 'notify',
+};
+
 const childChildEndingReads = '0199a3c4-7d2e-7c1a-9b3f-0000000000c2';
 
 const ofTheChildChildEndingReads = {
@@ -111,7 +173,11 @@ const ofTheChildChildEndingReads = {
 
 const started = {
   type: 'run_started',
-  data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: { text: 'x'.repeat(100 * 1024) } },
+  data: {
+    started_by: { id: 'acme-admin', name: 'acme-admin' },
+    playbook: 'alpha',
+    input: { text: 'x'.repeat(100 * 1024) },
+  },
 };
 
 const timedChild = '0199a3c4-7d2e-7c1a-9b3f-0000000000c1';
@@ -133,43 +199,6 @@ function readsRecorded(database: HostDatabase) {
   };
   return { recording, asked: (): readonly Statement[] => asked };
 }
-
-describe('the ending of a run that answers a call', () => {
-  it('is delivered by the follower to the step that waits for it, as its answer, and the call is answered', async () => {
-    const { database, settled, answeredCalls } = await waitingParent(child);
-
-    await recorded(database.store, `${alpha}runs/${child}`, succeeded, ofTheChild);
-
-    expect(await settled(parentId)).toEqual({ status: 'succeeded', output: 'checked' });
-    expect(await answeredCalls()).toEqual([{ state: 'answered', delivered: 1 }]);
-  });
-
-  it('is a receipt and no failure when it reaches a call that is closed, as when it is delivered again', async () => {
-    const mapped: string[] = [];
-    const waiting = recordedWaiting();
-    const { database, hosted, settled } = await waitingParent(child, {
-      waiting: {
-        ...waiting.options,
-        resultOf: (ending) => {
-          mapped.push(ending.type);
-          return resultOfEnding(ending);
-        },
-      },
-    });
-
-    await recorded(database.store, `${alpha}runs/${child}`, succeeded, ofTheChild);
-    await recorded(database.store, `${alpha}runs/${child}`, succeeded, ofTheChild);
-    await recorded(database.store, `${alpha}runs/${child}x`, { type: 'run_failed', data: {} }, ofTheChild);
-    await settled(parentId);
-    await until(
-      (): readonly string[] => mapped,
-      (types) => types.includes('run_failed'),
-    );
-
-    expect(mapped).toContain('run_failed');
-    expect(hosted.troubles()).toEqual([]);
-  });
-});
 
 describe('a delivery of an ending that the run cannot take now', () => {
   it('answers the call’s row and goes on, telling the trouble, and the answer the row keeps is given to the run before its next timer', async () => {
@@ -231,7 +260,7 @@ describe('the endings of the runs a run waits for, before a timer of that run fi
     const { database, callStates } = await waitingParent(child);
     await recorded(
       database.store,
-      `${alpha}runs/${child}`,
+      childStreamOf(child),
       { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } },
       ofTheChild,
     );
@@ -252,7 +281,7 @@ describe('the endings of the runs a run waits for, before a timer of that run fi
     const whileGoing = submitted.length;
     await recorded(
       database.store,
-      `${alpha}runs/${child}`,
+      childStreamOf(child),
       { type: 'run_rejected', data: { rejection: { reason: 'cancelled', detail: 'Expired', kind: 'deadline' } } },
       ofTheChild,
     );
@@ -296,7 +325,7 @@ describe('an answer a call’s row keeps that its run cannot take, before a time
     const { database } = await waitingParent(child);
     const failing = { database, resultOf: resultOfEnding, now: () => 1, trouble: noTrouble };
     const unavailable = new ContentUnavailable({ detail: 'The store of payloads did not answer' });
-    await recorded(database.store, `${alpha}runs/${child}`, succeeded, ofTheChild);
+    await recorded(database.store, await childStarted(database.store, child), succeeded, ofTheChild);
     const consumer = endingReadBy(childEndings({ ...failing, submitted: () => Effect.fail(unavailable) }));
     const { deliveries } = await Effect.runPromise(consumer.batchOf(undefined, 100));
     await Effect.runPromise(Effect.forEach(deliveries, ({ deliver }) => deliver));
@@ -308,16 +337,18 @@ describe('an answer a call’s row keeps that its run cannot take, before a time
 });
 
 describe('a cancel of the run a call waits for', () => {
-  it('asks for the run to be cancelled with the kind of the cancel and words that say why', async () => {
+  it('asks for the run to be cancelled with the kind of the cancel and words that say why, naming the definition the call called', async () => {
     const waiting = recordedWaiting();
-    const cancel = childCancelsOn(waiting.options.cancel);
+    const cancel = childCancelsOn(waiting.options.cancel, calledOf);
 
-    await Effect.runPromise(cancel({ child: childChildCancels, reason: 'deadline', lineage }));
-    await Effect.runPromise(cancel({ child: childChildCancels, reason: 'parent_ended', lineage }));
+    await Effect.runPromise(cancel({ child: childChildCancels, call: callChildCancels, reason: 'deadline', lineage }));
+    await Effect.runPromise(
+      cancel({ child: childChildCancels, call: callChildCancels, reason: 'parent_ended', lineage }),
+    );
 
     expect(waiting.cancels()).toEqual([
       {
-        run: { org: 'acme', playbook: 'alpha', id: childChildCancels.runId },
+        run: called,
         request: {
           kind: 'deadline',
           reason: 'The step that waited for this run ran out of time, so it no longer needs it',
@@ -325,7 +356,7 @@ describe('a cancel of the run a call waits for', () => {
         lineage,
       },
       {
-        run: { org: 'acme', playbook: 'alpha', id: childChildCancels.runId },
+        run: called,
         request: {
           kind: 'parent_ended',
           reason: 'The run that waited for this run ended first, or the branch that waited for it lost a race',
@@ -333,6 +364,27 @@ describe('a cancel of the run a call waits for', () => {
         lineage,
       },
     ]);
+  });
+});
+
+describe('a cancel of the run of a call that names no definition its functions know', () => {
+  it('asks for nothing and answers that no such run can be in the playbook', async () => {
+    const waiting = recordedWaiting();
+    const cancel = childCancelsOn(waiting.options.cancel, calledOf);
+
+    const receipts = await Effect.runPromise(
+      Effect.all([
+        cancel({ child: childChildCancels, call: null, reason: 'deadline', lineage }),
+        cancel({
+          child: childChildCancels,
+          call: { ...callChildCancels, arguments: 'ada' },
+          reason: 'deadline',
+          lineage,
+        }),
+      ]),
+    );
+
+    expect([receipts, waiting.cancels()]).toEqual([['unknown_run', 'unknown_run'], []]);
   });
 });
 
@@ -351,9 +403,7 @@ describe('the deadline of a call that waits for a run', () => {
       detail: 'The function notify did not finish within 600000 ms, the most it may take, at the step ask.',
       cause: { step: 'do/0/ask', run_id: 'notify at /do/0/ask #1', status: 'timed_out' },
     });
-    expect(waiting.cancels().map(({ run, request }) => [run, request.kind])).toEqual([
-      [{ org: 'acme', playbook: 'alpha', id: childChildCancels.runId }, 'deadline'],
-    ]);
+    expect(waiting.cancels().map(({ run, request }) => [run, request.kind])).toEqual([[called, 'deadline']]);
     expect(await callStates()).toEqual([{ state: 'cancelled', delivered: 0 }]);
   });
 });
@@ -363,13 +413,13 @@ describe('the ending of a run a run waits for, read before a timer of that run f
     const measured = readingMeasured((await waitingParent(childChildEndingReads)).database);
     await recorded(
       measured.database.store,
-      `${alpha}runs/${childChildEndingReads}`,
+      await childStarted(measured.database.store, childChildEndingReads),
       started,
       ofTheChildChildEndingReads,
     );
     await recorded(
       measured.database.store,
-      `${alpha}runs/${childChildEndingReads}`,
+      await childStarted(measured.database.store, childChildEndingReads),
       succeeded,
       ofTheChildChildEndingReads,
     );

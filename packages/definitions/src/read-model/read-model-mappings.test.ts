@@ -11,7 +11,7 @@ import {
   type ProjectedRow,
   type ProjectedRows,
 } from '@on.auto/operations';
-import { payloadReadsOf, recordedFactsUnder } from '@on.auto/operations/testing';
+import { payloadReadsOf, recordedFactsUnder, streamAddressed } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -21,7 +21,7 @@ import { definitionsReadModel } from './definitions-read-model.ts';
 import { definitionReferenceRows } from './reference-rows.ts';
 import { definitionVersionRows } from './version-rows.ts';
 
-const stream = { kind: 'definitions', id: 'workflow' };
+const stream = streamAddressed('definition/acme/d1/definitions/workflow');
 
 const context = {
   at: '2026-11-11T09:00:00.000Z',
@@ -63,7 +63,9 @@ function messageOf(fact: (typeof definitionFacts)[number], at: number): Projecte
 }
 
 function streamOf({ context: contextReadModelFixtures }: (typeof definitionFacts)[number]) {
-  return { kind: 'definitions', id: String(Reflect.get(contextReadModelFixtures, 'definitionType')) };
+  return streamAddressed(
+    `definition/acme/d1/definitions/${String(Reflect.get(contextReadModelFixtures, 'definitionType'))}`,
+  );
 }
 
 function keyedMessages(table: KeptProjection) {
@@ -98,7 +100,7 @@ function childRowsFolded(table: ChildRowsProjection): readonly unknown[] {
 
 export function rowsOfTheFixtures(): Readonly<Record<string, readonly unknown[]>> {
   return Object.fromEntries(
-    definitionsReadModel.tables.map((table) => [
+    definitionsReadModel.map((table) => [
       table.name,
       keepsChildRows(table) ? childRowsFolded(table) : rowsFolded(table),
     ]),
@@ -147,14 +149,19 @@ describe('the mappings of the read model of the current definitions', () => {
 describe('the read model of the current definitions over every recorded fact of a definition', () => {
   it('folds the facts every release recorded into the rows pinned for its version; a change to a mapping raises the version', () => {
     expect(definitionFacts.length).toBeGreaterThan(10);
-    expect({ version: definitionsReadModel.version, rows: rowsOfTheFixtures() }).toEqual(pinned);
+    expect(definitionsReadModel.map(({ version }) => version)).toEqual([
+      definitionRows.version,
+      definitionRows.version,
+      definitionRows.version,
+    ]);
+    expect({ version: definitionRows.version, rows: rowsOfTheFixtures() }).toEqual(pinned);
   });
 
   it('folds no value a fact may keep outside, so no build reads the content store', () => {
     const holders = contentHoldersOf([DefinitionEventSchema]);
 
-    expect(
-      payloadReadsOf({ projections: definitionsReadModel.tables }, holders, recordedFactsUnder(runtimeFolder)),
-    ).toEqual([]);
+    expect(payloadReadsOf({ projections: definitionsReadModel }, holders, recordedFactsUnder(runtimeFolder))).toEqual(
+      [],
+    );
   });
 });

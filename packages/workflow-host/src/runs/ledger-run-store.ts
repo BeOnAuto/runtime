@@ -1,4 +1,5 @@
 import { eventAppenderWithOf, eventCodecOf, statement, type Statement } from '@on.auto/ledger';
+import { streamPrefixOfPlaybook } from '@on.auto/operations';
 import {
   RunLogRecordSchema,
   runLogRecordOf,
@@ -11,7 +12,7 @@ import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import { runForgottenBy } from '../listeners/listener-rows.ts';
-import { runLogStreamOf } from './run-address.ts';
+import { runKeyOf, runLogStreamOf, type RunAddress } from './run-address.ts';
 import { lineageOfRecord } from './run-lineage.ts';
 import { latestSnapshotOf, savedSnapshot } from './snapshot-chunks.ts';
 
@@ -30,6 +31,20 @@ function knownRun(database: HostDatabase, runKey: string): Effect.Effect<void> {
     database.write(
       statement`INSERT INTO workflow_runs (run_key, stream_id) VALUES (${runKey}, ${runLogStreamOf(runKey)})
         ON CONFLICT (run_key) DO NOTHING`,
+    ),
+  );
+}
+
+export function runPlacedIn(database: HostDatabase, run: RunAddress): Effect.Effect<void> {
+  const runKey = runKeyOf(run);
+  return Effect.asVoid(
+    Effect.orDie(
+      database.write(
+        statement`INSERT INTO workflow_runs (run_key, stream_id, playbook_key)
+          VALUES (${runKey}, ${runLogStreamOf(runKey)}, ${streamPrefixOfPlaybook(run)})
+          ON CONFLICT (run_key) DO UPDATE SET playbook_key = excluded.playbook_key
+          WHERE workflow_runs.playbook_key IS NULL`,
+      ),
     ),
   );
 }

@@ -12,9 +12,14 @@ export interface PlaybookContentWriter {
   readonly keepContent: (content: ContentToKeep) => Effect.Effect<ContentKept, ContentRefused>;
 }
 
-export class PlaybookWriter extends Context.Service<PlaybookWriter, StreamWriter & PlaybookContentWriter>()(
-  '@on.auto/operations/PlaybookWriter',
-) {}
+export interface PlaybookDefinitionsWriter {
+  readonly ofDefinition: (definition: string) => StreamWriter;
+}
+
+export class PlaybookWriter extends Context.Service<
+  PlaybookWriter,
+  StreamWriter & PlaybookContentWriter & PlaybookDefinitionsWriter
+>()('@on.auto/operations/PlaybookWriter') {}
 
 export function playbookPayloadKept(
   toKeep: PayloadToKeep,

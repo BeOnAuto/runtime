@@ -23,7 +23,7 @@ function contextOf(type: string, name: string) {
   };
 }
 
-const started = { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} };
+const started = { started_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha', input: {} };
 
 function startedRecord(type: string, name: string): RecordedMessage {
   return {
@@ -34,16 +34,22 @@ function startedRecord(type: string, name: string): RecordedMessage {
   };
 }
 
+const definitionKey = 'definition/acme/0190a5b6-0000-7000-8000-000000000001/';
+
 const firsts: ReadonlyMap<string, RecordedMessage> = new Map([
-  [`${playbookKey}runs/r-close@1`, startedRecord('workflow', 'close')],
-  [`${playbookKey}runs/r-sum@1`, startedRecord('reasoning', 'sum')],
+  [`${definitionKey}runs/r-close@1`, startedRecord('workflow', 'close')],
+  [`${definitionKey}runs/r-sum@1`, startedRecord('reasoning', 'sum')],
 ]);
+
+const runsOfTheDefinition = new Set(['runs/r-close', 'runs/r-sum']);
 
 function counting() {
   const reads: string[] = [];
   const store = {
+    holderOfStream: ({ stream }: { readonly stream: string }) =>
+      Promise.resolve(runsOfTheDefinition.has(stream) ? definitionKey : undefined),
     messageAt: (stream: string, version: number) => {
-      reads.push(`${stream.slice(playbookKey.length)}@${version}`);
+      reads.push(`${stream.slice(definitionKey.length)}@${version}`);
       return Promise.resolve(firsts.get(`${stream}@${version}`));
     },
   };
@@ -151,6 +157,6 @@ describe('the workflow of a run', () => {
     );
 
     expect(workflows).toEqual(['close', undefined, undefined, 'close', undefined, 'close']);
-    expect(reads()).toEqual(['runs/r-close@1', 'runs/r-sum@1', 'runs/r-unknown@1', 'runs/r-other@1', 'runs/r-close@1']);
+    expect(reads()).toEqual(['runs/r-close@1', 'runs/r-sum@1', 'runs/r-close@1']);
   });
 });

@@ -2,7 +2,7 @@ import { Effect, Function } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { followedPlaybooksOn, type FollowedPlaybook, type Hold } from '../follower/followed-playbooks.ts';
+import { followedOrgsOn, type HeldPlaybook, type Hold } from '../follower/followed-orgs.ts';
 import { closeHostParts, openHostParts } from '../host/host-parts.ts';
 import { openWorkflowStore } from '../host/workflow-store.ts';
 import { followerWakeUp } from '../reactions/host-reactions.ts';
@@ -13,7 +13,7 @@ import { alpha, definitionRecorded, eventTrigger, playbookCreated, published } f
 export interface WokenFollower extends Omit<FollowerPartsOf, 'options'> {
   readonly woken: (now: number, sweep: boolean) => Promise<number | null>;
   readonly restarted: () => Promise<void>;
-  readonly place: () => Promise<FollowedPlaybook | undefined>;
+  readonly held: () => Promise<HeldPlaybook | undefined>;
   readonly heldAs: (hold: Hold) => Promise<void>;
   readonly failingReads: (failing: (text: string) => boolean) => void;
   readonly startsTake: (milliseconds: number) => void;
@@ -81,8 +81,11 @@ export async function wokenFollowerOn(
       await Effect.runPromise(current.wake.stop());
       current.wake = followerWakeUp(following, signal);
     },
-    place: () => Effect.runPromise(followedPlaybooksOn(store.database).load(alpha)),
-    heldAs: (hold) => Effect.runPromise(followedPlaybooksOn(store.database).held(alpha, hold)),
+    held: async () => {
+      const { due } = await Effect.runPromise(followedOrgsOn(store.database).heldAt(Number.MAX_SAFE_INTEGER, 100));
+      return due.find(({ playbookKey }) => playbookKey === alpha);
+    },
+    heldAs: (hold) => Effect.runPromise(followedOrgsOn(store.database).held(alpha, hold)),
     failingReads: (when) => {
       failing.when = when;
     },

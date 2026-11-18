@@ -5,7 +5,7 @@ import {
   type RunStreamAddress,
   type WorkRule,
 } from '@on.auto/definitions';
-import { Conflict, type StreamReader } from '@on.auto/operations';
+import { Conflict } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { interactionFactOf, type DeliveryEvent, type ReplyRefusal } from './run-facts.ts';
@@ -122,7 +122,10 @@ function seenIn({ answer }: RunWithItsReplies, worked: InteractionWork, replyId:
 
 export type SeenReplies = (replyId: string) => boolean;
 
-export function repliesSeenBy(reader: StreamReader, run: RunStreamAddress): Effect.Effect<SeenReplies> {
+export function repliesSeenBy(
+  reader: Parameters<typeof recordedRunIn>[0],
+  run: RunStreamAddress,
+): Effect.Effect<SeenReplies> {
   return Effect.map(
     recordedRunIn(reader, run),
     (recorded): SeenReplies =>

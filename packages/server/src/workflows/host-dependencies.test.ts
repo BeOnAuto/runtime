@@ -77,6 +77,7 @@ const lineage = { causationId: 'cancel-1', correlationId: unknownRun.id };
 const start = {
   org: 'acme',
   playbook: 'alpha',
+  definitionKey: 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-00000000c105/',
   workflow: 'close-the-month',
   version: 2,
   runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
@@ -125,14 +126,14 @@ describe('work the workflow host hands to the runtime of the server', () => {
 describe('the reports of the workflow host', () => {
   it('log a run left started with the reason the host gave, in words', async () => {
     const lines = await reportedLines(async (reports) => {
-      const run = { org: 'acme', playbook: 'alpha', runId: 'e-1' };
+      const run = { org: 'acme', definition: 'alpha-definition', runId: 'e-1' };
       await Effect.runPromise(reports.unsettled({ ...run, receipt: 'unknown_run' }));
       await Effect.runPromise(reports.unsettled({ ...run, receipt: 'settled_otherwise' }));
     });
 
     expect(lines).toEqual([
       expect.stringContaining(
-        '"annotations":{"org":"acme","playbook":"alpha","run_id":"e-1","reason":"The ledger has no such run"}',
+        '"annotations":{"org":"acme","definition":"alpha-definition","run_id":"e-1","reason":"The ledger has no such run"}',
       ),
       expect.stringContaining('"reason":"The run was settled otherwise before"'),
     ]);
@@ -144,7 +145,7 @@ describe('the reports of the workflow host', () => {
       await Effect.runPromise(
         reports.note({
           kind: 'settled_after_back_off',
-          run: { org: 'acme', playbook: 'alpha', runId: 'e-1' },
+          run: { org: 'acme', definition: 'alpha-definition', runId: 'e-1' },
           attempts: 21,
         }),
       );
@@ -218,7 +219,7 @@ describe('the machine the workflow host decides runs with', () => {
 });
 
 describe('the cancels the workflow host hands to the runtime of the server', () => {
-  it('settle nothing for a run the ledger does not have, and record the cancel of a run that has not started yet', async () => {
+  it('settle nothing for a run the ledger does not have, and answer that a run of a definition the playbook does not hold cannot be cancelled', async () => {
     const runtime = await memoryRuntime();
     const { waiting } = hostWorkOf(runtime, hostDispatchesOf(makeDispatcher([]), hostOperationsOf([echo])), {
       capabilities: [echo],
@@ -234,11 +235,15 @@ describe('the cancels the workflow host hands to the runtime of the server', () 
       Effect.as(waiting.cancelDeferred(unknownRun, { kind: 'requested', reason: 'No longer needed' }, lineage), 'left'),
     );
     const cancelled = await Effect.runPromise(
-      waiting.cancel(unknownRun, { kind: 'parent_ended', reason: 'The run that waited for it ended' }, lineage),
+      waiting.cancel(
+        { ...unknownRun, definitionType: 'echo', name: 'greet' },
+        { kind: 'parent_ended', reason: 'The run that waited for it ended' },
+        lineage,
+      ),
     );
     await runtime.dispose();
 
-    expect([settled, cancelled]).toEqual(['left', 'requested']);
+    expect([settled, cancelled]).toEqual(['left', 'unknown_run']);
   });
 });
 

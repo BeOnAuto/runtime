@@ -61,7 +61,7 @@ export function cancelledBeforeItsStart(state: RunStreamState): RunCancelled | u
   return cancel === undefined ? undefined : cancelledAsAsked(cancel);
 }
 
-const anotherRequest = new Conflict({
+export const anotherRequest = new Conflict({
   detail: 'The run id belongs to a run of another definition or with another input',
 });
 

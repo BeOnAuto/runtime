@@ -1,17 +1,23 @@
 import {
   definitionFactTypes,
-  definitionTypeStreamOf,
   playbookEventBytesToRead,
   playbookEventOf,
   playbookEventRead,
   type CloudEvent,
 } from '@on.auto/definitions';
 import type { LedgerStreams, StoredPage, StoredPlace } from '@on.auto/ledger';
-import type { PlaybookAddress, RecordedFact, Unavailable } from '@on.auto/operations';
+import {
+  addressedStreamOf,
+  playbookOfStreamPrefix,
+  type PlaybookAddress,
+  type RecordedFact,
+  type Unavailable,
+} from '@on.auto/operations';
 import { payloadReaderOf, payloadReadsAtOnce, type PayloadReader } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
+import { streamWithinItsKey } from '../follower/playbook-records.ts';
 import type { Point } from './history-points.ts';
 
 export interface PageEvent {
@@ -22,6 +28,8 @@ export interface PageEvent {
 }
 
 export const recordsInAPage = 1000;
+
+const definitionsKind = 'definitions';
 
 export const pageReadBounds = { outputs: 100, bytes: 8 * 1_048_576 } as const;
 
@@ -82,7 +90,7 @@ function factOf(playbookKey: string, record: StoredRecord): RecordedFact {
     id,
     causationId,
     correlationId,
-    stream: record.stream.slice(playbookKey.length),
+    stream: streamWithinItsKey(playbookKey, record.stream),
     version,
     globalPosition,
     type,
@@ -157,15 +165,26 @@ function boundedByTheirReads(playbookKey: string, records: readonly StoredRecord
   return { records, cutAfter: undefined };
 }
 
+function definitionsSeenIn(streams: ReadonlySet<string>, definitionTypes: readonly string[]): ReadonlySet<string> {
+  const seen = new Set(
+    [...streams].flatMap((stream) => {
+      const named = addressedStreamOf(stream);
+      return named?.kind === definitionsKind ? [named.id] : [];
+    }),
+  );
+  return new Set(definitionTypes.filter((type) => seen.has(type)));
+}
+
 export function readPage(
   store: LedgerStreams,
   payloads: PayloadReader,
   { playbookKey, after, types, definitionTypes }: PageRead,
 ): Effect.Effect<ReadPage, Unavailable> {
   return Effect.gen(function* () {
-    const page = yield* Effect.promise(() =>
-      store.readRecorded(
-        playbookKey,
+    const { org } = yield* Effect.orDie(Effect.fromOption(playbookOfStreamPrefix(playbookKey)));
+    const page = yield* Effect.promise(async () =>
+      store.readRecordedOfKeys(
+        { org, keys: [playbookKey, ...(await store.definitionsIn(playbookKey))] },
         { kind: 'everything' },
         { order: 'asc', limit: recordsInAPage, types, ...(after === undefined ? {} : { after }) },
       ),
@@ -181,9 +200,7 @@ export function readPage(
     const cut = bounded.records.length < page.records.length;
     return {
       events: placed.filter((each) => isPageEvent(each)),
-      definitionsSeen: new Set(
-        definitionTypes.filter((type) => streams.has(`${playbookKey}${definitionTypeStreamOf(type)}`)),
-      ),
+      definitionsSeen: definitionsSeenIn(streams, definitionTypes),
       passedOver: placed.filter((each) => isPassedOver(each)),
       contentMissing: read.flatMap(({ missing }) => (missing === undefined ? [] : [missing])),
       lastExamined: cut ? bounded.cutAfter : page.lastExamined,

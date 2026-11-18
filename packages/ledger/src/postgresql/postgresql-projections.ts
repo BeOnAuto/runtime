@@ -6,6 +6,7 @@ import type { StatementExecutor } from '../event-store.ts';
 import {
   columnsOfTheTable,
   dataBytesOf,
+  orgOfStream,
   playbookKeyOfStream,
   storedBytesOf,
 } from '../postgresql-reads/playbook-indexes.ts';
@@ -54,6 +55,7 @@ function pointsAfter(after: string | undefined): SQL {
 const keyOfALane: Readonly<Record<MessageLane['by'], ReturnType<typeof SQL.plain>>> = {
   stream: SQL.plain('m.stream_id'),
   prefix: SQL.plain(`(${playbookKeyOfStream})`),
+  org: SQL.plain(`(${orgOfStream})`),
 };
 
 interface LaneRead {
@@ -143,7 +145,6 @@ export const postgresqlProjectionDialect: ProjectionDialect = {
       : SQL`jsonb_set(message_metadata, '{payloadBytes}', to_jsonb(${payloadBytes}::bigint))`,
   booleanOf: (value) => value,
   listed: (values) => SQL`SELECT jsonb_array_elements_text(${JSON.stringify(values)}::jsonb) AS value`,
-  storedBytesOfMessage: storedBytesOf(columnsOfTheTable('m')),
   forUpdate: ' FOR UPDATE',
   catchUp: postgresqlCatchUp,
 };

@@ -3,7 +3,6 @@ import { aGeneratedHistory, definitionsReadModelOf } from '@on.auto/definitions/
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import {
-  checkpointsOf,
   keepsChildRows,
   Ledger,
   projectedTableOf,
@@ -11,7 +10,6 @@ import {
   type ProjectedKeyedRow,
   type ProjectedRow,
   type ProjectedValue,
-  type StreamProjection,
 } from '@on.auto/operations';
 import { Effect, ManagedRuntime, Schema, type Layer } from 'effect';
 import { Client } from 'pg';
@@ -37,7 +35,7 @@ const definitionNames = definitionNamesOf(types, () => Number.POSITIVE_INFINITY)
 
 interface Kept {
   readonly definitionNames: typeof definitionNames;
-  readonly streamProjections: readonly StreamProjection[];
+  readonly projections: readonly KeptProjection[];
   readonly mostBytesFilledAtOnce?: number;
 }
 
@@ -111,17 +109,17 @@ function rowsOf(ledger: Ledger['Service']) {
 
 async function foldedInline(aPlace: () => Promise<Place>, seed: number) {
   const { ledgerOn } = await aPlace();
-  const ledger = await opened(ledgerOn({ definitionNames, streamProjections: [readModel] }));
+  const ledger = await opened(ledgerOn({ definitionNames, projections: readModel }));
   await aGeneratedHistory(ledger, seed, types);
   return rowsOf(ledger);
 }
 
-async function caughtUp(aPlace: () => Promise<Place>, seed: number, mostBytesFilledAtOnce?: number) {
+async function filled(aPlace: () => Promise<Place>, seed: number, mostBytesFilledAtOnce?: number) {
   const { ledgerOn } = await aPlace();
-  await aGeneratedHistory(await opened(ledgerOn({ definitionNames, streamProjections: [] })), seed, types);
+  await aGeneratedHistory(await opened(ledgerOn({ definitionNames, projections: [] })), seed, types);
   const reopened = ledgerOn({
     definitionNames,
-    streamProjections: [readModel],
+    projections: readModel,
     ...(mostBytesFilledAtOnce === undefined ? {} : { mostBytesFilledAtOnce }),
   });
   return rowsOf(await opened(reopened));
@@ -144,16 +142,15 @@ function asTheVersionBefore(table: KeptProjection, version: number): KeptProject
     : { ...table, version, columns, rowAfter: (row, message) => withoutTheNewColumn(table.rowAfter(row, message)) };
 }
 
-function theVersionBefore(projection: StreamProjection): StreamProjection {
-  const version = projection.version - 1;
-  return { ...projection, version, tables: projection.tables.map((table) => asTheVersionBefore(table, version)) };
+function theVersionBefore(projections: readonly KeptProjection[]): readonly KeptProjection[] {
+  return projections.map((table) => asTheVersionBefore(table, table.version - 1));
 }
 
-function tablesOfTheVersion(projection: StreamProjection): readonly string[] {
-  return [...projection.tables, checkpointsOf(projection)].map((table) => projectedTableOf(table)).toSorted();
+function tablesOfTheVersion(projections: readonly KeptProjection[]): readonly string[] {
+  return projections.map((table) => projectedTableOf(table)).toSorted();
 }
 
-const namesOfTheReadModel = new Set([...readModel.tables.map(({ name }) => name), checkpointsOf(readModel).name]);
+const namesOfTheReadModel = new Set(readModel.map(({ name }) => name));
 
 async function tablesOfTheReadModelIn({ tablesNamed }: Place): Promise<readonly string[]> {
   return (await tablesNamed()).filter((table) => namesOfTheReadModel.has(table.replace(/_\d+$/u, ''))).toSorted();
@@ -165,10 +162,10 @@ function contributionsIn([definitions = []]: readonly (readonly ProjectedKeyedRo
 
 async function rebuiltOverTheVersionBefore(aPlace: () => Promise<Place>, seed: number) {
   const place = await aPlace();
-  const before = await opened(place.ledgerOn({ definitionNames, streamProjections: [theVersionBefore(readModel)] }));
+  const before = await opened(place.ledgerOn({ definitionNames, projections: theVersionBefore(readModel) }));
   await aGeneratedHistory(before, seed, types);
   const keptBefore = { rows: await rowsOf(before), tables: await tablesOfTheReadModelIn(place) };
-  const rebuilt = await rowsOf(await opened(place.ledgerOn({ definitionNames, streamProjections: [readModel] })));
+  const rebuilt = await rowsOf(await opened(place.ledgerOn({ definitionNames, projections: readModel })));
   return { keptBefore, rebuilt, tables: await tablesOfTheReadModelIn(place) };
 }
 
@@ -185,12 +182,12 @@ const stores: readonly Store[] = [
 
 describe.each(stores)('the read model of the current definitions on $store', ({ skipped, aPlace }) => {
   it.skipIf(skipped).each([1, 2, 3])(
-    'holds the same rows folded inline, caught up from its facts, and caught up one fact a page, history %i',
+    'holds the same rows folded inline, filled from its facts as the store opens, and filled one fact a page, history %i',
     async (seed) => {
       const inline = await foldedInline(aPlace, seed);
 
       expect(inline.flat().length).toBeGreaterThan(10);
-      expect([await caughtUp(aPlace, seed), await caughtUp(aPlace, seed, 1)]).toEqual([inline, inline]);
+      expect([await filled(aPlace, seed), await filled(aPlace, seed, 1)]).toEqual([inline, inline]);
     },
   );
 

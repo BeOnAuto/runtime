@@ -20,13 +20,13 @@ export type StoreKept = Pick<
   PostgreSQLOptions,
   | 'runOutcomes'
   | 'projections'
-  | 'streamProjections'
   | 'mostBytesFilledAtOnce'
   | 'holders'
   | 'layoutSteps'
   | 'factSchemas'
   | 'floor'
   | 'definitionNames'
+  | 'runIds'
   | 'tableMadeAgain'
   | 'pageFailed'
 >;

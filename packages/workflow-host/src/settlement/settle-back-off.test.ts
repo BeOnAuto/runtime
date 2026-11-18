@@ -5,9 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { HostNote } from '../host/host-reports.ts';
 import { addressOfRun } from '../runs/run-address.ts';
-import { runKey } from '../suite-testing/probe-subjects.ts';
-import { faultyDatabase } from '../testing/faulty-database.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { probeRun, runKey } from '../suite-testing/probe-subjects.ts';
+import { faultyWithARun, openedWithARun } from '../testing/started-runs.ts';
 import { ledgerRecordStore } from './ledger-record-store.ts';
 import { settleAttemptsBeforeBackingOff, settleBackOffMs } from './settle-attempts.ts';
 
@@ -47,7 +46,7 @@ async function recording(): Promise<Recording> {
       state.attempts += 1;
       return state.refuses ? Effect.fail(stillRunning) : Effect.succeed(recordedRun);
     });
-  const recordStore = ledgerRecordStore(await openedOn({ store: 'sqlite', file: aSQLiteFile() }), {
+  const recordStore = ledgerRecordStore(await openedWithARun(probeRun), {
     settle,
     note: (note) =>
       Effect.sync(() => {
@@ -131,7 +130,7 @@ describe('the record store of the host, refused', () => {
 
 describe('the record store of the host, failing', () => {
   it('counts a settlement that broke down as an attempt, to be dispatched again', async () => {
-    const recordStore = ledgerRecordStore(await openedOn({ store: 'sqlite', file: aSQLiteFile() }), {
+    const recordStore = ledgerRecordStore(await openedWithARun(probeRun), {
       settle: brokeDown,
       note: () => Effect.void,
       now: () => 0,
@@ -145,7 +144,7 @@ describe('the record store of the host, failing', () => {
   });
 
   it('fails a settlement or a due time it cannot record, to be dispatched again', async () => {
-    const database = faultyDatabase(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
+    const database = await faultyWithARun(probeRun);
     const recordStore = ledgerRecordStore(database, { settle: brokeDown, note: () => Effect.void, now: () => 0 });
     database.failing(true);
 

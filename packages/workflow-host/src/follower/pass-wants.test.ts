@@ -13,15 +13,18 @@ import {
   finishesRead,
   lastPageOf,
   listenerFor,
+  namesPlacingInAlpha,
+  org,
   passingOn,
+  placeOfTheTests,
   playbookKey,
   recordAt,
 } from '../reaction-testing/playbook-passes.ts';
-import { eventTrigger } from '../reaction-testing/playbook-writes.ts';
+import { definitionKeyNamed, eventTrigger } from '../reaction-testing/playbook-writes.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import type { Consumer, FollowedRecord } from './consumers.ts';
-import { followedPlaybooksOn } from './followed-playbooks.ts';
-import { passOf, type PassParts } from './playbook-pass.ts';
+import { followedOrgsOn } from './followed-orgs.ts';
+import { passesOf, type PassParts } from './org-pass.ts';
 import { stepOf, type StepParts, type Stepping } from './record-steps.ts';
 
 interface Wanting {
@@ -60,12 +63,13 @@ function wanting(name: string, wants?: boolean, wantedWith?: string): Wanting {
 async function passedOnce(...registered: readonly Consumer[]) {
   const reads: boolean[] = [];
   const database = await openedOn(await onSQLite());
-  const playbooks = followedPlaybooksOn(database);
-  const pass = passOf({
+  const orgs = followedOrgsOn(database);
+  const { org: pass } = passesOf({
     database,
-    playbooks,
+    orgs,
+    names: database.store,
     records: {
-      after: (_playbook, _cursor, delivers) =>
+      after: (_org, _cursor, delivers) =>
         Effect.sync(() => {
           reads.push(delivers.size > 0);
           return { records: [finishedAt(1)], hasMore: false, nextCursor: null, lastExamined: null };
@@ -84,8 +88,8 @@ async function passedOnce(...registered: readonly Consumer[]) {
     now: Date.now,
     holdNotes: { tried: () => Effect.void, failed: () => Effect.void, lifted: () => Effect.void },
   });
-  await Effect.runPromise(playbooks.follow(playbookKey, null));
-  const end = await Effect.runPromise(pass(playbookKey, 'signal'));
+  await Effect.runPromise(orgs.follow(org, placeOfTheTests));
+  const end = await Effect.runPromise(pass(org, 'signal'));
   return { end, reads };
 }
 
@@ -116,7 +120,7 @@ function countedRecords(pageAt: (read: number) => Effect.Effect<readonly Recorde
   const reads: boolean[] = [];
   return {
     records: {
-      after: (_playbook, _cursor, delivers) =>
+      after: (_org, _cursor, delivers) =>
         Effect.suspend(() => {
           reads.push(delivers.size > 0);
           return Effect.map(pageAt(reads.length), (records) => ({
@@ -151,11 +155,12 @@ function listening(database: HostDatabase, armedBy: number) {
 
 async function passing(counted: CountedRecords) {
   const opened = await openedOn(await onSQLite());
-  const playbooks = followedPlaybooksOn(opened);
-  const pass = passOf({
+  const orgs = followedOrgsOn(opened);
+  const { org: pass } = passesOf({
     database: opened,
     records: counted.records,
-    playbooks,
+    orgs,
+    names: opened.store,
     consumers: [],
     calls: [],
     definitionType: 'workflow',
@@ -169,7 +174,7 @@ async function passing(counted: CountedRecords) {
     now: Date.now,
     holdNotes: { tried: () => Effect.void, failed: () => Effect.void, lifted: () => Effect.void },
   });
-  return { database: opened, playbooks, pass };
+  return { database: opened, orgs, pass };
 }
 
 function finishedPassingOn(
@@ -191,10 +196,10 @@ function finishedPassingOn(
 }
 
 async function passedOncePassReactions(opening: ReturnType<typeof passingOn>) {
-  const { playbooks, pass } = await opening;
-  await Effect.runPromise(playbooks.follow(playbookKey, null));
-  const end = await Effect.runPromise(pass(playbookKey, 'signal'));
-  const followed = await Effect.runPromise(playbooks.load(playbookKey));
+  const { orgs, pass } = await opening;
+  await Effect.runPromise(orgs.follow(org, placeOfTheTests));
+  const end = await Effect.runPromise(pass(org, 'signal'));
+  const followed = await Effect.runPromise(orgs.load(org));
   return { end, cursor: followed?.cursor };
 }
 
@@ -220,6 +225,7 @@ const at = '2026-10-01T09:00:00.000Z';
 function triggerActivatedAt(position: number): RecordedEvent {
   return {
     ...recordAt('definitions/workflow', position),
+    stream: `${definitionKeyNamed('close')}definitions/workflow`,
     type: 'definition_created',
     data: {
       content: { source: 'schedule: {}', triggers: [eventTrigger({ type: 'run_succeeded' })] },
@@ -241,7 +247,7 @@ function notedAt(position: number, delivers: ReadonlySet<string>): RecordedEvent
 function pagesOf(pageAt: (read: number, delivers: ReadonlySet<string>) => Effect.Effect<RecordedPage>) {
   const reads = { count: 0 };
   const records: PassParts['records'] = {
-    after: (_playbook, _cursor, delivers) =>
+    after: (_org, _cursor, delivers) =>
       Effect.suspend(() => {
         reads.count += 1;
         return pageAt(reads.count, delivers);
@@ -266,13 +272,10 @@ function namedWhileTheSecondPageIsRead(database: HostDatabase) {
 }
 
 async function passedTwice(over: Parameters<typeof passingOn>[0]) {
-  const { playbooks, pass } = await passingOn(over);
-  await Effect.runPromise(playbooks.follow(playbookKey, null));
-  const ends = [
-    await Effect.runPromise(pass(playbookKey, 'signal')),
-    await Effect.runPromise(pass(playbookKey, 'signal')),
-  ];
-  return { ends, cursor: (await Effect.runPromise(playbooks.load(playbookKey)))?.cursor };
+  const { orgs, pass } = await passingOn(over);
+  await Effect.runPromise(orgs.follow(org, placeOfTheTests));
+  const ends = [await Effect.runPromise(pass(org, 'signal')), await Effect.runPromise(pass(org, 'signal'))];
+  return { ends, cursor: (await Effect.runPromise(orgs.load(org)))?.cursor };
 }
 
 describe('a consumer that says whether it wants the records of a playbook', () => {
@@ -351,11 +354,11 @@ describe('a step over a record whose stepping has not worked out the consumers t
 describe('the data of the records a pass reads', () => {
   it('is read again with it, after a glance without it, while a run of the playbook listens for a type of event', async () => {
     const counted = endlessNotes();
-    const { database, playbooks, pass } = await passing(counted);
-    await Effect.runPromise(playbooks.follow(playbookKeyPassData, null));
+    const { database, orgs, pass } = await passing(counted);
+    await Effect.runPromise(orgs.follow(org, placeOfTheTests));
     await Effect.runPromise(Effect.orDie(listening(database, 7)));
 
-    await Effect.runPromise(pass(playbookKeyPassData, 'signal'));
+    await Effect.runPromise(pass(org, 'signal'));
 
     expect(counted.reads().slice(0, 2)).toEqual([false, true]);
   });
@@ -393,7 +396,7 @@ describe('a pass over facts that another consumer reads, of a type no trigger or
 describe('a pass that meets a definition activating a trigger of a type it reads already', () => {
   it('hands the next record of that type to the consumers of the reactions', async () => {
     const delivered: string[] = [];
-    const { playbooks, pass } = await passingOn((database) => ({
+    const { orgs, pass } = await passingOn((database) => ({
       records: lastPageOf(() => Effect.succeed([finishedAt(1), triggerActivatedAt(2), finishedAt(3)])),
       consumers: [
         deliveringEach((id) => {
@@ -403,10 +406,11 @@ describe('a pass that meets a definition activating a trigger of a type it reads
       calls: [finishesRead()],
       passedEarly: () => Effect.void,
       applyDefinitionRecord: definitionRecordsKeepingTheirOwnStops(database),
+      names: namesPlacingInAlpha(definitionKeyNamed('close')),
     }));
-    await Effect.runPromise(playbooks.follow(playbookKey, null));
+    await Effect.runPromise(orgs.follow(org, placeOfTheTests));
 
-    await Effect.runPromise(pass(playbookKey, 'signal'));
+    await Effect.runPromise(pass(org, 'signal'));
 
     expect(delivered).toEqual(['record-3']);
   });

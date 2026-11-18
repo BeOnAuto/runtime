@@ -4,7 +4,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { HostWakeUp } from '../loop/host-wake-up.ts';
 import type { MovingTime } from '../reaction-testing/follower-parts.ts';
-import type { HeldPlaybook, HeldPlaybooks } from './followed-playbooks.ts';
+import type { HeldPlaybook, HeldPlaybooks } from './followed-orgs.ts';
 import { followerWakeUpOf, type FollowerWork } from './follower-wake-up.ts';
 
 const alpha = 'playbook/acme/alpha/';
@@ -13,10 +13,8 @@ const at = Date.parse('2026-11-11T09:00:00.000Z');
 
 const heldAlpha: HeldPlaybook = {
   playbookKey: alpha,
-  cursor: null,
-  delivered: null,
-  attempts: 0,
-  waiting: true,
+  org: 'acme',
+  progress: { cursor: 'c-0', delivered: null, attempts: 0, waiting: false },
   hold: { heldFor: 'content', since: at - 1000, until: at, holds: 1 },
 };
 
@@ -69,21 +67,25 @@ function holdsAnswering(answers: readonly HeldPlaybooks[], logged: Logged): Foll
   });
   return {
     heldAt: (now) => Effect.andThen(logged(`held at ${now - at}`), answered),
+    parkedForDelivery: () => Effect.succeed([]),
     failed: ({ playbookKey }, { at: triedAt, retryAt }) =>
       logged(`failed ${playbookKey} at ${triedAt - at}, again ${retryAt - triedAt}`),
   };
 }
 
-function passTaking(time: MovingTime, { failing, takesMs }: Passing, logged: Logged): FollowerWork['pass'] {
-  return (playbookKey, mode, known) =>
-    Effect.andThen(
-      Effect.sync(() => {
-        time.moved(takesMs);
-      }),
-      failing.has(playbookKey)
-        ? Effect.die(new Error('The test failed this pass'))
-        : Effect.as(logged(`pass ${playbookKey} ${mode} ${known?.hold?.holds ?? 'none'}`), 'waiting'),
-    );
+function passTaking(time: MovingTime, { failing, takesMs }: Passing, logged: Logged): FollowerWork['passes'] {
+  return {
+    org: () => Effect.die(new Error('No org is passed here')),
+    held: ({ playbookKey, hold }) =>
+      Effect.andThen(
+        Effect.sync(() => {
+          time.moved(takesMs);
+        }),
+        failing.has(playbookKey)
+          ? Effect.die(new Error('The test failed this pass'))
+          : Effect.as(logged(`pass ${playbookKey} sweep ${hold.holds}`), 'waiting'),
+      ),
+  };
 }
 
 function workHolding(
@@ -104,13 +106,12 @@ function workHolding(
       log.push(line);
     });
   const work: FollowerWork = {
-    pass: passTaking(time, passing, logged),
-    discovery: { atStart: () => Effect.void, registriesAppended: () => Effect.void, playbookSeen: () => Effect.void },
+    passes: passTaking(time, passing, logged),
+    discovery: { atStart: () => Effect.void, orgSeen: () => Effect.void },
     sweeps: {
       started: () => Effect.void,
-      next: () => Effect.as(logged('next sweep'), { registries: [], playbooks: [], again: false }),
+      next: () => Effect.as(logged('next sweep'), { orgs: [], again: false }),
       passAgain: Function.constVoid,
-      registriesRead: Function.constVoid,
     },
     upkeep: {
       sweep: () => Effect.void,

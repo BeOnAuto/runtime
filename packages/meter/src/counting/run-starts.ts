@@ -1,4 +1,5 @@
 import type { LoggedEvent, LogPorts } from '@on.auto/ledger';
+import { runStreamOf } from '@on.auto/operations';
 
 export interface Counted {
   readonly actions: number;
@@ -10,19 +11,22 @@ export interface Counting extends Counted {
   readonly hasStarted: (stream: string) => boolean;
 }
 
-export type FirstStartOf = (stream: string) => Promise<number | undefined>;
+export interface FirstStart {
+  readonly version: number;
+  readonly playbook: string;
+}
+
+export type FirstStartOf = (stream: string) => Promise<FirstStart | undefined>;
 
 interface Tally {
   readonly firstsAmong: (starts: readonly LoggedEvent[]) => Promise<number>;
   readonly hasStarted: (stream: string) => boolean;
 }
 
-const RUN_STREAM = /^playbook\/[^/]+\/[^/]+\/runs\/[^/]+$/u;
-
 const EVENTS_A_PAGE = 500;
 
 function isRunStart({ type, stream }: LoggedEvent): boolean {
-  return type === 'run_started' && RUN_STREAM.test(stream);
+  return type === 'run_started' && runStreamOf(stream) !== undefined;
 }
 
 function freshTally(): Tally {
@@ -37,7 +41,7 @@ function freshTally(): Tally {
 function tallyAfter(firstStartOf: FirstStartOf): Tally {
   const started = new Set<string>();
   const isFirst = async ({ stream, version }: LoggedEvent): Promise<boolean> =>
-    (await firstStartOf(stream)) === version && Boolean(started.add(stream));
+    (await firstStartOf(stream))?.version === version && Boolean(started.add(stream));
   return {
     firstsAmong: async (starts) => (await Promise.all(starts.map((start) => isFirst(start)))).filter(Boolean).length,
     hasStarted: (stream) => started.has(stream),

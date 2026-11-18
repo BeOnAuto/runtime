@@ -21,7 +21,7 @@ import {
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
 import { appendRefusedAs } from '../refusals/append-refused.ts';
 import { definitionNamesTableName } from './definition-names-table.ts';
-import { heldBy, holderOf, nameReleased, namesOfAKind, nameWritten } from './name-rows.ts';
+import { heldBy, holderOf, nameReleased, namesOfAKind, nameWritten, readOn } from './name-rows.ts';
 
 export type {
   DefinitionName,
@@ -65,7 +65,7 @@ async function judgedUnderLock(
   await inTurn(definitions, ({ definitionKey }) => locked(execute, dialect, definitionKey, ''));
   const judged: DefinitionJudged[] = [];
   await inTurn(definitions, async (definition) => {
-    judged.push(judgedOf(names, definition, await heldBy(execute, definition.definitionKey)));
+    judged.push(judgedOf(names, definition, await heldBy(readOn(execute), definition.definitionKey)));
   });
   return judged;
 }
@@ -80,10 +80,10 @@ async function judgedWhole(
   await inTurn(claims, ({ claimed }) => locked(execute, dialect, claimed.playbookKey, nameKeyOf(claimed)));
   await inTurn(kinds, ({ playbookKey, definitionType }) => locked(execute, dialect, playbookKey, definitionType));
   await inTurn(claims, async (claim) => {
-    refused(takenRefusal(names, judged, claim, await holderOf(execute, claim.claimed)));
+    refused(takenRefusal(names, judged, claim, await holderOf(readOn(execute), claim.claimed)));
   });
   await inTurn(kinds, async (kind) => {
-    refused(boundRefusal(names, judged, kind, await namesOfAKind(execute, kind)));
+    refused(boundRefusal(names, judged, kind, await namesOfAKind(readOn(execute), kind)));
   });
 }
 

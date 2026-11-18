@@ -7,15 +7,19 @@ import {
   type TriggerFilter,
 } from '@on.auto/definitions';
 import { statement } from '@on.auto/ledger';
-import { Effect, Result, Schema } from 'effect';
+import { Array as Arr, Effect, Result, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
 import { firstDueOf } from '../schedules/schedule-times.ts';
 import type { InZone } from '../schedules/zone-clock.ts';
 import { triggerChangesOf, type TriggerChange } from './trigger-changes.ts';
 
+export interface DefinitionPlace {
+  readonly playbookKey: string;
+  readonly definitionKey: string;
+}
+
 export interface Activation {
-  readonly workflow: string;
   readonly version: number;
   readonly triggers: readonly Trigger[];
   readonly activatedBy: string;
@@ -24,7 +28,7 @@ export interface Activation {
 
 interface Activating {
   readonly database: HostDatabase;
-  readonly playbookKey: string;
+  readonly place: DefinitionPlace;
   readonly activation: Activation;
   readonly inZone: InZone;
   readonly paused: boolean;
@@ -37,7 +41,7 @@ export interface EventPage {
 }
 
 export interface EventSubscription {
-  readonly workflow: string;
+  readonly definitionKey: string;
   readonly version: number;
   readonly reference: string;
   readonly filters: readonly TriggerFilter[];
@@ -50,26 +54,24 @@ const ScheduleRow = Schema.Struct({
   activated_at: WholeNumber,
 });
 
-const PauseRow = Schema.Struct({ workflow: Schema.String });
+const PauseRow = Schema.Struct({ definition_key: Schema.String });
 
 const EventRow = Schema.Struct({
-  workflow: Schema.String,
+  definition_key: Schema.String,
   version: WholeNumber,
   rule: Schema.fromJsonString(EventTriggerSchema),
 });
 
-function typesKept(database: HostDatabase, playbookKey: string, workflow: string, types: readonly string[]) {
+function typesKept(database: HostDatabase, { playbookKey, definitionKey }: DefinitionPlace, types: readonly string[]) {
   return Effect.orDie(
     Effect.andThen(
-      database.write(
-        statement`DELETE FROM workflow_subscription_types WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
-      ),
+      database.write(statement`DELETE FROM workflow_subscription_types WHERE definition_key = ${definitionKey}`),
       Effect.forEach(
         [...new Set(types)],
         (type) =>
           database.write(
-            statement`INSERT INTO workflow_subscription_types (playbook_key, workflow, type)
-              VALUES (${playbookKey}, ${workflow}, ${type}) ON CONFLICT DO NOTHING`,
+            statement`INSERT INTO workflow_subscription_types (definition_key, type, playbook_key)
+              VALUES (${definitionKey}, ${type}, ${playbookKey}) ON CONFLICT DO NOTHING`,
           ),
         { discard: true },
       ),
@@ -89,148 +91,151 @@ function firstDueOnActivation({ activation, inZone, paused }: Activating, trigge
   return trigger.kind === 'event' || paused ? null : firstDueAt(trigger, activation.activatedAt, inZone);
 }
 
-function keptTriggersOf(
-  database: HostDatabase,
-  playbookKey: string,
-  workflow: string,
-): Effect.Effect<readonly Trigger[]> {
+function keptTriggersOf(database: HostDatabase, definitionKey: string): Effect.Effect<readonly Trigger[]> {
   return Effect.orDie(
     rowsOf(
       KeptRow,
-      database.read(
-        statement`SELECT rule FROM workflow_subscriptions WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
-      ),
+      database.read(statement`SELECT rule FROM workflow_subscriptions WHERE definition_key = ${definitionKey}`),
     ),
   ).pipe(Effect.map((rows) => rows.map(({ rule }) => rule)));
 }
 
 function activatedRow(activating: Activating, trigger: Trigger) {
-  const { database, playbookKey, activation } = activating;
-  const { workflow, version, activatedBy, activatedAt } = activation;
+  const { database, place, activation } = activating;
+  const { version, activatedBy, activatedAt } = activation;
   return database.write(
     statement`INSERT INTO workflow_subscriptions
-        (playbook_key, workflow, reference, version, kind, rule, activated_by, activated_at, next_due, running)
-      VALUES (${playbookKey}, ${workflow}, ${trigger.reference}, ${version}, ${trigger.kind}, ${JSON.stringify(trigger)},
-        ${activatedBy}, ${activatedAt}, ${firstDueOnActivation(activating, trigger)}, NULL)
-      ON CONFLICT (playbook_key, workflow, reference) DO UPDATE SET version = excluded.version, kind = excluded.kind,
-        rule = excluded.rule, activated_by = excluded.activated_by, activated_at = excluded.activated_at,
-        next_due = excluded.next_due, held_due = NULL`,
+        (definition_key, reference, playbook_key, version, kind, rule, activated_by, activated_at, next_due, running)
+      VALUES (${place.definitionKey}, ${trigger.reference}, ${place.playbookKey}, ${version}, ${trigger.kind},
+        ${JSON.stringify(trigger)}, ${activatedBy}, ${activatedAt}, ${firstDueOnActivation(activating, trigger)}, NULL)
+      ON CONFLICT (definition_key, reference) DO UPDATE SET playbook_key = excluded.playbook_key,
+        version = excluded.version, kind = excluded.kind, rule = excluded.rule, activated_by = excluded.activated_by,
+        activated_at = excluded.activated_at, next_due = excluded.next_due, held_due = NULL`,
   );
 }
 
 function rowWritten(activating: Activating, change: TriggerChange) {
-  const { database, playbookKey, activation } = activating;
-  const { workflow, version } = activation;
+  const { database, place, activation } = activating;
+  const { definitionKey } = place;
   if (change.change === 'activated') {
     return activatedRow(activating, change.trigger);
   }
   return change.change === 'kept'
     ? database.write(
-        statement`UPDATE workflow_subscriptions SET version = ${version}
-          WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND reference = ${change.trigger.reference}`,
+        statement`UPDATE workflow_subscriptions SET version = ${activation.version}
+          WHERE definition_key = ${definitionKey} AND reference = ${change.trigger.reference}`,
       )
     : database.write(
         statement`DELETE FROM workflow_subscriptions
-          WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND reference = ${change.reference}`,
+          WHERE definition_key = ${definitionKey} AND reference = ${change.reference}`,
       );
 }
 
-function isPaused(database: HostDatabase, playbookKey: string, workflow: string): Effect.Effect<boolean> {
+function isPaused(database: HostDatabase, definitionKey: string): Effect.Effect<boolean> {
   return Effect.orDie(
     rowsOf(
       PauseRow,
-      database.read(
-        statement`SELECT workflow FROM workflow_pauses WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
-      ),
+      database.read(statement`SELECT definition_key FROM workflow_pauses WHERE definition_key = ${definitionKey}`),
     ),
   ).pipe(Effect.map((rows) => rows.length > 0));
 }
 
-export function triggersActivated(database: HostDatabase, playbookKey: string, activation: Activation, inZone: InZone) {
+export function triggersActivated(
+  database: HostDatabase,
+  place: DefinitionPlace,
+  activation: Activation,
+  inZone: InZone,
+) {
   return Effect.gen(function* () {
-    const kept = yield* keptTriggersOf(database, playbookKey, activation.workflow);
-    const paused = yield* isPaused(database, playbookKey, activation.workflow);
+    const kept = yield* keptTriggersOf(database, place.definitionKey);
+    const paused = yield* isPaused(database, place.definitionKey);
     yield* Effect.orDie(
       Effect.forEach(
         triggerChangesOf(kept, activation.triggers),
-        (change) => rowWritten({ database, playbookKey, activation, inZone, paused }, change),
+        (change) => rowWritten({ database, place, activation, inZone, paused }, change),
         { discard: true },
       ),
     );
-    yield* typesKept(database, playbookKey, activation.workflow, typesOf(activation.triggers));
+    yield* typesKept(database, place, typesOf(activation.triggers));
   });
 }
 
-export function triggersRemoved(database: HostDatabase, playbookKey: string, workflow: string) {
+export function triggersRemoved(database: HostDatabase, place: DefinitionPlace) {
   return Effect.asVoid(
     Effect.orDie(
-      database.write(
-        statement`DELETE FROM workflow_subscriptions WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
-      ),
+      database.write(statement`DELETE FROM workflow_subscriptions WHERE definition_key = ${place.definitionKey}`),
     ),
-  ).pipe(Effect.andThen(typesKept(database, playbookKey, workflow, [])));
+  ).pipe(Effect.andThen(typesKept(database, place, [])));
 }
 
-export function triggersRetired(database: HostDatabase, playbookKey: string, workflow: string) {
-  return Effect.andThen(
-    triggersRemoved(database, playbookKey, workflow),
-    Effect.orDie(
-      database.write(
-        statement`DELETE FROM workflow_pauses WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
+export function namedByTheirDefinitions<Row extends DefinitionPlace>(
+  database: HostDatabase,
+  rows: readonly Row[],
+): Effect.Effect<readonly (Row & { readonly workflow: string })[]> {
+  return Effect.map(
+    Effect.forEach(rows, (row) =>
+      Effect.flatMap(
+        Effect.promise(() => database.store.nameHeldBy(row.definitionKey)),
+        (held) =>
+          held === undefined
+            ? Effect.as(triggersRemoved(database, row), [])
+            : Effect.succeed([{ ...row, workflow: held.name }]),
       ),
     ),
+    Arr.flatten,
   );
 }
 
-export function triggersPaused(database: HostDatabase, playbookKey: string, workflow: string) {
+export function triggersRetired(database: HostDatabase, place: DefinitionPlace) {
+  return Effect.andThen(
+    triggersRemoved(database, place),
+    Effect.orDie(database.write(statement`DELETE FROM workflow_pauses WHERE definition_key = ${place.definitionKey}`)),
+  );
+}
+
+export function triggersPaused(database: HostDatabase, { definitionKey }: DefinitionPlace) {
   return Effect.asVoid(
     Effect.orDie(
       database.transaction([
         statement`UPDATE workflow_subscriptions SET next_due = NULL, held_due = NULL
-          WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND kind <> 'event'`,
-        statement`INSERT INTO workflow_pauses (playbook_key, workflow) VALUES (${playbookKey}, ${workflow})
-          ON CONFLICT DO NOTHING`,
+          WHERE definition_key = ${definitionKey} AND kind <> 'event'`,
+        statement`INSERT INTO workflow_pauses (definition_key) VALUES (${definitionKey}) ON CONFLICT DO NOTHING`,
       ]),
     ),
   );
 }
 
-function schedulesOf(database: HostDatabase, playbookKey: string, workflow: string) {
+function schedulesOf(database: HostDatabase, definitionKey: string) {
   return Effect.orDie(
     rowsOf(
       ScheduleRow,
       database.read(
         statement`SELECT rule, activated_at FROM workflow_subscriptions
-          WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND kind <> 'event'`,
+          WHERE definition_key = ${definitionKey} AND kind <> 'event'`,
       ),
     ),
   );
 }
 
-interface Resumption {
-  readonly workflow: string;
-  readonly resumedAt: number;
-}
-
 export function triggersResumed(
   database: HostDatabase,
-  playbookKey: string,
-  { workflow, resumedAt }: Resumption,
+  { definitionKey }: DefinitionPlace,
+  resumedAt: number,
   inZone: InZone,
 ) {
   return Effect.gen(function* () {
-    if (!(yield* isPaused(database, playbookKey, workflow))) {
+    if (!(yield* isPaused(database, definitionKey))) {
       return;
     }
-    const schedules = yield* schedulesOf(database, playbookKey, workflow);
+    const schedules = yield* schedulesOf(database, definitionKey);
     yield* Effect.orDie(
       database.transaction([
         ...schedules.map(
           ({ rule, activated_at: activatedAt }) =>
             statement`UPDATE workflow_subscriptions SET next_due = ${firstDueAt(rule, activatedAt, inZone, resumedAt)}
-              WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND reference = ${rule.reference}`,
+              WHERE definition_key = ${definitionKey} AND reference = ${rule.reference}`,
         ),
-        statement`DELETE FROM workflow_pauses WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
+        statement`DELETE FROM workflow_pauses WHERE definition_key = ${definitionKey}`,
       ]),
     );
   });
@@ -246,18 +251,18 @@ export function eventSubscriptionsOf(
       EventRow,
       Effect.orDie(
         database.read(
-          statement`SELECT s.workflow, s.version, s.rule FROM workflow_subscription_types t
-            JOIN workflow_subscriptions s ON s.playbook_key = t.playbook_key AND s.workflow = t.workflow AND s.kind = 'event'
-            WHERE t.playbook_key = ${playbookKey} AND t.type = ${type} AND t.workflow > ${after}
-              AND NOT EXISTS (SELECT 1 FROM workflow_pauses p WHERE p.playbook_key = t.playbook_key AND p.workflow = t.workflow)
-            ORDER BY t.workflow LIMIT ${most + 1}`,
+          statement`SELECT s.definition_key, s.version, s.rule FROM workflow_subscription_types t
+            JOIN workflow_subscriptions s ON s.definition_key = t.definition_key AND s.kind = 'event'
+            WHERE t.playbook_key = ${playbookKey} AND t.type = ${type} AND t.definition_key > ${after}
+              AND NOT EXISTS (SELECT 1 FROM workflow_pauses p WHERE p.definition_key = t.definition_key)
+            ORDER BY t.definition_key LIMIT ${most + 1}`,
         ),
       ),
     ),
   ).pipe(
     Effect.map((rows) =>
-      rows.map(({ workflow, version, rule }) => ({
-        workflow,
+      rows.map(({ definition_key: definitionKey, version, rule }) => ({
+        definitionKey,
         version,
         reference: rule.reference,
         filters: rule.filters,

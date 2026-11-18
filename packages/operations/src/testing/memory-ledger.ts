@@ -17,7 +17,6 @@ import {
   type Lineage,
   type RunOutcomeMapping,
   type KeptProjection,
-  type StreamProjection,
 } from '../index.ts';
 import type { AppendedFact, LoggedFact } from '../projections/memory-projections.ts';
 import { memoryAppendedReader, type MemoryAppends } from './memory-appended.ts';
@@ -58,13 +57,16 @@ function appendedTo(kept: Kept, { stream, stored, lineage }: Appended, at: numbe
     kept.outcomes.staged(stream, stored, version + 1),
     kept.projected.staged(stream, stored, version + 1),
   ];
-  const names = kept.names.staged(
-    stored.map((fact, index) => ({ ...messageOf(stream, version + index + 1, fact), stream })),
-  );
+  const messages = stored.map((fact, index) => ({ ...messageOf(stream, version + index + 1, fact), stream }));
+  const names = kept.names.staged(messages);
   if ('refused' in names) {
     return names.refused;
   }
-  for (const commit of [...commits, names.commit]) {
+  const runIds = kept.runIds.staged(messages);
+  if ('refused' in runIds) {
+    return runIds.refused;
+  }
+  for (const commit of [...commits, names.commit, runIds.commit]) {
     commit();
   }
   kept.logged(
@@ -171,6 +173,27 @@ function scrubbedOn(kept: Kept): Ledger['Service']['scrubFact'] {
     });
 }
 
+function namesReadIn(
+  kept: Kept,
+): Pick<Ledger['Service'], 'holderOfName' | 'nameHeldBy' | 'namesHeldIn' | 'holderOfStream'> {
+  return {
+    holderOfName: (named) => Effect.sync(() => kept.names.holderOf(named)),
+    nameHeldBy: (definitionKey) => Effect.sync(() => kept.names.heldBy(definitionKey)),
+    namesHeldIn: (kind) => Effect.sync(() => kept.names.heldIn(kind)),
+    holderOfStream: ({ playbookKey, stream }) =>
+      Effect.sync(() =>
+        kept.names
+          .definitionsIn(playbookKey)
+          .toSorted()
+          .find((definitionKey) => storedIn(kept, `${definitionKey}${stream}`).length > 0),
+      ),
+  };
+}
+
+function runIdsReadIn(kept: Kept): Pick<Ledger['Service'], 'holderOfRunId'> {
+  return { holderOfRunId: (claimed) => Effect.sync(() => kept.runIds.holderOf(claimed)) };
+}
+
 interface KeptLedger {
   readonly kept: Kept;
   readonly appends: MemoryAppends;
@@ -179,7 +202,7 @@ interface KeptLedger {
 function keptLedgerOf(tables: MemoryTables): KeptLedger {
   const log: MemoryRecord[] = [];
   const streams = new Map<string, readonly AppendedFact[]>();
-  const appends = memoryAppendedReader(log);
+  const appends = memoryAppendedReader(log, (playbookKey) => kept.names.definitionsIn(playbookKey));
   const kept: Kept = {
     streams,
     appendedAt: new Map(),
@@ -196,22 +219,23 @@ function keptLedgerOf(tables: MemoryTables): KeptLedger {
         }
       }
     },
-    ...keptTablesOf(tables, () => loggedFactsOf({ log })),
+    ...keptTablesOf(tables),
   };
   return { kept, appends };
 }
 
 export interface MemoryLedgerOptions {
   readonly runOutcomes?: RunOutcomeMapping | undefined;
-  readonly projections?: readonly (KeptProjection | StreamProjection)[];
+  readonly projections?: readonly KeptProjection[];
   readonly holders?: ContentHolders | undefined;
   readonly store?: ContentStore;
   readonly definitionNames?: DefinitionNames;
+  readonly runIds?: MemoryTables['runIds'];
 }
 
 export function memoryLedger(
   runOutcomes?: RunOutcomeMapping,
-  projections: readonly (KeptProjection | StreamProjection)[] = [],
+  projections: readonly KeptProjection[] = [],
   holders?: ContentHolders,
   store: ContentStore = memoryContentStore(),
 ): MemoryLedger {
@@ -224,11 +248,12 @@ export function memoryLedgerWith({
   holders,
   store = memoryContentStore(),
   definitionNames,
+  runIds,
 }: MemoryLedgerOptions): MemoryLedger {
-  const { kept, appends } = keptLedgerOf({ runOutcomes, projections, holders, definitionNames });
+  const { kept, appends } = keptLedgerOf({ runOutcomes, projections, holders, definitionNames, runIds });
   const { projected, references } = kept;
   const outside = keptOutside(kept.heads, store);
-  const recordedReader = memoryRecordedReader(kept.log);
+  const recordedReader = memoryRecordedReader(kept.log, (playbookKey) => kept.names.definitionsIn(playbookKey));
   const service = Ledger.of({
     load: (stream, fold) => Effect.suspend(() => folded(fold, storedIn(kept, stream))),
     factAt: (stream, position, eventSchema) =>
@@ -240,6 +265,8 @@ export function memoryLedgerWith({
       }),
     ageOfLastAppend: ageOn(kept),
     execute: executedOn(kept),
+    ...namesReadIn(kept),
+    ...runIdsReadIn(kept),
     scrubFact: scrubbedOn(kept),
     readRecorded: recordedReader.readRecorded,
     readRecordedEvent: recordedReader.readRecordedEvent,
@@ -250,7 +277,6 @@ export function memoryLedgerWith({
     countProjectedRows: projected.countProjectedRows,
     readDueRows: projected.readDueRows,
     nextDueOf: projected.nextDueOf,
-    resetStreamProjection: projected.resetStreamProjection,
     advanceRow: projected.advanceRow,
     content: outside.content,
     removeUnheld: references.removalOver(outside),

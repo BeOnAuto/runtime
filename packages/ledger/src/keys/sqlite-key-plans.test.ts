@@ -99,6 +99,14 @@ describe('the plans of the reads over keys on SQLite', () => {
   });
 });
 
+describe("the plan of the read of an org's records on SQLite", () => {
+  it('walks the index led by the org', async () => {
+    const org = await plannedOn((store) => store.readRecordedOfOrg('acme', { order: 'asc', limit: 5 }));
+
+    expect(org.text).toContain('SEARCH emt_messages USING INDEX ledger_messages_by_org (<expr>=?)');
+  });
+});
+
 describe('the keys of a read', () => {
   it("name one key with its org, the key's second segment, whether it names a playbook or a definition, and no org for a key of fewer segments", () => {
     expect([

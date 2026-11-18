@@ -12,3 +12,4 @@ export { commentOperations, orgCommentOperations } from './composition/comment-c
 export { commentChanges } from './comments/comment-changes.ts';
 export { listActivity } from './operations/list-activity.ts';
 export { markActivitySeen } from './operations/mark-activity-seen.ts';
+export { commentTargetOf, type CommentTarget } from './positions/comment-addresses.ts';

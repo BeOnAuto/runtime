@@ -40,7 +40,7 @@ const failed: RunFact = { type: 'run_ended', data: { status: 'failed', ms: 10, t
 const failingOnAFailure = (version: number) => tallyRowsOf(version, (row) => row['status'] === 'failed');
 
 function inPages(entry: LedgerEntry, database: string, projections: readonly KeptProjection[]) {
-  return entry.streamLedgerOn(database, { streamProjections: [], projections, mostBytesFilledAtOnce: 1 });
+  return entry.ledgerOn(database, undefined, projections, { mostBytesFilledAtOnce: 1 });
 }
 
 async function openedInPages(

@@ -91,7 +91,10 @@ function heldBackUntilItCommits(): void {
     const gate = aGate();
     const store = await aStoreWith(gate.passed);
     const factsOfAlpha = () =>
-      store.readAppendedFacts({ kind: 'playbook', playbookKey: alpha }, { after: null, most: 10, dataOf: [] });
+      store.readAppendedFacts(
+        { kind: 'playbook', playbookKey: alpha, definitionKeys: [] },
+        { after: null, most: 10, dataOf: [] },
+      );
 
     const appending = store.multiStreamAppend([
       { stream: `${alpha}notes/b`, events: notedMultiStreamSqlite, place },

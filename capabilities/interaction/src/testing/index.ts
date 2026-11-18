@@ -1,11 +1,14 @@
 export {
   acmeAdmin,
   alpha,
-  interactionHarness,
+  beta,
   type HarnessLedger,
   type HarnessOptions,
   type HarnessTools,
+  interactionHarness,
   type InteractionHarness,
+  ledgerKeepingNames,
+  namesOfTheTests,
   type RunLink,
 } from './interaction-harness.ts';
 export {
@@ -48,16 +51,3 @@ export { flatReplies } from './reading-documents.ts';
 export { chatProjections } from './chat-projections.ts';
 export { wakesHeard, type HeardWake, type WakesHeard } from './wakes-heard.ts';
 export { chatConversations, noConversations } from './chat-conversations.ts';
-export {
-  beforeReadings,
-  flatReadsNamingReplies,
-  keptAsRecorded,
-  recordedBeforeReadings,
-  recordedFlatReadsNamingReplies,
-  recordedReadsPastTheBound,
-  recordedTellingsBefore,
-  readsPastTheBound,
-  tellingsBefore,
-  type KeptFact,
-  type RecordedBeforeReadings,
-} from './before-readings.ts';

@@ -18,7 +18,7 @@ const context: RunContext = {
   org: 'acme',
   playbook: 'alpha',
   caller: { id: 'acme-admin', name: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' },
-  definition: { name: 'save-the-page', version: 1 },
+  definition: { id: '0199a3c4-7d2e-7c1a-9b3f-0000000000d2', name: 'save-the-page', version: 1 },
   journal: recordingJournal(),
   lineage: { startId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: runId },
   depth: 0,

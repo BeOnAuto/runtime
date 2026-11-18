@@ -127,7 +127,8 @@ function startFact(
 ): PresentedFact {
   const { definitionType, definitionName, trigger } = context;
   const summary = runStarted(words, definitionType, definitionName, trigger);
-  return { type, summary, data: { ...data, ...inputShownOf({ data }, content) } };
+  const { playbook: _admittedUnder, ...shown } = data;
+  return { type, summary, data: { ...shown, ...inputShownOf({ data }, content) } };
 }
 
 function cancelFact({ type, data }: Shown<'run_cancel_requested'>): PresentedFact {

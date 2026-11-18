@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { KeptViews } from '../capability/view-standing.ts';
 import type { RunDetailAsRecorded } from '../runs/run.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { keptArmOf, keptIn, keptLongBeforeAndLost, recordedAsGiven, watchedStore } from '../testing/kept-payloads.ts';
 import { playbookAsked } from '../testing/page-asking.ts';
 import { resultOfTheDay, workflowWithPage } from '../testing/pages.ts';
@@ -81,9 +81,9 @@ async function withTheMorning(source: string, held: boolean) {
         : keptLongBeforeAndLost(service.content, watched.store, alpha, output),
       recordedAsGiven(
         service,
-        `playbook/acme/alpha/runs/${runId}`,
+        `${String(asked.playbook.ledger.names().find(({ name }) => name === 'morning-social-content')?.definitionKey)}runs/${runId}`,
         [
-          { type: 'run_started', data: { input: {}, started_by: recordedAdmin } },
+          { type: 'run_started', data: { input: {}, ...startedInAlpha } },
           { type: 'run_succeeded', data: { output_sha256: kept.sha256, output_bytes: kept.bytes, record: {} } },
         ],
         onTheRun,

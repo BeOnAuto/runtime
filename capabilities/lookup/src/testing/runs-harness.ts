@@ -5,7 +5,7 @@ import {
   outputInWords,
   type SucceededRunsReader,
 } from '@on.auto/definitions';
-import { admittingMeter, uncheckedPages } from '@on.auto/definitions/testing';
+import { admittingMeter, definitionNamesWith, uncheckedPages } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   Conflict,
@@ -15,7 +15,7 @@ import {
   type Outcome,
   type Runnable,
 } from '@on.auto/operations';
-import { memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
+import { memoryLedgerWith, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
 import { reportingAccess } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, Layer, type Schema } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -70,7 +70,7 @@ export interface RunsHarness {
 }
 
 export function runsHarness({ readingBegins, assets, ...bounds }: RunsHarnessOptions = {}): RunsHarness {
-  const ledger = memoryLedger();
+  const ledger = memoryLedgerWith({ definitionNames: definitionNamesWith([]) });
   const { access } = reportingAccess({});
   onTestFinished(access.close);
   let begins: (() => Promise<unknown>) | undefined;

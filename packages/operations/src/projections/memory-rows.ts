@@ -1,14 +1,17 @@
+import { Option } from 'effect';
+
+import { playbookOfStreamPrefix, streamPrefixOfTheDefinitionsOf } from '../ledger/bound-ports.ts';
 import {
   streamPrefixOfAddress,
   type AddressedStream,
   type DueRowsQuery,
   type KeptProjection,
-  type ProjectedAddress,
   type ProjectedKeyedRow,
   type ProjectedRow,
   type ProjectedRows,
   type ProjectedRowsQuery,
   type ProjectedValue,
+  type RowsAddress,
 } from './keyed-projection.ts';
 import { conditionsMetBy } from './projected-conditions.ts';
 
@@ -81,8 +84,15 @@ function tupleCompared(left: readonly Ordered[], right: readonly Ordered[]): num
   return 0;
 }
 
-export function rowsAt({ rows }: Table, address: ProjectedAddress): readonly ProjectedKeyedRow[] {
-  return [...rows.values()].filter((kept) => kept.org === address.org && kept.playbook === address.playbook);
+export type Placed = (kept: ProjectedKeyedRow) => boolean;
+
+function placedUnder(prefixes: readonly string[]): Placed {
+  const under = new Set(prefixes);
+  return (kept) => under.has(streamPrefixOfAddress(kept));
+}
+
+function rowsPlaced({ rows }: Table, placed: Placed): readonly ProjectedKeyedRow[] {
+  return [...rows.values()].filter((kept) => placed(kept));
 }
 
 export function dueOf({ row }: ProjectedKeyedRow, column: string): readonly number[] {
@@ -110,19 +120,56 @@ export function dueRowsIn(rows: ReadonlyMap<string, ProjectedKeyedRow>, { column
 
 export function pageIn(
   table: Table,
-  address: ProjectedAddress,
+  placed: Placed,
   { where, orderBy, order, after, limit }: ProjectedRowsQuery,
 ): readonly ProjectedKeyedRow[] {
   const sign = order === 'asc' ? 1 : -1;
   const met = conditionsMetBy(table.projection, where);
-  return rowsAt(table, address)
+  return rowsPlaced(table, placed)
     .filter((kept) => met(kept))
     .filter((kept) => after === undefined || sign * tupleCompared(orderedKeyOf(orderBy, kept), after) > 0)
     .toSorted((left, right) => sign * tupleCompared(orderedKeyOf(orderBy, left), orderedKeyOf(orderBy, right)))
     .slice(0, limit);
 }
 
-export function countIn(table: Table, address: ProjectedAddress, where: ProjectedRowsQuery['where']): number {
+export function countIn(table: Table, placed: Placed, where: ProjectedRowsQuery['where']): number {
   const met = conditionsMetBy(table.projection, where);
-  return rowsAt(table, address).filter((kept) => met(kept)).length;
+  return rowsPlaced(table, placed).filter((kept) => met(kept)).length;
+}
+
+export type PlaybookOfADefinition = (definitionKey: string) => string | undefined;
+
+function withItsPlaybook(playbookOf: PlaybookOfADefinition): (row: ProjectedKeyedRow) => ProjectedKeyedRow {
+  return (row) =>
+    Option.match(
+      Option.fromNullishOr(row.definition).pipe(
+        Option.flatMap(() => Option.fromNullishOr(playbookOf(streamPrefixOfAddress(row)))),
+        Option.flatMap(playbookOfStreamPrefix),
+      ),
+      { onNone: () => row, onSome: ({ playbook }) => ({ ...row, playbook }) },
+    );
+}
+
+export type DefinitionsOfAPlaybook = (playbookKey: string) => readonly string[];
+
+function placedInThePlaybooksOf(org: string, playbookOf: PlaybookOfADefinition): Placed {
+  const definitions = streamPrefixOfTheDefinitionsOf({ org });
+  return (kept) => {
+    const prefix = streamPrefixOfAddress(kept);
+    return prefix.startsWith(definitions) && playbookOf(prefix) !== undefined;
+  };
+}
+
+function placedAt(definitionsOf: DefinitionsOfAPlaybook, playbookOf: PlaybookOfADefinition) {
+  return (address: RowsAddress): Placed => {
+    if (address.definitions === 'every') {
+      return placedInThePlaybooksOf(address.org, playbookOf);
+    }
+    const prefix = streamPrefixOfAddress(address);
+    return placedUnder([prefix, ...definitionsOf(prefix)]);
+  };
+}
+
+export function placementsOf(definitionsOf: DefinitionsOfAPlaybook, playbookOf: PlaybookOfADefinition) {
+  return { placed: placedAt(definitionsOf, playbookOf), placedIn: withItsPlaybook(playbookOf) };
 }

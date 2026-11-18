@@ -21,7 +21,7 @@ export function isLeading({ leading }: ReadingsOfAPlace, { reading }: ReadingOfA
 function ownSinceOf({ parts, place }: ReadingsOfAPlace, reading: ReadingOfATurn) {
   const row = { column: 'row_key', equals: readingKeyOf(place.key, reading.reading) };
   return Effect.map(
-    parts.ledger.readProjectedRows(readingsName, place.playbook, { where: [row], orderBy: [], order: 'asc', limit: 1 }),
+    parts.ledger.readProjectedRows(readingsName, place.address, { where: [row], orderBy: [], order: 'asc', limit: 1 }),
     ([own]): string | null => {
       if (own !== undefined) {
         return readingRowFrom(own.row).since;

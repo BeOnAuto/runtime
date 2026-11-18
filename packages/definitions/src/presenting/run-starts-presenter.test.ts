@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionPresenters } from '../index.ts';
 import type { RunEvent } from '../runs/run-events.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { startedInAlpha } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { testRunId as runId } from '../testing/run-facts.ts';
 
@@ -48,7 +48,7 @@ describe('the presenter of a run that answers a call of another run', () => {
 
     expect(
       presented(
-        { type: 'run_started', data: { started_by: recordedAdmin, input: {} } },
+        { type: 'run_started', data: { ...startedInAlpha, input: {} } },
         { ...ofGreet, callDepth: 1, calledBy },
       ),
     ).toMatchObject({
@@ -98,7 +98,7 @@ describe('the presenter of a cancel request', () => {
 
 function startedBy(kind: 'event' | 'cron' | 'every' | 'goal', reference: string) {
   return presented(
-    { type: 'run_started', data: { started_by: recordedAdmin, input: [] } },
+    { type: 'run_started', data: { ...startedInAlpha, input: [] } },
     { ...ofGreet, trigger: { kind, reference } },
   );
 }

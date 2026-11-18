@@ -127,7 +127,7 @@ describe('a read staged between today and the read model that fails', () => {
         read(
           { stage: 'shadow' },
           Effect.succeed(plain),
-          Effect.fail(new ReadModelRefused({ because: 'checks_failed' })),
+          Effect.fail(new ReadModelRefused({ because: 'pointer_disagrees' })),
         ),
         read({ stage: 'shadow' }, Effect.succeed(plain), Effect.die('broken')),
         read({ stage: 'shadow' }, Effect.succeed(plain), Effect.die(null)),

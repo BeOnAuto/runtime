@@ -118,15 +118,15 @@ describe('the definition create_definition records', () => {
     });
   });
 
-  it('records the definitions of each capability in a stream of the playbook named after the capability', async () => {
+  it('records each definition on a stream of its own, under the key of its id, named after its capability', async () => {
     const { call, ledger } = harness();
 
     await call(createDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet', source: hello }));
     await call(createDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'plain', source: 'text' }));
 
     expect(ledger.streamNames()).toEqual([
-      'playbook/acme/alpha/definitions/echo',
-      'playbook/acme/alpha/definitions/probe',
+      expect.stringMatching(/^definition\/acme\/[^/]+\/definitions\/echo$/u),
+      expect.stringMatching(/^definition\/acme\/[^/]+\/definitions\/probe$/u),
     ]);
   });
 });
@@ -239,16 +239,21 @@ describe('create_definition rejecting with conflict', () => {
     ).toMatchObject({ status: 'succeeded' });
   });
 
-  it('when another change to the definitions of the capability landed at the same moment', async () => {
+  it('when another definition took the same name at the same moment, and none for another name', async () => {
     const { dispatch, run } = harness();
     const creatingDefinition = (name: string) =>
       dispatch(createDefinition, toAlpha(acmeAdmin, { type: 'echo', name, source: hello }));
 
     expect(
-      await run(Effect.all([creatingDefinition('greet'), creatingDefinition('wave')], { concurrency: 'unbounded' })),
+      await run(
+        Effect.all([creatingDefinition('greet'), creatingDefinition('greet'), creatingDefinition('wave')], {
+          concurrency: 'unbounded',
+        }),
+      ),
     ).toMatchObject([
       { status: 'succeeded', output: { name: 'greet' } },
       { status: 'rejected', reason: 'conflict' },
+      { status: 'succeeded', output: { name: 'wave' } },
     ]);
   });
 });

@@ -6,7 +6,8 @@ import type { HostDatabase } from '../database/host-database.ts';
 import type { FilterPlace, FilterStops } from '../filtering/filter-matching.ts';
 import type { Refusals } from '../reactions/refusals.ts';
 import { reactionOfRun } from '../reactions/run-attributes.ts';
-import { addressOfRun, runLogStreamOf } from '../runs/run-address.ts';
+import { definitionKeyOfRun, runLogStreamOf } from '../runs/run-address.ts';
+import { playbookOfRun } from '../runs/run-places.ts';
 import {
   insertedListener,
   isListening,
@@ -43,11 +44,12 @@ export function sqlListeners(database: HostDatabase, refusals: Refusals, stops: 
         if (yield* isListening(database, place)) {
           return 'already_armed';
         }
-        const playbookKey = streamPrefixOfPlaybook(addressOfRun(runKey));
+        const playbookKey = streamPrefixOfPlaybook(yield* playbookOfRun(database, runKey));
         const reaction = reactionOfRun(run.attributes);
         const { workflow, version } = reaction;
         if ((yield* listenersInPlaybook(database, playbookKey)) >= mostListenersInAPlaybook) {
           yield* refusals.refuse(playbookKey, {
+            definitionKey: definitionKeyOfRun(runKey),
             workflow,
             version,
             reason: `A run listened for events of the playbook while ${mostListenersInAPlaybook} listeners were already open in it, the most a playbook keeps; the run takes only the events sent to it`,
@@ -73,7 +75,7 @@ export function sqlListeners(database: HostDatabase, refusals: Refusals, stops: 
       Effect.gen(function* () {
         const removed = yield* removedListener(database, { runKey: run.runId, listener: callKeyText(output.key) });
         const { workflow, version } = reactionOfRun(run.attributes);
-        const playbookKey = streamPrefixOfPlaybook(addressOfRun(run.runId));
+        const playbookKey = streamPrefixOfPlaybook(yield* playbookOfRun(database, run.runId));
         yield* stopsForgotten(database, stops, { playbookKey, workflow, version, reference: output.key.reference });
         return removed ? 'cancelled' : 'not_armed';
       }).pipe(Effect.mapError(failedTo('cancel_listener'))),

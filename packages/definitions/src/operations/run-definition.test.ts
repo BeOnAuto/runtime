@@ -4,7 +4,9 @@ import {
   defineCommand,
   type IncidentReporter,
   playbookCallerOf,
+  PlaybookReader,
   PlaybookWriter,
+  runStreamNameOf,
   type StreamWriter,
 } from '@on.auto/operations';
 import { Cause, Deferred, Effect, Fiber, Schema, type Scope } from 'effect';
@@ -14,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { LiveAttempts, liveAttemptsLayer, liveAttemptsOf, type RunRefusal } from '../attempts/live-attempts.ts';
 import { attemptEnded, type Capability, defineStartVersion, nextAttemptOf } from '../index.ts';
 import { linksIn } from '../journal-testing/run-links.ts';
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { runDecider } from '../runs/run-decider.ts';
 import { startedRunOf } from '../runs/run-state.ts';
 import type { RunDetail } from '../runs/run.ts';
 import { asking } from '../testing/asking.ts';
@@ -23,7 +25,7 @@ import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { quietMs, resumer } from '../testing/capabilities/resumer.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { firstMoment, harness, toPlaybook, type Harness } from '../testing/harness.ts';
+import { firstMoment, harness, runStreamIn, toPlaybook, type Harness } from '../testing/harness.ts';
 import { aProcess } from '../testing/held-attempts.ts';
 import {
   acted,
@@ -31,7 +33,7 @@ import {
   heldAfterItsCall,
   momentAfter,
   startedAndLeft,
-  stream,
+  stepStreamIn,
 } from '../testing/resumed-runs.ts';
 import { testRunId } from '../testing/run-facts.ts';
 import { answeredFirstCall, drivingAShell } from '../testing/shell-drives.ts';
@@ -148,7 +150,9 @@ function drivingTwice(capability: Capability) {
 
 function overtakenOnce(id: string) {
   return Effect.gen(function* () {
-    const writer = yield* PlaybookWriter;
+    const definition = String(yield* (yield* PlaybookReader).definitionHolding(runStreamNameOf(id)));
+    const playbookWriter = yield* PlaybookWriter;
+    const writer = playbookWriter.ofDefinition(definition);
     const written = { overtaken: false };
     const anotherShellsClaim = Effect.orDie(
       writer.execute(runStreamNameOf(id), runDecider, {
@@ -166,7 +170,7 @@ function overtakenOnce(id: string) {
     });
     const execute: StreamWriter['execute'] = (streamClaimedAttempts, decider, command, lineage) =>
       Effect.andThen(overtaking, writer.execute(streamClaimedAttempts, decider, command, lineage));
-    return { ...writer, execute };
+    return { ...playbookWriter, ofDefinition: () => ({ execute }) };
   });
 }
 
@@ -231,6 +235,7 @@ const someWords: unknown = expect.any(String);
 const startOfAnEcho = {
   type: 'start',
   started_by: recordedAdmin,
+  playbook: 'alpha',
   definition_type: 'echo',
   name: 'step',
   input: {},
@@ -246,7 +251,7 @@ describe('run_definition', () => {
 
     const outcome = await call(runDefinition, running('greet', { input: { who: 'Ada' } }), later);
     const [, , runStream] = ledger.streamNames();
-    const id = String(runStream).replace('playbook/acme/alpha/runs/', '');
+    const id = String(runStream).replace(/^definition\/acme\/[^/]+\/runs\//u, '');
 
     expect(id).toMatch(uuidV7);
     expect(outcome).toStrictEqual({
@@ -377,7 +382,9 @@ describe('run_definition rejected by the capability', () => {
 });
 
 async function recordedInputOf({ ledger, run }: Harness) {
-  const { state } = await run(ledger.service.load(stream, runDecider));
+  const { state } = await run(
+    ledger.service.load(runStreamIn(ledger, { type: 'echo', name: 'greet' }, runId), runDecider),
+  );
   return startedRunOf(state)?.input;
 }
 
@@ -672,11 +679,15 @@ describe('the next attempt of a started run of another type than the capability 
       definitions.call(operations.createDefinition, toAlpha(acmeAdmin, { type, name: 'step', source }));
     await created('echo', '{"greeting":"hello"}');
     await created('resumer', 'resumer source');
-    await definitions.run(Effect.orDie(definitions.ledger.service.execute(stream, runDecider, startOfAnEcho)));
+    await definitions.run(
+      Effect.orDie(definitions.ledger.service.execute(stepStreamIn(definitions.ledger), runDecider, startOfAnEcho)),
+    );
     const drive = drivingAShell([resuming.capability, echo], resuming.capability);
 
     const driven = await definitions.call(drive, toAlpha(acmeAdmin, { run_id: acted.runId }), momentAfter(quietMs + 1));
-    const { version } = await definitions.run(definitions.ledger.service.load(stream, runDecider));
+    const { version } = await definitions.run(
+      definitions.ledger.service.load(stepStreamIn(definitions.ledger), runDecider),
+    );
 
     expect(driven).toEqual({
       status: 'rejected',

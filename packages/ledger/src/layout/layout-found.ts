@@ -1,14 +1,11 @@
 import { SQL } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
-import { contentTableNames, namesFound } from '../content/content-tables.ts';
-import { definitionNamesTableName } from '../definition-names/definition-names-table.ts';
+import { namesFound } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
-import { projectionCheckpointsTableName } from '../projection-checkpoints/projection-checkpoints.ts';
 import { versionOfTable, type NamedProjection } from '../projections/projection-fill.ts';
-import { keptSecretsTableName } from '../secrets/kept-secrets.ts';
-import { receivedWebhooksTableName } from '../webhooks/received-webhooks-table.ts';
 import type { LayoutDialect } from './layout-dialects.ts';
+import { ownTableNames } from './own-tables.ts';
 
 export interface FoundLayout {
   readonly layout: number | undefined;
@@ -17,16 +14,9 @@ export interface FoundLayout {
 
 export const layoutTable = 'ledger_layout';
 
-const tablesOfTheLayout: ReadonlySet<string> = new Set([
-  layoutTable,
-  ...contentTableNames,
-  keptSecretsTableName,
-  receivedWebhooksTableName,
-  definitionNamesTableName,
-  projectionCheckpointsTableName,
-]);
+const tablesOfTheLayout: ReadonlySet<string> = new Set([layoutTable, ...ownTableNames]);
 
-export const prefixesOfTheStore: readonly string[] = ['emt_', 'dmb_'];
+const prefixesOfTheStore: readonly string[] = ['emt_', 'dmb_'];
 
 function isTheLedgers(table: string, projected: readonly NamedProjection[]): boolean {
   return (

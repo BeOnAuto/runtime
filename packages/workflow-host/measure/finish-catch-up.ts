@@ -1,10 +1,10 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { recordedReaderOf, statement } from '@on.auto/ledger';
+import { orgRecordedReaderOf, statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
 import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
-import { alpha, at, playbookCreated, recorded } from '../src/reaction-testing/playbook-writes.ts';
+import { alpha, at, byAdmin, playbookCreated, published, recorded } from '../src/reaction-testing/playbook-writes.ts';
 import { measuredHost, runAt } from './measured-host.ts';
 
 export interface FinishCatchUp {
@@ -24,22 +24,14 @@ const ofTheRun = { by: 'acme-admin', at, definitionType: 'workflow', definitionN
 
 async function placesOf(opened: Opened): Promise<readonly (string | null)[]> {
   const rows = await Effect.runPromise(
-    opened.read(statement`SELECT cursor FROM workflow_followed_playbooks WHERE playbook_key = ${alpha}`),
+    opened.read(statement`SELECT cursor FROM workflow_followed_orgs WHERE org = 'acme'`),
   );
   return Schema.decodeUnknownSync(Places)(rows).map(({ cursor }) => cursor);
 }
 
 async function latestOf(opened: Opened): Promise<string | null> {
   const { records } = await Effect.runPromise(
-    recordedReaderOf(opened.store)(
-      { org: 'acme', playbook: 'alpha' },
-      { kind: 'everything' },
-      {
-        order: 'desc',
-        limit: 1,
-        dataOf: [],
-      },
-    ),
+    orgRecordedReaderOf(opened.store)('acme', { order: 'desc', limit: 1, dataOf: [] }),
   );
   return records[0]?.cursor ?? null;
 }
@@ -63,6 +55,7 @@ export async function finishCatchUpOn(database: DatabaseSettings, finishes: numb
   const opened = await hostDatabaseOpenedOn(database);
   await playbookCreated(opened.store, 'alpha');
   const following = await measuredHost(database);
+  await published(opened.store, { id: 'e0', type: 'com.measure.other' }, byAdmin, alpha);
   await untilPlaced(opened, (places) => places.length > 0);
   await following.host.stop();
   await finishedInTurn(opened, finishes);

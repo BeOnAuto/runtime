@@ -5,7 +5,7 @@ import { definitionsReadModelOf } from '../read-model/definitions-read-model.ts'
 
 export function readModelLedgerOf(types: readonly string[]): MemoryLedger {
   return memoryLedgerWith({
-    projections: [definitionsReadModelOf(types)],
+    projections: definitionsReadModelOf(types),
     definitionNames: definitionNamesOf(types, unbounded),
   });
 }

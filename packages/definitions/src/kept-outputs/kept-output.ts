@@ -21,7 +21,7 @@ type RunOfAKeptValue = Parameters<ValueKeeping['kept']>[0];
 export interface OutputKeeping {
   readonly run: RunOfAKeptValue;
   readonly schema: Schema.JsonObject | undefined;
-  readonly calledAToolThatMayChangeSomething: Effect.Effect<boolean, never, PlaybookReader>;
+  readonly calledAToolThatMayChangeSomething: Effect.Effect<boolean, never, PlaybookReader | PlaybookContext>;
 }
 
 interface OutputAndRecord {

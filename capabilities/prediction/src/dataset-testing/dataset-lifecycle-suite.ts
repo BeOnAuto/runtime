@@ -42,7 +42,7 @@ function sharingTest(settingsOf: SettingsOf): void {
     await datasets.retired('orders-again');
     await datasets.gone(first.dataSha256);
 
-    expect([before.saved, kept.saved, kept.phase, kept.eventsFolded, kept.rows]).toEqual([1, 1, 'live', 1, 1]);
+    expect([kept.saved, kept.phase, kept.eventsFolded, kept.rows]).toEqual([before.saved, 'live', 1, 1]);
     expect([wider.dataSha256 === first.dataSha256, second.dataSha256 === first.dataSha256]).toEqual([true, false]);
     expect(await keptRowsOf(datasets.database, first.dataSha256)).toEqual([]);
     expect((await datasets.datasets()).map(({ dataSha256 }) => dataSha256)).toEqual([second.dataSha256]);

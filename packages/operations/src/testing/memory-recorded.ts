@@ -92,15 +92,16 @@ function loadedSizeOf(page: RecordedPageRequest, record: MemoryRecord): number {
   return loads(page, record) ? sizeOf(record) : 0;
 }
 
-function inSelection(key: string, selection: RecordedSelection): (record: MemoryRecord) => boolean {
+function inSelection(keys: readonly string[], selection: RecordedSelection): (record: MemoryRecord) => boolean {
   if (selection.kind === 'run') {
-    const streams = new Set([`${key}runs/${selection.run}`, `${key}run-logs/${selection.run}`]);
+    const { run } = selection;
+    const streams = new Set(keys.flatMap((key) => [`${key}runs/${run}`, `${key}run-logs/${run}`]));
     return ({ stream }) => streams.has(stream);
   }
   if (selection.kind === 'runs') {
     const leftOut = new Set(selection.notBeginningWith);
     return ({ stream, streamPosition, type }) =>
-      streamPosition === 1 && stream.startsWith(`${key}runs/`) && !leftOut.has(type);
+      streamPosition === 1 && keys.some((key) => stream.startsWith(`${key}runs/`)) && !leftOut.has(type);
   }
   return selection.kind === 'correlated' ? ({ correlationId }) => correlationId === selection.correlation : () => true;
 }
@@ -201,19 +202,25 @@ function beyond({ position, inclusive }: Resumed, order: RecordedPageRequest['or
   return (at) => (inclusive ? at <= position : at < position);
 }
 
+function isUnderOneOf(keys: readonly string[]): (record: MemoryRecord) => boolean {
+  return ({ stream }) => keys.some((key) => playbookKeyOf(stream) === key);
+}
+
 function pageOf(
   log: readonly MemoryRecord[],
-  key: string,
+  [key, ...definitions]: readonly [string, ...string[]],
   selection: RecordedSelection,
   page: RecordedPageRequest,
 ): (resumed: Resumed) => RecordedPage {
   return (resumed) => {
+    const keys = [key, ...definitions];
     const isBeyond = beyond(resumed, page.order);
-    const inPlaybook = log.filter(({ stream }) => playbookKeyOf(stream) === key);
+    const isUnder = isUnderOneOf(keys);
+    const inPlaybook = log.filter((record) => isUnder(record));
     const from = firstSince(inPlaybook, page.since) ?? Number.POSITIVE_INFINITY;
     const inOrder = page.order === 'asc' ? inPlaybook : inPlaybook.toReversed();
     const candidates = inOrder.filter(
-      (record) => inSelection(key, selection)(record) && record.position >= from && isBeyond(record.position),
+      (record) => inSelection(keys, selection)(record) && record.position >= from && isBeyond(record.position),
     );
     const cap = page.types === undefined && selection.kind !== 'runs' ? page.limit : mostExaminedInAPage;
     const examined =
@@ -231,17 +238,24 @@ function pageOf(
   };
 }
 
-export function memoryRecordedReader(log: readonly MemoryRecord[]): RecordedReader {
+export function memoryRecordedReader(
+  log: readonly MemoryRecord[],
+  definitionsIn: (playbookKey: string) => readonly string[],
+): RecordedReader {
+  const keysOf = (playbook: PlaybookAddress): readonly [string, ...string[]] => {
+    const key = streamPrefixOfPlaybook(playbook);
+    return [key, ...definitionsIn(key)];
+  };
   return {
     readRecorded: (playbook: PlaybookAddress, selection, page) =>
       Effect.suspend(() => {
-        const key = streamPrefixOfPlaybook(playbook);
-        return resumedFrom(page, key).pipe(Effect.map(pageOf(log, key, selection, page)));
+        const keys = keysOf(playbook);
+        return resumedFrom(page, keys[0]).pipe(Effect.map(pageOf(log, keys, selection, page)));
       }),
     readRecordedEvent: (playbook, id) =>
       Effect.sync(() => {
-        const key = streamPrefixOfPlaybook(playbook);
-        const record = log.find((each) => each.id === id && playbookKeyOf(each.stream) === key);
+        const isUnder = isUnderOneOf(keysOf(playbook));
+        const record = log.find((each) => each.id === id && isUnder(each));
         return record === undefined ? undefined : recordedFactOf(record, true);
       }),
   };

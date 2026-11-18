@@ -13,6 +13,13 @@ export interface HeldName extends DefinitionName {
   readonly definitionKey: string;
 }
 
+export type NameInAPlaybook = Pick<DefinitionName, 'playbookKey' | 'definitionType' | 'name'>;
+
+export interface StreamInAPlaybook {
+  readonly playbookKey: string;
+  readonly stream: string;
+}
+
 export type NameAfter = DefinitionName | 'released' | undefined;
 
 export interface NamedMessage extends ProjectedMessage {
@@ -86,7 +93,7 @@ export function definitionsInTheAppend(
   return inTheOrderOfTheirKeys(byKey);
 }
 
-export function isTheSameName(one: DefinitionName | undefined, other: DefinitionName): boolean {
+export function isTheSameName(one: NameInAPlaybook | undefined, other: NameInAPlaybook): boolean {
   return (
     one !== undefined &&
     one.playbookKey === other.playbookKey &&

@@ -9,6 +9,7 @@ import {
   threadDocument,
   type ChatHarness,
   type HarnessLedger,
+  namesOfTheTests,
 } from '@on.auto/interaction/testing';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
@@ -46,7 +47,7 @@ async function opened(layer: Layer.Layer<Ledger>): Promise<HarnessLedger> {
 function onSQLite(): Promise<HarnessLedger> {
   const ledger = temporaryLedger();
   onTestFinished(ledger.remove);
-  return opened(ledgerLayer({ fileName: ledger.fileName, projections }));
+  return opened(ledgerLayer({ fileName: ledger.fileName, projections, definitionNames: namesOfTheTests }));
 }
 
 async function onPostgreSQL(): Promise<HarnessLedger> {
@@ -55,7 +56,9 @@ async function onPostgreSQL(): Promise<HarnessLedger> {
   onTestFinished(() => administer(`DROP DATABASE ${name} WITH (FORCE)`));
   const url = new URL(postgresql);
   url.pathname = `/${name}`;
-  return opened(postgresqlLedgerLayer({ pools: plainPoolsOn(url.href), projections }));
+  return opened(
+    postgresqlLedgerLayer({ pools: plainPoolsOn(url.href), projections, definitionNames: namesOfTheTests }),
+  );
 }
 
 interface Store {

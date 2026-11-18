@@ -1,12 +1,11 @@
 import { setTimeout } from 'node:timers/promises';
 
-import { memoryLedger } from '@on.auto/operations/testing';
 import type { WorkflowHost } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { testExpressionCheck } from '../testing/expression-checks.ts';
-import { playbookOn } from '../testing/playbook.ts';
+import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { testPlaybookNames } from '../testing/test-sandbox.ts';
 import { guideVariablesOf } from './guide-variables.ts';
 import { makeWorkflowAdapter } from './workflow.ts';
@@ -36,7 +35,7 @@ describe('a run whose call is cancelled while its workflow starts', () => {
       longestCallMs: 1000,
       names: testPlaybookNames,
     });
-    const playbook = playbookOn(memoryLedger(), [workflow]);
+    const playbook = playbookOn(namingLedger(), [workflow]);
     await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'flow', source: flow });
 
     const answered = await playbook.callCancelledWhen(startBegan.promise, playbook.runDefinition, {
@@ -86,7 +85,7 @@ describe('the values the workflow guide names', () => {
       longestCallMs: 660_000,
       names: testPlaybookNames,
     });
-    const playbook = playbookOn(memoryLedger(), [workflow]);
+    const playbook = playbookOn(namingLedger(), [workflow]);
     const source = `document: { dsl: '1.0.3', namespace: acme, name: flow, version: '1.0.0' }\ndo: [{ pause: { wait: PT4H } }]\n`;
 
     expect(workflow.guide.variables).toEqual({

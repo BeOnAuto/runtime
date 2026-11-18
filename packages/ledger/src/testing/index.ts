@@ -15,10 +15,14 @@ export type { MultiStreamEntry } from '../multi-stream/multi-stream-cases.ts';
 export { earlierShapesBehaviour } from '../recorded-facts/earlier-shapes-behaviour.ts';
 export { knownFactsBehaviour } from '../layout/known-facts-behaviour.ts';
 export { archivedStreamsBehaviour } from '../archived-streams/archived-streams-behaviour.ts';
-export { ledgerStepsBehaviour } from '../layout/ledger-steps-behaviour.ts';
 export { recordedFactsBehaviour } from '../recorded-facts/recorded-facts-behaviour.ts';
 export type { RecordedFacts } from '../recorded-facts/recorded-facts.ts';
 export { sqliteUpdatesCountingOf, type LedgerEntry } from './ledger-entry.ts';
 export { unreachableDatabase, type UnreachableDatabase } from './unreachable-database.ts';
 export { valuesListOf } from './values-list.ts';
 export { receivedWebhooksOfItsOpenLedger, secretRowsOfItsOpenLedger } from './open-ledger.ts';
+export {
+  definitionProjectionsOnStoresBehaviour,
+  type NamingStores,
+} from '../projections/definition-projections-behaviour.ts';
+export { runIdsOnStoresBehaviour, type RunIdsStores } from '../run-ids/run-ids-on-stores-behaviour.ts';

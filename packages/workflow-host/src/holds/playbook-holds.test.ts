@@ -2,11 +2,11 @@ import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Context, Effect, Random } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { FollowedPlaybook, Hold } from '../follower/followed-playbooks.ts';
+import type { HeldPlaybook, Hold, Progress } from '../follower/followed-orgs.ts';
 import {
-  holdAfter,
+  heldAfter,
+  heldAgain,
   holdsUnreadableIn,
-  isHeldAt,
   type HeldAtARecord,
   type HoldLifted,
   type HoldParts,
@@ -18,18 +18,18 @@ const now = Date.parse('2026-11-11T09:00:00.000Z');
 
 const record = { id: 'r-1', type: 'run_succeeded' };
 
-const followed: FollowedPlaybook = {
-  playbookKey: 'playbook/acme/alpha/',
+const progress: Progress & { readonly cursor: string } = {
   cursor: 'c-1',
   delivered: null,
   attempts: 0,
-  waiting: true,
-  hold: undefined,
+  waiting: false,
 };
+
+const playbookKey = 'playbook/acme/alpha/';
 
 const heldAtTheRecord: HeldAtARecord = { heldFor: 'content', record, lag: { records: 4, capped: false } };
 
-const heldReach: PassReached = { end: 'waiting', records: 0, held: heldAtTheRecord };
+const heldReach: PassReached = { end: 'waiting', records: 0, progress, held: heldAtTheRecord };
 
 function factorOf(factor: number): Random.Random {
   return { nextIntUnsafe: () => 0, nextDoubleUnsafe: () => factor };
@@ -47,7 +47,11 @@ function partsKeeping(): { readonly parts: HoldParts; readonly kept: Kept } {
     kept,
     parts: {
       now: () => now,
-      playbooks: {
+      orgs: {
+        parked: ({ hold }) =>
+          Effect.sync(() => {
+            kept.holds.push(hold);
+          }),
         held: (_playbookKey, hold) =>
           Effect.sync(() => {
             kept.holds.push(hold);
@@ -72,9 +76,17 @@ function partsKeeping(): { readonly parts: HoldParts; readonly kept: Kept } {
   };
 }
 
-function keptAfter(playbook: FollowedPlaybook, reached: PassReached, factor = 0): Kept {
+function heldWith(hold: Hold): HeldPlaybook {
+  return { playbookKey, org: 'acme', progress, hold };
+}
+
+function keptAfter(hold: Hold | undefined, reached: PassReached, factor = 0): Kept {
   const { parts, kept } = partsKeeping();
-  Effect.runSync(holdAfter(parts, playbook, reached).pipe(Effect.provideService(Random.Random, factorOf(factor))));
+  const after =
+    hold === undefined
+      ? heldAgain(parts, { playbookKey, org: 'acme', hold }, { ...reached, held: reached.held ?? heldAtTheRecord })
+      : heldAfter(parts, heldWith(hold), reached);
+  Effect.runSync(after.pipe(Effect.provideService(Random.Random, factorOf(factor))));
   return kept;
 }
 
@@ -82,13 +94,13 @@ function waitsOf(holds: readonly (Hold | 'lifted')[]): readonly number[] {
   return holds.flatMap((hold) => (hold === 'lifted' ? [] : [hold.until - now]));
 }
 
-function heldADayFor(heldFor: Hold['heldFor']): FollowedPlaybook {
-  return { ...followed, hold: { heldFor, since: now - 86_400_000, until: now, holds: 20 } };
+function heldADayFor(heldFor: Hold['heldFor']): Hold {
+  return { heldFor, since: now - 86_400_000, until: now, holds: 20 };
 }
 
 describe('the hold a pass leaves on a playbook', () => {
   it('begins at a pass that ended held, tried again between half and all of a second later, its first try said', () => {
-    const kept = keptAfter(followed, heldReach, 0.5);
+    const kept = keptAfter(undefined, heldReach, 0.5);
 
     const hold: Hold = { heldFor: 'content', since: now, until: now + 750, holds: 1 };
     expect(kept).toEqual({
@@ -102,7 +114,7 @@ describe('the hold a pass leaves on a playbook', () => {
     const since = now - 600_000;
     const before: Hold = { heldFor: 'content', since, until: now, holds: 9 };
 
-    const [shortest, longest] = [0, 1].map((factor) => keptAfter({ ...followed, hold: before }, heldReach, factor));
+    const [shortest, longest] = [0, 1].map((factor) => keptAfter(before, heldReach, factor));
 
     expect([shortest?.holds, longest?.holds]).toEqual([
       [{ heldFor: 'content', since, until: now + 30_000, holds: 10 }],
@@ -112,7 +124,7 @@ describe('the hold a pass leaves on a playbook', () => {
   });
 
   it('keeps the time of the next try in whole milliseconds, never before the wait of the gate', () => {
-    const kept = keptAfter(followed, heldReach, 0.123);
+    const kept = keptAfter(undefined, heldReach, 0.123);
 
     expect(kept.holds).toEqual([{ heldFor: 'content', since: now, until: now + 562, holds: 1 }]);
   });
@@ -124,7 +136,7 @@ describe('the hold of a playbook held again for another reason or at another rec
   it('starts its tries again, the first of its reason, when the reason changed, keeping when the playbook’s hold began', () => {
     const unreadable: PassReached = { ...heldReach, held: { ...heldAtTheRecord, heldFor: 'unreadable' } };
 
-    const kept = keptAfter({ ...followed, hold: before }, unreadable, 1);
+    const kept = keptAfter(before, unreadable, 1);
 
     expect(kept.tried).toMatchObject([
       { first: true, hold: { heldFor: 'unreadable', since: now - 5000, holds: 1, until: now + 1000 } },
@@ -132,7 +144,7 @@ describe('the hold of a playbook held again for another reason or at another rec
   });
 
   it('starts its tries again when the pass moved past records before it was held, keeping when the playbook’s hold began', () => {
-    const kept = keptAfter({ ...followed, hold: before }, { ...heldReach, records: 3 }, 1);
+    const kept = keptAfter(before, { ...heldReach, records: 3 }, 1);
 
     expect(kept.tried).toMatchObject([
       { first: true, hold: { heldFor: 'content', since: now - 5000, holds: 1, until: now + 1000 } },
@@ -152,42 +164,37 @@ describe('the hold of a playbook held again for another reason or at another rec
 });
 
 describe('the hold of a pass that did not end held', () => {
-  it('is lifted by a pass that did not end held, said with how long it lasted and the records the pass moved past', () => {
+  it('is lifted by a pass that moved on and has more to read, said with how long it lasted and the records the pass moved past, and the playbook stays parked, due at once, until it reaches its org’s place', () => {
     const before: Hold = { heldFor: 'content', since: now - 5000, until: now, holds: 3 };
 
-    const kept = keptAfter({ ...followed, hold: before }, { end: 'more', records: 1000 });
+    const kept = keptAfter(before, { end: 'more', records: 1000, progress });
 
     expect(kept).toEqual({
-      holds: ['lifted'],
+      holds: [{ ...before, until: now, holds: 0 }],
       tried: [],
       lifted: [{ hold: before, at: now, records: 1000, more: true }],
     });
   });
 
-  it('is neither kept nor lifted by a pass of a playbook not held that did not end held', () => {
-    expect(keptAfter(followed, { end: 'caught_up', records: 3 })).toEqual({ holds: [], tried: [], lifted: [] });
+  it('lifts the parking of a playbook that reached its org’s place, saying nothing of a hold already lifted', () => {
+    const catchingUp: Hold = { heldFor: 'content', since: now - 5000, until: now, holds: 0 };
+
+    expect(keptAfter(catchingUp, { end: 'caught_up', records: 3, progress })).toEqual({
+      holds: ['lifted'],
+      tried: [],
+      lifted: [],
+    });
   });
 });
 
-describe('a hold, at a moment', () => {
-  it('holds until its time, and not from its time on, and no hold holds', () => {
-    const hold: Hold = { heldFor: 'content', since: now - 1000, until: now, holds: 1 };
+describe('a playbook parked for a delivery that waits to be tried again', () => {
+  it('is due at the next sweep, its time the time it was parked, whatever the tries before', () => {
+    const delivery: PassReached = { ...heldReach, held: { ...heldAtTheRecord, heldFor: 'delivery' } };
+    const before: Hold = { heldFor: 'delivery', since: now - 5000, until: now, holds: 6 };
 
-    expect([isHeldAt({ hold }, now - 1), isHeldAt({ hold }, now), isHeldAt(followed, now)]).toEqual([
-      true,
-      false,
-      false,
-    ]);
-  });
+    const waits = [waitsOf(keptAfter(undefined, delivery, 1).holds), waitsOf(keptAfter(before, delivery, 1).holds)];
 
-  it('holds no longer than its reason ever waits, so a clock that went back an hour does not hold it an hour', () => {
-    const hold: Hold = { heldFor: 'content', since: now - 1000, until: now + 60_000, holds: 9 };
-
-    expect([isHeldAt({ hold }, now), isHeldAt({ hold }, now - 1), isHeldAt({ hold }, now - 3_600_000)]).toEqual([
-      true,
-      false,
-      false,
-    ]);
+    expect(waits).toEqual([[0], [0]]);
   });
 });
 
@@ -195,13 +202,13 @@ describe('the hold of a playbook a later release held for a reason this release 
   const later: Hold = { heldFor: 'a reason of a later release', since: now - 5000, until: now, holds: 4 };
 
   it('is held again for this release’s own reason, its tries started again and its beginning kept', () => {
-    const kept = keptAfter({ ...followed, hold: later }, heldReach, 1);
+    const kept = keptAfter(later, heldReach, 1);
 
     expect(kept.holds).toEqual([{ heldFor: 'content', since: now - 5000, until: now + 1000, holds: 1 }]);
   });
 
   it('is lifted, said with the reason it was held for', () => {
-    const kept = keptAfter({ ...followed, hold: later }, { end: 'caught_up', records: 2 });
+    const kept = keptAfter(later, { end: 'caught_up', records: 2, progress });
 
     expect(kept.lifted).toEqual([{ hold: later, at: now, records: 2, more: false }]);
   });

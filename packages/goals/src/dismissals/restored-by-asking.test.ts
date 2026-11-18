@@ -69,8 +69,10 @@ async function measuredAndDismissedAt(at: number) {
   return { book, consumer: restoredByAskingOf(ports) };
 }
 
+const askOwnerKey = 'definition/acme/interaction-of-ask-owner/';
+
 function delivered(consumer: ReturnType<typeof restoredByAskingOf>, record: RecordedEvent, after?: string) {
-  const read = consumer.read({ playbook: sales, playbookKey: salesKey, record });
+  const read = consumer.read({ playbook: sales, playbookKey: salesKey, filedUnder: askOwnerKey, record });
   return Effect.runPromise(
     Effect.gen(function* () {
       if (read === 'unreadable') {

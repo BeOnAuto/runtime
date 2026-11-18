@@ -22,6 +22,8 @@ import type {
   StreamReader,
   StreamWriter,
 } from '../index.ts';
+import type { PlaybookDefinitionsReader } from '../ledger/playbook-reader.ts';
+import type { PlaybookDefinitionsWriter } from '../ledger/playbook-writer.ts';
 import type { OrgAppendedFactsReader, PlaybookAppendedFactsReader } from '../ledger/stream-ports.ts';
 import type { HandlerServices } from './handler-services.ts';
 
@@ -55,7 +57,9 @@ describe('the services a handler may ask for', () => {
     expectTypeOf<IncidentReporter>().not.toExtend<HandlerServices<'org', 'command'>>();
     expectTypeOf<IncidentReporter>().not.toExtend<HandlerServices<'playbook', 'command'>>();
   });
+});
 
+describe('the ports a handler sees', () => {
   it('bind every port a handler sees to the org or playbook of the call', () => {
     expectTypeOf<OrgContext['Service']>().toEqualTypeOf<OrgAddress>();
     expectTypeOf<PlaybookContext['Service']>().toEqualTypeOf<PlaybookAddress>();
@@ -68,8 +72,11 @@ describe('the services a handler may ask for', () => {
         PlaybookAppendedFactsReader &
         PlaybookRunOutcomesReader &
         BoundProjectionReader &
-        PlaybookContentReader
+        PlaybookContentReader &
+        PlaybookDefinitionsReader
     >();
-    expectTypeOf<PlaybookWriter['Service']>().toEqualTypeOf<StreamWriter & PlaybookContentWriter>();
+    expectTypeOf<PlaybookWriter['Service']>().toEqualTypeOf<
+      StreamWriter & PlaybookContentWriter & PlaybookDefinitionsWriter
+    >();
   });
 });

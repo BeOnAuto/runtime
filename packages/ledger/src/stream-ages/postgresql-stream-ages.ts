@@ -1,7 +1,7 @@
 import { Schema } from 'effect';
 
+import type { KeptStreamAges } from '../event-store.ts';
 import { defaultPartition, type Query } from '../postgresql-reads/recorded-parts.ts';
-import type { KeptStreamAges } from './stream-ages-store.ts';
 
 const AgeRows = Schema.Array(Schema.Struct({ age: Schema.FiniteFromString }));
 

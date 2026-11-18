@@ -7,6 +7,7 @@ import type { FollowedEvent } from './followed-events.ts';
 export interface CallRecord {
   readonly playbook: PlaybookAddress;
   readonly playbookKey: string;
+  readonly filedUnder: string;
   readonly record: RecordedEvent;
 }
 

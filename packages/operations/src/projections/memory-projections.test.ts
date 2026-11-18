@@ -170,6 +170,10 @@ const malformed: readonly (readonly [string, KeyedProjection])[] = [
     { ...runTallyRows, scopes: [] },
   ],
   ['The projection run_tallies names no stream kind it folds', { ...runTallyRows, kinds: [] }],
+  [
+    'The projection run_tallies keeps its rows at the org of the streams it folds, so it must key them by a mapping over those streams',
+    { ...runTallyRows, partition: 'org' },
+  ],
   ['The stream kind name Runs is malformed', { ...runTallyRows, kinds: ['Runs'] }],
   [
     'The projection topics has no column closed',

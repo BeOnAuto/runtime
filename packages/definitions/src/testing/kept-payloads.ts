@@ -4,6 +4,7 @@ import {
   streamPrefixOfOrg,
   type Context,
   type Decider,
+  type Ledger,
   type Lineage,
   type StreamWriter,
   type PlaybookAddress,
@@ -18,7 +19,9 @@ import {
 import { Effect, Result, type Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 
+import { decidedIn } from '../read-model-testing/in-the-playbook.ts';
 import { RunEventSchema, type RecordedRunEvent, type RunEvent } from '../runs/run-events.ts';
+import { recordedAdmin } from './callers.ts';
 
 interface FactsGiven {
   readonly events: readonly RunEvent[];
@@ -114,4 +117,27 @@ export function erasingReader({ org, playbook }: PlaybookAddress): PayloadReader
   const erased = ({ sha256 }: Digested) =>
     Effect.fail(new PayloadErased({ org, playbook, sha256, message: `The payload kept under ${sha256} was erased` }));
   return { json: erased, text: erased, all: () => erased({ sha256: 'each', bytes: 0 }) };
+}
+
+interface DefinedWithItsId {
+  readonly type: string;
+  readonly name: string;
+  readonly source: string;
+  readonly id: string;
+}
+
+export function definedWithItsId(
+  ledger: Ledger['Service'],
+  playbook: PlaybookAddress,
+  { type, name, source, id }: DefinedWithItsId,
+): Effect.Effect<void> {
+  return decidedIn(ledger, playbook, type, {
+    type: 'create',
+    name,
+    content: { source },
+    created_by: recordedAdmin,
+    definition_id: id,
+    by: recordedAdmin.id,
+    at: '2026-10-01T09:00:00.000Z',
+  });
 }

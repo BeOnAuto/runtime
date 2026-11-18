@@ -212,8 +212,8 @@ describe('the reads of a projection on PostgreSQL', () => {
     ]);
     expect(asked).toEqual([
       {
-        text: 'SELECT playbook_key, row_key, fn, began_at::float8 AS began_at, status, facts::float8 AS facts, open, due_at::float8 AS due_at, last_message FROM run_tallies_2 WHERE playbook_key = $1 AND open = $2 AND (began_at, row_key) < ($3, $4) ORDER BY began_at DESC NULLS LAST, row_key DESC NULLS LAST LIMIT $5',
-        values: ['playbook/acme/alpha/', true, 2000, 'r9', 20],
+        text: 'SELECT playbook_key, row_key, fn, began_at::float8 AS began_at, status, facts::float8 AS facts, open, due_at::float8 AS due_at, last_message, (SELECT n.playbook_key FROM definition_names_1 AS n WHERE n.definition_key = t.playbook_key) AS placed_in FROM run_tallies_2 AS t WHERE (playbook_key = $1 OR playbook_key IN (SELECT definition_key FROM definition_names_1 WHERE playbook_key = $2)) AND open = $3 AND (began_at, row_key) < ($4, $5) ORDER BY began_at DESC NULLS LAST, row_key DESC NULLS LAST LIMIT $6',
+        values: ['playbook/acme/alpha/', 'playbook/acme/alpha/', true, 2000, 'r9', 20],
       },
     ]);
   });
@@ -237,8 +237,8 @@ describe('the counts and due times of a projection on PostgreSQL', () => {
     ).toMatchObject([{ key: 'r1', row: { open: true } }]);
     expect(await Effect.runPromise(readerOf(soonest.query).nextDueOf('run_tallies', 'due_at', 0))).toBe(61_000);
     expect([...counts.asked, ...due.asked, ...soonest.asked].map(({ text }) => text)).toEqual([
-      'SELECT CAST(count(*) AS INTEGER) AS count FROM run_tallies_2 WHERE playbook_key = $1',
-      'SELECT playbook_key, row_key, fn, began_at::float8 AS began_at, status, facts::float8 AS facts, open, due_at::float8 AS due_at, last_message FROM run_tallies_2 WHERE due_at IS NOT NULL AND due_at <= $1 ORDER BY due_at, playbook_key, row_key LIMIT $2',
+      'SELECT CAST(count(*) AS INTEGER) AS count FROM run_tallies_2 WHERE (playbook_key = $1 OR playbook_key IN (SELECT definition_key FROM definition_names_1 WHERE playbook_key = $2))',
+      'SELECT playbook_key, row_key, fn, began_at::float8 AS began_at, status, facts::float8 AS facts, open, due_at::float8 AS due_at, last_message, (SELECT n.playbook_key FROM definition_names_1 AS n WHERE n.definition_key = t.playbook_key) AS placed_in FROM run_tallies_2 AS t WHERE due_at IS NOT NULL AND due_at <= $1 ORDER BY due_at, playbook_key, row_key LIMIT $2',
       'SELECT min(due_at)::float8 AS due FROM run_tallies_2 WHERE due_at IS NOT NULL AND due_at > $1',
     ]);
   });

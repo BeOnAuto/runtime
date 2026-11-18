@@ -12,6 +12,8 @@ export const savedIn: PlaybookAddress = { org: acmeAdmin.org, playbook: 'alpha' 
 
 export const recordedAdmin = recordedCallerOf(acmeAdmin);
 
+export const startedInAlpha = { started_by: recordedAdmin, playbook: 'alpha' } as const;
+
 export const adaOfAcme: CallerIdentity = { ...acmeAdmin, id: 'person:user_2ada', name: 'Ada Lovelace' };
 
 export const acmeReader: CallerIdentity = {

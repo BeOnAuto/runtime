@@ -1,12 +1,14 @@
 import {
-  PlaybookReader,
-  PlaybookWriter,
   playbookPayloadReader,
+  type PlaybookReader,
+  type PlaybookWriter,
+  type StreamReader,
   type Conflict,
   type Lineage,
   type PlaybookContext,
   type RecordedCaller,
   type Unavailable,
+  runStreamNameOf,
 } from '@on.auto/operations';
 import { payloadMembers, type Payload, type PayloadArm, type PayloadReader } from '@on.auto/operations/payloads';
 import { DateTime, Effect, Option, Struct, type Schema } from 'effect';
@@ -14,8 +16,8 @@ import { DateTime, Effect, Option, Struct, type Schema } from 'effect';
 import { comparedWithoutItsValue, keptToCompare, type ValuesRead } from '../payloads/payload-comparisons.ts';
 import { payloadWritten, type PayloadWritten } from '../payloads/payload-writing.ts';
 import { valuesReadFor } from '../payloads/run-payloads.ts';
-import type { AnswerFact, GivenAnswer, RunAnswer } from '../runs/run-commands.ts';
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import type { AnswerFact, GivenAnswer, RunAnswer, RunCommand } from '../runs/run-commands.ts';
+import { runDecider, placeOfRun, readerAt, writerAt, decidedOnNoRun } from '../runs/run-decider.ts';
 import type { AnswerBeside } from '../runs/run-events.ts';
 import { startedRunOf, type RecordedRunState } from '../runs/run-state.ts';
 
@@ -70,8 +72,13 @@ export type AnswerRun = (
   lineage: Lineage,
 ) => Effect.Effect<void, Conflict | Unavailable, InThePlaybook>;
 
-const readOfTheTaken = Effect.fnUntraced(function* (stream: string, offered: Payload<Schema.Json>, inHand: ValuesRead) {
-  const { state } = yield* (yield* PlaybookReader).load(stream, runDecider);
+const readOfTheTaken = Effect.fnUntraced(function* (
+  reader: StreamReader,
+  stream: string,
+  offered: Payload<Schema.Json>,
+  inHand: ValuesRead,
+) {
+  const { state } = yield* reader.load(stream, runDecider);
   const taken = Option.getOrThrow(
     Option.fromNullishOr(startedRunOf(state)).pipe(Option.flatMapNullishOr(({ answer }) => answer)),
   );
@@ -83,18 +90,26 @@ export const playbookBoundAnswerer: AnswerRun = (id, given, by, lineage) =>
   Effect.gen(function* () {
     const runId = id.toLowerCase();
     const stream = runStreamNameOf(runId);
+    const place = yield* Effect.option(placeOfRun(runId));
     const { payload, inHand } = yield* payloadWritten({ inline: given.answer });
     const at = DateTime.formatIso(yield* DateTime.now);
     const answer = keptAs(given, by, payload);
-    const answered = (valuesRead: ValuesRead) =>
-      PlaybookWriter.use((writer) =>
-        writer.execute(stream, runDecider, { type: 'answer', answer, valuesRead, runId, by: by.id, at }, lineage),
+    const commandOf = (valuesRead: ValuesRead) =>
+      ({ type: 'answer', answer, valuesRead, runId, by: by.id, at }) satisfies RunCommand;
+    if (Option.isNone(place)) {
+      return yield* decidedOnNoRun(runDecider, commandOf(inHand)).pipe(
+        Effect.catchTags({ not_found: Effect.die, cancelled: Effect.die }),
       );
-    yield* answered(inHand).pipe(
+    }
+    const writer = yield* writerAt(place.value);
+    const reader = yield* readerAt(place.value);
+    const answered = (valuesRead: ValuesRead) => writer.execute(stream, runDecider, commandOf(valuesRead), lineage);
+    return yield* answered(inHand).pipe(
       Effect.catchIf(
         (refused: unknown) => refused === comparedWithoutItsValue,
-        () => Effect.flatMap(readOfTheTaken(stream, payload, inHand), answered),
+        () => Effect.flatMap(readOfTheTaken(reader, stream, payload, inHand), answered),
       ),
       Effect.catchTags({ not_found: Effect.die, cancelled: Effect.die }),
+      Effect.asVoid,
     );
   });

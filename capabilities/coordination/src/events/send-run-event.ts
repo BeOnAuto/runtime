@@ -9,7 +9,7 @@ import {
   refusingForbiddenCharacters,
   type PlaybookOwnNames,
 } from '@on.auto/definitions';
-import { Caller, defineCommand, NotFound, PlaybookContext } from '@on.auto/operations';
+import { Caller, defineCommand, NotFound, PlaybookContext, PlaybookReader, runStreamNameOf } from '@on.auto/operations';
 import { quoted } from '@on.auto/phrasing';
 import { jsonBytesOf, measureOf, mostValueDepth } from '@on.auto/workflow-engine';
 import type { WorkflowHost } from '@on.auto/workflow-host';
@@ -106,6 +106,13 @@ const description = [
   "The playbook's own types and sources, and the lineage attributes it gives its own records, are refused.",
 ].join(' ');
 
+function definitionOfTheRun(runId: string) {
+  return PlaybookReader.use((reader) => reader.definitionHolding(runStreamNameOf(runId))).pipe(
+    Effect.flatMap(Effect.fromNullishOr),
+    Effect.orDie,
+  );
+}
+
 export function defineSendRunEvent(runs: Pick<WorkflowHost, 'deliver'>, names: PlaybookOwnNames) {
   return defineCommand('playbook', {
     name: 'send_run_event',
@@ -124,6 +131,7 @@ export function defineSendRunEvent(runs: Pick<WorkflowHost, 'deliver'>, names: P
         return yield* new NotFound({ detail: noRunningWorkflow });
       }
       const { org, playbook } = yield* PlaybookContext;
+      const definition = yield* definitionOfTheRun(runId);
       const { id: caller } = yield* Caller;
       const delivered = {
         ...event,
@@ -132,7 +140,7 @@ export function defineSendRunEvent(runs: Pick<WorkflowHost, 'deliver'>, names: P
         time: DateTime.formatIso(yield* DateTime.now),
       };
       const answer = yield* runs
-        .deliver({ org, playbook, runId }, delivered)
+        .deliver({ org, playbook, definition, runId }, delivered)
         .pipe(Effect.mapError(unavailableUnless(notNow)));
       if (answer !== 'delivered') {
         return yield* new NotFound({ detail: noRunningWorkflow });

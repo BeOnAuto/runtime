@@ -1,9 +1,26 @@
+import { SQL } from '@event-driven-io/dumbo';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { definitionNames } from '../definition-names/definition-names-table.ts';
 import { stamped } from '../testing/happenings.ts';
 import type { LedgerEntry } from '../testing/ledger-entry.ts';
 
 const created = [{ type: 'definition_created', data: { name: 'reviews' } }];
+
+const firstOfBeta = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71/';
+
+const secondOfAlpha = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72/';
+
+const holdingNoName = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73/';
+
+function placed(entry: LedgerEntry, database: string, definitionKey: string, playbookKey: string): Promise<unknown> {
+  return entry.executedOn(database, (execute) =>
+    execute.command(
+      SQL`INSERT INTO ${definitionNames} (playbook_key, definition_type, name, definition_key, status, has_triggers)
+        VALUES (${playbookKey}, 'reasoning', ${definitionKey}, ${definitionKey}, 'active', FALSE)`,
+    ),
+  );
+}
 
 export function definitionStreamsBehaviour(entry: LedgerEntry): void {
   describe('the definition streams of a type', () => {
@@ -41,14 +58,45 @@ export function definitionStreamsBehaviour(entry: LedgerEntry): void {
       );
 
       expect(await store.definitionStreams('page')).toEqual([
-        { stream: 'playbook/acme/alpha/definitions/page', version: 2 },
-        { stream: 'playbook/acme/beta/definitions/page', version: 1 },
+        { stream: 'playbook/acme/alpha/definitions/page', version: 2, playbookKey: 'playbook/acme/alpha/' },
+        { stream: 'playbook/acme/beta/definitions/page', version: 1, playbookKey: 'playbook/acme/beta/' },
       ]);
       expect(await store.definitionStreams('computation')).toEqual([]);
       expect(await store.definitionStreams('playbook')).toEqual([
-        { stream: 'playbook/acme/alpha/definitions/playbook', version: 1 },
+        { stream: 'playbook/acme/alpha/definitions/playbook', version: 1, playbookKey: 'playbook/acme/alpha/' },
       ]);
       expect(await entry.definitionStreamsIndexed(database)).toBe(true);
     });
+
+    placedDefinitionStreamsBehaviour(entry);
+  });
+}
+
+function placedDefinitionStreamsBehaviour(entry: LedgerEntry): void {
+  it('are, under keys that name definitions, the streams of the definitions that hold a name, each with the playbook it is in', async () => {
+    const database = await entry.aDatabase();
+    const store = entry.storeOn(database);
+    onTestFinished(() => store.close());
+    await store.migrate();
+    await placed(entry, database, firstOfBeta, 'playbook/acme/beta/');
+    await placed(entry, database, secondOfAlpha, 'playbook/acme/alpha/');
+    await Promise.all(
+      [
+        `${firstOfBeta}definitions/reasoning`,
+        `${secondOfAlpha}definitions/reasoning`,
+        `${holdingNoName}definitions/reasoning`,
+        'org/acme/notes/definitions/reasoning',
+      ].map((stream) => store.append(stream, created, { expectedVersion: 0, context: stamped })),
+    );
+    await store.append('playbook/acme/alpha/definitions/reasoning', [...created, ...created], {
+      expectedVersion: 0,
+      context: stamped,
+    });
+
+    expect(await store.definitionStreams('reasoning')).toEqual([
+      { stream: `${firstOfBeta}definitions/reasoning`, version: 1, playbookKey: 'playbook/acme/beta/' },
+      { stream: `${secondOfAlpha}definitions/reasoning`, version: 1, playbookKey: 'playbook/acme/alpha/' },
+      { stream: 'playbook/acme/alpha/definitions/reasoning', version: 2, playbookKey: 'playbook/acme/alpha/' },
+    ]);
   });
 }

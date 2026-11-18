@@ -2,6 +2,7 @@ import type { KeptContentHead, StreamedContent } from '@on.auto/content';
 import { Context, Effect } from 'effect';
 
 import { PlaybookContext } from '../caller/playbook-context.ts';
+import type { HeldName } from '../definition-names/name-judgement.ts';
 import { payloadReaderOf, type PayloadReader } from '../payloads/payload-reader.ts';
 import { PayloadsShared } from '../payloads/shared-payloads.ts';
 import type { BoundProjectionReader } from '../projections/keyed-projection.ts';
@@ -18,6 +19,13 @@ export interface PlaybookContentReader {
   readonly readContentHead: (sha256: string) => Effect.Effect<KeptContentHead | undefined>;
 }
 
+export interface PlaybookDefinitionsReader {
+  readonly ofDefinition: (definition: string) => StreamReader & StreamAges;
+  readonly holderOfName: (definitionType: string, name: string) => Effect.Effect<HeldName | undefined>;
+  readonly namesHeldIn: (definitionType: string) => Effect.Effect<readonly HeldName[]>;
+  readonly definitionHolding: (stream: string) => Effect.Effect<string | undefined>;
+}
+
 export class PlaybookReader extends Context.Service<
   PlaybookReader,
   StreamReader &
@@ -26,7 +34,8 @@ export class PlaybookReader extends Context.Service<
     PlaybookAppendedFactsReader &
     PlaybookRunOutcomesReader &
     BoundProjectionReader &
-    PlaybookContentReader
+    PlaybookContentReader &
+    PlaybookDefinitionsReader
 >()('@on.auto/operations/PlaybookReader') {}
 
 export const playbookPayloadReader: Effect.Effect<PayloadReader, never, PlaybookReader | PlaybookContext> = Effect.gen(

@@ -1,11 +1,12 @@
 import { textAt } from '@on.auto/definitions/tool-blocks';
 import {
-  playbookCallerOf,
   messageIdOf,
+  playbookCallerOf,
   randomUUIDv7,
-  streamPrefixOfPlaybook,
-  type PlaybookAddress,
+  streamPrefixOfAddress,
   type Lineage,
+  type PlaybookAddress,
+  type ProjectedAddress,
   type StreamWriter,
 } from '@on.auto/operations';
 import {
@@ -27,6 +28,7 @@ import type { TellingCall } from './telling-calls.ts';
 
 export interface Telling {
   readonly playbook: PlaybookAddress;
+  readonly filedIn: ProjectedAddress;
   readonly server: string;
   readonly runId: string;
   readonly definition: DefinitionOfTheTelling;
@@ -67,8 +69,8 @@ export function onceFor({ runId, call }: OnceOfARun): string {
 }
 
 export function told({ ledger, tools }: TellingParts, telling: Telling, callId = randomUUIDv7()): Effect.Effect<void> {
-  const { playbook, server, runId, definition, call: made, lineage } = telling;
-  const stream = `${streamPrefixOfPlaybook(playbook)}${conversationCallStreamOf(callId)}`;
+  const { playbook, filedIn, server, runId, definition, call: made, lineage } = telling;
+  const stream = `${streamPrefixOfAddress(filedIn)}${conversationCallStreamOf(callId)}`;
   const by = playbookCallerOf(playbook).id;
   const ofTheCall = { callId, runId, definition, about: made.about, form: made.form };
   const call = {

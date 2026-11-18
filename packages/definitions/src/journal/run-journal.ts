@@ -1,22 +1,16 @@
-import {
-  Conflict,
-  PlaybookContext,
-  PlaybookWriter,
-  Caller,
-  messageIdOf,
-  streamPrefixOfPlaybook,
-} from '@on.auto/operations';
+import { Conflict, Caller, messageIdOf, runStreamNameOf } from '@on.auto/operations';
 import type { CallEnded } from '@on.auto/tool-servers';
 import { DateTime, Effect, Exit, Ref, Schema, Semaphore } from 'effect';
 
 import type { RunAttempt, RunJournal, RunLineage } from '../capability/run-context.ts';
 import type { CallFact } from '../runs/run-commands.ts';
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { runDecider, placeOfRun, writerAt } from '../runs/run-decider.ts';
 import type { ToolCallEnded } from '../runs/run-events.ts';
 import { lastCallOf, startedRunOf, type RunState } from '../runs/run-state.ts';
 import { isCallStart } from './call-numbering.ts';
 
 export interface LedgerJournal extends RunJournal {
+  readonly definition: string;
   readonly latest: Effect.Effect<string>;
 }
 
@@ -66,8 +60,9 @@ export const runJournal = Effect.fnUntraced(function* (
   attempt: RunAttempt,
   fencingToken: number,
 ) {
-  const writer = yield* PlaybookWriter;
-  const stream = `${streamPrefixOfPlaybook(yield* PlaybookContext)}${runStreamNameOf(id)}`;
+  const place = yield* Effect.orDie(placeOfRun(id));
+  const writer = yield* writerAt(place);
+  const { stream } = place;
   const { id: by } = yield* Caller;
   const permit = yield* Semaphore.make(1);
   const calls = yield* Ref.make<Calls>({ answered: lineage.startId, started: new Map() });
@@ -93,6 +88,7 @@ export const runJournal = Effect.fnUntraced(function* (
       }),
     );
   const journal: LedgerJournal = {
+    definition: place.definition,
     attempt,
     started: (data) => record({ type: 'tool_call_started', data }).pipe(Effect.catchCause(() => Effect.undefined)),
     ended: (number, fact) => recorded(record(toolEnded(number, fact))),

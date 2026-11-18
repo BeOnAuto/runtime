@@ -3,11 +3,11 @@ import { PayloadOffloading } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
+import { acmeAdmin, recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
-import { keptArmOf, watchedStore } from '../testing/kept-payloads.ts';
+import { definedWithItsId, keptArmOf, watchedStore } from '../testing/kept-payloads.ts';
 import { admittingMeter, recordingMeter } from '../testing/recording-meter.ts';
 
 const someWords: unknown = expect.any(String);
@@ -20,6 +20,8 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
+const greetId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8a01';
+
 const input = { who: 'Ada', notes: 'n'.repeat(17_000) };
 
 const output = { greeting: 'Hi', input };
@@ -29,9 +31,13 @@ const tenKiB = { who: 'Ada', notes: 'n'.repeat(10_240) };
 async function greeting() {
   const watched = watchedStore();
   const definitions = harness(admittingMeter, watched.store);
-  await definitions.call(
-    createDefinition,
-    toAlpha(acmeAdmin, { type: 'echo', name: 'greet', source: '{"greeting": "Hi"}' }),
+  await definitions.run(
+    definedWithItsId(definitions.ledger.service, alpha, {
+      type: 'echo',
+      name: 'greet',
+      source: '{"greeting": "Hi"}',
+      id: greetId,
+    }),
   );
   return { definitions, watched };
 }
@@ -80,7 +86,12 @@ describe('a run whose playbook keeps large values outside its runs', () => {
     expect(await factsOf(definitions)).toEqual([
       {
         type: 'run_started',
-        data: { input_sha256: inputKept.sha256, input_bytes: inputKept.bytes, started_by: recordedAdmin },
+        data: {
+          input_sha256: inputKept.sha256,
+          input_bytes: inputKept.bytes,
+          started_by: recordedAdmin,
+          playbook: 'alpha',
+        },
       },
       {
         type: 'run_succeeded',
@@ -114,7 +125,7 @@ describe('a run that keeps nothing outside its record: a small input, the switch
     await keepingOutside(definitions, ranWith({ who: 'Ada' }));
 
     expect(await dataOf(definitions)).toEqual([
-      { input: { who: 'Ada' }, started_by: recordedAdmin },
+      { input: { who: 'Ada' }, ...startedInAlpha },
       { output: { greeting: 'Hi', input: { who: 'Ada' } }, record: { greeting: 'Hi' } },
     ]);
   });
@@ -125,7 +136,7 @@ describe('a run that keeps nothing outside its record: a small input, the switch
     await definitions.call(runDefinition, ranWith(input));
 
     expect(await dataOf(definitions)).toEqual([
-      { input, started_by: recordedAdmin },
+      { input, ...startedInAlpha },
       { output, record: { greeting: 'Hi' } },
     ]);
     expect(watched.reads()).toBe(0);
@@ -140,7 +151,7 @@ describe('a run that keeps nothing outside its record: a small input, the switch
       output: { status: 'succeeded', output },
     });
     expect(await dataOf(definitions)).toEqual([
-      { input, started_by: recordedAdmin },
+      { input, ...startedInAlpha },
       { output, record: { greeting: 'Hi' } },
     ]);
   });
@@ -153,7 +164,7 @@ describe('a run whose input and output are past what a page shows whole and with
     await inline.definitions.call(runDefinition, ranWith(tenKiB));
 
     expect(await dataOf(outside.definitions)).toEqual([
-      { input: tenKiB, started_by: recordedAdmin },
+      { input: tenKiB, ...startedInAlpha },
       { output: { greeting: 'Hi', input: tenKiB }, record: { greeting: 'Hi' } },
     ]);
     expect(await dataOf(outside.definitions)).toEqual(await dataOf(inline.definitions));

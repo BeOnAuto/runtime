@@ -1,6 +1,7 @@
+import { streamAddressed } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
-import { financePrefix, projected } from '../testing/projected.ts';
+import { aDefinition, definitionPrefix, projected } from '../testing/projected.ts';
 import {
   definitionCreated,
   definitionRetired,
@@ -26,14 +27,14 @@ const runAt = (version: number, index: number): RunOf => ({
 
 const at = (minute: number) => `2026-11-01T15:${String(minute).padStart(2, '0')}:00.000Z`;
 
-const definitions = `${financePrefix}definitions/reasoning`;
+const definitions = `${definitionPrefix}definitions/reasoning`;
 
-const runs = (run: RunOf) => `${financePrefix}runs/${run.runId}`;
+const runs = (run: RunOf) => `${definitionPrefix}runs/${run.runId}`;
 
 const key = 'reasoning/categorize-invoice';
 
 async function brokenAfter(...steps: readonly (readonly [string, RecordedFact])[]) {
-  const { record, rows } = projected(brokenRows);
+  const { record, rows } = projected(brokenRows, aDefinition);
   await record(definitions, definitionCreated({ ...invoice, version: 1 }, at(0), 'person:user_2ada'));
   await steps.reduce((done: Promise<void>, [stream, fact]) => done.then(() => record(stream, fact)), Promise.resolve());
   return (await rows())[key];
@@ -175,9 +176,12 @@ describe('what keeps no broken definition', () => {
     const started = messageOf(runStarted(one, at(0), 'x'));
 
     expect(
-      brokenRows.keyOf?.({ ...started, context: { at: at(0), by: 'x' } }, { kind: 'runs', id: one.runId }),
+      brokenRows.keyOf?.(
+        { ...started, context: { at: at(0), by: 'x' } },
+        streamAddressed(`definition/acme/d1/runs/${one.runId}`),
+      ),
     ).toBeUndefined();
-    expect(brokenRows.keyOf?.(started, { kind: 'runs', id: one.runId })).toBe(key);
+    expect(brokenRows.keyOf?.(started, streamAddressed(`definition/acme/d1/runs/${one.runId}`))).toBe(key);
     expect(
       brokenRows.rowAfter(undefined, { ...messageOf(runFailed(one, at(1))), data: { incident: 3 } }),
     ).toBeUndefined();

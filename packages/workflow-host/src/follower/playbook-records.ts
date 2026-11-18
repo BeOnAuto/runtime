@@ -1,9 +1,5 @@
 import { definitionFactTypes } from '@on.auto/definitions';
-import { recordedReaderOf, type LedgerStreams } from '@on.auto/ledger';
-import type { PlaybookAddress, RecordedEvent, RecordedPage } from '@on.auto/operations';
-import { Effect } from 'effect';
-
-const recordsInAPage = 100;
+import type { RecordedEvent } from '@on.auto/operations';
 
 const factTypes: ReadonlySet<string> = new Set([
   'run_started',
@@ -20,33 +16,16 @@ export function recordTypesOf(eventTypes: readonly string[]): ReadonlySet<string
   return new Set(facts.length < eventTypes.length ? [...facts, 'event_published'] : facts);
 }
 
-export interface PlaybookRecords {
-  readonly after: (
-    playbook: PlaybookAddress,
-    cursor: string | null,
-    delivers: ReadonlySet<string>,
-  ) => Effect.Effect<RecordedPage>;
+const aDefinitionKey = /^definition\/[^/]+\/[^/]+\//u;
+
+export function streamWithinItsKey(playbookKey: string, stream: string): string {
+  return stream.startsWith(playbookKey) ? stream.slice(playbookKey.length) : stream.replace(aDefinitionKey, '');
+}
+
+export function keyOfTheStream(playbookKey: string, stream: string): string {
+  return stream.slice(0, stream.length - streamWithinItsKey(playbookKey, stream).length);
 }
 
 export function relativeRecord(playbookKey: string, record: RecordedEvent): RecordedEvent {
-  return { ...record, stream: record.stream.slice(playbookKey.length) };
-}
-
-export function playbookRecordsOf(store: LedgerStreams): PlaybookRecords {
-  const read = recordedReaderOf(store);
-  return {
-    after: (playbook, cursor, delivers) =>
-      Effect.orDie(
-        read(
-          playbook,
-          { kind: 'everything' },
-          {
-            order: 'asc',
-            limit: recordsInAPage,
-            dataOf: [...new Set([...definitionFactTypes, ...delivers])],
-            ...(cursor === null ? {} : { cursor }),
-          },
-        ),
-      ),
-  };
+  return { ...record, stream: streamWithinItsKey(playbookKey, record.stream) };
 }

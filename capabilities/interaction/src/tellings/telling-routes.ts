@@ -1,13 +1,7 @@
 import type { Effect } from 'effect';
 import { Schema } from 'effect';
 
-import {
-  tellBlockOf,
-  tellWords,
-  type DeliverBlock,
-  type Replies,
-  type TellBlock,
-} from '../tool-blocks/tool-block-schemas.ts';
+import { tellWords, type DeliverBlock, type Replies, type TellBlock } from '../tool-blocks/tool-block-schemas.ts';
 
 const Templates = Schema.Record(Schema.String, Schema.Json);
 
@@ -53,7 +47,7 @@ export type ConversationsOf = (provider: string | null) => Effect.Effect<Convers
 
 const toldNothing: TellingRoute = { when: 'none' };
 
-export type Delivering = Pick<DeliverBlock, 'tool' | 'sent'>;
+type Delivering = Pick<DeliverBlock, 'tool' | 'sent'>;
 
 function lineOf(block: TellBlock, { tool: delivering, sent: pointers }: Delivering): Line {
   const tool = block.tool ?? delivering;
@@ -98,9 +92,4 @@ export function resolvedTelling(deliver: DeliverBlock, replies: Replies, part?: 
     return tell === undefined ? toldNothing : { when: tell };
   }
   return { when: tell ?? part.tell, line: part.reply, ...ofTheProvider(part) };
-}
-
-export function tellingWrittenBefore(replies: Replies, delivering: Delivering): TellingRoute {
-  const block = tellBlockOf(replies);
-  return block === undefined ? toldNothing : { when: 'refusals', line: lineOf(block, delivering) };
 }

@@ -2,7 +2,6 @@ import { Conflict, type Context, type PlaybookAddress, type Rejection } from '@o
 import { Result } from 'effect';
 
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
-import { earlierDefinitionIdOf } from '../identity/definition-ids.ts';
 import { blankRefusalWhere } from '../imports/blank-refusals.ts';
 import type {
   CommandMetadata,
@@ -28,9 +27,18 @@ function recording(event: DefinitionEvent): Decision {
 }
 
 function decideCreation(
-  { address }: DefinitionsOf,
+  { type, address }: DefinitionsOf,
   { content, created_by, definition_id, paused, blanksRefused }: DefinitionCreation & CommandMetadata,
+  existing: StoredDefinition | undefined,
 ): Decision {
+  if (existing !== undefined) {
+    return Result.fail(
+      new Conflict({
+        detail: `The playbook already has the ${definitionResourceLabel(type)} ${existing.name}`,
+        kind: 'taken',
+      }),
+    );
+  }
   const blanked = blankRefusalWhere(blanksRefused === true && paused === undefined, content, 'create');
   return blanked === undefined
     ? recording({
@@ -155,20 +163,10 @@ function versionSaved(
   return { definitionVersion: command.type === 'update' ? existing.version + 1 : existing.version };
 }
 
-function idOf(
-  { type, address }: DefinitionsOf,
-  command: DefinitionCommand,
-  existing: RegisteredDefinition | undefined,
-): string {
-  if (command.type === 'create') {
-    return command.definition_id;
-  }
-  return existing?.definition_id ?? earlierDefinitionIdOf({ ...address, type, name: command.name });
-}
-
 export interface DefinitionsOf {
   readonly type: string;
   readonly address: PlaybookAddress;
+  readonly definition: string;
 }
 
 export function definitionContextOf(
@@ -183,17 +181,18 @@ export function definitionContextOf(
     definitionType: of.type,
     definitionName: name,
     ...versionSaved(command, existing),
-    definitionId: idOf(of, command, existing),
+    definitionId: of.definition,
   };
 }
 
 export function decideOnDefinition(
-  { type, address }: DefinitionsOf,
+  of: DefinitionsOf,
   command: DefinitionCommand,
   existing: RegisteredDefinition | undefined,
 ): Decision {
+  const { type } = of;
   if (command.type === 'create') {
-    return decideCreation({ type, address }, command);
+    return decideCreation(of, command, existing);
   }
   if (command.type === 'update') {
     return decideUpdate(type, command, existing);

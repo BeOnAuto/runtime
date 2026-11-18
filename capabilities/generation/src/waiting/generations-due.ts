@@ -1,4 +1,4 @@
-import { playbookRowsOf, type PlaybookProjectedRow } from '@on.auto/operations';
+import { addressOfTheRow, playbookRowsOf, type PlaybookProjectedRow } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { polled } from './video-polls.ts';
@@ -18,9 +18,9 @@ export interface GenerationsDue {
   readonly nextDueAt: (after: number, callsOut?: boolean) => Effect.Effect<number | null>;
 }
 
-function rowNowOf(parts: WaitingParts, { playbook, key }: WaitingPlace): Effect.Effect<WaitingRow> {
+function rowNowOf(parts: WaitingParts, { address, key }: WaitingPlace): Effect.Effect<WaitingRow> {
   return Effect.map(
-    parts.ledger.readProjectedRows(generationsWaitingName, playbook, {
+    parts.ledger.readProjectedRows(generationsWaitingName, address, {
       where: [{ column: 'row_key', equals: key }],
       orderBy: [],
       order: 'asc',
@@ -45,6 +45,7 @@ function endedAtTheDeadline(parts: WaitingParts, place: WaitingPlace, now: numbe
 function itemOf(parts: WaitingParts, kept: PlaybookProjectedRow, callsOut: boolean): GenerationsDueItem {
   const place = {
     playbook: { org: kept.org, playbook: kept.playbook },
+    address: addressOfTheRow(kept),
     key: kept.key,
     row: waitingRowFrom(kept.row),
   };

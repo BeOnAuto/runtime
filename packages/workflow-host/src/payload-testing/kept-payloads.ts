@@ -11,6 +11,7 @@ import { memoryLedger } from '@on.auto/operations/testing';
 import { mostInlineHeldValueBytes, type ContentUnavailable, type RunPayloads } from '@on.auto/workflow-engine';
 import { Deferred, Effect, Exit, type Schema } from 'effect';
 
+import type { HostDatabase } from '../database/host-database.ts';
 import type { HostNote } from '../host/host-reports.ts';
 import { hostPayloadCacheBytes, hostRunPayloadsOf } from '../runs/run-payloads.ts';
 
@@ -60,17 +61,31 @@ export interface StoreOfPayloads {
 
 const refused = () => Effect.die(new Error('connect ECONNREFUSED'));
 
+type StartedRuns = Pick<HostDatabase, 'read'>;
+
+export function runsStartedIn(playbookKeyOf: (runKey: string) => string): StartedRuns {
+  return { read: ({ values: [runKey] }) => Effect.succeed([{ playbook_key: playbookKeyOf(String(runKey)) }]) };
+}
+
+export const runsOfAlpha: StartedRuns = runsStartedIn(() => 'playbook/acme/alpha/');
+
+function releasedAlready(): Deferred.Deferred<void> {
+  const released = Deferred.makeUnsafe<void>();
+  Effect.runSync(Deferred.done(released, Exit.void));
+  return released;
+}
+
 export function storeOn(
   payloadOffloading = true,
   shared: SharedPayloads = sharedPayloadsWithin(hostPayloadCacheBytes),
+  runs: StartedRuns = runsOfAlpha,
 ): StoreOfPayloads {
   const { content: kept } = memoryLedger().service;
   const { note, notes } = notesKept();
   let gets = 0;
   let isDown = false;
-  let held = Deferred.makeUnsafe<void>();
+  let held = releasedAlready();
   let asked = Promise.withResolvers<void>();
-  Effect.runSync(Deferred.done(held, Exit.void));
   const reached = <A, E>(call: Effect.Effect<A, E>) => Effect.suspend(() => (isDown ? refused() : call));
   const content: Content = {
     put: (owner, given) => reached(kept.put(owner, given)),
@@ -88,6 +103,7 @@ export function storeOn(
       payloadOffloading,
       payloadSizeThreshold: mostInlineHeldValueBytes,
       shared,
+      runs,
       note,
     }),
     content,
@@ -142,6 +158,7 @@ export function streamedIn(toKeep: PayloadToKeep, size: number): Streamed {
     payloadOffloading: true,
     payloadSizeThreshold: mostInlineHeldValueBytes,
     shared: sharedPayloadsWithin(0),
+    runs: runsOfAlpha,
     note: () => Effect.void,
   });
   return { payloads, chunks: () => chunks };

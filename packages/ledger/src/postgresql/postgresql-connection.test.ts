@@ -1,4 +1,5 @@
 import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
+import type { HeldName } from '@on.auto/operations/definition-names';
 import { Effect, Function, Logger, Result } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -41,6 +42,7 @@ const streams: StreamsCarrying = {
   appendWithin: () => Promise.resolve(),
   readRecorded: () => Promise.resolve({ records: [] }),
   readRecordedOfKeys: () => Promise.resolve({ records: [] }),
+  readRecordedOfOrg: () => Promise.resolve({ records: [] }),
   readRecordedEvent: (_, id) => Promise.resolve(new Map<string, StoredRecord>().get(id)),
   readRecordedEventOfKeys: (_, id) => Promise.resolve(new Map<string, StoredRecord>().get(id)),
   readAppended: () => Promise.resolve({ streams: [], through: ['0', '0'], more: false }),
@@ -48,6 +50,12 @@ const streams: StreamsCarrying = {
   waitForAppend: () => Promise.resolve('ended'),
   endWaits: Function.constVoid,
   definitionStreams: () => Promise.resolve([]),
+  holderOfName: ({ name }) => Promise.resolve(new Map<string, HeldName>().get(name)),
+  nameHeldBy: (definitionKey) => Promise.resolve(new Map<string, HeldName>().get(definitionKey)),
+  namesHeldIn: () => Promise.resolve([]),
+  definitionsIn: () => Promise.resolve([]),
+  holderOfStream: ({ stream }) => Promise.resolve(new Map<string, string>().get(stream)),
+  holderOfRunId: ({ runId }) => Promise.resolve(new Map<string, string>().get(runId)),
   ageOfLastAppend: () => Promise.resolve(Number.POSITIVE_INFINITY),
 };
 

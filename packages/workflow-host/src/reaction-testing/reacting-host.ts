@@ -3,11 +3,11 @@ import { onTestFinished } from 'vitest';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import { openWorkflowHost, type HostOptions, type WorkflowHost } from '../host/workflow-host.ts';
-import type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 import { testMachine } from '../testing/host-documents.ts';
-import { aSQLiteFile, connectedOn, openedOn } from '../testing/host-files.ts';
+import { aSQLiteFile, connectedOn, openedOn, type DatabaseSettings } from '../testing/host-files.ts';
 import { recordingReports, recordingSettlements, type RecordingReports } from '../testing/recording-reports.ts';
 import { recordedWaiting } from '../waiting-testing/recorded-waiting.ts';
+import { testDefinitionsPlaced } from './playbook-writes.ts';
 import { recordedReactions, type FailingStart, type RecordedReactions } from './recorded-reactions.ts';
 
 const startsEveryTime: FailingStart = () => null;
@@ -67,5 +67,6 @@ export async function reactingHost(options: ReactingOptions = {}): Promise<React
   });
   onTestFinished(() => host.stop());
   const database = await openedOn(settings);
+  await testDefinitionsPlaced(database.store);
   return { host, database, reactions, notes: reports.notes, settings };
 }

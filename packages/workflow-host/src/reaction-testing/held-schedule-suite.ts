@@ -8,6 +8,7 @@ import { until } from '../testing/until.ts';
 import { movedClock, type MovedClock } from './moved-clock.ts';
 import {
   at,
+  definitionKeyNamed,
   definitionPaused,
   definitionRecorded,
   definitionResumed,
@@ -50,7 +51,7 @@ function isoAt(minutes: number): string {
 
 function startedAt(minutes: number) {
   return {
-    runId: reactionRunIdOf('tick', 1, '/schedule/every', isoAt(minutes)),
+    runId: reactionRunIdOf(definitionKeyNamed('tick'), 1, '/schedule/every', isoAt(minutes)),
     input: { schedule: { due: isoAt(minutes) } },
   };
 }
@@ -196,7 +197,7 @@ function heldThenChanged(settingsOf: SettingsOf) {
       { held_due: null, next_due: minutesIn(15.5) },
       [
         {
-          runId: reactionRunIdOf('tick', 2, '/schedule/every', isoAt(15.5)),
+          runId: reactionRunIdOf(definitionKeyNamed('tick'), 2, '/schedule/every', isoAt(15.5)),
           input: { schedule: { due: isoAt(15.5) } },
         },
       ],

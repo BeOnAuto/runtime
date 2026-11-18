@@ -41,7 +41,7 @@ export function started(
       org,
       playbook,
       run_id: id,
-      definition,
+      definition: { name: definition.name, version: definition.version },
       caller,
       depth,
       call_depth: callDepth,
@@ -54,7 +54,7 @@ export function started(
     const longestCallMsByTask = yield* longestCallsOf(document, run);
     const limits = { mostDurationMs, longestCallMs, longestCallMsByTask };
     const answer = yield* runs
-      .start({ org, playbook, runId: id }, { document, input, limits, attributes, seed })
+      .start({ org, playbook, definition: definition.id, runId: id }, { document, input, limits, attributes, seed })
       .pipe(Effect.mapError(unavailableUnless(notNow)));
     return yield* finishedLaterOr(answer);
   });

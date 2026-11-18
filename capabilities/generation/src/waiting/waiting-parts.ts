@@ -7,8 +7,10 @@ import {
   type Settlement,
 } from '@on.auto/definitions';
 import type {
+  LedgerPorts,
   Lineage,
   PlaybookAddress,
+  ProjectedAddress,
   ProjectionAdvancer,
   ProjectionReader,
   RecordedReader,
@@ -27,6 +29,7 @@ export interface WaitingLedger
   extends
     StreamWriter,
     StreamReader,
+    Pick<LedgerPorts, 'holderOfStream'>,
     Pick<RecordedReader, 'readRecorded'>,
     Pick<ProjectionReader, 'readProjectedRows' | 'readDueRows' | 'nextDueOf'>,
     ProjectionAdvancer {}
@@ -40,6 +43,7 @@ export interface WaitingParts extends Pick<
 
 export interface WaitingPlace {
   readonly playbook: PlaybookAddress;
+  readonly address: ProjectedAddress;
   readonly key: string;
   readonly row: WaitingRow;
 }
@@ -56,8 +60,8 @@ export function cadenceOf({ row }: WaitingPlace): Cadence {
   return { polls: row.polls, progress: row.progress, next_poll_at: row.next_poll_at, ending_due_at: row.ending_due_at };
 }
 
-export function advanced(parts: WaitingParts, { playbook, key, row }: WaitingPlace, cadence: Cadence) {
-  return parts.ledger.advanceRow(generationsWaitingName, playbook, key, {
+export function advanced(parts: WaitingParts, { address, key, row }: WaitingPlace, cadence: Cadence) {
+  return parts.ledger.advanceRow(generationsWaitingName, address, key, {
     set: advancedOf(cadence),
     when: [
       { column: 'deferred_id', equals: row.deferred_id },

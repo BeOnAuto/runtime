@@ -6,7 +6,7 @@ import { runWordsFor } from '../plain-language/run-words.ts';
 import type { RunCommand } from '../runs/run-commands.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { firstMoment, harness, toPlaybook, runStreamIn } from '../testing/harness.ts';
 import { heldFromItsStart } from '../testing/run-facts.ts';
 import { deadAttemptEnder } from './index.ts';
 
@@ -17,8 +17,6 @@ const toAlpha = toPlaybook('acme', 'alpha');
 const runId = '0199a3c4-7d2e-7c1a-9b3f-0000000000f1';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
-
-const stream = `playbook/acme/alpha/runs/${runId}`;
 
 const longestCallMs = 70_000;
 
@@ -34,6 +32,7 @@ const startOfTheRun: RunCommand = {
   name: 'post',
   input: {},
   started_by: { id: acmeAdmin.id, name: acmeAdmin.name },
+  playbook: 'alpha',
   definition_version: 1,
   calls_tools: true,
   ...acted,
@@ -82,6 +81,7 @@ async function leftByItsAttempt(facts: readonly RunCommand[], start: RunCommand 
     operations.createDefinition,
     toAlpha(acmeAdmin, { type: 'system-call', name: 'post', source: 'post' }),
   );
+  const stream = runStreamIn(definitions.ledger, { type: 'system-call', name: 'post' }, runId);
   const heldWith = await definitions.run(heldFromItsStart(service, stream, start, facts));
   const reading = () => definitions.call(operations.getRun, toAlpha(acmeAdmin, { run_id: runId }));
   const lineage = { causationId: null, correlationId: runId };

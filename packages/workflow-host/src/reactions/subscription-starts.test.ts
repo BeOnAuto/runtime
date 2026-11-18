@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { stopsInARowBeforeTheVersion } from '../filtering/filter-matching.ts';
 import { subscribed, subscribedAt } from '../reaction-testing/event-subscriptions.ts';
 import { followedRecordOf } from '../reaction-testing/followed-records.ts';
+import { definitionKeyNamed } from '../reaction-testing/playbook-writes.ts';
 import { starting, stopsByItsMemory, stopsByItsWork } from '../reaction-testing/trigger-starting.ts';
 import { reactionRunIdOf } from './reaction-ids.ts';
 import { mostReactionDepth } from './subscription-starts.ts';
@@ -28,9 +29,10 @@ describe('the starts of the workflows whose trigger an event matches', () => {
       {
         org: 'acme',
         playbook: 'alpha',
+        definitionKey: definitionKeyNamed('close'),
         workflow: 'close',
         version: 1,
-        runId: reactionRunIdOf('close', 1, '/schedule/on', 'record-1'),
+        runId: reactionRunIdOf(definitionKeyNamed('close'), 1, '/schedule/on', 'record-1'),
         input: [{ specversion: '1.0', id: 'e1', source: '/acme', type: 'go', time: at, data: { region: 'eu' } }],
         depth: 1,
         cause: 'record-1',
@@ -182,6 +184,9 @@ describe('the subscriptions an event is matched against', () => {
     await subscribed(database, 'b', { type: 'go' });
     await subscribed(database, 'c', { type: 'go' });
     const followed = followedRecordOf(null);
+    const inTheirOrder = ['a', 'b', 'c'].toSorted((one, other) =>
+      definitionKeyNamed(one).localeCompare(definitionKeyNamed(other)),
+    );
 
     const first = await Effect.runPromise(consumer.batchOf(followed, undefined, 2));
     const second = await Effect.runPromise(consumer.batchOf(followed, first.through, 2));
@@ -191,14 +196,15 @@ describe('the subscriptions an event is matched against', () => {
 
     expect([first.deliveries.length, first.through, first.more, second.deliveries.length, second.more]).toEqual([
       2,
-      'b',
+      inTheirOrder.map((name) => definitionKeyNamed(name))[1],
       true,
       1,
       false,
     ]);
     expect(refused()).toEqual([
       {
-        workflow: 'c',
+        definitionKey: definitionKeyNamed(String(inTheirOrder[2])),
+        workflow: inTheirOrder[2],
         version: 1,
         trigger: { kind: 'event', reference: '/schedule/on' },
         reason: 'The workflow could not be started by its event trigger: refused',

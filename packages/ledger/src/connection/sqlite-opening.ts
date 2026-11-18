@@ -30,7 +30,11 @@ export function sqliteLedgerOpened<Driver extends AnyDriver>(
     store: sqliteEventStore(onThePool, kept, listeners),
     connection: sqliteConnectionOn(options.pool, {
       inMemory,
-      streams: sqliteEventStore(onThePool, { holders: kept.holders }, listeners),
+      streams: sqliteEventStore(
+        onThePool,
+        { holders: kept.holders, definitionNames: kept.definitionNames, runIds: kept.runIds },
+        listeners,
+      ),
       mostBoundValues,
     }),
   };
@@ -43,13 +47,13 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
   const {
     runOutcomes,
     projections,
-    streamProjections,
     holders,
     layoutSteps,
     factSchemas,
     floor,
     mostBytesFilledAtOnce,
     definitionNames,
+    runIds,
     appends,
     content,
   } = options;
@@ -59,13 +63,13 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
       const kept = {
         runOutcomes,
         projections,
-        streamProjections,
         holders,
         layoutSteps,
         factSchemas,
         floor,
         mostBytesFilledAtOnce,
         definitionNames,
+        runIds,
         tableMadeAgain,
         pageFailed,
       };

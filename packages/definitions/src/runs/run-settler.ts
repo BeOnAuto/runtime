@@ -3,7 +3,6 @@ import {
   NotFound,
   OrgIdSchema,
   playbookCallerOf,
-  streamPrefixOfPlaybook,
   type Conflict,
   type Lineage,
   type SettledRejection,
@@ -27,7 +26,7 @@ import {
   type WrittenOutput,
 } from '../payloads/settled-outputs.ts';
 import { jsonBytesOf, payloadBytesOf, withinResultBytes, withinResultLimit } from './recorded-size.ts';
-import { runStreamNameOf, settledOnLatest, settledOnRead, type SettledOn } from './run-decider.ts';
+import { settledOnLatest, settledOnRead, type SettledOn, runStreamIn, type RunPlacing } from './run-decider.ts';
 import { AnsweredRecordSchema, type RunFinished, type Settlement } from './run-events.ts';
 import { runOf } from './run-lookup.ts';
 import { causeOf, type RunRejection, type SettledRun } from './run.ts';
@@ -38,6 +37,11 @@ export interface RunStreamAddress {
   readonly org: string;
   readonly playbook: string;
   readonly id: string;
+}
+
+export interface CalledRun extends RunStreamAddress {
+  readonly definitionType: string;
+  readonly name: string;
 }
 
 type Settles<Given> = (
@@ -120,14 +124,13 @@ interface SettlingTarget {
   readonly runId: string;
 }
 
-function streamOf(address: RunStreamAddress): Effect.Effect<string, NotFound> {
-  return isWellFormed(address)
-    ? Effect.succeed(`${streamPrefixOfPlaybook(address)}${runStreamNameOf(address.id.toLowerCase())}`)
-    : Effect.fail(noSuchRun);
-}
-
-function playbookStreamOf(address: RunStreamAddress): Effect.Effect<string, NotFound> {
-  return isWellFormed(address) ? Effect.succeed(runStreamNameOf(address.id.toLowerCase())) : Effect.fail(noSuchRun);
+function streamIn(ledger: RunPlacing): (address: RunStreamAddress) => Effect.Effect<string, NotFound> {
+  return (address) =>
+    isWellFormed(address)
+      ? Effect.flatMap(runStreamIn(ledger, { ...address, id: address.id.toLowerCase() }), (stream) =>
+          stream === undefined ? Effect.fail(noSuchRun) : Effect.succeed(stream),
+        )
+      : Effect.fail(noSuchRun);
 }
 
 function outputChecked(output: Payload<Schema.Json>): Effect.Effect<Payload<Schema.Json>> {
@@ -201,19 +204,17 @@ function settlerOver(
     });
 }
 
-export function runSettler(ledger: StreamWriter): SettleRunWithItsPayload {
-  return settlerOver(settledOnLatest(ledger), streamOf);
+export function runSettler(ledger: StreamWriter & RunPlacing): SettleRunWithItsPayload {
+  return settlerOver(settledOnLatest(ledger), streamIn(ledger));
 }
 
-export function runSettlerKeepingOutputs(ledger: StreamWriter & StreamReader & ContentKeeper): SettleRunWithItsPayload {
-  return settlerOver(settledOnLatest(ledger), streamOf, outputsKeptIn(ledger));
+export function runSettlerKeepingOutputs(
+  ledger: StreamWriter & StreamReader & ContentKeeper & RunPlacing,
+): SettleRunWithItsPayload {
+  return settlerOver(settledOnLatest(ledger), streamIn(ledger), outputsKeptIn(ledger));
 }
 
-export function runSettlerAsRead(ledger: StreamWriter): SettleAsRead {
+export function runSettlerAsRead(ledger: StreamWriter & RunPlacing): SettleAsRead {
   return (run, settlement, readAt, lineage) =>
-    settlerOver(settledOnRead(ledger, readAt), streamOf)(run, settlement, lineage);
-}
-
-export function playbookBoundSettler(writer: StreamWriter): SettleRunWithItsPayload {
-  return settlerOver(settledOnLatest(writer), playbookStreamOf);
+    settlerOver(settledOnRead(ledger, readAt), streamIn(ledger))(run, settlement, lineage);
 }

@@ -71,7 +71,8 @@ function referenceRowsAfter(_rows: ProjectedRows, message: ProjectedMessage): Pr
 
 export const definitionReferenceRows: ChildRowsProjection = {
   name: 'definition_references',
-  version: 3,
+  version: 4,
+  scopes: ['definition'],
   kinds: ['definitions'],
   types: ['definition_created', 'definition_updated', 'definition_restored', 'definition_retired'],
   columns: [

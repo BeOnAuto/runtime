@@ -8,6 +8,12 @@ const finance = { org: 'acme', playbook: 'finance' };
 
 export const financePrefix = 'playbook/acme/finance/';
 
+const definitionId = '019a3f00-0000-7000-8000-000000000001';
+
+export const aDefinition = { org: 'acme', definition: definitionId };
+
+export const definitionPrefix = `definition/acme/${definitionId}/`;
+
 export interface Projected {
   readonly ledger: MemoryLedger;
   readonly record: (stream: string, ...facts: readonly RecordedFact[]) => Promise<void>;
@@ -16,7 +22,7 @@ export interface Projected {
 
 export function projected(
   projection: KeyedProjection,
-  address: { readonly org: string; readonly playbook?: string } = finance,
+  address: { readonly org: string; readonly playbook?: string; readonly definition?: string } = finance,
 ): Projected {
   const ledger = memoryLedger(undefined, [projection]);
   return {

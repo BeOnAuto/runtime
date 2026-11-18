@@ -39,7 +39,7 @@ export function clockAt(at: () => number): Clock.Clock {
 }
 
 export interface HarnessCalls {
-  readonly define: (name: string, source: string) => Promise<Outcome>;
+  readonly define: (name: string, source: string, playbook?: PlaybookAddress) => Promise<Outcome>;
   readonly run: (name: string, input: unknown, runId: string) => Promise<Outcome>;
   readonly runOf: (runId: string) => Promise<Outcome>;
   readonly assetOf: (id: string, playbook?: PlaybookAddress) => Promise<Outcome>;
@@ -72,13 +72,12 @@ export function callsOn(
   const capabilities = [capability];
   const getAsset = defineGetAsset(ports);
   return {
-    define: (name, source) =>
-      call(defineCreateDefinition(capabilities, uncheckedPages).registration, {
-        type: 'generation',
-        name,
-        source,
-        diagram: 'none',
-      }),
+    define: (name, source, playbook) =>
+      call(
+        defineCreateDefinition(capabilities, uncheckedPages).registration,
+        { type: 'generation', name, source, diagram: 'none' },
+        playbook,
+      ),
     run: (name, input, runId) =>
       call(defineRunDefinition(capabilities).registration, { type: 'generation', name, input, run_id: runId }),
     runOf: (runId) => call(defineGetRun(capabilities, uncheckedPages).registration, { run_id: runId }),

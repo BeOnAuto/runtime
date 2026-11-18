@@ -15,10 +15,10 @@ import { describe, expect, it } from 'vitest';
 
 import { type EventPublished, publishedEventDecider, publishedEventStreamOf } from '../events/published-events.ts';
 import { makeDefinitionPresenters } from '../index.ts';
-import { definitionsDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
+import { definitionDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { mostInputBytes, mostResultBytes } from '../runs/recorded-size.ts';
 import { coreRunFactTypes, type RunEvent } from '../runs/run-events.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { asking, echo } from '../testing/index.ts';
 import { testRunId } from '../testing/run-facts.ts';
 import { cutAtCodePoint, issuesShown } from './event-data.ts';
@@ -31,7 +31,7 @@ const runStream = `runs/${runId}`;
 
 const definitionStream = definitionTypeStreamOf(longestType);
 
-const definitionsOfTheLongestType = definitionsDecider(longestType, { org: 'acme', playbook: 'alpha' });
+const definitionsOfTheLongestType = definitionDecider(longestType, { org: 'acme', playbook: 'alpha' }, runId);
 
 const eventStream = publishedEventStreamOf('/ledger/eu', 'm-1');
 
@@ -113,7 +113,10 @@ const largestCause = {
 } as const;
 
 const largestRunEvents: readonly RunEvent[] = [
-  { type: 'run_started', data: { started_by: recordedAdmin, input: { text: 'x'.repeat(mostInputBytes - 16) } } },
+  {
+    type: 'run_started',
+    data: { ...startedInAlpha, input: { text: 'x'.repeat(mostInputBytes - 16) } },
+  },
   { type: 'run_succeeded', data: { output: largestJson, record: largestJson } },
   {
     type: 'run_rejected',

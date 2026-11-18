@@ -5,7 +5,7 @@ import type { HostReports } from '../host/host-reports.ts';
 import { startListeningLoop, type LoopParts } from '../loop/host-loop.ts';
 import { oneWakeAtATime, type HostWakeUp, type WakeSignal } from '../loop/host-wake-up.ts';
 import type { SomeFolder } from './folder.ts';
-import { keptKeyOf, playbookKeyOfDefinitions } from './playbook-definitions.ts';
+import { keptKeyOf } from './playbook-definitions.ts';
 import { playbookPass, type PassParts } from './playbook-pass.ts';
 import { scheduleOf, type Schedule } from './projector-schedule.ts';
 import type { ProjectorSettings } from './projector-settings.ts';
@@ -49,10 +49,9 @@ function discoveredFor(
   return Effect.gen(function* () {
     const streams = yield* Effect.promise(() => database.store.definitionStreams(definitionType));
     const known = schedule.definitions.of(keptKeyOf({ name }, definitionType));
-    for (const { stream, version } of streams) {
-      const playbook = playbookKeyOfDefinitions(stream, definitionType);
-      if (known.get(playbook)?.version !== version) {
-        schedule.want(playbook);
+    for (const { stream, version, playbookKey } of streams) {
+      if (known.get(stream)?.version !== version) {
+        schedule.want(playbookKey);
       }
     }
   });
@@ -118,7 +117,7 @@ function passPartsOf({ database, settings, reports, factPayloadsOf }: ProjectorP
     factPayloadsOf,
     database,
     settings,
-    definitions: schedule.definitions.of,
+    definitions: schedule.definitions,
     note: reports.note,
     resting: schedule.resting,
     firstSeen: firstSeenOf(mostRemembered),
@@ -129,11 +128,12 @@ function passPartsOf({ database, settings, reports, factPayloadsOf }: ProjectorP
 export function projectorWakeUp(parts: ProjectorParts, signal: WakeSignal): HostWakeUp {
   const schedule = scheduleOf();
   const passParts = passPartsOf(parts, schedule);
-  const stopListening = parts.settings.appends?.listen((playbook) => {
-    if (schedule.definitions.knows(playbook)) {
-      schedule.want(playbook);
-    } else {
+  const stopListening = parts.settings.appends?.listen((key) => {
+    const playbook = schedule.definitions.playbookOf(key);
+    if (playbook === undefined) {
       schedule.discover();
+    } else {
+      schedule.want(playbook);
     }
     signal.raised();
   });

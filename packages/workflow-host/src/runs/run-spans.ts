@@ -50,8 +50,8 @@ export function followSpanOf(record: RecordedEvent): Tracer.SpanOptions {
 }
 
 export function runAttributesOf(runKey: string): Readonly<Record<string, string>> {
-  const { org, playbook, runId } = addressOfRun(runKey);
-  return { 'auto.on.org': org, 'auto.on.playbook': playbook, 'auto.on.run_id': runId };
+  const { org, definition, runId } = addressOfRun(runKey);
+  return { 'auto.on.org': org, 'auto.on.definition.id': definition, 'auto.on.run_id': runId };
 }
 
 export function callSpanOf({ key, function: called }: StartCall, parent?: SpanIdentity): Tracer.SpanOptions {

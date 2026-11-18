@@ -10,6 +10,7 @@ import {
   type ReadLatestAppends,
   type RecordedPoint,
 } from '../event-store.ts';
+import { keysOfOne } from '../keys/recorded-keys.ts';
 import { signalOf, type StreamSignal } from '../signal/append-signal.ts';
 
 const lookEveryMs = 1000;
@@ -71,9 +72,13 @@ function earliestOf(left: RecordedPoint | undefined, right: RecordedPoint): Reco
   return left === undefined || isLater(left, right) ? right : left;
 }
 
+function definitionsOfItsOrg(playbookKey: string): string {
+  return `definition/${keysOfOne(playbookKey).org}/`;
+}
+
 export function inScope(scope: FactScope, appendedTo: string): boolean {
   if (scope.kind === 'playbook') {
-    return appendedTo.startsWith(scope.playbookKey);
+    return appendedTo.startsWith(scope.playbookKey) || appendedTo.startsWith(definitionsOfItsOrg(scope.playbookKey));
   }
   const ofAKind = isAKind(appendedTo);
   return scope.streams.some(

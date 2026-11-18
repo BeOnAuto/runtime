@@ -46,11 +46,11 @@ describe('the pretty log format', () => {
 
   it('writes an annotation that is not one plain word as JSON', async () => {
     const lines = await prettyLinesLoggedBy(
-      logUnsettled({ org: 'acme', playbook: 'alpha', runId: 'e-1', reason: 'The ledger has no such run' }),
+      logUnsettled({ org: 'acme', definition: 'alpha-definition', runId: 'e-1', reason: 'The ledger has no such run' }),
     );
 
     expect(lines).toEqual([
-      '<time> ERROR A run stays started because settling it failed org=acme playbook=alpha run_id=e-1 reason="The ledger has no such run"',
+      '<time> ERROR A run stays started because settling it failed org=acme definition=alpha-definition run_id=e-1 reason="The ledger has no such run"',
     ]);
   });
 
@@ -116,7 +116,12 @@ describe('the console log format', () => {
         [
           logWorkflows({ mostDurationMs: 604_800_000, mostCallsAtOnce: 8, sweepEveryMs: 250 }),
           logAccessMode({ mode: 'closed', signIn: undefined }),
-          logUnsettled({ org: 'acme', playbook: 'alpha', runId: 'e-1', reason: 'The ledger has no such run' }),
+          logUnsettled({
+            org: 'acme',
+            definition: 'alpha-definition',
+            runId: 'e-1',
+            reason: 'The ledger has no such run',
+          }),
           Effect.logFatal('The ledger is gone'),
           Effect.logDebug({ answered: false }),
         ],

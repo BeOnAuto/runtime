@@ -85,6 +85,10 @@ export async function recordsOf(ledger: HarnessLedger, ...types: readonly string
 
 export function conversationRows(ledger: HarnessLedger) {
   return Effect.runPromise(
-    ledger.service.readProjectedRows(conversationsName, alpha, { where: [], orderBy: [], order: 'asc', limit: 50 }),
+    ledger.service.readProjectedRows(
+      conversationsName,
+      { org: alpha.org },
+      { where: [], orderBy: [], order: 'asc', limit: 50 },
+    ),
   );
 }

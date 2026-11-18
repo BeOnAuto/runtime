@@ -39,7 +39,7 @@ type Decision = Result.Result<readonly RunEvent[], Rejection<'not_found' | 'conf
 
 const nothingToRecord: Decision = Result.succeed([]);
 
-const noSuchRun = new NotFound({ detail: 'There is no such run in this playbook' });
+export const noSuchRun = new NotFound({ detail: 'There is no such run in this playbook' });
 
 export const runTaken = new Conflict({
   detail: 'A run under this id is going or has ended with a result, so this start records nothing',
@@ -73,9 +73,13 @@ function startedCallingToolsBefore(start: RunStart, state: RunState): boolean {
   return state !== undefined && isRunning(state) && (state.callsTools || start.calls_tools);
 }
 
+function startedOver(start: RunStart, run: RunState) {
+  return startedEvent(start, run?.playbook ?? start.playbook);
+}
+
 function decideCreateOnly(start: RunStart, state: RunState): Decision {
   return Result.flatMap(takesAStartOnce(state, start), (taken): Decision =>
-    taken ? Result.fail(runTaken) : Result.succeed([startedEvent(start)]),
+    taken ? Result.fail(runTaken) : Result.succeed([startedOver(start, state)]),
   );
 }
 
@@ -94,9 +98,10 @@ function decideStart(start: RunStart, state: RunStreamState): Decision {
     if (claim.type === 'resume') {
       return Result.fail(stillRunning);
     }
-    return startedCallingToolsBefore(start, startedRunOf(state))
+    const run = startedRunOf(state);
+    return startedCallingToolsBefore(start, run)
       ? Result.fail(startedCallingTools)
-      : Result.succeed([startedEvent(start)]);
+      : Result.succeed([startedOver(start, run)]);
   });
 }
 

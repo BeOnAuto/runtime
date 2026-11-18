@@ -100,10 +100,11 @@ describe('what a playbook holds for its goals', () => {
     expect(await standingOf(harness())).toEqual({ version: 0, goals: [], workflows: [], notifiers: new Set() });
   });
 
-  it('is its goals, its workflows that are not retired with what they contribute, and the notifications it can send', async () => {
+  it('is its goals, its workflows that are not retired with what they contribute, the notifications it can send, and when a workflow was last saved', async () => {
     const standing = await standingAfterSaves();
 
     expect(standing).toMatchObject({ version: 1, source: savedGoals, goals: [{ id: experiments.id }] });
+    expect(standing.armedAt).toEqual(expect.any(Number));
     expect(standing.workflows).toEqual([
       { name: 'measuring', version: 1, paused: false, contributes: [measuring] },
       { name: 'resting', version: 1, paused: true, contributes: [measuring] },

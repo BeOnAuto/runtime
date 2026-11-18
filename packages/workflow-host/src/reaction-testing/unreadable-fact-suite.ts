@@ -15,7 +15,15 @@ import {
   type Holding,
 } from './followed-rows.ts';
 import { movedClock } from './moved-clock.ts';
-import { alpha, at, definitionRecorded, eventTrigger, published, recorded } from './playbook-writes.ts';
+import {
+  alpha,
+  at,
+  definitionRecorded,
+  definitionStreamNamed,
+  eventTrigger,
+  published,
+  recorded,
+} from './playbook-writes.ts';
 import { reactingHost } from './reacting-host.ts';
 
 const startedAt = Date.parse(at) + 1000;
@@ -98,7 +106,7 @@ function passedWhenItsTypeIsUnknown(settingsOf: SettingsOf) {
     });
     await recorded(
       store,
-      `${alpha}definitions/workflow`,
+      definitionStreamNamed('watch'),
       { type: 'definition_archived', data: {} },
       { by: 'acme-admin', at, definitionType: 'workflow', definitionName: 'watch', definitionVersion: 1 },
     );

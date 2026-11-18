@@ -17,6 +17,7 @@ import {
   appendedFactsOnStoresBehaviour,
   archivedStreamsBehaviour,
   definitionNamesBehaviour,
+  definitionProjectionsOnStoresBehaviour,
   appendsWithStatementsOnStoresBehaviour,
   measuredRiddenAppendsBehaviour,
   multiStreamAppendBehaviour,
@@ -26,12 +27,13 @@ import {
   receivedWebhooksBehaviour,
   knownFactsBehaviour,
   ledgerBehaviour,
-  ledgerStepsBehaviour,
   logBehaviour,
   receivedWebhooksOfItsOpenLedger,
+  runIdsOnStoresBehaviour,
   secretRowsOfItsOpenLedger,
   sqliteUpdatesCountingOf,
   type LedgerEntry,
+  type NamingStores,
 } from './testing/index.ts';
 import { temporaryDatabase } from './testing/temporary-database.ts';
 
@@ -56,9 +58,8 @@ const onSQLite: LedgerEntry = {
     onTestFinished(remove);
     return Promise.resolve(fileName);
   },
-  ledgerOn: (fileName, runOutcomes, projections = [], holders) =>
-    ledgerLayer({ fileName, projections, runOutcomes, holders }),
-  streamLedgerOn: (fileName, kept) => ledgerLayer({ fileName, ...kept }),
+  ledgerOn: (fileName, runOutcomes, projections = [], kept = {}) =>
+    ledgerLayer({ fileName, projections, runOutcomes, ...kept }),
   ledgerOutsideOn: (fileName, holders, content) => ledgerLayer({ fileName, holders, content }),
   ledgerRaisingOn: (fileName, appended) => ledgerLayer({ fileName, appended }),
   storeOn: (fileName) => openedOn(fileName).store,
@@ -85,8 +86,25 @@ const onSQLite: LedgerEntry = {
   labelledTables: "SELECT name FROM sqlite_master WHERE type = 'table' AND name GLOB 'label*' ORDER BY name",
 };
 
+const namingStoresOnSQLite: NamingStores = {
+  aDatabase: onSQLite.aDatabase,
+  storeOn: (fileName, projections, definitionNames) =>
+    sqliteLedgerOpened(
+      { optionsOf: () => ({ driver: nodeSqliteEventStoreDriver, fileName }), inMemory: false },
+      { definitionNames, projections },
+    ).store,
+};
+
 describe('The ledger on SQLite', () => {
   ledgerBehaviour(onSQLite);
+  runIdsOnStoresBehaviour({
+    aDatabase: onSQLite.aDatabase,
+    storeOn: (fileName, runIds) =>
+      sqliteLedgerOpened(
+        { optionsOf: () => ({ driver: nodeSqliteEventStoreDriver, fileName }), inMemory: false },
+        { runIds },
+      ).store,
+  });
   logBehaviour(onSQLite);
   appendedFactsOnStoresBehaviour(onSQLite);
   factScrubOnStoresBehaviour(onSQLite);
@@ -100,7 +118,6 @@ describe('The ledger on SQLite', () => {
     read: { version: 0, types: [] },
     rows: [{ archived: 1, facts: 2 }],
   });
-  ledgerStepsBehaviour(onSQLite);
   keptSecretsBehaviour({
     ...onSQLite,
     secretRowsOn: (fileName) => secretRowsOfItsOpenLedger(sqliteLedgerFile(fileName)),
@@ -123,6 +140,7 @@ describe('The ledger on SQLite', () => {
         { definitionNames },
       ).store,
   });
+  definitionProjectionsOnStoresBehaviour(namingStoresOnSQLite);
 });
 
 describe('The secret rows on a pool of their own, as code that opens the ledger on a driver of its own opens them', () => {

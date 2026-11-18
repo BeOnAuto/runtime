@@ -1,5 +1,5 @@
 import { chainOriginsOf, ledgerChainReads, type ChainFact, type ChainOrigin } from '@on.auto/goals';
-import { LedgerConnection, statement } from '@on.auto/ledger';
+import { LedgerConnection, statement, type RecordedKeys } from '@on.auto/ledger';
 import { streamPrefixOfPlaybook } from '@on.auto/operations';
 import {
   endedRunsClosed,
@@ -49,11 +49,16 @@ const callsKept = statement`SELECT COUNT(*) AS calls,
   COALESCE(SUM(CASE WHEN call IS NULL AND attributes IS NULL AND result IS NULL THEN 0 ELSE 1 END), 0) AS kept
   FROM workflow_calls`;
 
+async function keysOfThePlaybook(database: HostDatabase): Promise<RecordedKeys> {
+  const playbookKey = streamPrefixOfPlaybook(playbook);
+  return { org: playbook.org, keys: [playbookKey, ...(await database.store.definitionsIn(playbookKey))] };
+}
+
 function endingsOf(database: HostDatabase, run: string) {
   return Effect.map(
-    Effect.promise(() =>
-      database.store.readRecorded(
-        streamPrefixOfPlaybook(playbook),
+    Effect.promise(async () =>
+      database.store.readRecordedOfKeys(
+        await keysOfThePlaybook(database),
         { kind: 'run', run },
         { order: 'desc', limit: 1, types: ['run_succeeded'], dataOf: [] },
       ),

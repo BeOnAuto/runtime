@@ -10,7 +10,7 @@ import {
 import { Data, Effect, Schema } from 'effect';
 
 import { rowsOf, type HostDatabase } from '../database/host-database.ts';
-import { ledgerRunLogStore } from '../runs/ledger-run-store.ts';
+import { ledgerRunLogStore, runPlacedIn } from '../runs/ledger-run-store.ts';
 import { runKeyOf, type RunAddress } from '../runs/run-address.ts';
 import { backOffLifted } from '../settlement/settle-attempts.ts';
 import { cancelledIfAsked } from '../waiting/pending-cancels.ts';
@@ -96,6 +96,7 @@ export function runRequestsOf(parts: RequestParts): RunRequests {
         if (status !== 'new') {
           return 'going';
         }
+        yield* runPlacedIn(database, run);
         const { outcome } = yield* engine.submitted({ ...start, kind: 'started', runId: runKey, at: clock.now() });
         if (outcome !== 'applied') {
           return 'going';

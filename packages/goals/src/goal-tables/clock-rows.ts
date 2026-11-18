@@ -19,10 +19,6 @@ export const clocksName = 'goal_clocks';
 
 const goalsKind = 'goals';
 
-const definitionsKind = 'definitions';
-
-const contributionTypes = ['definition_created', 'definition_updated', 'definition_resumed', 'definition_restored'];
-
 export const clockKey = 'clock';
 
 const CalendarSchema = Schema.Struct({
@@ -40,7 +36,6 @@ const GoalClockSchema = Schema.Struct({
   summary: Schema.optionalKey(Schema.Struct({ cron: Schema.String, time_zone: Schema.optionalKey(Schema.String) })),
   latest_opened: Schema.optionalKey(Schema.Finite),
   last_summary: Schema.optionalKey(Schema.Finite),
-  armed_at: Schema.optionalKey(Schema.Finite),
 });
 
 const GoalClocksSchema = Schema.fromJsonString(Schema.Array(GoalClockSchema));
@@ -88,16 +83,13 @@ function summaryOf(goal: Goal): Pick<GoalClockEntry, 'summary'> {
   };
 }
 
-function keptOf(
-  before: GoalClockEntry | undefined,
-): Pick<GoalClockEntry, 'latest_opened' | 'last_summary' | 'armed_at'> {
+function keptOf(before: GoalClockEntry | undefined): Pick<GoalClockEntry, 'latest_opened' | 'last_summary'> {
   if (before === undefined) {
     return {};
   }
   return {
     ...(before.latest_opened === undefined ? {} : { latest_opened: before.latest_opened }),
     ...(before.last_summary === undefined ? {} : { last_summary: before.last_summary }),
-    ...(before.armed_at === undefined ? {} : { armed_at: before.armed_at }),
   };
 }
 
@@ -219,33 +211,7 @@ function duesOf(clocks: readonly GoalClockEntry[], held: Instant | null = null):
   };
 }
 
-function armedCalendarOf(clock: GoalClockEntry): CalendarWindowRule | undefined {
-  return clock.retired === true ? undefined : clock.calendar;
-}
-
-function armedBy(row: ProjectedRow | undefined, { context }: ProjectedMessage): ProjectedRow | undefined {
-  const clocks = goalClocksIn(row);
-  if (row === undefined || !clocks.some((clock) => armedCalendarOf(clock) !== undefined)) {
-    return undefined;
-  }
-  const at = Date.parse(context.at);
-  const armed = clocks.map((clock) => (armedCalendarOf(clock) === undefined ? clock : { ...clock, armed_at: at }));
-  const next = clocks.map((clock) => {
-    const calendar = armedCalendarOf(clock);
-    return calendar === undefined ? null : nextCalendarOpeningOf(calendar, { firstSavedAt: at });
-  });
-  const held = row['opens_at'];
-  return {
-    ...row,
-    goals: textOfClocks(armed),
-    opens_at: earliestOf([...next, typeof held === 'number' ? held : null]),
-  };
-}
-
 function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): ProjectedRow | undefined {
-  if (contributionTypes.includes(message.type)) {
-    return armedBy(row, message);
-  }
   return Option.match(goalsEventOf(message), {
     onSome: (event) => {
       const clocks = savedAfter(goalClocksIn(row), event);
@@ -267,20 +233,15 @@ function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): Pro
 
 const goalClockTypes = ['playbook_goals_saved', 'goal_assessment_opened', 'goal_summary_started'];
 
-const clockTypes = [...goalClockTypes, ...contributionTypes];
-
-function keyOf({ type, context }: ProjectedMessage): string | undefined {
-  if (contributionTypes.includes(type)) {
-    return context.definitionType === 'workflow' ? clockKey : undefined;
-  }
+function keyOf({ type }: ProjectedMessage): string | undefined {
   return goalClockTypes.includes(type) ? clockKey : undefined;
 }
 
 export const clockRows: KeyedProjection = {
   name: clocksName,
   version: 1,
-  kinds: [goalsKind, assessmentsKind, goalSummariesKind, definitionsKind],
-  types: clockTypes,
+  kinds: [goalsKind, assessmentsKind, goalSummariesKind],
+  types: goalClockTypes,
   columns: [
     { name: 'goals_version', kind: 'integer' },
     { name: 'goals', kind: 'text' },
@@ -293,7 +254,7 @@ export const clockRows: KeyedProjection = {
   ],
   keyOf,
   advanced: [
-    { column: 'opens_at', setBy: ['playbook_goals_saved', 'goal_assessment_opened', ...contributionTypes] },
+    { column: 'opens_at', setBy: ['playbook_goals_saved', 'goal_assessment_opened'] },
     { column: 'summary_at', setBy: ['playbook_goals_saved', 'goal_summary_started'] },
   ],
   rowAfter,

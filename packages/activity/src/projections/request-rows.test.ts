@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { financePrefix, projected } from '../testing/projected.ts';
+import { aDefinition, definitionPrefix, projected } from '../testing/projected.ts';
 import {
   messageOf,
   requestAnswered,
@@ -37,11 +37,11 @@ const asked = {
   answerSchema: yesOrNo,
 };
 
-const streamOf = ({ runId }: RunOf) => `${financePrefix}runs/${runId}`;
+const streamOf = ({ runId }: RunOf) => `${definitionPrefix}runs/${runId}`;
 
 describe('the requests of the activity', () => {
   it('opens a row when a run asks a person for an answer, with who started the run and whom it waits on', async () => {
-    const { record, rows } = projected(requestRows);
+    const { record, rows } = projected(requestRows, aDefinition);
     await record(
       streamOf(approve),
       runStarted(approve, at(0), 'person:user_7kLm2'),
@@ -83,7 +83,7 @@ describe('a request recorded when a run asked a person to approve an action or t
   it.each(recordedBefore)(
     'opens a row of a $type run that waits on the person by id, with nothing of its $key kept, and closes at its answer',
     async ({ type, key, value }) => {
-      const { record, rows } = projected(requestRows);
+      const { record, rows } = projected(requestRows, aDefinition);
       const asking: RunOf = { ...approve, type, name: 'asking-a-person' };
       const person = 'person:user_7kLm2';
       const deferred = runDeferred(asking, at(1), { ...asked, to: person });
@@ -111,7 +111,7 @@ describe('a request recorded when a run asked a person to approve an action or t
 
 describe('a request a workflow step made', () => {
   it('opens a row, the step being the run that asked', async () => {
-    const { record, rows } = projected(requestRows);
+    const { record, rows } = projected(requestRows, aDefinition);
     await record(streamOf(step), runStarted(step, at(0), 'person:user_7kLm2'), runDeferred(step, at(1), asked));
 
     expect((await rows())[step.runId]).toMatchObject({ open: true });
@@ -127,7 +127,7 @@ const endings = [
 
 describe('a request answered or ended', () => {
   it.each(endings)('closes the row on $type, and changes nothing of a closed row', async (ending) => {
-    const { record, rows } = projected(requestRows);
+    const { record, rows } = projected(requestRows, aDefinition);
     await record(streamOf(approve), runStarted(approve, at(0), 'x'), runDeferred(approve, at(1), asked), ending);
 
     expect((await rows())[approve.runId]).toMatchObject({ open: false, message: asked.message.split('\n')[0] });
@@ -137,7 +137,7 @@ describe('a request answered or ended', () => {
 
 describe('what opens no request', () => {
   it('opens no row for a request that takes no answer or a record that is no request, and keeps one only for its start', async () => {
-    const { record, rows } = projected(requestRows);
+    const { record, rows } = projected(requestRows, aDefinition);
     const told = { to: asked.to, message: asked.message, expiresAt: asked.expiresAt };
     await record(streamOf(approve), runStarted(approve, at(0), 'x'), runDeferred(approve, at(1), told));
     const notARequest = { ...messageOf(runDeferred(approve, at(1), asked)), data: { record: { waiting: true } } };

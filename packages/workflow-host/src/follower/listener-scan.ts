@@ -7,7 +7,8 @@ import { rowsOf, type HostDatabase } from '../database/host-database.ts';
 import { insertedListener } from '../listeners/listener-rows.ts';
 import { reactionOfRun } from '../reactions/run-attributes.ts';
 import { ledgerRunLogStore } from '../runs/ledger-run-store.ts';
-import { addressOfRun, runLogStreamOf } from '../runs/run-address.ts';
+import { runLogStreamOf } from '../runs/run-address.ts';
+import { playbookOfRun } from '../runs/run-places.ts';
 
 const RunRow = Schema.Struct({ run_key: Schema.String });
 
@@ -22,13 +23,14 @@ function listenersOfRun(database: HostDatabase, runKey: string) {
       return;
     }
     const reaction = reactionOfRun(state.attributes);
+    const playbookKey = streamPrefixOfPlaybook(yield* playbookOfRun(database, runKey));
     yield* Effect.forEach(
       listeners,
       ([listener, key]: readonly [string, CallKey]) =>
         insertedListener(database, {
           runKey,
           listener,
-          playbookKey: streamPrefixOfPlaybook(addressOfRun(runKey)),
+          playbookKey,
           streamId: runLogStreamOf(runKey),
           armedBy: version,
           filters: JSON.stringify(listenFiltersOf(valueAtPointer(document, key.reference))),

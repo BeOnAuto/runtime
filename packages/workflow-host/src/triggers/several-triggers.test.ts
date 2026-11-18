@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { startsReaching, untilScheduleRuns } from '../reaction-testing/kept-triggers.ts';
 import { movedClock } from '../reaction-testing/moved-clock.ts';
 import {
-  alpha,
   at,
   cronTrigger,
+  definitionKeyNamed,
   definitionRecordAt,
   definitionRecorded,
   emittedContext,
@@ -56,8 +56,8 @@ async function closingAt(start: number, onEvents = closed) {
 function closingStartedIn({ database }: ReactingHost, minute: number, starts: number) {
   return Effect.runPromise(
     database.write(
-      statement`INSERT INTO workflow_reaction_rates (playbook_key, workflow, minute, starts)
-        VALUES (${alpha}, 'close', ${minute}, ${starts})`,
+      statement`INSERT INTO workflow_reaction_rates (definition_key, minute, starts)
+        VALUES (${definitionKeyNamed('close')}, ${minute}, ${starts})`,
     ),
   );
 }
@@ -69,7 +69,7 @@ function runIdOf(start: { readonly runId: string } | undefined): string {
 describe('a workflow with an event trigger, a cron schedule and an every schedule', () => {
   it('starts one run for an event and one at each time each schedule is due, each naming its trigger and cause', async () => {
     const { reacting, clock } = await closingAt(activatedAt + 1000);
-    const activation = definitionRecordAt(1);
+    const activation = definitionRecordAt('close', 1);
     const event = eventRecordOf('e1');
 
     await published(reacting.database.store, { id: 'e1', type: 'com.acme.closed' });
@@ -80,21 +80,26 @@ describe('a workflow with an event trigger, a cron schedule and an every schedul
     const starts = await startsReaching(reacting.reactions.starts, 4);
 
     expect(starts.map(({ runId, trigger, cause, version }) => [runId, trigger, cause, version])).toEqual([
-      [reactionRunIdOf('close', 1, '/schedule/on', event), { kind: 'event', reference: '/schedule/on' }, event, 1],
       [
-        reactionRunIdOf('close', 1, '/schedule/every', isoAt(15)),
+        reactionRunIdOf(definitionKeyNamed('close'), 1, '/schedule/on', event),
+        { kind: 'event', reference: '/schedule/on' },
+        event,
+        1,
+      ],
+      [
+        reactionRunIdOf(definitionKeyNamed('close'), 1, '/schedule/every', isoAt(15)),
         { kind: 'every', reference: '/schedule/every' },
         activation,
         1,
       ],
       [
-        reactionRunIdOf('close', 1, '/schedule/cron', isoAt(30)),
+        reactionRunIdOf(definitionKeyNamed('close'), 1, '/schedule/cron', isoAt(30)),
         { kind: 'cron', reference: '/schedule/cron' },
         activation,
         1,
       ],
       [
-        reactionRunIdOf('close', 1, '/schedule/every', isoAt(30)),
+        reactionRunIdOf(definitionKeyNamed('close'), 1, '/schedule/every', isoAt(30)),
         { kind: 'every', reference: '/schedule/every' },
         activation,
         1,

@@ -6,6 +6,7 @@ import {
   PlaybookContext,
   PlaybookReader,
   PlaybookWriter,
+  runStreamNameOf,
   uuidV5,
   type AssetReference,
   type ValueKeeping,
@@ -64,6 +65,15 @@ function keptBefore(reader: PlaybookReader['Service'], id: string): Effect.Effec
   );
 }
 
+/** The definition whose run keeps the value, under whose key its asset is filed, as every asset a run keeps is. */
+function definitionOfTheRun(reader: PlaybookReader['Service'], runId: string): Effect.Effect<string> {
+  return Effect.flatMap(reader.definitionHolding(runStreamNameOf(runId)), (definition) =>
+    definition === undefined
+      ? Effect.die(new Error(`The run ${runId} that keeps a value is not a run of this playbook`))
+      : Effect.succeed(definition),
+  );
+}
+
 function keptValue(bounds: KeptValueBounds, run: RunOfAKeptValue, value: ValueToKeep) {
   return Effect.gen(function* () {
     const bytes = Buffer.byteLength(value.text, 'utf8');
@@ -74,6 +84,7 @@ function keptValue(bounds: KeptValueBounds, run: RunOfAKeptValue, value: ValueTo
     const reader = yield* PlaybookReader;
     const writer = yield* PlaybookWriter;
     yield* roomLeft(totalsIn(reader), playbook, bounds.mostPlaybookBytes);
+    const definition = yield* definitionOfTheRun(reader, run.context.runId);
     const held = yield* Effect.orDie(writer.keepContent(textToKeep(value.text, value.mediaType)));
     const id = assetIdOfAValue(run.context.runId, value.pointer, held.sha256);
     const at = yield* Clock.currentTimeMillis;
@@ -89,10 +100,13 @@ function keptValue(bounds: KeptValueBounds, run: RunOfAKeptValue, value: ValueTo
       event: { type: 'asset_kept', data },
       context: { ...run.context, at: new Date(at).toISOString() },
     };
-    return yield* writer.execute(assetStreamOf(id), assetDecider, command, run.lineage).pipe(
-      Effect.as(referenceOf(id, data)),
-      Effect.catchIf(wasKeptBefore, () => keptBefore(reader, id)),
-    );
+    return yield* writer
+      .ofDefinition(definition)
+      .execute(assetStreamOf(id), assetDecider, command, run.lineage)
+      .pipe(
+        Effect.as(referenceOf(id, data)),
+        Effect.catchIf(wasKeptBefore, () => keptBefore(reader, id)),
+      );
   });
 }
 

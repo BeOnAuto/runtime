@@ -1,13 +1,12 @@
 import { echo } from '@on.auto/definitions/testing';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { playbookOn } from '../testing/playbook.ts';
+import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { testPlaybookNames } from '../testing/test-sandbox.ts';
 import { defineSendRunEvent } from './send-run-event.ts';
 
-const playbook = playbookOn(memoryLedger(), [echo]);
+const playbook = playbookOn(namingLedger(), [echo]);
 
 const sendEvent = defineSendRunEvent({ deliver: () => Effect.die('An event was delivered') }, testPlaybookNames);
 

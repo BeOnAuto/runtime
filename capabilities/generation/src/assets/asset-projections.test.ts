@@ -1,5 +1,5 @@
 import { checkedProjection, type ProjectedMessage } from '@on.auto/operations';
-import { nothingKept } from '@on.auto/operations/testing';
+import { nothingKept, streamAddressed } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { assetPresenter } from './asset-presenter.ts';
@@ -156,8 +156,8 @@ describe('the projection of the assets of a playbook, of a kind a later release 
   });
 });
 
-describe('the projection of the bytes each playbook keeps of assets', () => {
-  it('keeps the bytes and the count of the assets a playbook holds', () => {
+describe('the projection of the bytes each definition keeps of assets', () => {
+  it('keeps the bytes and the count of the assets the runs of a definition hold, in one row keyed by the definition', () => {
     const one = assetTotals.rowAfter(undefined, keptMessage);
     const two = assetTotals.rowAfter(one, keptMessage);
 
@@ -167,10 +167,10 @@ describe('the projection of the bytes each playbook keeps of assets', () => {
       { bytes: 2048, assets: 1 },
       undefined,
     ]);
-    expect([assetTotals.keyOf?.(keptMessage, { kind: 'assets', id: 'a' }), totalsRowOf({ bytes: 'many' })]).toEqual([
-      'playbook',
-      { bytes: 0, assets: 0 },
-    ]);
+    expect([
+      assetTotals.keyOf?.(keptMessage, streamAddressed('definition/acme/d1/assets/a')),
+      totalsRowOf({ bytes: 'many' }),
+    ]).toEqual(['d1', { bytes: 0, assets: 0 }]);
   });
 });
 

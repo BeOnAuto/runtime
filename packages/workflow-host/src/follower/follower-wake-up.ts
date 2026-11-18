@@ -42,7 +42,7 @@ function startOf(parts: FollowerWork, now: number): Effect.Effect<Round> {
       failedAt(
         parts,
         now,
-        'The follower of the playbooks could not find the playbooks at its start; it tries again at the next sweep, within a minute, twice as long after each try that fails in a row, at most an hour',
+        'The follower of the playbooks could not place the orgs at its start; it tries again at the next sweep, within a minute, twice as long after each try that fails in a row, at most an hour',
       ),
     ),
   );

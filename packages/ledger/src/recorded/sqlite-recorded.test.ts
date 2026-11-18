@@ -2,16 +2,18 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { SQL } from '@event-driven-io/dumbo';
 import { sqliteFormatter } from '@event-driven-io/dumbo/sqlite';
+import { cursorWithin, InvalidCursor } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
-import type { RecordedStore, StoredRecord } from '../event-store.ts';
-import type { RecordedKeys } from '../keys/recorded-keys.ts';
+import type { DefinitionNamesStore, RecordedStore, StoredRecord } from '../event-store.ts';
+import type { OrgPageAsked, RecordedKeys } from '../keys/recorded-keys.ts';
 import { sqliteEventStore } from '../sqlite-event-store.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
+import { cursorOf } from './cursor.ts';
 import type { IndexExecutor } from './missing-indexes.ts';
-import { recordedEventReaderOf, recordedReaderOf } from './recorded-reader.ts';
+import { orgRecordedReaderOf, recordedEventReaderOf, recordedReaderOf } from './recorded-reader.ts';
 import { executedOn, planOf } from './sqlite-checks.ts';
 import { createSQLitePlaybookIndexes, orgOfStream } from './sqlite-indexes.ts';
 import { sqliteRecordedStore } from './sqlite-recorded.ts';
@@ -19,6 +21,7 @@ import { sqliteRecordedStore } from './sqlite-recorded.ts';
 const playbookIndexes = [
   'ledger_definition_streams',
   'ledger_first_messages_by_kind',
+  'ledger_messages_by_org',
   'ledger_messages_by_org_and_correlation',
   'ledger_messages_by_org_and_id',
   'ledger_messages_by_playbook',
@@ -84,18 +87,20 @@ const untraced: StoredRecord = {
 };
 
 interface Holding {
-  readonly store: RecordedStore;
+  readonly store: RecordedStore & Pick<DefinitionNamesStore, 'definitionsIn'>;
   readonly asked: readonly RecordedKeys[];
 }
 
-function storeHolding(record: StoredRecord): Holding {
+function storeHolding(record: StoredRecord, definitions: readonly string[] = []): Holding {
   const asked: RecordedKeys[] = [];
-  const store: RecordedStore = {
+  const store: RecordedStore & Pick<DefinitionNamesStore, 'definitionsIn'> = {
+    definitionsIn: (playbookKey) => Promise.resolve(playbookKey === 'playbook/acme/alpha/' ? definitions : []),
     pointLength: 1,
     readRecorded: () => Promise.reject(new Error('A read by the text of a key is not asked here')),
     readAppended: () => Promise.resolve({ streams: [], through: ['21'], more: false }),
     readAppendedFacts: () => Promise.resolve({ held: false }),
     readRecordedEvent: () => Promise.reject(new Error('A read by the text of a key is not asked here')),
+    readRecordedOfOrg: () => Promise.reject(new Error('A read of an org is not asked here')),
     readRecordedOfKeys: (keys) => {
       asked.push(keys);
       return Promise.resolve({ records: [record] });
@@ -240,6 +245,19 @@ describe('the reads of a playbook', () => {
     expect(page.records.map(({ id }) => id)).toEqual(['message-21']);
     expect(asked).toEqual([theKeysOfAlpha, theKeysOfAlpha]);
   });
+
+  it('ask for the keys of the definitions that hold a name in the playbook too, after its own', async () => {
+    const { store, asked } = storeHolding(untraced, ['definition/acme/d1/', 'definition/acme/d2/']);
+
+    await Effect.runPromise(recordedReaderOf(store)(alpha, { kind: 'everything' }, { order: 'asc', limit: 5 }));
+    await Effect.runPromise(recordedEventReaderOf(store)(alpha, 'message-21'));
+
+    const ofItsDefinitions = {
+      org: 'acme',
+      keys: ['playbook/acme/alpha/', 'definition/acme/d1/', 'definition/acme/d2/'],
+    };
+    expect(asked).toEqual([ofItsDefinitions, ofItsDefinitions]);
+  });
 });
 
 describe('one record read by its id', () => {
@@ -263,6 +281,77 @@ describe('one record read by its id', () => {
       recordedAt: at,
     });
     expect(missing).toBeUndefined();
+  });
+});
+
+type OrgStore = Pick<RecordedStore, 'readRecordedOfOrg' | 'pointLength'>;
+
+function orgStoreAnswering(record: StoredRecord) {
+  const asked: OrgPageAsked[] = [];
+  const store: OrgStore = {
+    pointLength: 1,
+    readRecordedOfOrg: (org, page) => {
+      asked.push(page);
+      return Promise.resolve(org === 'acme' ? { records: [record], resumeAfter: record.point } : { records: [] });
+    },
+  };
+  return { store, asked };
+}
+
+function refusalsOfAlphasCursors(store: OrgStore): Promise<readonly InvalidCursor[]> {
+  const read = orgRecordedReaderOf(store);
+  const ofAlpha = cursorOf('playbook/acme/alpha/', ['20']);
+  return Effect.runPromise(
+    Effect.all([
+      Effect.flip(read('acme', { order: 'asc', limit: 5, cursor: ofAlpha })),
+      Effect.flip(read('acme', { order: 'asc', limit: 5, through: ofAlpha })),
+    ]),
+  );
+}
+
+describe("the read of an org's records", () => {
+  it("answers each record's cursor under the org, read after the place its cursor names and through the place it is read through", async () => {
+    const { store, asked } = orgStoreAnswering(untraced);
+
+    const page = await Effect.runPromise(
+      orgRecordedReaderOf(store)('acme', {
+        order: 'asc',
+        limit: 5,
+        cursor: cursorOf('acme', ['20']),
+        through: cursorOf('acme', ['30']),
+      }),
+    );
+
+    expect(asked).toEqual([{ order: 'asc', limit: 5, after: ['20'], to: ['30'] }]);
+    expect(page.records.map(({ cursor }) => cursor)).toEqual([cursorOf('acme', ['21'])]);
+    expect(page.nextCursor).toBe(cursorOf('acme', ['21']));
+  });
+
+  it('reads at the record a cursor within a record names, and from the start with no cursor', async () => {
+    const { store, asked } = orgStoreAnswering(untraced);
+    const read = orgRecordedReaderOf(store);
+
+    await Effect.runPromise(
+      read('acme', { order: 'asc', limit: 5, cursor: cursorWithin(cursorOf('acme', ['21']), 0) }),
+    );
+    await Effect.runPromise(read('acme', { order: 'asc', limit: 5 }));
+
+    expect(asked).toEqual([
+      { order: 'asc', limit: 5, at: ['21'] },
+      { order: 'asc', limit: 5 },
+    ]);
+  });
+
+  it('refuses a cursor or a place to read through that another key names', async () => {
+    const { store, asked } = orgStoreAnswering(untraced);
+
+    const refused = await refusalsOfAlphasCursors(store);
+
+    expect(refused).toEqual([
+      new InvalidCursor({ kind: 'of_another_playbook' }),
+      new InvalidCursor({ kind: 'of_another_playbook' }),
+    ]);
+    expect(asked).toEqual([]);
   });
 });
 

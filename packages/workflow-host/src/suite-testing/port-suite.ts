@@ -12,9 +12,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
+import { startedIn } from '../testing/started-runs.ts';
 import { executorSubjectOn } from './executor-subject.ts';
 import {
   listenerSubjectOn,
+  otherProbeRun,
+  probeRun,
   recordStoreSubjectOn,
   runStoreSubjectOn,
   timerSubjectOn,
@@ -51,7 +54,7 @@ const ports: readonly Port[] = [
 export function portSuite(settings: SettingsOf): void {
   describe.each(ports)('its $port, which meets the contract of the engine', ({ cases }) => {
     it.each(cases)('$title', async ({ run, expected }) => {
-      const database = await openedOn(await settings());
+      const database = await startedIn(await startedIn(await openedOn(await settings()), probeRun), otherProbeRun);
 
       expect(await Effect.runPromise(run(database))).toEqual(expected);
     });

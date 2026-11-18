@@ -1,9 +1,10 @@
 import type { Context, ProjectedMessage, RunContext } from '@on.auto/operations';
+import { streamAddressed } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { conversations } from './conversation-rows.ts';
 
-const stream = { kind: 'runs', id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' };
+const stream = streamAddressed('definition/acme/d1/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a');
 
 function ofTheRun(at: string): RunContext {
   return {

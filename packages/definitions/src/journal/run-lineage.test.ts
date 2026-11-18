@@ -33,12 +33,12 @@ describe('the lineage of a run that calls tools', () => {
     await definitions.running({ calls: 2 });
 
     expect(await linksIn(definitions)).toEqual([
-      { type: 'run_started', id: idAt(1), causationId: null, correlationId: runId },
-      { type: 'tool_call_started', id: idAt(2), causationId: idAt(1), correlationId: runId },
-      { type: 'tool_call_started', id: idAt(3), causationId: idAt(1), correlationId: runId },
-      { type: 'tool_call_answered', id: idAt(4), causationId: idAt(2), correlationId: runId },
-      { type: 'tool_call_answered', id: idAt(5), causationId: idAt(3), correlationId: runId },
-      { type: 'run_succeeded', id: idAt(6), causationId: idAt(5), correlationId: runId },
+      { type: 'run_started', id: idAt(definitions, 1), causationId: null, correlationId: runId },
+      { type: 'tool_call_started', id: idAt(definitions, 2), causationId: idAt(definitions, 1), correlationId: runId },
+      { type: 'tool_call_started', id: idAt(definitions, 3), causationId: idAt(definitions, 1), correlationId: runId },
+      { type: 'tool_call_answered', id: idAt(definitions, 4), causationId: idAt(definitions, 2), correlationId: runId },
+      { type: 'tool_call_answered', id: idAt(definitions, 5), causationId: idAt(definitions, 3), correlationId: runId },
+      { type: 'run_succeeded', id: idAt(definitions, 6), causationId: idAt(definitions, 5), correlationId: runId },
     ]);
   });
 
@@ -48,7 +48,7 @@ describe('the lineage of a run that calls tools', () => {
 
     expect((await linksIn(definitions)).map(({ type, causationId }) => [type, causationId])).toEqual([
       ['run_started', null],
-      ['run_rejected', idAt(1)],
+      ['run_rejected', idAt(definitions, 1)],
     ]);
   });
 
@@ -59,7 +59,7 @@ describe('the lineage of a run that calls tools', () => {
 
     expect((await linksIn(definitions)).map(({ causationId, correlationId }) => [causationId, correlationId])).toEqual([
       [lineage.causationId, 'root'],
-      [idAt(1), 'root'],
+      [idAt(definitions, 1), 'root'],
     ]);
   });
 
@@ -86,7 +86,7 @@ describe('the lineage of a run that finishes later', () => {
 
     expect((await linksIn(definitions)).map(({ type, causationId }) => [type, causationId])).toEqual([
       ['run_started', null],
-      ['run_deferred', idAt(1)],
+      ['run_deferred', idAt(definitions, 1)],
       ['run_succeeded', settledBy.causationId],
     ]);
   });
@@ -98,9 +98,9 @@ describe('the lineage of a run that finishes later', () => {
 
     expect((await linksIn(definitions)).map(({ type, causationId }) => [type, causationId])).toEqual([
       ['run_started', null],
-      ['run_rejected', idAt(1)],
+      ['run_rejected', idAt(definitions, 1)],
       ['run_started', null],
-      ['run_rejected', idAt(3)],
+      ['run_rejected', idAt(definitions, 3)],
     ]);
   });
 });

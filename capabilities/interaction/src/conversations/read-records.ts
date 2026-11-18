@@ -1,5 +1,5 @@
 import { argumentsFailureWords, type ArgumentsFailure } from '@on.auto/definitions/tool-blocks';
-import { playbookCallerOf, randomUUIDv7, streamPrefixOfPlaybook, type StreamWriter } from '@on.auto/operations';
+import { playbookCallerOf, randomUUIDv7, streamPrefixOfAddress, type StreamWriter } from '@on.auto/operations';
 import {
   conversationCallDecider,
   conversationCallStreamOf,
@@ -13,6 +13,7 @@ import {
 import type { ToolReference } from '@on.auto/tool-servers/policy';
 import { DateTime, Effect } from 'effect';
 
+import type { KeptRequest } from '../replies/reply-taking.ts';
 import { routeOfRequest } from '../replies/request-routes.ts';
 import { isWoken, type ConversationRow } from './conversation-rows.ts';
 import { failedRead, type ReadAnswer } from './read-answers.ts';
@@ -49,15 +50,16 @@ function readFactOf(record: ReadRecord, row: ConversationRow, recorded: Recorded
   );
 }
 
-export function recordedRead(
-  ledger: StreamWriter,
-  { playbook, row }: ConversationTurn['place'],
-  record: ReadRecord,
-): Effect.Effect<void> {
-  const stream = `${streamPrefixOfPlaybook(playbook)}${conversationCallStreamOf(record.callId)}`;
+export interface ReadFor {
+  readonly request: KeptRequest;
+  readonly row: ConversationRow;
+}
+
+export function recordedRead(ledger: StreamWriter, { request, row }: ReadFor, record: ReadRecord): Effect.Effect<void> {
+  const stream = `${streamPrefixOfAddress(request.address)}${conversationCallStreamOf(record.callId)}`;
   return Effect.gen(function* () {
     const at = DateTime.formatIso(yield* DateTime.now);
-    const fact = readFactOf(record, row, { by: playbookCallerOf(playbook).id, at });
+    const fact = readFactOf(record, row, { by: playbookCallerOf(request.playbook).id, at });
     yield* ledger
       .execute(stream, conversationCallDecider, fact, { causationId: row.last_fact, correlationId: null })
       .pipe(Effect.orDie);
@@ -80,5 +82,5 @@ export function unsentRead(
     reading: read.reading,
     since: read.since,
   };
-  return Effect.as(recordedRead(parts.ledger, place, record), unsent);
+  return Effect.as(recordedRead(parts.ledger, { request: read.request, row: place.row }, record), unsent);
 }

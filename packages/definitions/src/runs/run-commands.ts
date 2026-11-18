@@ -41,6 +41,7 @@ export function askedOf({ definition_type, name, input, valuesRead }: RunRequest
 export interface RunStart extends RunRequest {
   readonly type: 'start';
   readonly started_by: RecordedCaller;
+  readonly playbook: string;
   readonly definition_version: number;
   readonly calls_tools: boolean;
   readonly finishes_later?: boolean;
@@ -59,13 +60,14 @@ function inputAsWritten({ input, inputKept }: RunStart): Payload<Schema.Json> {
   return inputKept === undefined ? { inline: input } : { kept: inputKept };
 }
 
-export function startedEvent(start: RunStart): RunEvent {
+export function startedEvent(start: RunStart, playbook: string): RunEvent {
   const { started_by, calls_tools, finishes_later, resumes, output_shape } = start;
   return {
     type: 'run_started',
     data: {
       ...payloadMembers('input', inputAsWritten(start)),
       started_by,
+      playbook,
       ...(calls_tools ? { calls_tools } : {}),
       ...(finishes_later === true ? { finishes_later } : {}),
       ...(resumes === true ? { resumes } : {}),

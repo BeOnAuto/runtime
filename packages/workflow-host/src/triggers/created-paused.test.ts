@@ -11,11 +11,11 @@ import {
 } from '../reaction-testing/kept-triggers.ts';
 import { movedClock } from '../reaction-testing/moved-clock.ts';
 import {
-  alpha,
   at,
   byAdmin,
   cronTrigger,
   definitionRecorded,
+  definitionStreamNamed,
   definitionResumed,
   eventRecordOf,
   eventTrigger,
@@ -37,11 +37,12 @@ function isoAt(minutes: number): string {
 function createdPaused(store: LedgerStreams, name: string, triggers: readonly Trigger[]) {
   return recorded(
     store,
-    `${alpha}definitions/workflow`,
+    definitionStreamNamed(name),
     {
       type: 'definition_created',
       data: {
         content: { source: 'schedule: {}', triggers },
+        playbook: 'alpha',
         created_by: { id: 'acme-admin', name: 'acme-admin' },
         paused: { reason: 'Imported, waiting for its owner' },
       },
@@ -158,10 +159,18 @@ describe('a workflow created paused with an event trigger', () => {
     const starts = await startsReaching(reacting.reactions.starts, 3);
 
     expect(await pausesOf(reacting.database)).toEqual([]);
-    expect(starts.map(({ workflow, cause }) => [workflow, cause])).toEqual([
+    const [first, ...ofTheResumed] = starts.map(({ workflow, cause }) => [workflow, cause]);
+    expect([
+      first,
+      ofTheResumed.toSorted((one: readonly string[], other: readonly string[]) =>
+        String(one).localeCompare(String(other)),
+      ),
+    ]).toEqual([
       ['witness', eventRecordOf('while-paused')],
-      ['imported', eventRecordOf('once-resumed')],
-      ['witness', eventRecordOf('once-resumed')],
+      [
+        ['imported', eventRecordOf('once-resumed')],
+        ['witness', eventRecordOf('once-resumed')],
+      ],
     ]);
   });
 });

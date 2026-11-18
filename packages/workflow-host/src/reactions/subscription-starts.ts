@@ -17,7 +17,7 @@ import {
   type Delivery,
   type FollowedRecord,
 } from '../follower/consumers.ts';
-import { eventSubscriptionsOf, type EventSubscription } from '../triggers/trigger-rows.ts';
+import { eventSubscriptionsOf, namedByTheirDefinitions, type EventSubscription } from '../triggers/trigger-rows.ts';
 import { reactionRunIdOf } from './reaction-ids.ts';
 import { codesOf, type FailureDetail, type Refusal, type RefuseReaction, type RejectionCodes } from './refusals.ts';
 import type { WorkflowOfRun } from './run-workflows.ts';
@@ -35,10 +35,15 @@ export interface StartParts {
   readonly now: () => number;
 }
 
+interface NamedSubscription extends EventSubscription {
+  readonly playbookKey: string;
+  readonly workflow: string;
+}
+
 type Verdict = 'matched' | 'unmatched' | { readonly error: string };
 
 interface SubscriptionVerdict {
-  readonly subscription: EventSubscription;
+  readonly subscription: NamedSubscription;
   readonly place: FilterPlace;
   readonly verdict: Verdict;
   readonly stopped: readonly DslError[];
@@ -53,26 +58,26 @@ function verdictOf(verdicts: readonly FilterVerdict[]): Verdict {
   return typeof failed === 'object' ? { error: describeError(failed.error) } : 'unmatched';
 }
 
-function placeOf(playbookKey: string, { workflow, version, reference }: EventSubscription): FilterPlace {
+function placeOf(playbookKey: string, { workflow, version, reference }: NamedSubscription): FilterPlace {
   return { kind: 'trigger', playbookKey, workflow, version, reference };
 }
 
 function refusalOf(
-  { workflow, version, reference }: EventSubscription,
+  { definitionKey, workflow, version, reference }: NamedSubscription,
   reason: string,
   codes: RejectionCodes = {},
 ): Refusal {
-  return { workflow, version, trigger: { kind: 'event', reference }, reason, ...codesOf(codes) };
+  return { definitionKey, workflow, version, trigger: { kind: 'event', reference }, reason, ...codesOf(codes) };
 }
 
-function unstarted(subscription: EventSubscription, failure: FailureDetail): Refusal {
+function unstarted(subscription: NamedSubscription, failure: FailureDetail): Refusal {
   return refusalOf(subscription, `The workflow could not be started by its event trigger: ${failure.detail}`, failure);
 }
 
 function verdictsOf(
   matchGroups: MatchGroups,
   parts: StartParts,
-  subscriptions: readonly EventSubscription[],
+  subscriptions: readonly NamedSubscription[],
   { playbookKey, event: { event } }: FollowedRecord,
 ): Effect.Effect<readonly SubscriptionVerdict[]> {
   const groups = subscriptions.map((subscription) => ({
@@ -103,11 +108,11 @@ function tracedBy({ traceId, spanId }: FollowedRecord['record']) {
   return traceId === undefined || spanId === undefined ? {} : { trace: { traceId, spanId } };
 }
 
-function startOf(parts: StartParts, subscription: EventSubscription, followed: FollowedRecord): Delivery {
+function startOf(parts: StartParts, subscription: NamedSubscription, followed: FollowedRecord): Delivery {
   const { playbook, playbookKey, record, event } = followed;
-  const { workflow, version, reference } = subscription;
+  const { definitionKey, workflow, version, reference } = subscription;
   return {
-    key: workflow,
+    key: definitionKey,
     workflow,
     skipped: (failure) => parts.refusals.refuse(playbookKey, unstarted(subscription, failure)),
     deliver:
@@ -121,9 +126,10 @@ function startOf(parts: StartParts, subscription: EventSubscription, followed: F
           )
         : parts.starting.start(playbookKey, {
             ...playbook,
+            definitionKey,
             workflow,
             version,
-            runId: reactionRunIdOf(workflow, version, reference, record.id),
+            runId: reactionRunIdOf(definitionKey, version, reference, record.id),
             input: [event.event],
             depth: event.depth,
             cause: record.id,
@@ -133,10 +139,10 @@ function startOf(parts: StartParts, subscription: EventSubscription, followed: F
   };
 }
 
-function matchedLater(parts: StartParts, playbookKey: string, subscription: EventSubscription): Delivery {
-  const { workflow } = subscription;
+function matchedLater(parts: StartParts, playbookKey: string, subscription: NamedSubscription): Delivery {
+  const { definitionKey, workflow } = subscription;
   return {
-    key: workflow,
+    key: definitionKey,
     workflow,
     skipped: (failure) => parts.refusals.refuse(playbookKey, unstarted(subscription, failure)),
     deliver: Effect.fail(
@@ -193,14 +199,19 @@ export function subscriptionStarts(parts: StartParts): RecordConsumer {
     batchOf: (followed, after, most) =>
       Effect.gen(function* () {
         const type = followed.event.event.type;
-        const candidates = yield* eventSubscriptionsOf(parts.database, followed.playbookKey, { type, after, most });
+        const { playbookKey } = followed;
+        const candidates = yield* eventSubscriptionsOf(parts.database, playbookKey, { type, after, most });
         const taken = candidates.slice(0, most);
-        const judged = yield* verdictsOf(matchGroups, parts, taken, followed);
+        const named = yield* namedByTheirDefinitions(
+          parts.database,
+          taken.map((subscription) => ({ ...subscription, playbookKey })),
+        );
+        const judged = yield* verdictsOf(matchGroups, parts, named, followed);
         yield* Effect.forEach(judged, (each) => reported(parts, each), { discard: true });
         const deliveries = yield* Effect.forEach(judged, (each) => deliveriesOf(parts, each, followed));
         return {
           deliveries: deliveries.flat(),
-          through: taken.at(-1)?.workflow,
+          through: taken.at(-1)?.definitionKey,
           more: candidates.length > most,
         };
       }),

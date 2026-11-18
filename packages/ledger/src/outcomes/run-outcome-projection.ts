@@ -65,6 +65,7 @@ function runOutcomeProjectionOf({ types, rowAfter }: RunOutcomeMapping): KeyedPr
   return {
     name: 'run_outcomes',
     version: runOutcomesVersion,
+    scopes: ['definition'],
     kinds: ['runs'],
     types,
     columns: [

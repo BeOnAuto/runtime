@@ -248,7 +248,7 @@ describe('the prediction capability of a runtime', () => {
     expect([folders.length, operations]).toEqual([1, [answerInteraction]]);
   });
 
-  it.each([2, 3])('is made by an extension at contract %i with its settings, to the most allowed', async (contract) => {
+  it.each([2, 7])('is made by an extension at contract %i with its settings, to the most allowed', async (contract) => {
     const makePrediction = await predictionFilledBy([
       '@acme/forecasts',
       (given: CapabilityPorts) => ({ capability: forecastsOf(given) }),
@@ -266,7 +266,7 @@ describe('an extension filling capability/prediction that a runtime refuses, so 
     [
       'built against a contract other than the release’s',
       ['@acme/forecasts', makingOnly(wholeCapability()), 1],
-      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 6',
+      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 7',
     ],
     [
       'whose implementation makes nothing',

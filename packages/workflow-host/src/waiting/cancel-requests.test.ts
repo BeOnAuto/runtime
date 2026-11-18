@@ -5,8 +5,15 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { waitingRow } from '../calls/call-rows.ts';
-import { alpha, at, playbookCreated, recorded, recordedWith } from '../reaction-testing/playbook-writes.ts';
-import { runAt, startOf, testMachine, workflow } from '../testing/host-documents.ts';
+import {
+  alpha,
+  at,
+  childStarted,
+  playbookCreated,
+  recorded,
+  recordedWith,
+} from '../reaction-testing/playbook-writes.ts';
+import { definitionKeyOfTheTests, runAt, startOf, testMachine, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, onSQLite, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { until } from '../testing/until.ts';
@@ -28,7 +35,7 @@ function runOf(type: string, by = 'acme-admin'): Context {
   return { by, at, runId, definitionType: type, definitionName: 'pause', definitionVersion: 1 };
 }
 
-const requestStream = `${alpha}runs/${runId}`;
+const requestStream = `${definitionKeyOfTheTests}runs/${runId}`;
 
 const requestId = messageIdOf(requestStream, 1);
 
@@ -51,6 +58,7 @@ function asked({ type, data }: Fact, context: Context = runOf('workflow')) {
   return {
     playbook: { org: 'acme', playbook: 'alpha' },
     playbookKey: alpha,
+    filedUnder: definitionKeyOfTheTests,
     record: {
       id: requestId,
       cursor: 'c',
@@ -108,6 +116,8 @@ const ofTheChild = {
 
 const run = { runId: 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a', attributes: {} };
 
+const checks = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-00000000c4ec/';
+
 function callWith(arguments_: StartCall['arguments']): StartCall {
   return {
     kind: 'start_call',
@@ -148,7 +158,7 @@ describe('a cancel request on a workflow run', () => {
     );
 
     expect(settlement).toEqual(cancelled);
-    expect(records[0]).toMatchObject({ stream: `${alpha}run-logs/${runId}`, causationId: requestId });
+    expect(records[0]).toMatchObject({ stream: `${definitionKeyOfTheTests}run-logs/${runId}`, causationId: requestId });
   });
 });
 
@@ -182,7 +192,7 @@ describe('a cancel request recorded before the host started the workflow', () =>
     const other = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
     hosted.know(other);
     await Effect.runPromise(hosted.host.start(runAt(other), startOf(pausing)));
-    await recorded(database.store, `${alpha}runs/${other}`, askedToCancel, runOf('workflow'));
+    await recorded(database.store, `${definitionKeyOfTheTests}runs/${other}`, askedToCancel, runOf('workflow'));
 
     const otherSettled = await settled(other);
     const answer = await Effect.runPromise(hosted.host.start(runAt(runId), startOf(pausing)));
@@ -290,7 +300,7 @@ describe('a host that died after it marked a call waiting and before it read the
     const first = await hostedOn(settings, { answer: () => Effect.never });
     first.know(parentId);
     await Effect.runPromise(first.host.start(runAt(parentId), startOf(asking)));
-    await recorded(database.store, `${alpha}runs/${child}`, ending, ofTheChild);
+    await recorded(database.store, await childStarted(database.store, child), ending, ofTheChild);
     await followedThroughTheLatest(database);
     await first.host.stop();
     await Effect.runPromise(waitingRow(database, key, { child, at: Date.now() }));
@@ -318,6 +328,26 @@ describe('the run a call waits for', () => {
     ]).toEqual(['notify at /do/0/ask #1', null, null]);
     expect([derived.mostOpen, underived.mostOpen]).toEqual([mostOpenCallsOfATree, 5]);
   });
+
+  it('is cancelled under the definition its functions say the call called, and not where they say none', async () => {
+    const { options, cancels } = recordedWaiting();
+    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const waitedFor = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-0000000000c1' };
+    const cancelledOn = (machine: typeof testMachine) =>
+      executorWaitingOf(database, machine, options).cancelChild({
+        child: waitedFor,
+        call: callWith({ to: 'ada' }),
+        reason: 'deadline',
+        lineage: { causationId: null, correlationId: run.runId },
+      });
+
+    const receipts = await Effect.runPromise(Effect.all([cancelledOn(testMachine), cancelledOn(withoutChildren)]));
+
+    expect([receipts.at(1), cancels().map(({ run: { definitionType, name } }) => [definitionType, name])]).toEqual([
+      'unknown_run',
+      [['notifier', 'notify']],
+    ]);
+  });
 });
 
 describe('the answer of a run a call waits for', () => {
@@ -335,8 +365,17 @@ describe('the answer of a run a call waits for', () => {
     };
     const calledBy = { runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a', reference: '/do/0/ask', run: 1 };
     const checked = { type: 'run_succeeded', data: { output: 'checked', record: {} } };
-    await recorded(database.store, `${alpha}runs/answered`, checked, { ...ofTheChildWaitingParts, calledBy });
-    await recorded(database.store, `${alpha}runs/uncalled`, checked, ofTheChildWaitingParts);
+    const startedWaitingParts = {
+      type: 'run_started',
+      data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha', input: {} },
+    };
+    await Promise.all(
+      ['answered', 'uncalled', 'running'].map((childWaitingParts) =>
+        recorded(database.store, `${checks}runs/${childWaitingParts}`, startedWaitingParts, ofTheChildWaitingParts),
+      ),
+    );
+    await recorded(database.store, `${checks}runs/answered`, checked, { ...ofTheChildWaitingParts, calledBy });
+    await recorded(database.store, `${checks}runs/uncalled`, checked, ofTheChildWaitingParts);
 
     const answers = await Effect.runPromise(
       Effect.all(

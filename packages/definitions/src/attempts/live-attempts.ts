@@ -2,7 +2,6 @@ import {
   IncidentReporter,
   playbookCallerOf,
   randomUUIDv7,
-  streamPrefixOfPlaybook,
   type Conflict,
   type InvalidInput,
   type Lineage,
@@ -17,7 +16,7 @@ import {
 import { Cause, Context, DateTime, Deferred, Effect, Exit, Fiber, Layer, Option, Scope } from 'effect';
 
 import type { RunCommand } from '../runs/run-commands.ts';
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { runDecider, runStreamIn, type RunPlacing } from '../runs/run-decider.ts';
 import { isOutlivingItsCall, isTaken } from '../runs/run-decisions.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
 import type { RunDetail } from '../runs/run.ts';
@@ -161,10 +160,10 @@ type DeadAttemptReceipt = 'ended' | 'not_running' | 'outlives_its_call';
 
 type EndDeadAttempt = (attempt: AttemptThatDied) => Effect.Effect<DeadAttemptReceipt>;
 
-export function deadAttemptEnder(ledger: StreamWriter): EndDeadAttempt {
+export function deadAttemptEnder(ledger: StreamWriter & RunPlacing): EndDeadAttempt {
   return ({ run, lineage, fencingToken, noNextAttempt }) =>
     Effect.gen(function* () {
-      const stream = `${streamPrefixOfPlaybook(run)}${runStreamNameOf(run.id)}`;
+      const stream = yield* Effect.orDie(Effect.fromNullishOr(yield* runStreamIn(ledger, run)));
       const at = DateTime.formatIso(yield* DateTime.now);
       const command: RunCommand = {
         type: 'attempt_died',

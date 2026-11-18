@@ -2,7 +2,7 @@ import { templateLimits } from '@on.auto/definitions/template';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { aPageARunReturned, assetIdOf } from '../run-testing/run-outcomes.ts';
+import { aPageARunReturned, aRunIn, assetIdOf } from '../run-testing/run-outcomes.ts';
 import { alpha, generationHarness, harnessStartsAt, sourceWith } from '../testing/index.ts';
 
 const anyWords: unknown = expect.any(String);
@@ -121,7 +121,13 @@ describe('a kept file a prompt writes as text', () => {
 describe('a kept text a prompt reads', () => {
   it('is refused at its place past the characters the model takes, though within those a render may hold', async () => {
     const playbook = generationHarness();
-    const page = await aPageARunReturned(playbook.ledger.service, alpha, assetIdOf(3), harnessStartsAt);
+    const definitionKey = await aRunIn(playbook, 'run-1');
+    const page = await aPageARunReturned(
+      playbook.ledger.service,
+      { playbook: alpha, definitionKey },
+      assetIdOf(3),
+      harnessStartsAt,
+    );
     await playbook.define('picture', sourceWith(image, 'A lighthouse, as {{ input.page }} says'));
     const reference = {
       id: assetIdOf(3),

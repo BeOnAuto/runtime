@@ -3,7 +3,6 @@ import { Effect } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
 import type { Definition, StoredDefinition } from '../registry/definition.ts';
-import { findDefinition } from '../registry/registry-lookup.ts';
 import type { DefinitionUser } from '../used-by/user-relations.ts';
 import { usersAnswered, usersToday } from '../used-by/users-of-a-definition.ts';
 import {
@@ -12,7 +11,7 @@ import {
   type Answering,
   type DefinitionAnswered,
 } from './answered-definitions.ts';
-import { loadRegistry, type DefinitionInRegistry } from './registry-access.ts';
+import { foundDefinition, type DefinitionInRegistry } from './registry-access.ts';
 
 export interface ReadDefinition extends DefinitionAnswered {
   readonly stored: StoredDefinition;
@@ -44,7 +43,7 @@ export function answeredDefinition(
   inRegistry: DefinitionInRegistry,
   answering?: Answering,
 ): Effect.Effect<Definition, Unavailable | Conflict, PlaybookReader | PlaybookContext> {
-  const users = usersAnswered(types, inRegistry.registry, { type: capability.type, name: inRegistry.stored.name });
+  const users = usersAnswered(types, { type: capability.type, name: inRegistry.stored.name });
   return Effect.map(
     answeredWithItsUsers(capability, inRegistry.stored, users, answering),
     ({ definition }) => definition,
@@ -58,9 +57,8 @@ export function readDefinition(
   goals = false,
 ): Effect.Effect<ReadDefinition, NotFound | Unavailable | Conflict, PlaybookReader | PlaybookContext> {
   return Effect.gen(function* () {
-    const registry = yield* loadRegistry(capability.type);
-    const stored = yield* findDefinition(registry, capability.type, name);
-    const users = usersToday(types, registry, { type: capability.type, name: stored.name });
+    const stored = yield* foundDefinition(capability.type, name);
+    const users = usersToday(types, { type: capability.type, name: stored.name });
     return { stored, ...(yield* answeredWithItsUsers(capability, stored, users, { goals })) };
   });
 }

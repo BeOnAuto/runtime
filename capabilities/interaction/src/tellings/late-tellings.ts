@@ -28,7 +28,7 @@ interface TakenAnswer {
 }
 
 export function answerTold({ parts, playbook, request, answeredAt, hold }: TakenAnswer): Effect.Effect<boolean> {
-  const address = { ...playbook, id: request.runId };
+  const address = { ...playbook, id: request.runId, filedIn: request.address };
   return Effect.gen(function* () {
     const knownBefore = !(yield* toldUnknowingly(parts.ledger, playbook, request.runId));
     const toldInFull = yield* toldOnceAnswered(parts, { address, answeredAt, hold });
@@ -48,6 +48,7 @@ export function toldAnsweredAlready(late: LateReply, state: IntakeState): Effect
     const definition = { definitionType: 'interaction', definitionName: row.function, definitionVersion: row.version };
     const telling = {
       playbook,
+      filedIn: request.address,
       server: routeOfRequest(request).server,
       runId,
       definition,

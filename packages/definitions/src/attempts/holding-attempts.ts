@@ -1,14 +1,13 @@
 import {
   OrgIdSchema,
   PlaybookIdSchema,
-  streamPrefixOfPlaybook,
   type CalledBy,
   type StartingTrigger,
   type StreamReader,
 } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { runDecider, runStreamIn, type RunPlacing } from '../runs/run-decider.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
 import { isRunning, startedRunOf, type RecordedRunState, type RunStreamState } from '../runs/run-state.ts';
 
@@ -49,12 +48,15 @@ function holdingIn(state: RunStreamState): HoldingAttempt | undefined {
 }
 
 export function holdingAttemptIn(
-  reader: StreamReader,
+  reader: StreamReader & RunPlacing,
   address: RunStreamAddress,
 ): Effect.Effect<HoldingAttempt | undefined> {
   if (!isWellFormed(address)) {
     return Effect.undefined;
   }
-  const stream = `${streamPrefixOfPlaybook(address)}${runStreamNameOf(address.id.toLowerCase())}`;
-  return Effect.map(reader.load(stream, runDecider), ({ state }) => holdingIn(state));
+  return Effect.flatMap(runStreamIn(reader, { ...address, id: address.id.toLowerCase() }), (stream) =>
+    stream === undefined
+      ? Effect.undefined
+      : Effect.map(reader.load(stream, runDecider), ({ state }) => holdingIn(state)),
+  );
 }

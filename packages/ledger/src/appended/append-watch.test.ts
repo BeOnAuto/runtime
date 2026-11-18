@@ -9,7 +9,7 @@ import { appendWatchOf, inScope, isLater } from './append-watch.ts';
 import { appendedFactsReaderOf } from './appended-reader.ts';
 import { postgresqlAppended } from './postgresql-appended.ts';
 
-const alpha: FactScope = { kind: 'playbook', playbookKey: 'playbook/acme/alpha/' };
+const alpha: FactScope = { kind: 'playbook', playbookKey: 'playbook/acme/alpha/', definitionKeys: [] };
 
 const registries: FactScope = { kind: 'streams', streams: ['org/acme/playbooks', 'org/acme/keys/a/b'] };
 
@@ -71,6 +71,7 @@ const alphaAppendedReader = { kind: 'playbook', playbook: { org: 'acme', playboo
 function aStoreAsked() {
   const asked: AppendedFactsAsked[] = [];
   const reader = appendedFactsReaderOf({
+    definitionsIn: () => Promise.resolve([]),
     pointLength: 1,
     readAppendedFacts: (_scope, request) => {
       asked.push(request);
@@ -125,16 +126,18 @@ describe('the order of the points of a ledger', () => {
 });
 
 describe('the scope of a wait', () => {
-  it('takes the kinds of a playbook for a playbook, and the streams it names or the kinds that hold them for named streams', () => {
+  it('takes the kinds of a playbook and of every definition of its org for a playbook, and the streams it names or the kinds that hold them for named streams', () => {
     expect([
       inScope(alpha, 'playbook/acme/alpha/runs/'),
       inScope(alpha, 'playbook/acme/alpha/runs/r1'),
       inScope(alpha, 'playbook/acme/alphabet/runs/'),
+      inScope(alpha, 'definition/acme/d1/definitions/workflow'),
+      inScope(alpha, 'definition/globex/d1/definitions/workflow'),
       inScope(registries, 'org/acme/playbooks'),
       inScope(registries, 'org/acme/keys/a/'),
       inScope(registries, 'org/acme/playbooks/'),
       inScope(registries, 'org/acme/connections'),
-    ]).toEqual([true, true, false, true, true, false, false]);
+    ]).toEqual([true, true, false, true, false, true, true, false, false]);
   });
 });
 

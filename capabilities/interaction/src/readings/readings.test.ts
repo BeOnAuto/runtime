@@ -6,16 +6,11 @@ import {
   answererId,
   chatHarness,
   type ChatHarness,
-  chatProjections,
   type FakeAnswer,
   farAhead,
-  flatReadsNamingReplies,
-  keptAsRecorded,
-  recordedFlatReadsNamingReplies,
   recordsOf,
   threadDocument,
 } from '../testing/index.ts';
-import { ledgerHoldingRuns } from '../testing/interaction-harness.ts';
 import { flatNamingReplies, flatReplies } from '../testing/reading-documents.ts';
 
 const answeredFirst = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71';
@@ -66,48 +61,6 @@ describe('a conversation whose read names no message, read by another call once 
       ]);
     },
   );
-});
-
-const { answeredOfOneCall, waitingOfOneCall, answeredOfAnother, waitingOfAnother } = flatReadsNamingReplies;
-
-describe('requests main left waiting in channels read flat whose replies may name their message, each after an earlier request was answered there by a plain reply', () => {
-  it('are read on from where each conversation was, so the earlier answer answers no later request and the next plain reply does', async () => {
-    const recorded = recordedFlatReadsNamingReplies();
-    const ledger = ledgerHoldingRuns(chatProjections);
-    await keptAsRecorded(ledger.service, recorded.facts);
-    const playbook = await chatHarness({ ledger, inTheChat: recorded.messages });
-    const settledAt = recorded.lastAt + 60_000;
-    const runsOf = (runIds: readonly string[]) => Promise.all(runIds.map((runId) => playbook.runOf(runId)));
-
-    await playbook.performReads(Date.now() + farAhead);
-    await playbook.performDue(settledAt);
-    const afterTheFirstRead = await runsOf([waitingOfOneCall, waitingOfAnother]);
-    playbook.chat.reply({ channel: '#approvals-finance', user: answererId, text: 'reject' });
-    playbook.chat.reply({ channel: '#approvals-hr', user: answererId, text: 'reject' });
-    await playbook.performReads(Date.now() + 2 * farAhead);
-    await playbook.performDue(settledAt);
-
-    expect(
-      playbook.chat
-        .calls()
-        .filter(({ reference }) => reference.tool === 'thread_replies')
-        .map(({ input }) => [input['channel'], input['oldest'], input['limit']]),
-    ).toEqual([
-      ['#approvals-finance', '1699.000003', undefined],
-      ['#approvals-hr', '1699.000004', 20],
-      ['#approvals-finance', '1699.000003', undefined],
-      ['#approvals-hr', '1699.000004', 20],
-    ]);
-    expect(afterTheFirstRead).toMatchObject([{ output: { status: 'started' } }, { output: { status: 'started' } }]);
-    expect(await runsOf([answeredOfOneCall, waitingOfOneCall, answeredOfAnother, waitingOfAnother])).toMatchObject([
-      { output: { status: 'succeeded', output: { choice: 'approve' } } },
-      { output: { status: 'succeeded', output: { choice: 'reject' } } },
-      { output: { status: 'succeeded', output: { choice: 'approve' } } },
-      { output: { status: 'succeeded', output: { choice: 'reject' } } },
-    ]);
-    expect(await recordsOf(playbook.ledger, 'request_answered')).toHaveLength(4);
-    expect(await recordsOf(playbook.ledger, 'reply_refused')).toEqual([]);
-  });
 });
 
 const older = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71';

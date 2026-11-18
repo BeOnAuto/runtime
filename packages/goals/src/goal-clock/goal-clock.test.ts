@@ -59,9 +59,9 @@ describe('the work of a goal clock at a moment', () => {
     });
   });
 
-  it('opens nothing it opened already and moves on, and holds no boundary while nothing reports the measure', () => {
+  it('opens nothing it opened already, nor while nothing reports the measure, and looks again at the next opening', () => {
     expect(clockWorkAt(moment({ latestOpened: day(0) }))).toEqual({ nextAt: day(1) });
-    expect(clockWorkAt(moment({ reporting: false }))).toEqual({ nextAt: null });
+    expect(clockWorkAt(moment({ reporting: false }))).toEqual({ nextAt: day(1) });
   });
 });
 

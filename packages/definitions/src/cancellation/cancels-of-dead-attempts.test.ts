@@ -7,14 +7,16 @@ import { runDecider } from '../runs/run-decider.ts';
 import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { firstMoment, harness, toPlaybook, runStreamIn, type Harness } from '../testing/harness.ts';
 import { keptArmOf, keptIn, recordedAsGiven, watchedStore } from '../testing/kept-payloads.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-0000000000e1';
 
-const stream = `playbook/acme/alpha/runs/${runId}`;
+function streamIn(ledger: Harness['ledger']): string {
+  return runStreamIn(ledger, { type: 'system-call', name: 'post' }, runId);
+}
 
 const longestCallMs = 70_000;
 
@@ -94,6 +96,7 @@ async function aRunAClientStartedWhoseProcessDied(calls: CallsBeforeItDies = 'ac
   const cancelRequest = toAlpha(acmeAdmin, { run_id: runId });
   return {
     service: definitions.ledger.service,
+    stream: streamIn(definitions.ledger),
     parsesNoMore: dying.parsesNoMore,
     reading: (afterMs: number) => definitions.call(operations.getRun, cancelRequest, momentAfter(afterMs)),
     cancelling: (afterMs: number) => definitions.call(operations.cancelRun, cancelRequest, momentAfter(afterMs)),
@@ -121,10 +124,21 @@ async function aRunWhoseInputItsPlaybookKeepsOutside() {
   const input = { brief: 'b'.repeat(4096) };
   const { sha256, bytes } = keptArmOf(input);
   const context = { ...at, definitionType: 'system-call', definitionName: 'post', definitionVersion: 1 };
-  const data = { input_sha256: sha256, input_bytes: bytes, started_by: recordedAdmin, calls_tools: true } as const;
+  const data = {
+    input_sha256: sha256,
+    input_bytes: bytes,
+    started_by: recordedAdmin,
+    playbook: 'alpha',
+    calls_tools: true,
+  } as const;
   const kept = keptIn(service.content, { org: 'acme', playbook: 'alpha' }, input);
   await definitions.run(
-    Effect.orDie(Effect.andThen(kept, recordedAsGiven(service, stream, [{ type: 'run_started', data }], context))),
+    Effect.orDie(
+      Effect.andThen(
+        kept,
+        recordedAsGiven(service, streamIn(definitions.ledger), [{ type: 'run_started', data }], context),
+      ),
+    ),
   );
   return {
     readsNothingMore: watched.fail,
@@ -236,7 +250,7 @@ describe('a cancel of a run within its call whose attempt cannot be judged', () 
   });
 
   it('is refused as before where its attempt recorded a fact between the read and the cancel, and records nothing', async () => {
-    const { service, cancellingOver, history } = await aRunAClientStartedWhoseProcessDied();
+    const { service, stream, cancellingOver, history } = await aRunAClientStartedWhoseProcessDied();
     const anotherCall = { call_id: 'toolu_2', ...sent };
     const recordingMeanwhile = Ledger.of({
       ...service,

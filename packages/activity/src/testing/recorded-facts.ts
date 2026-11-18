@@ -53,6 +53,7 @@ export function runStarted(run: RunOf, at: string, by: string, outputShape?: str
     data: {
       input: {},
       started_by: { id: by, name: by },
+      playbook: 'alpha',
       ...(outputShape === undefined ? {} : { output_shape: outputShape }),
     },
     context: runContext(run, at),
@@ -119,10 +120,14 @@ function definitionContext({ type, name, version }: DefinitionOf, at: string, by
   return { at, by, definitionType: type, definitionName: name, definitionVersion: version };
 }
 
-export function definitionCreated(definition: DefinitionOf, at: string, by: string): RecordedFact {
+export function definitionCreated(definition: DefinitionOf, at: string, by: string, playbook?: string): RecordedFact {
   return {
     type: 'definition_created',
-    data: { content: { source: 'source' }, created_by: { id: by, name: by } },
+    data: {
+      content: { source: 'source' },
+      created_by: { id: by, name: by },
+      ...(playbook === undefined ? {} : { playbook }),
+    },
     context: definitionContext(definition, at, by),
   };
 }

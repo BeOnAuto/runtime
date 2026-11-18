@@ -4,9 +4,10 @@ import { Effect, Schema } from 'effect';
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
 import type { ReactionStart } from '../reactions/reaction-options.ts';
 import { until } from '../testing/until.ts';
+import { nameOfKey } from './playbook-writes.ts';
 
 const TriggerRow = Schema.Struct({
-  workflow: Schema.String,
+  definition_key: Schema.String,
   reference: Schema.String,
   version: WholeNumber,
   kind: Schema.String,
@@ -19,24 +20,48 @@ const TriggerRow = Schema.Struct({
 
 const RefusalRow = Schema.Struct({ workflow: Schema.String, reason: Schema.String });
 
-const PauseRow = Schema.Struct({ workflow: Schema.String });
+const PauseRow = Schema.Struct({ definition_key: Schema.String });
 
-export function triggerRowsOf(database: HostDatabase): Promise<readonly (typeof TriggerRow.Type)[]> {
-  return Effect.runPromise(
+interface NamedTriggerRow extends Omit<typeof TriggerRow.Type, 'definition_key'> {
+  readonly workflow: string | undefined;
+}
+
+function namedRowOf(row: typeof TriggerRow.Type): NamedTriggerRow {
+  return {
+    workflow: nameOfKey(row.definition_key),
+    reference: row.reference,
+    version: row.version,
+    kind: row.kind,
+    rule: row.rule,
+    activated_by: row.activated_by,
+    activated_at: row.activated_at,
+    next_due: row.next_due,
+    running: row.running,
+  };
+}
+
+function inOrderOf({ workflow, reference }: NamedTriggerRow): string {
+  return `${String(workflow)}\u0000${reference}`;
+}
+
+export async function triggerRowsOf(database: HostDatabase): Promise<readonly NamedTriggerRow[]> {
+  const rows = await Effect.runPromise(
     rowsOf(
       TriggerRow,
       database.read(
-        statement`SELECT workflow, reference, version, kind, rule, activated_by, activated_at, next_due, running
-          FROM workflow_subscriptions ORDER BY workflow, reference`,
+        statement`SELECT definition_key, reference, version, kind, rule, activated_by, activated_at, next_due, running
+          FROM workflow_subscriptions`,
       ),
     ),
   );
+  return rows.map((row) => namedRowOf(row)).toSorted((one, other) => inOrderOf(one).localeCompare(inOrderOf(other)));
 }
 
-export function pausesOf(database: HostDatabase): Promise<readonly string[]> {
-  return Effect.runPromise(
-    rowsOf(PauseRow, database.read(statement`SELECT workflow FROM workflow_pauses ORDER BY workflow`)),
-  ).then((rows) => rows.map(({ workflow }) => workflow));
+export async function pausesOf(database: HostDatabase): Promise<readonly (string | undefined)[]> {
+  const rows = await Effect.runPromise(
+    rowsOf(PauseRow, database.read(statement`SELECT definition_key FROM workflow_pauses ORDER BY definition_key`)),
+  );
+  return rows.map(({ definition_key: definitionKey }) => nameOfKey(definitionKey));
 }
 
 export function untilPaused(database: HostDatabase, paused: readonly string[]) {

@@ -1,17 +1,28 @@
 import {
   Conflict,
+  definitionOfStreamPrefix,
+  PlaybookContext,
+  PlaybookReader,
+  PlaybookWriter,
+  streamPrefixOfDefinition,
+  streamPrefixOfPlaybook,
   type Decider,
+  type LedgerPorts,
   type Lineage,
+  type PlaybookAddress,
   type Rejection,
+  type StreamAges,
+  type StreamReader,
   type StreamState,
   type StreamWriter,
+  runStreamNameOf,
 } from '@on.auto/operations';
-import { Effect, Equal, Result } from 'effect';
+import { Effect, Equal, Option, Result } from 'effect';
 
 import type { AdmitsFact } from '../run-work/work-decisions.ts';
 import type { RunCommand, RunSettlement } from './run-commands.ts';
 import { runContextOf } from './run-context.ts';
-import { decideOnRun } from './run-decisions.ts';
+import { decideOnRun, noSuchRun } from './run-decisions.ts';
 import { RunEventSchema, runEventSchemaOf, type IsDeclared, type RecordedRunEvent } from './run-events.ts';
 import { evolveRun, type RunStreamState } from './run-state.ts';
 
@@ -74,10 +85,6 @@ export const runDecider: RunDecider = readingAnyWork.decider;
 
 export const runDeciderAsRead: RunDeciderAsRead = readingAnyWork.asRead;
 
-export function runStreamNameOf(id: string): string {
-  return `runs/${id}`;
-}
-
 export type SettledOn = (
   stream: string,
   command: RunSettlement,
@@ -94,4 +101,66 @@ export function settledOnRead(ledger: StreamWriter, readAt: number): SettledOn {
       state: state.state,
       version,
     }));
+}
+
+export function decidedOnNoRun<State, Command>(
+  decider: Decider<State, Command, RecordedRunEvent, RunReason>,
+  command: Command,
+): Effect.Effect<never, Rejection<RunReason>> {
+  return Effect.andThen(Effect.fromResult(decider.decide(command, decider.initialState)), Effect.die(noSuchRun));
+}
+
+export type RunPlacing = Pick<LedgerPorts, 'holderOfStream'>;
+
+export interface RunInAPlaybook extends PlaybookAddress {
+  readonly id: string;
+}
+
+export function runStreamIn(ledger: RunPlacing, run: RunInAPlaybook): Effect.Effect<string | undefined> {
+  const name = runStreamNameOf(run.id);
+  return Effect.map(ledger.holderOfStream({ playbookKey: streamPrefixOfPlaybook(run), stream: name }), (key) =>
+    key === undefined ? undefined : `${key}${name}`,
+  );
+}
+
+function definitionOfRun(id: string): Effect.Effect<string | undefined, never, PlaybookReader> {
+  return PlaybookReader.use((reader) => reader.definitionHolding(runStreamNameOf(id)));
+}
+
+export interface RunPlace {
+  readonly definition: string;
+  readonly stream: string;
+}
+
+function runPlaceIn(definition: string, id: string): Effect.Effect<RunPlace, never, PlaybookContext> {
+  return Effect.map(PlaybookContext, ({ org }) => ({
+    definition,
+    stream: `${streamPrefixOfDefinition({ org, definition })}${runStreamNameOf(id)}`,
+  }));
+}
+
+export const placeOfRun = Effect.fnUntraced(function* (id: string) {
+  const definition = yield* definitionOfRun(id);
+  return definition === undefined ? yield* noSuchRun : yield* runPlaceIn(definition, id);
+});
+
+export const placeToStart = Effect.fnUntraced(function* (id: string, definitionType: string, name: string) {
+  const placed = yield* definitionOfRun(id);
+  if (placed !== undefined) {
+    return yield* runPlaceIn(placed, id);
+  }
+  const held = yield* (yield* PlaybookReader).holderOfName(definitionType, name);
+  const named = Option.fromNullishOr(held).pipe(
+    Option.flatMap(({ definitionKey }) => definitionOfStreamPrefix(definitionKey)),
+    Option.map((address) => address.definition),
+  );
+  return yield* runPlaceIn(yield* Effect.orDie(Effect.fromOption(named)), id);
+});
+
+export function readerAt({ definition }: RunPlace): Effect.Effect<StreamReader & StreamAges, never, PlaybookReader> {
+  return PlaybookReader.use((reader) => Effect.succeed(reader.ofDefinition(definition)));
+}
+
+export function writerAt({ definition }: RunPlace): Effect.Effect<StreamWriter, never, PlaybookWriter> {
+  return PlaybookWriter.use((writer) => Effect.succeed(writer.ofDefinition(definition)));
 }

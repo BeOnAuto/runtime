@@ -138,8 +138,8 @@ async function resumedMidDay() {
   await harness.until('2026-11-11T10:00:00.000Z');
   const whilePaused = harness.wakes.map(({ at }) => new Date(at).toISOString());
   const quiet = await harness.row(clocksName, clockKey);
-  await harness.book.append(
-    'definitions/workflow',
+  await harness.book.workflowChanged(
+    'check',
     'definition_resumed',
     {},
     { at: '2026-11-11T10:00:00.000Z', definitionType: 'workflow', definitionName: 'check', definitionVersion: 1 },
@@ -148,16 +148,16 @@ async function resumedMidDay() {
 }
 
 describe('the clock of a calendar goal whose only contribution is paused', () => {
-  it('is woken once at the boundary after the save and not again while paused, and a resume arms it for the next window', async () => {
+  it('is woken at each boundary while paused and opens nothing, and opens the windows after a resume, never the one it was resumed in', async () => {
     const { harness, whilePaused, quiet } = await resumedMidDay();
-    const armed = await harness.row(clocksName, clockKey);
+    const afterTheResume = await harness.row(clocksName, clockKey);
     await harness.until('2026-11-13T02:00:00.000Z');
     const resumed = harness.wakes.slice(whilePaused.length).map(({ at }) => new Date(at).toISOString());
     const rows = await harness.book.rows(assessmentsName);
 
-    expect(whilePaused).toEqual(['2026-11-09T00:00:00.000Z']);
-    expect(quiet).toMatchObject({ opens_at: null });
-    expect(armed).toMatchObject({ opens_at: Date.parse('2026-11-12T00:00:00.000Z') });
+    expect(whilePaused).toEqual(['2026-11-09T00:00:00.000Z', '2026-11-10T00:00:00.000Z', '2026-11-11T00:00:00.000Z']);
+    expect(quiet).toMatchObject({ opens_at: Date.parse('2026-11-12T00:00:00.000Z') });
+    expect(afterTheResume).toEqual(quiet);
     expect(resumed).toEqual(['2026-11-12T00:00:00.000Z', '2026-11-13T00:00:00.000Z', '2026-11-13T01:00:00.000Z']);
     expect(
       Object.values(rows)

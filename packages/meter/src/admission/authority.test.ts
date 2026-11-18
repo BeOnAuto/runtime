@@ -6,12 +6,12 @@ import { noMeter } from '../meter-stream/meter-events.ts';
 import { admitting, authorityAnswering, cloudMetered } from '../meter-testing/cloud-metered.ts';
 import { closedAccounts } from '../meter-testing/refusal-behaviour.ts';
 import { sqliteLedger } from '../testing/ledgers.ts';
-import { runOf } from '../testing/runs.ts';
+import { runOf, runStreamOf } from '../testing/runs.ts';
 import type { AuthorityAnswer } from './authority.ts';
 import { ledgerMeterAdmittedBy } from './ledger-meter.ts';
 
 describe('a meter whose authority admits each action, as Auto’s hosting does through its account', () => {
-  it('asks the authority for every new run by org, playbook and run id, with no allowance, and records nothing of its own', async () => {
+  it('asks the authority for every new run by org and run id, with no allowance, and records nothing of its own', async () => {
     const asking = authorityAnswering(admitting);
     const metered = await cloudMetered(asking);
     await metered.admitted('run-1');
@@ -19,7 +19,7 @@ describe('a meter whose authority admits each action, as Auto’s hosting does t
     await metered.admitted('Run-1');
     await metered.admitted('run-2');
 
-    expect(asking.asked()).toEqual(['acme/alpha/run-1', 'acme/alpha/run-2']);
+    expect(asking.asked()).toEqual(['acme/run-1', 'acme/run-2']);
     expect(await metered.state()).toEqual(noMeter);
   });
 
@@ -28,11 +28,11 @@ describe('a meter whose authority admits each action, as Auto’s hosting does t
     const metered = await cloudMetered(asking);
     await metered.admitted('run-1');
     await metered.started('run-1');
-    await metered.tampering.streamDeleted('playbook/acme/alpha/runs/run-1');
+    await metered.tampering.streamDeleted(runStreamOf('run-1'));
 
     expect(await metered.admitted('run-1')).toEqual({ kind: 'admitted', detail: '' });
     expect(await metered.admitted('run-2')).toEqual({ kind: 'admitted', detail: '' });
-    expect(asking.asked()).toEqual(['acme/alpha/run-1', 'acme/alpha/run-1', 'acme/alpha/run-2']);
+    expect(asking.asked()).toEqual(['acme/run-1', 'acme/run-1', 'acme/run-2']);
   });
 
   it('refuses in the kind and words of the authority, and as meter_unavailable when it cannot be asked', async () => {
@@ -56,7 +56,7 @@ describe('a meter whose authority admits each action, as Auto’s hosting does t
     onTestFinished(() => runtime.dispose());
     await runtime.runPromise(Effect.flatMap(Effect.service(RunMeter), (meter) => meter.admit(runOf('run-1'))));
 
-    expect(asking.asked()).toEqual(['acme/alpha/run-1']);
+    expect(asking.asked()).toEqual(['acme/run-1']);
   });
 });
 
@@ -91,7 +91,21 @@ describe('a meter whose authority answers that the account of the org is closed'
       const metered = await cloudMetered(asking);
 
       expect(await metered.admitted('run-1')).toEqual({ kind: 'account_closed', ...closed });
-      expect(asking.asked()).toEqual(['acme/alpha/run-1']);
+      expect(asking.asked()).toEqual(['acme/run-1']);
     },
   );
+});
+
+describe('a meter whose authority admits each action, asked for a run under an id another definition’s run holds', () => {
+  it('asks its authority nothing for a run whose id a run of another playbook of the org holds, and refuses it in the words of a run id held by another', async () => {
+    const asking = authorityAnswering(admitting);
+    const metered = await cloudMetered(asking);
+    await metered.admitted('run-1');
+    await metered.started('run-1');
+
+    expect(await metered.admitted('run-1', 'beta')).toMatchObject({
+      detail: 'The run id belongs to a run of another definition or with another input',
+    });
+    expect(asking.asked()).toEqual(['acme/run-1']);
+  });
 });

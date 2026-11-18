@@ -1,8 +1,8 @@
 import type { Finished, RunContext } from '@on.auto/definitions';
-import { randomUUIDv7, type Conflict, type Context, type Lineage, type PlaybookAddress } from '@on.auto/operations';
+import { randomUUIDv7, type Conflict, type Lineage, type PlaybookAddress } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { keptAsset, madeByThe, type MadeByAGeneration } from '../assets/asset-keeping.ts';
+import { keptAsset, madeByThe, type KeptByARun, type MadeByAGeneration } from '../assets/asset-keeping.ts';
 import { addressOf, assetReferenceOf } from '../assets/asset-reference.ts';
 import type { GenerationPorts } from '../capability/generation-ports.ts';
 import type { GenerationFunctionDefinitionDocument } from '../document/generation-document.ts';
@@ -19,14 +19,14 @@ export interface Keeping {
   readonly generated: Pick<Generated, 'bytes' | 'mediaType'>;
   readonly madeBy: MadeByAGeneration;
   readonly keptForMs: number;
-  readonly context: Omit<Context, 'at'>;
+  readonly context: KeptByARun;
   readonly lineage: Lineage;
   readonly startedAt: number;
 }
 
 type FinishingPorts = Pick<GenerationPorts, 'ledger' | 'content' | 'addresses'>;
 
-function keptContext(context: RunContext): Omit<Context, 'at'> {
+function keptContext(context: RunContext): KeptByARun {
   return {
     by: context.caller.id,
     runId: context.id,

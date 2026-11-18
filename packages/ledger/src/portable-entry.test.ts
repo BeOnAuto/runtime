@@ -40,14 +40,6 @@ describe('the ledger entry points', () => {
     expect(packages.filter((name) => name.includes('sqlite'))).toEqual([]);
   });
 
-  it('keep the structure of a database on either store, and the floor on PostgreSQL, behind the database-structure entry, with both drivers', () => {
-    const packages = packagesReachableFrom('structure/database-floors.ts');
-
-    expect(packages).toContain('pg');
-    expect(packages).toContain('@event-driven-io/emmett-postgresql');
-    expect(packages).toContain('@on.auto/node-sqlite');
-  });
-
   it('keep the driver of node:sqlite and the file system behind the sqlite entry', () => {
     const packages = packagesReachableFrom('sqlite.ts');
 

@@ -3,12 +3,12 @@ import { Effect, type Cause } from 'effect';
 import { failedTryRetryMs, type HeldTries } from '../holds/playbook-holds.ts';
 import { earliestOf, type FailedRounds } from '../loop/failed-rounds.ts';
 import type { WakeUpParts, Woken } from '../loop/host-wake-up.ts';
-import type { PlaybookSweeps } from '../sweeps/playbook-sweeps.ts';
+import type { OrgSweeps } from '../sweeps/org-sweeps.ts';
 import type { Wakes } from '../sweeps/wakes.ts';
 import type { Mode } from './delivery-loop.ts';
-import type { FollowedPlaybook, HeldPlaybooks } from './followed-playbooks.ts';
-import type { Discovery } from './playbook-discovery.ts';
-import type { PassEnd } from './record-steps.ts';
+import type { FollowedOrg, HeldPlaybook, HeldPlaybooks } from './followed-orgs.ts';
+import type { Discovery } from './org-discovery.ts';
+import type { Passes } from './org-pass.ts';
 
 export interface RoundUpkeep {
   readonly sweep: () => Effect.Effect<void>;
@@ -16,9 +16,9 @@ export interface RoundUpkeep {
 }
 
 export interface RoundParts extends Pick<WakeUpParts, 'clock' | 'trouble'> {
-  readonly pass: (playbookKey: string, mode: Mode, known?: FollowedPlaybook) => Effect.Effect<PassEnd>;
+  readonly passes: Passes;
   readonly discovery: Discovery;
-  readonly sweeps: PlaybookSweeps;
+  readonly sweeps: OrgSweeps;
   readonly upkeep: RoundUpkeep;
   readonly holds: HeldTries;
   readonly rounds: FailedRounds;
@@ -38,78 +38,70 @@ interface RoundFailed {
 
 export type Round = RoundThrough | RoundFailed;
 
+const parkedInASweep = 64;
+
 interface Passing {
-  readonly playbookKey: string;
+  readonly org: string;
   readonly mode: Mode;
-  readonly known: FollowedPlaybook | undefined;
+  readonly known: FollowedOrg | undefined;
 }
 
-function passedOnce(parts: RoundParts, wakes: Wakes, { playbookKey, mode, known }: Passing): Effect.Effect<boolean> {
-  const seen = known === undefined ? parts.discovery.playbookSeen(playbookKey) : Effect.void;
-  return Effect.andThen(seen, () => parts.pass(playbookKey, mode, known)).pipe(
+function passedOnce(parts: RoundParts, wakes: Wakes, { org, mode, known }: Passing): Effect.Effect<void> {
+  const seen = known === undefined ? parts.discovery.orgSeen(org) : Effect.void;
+  return Effect.andThen(seen, () => parts.passes.org(org, mode, known)).pipe(
     Effect.tap((end) =>
       Effect.sync(() => {
         if (end === 'more') {
-          wakes.playbookAgain(playbookKey);
+          wakes.orgAgain(org);
         }
       }),
     ),
-    Effect.as(true),
+    Effect.asVoid,
     Effect.catchCause((cause) =>
       Effect.andThen(
-        parts.trouble('A pass over a playbook failed; the next sweep passes the playbook again', cause),
+        parts.trouble("A pass over an org's records failed; the next sweep passes the org again", cause),
         Effect.sync(() => {
-          parts.sweeps.passAgain(playbookKey);
-          return false;
+          parts.sweeps.passAgain(org);
         }),
       ),
     ),
   );
 }
 
-function registriesRead(parts: RoundParts, registries: readonly string[]): Effect.Effect<void> {
-  return registries.length === 0 ? Effect.void : parts.discovery.registriesAppended(registries);
-}
-
-function registryRead(parts: RoundParts, registry: string): Effect.Effect<void> {
-  return parts.discovery.registriesAppended([registry]).pipe(
-    Effect.andThen(
-      Effect.sync(() => {
-        parts.sweeps.registriesRead([registry]);
-      }),
-    ),
-    Effect.catchCause((cause) =>
-      parts.trouble('A registry of playbooks could not be read; the next sweep reads it again', cause),
-    ),
+function signalled(parts: RoundParts, wakes: Wakes) {
+  return Effect.forEach(
+    wakes.orgsWoken(),
+    (org) => passedOnce(parts, wakes, { org, mode: 'signal', known: undefined }),
+    { discard: true },
   );
 }
 
-function signalled(parts: RoundParts, wakes: Wakes) {
-  return Effect.gen(function* () {
-    yield* registriesRead(parts, wakes.registriesWoken());
-    yield* Effect.forEach(
-      wakes.playbooksWoken(),
-      (playbookKey) => passedOnce(parts, wakes, { playbookKey, mode: 'signal', known: undefined }),
-      { discard: true },
-    );
-  });
+function heldOnce(parts: RoundParts, held: HeldPlaybook): Effect.Effect<boolean> {
+  return parts.passes.held(held).pipe(
+    Effect.as(true),
+    Effect.catchCause((cause) =>
+      Effect.as(
+        parts.trouble('A pass over a held playbook failed; the next try passes the playbook again', cause),
+        false,
+      ),
+    ),
+  );
 }
 
 function swept(parts: RoundParts, wakes: Wakes): Effect.Effect<boolean> {
   return Effect.gen(function* () {
     const sweep = yield* parts.sweeps.next();
     const handedBack = Effect.sync(() => {
-      for (const { playbookKey } of sweep.playbooks) {
-        parts.sweeps.passAgain(playbookKey);
+      for (const { org } of sweep.orgs) {
+        parts.sweeps.passAgain(org);
       }
     });
-    yield* Effect.forEach(sweep.registries, (registry) => registryRead(parts, registry), { discard: true });
     yield* parts.upkeep.sweep().pipe(Effect.catchCause((cause) => Effect.andThen(handedBack, Effect.failCause(cause))));
-    yield* Effect.forEach(
-      sweep.playbooks,
-      ({ playbookKey, known }) => passedOnce(parts, wakes, { playbookKey, mode: 'sweep', known }),
-      { discard: true },
-    );
+    yield* Effect.forEach(sweep.orgs, ({ org, known }) => passedOnce(parts, wakes, { org, mode: 'sweep', known }), {
+      discard: true,
+    });
+    const parked = yield* parts.holds.parkedForDelivery(parkedInASweep);
+    yield* Effect.forEach(parked, (held) => heldOnce(parts, held), { discard: true });
     return sweep.again;
   });
 }
@@ -125,23 +117,20 @@ function failedOf(tries: readonly TriedPass[]): ReadonlySet<string> {
   return new Set(tries.filter((tried: TriedPass) => !tried.through).map((tried: TriedPass) => tried.playbookKey));
 }
 
-function failedPassesOf(parts: RoundParts, wakes: Wakes, held: HeldPlaybooks): Effect.Effect<ReadonlySet<string>> {
+function failedPassesOf(parts: RoundParts, held: HeldPlaybooks): Effect.Effect<ReadonlySet<string>> {
   const tried = Effect.forEach(held.due, (known) =>
-    Effect.map(
-      passedOnce(parts, wakes, { playbookKey: known.playbookKey, mode: 'sweep', known }),
-      (through): TriedPass => ({ playbookKey: known.playbookKey, through }),
-    ),
+    Effect.map(heldOnce(parts, known), (through): TriedPass => ({ playbookKey: known.playbookKey, through })),
   );
   return Effect.map(tried, failedOf);
 }
 
-function heldPassed(parts: RoundParts, wakes: Wakes): Effect.Effect<number | null> {
+function heldPassed(parts: RoundParts): Effect.Effect<number | null> {
   return Effect.gen(function* () {
     const held = yield* parts.holds.heldAt(parts.clock.now(), heldPlaybooksInARound);
     if (held.due.length === 0) {
       return held.nextAt;
     }
-    const failedPasses = yield* failedPassesOf(parts, wakes, held);
+    const failedPasses = yield* failedPassesOf(parts, held);
     const now = parts.clock.now();
     const after = yield* parts.holds.heldAt(now, heldPlaybooksInARound);
     return yield* retriedAfter(parts, { failedPasses, after, now });
@@ -180,7 +169,7 @@ export function roundOf(parts: RoundParts, wakes: Wakes, { now, sweep }: Woken):
     yield* parts.upkeep.fireSchedules();
     yield* signalled(parts, wakes);
     const owed = sweep ? yield* swept(parts, wakes) : false;
-    const heldUntil = yield* heldPassed(parts, wakes);
+    const heldUntil = yield* heldPassed(parts);
     yield* parts.rounds.succeeded();
     const through: Round = { owed, heldUntil, failed: false };
     return through;

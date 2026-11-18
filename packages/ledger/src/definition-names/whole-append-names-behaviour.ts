@@ -5,7 +5,7 @@ import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { EncodedEvent, LedgerStore } from '../event-store.ts';
-import { streamPortsOf } from '../ledger-service.ts';
+import { makeLedger } from '../ledger-service.ts';
 import { to } from '../multi-stream/multi-stream-cases.ts';
 import { storeOnlyNamesBehaviour, type DefinitionNamesEntry } from './definition-names-behaviour.ts';
 import type { DefinitionNames } from './definition-names.ts';
@@ -86,7 +86,10 @@ function atThePort(entry: DefinitionNamesEntry): (names: DefinitionNames) => Pro
     const store = entry.storeKeepingNames(database, names);
     onTestFinished(() => store.close());
     await store.migrate();
-    return { ledger: streamPortsOf(store), names: () => heldIn(entry, database) };
+    return {
+      ledger: makeLedger(store),
+      names: () => heldIn(entry, database),
+    };
   };
 }
 

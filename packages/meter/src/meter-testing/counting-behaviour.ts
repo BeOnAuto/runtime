@@ -1,9 +1,11 @@
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
+import { heldRunOf } from '../admission/metering.ts';
 import { runOf, runStreamOf } from '../testing/runs.ts';
+import { admittedWhereFiled, countedWhereFiled } from './filed-runs-behaviour.ts';
 import { opened, replicaOf, restartedAfter, runsNamed, startedOnceAdmitted, type LedgerOf } from './opened.ts';
 
-export function countingBehaviour(ledgerOf: LedgerOf): void {
+function countingBehaviour(ledgerOf: LedgerOf): void {
   it('counts a run once as it admits it, however often it is asked again under its id, before or after it starts', async () => {
     const { metered } = await opened(ledgerOf);
     await metered.admitted(runOf('run-1'));
@@ -13,11 +15,27 @@ export function countingBehaviour(ledgerOf: LedgerOf): void {
     await metered.admitted(runOf('run-2'));
 
     expect((await metered.state()).admitted).toMatchObject({ actions: 2, first_runs: 2, licensed: 0 });
-    expect((await metered.state()).recent.map(({ run }) => run)).toEqual([runStreamOf('run-1'), runStreamOf('run-2')]);
+    expect((await metered.state()).recent.map(({ run }) => run)).toEqual([
+      heldRunOf(runOf('run-1')),
+      heldRunOf(runOf('run-2')),
+    ]);
   });
 
-  it('counts a run whose stream held other events before its start, and admits it without counting once started, however often', async () => {
+  it('holds a run by its id in its org, so starts of two definitions of one org asked at once with one id count once', async () => {
     const { metered } = await opened(ledgerOf);
+    await Promise.all([metered.admitted(runOf('run-1')), metered.admitted(runOf('run-1', 'beta'))]);
+    await metered.admitted(runOf('run-1', 'alpha', 'globex'));
+
+    expect((await metered.state()).admitted.actions).toBe(2);
+    expect((await metered.state()).recent.map(({ run }) => run).toSorted()).toEqual([
+      'org/acme/runs/run-1',
+      'org/globex/runs/run-1',
+    ]);
+  });
+
+  it('counts a run whose stream held a cancel asked and other events before its start, and admits it without counting once started, however often', async () => {
+    const { metered } = await opened(ledgerOf);
+    await metered.cancelAsked(runStreamOf('run-1'));
     await metered.noted(runStreamOf('run-1'), 2);
     await metered.admitted(runOf('run-1'));
     await metered.started('run-1');
@@ -29,7 +47,7 @@ export function countingBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
-export function startedRunsBehaviour(ledgerOf: LedgerOf): void {
+function startedRunsBehaviour(ledgerOf: LedgerOf): void {
   it('counts every run of every org and playbook it admits, and nothing it did not admit', async () => {
     const { metered } = await opened(ledgerOf);
     await startedOnceAdmitted(metered, 'run-1');
@@ -47,7 +65,9 @@ export function startedRunsBehaviour(ledgerOf: LedgerOf): void {
     await metered.admitted(runOf('run-1'));
 
     expect((await metered.state()).admitted.actions).toBe(2);
-    expect((await metered.state()).recent).toEqual([{ run: runStreamOf('run-1'), until: '2026-10-27T12:20:00.001Z' }]);
+    expect((await metered.state()).recent).toEqual([
+      { run: heldRunOf(runOf('run-1')), until: '2026-10-27T12:20:00.001Z' },
+    ]);
   });
 
   it('counts each run once while two replicas of one ledger admit and start the same runs at once', async () => {
@@ -68,7 +88,7 @@ function unreadableHistoryBehaviour(ledgerOf: LedgerOf): void {
     const { metered, tampering } = await opened(ledgerOf);
     await metered.admitted(runOf('run-1'));
     await metered.started('run-1');
-    const [started = ''] = await tampering.idsOf('playbook/acme/alpha/runs/run-1');
+    const [started = ''] = await tampering.idsOf(runStreamOf('run-1'));
     await tampering.garbled(started);
 
     expect((await metered.admitted(runOf('run-2'))).kind).toBe('admitted');
@@ -115,5 +135,19 @@ export function historyBehaviour(ledgerOf: LedgerOf): void {
 
     expect([refused.kind, (await metered.admitted(runOf('run-2'))).kind]).toEqual(['license_required', 'admitted']);
     expect((await metered.state()).installation).not.toBe(installation);
+  });
+}
+
+export function runsBehaviour(ledgerOf: LedgerOf): void {
+  describe('counting', () => {
+    countingBehaviour(ledgerOf);
+    startedRunsBehaviour(ledgerOf);
+  });
+  describe('runs filed under their definitions', () => {
+    admittedWhereFiled(ledgerOf);
+    countedWhereFiled(ledgerOf);
+  });
+  describe('the history of its runs', () => {
+    historyBehaviour(ledgerOf);
   });
 }

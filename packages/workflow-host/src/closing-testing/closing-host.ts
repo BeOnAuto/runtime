@@ -8,10 +8,11 @@ import type { HostClock } from '../loop/host-clock.ts';
 import { hostWakeUp, type HostWakeUp } from '../loop/host-wake-up.ts';
 import { ledgerRunLogStore } from '../runs/ledger-run-store.ts';
 import type { RecordedOptions } from '../testing/host-runs.ts';
+import { runKeyAt, startedIn } from '../testing/started-runs.ts';
 
 export const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-export const runKey = `acme/alpha/${runId}`;
+export const runKey = runKeyAt(runId);
 
 const CallSeen = Schema.Struct({
   state: Schema.String,
@@ -47,6 +48,7 @@ export interface ClosingHost {
   readonly parts: () => HostParts;
   readonly wakeUp: (now: number, sweep?: boolean) => Promise<number | null>;
   readonly opened: () => Promise<void>;
+  readonly placed: () => Promise<void>;
   readonly endOf: () => Promise<End>;
   readonly calls: () => Promise<readonly CallSeenRow[]>;
   readonly run: () => Promise<readonly RunSeenRow[]>;
@@ -89,6 +91,9 @@ export async function closingHostOver(
       await Effect.runPromise(held.opened.wake.stop());
       await closeHostParts(held.opened.parts);
       held.opened = openedOver(store, options, clock);
+    },
+    placed: async () => {
+      await startedIn(database, runId);
     },
     endOf: () => endIn(database),
     calls: () =>

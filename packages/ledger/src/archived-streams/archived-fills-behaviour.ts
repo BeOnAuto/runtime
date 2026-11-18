@@ -12,7 +12,6 @@ import {
 import { Effect } from 'effect';
 import { expect, it } from 'vitest';
 
-import { aStreamLedger, historyOf, keptWith, readLogged } from '../stream-projections/stream-testing.ts';
 import { aLedger, aLedgerHolding, type LedgerEntry } from '../testing/ledger-entry.ts';
 import {
   alpha,
@@ -112,23 +111,6 @@ function refoldedOnAScrub(entry: LedgerEntry): void {
   });
 }
 
-function builtOnFirstRead(entry: LedgerEntry): void {
-  it('builds a stream projection on its first read from the streams that are not archived', async () => {
-    const database = await entry.aDatabase();
-    await historyOf(await aStreamLedger(entry, database), 'alpha');
-    await archivedBySQL(entry, database, ['playbook/acme/alpha/notes/n2']);
-
-    const ledger = await aStreamLedger(entry, database, keptWith());
-
-    expect((await readLogged(ledger)).rows).toEqual([
-      ['n1/1', 1, 1],
-      ['n1/3', 2, 3],
-      ['n1', 'billing', 1, 3],
-      ['n1', 'urgent', 2, 3],
-    ]);
-  });
-}
-
 function heldAtOpen(entry: LedgerEntry): void {
   it('fills the holds of content as the ledger opens from the facts that are not archived, so a content only an archived fact names is held by nothing', async () => {
     const database = await entry.aDatabase();
@@ -150,6 +132,5 @@ function heldAtOpen(entry: LedgerEntry): void {
 export function archivedFillsBehaviour(entry: LedgerEntry): void {
   filledAtOpen(entry);
   refoldedOnAScrub(entry);
-  builtOnFirstRead(entry);
   heldAtOpen(entry);
 }

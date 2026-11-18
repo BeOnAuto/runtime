@@ -18,7 +18,7 @@ import { Clock, Effect, Result } from 'effect';
 
 import { appendedFactsReaderOf } from './appended/appended-reader.ts';
 import { refusableAppenderOf } from './event-appender.ts';
-import type { LedgerContent, LedgerStore, StreamMessagesStore, Streams } from './event-store.ts';
+import type { DefinitionNamesStore, LedgerContent, LedgerStore, StreamMessagesStore, Streams } from './event-store.ts';
 import { foldEvents } from './fold-events.ts';
 import { runOutcomesReaderOf } from './outcomes/run-outcomes-reader.ts';
 import { recordedEventReaderOf, recordedReaderOf } from './recorded/recorded-reader.ts';
@@ -111,6 +111,21 @@ export function streamPortsOf(
   };
 }
 
+function definitionNamesReaderOf(
+  store: DefinitionNamesStore,
+): Pick<Ledger['Service'], 'holderOfName' | 'nameHeldBy' | 'namesHeldIn' | 'holderOfStream'> {
+  return {
+    holderOfName: (named) => Effect.promise(() => store.holderOfName(named)),
+    nameHeldBy: (definitionKey) => Effect.promise(() => store.nameHeldBy(definitionKey)),
+    namesHeldIn: (kind) => Effect.promise(() => store.namesHeldIn(kind)),
+    holderOfStream: (named) => Effect.promise(() => store.holderOfStream(named)),
+  };
+}
+
+function runIdsReaderOf(store: Pick<LedgerStore, 'holderOfRunId'>): Pick<Ledger['Service'], 'holderOfRunId'> {
+  return { holderOfRunId: (claimed) => Effect.promise(() => store.holderOfRunId(claimed)) };
+}
+
 export function ownContentOf(store: LedgerStore): LedgerContent {
   return {
     content: store.content,
@@ -127,6 +142,8 @@ export function makeLedger(store: LedgerStore, kept: LedgerContent = ownContentO
     ...streamPortsOf(store, store.lastPositionOf),
     scrubFact: store.scrubFact,
     ageOfLastAppend: (stream) => Effect.promise(() => store.ageOfLastAppend(stream)),
+    ...definitionNamesReaderOf(store),
+    ...runIdsReaderOf(store),
     readRecorded: recordedReaderOf(store),
     readRecordedEvent: recordedEventReaderOf(store),
     ...appendedFactsReaderOf(store),
@@ -135,7 +152,6 @@ export function makeLedger(store: LedgerStore, kept: LedgerContent = ownContentO
     countProjectedRows: store.countProjectedRows,
     readDueRows: store.readDueRows,
     nextDueOf: store.nextDueOf,
-    resetStreamProjection: store.resetStreamProjection,
     advanceRow: store.advanceRow,
     content: kept.content,
     removeUnheld: (playbook, sha256) =>

@@ -8,5 +8,8 @@ export function postgresqlReadsOn(
   kept: Pick<PostgreSQLOptions, 'runOutcomes'>,
   query: Query,
 ): Pick<LedgerStore, 'readRunOutcomes' | 'log'> {
-  return { readRunOutcomes: postgresqlRunOutcomesOf(kept.runOutcomes, query), log: postgresqlLogOn(query) };
+  return {
+    readRunOutcomes: postgresqlRunOutcomesOf(kept.runOutcomes, query),
+    log: postgresqlLogOn(query),
+  };
 }

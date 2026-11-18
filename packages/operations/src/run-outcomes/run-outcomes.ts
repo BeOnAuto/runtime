@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-import type { ProjectedMessage } from '../projections/keyed-projection.ts';
+import { addressedStreamOf, type ProjectedMessage } from '../projections/keyed-projection.ts';
 
 export const RunOutcomeStatusSchema = Schema.Literals(['started', 'succeeded', 'failed', 'rejected']);
 
@@ -49,15 +49,13 @@ export interface RunOutcomeGroup {
 }
 
 export interface RunStream {
-  readonly playbookKey: string;
+  readonly definitionKey: string;
   readonly runId: string;
 }
 
-const runStream = /^(?<playbookKey>[^/]+\/[^/]+\/[^/]+\/)runs\/(?<runId>[^/]+)$/u;
-
 export function runStreamOf(stream: string): RunStream | undefined {
-  const groups = runStream.exec(stream)?.groups;
-  return groups === undefined
-    ? undefined
-    : { playbookKey: String(groups['playbookKey']), runId: String(groups['runId']) };
+  const addressed = addressedStreamOf(stream);
+  return addressed?.scope === 'definition' && addressed.kind === 'runs'
+    ? { definitionKey: addressed.prefix, runId: addressed.id }
+    : undefined;
 }

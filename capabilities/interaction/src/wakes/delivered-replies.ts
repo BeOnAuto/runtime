@@ -68,7 +68,6 @@ function intakeOf({ parts, delivered, named, hold }: Delivery, request: KeptRequ
   const route = routeOfRequest(request);
   return {
     parts,
-    playbook: delivered.playbook,
     candidates: named.map((each) => each.request),
     arrival: {
       server: route.server,

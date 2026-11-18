@@ -2,17 +2,17 @@ import { streamSignalOf, type AppendedStreams } from '@on.auto/ledger';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import type { FollowedPlaybooks } from '../follower/followed-playbooks.ts';
+import type { FollowedOrgs } from '../follower/followed-orgs.ts';
 import { startFollower } from '../follower/follower-loop.ts';
 import type { Upkeep } from '../follower/follower-wake-up.ts';
 import type { PassEnd } from '../follower/record-steps.ts';
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import { until } from '../testing/until.ts';
-import { playbookSweepsOn } from './playbook-sweeps.ts';
+import { orgSweepsOn } from './org-sweeps.ts';
 
 const alpha = 'playbook/acme/alpha/';
 
-const beta = 'playbook/acme/beta/';
+const beta = 'playbook/globex/beta/';
 
 const nothingDue: Omit<Upkeep, 'sweep'> = {
   fireSchedules: () => Effect.void,
@@ -20,13 +20,16 @@ const nothingDue: Omit<Upkeep, 'sweep'> = {
   nextDeferredAt: () => Effect.succeed(null),
 };
 
-const noPlaybooks: FollowedPlaybooks = {
+const noOrgs: FollowedOrgs = {
   follow: () => Effect.void,
-  load: () => Effect.die(new Error('The sweeps hand every playbook known')),
+  load: () => Effect.die(new Error('The sweeps hand every org known')),
   save: () => Effect.void,
+  heldIn: () => Effect.succeed(new Set()),
+  parked: () => Effect.void,
   held: () => Effect.void,
   lifted: () => Effect.void,
   heldAt: () => Effect.succeed({ due: [], nextAt: null }),
+  parkedForDelivery: () => Effect.succeed([]),
   waitingForASweep: () => Effect.succeed([]),
   following: () => Effect.succeed([]),
 };
@@ -34,10 +37,9 @@ const noPlaybooks: FollowedPlaybooks = {
 interface Following {
   readonly streams: readonly string[];
   readonly sweepEveryMs: number;
-  readonly pass: (playbookKey: string) => Effect.Effect<PassEnd>;
+  readonly pass: (org: string) => Effect.Effect<PassEnd>;
   readonly upkeepFailing?: (sweep: number) => boolean;
-  readonly registries?: (registries: readonly string[]) => Effect.Effect<void>;
-  readonly playbookSeen?: (playbookKey: string) => Effect.Effect<void>;
+  readonly orgSeen?: (org: string) => Effect.Effect<void>;
 }
 
 interface Wait {
@@ -68,14 +70,7 @@ function recordingWaits(sweeps: () => number): { readonly pace: HostClock; reado
 }
 
 function followed(following: Following): Followed {
-  const {
-    streams,
-    sweepEveryMs,
-    pass,
-    upkeepFailing = () => false,
-    registries = () => Effect.void,
-    playbookSeen = () => Effect.void,
-  } = following;
+  const { streams, sweepEveryMs, pass, upkeepFailing = () => false, orgSeen = () => Effect.void } = following;
   const counts = { reads: 0, upkeeps: 0 };
   const troubles: string[] = [];
   const recording = recordingWaits(() => counts.reads - 1);
@@ -92,20 +87,17 @@ function followed(following: Following): Followed {
       return upkeepFailing(counts.upkeeps) ? Effect.die(new Error('The backlog could not be read')) : Effect.void;
     });
   const follower = startFollower({
-    pass,
-    discovery: { atStart: () => Effect.void, registriesAppended: registries, playbookSeen },
-    sweeps: playbookSweepsOn(store, noPlaybooks),
+    passes: { org: pass, held: () => Effect.die(new Error('No playbook is held here')) },
+    discovery: { atStart: () => Effect.void, orgSeen },
+    sweeps: orgSweepsOn(store, noOrgs),
     upkeep: { sweep: upkeep, ...nothingDue },
     appended: streamSignalOf(),
-    holds: { heldAt: noPlaybooks.heldAt, failed: () => Effect.void },
+    holds: { heldAt: noOrgs.heldAt, parkedForDelivery: noOrgs.parkedForDelivery, failed: () => Effect.void },
     rounds: { failed: () => Effect.succeed(60_000), succeeded: () => Effect.void },
     clock: systemClock,
     pace: recording.pace,
     sweepEveryMs,
-    trouble: (what) =>
-      Effect.sync(() => {
-        troubles.push(what);
-      }),
+    trouble: (what) => Effect.sync(() => troubles.push(what)),
   });
   onTestFinished(() => follower.stop());
   return {
@@ -148,29 +140,29 @@ function passedReaching(passes: readonly string[], count: number) {
   );
 }
 
-describe('a sweep in which the pass over a playbook fails', () => {
-  it('passes the playbooks after it in the same sweep, and the playbook again at the next sweep', async () => {
+describe('a sweep in which the pass over an org fails', () => {
+  it('passes the orgs after it in the same sweep, and the org again at the next sweep', async () => {
     const passes: string[] = [];
     const watched = followed({
       streams: [`${alpha}events/`, `${beta}events/`],
       sweepEveryMs: 20,
-      pass: passesFailingFirstFor(alpha, (playbookKey) => {
+      pass: passesFailingFirstFor('acme', (playbookKey) => {
         passes.push(playbookKey);
       }),
     });
 
     const passed = await passedReaching(passes, 2);
 
-    expect(passed).toEqual([beta, alpha]);
-    expect(watched.troubles()).toEqual(['A pass over a playbook failed; the next sweep passes the playbook again']);
+    expect(passed).toEqual(['globex', 'acme']);
+    expect(watched.troubles()).toEqual(["A pass over an org's records failed; the next sweep passes the org again"]);
   });
 
-  it('passes the playbook again when the next sweep fails before its passes', async () => {
+  it('passes the org again when the next sweep fails before its passes', async () => {
     const passes: string[] = [];
     const watched = followed({
       streams: [`${alpha}events/`],
       sweepEveryMs: 20,
-      pass: passesFailingFirstFor(alpha, (playbookKey) => {
+      pass: passesFailingFirstFor('acme', (playbookKey) => {
         passes.push(playbookKey);
       }),
       upkeepFailing: (sweep) => sweep === 2,
@@ -178,16 +170,16 @@ describe('a sweep in which the pass over a playbook fails', () => {
 
     const passed = await passedReaching(passes, 1);
 
-    expect(passed).toEqual([alpha]);
+    expect(passed).toEqual(['acme']);
     expect(watched.troubles()).toEqual([
-      'A pass over a playbook failed; the next sweep passes the playbook again',
+      "A pass over an org's records failed; the next sweep passes the org again",
       'The follower of the playbooks failed; it tries again in a minute, twice as long after each round that fails in a row, at most an hour',
     ]);
   });
 });
 
-describe('a sweep in which following a playbook it finds fails', () => {
-  it('passes the playbooks after it in the same sweep, and the playbook again at the next sweep', async () => {
+describe('a sweep in which following an org it finds fails', () => {
+  it('passes the orgs after it in the same sweep, and the org again at the next sweep', async () => {
     const passes: string[] = [];
     const watched = followed({
       streams: [`${alpha}events/`, `${beta}events/`],
@@ -195,19 +187,19 @@ describe('a sweep in which following a playbook it finds fails', () => {
       pass: passesRecorded((playbookKey) => {
         passes.push(playbookKey);
       }),
-      playbookSeen: failingOnceFor(alpha, () => Effect.void),
+      orgSeen: failingOnceFor('acme', () => Effect.void),
     });
 
     const passed = await passedReaching(passes, 2);
 
-    expect(passed).toEqual([beta, alpha]);
-    expect(watched.troubles()).toEqual(['A pass over a playbook failed; the next sweep passes the playbook again']);
+    expect(passed).toEqual(['globex', 'acme']);
+    expect(watched.troubles()).toEqual(["A pass over an org's records failed; the next sweep passes the org again"]);
   });
 });
 
-describe('a sweep in which more playbooks fail than it has room for', () => {
+describe('a sweep in which more orgs fail than it has room for', () => {
   it('waits for the next interval rather than sweeping again at once', async () => {
-    const streams = Array.from({ length: 130 }, (_, index) => `playbook/acme/b${index}/events/`);
+    const streams = Array.from({ length: 130 }, (_, index) => `playbook/o${index}/alpha/events/`);
     const watched = followed({
       streams,
       sweepEveryMs: 1000,
@@ -218,72 +210,5 @@ describe('a sweep in which more playbooks fail than it has room for', () => {
     const firstWait = waits.find(({ milliseconds }) => milliseconds > 0);
 
     expect(firstWait?.sweptBefore).toBeLessThanOrEqual(2);
-  });
-});
-
-function registryReadFailingOnce(read: (registries: readonly string[]) => void) {
-  const failures = { left: 1 };
-  return (registries: readonly string[]) =>
-    Effect.suspend(() => {
-      failures.left -= 1;
-      if (failures.left >= 0) {
-        return Effect.die(new Error('The registry could not be read'));
-      }
-      read(registries);
-      return Effect.void;
-    });
-}
-
-describe('a sweep whose read of a registry of playbooks fails', () => {
-  it('reads the registry again at the next sweep after its read failed', async () => {
-    const followedFrom: string[] = [];
-    const watched = followed({
-      streams: ['org/acme/playbooks'],
-      sweepEveryMs: 20,
-      pass: () => Effect.succeed<PassEnd>('caught_up'),
-      registries: registryReadFailingOnce((registries) => {
-        followedFrom.push(...registries);
-      }),
-    });
-
-    const read = await until(
-      () => Promise.resolve<readonly string[]>([...followedFrom]),
-      (registries) => registries.length > 0,
-    );
-
-    expect(read).toEqual(['org/acme/playbooks']);
-    expect(watched.troubles()).toEqual(['A registry of playbooks could not be read; the next sweep reads it again']);
-  });
-});
-
-describe('a sweep whose read of a registry of playbooks keeps failing', () => {
-  it('still passes the playbooks appended to, and still runs its upkeep', async () => {
-    const passes: string[] = [];
-    const watched = followed({
-      streams: ['org/acme/playbooks', 'playbook/acme/alpha/events/'],
-      sweepEveryMs: 50,
-      pass: (playbookKey) =>
-        Effect.sync(() => {
-          passes.push(playbookKey);
-          return 'caught_up' satisfies PassEnd;
-        }),
-      registries: () => Effect.die(new Error('The registry could not be read')),
-    });
-
-    const passed = await passedReaching(passes, 1);
-    await until(
-      () => Promise.resolve(watched.upkeeps()),
-      (upkeeps) => upkeeps >= 3,
-    );
-    await watched.stop();
-
-    expect(passed).toEqual(['playbook/acme/alpha/']);
-    expect(watched.upkeeps()).toBe(watched.sweeps());
-    expect(watched.troubles()).toEqual(
-      Array.from(
-        { length: watched.sweeps() },
-        () => 'A registry of playbooks could not be read; the next sweep reads it again',
-      ),
-    );
   });
 });

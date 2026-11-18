@@ -13,6 +13,7 @@ import { Clock, Duration, Effect, Option } from 'effect';
 import type {
   AppendedFactsAsked,
   AppendWaitsStore,
+  DefinitionNamesStore,
   FactPlace,
   FactScope,
   RecordedPoint,
@@ -23,10 +24,16 @@ import { isPosition } from '../recorded/cursor.ts';
 
 type AppendedFactsPorts = Pick<Ledger['Service'], 'readAppendedFacts' | 'waitForAppend'>;
 
-type AppendedStore = Pick<RecordedStore, 'pointLength' | 'readAppendedFacts'> & AppendWaitsStore;
+type AppendedStore = Pick<RecordedStore, 'pointLength' | 'readAppendedFacts'> &
+  AppendWaitsStore &
+  Pick<DefinitionNamesStore, 'definitionsIn'>;
 
-function factScopeOf(scope: AppendedScope): FactScope {
-  return scope.kind === 'playbook' ? { kind: 'playbook', playbookKey: streamPrefixOfPlaybook(scope.playbook) } : scope;
+async function factScopeOf(store: AppendedStore, scope: AppendedScope): Promise<FactScope> {
+  if (scope.kind === 'streams') {
+    return scope;
+  }
+  const playbookKey = streamPrefixOfPlaybook(scope.playbook);
+  return { kind: 'playbook', playbookKey, definitionKeys: await store.definitionsIn(playbookKey) };
 }
 
 function cursorOf(place: FactPlace | null): string {
@@ -80,7 +87,9 @@ export function appendedFactsReaderOf(store: AppendedStore): AppendedFactsPorts 
   return {
     readAppendedFacts: (scope, { after, most, dataOf }) => {
       const read = (asked: AppendedFactsAsked) =>
-        Effect.promise(() => store.readAppendedFacts(factScopeOf(scope), asked)).pipe(Effect.flatMap(appendedFactsOf));
+        Effect.promise(async () => store.readAppendedFacts(await factScopeOf(store, scope), asked)).pipe(
+          Effect.flatMap(appendedFactsOf),
+        );
       if (after === undefined) {
         return read({ most, dataOf });
       }
@@ -96,7 +105,9 @@ export function appendedFactsReaderOf(store: AppendedStore): AppendedFactsPorts 
         if (left <= 0) {
           return 'ended';
         }
-        const appended = Effect.promise((signal) => store.waitForAppend(factScopeOf(scope), point, signal));
+        const appended = Effect.promise(async (signal) =>
+          store.waitForAppend(await factScopeOf(store, scope), point, signal),
+        );
         return Option.getOrElse(yield* Effect.timeoutOption(appended, Duration.millis(left)), () => 'ended' as const);
       }),
   };

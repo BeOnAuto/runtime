@@ -1,14 +1,16 @@
-import { type Context, type DefinitionContext, NotFound, randomUUIDv7 } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
+import { type Context, type DefinitionContext, NotFound } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { earlierDefinitionIdOf } from '../identity/definition-ids.ts';
+import { versionOf } from '../operations/registry-access.ts';
+import { inThePlaybook } from '../read-model-testing/in-the-playbook.ts';
+import { createdIn, executedIn } from '../read-model-testing/read-model-histories.ts';
+import { readModelLedgerOf } from '../read-model-testing/read-model-ledger.ts';
 import { recordedAdmin } from '../testing/callers.ts';
 import type { DefinitionCommand } from './definition-commands.ts';
 import type { DefinitionContent, RecordedDefinitionEvent } from './definition-events.ts';
 import { definitionVersionFold, definitionVersionIn } from './definition-versions.ts';
-import { definitionsDecider } from './definitions-decider.ts';
+import { definitionDecider } from './definitions-decider.ts';
 
 function about(name: string, version: number, by = 'acme-admin'): DefinitionContext {
   return {
@@ -27,11 +29,6 @@ const history: readonly RecordedDefinitionEvent[] = [
     context: about('greet', 1),
   },
   {
-    type: 'definition_created',
-    data: { content: { source: 'else' }, created_by: recordedAdmin },
-    context: about('other', 1),
-  },
-  {
     type: 'definition_updated',
     data: { content: { source: 'two', stripped: { module: 'TWO' } } },
     context: about('greet', 2, 'person:ada'),
@@ -41,7 +38,9 @@ const history: readonly RecordedDefinitionEvent[] = [
   { type: 'definition_retired', data: {}, context: about('greet', 2) },
 ];
 
-const echoDefinitions = definitionsDecider('echo', { org: 'acme', playbook: 'alpha' });
+const greetId = '019a5f00-0000-7000-8000-000000000002';
+
+const echoDefinitions = definitionDecider('echo', { org: 'acme', playbook: 'alpha' }, greetId);
 
 const creation = { by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
 
@@ -88,64 +87,52 @@ function decided(...historyDefinitionRestorations: readonly RecordedDefinitionEv
   return echoDefinitions.decide(restoringGreet, registryAfter(echoDefinitions, ...historyDefinitionRestorations));
 }
 
-describe('a search for one version of a definition', () => {
+describe('a search for one version of a definition, on its own stream', () => {
   it('finds its document and the position of the record that made it, as a fold that decides nothing', () => {
-    const search = definitionVersionFold('greet', 2);
-    const first = definitionVersionFold('greet', 1);
+    const search = definitionVersionFold(2);
+    const first = definitionVersionFold(1);
 
     expect(history.reduce((found, event) => search.evolve(found, event), search.initialState)).toEqual({
-      position: 6,
-      found: { source: { inline: 'two' }, stripped: { module: 'TWO' }, position: 3, putInPlaceBy: 'person:ada' },
+      position: 5,
+      found: { source: { inline: 'two' }, stripped: { module: 'TWO' }, position: 2, putInPlaceBy: 'person:ada' },
     });
     expect(Object.keys(search).toSorted()).toEqual(['eventSchema', 'evolve', 'initialState']);
     expect(history.reduce((found, event) => first.evolve(found, event), first.initialState)).toEqual({
-      position: 6,
+      position: 5,
       found: { source: { inline: 'one' }, position: 1, putInPlaceBy: 'acme-admin' },
     });
   });
 
   it('names who put the version in place: whoever saved it, or whoever restored it since', () => {
-    const search = definitionVersionFold('greet', 2);
+    const search = definitionVersionFold(2);
     const restored: RecordedDefinitionEvent = {
       type: 'definition_restored',
       data: { content: { source: 'two' }, restored_by: recordedAdmin },
       context: about('greet', 2, 'person:ben'),
     };
     const restoredBeforeAnySave: RecordedDefinitionEvent = { ...restored, context: about('greet', 3, 'person:ben') };
-    const later = definitionVersionFold('greet', 3);
+    const later = definitionVersionFold(3);
 
     expect([...history, restored].reduce((found, event) => search.evolve(found, event), search.initialState)).toEqual({
-      position: 7,
-      found: { source: { inline: 'two' }, stripped: { module: 'TWO' }, position: 3, putInPlaceBy: 'person:ben' },
+      position: 6,
+      found: { source: { inline: 'two' }, stripped: { module: 'TWO' }, position: 2, putInPlaceBy: 'person:ben' },
     });
     expect(later.evolve(later.initialState, restoredBeforeAnySave)).toEqual({ position: 1, found: undefined });
   });
 });
 
+function refusal(name: string, version: number) {
+  return versionOf('echo', name, version).pipe(
+    Effect.as('found'),
+    Effect.catchTag('not_found', ({ detail }: { readonly detail: string }) => Effect.succeed(detail)),
+  );
+}
+
 describe('a read of one version of a definition of a playbook', () => {
-  it('finds its document in the playbook it reads, and nothing for a version or a playbook that has none', async () => {
-    const ledger = memoryLedger().service;
-    const at = { by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
-    const stream = 'playbook/acme/alpha/definitions/echo';
-    const decider = definitionsDecider('echo', { org: 'acme', playbook: 'alpha' });
-    await Effect.runPromise(
-      ledger.execute(stream, decider, {
-        type: 'create',
-        name: 'greet',
-        content: { source: 'one' },
-        created_by: recordedAdmin,
-        definition_id: randomUUIDv7(),
-        ...at,
-      }),
-    );
-    await Effect.runPromise(
-      ledger.execute(stream, decider, {
-        type: 'update',
-        name: 'greet',
-        content: { source: 'two' },
-        ...at,
-      }),
-    );
+  it('finds its document on the stream of the definition that holds the name in the playbook, and nothing for a version or a playbook that has none', async () => {
+    const ledger = readModelLedgerOf(['echo']).service;
+    await createdIn(ledger, 'greet');
+    await executedIn(ledger, 'echo', { type: 'update', name: 'greet', content: { source: 'two' } });
     const alpha = { org: 'acme', playbook: 'alpha' };
 
     const found = await Effect.runPromise(
@@ -157,9 +144,21 @@ describe('a read of one version of a definition of a playbook', () => {
     );
 
     expect(found).toEqual([
-      { source: { inline: 'two' }, position: 2, putInPlaceBy: 'acme-admin' },
+      { source: { inline: 'two' }, position: 2, putInPlaceBy: 'person_reader' },
       undefined,
       undefined,
+    ]);
+  });
+
+  it('is refused for a name no definition of the playbook holds, and for a version its definition never saved', async () => {
+    const ledger = readModelLedgerOf(['echo']);
+    await createdIn(ledger.service, 'greet');
+    expect(
+      await inThePlaybook(ledger, Effect.all([refusal('nobody', 1), refusal('greet', 2), refusal('greet', 1)])),
+    ).toEqual([
+      'There is no version 1 of the echo definition nobody in this playbook',
+      'There is no version 2 of the echo definition greet in this playbook',
+      'found',
     ]);
   });
 });
@@ -175,7 +174,7 @@ describe('restoring a retired definition', () => {
       echoDefinitions.context(restoringGreet, registryAfter(echoDefinitions, ...historyDefinitionRestorations)),
     ).toStrictEqual({
       ...ofTheDefinition('greet', restoring, 2),
-      definitionId: earlierDefinitionIdOf({ org: 'acme', playbook: 'alpha', type: 'echo', name: 'greet' }),
+      definitionId: greetId,
     });
   });
 

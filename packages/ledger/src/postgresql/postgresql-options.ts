@@ -1,4 +1,4 @@
-import type { ContentHolders, KeptProjection, RunOutcomeMapping, StreamProjection } from '@on.auto/operations';
+import type { ContentHolders, KeptProjection, RunIds, RunOutcomeMapping } from '@on.auto/operations';
 import { Pool } from 'pg';
 
 import type { DefinitionNames } from '../definition-names/definition-names.ts';
@@ -20,13 +20,13 @@ export interface PostgreSQLOptions extends AppendListeners {
   readonly pools: PostgreSQLPools;
   readonly runOutcomes?: RunOutcomeMapping;
   readonly projections?: readonly KeptProjection[];
-  readonly streamProjections?: readonly StreamProjection[];
   readonly mostBytesFilledAtOnce?: number;
   readonly holders?: ContentHolders;
   readonly layoutSteps?: readonly LayoutStep[];
   readonly factSchemas?: readonly FactSchemaRead[];
   readonly floor?: number;
   readonly definitionNames?: DefinitionNames;
+  readonly runIds?: RunIds;
   readonly tableMadeAgain?: (table: string) => void;
   readonly pageFailed?: (position: string) => void;
 }

@@ -1,5 +1,5 @@
-import { Conflict, type KeptProjection, type ProjectedMessage, type StreamProjection } from '@on.auto/operations';
-import { labelReadModelOf, noteHolders, runTallyRows } from '@on.auto/operations/testing';
+import { Conflict, type KeptProjection, type ProjectedMessage } from '@on.auto/operations';
+import { noteHolders, runTallyRows } from '@on.auto/operations/testing';
 import { Function, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -136,12 +136,12 @@ function racedInOppositeOrders(): void {
   });
 }
 
-const ofAlpha = { kind: 'playbook', playbookKey: alpha } as const;
+const ofAlpha = { kind: 'playbook', playbookKey: alpha, definitionKeys: [] } as const;
 
 const fromTheStart = { after: null, most: 10, dataOf: [] };
 
 function heldBackUntilItCommits(): void {
-  it('holds back every fact of the append from a reader until it commits, and a fact committed meanwhile behind it', async () => {
+  it("holds back every fact of the append from a reader, and from a read of the org's records, until it commits, and a fact committed meanwhile behind it", async () => {
     const database = await aDatabase();
     const store = await aStoreOn(database, { projections: [runTallyRows] });
     const holding = await postgresqlConnected(database);
@@ -154,10 +154,13 @@ function heldBackUntilItCommits(): void {
     await untilOneWaitsOnALock(database);
     await store.append(`${alpha}runs/r2`, [began], at(0));
     const whileOpen = await store.readAppendedFacts(ofAlpha, fromTheStart);
+    const ofTheOrgWhileOpen = await store.readRecordedOfOrg('acme', { order: 'asc', limit: 10 });
     await holding.query('ROLLBACK');
     const kept = await appending;
+    const ofTheOrg = await store.readRecordedOfOrg('acme', { order: 'asc', limit: 10 });
 
     expect(whileOpen).toMatchObject({ held: true, facts: [] });
+    expect([ofTheOrgWhileOpen.records, ofTheOrg.records.length]).toEqual([[], 3]);
     expect(kept).toBe('kept');
     expect(await store.readAppendedFacts(ofAlpha, fromTheStart)).toMatchObject({
       held: true,
@@ -263,7 +266,7 @@ function aKeyBrokenMetAsAConflict(): void {
   });
 }
 
-type KeptLockOrderPostgresql = Pick<PostgreSQLOptions, 'holders' | 'streamProjections'>;
+type KeptLockOrderPostgresql = Pick<PostgreSQLOptions, 'holders'>;
 
 async function aStoreOnLockOrderPostgresql(database: string, kept: KeptLockOrderPostgresql): Promise<LedgerStore> {
   const store = postgresqlEventStore({
@@ -348,48 +351,6 @@ function holdsInOneOrder(): void {
   });
 }
 
-const ofThreeStreams: StreamProjection = { ...labelReadModelOf(), streams: ['n1', 'n2', 'n3'] };
-
-function labelsSet(note: string): EncodedEvent {
-  return { type: 'labels_set', data: { note, labels: ['urgent'] } };
-}
-
-const [n1, n2, n3] = [`${alpha}notes/n1`, `${alpha}notes/n2`, `${alpha}notes/n3`] as const;
-
-function checkpointsBeforeRows(): void {
-  it("locks the checkpoints of a stream projection for all its streams before any row the projection's tables fold, so it meets an append to another of the projection's streams that folds into the same rows without a deadlock", async () => {
-    const database = await aDatabase();
-    const store = await aStoreOnLockOrderPostgresql(database, { streamProjections: [ofThreeStreams] });
-    const holding = await postgresqlConnected(database);
-    await holding.query('BEGIN');
-    await holding.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
-      `labelled_checkpoints_1:${alpha}notes/n2`,
-    ]);
-
-    const several = settling(store.multiStreamAppend([to(n1, 0, labelsSet('b')), to(n2, 0, labelsSet('a'))]));
-    await untilWaitingOnALock(database, 1);
-    const one = settling(store.append(n3, [labelsSet('a'), labelsSet('b')], at(0)));
-    await untilKeptOrWaitingOnALock(database, one, 2);
-    await holding.query('ROLLBACK');
-
-    expect([await several.outcome, await one.outcome]).toEqual(['kept', 'kept']);
-    expect(
-      await postgresqlQueried(
-        database,
-        'SELECT stream, folded_through::int AS folded FROM labelled_checkpoints_1 ORDER BY stream',
-      ),
-    ).toEqual([
-      { stream: 'notes/n1', folded: 1 },
-      { stream: 'notes/n2', folded: 1 },
-      { stream: 'notes/n3', folded: 2 },
-    ]);
-    expect(await postgresqlQueried(database, 'SELECT row_key FROM label_notes_1 ORDER BY row_key')).toEqual([
-      { row_key: 'a' },
-      { row_key: 'b' },
-    ]);
-  });
-}
-
 describe.skipIf(skipped)(`An append to several streams on PostgreSQL${notice}`, () => {
   lockedInTheOrderOfTheirNames();
   racedInOppositeOrders();
@@ -400,5 +361,4 @@ describe.skipIf(skipped)(`An append to several streams on PostgreSQL${notice}`, 
 
 describe.skipIf(skipped)(`The locks of an append to several streams on PostgreSQL, in one order${notice}`, () => {
   holdsInOneOrder();
-  checkpointsBeforeRows();
 });

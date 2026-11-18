@@ -7,7 +7,6 @@ import { workflowFacts } from '@on.auto/coordination';
 import { declaredFact, runOutcomeMapping } from '@on.auto/definitions';
 import { renderTargetNames } from '@on.auto/interaction';
 import { nudging } from '@on.auto/interaction/testing';
-import { layoutStepsInSequence } from '@on.auto/ledger';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import { LicensedFeatures, licensedFeaturesOf } from '@on.auto/meter';
 import {
@@ -39,10 +38,9 @@ import { forecastChecked } from '../testing/extensions/declared-facts.ts';
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
 import { applicationLayer } from './application-layer.ts';
 import { factsComposedOf } from './composed-facts.ts';
-import { keptProjections, keptStreamProjections } from './kept-projections.ts';
+import { keptProjections } from './kept-projections.ts';
 import { factSchemasKnownWith, knownFactSchemas } from './known-facts.ts';
 import { factsKnownWith } from './known-holders.ts';
-import { layoutSteps } from './layout-steps.ts';
 import { release } from './release.ts';
 import { runtimeLedger } from './runtime-ledger.ts';
 
@@ -121,10 +119,7 @@ function recordedFixtures() {
 const tables = {
   projections: keptProjections,
   runOutcomes: runOutcomeMapping,
-  streamProjections: keptStreamProjections,
 };
-
-const readModelTables = keptStreamProjections.flatMap(({ tables: kept }) => kept);
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -363,10 +358,7 @@ describe('the facts the server tells the ledger hold content', () => {
 describe('the tables the server keeps from facts', () => {
   it('have a recorded fact of every type they fold, so each type is checked against the payloads it may keep outside', () => {
     const recorded = new Set(recordedFixtures().map(({ type }) => type));
-    const folded = [
-      ...[...keptProjections, ...readModelTables].flatMap(({ types }) => types),
-      ...runOutcomeMapping.types,
-    ];
+    const folded = [...keptProjections.flatMap(({ types }) => types), ...runOutcomeMapping.types];
 
     expect(folded.filter((type) => !recorded.has(type))).toEqual([]);
   });
@@ -398,18 +390,6 @@ describe("the ledger the server hands its capabilities, over the runtime's own",
     await runtime.dispose();
 
     expect(read).toEqual({ type: 'remark_made', data: { text: 'first' }, context: remarkedContext });
-  });
-});
-
-describe('the steps the server gives the ledger, from every package that owns a table in its database', () => {
-  it('lead from the floor to the layout kept by one step for each number, the statements every package gives a number taken together, and hold no step to any other', () => {
-    const inSequence = layoutStepsInSequence(layoutSteps);
-    const numbers = [...new Set(layoutSteps.map(({ layout }) => layout))].toSorted((one, other) => one - other);
-
-    expect(inSequence.map(({ layout }) => layout)).toEqual(numbers);
-    expect(inSequence.flatMap(({ statements }) => statements)).toEqual(
-      layoutSteps.toSorted((one, other) => one.layout - other.layout).flatMap(({ statements }) => statements),
-    );
   });
 });
 

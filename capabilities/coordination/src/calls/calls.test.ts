@@ -1,7 +1,7 @@
 import { nestedRunId, type RunEnding } from '@on.auto/definitions';
 import { describe, expect, it } from 'vitest';
 
-import { childRunOf } from './child-run.ts';
+import { calledDefinitionOf, childRunOf } from './child-run.ts';
 import { definitionRunResultOf, endedRunResultOf } from './function-results.ts';
 
 const workflowRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -31,6 +31,16 @@ describe('the run a call of a workflow starts', () => {
       childRunOf({ ...call, function: 'notify' }),
       childRunOf({ ...call, attributes: {} }),
     ]).toEqual([undefined, undefined, undefined]);
+  });
+});
+
+describe('the definition a call of a workflow calls', () => {
+  it('is the type and the name its arguments give, and none for arguments the call would refuse or another function', () => {
+    expect([
+      calledDefinitionOf(call),
+      calledDefinitionOf({ ...call, arguments: 'plain' }),
+      calledDefinitionOf({ ...call, function: 'notify' }),
+    ]).toEqual([{ type: 'reasoning', name: 'classify' }, undefined, undefined]);
   });
 });
 

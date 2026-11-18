@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-import type { Issue } from '@on.auto/operations';
+import type { Issue, PlaybookAddress, ProjectedAddress } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import type { ReplyRefusal } from '../facts/run-facts.ts';
@@ -15,9 +15,12 @@ interface SentMessage {
 }
 
 export interface KeptRequest {
+  readonly playbook: PlaybookAddress;
+  readonly address: ProjectedAddress;
   readonly runId: string;
   readonly row: OpenRequestRow;
   readonly sent: SentMessage;
+  readonly reading: string;
   readonly rule: ReplyRule;
   readonly answerSchema: Schema.JsonObject;
 }

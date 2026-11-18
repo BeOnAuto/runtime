@@ -11,7 +11,7 @@ import {
   type CallRecord,
   type Delivery,
 } from '../follower/consumers.ts';
-import { runKeyOf } from '../runs/run-address.ts';
+import { runKeyUnder } from '../runs/run-address.ts';
 import { passedOverRow } from './pending-cancel-rows.ts';
 import type { WaitingOptions } from './waiting-options.ts';
 
@@ -25,6 +25,7 @@ export interface CancelParts {
 
 interface Asked {
   readonly playbook: PlaybookAddress;
+  readonly filedUnder: string;
   readonly record: RecordedEvent;
   readonly request: CancelRequested;
 }
@@ -42,10 +43,10 @@ function lineageOf({ id, correlationId }: RecordedEvent): Lineage {
   return { causationId: id, correlationId };
 }
 
-function cancelledWorkflow(parts: CancelParts, { playbook, record, request, runId }: AskedOfARun) {
+function cancelledWorkflow(parts: CancelParts, { filedUnder, record, request, runId }: AskedOfARun) {
   const { kind, reason } = request.data;
   const { by } = request.context;
-  const runKey = runKeyOf({ ...playbook, runId });
+  const runKey = runKeyUnder(filedUnder, runId);
   const pending = { runKey, cause: record.id, cancel: { by, kind, reason } };
   return parts.submitted({ kind: 'cancel_requested', runId: runKey, at: parts.now(), ...pending }).pipe(
     Effect.flatMap(({ outcome }) => (outcome === 'not_started' ? passedOverRow(parts.database, pending) : Effect.void)),
@@ -65,9 +66,9 @@ function cancelled(parts: CancelParts, asked: AskedOfARun): Effect.Effect<void, 
     .pipe(Effect.mapError(failedWith));
 }
 
-function askedOf({ playbook, record }: CallRecord): Asked | undefined {
+function askedOf({ playbook, filedUnder, record }: CallRecord): Asked | undefined {
   const request = cancelRequestOf(record);
-  return request === undefined ? undefined : { playbook, record, request };
+  return request === undefined ? undefined : { playbook, filedUnder, record, request };
 }
 
 function deliveriesOf(parts: CancelParts, asked: Asked): readonly Delivery[] {

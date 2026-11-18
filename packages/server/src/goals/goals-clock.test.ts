@@ -246,7 +246,7 @@ async function movedThroughDays(assessed: Assessing, from: number, days: number)
 const clockRowOf = async (assessed: Assessing) => Object.values(await assessed.rowsOf('goal_clocks'))[0];
 
 describe('a daily goal on a Node server whose only contribution is paused', () => {
-  it('holds no boundary on its clock row while paused, so the clock does no work, and a resume arms it for the next day', async () => {
+  it('is due once a day while paused and opens nothing, and after a resume opens the next day, not the day it was resumed in', async () => {
     const assessed = await served(goalsOf('checked-daily'));
     expect(await savedWorkflow(assessed.server, 'check', reporting('checked-daily', []))).toBe(201);
     const paused = await assessed.server.call(
@@ -260,12 +260,10 @@ describe('a daily goal on a Node server whose only contribution is paused', () =
     assessed.clock.moveTo(midnight + 1000);
     const quiet = await until(
       () => clockRowOf(assessed),
-      (row) => row?.['opens_at'] === null,
+      (row) => row?.['opens_at'] === midnight + day,
     );
-    const performedBefore = assessed.asked.filter((asked) => asked.endsWith('goals/playbook')).length;
     await movedThroughDays(assessed, midnight + 1000, 3);
-    const performedWhilePaused =
-      assessed.asked.filter((asked) => asked.endsWith('goals/playbook')).length - performedBefore;
+    const whilePaused = ofGoal(await assessed.rowsOf('goal_assessments'), 'checked-daily');
     const resumedAt = midnight + 3 * day + 10 * hour;
     assessed.clock.moveTo(resumedAt);
     const mocked = vi.spyOn(Date, 'now').mockReturnValue(resumedAt);
@@ -274,19 +272,16 @@ describe('a daily goal on a Node server whose only contribution is paused', () =
       .finally(() => {
         mocked.mockRestore();
       });
-    const armed = await until(
-      () => clockRowOf(assessed),
-      (row) => row?.['opens_at'] === midnight + 4 * day,
-    );
+    const afterTheResume = await clockRowOf(assessed);
     const resumedDay = ofGoal(await assessed.rowsOf('goal_assessments'), 'checked-daily');
     assessed.clock.moveTo(midnight + 4 * day + 1000);
     const rows = await rowsHolding(assessed, (held) => ofGoal(held, 'checked-daily').length === 1);
 
     expect(paused.status).toBe(200);
-    expect(quiet).toMatchObject({ opens_at: null });
-    expect(performedWhilePaused).toBe(0);
+    expect(quiet).toMatchObject({ opens_at: midnight + day });
+    expect(whilePaused).toEqual([]);
     expect(resumed.status).toBe(200);
-    expect(armed).toMatchObject({ opens_at: midnight + 4 * day });
+    expect(afterTheResume).toMatchObject({ opens_at: midnight + 4 * day });
     expect(resumedDay).toEqual([]);
     expect(ofGoal(rows, 'checked-daily')[0]).toMatchObject({ window_opens: midnight + 4 * day, open: true });
     expect((await clockRowOf(assessed))?.['opens_at']).toBe(midnight + 5 * day);

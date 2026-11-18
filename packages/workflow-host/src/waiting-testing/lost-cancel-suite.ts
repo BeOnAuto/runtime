@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { alpha, at, playbookCreated, recorded } from '../reaction-testing/playbook-writes.ts';
+import { at, playbookCreated, recorded, testDefinitionsPlaced } from '../reaction-testing/playbook-writes.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { until } from '../testing/until.ts';
@@ -10,9 +10,11 @@ import { startedByAHostThatDied } from './crashed-host.ts';
 import { followedThroughTheLatest, settledIn, untilFollowed } from './followed-host.ts';
 import {
   askedCancel,
+  filedRunOf,
   lostCancelId,
   lostRunId,
   lostRunKey,
+  lostRunPlaced,
   lostStart,
   lostStream,
   startedThenCancelled,
@@ -41,12 +43,13 @@ function diedAfterTheStart(settingsOf: SettingsOf): void {
       const settings = await settingsOf();
       const database = await openedOn(settings);
       await playbookCreated(database.store, 'alpha');
+      await testDefinitionsPlaced(database.store);
       const first = await hostedOn(settings);
       await untilFollowed(database);
       await startedThenCancelled(database);
       await followedThroughTheLatest(database);
       await first.host.stop();
-      await startedByAHostThatDied(database, lostRunKey, lostStart);
+      await startedByAHostThatDied(await lostRunPlaced(database), lostRunKey, lostStart);
 
       const next = await hostedOn(settings);
       next.know(lostRunId);
@@ -69,11 +72,12 @@ function endedWithoutStarting(settingsOf: SettingsOf): void {
       const settings = await settingsOf();
       const database = await openedOn(settings);
       await playbookCreated(database.store, 'alpha');
+      await testDefinitionsPlaced(database.store);
       const first = await hostedOn(settings);
       await untilFollowed(database);
       const pending = () => Effect.runPromise(pendingCancelRowsAfter(database, '', 10));
       await startedThenCancelled(database);
-      await recorded(database.store, `${alpha}runs/${strandedId}`, strandedCancel, {
+      await recorded(database.store, filedRunOf(strandedId).stream, strandedCancel, {
         ...ofTheRun,
         runId: strandedId,
       });
@@ -92,7 +96,7 @@ function endedWithoutStarting(settingsOf: SettingsOf): void {
         cancel: askedCancel,
       });
       expect(keptAfterTheEnding).toHaveLength(2);
-      expect(left.map(({ runKey }) => runKey)).toEqual([`acme/alpha/${strandedId}`]);
+      expect(left.map(({ runKey }) => runKey)).toEqual([filedRunOf(strandedId).runKey]);
     });
   });
 }

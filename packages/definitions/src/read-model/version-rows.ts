@@ -3,7 +3,7 @@ import type { KeyedProjection, ProjectedMessage, ProjectedRow, ProjectedStream }
 import { isDefinitionSaved } from '../registry/definition-events.ts';
 import { definitionFactOf } from './definition-rows.ts';
 
-function versionKeyOf(message: ProjectedMessage, { id }: ProjectedStream): string | undefined {
+export function versionKeyOf(message: ProjectedMessage, { id }: ProjectedStream): string | undefined {
   const fact = definitionFactOf(message);
   if (fact === undefined || !(isDefinitionSaved(fact) || fact.type === 'definition_restored')) {
     return undefined;
@@ -29,7 +29,8 @@ function versionRowAfter(row: ProjectedRow | undefined, message: ProjectedMessag
 
 export const definitionVersionRows: KeyedProjection = {
   name: 'definition_versions',
-  version: 3,
+  version: 4,
+  scopes: ['definition'],
   kinds: ['definitions'],
   types: ['definition_created', 'definition_updated', 'definition_restored'],
   columns: [

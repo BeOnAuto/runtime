@@ -79,7 +79,3 @@ function theStepTo(layout: number, steps: readonly LayoutStep[]): LayoutStep {
 export function stepsFrom(layout: number, { kept, steps }: Omit<LayoutCarrying, 'floor'>): readonly LayoutStep[] {
   return Array.from({ length: Math.max(kept - layout, 0) }, (_, index) => theStepTo(layout + index + 1, steps));
 }
-
-export function layoutStepsInSequence(steps: readonly LayoutStep[]): readonly LayoutStep[] {
-  return stepsFrom(ledgerLayoutFloor, layoutCarryingBy({ layoutSteps: steps }));
-}

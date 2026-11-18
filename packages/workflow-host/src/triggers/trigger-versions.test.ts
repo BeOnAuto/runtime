@@ -17,7 +17,9 @@ import { movedClock } from '../reaction-testing/moved-clock.ts';
 import {
   alpha,
   at,
+  byAdmin,
   cronTrigger,
+  definitionStreamNamed,
   definitionRecordAt,
   definitionRecorded,
   definitionRetired,
@@ -124,7 +126,7 @@ describe('a version that leaves the triggers of the one before unchanged', () =>
     expect([next?.version, next?.input, next?.cause]).toEqual([
       2,
       { schedule: { due: isoAt(3) } },
-      definitionRecordAt(1),
+      definitionRecordAt('tick', 1),
     ]);
   });
 });
@@ -153,7 +155,7 @@ describe('a version that changes an every schedule', () => {
     expect([next?.version, next?.input, next?.cause]).toEqual([
       2,
       { schedule: { due: isoAt(5.5) } },
-      definitionRecordAt(2),
+      definitionRecordAt('tick', 2),
     ]);
   });
 });
@@ -286,9 +288,9 @@ describe('the triggers of a playbook made again from the records of its definiti
     expect(
       rows.map(({ workflow, reference, version, activated_by: by }) => [workflow, reference, version, by]),
     ).toEqual([
-      ['close', '/schedule/every', 3, definitionRecordAt(1)],
-      ['close', '/schedule/on', 3, definitionRecordAt(3)],
-      ['tick', '/schedule/every', 2, definitionRecordAt(5)],
+      ['close', '/schedule/every', 3, definitionRecordAt('close', 1)],
+      ['close', '/schedule/on', 3, definitionRecordAt('close', 3)],
+      ['tick', '/schedule/every', 2, definitionRecordAt('tick', 2)],
     ]);
   });
 });
@@ -298,14 +300,20 @@ describe('the triggers of a playbook made again, past the records of its definit
     const settings = await onSQLite();
     const { store } = await openedOn(settings);
     await playbookCreated(store, 'alpha');
-    await recorded(store, `${alpha}definitions/workflow`, {
-      type: 'definition_created',
-      data: { content: 7 },
-    });
-    await recorded(store, `${alpha}definitions/workflow`, {
-      type: 'definition_created',
-      data: { content: {} },
-    });
+    const broken = { ...byAdmin, definitionType: 'workflow', definitionName: 'broken', definitionVersion: 1 };
+    await definitionRecorded(store, { name: 'broken', version: 1, triggers: [] });
+    await recorded(
+      store,
+      definitionStreamNamed('broken'),
+      { type: 'definition_updated', data: { content: 7 } },
+      { ...broken, definitionVersion: 2 },
+    );
+    await recorded(
+      store,
+      definitionStreamNamed('broken'),
+      { type: 'definition_updated', data: { content: {} } },
+      { ...broken, definitionVersion: 3 },
+    );
     await definitionRecorded(store, { name: 'tick', version: 1, triggers: [everyTrigger(aMinute)] });
 
     const reacting = await reactingHost({ settings, clock: movedClock(activatedAt + 1000) });
@@ -320,15 +328,15 @@ describe('the triggers of a playbook made again, past the records of its definit
         kind: 'record_unreadable',
         org: 'acme',
         playbook: 'alpha',
-        recordId: definitionRecordAt(1),
-        type: 'definition_created',
+        recordId: definitionRecordAt('broken', 2),
+        type: 'definition_updated',
       },
       {
         kind: 'record_unreadable',
         org: 'acme',
         playbook: 'alpha',
-        recordId: definitionRecordAt(2),
-        type: 'definition_created',
+        recordId: definitionRecordAt('broken', 3),
+        type: 'definition_updated',
       },
     ]);
   });

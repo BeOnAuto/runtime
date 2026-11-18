@@ -1,12 +1,11 @@
 import type { RunContext } from '@on.auto/definitions';
 import { noCalledDefinitions, recordingJournal } from '@on.auto/definitions/testing';
 import { InvalidInput } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import type { Json } from '@on.auto/workflow-engine';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { playbookOn } from '../testing/playbook.ts';
+import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { recordingStarts, recordingWorkflows } from '../testing/recording-starts.ts';
 import { acmeCaller } from '../testing/workflows.ts';
 
@@ -42,7 +41,7 @@ const tooFewSeats = { pointer: '/input/seats', detail: 'seats, How many seats to
 
 async function playbookWith(name: string, source: string) {
   const { starts, recording } = recordingStarts();
-  const playbook = playbookOn(memoryLedger(), [recordingWorkflows(recording)]);
+  const playbook = playbookOn(namingLedger(), [recordingWorkflows(recording)]);
   await playbook.call(playbook.createDefinition, { type: 'workflow', name, source });
   const run = (input: Json, run_id?: string) =>
     playbook.call(playbook.runDefinition, {
@@ -161,7 +160,7 @@ function contextOf(links: Partial<Pick<RunContext, 'trigger'>>): RunContext {
     org: 'acme',
     playbook: 'alpha',
     caller: acmeCaller,
-    definition: { name: 'booking', version: 1 },
+    definition: { id: '0199a3c4-7d2e-7c1a-9b3f-0000000000d1', name: 'booking', version: 1 },
     journal: recordingJournal(),
     lineage: { startId: 'start-1', correlationId: runId },
     depth: 1,

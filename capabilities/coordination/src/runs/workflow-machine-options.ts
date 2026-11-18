@@ -2,7 +2,7 @@ import type { PlaybookOwnNames } from '@on.auto/definitions';
 import type { JsonObject, MachineOptions, MachineSandbox, MachineSettings } from '@on.auto/workflow-engine';
 import { runLogContextOf } from '@on.auto/workflow-host';
 
-import { childRunOf } from '../calls/child-run.ts';
+import { calledDefinitionOf, childRunOf } from '../calls/child-run.ts';
 import { workflowFunctionsOf } from '../document/workflow-functions.ts';
 
 const runtimeDescriptor: JsonObject = {
@@ -13,7 +13,7 @@ const runtimeDescriptor: JsonObject = {
 
 export function workflowMachineSettingsOf(names: PlaybookOwnNames): MachineSettings {
   return {
-    functions: { ...workflowFunctionsOf(names), childOf: childRunOf },
+    functions: { ...workflowFunctionsOf(names), childOf: childRunOf, calledOf: calledDefinitionOf },
     runtime: runtimeDescriptor,
     contextOf: runLogContextOf,
   };

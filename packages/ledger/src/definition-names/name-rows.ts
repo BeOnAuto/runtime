@@ -1,9 +1,15 @@
 import { SQL } from '@event-driven-io/dumbo';
-import type { DefinitionName, HeldName } from '@on.auto/operations/definition-names';
+import type {
+  DefinitionName,
+  HeldName,
+  NameInAPlaybook,
+  StreamInAPlaybook,
+} from '@on.auto/operations/definition-names';
 import { Schema } from 'effect';
 
-import type { StatementExecutor } from '../event-store.ts';
+import type { DefinitionNamesStore, StatementExecutor } from '../event-store.ts';
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
+import type { ReadQuery } from '../scrub/scrubbed-facts.ts';
 import { definitionNames } from './definition-names-table.ts';
 
 const NameRows = Schema.Array(
@@ -19,8 +25,16 @@ const NameRows = Schema.Array(
 
 const decodeNameRows = Schema.decodeUnknownSync(NameRows);
 
-async function heldWhere(execute: StatementExecutor, where: SQL): Promise<readonly HeldName[]> {
-  const { rows } = await execute.query(
+const decodeHolderRows = Schema.decodeUnknownSync(Schema.Array(Schema.Struct({ definition_key: Schema.String })));
+
+const defaultPartition = 'emt:default';
+
+export function readOn(execute: StatementExecutor): ReadQuery {
+  return async (sql) => (await execute.query(sql)).rows;
+}
+
+async function heldWhere(read: ReadQuery, where: SQL): Promise<readonly HeldName[]> {
+  const rows = await read(
     SQL`SELECT playbook_key, definition_type, name, definition_key, status, has_triggers
       FROM ${definitionNames} WHERE ${where} ORDER BY definition_key`,
   );
@@ -34,27 +48,48 @@ async function heldWhere(execute: StatementExecutor, where: SQL): Promise<readon
   }));
 }
 
-export async function heldBy(execute: StatementExecutor, definitionKey: string): Promise<HeldName | undefined> {
-  return (await heldWhere(execute, SQL`definition_key = ${definitionKey}`)).at(0);
+export async function heldBy(read: ReadQuery, definitionKey: string): Promise<HeldName | undefined> {
+  return (await heldWhere(read, SQL`definition_key = ${definitionKey}`)).at(0);
 }
 
 export async function holderOf(
-  execute: StatementExecutor,
-  { playbookKey, definitionType, name }: DefinitionName,
+  read: ReadQuery,
+  { playbookKey, definitionType, name }: NameInAPlaybook,
 ): Promise<HeldName | undefined> {
   return (
-    await heldWhere(
-      execute,
-      SQL`playbook_key = ${playbookKey} AND definition_type = ${definitionType} AND name = ${name}`,
-    )
+    await heldWhere(read, SQL`playbook_key = ${playbookKey} AND definition_type = ${definitionType} AND name = ${name}`)
   ).at(0);
 }
 
 export function namesOfAKind(
-  execute: StatementExecutor,
+  read: ReadQuery,
   { playbookKey, definitionType }: Pick<DefinitionName, 'playbookKey' | 'definitionType'>,
 ): Promise<readonly HeldName[]> {
-  return heldWhere(execute, SQL`playbook_key = ${playbookKey} AND definition_type = ${definitionType}`);
+  return heldWhere(read, SQL`playbook_key = ${playbookKey} AND definition_type = ${definitionType}`);
+}
+
+async function holderOfStreamIn(
+  read: ReadQuery,
+  { playbookKey, stream }: StreamInAPlaybook,
+): Promise<string | undefined> {
+  const rows = await read(
+    SQL`SELECT n.definition_key FROM ${definitionNames} AS n
+      WHERE n.playbook_key = ${playbookKey} AND EXISTS (SELECT 1 FROM emt_streams AS s
+        WHERE s.stream_id = n.definition_key || ${stream} AND s.partition = ${defaultPartition} AND s.is_archived = FALSE)
+      ORDER BY n.definition_key LIMIT 1`,
+  );
+  return decodeHolderRows(rows).at(0)?.definition_key;
+}
+
+export function definitionNamesReadOn(read: ReadQuery): DefinitionNamesStore {
+  return {
+    holderOfName: (named) => holderOf(read, named),
+    nameHeldBy: (definitionKey) => heldBy(read, definitionKey),
+    namesHeldIn: (kind) => namesOfAKind(read, kind),
+    definitionsIn: async (playbookKey) =>
+      (await heldWhere(read, SQL`playbook_key = ${playbookKey}`)).map(({ definitionKey }) => definitionKey),
+    holderOfStream: (named) => holderOfStreamIn(read, named),
+  };
 }
 
 export function nameReleased(execute: StatementExecutor, definitionKey: string): Promise<unknown> {

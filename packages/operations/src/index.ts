@@ -1,11 +1,7 @@
-export {
-  orgOfStreamPrefix,
-  playbookBoundProjectionReader,
-  playbookBoundStreamReader,
-  playbookOfStreamPrefix,
-  streamPrefixOfPlaybook,
-  streamPrefixOfOrg,
-} from './ledger/bound-ports.ts';
+export { definitionBoundStreamReader, definitionOfStreamPrefix, orgOfStreamPrefix } from './ledger/bound-ports.ts';
+export { playbookBoundProjectionReader, playbookBoundStreamReader, runStreamNameOf } from './ledger/bound-ports.ts';
+export { playbookOfStreamPrefix, streamPrefixOfDefinition, streamPrefixOfPlaybook } from './ledger/bound-ports.ts';
+export { streamPrefixOfOrg, streamPrefixOfTheDefinitionsOf } from './ledger/bound-ports.ts';
 export { PlaybookAccessSchema, canAccessPlaybook, type PlaybookAccess } from './caller/playbook-access.ts';
 export { PlaybookRegistry, type PlaybookStatus } from './ledger/playbook-registry.ts';
 export {
@@ -37,15 +33,12 @@ export {
 export { catalogPathOf, makeCatalog, type Catalog } from './catalog/catalog.ts';
 export { CancelledKindSchema, RunCancelled, type CancelledKind } from './outcome/cancelled-run.ts';
 export { Conflict, ConflictKindSchema, resolutionOf, type ConflictKind } from './outcome/conflict.ts';
+export { runIdClaimsOf, type RunIdClaim, type RunIdInAnOrg, type RunIds } from './run-ids/run-ids.ts';
 export { Forbidden, ForbiddenKindSchema } from './outcome/forbidden.ts';
 export { RunUnanswered, UnansweredKindSchema, type UnansweredKind } from './outcome/unanswered-run.ts';
 export { addressOfStreamPrefix, addressedStreamOf, advancedColumnsLeftBy } from './projections/keyed-projection.ts';
 export { advancedColumnsOf, childKeyColumn, foldsStream } from './projections/keyed-projection.ts';
 export { checkedProjection } from './projections/projection-checks.ts';
-export { checkedStreamProjection, checkpointsOf, typesOf } from './stream-projections/stream-projection.ts';
-export type { CountedRows, GroupwiseMaximum, StreamProjection } from './stream-projections/stream-projection.ts';
-export { circuitBreakers, readModelOpenForMs, type CircuitBreakers } from './stream-projections/circuit-breakers.ts';
-export { isStreamProjectionRefused, StreamProjectionRefused } from './stream-projections/stream-projection-refused.ts';
 export { keepsChildRows, projectedTableOf, requireAdvancedColumns } from './projections/keyed-projection.ts';
 export { rowKeyColumn, rowKeyOf, scopesOf, streamPrefixOfAddress } from './projections/keyed-projection.ts';
 export { type AddressedStream } from './projections/keyed-projection.ts';
@@ -57,8 +50,9 @@ export { type ProjectedKeyedRow, type ProjectedMessage, type ProjectedOrder } fr
 export { type ProjectedRow, type ProjectedRows, type ProjectedRowsQuery } from './projections/keyed-projection.ts';
 export { type ProjectedStream, type ProjectedValue, type ProjectionAdvancer } from './projections/keyed-projection.ts';
 export { type ProjectionDeclaration, type RowAdvance, type ProjectionReader } from './projections/keyed-projection.ts';
-export { type StreamScope } from './projections/keyed-projection.ts';
-export { playbookRowsOf, type PlaybookProjectedRow } from './projections/playbook-rows.ts';
+export { everyDefinitionOf, partitionOfTheRow } from './projections/keyed-projection.ts';
+export { type RowPartition, type RowsAddress, type StreamScope } from './projections/keyed-projection.ts';
+export { addressOfTheRow, playbookRowsOf, type PlaybookProjectedRow } from './projections/playbook-rows.ts';
 export { comparedColumnOf } from './projections/projected-conditions.ts';
 export type { ProjectedComparison, ProjectedCondition } from './projections/projected-conditions.ts';
 export {

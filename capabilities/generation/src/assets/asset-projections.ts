@@ -14,8 +14,6 @@ export const assetsName = 'assets';
 
 export const assetTotalsName = 'asset_totals';
 
-export const totalsKey = 'playbook';
-
 const readAsset = factReaderOf(AssetEventSchema);
 
 const AssetRowSchema = Schema.Struct({
@@ -103,6 +101,7 @@ const assetTypes = ['asset_kept', 'asset_expired'];
 export const assets: KeyedProjection = {
   name: assetsName,
   version: 1,
+  scopes: ['definition'],
   kinds: [assetsKind],
   types: assetTypes,
   columns: [
@@ -124,6 +123,7 @@ export const assets: KeyedProjection = {
 export const assetTotals: KeyedProjection = {
   name: assetTotalsName,
   version: 1,
+  scopes: ['definition'],
   kinds: [assetsKind],
   types: assetTypes,
   columns: [
@@ -131,6 +131,6 @@ export const assetTotals: KeyedProjection = {
     { name: 'assets', kind: 'integer' },
   ],
   indexes: [],
-  keyOf: () => totalsKey,
+  keyOf: (_message, { address }) => address.definition,
   rowAfter: totalsAfter,
 };

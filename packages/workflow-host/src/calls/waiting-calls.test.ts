@@ -1,16 +1,15 @@
 import { statement } from '@on.auto/ledger';
-import { messageIdOf, type CallResult } from '@on.auto/operations';
+import type { CallResult } from '@on.auto/operations';
 import type { CallAnsweredResult, StartCall } from '@on.auto/workflow-engine';
 import { Deferred, Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { faultyDatabase } from '../testing/faulty-database.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { faultyWithARun, logRecordOf, runKeyAt } from '../testing/started-runs.ts';
 import { until } from '../testing/until.ts';
 import type { ChildCancel, ChildReceipt } from './call-cancels.ts';
 import { hostExecutor, type CallAnswer } from './host-executor.ts';
 
-const runKey = 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+const runKey = runKeyAt('0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a');
 
 const root = '0199a3c4-7d2e-7c1a-9b3f-000000000999';
 
@@ -60,7 +59,7 @@ async function executing(
   answer: (call: StartCall) => Effect.Effect<CallAnswer>,
   { mostOpen = 1000, ended, receipt = 'requested' }: Executing = {},
 ) {
-  const database = faultyDatabase(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
+  const database = await faultyWithARun('0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a');
   const counts = { performed: 0 };
   const answered: CallAnsweredResult[] = [];
   const cancels: ChildCancel[] = [];
@@ -177,9 +176,16 @@ describe('a cancel of a waiting call', () => {
     expect(calls.cancels()).toEqual([
       {
         child: { org: 'acme', playbook: 'alpha', runId: child },
+        call: {
+          kind: 'start_call',
+          key: { runId: runKey, reference: '/do/0/a', run: 1 },
+          function: 'notify',
+          arguments: { to: 'ada' },
+          longestMs: 60_000,
+        },
         reason: 'deadline',
         lineage: {
-          causationId: messageIdOf(`playbook/acme/alpha/run-logs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a`, origin.version),
+          causationId: logRecordOf('0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a', origin.version),
           correlationId: root,
         },
       },
@@ -215,7 +221,7 @@ describe('a cancel of a running call', () => {
 
 describe('a cancel of a call whose run could not be cancelled', () => {
   it('fails to be dispatched again when the run it waits for could not be cancelled', async () => {
-    const database = faultyDatabase(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
+    const database = await faultyWithARun('0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a');
     const executor = hostExecutor({
       now: Date.now,
       database,

@@ -44,7 +44,7 @@ function succeededWith(index: number, data: Readonly<Record<string, Schema.Json>
 
 async function storeAnswering(page: StoredPage): Promise<LedgerStreams> {
   const { store } = await openedOn(await onSQLite());
-  return { ...store, readRecorded: () => Promise.resolve(page) };
+  return { ...store, readRecordedOfKeys: () => Promise.resolve(page) };
 }
 
 async function keptOutputs(count: number, output: Schema.Json) {

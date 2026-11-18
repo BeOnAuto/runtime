@@ -8,6 +8,7 @@ import {
   type WorkRule,
 } from '@on.auto/definitions';
 import type {
+  LedgerPorts,
   Lineage,
   ProjectionAdvancer,
   ProjectionReader,
@@ -30,6 +31,7 @@ export interface RequestLedger
   extends
     StreamWriter,
     StreamReader,
+    Pick<LedgerPorts, 'holderOfStream'>,
     Pick<RecordedReader, 'readRecorded'>,
     Pick<ProjectionReader, 'readDueRows' | 'nextDueOf' | 'readProjectedRows'>,
     Pick<ProjectionAdvancer, 'advanceRow'>,
@@ -40,7 +42,7 @@ function endedBefore(): Effect.Effect<void> {
 }
 
 export function settled(
-  ledger: StreamWriter,
+  ledger: StreamWriter & Pick<LedgerPorts, 'holderOfStream'>,
   address: RequestAddress,
   settlement: Settlement,
   lineage: Lineage,

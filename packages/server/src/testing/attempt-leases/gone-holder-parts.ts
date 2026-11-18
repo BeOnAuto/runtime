@@ -50,7 +50,7 @@ interface AttemptsWorkGiven extends Asked {
 }
 
 export function startedBy(id: string): RunEvent {
-  return { type: 'run_started', data: { started_by: { id, name: id }, input: {}, resumes: true } };
+  return { type: 'run_started', data: { started_by: { id, name: id }, playbook: 'alpha', input: {}, resumes: true } };
 }
 
 export const at = Date.parse('2026-11-15T09:00:00.000Z');
@@ -74,7 +74,7 @@ async function partsGiven(given: Readonly<Given>, holding: AttemptHolding, lease
   const { startedBy: by = writer.id, answered = ran, notMade } = given;
   const definition = { definitionType: 'reasoning', definitionName: 'summary', definitionVersion: 1 };
   const { runtime, store } = await runtimeRecording({
-    stream: `playbook/acme/alpha/runs/${run.runId}`,
+    definition: { type: definition.definitionType, name: definition.definitionName },
     events: given.events ?? [startedBy(by)],
     context: { runId: run.runId, by, at: new Date(at).toISOString(), ...definition, ...given.context },
   });

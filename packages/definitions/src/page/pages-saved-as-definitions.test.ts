@@ -48,13 +48,13 @@ const savedBack = Effect.gen(function* () {
 async function withPagesOfTheirOwn() {
   const asked = playbookAsked();
   await asked.created('workflow', 'morning', 'name: morning\ndo: []\n');
-  await asked.created('page', 'morning-posts', morningPage, { details: details('workflow/morning') });
-  await asked.record('page', {
+  await asked.savedAsAPage('morning-posts', morningPage, { details: details('workflow/morning') });
+  await asked.recordedAsAPage({
     type: 'update',
     name: 'morning-posts',
     content: { source: `${morningPage}\n`, details: details('workflow/morning'), stripped: { module: 'm' } },
   });
-  await asked.created('page', 'dashboard', playbookPage, { details: details('playbook') });
+  await asked.savedAsAPage('dashboard', playbookPage, { details: details('playbook') });
   return asked;
 }
 
@@ -110,7 +110,7 @@ describe('a page saved as a definition of its own that gives way', () => {
   it('gives way to the page key of its subject, and to an empty one, which means no page', async () => {
     const asked = await withPagesOfTheirOwn();
     await asked.created('workflow', 'evening', 'name: evening\npage: {}\n', { page: null });
-    await asked.record('page', {
+    await asked.recordedAsAPage({
       type: 'create',
       name: 'evening-posts',
       content: { source: savedAsADefinition('workflow/evening'), details: details('workflow/evening') },
@@ -138,16 +138,16 @@ describe('a page saved as a definition of its own that gives way', () => {
   it('stays its subject’s page while it is paused', async () => {
     const asked = await withPagesOfTheirOwn();
     const before = await asked.ask(Effect.map(carriedPagesIn, (carried) => [...carried.keys()]));
-    await asked.record('page', { type: 'pause', name: 'morning-posts', paused_by: recordedAdmin });
+    await asked.recordedAsAPage({ type: 'pause', name: 'morning-posts', paused_by: recordedAdmin });
 
     expect(await asked.ask(Effect.map(carriedPagesIn, (carried) => [...carried.keys()]))).toEqual(before);
   });
 
   it('is no page once it was retired, nor where its details name no subject or its source no longer reads as a page', async () => {
     const asked = await withPagesOfTheirOwn();
-    await asked.record('page', { type: 'retire', name: 'morning-posts' });
-    await asked.created('page', 'unnamed', pageOf(), { details: {} });
-    await asked.created('page', 'twice', pageOf({ front: 'of: playbook\nof: playbook' }), {
+    await asked.recordedAsAPage({ type: 'retire', name: 'morning-posts' });
+    await asked.savedAsAPage('unnamed', pageOf(), { details: {} });
+    await asked.savedAsAPage('twice', pageOf({ front: 'of: playbook\nof: playbook' }), {
       details: details('workflow/noon'),
     });
 
@@ -167,7 +167,7 @@ describe('a page saved as a definition of its own whose document a fact keeps ou
     const kept = await asked.playbook.run(
       textKeptIn(asked.playbook.ledger.service.content, { org: 'acme', playbook: 'alpha' }, noon),
     );
-    await asked.record('page', {
+    await asked.recordedAsAPage({
       type: 'create',
       name: 'noon-posts',
       content: { source_sha256: kept.sha256, source_bytes: kept.bytes, details: details('workflow/noon') },

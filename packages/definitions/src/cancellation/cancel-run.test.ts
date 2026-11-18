@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   cancelledAsAsked,
+  type CalledRun,
   type CancelledRun,
   type CancelOfALiveAttempt,
   type CancelRequest,
@@ -13,7 +14,6 @@ import {
   defineCancelRun,
   defineCapability,
   runCanceller,
-  type RunStreamAddress,
   type Settlement,
 } from '../index.ts';
 import { cancelsAt, longestCallMs } from '../read-model-testing/dead-attempt-cancels.ts';
@@ -22,7 +22,7 @@ import { runDecider } from '../runs/run-decider.ts';
 import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { firstMoment, harness, runStreamIn, toPlaybook } from '../testing/harness.ts';
 import { keptIn, recordedAsGiven, watchedStore } from '../testing/kept-payloads.ts';
 import { cancelledAt, relayedId, withHandOn } from '../testing/relaying.ts';
 
@@ -42,7 +42,7 @@ const everything = { kind: 'everything' } as const;
 
 const aMinuteAfterItStarted = '2026-10-01T09:01:00.000Z';
 
-const relayed = { org: 'acme', playbook: 'alpha', id: relayedId };
+const relayed = { org: 'acme', playbook: 'alpha', id: relayedId, definitionType: 'relay', name: 'hand-on' };
 
 const lineage = { causationId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: relayedId };
 
@@ -93,9 +93,7 @@ const passingItsAnswerOn = defineCapability({
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-0000000000d2';
 
-const address = { org: 'acme', playbook: 'alpha', id: runId };
-
-const stream = `playbook/acme/alpha/runs/${runId}`;
+const address = { org: 'acme', playbook: 'alpha', id: runId, definitionType: 'system-call', name: 'post' };
 
 const lineageKeptDocumentCancels = { causationId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: runId };
 
@@ -134,6 +132,7 @@ const started: RunCommand = {
   name: 'post',
   input: {},
   started_by: { id: acmeAdmin.id, name: acmeAdmin.name },
+  playbook: 'alpha',
   definition_version: 1,
   calls_tools: true,
   ...acted,
@@ -163,6 +162,7 @@ async function cancelledLate({ readable }: { readonly readable: boolean }) {
       )
       .pipe(Effect.provideService(PayloadOffloading, true)),
   );
+  const stream = runStreamIn(definitions.ledger, { type: 'system-call', name: 'post' }, runId);
   await definitions.run(
     Effect.orDie(
       Effect.andThen(service.execute(stream, runDecider, started), service.execute(stream, runDecider, calling)),
@@ -348,7 +348,7 @@ describe('a cancel request the workflow host records on a run', () => {
     });
   });
 
-  it('answers that the run has ended, and records the request on a run within its call, on a run not started yet, but not at an ill-formed address', async () => {
+  it('answers that the run has ended, and records the request on a run within its call, on a run not started yet, but not for a name no definition of the playbook holds nor at an ill-formed address', async () => {
     const { call, runDefinition, running, ledger, prober, settling } = await withHandOn();
     await running();
     await settling({ status: 'failed' });
@@ -358,10 +358,11 @@ describe('a cancel request the workflow host records on a run', () => {
     await prober.stalled;
     const cancel = runCanceller(ledger.service);
 
-    const addresses: readonly RunStreamAddress[] = [
+    const addresses: readonly CalledRun[] = [
       relayed,
       { ...relayed, id: plain },
       { ...relayed, id: '0199a3c4-7d2e-7c1a-9b3f-00000000ffff' },
+      { ...relayed, id: '0199a3c4-7d2e-7c1a-9b3f-00000000fffe', name: 'held-by-none' },
       { ...relayed, id: 'not-a-run' },
       { ...relayed, playbook: 'al/pha' },
     ];
@@ -369,7 +370,7 @@ describe('a cancel request the workflow host records on a run', () => {
       Effect.forEach(addresses, (run) => cancel(run, { ...deadline, by: 'acme-admin' }, lineage)),
     );
 
-    expect(receipts).toEqual(['ended', 'requested', 'requested', 'unknown_run', 'unknown_run']);
+    expect(receipts).toEqual(['ended', 'requested', 'requested', 'unknown_run', 'unknown_run', 'unknown_run']);
   });
 });
 
@@ -415,7 +416,7 @@ describe('a cancel of a run that took an answer its playbook keeps outside the r
     await Effect.runPromise(
       recordedAsGiven(
         service,
-        `playbook/acme/alpha/runs/${relayedId}`,
+        `${String(ledger.names().find(({ name }) => name === 'hand-on')?.definitionKey)}runs/${relayedId}`,
         [{ type: 'request_answered', data: answered }],
         onTheRun,
       ),

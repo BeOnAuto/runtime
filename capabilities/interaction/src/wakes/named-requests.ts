@@ -1,4 +1,9 @@
-import type { PlaybookAddress } from '@on.auto/operations';
+import {
+  playbookRowsOf,
+  type PlaybookAddress,
+  type PlaybookProjectedRow,
+  type ProjectedKeyedRow,
+} from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { keptRequestOf, takesReplies } from '../conversations/open-in-conversation.ts';
@@ -6,7 +11,7 @@ import { repliesSeenBy, type SeenReplies } from '../facts/work-rules.ts';
 import type { KeptRequest } from '../replies/reply-taking.ts';
 import { routeOfRequest, tellsTakenAndRefused } from '../replies/request-routes.ts';
 import { openRequestsName } from '../requests/open-requests.ts';
-import { requestRowFrom, type OpenRequestRow } from '../requests/request-rows.ts';
+import { requestRowFrom } from '../requests/request-rows.ts';
 import type { DeliveryParts } from '../schedule/delivery-parts.ts';
 import { answerToldKnowingly } from '../tellings/own-messages.ts';
 
@@ -40,21 +45,12 @@ function rowSentAs(parts: Pick<DeliveryParts, 'ledger'>, { playbook, conversatio
   });
 }
 
-function candidateSentAs(
-  parts: Pick<DeliveryParts, 'ledger'>,
-  place: PlaceOfTheReplies,
-  id: string,
-): Effect.Effect<Candidate | undefined> {
-  return Effect.map(rowSentAs(parts, place, id), ([kept]) =>
-    kept === undefined ? undefined : candidateOf(kept.key, requestRowFrom(kept.row), place.connection),
-  );
-}
-
-function candidateOf(runId: string, row: OpenRequestRow, connection: string): Candidate | undefined {
+function candidateOf(placed: PlaybookProjectedRow, connection: string): Candidate | undefined {
+  const row = requestRowFrom(placed.row);
   if (row.conversation === null) {
     return undefined;
   }
-  const request = keptRequestOf(runId, row);
+  const request = keptRequestOf(placed, row);
   if (routeOfRequest(request).server !== connection) {
     return undefined;
   }
@@ -62,6 +58,20 @@ function candidateOf(runId: string, row: OpenRequestRow, connection: string): Ca
     return { request, answered: false };
   }
   return row.taken === null ? undefined : { request, answered: true };
+}
+
+const placedOf = (rows: readonly ProjectedKeyedRow[]): readonly PlaybookProjectedRow[] =>
+  playbookRowsOf(openRequestsName, rows);
+
+function candidateSentAs(
+  parts: Pick<DeliveryParts, 'ledger'>,
+  place: PlaceOfTheReplies,
+  id: string,
+): Effect.Effect<Candidate | undefined> {
+  return Effect.map(rowSentAs(parts, place, id), (rows) => {
+    const [placed] = placedOf(rows);
+    return placed === undefined ? undefined : candidateOf(placed, place.connection);
+  });
 }
 
 function namedOf(

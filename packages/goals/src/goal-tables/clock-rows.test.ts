@@ -1,4 +1,5 @@
-import type { ProjectedMessage, ProjectedRow } from '@on.auto/operations';
+import type { ProjectedMessage } from '@on.auto/operations';
+import { streamAddressed } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { summaryRunIdOf } from '../assessments/assessment-identity.ts';
@@ -81,9 +82,7 @@ const foldedOf = (facts: readonly Fact[]) =>
     facts.map((fact, position) => messageOf(fact, position)),
   );
 
-const stream = { kind: 'goals', id: 'playbook' };
-
-const workflowArming = ['definition_created', 'definition_updated', 'definition_resumed', 'definition_restored'];
+const stream = streamAddressed('playbook/acme/alpha/goals/playbook');
 
 describe('the clock row of a playbook', () => {
   it('keeps the windows opened and the summaries fired over a later save, and takes no other fact', () => {
@@ -121,7 +120,7 @@ describe('the clock row of a playbook', () => {
       ].map((fact: Fact, position) => clockRows.rowAfter(row, messageOf(fact, position))),
     ).toEqual([undefined, undefined, undefined]);
     expect(clockRows.advanced).toEqual([
-      { column: 'opens_at', setBy: ['playbook_goals_saved', 'goal_assessment_opened', ...workflowArming] },
+      { column: 'opens_at', setBy: ['playbook_goals_saved', 'goal_assessment_opened'] },
       { column: 'summary_at', setBy: ['playbook_goals_saved', 'goal_summary_started'] },
     ]);
   });
@@ -226,57 +225,31 @@ describe('the clock row of a goal retired before its clock ran', () => {
   });
 });
 
-const workflowFact = (type: string, moment: string, definitionType = 'workflow'): ProjectedMessage => ({
+const workflowFact = (type: string, moment: string): ProjectedMessage => ({
   id: `definition-${type}`,
   position: 0,
   type,
   data: {},
-  context: { at: moment, by: 'person:ada', definitionType, definitionName: 'check', definitionVersion: 1 },
+  context: { at: moment, by: 'person:ada', definitionType: 'workflow', definitionName: 'check', definitionVersion: 1 },
 });
 
 describe('the clock row of a playbook whose workflows are saved or resumed', () => {
-  const savedAt = '2026-11-10T10:00:00.000Z';
-  const quiet = { ...foldedOf([saved([daily, weekly], 1)]), opens_at: null };
+  it('takes no fact of a workflow, which lies under the workflow’s own key: the clock reads when one was last saved as it works', () => {
+    const quiet = { ...foldedOf([saved([daily, weekly], 1)]), opens_at: null };
+    const facts = ['definition_created', 'definition_updated', 'definition_resumed', 'definition_restored'];
 
-  it('is due at the next window to start, so a calendar goal its clock left unarmed is looked at again, for a workflow alone', () => {
-    const armed = workflowArming.map((type) => clockRows.rowAfter(quiet, workflowFact(type, savedAt)));
-    const atMidnight = clockRows.rowAfter(quiet, workflowFact('definition_resumed', '2026-11-11T00:00:00.000Z'));
-
-    expect(armed.map((row) => row?.['opens_at'])).toEqual(workflowArming.map(() => at('2026-11-11T00:00:00.000Z')));
-    expect(goalClocksIn(armed[0]).map(({ armed_at: armedAt }) => armedAt)).toEqual([at(savedAt), undefined]);
-    expect(atMidnight).toMatchObject({ opens_at: at('2026-11-11T00:00:00.000Z') });
+    expect(facts.map((type) => clockRows.rowAfter(quiet, workflowFact(type, '2026-11-10T10:00:00.000Z')))).toEqual(
+      Array.from({ length: facts.length }),
+    );
     expect(
-      clockRows.keyOf?.(workflowFact('definition_resumed', savedAt), { kind: 'definitions', id: 'workflow' }),
-    ).toBe(clockKey);
-    expect(
-      clockRows.keyOf?.(workflowFact('definition_resumed', savedAt, 'interaction'), {
-        kind: 'definitions',
-        id: 'interaction',
-      }),
+      clockRows.keyOf?.(
+        workflowFact('definition_resumed', '2026-11-10T10:00:00.000Z'),
+        streamAddressed('definition/acme/d1/definitions/workflow'),
+      ),
     ).toBeUndefined();
-  });
-
-  it('keeps a sooner due, and writes nothing where no calendar goal is kept or no goals were saved', () => {
-    const resumed = workflowFact('definition_resumed', savedAt);
-    const sooner = { ...quiet, opens_at: at('2026-11-10T09:00:00.000Z') };
-    const weeklyAlone = { ...foldedOf([saved([weekly], 1)]), opens_at: null };
-
-    const withRetired = {
-      ...foldedOf([saved([daily, { ...daily, id: 'old-check', retired: true }], 1)]),
-      opens_at: null,
-    };
-
-    expect(clockRows.rowAfter(sooner, resumed)).toMatchObject({ opens_at: at('2026-11-10T09:00:00.000Z') });
-    expect(goalClocksIn(clockRows.rowAfter(withRetired, resumed)).map(({ armed_at: armedAt }) => armedAt)).toEqual([
-      at(savedAt),
-      undefined,
+    expect([clockRows.kinds, facts.filter((type) => clockRows.types.includes(type))]).toEqual([
+      ['goals', 'assessments', 'goal-summaries'],
+      [],
     ]);
-    expect([weeklyAlone, undefined].map((row: ProjectedRow | undefined) => clockRows.rowAfter(row, resumed))).toEqual([
-      undefined,
-      undefined,
-    ]);
-    expect(clockRows.rowAfter({ ...quiet, opens_at: at('2026-11-12T00:00:00.000Z') }, resumed)).toMatchObject({
-      opens_at: at('2026-11-11T00:00:00.000Z'),
-    });
   });
 });

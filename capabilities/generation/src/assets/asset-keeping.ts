@@ -1,8 +1,10 @@
 import { contentOfBytes, type RecordedContent } from '@on.auto/content';
 import {
+  runStreamNameOf,
   streamPrefixOfPlaybook,
   type Conflict,
   type Context,
+  type LedgerPorts,
   type Lineage,
   type StreamWriter,
   type PlaybookAddress,
@@ -32,12 +34,14 @@ export interface AssetToKeep {
   readonly kind: KindWritten;
   readonly madeBy: MadeByWritten;
   readonly keptForMs: number;
-  readonly context: Omit<Context, 'at'>;
+  readonly context: KeptByARun;
   readonly lineage: Lineage;
 }
 
+export type KeptByARun = Omit<Context, 'at'> & { readonly runId: string };
+
 export interface AssetKeeping {
-  readonly ledger: StreamWriter;
+  readonly ledger: StreamWriter & Pick<LedgerPorts, 'holderOfStream'>;
   readonly content: Pick<RecordedContent, 'put'>;
 }
 
@@ -46,16 +50,31 @@ export interface KeptAt {
   readonly at: number;
 }
 
-export function assetStreamIn(playbook: PlaybookAddress, id: string): string {
-  return `${streamPrefixOfPlaybook(playbook)}${assetStreamOf(id)}`;
+export function assetStreamIn(definitionKey: string, id: string): string {
+  return `${definitionKey}${assetStreamOf(id)}`;
+}
+
+function definitionOfTheRun({ ledger }: AssetKeeping, { playbook, context }: AssetToKeep): Effect.Effect<string> {
+  const { runId } = context;
+  return Effect.flatMap(
+    ledger.holderOfStream({ playbookKey: streamPrefixOfPlaybook(playbook), stream: runStreamNameOf(runId) }),
+    (key) =>
+      key === undefined
+        ? Effect.die(
+            new Error(`The run ${runId} that keeps an asset is not a run of the playbook ${playbook.playbook}`),
+          )
+        : Effect.succeed(key),
+  );
 }
 
 export function madeByThe({ kind, ...generation }: MadeByAGeneration): Pick<AssetToKeep, 'kind' | 'madeBy'> {
   return { kind, madeBy: { generation } };
 }
 
-export function keptAsset({ ledger, content }: AssetKeeping, asset: AssetToKeep): Effect.Effect<KeptAt, Conflict> {
+export function keptAsset(keeping: AssetKeeping, asset: AssetToKeep): Effect.Effect<KeptAt, Conflict> {
+  const { ledger, content } = keeping;
   return Effect.gen(function* () {
+    const definitionKey = yield* definitionOfTheRun(keeping, asset);
     const { stream, mediaType } = contentOfBytes(asset.bytes, asset.mediaType);
     const held = yield* Effect.orDie(content.put(asset.playbook, { stream, mediaType }));
     const at = yield* Clock.currentTimeMillis;
@@ -68,7 +87,7 @@ export function keptAsset({ ledger, content }: AssetKeeping, asset: AssetToKeep)
       expires_at: new Date(at + asset.keptForMs).toISOString(),
     };
     yield* ledger.execute(
-      assetStreamIn(asset.playbook, asset.id),
+      assetStreamIn(definitionKey, asset.id),
       assetDecider,
       { event: { type: 'asset_kept', data }, context: { ...asset.context, at: new Date(at).toISOString() } },
       asset.lineage,

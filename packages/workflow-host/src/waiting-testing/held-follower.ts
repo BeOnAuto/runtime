@@ -1,7 +1,5 @@
-import { playbooksStreamOfOrg } from '@on.auto/playbooks';
-
 import type { HostDatabase } from '../database/host-database.ts';
-import { playbookCreated } from '../reaction-testing/playbook-writes.ts';
+import { playbookCreated, testDefinitionsPlaced } from '../reaction-testing/playbook-writes.ts';
 import { aSQLiteFile, openedOn, type DatabaseSettings } from '../testing/host-files.ts';
 import { hostedOn, type HostedOptions } from '../testing/host-runs.ts';
 import { settledIn, type FollowedHost } from './followed-host.ts';
@@ -10,17 +8,14 @@ export interface HeldFollower extends FollowedHost {
   readonly release: () => void;
 }
 
-function registryHeldUntil(released: Promise<void>, database: HostDatabase): HostDatabase {
-  const registry = playbooksStreamOfOrg('acme');
+function placingHeldUntil(released: Promise<void>, database: HostDatabase): HostDatabase {
   return {
     ...database,
     store: {
       ...database.store,
-      read: async (stream, after) => {
-        if (stream === registry) {
-          await released;
-        }
-        return database.store.read(stream, after);
+      definitionStreams: async (definitionType) => {
+        await released;
+        return database.store.definitionStreams(definitionType);
       },
     },
   };
@@ -36,8 +31,9 @@ export async function heldFollower(
 ): Promise<HeldFollower> {
   const database = await openedOn(settings);
   await playbookCreated(database.store, 'alpha');
+  await testDefinitionsPlaced(database.store);
   const released = Promise.withResolvers<void>();
-  const held = registryHeldUntil(released.promise, await openedOn(settings));
+  const held = placingHeldUntil(released.promise, await openedOn(settings));
   const hosted = await hostedOn({ database: held }, options);
   return {
     database,

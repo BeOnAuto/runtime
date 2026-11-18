@@ -1,4 +1,4 @@
-import type { ProjectedKeyedRow } from './keyed-projection.ts';
+import type { ProjectedAddress, ProjectedKeyedRow } from './keyed-projection.ts';
 
 export interface PlaybookProjectedRow extends ProjectedKeyedRow {
   readonly playbook: string;
@@ -16,4 +16,8 @@ export function playbookRowsOf(
     }
     return { ...kept, playbook };
   });
+}
+
+export function addressOfTheRow({ org, playbook, definition }: ProjectedAddress): ProjectedAddress {
+  return definition === undefined ? { org, ...(playbook === undefined ? {} : { playbook }) } : { org, definition };
 }

@@ -4,9 +4,10 @@ import { mostInlineHeldValueBytes } from '@on.auto/workflow-engine';
 import { Effect, Schema } from 'effect';
 
 import { hostDatabaseOpenedOn } from './src/ledger-testing/ledger-connections.ts';
-import { keptOf } from './src/payload-testing/kept-payloads.ts';
+import { keptOf, runsOfAlpha } from './src/payload-testing/kept-payloads.ts';
 import { runKeyOf } from './src/runs/run-address.ts';
 import { hostRunPayloadsOf } from './src/runs/run-payloads.ts';
+import { definitionOfTheTests } from './src/testing/host-documents.ts';
 import { databaseSettingsOf } from './src/testing/host-processes.ts';
 
 const HeldIn = Schema.Union([
@@ -21,7 +22,11 @@ const heldIn = Schema.decodeUnknownSync(Schema.fromJsonString(HeldIn))(heldInTex
 
 const count = Number(countText);
 
-const runKey = runKeyOf({ org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' });
+const runKey = runKeyOf({
+  org: 'acme',
+  definition: definitionOfTheTests,
+  runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+});
 
 const letter = shape === 'ascii' ? 'a' : '漢';
 
@@ -78,6 +83,7 @@ const store = (cacheBytes: number) =>
     payloadOffloading: true,
     payloadSizeThreshold: mostInlineHeldValueBytes,
     shared: sharedPayloadsWithin(cacheBytes),
+    runs: runsOfAlpha,
     note: () => Effect.void,
   });
 await Effect.runPromise(store(0).keep(runKey, texts));

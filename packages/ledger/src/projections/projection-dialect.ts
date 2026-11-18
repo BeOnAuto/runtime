@@ -5,7 +5,7 @@ import { Schema } from 'effect';
 import type { CatchUpDialect } from '../projection-catch-up/catch-up-dialect.ts';
 
 export interface MessageLane {
-  readonly by: 'stream' | 'prefix';
+  readonly by: 'stream' | 'prefix' | 'org';
   readonly key: string;
 }
 
@@ -48,7 +48,6 @@ export interface ProjectionDialect {
   readonly booleanOf: (value: boolean) => boolean | number;
   readonly listed: (values: readonly string[]) => SQL;
   readonly forUpdate: string;
-  readonly storedBytesOfMessage: string;
   readonly catchUp: CatchUpDialect;
 }
 

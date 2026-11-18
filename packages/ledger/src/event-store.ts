@@ -14,14 +14,14 @@ import type {
 } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
-import type { RecordedKeys } from './keys/recorded-keys.ts';
+import type { DefinitionStreamsStore, LookupTablesStore } from './definitions/definition-reads.ts';
+import type { OrgRecordsStore, RecordedKeys } from './keys/recorded-keys.ts';
 import type { LogPorts } from './log/ledger-log.ts';
 import type { MultiStreamAppends } from './multi-stream/multi-stream-appends.ts';
 import type { HeldHeads } from './references/held-heads.ts';
 import type { StreamSignal } from './signal/append-signal.ts';
-import type { KeptStreamAges, StreamAgesStore } from './stream-ages/stream-ages-store.ts';
 
-export type { KeptStreamAges } from './stream-ages/stream-ages-store.ts';
+export type { DefinitionNamesStore, DefinitionStream, DefinitionStreamsStore } from './definitions/definition-reads.ts';
 
 export interface EncodedEvent {
   readonly type: string;
@@ -136,7 +136,7 @@ export interface LatestAppends extends AppendedStreams {
 export type ReadLatestAppends = (after: RecordedPoint | undefined, most: number) => Promise<LatestAppends>;
 
 export type FactScope =
-  | { readonly kind: 'playbook'; readonly playbookKey: string }
+  | { readonly kind: 'playbook'; readonly playbookKey: string; readonly definitionKeys: readonly string[] }
   | { readonly kind: 'streams'; readonly streams: readonly string[] };
 
 export function isAKind(stream: string): boolean {
@@ -168,7 +168,7 @@ type ReadOf<Scope> = (scope: Scope, selection: RecordedSelection, page: StoredPa
 
 type EventReadOf<Scope> = (scope: Scope, id: string) => Promise<StoredRecord | undefined>;
 
-export interface RecordedStore {
+export interface RecordedStore extends OrgRecordsStore {
   readonly pointLength: number;
   readonly readRecorded: ReadOf<string>;
   readonly readRecordedOfKeys: ReadOf<RecordedKeys>;
@@ -178,13 +178,13 @@ export interface RecordedStore {
   readonly readRecordedEventOfKeys: EventReadOf<RecordedKeys>;
 }
 
-export interface DefinitionStream {
-  readonly stream: string;
-  readonly version: number;
+export interface StreamAgesStore {
+  readonly ageOfLastAppend: (stream: string) => Promise<number>;
+  readonly lastPositionOf?: (stream: string) => Promise<number>;
 }
 
-export interface DefinitionStreamsStore {
-  readonly definitionStreams: (definitionType: string) => Promise<readonly DefinitionStream[]>;
+export interface KeptStreamAges extends StreamAgesStore {
+  readonly lastPositionOf: (stream: string) => Promise<number>;
 }
 
 export interface StreamVersionsStore {
@@ -213,6 +213,7 @@ export interface LedgerStreams
     LastMessagesStore,
     RecordedStore,
     DefinitionStreamsStore,
+    LookupTablesStore,
     StreamAgesStore,
     StreamVersionsStore,
     AppendWaitsStore {}

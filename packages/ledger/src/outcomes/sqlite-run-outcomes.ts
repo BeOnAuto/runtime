@@ -2,6 +2,7 @@ import { SQL } from '@event-driven-io/dumbo';
 import type { RunOutcomeMapping, RunOutcomeSelection } from '@on.auto/operations';
 import { Schema } from 'effect';
 
+import { definitionNames } from '../definition-names/definition-names-table.ts';
 import type { RunOutcomesStore, StatementExecutor } from '../event-store.ts';
 import { groupFields, groupOf } from './run-outcome-groups.ts';
 import { runOutcomesTable } from './run-outcome-projection.ts';
@@ -28,7 +29,8 @@ function sqliteRunOutcomesReader(execute: StatementExecutor): RunOutcomesStore['
           coalesce(sum(cached_tokens), 0) AS cached_tokens, sum(cost_micro_usd) AS cost_micro_usd,
           json_group_array(duration_ms) FILTER (WHERE duration_ms IS NOT NULL) AS durations
         FROM ${table}
-        WHERE playbook_key = ${playbookKey} AND started_day BETWEEN ${from} AND ${to}${selected(selection)}
+        WHERE playbook_key IN (SELECT definition_key FROM ${definitionNames} WHERE playbook_key = ${playbookKey})
+          AND started_day BETWEEN ${from} AND ${to}${selected(selection)}
         GROUP BY started_day, definition_type, name, status`,
     );
     return Schema.decodeUnknownSync(GroupRows)(rows).map((row) => groupOf(row));

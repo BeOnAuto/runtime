@@ -10,12 +10,14 @@ import {
 import { Data, Effect } from 'effect';
 
 import type { DatabaseFailed, HostDatabase } from '../database/host-database.ts';
-import { addressOfRun, type RunAddress } from '../runs/run-address.ts';
+import type { RunInAPlaybook } from '../runs/run-address.ts';
 import { lineageOfSettlement } from '../runs/run-lineage.ts';
+import { playbookOfRun } from '../runs/run-places.ts';
 import { callRowOf, cancelledRow, tombstonedRow, type CallRow } from './call-rows.ts';
 
 export interface ChildCancel {
-  readonly child: RunAddress;
+  readonly child: RunInAPlaybook;
+  readonly call: CallRow['call'];
   readonly reason: CancelReason;
   readonly lineage: Lineage;
 }
@@ -43,19 +45,21 @@ export interface Cancelling {
 }
 
 function childCancelled(
-  { cancelChild }: CancelParts,
-  child: string | null,
+  { database, cancelChild }: CancelParts,
+  { child, call: called }: CallRow,
   { call, run, origin }: Cancelling,
 ): Effect.Effect<void, ChildNotCancelled> {
   if (child === null) {
     return Effect.void;
   }
-  const { org, playbook } = addressOfRun(run.runId);
-  return cancelChild({
-    child: { org, playbook, runId: child },
-    reason: call.reason ?? 'parent_ended',
-    lineage: lineageOfSettlement(run, origin),
-  }).pipe(
+  return Effect.flatMap(playbookOfRun(database, run.runId), ({ org, playbook }) =>
+    cancelChild({
+      child: { org, playbook, runId: child },
+      call: called,
+      reason: call.reason ?? 'parent_ended',
+      lineage: lineageOfSettlement(run, origin),
+    }),
+  ).pipe(
     Effect.mapError(({ detail }) => new ChildNotCancelled({ detail })),
     Effect.flatMap((receipt) => (receipt === 'unknown_run' ? Effect.fail(childNotInItsPlaybook) : Effect.void)),
   );
@@ -74,7 +78,7 @@ function cancelledAs(
     if (row.state === 'answered') {
       return 'already_answered';
     }
-    yield* childCancelled(parts, row.child, cancelling);
+    yield* childCancelled(parts, row, cancelling);
     if (row.state !== 'cancelled') {
       yield* cancelledRow(parts.database, key);
     }

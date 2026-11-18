@@ -5,7 +5,7 @@ import { declaredFactsOf } from '../run-work/declared-facts.ts';
 import type { RunEvent } from '../runs/run-events.ts';
 import { evolveRun, startedRunOf } from '../runs/run-state.ts';
 import { asking } from '../testing/asking.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { recordedWith, testRunId } from '../testing/run-facts.ts';
 import { storedTypesByStatus } from './run-status.ts';
 
@@ -18,7 +18,7 @@ const recorded = recordedWith({
   definitionVersion: 1,
 });
 
-const start: RunEvent = { type: 'run_started', data: { started_by: recordedAdmin, input: {} } };
+const start: RunEvent = { type: 'run_started', data: { ...startedInAlpha, input: {} } };
 
 const ofTheTool = { server: 'chat', tool: 'post_message' };
 

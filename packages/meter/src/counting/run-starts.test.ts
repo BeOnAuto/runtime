@@ -2,14 +2,15 @@ import type { LoggedEvent, LogPorts } from '@on.auto/ledger';
 import { describe, expect, it } from 'vitest';
 
 import { pickOf, seeded } from '../meter-testing/random-ledgers.ts';
-import { countedAfter, countedFromTheStart } from './run-starts.ts';
+import { countedAfter, countedFromTheStart, type FirstStartOf } from './run-starts.ts';
 
 const streams = [
-  'playbook/acme/alpha/runs/one',
-  'playbook/acme/alpha/runs/two',
-  'playbook/acme/beta/runs/one',
-  'playbook/globex/gamma/runs/three',
-  'playbook/acme/alpha/definitions/totals',
+  'definition/acme/totals-of-alpha/runs/one',
+  'definition/acme/totals-of-alpha/runs/two',
+  'definition/acme/totals-of-beta/runs/one',
+  'definition/globex/totals-of-gamma/runs/three',
+  'playbook/acme/alpha/runs/four',
+  'definition/acme/totals-of-alpha/definitions/computation',
   'org/acme/connections',
   'meter',
 ];
@@ -42,13 +43,17 @@ function randomLog(seed: number): readonly LoggedEvent[] {
   });
 }
 
-function firstStartsIn(events: readonly LoggedEvent[]): (stream: string) => Promise<number | undefined> {
-  return (stream) =>
-    Promise.resolve(events.find((event) => event.stream === stream && event.type === 'run_started')?.version);
+function firstStartsIn(events: readonly LoggedEvent[]): FirstStartOf {
+  return (stream) => {
+    const first = events.find((event) => event.stream === stream && event.type === 'run_started');
+    return Promise.resolve(first === undefined ? undefined : { version: first.version, playbook: 'alpha' });
+  };
 }
 
 function runsStartedIn(events: readonly LoggedEvent[]): number {
-  const runStarts = events.filter(({ stream, type }) => type === 'run_started' && stream.includes('/runs/'));
+  const runStarts = events.filter(
+    ({ stream, type }) => type === 'run_started' && stream.startsWith('definition/') && stream.includes('/runs/'),
+  );
   return new Set(runStarts.map(({ stream }) => stream)).size;
 }
 
@@ -76,7 +81,7 @@ async function countsOf(seed: number): Promise<Counts> {
   return { seed, expected: runsStartedIn(events), fresh: fresh.actions, incremental: incremental.actions };
 }
 
-describe('the count of the run starts of a log', () => {
+describe('the count of the run starts of a log, each run filed under its definition', () => {
   it('is the same counted from the first event or from any checkpoint, and counts each run once, over 2,000 random logs', async () => {
     const seeds = Array.from({ length: 2000 }, (_, index) => index + 1);
     const counts = await Promise.all(seeds.map((seed) => countsOf(seed)));

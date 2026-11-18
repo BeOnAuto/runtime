@@ -2,6 +2,7 @@ import { SQL } from '@event-driven-io/dumbo';
 import type { RunOutcomeMapping, RunOutcomeSelection } from '@on.auto/operations';
 import { Schema } from 'effect';
 
+import { definitionNamesTableName } from '../definition-names/definition-names-table.ts';
 import type { RunOutcomesStore, StatementExecutor } from '../event-store.ts';
 import { groupFields, groupOf } from '../outcomes/run-outcome-groups.ts';
 import { runOutcomesTable } from '../outcomes/run-outcome-projection.ts';
@@ -18,6 +19,7 @@ function selected(bind: Bind, { definitionType, name }: RunOutcomeSelection): st
 export function postgresqlRunOutcomesReader(query: Query): RunOutcomesStore['readRunOutcomes'] {
   return async (playbookKey, { from, to }, selection) => {
     const { values, bind } = binding();
+    const key = bind(playbookKey);
     const rows = await query(
       `SELECT started_day AS day, definition_type, name, status, count(*)::int AS runs,
           coalesce(sum(input_tokens), 0)::float8 AS input_tokens,
@@ -26,7 +28,8 @@ export function postgresqlRunOutcomesReader(query: Query): RunOutcomesStore['rea
           sum(cost_micro_usd)::float8 AS cost_micro_usd,
           coalesce(json_agg(duration_ms) FILTER (WHERE duration_ms IS NOT NULL), '[]'::json) AS durations
         FROM ${runOutcomesTable}
-        WHERE playbook_key = ${bind(playbookKey)} AND started_day BETWEEN ${bind(from)} AND ${bind(to)}${selected(bind, selection)}
+        WHERE playbook_key IN (SELECT definition_key FROM ${definitionNamesTableName} WHERE playbook_key = ${key})
+          AND started_day BETWEEN ${bind(from)} AND ${bind(to)}${selected(bind, selection)}
         GROUP BY started_day, definition_type, name, status`,
       values,
     );

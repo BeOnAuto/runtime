@@ -3,8 +3,9 @@ import { Effect, Schema } from 'effect';
 
 import { oneRowOf, rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
 import type { DueItem, DueWork } from '../due-work/due-work.ts';
-import { runKeyOf, type RunAddress } from '../runs/run-address.ts';
+import type { RunInAPlaybook } from '../runs/run-address.ts';
 import {
+  attemptKeyOfRun,
   attemptLeasePrefix,
   clockOf,
   leasedAttemptOf,
@@ -18,9 +19,9 @@ import { nowOn } from './host-lease.ts';
 export type HolderGoneReceipt = 'ended' | 'not_running' | 'outlives_its_call';
 
 export interface GoneHolders {
-  readonly holdingOf: (run: RunAddress) => Effect.Effect<number | undefined>;
-  readonly ended: (run: RunAddress, fencingToken: number) => Effect.Effect<HolderGoneReceipt>;
-  readonly resumed: (run: RunAddress) => Effect.Effect<void>;
+  readonly holdingOf: (run: RunInAPlaybook) => Effect.Effect<number | undefined>;
+  readonly ended: (run: RunInAPlaybook, fencingToken: number) => Effect.Effect<HolderGoneReceipt>;
+  readonly resumed: (run: RunInAPlaybook) => Effect.Effect<void>;
 }
 
 const LeaseRow = Schema.Struct({ name: Schema.String, holder: Schema.String, expires_at: WholeNumber });
@@ -65,7 +66,7 @@ function tokensOfLiveLeasesBeside(
   { run }: LeasedAttempt,
   now: number,
 ): Effect.Effect<readonly (number | undefined)[], DatabaseFailed> {
-  const ofTheRun = leasesOfTheRun(runKeyOf(run));
+  const ofTheRun = leasesOfTheRun(attemptKeyOfRun(run));
   return Effect.map(
     rowsOf(
       NameRow,
@@ -92,7 +93,7 @@ interface Judging {
   readonly gone: GoneHolders;
 }
 
-function endedAs(judging: Judging, row: LapsedLease, run: RunAddress, fencingToken: number) {
+function endedAs(judging: Judging, row: LapsedLease, run: RunInAPlaybook, fencingToken: number) {
   const { gone, database } = judging;
   return Effect.flatMap(gone.ended(run, fencingToken), (receipt) =>
     Effect.andThen(receipt === 'outlives_its_call' ? gone.resumed(run) : Effect.void, forgotten(database, row)),
@@ -109,7 +110,7 @@ function heldBeside(tokens: readonly (number | undefined)[], holding: number): H
 }
 
 interface Holding {
-  readonly run: RunAddress;
+  readonly run: RunInAPlaybook;
   readonly fencingToken: number;
   readonly beside: HeldBeside;
 }

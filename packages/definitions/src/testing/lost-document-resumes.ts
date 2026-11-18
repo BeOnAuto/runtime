@@ -8,7 +8,7 @@ import { definitionOperationsFor } from './definition-operations.ts';
 import { harness, toPlaybook } from './harness.ts';
 import { twoHoursLater } from './kept-documents.ts';
 import { watchedStore } from './kept-payloads.ts';
-import { acted, startOfTheStep, stream } from './resumed-runs.ts';
+import { acted, startOfTheStep, stepStreamIn } from './resumed-runs.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -24,7 +24,9 @@ async function leftWithItsDocumentKept() {
     toAlpha(acmeAdmin, { type: 'resumer', name: 'step', source: longerThanAFactHolds }),
   );
   await definitions.run(defined.pipe(Effect.provideService(PayloadOffloading, true)));
-  await definitions.run(Effect.orDie(definitions.ledger.service.execute(stream, runDecider, startOfTheStep)));
+  await definitions.run(
+    Effect.orDie(definitions.ledger.service.execute(stepStreamIn(definitions.ledger), runDecider, startOfTheStep)),
+  );
   const asked = { type: 'resumer', name: 'step', input: {}, run_id: acted.runId };
   const asking = (attemptDied?: true) =>
     definitions.dispatch(operations.runDefinition, {

@@ -8,7 +8,7 @@ import { resumer } from './capabilities/resumer.ts';
 import { definitionOperationsFor } from './definition-operations.ts';
 import { harness, toPlaybook } from './harness.ts';
 import { keptArmOf, keptIn, keptLongBeforeAndLost, recordedAsGiven } from './kept-payloads.ts';
-import { acted, startOfTheStep, stream } from './resumed-runs.ts';
+import { acted, startOfTheStep, stepStreamIn } from './resumed-runs.ts';
 
 export interface KeptInput {
   readonly input: Schema.Json;
@@ -26,17 +26,24 @@ export async function leftWithItsInputKept({ input, held, store }: KeptInput) {
   const defining = (source: string, operation = operations.createDefinition) =>
     definitions.call(operation, toAlpha(acmeAdmin, { type: 'resumer', name: 'step', source }));
   const { sha256, bytes } = keptArmOf(input);
-  const { started_by, calls_tools, resumes } = startOfTheStep;
+  const { started_by, playbook, calls_tools, resumes } = startOfTheStep;
   const context = { ...acted, definitionType: 'resumer', definitionName: 'step', definitionVersion: 1 };
-  const data = { input_sha256: sha256, input_bytes: bytes, started_by, calls_tools, resumes };
+  const data = { input_sha256: sha256, input_bytes: bytes, started_by, playbook, calls_tools, resumes };
   const call = { type: 'model_call_started', data: { number: 1, ...modelCallSent() } } as const;
   const alpha = { org: 'acme', playbook: 'alpha' };
   await defining('first');
   await definitions.run(
     Effect.all([
       held ? keptIn(service.content, alpha, input) : keptLongBeforeAndLost(service.content, store, alpha, input),
-      recordedAsGiven(service, stream, [{ type: 'run_started', data }], context),
-      Effect.orDie(service.execute(stream, runDecider, { type: 'call', fact: call, fencingToken: 1, ...acted })),
+      recordedAsGiven(service, stepStreamIn(definitions.ledger), [{ type: 'run_started', data }], context),
+      Effect.orDie(
+        service.execute(stepStreamIn(definitions.ledger), runDecider, {
+          type: 'call',
+          fact: call,
+          fencingToken: 1,
+          ...acted,
+        }),
+      ),
     ]),
   );
   await defining('second', operations.updateDefinition);

@@ -1,17 +1,30 @@
-import { PlaybookContext, Caller, messageIdOf, playbookLedgerOf, type RecordedEvent } from '@on.auto/operations';
-import { Effect } from 'effect';
+import {
+  PlaybookContext,
+  Caller,
+  messageIdOf,
+  playbookLedgerOf,
+  type RecordedEvent,
+  runStreamNameOf,
+} from '@on.auto/operations';
+import { Effect, Option } from 'effect';
 
 import { runJournal, type LedgerJournal } from '../journal/run-journal.ts';
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { decidedIn } from '../read-model-testing/in-the-playbook.ts';
+import { runDecider } from '../runs/run-decider.ts';
 import { fencingTokenOf, startedRunOf } from '../runs/run-state.ts';
-import { acmeAdmin } from '../testing/callers.ts';
+import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
 import type { Harness } from '../testing/harness.ts';
 import { testRunId } from '../testing/run-facts.ts';
 
-const stream = `playbook/acme/alpha/${runStreamNameOf(testRunId)}`;
+const alpha = { org: 'acme', playbook: 'alpha' };
 
-export function idAt(position: number): string {
-  return messageIdOf(stream, position);
+const callerId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8ca1';
+
+export const journalledStream = `definition/acme/${callerId}/${runStreamNameOf(testRunId)}`;
+
+export function idAt({ ledger }: Pick<Harness, 'ledger'>, position: number): string {
+  const ofTheRun = ledger.streamNames().find((name) => name.endsWith(`/${runStreamNameOf(testRunId)}`));
+  return messageIdOf(Option.getOrThrow(Option.fromNullishOr(ofTheRun)), position);
 }
 
 export interface Linked {
@@ -48,12 +61,22 @@ export async function endingIn(definitions: Harness): Promise<unknown> {
 
 export function journalled<A>(definitions: Harness, use: (journal: LedgerJournal) => Effect.Effect<A>): Promise<A> {
   const recording = Effect.gen(function* () {
-    const { state } = yield* definitions.ledger.service.execute(stream, runDecider, {
+    yield* decidedIn(definitions.ledger.service, alpha, 'tool-user', {
+      type: 'create',
+      name: 'caller',
+      content: { source: 'x' },
+      created_by: recordedAdmin,
+      definition_id: callerId,
+      by: acmeAdmin.id,
+      at: '2026-10-01T09:00:00.000Z',
+    });
+    const { state } = yield* definitions.ledger.service.execute(journalledStream, runDecider, {
       type: 'start',
       definition_type: 'tool-user',
       name: 'caller',
       input: {},
       started_by: { id: 'acme-admin', name: 'acme-admin' },
+      playbook: 'alpha',
       definition_version: 1,
       calls_tools: true,
       runId: testRunId,
@@ -63,15 +86,15 @@ export function journalled<A>(definitions: Harness, use: (journal: LedgerJournal
     return yield* use(
       yield* runJournal(
         testRunId,
-        { startId: idAt(1), correlationId: testRunId },
+        { startId: messageIdOf(journalledStream, 1), correlationId: testRunId },
         { startedAt: '2026-10-01T09:00:00.000Z', modelCallsBefore: 0, calls: [] },
         fencingTokenOf(startedRunOf(state)),
       ),
     );
   }).pipe(
-    Effect.provideContext(playbookLedgerOf(definitions.ledger.service, { org: 'acme', playbook: 'alpha' })),
+    Effect.provideContext(playbookLedgerOf(definitions.ledger.service, alpha)),
     Effect.provideService(Caller, acmeAdmin),
-    Effect.provideService(PlaybookContext, { org: 'acme', playbook: 'alpha' }),
+    Effect.provideService(PlaybookContext, alpha),
   );
   return definitions.run(Effect.orDie(recording));
 }

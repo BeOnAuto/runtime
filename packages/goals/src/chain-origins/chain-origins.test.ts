@@ -224,13 +224,16 @@ function storeOf(
 ): AskedStore {
   const asked: string[] = [];
   const store: ChainStore = {
-    readRecorded: (playbookKey, { run }, page) => {
-      asked.push(`${playbookKey} run ${run} ${page.order} ${String(page.limit)} ${String(page.dataOf.length)}`);
+    definitionsIn: (playbookKey) => Promise.resolve([`${playbookKey.replace('playbook/', 'definition/')}d1/`]),
+    readRecordedOfKeys: ({ org, keys }, { run }, page) => {
+      asked.push(
+        `${org} ${keys.join(' ')} run ${run} ${page.order} ${String(page.limit)} ${String(page.dataOf.length)}`,
+      );
       const first = runs.get(run);
       return Promise.resolve({ records: first === undefined ? [] : [first] });
     },
-    readRecordedEvent: (playbookKey, id) => {
-      asked.push(`${playbookKey} record ${id}`);
+    readRecordedEventOfKeys: ({ org, keys }, id) => {
+      asked.push(`${org} ${keys.join(' ')} record ${id}`);
       return id === 'broken'
         ? Promise.reject(new Error('the store is not reachable'))
         : Promise.resolve(records.get(id));
@@ -241,13 +244,13 @@ function storeOf(
 
 describe('the reads of a chain over a ledger’s recorded facts', () => {
   const first: StoredChainFact = {
-    stream: 'playbook/acme/sales/runs/r1',
+    stream: 'runs/r1',
     metadata: { context: { at, by: 'local', runId: 'r1' } },
     causationId: 'c1',
     correlationId: 'r1',
   };
 
-  it('reads the first fact of a run and a record by its id within the playbook, without their data', async () => {
+  it('reads the first fact of a run and a record by its id within the playbook and its definitions, without their data', async () => {
     const { store, asked } = storeOf(new Map([['r1', first]]), new Map([['c1', first]]));
     const reads = ledgerChainReads(store, {
       org: 'acme',
@@ -258,11 +261,12 @@ describe('the reads of a chain over a ledger’s recorded facts', () => {
     );
     const fact = { stream: first.stream, context: first.metadata.context, causationId: 'c1', correlationId: 'r1' };
     expect(read).toEqual([fact, undefined, fact, undefined]);
+    const keys = 'acme playbook/acme/sales/ definition/acme/sales/d1/';
     expect(asked).toEqual([
-      'playbook/acme/sales/ run r1 asc 1 0',
-      'playbook/acme/sales/ run r2 asc 1 0',
-      'playbook/acme/sales/ record c1',
-      'playbook/acme/sales/ record c2',
+      `${keys} run r1 asc 1 0`,
+      `${keys} run r2 asc 1 0`,
+      `${keys} record c1`,
+      `${keys} record c2`,
     ]);
   });
 

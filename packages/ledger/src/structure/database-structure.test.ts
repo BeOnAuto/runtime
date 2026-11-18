@@ -1,20 +1,13 @@
 import { runTallyRows } from '@on.auto/operations/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { ledgerLayout } from '../layout/ledger-layout.ts';
 import { plainPoolsOn, postgresqlLedgerLayer } from '../postgresql/postgresql-ledger.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import { queried } from '../recorded/sqlite-checks.ts';
 import { openLedgerWith } from '../testing/open-ledger.ts';
 import { postgresqlDatabasesOn } from '../testing/postgresql-databases.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
-import {
-  aPostgreSQLDatabaseFrom,
-  aPostgreSQLDatabaseOfTheStore,
-  postgresqlLayoutDumpOf,
-  structureOfThePostgreSQLDatabase,
-  structureOfTheSQLiteFile,
-} from './database-floors.ts';
+import { structureOfThePostgreSQLDatabase, structureOfTheSQLiteFile } from './database-floors.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
@@ -34,23 +27,16 @@ async function aFileMadeBy(statements: readonly string[]): Promise<string> {
   return fileName;
 }
 
-describe.skipIf(skipped)(`The floor of a ledger on PostgreSQL${notice}`, () => {
-  it('holds the tables and indexes of the layout apart from those of the store, and makes the database again in the structure the ledger left', async () => {
-    const [ledger, storeAlone, made] = [await aDatabase(), await aDatabase(), await aDatabase()];
-    await aLedgerOpenedOn(ledger);
-    await aPostgreSQLDatabaseOfTheStore(storeAlone);
+describe.skipIf(skipped)(`The structure of a ledger's database on PostgreSQL${notice}`, () => {
+  it('holds the tables of the ledger and its projections, the same in two databases the ledger made', async () => {
+    const [first, second] = [await aDatabase(), await aDatabase()];
+    await aLedgerOpenedOn(first);
+    await aLedgerOpenedOn(second);
 
-    const floor = await postgresqlLayoutDumpOf(ledger, storeAlone);
-    await aPostgreSQLDatabaseFrom(floor, made);
+    const structure = await structureOfThePostgreSQLDatabase(first);
 
-    expect(floor).toMatchObject({
-      layout: ledgerLayout,
-      kept: [{ table: 'ledger_layout', rows: [{ layout: ledgerLayout }] }],
-    });
-    expect(floor.made.filter((statement) => statement.startsWith('CREATE TABLE emt_'))).toEqual([]);
-    expect(floor.made.some((statement) => statement.startsWith(`CREATE TABLE ${runTallyRows.name}_`))).toBe(true);
-    expect(await structureOfThePostgreSQLDatabase(made)).toEqual(await structureOfThePostgreSQLDatabase(ledger));
-    expect(await postgresqlLayoutDumpOf(made, storeAlone)).toEqual(floor);
+    expect(Object.keys(structure.tables).some((table) => table.startsWith(`${runTallyRows.name}_`))).toBe(true);
+    expect(await structureOfThePostgreSQLDatabase(second)).toEqual(structure);
   });
 });
 

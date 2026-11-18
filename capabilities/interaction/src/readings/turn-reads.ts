@@ -4,9 +4,8 @@ import { readReplies } from '../conversations/conversation-reads.ts';
 import type { ReadAnswer } from '../conversations/read-answers.ts';
 import type { ConversationTurn, ReadDone } from '../conversations/turn-parts.ts';
 import { carriedOn, nothingTaken } from '../replies/reply-recording.ts';
-import type { KeptRequest } from '../replies/reply-taking.ts';
 import { isLeading, leadingOf, sinceOf, type ReadingsOfAPlace } from './reading-cursors.ts';
-import { readingsInTurn, type ReadingOfATurn } from './turn-readings.ts';
+import { readingsInTurn, type ReadingOfATurn, type ReadingsOfTheTurn } from './turn-readings.ts';
 
 interface ReadsSoFar {
   readonly reads: readonly ReadAnswer[];
@@ -67,18 +66,8 @@ function readOn(
   });
 }
 
-export function turnRead(
-  turn: ConversationTurn,
-  readings: readonly ReadingOfATurn[],
-  oldest: KeptRequest,
-): Effect.Effect<TurnDone> {
+export function turnRead(turn: ConversationTurn, readings: ReadingsOfTheTurn): Effect.Effect<TurnDone> {
   const { place } = turn;
-  if (readings.length === 0) {
-    const read = { reading: undefined, request: oldest, since: place.row.since };
-    return Effect.map(readReplies(turn, read, nothingTaken), ({ answer, state }) =>
-      doneOf({ reads: [answer], readThrough: 1, state }, true, place.row.next_reading),
-    );
-  }
   const cursors = { parts: turn.parts, place, leading: leadingOf(readings) };
   const chosen = readingsInTurn(readings, place.row.next_reading);
   return Effect.map(readOn(turn, cursors, chosen, { reads: [], readThrough: 0, state: nothingTaken }), (soFar) =>

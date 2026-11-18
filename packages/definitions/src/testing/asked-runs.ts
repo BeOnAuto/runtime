@@ -5,13 +5,15 @@ import { startedRunOf } from '../runs/run-state.ts';
 import { asking } from './asking.ts';
 import { acmeAdmin } from './callers.ts';
 import { definitionOperationsFor } from './definition-operations.ts';
-import { harness, toPlaybook } from './harness.ts';
+import { harness, toPlaybook, runStreamIn, type Harness } from './harness.ts';
 
 export const askedRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-export const askedRun = { org: 'acme', playbook: 'alpha', id: askedRunId };
+export const askedRun = { org: 'acme', playbook: 'alpha', id: askedRunId, definitionType: 'asking', name: 'approve' };
 
-export const askedStream = `playbook/acme/alpha/runs/${askedRunId}`;
+function askedStreamIn(ledger: Harness['ledger']): string {
+  return runStreamIn(ledger, { type: 'asking', name: 'approve' }, askedRunId);
+}
 
 export const askedLineage = { causationId: 'request-1', correlationId: askedRunId };
 
@@ -45,6 +47,7 @@ export async function asked(input: unknown = askedLater) {
   const { service } = definitions.ledger;
   return {
     ...definitions,
+    stream: askedStreamIn(definitions.ledger),
     started,
     record: workRecorder(service, askingFacts),
     recorded: async () =>
@@ -53,7 +56,10 @@ export async function asked(input: unknown = askedLater) {
           Effect.orDie(service.readRecorded(askedRun, { kind: 'run', run: askedRunId }, { order: 'asc', limit: 20 })),
         )
       ).records,
-    state: async () => startedRunOf((await Effect.runPromise(service.load(askedStream, askingFacts.decider))).state),
+    state: async () =>
+      startedRunOf(
+        (await Effect.runPromise(service.load(askedStreamIn(definitions.ledger), askingFacts.decider))).state,
+      ),
   };
 }
 

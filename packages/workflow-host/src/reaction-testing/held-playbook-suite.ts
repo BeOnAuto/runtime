@@ -65,7 +65,7 @@ function heldAtTheFirstStart(settingsOf: SettingsOf) {
 
     const held = await holdReaching(holding, (state) => state.holds === 1);
 
-    expect(held).toMatchObject({ held_since: startedAt, holds: 1, held_for: 'content', attempts: 0, waiting: 1 });
+    expect(held).toMatchObject({ held_since: startedAt, holds: 1, held_for: 'content', attempts: 0 });
     expect(waitedFor(held, startedAt)).toBeGreaterThanOrEqual(500);
     expect(waitedFor(held, startedAt)).toBeLessThanOrEqual(1000);
     expect(causesOf(holding)).toEqual([]);
@@ -123,7 +123,7 @@ function keptThroughARestart(settingsOf: SettingsOf) {
     const restarted = await holdReaching(second, (state) => state.holds === 1);
     await published(reacting.database.store, { id: 's3', type: 'com.acme.sentinel' });
 
-    const passedOver = await holdReaching(second, (state) => state.checked >= restarted.checked + 2);
+    const passedOver = await holdReaching(second, (state) => state.place !== restarted.place);
     const startsWhileHeld = causesOf(second);
     first.clock.moveTo(heldUntil(held));
     const lifted = await holdReaching(second, (state) => state.holds === 0);

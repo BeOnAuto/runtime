@@ -18,8 +18,15 @@ import {
 import { Cause, Context, Effect, Fiber, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { keptOf, notesKept, storeOn, streamedIn } from '../payload-testing/kept-payloads.ts';
-import { runAt, startOf, workflow } from '../testing/host-documents.ts';
+import {
+  keptOf,
+  notesKept,
+  runsOfAlpha,
+  runsStartedIn,
+  storeOn,
+  streamedIn,
+} from '../payload-testing/kept-payloads.ts';
+import { definitionOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, onPostgreSQLAt, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { describeOnPostgreSQL } from '../testing/postgresql-databases.ts';
@@ -30,11 +37,19 @@ import { HeldValueSizeThreshold, hostPayloadsOf, hostRunPayloadsOf } from './run
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-const alphaRun = runKeyOf({ org: 'acme', playbook: 'alpha', runId });
+const alphaRun = runKeyOf({ org: 'acme', definition: 'alpha-definition', runId });
 
-const betaRun = runKeyOf({ org: 'acme', playbook: 'beta', runId });
+const betaRun = runKeyOf({ org: 'acme', definition: 'beta-definition', runId });
 
-const gammaRun = runKeyOf({ org: 'globex', playbook: 'gamma', runId });
+const gammaRun = runKeyOf({ org: 'globex', definition: 'gamma-definition', runId });
+
+const startedIn = new Map([
+  [alphaRun, 'playbook/acme/alpha/'],
+  [betaRun, 'playbook/acme/beta/'],
+  [gammaRun, 'playbook/globex/gamma/'],
+]);
+
+const runsOfThreePlaybooks = runsStartedIn((runKey) => startedIn.get(runKey) ?? '');
 
 const answer = keptOf({ text: 'a'.repeat(20_000) });
 
@@ -48,7 +63,11 @@ function erasing(reader: PayloadReader): PayloadReader {
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
-const alphaRunComposedPayloads = runKeyOf({ ...alpha, runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' });
+const alphaRunComposedPayloads = runKeyOf({
+  org: 'acme',
+  definition: definitionOfTheTests,
+  runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+});
 
 const value = { text: 'a'.repeat(20_000) };
 
@@ -61,6 +80,7 @@ async function keptAndReadBy(outside: boolean) {
   const payloads = hostPayloadsOf({
     content: store.content,
     context: Context.make(PayloadOffloading, outside).pipe(Context.add(PayloadsShared, shared)),
+    runs: runsOfAlpha,
     note: notesKept().note,
   });
   const read = await Effect.runPromise(
@@ -70,7 +90,8 @@ async function keptAndReadBy(outside: boolean) {
 }
 
 function thresholdComposedFrom(context: Context.Context<never>): number {
-  return hostPayloadsOf({ content: storeOn().content, context, note: notesKept().note }).runs.payloadSizeThreshold;
+  return hostPayloadsOf({ content: storeOn().content, context, runs: runsOfAlpha, note: notesKept().note }).runs
+    .payloadSizeThreshold;
 }
 
 const run = runAt('0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b');
@@ -130,7 +151,7 @@ function defectOf<A, E>(work: Effect.Effect<A, E>): Promise<unknown> {
 
 describe('the store of payloads the host composes for its engine', () => {
   it('keeps a text in the org of the playbook its run names and reads it back whole, which a run of another playbook of that org reads too and a run of another org reads as missing', async () => {
-    const { payloads, notes } = storeOn();
+    const { payloads, notes } = storeOn(true, undefined, runsOfThreePlaybooks);
 
     await Effect.runPromise(payloads.keep(alphaRun, [answer]));
     const read = await Promise.all(
@@ -145,19 +166,25 @@ describe('the store of payloads the host composes for its engine', () => {
     expect(notes()).toEqual([
       {
         kind: 'payloads_read',
-        run: { org: 'acme', playbook: 'alpha', runId },
+        run: { org: 'acme', definition: 'alpha-definition', runId },
         texts: 1,
         bytes: answer.bytes,
         unread: 0,
       },
       {
         kind: 'payloads_read',
-        run: { org: 'acme', playbook: 'beta', runId },
+        run: { org: 'acme', definition: 'beta-definition', runId },
         texts: 1,
         bytes: answer.bytes,
         unread: 0,
       },
-      { kind: 'payloads_read', run: { org: 'globex', playbook: 'gamma', runId }, texts: 1, bytes: 0, unread: 1 },
+      {
+        kind: 'payloads_read',
+        run: { org: 'globex', definition: 'gamma-definition', runId },
+        texts: 1,
+        bytes: 0,
+        unread: 1,
+      },
     ]);
   });
 
@@ -212,6 +239,7 @@ describe('the store of payloads the host composes, when the store fails or answe
     const { content } = storeOn();
     const payloads = hostRunPayloadsOf({
       content,
+      runs: runsOfThreePlaybooks,
       payloadOffloading: true,
       payloadSizeThreshold: mostInlineHeldValueBytes,
       shared: sharedPayloadsWithin(0),

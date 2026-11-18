@@ -24,6 +24,7 @@ function startNumber(index: number): ReactionStart {
   return {
     org: 'acme',
     playbook: 'alpha',
+    definitionKey: 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-0000000c105e/',
     workflow: 'close',
     version: 1,
     runId: `run-${index}`,
@@ -37,7 +38,7 @@ function startNumber(index: number): ReactionStart {
 async function startingAt(time: Readonly<{ now: number }>, refuses = () => false) {
   const database = await openedOn(await onSQLite());
   const started: string[] = [];
-  const refusals = refusalsOn(database, () => time.now);
+  const refusals = refusalsOn(database, 'workflow', () => time.now);
   const starting = startingOn(
     database,
     (start) =>
@@ -129,8 +130,8 @@ describe('the starts that wait for a later minute', () => {
         statement`WITH RECURSIVE waiting (at) AS (
             SELECT 1 UNION ALL SELECT at + 1 FROM waiting WHERE at < ${mostDeferredStarts - 1}
           )
-          INSERT INTO workflow_reaction_backlog (playbook_key, workflow, run_id, start, due)
-          SELECT ${playbookKey}, 'close', 'waiting-' || at, '{}', ${minute + aMinute} FROM waiting`,
+          INSERT INTO workflow_reaction_backlog (definition_key, run_id, start, due)
+          SELECT ${startNumber(0).definitionKey}, 'waiting-' || at, '{}', ${minute + aMinute} FROM waiting`,
       ),
     );
 
@@ -138,7 +139,7 @@ describe('the starts that wait for a later minute', () => {
     const deferred = await deferredCount(database);
     time.now = minute + aMinute;
     await Effect.runPromise(refusals.flush());
-    const { messages } = await database.store.read(`${playbookKey}reactions/close`);
+    const { messages } = await database.store.read(`${startNumber(0).definitionKey}reactions/workflow`);
 
     expect([deferred, messages]).toMatchObject([
       mostDeferredStarts,
@@ -185,7 +186,7 @@ describe('a start refused because its workflow’s document cannot be read just 
     const starting = startingOn(
       database,
       () => Effect.fail(new StartRefused({ detail, kind: 'content_unavailable' })),
-      refusalsOn(database, () => minute),
+      refusalsOn(database, 'workflow', () => minute),
       () => minute,
     );
 
@@ -215,7 +216,7 @@ describe('a deferred start the playbook refuses', () => {
     const left = await deferredCount(database);
     time.now = minute + (deliverySweeps + 1) * aMinute;
     await Effect.runPromise(refusals.flush());
-    const { messages } = await database.store.read(`${playbookKey}reactions/close`);
+    const { messages } = await database.store.read(`${startNumber(0).definitionKey}reactions/workflow`);
 
     expect([left, messages]).toMatchObject([
       0,
@@ -237,7 +238,7 @@ describe('a start the playbook rejects for good', () => {
   it('is said with the kind and because of its rejection and its trigger, and not tried again, whether it starts at once or waited for a later minute', async () => {
     const time = { now: minute + 1000 };
     const database = await openedOn(await onSQLite());
-    const refusals = refusalsOn(database, () => time.now);
+    const refusals = refusalsOn(database, 'workflow', () => time.now);
     const rejecting = startingOn(
       database,
       () =>
@@ -258,7 +259,7 @@ describe('a start the playbook rejects for good', () => {
     const left = await deferredCount(database);
     time.now = minute + 2 * aMinute;
     await Effect.runPromise(refusals.flush());
-    const { messages } = await database.store.read(`${playbookKey}reactions/close`);
+    const { messages } = await database.store.read(`${startNumber(0).definitionKey}reactions/workflow`);
 
     expect([left, messages]).toMatchObject([
       0,

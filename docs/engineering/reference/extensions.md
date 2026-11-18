@@ -85,7 +85,7 @@ A package that does not declare `@on.auto/runtime` is linked like any other adja
 Startup stops and names the package if any of these conditions holds:
 
 - The package provides a point this release does not support, or provides one point twice.
-- Its contract version is one the runtime does not serve. The error names both, for example: `The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 6`.
+- Its contract version is one the runtime does not serve. The error names both, for example: `The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 7`.
 - Its implementation is not a function, or fails while constructing the capability.
 - A returned capability, folder or operation is missing a member or has a member of the wrong kind. The error names the member, for example `The extension @acme/forecasts is refused: its capability has no facts` or `its folders[0] has no fold`.
 - A run-fact schema accepts types other than its declared type, or declares a fact type owned by the runtime.

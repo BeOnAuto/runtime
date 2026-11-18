@@ -3,16 +3,30 @@ import { Effect, Function } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import type { CallConsumer, RecordConsumer } from '../follower/consumers.ts';
-import { followedPlaybooksOn } from '../follower/followed-playbooks.ts';
-import { passOf, type PassParts } from '../follower/playbook-pass.ts';
+import { followedOrgsOn } from '../follower/followed-orgs.ts';
+import { passesOf, type PassParts } from '../follower/org-pass.ts';
 import { factPayloadsOn } from '../ledger-testing/ledger-connections.ts';
 import type { ListenerRow } from '../listeners/listener-rows.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 
 export const playbookKey = 'playbook/acme/alpha/';
 
+export const org = 'acme';
+
+export const placeOfTheTests = 'cursor-0';
+
 export type PassedOver = Pick<PassParts, 'records' | 'consumers' | 'calls' | 'passedEarly'> &
-  Partial<Pick<PassParts, 'applyDefinitionRecord'>>;
+  Partial<Pick<PassParts, 'applyDefinitionRecord' | 'names' | 'registered'>>;
+
+export function namesPlacingInAlpha(definitionKey: string): PassParts['names'] {
+  const placed = new Map([
+    [
+      definitionKey,
+      { definitionKey, playbookKey, definitionType: 'workflow', name: 'close', status: 'active', hasTriggers: true },
+    ],
+  ]);
+  return { nameHeldBy: (key) => Promise.resolve(placed.get(key)) };
+}
 
 export function recordAt(stream: string, position: number): RecordedEvent {
   return {
@@ -111,12 +125,12 @@ export function listenerFor(type: string): ListenerRow {
   };
 }
 
-export async function passingOn(over: (database: HostDatabase) => PassedOver) {
-  const opened = await openedOn(await onSQLite());
-  const playbooks = followedPlaybooksOn(opened);
-  const pass = passOf({
+export function passesOn(opened: HostDatabase, over: (database: HostDatabase) => PassedOver) {
+  const orgs = followedOrgsOn(opened);
+  const passes = passesOf({
     database: opened,
-    playbooks,
+    orgs,
+    names: opened.store,
     definitionType: 'workflow',
     applyDefinitionRecord: Function.constant(Effect.succeed('applied')),
     unreadable: Function.constant(Effect.void),
@@ -132,5 +146,9 @@ export async function passingOn(over: (database: HostDatabase) => PassedOver) {
     },
     ...over(opened),
   });
-  return { database: opened, playbooks, pass };
+  return { database: opened, orgs, pass: passes.org, held: passes.held };
+}
+
+export async function passingOn(over: (database: HostDatabase) => PassedOver) {
+  return passesOn(await openedOn(await onSQLite()), over);
 }

@@ -11,14 +11,7 @@ import {
   type RecordedEvent,
   shownData,
 } from '../index.ts';
-import {
-  playbookBoundAppendedFactsReader,
-  playbookBoundProjectionReader,
-  playbookBoundRecordedReader,
-  playbookBoundRunOutcomesReader,
-  prefixedAges,
-  prefixedReader,
-} from '../ledger/bound-ports.ts';
+import { playbookReaderOf } from '../ledger/playbook-ledger.ts';
 import { nothingKept } from '../testing/index.ts';
 import { memoryLedger } from '../testing/memory-ledger.ts';
 
@@ -171,21 +164,7 @@ function keptOf(
       yield* service.content.put(playbook, textToKeep(texts.m1, 'application/octet-stream'));
       const content = yield* keptContentOf(records, mostBytes, holders);
       return digests.map((digest) => content(digest));
-    }).pipe(
-      Effect.provideService(
-        PlaybookReader,
-        PlaybookReader.of({
-          ...prefixedReader(service, 'playbook/acme/alpha/'),
-          ...prefixedAges(service, 'playbook/acme/alpha/'),
-          ...playbookBoundRecordedReader(service, playbook),
-          ...playbookBoundAppendedFactsReader(service, playbook),
-          ...playbookBoundRunOutcomesReader(service, playbook),
-          ...playbookBoundProjectionReader(service, playbook),
-          readContent: (sha256) => service.content.get(playbook, sha256),
-          readContentHead: (sha256) => service.content.getHead(playbook, sha256),
-        }),
-      ),
-    ),
+    }).pipe(Effect.provideService(PlaybookReader, PlaybookReader.of(playbookReaderOf(service, playbook)))),
   );
 }
 

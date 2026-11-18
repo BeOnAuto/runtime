@@ -223,7 +223,7 @@ describe('run_definition rejecting', () => {
       detail: someWords,
       kind: 'unworkable',
     });
-    expect(ledger.streamNames()).toEqual(['playbook/acme/alpha/definitions/probe']);
+    expect(ledger.streamNames()).toEqual([expect.stringMatching(/^definition\/acme\/[^/]+\/definitions\/probe$/u)]);
   });
 
   it('a run id that is not a UUID', async () => {

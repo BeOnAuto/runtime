@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { cursorOf } from '../positions/activity-position.ts';
 import { activityHarness, ada, listedOf, outputOf, priya, salesReader } from '../testing/harness.ts';
 import { runDeferred, runStarted } from '../testing/recorded-facts.ts';
-import { at, financeAndSales, runs } from '../testing/scenario.ts';
+import { at, definitionStreamOf, definitions, filed, financeAndSales, runStreamOf, runs } from '../testing/scenario.ts';
 import { listActivity } from './list-activity.ts';
 
 describe('what list_activity refuses', () => {
@@ -92,9 +92,9 @@ describe('the pages of list_activity', () => {
   it('reads every row once, page after page, by the cursor of the page before', async () => {
     const { list } = await financeAndSales();
     const all = addresses(listedOf(await list(ada)).rows);
-    const first = listedOf(await list(ada, { limit: '4' }));
-    const second = listedOf(await list(ada, { limit: '4', cursor: String(first.next_cursor) }));
-    const third = listedOf(await list(ada, { limit: '4', cursor: String(second.next_cursor) }));
+    const first = listedOf(await list(ada, { limit: '5' }));
+    const second = listedOf(await list(ada, { limit: '5', cursor: String(first.next_cursor) }));
+    const third = listedOf(await list(ada, { limit: '5', cursor: String(second.next_cursor) }));
 
     expect([first.has_more, second.has_more, third.has_more]).toEqual([true, true, false]);
     expect(third.next_cursor).toBeNull();
@@ -134,7 +134,7 @@ describe('the rows of list_activity after a cursor', () => {
         definitionVersion: version,
       },
     }));
-    await record('playbook/acme/finance/definitions/reasoning', ...versions);
+    await record(definitionStreamOf(definitions.categorize), ...versions);
     const first = listedOf(await list(ada, { limit: '1', kind: 'new' }));
     const second = listedOf(await list(ada, { limit: '1', kind: 'new', cursor: String(first.next_cursor) }));
     const third = listedOf(await list(ada, { limit: '1', kind: 'new', cursor: String(second.next_cursor) }));
@@ -179,7 +179,11 @@ describe('list_activity', () => {
         { kind: 'new', address: 'finance/definitions/reasoning/categorize-invoice/1', change: 'created', seen: false },
         { kind: 'new', address: `playbooks/sales/${ms('10:00')}`, change: 'created', by: ada.id, seen: true },
         { kind: 'new', address: `playbooks/finance/${ms('10:00')}`, change: 'created', by: priya.id, seen: false },
+        { kind: 'new', address: 'sales/definitions/workflow/weekly-sales/1', seen: true },
         { kind: 'new', address: 'sales/definitions/workflow/old-report/1', seen: true },
+        { kind: 'new', address: 'finance/definitions/workflow/close-the-week/1', seen: true },
+        { kind: 'new', address: 'finance/definitions/reasoning/summarize-week/1', seen: true },
+        { kind: 'new', address: 'finance/definitions/interaction/approve-payment/1', seen: true },
       ],
       has_more: false,
       next_cursor: null,
@@ -231,9 +235,11 @@ describe('a request in list_activity whose party is a person by id', () => {
       name: 'portal-check',
       version: 1,
     };
+    const portalCheck = { id: '019a3f00-0000-7000-8000-000000000009', ...asking, playbook: 'finance' };
     await harness.created(priya, 'finance', at('10:00'));
+    await harness.record(definitionStreamOf(portalCheck), filed(portalCheck, at('10:30'), priya.id));
     await harness.record(
-      `playbook/acme/finance/runs/${asking.runId}`,
+      runStreamOf(portalCheck, asking),
       runStarted(asking, at('11:00'), 'playbook:finance'),
       runDeferred(asking, at('11:01'), {
         to: priya.id,
@@ -244,7 +250,14 @@ describe('a request in list_activity whose party is a person by id', () => {
     );
 
     expect([outputOf(await harness.list(priya)), outputOf(await harness.list(ada))]).toMatchObject([
-      { rows: [{ kind: 'needs_you', waits_on: priya.id }, { kind: 'new' }], counts: { needs_you: 1 } },
+      {
+        rows: [
+          { kind: 'needs_you', waits_on: priya.id },
+          { kind: 'new', address: 'finance/definitions/interaction/portal-check/1' },
+          { kind: 'new', address: `playbooks/finance/${ms('10:00')}` },
+        ],
+        counts: { needs_you: 1 },
+      },
       { counts: { needs_you: 0 } },
     ]);
   });

@@ -5,9 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { defineGetPlaybookAnalytics } from '../index.ts';
 import { RunEventSchema, type RecordedRunEvent, type RunEvent } from '../runs/run-events.ts';
 import type { RunRejection } from '../runs/run.ts';
-import { acmeReader, recordedAdmin } from '../testing/callers.ts';
+import { acmeReader, startedInAlpha } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { asQueryString, harness, toPlaybook, type Harness } from '../testing/harness.ts';
+import { definedWithItsId } from '../testing/kept-payloads.ts';
 
 const someWords: unknown = expect.any(String);
 
@@ -47,7 +48,7 @@ const usage = { input: { total: 1200, cache_read: 1000 }, output: { total: 300 }
 
 function started(name: string, at: string, type = 'reasoning'): Writing {
   return {
-    event: { type: 'run_started', data: { started_by: recordedAdmin, input: {} } },
+    event: { type: 'run_started', data: { ...startedInAlpha, input: {} } },
     context: ofTheRun(name, type, at),
   };
 }
@@ -62,16 +63,28 @@ function running(definitions: Harness, stream: string, ...events: readonly Writi
   );
 }
 
+const placed = [
+  { playbook: 'alpha', type: 'reasoning', name: 'triage', id: 'triage-of-alpha' },
+  { playbook: 'alpha', type: 'workflow', name: 'approval', id: 'approval-of-alpha' },
+  { playbook: 'alpha', type: 'reasoning', name: 'draft', id: 'draft-of-alpha' },
+  { playbook: 'beta', type: 'reasoning', name: 'triage', id: 'triage-of-beta' },
+] as const;
+
 async function aPlaybookWithRuns(): Promise<Harness> {
   const definitions = harness();
+  await Effect.runPromise(
+    Effect.forEach(placed, ({ playbook, id, ...definition }) =>
+      definedWithItsId(definitions.ledger.service, { org: 'acme', playbook }, { ...definition, id, source: 'x' }),
+    ),
+  );
   const rejection: RunRejection = { reason: 'unavailable', detail: 'The answer is not JSON' };
   await running(
     definitions,
-    'playbook/acme/alpha/runs/r1',
+    'definition/acme/triage-of-alpha/runs/r1',
     started('triage', '2026-10-05T09:00:00.000Z'),
     succeeded('2026-10-05T09:00:01.000Z', { usage, cost_usd: 0.0123 }),
   );
-  await running(definitions, 'playbook/acme/alpha/runs/r2', started('triage', '2026-10-05T10:00:00.000Z'), {
+  await running(definitions, 'definition/acme/triage-of-alpha/runs/r2', started('triage', '2026-10-05T10:00:00.000Z'), {
     event: {
       type: 'run_rejected',
       data: {
@@ -83,18 +96,18 @@ async function aPlaybookWithRuns(): Promise<Harness> {
   });
   await running(
     definitions,
-    'playbook/acme/alpha/runs/r3',
+    'definition/acme/approval-of-alpha/runs/r3',
     started('approval', '2026-10-06T08:00:00.000Z', 'workflow'),
     succeeded('2026-10-06T08:00:02.000Z', {}, 'approval', 'workflow'),
   );
-  await running(definitions, 'playbook/acme/alpha/runs/r4', started('draft', '2026-10-06T09:00:00.000Z'));
+  await running(definitions, 'definition/acme/draft-of-alpha/runs/r4', started('draft', '2026-10-06T09:00:00.000Z'));
   await running(
     definitions,
-    'playbook/acme/alpha/runs/r5',
+    'definition/acme/triage-of-alpha/runs/r5',
     started('triage', '2026-09-20T09:00:00.000Z'),
     succeeded('2026-09-20T09:00:00.400Z'),
   );
-  await running(definitions, 'playbook/acme/beta/runs/r6', started('triage', '2026-10-06T09:00:00.000Z'));
+  await running(definitions, 'definition/acme/triage-of-beta/runs/r6', started('triage', '2026-10-06T09:00:00.000Z'));
   return definitions;
 }
 

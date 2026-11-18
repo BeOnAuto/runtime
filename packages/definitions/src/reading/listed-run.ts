@@ -7,10 +7,11 @@ import {
   RejectionCauseSchema,
   UnavailableKindSchema,
   type RecordedEvent,
+  runStreamNameOf,
 } from '@on.auto/operations';
 import { Effect, Schema, Struct } from 'effect';
 
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { runDecider } from '../runs/run-decider.ts';
 import { RunEventSchema, type RecordedRunEvent } from '../runs/run-events.ts';
 import { runOf } from '../runs/run-lookup.ts';
 import { evolveRun, startedRunOf, type RunStreamState } from '../runs/run-state.ts';

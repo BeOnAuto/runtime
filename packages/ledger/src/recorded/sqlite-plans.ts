@@ -1,6 +1,6 @@
 import { SQL, type SQLExecutor } from '@event-driven-io/dumbo';
 
-import { definitionStreamsQuery } from '../definitions/sqlite-definition-streams.ts';
+import { definitionStreamsQuery } from '../definitions/sqlite-definition-reads.ts';
 import type { RecordedStore } from '../event-store.ts';
 import { sqliteRecordedStore } from './sqlite-recorded.ts';
 

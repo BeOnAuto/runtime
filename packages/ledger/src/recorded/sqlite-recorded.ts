@@ -3,12 +3,11 @@ import { Schema } from 'effect';
 
 import { sqliteAppended } from '../appended/sqlite-appended.ts';
 import { sqliteContentOn } from '../content/content-store.ts';
-import { sqliteDefinitionStreams } from '../definitions/sqlite-definition-streams.ts';
+import { sqliteDefinitionReads } from '../definitions/sqlite-definition-reads.ts';
 import {
   isAKind,
   type AppendListeners,
   type AppendWaitsStore,
-  type DefinitionStreamsStore,
   type LastMessagesStore,
   type OwnContentStore,
   type RecordedStore,
@@ -84,6 +83,9 @@ function recordsIn(selected: RecordsSelected, scope: ExaminationScope): SQL {
   }
   if (selected.kind === 'run') {
     return recordsWhere(ofTheRun(selected, scope), scope);
+  }
+  if (selected.kind === 'org') {
+    return recordsWhere(SQL`${orgOfStream} = ${selected.org}`, scope);
   }
   if (selected.kind === 'correlated') {
     return recordsWhere(
@@ -175,7 +177,7 @@ export function sqliteRecordedStore(
   execute: SQLExecutor,
   listeners: AppendListeners = {},
 ): RecordedStore &
-  DefinitionStreamsStore &
+  ReturnType<typeof sqliteDefinitionReads> &
   KeptStreamAges &
   StreamVersionsStore &
   LastMessagesStore &
@@ -188,7 +190,7 @@ export function sqliteRecordedStore(
     dataAt: dataAt(execute),
   };
   return {
-    ...sqliteDefinitionStreams(execute),
+    ...sqliteDefinitionReads(execute),
     ...appended,
     pointLength: 1,
     ...recordedReadsOver(statements, recordWithId(execute)),
@@ -200,7 +202,7 @@ export function sqliteRecordedStoreOn(
   pool: TransactionalPool<SQLExecutor>,
   listeners: AppendListeners,
 ): RecordedStore &
-  DefinitionStreamsStore &
+  ReturnType<typeof sqliteDefinitionReads> &
   KeptStreamAges &
   StreamVersionsStore &
   LastMessagesStore &

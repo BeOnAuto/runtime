@@ -7,12 +7,19 @@ import {
   runContentHolders,
   watchedStore,
 } from '@on.auto/definitions/testing';
-import { memoryLedger } from '@on.auto/operations/testing';
-import { Effect, Schema } from 'effect';
+import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { openRequests } from '../requests/open-requests.ts';
-import { askedRunId, askedThroughChat, fakeTools, interactionHarness, nudging, recordsOf } from '../testing/index.ts';
+import {
+  askedRunId,
+  askedThroughChat,
+  fakeTools,
+  interactionHarness,
+  ledgerKeepingNames,
+  nudging,
+  recordsOf,
+} from '../testing/index.ts';
 import { attemptSchedule, nextAttemptAt } from './attempt-schedule.ts';
 
 const anyWords: unknown = expect.any(String);
@@ -90,7 +97,7 @@ const RecordedSchema = Schema.Struct({ type: Schema.String, data: Schema.JsonObj
 
 const decodeRecorded = Schema.decodeUnknownSync(Schema.Array(RecordedSchema));
 
-async function typesOn(ledger: ReturnType<typeof memoryLedger>, run: string) {
+async function typesOn(ledger: ReturnType<typeof ledgerKeepingNames>, run: string) {
   const { records } = await Effect.runPromise(
     ledger.service.readRecorded(alpha, { kind: 'run', run }, { order: 'asc', limit: 20 }),
   );
@@ -99,10 +106,12 @@ async function typesOn(ledger: ReturnType<typeof memoryLedger>, run: string) {
 
 async function askedWithAKeptInput(held: boolean) {
   const watched = watchedStore();
-  const ledger = memoryLedger(undefined, [openRequests], runContentHolders, watched.store);
+  const ledger = ledgerKeepingNames([openRequests], runContentHolders, watched.store);
   const asked = await askedThroughChat({ ledger });
   const [, deferral] = await typesOn(ledger, askedRunId);
   const { sha256, bytes } = keptArmOf(input);
+  const named = { playbookKey: 'playbook/acme/alpha/', definitionType: 'interaction', name: 'approve-brief' };
+  const holder = Option.getOrThrow(Option.fromNullishOr(await Effect.runPromise(ledger.service.holderOfName(named))));
   const context = {
     runId: keptRunId,
     by: 'acme-admin',
@@ -118,7 +127,7 @@ async function askedWithAKeptInput(held: boolean) {
         : keptLongBeforeAndLost(ledger.service.content, watched.store, alpha, input),
       recordedAsGiven(
         ledger.service,
-        `playbook/acme/alpha/runs/${keptRunId}`,
+        `${holder.definitionKey}runs/${keptRunId}`,
         [
           {
             type: 'run_started',
@@ -126,6 +135,7 @@ async function askedWithAKeptInput(held: boolean) {
               input_sha256: sha256,
               input_bytes: bytes,
               started_by: { id: 'acme-admin', name: 'acme-admin' },
+              playbook: 'alpha',
               finishes_later: true,
             },
           },

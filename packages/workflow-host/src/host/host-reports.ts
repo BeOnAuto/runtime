@@ -2,31 +2,36 @@ import type { TroublingReceipt } from '@on.auto/workflow-engine';
 import type { Effect } from 'effect';
 
 import type { Trouble } from '../calls/host-executor.ts';
-import type { HeldFor } from '../follower/followed-playbooks.ts';
-import type { RunAddress } from '../runs/run-address.ts';
+import type { HeldAtTheRecordFor } from '../follower/followed-orgs.ts';
+import type { FiledRun, RunInAPlaybook } from '../runs/run-address.ts';
 
 export type HostNote =
   | { readonly kind: 'standing_by'; readonly holder: string; readonly until: number }
   | { readonly kind: 'took_over'; readonly holder: string }
   | {
       readonly kind: 'settle_backing_off';
-      readonly run: RunAddress;
+      readonly run: FiledRun;
       readonly attempts: number;
       readonly detail: string;
     }
-  | { readonly kind: 'settled_after_back_off'; readonly run: RunAddress; readonly attempts: number }
-  | { readonly kind: 'offer_declined'; readonly run: RunAddress; readonly detail: string }
-  | { readonly kind: 'run_record_passed'; readonly run: RunAddress; readonly version: number; readonly sweeps: number }
+  | { readonly kind: 'settled_after_back_off'; readonly run: FiledRun; readonly attempts: number }
+  | { readonly kind: 'offer_declined'; readonly run: FiledRun; readonly detail: string }
+  | {
+      readonly kind: 'run_record_passed';
+      readonly run: RunInAPlaybook;
+      readonly version: number;
+      readonly sweeps: number;
+    }
   | {
       readonly kind: 'run_reloaded';
-      readonly run: RunAddress;
+      readonly run: FiledRun;
       readonly snapshot: boolean;
       readonly events: number;
       readonly keptBytes: number;
     }
   | {
       readonly kind: 'payloads_read';
-      readonly run: RunAddress;
+      readonly run: FiledRun;
       readonly texts: number;
       readonly bytes: number;
       readonly unread: number;
@@ -50,7 +55,7 @@ export type HostNote =
       readonly kind: 'content_hold';
       readonly org: string;
       readonly playbook: string;
-      readonly heldFor: HeldFor;
+      readonly heldFor: HeldAtTheRecordFor;
       readonly heldSince: number;
       readonly heldMs: number;
       readonly holds: number;
@@ -120,7 +125,7 @@ export type HostNote =
       readonly detail: string;
     };
 
-export interface UnsettledRun extends RunAddress {
+export interface UnsettledRun extends FiledRun {
   readonly receipt: TroublingReceipt;
 }
 

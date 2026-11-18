@@ -2,9 +2,8 @@ import type { Recorded, StreamReader } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import { eventCodecOf } from './event-codec.ts';
-import type { RecordedMessage, StreamMessagesStore, Streams } from './event-store.ts';
+import type { RecordedMessage, StreamAgesStore, StreamMessagesStore, Streams } from './event-store.ts';
 import { foldEvents } from './fold-events.ts';
-import type { StreamAgesStore } from './stream-ages/stream-ages-store.ts';
 
 function decodedOf<Event extends Recorded>(
   message: RecordedMessage | undefined,

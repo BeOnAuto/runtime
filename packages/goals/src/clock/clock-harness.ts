@@ -106,16 +106,19 @@ function replayedInto(fresh: Book, book: Book) {
   return Effect.gen(function* () {
     const { records } = yield* book.ledger.readRecorded(sales, { kind: 'everything' }, { order: 'asc', limit: 10_000 });
     for (const fact of records) {
+      const workflow = fact.context.definitionType === 'workflow' ? fact.context.definitionName : undefined;
       yield* Effect.promise(() =>
-        fresh.append(fact.stream.slice(salesKey.length), fact.type, jsonOf(fact.data), fact.context),
+        workflow === undefined
+          ? fresh.append(fact.stream.slice(salesKey.length), fact.type, jsonOf(fact.data), fact.context)
+          : fresh.workflowChanged(workflow, fact.type, jsonOf(fact.data), fact.context),
       );
     }
   });
 }
 
 function pausedIn(book: Book, workflow: string, at: string): Promise<void> {
-  return book.append(
-    'definitions/workflow',
+  return book.workflowChanged(
+    workflow,
     'definition_paused',
     { paused_by: { id: 'person:owner', name: 'Owner' } },
     { at, definitionType: 'workflow', definitionName: workflow, definitionVersion: 1 },
@@ -152,7 +155,11 @@ export function clockHarnessOf(start: string, book: Book = bookOf(), clockOf: Cl
   const assessor = assessorOver(book, moment);
   const until = (at: string) => Effect.runPromise(performedUntil(driven, Date.parse(at)));
   return {
-    book,
+    book: {
+      ...book,
+      workflowSaved: (name, version, contributes) =>
+        book.workflowSaved(name, version, contributes, stamped(moment.now())),
+    },
     clock: driven.clock,
     assessor,
     wakes: driven.wakes,

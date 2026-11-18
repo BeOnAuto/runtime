@@ -3,15 +3,15 @@ import { mostTryAgainMs, PayloadOffloading, tryAgainAfter } from '@on.auto/opera
 import { Context, Effect, Random } from 'effect';
 
 import {
-  isDueAt,
   mostWaitOf,
-  type FollowedPlaybook,
-  type FollowedPlaybooks,
+  type FollowedOrgs,
   type HeldFor,
   type HeldPlaybook,
   type Hold,
-} from '../follower/followed-playbooks.ts';
-import type { Held, PassEnd } from '../follower/record-steps.ts';
+  type ParkedPlaybook,
+  type Progress,
+} from '../follower/followed-orgs.ts';
+import type { PassEnd } from '../follower/record-steps.ts';
 import type { HostContext } from '../loop/forked-fibers.ts';
 
 interface Lag {
@@ -19,13 +19,16 @@ interface Lag {
   readonly capped: boolean;
 }
 
-export interface HeldAtARecord extends Held {
+export interface HeldAtARecord {
+  readonly heldFor: HeldFor;
+  readonly record: Pick<RecordedEvent, 'id' | 'type'>;
   readonly lag: Lag;
 }
 
 export interface PassReached {
   readonly end: PassEnd;
   readonly records: number;
+  readonly progress: Progress;
   readonly held?: HeldAtARecord;
 }
 
@@ -55,7 +58,7 @@ interface HoldTryFailed extends TryFailedAt {
   readonly hold: Hold;
 }
 
-export interface HeldTries extends Pick<FollowedPlaybooks, 'heldAt'> {
+export interface HeldTries extends Pick<FollowedOrgs, 'heldAt' | 'parkedForDelivery'> {
   readonly failed: (held: HeldPlaybook, failed: TryFailedAt) => Effect.Effect<void>;
 }
 
@@ -68,63 +71,82 @@ export interface HoldNotes {
 export const failedTryRetryMs = mostTryAgainMs;
 
 export interface HoldParts {
-  readonly playbooks: Pick<FollowedPlaybooks, 'held' | 'lifted'>;
+  readonly orgs: Pick<FollowedOrgs, 'parked' | 'held' | 'lifted'>;
   readonly now: () => number;
   readonly holdNotes: HoldNotes;
+}
+
+export interface Parking {
+  readonly playbookKey: string;
+  readonly org: string;
+  readonly hold: Hold | undefined;
 }
 
 export function holdsUnreadableIn({ context }: { readonly context?: HostContext }): boolean {
   return Context.get(context ?? Context.empty(), PayloadOffloading);
 }
 
-export function isHeldAt({ hold }: Pick<FollowedPlaybook, 'hold'>, now: number): boolean {
-  return hold !== undefined && !isDueAt(hold, now);
-}
-
-function triesBefore({ hold }: FollowedPlaybook, { heldFor }: HeldAtARecord, moved: boolean): number {
+function triesBefore({ hold }: Parking, { heldFor }: HeldAtARecord, moved: boolean): number {
   return hold === undefined || hold.heldFor !== heldFor || moved ? 0 : hold.holds;
 }
 
-function heldAgain(
+function waitOf(heldFor: HeldFor, holds: number, factor: number): number {
+  return heldFor === 'delivery' ? 0 : Math.ceil(tryAgainAfter(holds, factor, mostWaitOf(heldFor)));
+}
+
+export function heldAgain(
   parts: HoldParts,
-  followed: FollowedPlaybook,
-  held: HeldAtARecord,
-  moved: boolean,
+  parking: Parking,
+  reached: Pick<PassReached, 'progress' | 'records'> & { readonly held: HeldAtARecord },
 ): Effect.Effect<void> {
-  const { playbookKey, hold: before } = followed;
+  const { playbookKey, org, hold: before } = parking;
+  const { held, progress } = reached;
   const at = parts.now();
-  const holds = triesBefore(followed, held, moved) + 1;
+  const holds = triesBefore(parking, held, reached.records > 0) + 1;
   return Effect.flatMap(Random.next, (factor) => {
     const hold = {
       heldFor: held.heldFor,
       since: before?.since ?? at,
-      until: at + Math.ceil(tryAgainAfter(holds, factor, mostWaitOf(held.heldFor))),
+      until: at + waitOf(held.heldFor, holds, factor),
       holds,
     };
     const tried: HoldTried = { hold, first: holds === 1, record: held.record, lag: held.lag, at };
-    return Effect.andThen(parts.playbooks.held(playbookKey, hold), parts.holdNotes.tried(playbookKey, tried));
+    const parked: ParkedPlaybook = { playbookKey, org, progress, hold };
+    return Effect.andThen(parts.orgs.parked(parked), parts.holdNotes.tried(playbookKey, tried));
   });
 }
 
 export function holdTryFailed(
-  { playbooks, holdNotes }: Pick<HoldParts, 'playbooks' | 'holdNotes'>,
+  { orgs, holdNotes }: Pick<HoldParts, 'orgs' | 'holdNotes'>,
   { playbookKey, hold }: HeldPlaybook,
   { at, retryAt }: TryFailedAt,
 ): Effect.Effect<void> {
   return Effect.andThen(
-    playbooks.held(playbookKey, { ...hold, until: retryAt }),
+    orgs.held(playbookKey, { ...hold, until: retryAt }),
     holdNotes.failed(playbookKey, { hold, at, retryAt }),
   );
 }
 
-export function holdAfter(parts: HoldParts, followed: FollowedPlaybook, reached: PassReached): Effect.Effect<void> {
-  const { playbookKey, hold } = followed;
-  if (reached.held !== undefined) {
-    return heldAgain(parts, followed, reached.held, reached.records > 0);
-  }
-  if (hold === undefined) {
+function liftNoted(parts: HoldParts, { playbookKey, hold }: HeldPlaybook, reached: PassReached): Effect.Effect<void> {
+  if (hold.holds === 0) {
     return Effect.void;
   }
   const lifted: HoldLifted = { hold, at: parts.now(), records: reached.records, more: reached.end === 'more' };
-  return Effect.andThen(parts.playbooks.lifted(playbookKey), parts.holdNotes.lifted(playbookKey, lifted));
+  return parts.holdNotes.lifted(playbookKey, lifted);
+}
+
+export function heldAfter(parts: HoldParts, held: HeldPlaybook, reached: PassReached): Effect.Effect<void> {
+  if (reached.held !== undefined) {
+    return heldAgain(parts, held, { ...reached, held: reached.held });
+  }
+  const noted = liftNoted(parts, held, reached);
+  if (reached.end === 'caught_up') {
+    return Effect.andThen(parts.orgs.lifted(held.playbookKey), noted);
+  }
+  const catchingUp: ParkedPlaybook = {
+    ...held,
+    progress: reached.progress,
+    hold: { ...held.hold, until: parts.now(), holds: 0 },
+  };
+  return Effect.andThen(parts.orgs.parked(catchingUp), noted);
 }

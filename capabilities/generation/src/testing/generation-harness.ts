@@ -1,16 +1,11 @@
 import type { ContentStore } from '@on.auto/content';
 import { memoryContentStore } from '@on.auto/content/testing';
 import type { Capability } from '@on.auto/definitions';
-import { contentHoldersOf } from '@on.auto/operations';
-import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
+import type { MemoryLedger } from '@on.auto/operations/testing';
 
 import {
-  AssetEventSchema,
-  assets,
   assetsDue,
-  assetTotals,
   generationsDue,
-  generationsWaiting,
   makeGenerationFunctionAdapter,
   type AssetsDue,
   type GenerationPorts,
@@ -18,6 +13,7 @@ import {
 } from '../index.ts';
 import { fakeGateway, type FakeGateway, type GatewayAnswering } from './gateway-fakes.ts';
 import { callsOn, performedAt, type HarnessCalls } from './harness-calls.ts';
+import { harnessLedger } from './harness-ledger.ts';
 import { readersOn, type HarnessReaders } from './harness-readers.ts';
 import { testCatalog } from './test-catalog.ts';
 
@@ -43,12 +39,7 @@ export interface GenerationHarness extends HarnessCalls, HarnessReaders {
 
 export function generationHarness({ answering, clockStepMs = 0, ...given }: HarnessOptions = {}): GenerationHarness {
   const store = memoryContentStore();
-  const ledger = memoryLedger(
-    undefined,
-    [assets, assetTotals, generationsWaiting],
-    contentHoldersOf([AssetEventSchema]),
-    store,
-  );
+  const ledger = harnessLedger(store);
   const gateway = fakeGateway(answering);
   const time = { now: harnessStartsAt };
   const ports = {

@@ -50,6 +50,10 @@ export interface VersionToRun {
   readonly version: number;
 }
 
+export interface DefinitionToStart extends VersionToRun {
+  readonly definition_id: string;
+}
+
 type VersionAsRecorded = Parameters<typeof documentToRun>[1] & {
   readonly stripped?: Parameters<Capability['prepare']>[1];
 };

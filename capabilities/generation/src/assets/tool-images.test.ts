@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { generationBounds } from '../capability/generation-ports.ts';
-import { assetIdOf, day } from '../run-testing/run-outcomes.ts';
+import { aRunIn, assetIdOf, day } from '../run-testing/run-outcomes.ts';
 import { alpha, generationHarness, harnessStartsAt, onePixelPng, type GenerationHarness } from '../testing/index.ts';
 import { toolImagesKept, type ToolImagePorts, type ToolImageToKeep } from './tool-images.ts';
 
@@ -42,6 +42,7 @@ function keepingIn(playbook: GenerationHarness, bounds: ToolImagePorts['bounds']
 describe('an image a tool call answered', () => {
   it('is kept as an asset of the run, made by that call, for as long as the runtime keeps an asset, and answers its id', async () => {
     const playbook = generationHarness();
+    await aRunIn(playbook, 'run-1');
     const keep = keepingIn(playbook, { ...generationBounds, keptMs: 30 * day });
 
     const kept = await at(harnessStartsAt, keep(screenshot));
@@ -65,6 +66,7 @@ describe('an image a tool call answered', () => {
 
   it('is kept as the image its bytes are, and names no connection where the call went through none', async () => {
     const playbook = generationHarness();
+    await aRunIn(playbook, 'run-1');
     const ofAServer = { call_id: 'toolu_01', server: 'graph', tool: 'chart' };
 
     await at(harnessStartsAt, keepingIn(playbook)({ ...screenshot, call: ofAServer }));
@@ -79,6 +81,7 @@ describe('an image a tool call answered', () => {
 describe('an image a tool call answered, past what the runtime keeps', () => {
   it('is not kept where its bytes are of no image the runtime knows, larger than an image may be, or past what the playbook may keep', async () => {
     const playbook = generationHarness();
+    await aRunIn(playbook, 'run-1');
     const notAnImage = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"/>');
     const keep = keepingIn(playbook);
     const tooLarge = keepingIn(playbook, {
@@ -101,11 +104,23 @@ describe('an image a tool call answered, past what the runtime keeps', () => {
 describe('an image a tool call answered, where the runtime gives no ids', () => {
   it('is kept under a version 7 UUID where the runtime gives no ids of its own', async () => {
     const playbook = generationHarness();
+    await aRunIn(playbook, 'run-1');
     const keep = toolImagesKept({ ledger: playbook.ledger.service, content: playbook.ledger.service.content });
 
     const kept = await Effect.runPromise(keep(screenshot));
 
     expect(kept).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
     expect(await playbook.totals()).toEqual({ bytes: onePixelPng.byteLength, assets: 1 });
+  });
+});
+
+describe('an image of a run the playbook does not hold', () => {
+  it('is not kept, and its keeping fails as a fault, since a run keeps its assets under its own definition', async () => {
+    const playbook = generationHarness();
+
+    await expect(at(harnessStartsAt, keepingIn(playbook)(screenshot))).rejects.toThrow(
+      'The run run-1 that keeps an asset is not a run of the playbook alpha',
+    );
+    expect(await playbook.totals()).toEqual({ bytes: 0, assets: 0 });
   });
 });

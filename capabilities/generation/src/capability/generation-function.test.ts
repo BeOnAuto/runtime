@@ -1,7 +1,6 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { generationLayoutSteps } from '../index.ts';
 import { audioSource, generationHarness, imageSource, videoSource } from '../testing/index.ts';
 import { generationBounds } from './generation-ports.ts';
 import { describeOutput, waitingAccount } from './generation-words.ts';
@@ -128,13 +127,6 @@ describe('the words and the bounds of the generation capability', () => {
       keptMs: 90 * 86_400_000,
       waitMs: 600_000,
     });
-  });
-
-  it('carries a ledger of the layouts before forward with a step for each of its tables', () => {
-    expect(generationLayoutSteps).toEqual([
-      { layout: 11, statements: [] },
-      { layout: 13, statements: [] },
-    ]);
   });
 });
 

@@ -121,6 +121,8 @@ const cadenceColumns: readonly string[] = ['open', 'active_at', 'reads', 'next_r
 export const conversations: KeyedProjection = {
   name: conversationsName,
   version: 4,
+  scopes: ['definition'],
+  partition: 'org',
   kinds: ['runs', conversationCallsKind],
   types: ['delivery_succeeded', 'replies_read', 'reading_failed'],
   columns: [

@@ -50,6 +50,15 @@ describe('what the assessor keeps between records', () => {
 });
 
 describe('the entries the assessor reads', () => {
+  it('are none for a run of a workflow whose name the playbook does not hold', async () => {
+    const { ports } = await built();
+    const assessor = assessorOf(ports);
+
+    const unheld = await deliveredAll(assessor, finished({ id: 'u', workflow: 'unsaved', data: results(0) }));
+
+    expect(unheld.keys).toEqual([]);
+  });
+
   it('leave out goals the playbook does not have, and observe nothing when none is left', async () => {
     const { book, ports } = await built();
     const gone = { goal: 'gone-goal', purpose: 'Counts what is gone.', measures: '/n' };

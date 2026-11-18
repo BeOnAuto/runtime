@@ -108,7 +108,7 @@ describe('an overview its playbook keeps outside the fact of its version', () =>
     expect(await readable.asked(getDefinition)).toMatchObject({ status: 'succeeded', output: small });
     expect(
       records.flatMap((record) =>
-        present({ ...record, stream: record.stream.replace(showing.streamPrefix, '') }, showing),
+        present({ ...record, stream: record.stream.replace(/^(?:playbook|definition)\/[^/]+\/[^/]+\//u, '') }, showing),
       ),
     ).toMatchObject([{ data: { overview_sha256: overview.sha256, overview_bytes: overview.bytes } }]);
     expect(await askedAt(lost.definitions, twoHoursLater)(getDefinition)).toMatchObject({

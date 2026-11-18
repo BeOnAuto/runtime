@@ -1,12 +1,11 @@
 import { Unavailable } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import type { CheckJob } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { makeWorkflowAdapter } from '../capability/workflow.ts';
 import { testExpressionCheck } from '../testing/expression-checks.ts';
-import { playbookOn } from '../testing/playbook.ts';
+import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { testPlaybookNames } from '../testing/test-sandbox.ts';
 import type { ExpressionCheck } from './expression-check.ts';
 
@@ -20,7 +19,7 @@ function saving(check: ExpressionCheck) {
     longestCallMs: 1000,
     names: testPlaybookNames,
   });
-  const playbook = playbookOn(memoryLedger(), [workflow]);
+  const playbook = playbookOn(namingLedger(), [workflow]);
   return (source: string) => playbook.call(playbook.createDefinition, { type: 'workflow', name: 'flow', source });
 }
 

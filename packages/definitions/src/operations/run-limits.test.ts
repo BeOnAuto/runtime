@@ -105,7 +105,7 @@ describe('the input of a run', () => {
 
     expect(await running('a'.repeat(1_048_575))).toEqual(inputTooLarge(1_048_577));
     expect(await running({ text: 'é'.repeat(524_286) })).toEqual(inputTooLarge(1_048_583));
-    expect(ledger.streamNames()).toEqual(['playbook/acme/alpha/definitions/probe']);
+    expect(ledger.streamNames()).toEqual([expect.stringMatching(/^definition\/acme\/[^/]+\/definitions\/probe$/u)]);
   });
 });
 
@@ -131,7 +131,7 @@ describe('the nesting of the input of a run', () => {
 
     expect(await running(nested(513))).toEqual(tooDeep);
     expect(await running(nested(3000))).toEqual(tooDeep);
-    expect(ledger.streamNames()).toEqual(['playbook/acme/alpha/definitions/probe']);
+    expect(ledger.streamNames()).toEqual([expect.stringMatching(/^definition\/acme\/[^/]+\/definitions\/probe$/u)]);
   });
 });
 

@@ -1,13 +1,12 @@
 import { readFileSync } from 'node:fs';
 
 import { sha256Of } from '@on.auto/content';
-import { PlaybookContext, playbookLedgerOf, streamPrefixOfPlaybook } from '@on.auto/operations';
+import { PlaybookContext, playbookLedgerOf, runStreamNameOf, streamPrefixOfPlaybook } from '@on.auto/operations';
 import { PayloadOffloading, PayloadSizeThreshold, textBytesOf } from '@on.auto/operations/payloads';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Logger, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { runStreamNameOf } from '../runs/run-decider.ts';
 import { harness } from '../testing/harness.ts';
 import { keptArmOf, watchedStore } from '../testing/kept-payloads.ts';
 import { relayedId, settledAt, withHandOn } from '../testing/relaying.ts';

@@ -119,6 +119,7 @@ describe('the bounds of a page of runs', () => {
         ledger.service.execute(`playbook/acme/alpha/runs/${idOf(index)}`, runDecider, {
           type: 'start',
           started_by: recordedAdmin,
+          playbook: 'alpha',
           definition_type: 'echo',
           name: 'greet',
           definition_version: 1,

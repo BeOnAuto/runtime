@@ -49,7 +49,15 @@ export function postgresqlLedgerOpened(options: PostgreSQLStoreOptions): OpenedL
     },
     connection: postgresqlConnectionOn(
       besides,
-      postgresqlStoreOn(() => pool, options.holders === undefined ? {} : { holders: options.holders }, listeners),
+      postgresqlStoreOn(
+        () => pool,
+        {
+          ...(options.holders === undefined ? {} : { holders: options.holders }),
+          ...(options.definitionNames === undefined ? {} : { definitionNames: options.definitionNames }),
+          ...(options.runIds === undefined ? {} : { runIds: options.runIds }),
+        },
+        listeners,
+      ),
     ),
   };
 }

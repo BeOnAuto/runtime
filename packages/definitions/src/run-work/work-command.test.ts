@@ -8,14 +8,13 @@ import {
   asked,
   askedLineage as lineage,
   askedRun as run,
-  askedStream as stream,
   askingFacts,
   attempted,
   nudge,
   question,
 } from '../testing/asked-runs.ts';
 import { askedRequest } from '../testing/asking.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { startedInAlpha } from '../testing/callers.ts';
 import type { WorkLedger } from './work-recorder.ts';
 
 function refused(tag: string, fields: object = {}): unknown {
@@ -32,9 +31,9 @@ describe('a run of a capability that answers by its input', () => {
       { status: 'succeeded', output: { status: 'started' } },
     ]);
     expect([(await now.recorded())[0]?.data, (await later.recorded()).map(({ type, data }) => [type, data])]).toEqual([
-      { input: { now: true }, started_by: recordedAdmin },
+      { input: { now: true }, ...startedInAlpha },
       [
-        ['run_started', { input: { campaign: 'Spring' }, started_by: recordedAdmin, finishes_later: true }],
+        ['run_started', { input: { campaign: 'Spring' }, ...startedInAlpha, finishes_later: true }],
         ['run_deferred', { record: { ...askedRequest, message: question } }],
       ],
     ]);
@@ -43,7 +42,7 @@ describe('a run of a capability that answers by its input', () => {
 
 describe('the work a capability records on a run that finishes later', () => {
   it('is recorded under the name its capability declares, as the playbook itself, with the lineage it is given', async () => {
-    const { record, recorded, state } = await asked();
+    const { record, recorded, state, stream } = await asked();
 
     const first = await Effect.runPromise(record(run, nudge(1), lineage));
     const second = await Effect.runPromise(record(run, nudge(2), { ...lineage, causationId: first.id }));

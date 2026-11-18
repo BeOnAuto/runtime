@@ -1,12 +1,11 @@
 import { echo } from '@on.auto/definitions/testing';
 import type { Outcome } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { expect, vi } from 'vitest';
 
 import { makeWorkflowAdapter } from '../capability/workflow.ts';
 import { testExpressionCheck } from './expression-checks.ts';
-import { playbookOn, type Playbook } from './playbook.ts';
+import { playbookOn, type Playbook, namingLedger } from './playbook.ts';
 import { testHost } from './test-host.ts';
 import { testPlaybookNames } from './test-sandbox.ts';
 
@@ -27,7 +26,7 @@ const isStarted = Schema.is(StartedSchema);
 export async function workflowPlaybook({
   goals = false,
 }: { readonly goals?: boolean } = {}): Promise<WorkflowPlaybook> {
-  const ledger = memoryLedger();
+  const ledger = namingLedger();
   const nested = playbookOn(ledger, [echo]);
   const host = await testHost(nested);
   const playbook = playbookOn(ledger, [

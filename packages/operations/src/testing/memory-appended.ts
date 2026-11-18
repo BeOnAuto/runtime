@@ -19,10 +19,13 @@ export interface MemoryAppends {
 
 const positionPattern = /^[1-9]\d{0,14}$/u;
 
-function inScope(scope: AppendedScope): (record: MemoryRecord) => boolean {
+type DefinitionsOfAPlaybook = (playbookKey: string) => readonly string[];
+
+function inScope(scope: AppendedScope, definitionsIn: DefinitionsOfAPlaybook): (record: MemoryRecord) => boolean {
   if (scope.kind === 'playbook') {
     const key = streamPrefixOfPlaybook(scope.playbook);
-    return ({ stream }) => stream.startsWith(key);
+    const keys = [key, ...definitionsIn(key)];
+    return ({ stream }) => keys.some((each) => stream.startsWith(each));
   }
   const streams = new Set(scope.streams);
   const kinds = scope.streams.filter((named) => named.endsWith('/'));
@@ -88,10 +91,30 @@ function positionThrough(through: string): number {
   return Number(position);
 }
 
-export function memoryAppendedReader(log: readonly MemoryRecord[]): MemoryAppends {
+function factsIn(log: readonly MemoryRecord[], definitionsIn: DefinitionsOfAPlaybook) {
+  return (scope: AppendedScope, request: AppendedFactsRequest): Effect.Effect<AppendedFacts, CursorNotHeld> =>
+    Effect.suspend(() => {
+      const isInScope = inScope(scope, definitionsIn);
+      const scoped = log.filter((record) => isInScope(record));
+      const end = log.length;
+      if (request.after === undefined) {
+        return Effect.succeed(nowIn(scoped, end));
+      }
+      const held = Option.flatMap(partsOfCursor(request.after), (parts) => positionHeldBy(parts, scoped));
+      return Option.match(held, {
+        onNone: () => Effect.fail(new CursorNotHeld()),
+        onSome: (position) => Effect.succeed(readFrom(scoped, request, end)(position)),
+      });
+    });
+}
+
+export function memoryAppendedReader(
+  log: readonly MemoryRecord[],
+  definitionsIn: DefinitionsOfAPlaybook,
+): MemoryAppends {
   const waiting = new Set<() => void>();
   const appendedAfter = (scope: AppendedScope, position: number): boolean => {
-    const scoped = inScope(scope);
+    const scoped = inScope(scope, definitionsIn);
     return log.some((record) => record.position > position && scoped(record));
   };
   return {
@@ -101,20 +124,7 @@ export function memoryAppendedReader(log: readonly MemoryRecord[]): MemoryAppend
       }
     },
     reader: {
-      readAppendedFacts: (scope, request) =>
-        Effect.suspend(() => {
-          const isInScope = inScope(scope);
-          const scoped = log.filter((record) => isInScope(record));
-          const end = log.length;
-          if (request.after === undefined) {
-            return Effect.succeed(nowIn(scoped, end));
-          }
-          const held = Option.flatMap(partsOfCursor(request.after), (parts) => positionHeldBy(parts, scoped));
-          return Option.match(held, {
-            onNone: () => Effect.fail(new CursorNotHeld()),
-            onSome: (position) => Effect.succeed(readFrom(scoped, request, end)(position)),
-          });
-        }),
+      readAppendedFacts: factsIn(log, definitionsIn),
       waitForAppend: (scope, after, deadline) =>
         Effect.gen(function* () {
           const left = deadline - (yield* Clock.currentTimeMillis);

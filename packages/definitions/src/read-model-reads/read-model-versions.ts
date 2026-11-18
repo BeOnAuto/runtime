@@ -10,6 +10,7 @@ import { inThePlaybookOf, versionAndSaveIn, type ReadModelReader } from './read-
 export interface VersionInTheReadModel {
   readonly name: string;
   readonly version: number;
+  readonly definition_id: string;
   readonly source: RegisteredDefinition['source'];
   readonly stripped: RegisteredDefinition['stripped'];
   readonly putInPlaceBy: string;
@@ -35,6 +36,7 @@ export function versionFromTheReadModelIn(
     return Effect.succeed({
       name,
       version,
+      definition_id: found.definition,
       source: payloadOf<'source', string>(content, 'source'),
       stripped: content.stripped,
       putInPlaceBy: found.row.put_in_place_by,

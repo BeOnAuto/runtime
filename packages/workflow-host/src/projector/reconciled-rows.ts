@@ -1,10 +1,14 @@
+import { definitionTypeOrder } from '@on.auto/definitions';
 import { Effect } from 'effect';
 
 import type { DatabaseFailed, HostDatabase } from '../database/host-database.ts';
 import type { Folder, PassedChange, PassedRow, Reconciling, RowPhase } from './folder.ts';
 import { definitionStreamOf, keptKeyOf, noDefinitions, type PlaybookDefinitions } from './playbook-definitions.ts';
 
-export type KeptDefinitions = (kept: string) => Map<string, PlaybookDefinitions>;
+export interface KeptDefinitions {
+  readonly of: (kept: string) => Map<string, PlaybookDefinitions>;
+  readonly placed: (key: string, playbook: string) => void;
+}
 
 export interface DefinitionsKept {
   readonly database: HostDatabase;
@@ -72,22 +76,66 @@ function phasedBySlots<Row extends PassedRow, Change extends PassedChange<Row>>(
   return rows.map((row) => (isBuilding(row) ? { ...row, phase: phaseIn(slots, folder.keyOf(row)) } : row));
 }
 
-function definitionsOfType<Row extends PassedRow, Change extends PassedChange<Row>>(
+function foldedStream<Row extends PassedRow, Change extends PassedChange<Row>>(
   folder: Folder<Row, Change>,
+  { database, definitions }: DefinitionsKept,
+  definitionType: string,
+  stream: string,
+): Effect.Effect<PlaybookDefinitions> {
+  const kept = definitions.of(keptKeyOf(folder, definitionType));
+  const known = kept.get(stream) ?? noDefinitions;
+  return Effect.promise(() => database.store.read(stream, known.version)).pipe(
+    Effect.map(({ messages }) => {
+      const next = folder.keptAfter(known, definitionType, messages);
+      kept.set(stream, next);
+      return next;
+    }),
+  );
+}
+
+function heldStreamsOf(
   { database, definitions }: DefinitionsKept,
   playbook: string,
   definitionType: string,
-): Effect.Effect<readonly [string, PlaybookDefinitions]> {
-  const kept = definitions(keptKeyOf(folder, definitionType));
-  const known = kept.get(playbook) ?? noDefinitions;
-  return Effect.promise(() => database.store.read(definitionStreamOf(playbook, definitionType), known.version)).pipe(
-    Effect.map(({ messages }) => {
-      const next = folder.keptAfter(known, definitionType, messages);
-      kept.set(playbook, next);
-      const entry: readonly [string, PlaybookDefinitions] = [definitionType, next];
-      return entry;
-    }),
+): Effect.Effect<readonly string[]> {
+  return Effect.map(
+    Effect.promise(() => database.store.namesHeldIn({ playbookKey: playbook, definitionType })),
+    (held) =>
+      held.map(({ definitionKey }) => {
+        definitions.placed(definitionKey, playbook);
+        return definitionStreamOf(definitionKey, definitionType);
+      }),
   );
+}
+
+function together(every: readonly PlaybookDefinitions[]): PlaybookDefinitions {
+  return {
+    ...(every[0] ?? noDefinitions),
+    version: every.reduce((folded, { version }) => folded + version, 0),
+    functions: new Map(every.flatMap(({ functions }) => Array.from(functions))),
+  };
+}
+
+function ownStreamsOf(playbook: string, definitionType: string): readonly string[] {
+  return definitionTypeOrder.includes(definitionType) ? [] : [definitionStreamOf(playbook, definitionType)];
+}
+
+function definitionsOfType<Row extends PassedRow, Change extends PassedChange<Row>>(
+  folder: Folder<Row, Change>,
+  kept: DefinitionsKept,
+  playbook: string,
+  definitionType: string,
+): Effect.Effect<readonly [string, PlaybookDefinitions]> {
+  return Effect.gen(function* () {
+    kept.definitions.placed(playbook, playbook);
+    const streams = [
+      ...ownStreamsOf(playbook, definitionType),
+      ...(yield* heldStreamsOf(kept, playbook, definitionType)),
+    ];
+    const folded = yield* Effect.forEach(streams, (stream) => foldedStream(folder, kept, definitionType, stream));
+    const entry: readonly [string, PlaybookDefinitions] = [definitionType, together(folded)];
+    return entry;
+  });
 }
 
 function definitionsOf<Row extends PassedRow, Change extends PassedChange<Row>>(

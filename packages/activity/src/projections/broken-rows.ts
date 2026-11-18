@@ -118,6 +118,7 @@ function rowAfterFact(row: ProjectedRow | undefined, fact: ActivityFact): Projec
 export const brokenRows: KeyedProjection = {
   name: brokenName,
   version: 1,
+  scopes: ['definition'],
   kinds: ['runs', 'definitions'],
   types: [
     'definition_created',

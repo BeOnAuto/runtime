@@ -1,10 +1,10 @@
 import { streamSignalOf } from '@on.auto/ledger';
-import { Effect, Function } from 'effect';
+import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { firstRoundRetryMs } from '../loop/failed-rounds.ts';
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
-import type { Sweep } from '../sweeps/playbook-sweeps.ts';
+import type { Sweep } from '../sweeps/org-sweeps.ts';
 import { until } from '../testing/until.ts';
 import { startFollower } from './follower-loop.ts';
 import type { Upkeep } from './follower-wake-up.ts';
@@ -15,7 +15,7 @@ const anHour = 3_600_000;
 const failedRound =
   'The follower of the playbooks failed; it tries again in a minute, twice as long after each round that fails in a row, at most an hour';
 
-const nothingToSweep: Sweep = { registries: [], playbooks: [], again: false };
+const nothingToSweep: Sweep = { orgs: [], again: false };
 
 interface Watched {
   readonly raise: (stream: string) => void;
@@ -85,9 +85,9 @@ function failingFirst<A>(times: number, read: Effect.Effect<A>): () => Effect.Ef
     });
 }
 
-function followsFailingOnceFor(failing: string | undefined): (playbookKey: string) => Effect.Effect<void> {
+function followsFailingOnceFor(failing: string | undefined): (org: string) => Effect.Effect<void> {
   const follow = failingFirst(1, Effect.void);
-  return (playbookKey) => (playbookKey === failing ? follow() : Effect.void);
+  return (org) => (org === failing ? follow() : Effect.void);
 }
 
 function inTurn<A>(items: readonly A[], after: A): () => A {
@@ -109,9 +109,29 @@ function upkeepOf(following: Following, logged: (line: string) => Effect.Effect<
 }
 
 const nothingHeldAndRoundsAMinuteApart = {
-  holds: { heldAt: () => Effect.succeed({ due: [], nextAt: null }), failed: () => Effect.void },
+  holds: {
+    heldAt: () => Effect.succeed({ due: [], nextAt: null }),
+    parkedForDelivery: () => Effect.succeed([]),
+    failed: () => Effect.void,
+  },
   rounds: { failed: () => Effect.succeed(firstRoundRetryMs), succeeded: () => Effect.void },
 };
+
+function passesLogging(
+  passEnd: () => PassEnd | 'fails',
+  logged: (line: string) => Effect.Effect<void>,
+): Parameters<typeof startFollower>[0]['passes'] {
+  return {
+    org: (org, mode) =>
+      Effect.suspend(() => {
+        const end = passEnd();
+        return end === 'fails'
+          ? Effect.die(new Error('The pass broke'))
+          : Effect.as(logged(`pass ${org} ${mode}`), end);
+      }),
+    held: () => Effect.die(new Error('No playbook is held here')),
+  };
+}
 
 function followerWith(following: Following = {}): Watched {
   const log: string[] = [];
@@ -128,25 +148,17 @@ function followerWith(following: Following = {}): Watched {
     return sweep();
   };
   const follower = startFollower({
-    pass: (playbookKey, mode) =>
-      Effect.suspend(() => {
-        const end = passEnd();
-        return end === 'fails'
-          ? Effect.die(new Error('The pass broke'))
-          : Effect.as(logged(`pass ${playbookKey} ${mode}`), end);
-      }),
+    passes: passesLogging(passEnd, logged),
     discovery: {
       atStart: failingFirst(following.startsFailing ?? 0, logged('start')),
-      registriesAppended: (registries) => logged(`registries ${registries.join(' ')}`),
-      playbookSeen: followsFailingOnceFor(following.followFailingOnce),
+      orgSeen: followsFailingOnceFor(following.followFailingOnce),
     },
     sweeps: {
       started: () => logged('anchored'),
       next: failingFirst(following.sweepsFailing ?? 0, Effect.sync(sweptAfter)),
-      passAgain: (playbookKey) => {
-        log.push(`handed back ${playbookKey}`);
+      passAgain: (org) => {
+        log.push(`handed back ${org}`);
       },
-      registriesRead: Function.constVoid,
     },
     upkeep: upkeepOf(following, logged),
     appended,
@@ -168,50 +180,42 @@ function logReaching(watched: Watched, length: number) {
 }
 
 describe('the follower of the playbooks', () => {
-  it('takes its place in the ledger and finds the playbooks at its start, sweeps, and reads a registry appended to', async () => {
+  it('takes its place in the ledger and places the orgs at its start, sweeps, and passes nothing for an append to an org’s own stream', async () => {
     const watched = followerWith();
     await logReaching(watched, 3);
 
     watched.raise('org/acme/playbooks');
+    watched.raise('playbook/acme/alpha/events/e1');
     const log = await logReaching(watched, 4);
 
-    expect(log).toEqual(['anchored', 'start', 'sweep', 'registries org/acme/playbooks']);
+    expect(log).toEqual(['anchored', 'start', 'sweep', 'pass acme signal']);
   });
 
-  it('passes a playbook an event was appended to, not one a run appended to, and again while the pass says there is more', async () => {
-    const watched = followerWith({ passEnds: ['more', 'more', 'caught_up'] });
+  it("passes the org of a playbook or a definition an event was appended to, not one a run's log appended to, and again while the pass says there is more", async () => {
+    const watched = followerWith({ passEnds: ['more', 'more', 'caught_up', 'caught_up'] });
     await logReaching(watched, 3);
 
-    watched.raise('playbook/acme/beta/run-logs/r-1');
+    watched.raise('playbook/initech/beta/run-logs/r-1');
+    watched.raise('definition/umbrella/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b/run-logs/r-1');
     watched.raise('playbook/acme/alpha/events/e1');
     watched.raise('workflow/elsewhere');
-    const log = await logReaching(watched, 6);
+    const signalled = await logReaching(watched, 6);
+    watched.raise('definition/globex/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a/runs/r-2');
+    const log = await logReaching(watched, 7);
 
-    expect(log.slice(3)).toEqual([
-      'pass playbook/acme/alpha/ signal',
-      'pass playbook/acme/alpha/ signal',
-      'pass playbook/acme/alpha/ signal',
+    expect([signalled.slice(3), log.slice(6)]).toEqual([
+      ['pass acme signal', 'pass acme signal', 'pass acme signal'],
+      ['pass globex signal'],
     ]);
   });
 
-  it('reads the registries a sweep names, passes the playbooks it hands out, and sweeps again at once when it says so', async () => {
-    const handedOut: Sweep = {
-      registries: ['org/acme/playbooks'],
-      playbooks: [{ playbookKey: 'playbook/acme/alpha/', known: undefined }],
-      again: true,
-    };
+  it('passes the orgs a sweep hands out, and sweeps again at once when it says so', async () => {
+    const handedOut: Sweep = { orgs: [{ org: 'acme', known: undefined }], again: true };
     const watched = followerWith({ sweeps: [handedOut] });
 
-    const log = await logReaching(watched, 6);
+    const log = await logReaching(watched, 5);
 
-    expect(log).toEqual([
-      'anchored',
-      'start',
-      'registries org/acme/playbooks',
-      'sweep',
-      'pass playbook/acme/alpha/ sweep',
-      'sweep',
-    ]);
+    expect(log).toEqual(['anchored', 'start', 'sweep', 'pass acme sweep', 'sweep']);
   });
 });
 
@@ -223,7 +227,7 @@ describe('the follower of the playbooks, when a read fails', () => {
 
     expect(log.slice(0, 7)).toEqual([
       'anchored',
-      'The follower of the playbooks could not find the playbooks at its start; it tries again at the next sweep, within a minute, twice as long after each try that fails in a row, at most an hour',
+      'The follower of the playbooks could not place the orgs at its start; it tries again at the next sweep, within a minute, twice as long after each try that fails in a row, at most an hour',
       'anchored',
       'start',
       'sweep',
@@ -241,7 +245,7 @@ describe('the follower of the playbooks, when a read fails', () => {
   });
 });
 
-describe('the follower of the playbooks, when a pass over a playbook fails', () => {
+describe('the follower of the playbooks, when a pass over an org fails', () => {
   it('says a pass that fails is trouble, and passes again at the next signal', async () => {
     const watched = followerWith({ passEnds: ['fails'] });
     await logReaching(watched, 3);
@@ -252,24 +256,24 @@ describe('the follower of the playbooks, when a pass over a playbook fails', () 
     const log = await logReaching(watched, 6);
 
     expect(log.slice(3)).toEqual([
-      'A pass over a playbook failed; the next sweep passes the playbook again',
-      'handed back playbook/acme/alpha/',
-      'pass playbook/acme/alpha/ signal',
+      "A pass over an org's records failed; the next sweep passes the org again",
+      'handed back acme',
+      'pass acme signal',
     ]);
   });
 
-  it('says a follow of a signalled playbook that fails is trouble for that playbook alone, passes the others, and hands the playbook back', async () => {
-    const watched = followerWith({ followFailingOnce: 'playbook/acme/alpha/' });
+  it('says a follow of a signalled org that fails is trouble for that org alone, passes the others, and hands the org back', async () => {
+    const watched = followerWith({ followFailingOnce: 'acme' });
     await logReaching(watched, 3);
 
     watched.raise('playbook/acme/alpha/events/e1');
-    watched.raise('playbook/acme/beta/events/e1');
+    watched.raise('playbook/globex/beta/events/e1');
     const log = await logReaching(watched, 6);
 
     expect(log.slice(3)).toEqual([
-      'A pass over a playbook failed; the next sweep passes the playbook again',
-      'handed back playbook/acme/alpha/',
-      'pass playbook/acme/beta/ signal',
+      "A pass over an org's records failed; the next sweep passes the org again",
+      'handed back acme',
+      'pass globex signal',
     ]);
   });
 });

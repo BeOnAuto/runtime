@@ -135,7 +135,7 @@ describe('the settlement of a run that took an answer', () => {
 });
 
 describe('the answer a caller gives to a request a run waits on', () => {
-  it('is recorded on the run of the playbook as the caller that gave it, and another answer after it is a conflict', async () => {
+  it('is recorded on the run of the playbook as the caller that gave it, and another answer after it, or one to a run there is not, is a conflict', async () => {
     const { ledger, recorded } = await asked();
     const inAlpha = playbookLedgerOf(ledger.service, run);
     const answer = (...given: Readonly<Parameters<typeof playbookBoundAnswerer>>) =>
@@ -155,5 +155,10 @@ describe('the answer a caller gives to a request a run waits on', () => {
         answer(run.id, { answer: { choice: 'reject' } }, { id: 'person:grace', name: 'Grace Hopper' }, lineage),
       ),
     ).toEqual(Result.fail(answeredAlready));
+    expect(
+      await attempted(
+        answer('0199a3c4-7d2e-7c1a-9b3f-000000000000', { answer: { choice: 'reject' } }, thePlaybook, lineage),
+      ),
+    ).toEqual(Result.fail(endedUnanswered));
   });
 });

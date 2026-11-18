@@ -23,7 +23,7 @@ export function listedRowsFromTheReadModel(
 ): Reading<readonly ListedRow[]> {
   return Effect.flatMap(definitionRowsOfType(capability.type), (rows) =>
     Effect.forEach(rows.filter((row) => includeRetired || row.status !== 'retired').toSorted(rowsByName), (row) =>
-      Effect.map(savedByOf(capability.type, row.saved_position), (savedBy): ListedRow => ({
+      Effect.map(savedByOf(capability.type, row), (savedBy): ListedRow => ({
         row,
         listed: listedOfTheRow(capability, row, savedBy, goals),
       })),

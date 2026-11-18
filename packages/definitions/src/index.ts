@@ -156,9 +156,9 @@ export {
 } from './runs/run.ts';
 export { payloadAsRead, payloadsKeptIn, type KeptContentReader, type PayloadAsRead } from './payloads/run-payloads.ts';
 export {
-  playbookBoundSettler,
   runSettler,
   runSettlerKeepingOutputs,
+  type CalledRun,
   type RunStreamAddress,
   type SettleRun,
   type Settlement,
@@ -239,7 +239,7 @@ export {
   type Trigger,
   type TriggerFilter,
 } from './registry/definition-triggers.ts';
-export { runStartedOf } from './runs/run-starts.ts';
+export { runIds, runStartedOf } from './runs/run-starts.ts';
 export { inWords, nameInWords, outputInWords } from './plain-language/in-words.ts';
 export { scheduleNamed, triggerNamed } from './plain-language/event-words.ts';
 export { mostInputBytes, mostInputDepth, mostResultBytes } from './runs/recorded-size.ts';

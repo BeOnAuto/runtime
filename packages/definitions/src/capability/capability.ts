@@ -195,7 +195,7 @@ export interface Capability {
   readonly prepare: (source: string, stripped?: StrippedForms) => Effect.Effect<PreparedDefinition, InvalidInput>;
 }
 
-export const capabilityContract = 6;
+export const capabilityContract = 7;
 
 export const earliestCapabilityContractServed = 2;
 

@@ -262,14 +262,14 @@ describe('the workflow logs', () => {
     expect(line).toContain(words);
   });
 
-  it('report a run settling left started as an error with its org, playbook, id and reason only', async () => {
+  it('report a run settling left started as an error with its org, definition, id and reason only', async () => {
     const [line] = await linesLoggedBy(
-      logUnsettled({ org: 'acme', playbook: 'alpha', runId: 'e-1', reason: 'The ledger has no such run' }),
+      logUnsettled({ org: 'acme', definition: 'alpha-definition', runId: 'e-1', reason: 'The ledger has no such run' }),
     );
 
     expect(line).toContain('"message":"A run stays started because settling it failed","level":"ERROR"');
     expect(line).toContain(
-      '"annotations":{"org":"acme","playbook":"alpha","run_id":"e-1","reason":"The ledger has no such run"}',
+      '"annotations":{"org":"acme","definition":"alpha-definition","run_id":"e-1","reason":"The ledger has no such run"}',
     );
   });
 });

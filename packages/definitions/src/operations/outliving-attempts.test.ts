@@ -14,7 +14,7 @@ import {
 } from '../testing/resumed-runs.ts';
 import { testRunId } from '../testing/run-facts.ts';
 
-const run = { org: 'acme', playbook: 'alpha', id: testRunId };
+const run = { org: 'acme', playbook: 'alpha', id: testRunId, definitionType: 'resumer', name: 'step' };
 
 const lineage = { causationId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: testRunId };
 

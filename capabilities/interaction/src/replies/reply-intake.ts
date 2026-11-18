@@ -1,9 +1,9 @@
-import type { Issue, PlaybookAddress } from '@on.auto/operations';
+import { everyDefinitionOf, type Issue } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import { saidOfARefusal, type ReplyRefusal, type ReplyRefused } from '../facts/run-facts.ts';
 import { answerTold, toldAnsweredAlready } from '../tellings/late-tellings.ts';
-import { isPostedByThePlaybook } from '../tellings/own-messages.ts';
+import { isPostedInTheOrg } from '../tellings/own-messages.ts';
 import { told, type Telling } from '../tellings/tellings.ts';
 import { recordedReplyWork, type RecordedReply, type ReplyPlace } from './reply-recorder.ts';
 import { refusalTellingOf, replyBoundsOfAReading, type IntakeState } from './reply-recording.ts';
@@ -20,14 +20,13 @@ interface Arrival {
 
 export interface Intake {
   readonly parts: ReplyPlace['parts'];
-  readonly playbook: PlaybookAddress;
   readonly candidates: readonly KeptRequest[];
   readonly arrival: Arrival;
   readonly roomForATelling: Effect.Effect<boolean>;
   readonly heldUntil: number;
 }
 
-function placeOf({ parts, playbook, arrival }: Intake): ReplyPlace {
+function placeOf({ parts, arrival }: Intake, { playbook }: KeptRequest): ReplyPlace {
   return { parts, playbook, causationId: arrival.causationId };
 }
 
@@ -50,8 +49,8 @@ interface Taking {
 }
 
 function toldTaken(intake: Intake, state: IntakeState, request: KeptRequest, made: RecordedReply) {
-  const { parts, playbook, heldUntil: until, roomForATelling: room } = intake;
-  const answer = { parts, playbook, request, answeredAt: Date.parse(made.at), hold: { until, room } };
+  const { parts, heldUntil: until, roomForATelling: room } = intake;
+  const answer = { parts, playbook: request.playbook, request, answeredAt: Date.parse(made.at), hold: { until, room } };
   return Effect.map(answerTold(answer), (toldFirst): IntakeState => ({
     ...state,
     taken: state.taken + 1,
@@ -64,7 +63,7 @@ function toldTaken(intake: Intake, state: IntakeState, request: KeptRequest, mad
 function taken(intake: Intake, state: IntakeState, { request, reply, answer }: Taking): Effect.Effect<IntakeState> {
   const given = { answer, reply: answeredReplyOf(reply), ...howItArrived(intake.arrival) };
   const work = { type: 'answer', answer: given } as const;
-  return recordedReplyWork(placeOf(intake), request, reply, { work }).pipe(
+  return recordedReplyWork(placeOf(intake, request), request, reply, { work }).pipe(
     Effect.flatMap((made) => (made === undefined ? Effect.succeed(state) : toldTaken(intake, state, request, made))),
     Effect.catchTag('unavailable', () => Effect.succeed<IntakeState>({ ...state, unrecorded: true })),
   );
@@ -93,9 +92,10 @@ function refusalFactOf({ arrival }: Intake, { reply, because, issues }: Refusal,
   };
 }
 
-function tellingOf(intake: Intake, request: KeptRequest, call: Telling['call'], made: RecordedReply): Telling {
+function tellingOf(request: KeptRequest, call: Telling['call'], made: RecordedReply): Telling {
   return {
-    playbook: intake.playbook,
+    playbook: request.playbook,
+    filedIn: request.address,
     server: routeOfRequest(request).server,
     runId: request.runId,
     definition: {
@@ -113,20 +113,20 @@ function refusedReply(intake: Intake, state: IntakeState, refusal: Refusal) {
   const { request, reply } = refusal;
   return Effect.gen(function* () {
     const open = intake.candidates.filter(({ runId }) => !state.answered.has(runId)).length;
-    const input = yield* refusalTellingOf(intake.parts, intake.playbook, state, { ...refusal, open });
+    const input = yield* refusalTellingOf(intake.parts, request.playbook, state, { ...refusal, open });
     if (input !== undefined && !(yield* intake.roomForATelling)) {
       return { ...state, foundAnswerer: true, unrecorded: true };
     }
     const fact = refusalFactOf(intake, refusal, input !== undefined);
     const work = { work: { type: 'work', fact }, refusal: refusal.because } as const;
-    const made = yield* recordedReplyWork(placeOf(intake), request, reply, work).pipe(
+    const made = yield* recordedReplyWork(placeOf(intake, request), request, reply, work).pipe(
       Effect.catchTag('unavailable', Effect.die),
     );
     if (made === undefined) {
       return state;
     }
     if (input !== undefined) {
-      yield* told(intake.parts, tellingOf(intake, request, input, made));
+      yield* told(intake.parts, tellingOf(request, input, made));
     }
     const toldNow = (state.told.get(request.runId) ?? 0) + (input === undefined ? 0 : 1);
     const said = saidOfARefusal(refusal.because, refusal.issues);
@@ -157,8 +157,8 @@ export function replyTaken(intake: Intake, state: IntakeState, reply: Reply): Ef
   const { request } = decision;
   const posted = { conversation: intake.arrival.conversation, id: reply.id };
   const fromTheAnswerer = decision.kind === 'take' || decision.because !== 'not_the_answerer';
-  const late = { ...intake, request, reply, causationId: intake.arrival.causationId };
-  return Effect.flatMap(isPostedByThePlaybook(intake.parts.ledger, intake.playbook, posted), (own) => {
+  const late = { ...intake, playbook: request.playbook, request, reply, causationId: intake.arrival.causationId };
+  return Effect.flatMap(isPostedInTheOrg(intake.parts.ledger, everyDefinitionOf(request.playbook), posted), (own) => {
     if (own) {
       return Effect.succeed(state);
     }

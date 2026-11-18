@@ -1,5 +1,5 @@
 import type { RunOutcomeMapping } from '@on.auto/operations';
-import { memoryLedger, runTallies } from '@on.auto/operations/testing';
+import { definitionsPlaced, memoryLedgerWith, runTallies } from '@on.auto/operations/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { plainPoolsOn, postgresqlLedgerLayer } from '../postgresql/postgresql-ledger.ts';
@@ -39,20 +39,30 @@ function counting(): Counting {
 }
 
 describe('The in-memory ledger of the application layer', () => {
-  runOutcomesBehaviour((runOutcomes) => Promise.resolve(memoryLedger(runOutcomes).service));
+  runOutcomesBehaviour((runOutcomes) =>
+    Promise.resolve(memoryLedgerWith({ runOutcomes, definitionNames: definitionsPlaced }).service),
+  );
 });
 
 describe.skipIf(skipped)(`The outcomes of runs on PostgreSQL${notice}`, () => {
   it('are filled once by ledgers that start together, the table made under the lock of the migration', async () => {
     const database = await aDatabase();
-    const writing = await openLedgerWith(postgresqlLedgerLayer({ pools: plainPoolsOn(database) }));
+    const writing = await openLedgerWith(
+      postgresqlLedgerLayer({ pools: plainPoolsOn(database), definitionNames: definitionsPlaced }),
+    );
     await fourRuns(writing.ledger);
     await writing.dispose();
     const { mapping, count } = counting();
 
     const opened = await Promise.all(
       [1, 2, 3].map(() =>
-        openLedgerWith(postgresqlLedgerLayer({ pools: plainPoolsOn(database), runOutcomes: mapping })),
+        openLedgerWith(
+          postgresqlLedgerLayer({
+            pools: plainPoolsOn(database),
+            runOutcomes: mapping,
+            definitionNames: definitionsPlaced,
+          }),
+        ),
       ),
     );
     onTestFinished(async () => {
@@ -69,7 +79,9 @@ describe.skipIf(skipped)(`The outcomes of runs on PostgreSQL${notice}`, () => {
 
   it('are caught up once by ledgers that start together, which take the pages in turn, a fact a page', async () => {
     const database = await aDatabase();
-    const writing = await openLedgerWith(postgresqlLedgerLayer({ pools: plainPoolsOn(database) }));
+    const writing = await openLedgerWith(
+      postgresqlLedgerLayer({ pools: plainPoolsOn(database), definitionNames: definitionsPlaced }),
+    );
     await fourRuns(writing.ledger);
     await writing.dispose();
     const { mapping, count } = counting();
@@ -77,7 +89,12 @@ describe.skipIf(skipped)(`The outcomes of runs on PostgreSQL${notice}`, () => {
     const opened = await Promise.all(
       [1, 2].map(() =>
         openLedgerWith(
-          postgresqlLedgerLayer({ pools: plainPoolsOn(database), runOutcomes: mapping, mostBytesFilledAtOnce: 1 }),
+          postgresqlLedgerLayer({
+            pools: plainPoolsOn(database),
+            runOutcomes: mapping,
+            mostBytesFilledAtOnce: 1,
+            definitionNames: definitionsPlaced,
+          }),
         ),
       ),
     );

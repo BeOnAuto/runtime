@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { definitionStreamsBehaviour } from '../definitions/definition-streams-behaviour.ts';
 import type { LedgerStore, StoredPage, StoredPageRequest } from '../event-store.ts';
+import { orgRecordsBehaviour } from '../recorded/org-records-behaviour.ts';
 import { stamped } from '../testing/happenings.ts';
 import { aStore, type LedgerEntry } from '../testing/ledger-entry.ts';
 import type { RecordedKeys } from './recorded-keys.ts';
@@ -250,27 +251,13 @@ function oneEventAcrossKeys(entry: LedgerEntry): void {
   });
 }
 
-function theDefinitionStreamsUnderAKeyThatNamesADefinition(entry: LedgerEntry): void {
-  describe('the definition streams of a type under keys that name definitions', () => {
-    it('are found as those under a key that names a playbook are', async () => {
-      const store = await aStore(entry);
-      await appendedInTurn(store, interleaved);
-
-      expect(await store.definitionStreams('reasoning')).toEqual([
-        { stream: `${triage}definitions/reasoning`, version: 2 },
-        { stream: `${elsewhere}definitions/reasoning`, version: 1 },
-      ]);
-    });
-  });
-}
-
 export function recordedKeysBehaviour(entry: LedgerEntry): void {
   definitionStreamsBehaviour(entry);
-  theDefinitionStreamsUnderAKeyThatNamesADefinition(entry);
   aKeyThatNamesADefinition(entry);
   recordsOverSeveralKeys(entry);
   aPageFromATimeOverSeveralKeys(entry);
   runsOverSeveralKeys(entry);
   theTreeOfARunAcrossKeys(entry);
   oneEventAcrossKeys(entry);
+  orgRecordsBehaviour(entry);
 }

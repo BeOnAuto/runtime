@@ -4,10 +4,10 @@ import type { CallersById } from '@on.auto/identity';
 import { Ledger, playbookCallerOf, type CallerIdentity, type PlaybookRequest } from '@on.auto/operations';
 import {
   attemptLeasesOn,
-  runKeyOf,
+  attemptKeyOfRun,
   type AttemptLeaseSettings,
   type GoneHolders,
-  type RunAddress,
+  type RunInAPlaybook,
   type WorkflowStore,
 } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
@@ -24,7 +24,7 @@ export interface GoneHolderParts {
   readonly dispatches: Pick<HostDispatches, 'nextAttempt' | 'refusedAttempt'>;
 }
 
-function streamAddressOf({ org, playbook, runId }: RunAddress) {
+function streamAddressOf({ org, playbook, runId }: RunInAPlaybook) {
   return { org, playbook, id: runId };
 }
 
@@ -32,7 +32,7 @@ function withNoGrant(org: string, id: string): CallerIdentity {
   return { id, name: id, org, permissions: [], playbooks: [] };
 }
 
-function callerNow({ callers }: GoneHolderParts, run: RunAddress, id: string) {
+function callerNow({ callers }: GoneHolderParts, run: RunInAPlaybook, id: string) {
   const playbook = playbookCallerOf(run);
   if (id === playbook.id) {
     return Effect.succeed(playbook);
@@ -47,16 +47,16 @@ function isResumedByItsShell({ resumes, calledBy }: HoldingAttempt): boolean {
   return resumes && calledBy === null;
 }
 
-function readsAgainHere({ callers }: GoneHolderParts, run: RunAddress, id: string): boolean {
+function readsAgainHere({ callers }: GoneHolderParts, run: RunInAPlaybook, id: string): boolean {
   return id === playbookCallerOf(run).id || callers.readsAgain(id);
 }
 
-function hasNoNextAttempt(parts: GoneHolderParts, run: RunAddress, holding: HoldingAttempt | undefined): boolean {
+function hasNoNextAttempt(parts: GoneHolderParts, run: RunInAPlaybook, holding: HoldingAttempt | undefined): boolean {
   return holding !== undefined && isResumedByItsShell(holding) && !readsAgainHere(parts, run, holding.startedBy);
 }
 
 function nextAttemptRequestOf(
-  run: RunAddress,
+  run: RunInAPlaybook,
   holding: HoldingAttempt,
   caller: CallerIdentity,
   correlationId: string,
@@ -78,7 +78,7 @@ function nextAttemptRequestOf(
 }
 
 interface Resuming {
-  readonly run: RunAddress;
+  readonly run: RunInAPlaybook;
   readonly holding: HoldingAttempt;
   readonly request: PlaybookRequest;
 }
@@ -93,7 +93,7 @@ function resumedOrRefused({ dispatches }: GoneHolderParts, { run, holding, reque
   });
 }
 
-function resumedNow(parts: GoneHolderParts, run: RunAddress) {
+function resumedNow(parts: GoneHolderParts, run: RunInAPlaybook) {
   return Effect.gen(function* () {
     const ledger = yield* Ledger;
     const address = streamAddressOf(run);
@@ -104,7 +104,7 @@ function resumedNow(parts: GoneHolderParts, run: RunAddress) {
     const caller = yield* callerNow(parts, run, holding.startedBy);
     const request = nextAttemptRequestOf(run, holding, caller, yield* runCorrelationIn(ledger, address));
     const leases = attemptLeasesOn(parts.store.database, parts.holding);
-    const runKey = runKeyOf(run);
+    const runKey = attemptKeyOfRun(run);
     yield* Effect.orDie(leases.taken(runKey));
     const resumed = resumedOrRefused(parts, { run, holding, request });
     yield* Effect.forkDetach(

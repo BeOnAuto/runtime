@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { Hold } from '../follower/followed-playbooks.ts';
+import type { Hold } from '../follower/followed-orgs.ts';
 import { recordingReports } from '../testing/recording-reports.ts';
 import { holdNotesBy } from './hold-notes.ts';
 import type { TriedHold } from './playbook-holds.ts';

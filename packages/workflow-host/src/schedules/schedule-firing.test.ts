@@ -8,6 +8,7 @@ import {
   at,
   cronTrigger,
   everyTrigger,
+  definitionKeyNamed,
   definitionRecordAt,
   definitionRecorded,
 } from '../reaction-testing/playbook-writes.ts';
@@ -88,12 +89,13 @@ describe('a workflow whose every schedule is due every minute', () => {
       {
         org: 'acme',
         playbook: 'alpha',
+        definitionKey: definitionKeyNamed('tick'),
         workflow: 'tick',
         version: 1,
-        runId: reactionRunIdOf('tick', 1, '/schedule/every', isoAt(1)),
+        runId: reactionRunIdOf(definitionKeyNamed('tick'), 1, '/schedule/every', isoAt(1)),
         input: { schedule: { due: isoAt(1) } },
         depth: 1,
-        cause: definitionRecordAt(1),
+        cause: definitionRecordAt('tick', 1),
         trigger: { kind: 'every', reference: '/schedule/every' },
       },
     ]);
@@ -106,7 +108,7 @@ describe('the due times of a schedule', () => {
     const { reacting, clock } = await ticking();
     clock.moveTo(activatedAt + aMinute);
     await startsReaching(reacting, 1);
-    const running = `acme/alpha/${reactionRunIdOf('tick', 1, '/schedule/every', isoAt(1))}`;
+    const running = `acme/alpha/${reactionRunIdOf(definitionKeyNamed('tick'), 1, '/schedule/every', isoAt(1))}`;
     await Effect.runPromise(
       reacting.database.write(statement`INSERT INTO workflow_runs (run_key, stream_id) VALUES (${running}, ${'s'})`),
     );
@@ -213,5 +215,35 @@ describe('a workflow with a cron schedule', () => {
     const starts = await startsReaching(reacting, 1);
 
     expect(starts.map(({ input }) => input)).toEqual([{ schedule: { due: '2026-10-02T02:30:00.000Z' } }]);
+  });
+});
+
+describe('a schedule whose workflow holds no name in the ledger', () => {
+  it('starts nothing, and its row is deleted when it comes due', async () => {
+    const clock = movedClock(activatedAt + 1000);
+    const reacting = await reactingHost({ clock });
+    const nameless = 'definition/acme/0190a5b6-0000-7000-8000-000000000000/';
+    await Effect.runPromise(
+      reacting.database.write(
+        statement`INSERT INTO workflow_subscriptions
+            (definition_key, reference, playbook_key, version, kind, rule, activated_by, activated_at, next_due)
+          VALUES (${nameless}, '/schedule/every', 'playbook/acme/alpha/', 1, 'every',
+            ${JSON.stringify(everyTrigger(aMinute))}, 'nobody', ${activatedAt}, ${activatedAt + aMinute})`,
+      ),
+    );
+    clock.moveTo(activatedAt + aMinute);
+    const rows = await until(
+      () =>
+        Effect.runPromise(
+          rowsOf(
+            Schema.Struct({ reference: Schema.String }),
+            reacting.database.read(statement`SELECT reference FROM workflow_subscriptions`),
+          ),
+        ),
+      (found) => found.length === 0,
+    );
+
+    expect(rows).toEqual([]);
+    expect(reacting.reactions.starts()).toEqual([]);
   });
 });

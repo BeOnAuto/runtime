@@ -1,16 +1,31 @@
 import type { TestResponse } from './http-client.ts';
-import { alpha, type ReasoningServer } from './reasoning-server.ts';
+import type { ReasoningServer } from './reasoning-server.ts';
 import { workflowSource } from './workflow-server.ts';
 
 const tally = workflowSource('tally', 'do:\n  - count:\n      set: { counted: true }\n');
 
-export async function tallyCreated(served: ReasoningServer): Promise<void> {
-  await served.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await served.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'tally', source: tally } });
+interface Placed {
+  readonly playbook: string;
+  readonly name: string;
 }
 
-export function tallied(served: ReasoningServer, body: object = {}): Promise<TestResponse> {
-  return served.call('POST', `${alpha}/definitions/workflow/tally/run`, { body: { input: {}, ...body } });
+const inAlpha: Placed = { playbook: 'alpha', name: 'Alpha' };
+
+function playbookPathOf({ playbook }: Placed): string {
+  return `/v1/orgs/acme/playbooks/${playbook}`;
+}
+
+export async function tallyCreated(served: ReasoningServer, placed: Placed = inAlpha): Promise<void> {
+  await served.call('POST', '/v1/orgs/acme/playbooks', { body: placed });
+  await served.call('POST', `${playbookPathOf(placed)}/definitions/workflow`, {
+    body: { name: 'tally', source: tally },
+  });
+}
+
+export function tallied(served: ReasoningServer, body: object = {}, placed: Placed = inAlpha): Promise<TestResponse> {
+  return served.call('POST', `${playbookPathOf(placed)}/definitions/workflow/tally/run`, {
+    body: { input: {}, ...body },
+  });
 }
 
 export function talliedTimes(served: ReasoningServer, times: number): Promise<readonly TestResponse[]> {

@@ -40,7 +40,7 @@ function workOf(
     playbookRetired: at.retired,
     firstSavedAt: clock.first_saved_at,
     ...(clock.latest_opened === undefined ? {} : { latestOpened: clock.latest_opened }),
-    ...(clock.armed_at === undefined ? {} : { armedAt: clock.armed_at }),
+    ...(standing.armedAt === undefined ? {} : { armedAt: standing.armedAt }),
   });
 }
 

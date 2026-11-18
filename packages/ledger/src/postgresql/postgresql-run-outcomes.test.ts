@@ -45,18 +45,15 @@ function recording(answers: Answers): Recording {
 
 const began: RunFact = { type: 'run_began', data: { at: '2026-10-01T09:00:00.000Z', fn: 'triage' } };
 
-const indexes = [
-  'ledger_messages_by_playbook',
-  'ledger_messages_by_playbook_and_time',
-  'ledger_messages_by_stream',
-  'ledger_first_messages_by_kind',
-  'ledger_messages_by_org_and_correlation',
-  'ledger_definition_streams',
-  'ledger_messages_by_org_and_id',
-].map((name) => ({ name }));
+const indexes = (
+  'ledger_messages_by_playbook ledger_messages_by_playbook_and_time ledger_messages_by_stream ledger_first_messages_by_kind ' +
+  'ledger_messages_by_org ledger_messages_by_org_and_correlation ledger_definition_streams ledger_messages_by_org_and_id'
+)
+  .split(' ')
+  .map((name) => ({ name }));
 
 const ownTables =
-  'recorded_content_heads_by_upload recorded_content_heads_expiring kept_secrets webhooks_received webhooks_received_kept_until definition_names_1 definition_names_1_by_definition projection_checkpoints';
+  'recorded_content_heads_by_upload recorded_content_heads_expiring kept_secrets webhooks_received webhooks_received_kept_until definition_names_1 definition_names_1_by_definition run_ids_1 projection_checkpoints';
 
 const ownRows = [...contentTableNames, ...ownTables.split(' ')].map((name) => ({
   name,
@@ -70,7 +67,9 @@ function aLedgerWithOneRun(tables: readonly string[]): Answers {
     if (statement.includes('ledger_messages_by_playbook')) {
       return indexes;
     }
-    if (/content_chunks|_by_upload|kept_secrets|webhooks_received|definition_names|checkpoints/u.test(statement)) {
+    if (
+      /content_chunks|_by_upload|kept_secrets|webhooks_received|definition_names|run_ids|checkpoints/u.test(statement)
+    ) {
       return ownRows;
     }
     if (statement.includes('pg_class')) {
@@ -81,7 +80,7 @@ function aLedgerWithOneRun(tables: readonly string[]): Answers {
 }
 
 const keptRow =
-  'INSERT INTO run_outcomes_5 (playbook_key, row_key, started_day, started_at, last_started_at, definition_type, name, status, duration_ms, input_tokens, output_tokens, cached_tokens, cost_micro_usd) VALUES ("playbook/acme/alpha/", "r1", "2026-10-01", "2026-10-01T09:00:00.000Z", "2026-10-01T09:00:00.000Z", "tally", "triage", "started", null, null, null, null, null) ON CONFLICT (playbook_key, row_key) DO UPDATE SET started_day = excluded.started_day,';
+  'INSERT INTO run_outcomes_5 (playbook_key, row_key, started_day, started_at, last_started_at, definition_type, name, status, duration_ms, input_tokens, output_tokens, cached_tokens, cost_micro_usd) VALUES ("definition/acme/d1/", "r1", "2026-10-01", "2026-10-01T09:00:00.000Z", "2026-10-01T09:00:00.000Z", "tally", "triage", "started", null, null, null, null, null) ON CONFLICT (playbook_key, row_key) DO UPDATE SET started_day = excluded.started_day,';
 
 describe('the table of the outcomes of runs on PostgreSQL, as the ledger opens', () => {
   it("is created after the playbook's indexes, in the transaction of the migration, and recorded at the start of the store", async () => {
@@ -116,7 +115,7 @@ describe('the projection of the outcomes of runs on PostgreSQL', () => {
       type: 'run_began',
       data: { json: JSON.stringify(began.data) },
       metadata: {
-        streamName: 'playbook/acme/alpha/runs/r1',
+        streamName: 'definition/acme/d1/runs/r1',
         messageId: 'm1',
         streamPosition: 1n,
         at: '2026-10-01T09:00:00.000Z',
@@ -192,7 +191,7 @@ describe('the read of the outcomes of runs on PostgreSQL', () => {
       ['playbook/acme/alpha/', '2026-10-01', '2026-10-07'],
     ]);
     expect(asked[0]?.text).toContain(
-      'WHERE playbook_key = $1 AND started_day BETWEEN $2 AND $3 AND definition_type = $4 AND name = $5 GROUP BY started_day, definition_type, name, status',
+      'WHERE playbook_key IN (SELECT definition_key FROM definition_names_1 WHERE playbook_key = $1) AND started_day BETWEEN $2 AND $3 AND definition_type = $4 AND name = $5 GROUP BY started_day, definition_type, name, status',
     );
     expect(asked[1]?.text).toContain('BETWEEN $2 AND $3 GROUP BY');
     expect(asked[0]?.text).toContain('sum(cost_micro_usd)::float8 AS cost_micro_usd');

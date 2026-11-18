@@ -1,3 +1,13 @@
+import type { RecordedPoint, StoredPage, StoredPageRequest } from '../event-store.ts';
+
+export interface OrgPageAsked extends Omit<StoredPageRequest, 'since'> {
+  readonly to?: RecordedPoint;
+}
+
+export interface OrgRecordsStore {
+  readonly readRecordedOfOrg: (org: string, page: OrgPageAsked) => Promise<StoredPage>;
+}
+
 export interface RecordedKeys {
   readonly org: string;
   readonly keys: readonly [string, ...string[]];

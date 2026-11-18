@@ -39,6 +39,10 @@ const streamNameGrammar = /^[A-Za-z0-9_-]{1,64}(?:\/[A-Za-z0-9_-]{1,64})*$/u;
 
 const longestStreamName = 256;
 
+export function runStreamNameOf(id: string): string {
+  return `runs/${id}`;
+}
+
 function wellFormed(stream: string): Effect.Effect<string> {
   return stream.length <= longestStreamName && streamNameGrammar.test(stream)
     ? Effect.succeed(stream)
@@ -58,6 +62,27 @@ export function streamPrefixOfPlaybook({ org, playbook }: PlaybookAddress): stri
 }
 
 const aPlaybookPrefix = new RegExp(`^${playbookStreams}([^/]+)/([^/]+)/$`, 'u');
+
+export interface DefinitionAddress extends OrgAddress {
+  readonly definition: string;
+}
+
+const definitionStreams = 'definition/';
+
+export function streamPrefixOfDefinition({ org, definition }: DefinitionAddress): string {
+  return `${definitionStreams}${org}/${definition}/`;
+}
+
+export function streamPrefixOfTheDefinitionsOf({ org }: OrgAddress): string {
+  return `${definitionStreams}${org}/`;
+}
+
+const aDefinitionPrefix = new RegExp(`^${definitionStreams}([^/]+)/([^/]+)/$`, 'u');
+
+export function definitionOfStreamPrefix(prefix: string): Option.Option<DefinitionAddress> {
+  const [, org, definition] = aDefinitionPrefix.exec(prefix) ?? [];
+  return org === undefined || definition === undefined ? Option.none() : Option.some({ org, definition });
+}
 
 export function playbookOfStreamPrefix(prefix: string): Option.Option<PlaybookAddress> {
   const [, org, playbook] = aPlaybookPrefix.exec(prefix) ?? [];
@@ -86,6 +111,10 @@ export function playbookBoundStreamReader(ledger: StreamReader, playbook: Playbo
   return prefixedReader(ledger, streamPrefixOfPlaybook(playbook));
 }
 
+export function definitionBoundStreamReader(ledger: StreamReader, definition: DefinitionAddress): StreamReader {
+  return prefixedReader(ledger, streamPrefixOfDefinition(definition));
+}
+
 export function prefixedAges(ledger: StreamAges, prefix: string): StreamAges {
   return {
     ageOfLastAppend: (stream) =>
@@ -104,10 +133,10 @@ export function prefixedWriter(ledger: StreamWriter, prefix: string): StreamWrit
 
 function wellFormedSelection(selection: RecordedSelection): Effect.Effect<RecordedSelection> {
   if (selection.kind === 'run') {
-    return wellFormed(`runs/${selection.run}`).pipe(Effect.as(selection));
+    return wellFormed(runStreamNameOf(selection.run)).pipe(Effect.as(selection));
   }
   return selection.kind === 'correlated'
-    ? wellFormed(`runs/${selection.correlation}`).pipe(Effect.as(selection))
+    ? wellFormed(runStreamNameOf(selection.correlation)).pipe(Effect.as(selection))
     : Effect.succeed(selection);
 }
 
@@ -136,8 +165,14 @@ const refusedCursors: Readonly<Record<InvalidCursorKind, InvalidInput>> = {
   }),
 };
 
+const aDefinitionKey = /^definition\/[^/]+\/[^/]+\//u;
+
+function streamRelativeTo(prefix: string, stream: string): string {
+  return stream.startsWith(prefix) ? stream.slice(prefix.length) : stream.replace(aDefinitionKey, '');
+}
+
 function recordRelativeTo(prefix: string): <Record extends RecordedFact>(record: Record) => Record {
-  return (record) => ({ ...record, stream: record.stream.slice(prefix.length) });
+  return (record) => ({ ...record, stream: streamRelativeTo(prefix, record.stream) });
 }
 
 function relativeTo(prefix: string): (page: RecordedPage) => RecordedPage {
@@ -178,7 +213,6 @@ function boundProjectionReader(ledger: ProjectionReader, address: ProjectedAddre
         ? ledger.readProjectedRows(projection, address, query)
         : Effect.die(new RangeError(`A read of projected rows takes a limit of 1 or more, not ${query.limit}`)),
     countProjectedRows: (projection, where) => ledger.countProjectedRows(projection, address, where),
-    resetStreamProjection: (projection) => ledger.resetStreamProjection(projection, address),
   };
 }
 
@@ -217,7 +251,7 @@ function wellFormedRequest(request: AppendedFactsRequest): Effect.Effect<Appende
 
 function factsRelativeTo(prefix: string): (read: AppendedFacts) => AppendedFacts {
   return ({ facts, ...reached }) => ({
-    facts: facts.map((fact) => ({ ...fact, stream: fact.stream.slice(prefix.length) })),
+    facts: facts.map((fact) => ({ ...fact, stream: streamRelativeTo(prefix, fact.stream) })),
     ...reached,
   });
 }

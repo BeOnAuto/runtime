@@ -75,7 +75,7 @@ export function steppingOf(parts: SteppingParts, playbookKey: string, mode: Mode
         : Effect.map(refreshed, (now) => namesOf(now).has(type));
     return {
       playbookKey,
-      gate: runGateOf(parts.database, playbookKey),
+      gate: runGateOf(parts.database),
       mode,
       delivered: () => known.wanted.delivered,
       registered: () => known.wanted.registered,

@@ -1,7 +1,8 @@
 import type { Finished } from '@on.auto/definitions';
-import { uuidV5, type Context } from '@on.auto/operations';
+import { uuidV5 } from '@on.auto/operations';
 import { Clock, Effect } from 'effect';
 
+import type { KeptByARun } from '../assets/asset-keeping.ts';
 import { assetRowFrom, assetRowOf, assetsName, type AssetRow } from '../assets/asset-projections.ts';
 import { addressOf, assetReferenceOf } from '../assets/asset-reference.ts';
 import type { Generated } from '../gateway/generation-gateway.ts';
@@ -14,7 +15,7 @@ export function assetIdOfTheWait(deferredId: string): string {
   return uuidV5(waitedAssets, deferredId);
 }
 
-function contextOf({ address, run }: Waiting): Omit<Context, 'at'> {
+function contextOf({ address, run }: Waiting): KeptByARun {
   return {
     by: run.started_by.id,
     runId: address.id,

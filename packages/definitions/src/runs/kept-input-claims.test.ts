@@ -2,7 +2,7 @@ import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { comparedWithoutItsValue } from '../payloads/payload-comparisons.ts';
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { keptArmOf } from '../testing/kept-payloads.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import { claimOf, takesAStartOnce } from './run-claims.ts';
@@ -24,7 +24,7 @@ const kept = keptArmOf(leads);
 
 const startedKept: RunEvent = {
   type: 'run_started',
-  data: { input_sha256: kept.sha256, input_bytes: kept.bytes, started_by: recordedAdmin },
+  data: { input_sha256: kept.sha256, input_bytes: kept.bytes, ...startedInAlpha },
 };
 
 const rejected: RunEvent = { type: 'run_rejected', data: { rejection: { reason: 'unavailable', detail: 'Busy' } } };
@@ -40,7 +40,14 @@ function asked(input: Schema.Json) {
 const request = { definition_type: 'echo', name: 'score' };
 
 function createdOnlyWith(input: Schema.Json) {
-  const start = { type: 'start', ...request, input, started_by: recordedAdmin, calls_tools: false } as const;
+  const start = {
+    type: 'start',
+    ...request,
+    input,
+    started_by: recordedAdmin,
+    playbook: 'alpha',
+    calls_tools: false,
+  } as const;
   return { ...start, definition_version: 1, createOnly: true, ...at } as const;
 }
 
@@ -83,7 +90,14 @@ describe('a run whose input its playbook keeps outside the run, given what its o
   });
 
   it('starts with its input kept outside where the start names the digest it was kept by', () => {
-    const start = { type: 'start', ...request, input: leads, inputKept: kept, started_by: recordedAdmin } as const;
+    const start = {
+      type: 'start',
+      ...request,
+      input: leads,
+      inputKept: kept,
+      started_by: recordedAdmin,
+      playbook: 'alpha',
+    } as const;
 
     expect(
       runDecider.decide({ ...start, calls_tools: false, definition_version: 1, ...at }, runDecider.initialState),

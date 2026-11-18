@@ -1,17 +1,20 @@
-import { Caller, PlaybookContext, PlaybookWriter } from '@on.auto/operations';
-import { Effect, Exit, Schema } from 'effect';
+import { Caller, PlaybookContext, PlaybookReader, PlaybookWriter, playbookLedgerOf } from '@on.auto/operations';
+import { memoryLedger } from '@on.auto/operations/testing';
+import { Context, Effect, Exit, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { modelCallAnswered, modelCallSent, modelCallTimedOut } from '../journal-testing/model-calls.ts';
-import { idAt, journalled, linksIn } from '../journal-testing/run-links.ts';
+import { idAt, journalled, journalledStream, linksIn } from '../journal-testing/run-links.ts';
 import type { ModelCallFact, RunCommand } from '../runs/run-commands.ts';
-import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { runDecider } from '../runs/run-decider.ts';
 import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
 import { answerOfCall, startOfCall, toolUser } from '../testing/capabilities/tool-user.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { harness, toPlaybook } from '../testing/harness.ts';
+import { harness, runStreamIn, toPlaybook } from '../testing/harness.ts';
 import { testRunId as runId } from '../testing/run-facts.ts';
 import { runJournal } from './run-journal.ts';
+
+const alpha = { org: 'acme', playbook: 'alpha' };
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -45,7 +48,7 @@ async function playbookWithToolUser() {
       Effect.forEach(commands, (command) =>
         Effect.orDie(
           definitions.ledger.service.execute(
-            `playbook/acme/alpha/${runStreamNameOf(runIdRunJournal)}`,
+            runStreamIn(definitions.ledger, { type: 'tool-user', name: 'caller' }, runIdRunJournal),
             runDecider,
             command,
           ),
@@ -167,6 +170,7 @@ describe('a run that called tools', () => {
       {
         type: 'start',
         started_by: recordedAdmin,
+        playbook: 'alpha',
         definition_type: 'tool-user',
         name: 'caller',
         input: {},
@@ -207,18 +211,14 @@ describe('a run of a definition that calls tools, still in progress', () => {
 describe('the journal of an attempt, given the end of a call an attempt before it started', () => {
   it('links the end to where its attempt began, knowing no start of the call', async () => {
     const definitions = harness();
-    const startedBefore = definitions.ledger.service.execute(
-      `playbook/acme/alpha/${runStreamNameOf(runId)}`,
-      runDecider,
-      {
-        type: 'call',
-        fact: { type: 'tool_call_started', data: startOfCall(1) },
-        fencingToken: 1,
-        runId,
-        by: 'acme-admin',
-        at: '2026-10-01T09:00:01.000Z',
-      },
-    );
+    const startedBefore = definitions.ledger.service.execute(journalledStream, runDecider, {
+      type: 'call',
+      fact: { type: 'tool_call_started', data: startOfCall(1) },
+      fencingToken: 1,
+      runId,
+      by: 'acme-admin',
+      at: '2026-10-01T09:00:01.000Z',
+    });
 
     expect(
       await journalled(definitions, (journal) =>
@@ -227,8 +227,8 @@ describe('the journal of an attempt, given the end of a call an attempt before i
     ).toBe(true);
     expect((await linksIn(definitions)).at(-1)).toEqual({
       type: 'tool_call_answered',
-      id: idAt(3),
-      causationId: idAt(1),
+      id: idAt(definitions, 3),
+      causationId: idAt(definitions, 1),
       correlationId: runId,
     });
   });
@@ -245,9 +245,17 @@ describe('a fact the ledger cannot write', () => {
       );
       return yield* journal.record({ type: 'model_call_started', data: { number: 1, ...modelCallSent() } });
     }).pipe(
-      Effect.provideService(PlaybookWriter, { execute: diskFull, keepContent: diskFull }),
+      Effect.provideService(PlaybookReader, {
+        ...Context.get(playbookLedgerOf(memoryLedger().service, alpha), PlaybookReader),
+        definitionHolding: () => Effect.succeed('0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8ca1'),
+      }),
+      Effect.provideService(PlaybookWriter, {
+        execute: diskFull,
+        keepContent: diskFull,
+        ofDefinition: () => ({ execute: diskFull }),
+      }),
       Effect.provideService(Caller, acmeAdmin),
-      Effect.provideService(PlaybookContext, { org: 'acme', playbook: 'alpha' }),
+      Effect.provideService(PlaybookContext, alpha),
     );
 
     const exit = await Effect.runPromiseExit(failing);
@@ -274,15 +282,15 @@ describe('the journal of a run that calls its model', () => {
       ),
     );
 
-    expect(recorded).toEqual([1, 1, 1, true, 2, takenSecond, 2, idAt(7)]);
+    expect(recorded).toEqual([1, 1, 1, true, 2, takenSecond, 2, idAt(definitions, 7)]);
     expect((await linksIn(definitions)).map(({ type, causationId }) => [type, causationId])).toEqual([
       ['run_started', null],
-      ['model_call_started', idAt(1)],
-      ['model_call_answered', idAt(2)],
-      ['tool_call_started', idAt(3)],
-      ['tool_call_answered', idAt(4)],
-      ['model_call_started', idAt(5)],
-      ['model_call_failed', idAt(6)],
+      ['model_call_started', idAt(definitions, 1)],
+      ['model_call_answered', idAt(definitions, 2)],
+      ['tool_call_started', idAt(definitions, 3)],
+      ['tool_call_answered', idAt(definitions, 4)],
+      ['model_call_started', idAt(definitions, 5)],
+      ['model_call_failed', idAt(definitions, 6)],
     ]);
   });
 });

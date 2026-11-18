@@ -6,12 +6,11 @@ import {
   noCalledDefinitions,
   recordingJournal,
 } from '@on.auto/definitions/testing';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { callMarginMs } from '../runs/call-limits.ts';
-import { playbookOn } from '../testing/playbook.ts';
+import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { recordingStarts, recordingWorkflows } from '../testing/recording-starts.ts';
 import { acmeCaller } from '../testing/workflows.ts';
 
@@ -29,7 +28,7 @@ const calling = [
 describe('the run a run of a workflow starts', () => {
   it('is known by its playbook, its run, its version, its caller, its reaction depth and its lineage', async () => {
     const { starts, recording } = recordingStarts();
-    const playbook = playbookOn(memoryLedger(), [recordingWorkflows(recording)]);
+    const playbook = playbookOn(namingLedger(), [recordingWorkflows(recording)]);
     await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'flow', source: flow });
 
     await playbook.call(playbook.runDefinition, { type: 'workflow', name: 'flow', run_id: runId });
@@ -64,7 +63,7 @@ describe('the run a run of a workflow starts for a call or a trigger', () => {
       org: 'acme',
       playbook: 'alpha',
       caller: acmeCaller,
-      definition: { name: 'flow', version: 1 },
+      definition: { id: '0199a3c4-7d2e-7c1a-9b3f-0000000000d1', name: 'flow', version: 1 },
       journal: recordingJournal(),
       lineage: { startId: 'start-1', correlationId: 'root-1' },
       depth: 1,
@@ -90,7 +89,7 @@ describe('the run a run of a workflow starts for a call or a trigger', () => {
 describe('the calls of the run a run of a workflow starts', () => {
   it('waits for each call that names its definition no longer than that definition may run, with a minute more', async () => {
     const { starts, recording } = recordingStarts();
-    const playbook = playbookOn(memoryLedger(), [recordingWorkflows(recording), echo]);
+    const playbook = playbookOn(namingLedger(), [recordingWorkflows(recording), echo]);
     await playbook.call(playbook.createDefinition, { type: 'echo', name: 'greet', source: '{"greeting": "Hello"}' });
     await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'flow', source: flow });
     await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'calling', source: calling });
@@ -120,7 +119,7 @@ const askingInTurn = [
 describe('the calls of a workflow to a function whose runs last as long as their input says', () => {
   it('waits for each call as long as the call’s literal input may run, and as long as any input may otherwise', async () => {
     const { starts, recording } = recordingStarts();
-    const playbook = playbookOn(memoryLedger(), [recordingWorkflows(recording), asking]);
+    const playbook = playbookOn(namingLedger(['asking']), [recordingWorkflows(recording), asking]);
     await playbook.call(playbook.createDefinition, { type: 'asking', name: 'approve', source: 'Approve the brief?' });
     await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'asking', source: askingInTurn });
 

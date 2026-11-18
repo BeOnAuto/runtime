@@ -4,13 +4,14 @@ import { Effect, Schema } from 'effect';
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
 import type { DueWork } from '../due-work/due-work.ts';
 import {
+  attemptKeyOfRun,
   attemptLeaseMsFor,
   attemptLeasesOn,
   attemptLeasesRenewed,
   type AttemptLeases,
 } from '../lease/attempt-leases.ts';
 import { goneHoldersWork, type GoneHolders, type HolderGoneReceipt } from '../lease/gone-holders.ts';
-import { runKeyOf, type RunAddress } from '../runs/run-address.ts';
+import type { RunInAPlaybook } from '../runs/run-address.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
 
 export const sweepEveryMs = 10_000;
@@ -19,13 +20,13 @@ export const lastsMs = attemptLeaseMsFor(sweepEveryMs);
 
 export const started = 1_790_845_200_000;
 
-export const first: RunAddress = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-0000000000a1' };
+export const first: RunInAPlaybook = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-0000000000a1' };
 
-export const second: RunAddress = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-0000000000a2' };
+export const second: RunInAPlaybook = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-0000000000a2' };
 
-export const firstKey = runKeyOf(first);
+export const firstKey = attemptKeyOfRun(first);
 
-export const secondKey = runKeyOf(second);
+export const secondKey = attemptKeyOfRun(second);
 
 const LeaseRowSchema = Schema.Struct({ name: Schema.String, holder: Schema.String, expires_at: WholeNumber });
 
@@ -78,12 +79,12 @@ export async function sharedOn(settingsOf: SettingsOf): Promise<Shared> {
     holdingOf: () => Effect.sync(() => asked.answers.holding),
     ended: (run, fencingToken) =>
       Effect.sync(() => {
-        asked.ended.push([runKeyOf(run), fencingToken]);
+        asked.ended.push([attemptKeyOfRun(run), fencingToken]);
         return asked.answers.receipt ?? 'ended';
       }),
     resumed: (run) =>
       Effect.sync(() => {
-        asked.resumed.push(runKeyOf(run));
+        asked.resumed.push(attemptKeyOfRun(run));
       }),
   };
   return {
@@ -112,11 +113,11 @@ export async function sharedOn(settingsOf: SettingsOf): Promise<Shared> {
 
 type Step = (runKey: string) => Effect.Effect<void, unknown>;
 
-export function steppedThrough(address: RunAddress, ...steps: readonly Step[]): Promise<void> {
-  const runKey = runKeyOf(address);
+export function steppedThrough(address: RunInAPlaybook, ...steps: readonly Step[]): Promise<void> {
+  const runKey = attemptKeyOfRun(address);
   return Effect.runPromise(Effect.orDie(Effect.forEach(steps, (step) => step(runKey), { discard: true })));
 }
 
-export function heldBy(process: AttemptLeases, address: RunAddress, fencingToken: number): Promise<void> {
+export function heldBy(process: AttemptLeases, address: RunInAPlaybook, fencingToken: number): Promise<void> {
   return steppedThrough(address, process.taken, (runKey) => process.named(runKey, fencingToken));
 }

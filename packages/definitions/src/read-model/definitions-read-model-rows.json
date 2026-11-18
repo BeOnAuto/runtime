@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "rows": {
     "definitions": [
       {
@@ -7,7 +7,6 @@
         "row": {
           "definition_type": "workflow",
           "name": "follow-up-leads",
-          "definition_id": null,
           "version": 2,
           "status": "retired",
           "description": "Follows up the leads of the day",
@@ -34,7 +33,6 @@
         "row": {
           "definition_type": "computation",
           "name": "check-totals",
-          "definition_id": null,
           "version": 2,
           "status": "active",
           "description": null,
@@ -61,7 +59,6 @@
         "row": {
           "definition_type": "workflow",
           "name": "close-the-month",
-          "definition_id": null,
           "version": 2,
           "status": "paused",
           "description": null,
@@ -88,7 +85,6 @@
         "row": {
           "definition_type": "reasoning",
           "name": "greet-reasoning",
-          "definition_id": null,
           "version": 2,
           "status": "paused",
           "description": "Greets each guest",
@@ -115,7 +111,6 @@
         "row": {
           "definition_type": "workflow",
           "name": "close-the-week",
-          "definition_id": "019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a",
           "version": 2,
           "status": "retired",
           "description": null,
@@ -142,7 +137,6 @@
         "row": {
           "definition_type": "workflow",
           "name": "post-the-orders",
-          "definition_id": null,
           "version": 1,
           "status": "paused",
           "description": null,

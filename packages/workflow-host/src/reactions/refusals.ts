@@ -27,6 +27,7 @@ export function codesOf({ kind, because }: RejectionCodes): RejectionCodes {
 }
 
 export interface Refusal extends RejectionCodes {
+  readonly definitionKey: string;
   readonly workflow: string;
   readonly version: number;
   readonly reason: string;
@@ -42,6 +43,7 @@ export interface Refusals extends RefuseReaction {
 }
 
 const refusalFields = {
+  definition_key: Schema.String,
   playbook_key: Schema.String,
   workflow: Schema.String,
   version: WholeNumber,
@@ -70,8 +72,8 @@ function minuteOf(at: number): number {
   return Math.floor(at / aMinute) * aMinute;
 }
 
-export function reactionsStreamOf(playbookKey: string, workflow: string): string {
-  return `${playbookKey}${reactionsStreamKind}/${workflow}`;
+export function reactionsStreamOf(definitionKey: string, definitionType: string): string {
+  return `${definitionKey}${reactionsStreamKind}/${definitionType}`;
 }
 
 function refusalLoopOn(database: HostDatabase) {
@@ -107,7 +109,12 @@ function refusedOf(row: Row) {
   };
 }
 
-function recorded(database: HostDatabase, row: Row, at: number): Effect.Effect<void> {
+interface Recording {
+  readonly database: HostDatabase;
+  readonly definitionType: string;
+}
+
+function recorded({ database, definitionType }: Recording, row: Row, at: number): Effect.Effect<void> {
   const refusal = {
     playbook: playbookOfKey(row.playbook_key),
     workflow: row.workflow,
@@ -117,10 +124,10 @@ function recorded(database: HostDatabase, row: Row, at: number): Effect.Effect<v
   };
   return Effect.orDie(
     Effect.gen(function* () {
-      yield* refusalLoopOn(database)(reactionsStreamOf(row.playbook_key, row.workflow), refusal);
+      yield* refusalLoopOn(database)(reactionsStreamOf(row.definition_key, definitionType), refusal);
       yield* database.write(
         statement`UPDATE workflow_reaction_refusals SET recorded = 1
-          WHERE playbook_key = ${row.playbook_key} AND workflow = ${row.workflow}
+          WHERE definition_key = ${row.definition_key}
             AND trigger_kind = ${row.trigger_kind} AND trigger_reference = ${row.trigger_reference}
             AND minute = ${row.minute}`,
       );
@@ -128,16 +135,16 @@ function recorded(database: HostDatabase, row: Row, at: number): Effect.Effect<v
   );
 }
 
-function rowOf(database: HostDatabase, playbookKey: string, refusal: Refusal): Effect.Effect<Row | undefined> {
+function rowOf(database: HostDatabase, refusal: Refusal): Effect.Effect<Row | undefined> {
   const { triggerKind, triggerReference } = triggerColumnsOf(refusal);
   return Effect.orDie(
     rowsOf(
       RefusalRow,
       database.read(
-        statement`SELECT playbook_key, workflow, version, minute, count, reason, recorded,
+        statement`SELECT definition_key, playbook_key, workflow, version, minute, count, reason, recorded,
             kind, because, trigger_kind, trigger_reference
           FROM workflow_reaction_refusals
-          WHERE playbook_key = ${playbookKey} AND workflow = ${refusal.workflow}
+          WHERE definition_key = ${refusal.definitionKey}
             AND trigger_kind = ${triggerKind} AND trigger_reference = ${triggerReference}`,
       ),
     ),
@@ -145,31 +152,32 @@ function rowOf(database: HostDatabase, playbookKey: string, refusal: Refusal): E
 }
 
 function counted(database: HostDatabase, playbookKey: string, refusal: Refusal, minute: number) {
-  const { workflow, version, reason, kind = null, because = null } = refusal;
+  const { definitionKey, workflow, version, reason, kind = null, because = null } = refusal;
   const { triggerKind, triggerReference } = triggerColumnsOf(refusal);
   return Effect.orDie(
     database.write(
-      statement`INSERT INTO workflow_reaction_refusals
-          (playbook_key, workflow, version, minute, count, reason, recorded, kind, because, trigger_kind, trigger_reference)
-        VALUES (${playbookKey}, ${workflow}, ${version}, ${minute}, 1, ${reason}, 0,
+      statement`INSERT INTO workflow_reaction_refusals (definition_key, playbook_key, workflow, version, minute, count,
+          reason, recorded, kind, because, trigger_kind, trigger_reference)
+        VALUES (${definitionKey}, ${playbookKey}, ${workflow}, ${version}, ${minute}, 1, ${reason}, 0,
           ${kind}, ${because}, ${triggerKind}, ${triggerReference})
-        ON CONFLICT (playbook_key, workflow, trigger_kind, trigger_reference) DO UPDATE SET
+        ON CONFLICT (definition_key, trigger_kind, trigger_reference) DO UPDATE SET
           count = CASE WHEN workflow_reaction_refusals.minute = excluded.minute
             THEN workflow_reaction_refusals.count + 1 ELSE 1 END,
-          version = excluded.version, minute = excluded.minute, reason = excluded.reason, recorded = 0,
+          playbook_key = excluded.playbook_key, workflow = excluded.workflow, version = excluded.version, minute = excluded.minute, reason = excluded.reason, recorded = 0,
           kind = excluded.kind, because = excluded.because`,
     ),
   );
 }
 
-export function refusalsOn(database: HostDatabase, now: () => number): Refusals {
+export function refusalsOn(database: HostDatabase, definitionType: string, now: () => number): Refusals {
+  const recording = { database, definitionType };
   return {
     refuse: (playbookKey, refusal) =>
       Effect.gen(function* () {
         const at = now();
-        const row = yield* rowOf(database, playbookKey, refusal);
+        const row = yield* rowOf(database, refusal);
         if (row !== undefined && row.minute !== minuteOf(at) && row.recorded === 0) {
-          yield* recorded(database, row, at);
+          yield* recorded(recording, row, at);
         }
         yield* counted(database, playbookKey, refusal, minuteOf(at));
       }),
@@ -180,15 +188,15 @@ export function refusalsOn(database: HostDatabase, now: () => number): Refusals 
           rowsOf(
             RefusalRow,
             database.read(
-              statement`SELECT playbook_key, workflow, version, minute, count, reason, recorded,
+              statement`SELECT definition_key, playbook_key, workflow, version, minute, count, reason, recorded,
                   kind, because, trigger_kind, trigger_reference
                 FROM workflow_reaction_refusals
                 WHERE recorded = 0 AND minute < ${minuteOf(at)}
-                ORDER BY minute, playbook_key, workflow, trigger_kind, trigger_reference`,
+                ORDER BY minute, definition_key, trigger_kind, trigger_reference`,
             ),
           ),
         );
-        yield* Effect.forEach(due, (row) => recorded(database, row, at), { discard: true });
+        yield* Effect.forEach(due, (row) => recorded(recording, row, at), { discard: true });
         return due.length;
       }),
   };

@@ -11,9 +11,9 @@ import {
 } from '../index.ts';
 import type { RunCommand } from '../runs/run-commands.ts';
 import { runDecider } from '../runs/run-decider.ts';
-import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
+import { acmeAdmin, startedInAlpha } from '../testing/callers.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { firstMoment, harness, toPlaybook, runStreamIn } from '../testing/harness.ts';
 import { keptArmOf, keptIn, recordedAsGiven, watchedStore } from '../testing/kept-payloads.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -22,9 +22,7 @@ const runId = '0199a3c4-7d2e-7c1a-9b3f-0000000000d1';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
-const address = { ...alpha, id: runId };
-
-const stream = `playbook/acme/alpha/runs/${runId}`;
+const address = { ...alpha, id: runId, definitionType: 'system-call', name: 'post' };
 
 const lineage: Lineage = { causationId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: runId };
 
@@ -74,6 +72,7 @@ function startOfTheRun(version = 1): RunCommand {
     name: 'post',
     input: {},
     started_by: { id: acmeAdmin.id, name: acmeAdmin.name },
+    playbook: 'alpha',
     definition_version: version,
     calls_tools: true,
     ...acted,
@@ -105,13 +104,24 @@ const callAnswered: RunCommand = {
 
 const keptInput = { brief: 'b'.repeat(4096) };
 
-function startedWithAKeptInput(service: Ledger['Service']) {
+function startedWithAKeptInput(service: Ledger['Service'], stream: string) {
   const { sha256, bytes } = keptArmOf(keptInput);
   const context = { ...acted, definitionType: 'system-call', definitionName: 'post', definitionVersion: 1 };
-  const data = { input_sha256: sha256, input_bytes: bytes, started_by: recordedAdmin, calls_tools: true } as const;
+  const data = { input_sha256: sha256, input_bytes: bytes, ...startedInAlpha, calls_tools: true } as const;
   return Effect.andThen(
     keptIn(service.content, alpha, keptInput),
     recordedAsGiven(service, stream, [{ type: 'run_started', data }], context),
+  );
+}
+
+function recordedAs(service: Ledger['Service'], stream: string, facts: readonly RunCommand[], kept: number | true) {
+  const starting =
+    kept === true ? startedWithAKeptInput(service, stream) : service.execute(stream, runDecider, startOfTheRun(kept));
+  return Effect.orDie(
+    Effect.andThen(
+      starting,
+      Effect.forEach(facts, (fact) => service.execute(stream, runDecider, fact)),
+    ),
   );
 }
 
@@ -125,21 +135,13 @@ async function leftByItsAttempt(facts: readonly RunCommand[], version?: number, 
     operations.createDefinition,
     toAlpha(acmeAdmin, { type: 'system-call', name: 'post', source: 'post' }),
   );
-  const starting = inputKept
-    ? startedWithAKeptInput(service)
-    : Effect.asVoid(service.execute(stream, runDecider, startOfTheRun(version)));
-  await definitions.run(
-    Effect.orDie(
-      Effect.andThen(
-        starting,
-        Effect.forEach(facts, (command) => service.execute(stream, runDecider, command)),
-      ),
-    ),
-  );
+  const stream = runStreamIn(definitions.ledger, { type: 'system-call', name: 'post' }, runId);
+  await definitions.run(recordedAs(service, stream, facts, inputKept || (version ?? 1)));
   const lookedAtAgain: CancelOfALiveAttempt[] = [];
   const lookAgain = (cancel: CancelOfALiveAttempt) => Effect.sync(() => lookedAtAgain.push(cancel));
   return {
     service,
+    stream,
     watched,
     lookedAtAgain,
     cancelling: (
@@ -240,7 +242,7 @@ describe('a cancel its caller makes of a run within its call whose attempt may b
   });
 
   it('records the cancel alone when the run changed between its read and the cancel', async () => {
-    const { service, cancelling, reading, recorded, lookedAtAgain } = await leftByItsAttempt([callStarted(1)]);
+    const { service, stream, cancelling, reading, recorded, lookedAtAgain } = await leftByItsAttempt([callStarted(1)]);
     const writingMeanwhile = Ledger.of({
       ...service,
       ageOfLastAppend: () =>

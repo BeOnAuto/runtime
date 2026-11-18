@@ -1,6 +1,7 @@
 import {
   Ledger,
   contentHoldersOf,
+  definitionOfStreamPrefix,
   makeDispatcher,
   settle,
   type ContentHolders,
@@ -20,7 +21,7 @@ import {
   type MemoryLedger,
   type ReportedIncident,
 } from '@on.auto/operations/testing';
-import { DateTime, Effect, Layer } from 'effect';
+import { DateTime, Effect, Layer, Option } from 'effect';
 import { TestClock } from 'effect/testing';
 
 import type { RunMeter } from '../metering/run-meter.ts';
@@ -157,4 +158,30 @@ export function toPlaybook(
 
 export function asQueryString(request: PlaybookRequest): PlaybookRequest {
   return { ...request, encoding: 'strings' };
+}
+
+interface NamedDefinition {
+  readonly type: string;
+  readonly name: string;
+  readonly playbook?: string;
+}
+
+function definitionKeyIn(
+  ledger: Pick<MemoryLedger, 'names'>,
+  { type, name, playbook = 'alpha' }: NamedDefinition,
+): string {
+  const held = ledger
+    .names()
+    .find(
+      (row) => row.playbookKey === `playbook/acme/${playbook}/` && row.definitionType === type && row.name === name,
+    );
+  return Option.getOrThrow(Option.fromNullishOr(held)).definitionKey;
+}
+
+export function definitionIdIn(ledger: Pick<MemoryLedger, 'names'>, definition: NamedDefinition): string {
+  return Option.getOrThrow(definitionOfStreamPrefix(definitionKeyIn(ledger, definition))).definition;
+}
+
+export function runStreamIn(ledger: Pick<MemoryLedger, 'names'>, definition: NamedDefinition, runId: string): string {
+  return `${definitionKeyIn(ledger, definition)}runs/${runId}`;
 }

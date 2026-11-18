@@ -39,7 +39,7 @@ interface PlacedFact {
 
 function placeOf(stream: string): ReferencesPlace | undefined {
   const named = addressedStreamOf(stream);
-  return named?.scope === 'playbook'
+  return named !== undefined && named.scope !== 'org'
     ? { orgKey: streamPrefixOfOrg(named.address), prefix: named.prefix, stream: `${named.kind}/${named.id}` }
     : undefined;
 }

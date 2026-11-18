@@ -1,16 +1,12 @@
 import { Effect, Function } from 'effect';
 
-import { followedPlaybooksOn, type FollowedPlaybooks } from '../src/follower/followed-playbooks.ts';
-import { passOf } from '../src/follower/playbook-pass.ts';
-import { playbookRecordsOf } from '../src/follower/playbook-records.ts';
-import {
-  factPayloadsOn,
-  hostDatabaseOpenedOn,
-  type DatabaseSettings,
-} from '../src/ledger-testing/ledger-connections.ts';
+import { orgFollowerCursorOf } from '../src/database/org-follower-tables.ts';
+import { orgRecordsOf } from '../src/follower/org-records.ts';
+import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { definitionRecordsKeepingTheirOwnStops } from '../src/reaction-testing/own-stops.ts';
+import { passesOn } from '../src/reaction-testing/playbook-passes.ts';
 import { byAdmin, definitionRecorded, eventTrigger, published } from '../src/reaction-testing/playbook-writes.ts';
-import { playbookSweepsOn, type PlaybookSweeps } from '../src/sweeps/playbook-sweeps.ts';
+import { orgSweepsOn, type OrgSweeps } from '../src/sweeps/org-sweeps.ts';
 import { resultOfEnding } from '../src/waiting-testing/recorded-waiting.ts';
 import { servedWaitingOf } from '../src/waiting/waiting-parts.ts';
 
@@ -22,7 +18,9 @@ export interface SweepCost {
   readonly changedMs: number;
 }
 
-type Pass = ReturnType<typeof passOf>;
+type Passing = ReturnType<typeof passesOn>;
+
+type Pass = Passing['pass'];
 
 const idleSweeps = 20;
 
@@ -37,16 +35,14 @@ function inTurn(count: number, step: (index: number) => Promise<unknown>): Promi
   );
 }
 
-function sweptUntilEmpty(sweeps: PlaybookSweeps, pass: Pass): Effect.Effect<void> {
+function sweptUntilEmpty(sweeps: OrgSweeps, pass: Pass): Effect.Effect<void> {
   return Effect.gen(function* () {
     for (;;) {
       const sweep = yield* sweeps.next();
-      if (sweep.playbooks.length === 0) {
+      if (sweep.orgs.length === 0) {
         return;
       }
-      yield* Effect.forEach(sweep.playbooks, ({ playbookKey, known }) => pass(playbookKey, 'sweep', known), {
-        discard: true,
-      });
+      yield* Effect.forEach(sweep.orgs, ({ org, known }) => pass(org, 'sweep', known), { discard: true });
     }
   });
 }
@@ -61,11 +57,9 @@ function medianOf(times: readonly number[]): number {
   return times.toSorted((left, right) => left - right)[Math.floor(times.length / 2)] ?? 0;
 }
 
-function passOver(opened: Awaited<ReturnType<typeof hostDatabaseOpenedOn>>, followed: FollowedPlaybooks) {
-  return passOf({
-    database: opened,
-    records: playbookRecordsOf(opened.store),
-    playbooks: followed,
+function passOver(opened: Awaited<ReturnType<typeof hostDatabaseOpenedOn>>): Passing {
+  return passesOn(opened, () => ({
+    records: orgRecordsOf(opened.store),
     consumers: [],
     calls: servedWaitingOf({
       database: opened,
@@ -76,26 +70,19 @@ function passOver(opened: Awaited<ReturnType<typeof hostDatabaseOpenedOn>>, foll
       now: Date.now,
       trouble: () => Effect.void,
     }).calls,
-    definitionType: 'workflow',
     applyDefinitionRecord: definitionRecordsKeepingTheirOwnStops(opened),
-    unreadable: () => Effect.void,
-    contentMissing: () => Effect.void,
-    factPayloadsOf: factPayloadsOn(opened),
     passedEarly: () => Effect.void,
-    registered: [],
-    holdsUnreadable: false,
-    now: Date.now,
-    holdNotes: { tried: () => Effect.void, failed: () => Effect.void, lifted: () => Effect.void },
-  });
+  }));
 }
 
 export async function sweepCostOn(database: DatabaseSettings, playbooks: number, reacting: number): Promise<SweepCost> {
   const opened = await hostDatabaseOpenedOn(database);
-  const followed = followedPlaybooksOn(opened);
-  await inTurn(playbooks, async (index) => {
-    await published(opened.store, { id: `e${index}`, type: 'com.measure.other' }, byAdmin, playbookKeyOf(index));
-    await Effect.runPromise(followed.follow(playbookKeyOf(index), null));
-  });
+  const { orgs: followed, pass } = passOver(opened);
+  const { through: start } = await opened.store.readAppended(undefined, 0);
+  await Effect.runPromise(followed.follow('acme', orgFollowerCursorOf('acme', start)));
+  await inTurn(playbooks, (index) =>
+    published(opened.store, { id: `e${index}`, type: 'com.measure.other' }, byAdmin, playbookKeyOf(index)),
+  );
   await inTurn(reacting, (index) =>
     definitionRecorded(
       opened.store,
@@ -103,8 +90,7 @@ export async function sweepCostOn(database: DatabaseSettings, playbooks: number,
       playbookKeyOf(index),
     ),
   );
-  const pass = passOver(opened, followed);
-  const sweeps = playbookSweepsOn(opened.store, followed);
+  const sweeps = orgSweepsOn(opened.store, followed);
   await Effect.runPromise(sweeps.started());
   const roundMs = await timed(sweptUntilEmpty(sweeps, pass));
   const idle: number[] = [];

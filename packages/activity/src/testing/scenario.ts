@@ -1,7 +1,41 @@
 import { activityHarness, ada, priya, type LedgerReads } from './harness.ts';
-import { definitionCreated, runDeferred, runFailed, runStarted, runSucceeded, type RunOf } from './recorded-facts.ts';
+import {
+  definitionCreated,
+  runDeferred,
+  runFailed,
+  runStarted,
+  runSucceeded,
+  type RecordedFact,
+  type RunOf,
+} from './recorded-facts.ts';
 
 const runId = (index: number) => `019a4000-0000-7000-8000-${String(index).padStart(12, '0')}`;
+
+const definitionId = (index: number) => `019a3f00-0000-7000-8000-${String(index).padStart(12, '0')}`;
+
+export interface FiledDefinition {
+  readonly id: string;
+  readonly type: string;
+  readonly name: string;
+  readonly playbook: string;
+}
+
+export const definitions = {
+  oldReport: { id: definitionId(1), type: 'workflow', name: 'old-report', playbook: 'sales' },
+  categorize: { id: definitionId(2), type: 'reasoning', name: 'categorize-invoice', playbook: 'finance' },
+  approve: { id: definitionId(3), type: 'interaction', name: 'approve-payment', playbook: 'finance' },
+  closeTheWeek: { id: definitionId(4), type: 'workflow', name: 'close-the-week', playbook: 'finance' },
+  summarize: { id: definitionId(5), type: 'reasoning', name: 'summarize-week', playbook: 'finance' },
+  weeklySales: { id: definitionId(6), type: 'workflow', name: 'weekly-sales', playbook: 'sales' },
+} satisfies Readonly<Record<string, FiledDefinition>>;
+
+export const definitionStreamOf = ({ id, type }: FiledDefinition) => `definition/acme/${id}/definitions/${type}`;
+
+export const runStreamOf = ({ id }: FiledDefinition, { runId: run }: RunOf) => `definition/acme/${id}/runs/${run}`;
+
+export function filed(definition: FiledDefinition, at: string, by: string): RecordedFact {
+  return definitionCreated({ ...definition, version: 1 }, at, by, definition.playbook);
+}
 
 export const runs = {
   broke: { runId: runId(1), type: 'reasoning', name: 'categorize-invoice', version: 1 },
@@ -26,9 +60,7 @@ export const runs = {
 
 export const at = (time: string) => `2026-11-01T${time}:00.000Z`;
 
-const finance = 'playbook/acme/finance/';
-
-const runStream = ({ runId: id }: RunOf, prefix = finance) => `${prefix}runs/${id}`;
+const before = '2026-10-20T09:00:00.000Z';
 
 const asked = (to: string) => ({
   to,
@@ -40,36 +72,40 @@ const asked = (to: string) => ({
 export async function financeAndSales(reads?: LedgerReads) {
   const harness = activityHarness(reads);
   const { created, record } = harness;
+  const { oldReport, categorize, approve, closeTheWeek, summarize, weeklySales } = definitions;
   await created(priya, 'finance', at('10:00'));
   await created(ada, 'sales', at('10:00'));
+  await record(definitionStreamOf(oldReport), filed(oldReport, before, priya.id));
+  await Promise.all(
+    [approve, closeTheWeek, summarize, weeklySales].map((definition: FiledDefinition) =>
+      record(definitionStreamOf(definition), filed(definition, before, priya.id)),
+    ),
+  );
+  await record(definitionStreamOf(categorize), filed(categorize, at('10:05'), priya.id));
   await record(
-    'playbook/acme/sales/definitions/workflow',
-    definitionCreated({ type: 'workflow', name: 'old-report', version: 1 }, '2026-10-20T09:00:00.000Z', priya.id),
+    runStreamOf(categorize, runs.broke),
+    runStarted(runs.broke, at('11:00'), ada.id),
+    runFailed(runs.broke, at('11:01')),
   );
   await record(
-    `${finance}definitions/reasoning`,
-    definitionCreated({ type: 'reasoning', name: 'categorize-invoice', version: 1 }, at('10:05'), priya.id),
-  );
-  await record(runStream(runs.broke), runStarted(runs.broke, at('11:00'), ada.id), runFailed(runs.broke, at('11:01')));
-  await record(
-    runStream(runs.askedAnyone),
+    runStreamOf(approve, runs.askedAnyone),
     runStarted(runs.askedAnyone, at('12:00'), priya.id),
     runDeferred(runs.askedAnyone, at('12:01'), asked('#approvals')),
   );
   await record(
-    runStream(runs.askedDana),
+    runStreamOf(approve, runs.askedDana),
     runStarted(runs.askedDana, at('12:10'), priya.id),
     runDeferred(runs.askedDana, at('12:11'), asked('Dana@Example.com')),
   );
-  await record(runStream(runs.closed), runStarted(runs.closed, at('13:00'), priya.id, 'table'));
+  await record(runStreamOf(closeTheWeek, runs.closed), runStarted(runs.closed, at('13:00'), priya.id, 'table'));
   await record(
-    runStream(runs.step),
+    runStreamOf(summarize, runs.step),
     runStarted(runs.step, at('13:01'), priya.id),
     runSucceeded(runs.step, at('13:02')),
   );
-  await record(runStream(runs.closed), runSucceeded(runs.closed, at('13:05')));
+  await record(runStreamOf(closeTheWeek, runs.closed), runSucceeded(runs.closed, at('13:05')));
   await record(
-    runStream(runs.sold, 'playbook/acme/sales/'),
+    runStreamOf(weeklySales, runs.sold),
     runStarted(runs.sold, at('14:00'), ada.id),
     runSucceeded(runs.sold, at('14:01')),
   );

@@ -7,7 +7,6 @@ import {
   playbookCallerOf,
   messageIdOf,
   recordedCallerOf,
-  streamPrefixOfPlaybook,
   type Lineage,
   type RecordedCaller,
   type StreamReader,
@@ -18,7 +17,13 @@ import { DateTime, Effect, Schema } from 'effect';
 import { payloadWrittenIn } from '../payloads/payload-writing.ts';
 import { payloadsKeptIn } from '../payloads/run-payloads.ts';
 import type { CapabilityFact, GivenAnswer, RunAnswer, RunWork } from '../runs/run-commands.ts';
-import { isChangedSinceRead, runStreamNameOf, type RunDeciders } from '../runs/run-decider.ts';
+import {
+  isChangedSinceRead,
+  type RunDeciders,
+  runStreamIn,
+  type RunPlacing,
+  decidedOnNoRun,
+} from '../runs/run-decider.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
 import { startedRunOf, type RecordedRunState } from '../runs/run-state.ts';
 import { answerCommandOf, type AnswerPayloads } from './answer-commands.ts';
@@ -41,7 +46,7 @@ export type RecordWork = (
   rule?: WorkRule,
 ) => Effect.Effect<RecordedWorkAt, Conflict | Unavailable>;
 
-export interface WorkLedger extends StreamReader, StreamWriter {
+export interface WorkLedger extends StreamReader, StreamWriter, RunPlacing {
   readonly content: Pick<RecordedContent, 'put' | 'get' | 'getHead'>;
 }
 
@@ -81,8 +86,9 @@ export function workRecorder(ledger: WorkLedger, deciders: RunDeciders): RecordW
       return yield* noSuchRun;
     }
     const runId = run.id.toLowerCase();
-    const stream = `${streamPrefixOfPlaybook(run)}${runStreamNameOf(runId)}`;
-    const read = (yield* ledger.load(stream, deciders.asRead)).state;
+    const stream = yield* runStreamIn(ledger, { ...run, id: runId });
+    const read =
+      stream === undefined ? deciders.asRead.initialState : (yield* ledger.load(stream, deciders.asRead)).state;
     const recorded = startedRunOf(read.state);
     const refusal = recorded === undefined ? undefined : rule(recorded);
     if (refusal !== undefined) {
@@ -91,9 +97,14 @@ export function workRecorder(ledger: WorkLedger, deciders: RunDeciders): RecordW
     const at = DateTime.formatIso(yield* DateTime.now);
     const thePlaybook = recordedCallerOf(playbookCallerOf(run));
     const recordedWork = yield* commandOf(work, thePlaybook, recorded, payloadsIn(ledger, run));
-    const command = { ...recordedWork, runId, by: thePlaybook.id, at };
+    const asked = { readAt: read.version, command: { ...recordedWork, runId, by: thePlaybook.id, at } };
+    if (stream === undefined) {
+      return yield* decidedOnNoRun(deciders.asRead, asked).pipe(
+        Effect.catchTags({ not_found: Effect.die, cancelled: Effect.die }),
+      );
+    }
     const { version } = yield* ledger
-      .execute(stream, deciders.asRead, { readAt: read.version, command }, lineage)
+      .execute(stream, deciders.asRead, asked, lineage)
       .pipe(Effect.catchTags({ not_found: Effect.die, cancelled: Effect.die }));
     return { id: messageIdOf(stream, version), at };
   });

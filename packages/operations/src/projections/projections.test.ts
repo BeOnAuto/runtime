@@ -12,9 +12,10 @@ import {
   advancedColumnsOf,
   requireAdvancedColumns,
   rowKeyOf,
+  type ProjectedKeyedRow,
   streamPrefixOfAddress,
 } from './keyed-projection.ts';
-import { playbookRowsOf } from './playbook-rows.ts';
+import { addressOfTheRow, playbookRowsOf } from './playbook-rows.ts';
 import { remarkRows } from './remark-rows.ts';
 import { runTallyRows, tallyDueAfterMs } from './tally-rows.ts';
 import { topicRows } from './topic-rows.ts';
@@ -45,6 +46,20 @@ describe('the rows of a projection of a playbook’s streams', () => {
     ).toThrow(
       "The projection remarks folds a playbook's streams alone, yet its row r2 names the org acme and no playbook",
     );
+  });
+});
+
+describe('the address of a row read back', () => {
+  it('is where the row lies: its definition, else its playbook, else its org', () => {
+    const row = { text: 'kept' };
+
+    expect(
+      [
+        { org: 'acme', playbook: 'alpha', definition: 'd1', key: 'r1', row },
+        { org: 'acme', playbook: 'alpha', key: 'r2', row },
+        { org: 'acme', key: 'r3', row },
+      ].map((kept: Readonly<ProjectedKeyedRow>) => addressOfTheRow(kept)),
+    ).toEqual([{ org: 'acme', definition: 'd1' }, { org: 'acme', playbook: 'alpha' }, { org: 'acme' }]);
   });
 });
 

@@ -13,11 +13,16 @@ import { listenersKeepingTheirOwnStops } from '../reaction-testing/own-stops.ts'
 import { ledgerRunLogStore } from '../runs/ledger-run-store.ts';
 import { ledgerRecordStore } from '../settlement/ledger-record-store.ts';
 import { knownRuns } from '../testing/known-runs.ts';
+import { runKeyAt } from '../testing/started-runs.ts';
 import { sqlTimers } from '../timers/sql-timers.ts';
 
-export const runKey = 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+export const probeRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-const otherRunKey = 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
+export const runKey = runKeyAt(probeRun);
+
+export const otherProbeRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
+
+const otherRunKey = runKeyAt(otherProbeRun);
 
 export const startedAt = 1_790_845_200_000;
 

@@ -1,4 +1,4 @@
-import type { PlaybookAddress, ProjectedCondition, ProjectionReader } from '@on.auto/operations';
+import type { PlaybookAddress, ProjectedCondition, ProjectionReader, RowsAddress } from '@on.auto/operations';
 import type { TellingForm } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
@@ -11,22 +11,22 @@ export type TellingsReader = Pick<ProjectionReader, 'readProjectedRows'>;
 
 function anyRow(
   ledger: TellingsReader,
-  playbook: PlaybookAddress,
+  address: RowsAddress,
   projection: string,
   where: readonly ProjectedCondition[],
 ): Effect.Effect<boolean> {
   return Effect.map(
-    ledger.readProjectedRows(projection, playbook, { where, orderBy: [], order: 'asc', limit: 1 }),
+    ledger.readProjectedRows(projection, address, { where, orderBy: [], order: 'asc', limit: 1 }),
     (rows) => rows.length > 0,
   );
 }
 
 function anyTelling(
   ledger: TellingsReader,
-  playbook: PlaybookAddress,
+  address: RowsAddress,
   where: readonly ProjectedCondition[],
 ): Effect.Effect<boolean> {
-  return anyRow(ledger, playbook, tellingsName, where);
+  return anyRow(ledger, address, tellingsName, where);
 }
 
 export interface PostedMessage {
@@ -34,16 +34,16 @@ export interface PostedMessage {
   readonly id: string;
 }
 
-export function isPostedByThePlaybook(
+export function isPostedInTheOrg(
   ledger: TellingsReader,
-  playbook: PlaybookAddress,
+  org: RowsAddress,
   { conversation, id }: PostedMessage,
 ): Effect.Effect<boolean> {
-  const told = anyTelling(ledger, playbook, [
+  const told = anyTelling(ledger, org, [
     { column: 'conversation', equals: conversation },
     { column: 'message', equals: id },
   ]);
-  const asked = anyRow(ledger, playbook, openRequestsName, [
+  const asked = anyRow(ledger, org, openRequestsName, [
     { column: 'sent_conversation', equals: conversation },
     { column: 'sent_id', equals: id },
   ]);

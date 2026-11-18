@@ -1,4 +1,4 @@
-import { messageIdOf, PlaybookContext, streamPrefixOfPlaybook } from '@on.auto/operations';
+import { messageIdOf, PlaybookContext, streamPrefixOfDefinition } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
@@ -18,11 +18,13 @@ const decodeWarnings = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Arr
 
 const decodeTriggers = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(TriggerSchema)));
 
-export function savedByOf(type: string, position: number): Effect.Effect<string, never, PlaybookContext> {
-  return Effect.gen(function* () {
-    const playbook = yield* PlaybookContext;
-    return messageIdOf(`${streamPrefixOfPlaybook(playbook)}${definitionTypeStreamOf(type)}`, position);
-  });
+export function savedByOf(
+  type: string,
+  { definition_id: definition, saved_position: position }: Pick<DefinitionRow, 'definition_id' | 'saved_position'>,
+): Effect.Effect<string, never, PlaybookContext> {
+  return Effect.map(PlaybookContext, ({ org }) =>
+    messageIdOf(`${streamPrefixOfDefinition({ org, definition })}${definitionTypeStreamOf(type)}`, position),
+  );
 }
 
 function standingOf(row: DefinitionRow) {

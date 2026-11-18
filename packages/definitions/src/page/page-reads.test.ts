@@ -283,10 +283,10 @@ describe('a preview that is refused', () => {
 
 describe('a page saved as a definition of its own', () => {
   it('is the page of its subject until the document of the subject has a page of its own', async () => {
-    const { operations, calling, created } = playbookWithItsPage();
+    const { operations, calling, savedAsAPage } = playbookWithItsPage();
     const legacy = '---\nof: workflow/morning-social-content\n---\n{% result %}{{ output.greeting }}!{% endresult %}\n';
     await calling(operations.createDefinition, { ...workflow, source: greeting });
-    await created('page', 'morning-posts', legacy, { details: { of: 'workflow/morning-social-content' } });
+    await savedAsAPage('morning-posts', legacy, { details: { of: 'workflow/morning-social-content' } });
     const sample = { greeting: 'Good morning', input: {} };
 
     const carried = await calling(operations.getDefinition, { ...workflow, render: true, sample_output: sample });

@@ -1,15 +1,16 @@
-import type { ProjectionReader, StreamReader } from '@on.auto/operations';
+import type { ProjectionReader } from '@on.auto/operations';
 import { Effect, type Option, type Schema } from 'effect';
 
 import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import { sourceToPrepare } from '../operations/definition-views.ts';
 import { payloadsKeptIn, payloadValueOf, type KeptContentReader } from '../payloads/run-payloads.ts';
+import type { DefinitionVersionReader } from '../registry/definition-versions.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
 import type { RecordedRunState } from '../runs/run-state.ts';
 import { versionOfTheRun, type VersionToPrepare } from './run-versions.ts';
 
 export interface RunOfItsCapability {
-  readonly ledger: StreamReader & ProjectionReader & KeptContentReader;
+  readonly ledger: DefinitionVersionReader & ProjectionReader & KeptContentReader;
   readonly capabilities: readonly Capability[];
   readonly run: RunStreamAddress;
 }

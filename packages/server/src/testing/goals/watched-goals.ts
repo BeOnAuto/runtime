@@ -259,7 +259,7 @@ export function followerRewound(ledger: TemporaryLedger): void {
   const database = new DatabaseSync(ledger.fileName);
   try {
     database
-      .prepare('UPDATE workflow_followed_playbooks SET cursor = NULL, delivered = NULL, attempts = 0, waiting = 1')
+      .prepare('UPDATE workflow_followed_orgs SET cursor = NULL, delivered = NULL, attempts = 0, waiting = 1')
       .run();
   } finally {
     database.close();

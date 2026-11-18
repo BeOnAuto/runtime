@@ -18,9 +18,11 @@ import {
 } from '@on.auto/workflow-engine';
 import { Context, Deferred, Effect } from 'effect';
 
+import type { HostDatabase } from '../database/host-database.ts';
 import type { FactPayloads } from '../follower/followed-events.ts';
 import type { HostNote } from '../host/host-reports.ts';
 import { addressOfRun } from './run-address.ts';
+import { playbookOfRun } from './run-places.ts';
 
 type Owner = PayloadSource['owner'];
 
@@ -37,13 +39,9 @@ interface HostPayloadParts {
   readonly payloadOffloading: boolean;
   readonly payloadSizeThreshold: number;
   readonly shared: SharedPayloads;
+  readonly runs: Pick<HostDatabase, 'read'>;
   readonly note: (note: Extract<HostNote, { readonly kind: 'payloads_read' }>) => Effect.Effect<void>;
   readonly readerOf?: (source: PayloadSource) => PayloadReader;
-}
-
-function ownerOf(runKey: string): Owner {
-  const { org, playbook } = addressOfRun(runKey);
-  return { org, playbook };
 }
 
 function contentOf(read: Effect.Effect<string, PayloadNotRead>): Effect.Effect<HeldContent, ContentUnavailable> {
@@ -94,6 +92,7 @@ export function hostRunPayloadsOf({
   payloadOffloading,
   payloadSizeThreshold,
   shared,
+  runs,
   note,
   readerOf = payloadReaderOf,
 }: HostPayloadParts): RunPayloads<ContentUnavailable> {
@@ -107,11 +106,12 @@ export function hostRunPayloadsOf({
   return {
     payloadOffloading,
     payloadSizeThreshold,
-    read: (runKey, kept) => {
-      const owner = ownerOf(runKey);
-      return Effect.forEach(kept, (each) => Effect.map(readOne(owner, each), (read) => [each.sha256, read] as const), {
-        concurrency: payloadReadsAtOnce,
-      }).pipe(
+    read: (runKey, kept) =>
+      Effect.flatMap(playbookOfRun(runs, runKey), (owner) =>
+        Effect.forEach(kept, (each) => Effect.map(readOne(owner, each), (read) => [each.sha256, read] as const), {
+          concurrency: payloadReadsAtOnce,
+        }),
+      ).pipe(
         Effect.map((read: readonly (readonly [string, HeldContent])[]) => new Map(read)),
         Effect.tap((contents) =>
           note({
@@ -122,15 +122,14 @@ export function hostRunPayloadsOf({
             unread: kept.filter(({ sha256 }) => contents.get(sha256)?.kind !== 'read').length,
           }),
         ),
-      );
-    },
-    keep: (runKey, payloads) => {
-      const owner = ownerOf(runKey);
-      return Effect.forEach(payloads, (payload) => payloadKept(content, owner, payload, { cache, gate }), {
-        concurrency: payloadReadsAtOnce,
-        discard: true,
-      }).pipe(Effect.mapError(unavailableOf));
-    },
+      ),
+    keep: (runKey, payloads) =>
+      Effect.flatMap(playbookOfRun(runs, runKey), (owner) =>
+        Effect.forEach(payloads, (payload) => payloadKept(content, owner, payload, { cache, gate }), {
+          concurrency: payloadReadsAtOnce,
+          discard: true,
+        }),
+      ).pipe(Effect.mapError(unavailableOf)),
   };
 }
 
@@ -141,7 +140,7 @@ export function factPayloadsIn(
   return ({ org, playbook }) => payloadReaderOf({ owner: { org, playbook }, content, cache, gate });
 }
 
-export interface ComposedPayloads extends Pick<HostPayloadParts, 'content' | 'note'> {
+export interface ComposedPayloads extends Pick<HostPayloadParts, 'content' | 'runs' | 'note'> {
   readonly context: Context.Context<never> | undefined;
 }
 
@@ -150,12 +149,12 @@ export interface HostPayloads {
   readonly factsOf: FactPayloads;
 }
 
-export function hostPayloadsOf({ content, context = Context.empty(), note }: ComposedPayloads): HostPayloads {
+export function hostPayloadsOf({ content, context = Context.empty(), runs, note }: ComposedPayloads): HostPayloads {
   const payloadOffloading = Context.get(context, PayloadOffloading);
   const payloadSizeThreshold = Context.get(context, HeldValueSizeThreshold);
   const shared = Context.get(context, PayloadsShared);
   return {
-    runs: hostRunPayloadsOf({ content, payloadOffloading, payloadSizeThreshold, shared, note }),
+    runs: hostRunPayloadsOf({ content, payloadOffloading, payloadSizeThreshold, shared, runs, note }),
     factsOf: factPayloadsIn(content, shared),
   };
 }

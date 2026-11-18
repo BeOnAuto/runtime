@@ -1,23 +1,4 @@
-import {
-  statement,
-  statementOf,
-  type LayoutStep,
-  type RowPhase,
-  type Statement,
-  type StatementValue,
-} from '@on.auto/workflow-host';
-
-export const predictionLayoutSteps: readonly LayoutStep[] = [
-  {
-    layout: 7,
-    statements: [
-      statement`DROP TABLE IF EXISTS prediction_builds_1`,
-      statement`DROP TABLE IF EXISTS prediction_models_1`,
-      statement`DROP TABLE IF EXISTS prediction_rows`,
-      statement`DROP TABLE IF EXISTS prediction_datasets`,
-    ],
-  },
-];
+import { statement, statementOf, type RowPhase, type Statement, type StatementValue } from '@on.auto/workflow-host';
 
 export const datasetTables = { datasets: 'prediction_datasets', rows: 'prediction_rows' } as const;
 

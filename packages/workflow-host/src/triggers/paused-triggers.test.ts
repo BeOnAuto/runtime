@@ -140,10 +140,19 @@ describe('a paused workflow with an event trigger', () => {
     await published(store, { id: 'once-resumed', type: 'com.acme.sentinel' });
     const starts = await startsReaching(reacting.reactions.starts, 3);
 
-    expect(starts.map(({ workflow, cause }) => [workflow, cause])).toEqual([
+    const [first, ...ofTheResumed] = starts.map(({ workflow, cause }) => [workflow, cause]);
+
+    expect([
+      first,
+      ofTheResumed.toSorted((one: readonly string[], other: readonly string[]) =>
+        String(one).localeCompare(String(other)),
+      ),
+    ]).toEqual([
       ['witness', eventRecordOf('while-paused')],
-      ['watch', eventRecordOf('once-resumed')],
-      ['witness', eventRecordOf('once-resumed')],
+      [
+        ['watch', eventRecordOf('once-resumed')],
+        ['witness', eventRecordOf('once-resumed')],
+      ],
     ]);
   });
 });

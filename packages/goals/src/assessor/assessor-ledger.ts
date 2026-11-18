@@ -1,3 +1,5 @@
+import { definitionTypeOrder } from '@on.auto/definitions';
+import { definitionNamesOf } from '@on.auto/definitions/identity';
 import {
   ContextSchema,
   type Context,
@@ -8,7 +10,7 @@ import {
   type ProjectedRowsQuery,
   type RecordedEvent,
 } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
+import { memoryLedgerWith } from '@on.auto/operations/testing';
 import type { Consumer, FollowedRecord } from '@on.auto/workflow-host';
 import { Effect, Result, Schema } from 'effect';
 
@@ -72,42 +74,75 @@ export interface Book {
   readonly ledger: Ledger['Service'];
   readonly append: (stream: string, type: string, data: Schema.Json, context?: Partial<Context>) => Promise<void>;
   readonly goalsSaved: (goals: Schema.Json, version?: number) => Promise<void>;
-  readonly workflowSaved: (name: string, version: number, contributes?: Schema.Json) => Promise<void>;
+  readonly workflowSaved: (name: string, version: number, contributes?: Schema.Json, at?: string) => Promise<void>;
+  readonly workflowChanged: (name: string, type: string, data: Schema.Json, context: Partial<Context>) => Promise<void>;
+  readonly definitionChanged: (
+    definition: { readonly type: string; readonly name: string },
+    fact: string,
+    data: Schema.Json,
+    context: Partial<Context>,
+  ) => Promise<void>;
   readonly rows: (table: string) => Promise<Readonly<Record<string, ProjectedRow>>>;
   readonly factsOf: (stream: string) => Promise<readonly string[]>;
 }
 
+function definitionStreamOf(type: string, name: string): string {
+  return `definition/acme/${type}-of-${name}/definitions/${type}`;
+}
+
+function workflowStreamOf(name: string): string {
+  return definitionStreamOf('workflow', name);
+}
+
+function workflowSaveOf(
+  name: string,
+  version: number,
+  contributes: Schema.Json | undefined,
+  savedAt: string | undefined,
+): readonly [string, Schema.Json, Partial<Context>] {
+  return [
+    version === 1 ? 'definition_created' : 'definition_updated',
+    {
+      content: { source: `document: ${name}`, ...(contributes === undefined ? {} : { details: { contributes } }) },
+      ...(version === 1 ? { created_by: { id: 'person:owner', name: 'Owner' }, playbook: sales.playbook } : {}),
+    },
+    {
+      ...(savedAt === undefined ? {} : { at: savedAt }),
+      definitionType: 'workflow',
+      definitionName: name,
+      definitionVersion: version,
+    },
+  ];
+}
+
 export function bookOf(): Book {
-  const { service } = memoryLedger(undefined, goalsLedger.projections);
+  const { service } = memoryLedgerWith({
+    projections: goalsLedger.projections,
+    definitionNames: definitionNamesOf(definitionTypeOrder),
+  });
   const at = new Date(monday - 3_600_000).toISOString();
-  const append: Book['append'] = (stream, type, data, context = {}) =>
+  const appendedTo = (stream: string, type: string, data: Schema.Json, context: Partial<Context> = {}) =>
     Effect.runPromise(
       Effect.asVoid(
-        service.execute(`${salesKey}${stream}`, verbatim, {
+        service.execute(stream, verbatim, {
           type,
           data,
           context: { at, by: 'person:owner', ...context },
         }),
       ),
     );
+  const append: Book['append'] = (stream, type, data, context) =>
+    appendedTo(`${salesKey}${stream}`, type, data, context);
   return {
     ledger: service,
     append,
     goalsSaved: (goals, version = 1) =>
       append('goals/playbook', 'playbook_goals_saved', { source: 'goals', goals, version }),
-    workflowSaved: (name, version, contributes) =>
-      append(
-        'definitions/workflow',
-        version === 1 ? 'definition_created' : 'definition_updated',
-        {
-          content: {
-            source: `document: ${name}`,
-            ...(contributes === undefined ? {} : { details: { contributes } }),
-          },
-          ...(version === 1 ? { created_by: { id: 'person:owner', name: 'Owner' } } : {}),
-        },
-        { definitionType: 'workflow', definitionName: name, definitionVersion: version },
-      ),
+    workflowChanged: (name, type, data, context) => appendedTo(workflowStreamOf(name), type, data, context),
+    definitionChanged: ({ type, name }, fact, data, context) =>
+      appendedTo(definitionStreamOf(type, name), fact, data, context),
+    workflowSaved: (name, version, contributes, savedAt) =>
+      appendedTo(workflowStreamOf(name), ...workflowSaveOf(name, version, contributes, savedAt)),
     rows: async (table) => {
       const kept = await Effect.runPromise(service.readProjectedRows(table, sales, allOf));
       return Object.fromEntries(kept.map(({ key, row }) => [key, row]));
@@ -166,6 +201,7 @@ export function finished({
   return {
     playbook: sales,
     playbookKey: salesKey,
+    filedUnder: salesKey,
     record,
     event: {
       event: { specversion: '1.0', id, source: 'auto', type, time: new Date(at).toISOString() },

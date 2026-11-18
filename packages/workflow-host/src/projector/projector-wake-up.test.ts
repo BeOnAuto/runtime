@@ -67,7 +67,10 @@ async function talliedRunOf({ append }: ProjectedFolders): Promise<void> {
   await append(
     `${alpha}runs/${runId}`,
     [
-      { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } },
+      {
+        type: 'run_started',
+        data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha', input: {} },
+      },
       { type: 'run_succeeded', data: { output: 1, record: {} } },
     ],
     { by: 'acme-admin', at: savedAt, definitionType: 'reasoning', definitionName: 'runs', definitionVersion: 1, runId },

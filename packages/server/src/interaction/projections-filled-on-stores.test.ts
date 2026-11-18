@@ -18,6 +18,7 @@ import {
   nudging,
   threadDocument,
   type HarnessLedger,
+  namesOfTheTests,
 } from '@on.auto/interaction/testing';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
@@ -62,7 +63,7 @@ function onSQLite(): Promise<Place> {
   const ledger = temporaryLedger();
   onTestFinished(ledger.remove);
   return Promise.resolve({
-    open: () => opened(ledgerLayer({ fileName: ledger.fileName, projections })),
+    open: () => opened(ledgerLayer({ fileName: ledger.fileName, projections, definitionNames: namesOfTheTests })),
     dropTables: async () => {
       await onTheLedgerIn(ledger.fileName, (connection) =>
         Promise.all(tables.map((table) => connection.write(tableDropped(table)))),
@@ -88,7 +89,8 @@ async function onPostgreSQL(): Promise<Place> {
   const url = new URL(postgresql);
   url.pathname = `/${name}`;
   return {
-    open: () => opened(postgresqlLedgerLayer({ pools: plainPoolsOn(url.href), projections })),
+    open: () =>
+      opened(postgresqlLedgerLayer({ pools: plainPoolsOn(url.href), projections, definitionNames: namesOfTheTests })),
     dropTables: () => administer(url.href, tables.map((table) => `DROP TABLE ${table}`).join('; ')),
   };
 }
@@ -128,13 +130,18 @@ async function threadOfRun(ledger: HarnessLedger, run: string): Promise<string> 
 async function rowsOf(ledger: HarnessLedger) {
   const requests = await requestRowsOf(ledger);
   const conversationsRead = await conversationRows(ledger);
-  const [readingsKept, tellingsKept] = await Promise.all(
-    [readingsName, tellingsName].map((name) =>
-      Effect.runPromise(
-        ledger.service.readProjectedRows(name, alpha, { where: [], orderBy: [], order: 'asc', limit: 50 }),
+  const [readingsKept, tellingsKept] = await Promise.all([
+    Effect.runPromise(
+      ledger.service.readProjectedRows(
+        readingsName,
+        { org: alpha.org },
+        { where: [], orderBy: [], order: 'asc', limit: 50 },
       ),
     ),
-  );
+    Effect.runPromise(
+      ledger.service.readProjectedRows(tellingsName, alpha, { where: [], orderBy: [], order: 'asc', limit: 50 }),
+    ),
+  ]);
   return {
     requests: requests.map(({ row }) => row),
     conversations: conversationsRead.map(({ row }) => foldedColumnsOf(row)),

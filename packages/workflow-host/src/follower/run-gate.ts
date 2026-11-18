@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 import type { HostDatabase } from '../database/host-database.ts';
 import { sqlWatermark } from '../dispatch/sql-watermark.ts';
 import { passedListeners, pendingArmings, runPassedThrough } from '../listeners/listener-rows.ts';
+import { runKeyOfItsLog } from '../runs/run-address.ts';
 
 export type GateVerdict = 'held' | 'passed' | 'listened' | 'overdue';
 
@@ -16,9 +17,8 @@ interface Known {
   readonly pending: readonly number[];
 }
 
-export function runGateOf(database: HostDatabase, playbookKey: string): RunGate {
+export function runGateOf(database: HostDatabase): RunGate {
   const watermark = sqlWatermark(database);
-  const [, org = '', playbook = ''] = playbookKey.split('/');
   const known = new Map<string, Known>();
   const knownOf = (runKey: string, record: RecordedEvent): Effect.Effect<Known> => {
     const cached = known.get(runKey);
@@ -35,7 +35,7 @@ export function runGateOf(database: HostDatabase, playbookKey: string): RunGate 
   return {
     verdictOn: (record, overdue) =>
       Effect.gen(function* () {
-        const runKey = `${org}/${playbook}/${record.stream.slice(record.stream.lastIndexOf('/') + 1)}`;
+        const runKey = runKeyOfItsLog(record.stream);
         const { through, pending } = yield* knownOf(runKey, record);
         const behind = through < record.version;
         if (behind && !overdue) {

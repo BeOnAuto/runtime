@@ -1,17 +1,17 @@
-import { randomUUIDv7, type Context, type Lineage, type PlaybookAddress } from '@on.auto/operations';
+import { randomUUIDv7, type Lineage, type PlaybookAddress } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { generationBounds, type GenerationPorts } from '../capability/generation-ports.ts';
 import { imageMediaTypeOf } from '../catalog/media-types.ts';
 import { roomLeft } from '../run/asset-room.ts';
 import type { ToolCallOfAnAsset } from './asset-facts.ts';
-import { keptAsset } from './asset-keeping.ts';
+import { keptAsset, type KeptByARun } from './asset-keeping.ts';
 
 export interface ToolImageToKeep {
   readonly playbook: PlaybookAddress;
   readonly bytes: Readonly<Uint8Array>;
   readonly call: ToolCallOfAnAsset;
-  readonly context: Omit<Context, 'at'>;
+  readonly context: KeptByARun;
   readonly lineage: Lineage;
 }
 

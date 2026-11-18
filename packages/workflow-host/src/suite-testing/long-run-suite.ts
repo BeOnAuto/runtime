@@ -7,6 +7,7 @@ import { ledgerRunLogStore } from '../runs/ledger-run-store.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
+import { runKeyAt } from '../testing/started-runs.ts';
 import { until } from '../testing/until.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-000000003000';
@@ -32,8 +33,8 @@ export function longRunSuite(settings: SettingsOf): void {
     await until(hosted.settlements, (settled) => settled.size > 0);
     await hosted.host.stop();
     const runStore = ledgerRunLogStore(await openedOn(database));
-    const stored = await Effect.runPromise(runStore.load(`acme/alpha/${runId}`));
-    const events = await Effect.runPromise(runStore.eventsAfter(`acme/alpha/${runId}`, 0));
+    const stored = await Effect.runPromise(runStore.load(runKeyAt(runId)));
+    const events = await Effect.runPromise(runStore.eventsAfter(runKeyAt(runId), 0));
     const resumed = loadedRunOf(stored);
 
     expect(events).toHaveLength(longRunInputs);

@@ -15,7 +15,6 @@ export {
   labelledContext,
   type LabelFact,
 } from '../projections/label-rows.ts';
-export { labelNotes, labelReadModelOf, labelSets } from '../stream-projections/label-read-model.ts';
 export {
   RemarkFactSchema,
   remarkFacts,
@@ -30,6 +29,17 @@ export {
   type NamesAtThePortEntry,
 } from '../names-testing/names-behaviour.ts';
 export { childRowsBehaviour, type ChildRowsLedger } from '../projections-testing/child-rows-behaviour.ts';
+export { streamAddressed } from '../projections-testing/streams-addressed.ts';
+export { runIdsBehaviour, runIdsOfTheTests, type RunIdsLedger } from '../run-ids-testing/run-ids-behaviour.ts';
+export {
+  addressesOfRows,
+  definitionRowsBehaviour,
+  definitionsPlaced,
+  placedIn,
+  ran,
+  topicsAtTheOrg,
+  type NamingLedger,
+} from '../projections-testing/definition-rows-behaviour.ts';
 export { unheldContentBehaviour } from '../content-testing/unheld-content-behaviour.ts';
 export {
   erasedContentBehaviour,

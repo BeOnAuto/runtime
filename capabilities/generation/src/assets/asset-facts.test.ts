@@ -1,7 +1,7 @@
 import { textToKeep } from '@on.auto/content';
 import { at } from '@on.auto/content/testing';
 import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
-import { contentHoldersOf, streamPrefixOfPlaybook } from '@on.auto/operations';
+import { contentHoldersOf } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -133,6 +133,8 @@ describe('the stream of an asset', () => {
   });
 });
 
+const ofTheRun = 'definition/acme/019a4f2e-0000-7000-8000-00000000d001/';
+
 describe('the content of an asset', () => {
   it('is held by its asset from the fact that keeps it until the fact that it expired, and removed after that once its hour has passed', async () => {
     const { service: ledger } = memoryLedger(undefined, [], contentHoldersOf([AssetEventSchema]));
@@ -140,7 +142,7 @@ describe('the content of an asset', () => {
     const keptAt = Date.parse(kept.context.at);
     const pastItsHour = keptAt + 2 * 3_600_000;
     const content = await at(keptAt, ledger.content.put(playbook, textToKeep('the bytes of an image', 'image/png')));
-    const stream = `${streamPrefixOfPlaybook(playbook)}${assetStreamOf('019a4f2e-0000-7000-8000-000000000002')}`;
+    const stream = `${ofTheRun}${assetStreamOf('019a4f2e-0000-7000-8000-000000000002')}`;
     const keeping = {
       event: { type: kept.type, data: { ...kept.data, sha256: content.sha256 } },
       context: kept.context,
@@ -226,16 +228,14 @@ describe('the kinds and the maker of an asset a later release writes, which this
     await at(
       keptAt,
       keptAsRead(ledger, {
-        playbook,
+        definitionKey: ofTheRun,
         id,
         data: { ...aPageARunReturned.data, kind: 'text', sha256: content.sha256 },
         context: onTheRun,
       }),
     );
     const whileKept = await at(pastItsHour, ledger.removeUnheld(playbook, content.sha256));
-    await Effect.runPromise(
-      ledger.execute(`${streamPrefixOfPlaybook(playbook)}${assetStreamOf(id)}`, assetDecider, expiring),
-    );
+    await Effect.runPromise(ledger.execute(`${ofTheRun}${assetStreamOf(id)}`, assetDecider, expiring));
     const onceExpired = await at(pastItsHour, ledger.removeUnheld(playbook, content.sha256));
 
     expect([whileKept, onceExpired]).toEqual(['held', 'removed']);

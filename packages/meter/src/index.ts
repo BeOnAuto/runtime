@@ -8,8 +8,10 @@ export {
   countedFromTheStart,
   type Counted,
   type Counting,
+  type FirstStart,
   type FirstStartOf,
 } from './counting/run-starts.ts';
+export { firstStartsIn } from './counting/first-starts.ts';
 export { AccountFailure, type AccountRefusal } from './accounts/account-failure.ts';
 export { type AllocationStanding } from './allocations/allocation.ts';
 export {

@@ -1,11 +1,11 @@
-import { Conflict, type Context } from '@on.auto/operations';
+import { Conflict, type Context, runStreamNameOf } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { recordedAdmin } from '../testing/callers.ts';
+import { recordedAdmin, startedInAlpha } from '../testing/callers.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
 import type { RunCommand, RunResult } from './run-commands.ts';
-import { runDecider, runStreamNameOf } from './run-decider.ts';
+import { runDecider } from './run-decider.ts';
 import type { RecordedRunEvent, RunEvent } from './run-events.ts';
 import { startedRunOf } from './run-state.ts';
 
@@ -17,7 +17,10 @@ const ofGreet = { definitionType: 'echo', definitionName: 'greet', definitionVer
 
 const greeting = { definition_type: 'echo', name: 'greet', input: { who: 'Ada', tags: ['a', 'b'] } };
 
-const started: RunEvent = { type: 'run_started', data: { started_by: recordedAdmin, input: greeting.input } };
+const started: RunEvent = {
+  type: 'run_started',
+  data: { ...startedInAlpha, input: greeting.input },
+};
 
 const succeeded: RunResult = { type: 'run_succeeded', data: { output: 'Hello Ada', record: { model: 'x' } } };
 
@@ -65,6 +68,7 @@ function starting(request: object = {}, version = 1): RunCommand {
     type: 'start',
     ...greeting,
     started_by: recordedAdmin,
+    playbook: 'alpha',
     calls_tools: false,
     ...request,
     definition_version: version,
@@ -78,6 +82,13 @@ function finishing(result: RunResult, fencingToken = 1): RunCommand {
 
 const anotherRequest = new Conflict({
   detail: 'The run id belongs to a run of another definition or with another input',
+});
+
+describe('a run started again from another playbook', () => {
+  it('records again the playbook of its first start, whatever playbook asks', () => {
+    expect(decided(starting({ playbook: 'beta' }, 2), startedAt(started))).toStrictEqual(Result.succeed([started]));
+    expect(started.data).toMatchObject({ playbook: 'alpha' });
+  });
 });
 
 describe('starting a run', () => {
@@ -163,6 +174,7 @@ describe('finishing a run', () => {
 });
 
 const recordedState = {
+  playbook: 'alpha',
   attempt: 1,
   holderStartedACall: false,
   finishesLater: false,

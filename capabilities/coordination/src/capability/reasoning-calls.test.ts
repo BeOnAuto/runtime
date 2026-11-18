@@ -1,12 +1,11 @@
 import { memoryRecordedContent } from '@on.auto/content/testing';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { makeReasoningFunctionAdapter, readReasoningFunctionDefinition, resumesAfterMsOf } from '@on.auto/reasoning';
 import { scriptedLanguageModel } from '@on.auto/reasoning/testing';
 import { noToolServers } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { playbookOn } from '../testing/playbook.ts';
+import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { recordingStarts, recordingWorkflows } from '../testing/recording-starts.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-555555555554';
@@ -41,7 +40,7 @@ function resumesAfterOfTheSource(source: string): number {
 describe('the calls of a workflow to reasoning functions', () => {
   it('each carry the interval after which its run may be resumed, resumesAfterMsOf its own definition, and a call of a workflow, whose runs do not resume, none', async () => {
     const { starts, recording } = recordingStarts();
-    const playbook = playbookOn(memoryLedger(), [recordingWorkflows(recording), reasoning]);
+    const playbook = playbookOn(namingLedger(), [recordingWorkflows(recording), reasoning]);
     await playbook.call(playbook.createDefinition, {
       type: 'reasoning',
       name: 'brief',

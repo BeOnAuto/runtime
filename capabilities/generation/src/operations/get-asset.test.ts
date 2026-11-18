@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { toolImagesKept } from '../assets/tool-images.ts';
 import {
   aPageARunReturned,
+  aRunIn,
   assetIdOf,
   day,
   issuesOf,
@@ -118,6 +119,7 @@ describe('an image a tool call answered, read by its id', () => {
   it('answers no model, since none made it, and an address to its bytes as an asset a model made has', async () => {
     const { playbook, signing } = signedHarness();
     const keep = toolImagesKept({ ledger: playbook.ledger.service, content: playbook.ledger.service.content });
+    await aRunIn(playbook, runIdOf(2));
     const id = await at(
       harnessStartsAt,
       keep({
@@ -127,7 +129,7 @@ describe('an image a tool call answered, read by its id', () => {
         context: {
           by: 'acme-admin',
           runId: runIdOf(2),
-          definitionType: 'reasoning',
+          definitionType: 'generation',
           definitionName: 'look',
           definitionVersion: 1,
         },
@@ -145,7 +147,13 @@ describe('an image a tool call answered, read by its id', () => {
 describe('a file a run returned, of a kind a later release keeps, read by its id', () => {
   it('answers no model, since none made it, an address to its bytes, and says it is a file', async () => {
     const { playbook, signing } = signedHarness();
-    const page = await aPageARunReturned(playbook.ledger.service, alpha, assetIdOf(7), harnessStartsAt);
+    const definitionKey = await aRunIn(playbook, runIdOf(3));
+    const page = await aPageARunReturned(
+      playbook.ledger.service,
+      { playbook: alpha, definitionKey },
+      assetIdOf(7),
+      harnessStartsAt,
+    );
 
     const read = await readOf(playbook, assetIdOf(7));
 

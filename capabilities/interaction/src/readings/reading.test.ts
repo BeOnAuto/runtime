@@ -1,4 +1,5 @@
 import type { ProjectedMessage } from '@on.auto/operations';
+import { streamAddressed } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
 import { answererId, chatHarness, type ChatHarness, farAhead, threadDocument } from '../testing/index.ts';
@@ -9,7 +10,7 @@ import {
 } from '../testing/reading-documents.ts';
 import { readings } from './reading-rows.ts';
 
-const stream = { kind: 'conversation-calls', id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b70' };
+const stream = streamAddressed('definition/acme/d1/conversation-calls/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b70');
 
 const reading = 'f'.repeat(64);
 

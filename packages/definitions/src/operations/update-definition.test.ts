@@ -106,16 +106,25 @@ describe('update_definition rejecting', () => {
       issues: [{ pointer: '/type' }],
     });
   });
+});
 
-  it('with conflict when another change to the definitions of the capability landed at the same moment', async () => {
+describe('update_definition at the same moment as another change', () => {
+  it('with conflict when another change to the same definition landed at the same moment, and none for another definition', async () => {
     const { call, dispatch, run } = await withGreet();
     await call(createDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'wave', source: hello }));
-    const updating = (name: string) =>
-      dispatch(updateDefinition, toAlpha(acmeAdmin, { type: 'echo', name, source: '{"greeting": "Yo"}' }));
+    const updating = (name: string, greeting: string) =>
+      dispatch(updateDefinition, toAlpha(acmeAdmin, { type: 'echo', name, source: `{"greeting": "${greeting}"}` }));
 
-    expect(await run(Effect.all([updating('greet'), updating('wave')], { concurrency: 'unbounded' }))).toMatchObject([
+    expect(
+      await run(
+        Effect.all([updating('greet', 'Yo'), updating('greet', 'Hey'), updating('wave', 'Yo')], {
+          concurrency: 'unbounded',
+        }),
+      ),
+    ).toMatchObject([
       { status: 'succeeded', output: { name: 'greet', version: 2 } },
       { status: 'rejected', reason: 'conflict' },
+      { status: 'succeeded', output: { name: 'wave', version: 2 } },
     ]);
   });
 });

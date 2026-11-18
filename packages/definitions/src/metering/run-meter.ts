@@ -5,6 +5,7 @@ export interface MeteredRun {
   readonly org: string;
   readonly playbook: string;
   readonly run_id: string;
+  readonly definition_id: string;
   readonly definition_type: string;
   readonly definition_name: string;
   readonly definition_version: number;

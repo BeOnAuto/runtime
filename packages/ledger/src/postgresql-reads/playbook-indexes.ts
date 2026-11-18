@@ -57,6 +57,11 @@ const playbookIndexes: readonly PlaybookIndex[] = [
       ON emt_messages ((${SQL.plain(kindKeyOfStream)}), stream_position, transaction_id, global_position)`,
   },
   {
+    name: 'ledger_messages_by_org',
+    create: () => SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_org
+      ON emt_messages ((${SQL.plain(orgOfStream)}), transaction_id, global_position)`,
+  },
+  {
     name: 'ledger_messages_by_org_and_correlation',
     create: () => SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_org_and_correlation
       ON emt_messages ((${SQL.plain(orgOfStream)}), ${SQL.plain(correlationOfMessage)}, transaction_id, global_position)`,

@@ -1,3 +1,4 @@
+import { runIds } from '@on.auto/definitions';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { postgresqlDatabaseOn } from '@on.auto/ledger/postgresql-testing';
 import { Client } from 'pg';
@@ -5,6 +6,7 @@ import { describe } from 'vitest';
 
 import { meterOnADatabaseBehaviour } from '../meter-testing/meter-behaviour.ts';
 import type { LedgerAt } from '../testing/ledgers.ts';
+import { placedDefinitions } from '../testing/runs.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
@@ -12,7 +14,7 @@ async function postgresqlLedger(): Promise<LedgerAt> {
   const { url, remove } = await postgresqlDatabaseOn(server);
   return {
     name: 'PostgreSQL',
-    layer: () => postgresqlLedgerLayer({ pools: plainPoolsOn(url) }),
+    layer: () => postgresqlLedgerLayer({ pools: plainPoolsOn(url), definitionNames: placedDefinitions, runIds }),
     rows: async (statement, values = []) => {
       const client = new Client({ connectionString: url });
       await client.connect();

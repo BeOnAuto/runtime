@@ -1,13 +1,5 @@
-import {
-  LedgerConnection,
-  type AppendObserver,
-  type ConnectionPorts,
-  type LedgerServices,
-  type Statement,
-} from '@on.auto/ledger';
-import type { PostgreSQLPools } from '@on.auto/ledger/postgresql';
-import type { ContentHolders } from '@on.auto/operations';
-import { Effect, ManagedRuntime, type Layer } from 'effect';
+import { LedgerConnection, type ConnectionPorts, type Statement } from '@on.auto/ledger';
+import { Effect, ManagedRuntime } from 'effect';
 
 import { hostDatabaseOn, type HostDatabase } from '../database/host-database.ts';
 import { hostTablesMadeOn } from '../database/host-tables.ts';
@@ -15,17 +7,9 @@ import type { FactPayloads } from '../follower/followed-events.ts';
 import { openWorkflowHost, type HostOptions, type WorkflowHost } from '../host/workflow-host.ts';
 import { factPayloadsIn } from '../runs/run-payloads.ts';
 import { boundedConnection } from './bounded-connection.ts';
+import { ledgerLayerOn, type DatabaseSettings } from './ledger-layers.ts';
 
-interface DatabaseBound {
-  readonly mostBoundValues?: number | undefined;
-  readonly holders?: ContentHolders | undefined;
-}
-
-export type DatabaseSettings = DatabaseBound &
-  (
-    | { readonly store: 'sqlite'; readonly file: string; readonly observer?: AppendObserver | undefined }
-    | { readonly store: 'postgresql'; readonly pools: PostgreSQLPools; readonly observer?: AppendObserver | undefined }
-  );
+export type { DatabaseSettings } from './ledger-layers.ts';
 
 export interface ConnectedLedger {
   readonly connection: ConnectionPorts;
@@ -34,20 +18,6 @@ export interface ConnectedLedger {
 
 export interface ClosingHostDatabase extends HostDatabase {
   readonly close: () => Promise<void>;
-}
-
-async function ledgerLayerOn(settings: DatabaseSettings): Promise<Layer.Layer<LedgerServices>> {
-  if (settings.store === 'sqlite') {
-    const { ledgerLayer } = await import('@on.auto/ledger/sqlite');
-    return ledgerLayer({ fileName: settings.file, observer: settings.observer, holders: settings.holders });
-  }
-  const { postgresqlLedgerLayer } = await import('@on.auto/ledger/postgresql');
-  const { holders } = settings;
-  return postgresqlLedgerLayer({
-    pools: settings.pools,
-    observer: settings.observer,
-    ...(holders === undefined ? {} : { holders }),
-  });
 }
 
 export async function ledgerConnectedOn(settings: DatabaseSettings): Promise<ConnectedLedger> {

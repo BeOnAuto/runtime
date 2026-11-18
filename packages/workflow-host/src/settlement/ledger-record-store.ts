@@ -6,8 +6,8 @@ import { Cause, Effect, Equal, Option, Predicate, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
 import type { HostNote } from '../host/host-reports.ts';
-import { addressOfRun } from '../runs/run-address.ts';
 import { lineageOfSettlement } from '../runs/run-lineage.ts';
+import { knownRunOf } from '../runs/run-places.ts';
 import { attempted, isBackingOff, settleAttemptsBeforeBackingOff, settleBackOffMs } from './settle-attempts.ts';
 
 export interface RecordStoreParts {
@@ -33,6 +33,8 @@ const SettlementRow = Schema.Struct({
 const RunRow = Schema.Struct({ run_key: Schema.String });
 
 type Receipt = Effect.Effect<SettleReceipt, DatabaseFailed | DispatchFailed>;
+
+type NotedRun = Extract<HostNote, { readonly kind: 'settle_backing_off' }>['run'];
 
 interface Settling {
   readonly database: HostDatabase;
@@ -63,42 +65,42 @@ function detailOf(failure: unknown): string {
     : String(failure);
 }
 
-function failedAttempt({ database, parts, runKey }: Settling, detail: string): Receipt {
+function failedAttempt({ database, parts, runKey }: Settling, run: NotedRun, detail: string): Receipt {
   return Effect.gen(function* () {
     const attempts = yield* attempted(database, runKey, parts.now());
     if (attempts === settleAttemptsBeforeBackingOff) {
-      yield* parts.note({ kind: 'settle_backing_off', run: addressOfRun(runKey), attempts, detail });
+      yield* parts.note({ kind: 'settle_backing_off', run, attempts, detail });
     }
     return yield* new DispatchFailed({ output: 'settle', detail });
   });
 }
 
-function succeeded({ database, parts, runKey, settlement }: Settling, attemptsBefore: number): Receipt {
+function succeeded({ database, parts, runKey, settlement }: Settling, run: NotedRun, attemptsBefore: number): Receipt {
   return Effect.gen(function* () {
     yield* recorded(database, runKey, settlement);
     if (attemptsBefore >= settleAttemptsBeforeBackingOff) {
-      yield* parts.note({ kind: 'settled_after_back_off', run: addressOfRun(runKey), attempts: attemptsBefore + 1 });
+      yield* parts.note({ kind: 'settled_after_back_off', run, attempts: attemptsBefore + 1 });
     }
     return 'recorded' as const;
   });
 }
 
-function settledFor(settling: Settling, attemptsBefore: number): Receipt {
-  const { org, playbook, runId } = addressOfRun(settling.runKey);
-  const run = { org, playbook, id: runId };
-  return settling.parts.settle(run, settling.settlement, settling.lineage).pipe(
+function settledAs(settling: Settling, run: NotedRun & { readonly playbook: string }, attemptsBefore: number): Receipt {
+  const { org, playbook, definition, runId } = run;
+  const noted = { org, definition, runId };
+  return settling.parts.settle({ org, playbook, id: runId }, settling.settlement, settling.lineage).pipe(
     Effect.matchCauseEffect({
-      onSuccess: () => succeeded(settling, attemptsBefore),
+      onSuccess: () => succeeded(settling, noted, attemptsBefore),
       onFailure: (cause: Cause.Cause<unknown>) =>
         Option.exists(Cause.findErrorOption(cause), (error) => error instanceof NotFound)
           ? Effect.succeed('unknown_run' as const)
-          : failedAttempt(settling, detailOf(Cause.squash(cause))),
+          : failedAttempt(settling, noted, detailOf(Cause.squash(cause))),
     }),
     Effect.tap((receipt: SettleReceipt) => Effect.annotateCurrentSpan('auto.on.settle.receipt', receipt)),
     Effect.withSpan('settle', {
       attributes: {
         'auto.on.org': org,
-        'auto.on.playbook': playbook,
+        'auto.on.definition.id': definition,
         'auto.on.run_id': runId,
         'auto.on.settlement.status': settling.settlement.status,
         'auto.on.settle.attempts_before': attemptsBefore,
@@ -132,7 +134,8 @@ function settledOnce(settling: Settling): Receipt {
         detail: `The settlement failed ${attemptsBefore} times, so it is tried again once every ${settleBackOffMs} ms`,
       });
     }
-    return yield* settledFor(settling, attemptsBefore);
+    const run = yield* knownRunOf(database, runKey);
+    return run === undefined ? 'unknown_run' : yield* settledAs(settling, run, attemptsBefore);
   });
 }
 

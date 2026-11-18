@@ -17,11 +17,17 @@ export interface ChildCall {
   readonly attributes: JsonObject;
 }
 
+export interface CalledDefinition {
+  readonly type: string;
+  readonly name: string;
+}
+
 export interface CallFunctions {
   readonly argumentChecks: Readonly<Record<string, ArgumentRejections>>;
   readonly describe: CallDescription;
   readonly refusal?: RefusalWords;
   readonly childOf?: (call: ChildCall) => string | undefined;
+  readonly calledOf?: (call: Pick<ChildCall, 'function' | 'arguments'>) => CalledDefinition | undefined;
   readonly emitRejections?: (attributes: JsonObject, pointer: string) => readonly Rejection[];
   readonly emitRefusal?: (event: JsonObject) => string | undefined;
   readonly outputRefusal?: (document: JsonObject, output: Json) => string | undefined;

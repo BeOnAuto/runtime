@@ -51,6 +51,6 @@ export const createdFrom = Effect.fnUntraced(function* (
   commandOf: (content: DefinitionContent) => DefinitionCommandData,
 ) {
   const saved = yield* savedFrom(saving, commandOf);
-  const first = types.includes('workflow') && (yield* isThePlaybooksFirst(types, saving.capability.type, saved));
+  const first = types.includes('workflow') && (yield* isThePlaybooksFirst(types));
   return first ? { ...saved, notices: [...saved.notices, firstDefinitionNotice] } : saved;
 });

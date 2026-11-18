@@ -2,6 +2,7 @@ import {
   addressedStreamOf,
   advancedColumnsOf,
   keepsChildRows,
+  partitionOfTheRow,
   rowKeyOf,
   type AddressedStream,
   type ProjectedMessage,
@@ -66,13 +67,20 @@ interface Folding<Folded> {
 
 type FoldedOver<Folded> = (messages: readonly ProjectedMessage[], from: Folded) => Folded;
 
-function lanesOfTheRow({ kinds, keyOf }: ProjectionDeclaration, { prefix, scope }: AddressedStream, key: string) {
+function lanesOfTheRow(
+  { kinds, keyOf, partition }: ProjectionDeclaration,
+  { prefix, scope, address }: AddressedStream,
+  key: string,
+): readonly MessageLane[] {
+  if (partition === 'org') {
+    return [{ by: 'org', key: address.org }];
+  }
   if (keyOf === undefined) {
     return kinds.map((kind): MessageLane => ({ by: 'stream', key: `${prefix}${kind}/${key}` }));
   }
-  return scope === 'playbook'
-    ? [{ by: 'prefix', key: prefix } satisfies MessageLane]
-    : kinds.map((kind): MessageLane => ({ by: 'prefix', key: `${prefix}${kind}/` }));
+  return scope === 'org'
+    ? kinds.map((kind): MessageLane => ({ by: 'prefix', key: `${prefix}${kind}/` }))
+    : [{ by: 'prefix', key: prefix }];
 }
 
 function messagesOfTheRow(
@@ -83,7 +91,11 @@ function messagesOfTheRow(
   return messages.flatMap((message) => {
     const named = addressedStreamOf(message.stream);
     const projected = filledMessageOf(keeping, message);
-    return named?.prefix === prefix && rowKeyOf(keeping.projection, projected, named) === key ? [projected] : [];
+    return named !== undefined &&
+      partitionOfTheRow(keeping.projection, named).prefix === prefix &&
+      rowKeyOf(keeping.projection, projected, named) === key
+      ? [projected]
+      : [];
   });
 }
 
@@ -107,7 +119,7 @@ async function rowRefolded(
   named: AddressedStream,
   key: string,
 ): Promise<void> {
-  const place = { prefix: named.prefix, key };
+  const place = { prefix: partitionOfTheRow(projection, named).prefix, key };
   const lanes = lanesOfTheRow(projection, named, key);
   if (keepsChildRows(projection)) {
     const keeping = { dialect, projection };
@@ -143,7 +155,8 @@ export async function rowsRefolded(
     keepings.filter(({ projection }) => projection.types.includes(rewritten.before.type)),
     async (keeping) => {
       const keys = keysOf(keeping, rewritten, named);
-      const places = keys.map((key) => ({ prefix: named.prefix, key }));
+      const { prefix } = partitionOfTheRow(keeping.projection, named);
+      const places = keys.map((key) => ({ prefix, key }));
       await rowsLocked(execute, keeping.dialect, keeping.projection, places);
       await inTurn(keys, (key) => rowRefolded(keeping, execute, named, key));
     },

@@ -14,7 +14,7 @@ export const projectionCheckpointsTableName = 'projection_checkpoints';
 
 const checkpoints = SQL.identifier(projectionCheckpointsTableName);
 
-export const projectionCheckpointsTable: PlaybookIndex = {
+const projectionCheckpointsTable: PlaybookIndex = {
   name: projectionCheckpointsTableName,
   create: () => SQL`CREATE TABLE IF NOT EXISTS ${checkpoints} (
     projection TEXT NOT NULL,
@@ -33,11 +33,6 @@ export async function createdProjectionCheckpointsTable(
 }
 
 export type VersionedProjection = Pick<ProjectionDeclaration, 'name' | 'version'>;
-
-export function caughtUpFound({ name, version }: VersionedProjection): SQL {
-  return SQL`INSERT INTO ${checkpoints} (projection, version, folded_through) VALUES (${name}, ${version}, NULL)
-    ON CONFLICT (projection, version) DO NOTHING`;
-}
 
 function caughtUpWritten({ name, version }: VersionedProjection): SQL {
   return SQL`INSERT INTO ${checkpoints} (projection, version, folded_through) VALUES (${name}, ${version}, NULL)

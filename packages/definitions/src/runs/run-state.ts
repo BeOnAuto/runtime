@@ -35,6 +35,7 @@ export interface RecordedWork {
 }
 
 export interface RecordedRunState extends CallNumbering {
+  readonly playbook: string;
   readonly attempt: number;
   readonly fencingToken: number;
   readonly holderStartedACall: boolean;
@@ -94,9 +95,10 @@ function definitionOf({ definitionType, definitionName, definitionVersion }: Run
 
 function startedRun(started: RecordedRunFact<'run_started'>, earlier: RunState): RecordedRunState {
   const { data, context } = started;
-  const { started_by, calls_tools, finishes_later, resumes, output_shape } = data;
+  const { started_by, playbook, calls_tools, finishes_later, resumes, output_shape } = data;
   const { at, depth = 0, callDepth = 0, calledBy, trigger, actsFor } = context;
   return {
+    playbook,
     attempt: firstAttempt,
     fencingToken: (earlier?.fencingToken ?? 0) + 1,
     holderStartedACall: false,

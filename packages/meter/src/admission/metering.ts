@@ -1,5 +1,12 @@
-import type { MeteredRun } from '@on.auto/definitions';
-import { Conflict, streamPrefixOfPlaybook, Unavailable, type Ledger } from '@on.auto/operations';
+import { runIds, type MeteredRun } from '@on.auto/definitions';
+import {
+  Conflict,
+  runStreamNameOf,
+  streamPrefixOfDefinition,
+  streamPrefixOfOrg,
+  Unavailable,
+  type Ledger,
+} from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
 import { firstStartIn } from '../counting/first-starts.ts';
@@ -40,12 +47,20 @@ export function billingPageOf({ studio }: MeterOptions, org: string): string {
   return `${studio}/?settings=billing&org=${encodeURIComponent(org)}`;
 }
 
-export function runStreamOf({ org, playbook, run_id: runId }: MeteredRun): string {
-  return `${streamPrefixOfPlaybook({ org, playbook })}runs/${runId.toLowerCase()}`;
+function definitionKeyOf({ org, definition_id: definition }: MeteredRun): string {
+  return streamPrefixOfDefinition({ org, definition });
 }
 
-export function actionOf({ org, playbook, run_id: runId }: MeteredRun): string {
-  return `${org}/${playbook}/${runId.toLowerCase()}`;
+function runStreamOf(run: MeteredRun): string {
+  return `${definitionKeyOf(run)}${runStreamNameOf(run.run_id.toLowerCase())}`;
+}
+
+export function actionOf({ org, run_id: runId }: MeteredRun): string {
+  return `${org}/${runId.toLowerCase()}`;
+}
+
+export function heldRunOf(run: MeteredRun): string {
+  return `${streamPrefixOfOrg(run)}${runStreamNameOf(run.run_id.toLowerCase())}`;
 }
 
 export const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
@@ -64,6 +79,15 @@ export function executed(metering: Metering, command: MeterCommand): Effect.Effe
   );
 }
 
-export function hasStarted({ ledger }: Pick<Metering, 'ledger'>, run: MeteredRun): Effect.Effect<boolean> {
-  return Effect.map(firstStartIn(ledger, runStreamOf(run)), (first) => first !== undefined);
+function startedUnder(ledger: Ledger['Service'], run: MeteredRun, holder: string): Effect.Effect<boolean, Conflict> {
+  return holder === definitionKeyOf(run)
+    ? Effect.map(firstStartIn(ledger, runStreamOf(run)), (first) => first !== undefined)
+    : Effect.fail(runIds.heldElsewhere());
+}
+
+export function hasStarted({ ledger }: Pick<Metering, 'ledger'>, run: MeteredRun): Effect.Effect<boolean, Conflict> {
+  return Effect.flatMap(
+    ledger.holderOfRunId({ orgKey: streamPrefixOfOrg(run), runId: run.run_id.toLowerCase() }),
+    (holder) => (holder === undefined ? Effect.succeed(false) : startedUnder(ledger, run, holder)),
+  );
 }

@@ -3,11 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { definitionNamesOf } from '../identity/definition-names.ts';
 import { defineCapability, type Capability, type StandingRequest } from '../index.ts';
-import { definitionsDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
+import { inThePlaybook } from '../read-model-testing/in-the-playbook.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
+import { loadRegistry } from './registry-access.ts';
 
 const someWords: unknown = expect.any(String);
 
@@ -64,12 +65,7 @@ describe('what a definition keeps for its runtime adapter', () => {
     const created = await create('reviews');
     const read = await definitions.call(getDefinition, toAlpha(acmeAdmin, { type: 'keeper', name: 'reviews' }));
     const listed = await definitions.call(listDefinitions, toAlpha(acmeAdmin, { type: 'keeper' }));
-    const { state } = await Effect.runPromise(
-      definitions.ledger.service.load(
-        `playbook/acme/alpha/${definitionTypeStreamOf('keeper')}`,
-        definitionsDecider('keeper', { org: 'acme', playbook: 'alpha' }),
-      ),
-    );
+    const state = await inThePlaybook(definitions.ledger, loadRegistry('keeper'));
 
     expect(state.get('reviews')?.details).toEqual({ kept: 'reviews', line: 4 });
     for (const outcome of [created, read]) {

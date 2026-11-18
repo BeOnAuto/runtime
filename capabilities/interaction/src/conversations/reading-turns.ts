@@ -46,7 +46,7 @@ function cadenceAfterTurn(
 export function readNow(parts: ConversationParts, place: ConversationPlace, now: number): Effect.Effect<void> {
   return Effect.gen(function* () {
     const open = yield* openInConversation(parts, place);
-    const [oldest] = open.kept;
+    const [oldest, ...later] = open.kept;
     if (oldest === undefined) {
       return yield* advanced(parts, place, resting(place));
     }
@@ -57,7 +57,7 @@ export function readNow(parts: ConversationParts, place: ConversationPlace, now:
       return yield* advanced(parts, place, { ...cadenceOf(place), open: true, next_read_at: firstRead });
     }
     const rendering = { clock: yield* renderClock, mostRequestBytesTo: parts.tools.mostRequestBytesTo };
-    const readings = readingsOfTheTurn(open.kept, place.row.conversation, rendering);
+    const readings = readingsOfTheTurn([oldest, ...later], place.row.conversation, rendering);
     const turn = {
       parts,
       place,
@@ -65,7 +65,7 @@ export function readNow(parts: ConversationParts, place: ConversationPlace, now:
       roomForACall: roomForACall(now),
       heldUntil: now + turnBounds.holdMs,
     };
-    const done = yield* turnRead(turn, readings, oldest);
+    const done = yield* turnRead(turn, readings);
     const end = { floorMs, now: yield* Clock.currentTimeMillis };
     return yield* advanced(parts, place, cadenceAfterTurn(place, open, done, end));
   });

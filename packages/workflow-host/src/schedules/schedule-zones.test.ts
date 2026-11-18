@@ -4,6 +4,7 @@ import { refusalsSaid, runStillGoing, startsReaching, triggerRowsOf } from '../r
 import { movedClock, type MovedClock } from '../reaction-testing/moved-clock.ts';
 import {
   cronTrigger,
+  definitionKeyNamed,
   definitionRecorded,
   eventTrigger,
   everyTrigger,
@@ -68,7 +69,7 @@ describe('a workflow with a cron schedule in a time zone', () => {
     await startedAtEach(zoned, ['2026-03-07T11:00:00.000Z']);
     await runStillGoing(
       zoned.reacting.database,
-      reactionRunIdOf('morning', 1, '/schedule/cron', '2026-03-07T11:00:00.000Z'),
+      reactionRunIdOf(definitionKeyNamed('morning'), 1, '/schedule/cron', '2026-03-07T11:00:00.000Z'),
     );
 
     zoned.clock.moveTo(Date.parse('2026-03-08T10:00:00.000Z'));

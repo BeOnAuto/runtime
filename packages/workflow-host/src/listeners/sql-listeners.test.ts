@@ -9,15 +9,19 @@ import { sqlWatermark } from '../dispatch/sql-watermark.ts';
 import { type FilterPlace, filterStops } from '../filtering/filter-matching.ts';
 import { runGateOf } from '../follower/run-gate.ts';
 import { refusalsOn } from '../reactions/refusals.ts';
-import { faultyDatabase } from '../testing/faulty-database.ts';
 import { onPostgreSQLAt, onSQLite, openedOn } from '../testing/host-files.ts';
 import { describeOnPostgreSQL } from '../testing/postgresql-databases.ts';
+import { faultyWithARun, runKeyAt, startedIn } from '../testing/started-runs.ts';
 import { insertedListener } from './listener-rows.ts';
 import { mostListenersInAPlaybook, sqlListeners } from './sql-listeners.ts';
 
 const attributes = { definition: { name: 'await-approval', version: 1 }, caller: { id: 'acme-admin' } };
 
-const run = { runId: 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a', attributes };
+const listening = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+const otherListening = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
+
+const run = { runId: runKeyAt(listening), attributes };
 
 const armedBy = { version: 3 };
 
@@ -33,9 +37,11 @@ const RefusalRow = Schema.Struct({ workflow: Schema.String, reason: Schema.Strin
 
 const playbookKey = 'playbook/acme/alpha/';
 
-const runKey = 'acme/alpha/r-1';
+const definitionKey = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-00000000de01/';
 
-const stream = `${playbookKey}run-logs/r-1`;
+const runKey = 'acme/0199a3c4-7d2e-7c1a-9b3f-00000000de01/r-1';
+
+const stream = `${definitionKey}run-logs/r-1`;
 
 type RecordedEvent = Parameters<ReturnType<typeof runGateOf>['verdictOn']>[0];
 
@@ -95,7 +101,7 @@ function passedEarlyTests(aDatabase: () => Promise<string>): void {
           statement`INSERT INTO workflow_runs (run_key, stream_id, dispatched_through) VALUES (${runKey}, ${stream}, ${0})`,
         ),
       );
-      const passing = () => Effect.runPromise(runGateOf(database, playbookKey).verdictOn(record, true));
+      const passing = () => Effect.runPromise(runGateOf(database).verdictOn(record, true));
 
       await Effect.runPromise(
         insertedListener(holdingTheInsert(database, { held, insertInto: 'workflow_listeners', meanwhile: passing }), {
@@ -133,7 +139,7 @@ function catchingUpTests(aDatabase: () => Promise<string>): void {
       const catchingUp = () => Effect.runPromise(sqlWatermark(database).advance(runKey, 2));
       const holding = holdingTheInsert(database, { held, insertInto: 'workflow_passed_runs', meanwhile: catchingUp });
 
-      const verdict = await Effect.runPromise(runGateOf(holding, playbookKey).verdictOn(record, true));
+      const verdict = await Effect.runPromise(runGateOf(holding).verdictOn(record, true));
       const left = await Effect.runPromise(database.read(statement`SELECT run_key FROM workflow_passed_runs`));
 
       expect([verdict, left]).toEqual(['overdue', []]);
@@ -143,8 +149,8 @@ function catchingUpTests(aDatabase: () => Promise<string>): void {
 
 describe('the listeners of a playbook', () => {
   it('are 4,096 in a playbook at most: one more is refused and said, and its run takes only the events sent to it', async () => {
-    const database = await openedOn(await onSQLite());
-    const listeners = sqlListeners(database, refusalsOn(database, Date.now), filterStops());
+    const database = await startedIn(await openedOn(await onSQLite()), listening);
+    const listeners = sqlListeners(database, refusalsOn(database, 'workflow', Date.now), filterStops());
     await Effect.runPromise(
       database.write(
         statement`WITH RECURSIVE listening (at) AS (
@@ -177,10 +183,10 @@ describe('the listeners of a playbook', () => {
 
 describe('the stops of the filter of a listen task', () => {
   it('are kept while another run listens at the task of that version, and forgotten when the last such listener is cancelled', async () => {
-    const database = await openedOn(await onSQLite());
+    const database = await startedIn(await startedIn(await openedOn(await onSQLite()), listening), otherListening);
     const stops = filterStops();
-    const listeners = sqlListeners(database, refusalsOn(database, Date.now), stops);
-    const other = { ...run, runId: 'acme/alpha/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b' };
+    const listeners = sqlListeners(database, refusalsOn(database, 'workflow', Date.now), stops);
+    const other = { ...run, runId: runKeyAt(otherListening) };
     const place: FilterPlace = {
       kind: 'listener',
       playbookKey: 'playbook/acme/alpha/',
@@ -206,8 +212,8 @@ describe('the stops of the filter of a listen task', () => {
 
 describe('a listener the host tables cannot record', () => {
   it('fails to arm or cancel, to be dispatched again', async () => {
-    const database = faultyDatabase(await openedOn(await onSQLite()));
-    const listeners = sqlListeners(database, refusalsOn(database, Date.now), filterStops());
+    const database = await faultyWithARun(listening);
+    const listeners = sqlListeners(database, refusalsOn(database, 'workflow', Date.now), filterStops());
     const listener = listenerAt('/do/0/await');
     database.failing(true);
 

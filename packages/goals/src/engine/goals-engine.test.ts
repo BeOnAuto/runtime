@@ -26,8 +26,15 @@ const database: HostDatabase = {
     readAppendedFacts: unused,
     readRecordedEvent: unused,
     readRecordedOfKeys: unused,
+    readRecordedOfOrg: unused,
     readRecordedEventOfKeys: unused,
     definitionStreams: unused,
+    holderOfName: unused,
+    nameHeldBy: unused,
+    namesHeldIn: unused,
+    holderOfStream: unused,
+    holderOfRunId: unused,
+    definitionsIn: unused,
     ageOfLastAppend: unused,
     versionOf: unused,
     messageAt: unused,
@@ -82,7 +89,6 @@ describe('the goals engine', () => {
       'goal_stopped',
       'goal_summary_started',
     ]);
-    expect(goalsLedger.layoutSteps).toEqual([{ layout: 24, statements: [] }]);
   });
 
   it('makes its consumers, due work and operations over the ports of a host that keeps goals', () => {

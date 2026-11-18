@@ -50,18 +50,10 @@ export function keptKeyOf(folder: { readonly name: string }, definitionType: str
   return JSON.stringify([folder.name, definitionType]);
 }
 
-export function playbookKeyOfDefinitions(stream: string, definitionType: string): string {
-  return stream.slice(0, stream.length - definitionTypeStreamOf(definitionType).length);
-}
-
-function evolved(
-  functions: ReadonlyMap<string, KeptFunction>,
-  event: RecordedDefinitionEvent,
-  saved: number,
-  keptOf: KeptOf,
-) {
+function evolved(functions: ReadonlyMap<string, KeptFunction>, event: RecordedDefinitionEvent, keptOf: KeptOf) {
   const kept = new Map(functions);
-  const { definitionName: name, definitionVersion: version } = event.context;
+  const { definitionName: name, definitionVersion: version, at } = event.context;
+  const saved = Date.parse(at);
   if (carriesContent(event)) {
     const { content } = event.data;
     kept.set(name, { version, saved, details: keptOf(content.details, content.stripped) });
@@ -77,10 +69,10 @@ export function definitionsAfter(
   keptOf: KeptOf,
 ): PlaybookDefinitions {
   const functions = events.reduce<ReadonlyMap<string, KeptFunction>>(
-    (kept, stored, index) =>
+    (kept, stored) =>
       Option.match(decodeDefinitionEvent(stored), {
         onNone: () => kept,
-        onSome: (event) => evolved(kept, event, previous.version + index + 1, keptOf),
+        onSome: (event) => evolved(kept, event, keptOf),
       }),
     previous.functions,
   );

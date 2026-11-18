@@ -6,12 +6,13 @@ import { runDecider } from '../runs/run-decider.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { quietMs } from '../testing/capabilities/resumer.ts';
 import { firstMoment, toPlaybook, type Harness } from '../testing/harness.ts';
-import { acted, momentAfter, startedAndLeft, startOfTheStep, stream } from '../testing/resumed-runs.ts';
+import { acted, momentAfter, startedAndLeft, startOfTheStep, stepStreamIn } from '../testing/resumed-runs.ts';
 import { testRunId } from '../testing/run-facts.ts';
 
 describe('a run of a capability that resumes, asked for again once its last fact is older than its bound', () => {
   it('goes on from its facts at the version it started with, from its start and its last fact, and answers when it ends', async () => {
-    const { running, resuming } = await startedAndLeft();
+    const definitions = await startedAndLeft();
+    const { running, resuming } = definitions;
 
     expect(await running(momentAfter(quietMs + 1))).toMatchObject({
       status: 'succeeded',
@@ -22,7 +23,7 @@ describe('a run of a capability that resumes, asked for again once its last fact
         journal: {
           attempt: { startedAt: firstMoment, calls: [{ type: 'model_call_started', data: { number: 1 } }] },
         },
-        lineage: { startId: idAt(2), correlationId: testRunId },
+        lineage: { startId: idAt(definitions, 2), correlationId: testRunId },
         definition: { version: 1 },
       },
     ]);
@@ -35,8 +36,8 @@ describe('a run of a capability that resumes, asked for again once its last fact
     expect((await linksIn(definitions)).map(({ type, causationId }) => [type, causationId])).toEqual([
       ['run_started', null],
       ['model_call_started', null],
-      ['model_call_started', idAt(2)],
-      ['run_succeeded', idAt(2)],
+      ['model_call_started', idAt(definitions, 2)],
+      ['run_succeeded', idAt(definitions, 2)],
     ]);
   });
 });
@@ -54,9 +55,11 @@ describe('a run of a capability that resumes, asked for again while its last fac
       detail: stillRunningWords,
     });
     expect(resuming.contexts()).toEqual([]);
-    expect(await Effect.runPromise(Effect.map(ledger.service.load(stream, runDecider), ({ version }) => version))).toBe(
-      2,
-    );
+    expect(
+      await Effect.runPromise(
+        Effect.map(ledger.service.load(stepStreamIn(ledger), runDecider), ({ version }) => version),
+      ),
+    ).toBe(2);
   });
 
   it('goes on at once for a caller that knows the attempt before it died', async () => {
@@ -71,7 +74,7 @@ describe('a run of a capability that resumes, whose cancel was asked', () => {
     const definitions = await startedAndLeft();
     await definitions.run(
       Effect.orDie(
-        definitions.ledger.service.execute(stream, runDecider, {
+        definitions.ledger.service.execute(stepStreamIn(definitions.ledger), runDecider, {
           type: 'cancel',
           kind: 'requested',
           reason: 'The person asked for it',
@@ -93,7 +96,7 @@ describe('a run of a capability that resumes, whose cancel was asked', () => {
 function cancelledElsewhere(definitions: { readonly ledger: Harness['ledger'] }): Effect.Effect<void> {
   return Effect.asVoid(
     Effect.orDie(
-      definitions.ledger.service.execute(stream, runDecider, {
+      definitions.ledger.service.execute(stepStreamIn(definitions.ledger), runDecider, {
         type: 'cancel',
         kind: 'requested',
         reason: 'Asked of another server',
@@ -192,7 +195,7 @@ describe('a run of a capability that resumes, which ended without a final result
     const definitions = await startedAndLeft();
     await definitions.run(
       Effect.orDie(
-        definitions.ledger.service.execute(stream, runDecider, {
+        definitions.ledger.service.execute(stepStreamIn(definitions.ledger), runDecider, {
           type: 'finish',
           result: { type: 'run_failed', data: {} },
           attempt: { fencingToken: 1, version: 1 },
@@ -232,7 +235,7 @@ describe('a run of a capability that resumes, whose call another attempt beat to
     const definitions = await startedAndLeft({ beforeItsCall: Effect.suspend(() => elsewhere.ending) });
     elsewhere.ending = Effect.asVoid(
       Effect.orDie(
-        definitions.ledger.service.execute(stream, runDecider, {
+        definitions.ledger.service.execute(stepStreamIn(definitions.ledger), runDecider, {
           type: 'finish',
           result: { type: 'run_succeeded', data: { output: 'from the other attempt', record: {} } },
           attempt: { fencingToken: 1, version: 1 },
@@ -259,7 +262,9 @@ describe('a start of a run of a capability that resumes', () => {
 
     expect(
       await definitions.run(
-        Effect.orDie(Effect.flip(definitions.ledger.service.execute(stream, runDecider, startOfTheStep))),
+        Effect.orDie(
+          Effect.flip(definitions.ledger.service.execute(stepStreamIn(definitions.ledger), runDecider, startOfTheStep)),
+        ),
       ),
     ).toMatchObject({ kind: 'taken', detail: stillRunningWords });
     expect(

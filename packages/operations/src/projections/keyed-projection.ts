@@ -2,8 +2,10 @@ import { Option, type Effect } from 'effect';
 
 import type { OrgAddress } from '../caller/org-context.ts';
 import {
+  definitionOfStreamPrefix,
   orgOfStreamPrefix,
   playbookOfStreamPrefix,
+  streamPrefixOfDefinition,
   streamPrefixOfOrg,
   streamPrefixOfPlaybook,
 } from '../ledger/bound-ports.ts';
@@ -46,17 +48,20 @@ export interface AdvancedColumn {
   readonly setBy: readonly string[];
 }
 
-export type StreamScope = 'playbook' | 'org';
+export type StreamScope = 'playbook' | 'definition' | 'org';
+
+export type RowPartition = 'stream' | 'org';
 
 export interface ProjectionDeclaration {
   readonly name: string;
   readonly version: number;
   readonly scopes?: readonly StreamScope[];
+  readonly partition?: RowPartition;
   readonly kinds: readonly string[];
   readonly types: readonly string[];
   readonly columns: readonly ProjectedColumn[];
   readonly indexes: readonly ProjectedIndex[];
-  readonly keyOf?: (message: ProjectedMessage, stream: ProjectedStream) => string | undefined;
+  readonly keyOf?: (message: ProjectedMessage, stream: AddressedStream) => string | undefined;
   readonly advanced?: readonly AdvancedColumn[];
 }
 
@@ -88,6 +93,15 @@ export interface ProjectedRowsQuery {
 
 export interface ProjectedAddress extends OrgAddress {
   readonly playbook?: string;
+  readonly definition?: string;
+}
+
+export interface RowsAddress extends ProjectedAddress {
+  readonly definitions?: 'every';
+}
+
+export function everyDefinitionOf({ org }: OrgAddress): RowsAddress {
+  return { org, definitions: 'every' };
 }
 
 export interface ProjectedKeyedRow extends ProjectedAddress {
@@ -105,17 +119,16 @@ export interface DueRowsQuery {
 export interface ProjectionReader {
   readonly readProjectedRows: (
     projection: string,
-    address: ProjectedAddress,
+    address: RowsAddress,
     query: ProjectedRowsQuery,
   ) => Effect.Effect<readonly ProjectedKeyedRow[]>;
   readonly countProjectedRows: (
     projection: string,
-    address: ProjectedAddress,
+    address: RowsAddress,
     where: readonly ProjectedCondition[],
   ) => Effect.Effect<number>;
   readonly readDueRows: (projection: string, query: DueRowsQuery) => Effect.Effect<readonly ProjectedKeyedRow[]>;
   readonly nextDueOf: (projection: string, column: string, after: number) => Effect.Effect<number | null>;
-  readonly resetStreamProjection: (projection: string, address: ProjectedAddress) => Effect.Effect<void>;
 }
 
 export interface RowAdvance {
@@ -138,7 +151,6 @@ export interface BoundProjectionReader {
     query: ProjectedRowsQuery,
   ) => Effect.Effect<readonly ProjectedKeyedRow[]>;
   readonly countProjectedRows: (projection: string, where: readonly ProjectedCondition[]) => Effect.Effect<number>;
-  readonly resetStreamProjection: (projection: string) => Effect.Effect<void>;
 }
 
 export interface OrgProjectionReader extends BoundProjectionReader {
@@ -158,12 +170,18 @@ export const rowKeyColumn = 'row_key';
 
 export const childKeyColumn = 'child_key';
 
-export function streamPrefixOfAddress({ org, playbook }: ProjectedAddress): string {
+export function streamPrefixOfAddress({ org, playbook, definition }: ProjectedAddress): string {
+  if (definition !== undefined) {
+    return streamPrefixOfDefinition({ org, definition });
+  }
   return playbook === undefined ? streamPrefixOfOrg({ org }) : streamPrefixOfPlaybook({ org, playbook });
 }
 
 export function addressOfStreamPrefix(prefix: string): Option.Option<ProjectedAddress> {
-  return Option.orElse(playbookOfStreamPrefix(prefix), () => orgOfStreamPrefix(prefix));
+  return Option.orElse(
+    Option.orElse(playbookOfStreamPrefix(prefix), () => definitionOfStreamPrefix(prefix)),
+    () => orgOfStreamPrefix(prefix),
+  );
 }
 
 export interface AddressedStream extends ProjectedStream {
@@ -172,7 +190,7 @@ export interface AddressedStream extends ProjectedStream {
   readonly address: ProjectedAddress;
 }
 
-const aPlaybookKindAndId = /^([^/]+\/[^/]+\/[^/]+\/)([^/]+)\/([^/]+)$/u;
+const aKeyKindAndId = /^([^/]+\/[^/]+\/[^/]+\/)([^/]+)\/([^/]+)$/u;
 
 const anOrgKindAndId = /^([^/]+\/[^/]+\/)([^/]+)\/([^/]+)$/u;
 
@@ -188,8 +206,11 @@ function streamIn(
 
 export function addressedStreamOf(stream: string): AddressedStream | undefined {
   return Option.getOrUndefined(
-    Option.orElse(streamIn('playbook', aPlaybookKindAndId, playbookOfStreamPrefix, stream), () =>
-      streamIn('org', anOrgKindAndId, orgOfStreamPrefix, stream),
+    Option.orElse(
+      Option.orElse(streamIn('playbook', aKeyKindAndId, playbookOfStreamPrefix, stream), () =>
+        streamIn('definition', aKeyKindAndId, definitionOfStreamPrefix, stream),
+      ),
+      () => streamIn('org', anOrgKindAndId, orgOfStreamPrefix, stream),
     ),
   );
 }
@@ -198,6 +219,17 @@ const playbookStreamsAlone: readonly StreamScope[] = ['playbook'];
 
 export function scopesOf({ scopes = playbookStreamsAlone }: ProjectionDeclaration): readonly StreamScope[] {
   return scopes;
+}
+
+export function partitionOfTheRow(
+  { partition = 'stream' }: ProjectionDeclaration,
+  stream: AddressedStream,
+): AddressedStream {
+  if (partition === 'stream') {
+    return stream;
+  }
+  const org = { org: stream.address.org };
+  return { ...stream, prefix: streamPrefixOfOrg(org), address: org };
 }
 
 export function foldsStream(projection: ProjectionDeclaration, { scope, kind }: AddressedStream): boolean {

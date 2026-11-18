@@ -14,7 +14,7 @@ import {
   type LedgerServices,
   type ReceivedWebhooks,
 } from '@on.auto/ledger';
-import type { ContentHolders, KeptProjection, RunOutcomeMapping, StreamProjection } from '@on.auto/operations';
+import type { ContentHolders, KeptProjection, RunOutcomeMapping } from '@on.auto/operations';
 import type { SecretRows } from '@on.auto/secrets';
 import { Cause, Effect, Layer, type Context } from 'effect';
 
@@ -26,7 +26,6 @@ import { ledgerOfUnknownFacts } from './ledger-of-unknown-facts.ts';
 interface KeptByTheLedger {
   readonly runOutcomes?: RunOutcomeMapping;
   readonly projections?: readonly KeptProjection[];
-  readonly streamProjections?: readonly StreamProjection[];
   readonly holders?: ContentHolders;
   readonly definitionNames?: DefinitionNames;
   readonly layoutSteps?: readonly LayoutStep[];

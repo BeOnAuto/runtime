@@ -1,8 +1,8 @@
 import { SQL, type SQLExecutor } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
+import type { KeptStreamAges } from '../event-store.ts';
 import { defaultPartition } from '../recorded/sqlite-parts.ts';
-import type { KeptStreamAges } from './stream-ages-store.ts';
 
 const AgeRows = Schema.Array(Schema.Struct({ age: Schema.Int }));
 

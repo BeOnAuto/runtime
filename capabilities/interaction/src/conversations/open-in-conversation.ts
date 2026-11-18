@@ -1,3 +1,4 @@
+import { addressOfTheRow, everyDefinitionOf, playbookRowsOf, type PlaybookProjectedRow } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { ReplyRuleSchema } from '../replies/reply-rule.ts';
@@ -14,6 +15,7 @@ const keptRowFrom = Schema.decodeUnknownSync(
   Schema.Struct({
     sent_conversation: Schema.String,
     sent_id: Schema.String,
+    reading: Schema.String,
     reply: Schema.fromJsonString(ReplyRuleSchema),
     answer_schema: Schema.fromJsonString(Schema.JsonObject),
   }),
@@ -23,14 +25,23 @@ export function takesReplies({ standing }: Pick<OpenRequestRow, 'standing'>): bo
   return takingReplies.has(standing);
 }
 
-export function keptRequestOf(runId: string, stored: OpenRequestRow): KeptRequest {
+export function keptRequestOf(placed: PlaybookProjectedRow, stored: OpenRequestRow): KeptRequest {
   const kept = keptRowFrom(stored);
-  const sent = { conversation: kept.sent_conversation, id: kept.sent_id };
-  return { runId, row: stored, sent, rule: kept.reply, answerSchema: kept.answer_schema };
+  return {
+    playbook: { org: placed.org, playbook: placed.playbook },
+    address: addressOfTheRow(placed),
+    runId: placed.key,
+    row: stored,
+    sent: { conversation: kept.sent_conversation, id: kept.sent_id },
+    reading: kept.reading,
+    rule: kept.reply,
+    answerSchema: kept.answer_schema,
+  };
 }
 
-function keptOf(runId: string, stored: OpenRequestRow): readonly KeptRequest[] {
-  return takesReplies(stored) ? [keptRequestOf(runId, stored)] : [];
+function keptOf(placed: PlaybookProjectedRow): readonly KeptRequest[] {
+  const stored = requestRowFrom(placed.row);
+  return takesReplies(stored) ? [keptRequestOf(placed, stored)] : [];
 }
 
 export interface OpenInConversation {
@@ -40,10 +51,10 @@ export interface OpenInConversation {
 
 export function openInConversation(
   parts: { readonly ledger: Pick<ConversationParts['ledger'], 'readProjectedRows'> },
-  { playbook, key }: Pick<ConversationPlace, 'playbook' | 'key'>,
+  { address, key }: Pick<ConversationPlace, 'address' | 'key'>,
 ): Effect.Effect<OpenInConversation> {
   return Effect.map(
-    parts.ledger.readProjectedRows(openRequestsName, playbook, {
+    parts.ledger.readProjectedRows(openRequestsName, everyDefinitionOf(address), {
       where: [
         { column: 'open', equals: true },
         { column: 'conversation', equals: key },
@@ -53,7 +64,7 @@ export function openInConversation(
       limit: conversationBounds.requestsRead,
     }),
     (rows) => ({
-      kept: rows.flatMap(({ key: runId, row: stored }) => keptOf(runId, requestRowFrom(stored))),
+      kept: playbookRowsOf(openRequestsName, rows).flatMap((placed) => keptOf(placed)),
       more: rows.length === conversationBounds.requestsRead,
     }),
   );

@@ -1,6 +1,5 @@
 import {
   playbookCallerOf,
-  streamPrefixOfPlaybook,
   type Conflict,
   type Lineage,
   type NotFound,
@@ -10,7 +9,7 @@ import {
 import { Effect, Equal } from 'effect';
 
 import { cancelledAsAsked, type CancelledRun, type Capability } from '../capability/capability.ts';
-import { isChangedSinceRead, runDeciderAsRead, runStreamNameOf } from '../runs/run-decider.ts';
+import { isChangedSinceRead, runDeciderAsRead, runStreamIn, type RunPlacing } from '../runs/run-decider.ts';
 import { endedWithAnotherResult } from '../runs/run-decisions.ts';
 import { runSettlerAsRead, type RunStreamAddress, type Settlement } from '../runs/run-settler.ts';
 import { startedRunOf, takesSettlement } from '../runs/run-state.ts';
@@ -41,12 +40,15 @@ function decided(capability: Capability | undefined, run: CancelledRun): Effect.
 
 export function deferredCanceller(
   capabilities: readonly Capability[],
-  ledger: StreamReader & StreamWriter,
+  ledger: StreamReader & StreamWriter & RunPlacing,
 ): SettleCancelled {
   const settle = runSettlerAsRead(ledger);
   const settledAsRead: SettleCancelled = (run, { kind, reason, by }, lineage) =>
     Effect.gen(function* () {
-      const stream = `${streamPrefixOfPlaybook(run)}${runStreamNameOf(run.id.toLowerCase())}`;
+      const stream = yield* runStreamIn(ledger, { ...run, id: run.id.toLowerCase() });
+      if (stream === undefined) {
+        return;
+      }
       const read = (yield* ledger.load(stream, runDeciderAsRead)).state;
       const state = startedRunOf(read.state);
       if (state === undefined || !takesSettlement(state)) {

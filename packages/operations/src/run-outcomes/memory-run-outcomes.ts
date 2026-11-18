@@ -14,7 +14,7 @@ import {
 import { projectedMessagesOf, type AppendedFact } from '../projections/memory-projections.ts';
 
 interface KeptOutcome {
-  readonly playbookKey: string;
+  readonly definitionKey: string;
   readonly row: RunOutcome;
 }
 
@@ -83,13 +83,16 @@ function stagedOutcomes(
     if (run === undefined || !types.includes(message.type)) {
       return staged;
     }
-    const key = `${run.playbookKey}${run.runId}`;
+    const key = `${run.definitionKey}${run.runId}`;
     const row = rowAfter((staged.get(key) ?? kept.get(key))?.row, message);
-    return row === undefined ? staged : new Map([...staged, [key, { playbookKey: run.playbookKey, row }]]);
+    return row === undefined ? staged : new Map([...staged, [key, { definitionKey: run.definitionKey, row }]]);
   };
 }
 
-export function memoryRunOutcomes(mapping: RunOutcomeMapping | undefined): MemoryRunOutcomes {
+export function memoryRunOutcomes(
+  mapping: RunOutcomeMapping | undefined,
+  definitionsOf: (playbookKey: string) => readonly string[],
+): MemoryRunOutcomes {
   const kept = new Map<string, KeptOutcome>();
   const staged: MemoryRunOutcomes['staged'] = (stream, facts, firstPosition) => {
     if (mapping === undefined) {
@@ -112,16 +115,14 @@ export function memoryRunOutcomes(mapping: RunOutcomeMapping | undefined): Memor
     refold: (stream, facts) => {
       const run = runStreamOf(stream);
       if (run !== undefined) {
-        kept.delete(`${run.playbookKey}${run.runId}`);
+        kept.delete(`${run.definitionKey}${run.runId}`);
       }
       staged(stream, facts, 1)();
     },
     readRunOutcomes: (playbook, window, selection) =>
       Effect.sync(() => {
-        const playbookKey = streamPrefixOfPlaybook(playbook);
-        const rows = [...kept.values()].flatMap((outcome) =>
-          outcome.playbookKey === playbookKey ? [outcome.row] : [],
-        );
+        const keys = new Set(definitionsOf(streamPrefixOfPlaybook(playbook)));
+        const rows = [...kept.values()].flatMap((outcome) => (keys.has(outcome.definitionKey) ? [outcome.row] : []));
         return grouped(rows.filter((row) => isSelected(row, window, selection)));
       }),
   };

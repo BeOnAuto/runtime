@@ -3,11 +3,11 @@ import { memoryLedgerWith } from '@on.auto/operations/testing';
 import { Cause, Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { recordedWith } from '../operations/registry-access.ts';
+import { inPlaybookOf } from '../read-model-testing/in-the-playbook.ts';
 import type { DefinitionCommandData, DefinitionCreation } from '../registry/definition-commands.ts';
 import type { DefinitionContent } from '../registry/definition-events.ts';
-import { definitionsDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { recordedAdmin } from '../testing/callers.ts';
-import { definitionKeyOfId, earlierDefinitionIdOf } from './definition-ids.ts';
 import { definitionBoundsHeld, definitionNamesOf, mostReactingDefinitions, unbounded } from './definition-names.ts';
 
 function refused(tag: string, fields: object = {}): unknown {
@@ -16,7 +16,7 @@ function refused(tag: string, fields: object = {}): unknown {
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
-const stream = `playbook/acme/alpha/${definitionTypeStreamOf('echo')}`;
+const stream = 'definition/acme/id-of-greet/definitions/echo';
 
 const plain: DefinitionContent = { source: 'hello' };
 
@@ -37,7 +37,7 @@ type Ledger = ReturnType<typeof ledgerKeeping>;
 
 async function answerOf(ledger: Ledger, command: DefinitionCommandData): Promise<unknown> {
   const exit = await Effect.runPromiseExit(
-    ledger.service.execute(stream, definitionsDecider('echo', alpha), { ...command, ...at }),
+    inPlaybookOf(ledger.service, alpha, recordedWith('echo', { ...command, ...at })),
   );
   return Exit.isFailure(exit) ? Cause.squash(exit.cause) : null;
 }
@@ -46,19 +46,11 @@ function create(name: string, content = plain, definitionId = `id-of-${name}`): 
   return { type: 'create', name, content, created_by: recordedAdmin, definition_id: definitionId };
 }
 
-const decidedOnItsOwn = definitionsDecider('echo', alpha);
-
-const decidedWithoutTheOthers: typeof decidedOnItsOwn = {
-  ...decidedOnItsOwn,
-  evolve: (registry) => registry,
-  lastFactAlone: true,
-};
-
 function createdUnderNewNames(ledger: Ledger, creations: readonly DefinitionCreation[]): Promise<void> {
   return Effect.runPromise(
     Effect.forEach(
       creations,
-      (command) => ledger.service.execute(stream, decidedWithoutTheOthers, { ...command, ...at }),
+      (command) => inPlaybookOf(ledger.service, alpha, recordedWith('echo', { ...command, ...at })),
       { discard: true },
     ),
   );
@@ -101,8 +93,8 @@ describe('the names of definitions, as the definitions declare them', () => {
     );
 
     expect(held).toEqual({
-      greet: [definitionKeyOfId('acme', 'id-of-greet'), 'paused', false],
-      wave: [definitionKeyOfId('acme', 'id-of-wave'), 'paused', true],
+      greet: ['definition/acme/id-of-greet/', 'paused', false],
+      wave: ['definition/acme/id-of-wave/', 'paused', true],
     });
   });
 });
@@ -176,41 +168,66 @@ describe('the facts the names of definitions read', () => {
   const context = { ...at, definitionType: 'echo', definitionName: 'greet', definitionVersion: 1 };
   const created = {
     type: 'definition_created',
-    data: { content: plain, created_by: recordedAdmin },
+    data: { content: plain, created_by: recordedAdmin, playbook: 'alpha' },
     context,
     id: 'x',
     position: 1,
   };
 
-  it('name the key of an earlier definition by the one function over its address, the key of a later one by its id', () => {
-    expect(names.definitionKeyOf({ ...created, stream })).toBe(
-      definitionKeyOfId('acme', earlierDefinitionIdOf({ ...alpha, type: 'echo', name: 'greet' })),
+  it('name the key of the definition whose own stream holds the fact, and the playbook its creation names', () => {
+    expect([names.definitionKeyOf({ ...created, stream }), names.nameAfter(undefined, { ...created, stream })]).toEqual(
+      [
+        'definition/acme/id-of-greet/',
+        {
+          playbookKey: 'playbook/acme/alpha/',
+          definitionType: 'echo',
+          name: 'greet',
+          status: 'active',
+          hasTriggers: false,
+        },
+      ],
     );
   });
+});
 
-  it('hold names on the stream of each declared type of a playbook, and on no other', () => {
+describe('the streams the names of definitions read', () => {
+  const names = definitionNamesOf(['echo']);
+  const context = { ...at, definitionType: 'echo', definitionName: 'greet', definitionVersion: 1 };
+  const created = {
+    type: 'definition_created',
+    data: { content: plain, created_by: recordedAdmin, playbook: 'alpha' },
+    context,
+    id: 'x',
+    position: 1,
+  };
+
+  it("hold names on the stream of each declared type of a definition, and on no other, a playbook's among them", () => {
     expect(
-      [stream, 'playbook/acme/alpha/definitions/page', 'org/acme/definitions/echo', 'playbook/acme/alpha/runs/r1'].map(
-        (each) => names.holdsNames(each),
-      ),
-    ).toEqual([true, false, false, false]);
+      [
+        stream,
+        'definition/acme/id-of-greet/definitions/page',
+        'playbook/acme/alpha/definitions/echo',
+        'org/acme/definitions/echo',
+        'definition/acme/id-of-greet/runs/r1',
+      ].map((each) => names.holdsNames(each)),
+    ).toEqual([true, false, false, false, false]);
   });
 
-  it('name no definition for a stream that is not a declared type of a playbook, or a fact without a name', () => {
+  it('name no definition for a stream that is not a declared type of a definition', () => {
     expect([
-      names.definitionKeyOf({ ...created, stream: 'playbook/acme/alpha/definitions/page' }),
+      names.definitionKeyOf({ ...created, stream: 'definition/acme/id-of-greet/definitions/page' }),
+      names.definitionKeyOf({ ...created, stream: 'playbook/acme/alpha/definitions/echo' }),
       names.definitionKeyOf({ ...created, stream: 'org/acme/definitions/echo' }),
-      names.definitionKeyOf({ ...created, stream, context: at }),
-      names.definitionKeyOf({ ...created, stream, context: { ...context, definitionId: 'given' } }),
-    ]).toEqual([undefined, undefined, undefined, 'definition/acme/given/']);
+    ]).toEqual([undefined, undefined, undefined]);
   });
 
-  it('change no name for a creation of no declared stream, a change of no held name, or a fact it cannot read', () => {
+  it('change no name for a creation of no declared stream or that names no playbook, a change of no held name, or a fact it cannot read', () => {
     expect([
-      names.nameAfter(undefined, { ...created, stream: 'playbook/acme/alpha/definitions/page' }),
+      names.nameAfter(undefined, { ...created, stream: 'playbook/acme/alpha/definitions/echo' }),
+      names.nameAfter(undefined, { ...created, stream, data: { content: plain, created_by: recordedAdmin } }),
       names.nameAfter(undefined, { ...created, stream, type: 'definition_retired', data: {} }),
       names.nameAfter(undefined, { ...created, stream, data: {} }),
-    ]).toEqual([undefined, undefined, undefined]);
+    ]).toEqual([undefined, undefined, undefined, undefined]);
   });
 });
 

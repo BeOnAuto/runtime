@@ -1,6 +1,14 @@
+import { definitionNamesWith } from '@on.auto/definitions/testing';
 import { aSQLiteFileInLayout, ledgerLayer } from '@on.auto/ledger/sqlite';
 import { ledgerLayout, ledgerLayoutFloor } from '@on.auto/ledger/testing';
-import { ContextSchema, Ledger, type Context, type Decided, type Decider } from '@on.auto/operations';
+import {
+  ContextSchema,
+  Ledger,
+  streamPrefixOfDefinition,
+  type Context,
+  type Decided,
+  type Decider,
+} from '@on.auto/operations';
 import { Effect, ManagedRuntime, Result, Schema } from 'effect';
 
 export const anEarlierLayout = ledgerLayoutFloor - 1;
@@ -54,7 +62,7 @@ const ofThePredictionFunction = {
 };
 
 async function aLedgerHoldingAt(file: string, held: Held): Promise<void> {
-  const runtime = ManagedRuntime.make(ledgerLayer({ fileName: file }));
+  const runtime = ManagedRuntime.make(ledgerLayer({ fileName: file, definitionNames: definitionNamesWith([]) }));
   await runtime.runPromise(
     Effect.gen(function* () {
       const ledger = yield* Ledger;
@@ -91,15 +99,18 @@ export interface SavedEarlier {
   readonly warnings: readonly string[];
 }
 
+const aReasoningFunctionSavedEarlier = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
 export function aLedgerHoldingAReasoningFunctionSavedEarlierAt(file: string, saved: SavedEarlier): Promise<void> {
   const { name, source, outputSchema, warnings } = saved;
   return aLedgerHoldingAt(file, {
-    stream: 'playbook/acme/alpha/definitions/reasoning',
+    stream: `${streamPrefixOfDefinition({ org: 'acme', definition: aReasoningFunctionSavedEarlier })}definitions/reasoning`,
     fact: {
       type: 'definition_created',
       data: {
         content: { source, output_schema: outputSchema, warnings },
         created_by: { id: 'key_7f3a', name: 'key_7f3a' },
+        playbook: 'alpha',
       },
     },
     context: { at, by: 'key_7f3a', definitionType: 'reasoning', definitionName: name, definitionVersion: 1 },
