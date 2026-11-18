@@ -6,6 +6,7 @@ export { commentRows } from './projections/comment-rows.ts';
 export { requestRows } from './projections/request-rows.ts';
 export { seenRows } from './projections/seen-rows.ts';
 export { goalOverdueRows, goalOverduesName, goalVerdictRows, goalVerdictsName } from './projections/goal-rows.ts';
+export { dismissalRows, dismissalsName } from './projections/dismissal-rows.ts';
 export { activityProjections, activityOperationsOf } from './composition/activity-composition.ts';
 export { commentOperations, orgCommentOperations } from './composition/comment-composition.ts';
 export { commentChanges } from './comments/comment-changes.ts';

@@ -288,8 +288,8 @@ describe('served tools with goals', () => {
   });
 
   describe('the tools of /mcp on a server that keeps goals', () => {
-    it('stay forty-two, each under 800 characters, in three to eight sentences', () => {
-      expect(tools).toHaveLength(42);
+    it('stay forty-three, each under 800 characters, in three to eight sentences', () => {
+      expect(tools).toHaveLength(43);
       expect(tools.filter((tool) => isOutsideItsBounds(tool)).map(({ name }) => name)).toEqual([]);
     });
 

@@ -1,7 +1,7 @@
 import { makeAppRuntime } from '@on.auto/api';
 import { goalsKeptNowhere, type GoalsHostParts } from '@on.auto/goals';
 import { memoryLedger, memoryPlaybookRegistry } from '@on.auto/operations/testing';
-import type { Consumer, DueWork, HostDatabase } from '@on.auto/workflow-host';
+import type { Consumer, DueWork, FollowerConsumers, HostDatabase } from '@on.auto/workflow-host';
 import { Effect, Function, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -26,7 +26,10 @@ const engine: GoalsHostParts = {
   playbookOperations: [],
 };
 
-const own = { consumers: [consumerNamed('own')], dueWork: [dueWorkNamed('requests')] };
+const own: { readonly consumers: FollowerConsumers; readonly dueWork: readonly DueWork[] } = {
+  consumers: [consumerNamed('own')],
+  dueWork: [dueWorkNamed('requests')],
+};
 
 describe('the lists a server gives its host, with the goals engine', () => {
   it('hold the host’s own consumers and due work, then the engine’s', () => {
@@ -91,8 +94,8 @@ describe('the lists a server serves with the goals engine', () => {
     };
 
     expect(await Promise.all([names(true), names(true, () => 0), names(false)])).toEqual([
-      [1, ['requests', 'the clock of the goals', 'the stopped things of the goals caught up'], 0],
-      [1, ['requests', 'the clock of the goals', 'the stopped things of the goals caught up'], 0],
+      [2, ['requests', 'the clock of the goals', 'the stopped things of the goals caught up'], 0],
+      [2, ['requests', 'the clock of the goals', 'the stopped things of the goals caught up'], 0],
       [0, ['requests'], 0],
     ]);
   });

@@ -9,6 +9,7 @@ import type {
 } from '../goal-rules/goal-rule.ts';
 import type { AssessmentFact, AssessmentOpened, EndReason, GoalObserved, JudgedBy } from './assessment-facts.ts';
 import type { NoticeChange } from './assessment-identity.ts';
+import { dismissedAfter, type Dismissed } from './dismissing.ts';
 import { refusedAfter, startedAfter } from './notice-owing.ts';
 import { stoppedAfterObserving, stoppedOf, type Stopped } from './stopping.ts';
 import { countsIn, opensInRun } from './window-counting.ts';
@@ -70,6 +71,7 @@ export interface AssessmentState {
   readonly overdueSince?: Instant;
   readonly ended?: EndReason;
   readonly stopped?: Stopped;
+  readonly dismissed?: Dismissed;
   readonly sources: readonly string[];
   readonly owed: readonly OwedNotice[];
   readonly started: readonly { readonly change: NoticeChange; readonly run: string }[];
@@ -254,7 +256,10 @@ function overdueAfter(state: AssessmentState, data: FactOf<'goal_overdue'>): Ass
   return { ...state, overdueSince: instantOf(data.since), owed: owedAfter(state, 'overdue', data.told, data.since) };
 }
 
-type JudgingFact = Exclude<AssessmentFact, { readonly type: 'goal_notice_started' | 'goal_notice_refused' }>;
+type JudgingFact = Exclude<
+  AssessmentFact,
+  { readonly type: 'goal_notice_started' | 'goal_notice_refused' | 'goal_dismissed' | 'goal_restored' }
+>;
 
 function factAfter(state: AssessmentState, fact: JudgingFact): AssessmentState {
   if (fact.type === 'goal_assessment_opened') {
@@ -278,6 +283,9 @@ function factAfter(state: AssessmentState, fact: JudgingFact): AssessmentState {
 export function assessmentAfter(state: AssessmentState, fact: AssessmentFact): AssessmentState {
   if (fact.type === 'goal_notice_started') {
     return startedAfter(state, fact.data);
+  }
+  if (fact.type === 'goal_dismissed' || fact.type === 'goal_restored') {
+    return dismissedAfter(state, fact);
   }
   return fact.type === 'goal_notice_refused' ? refusedAfter(state, fact.data) : factAfter(state, fact);
 }

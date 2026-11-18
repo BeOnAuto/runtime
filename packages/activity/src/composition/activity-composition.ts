@@ -1,7 +1,7 @@
 import type { KeyedProjection } from '@on.auto/operations';
 
 import { activityOperationsKeepingGoals } from '../goal-activity/goal-operations.ts';
-import type { GoalsRead } from '../goal-activity/goal-words.ts';
+import type { GoalsRead } from '../goal-activity/goal-set-aside.ts';
 import { listActivity } from '../operations/list-activity.ts';
 import { markActivitySeen } from '../operations/mark-activity-seen.ts';
 import { activityRows } from '../projections/activity-rows.ts';

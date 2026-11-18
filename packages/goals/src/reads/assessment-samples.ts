@@ -1,17 +1,11 @@
 import type { Goal } from '@on.auto/definitions/goals';
-import {
-  ContextSchema,
-  playbookLedgerOf,
-  type Decider,
-  type PlaybookReader,
-  PlaybookContext,
-} from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
-import { Effect, Result, Schema } from 'effect';
+import { playbookLedgerOf, type PlaybookReader, PlaybookContext } from '@on.auto/operations';
+import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
+import { Effect, type Schema } from 'effect';
 
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import { goalsLedger } from '../engine/goals-engine.ts';
-import { runStartedByAnEventIn } from './run-samples.ts';
+import { runStartedByAnEventIn, verbatim } from './run-samples.ts';
 
 const sales = { org: 'acme', playbook: 'sales' };
 
@@ -95,18 +89,6 @@ export const oneOffGoal: Goal = {
   notify: { passed: 'now', failed: 'now', through: 'tell-owner' },
 };
 
-const FactSchema = Schema.Struct({ type: Schema.String, data: Schema.Json, context: ContextSchema });
-
-type Fact = typeof FactSchema.Type;
-
-const verbatim: Decider<null, Fact, Fact> = {
-  initialState: null,
-  evolve: () => null,
-  decide: ({ type, data }) => Result.succeed([{ type, data }]),
-  context: ({ context }) => context,
-  eventSchema: FactSchema,
-};
-
 export interface Span {
   readonly opens: number;
   readonly closes: number;
@@ -150,6 +132,8 @@ export interface AssessmentBook {
   readonly overdue: (id: string, since: number) => Promise<void>;
   readonly ended: (id: string, reason: 'no_result' | 'goal_retired' | 'playbook_retired', at: number) => Promise<void>;
   readonly stopped: (id: string, run: string, at: number, reason: string) => Promise<void>;
+  readonly dismissed: (id: string, by: string, at: number, requests?: readonly string[]) => Promise<void>;
+  readonly restored: (id: string, by: string, at: number) => Promise<void>;
   readonly noticeStarted: (id: string, change: 'passed' | 'failed' | 'overdue', at: number) => Promise<void>;
   readonly noticeEnded: (
     change: 'passed' | 'failed' | 'overdue',
@@ -161,6 +145,7 @@ export interface AssessmentBook {
   readonly goalsSaved: (goals: readonly Goal[]) => Promise<void>;
   readonly runStartedByAnEvent: (run: string, cause: string, at: number) => Promise<void>;
   readonly inThePlaybook: <A>(work: Effect.Effect<A, never, PlaybookReader | PlaybookContext>) => Promise<A>;
+  readonly ledger: MemoryLedger['layer'];
 }
 
 function windowOfData(window: Span | undefined) {
@@ -224,13 +209,20 @@ function appendingTo(service: ReturnType<typeof memoryLedger>['service']): Appen
 const refusedOutput = '/contributes/0: The output at /customers is no finite number';
 
 export function assessmentBookOf(): AssessmentBook {
-  const { service } = memoryLedger(undefined, goalsLedger.projections);
+  const { service, layer } = memoryLedger(undefined, goalsLedger.projections);
   const append = appendingTo(service);
   let runs = 0;
+  const things = new Map<string, { readonly goal: string; readonly per?: string }>();
   const toIt = (id: string, type: string, data: Schema.Json, at: number) => append(`assessments/${id}`, type, data, at);
+  const dismissal = (id: string, by: string, at: number) => ({
+    ...things.get(id),
+    at: instantText(at),
+    by: { id: by, name: by },
+  });
   return {
     opened: async (goal, at, thing = {}) => {
       const id = openingIdOf(goal, thing);
+      things.set(id, { goal: goal.id, ...(thing.per === undefined ? {} : { per: thing.per }) });
       await toIt(id, 'goal_assessment_opened', openedDataOf(goal, thing), at);
       return id;
     },
@@ -243,6 +235,9 @@ export function assessmentBookOf(): AssessmentBook {
     overdue: (id, since) => toIt(id, 'goal_overdue', { since: instantText(since), told: 'now' }, since),
     ended: (id, reason, at) => toIt(id, 'goal_assessment_ended', { reason }, at),
     stopped: (id, run, at, reason) => toIt(id, 'goal_stopped', { run, at: instantText(at), reason }, at),
+    dismissed: (id, by, at, requests = []) =>
+      toIt(id, 'goal_dismissed', { ...dismissal(id, by, at), requests: [...requests] }, at),
+    restored: (id, by, at) => toIt(id, 'goal_restored', dismissal(id, by, at), at),
     noticeStarted: (id, change, at) => toIt(id, 'goal_notice_started', { change, run: `notice-${change}` }, at),
     noticeEnded: (change, type, data, at) => append(`runs/notice-${change}`, type, data, at),
     refused: (goal, workflow, at, detail = refusedOutput) =>
@@ -259,6 +254,7 @@ export function assessmentBookOf(): AssessmentBook {
       Effect.runPromise(
         Effect.provideContext(Effect.provideService(work, PlaybookContext, sales), playbookLedgerOf(service, sales)),
       ),
+    ledger: layer,
   };
 }
 

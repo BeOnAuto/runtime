@@ -8,5 +8,7 @@
   "src/goal-facts/0.57.0/goal_observed.json": "96d4b3822898953b1f142940cab79d127a1c02eb277b5ac329eee56eef7fa8d5",
   "src/goal-facts/0.57.0/goal_overdue.json": "4cf0da07d2fd1bdf8bc5736e43551cc301149e9d1459045e9648ae436fc11988",
   "src/goal-facts/0.57.0/goal_summary_started.json": "e1583f1793bd92a7a81e6685d4b99f37601a2b50f6c17f6a6926951b4d5d3578",
+  "src/goal-facts/0.59.0/goal_dismissed.json": "693bff4e8b8b4b45f8b9dbef7dfb0101de1ef01827626a488025895c8c3d5d73",
+  "src/goal-facts/0.59.0/goal_restored.json": "bc3f22f6f6aabdec10cd09895582746fa8f72fc11be426d01f3e56a6bb20de48",
   "src/goal-facts/0.63.0/goal_stopped.json": "7751ef67c23d020fe51ed59507d433fb2cb7d45f15e2bbf484254f1f7dce52da"
 }

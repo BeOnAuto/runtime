@@ -148,6 +148,7 @@ describe('the assessments of a goal with nothing judged', () => {
       current: null,
       open_count: 0,
       stopped_count: 0,
+      dismissed_count: 0,
       in_flight: [],
       by_milestone: { chosen: 0, prepared: 0, live: 0, measured: 0 },
       waiting: { chosen: 0, prepared: 0, live: 0, measured: 0 },

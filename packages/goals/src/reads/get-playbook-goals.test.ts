@@ -40,7 +40,7 @@ function readOfAnEmptyPlaybook(
 }
 
 describe('the goals read as an operation', () => {
-  it('is served over HTTP alone at GET /goals of a playbook beside agree_playbook_goals, get_goal_day and list_goal_results, and only where goals are kept', () => {
+  it('is served over HTTP alone at GET /goals of a playbook beside agree_playbook_goals, get_goal_day, list_goal_results and dismiss_goal_thing, and only where goals are kept', () => {
     const [kept, ...beside] = goalsOperationsServed(true);
 
     expect(goalsOperationsServed(false)).toEqual([]);
@@ -48,6 +48,7 @@ describe('the goals read as an operation', () => {
       'agree_playbook_goals',
       'get_goal_day',
       'list_goal_results',
+      'dismiss_goal_thing',
     ]);
     expect(kept?.registration).toMatchObject({
       name: 'get_playbook_goals',
@@ -66,11 +67,12 @@ describe('the goals read as an operation', () => {
 });
 
 describe('the query of the goals read', () => {
-  it('takes a time zone, a number of days up to thirty-one and the last day', async () => {
+  it('takes a time zone, a number of days up to thirty-one, the last day and whether to include dismissed things', async () => {
     const asked = await readOfAnEmptyPlaybook(getPlaybookGoals.registration, {
       time_zone: 'America/Los_Angeles',
       days: '31',
       until: '2026-11-16',
+      dismissed: 'include',
     });
 
     expect(asked).toMatchObject({ status: 'succeeded', output: { goals: [] } });
@@ -82,6 +84,7 @@ describe('the query of the goals read', () => {
     [{ time_zone: 'UTC', days: '0' }, '/days'],
     [{ time_zone: 'UTC', until: '2026-02-30' }, '/until'],
     [{ zone: 'UTC' }, '/zone'],
+    [{ dismissed: 'all' }, '/dismissed'],
   ])('refuses %o at %s', async (input: Readonly<Record<string, string>>, pointer: string) => {
     expect(await readOfAnEmptyPlaybook(getPlaybookGoals.registration, input)).toMatchObject({
       status: 'rejected',
@@ -116,15 +119,11 @@ describe('whether the goals read says the engine judges the goals', () => {
 describe('the goal change', () => {
   const fact = { id: 'fact-1', type: 'playbook_goals_saved', context: { at: '2026-10-05T09:00:00.000Z', by: 'x' } };
 
-  it('is named, with no fields, for goals saved or agreed, an assessment changed or evidence refused, where goals are kept', () => {
+  it('is named, with no fields, for goals saved or agreed or evidence refused, where goals are kept', () => {
     const catalog = changeCatalogOf(goalChangeNamings(true));
 
     expect(catalog.changesOf({ ...fact, stream: 'goals' })).toEqual([{ kind: 'goal' }]);
     expect(catalog.changesOf({ ...fact, type: 'playbook_goals_agreed', stream: 'goals' })).toEqual([{ kind: 'goal' }]);
-    expect(catalog.changesOf({ ...fact, type: 'goal_observed', stream: 'assessments' })).toEqual([{ kind: 'goal' }]);
-    expect(catalog.changesOf({ ...fact, type: 'goal_notice_started', stream: 'assessments' })).toEqual([
-      { kind: 'goal' },
-    ]);
     expect(catalog.changesOf({ ...fact, type: 'goal_observation_refused', stream: 'goal-refusals' })).toEqual([
       { kind: 'goal' },
     ]);

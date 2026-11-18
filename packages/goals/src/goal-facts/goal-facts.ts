@@ -11,6 +11,12 @@ export const goalSummariesKind = 'goal-summaries';
 
 const noticeRefused = factOf('goal_notice_refused', goalFactData.goal_notice_refused, ActedContextSchema);
 
+const dismissed = factOf('goal_dismissed', goalFactData.goal_dismissed, ActedContextSchema);
+
+const restored = factOf('goal_restored', goalFactData.goal_restored, ActedContextSchema);
+
+export const DismissalEventSchema = Schema.Union([dismissed, restored]);
+
 export const AssessmentEventSchema = Schema.Union([
   factOf('goal_assessment_opened', goalFactData.goal_assessment_opened, ActedContextSchema),
   factOf('goal_observed', goalFactData.goal_observed, ActedContextSchema),
@@ -20,6 +26,8 @@ export const AssessmentEventSchema = Schema.Union([
   noticeRefused,
   factOf('goal_assessment_ended', goalFactData.goal_assessment_ended, ActedContextSchema),
   factOf('goal_stopped', goalFactData.goal_stopped, ActedContextSchema),
+  dismissed,
+  restored,
 ]);
 
 export type RecordedAssessmentEvent = typeof AssessmentEventSchema.Type;

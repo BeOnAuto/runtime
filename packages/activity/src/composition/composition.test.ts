@@ -23,7 +23,7 @@ describe('the operations of comments a catalog serves', () => {
   });
 });
 
-const goals = { read: () => Effect.succeed({ goals: { gaps: [] } }) };
+const goals = { read: () => Effect.succeed({ goals: { gaps: [] } }), setAside: () => Effect.succeed(new Map()) };
 
 describe('the operations of the activity', () => {
   it('are those of today where goals are not kept', () => {

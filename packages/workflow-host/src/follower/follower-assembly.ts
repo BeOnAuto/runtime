@@ -9,10 +9,12 @@ import { passReportsOf } from './pass-reports.ts';
 import { playbookDiscoveryOn } from './playbook-discovery.ts';
 import { passOf, type PassParts } from './playbook-pass.ts';
 
+type FollowerConsumer = PassParts['registered'][number] | PassParts['calls'][number];
+
 export interface FollowerAssembly extends ReactionUse {
   readonly records: PassParts['records'];
   readonly appended: FollowerWork['appended'];
-  readonly consumers: PassParts['registered'];
+  readonly consumers: readonly FollowerConsumer[];
   readonly calls: PassParts['calls'];
 }
 
@@ -21,14 +23,16 @@ export function followerWorkOn(host: FollowerHost, assembly: FollowerAssembly): 
   const playbooks = followedPlaybooksKnowingHolds(database);
   const reacting = reactingOn(host, assembly);
   const passReports = passReportsOf(host);
+  const registered = assembly.consumers.filter((consumer) => 'batchOf' in consumer);
+  const calls = assembly.consumers.filter((consumer) => 'read' in consumer);
   const pass = passOf({
     ...passReports,
     database,
     records: assembly.records,
     playbooks,
     consumers: reacting.consumers,
-    registered: assembly.consumers,
-    calls: assembly.calls,
+    registered,
+    calls: [...assembly.calls, ...calls],
     definitionType: assembly.options.definitionType,
     applyDefinitionRecord: reacting.applyDefinitionRecord,
     factPayloadsOf: host.factPayloadsOf,

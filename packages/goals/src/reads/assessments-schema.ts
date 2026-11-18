@@ -4,6 +4,8 @@ export const mostInFlight = 12;
 
 export const mostClosedShown = 60;
 
+export const mostDismissedByBytes = 200;
+
 const Instant = (description: string) => Schema.String.annotate({ description });
 
 const Count = (description: string) => Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).annotate({ description });
@@ -72,6 +74,16 @@ const StoppedSchema = Schema.Struct({
   description: 'Set when a run ended without the result it needs; it stays open until judged at its due time',
 });
 
+const DismissedSchema = Schema.Struct({
+  at: Instant('When it was dismissed'),
+  by: Schema.String.annotate({
+    description: `The id of the caller who dismissed it, cut to ${String(mostDismissedByBytes)} bytes`,
+  }),
+}).annotate({
+  description:
+    'Set on an open assessment someone dismissed; only a read asked with dismissed=include lists one. It is judged as before',
+});
+
 const JudgedBySchema = Schema.Literals(['crossing', 'final', 'deadline']).annotate({
   description:
     'How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided; deadline, the deadline passed with no final measurement that counts, so it failed with no number',
@@ -105,6 +117,7 @@ export const AssessmentSchema = Schema.Struct({
     Instant('Since when it is overdue: its deadline passed with no final measurement that counts'),
   ),
   stopped: Schema.optionalKey(StoppedSchema),
+  dismissed: Schema.optionalKey(DismissedSchema),
   goals_version: Schema.Int.annotate({ description: 'The version of the goals it opened under' }),
   notices: Schema.Array(NoticeSchema).annotate({ description: 'The notices sent of it' }),
 }).annotate({ identifier: 'GoalAssessment', description: 'One judgement of a goal' });
@@ -172,6 +185,11 @@ export const AssessmentsSchema = Schema.Struct({
   }),
   open_count: Count('How many assessments are open'),
   stopped_count: Schema.optionalKey(Count('How many open ones are stopped')),
+  dismissed_count: Schema.optionalKey(
+    Count(
+      'How many open ones someone dismissed; the read leaves them out of every other open count and list unless asked with dismissed=include',
+    ),
+  ),
   in_flight: Schema.Array(AssessmentSchema).annotate({
     description: `The open assessments, at most ${String(mostInFlight)}: overdue first, then by due, then newest`,
   }),
@@ -201,6 +219,7 @@ export const noAssessments: Assessments = {
   current: null,
   open_count: 0,
   stopped_count: 0,
+  dismissed_count: 0,
   in_flight: [],
   by_milestone: {},
   waiting: {},

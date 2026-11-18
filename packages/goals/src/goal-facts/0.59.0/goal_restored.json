@@ -1,0 +1,16 @@
+{
+  "type": "goal_restored",
+  "data": {
+    "goal": "paying-customers",
+    "per": "experiment-7",
+    "at": "2026-11-09T11:05:00.000Z",
+    "by": {
+      "id": "person:user_2b7c4d9e1f",
+      "name": "Robin Park"
+    }
+  },
+  "context": {
+    "at": "2026-11-09T11:05:00.000Z",
+    "by": "person:user_2b7c4d9e1f"
+  }
+}

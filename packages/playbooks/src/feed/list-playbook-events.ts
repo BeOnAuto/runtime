@@ -20,15 +20,30 @@ import { Effect, Schema, SchemaTransformation } from 'effect';
 
 import { eventsFound } from '../plain-language/feed-words.ts';
 
-const description = [
-  'Lists what happened in the playbook a page at a time, newest first: definitions saved and retired, runs started and how they ended,',
-  'the steps of workflow runs, tool calls, and the events published to it, each with a summary in plain words,',
-  'its fact as data with a large field as its size, and its metadata; get_event reads one event whole.',
-  "Use it to follow the playbook's activity, to see what one run did, or to find the events a page or a workflow's schedule can take.",
-  '`type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on,',
-  'and `cursor` is the next_cursor of the page before.',
-  "The playbook's own creation, update and retirement are not among the events; list_playbooks shows them.",
-].join(' ');
+const alwaysListed = [
+  'definitions saved and retired',
+  'runs started and how they ended',
+  'the steps of workflow runs',
+  'tool calls',
+  'the events published to it',
+];
+
+function listedIn(presenters: readonly Presenter[]): string {
+  const listed = [...alwaysListed, ...presenters.flatMap(({ listedAs }) => (listedAs === undefined ? [] : [listedAs]))];
+  return listed.map((what, index) => (index === listed.length - 1 ? `and ${what}` : what)).join(', ');
+}
+
+function descriptionOf(presenters: readonly Presenter[]): string {
+  return [
+    `Lists what happened in the playbook a page at a time, newest first: ${listedIn(presenters)},`,
+    'each with a summary in plain words, its fact as data with a large field as its size, and its metadata;',
+    'get_event reads one event whole.',
+    "Use it to follow the playbook's activity, to see what one run did, or to find the events a page or a workflow's schedule can take.",
+    '`type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on,',
+    'and `cursor` is the next_cursor of the page before.',
+    "The playbook's own creation, update and retirement are not among the events; list_playbooks shows them.",
+  ].join(' ');
+}
 
 const RunIdField = Schema.String.annotate({
   description: 'The id of a run that no other run started: only what it and the runs it started recorded',
@@ -89,7 +104,7 @@ export function defineListPlaybookEvents(presenters: readonly Presenter[], holde
   return defineQuery('playbook', {
     name: 'list_playbook_events',
     title: 'List playbook events',
-    description,
+    description: descriptionOf(presenters),
     route: { method: 'GET', path: '/events' },
     inputSchema: feedInput(presentation.publicTypes),
     outputSchema: EventsPage,

@@ -154,12 +154,13 @@ describe('a server connected, as the tool access names it', () => {
 
 describe('the goals read served with the connections', () => {
   it('is get_playbook_goals, judged or not', () => {
-    const port = connectedOnly();
+    const connected = connectedOnly();
 
     expect(
-      [goalsOperationsServed(true, true, true, port), goalsOperationsServed(true, false, true, port)].map(
-        ([read]) => read?.registration.name,
-      ),
+      [
+        goalsOperationsServed(true, true, true, { connected }),
+        goalsOperationsServed(true, false, true, { connected }),
+      ].map(([read]) => read?.registration.name),
     ).toEqual(['get_playbook_goals', 'get_playbook_goals']);
   });
 });

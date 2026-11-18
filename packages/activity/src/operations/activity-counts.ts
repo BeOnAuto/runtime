@@ -10,7 +10,6 @@ import {
   type ItemForm,
 } from '../positions/activity-addresses.ts';
 import { brokenName } from '../projections/broken-rows.ts';
-import { anyMember, requestsName } from '../projections/request-rows.ts';
 import type { Mark } from '../projections/seen-rows.ts';
 import type { ActivityRow } from './activity-row.ts';
 import {
@@ -22,8 +21,7 @@ import {
   type ActivityTable,
 } from './activity-tables.ts';
 import { isSeenBy, type Viewer } from './activity-viewer.ts';
-
-const localDeveloper = 'local';
+import { needsYouIn, noneSetAside, type RequestsSetAside } from './needs-you.ts';
 
 export interface ActivityCounts {
   readonly needs_you: number;
@@ -43,20 +41,6 @@ const tablesOfForms: Readonly<Partial<Record<ItemForm, ActivityTable>>> = {
 
 function openIn(table: ActivityTable): ProjectedCondition {
   return { column: table.openColumn, equals: true };
-}
-
-function needsYouIn(viewer: Viewer, playbook: string) {
-  return Effect.gen(function* () {
-    const reader = yield* OrgReader;
-    if (viewer.caller === localDeveloper) {
-      return yield* reader.countPlaybookRows(playbook, requestsName, [open]);
-    }
-    const waitingOn = (party: string) =>
-      reader.countPlaybookRows(playbook, requestsName, [open, { column: 'waits_on', equals: party }]);
-    const anyone = yield* waitingOn(anyMember);
-    const asked = yield* waitingOn(viewer.caller);
-    return anyone + asked;
-  });
 }
 
 function isOwnedBy(item: ActivityItem, owner: string): boolean {
@@ -113,11 +97,11 @@ export function unseenIn(viewer: Viewer, table: ActivityTable, playbook: string)
   });
 }
 
-function countsIn(viewer: Viewer, playbook: string) {
+function countsIn(viewer: Viewer, playbook: string, setAside: RequestsSetAside) {
   return Effect.gen(function* () {
     const reader = yield* OrgReader;
     const counted: ActivityCounts = {
-      needs_you: yield* needsYouIn(viewer, playbook),
+      needs_you: yield* needsYouIn(viewer, playbook, setAside),
       broken: yield* reader.countPlaybookRows(playbook, brokenName, [open]),
       new: yield* unseenIn(viewer, newTable, playbook),
       comments: yield* unseenIn(viewer, commentTable, playbook),
@@ -131,7 +115,12 @@ export interface CountedActivity {
   readonly readable: readonly string[];
   readonly withTheOrg: boolean;
   readonly changes: readonly ActivityRow[];
+  readonly setAside: RequestsSetAside;
 }
+
+export type SetAsideOf = (playbooks: readonly string[]) => Effect.Effect<RequestsSetAside, never, OrgReader>;
+
+export const noneSetAsideOf: SetAsideOf = () => Effect.succeed(noneSetAside);
 
 function countsOfTheOrg(viewer: Viewer) {
   return Effect.map(unseenIn(viewer, commentTable, ofTheOrg), (comments) => {
@@ -140,9 +129,9 @@ function countsOfTheOrg(viewer: Viewer) {
   });
 }
 
-export function countsFor({ viewer, readable, withTheOrg, changes }: CountedActivity) {
+export function countsFor({ viewer, readable, withTheOrg, changes, setAside }: CountedActivity) {
   return Effect.gen(function* () {
-    const ofPlaybooks = yield* Effect.forEach(readable, (playbook) => countsIn(viewer, playbook), {
+    const ofPlaybooks = yield* Effect.forEach(readable, (playbook) => countsIn(viewer, playbook, setAside), {
       concurrency: readsAtOnce,
     });
     const each = withTheOrg ? [...ofPlaybooks, yield* countsOfTheOrg(viewer)] : ofPlaybooks;

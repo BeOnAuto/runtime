@@ -1,14 +1,10 @@
 import { goalsDocumentOf } from '@on.auto/definitions/goals';
 import { OrgContext } from '@on.auto/operations';
-import type { PlaybookGoals } from '@on.auto/playbooks';
 import { Effect, Result } from 'effect';
 
 import type { ActivityRow, GoalShown } from '../operations/activity-row.ts';
 import { readsAtOnce } from '../operations/activity-tables.ts';
-
-export interface GoalsRead {
-  readonly read: PlaybookGoals['read'];
-}
+import type { GoalsRead } from './goal-set-aside.ts';
 
 interface VerdictWords {
   readonly passed: string;

@@ -1,6 +1,7 @@
 import { getCaller, roleAssignmentOperations } from '@on.auto/access-control';
 import { activityOperationsOf, commentChanges, orgCommentOperations } from '@on.auto/activity';
 import { connectionChanges } from '@on.auto/connections';
+import { requestsSetAsideBy } from '@on.auto/goals';
 import { defineListOrgChanges, playbookChanges, playbookOperationsOf } from '@on.auto/playbooks';
 
 import { playbookGoalsServedBy } from '../goals/reads/served-playbook-goals.ts';
@@ -21,7 +22,7 @@ function orgOperationsOfPlaybooks(
   return [
     ...playbookOperationsOf(playbookPagesServedBy(runtime, served.pages), goals),
     orgChanges,
-    ...activityOperationsOf(goals),
+    ...activityOperationsOf(goals === undefined ? undefined : { read: goals.read, setAside: requestsSetAsideBy }),
     ...orgCommentOperations,
     ...roleAssignmentOperations,
     getCaller,

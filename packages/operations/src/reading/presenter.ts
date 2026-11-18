@@ -22,4 +22,5 @@ export interface Presenter {
   readonly publicNames: Readonly<Record<string, readonly string[]>>;
   readonly present: (recorded: RecordedFact, content: KeptContent) => readonly PresentedFact[];
   readonly changes: ChangesNamed;
+  readonly listedAs?: string;
 }

@@ -1,11 +1,16 @@
 import type { Capability } from '@on.auto/definitions';
 import { echo } from '@on.auto/definitions/testing';
+import { PlaybookContext, playbookLedgerOf } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { alpha, approvalDocument, interactionHarness, type RunLink } from '../testing/index.ts';
-import { listInteractions, listInteractionsAbout, type RequestThings } from './list-interactions.ts';
+import { listInteractions, listInteractionsAbout } from './list-interactions.ts';
 import { mostCauses } from './request-causes.ts';
+import { requestsAskingAbout } from './requests-about.ts';
+import type { RequestThings } from './requests-set-aside.ts';
+
+const noneSetAside = () => Effect.succeed(new Map());
 
 const echoingWorkflow: Capability = { ...echo, type: 'workflow' };
 
@@ -163,7 +168,9 @@ describe('the things a question is about', () => {
       return Effect.succeed([[], [{ goal: 'revisions', id: 'a1', per: 'letterhead' }], []]);
     };
 
-    const listed = decodeListed(await playbook.call(listInteractionsAbout(things), {})).output.interactions;
+    const listed = decodeListed(
+      await playbook.call(listInteractionsAbout({ about: things, setAside: noneSetAside }), {}),
+    ).output.interactions;
 
     expect(asked).toEqual([[[], [approveAndSend], [prepareRevision]]]);
     expect(listed.map(({ about }) => about)).toEqual([
@@ -182,9 +189,39 @@ describe('the things a question is about', () => {
       return Effect.succeed([[{ goal: 'revisions', id: 'a1' }]]);
     };
 
-    const [listed] = decodeListed(await playbook.call(listInteractionsAbout(things), {})).output.interactions;
+    const [listed] = decodeListed(
+      await playbook.call(listInteractionsAbout({ about: things, setAside: noneSetAside }), {}),
+    ).output.interactions;
 
     expect(asked).toEqual([[[]]]);
     expect(listed).not.toHaveProperty('about');
+  });
+});
+
+describe('the questions about one thing', () => {
+  it('are the open questions whose things include it, newest first, found with the same walk over their causes', async () => {
+    const playbook = await playbookWithTwoWorkflows();
+    await ranAs(playbook, 'prepare-revision', prepareRevision);
+    await ranAs(playbook, 'approve-and-send', approveAndSend);
+    const summer = `${askTheProducer.slice(0, -1)}4`;
+    await askedFrom(playbook, askTheProducer, calledFrom(prepareRevision));
+    await askedFrom(playbook, summer, calledFrom(approveAndSend), 'Summer');
+    await playbook.ask('ask-the-producer', { campaign: 'Autumn', owner: 'ada' }, `${askTheProducer.slice(0, -1)}5`);
+    const letterhead = { goal: 'revisions', id: 'a1', per: 'letterhead' };
+    const asked: (readonly (readonly string[])[])[] = [];
+    const things: RequestThings = (chains) => {
+      asked.push(chains);
+      return Effect.succeed([[], [letterhead, { goal: 'revisions', id: 'a2' }], [{ goal: 'other', id: 'a1' }]]);
+    };
+
+    const about = await Effect.runPromise(
+      requestsAskingAbout(things)({ goal: 'revisions', id: 'a1' }).pipe(
+        Effect.provideService(PlaybookContext, alpha),
+        Effect.provide(playbookLedgerOf(playbook.ledger.service, alpha)),
+      ),
+    );
+
+    expect(asked).toEqual([[[], [approveAndSend], [prepareRevision]]]);
+    expect(about).toEqual([summer]);
   });
 });

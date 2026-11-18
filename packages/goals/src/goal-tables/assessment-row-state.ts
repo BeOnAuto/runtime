@@ -75,6 +75,13 @@ const AssessmentStateSchema = Schema.Struct({
   stopped: Schema.optionalKey(
     Schema.Struct({ at: Instant, run: Schema.String, reason: Schema.optionalKey(Schema.String) }),
   ),
+  dismissed: Schema.optionalKey(
+    Schema.Struct({
+      at: Instant,
+      by: Schema.Struct({ id: Schema.String, name: Schema.String }),
+      requests: Schema.Array(Schema.String),
+    }),
+  ),
   sources: Schema.Array(Schema.String),
   owed: Schema.Array(Schema.Struct({ change: ChangeSchema, due: Instant, attempt: Schema.Int })),
   started: Schema.Array(Schema.Struct({ change: ChangeSchema, run: Schema.String })),

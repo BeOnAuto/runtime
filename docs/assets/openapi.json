@@ -1807,6 +1807,18 @@
               "maxLength": 512,
               "description": "The next_cursor of the page before"
             }
+          },
+          {
+            "name": "dismissed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "include"
+              ],
+              "description": "include to also list the needs_you rows of the requests that were waiting on a thing of a goal when it was dismissed, each with dismissed naming the thing. Left out, they are left out, as Studio leaves them out."
+            }
           }
         ],
         "responses": {
@@ -1846,7 +1858,7 @@
                       "properties": {
                         "needs_you": {
                           "type": "integer",
-                          "description": "The requests that wait on the caller"
+                          "description": "The requests that wait on the caller, leaving out those that were waiting on a thing of a goal when it was dismissed, whether or not the list asked for dismissed=include"
                         },
                         "broken": {
                           "type": "integer",
@@ -2215,6 +2227,35 @@
                             }
                           ],
                           "description": "For goal, the time its verdict names, which can come before at, when the verdict was recorded; for goal_overdue, the time it became overdue, as at; in ISO 8601 UTC; otherwise null"
+                        },
+                        "dismissed": {
+                          "type": "object",
+                          "properties": {
+                            "goal": {
+                              "type": "string",
+                              "description": "The id of the goal of the dismissed thing"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the dismissed thing"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it was dismissed, in ISO 8601 UTC"
+                            },
+                            "by": {
+                              "type": "string",
+                              "description": "The id of the caller who dismissed it"
+                            }
+                          },
+                          "required": [
+                            "goal",
+                            "id",
+                            "at",
+                            "by"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For a needs_you row of a list asked with dismissed=include, the dismissed thing this request was waiting on when it was dismissed, by the goal and id dismiss_goal_thing takes to restore the thing"
                         }
                       },
                       "required": [
@@ -2373,7 +2414,7 @@
                       "properties": {
                         "needs_you": {
                           "type": "integer",
-                          "description": "The requests that wait on the caller"
+                          "description": "The requests that wait on the caller, leaving out those that were waiting on a thing of a goal when it was dismissed, whether or not the list asked for dismissed=include"
                         },
                         "broken": {
                           "type": "integer",
@@ -24080,7 +24121,7 @@
       "get": {
         "operationId": "list_playbook_events",
         "summary": "List playbook events",
-        "description": "Lists what happened in the playbook a page at a time, newest first: definitions saved and retired, runs started and how they ended, the steps of workflow runs, tool calls, and the events published to it, each with a summary in plain words, its fact as data with a large field as its size, and its metadata; get_event reads one event whole. Use it to follow the playbook's activity, to see what one run did, or to find the events a page or a workflow's schedule can take. `type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on, and `cursor` is the next_cursor of the page before. The playbook's own creation, update and retirement are not among the events; list_playbooks shows them.",
+        "description": "Lists what happened in the playbook a page at a time, newest first: definitions saved and retired, runs started and how they ended, the steps of workflow runs, tool calls, the events published to it, and a goal's things dismissed or restored, each with a summary in plain words, its fact as data with a large field as its size, and its metadata; get_event reads one event whole. Use it to follow the playbook's activity, to see what one run did, or to find the events a page or a workflow's schedule can take. `type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on, and `cursor` is the next_cursor of the page before. The playbook's own creation, update and retirement are not among the events; list_playbooks shows them.",
         "tags": [
           "events"
         ],
@@ -24160,7 +24201,9 @@
                 "step_waiting",
                 "step_finished",
                 "step_failed",
-                "step_skipped"
+                "step_skipped",
+                "thing.dismissed",
+                "thing.restored"
               ],
               "description": "Only the events of this type, by its public name"
             }
@@ -24646,7 +24689,7 @@
       "get": {
         "operationId": "list_playbook_changes",
         "summary": "List playbook changes",
-        "description": "Answers which runs, interactions, definitions, playbooks, events, comments, and goals of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.",
+        "description": "Answers which runs, interactions, definitions, playbooks, events, goals, and comments of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.",
         "tags": [
           "changes"
         ],
@@ -24814,6 +24857,23 @@
                               "kind": {
                                 "type": "string",
                                 "enum": [
+                                  "goal"
+                                ],
+                                "description": "The kind of the resource that changed"
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The goals of the playbook, or how one of them is judged"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
                                   "comment"
                                 ],
                                 "description": "The kind of the resource that changed"
@@ -24829,23 +24889,6 @@
                             ],
                             "additionalProperties": false,
                             "description": "A comment made, resolved or reopened"
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "kind": {
-                                "type": "string",
-                                "enum": [
-                                  "goal"
-                                ],
-                                "description": "The kind of the resource that changed"
-                              }
-                            },
-                            "required": [
-                              "kind"
-                            ],
-                            "additionalProperties": false,
-                            "description": "The goals of the playbook, or how one of them is judged"
                           }
                         ]
                       },
@@ -25205,6 +25248,18 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "dismissed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "include"
+              ],
+              "description": "include to read the open assessments someone dismissed too, each with dismissed; left out of the read when this is left out"
             }
           }
         ],
@@ -25592,6 +25647,25 @@
                           ],
                           "additionalProperties": false,
                           "description": "Set when a run ended without the result it needs; it stays open until judged at its due time"
+                        },
+                        "dismissed": {
+                          "type": "object",
+                          "properties": {
+                            "at": {
+                              "type": "string",
+                              "description": "When it was dismissed"
+                            },
+                            "by": {
+                              "type": "string",
+                              "description": "The id of the caller who dismissed it, cut to 200 bytes"
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "by"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Set on an open assessment someone dismissed; only a read asked with dismissed=include lists one. It is judged as before"
                         },
                         "goals_version": {
                           "type": "integer",
@@ -26024,6 +26098,11 @@
                               "type": "integer",
                               "minimum": 0,
                               "description": "How many open ones are stopped"
+                            },
+                            "dismissed_count": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "description": "How many open ones someone dismissed; the read leaves them out of every other open count and list unless asked with dismissed=include"
                             },
                             "in_flight": {
                               "type": "array",
@@ -27482,6 +27561,226 @@
           {
             "openIdConnect": [
               "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/goals/{goal}/things/{id}/dismissed": {
+      "put": {
+        "operationId": "dismiss_goal_thing",
+        "summary": "Dismiss a thing of a goal",
+        "description": "Dismisses a thing of a goal for everyone in the organization: it leaves its goal's Outstanding in Studio, and list_interactions lists its requests only with dismissed: include. Call it only when the person clearly says a thing no longer needs them, by the goal and id from a request's about in list_interactions. If their words could be an answer, a correction or a cancel, as \"ignore it\" or \"forget it\" can, ask first if it no longer needs them; answers go to answer_interaction. Asking for several, even \"all of them\", is not a yes: name each and wait for a yes. It answers and cancels nothing: requests wait until they expire; the thing is still judged and counts. To restore the thing, send dismissed: false; a thing.dismissed event or list_interactions with dismissed: include has goal and id.",
+        "tags": [
+          "goals"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "goal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The id of the goal, from a request's about in list_interactions or a thing.dismissed event"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid",
+              "description": "The id of the thing, not its per, from a request's about in list_interactions or a thing.dismissed event"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/dismiss_goal_thing/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "dismissed": {
+                    "type": "boolean",
+                    "description": "true, or left out, to dismiss the thing; false to restore a dismissed thing"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/dismiss_goal_thing/output",
+                  "type": "object",
+                  "properties": {
+                    "goal": {
+                      "type": "string",
+                      "description": "The id of the goal"
+                    },
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the thing"
+                    },
+                    "per": {
+                      "type": "string",
+                      "description": "The id of the thing in its own words"
+                    },
+                    "dismissed": {
+                      "type": "boolean",
+                      "description": "Whether the thing is dismissed now"
+                    },
+                    "at": {
+                      "type": "string",
+                      "description": "When it was dismissed, in ISO 8601 UTC; present while dismissed"
+                    },
+                    "by": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the member who dismissed it"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Their name"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Who dismissed it; present while dismissed"
+                    },
+                    "open": {
+                      "type": "boolean",
+                      "description": "true while the thing waits for its result"
+                    },
+                    "questions_set_aside": {
+                      "type": "integer",
+                      "description": "How many questions waiting on the thing its dismissal set aside; 0 while not dismissed"
+                    },
+                    "notices": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/Notice"
+                      },
+                      "maxItems": 3,
+                      "description": "What to double-check in what was just accepted; the action is done either way. Left out when there is nothing to check"
+                    },
+                    "before_going_on": {
+                      "type": "string",
+                      "description": "What to do with the notices before going on, in words; present only with notices"
+                    }
+                  },
+                  "required": [
+                    "goal",
+                    "id",
+                    "dismissed",
+                    "open",
+                    "questions_set_aside"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A thing of a goal, dismissed or not",
+                  "$defs": {
+                    "Notice": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "description": "What was noticed, as a code that stays the same"
+                        },
+                        "detail": {
+                          "type": "string",
+                          "maxLength": 400,
+                          "description": "What was noticed and what to check, in words"
+                        },
+                        "at": {
+                          "type": "string",
+                          "description": "Where it is in the document, as a JSON pointer such as /tools"
+                        },
+                        "certainty": {
+                          "type": "string",
+                          "enum": [
+                            "exact",
+                            "likely",
+                            "reminder"
+                          ],
+                          "description": "exact when the fact was checked, likely when it usually means a mistake, reminder when it could not be checked"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "detail",
+                        "certainty"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Something to double-check in what was just accepted"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:write"
             ]
           }
         ]
@@ -30058,6 +30357,18 @@
               "maxLength": 512,
               "description": "The next_cursor of the page before, or the cursor of an item, to read on after it"
             }
+          },
+          {
+            "name": "dismissed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "include"
+              ],
+              "description": "include to also list the requests that were waiting on a thing when it was dismissed, each with dismissed naming the thing, and to show dismissed things in about. Left out, both are left out, so the list matches what Studio shows."
+            }
           }
         ],
         "responses": {
@@ -30258,7 +30569,36 @@
                             ],
                             "additionalProperties": false
                           },
-                          "description": "The open things of the playbook’s goals the request is about: each one a run of its causes marked or measured, or a run started by the same event from outside every run that began its causes; left out with causes, and where goals are not judged"
+                          "description": "The open things of the playbook’s goals the request is about: each one a run of its causes marked or measured, or a run started by the same event from outside every run that began its causes; a dismissed thing only in a list asked with dismissed=include; left out with causes, and where goals are not judged"
+                        },
+                        "dismissed": {
+                          "type": "object",
+                          "properties": {
+                            "goal": {
+                              "type": "string",
+                              "description": "The id of the goal of the dismissed thing"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the dismissed thing"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it was dismissed, in ISO 8601 UTC"
+                            },
+                            "by": {
+                              "type": "string",
+                              "description": "The id of the caller who dismissed it"
+                            }
+                          },
+                          "required": [
+                            "goal",
+                            "id",
+                            "at",
+                            "by"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The dismissed thing this request was waiting on when it was dismissed, by the goal and id dismiss_goal_thing takes to restore the thing; only a list asked with dismissed=include shows such a request"
                         },
                         "standing": {
                           "type": "string",

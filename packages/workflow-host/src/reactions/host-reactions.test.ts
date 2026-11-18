@@ -6,7 +6,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { type HostDatabase, rowsOf, WholeNumber } from '../database/host-database.ts';
 import { filterStops } from '../filtering/filter-matching.ts';
-import { deliverySweeps } from '../follower/consumers.ts';
+import { callConsumerOf, deliverySweeps, type Consumer } from '../follower/consumers.ts';
 import {
   closeHostParts,
   followerWakeUp,
@@ -299,6 +299,79 @@ describe('the follower of a host composed by a clock of its own', () => {
       [],
     ]);
     expect(raised.times).toBeGreaterThan(0);
+  });
+});
+
+function handedTo(note: (name: string) => void, name: string) {
+  return (after: string | undefined) =>
+    Effect.succeed({
+      deliveries:
+        after === undefined
+          ? [
+              {
+                key: name,
+                workflow: 'close',
+                deliver: Effect.sync(() => {
+                  note(name);
+                }),
+                skipped: () => Effect.void,
+              },
+            ]
+          : [],
+      through: undefined,
+      more: false,
+    });
+}
+
+describe('the consumers a shell gives the follower', () => {
+  it('hands one the events of its types, and one that reads records each record of its types, by the record’s type', async () => {
+    const store = await openWorkflowStore(await connectedOn({ store: 'sqlite', file: aSQLiteFile() }), []);
+    const { through: placeAtOpen } = await store.database.store.readAppended(undefined, 0);
+    const { options } = recordedOptionsOf();
+    const parts = openHostParts(store, { ...options, clock: systemClock }, Function.constVoid);
+    let names: readonly string[] = [];
+    const seen = (name: string) => {
+      names = [...names, name];
+    };
+    const byEvent: Consumer = {
+      name: 'by event',
+      types: ['com.acme.closed'],
+      skippedAfterSweeps: deliverySweeps,
+      batchOf: (_followed, after) => handedTo(seen, 'event')(after),
+    };
+    const byRecord = callConsumerOf({
+      name: 'by record',
+      types: ['event_published'],
+      skippedAfterSweeps: deliverySweeps,
+      readOf: (call) => call,
+      batchOf: (_call, after) => handedTo(seen, 'record')(after),
+    });
+    const follower = followerWakeUp(
+      {
+        database: store.database,
+        parts,
+        reactions: recordedReactions().options,
+        reports: options.reports,
+        placeAtOpen,
+        consumers: [byEvent, byRecord],
+      },
+      { raised: Function.constVoid, renewed: Function.constVoid },
+    );
+    onTestFinished(async () => {
+      await Effect.runPromise(follower.stop());
+      await closeHostParts(parts);
+    });
+
+    await published(store.database.store, { id: 'e1', type: 'com.acme.closed' });
+    const handed = await until(
+      async () => {
+        await Effect.runPromise(follower.wakeUp({ now: Date.now(), sweep: false }));
+        return names;
+      },
+      (found) => found.length >= 2,
+    );
+
+    expect(handed.toSorted()).toEqual(['event', 'record']);
   });
 });
 

@@ -33,7 +33,7 @@ describe('the tables of goals', () => {
       'definition_restored',
     ]);
     expect(goalsLedger.projections.map(({ name, version }) => `${name}_${String(version)}`)).toEqual([
-      'goal_assessments_4',
+      'goal_assessments_5',
       'goal_clocks_1',
       'goal_refusals_1',
       'goal_notice_days_1',
@@ -41,6 +41,7 @@ describe('the tables of goals', () => {
       'goal_observations_1',
       'activity_goals_3',
       'activity_goal_overdues_1',
+      'activity_dismissals_1',
     ]);
   });
 });

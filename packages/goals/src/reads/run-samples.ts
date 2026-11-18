@@ -6,7 +6,7 @@ const RunFactSchema = Schema.Struct({ type: Schema.String, data: Schema.Json, co
 
 type RunFact = typeof RunFactSchema.Type;
 
-const verbatim: Decider<null, RunFact, RunFact> = {
+export const verbatim: Decider<null, RunFact, RunFact> = {
   initialState: null,
   evolve: () => null,
   decide: ({ type, data }) => Result.succeed([{ type, data }]),

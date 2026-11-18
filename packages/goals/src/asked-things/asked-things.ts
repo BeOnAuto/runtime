@@ -13,7 +13,7 @@ import {
 } from '../chain-origins/outside-events.ts';
 import { playbookChainReads } from '../chain-origins/playbook-chain-reads.ts';
 import { heldAssessmentsOf, type HeldAssessment } from '../reads/assessment-read.ts';
-import { goalRowsOf } from '../results/goal-rows.ts';
+import { goalRowsOf, openRowsOf, type DismissedAsked } from '../results/goal-rows.ts';
 
 export const mostThingsOfARequest = 10;
 
@@ -40,9 +40,13 @@ function thingOf(goal: Goal, { id, pinned, state }: HeldAssessment): OpenThing {
   return { thing: { goal: goal.id, id, ...per }, acts: actsOf(state) };
 }
 
-function openThingsOf(reader: PlaybookReader['Service'], goal: Goal): Effect.Effect<readonly OpenThing[]> {
+function openThingsOf(
+  reader: PlaybookReader['Service'],
+  goal: Goal,
+  asked: DismissedAsked,
+): Effect.Effect<readonly OpenThing[]> {
   return Effect.map(
-    goalRowsOf(reader, goal).read([{ column: 'open', equals: true }], ['opened_at'], 'desc', mostOpenItemsSearched),
+    openRowsOf(goalRowsOf(reader, goal), asked).read([], ['opened_at'], 'desc', mostOpenItemsSearched),
     (rows) => rows.flatMap((row) => heldAssessmentsOf(row).map((held) => thingOf(goal, held))),
   );
 }
@@ -78,6 +82,7 @@ function aboutOf<E>(walks: Walks<E>, things: readonly OpenThing[], chain: Asking
 export function thingsAskedAboutOver<E>(
   reads: ChainReads<E>,
   chains: readonly (readonly string[])[],
+  dismissed: DismissedAsked = {},
 ): Effect.Effect<readonly (readonly AskedThing[])[], E, PlaybookReader | PlaybookContext> {
   return Effect.gen(function* () {
     if (chains.every((causes) => causes.length === 0)) {
@@ -86,7 +91,7 @@ export function thingsAskedAboutOver<E>(
     const reader = yield* PlaybookReader;
     const { goals } = yield* goalStandingIn;
     const open = goals.filter(({ retired }) => retired !== true);
-    const things = (yield* Effect.forEach(open, (goal) => openThingsOf(reader, goal))).flat();
+    const things = (yield* Effect.forEach(open, (goal) => openThingsOf(reader, goal, dismissed))).flat();
     const walks = walksOf(reads);
     return yield* Effect.forEach(chains, ([asked, ...before]) =>
       things.length === 0 || asked === undefined
@@ -98,6 +103,9 @@ export function thingsAskedAboutOver<E>(
 
 export function thingsAskedAbout(
   chains: readonly (readonly string[])[],
+  dismissed: DismissedAsked = {},
 ): Effect.Effect<readonly (readonly AskedThing[])[], never, PlaybookReader | PlaybookContext> {
-  return Effect.flatMap(PlaybookReader, (reader) => thingsAskedAboutOver(playbookChainReads(reader), chains));
+  return Effect.flatMap(PlaybookReader, (reader) =>
+    thingsAskedAboutOver(playbookChainReads(reader), chains, dismissed),
+  );
 }

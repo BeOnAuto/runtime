@@ -8,8 +8,13 @@ import {
 } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { cursorOf } from '../positions/activity-position.ts';
-import { countsFor, type ActivityCounts, type CountedActivity } from './activity-counts.ts';
+import {
+  countsFor,
+  noneSetAsideOf,
+  type ActivityCounts,
+  type CountedActivity,
+  type SetAsideOf,
+} from './activity-counts.ts';
 import { cursorField, kindsOf, mostRowsInAPage, positionAt, rowsInAPage } from './activity-input.ts';
 import { pageOf } from './activity-page.ts';
 import {
@@ -23,6 +28,7 @@ import {
 } from './activity-row.ts';
 import { activityTables, type ActivityTable } from './activity-tables.ts';
 import { isSeenBy, throughOf, viewerOf, type Viewer } from './activity-viewer.ts';
+import { noneSetAside, type RequestsSetAside } from './needs-you.ts';
 import { loadPlaybookRegister, mostPlaybookChanges, type PlaybookRegister } from './playbook-register.ts';
 
 export const ActivityCountsSchema = Schema.Struct({
@@ -66,6 +72,10 @@ export const ListActivityInputSchema = Schema.Struct({
 
 export type ListActivityInput = typeof ListActivityInputSchema.Type;
 
+interface DismissedAsked {
+  readonly dismissed?: 'include';
+}
+
 const ListActivityOutputSchema = Schema.Struct({
   rows: Schema.Array(ActivityRowSchema).annotate({ description: 'The rows of the page, newest first by at' }),
   has_more: Schema.Boolean.annotate({ description: 'Whether more rows follow this page' }),
@@ -85,8 +95,13 @@ function playbookAsked(register: PlaybookRegister, playbook: string | undefined)
 export interface ActivityServing<Row, Counts, R> {
   readonly kinds: readonly ActivityKind[];
   readonly tables: readonly ActivityTable[];
-  readonly rowsServed: (rows: readonly ActivityRow[], viewer: Viewer) => Effect.Effect<readonly Row[], never, R>;
+  readonly rowsServed: (
+    rows: readonly ActivityRow[],
+    viewer: Viewer,
+    shown: RequestsSetAside,
+  ) => Effect.Effect<readonly Row[], never, R>;
   readonly countsOf: (counted: CountedActivity) => Effect.Effect<Counts, never, OrgReader>;
+  readonly setAsideOf: SetAsideOf;
 }
 
 export function listedBy<Row, Counts, R>({
@@ -94,8 +109,9 @@ export function listedBy<Row, Counts, R>({
   tables,
   rowsServed,
   countsOf,
+  setAsideOf,
 }: ActivityServing<Row, Counts, R>) {
-  return Effect.fnUntraced(function* (input: ListActivityInput) {
+  return Effect.fnUntraced(function* (input: ListActivityInput & DismissedAsked) {
     const caller = yield* Caller;
     const register = yield* loadPlaybookRegister;
     const playbook = yield* playbookAsked(register, input.playbook);
@@ -105,6 +121,9 @@ export function listedBy<Row, Counts, R>({
     const readable = [...register.active].filter((each) => canAccessPlaybook(caller.playbooks, each)).toSorted();
     const viewer = yield* viewerOf(caller.id);
     const withTheOrg = caller.playbooks === '*';
+    const setAside = yield* setAsideOf(readable);
+    const included = input.dismissed === 'include';
+    const shown = included ? setAside : noneSetAside;
     const page = yield* pageOf(
       register,
       {
@@ -115,15 +134,15 @@ export function listedBy<Row, Counts, R>({
         limit: input.limit ?? rowsInAPage,
         cursor,
         since,
+        leftOut: included ? noneSetAside : setAside,
       },
       tables,
     );
-    const last = page.rows.at(-1);
     return {
-      rows: yield* rowsServed(page.rows, viewer),
+      rows: yield* rowsServed(page.rows, viewer, shown),
       has_more: page.hasMore,
-      next_cursor: page.hasMore && last !== undefined ? cursorOf(last.position) : null,
-      counts: yield* countsOf({ viewer, readable, withTheOrg, changes: register.changes }),
+      next_cursor: page.nextCursor,
+      counts: yield* countsOf({ viewer, readable, withTheOrg, changes: register.changes, setAside }),
       through: throughOf(viewer.seen),
     };
   });
@@ -135,6 +154,7 @@ const servedToday: ActivityServing<ServedActivityRow, ActivityCounts, never> = {
   rowsServed: (rows, viewer) =>
     Effect.succeed(rows.map((row) => servedRow(row, seenKinds.has(row.kind) ? isSeenBy(viewer, row) : null))),
   countsOf: countsFor,
+  setAsideOf: noneSetAsideOf,
 };
 
 export const listActivity = defineHttpOperation('org', 'query', {

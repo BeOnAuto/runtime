@@ -7,6 +7,7 @@ import { stoppedCatchUpOf } from '../catching-up/stopped-catch-up.ts';
 import type { CallerRule } from '../chain-origins/chain-origin.ts';
 import { ledgerChainReads } from '../chain-origins/ledger-chain-reads.ts';
 import { goalsClockOf } from '../clock/goals-clock.ts';
+import { restoredByAskingOf } from '../dismissals/restored-by-asking.ts';
 
 export interface GoalsPorts {
   readonly database: HostDatabase;
@@ -38,7 +39,7 @@ export function goalsHostParts(ports: GoalsPorts): GoalsHostParts {
     now: ports.now,
   };
   return {
-    consumers: [assessorOf(assessorPorts)],
+    consumers: [assessorOf(assessorPorts), restoredByAskingOf(assessorPorts)],
     dueWork: [goalsClockOf({ ledger: ports.ledger, registry: ports.registry }), stoppedCatchUpOf(assessorPorts)],
     playbookOperations: [],
   };

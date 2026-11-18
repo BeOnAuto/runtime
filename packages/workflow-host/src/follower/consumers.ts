@@ -60,6 +60,7 @@ export function boundTo<Followed>(consumer: RecordConsumer<Followed>, followed: 
 export type Reading = BoundConsumer | 'unreadable';
 
 export interface CallConsumer {
+  readonly name: string;
   readonly types: readonly string[];
   readonly read: (call: CallRecord) => Reading;
 }
@@ -71,6 +72,7 @@ interface CallReader<Read> extends RecordConsumer<Read> {
 
 export function callConsumerOf<Read>(reader: CallReader<Read>): CallConsumer {
   return {
+    name: reader.name,
     types: reader.types,
     read: (call) => {
       const read = reader.readOf(call);

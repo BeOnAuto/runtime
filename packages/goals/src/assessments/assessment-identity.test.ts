@@ -83,6 +83,8 @@ describe('the facts of an assessment', () => {
       'goal_assessment_ended',
       'goal_stopped',
       'goal_observation_refused',
+      'goal_dismissed',
+      'goal_restored',
     ]);
   });
 

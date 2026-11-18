@@ -35,12 +35,27 @@ const ActivityRowWithGoalsSchema = Schema.Struct({
   result_at: NullableText(
     'For goal, the time its verdict names, which can come before at, when the verdict was recorded; for goal_overdue, the time it became overdue, as at; in ISO 8601 UTC; otherwise null',
   ),
+  dismissed: Schema.optionalKey(
+    Schema.Struct({
+      goal: Schema.String.annotate({ description: 'The id of the goal of the dismissed thing' }),
+      id: Schema.String.annotate({ description: 'The id of the dismissed thing' }),
+      at: Schema.String.annotate({ description: 'When it was dismissed, in ISO 8601 UTC' }),
+      by: Schema.String.annotate({ description: 'The id of the caller who dismissed it' }),
+    }).annotate({
+      description:
+        'For a needs_you row of a list asked with dismissed=include, the dismissed thing this request was waiting on when it was dismissed, by the goal and id dismiss_goal_thing takes to restore the thing',
+    }),
+  ),
 }).annotate({ identifier: 'ActivityRow', description: 'An item of the activity of the org' });
 
 export type ServedActivityRowWithGoals = typeof ActivityRowWithGoalsSchema.Type;
 
 const ActivityCountsWithGoalsSchema = Schema.Struct({
   ...ActivityCountsSchema.fields,
+  needs_you: Schema.Int.annotate({
+    description:
+      'The requests that wait on the caller, leaving out those that were waiting on a thing of a goal when it was dismissed, whether or not the list asked for dismissed=include',
+  }),
   goals: Schema.Int.annotate({
     description: 'The verdicts of goals the caller has not seen and the overdues of goals still open',
   }),
@@ -53,6 +68,12 @@ export const ListActivityWithGoalsInputSchema = Schema.Struct({
   kind: Schema.optionalKey(
     Schema.String.annotate({
       description: `One kind, ${kindsInWords(kindsWithGoals)}, or several separated by commas: keep the rows of those kinds`,
+    }),
+  ),
+  dismissed: Schema.optionalKey(
+    Schema.Literal('include').annotate({
+      description:
+        'include to also list the needs_you rows of the requests that were waiting on a thing of a goal when it was dismissed, each with dismissed naming the thing. Left out, they are left out, as Studio leaves them out.',
     }),
   ),
 });

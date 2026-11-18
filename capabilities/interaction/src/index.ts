@@ -27,13 +27,10 @@ export { guideVariablesOf } from './capability/interaction-words.ts';
 export { interactionType } from './capability/interaction-type.ts';
 export { InteractionRunFactSchema } from './facts/run-facts.ts';
 export { answerInteraction } from './requests/answer-interaction.ts';
-export {
-  listInteractions,
-  listInteractionsAbout,
-  type RequestThing,
-  type RequestThings,
-} from './requests/list-interactions.ts';
+export { listInteractions, listInteractionsAbout } from './requests/list-interactions.ts';
+export type { RequestThing, RequestThings } from './requests/requests-set-aside.ts';
 export { openRequests, openRequestsName } from './requests/open-requests.ts';
+export { requestsAskingAbout } from './requests/requests-about.ts';
 export { readings, readingsName } from './readings/reading-rows.ts';
 export { tellings, tellingsName } from './tellings/telling-rows.ts';
 export type { InteractionPorts } from './run/request-reach.ts';

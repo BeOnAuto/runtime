@@ -166,6 +166,9 @@ export { GoalsReadSchema, type GoalRead, type GoalsRead } from './reads/goals-re
 export { goalsReadOf, type AssessmentsOfGoal } from './reads/goals-read.ts';
 export { getPlaybookGoals, goalsReadIn } from './reads/get-playbook-goals.ts';
 export { goalsOperationsServed } from './reads/goals-operations.ts';
+export type { AskedAbout } from './dismissals/dismiss-goal-thing.ts';
+export { requestsSetAside, requestsSetAsideBy } from './dismissals/requests-set-aside.ts';
+export { goalPresenters } from './dismissals/dismissal-presenter.ts';
 export {
   serverConnectedThrough,
   type GoalConnection,

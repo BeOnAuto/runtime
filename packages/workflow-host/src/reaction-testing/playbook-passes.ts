@@ -65,6 +65,7 @@ export function lastPageOf(page: (read: number) => Effect.Effect<readonly Record
 
 export function finishesRead(read: Effect.Effect<void> = Effect.void): CallConsumer {
   return {
+    name: 'endings',
     types: ['run_succeeded'],
     read: () => ({
       name: 'endings',

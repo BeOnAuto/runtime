@@ -95,6 +95,12 @@ function stoppedColumnsOf(state: AssessmentState): ProjectedRow {
     : { stopped_at: stopped.at, stopped_run: stopped.run };
 }
 
+function dismissedColumnsOf({ dismissed }: AssessmentState): ProjectedRow {
+  return dismissed === undefined
+    ? { dismissed: false, dismissed_at: null, dismissed_by: null }
+    : { dismissed: true, dismissed_at: dismissed.at, dismissed_by: dismissed.by.id };
+}
+
 function columnsOf(state: AssessmentState, pinned: PinnedRule): ProjectedRow {
   return {
     ...thingColumnsOf(state, pinned),
@@ -108,6 +114,7 @@ function columnsOf(state: AssessmentState, pinned: PinnedRule): ProjectedRow {
     no_result_at: noResultAtOf(state),
     notice_due_at: nullWhenAbsent(noticeDueOf(state)),
     ...stoppedColumnsOf(state),
+    ...dismissedColumnsOf(state),
     state: assessmentStateText(state),
   };
 }
@@ -189,7 +196,7 @@ const goalIndex = (name: string, columns: readonly string[]) => ({ name, columns
 
 export const assessmentRows: KeyedProjection = {
   name: assessmentsName,
-  version: 4,
+  version: 5,
   kinds: [assessmentsKind],
   types: [
     'goal_assessment_opened',
@@ -200,6 +207,8 @@ export const assessmentRows: KeyedProjection = {
     'goal_notice_refused',
     'goal_assessment_ended',
     'goal_stopped',
+    'goal_dismissed',
+    'goal_restored',
   ],
   columns: [
     { name: 'goal', kind: 'text' },
@@ -234,17 +243,21 @@ export const assessmentRows: KeyedProjection = {
     { name: 'notice_refused_at', kind: 'integer' },
     { name: 'stopped_at', kind: 'integer' },
     { name: 'stopped_run', kind: 'text' },
+    { name: 'dismissed', kind: 'boolean' },
+    { name: 'dismissed_at', kind: 'integer' },
+    { name: 'dismissed_by', kind: 'text' },
     { name: 'state', kind: 'text' },
   ],
   indexes: [
-    goalIndex('in_flight', ['open', 'overdue', 'window_due']),
-    goalIndex('newest', ['open', 'opened_at']),
-    goalIndex('waiting', ['open', 'next_milestone']),
+    goalIndex('in_flight', ['open', 'dismissed', 'overdue', 'window_due']),
+    goalIndex('newest', ['open', 'dismissed', 'opened_at']),
+    goalIndex('waiting', ['open', 'dismissed', 'next_milestone']),
     goalIndex('closed', ['open', 'closed_at']),
     goalIndex('closed_recorded', ['open', 'closed_recorded_at']),
     goalIndex('overdue_recorded', ['open', 'overdue', 'overdue_recorded_at']),
     goalIndex('outcomes', ['outcome', 'closed_at']),
-    goalIndex('stopped', ['open', 'stopped_at']),
+    goalIndex('stopped', ['open', 'dismissed', 'stopped_at']),
+    { name: 'dismissed', columns: ['dismissed', 'dismissed_at', 'row_key'] },
     goalIndex('noticed', ['noticed_at']),
     goalIndex('refused_notices', ['notice_refused_at']),
     { name: 'judging_due', columns: ['judging_due_at'], acrossPlaybooks: true, whereSet: 'judging_due_at' },

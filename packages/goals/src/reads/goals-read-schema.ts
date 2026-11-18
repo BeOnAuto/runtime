@@ -141,4 +141,10 @@ export const GoalsQuerySchema = Schema.Struct({
       description: 'The newest day to count, as YYYY-MM-DD; today in the time zone when left out',
     }),
   ),
+  dismissed: Schema.optionalKey(
+    Schema.Literal('include').annotate({
+      description:
+        'include to read the open assessments someone dismissed too, each with dismissed; left out of the read when this is left out',
+    }),
+  ),
 });

@@ -3,7 +3,7 @@ import { goalsText, leadGoalId, plainGoalId } from '@on.auto/playbooks/testing';
 import { Effect, type Schema } from 'effect';
 
 import { activityOperationsKeepingGoals } from '../goal-activity/goal-operations.ts';
-import type { GoalsRead } from '../goal-activity/goal-words.ts';
+import type { GoalsRead } from '../goal-activity/goal-set-aside.ts';
 import { listActivity } from '../operations/list-activity.ts';
 import { markActivitySeen } from '../operations/mark-activity-seen.ts';
 import { goalOverdueRows, goalVerdictRows } from '../projections/goal-rows.ts';
@@ -59,6 +59,7 @@ export const goalsOfFinance: GoalsRead = {
     playbook === 'finance'
       ? Effect.succeed({ goals: { source: goalsText, version: 1, gaps: [] } })
       : Effect.die(new Error('The playbook could not be reached')),
+  setAside: () => Effect.succeed(new Map()),
 };
 
 const nullFields = {

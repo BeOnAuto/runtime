@@ -62,6 +62,7 @@ export async function functionsServedBy(
       results,
       messages,
       connected: serverConnectedThrough({ named }),
+      askedAbout: interaction.askedAbout,
       ...orgPartsServedBy(
         runtime,
         { goals, messages, pages: projections.pages, ...listing, ...reasoning },

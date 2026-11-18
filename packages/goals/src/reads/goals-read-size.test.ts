@@ -7,7 +7,7 @@ import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { mostDays } from '../results/judged-days.ts';
-import { mostClosedShown, mostInFlight, type Assessments } from './assessments-schema.ts';
+import { mostClosedShown, mostDismissedByBytes, mostInFlight, type Assessments } from './assessments-schema.ts';
 import { GoalsReadSchema } from './goals-read-schema.ts';
 import { goalsReadOf } from './goals-read.ts';
 
@@ -67,9 +67,11 @@ function widestGoalsText(): string {
 
 const subject = { id: widestText, title: widestText, link: widestText };
 
+const widestDismissal = { at: '2026-11-13T10:00:00.000Z', by: '\u{1D11E}'.repeat(mostDismissedByBytes / 4) };
+
 const window = { opens: instant, closes: instant, due: instant };
 
-function assessmentOf({ success, milestones = [] }: Goal, index: number): AssessmentRead {
+function assessmentOf({ success, milestones = [] }: Goal, index: number, dismissed = false): AssessmentRead {
   return {
     id: `0199a3b2-7c4d-7e8f-9a0b-${String(index).padStart(12, '0')}`,
     per: subject,
@@ -92,6 +94,7 @@ function assessmentOf({ success, milestones = [] }: Goal, index: number): Assess
     verdict_by: 'deadline',
     overdue_since: instant,
     stopped: { at: instant, run: runId, reason: widestText },
+    ...(dismissed ? { dismissed: widestDismissal } : {}),
     goals_version: 1,
     notices: (['passed', 'failed', 'overdue'] as const).map((change) => ({
       change,
@@ -120,13 +123,14 @@ function closedOf(goal: Goal, index: number): ClosedRead {
   };
 }
 
-function widestAssessmentsOf(goal: Goal): Assessments {
+function widestAssessmentsOf(goal: Goal, dismissed = false): Assessments {
   const counted = Object.fromEntries((goal.milestones ?? []).map(({ id }) => [id, 999_999]));
   return {
-    current: assessmentOf(goal, 0),
+    current: assessmentOf(goal, 0, dismissed),
     open_count: 999_999,
     stopped_count: 999_999,
-    in_flight: Array.from({ length: mostInFlight }, (_, index) => assessmentOf(goal, index + 1)),
+    dismissed_count: 999_999,
+    in_flight: Array.from({ length: mostInFlight }, (_, index) => assessmentOf(goal, index + 1, dismissed)),
     by_milestone: counted,
     waiting: counted,
     closed: {
@@ -162,19 +166,26 @@ describe('the size of the goals read', () => {
     expect(mostClosedShown).toBe(60);
   });
 
-  it('stays within the bytes a page of the ledger loads with eight goals at their widest, each with sixty closed results and thirty-one days', () => {
-    const text = widestGoalsText();
-    const { goals } = Result.getOrThrow(goalsDocumentOf(text));
-    const read = goalsReadOf(
-      { version: 1, source: text, goals, workflows: workflowsServing(goals), notifiers: new Set() },
-      (goal) => widestAssessmentsOf(goal),
-    );
-    const bytes = Buffer.byteLength(JSON.stringify(Schema.encodeUnknownSync(GoalsReadSchema)(read)));
+  it.each([
+    ['no dismissed thing read', false],
+    ['every open thing read dismissed, by the widest caller id the read carries', true],
+  ])(
+    'stays within the bytes a page of the ledger loads with eight goals at their widest, each with sixty closed results and thirty-one days, %s',
+    (_, dismissed: boolean) => {
+      const text = widestGoalsText();
+      const { goals } = Result.getOrThrow(goalsDocumentOf(text));
+      const read = goalsReadOf(
+        { version: 1, source: text, goals, workflows: workflowsServing(goals), notifiers: new Set() },
+        (goal) => widestAssessmentsOf(goal, dismissed),
+      );
+      const bytes = Buffer.byteLength(JSON.stringify(Schema.encodeUnknownSync(GoalsReadSchema)(read)));
 
-    expect(Buffer.byteLength(text)).toBeLessThanOrEqual(mostGoalsBytes);
-    expect(read.goals.map(({ assessments }) => assessments.closed.latest.length)).toEqual(
-      Array.from({ length: mostGoals }, () => mostClosedShown),
-    );
-    expect(bytes).toBeLessThanOrEqual(mostBytesLoadedInAPage);
-  });
+      expect(Buffer.byteLength(text)).toBeLessThanOrEqual(mostGoalsBytes);
+      expect(Buffer.byteLength(JSON.stringify(widestDismissal.by)) - 2).toBe(mostDismissedByBytes);
+      expect(read.goals.map(({ assessments }) => assessments.closed.latest.length)).toEqual(
+        Array.from({ length: mostGoals }, () => mostClosedShown),
+      );
+      expect(bytes).toBeLessThanOrEqual(mostBytesLoadedInAPage);
+    },
+  );
 });

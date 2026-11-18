@@ -1,4 +1,4 @@
-import { goalOverdueRows, goalVerdictRows } from '@on.auto/activity';
+import { dismissalRows, goalOverdueRows, goalVerdictRows } from '@on.auto/activity';
 import type { LayoutStep } from '@on.auto/ledger';
 import type { KeyedProjection } from '@on.auto/operations';
 
@@ -7,7 +7,7 @@ import { goalTables } from './goal-tables.ts';
 
 const goalsLayout = 24;
 
-export const goalBellProjections: readonly KeyedProjection[] = [goalVerdictRows, goalOverdueRows];
+export const goalBellProjections: readonly KeyedProjection[] = [goalVerdictRows, goalOverdueRows, dismissalRows];
 
 const goalLayoutSteps: readonly LayoutStep[] = [{ layout: goalsLayout, statements: [] }];
 

@@ -97,6 +97,26 @@ const stopped = {
   context: ofThePlaybook,
 } as const;
 
+const owner = { id: 'person:user_2b7c4d9e1f', name: 'Robin Park' };
+
+const dismissed = {
+  type: 'goal_dismissed',
+  data: {
+    goal: 'paying-customers',
+    per: 'experiment-7',
+    at: '2026-11-09T11:00:00.000Z',
+    by: owner,
+    requests: ['019a8f2e-7b6c-7d5e-8f40-3a2b1c0d9e90', '019a8f2e-7b6c-7d5e-8f40-3a2b1c0d9e91'],
+  },
+  context: { at: '2026-11-09T11:00:00.000Z', by: owner.id },
+} as const;
+
+const restored = {
+  type: 'goal_restored',
+  data: { goal: 'paying-customers', per: 'experiment-7', at: '2026-11-09T11:05:00.000Z', by: owner },
+  context: { at: '2026-11-09T11:05:00.000Z', by: owner.id },
+} as const;
+
 const summaryStarted = {
   type: 'goal_summary_started',
   data: {
@@ -124,6 +144,7 @@ describe('the facts of an assessment', () => {
     folder,
     releases: {
       '0.57.0': [opened, observed, assessed, overdue, noticeStarted, noticeRefused, ended],
+      '0.59.0': [dismissed, restored],
       '0.63.0': [stopped],
     },
   });

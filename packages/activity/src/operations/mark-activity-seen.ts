@@ -12,7 +12,7 @@ import { DateTime, Effect, Schema } from 'effect';
 
 import { activityStreamOf, seenDecider, type SeenItem } from '../facts/activity-seen.ts';
 import { itemOfAddress, orgSegment, type ActivityItem } from '../positions/activity-addresses.ts';
-import { countsFor, type CountedActivity } from './activity-counts.ts';
+import { countsFor, noneSetAsideOf, type CountedActivity, type SetAsideOf } from './activity-counts.ts';
 import { cursorField, mostRowsInAPage, positionAt, refusedAt } from './activity-input.ts';
 import { isoOf } from './activity-row.ts';
 import { throughOf, viewerOf } from './activity-viewer.ts';
@@ -53,6 +53,7 @@ function forbiddenDetailOf({ form, playbook }: ActivityItem): string {
 export interface SeenServing<Counts> {
   readonly itemOf: (address: string) => ActivityItem | undefined;
   readonly countsOf: (counted: CountedActivity) => Effect.Effect<Counts, never, OrgReader>;
+  readonly setAsideOf: SetAsideOf;
 }
 
 function seenItemAt(
@@ -73,7 +74,7 @@ function seenItemAt(
     : Effect.fail(new Forbidden({ detail: forbiddenDetailOf(item) }));
 }
 
-export function markedBy<Counts>({ itemOf, countsOf }: SeenServing<Counts>) {
+export function markedBy<Counts>({ itemOf, countsOf, setAsideOf }: SeenServing<Counts>) {
   return Effect.fnUntraced(function* ({ items = [], through: cursor }: MarkActivitySeenInput) {
     const caller = yield* Caller;
     if (items.length === 0 && cursor === undefined) {
@@ -92,8 +93,15 @@ export function markedBy<Counts>({ itemOf, countsOf }: SeenServing<Counts>) {
     });
     const viewer = yield* viewerOf(caller.id);
     const readable = [...register.active].filter((each) => canAccessPlaybook(caller.playbooks, each)).toSorted();
+    const setAside = yield* setAsideOf(readable);
     return {
-      counts: yield* countsOf({ viewer, readable, withTheOrg: caller.playbooks === '*', changes: register.changes }),
+      counts: yield* countsOf({
+        viewer,
+        readable,
+        withTheOrg: caller.playbooks === '*',
+        changes: register.changes,
+        setAside,
+      }),
       through: throughOf(viewer.seen),
     };
   });
@@ -112,5 +120,5 @@ export const markActivitySeen = defineHttpOperation('org', 'command', {
   inputSchema: MarkActivitySeenInputSchema,
   outputSchema: MarkActivitySeenOutputSchema,
   reasons: ['invalid_input', 'forbidden', 'conflict'],
-  handle: markedBy({ itemOf: itemOfAddress, countsOf: countsFor }),
+  handle: markedBy({ itemOf: itemOfAddress, countsOf: countsFor, setAsideOf: noneSetAsideOf }),
 });

@@ -41,6 +41,15 @@ describe('list_playbook_events', () => {
     );
   });
 
+  it('names, among what it lists, what each presenter that says so shows, last', () => {
+    const shelves = { ...presenterOf('shelves', { added: 'shelf_filled' }), listedAs: 'the shelves filled' };
+
+    expect(defineListPlaybookEvents([shelves], feedHolders).registration.description).toContain(
+      'and the shelves filled, each with',
+    );
+    expect(listPlaybookEvents.registration.description).not.toContain('the shelves filled');
+  });
+
   it('needs a presenter that shows at least one type of event', () => {
     expect(() => defineListPlaybookEvents([presenterOf('notes', { added: null })], feedHolders)).toThrow(
       'The events of a playbook need a presenter that shows at least one type of event',

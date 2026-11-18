@@ -5,7 +5,15 @@ export { endedRunsClosed, type ClosingPass, type ClosingPassAsked } from './clos
 export { choreWork, type Chore } from './due-work/due-chores.ts';
 export { dueInOneWakeUp, duePerformedAtOnce, type DueItem, type DueWork } from './due-work/due-work.ts';
 export { rowWaitBounds } from './due-work/row-waits.ts';
-export { DeliveryFailed, type Consumer, type Delivery, type FollowedRecord } from './follower/consumers.ts';
+export {
+  DeliveryFailed,
+  callConsumerOf,
+  type CallConsumer,
+  type CallRecord,
+  type Consumer,
+  type Delivery,
+  type FollowedRecord,
+} from './follower/consumers.ts';
 export type { FollowedEvent } from './follower/followed-events.ts';
 export { HostStopped } from './host/host-gate.ts';
 export { closeHostParts, openHostParts, type HostParts, type PartsOptions } from './host/host-parts.ts';

@@ -129,6 +129,14 @@ const history: readonly (readonly [string, Fact])[] = [
     },
   ],
   [
+    `assessments/${tuesday}`,
+    {
+      type: 'goal_dismissed',
+      data: { goal: 'controls-hold', at: '2026-11-11T02:00:00.000Z', by: { id: 'ada', name: 'Ada' }, requests: ['r'] },
+      context: at('2026-11-11T02:00:00.000Z'),
+    },
+  ],
+  [
     'goal-refusals/controls-hold.check-controls',
     {
       type: 'goal_observation_refused',
@@ -282,7 +290,7 @@ describe.each(stores)('the tables of goals on $store', ({ skipped, aPlace }) => 
         summary: instant('2026-11-20T09:00:00.000Z'),
         summaryRetry: instant('2026-11-20T09:05:00.000Z'),
       });
-      expect(Object.values(kept.rows).map((rows) => rows?.length)).toEqual([2, 1, 1, 2, 1, 1, 2, 2]);
+      expect(Object.values(kept.rows).map((rows) => rows?.length)).toEqual([2, 1, 1, 2, 1, 1, 2, 2, 1]);
       expect({ rows: await rowsOf(filled), dues: await duesOf(filled) }).toEqual(kept);
     },
   );

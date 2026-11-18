@@ -1,4 +1,4 @@
-import type { ProjectedMessage } from '@on.auto/operations';
+import type { ProjectedMessage, ProjectedRow } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { assessmentRows } from './assessment-rows.ts';
@@ -219,5 +219,60 @@ describe('the assessments of a goal by outcome', () => {
       name: 'outcomes',
       columns: ['goal', 'outcome', 'closed_at', 'row_key'],
     });
+  });
+});
+
+function indexColumnsOf(name: string): readonly string[] | undefined {
+  return assessmentRows.indexes.find((index) => index.name === name)?.columns;
+}
+
+function withoutState(row: ProjectedRow | undefined): ProjectedRow {
+  const { state: _, ...rest } = row ?? {};
+  return rest;
+}
+
+describe('the row of an assessment dismissed', () => {
+  const owner = { id: 'person:owner', name: 'Owner' };
+
+  const dismissed = {
+    type: 'goal_dismissed',
+    data: { goal: 'paying-customers', at: '2026-11-04T09:00:00.000Z', by: owner, requests: ['ask-1'] },
+  };
+
+  const restored = {
+    type: 'goal_restored',
+    data: { goal: 'paying-customers', at: '2026-11-04T10:00:00.000Z', by: owner },
+  };
+
+  it('says it is dismissed, since when and by whom, from the latest of the two facts, and keeps what is due as it was', () => {
+    const before = foldedOf([opened, marked('chosen', 'r1'), overdue]);
+
+    expect(withoutState(foldedOf([opened, marked('chosen', 'r1'), overdue, dismissed]))).toEqual({
+      ...withoutState(before),
+      dismissed: true,
+      dismissed_at: at('2026-11-04T09:00:00.000Z'),
+      dismissed_by: owner.id,
+    });
+    expect(foldedOf([opened, marked('chosen', 'r1'), overdue, dismissed, restored])).toEqual(before);
+    expect(before).toMatchObject({ dismissed: false, dismissed_at: null, dismissed_by: null });
+  });
+
+  it('stays dismissed once judged, its verdict closing it as any other', () => {
+    expect(foldedOf([opened, dismissed, assessed])).toMatchObject({
+      open: false,
+      outcome: 'passed',
+      dismissed: true,
+      dismissed_by: owner.id,
+    });
+  });
+
+  it('is left out of what the core reads seek, and found by when it was dismissed across the playbook', () => {
+    expect(['in_flight', 'newest', 'waiting', 'stopped', 'dismissed'].map((name) => indexColumnsOf(name))).toEqual([
+      ['goal', 'open', 'dismissed', 'overdue', 'window_due', 'row_key'],
+      ['goal', 'open', 'dismissed', 'opened_at', 'row_key'],
+      ['goal', 'open', 'dismissed', 'next_milestone', 'row_key'],
+      ['goal', 'open', 'dismissed', 'stopped_at', 'row_key'],
+      ['dismissed', 'dismissed_at', 'row_key'],
+    ]);
   });
 });

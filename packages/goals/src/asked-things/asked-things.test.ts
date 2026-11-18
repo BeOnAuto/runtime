@@ -248,3 +248,26 @@ describe('the things an open request is about, read from the playbook’s own le
     expect(about).toEqual([[thingOf(marked.id, 'letterhead'), { goal: controlsGoal.id, id: day }], []]);
   });
 });
+
+describe('the things an open request is about that someone dismissed', () => {
+  it('leaves a dismissed thing out of what the request is about, unless asked to include it, and takes it back once restored', async () => {
+    const book = assessmentBookOf();
+    await book.goalsSaved([experimentsGoal]);
+    const latona = await markedBy(book)('latona', arrived + minute);
+    const chains = [['ask-latona', 'intake', latona.run]];
+    const reads = readsOver([calledBy(latona.run, 'intake'), calledBy('ask-latona', 'intake'), byHand('intake')]);
+    await book.dismissed(latona.id, 'person:owner', arrived + 2 * minute);
+
+    const left = await askedOf(book, reads, chains);
+    const included = await book.inThePlaybook(thingsAskedAboutOver(reads, chains, { dismissed: 'include' }));
+    const ofTheLedger = await book.inThePlaybook(thingsAskedAbout(chains, { dismissed: 'include' }));
+    await book.restored(latona.id, 'person:owner', arrived + 3 * minute);
+
+    expect([left, included, ofTheLedger, await askedOf(book, reads, chains)]).toEqual([
+      [[]],
+      [[thingOf(latona.id, 'latona')]],
+      [[thingOf(latona.id, 'latona')]],
+      [[thingOf(latona.id, 'latona')]],
+    ]);
+  });
+});

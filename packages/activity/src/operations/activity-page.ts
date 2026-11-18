@@ -2,7 +2,7 @@ import { OrgReader, type ProjectedCondition, type ProjectedRowsQuery } from '@on
 import { Effect } from 'effect';
 
 import { ofTheOrg, resultKeyOf } from '../positions/activity-addresses.ts';
-import { newestFirst } from '../positions/activity-position.ts';
+import { cursorOf, newestFirst } from '../positions/activity-position.ts';
 import { activityName } from '../projections/activity-rows.ts';
 import { seenKinds, type ActivityKind, type ActivityRow } from './activity-row.ts';
 import {
@@ -16,6 +16,7 @@ import {
   type ActivityTable,
   type PageBounds,
 } from './activity-tables.ts';
+import { setAsideIn, type RequestsSetAside } from './needs-you.ts';
 import type { PlaybookRegister } from './playbook-register.ts';
 
 const mostRowsTied = 1000;
@@ -26,11 +27,13 @@ export interface PageAsked extends PageBounds {
   readonly withTheOrg: boolean;
   readonly mine: string | undefined;
   readonly limit: number;
+  readonly leftOut: RequestsSetAside;
 }
 
 interface Page {
   readonly rows: readonly ActivityRow[];
   readonly hasMore: boolean;
+  readonly nextCursor: string | null;
 }
 
 interface TableRead {
@@ -54,17 +57,23 @@ function tiedAt(read: TableRead, at: number) {
   return rowsRead({ ...read, where: [...read.where, { column: read.table.atColumn, equals: at }] }, mostRowsTied);
 }
 
+function leftOutOf(playbook: string, table: ActivityTable, { leftOut }: PageAsked): ReadonlySet<string> {
+  return new Set(table.kind === 'needs_you' ? setAsideIn(leftOut, playbook).keys() : []);
+}
+
 function rowsOfTable(playbook: string, table: ActivityTable, asked: PageAsked) {
   return Effect.gen(function* () {
     const read = { playbook, table, where: [{ column: table.openColumn, equals: true }, ...mineIn(table, asked.mine)] };
-    const newest = yield* rowsRead({ ...read, where: [...read.where, ...boundsOf(asked, table)] }, asked.limit + 1);
-    const lowest = newest.length > asked.limit ? newest.at(-1)?.position.at : undefined;
+    const leftOut = leftOutOf(playbook, table, asked);
+    const most = asked.limit + leftOut.size;
+    const newest = yield* rowsRead({ ...read, where: [...read.where, ...boundsOf(asked, table)] }, most + 1);
+    const lowest = newest.length > most ? newest.at(-1)?.position.at : undefined;
     const tied = yield* Effect.forEach(
       new Set([...tiedTimesOf(asked), ...(lowest === undefined ? [] : [lowest])]),
       (at) => tiedAt(read, at),
     );
     const rows = new Map([...newest, ...tied.flat()].map((row) => [row.position.key, row]));
-    return [...rows.values()].filter((row) => withinBounds(row, asked));
+    return [...rows.values()].filter((row) => withinBounds(row, asked) && !leftOut.has(row.position.key));
   });
 }
 
@@ -125,7 +134,9 @@ export function pageOf(
       newestFirst(left.position, right.position),
     );
     const rows = yield* Effect.forEach(merged.slice(0, asked.limit), startedBy, { concurrency: readsAtOnce });
-    const page: Page = { rows, hasMore: merged.length > asked.limit };
+    const hasMore = merged.length > asked.limit;
+    const last = rows.at(-1);
+    const page: Page = { rows, hasMore, nextCursor: hasMore && last !== undefined ? cursorOf(last.position) : null };
     return page;
   });
 }

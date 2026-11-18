@@ -4,7 +4,14 @@ import { Effect } from 'effect';
 
 import { markColumns } from '../goal-tables/assessment-rows.ts';
 import { noticesDeliveredIn } from '../notice-deliveries/notice-deliveries.ts';
-import { goalRowsOf, type GoalRows, type Rows } from '../results/goal-rows.ts';
+import {
+  goalRowsOf,
+  openRowsOf,
+  type DismissedAsked,
+  type GoalRows,
+  type OpenRows,
+  type Rows,
+} from '../results/goal-rows.ts';
 import { judgedDaysOf, streakOf, type DaysAsked } from '../results/judged-days.ts';
 import {
   assessmentReadOf,
@@ -18,11 +25,13 @@ import {
 import { mostClosedShown, mostInFlight, type Assessments } from './assessments-schema.ts';
 import type { NoticesDelivered } from './notices-delivered.ts';
 
-export type GoalsAsked = DaysAsked;
+export type GoalsAsked = DaysAsked & DismissedAsked;
 
 const set = Number.MIN_SAFE_INTEGER;
 
 const open: ProjectedCondition = { column: 'open', equals: true };
+
+const dismissedNow: ProjectedCondition = { column: 'dismissed', equals: true };
 
 const closed: ProjectedCondition = { column: 'open', equals: false };
 
@@ -43,7 +52,7 @@ function byDueThenNewest(left: ProjectedKeyedRow, right: ProjectedKeyedRow): num
   return byDueFirst === 0 ? openedOf(right) - openedOf(left) : byDueFirst;
 }
 
-function byDue(rows: GoalRows, where: readonly ProjectedCondition[], limit: number): Effect.Effect<Rows> {
+function byDue(rows: OpenRows, where: readonly ProjectedCondition[], limit: number): Effect.Effect<Rows> {
   if (limit <= 0) {
     return Effect.succeed([]);
   }
@@ -61,28 +70,31 @@ function byDue(rows: GoalRows, where: readonly ProjectedCondition[], limit: numb
   });
 }
 
-function withNoWindow(rows: GoalRows, windowed: number, limit: number): Effect.Effect<Rows> {
-  return Effect.map(rows.read([open], ['opened_at'], 'desc', limit + windowed), (newest) =>
+function withNoWindow(rows: OpenRows, windowed: number, limit: number): Effect.Effect<Rows> {
+  return Effect.map(rows.read([], ['opened_at'], 'desc', limit + windowed), (newest) =>
     newest.filter(({ row }) => row['window_due'] === null).slice(0, limit),
   );
 }
 
-function inFlightOf(rows: GoalRows, openCount: number): Effect.Effect<Rows> {
+function inFlightOf(rows: OpenRows, openCount: number): Effect.Effect<Rows> {
   return Effect.gen(function* () {
     if (openCount === 0) {
       return [];
     }
-    const overdue = yield* byDue(rows, [open, { column: 'overdue', equals: true }], mostInFlight);
+    const overdue = yield* byDue(rows, [{ column: 'overdue', equals: true }], mostInFlight);
     const due = yield* byDue(
       rows,
-      [open, { column: 'overdue', equals: false }, { column: 'window_due', after: set }],
+      [
+        { column: 'overdue', equals: false },
+        { column: 'window_due', after: set },
+      ],
       mostInFlight - overdue.length,
     );
     const windowed = overdue.length + due.length;
     if (windowed >= mostInFlight || windowed === openCount) {
       return [...overdue, ...due];
     }
-    const windowedCount = yield* rows.count([open, { column: 'window_due', after: set }]);
+    const windowedCount = yield* rows.count([{ column: 'window_due', after: set }]);
     return [...overdue, ...due, ...(yield* withNoWindow(rows, windowedCount, mostInFlight - windowed))];
   });
 }
@@ -97,9 +109,9 @@ function countsOf(
   );
 }
 
-function markedCountOf(rows: GoalRows, milestone: string, columns: readonly string[]): Effect.Effect<number> {
+function markedCountOf(rows: OpenRows, milestone: string, columns: readonly string[]): Effect.Effect<number> {
   return Effect.map(
-    Effect.forEach(columns, (column) => rows.count([open, { column, equals: milestone }])),
+    Effect.forEach(columns, (column) => rows.count([{ column, equals: milestone }])),
     (counts: readonly number[]) => counts.reduce((total, count) => total + count, 0),
   );
 }
@@ -108,23 +120,20 @@ function none(): Effect.Effect<number> {
   return Effect.succeed(0);
 }
 
-function pinnedNowBy(rows: GoalRows, openCount: number, goalsVersion: number | undefined): Effect.Effect<boolean> {
+function pinnedNowBy(rows: OpenRows, openCount: number, goalsVersion: number | undefined): Effect.Effect<boolean> {
   return goalsVersion === undefined
     ? Effect.succeed(false)
-    : Effect.map(
-        rows.count([open, { column: 'goals_version', equals: goalsVersion }]),
-        (pinned) => pinned === openCount,
-      );
+    : Effect.map(rows.count([{ column: 'goals_version', equals: goalsVersion }]), (pinned) => pinned === openCount);
 }
 
-function markedBy(rows: GoalRows, ids: readonly string[], pinnedNow: boolean) {
+function markedBy(rows: OpenRows, ids: readonly string[], pinnedNow: boolean) {
   return (id: string) => {
     const column = markColumns[ids.indexOf(id)];
     return markedCountOf(rows, id, pinnedNow && column !== undefined ? [column] : markColumns);
   };
 }
 
-function milestoneCountsOf(rows: GoalRows, goal: Goal, openCount: number, goalsVersion: number | undefined) {
+function milestoneCountsOf(rows: OpenRows, goal: Goal, openCount: number, goalsVersion: number | undefined) {
   const ids = (goal.milestones ?? []).map(({ id }) => id);
   return Effect.gen(function* () {
     if (openCount === 0 || ids.length === 0) {
@@ -133,7 +142,7 @@ function milestoneCountsOf(rows: GoalRows, goal: Goal, openCount: number, goalsV
     const pinnedNow = yield* pinnedNowBy(rows, openCount, goalsVersion);
     return {
       by_milestone: yield* countsOf(ids, markedBy(rows, ids, pinnedNow)),
-      waiting: yield* countsOf(ids, (id) => rows.count([open, { column: 'next_milestone', equals: id }])),
+      waiting: yield* countsOf(ids, (id) => rows.count([{ column: 'next_milestone', equals: id }])),
     };
   });
 }
@@ -181,11 +190,9 @@ function closedOf(rows: GoalRows, asked: DaysAsked) {
   });
 }
 
-function currentOf(rows: GoalRows, latest: readonly Ended[]): Effect.Effect<HeldAssessment | undefined> {
+function currentOf(rows: OpenRows, latest: readonly Ended[]): Effect.Effect<HeldAssessment | undefined> {
   return Effect.gen(function* () {
-    const [observed] = heldOf(
-      yield* rows.read([open, { column: 'observed_at', after: set }], ['opened_at'], 'desc', 1),
-    );
+    const [observed] = heldOf(yield* rows.read([{ column: 'observed_at', after: set }], ['opened_at'], 'desc', 1));
     if (observed !== undefined) {
       return observed;
     }
@@ -193,7 +200,7 @@ function currentOf(rows: GoalRows, latest: readonly Ended[]): Effect.Effect<Held
     if (judged !== undefined) {
       return judged.held;
     }
-    const [newest] = heldOf(yield* rows.read([open], ['opened_at'], 'desc', 1));
+    const [newest] = heldOf(yield* rows.read([], ['opened_at'], 'desc', 1));
     return newest;
   });
 }
@@ -212,17 +219,20 @@ export function goalAssessmentsIn(
   return Effect.gen(function* () {
     const reader = yield* PlaybookReader;
     const rows = goalRowsOf(reader, goal);
-    const openCount = yield* rows.count([open]);
-    const stoppedCount = openCount === 0 ? 0 : yield* rows.count([open, { column: 'stopped_at', after: set }]);
-    const inFlight = heldOf(yield* inFlightOf(rows, openCount));
-    const counts = yield* milestoneCountsOf(rows, goal, openCount, goalsVersion);
+    const openRows = openRowsOf(rows, asked);
+    const openCount = yield* openRows.count([]);
+    const stoppedCount = openCount === 0 ? 0 : yield* openRows.count([{ column: 'stopped_at', after: set }]);
+    const dismissedCount = yield* rows.count([open, dismissedNow]);
+    const inFlight = heldOf(yield* inFlightOf(openRows, openCount));
+    const counts = yield* milestoneCountsOf(openRows, goal, openCount, goalsVersion);
     const ended = yield* closedOf(rows, asked);
-    const current = yield* currentOf(rows, ended.latest);
+    const current = yield* currentOf(openRows, ended.latest);
     const read = readOf(delivered);
     return {
       current: current === undefined ? null : yield* read(current),
       open_count: openCount,
       stopped_count: stoppedCount,
+      dismissed_count: dismissedCount,
       in_flight: yield* Effect.forEach(inFlight, read),
       ...counts,
       closed: { ...ended, latest: ended.latest.map(({ closed: shown }) => shown) },

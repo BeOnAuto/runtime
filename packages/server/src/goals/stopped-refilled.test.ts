@@ -110,3 +110,48 @@ describe('a store whose goal facts a release before stopped items recorded', () 
     expect(String(kept?.row['state'])).toContain(noShot);
   });
 });
+
+describe('a store whose goal facts hold a dismissal, opened by a release that keeps goal_assessments_5', () => {
+  it('fills goal_assessments_5 from the facts, the letterhead request dismissed by its owner and still open', async () => {
+    const file = temporaryLedger();
+    onTestFinished(file.remove);
+    const owner = { id: 'person:owner', name: 'Owner' };
+    const dismissal: Fact = {
+      type: 'goal_dismissed',
+      data: {
+        goal: 'change-requests',
+        per: 'letterhead',
+        at: '2026-11-16T22:00:00.000Z',
+        by: owner,
+        requests: ['run-ask'],
+      },
+      context: { at: '2026-11-16T22:00:00.000Z', by: owner.id },
+    };
+    const before = await ledgerOn(file.fileName, false);
+    await Effect.runPromise(
+      Effect.forEach(
+        [...recordedBefore, dismissal],
+        (fact) => before.execute(`playbook/acme/studio/assessments/${letterhead}`, verbatim, fact),
+        { discard: true },
+      ),
+    );
+
+    const after = await ledgerOn(file.fileName, true);
+    const [kept] = await Effect.runPromise(
+      after.readProjectedRows('goal_assessments', studio, {
+        where: [{ column: 'dismissed', equals: true }],
+        orderBy: ['dismissed_at'],
+        order: 'desc',
+        limit: 5,
+      }),
+    );
+
+    expect(kept?.key).toBe(letterhead);
+    expect(kept?.row).toMatchObject({
+      open: true,
+      dismissed: true,
+      dismissed_at: Date.parse('2026-11-16T22:00:00.000Z'),
+      dismissed_by: owner.id,
+    });
+  });
+});

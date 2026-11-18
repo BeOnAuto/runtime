@@ -1,7 +1,5 @@
 import {
-  PlaybookReader,
   InvalidInput,
-  type PlaybookContext,
   PagingInputFields,
   PagingOutputFields,
   cursorOfParts,
@@ -16,9 +14,20 @@ import { counted, plainNumber } from '@on.auto/phrasing';
 import { Array as Arr, Effect, Option, Schema } from 'effect';
 
 import { renderedKeyOf } from '../conversations/conversation-keys.ts';
-import { openRequestsName } from './open-requests.ts';
 import { mostCauses, requestChainOf, type RequestChain } from './request-causes.ts';
 import { StandingSchema, requestRowFrom, routeOfRow, type OpenRequestRow } from './request-rows.ts';
+import {
+  DismissedInputFields,
+  SetAsideSchema,
+  keptRowsOf,
+  setAsideIn,
+  setAsideShown,
+  type DismissedShown,
+  type GoalsOfRequests,
+  type RequestSetAside,
+  type RequestThing,
+  type RequestThings,
+} from './requests-set-aside.ts';
 
 const InteractionSchema = Schema.Struct({
   run_id: Schema.String.annotate({ description: 'The run of the request, to answer with answer_interaction' }),
@@ -76,9 +85,10 @@ const InteractionSchema = Schema.Struct({
       }),
     ).annotate({
       description:
-        'The open things of the playbook’s goals the request is about: each one a run of its causes marked or measured, or a run started by the same event from outside every run that began its causes; left out with causes, and where goals are not judged',
+        'The open things of the playbook’s goals the request is about: each one a run of its causes marked or measured, or a run started by the same event from outside every run that began its causes; a dismissed thing only in a list asked with dismissed=include; left out with causes, and where goals are not judged',
     }),
   ),
+  dismissed: Schema.optionalKey(SetAsideSchema),
   standing: StandingSchema.annotate({
     description:
       'How its delivery stands: held_for_an_agent, to_deliver, delivering, delivered, retrying, undelivered once every attempt failed, or cancelling once a cancel was asked; an answered request leaves the list',
@@ -137,7 +147,11 @@ interface AboutShown {
   readonly about?: readonly RequestThing[];
 }
 
-function shownOf({ key, row }: ProjectedKeyedRow, chain: Partial<RequestChain>, about: AboutShown) {
+function shownOf(
+  { key, row }: ProjectedKeyedRow,
+  { chain, about }: Told,
+  setAside: ReadonlyMap<string, RequestSetAside>,
+) {
   const kept = requestRowFrom(row);
   return {
     run_id: key,
@@ -157,11 +171,12 @@ function shownOf({ key, row }: ProjectedKeyedRow, chain: Partial<RequestChain>, 
     reply_refusals: kept.reply_refusals,
     ...chain,
     ...about,
+    ...setAsideShown(setAside.get(key)),
     standing: kept.standing,
   };
 }
 
-interface Listing {
+interface Listing extends DismissedShown {
   readonly to?: string | undefined;
   readonly type?: string | undefined;
   readonly function?: string | undefined;
@@ -181,16 +196,6 @@ function conditionsOf({ to, type, function: name }: Listing): readonly Projected
   ];
 }
 
-export interface RequestThing {
-  readonly goal: string;
-  readonly id: string;
-  readonly per?: string;
-}
-
-export type RequestThings = (
-  chains: readonly (readonly string[])[],
-) => Effect.Effect<readonly (readonly RequestThing[])[], never, PlaybookReader | PlaybookContext>;
-
 const noAbout: AboutShown = {};
 
 interface Told {
@@ -201,59 +206,71 @@ interface Told {
 const toldOf = Effect.fnUntraced(function* (
   chains: readonly Partial<RequestChain>[],
   things: RequestThings | undefined,
+  shown: DismissedShown,
 ) {
   if (things === undefined) {
     return chains.map((chain): Told => ({ chain, about: noAbout }));
   }
-  const found = yield* things(chains.map(({ causes = [] }) => causes));
+  const found = yield* things(
+    chains.map(({ causes = [] }) => causes),
+    shown,
+  );
   return Arr.zipWith(chains, found, (chain, about): Told => ({
     chain,
     about: chain.causes === undefined ? noAbout : { about },
   }));
 });
 
-const listedWith = (things: RequestThings | undefined) =>
+const noneShown: ReadonlyMap<string, RequestSetAside> = new Map();
+
+const listedWith = (goals: GoalsOfRequests | undefined) =>
   Effect.fnUntraced(function* (listing: Listing) {
-    const { limit = defaultPageLimit, cursor } = listing;
+    const { limit = defaultPageLimit, cursor, dismissed } = listing;
     const after = yield* afterOf(cursor);
-    const where = conditionsOf(listing);
-    const rows = yield* (yield* PlaybookReader).readProjectedRows(openRequestsName, {
-      where,
-      orderBy: ['requested_at'],
-      order: 'desc',
-      ...(after === undefined ? {} : { after }),
-      limit: limit + 1,
+    const setAside = yield* setAsideIn(goals?.setAside);
+    const included = dismissed === 'include';
+    const rows = yield* keptRowsOf({
+      where: conditionsOf(listing),
+      after,
+      limit,
+      leftOut: included ? noneShown : setAside,
     });
     const page = rows.slice(0, limit);
     const last = page.at(-1);
     const hasMore = rows.length > limit && last !== undefined;
     const chains = yield* Effect.forEach(page, ({ row }) => requestChainOf(requestRowFrom(row)));
-    const told = yield* toldOf(chains, things);
+    const told = yield* toldOf(chains, goals?.about, included ? { dismissed } : {});
     return {
-      interactions: Arr.zipWith(page, told, (kept, { chain, about }) => shownOf(kept, chain, about)),
+      interactions: Arr.zipWith(page, told, (kept, each) => shownOf(kept, each, included ? setAside : noneShown)),
       has_more: hasMore,
       next_cursor: hasMore ? cursorOfParts([Number(last.row['requested_at']), last.key]) : null,
     };
   });
 
-export const listInteractionsAbout = (things?: RequestThings) =>
-  defineQuery('playbook', {
+const ListingFields = {
+  to: Schema.optionalKey(FilterText.annotate({ description: 'Only the requests to this party' })),
+  type: Schema.optionalKey(FilterText.annotate({ description: 'Only the requests of functions of this type' })),
+  function: Schema.optionalKey(
+    FilterText.annotate({ description: 'Only the requests of functions of this name, of the type given if any' }),
+  ),
+  limit: PagingInputFields.limit,
+  cursor: PagingInputFields.cursor,
+};
+
+const ListingSchema = Schema.Struct(ListingFields);
+
+const ListingAboutSchema = Schema.Struct({ ...ListingFields, ...DismissedInputFields });
+
+function listingOf(goals?: GoalsOfRequests) {
+  return defineQuery('playbook', {
     name: 'list_interactions',
     title: 'List open requests',
     description,
     route: { method: 'GET', path: '/interactions' },
-    inputSchema: Schema.Struct({
-      to: Schema.optionalKey(FilterText.annotate({ description: 'Only the requests to this party' })),
-      type: Schema.optionalKey(FilterText.annotate({ description: 'Only the requests of functions of this type' })),
-      function: Schema.optionalKey(
-        FilterText.annotate({ description: 'Only the requests of functions of this name, of the type given if any' }),
-      ),
-      limit: PagingInputFields.limit,
-      cursor: PagingInputFields.cursor,
-    }),
+    inputSchema: goals === undefined ? ListingSchema : ListingAboutSchema,
     outputSchema: Schema.Struct({ interactions: Schema.Array(InteractionSchema), ...PagingOutputFields }),
     reasons: ['invalid_input'],
-    handle: listedWith(things),
+    handle: listedWith(goals),
     plainLanguage: {
       task: 'list the open requests',
       attempt: () => 'list the open requests',
@@ -263,5 +280,8 @@ export const listInteractionsAbout = (things?: RequestThings) =>
           : `Found ${counted(interactions.length, requestNoun)} waiting on this page.${refusedInWords(interactions)}`,
     },
   });
+}
 
-export const listInteractions = listInteractionsAbout();
+export const listInteractions = listingOf();
+
+export const listInteractionsAbout = (goals: GoalsOfRequests) => listingOf(goals);

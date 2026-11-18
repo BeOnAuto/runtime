@@ -1,4 +1,5 @@
 import { WeekdaySchema } from '@on.auto/definitions/goals';
+import { RecordedCallerSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 const InstantText = Schema.String;
@@ -98,6 +99,20 @@ const GoalStoppedSchema = Schema.Struct({ run: Schema.String, at: InstantText, r
 
 const GoalObservationRefusedSchema = Schema.Struct({ run: Schema.String, detail: Schema.String });
 
+const ThingOfTheGoal = {
+  goal: Schema.String,
+  per: Schema.optionalKey(Schema.String),
+};
+
+const GoalDismissedSchema = Schema.Struct({
+  ...ThingOfTheGoal,
+  at: InstantText,
+  by: RecordedCallerSchema,
+  requests: Schema.Array(Schema.String),
+});
+
+const GoalRestoredSchema = Schema.Struct({ ...ThingOfTheGoal, at: InstantText, by: RecordedCallerSchema });
+
 export const goalFactData = {
   goal_assessment_opened: GoalAssessmentOpenedSchema,
   goal_observed: GoalObservedSchema,
@@ -109,6 +124,8 @@ export const goalFactData = {
   goal_assessment_ended: GoalAssessmentEndedSchema,
   goal_stopped: GoalStoppedSchema,
   goal_observation_refused: GoalObservationRefusedSchema,
+  goal_dismissed: GoalDismissedSchema,
+  goal_restored: GoalRestoredSchema,
 } as const;
 
 function decidedOf<const Type extends string, Data extends Schema.Top>(type: Type, data: Data) {
@@ -124,6 +141,8 @@ export const AssessmentFactSchema = Schema.Union([
   decidedOf('goal_notice_refused', GoalNoticeRefusedSchema),
   decidedOf('goal_assessment_ended', GoalAssessmentEndedSchema),
   decidedOf('goal_stopped', GoalStoppedSchema),
+  decidedOf('goal_dismissed', GoalDismissedSchema),
+  decidedOf('goal_restored', GoalRestoredSchema),
 ]);
 
 export type AssessmentFact = typeof AssessmentFactSchema.Type;
@@ -137,3 +156,5 @@ export type JudgedBy = (typeof GoalAssessedSchema.Type)['by'];
 export type EndReason = (typeof GoalAssessmentEndedSchema.Type)['reason'];
 
 export type GoalStopped = typeof GoalStoppedSchema.Type;
+
+export type GoalDismissed = typeof GoalDismissedSchema.Type;

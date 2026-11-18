@@ -38,3 +38,25 @@ export function goalRowsOf(reader: PlaybookReader['Service'], { id }: Pick<Goal,
     count: (where) => reader.countProjectedRows(assessmentsName, ofGoal(where)),
   };
 }
+
+export interface DismissedAsked {
+  readonly dismissed?: 'include';
+}
+
+export type OpenRows = Pick<GoalRows, 'read' | 'count'>;
+
+const open: ProjectedCondition = { column: 'open', equals: true };
+
+const undismissed: ProjectedCondition = { column: 'dismissed', equals: false };
+
+function openShownOf({ dismissed }: DismissedAsked): readonly ProjectedCondition[] {
+  return dismissed === 'include' ? [open] : [open, undismissed];
+}
+
+export function openRowsOf(rows: GoalRows, asked: DismissedAsked): OpenRows {
+  const shown = openShownOf(asked);
+  return {
+    read: (where, orderBy, order, limit) => rows.read([...shown, ...where], orderBy, order, limit),
+    count: (where) => rows.count([...shown, ...where]),
+  };
+}

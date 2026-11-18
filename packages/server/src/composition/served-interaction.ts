@@ -1,6 +1,6 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { PlaybookOperation, Capability, RecordWork } from '@on.auto/definitions';
-import { thingsAskedAbout } from '@on.auto/goals';
+import { requestsSetAside, thingsAskedAbout, type AskedAbout } from '@on.auto/goals';
 import {
   conversationsDue,
   answerInteraction,
@@ -8,6 +8,7 @@ import {
   listInteractionsAbout,
   makeInteractionFunctionAdapter,
   openRequestsName,
+  requestsAskingAbout,
   requestsDue,
   type RequestsDue,
 } from '@on.auto/interaction';
@@ -23,7 +24,10 @@ export interface ServedInteraction {
   readonly capability: Capability;
   readonly operations: readonly PlaybookOperation[];
   readonly dueWorkOf: (record: RecordWork) => readonly RequestsDue[];
+  readonly askedAbout: AskedAbout;
 }
+
+const askedAboutServed: AskedAbout = requestsAskingAbout(thingsAskedAbout);
 
 export function interactionServedBy(
   runtime: AppRuntime<DispatcherServices>,
@@ -51,7 +55,11 @@ export function interactionServedBy(
       mostOpenRequests: interaction.mostOpenRequests,
       conversationsOf: (provider) => Effect.succeed(conversationsOf(providers, provider)),
     }),
-    operations: [answerInteraction, results ? listInteractionsAbout(thingsAskedAbout) : listInteractions],
+    operations: [
+      answerInteraction,
+      results ? listInteractionsAbout({ about: thingsAskedAbout, setAside: requestsSetAside }) : listInteractions,
+    ],
     dueWorkOf: (record) => [requestsDue({ ledger, tools, record }), conversationsDue({ ledger, tools, record })],
+    askedAbout: askedAboutServed,
   };
 }

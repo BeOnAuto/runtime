@@ -1828,6 +1828,13 @@
           ]
         },
         {
+          "as": "tool dismiss_goal_thing: argument playbook",
+          "on": [
+            "/mcp",
+            "/directory"
+          ]
+        },
+        {
           "as": "tool publish_event: argument playbook",
           "on": [
             "/mcp",
@@ -2751,7 +2758,7 @@
       ]
     },
     {
-      "sha256": "5698879075aea3b2b27ac237cb5a0eca89bb8808326daff30421442c37e52fdd",
+      "sha256": "14c471e3c4003162f4ff1d24bad2351b4f30263ed27422572daaffcbb33fe67c",
       "tier": 1,
       "received": [
         {
@@ -2764,7 +2771,7 @@
         }
       ],
       "lines": [
-        "Lists what happened in the playbook a page at a time, newest first: definitions saved and retired, runs started and how they ended, the steps of workflow runs, tool calls, and the events published to it, each with a summary in plain words, its fact as data with a large field as its size, and its metadata; get_event reads one event whole. Use it to follow the playbook's activity, to see what one run did, or to find the events a page or a workflow's schedule can take. `type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on, and `cursor` is the next_cursor of the page before. The playbook's own creation, update and retirement are not among the events; list_playbooks shows them."
+        "Lists what happened in the playbook a page at a time, newest first: definitions saved and retired, runs started and how they ended, the steps of workflow runs, tool calls, the events published to it, and a goal's things dismissed or restored, each with a summary in plain words, its fact as data with a large field as its size, and its metadata; get_event reads one event whole. Use it to follow the playbook's activity, to see what one run did, or to find the events a page or a workflow's schedule can take. `type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on, and `cursor` is the next_cursor of the page before. The playbook's own creation, update and retirement are not among the events; list_playbooks shows them."
       ]
     },
     {
@@ -2969,6 +2976,91 @@
       ],
       "lines": [
         "The ids of the goals the person said yes to; leave it out for every goal that is not retired"
+      ]
+    },
+    {
+      "sha256": "c91c7a56b46c8846d940ce6b8b2c99a8cf76726cd52fa0b6bf11af0032b2e542",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool dismiss_goal_thing: title",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "Dismiss a thing of a goal"
+      ]
+    },
+    {
+      "sha256": "f7da31f5d32cb5e3a1f06f01fbd67ffb7ed06594c315de69c555976c28e467be",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool dismiss_goal_thing: description",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "Dismisses a thing of a goal for everyone in the organization: it leaves its goal's Outstanding in Studio, and list_interactions lists its requests only with dismissed: include. Call it only when the person clearly says a thing no longer needs them, by the goal and id from a request's about in list_interactions. If their words could be an answer, a correction or a cancel, as \"ignore it\" or \"forget it\" can, ask first if it no longer needs them; answers go to answer_interaction. Asking for several, even \"all of them\", is not a yes: name each and wait for a yes. It answers and cancels nothing: requests wait until they expire; the thing is still judged and counts. To restore the thing, send dismissed: false; a thing.dismissed event or list_interactions with dismissed: include has goal and id."
+      ]
+    },
+    {
+      "sha256": "66f36ae87ed3f25bc0e4ec6f5487cde28c2fdb47c08e7ff9ae9a33320184b640",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool dismiss_goal_thing: argument goal",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The id of the goal, from a request's about in list_interactions or a thing.dismissed event"
+      ]
+    },
+    {
+      "sha256": "d04308e3a6d438e119d4eaa28561837946c742c3d693e708c52614e845b31f01",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool dismiss_goal_thing: argument id",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The id of the thing, not its per, from a request's about in list_interactions or a thing.dismissed event"
+      ]
+    },
+    {
+      "sha256": "00ad5438c421c774306db3498566cb9ed605f64ee3426277be4265df229fef48",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool dismiss_goal_thing: argument dismissed",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "true, or left out, to dismiss the thing; false to restore a dismissed thing"
       ]
     },
     {
@@ -3585,6 +3677,23 @@
       ],
       "lines": [
         "Only the requests of functions of this name, of the type given if any"
+      ]
+    },
+    {
+      "sha256": "b2bd84604c4ed283fd24c1f4b32a72e36633b785f2490025146f318244d9a9ab",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool list_interactions: argument dismissed",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "include to also list the requests that were waiting on a thing when it was dismissed, each with dismissed naming the thing, and to show dismissed things in about. Left out, both are left out, so the list matches what Studio shows."
       ]
     },
     {
@@ -5591,7 +5700,7 @@
       ]
     },
     {
-      "sha256": "8267cd6047bf30cbce276c6afc20fe35e68f6669af07cbe0152e6176867e527b",
+      "sha256": "32e1af5387b7ab39961ff8fd5b989fa7d37c9e8e75d19e557dd753352253b096",
       "tier": 3,
       "received": [
         {
@@ -5783,6 +5892,7 @@
         "- `each` takes at most a hundred items, and names each thing once.",
         "- Every milestone of a goal, and its measure, need a workflow that marks or reports them. Until one does, the goal shows a gap.",
         "- A thing whose run fails, or whose final measurement can no longer meet an `on_crossing` target, shows as stopped in Studio, with the run's reason. It stays open and is judged at its due time; a later run that marks its next milestone, or a measurement that is not final, clears it. A failed run reaches only a thing marked or measured by a run it follows from, such as the run whose event started it, or, when its workflow contributes to the goal, by a run the same outside event started. So if preparing the package were its own workflow, started by an event the Monday workflow publishes once the idea is chosen, its failure would show that experiment as stopped with the reason; a run started by its schedule, or one that fails before anything marked the thing, stops nothing.",
+        "- When the person says a thing no longer needs them, dismiss it with dismiss_goal_thing, by its goal and id from the about of a request in list_interactions. It leaves its goal's Outstanding in Studio for everyone in the organization, and list_interactions leaves its requests out unless asked with dismissed: include, as Studio does. Dismissing is only for a clear \"this no longer needs us\". Words like \"ignore it\" or \"forget that one\" could be an answer, a correction or a wish to cancel: before you call dismiss_goal_thing, ask whether they mean the thing no longer needs them, and send an answer with answer_interaction. A dismissed thing's requests still wait and can be answered until they expire, and the thing is still judged and counts toward the goal. Before you dismiss several things, name each to the person, say they leave for everyone, and wait for their yes to that list; asking for \"all of them\" or \"everything\" is not that yes. Dismiss only what the person asked you to. To restore a dismissed thing, take its goal and id from list_interactions with dismissed: include, or from a thing.dismissed event of list_playbook_events, and call dismiss_goal_thing with dismissed: false.",
         "",
         "### final and as_of",
         "",

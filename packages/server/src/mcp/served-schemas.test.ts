@@ -99,10 +99,10 @@ async function listingOnTheWireServedSchemasWith(
 }
 
 const endpointsServedSchemasWith = [
-  { path: '/mcp', tools: 42, bytes: 67_354, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 40, bytes: 64_939, mostBytes: mostListingBytes.directory },
+  { path: '/mcp', tools: 43, bytes: 69_631, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 41, bytes: 67_216, mostBytes: mostListingBytes.directory },
   { path: '/orgs/local/mcp', tools: 18, bytes: 26_070, mostBytes: mostListingBytes.org },
-  { path: '/orgs/local/playbooks/alpha/mcp', tools: 29, bytes: 44_761, mostBytes: mostListingBytes.playbook },
+  { path: '/orgs/local/playbooks/alpha/mcp', tools: 30, bytes: 46_914, mostBytes: mostListingBytes.playbook },
 ] as const;
 
 describe('served schemas', () => {

@@ -1,3 +1,4 @@
+import { cutAtCodePoint } from '@on.auto/definitions';
 import type { ProjectedKeyedRow } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
@@ -6,7 +7,7 @@ import { isUndecided, textOf, type AssessmentState, type PinnedRule } from '../a
 import { countsIn } from '../assessments/window-counting.ts';
 import type { Target, WindowSpan } from '../goal-rules/goal-rule.ts';
 import { assessmentStateOfText, NoticesStartedSchema } from '../goal-tables/assessment-row-state.ts';
-import type { Assessments } from './assessments-schema.ts';
+import { mostDismissedByBytes, type Assessments } from './assessments-schema.ts';
 
 export type AssessmentRead = NonNullable<Assessments['current']>;
 
@@ -114,6 +115,14 @@ function stoppedOf(state: AssessmentState) {
   };
 }
 
+function dismissedOf(state: AssessmentState) {
+  const { dismissed } = state;
+  if (dismissed === undefined || !isUndecided(state)) {
+    return {};
+  }
+  return { dismissed: { at: textOf(dismissed.at), by: cutAtCodePoint(dismissed.by.id, mostDismissedByBytes) } };
+}
+
 function pinnedOf({ pinned }: HeldAssessment) {
   return { rule: { settles: pinned.settles, target: pinned.target }, milestones: pinned.milestones };
 }
@@ -131,6 +140,7 @@ export function assessmentReadOf(held: HeldAssessment): AssessmentRead {
     ...measurementsOf(state),
     ...verdictOf(state),
     ...stoppedOf(state),
+    ...dismissedOf(state),
     goals_version: pinned.goalsVersion,
     notices,
   };

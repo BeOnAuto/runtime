@@ -337,12 +337,13 @@ A run responds with `200`, `status: started` and its `run_id`. It then waits unt
 | A server or a tool the playbook may not use                                                                                                                                                                                             | `unavailable` with the kind `tool_not_offered` |
 | The playbook has as many open requests as the runtime allows                                                                                                                                                                            | `unavailable` with the kind `requests_full`    |
 
-The requests of a playbook have two routes of their own, relative to `/v1/orgs/{org}/playbooks/{playbook}`:
+The requests of a playbook have two routes of their own, and a third where goals are kept, relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
-| Operation            | Method and route             | Permission       | Input                                                   |
-| -------------------- | ---------------------------- | ---------------- | ------------------------------------------------------- |
-| `list_interactions`  | `GET /interactions`          | `playbook:read`  | Optional `to`, `type`, `function`, `limit` and `cursor` |
-| `answer_interaction` | `POST /runs/{run_id}/answer` | `playbook:write` | Run id in path; `answer` and an optional `claimed_for`  |
+| Operation            | Method and route                          | Permission       | Input                                                                                       |
+| -------------------- | ----------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------- |
+| `list_interactions`  | `GET /interactions`                       | `playbook:read`  | Optional `to`, `type`, `function`, `limit`, `cursor` and, where goals are kept, `dismissed` |
+| `answer_interaction` | `POST /runs/{run_id}/answer`              | `playbook:write` | Run id in path; `answer` and an optional `claimed_for`                                      |
+| `dismiss_goal_thing` | `PUT /goals/{goal}/things/{id}/dismissed` | `playbook:write` | Goal and thing id in path; an optional `dismissed`, `false` to restore the thing            |
 
 ### Listing open requests
 
@@ -351,6 +352,7 @@ The requests of a playbook have two routes of their own, relative to `/v1/orgs/{
 - `to` keeps only the requests to one party.
 - `type` keeps only those from one type of function.
 - `function` keeps only those from functions of one name. A name is unique within its type, so `function` with `type` names one function.
+- Where goals are kept, a request that a dismissal of a thing of a goal set aside is left out while the thing stays dismissed, and so is a dismissed thing in a request's `about`. `dismissed=include` lists them too, each such request with `dismissed`: the `goal` and `id` of the thing, when it was dismissed and the id of who dismissed it.
 
 Each request has these fields:
 
@@ -408,6 +410,10 @@ The run takes the answer within about a second (the server checks waiting runs e
 ### A request nobody answers
 
 When nobody answers a request before it expires, its run ends `rejected`, with the reason `unanswered` and the kind `expired`. A notification that could not be delivered ends with the kind `undelivered`. A request with the same run id and input then returns that ending as a `410` problem of the type `https://on.auto/problems/unanswered`. [How a run ends](interaction-format.md#how-a-run-ends) lists every ending.
+
+### Dismissing a thing a request is about
+
+`dismiss_goal_thing` dismisses a thing of a goal for everyone in the organization, by the `goal` and `id` a request's `about` gives. It records who dismissed it and up to ten open requests waiting on it then, which leave [`list_interactions`](#listing-open-requests) and the [activity](#the-organization-s-activity) unless they are asked with `dismissed=include`. A request asked about the thing later restores the thing: the runtime records that itself, as the playbook, and the thing and its requests are listed again. It answers and cancels nothing: those requests still wait until they are answered or expire, and the thing is judged when it is due as before. `dismissed: false` restores the thing, and its requests are listed again. Dismissing a dismissed thing, or restoring one that is not, records nothing.
 
 ## Computation functions
 
@@ -856,7 +862,8 @@ A step that starts and finishes in one input shows only `step_finished`.
 - the playbook's reads of a conversation, `replies_read` or `reading_failed`;
 - its tellings, `telling_started` and then `telling_succeeded` or `telling_failed`;
 - the inputs workflow runs took;
-- the events published to the playbook.
+- the events published to the playbook;
+- a goal's things dismissed and restored, where goals are kept: `thing.dismissed`, with the thing's `goal`, its `id`, its `per` where it has one, who dismissed it as `by` and the run ids of the open requests it set aside as `requests`, and `thing.restored`, with the same `goal`, `id`, `per` and `by`, whose `by` is the playbook itself, `playbook:` and its name, where a request asked about the thing after its dismissal restored it. The `goal` and `id` are what `dismiss_goal_thing` takes to restore the thing.
 
 | Filter   | Keeps                                                                                                   |
 | -------- | ------------------------------------------------------------------------------------------------------- |
@@ -1298,10 +1305,10 @@ A run's own records, its steps and its tool calls name the run; read them with `
 
 The organization's activity is what its playbooks did that a person may want to see: the requests that wait on an answer, the definitions whose latest run broke, the runs, definitions and playbooks that are new, and the open [comments](#comments) people made on them and on the organization's own things. The runtime keeps it for the whole org, with what each caller has seen, so a client shows it with one read however many playbooks the org holds, and what a person marks seen on one device shows on every other. These two routes are served over HTTP alone; no MCP tool serves them. They are relative to `/v1/orgs/{org}`:
 
-| Operation            | Method and route      | Permission                    | Input                                                              |
-| -------------------- | --------------------- | ----------------------------- | ------------------------------------------------------------------ |
-| `list_activity`      | `GET /activity`       | `org:read` or `playbook:read` | Optional `kind`, `playbook`, `mine`, `since`, `limit` and `cursor` |
-| `mark_activity_seen` | `POST /activity/seen` | `org:read` or `playbook:read` | `items`, `through` or both                                         |
+| Operation            | Method and route      | Permission                    | Input                                                                                                  |
+| -------------------- | --------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `list_activity`      | `GET /activity`       | `org:read` or `playbook:read` | Optional `kind`, `playbook`, `mine`, `since`, `limit`, `cursor` and, where goals are kept, `dismissed` |
+| `mark_activity_seen` | `POST /activity/seen` | `org:read` or `playbook:read` | `items`, `through` or both                                                                             |
 
 Each reads and marks only the activity of the playbooks the caller may access, as `list_playbooks` lists them, and the organization's own comments, which belong to no playbook, only for a caller who may access every playbook of the org; a caller who may access some playbooks alone reads the organization's comments with `list_comments` on the org's route ([The organization's comments](#the-organization-s-comments)) and sees none of them in the activity, while [`list_org_changes`](#changes) names each of them to every caller, as that route reads them. What a caller marks seen is theirs alone and changes nothing for anyone else.
 
@@ -1373,6 +1380,7 @@ An address is the playbook, or the organization, and the row's key in the activi
 - A caller who may access only some playbooks names one of them in `playbook`; a read that names none answers `forbidden`. A caller who may access every playbook of the org reads them all without it.
 - A retired playbook has no rows: `playbook` naming one answers no rows.
 - `counts` and `through` are the same whatever the filters and the page.
+- Where goals are kept, the `needs_you` row of a request that a dismissal of a thing of a goal set aside is left out while the thing stays dismissed, as [`list_interactions`](#listing-open-requests) leaves the request out, and `counts.needs_you` does not count it. `dismissed=include` lists those rows too, each with `dismissed`: the `goal` and `id` of the thing, when it was dismissed and the id of who dismissed it; `counts` leaves them out either way.
 - The rows are kept as each fact is recorded, so a read is as current as the playbooks' history. A client reads again when it wants the counts current; [`list_org_changes`](#changes) does not name the activity.
 
 ```http

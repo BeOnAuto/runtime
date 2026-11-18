@@ -54,8 +54,8 @@ describe('the OpenAPI document of the server', () => {
     expect(unresolvedSchemasIn(document)).toEqual([]);
   });
 
-  it('describes the 85 operations of the catalog, the content and the guides, under the tags of their resources', () => {
-    expect(operationsIn(document)).toHaveLength(85);
+  it('describes the 86 operations of the catalog, the content and the guides, under the tags of their resources', () => {
+    expect(operationsIn(document)).toHaveLength(86);
     expect(Schema.decodeUnknownSync(TagsSchema)(document).tags.map(({ name }) => name)).toEqual([
       'playbooks',
       'changes',

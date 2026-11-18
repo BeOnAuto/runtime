@@ -13,10 +13,11 @@ import {
   MarkActivitySeenWithGoalsOutputSchema,
   kindsWithGoals,
 } from './goal-schemas.ts';
+import { setAsideOfGoals, type GoalsRead } from './goal-set-aside.ts';
 import { tablesWithGoals } from './goal-tables.ts';
-import type { GoalsRead } from './goal-words.ts';
 
 export function activityOperationsKeepingGoals(goals: GoalsRead) {
+  const setAsideOf = setAsideOfGoals(goals.setAside);
   const listActivity = defineHttpOperation('org', 'query', {
     name: 'list_activity',
     title: 'List activity',
@@ -39,6 +40,7 @@ export function activityOperationsKeepingGoals(goals: GoalsRead) {
       tables: tablesWithGoals,
       rowsServed: rowsServedWithGoals(goals),
       countsOf: countsWithGoalsFor,
+      setAsideOf,
     }),
   });
   const markActivitySeen = defineHttpOperation('org', 'command', {
@@ -54,7 +56,7 @@ export function activityOperationsKeepingGoals(goals: GoalsRead) {
     inputSchema: MarkActivitySeenWithGoalsInputSchema,
     outputSchema: MarkActivitySeenWithGoalsOutputSchema,
     reasons: ['invalid_input', 'forbidden', 'conflict'],
-    handle: markedBy({ itemOf: itemOfAnyAddress, countsOf: countsWithGoalsFor }),
+    handle: markedBy({ itemOf: itemOfAnyAddress, countsOf: countsWithGoalsFor, setAsideOf }),
   });
   return { listActivity, markActivitySeen };
 }

@@ -1,6 +1,6 @@
 import { PlaybookRegistry, factTypesOf } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import type { HostDatabase } from '@on.auto/workflow-host';
+import type { Consumer, FollowerConsumers, HostDatabase } from '@on.auto/workflow-host';
 import { Effect, Function, type SchemaAST } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -71,12 +71,14 @@ describe('the goals engine', () => {
       'goal_assessed',
       'goal_assessment_ended',
       'goal_assessment_opened',
+      'goal_dismissed',
       'goal_notice_refused',
       'goal_notice_refused',
       'goal_notice_started',
       'goal_observation_refused',
       'goal_observed',
       'goal_overdue',
+      'goal_restored',
       'goal_stopped',
       'goal_summary_started',
     ]);
@@ -86,7 +88,7 @@ describe('the goals engine', () => {
   it('makes its consumers, due work and operations over the ports of a host that keeps goals', () => {
     expect(namesOf(goalsHostPartsWhere(true, portsOfAHost))).toEqual(namesOf(goalsHostParts(portsOfAHost())));
     expect(namesOf(goalsHostParts(portsOfAHost()))).toEqual({
-      consumers: ['goal assessments'],
+      consumers: ['goal assessments', 'dismissed things asked about again'],
       dueWork: ['the clock of the goals', 'the stopped things of the goals caught up'],
       operations: [],
     });
@@ -102,6 +104,8 @@ describe('the goals engine', () => {
   });
 });
 
+const isRegistered = (consumer: FollowerConsumers[number]): consumer is Consumer => 'batchOf' in consumer;
+
 describe('the assessor of the goals engine', () => {
   it("reads who began a run that is not a schedule's from the host's database, and fails its delivery while it cannot", async () => {
     const book = bookOf();
@@ -111,7 +115,8 @@ describe('the assessor of the goals engine', () => {
     const child = finished({ id: 'child', context: { by: 'playbook:sales' } });
     const called = { ...child, record: { ...child.record, correlationId: 'top' } };
 
-    const delivered = await Effect.runPromise(Effect.forEach(consumers, (consumer) => delivering(consumer, called)));
+    const assessors = consumers.filter((consumer) => isRegistered(consumer));
+    const delivered = await Effect.runPromise(Effect.forEach(assessors, (consumer) => delivering(consumer, called)));
 
     expect(delivered).toEqual([{ keys: [], failed: ['!'], batches: 1 }]);
   });
