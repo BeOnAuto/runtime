@@ -58,6 +58,45 @@ describe('an answer to a request whose run has a cancel asked', () => {
   });
 });
 
+type Nested = readonly Nested[] | string;
+
+function nestedLevels(levels: number): Nested {
+  return levels === 0 ? 'deep' : [nestedLevels(levels - 1)];
+}
+
+describe('an answer sent as JSON text', () => {
+  it('is taken as the value the text holds when the answer schema takes that value, and is the same answer as that value', async () => {
+    const { playbook } = await askedApproval();
+
+    const answered = await playbook.call(answerInteraction, { run_id: runId, answer: '{"choice":"approve"}' });
+    await playbook.performDue(Date.now());
+
+    expect(answered).toMatchObject({ status: 'succeeded', output: { run_id: runId, answer: { choice: 'approve' } } });
+    expect(await playbook.runOf(runId)).toMatchObject({
+      output: { status: 'succeeded', output: { choice: 'approve' } },
+    });
+    expect(await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'approve' } })).toMatchObject(
+      answered,
+    );
+  });
+
+  it('is refused as it was given when the text is not JSON, holds a value the schema does not take, or holds one past the bounds of an answer', async () => {
+    const { playbook } = await askedApproval();
+    const answering = (answer: string) => playbook.call(answerInteraction, { run_id: runId, answer });
+    const refusedAsGiven = { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/answer' }] };
+
+    expect([
+      await answering('approve'),
+      await answering('{"choice":"maybe"}'),
+      await answering(JSON.stringify({ choice: 'approve', extra: nestedLevels(interactionBounds.answerDepth) })),
+      await answering(JSON.stringify({ choice: 'approve', extra: 'x'.repeat(interactionBounds.answerBytes) })),
+    ]).toMatchObject([refusedAsGiven, refusedAsGiven, refusedAsGiven, refusedAsGiven]);
+    expect(await playbook.call(listInteractions, {})).toMatchObject({
+      output: { interactions: [{ run_id: runId }] },
+    });
+  });
+});
+
 const anyAnswer = [
   '---',
   "to: 'ada'",
@@ -68,12 +107,6 @@ const anyAnswer = [
   '---',
   'Anything?',
 ].join('\n');
-
-type Nested = readonly Nested[] | string;
-
-function nestedLevels(levels: number): Nested {
-  return levels === 0 ? 'deep' : [nestedLevels(levels - 1)];
-}
 
 async function asked() {
   const playbook = interactionHarness();
@@ -101,6 +134,20 @@ describe('the claim an answer makes', () => {
       { status: 'rejected', reason: 'invalid_input' },
     ]);
     expect(taken).toMatchObject({ status: 'succeeded', output: { answer: 'yes' } });
+  });
+});
+
+describe('an answer whose schema takes text', () => {
+  it('keeps text that holds JSON as the text it was given', async () => {
+    const playbook = await asked();
+
+    const answered = await playbook.call(answerInteraction, { run_id: runId, answer: '{"choice":"approve"}' });
+    await playbook.performDue(Date.now());
+
+    expect(answered).toMatchObject({ status: 'succeeded', output: { answer: '{"choice":"approve"}' } });
+    expect(await playbook.runOf(runId)).toMatchObject({
+      output: { status: 'succeeded', output: '{"choice":"approve"}' },
+    });
   });
 });
 
