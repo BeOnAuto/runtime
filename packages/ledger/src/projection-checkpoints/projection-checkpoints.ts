@@ -44,7 +44,7 @@ function caughtUpWritten({ name, version }: VersionedProjection): SQL {
     ON CONFLICT (projection, version) DO UPDATE SET folded_through = NULL`;
 }
 
-function earlierVersionsForgotten({ name, version }: VersionedProjection): SQL {
+export function earlierVersionsForgotten({ name, version }: VersionedProjection): SQL {
   return SQL`DELETE FROM ${checkpoints} WHERE projection = ${name} AND version < ${version}`;
 }
 
@@ -69,7 +69,7 @@ export function tablesMadeAgainLoggedWith(context: Context.Context<never>): Tabl
   };
 }
 
-const tablesMadeAgainLogged: TableMadeAgain = tablesMadeAgainLoggedWith(Context.empty());
+export const tablesMadeAgainLogged: TableMadeAgain = tablesMadeAgainLoggedWith(Context.empty());
 
 export interface Preparation {
   readonly execute: StatementExecutor;

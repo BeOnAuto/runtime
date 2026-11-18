@@ -48,6 +48,7 @@ export {
   isKeyHolder,
   isRefusal,
   isSignedInPerson,
+  signedInPersonOf,
   type Authentication,
   type Principal,
   type Refusal,

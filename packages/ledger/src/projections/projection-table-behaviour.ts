@@ -19,6 +19,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { runOutcomeTableBehaviour } from '../outcomes/run-outcome-table-behaviour.ts';
+import { catchUpBehaviour } from '../projection-catch-up/catch-up-behaviour.ts';
 import {
   caughtUpAt,
   checkpointsOfTheTallies,
@@ -289,6 +290,7 @@ export function projectionTableBehaviour(entry: LedgerEntry): void {
   aReadOrderedByAnUndeclaredColumn(entry);
   aTableNotThereYet(entry);
   projectionCheckpointsBehaviour(entry);
+  catchUpBehaviour(entry);
   aKeyedTableNotThereYet(entry);
   aTableOfOrgsNotThereYet(entry);
   aTableOfChildRowsNotThereYet(entry);

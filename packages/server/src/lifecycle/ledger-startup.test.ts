@@ -3,14 +3,17 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { statement } from '@on.auto/ledger';
 import { unreachableDatabase } from '@on.auto/ledger/testing';
+import { authLayout } from '@on.auto/openid-connect/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
+import { ledgerRefusalIn } from '../database/ledger-refusals.ts';
 import { aFakePostgreSQL } from '../testing/databases/fake-postgresql.ts';
 import { aCertificateOfTheLoopback, type LoopbackCertificate } from '../testing/databases/loopback-certificate.ts';
 import { secretsKey } from '../testing/databases/secrets-key.ts';
-import { saidAtStart } from '../testing/processes/in-process-starts.ts';
+import { saidAtStart, startedInProcess } from '../testing/processes/in-process-starts.ts';
 import { spawnServer } from '../testing/processes/spawned-server.ts';
 import {
   aFactInAnEarlierShape,
@@ -25,6 +28,7 @@ import {
   anEarlierLayout,
   aNewerLayout,
 } from '../testing/records/a-ledger-of-another-version.ts';
+import { onTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { startServer } from './lifecycle.ts';
 
@@ -112,6 +116,29 @@ describe('a ledger file made by a newer version of Auto Runtime', () => {
     expect(said.line).toContain(file);
     expect(said.line).toContain(`layout ${String(aNewerLayout)}`);
     expect(said.line).not.toContain('rm -f');
+  });
+});
+
+describe('a ledger file whose sign-in tables a newer version of Auto Runtime carried forward', () => {
+  it('stops start-up with the refusal of a newer version, which the start-up line and notice say, and leaves the tables as they were', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    const settings = { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: ledger.fileName };
+    await (await startedInProcess(settings)).stop();
+    await onTheLedgerIn(ledger.fileName, (connection) =>
+      connection.write(statement`UPDATE auth_layout SET layout = ${authLayout + 1}`),
+    );
+
+    const failure: unknown = await startedInProcess(settings).then(
+      (server) => server.stop(),
+      (refused: unknown) => refused,
+    );
+
+    expect(failure).toMatchObject({ _tag: 'SignInStoreOfANewerVersion', found: authLayout + 1, kept: authLayout });
+    expect(ledgerRefusalIn(failure)).toBe(failure);
+    expect(
+      await onTheLedgerIn(ledger.fileName, (connection) => connection.read(statement`SELECT layout FROM auth_layout`)),
+    ).toEqual([{ layout: authLayout + 1 }]);
   });
 });
 

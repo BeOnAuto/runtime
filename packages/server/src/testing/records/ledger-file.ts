@@ -35,6 +35,10 @@ export async function readOfTheLedgerIn(file: string, asked: Statement): Promise
   }
 }
 
+export function rowsOfTheLedgerIn(file: string, table: string): Promise<readonly unknown[]> {
+  return readOfTheLedgerIn(file, statementOf([`SELECT * FROM ${table}`], []));
+}
+
 const CatalogRowsSchema = Schema.Array(Schema.Struct({ name: Schema.String, sql: Schema.String }));
 
 export type CatalogRows = typeof CatalogRowsSchema.Type;

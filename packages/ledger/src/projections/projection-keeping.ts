@@ -177,17 +177,6 @@ export function replayedRow(
   );
 }
 
-export function replayedChildRows(
-  keeping: KeepingOf<ChildRowsProjection>,
-  messages: readonly ReplayedMessage[],
-): ProjectedRows {
-  return childRowsFoldedOver(
-    keeping.projection,
-    messages.map((message) => filledMessageOf(keeping, message)),
-    noRows,
-  );
-}
-
 export function projectionRegistrations(
   dialect: ProjectionDialect,
   projections: readonly KeptProjection[],

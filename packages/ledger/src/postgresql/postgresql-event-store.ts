@@ -28,6 +28,7 @@ export type StoreKept = Pick<
   | 'floor'
   | 'definitionNames'
   | 'tableMadeAgain'
+  | 'pageFailed'
 >;
 
 const eventsInOneBoundedAppend = 64;
@@ -81,6 +82,19 @@ function multiStreamAppendsOn(
   );
 }
 
+interface Migrating extends Opened {
+  readonly store: { readonly migrate: () => Promise<void> };
+}
+
+function migrationOf(migrating: () => Migrating, kept: StoreKept): () => Promise<void> {
+  const { pool, projections, store } = migrating();
+  return async () => {
+    await postgresqlLayoutKept(pool, projections.named, kept);
+    await store.migrate();
+    await projections.caughtUpOn(pool);
+  };
+}
+
 export const connectionsOfOneLedger = 10;
 
 export function postgresqlStoreOn(
@@ -122,10 +136,7 @@ export function postgresqlStoreOn(
     ...projections.scrubs.storeOver(store, formattedFor(query)),
     ...postgresqlReadsOn(kept, query),
     ...projections.holdsOn(pool, formattedFor(query)),
-    migrate: async () => {
-      await postgresqlLayoutKept(pool, projections.named, kept);
-      await store.migrate();
-    },
+    migrate: migrationOf(() => ({ pool, projections, store }), kept),
     close: async () => {
       recorded.endWaits();
       await store.close();

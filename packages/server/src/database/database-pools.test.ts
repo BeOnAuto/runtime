@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { ledgerLayout } from '@on.auto/ledger/testing';
+import { authLayout, authTablePrefix } from '@on.auto/openid-connect/testing';
 import type { ProxySettings } from '@on.auto/outbound';
 import type { DatabaseTokenRequest } from '@on.auto/outbound/aws';
 import { Schema } from 'effect';
@@ -16,7 +17,7 @@ import {
   modulesOfTheSignerLoaded,
   modulesOfTheSignerLoadedInAProcessOfItsOwnBy,
 } from '../testing/databases/signer-modules.ts';
-import { catalogOfTheLedgerIn } from '../testing/records/ledger-file.ts';
+import { catalogOfTheLedgerIn, type CatalogRows } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { loopbackSettingsOver } from '../testing/servers/reasoning-server.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
@@ -74,8 +75,8 @@ const PinnedLayout = Schema.fromJsonString(
   }),
 );
 
-function pinned() {
-  return Schema.decodeUnknownSync(PinnedLayout)(readFileSync(new URL('database-layout.json', import.meta.url), 'utf8'));
+function pinnedIn(file: string) {
+  return Schema.decodeUnknownSync(PinnedLayout)(readFileSync(new URL(file, import.meta.url), 'utf8'));
 }
 
 describe('the pools of a ledger whose password is in DATABASE_URL', () => {
@@ -245,8 +246,12 @@ describe('a signer of the tokens that cannot be loaded', () => {
   });
 });
 
+function isTheSignIns({ name }: CatalogRows[number]): boolean {
+  return name.startsWith(authTablePrefix);
+}
+
 describe('the layout of the database the server opens', () => {
-  it('is the layout of every table and index the ledger, the workflow host and the folders of its projector make, pinned in database-layout.json under the number of the ledger', async () => {
+  it('is the layout of every table and index the ledger, the workflow host and the folders of its projector make, pinned in database-layout.json under the number of the ledger, and of those of the sign-in, whose names begin with its prefix, pinned in auth-layout.json under the number of its store', async () => {
     const ledger = temporaryLedger();
     onTestFinished(ledger.remove);
     const server = await startServer(loopbackSettingsOver(ledger), compositionRoot);
@@ -255,8 +260,12 @@ describe('the layout of the database the server opens', () => {
     const catalog = await catalogOfTheLedgerIn(ledger.fileName);
 
     expect(
-      { layout: ledgerLayout, catalog },
+      { layout: ledgerLayout, catalog: catalog.filter((relation) => !isTheSignIns(relation)) },
       "The layout of the server's database changed: raise ledgerLayout in packages/ledger/src/layout/ledger-layout.ts, register the step that leads to it with the package that owns the table, then pin in src/database/database-layout.json the layout and the catalog of every table and index the server makes",
-    ).toEqual(pinned());
+    ).toEqual(pinnedIn('database-layout.json'));
+    expect(
+      { layout: authLayout, catalog: catalog.filter((relation) => isTheSignIns(relation)) },
+      "The layout of the sign-in's store changed: raise authLayout in packages/openid-connect/src/store/auth-layout.ts, register the step that leads to it in authLayoutSteps there, then pin in src/database/auth-layout.json the layout and the catalog of every table and index whose name begins with auth_",
+    ).toEqual(pinnedIn('auth-layout.json'));
   });
 });

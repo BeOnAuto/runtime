@@ -6,10 +6,10 @@ import type { ApiOptions } from '../api-options.ts';
 import { publicOriginOfRequest } from '../discovery/public-addresses.ts';
 import { noContextOfTheCall, type CallContext } from '../routes.ts';
 
-type LinkingStudio = Pick<ApiOptions, 'studio' | 'authenticator' | 'callContext'>;
+type LinkingStudio = Pick<ApiOptions, 'studio' | 'authenticator' | 'publicUrl' | 'callContext'>;
 
-function studioLinksAt({ studio, authenticator }: LinkingStudio, request: Request): StudioLinkTo | null {
-  const ownOrigin = publicOriginOfRequest(request, authenticator.resource);
+function studioLinksAt({ studio, authenticator, publicUrl }: LinkingStudio, request: Request): StudioLinkTo | null {
+  const ownOrigin = publicOriginOfRequest(request, { resource: authenticator.resource, publicUrl });
   return isHttpsOrLoopback(ownOrigin)
     ? (page) => studioLinkOf(studio, { ownOrigin, openedFrom: 'agent', installId: undefined, page })
     : null;

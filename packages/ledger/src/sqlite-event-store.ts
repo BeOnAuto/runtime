@@ -102,7 +102,7 @@ export function sqliteEventStore<Driver extends AnyDriver>(
       await sqliteLayoutKept(pool, projections.named, kept);
       await streams.migrate();
       await sqliteSchemaCreated(pool.execute);
-      await preparedOn(projections.prepare, pool);
+      await preparedOn(projections, pool);
     },
     close: async () => {
       recorded.endWaits();

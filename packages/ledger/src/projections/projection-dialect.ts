@@ -1,28 +1,15 @@
 import type { SQL } from '@event-driven-io/dumbo';
-import {
-  scopesOf,
-  type ProjectionDeclaration,
-  type ProjectedColumn,
-  type ProjectedColumnKind,
-  type ProjectedValue,
-  type StreamScope,
-} from '@on.auto/operations';
+import type { ProjectedColumn, ProjectedColumnKind, ProjectedValue } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-export interface FoldedStreams {
-  readonly scopes: readonly StreamScope[];
-  readonly kinds: readonly string[];
-}
+import type { CatchUpDialect } from '../projection-catch-up/catch-up-dialect.ts';
 
 export interface MessageLane {
   readonly by: 'stream' | 'prefix';
   readonly key: string;
 }
 
-export type StreamsInOrder =
-  | { readonly of: 'folded'; readonly folded: FoldedStreams }
-  | { readonly of: 'lane'; readonly lane: MessageLane }
-  | { readonly of: 'every' };
+export type StreamsInOrder = { readonly of: 'lane'; readonly lane: MessageLane } | { readonly of: 'every' };
 
 export interface HeldTypes {
   readonly holding: readonly string[];
@@ -41,23 +28,9 @@ export interface ProjectionDialect {
   readonly columnTypes: Readonly<Record<ProjectedColumnKind, string>>;
   readonly playbookIndexNulls: string;
   readonly asNumber: (expression: string) => string;
-  readonly streamsAfter: (after: string, count: number, folded: FoldedStreams, types: readonly string[]) => SQL;
-  readonly messagesOf: (streams: readonly string[], types: readonly string[]) => SQL;
   readonly messagesInOrderAfter: (
     after: string | undefined,
     count: number,
-    streams: StreamsInOrder,
-    types: readonly string[],
-  ) => SQL;
-  readonly sizesInOrderAfter: (
-    after: string | undefined,
-    count: number,
-    streams: StreamsInOrder,
-    types: readonly string[],
-  ) => SQL;
-  readonly messagesInOrderThrough: (
-    after: string | undefined,
-    through: string,
     streams: StreamsInOrder,
     types: readonly string[],
   ) => SQL;
@@ -76,10 +49,7 @@ export interface ProjectionDialect {
   readonly listed: (values: readonly string[]) => SQL;
   readonly forUpdate: string;
   readonly storedBytesOfMessage: string;
-}
-
-export function foldedStreamsOf(projection: ProjectionDeclaration): FoldedStreams {
-  return { scopes: scopesOf(projection), kinds: projection.kinds };
+  readonly catchUp: CatchUpDialect;
 }
 
 export function selectedColumn({ asNumber }: ProjectionDialect, { name, kind }: ProjectedColumn): string {

@@ -1,5 +1,10 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import type { Environment } from '@on.auto/config';
-import { describe, expect, it } from 'vitest';
+import { Redacted } from 'effect';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 
@@ -149,4 +154,105 @@ describe('readSettings given the key set of the identity service', () => {
       );
     },
   );
+});
+
+const company = {
+  PUBLIC_URL: 'https://auto.example.com',
+  OIDC_ISSUER: 'https://login.example.com/acme',
+  OIDC_CLIENT_ID: 'auto-runtime',
+  OIDC_CLIENT_SECRET: 'a-client-secret-of-the-test',
+};
+
+function settingNamedBy(environment: Environment): string | undefined {
+  const words = String(errorFrom(environment));
+  return /at \["([A-Z_]+)"\]/u.exec(words)?.[1] ?? /^InvalidSettingsError: ([A-Z_]+):/u.exec(words)?.[1];
+}
+
+function secretFileHolding(text: string, mode = 0o600): string {
+  const folder = mkdtempSync(join(tmpdir(), 'auto-runtime-oidc-'));
+  onTestFinished(() => {
+    rmSync(folder, { recursive: true });
+  });
+  const file = join(folder, 'client-secret');
+  writeFileSync(file, text, { mode });
+  return file;
+}
+
+function clientSecretOf(environment: Environment): string | undefined {
+  const { openIdConnect } = readSettingsOf(environment);
+  return openIdConnect === undefined ? undefined : Redacted.value(openIdConnect.clientSecret);
+}
+
+describe("readSettings signing people in through the company's identity provider", () => {
+  it('reads the provider, the client and the scopes, with the redirect URI under PUBLIC_URL', () => {
+    const settings = readSettingsOf({ ...company, OIDC_TOKEN_ENDPOINT_AUTH_METHOD: 'client_secret_post' });
+
+    expect(settings.signIn).toEqual({ issuer: company.OIDC_ISSUER, publicUrl: company.PUBLIC_URL });
+    expect(settings.openIdConnect).toMatchObject({
+      issuer: company.OIDC_ISSUER,
+      clientId: 'auto-runtime',
+      scopes: ['openid', 'profile', 'email'],
+      tokenEndpointAuthMethod: 'client_secret_post',
+      publicUrl: company.PUBLIC_URL,
+      redirectUri: 'https://auto.example.com/auth/oidc/callback',
+    });
+    expect(clientSecretOf(company)).toBe(company.OIDC_CLIENT_SECRET);
+    expect(JSON.stringify(settings)).not.toContain(company.OIDC_CLIENT_SECRET);
+  });
+
+  it('reads the secret from OIDC_CLIENT_SECRET_FILE without its line ending, and the scopes OIDC_SCOPES lists', () => {
+    const { OIDC_CLIENT_SECRET, ...withoutTheSecret } = company;
+    const file = secretFileHolding(`${OIDC_CLIENT_SECRET}\n`);
+
+    const environment = { ...withoutTheSecret, OIDC_CLIENT_SECRET_FILE: file, OIDC_SCOPES: 'openid  email' };
+
+    expect(clientSecretOf(environment)).toBe(OIDC_CLIENT_SECRET);
+    expect(readSettingsOf(environment).openIdConnect).toMatchObject({ scopes: ['openid', 'email'] });
+  });
+
+  it('leaves every setting as it is without OIDC_ISSUER, OIDC_CLIENT_ID and a secret', () => {
+    expect(readSettingsOf({ PUBLIC_URL: company.PUBLIC_URL, OIDC_SCOPES: 'email' })).toMatchObject({
+      signIn: { issuer: 'https://clerk.on.auto', publicUrl: company.PUBLIC_URL },
+      openIdConnect: undefined,
+    });
+  });
+});
+
+describe("readSettings refusing the company's identity provider", () => {
+  it.each<[string, Environment]>([
+    ['OIDC_ISSUER', { OIDC_ISSUER: company.OIDC_ISSUER, PUBLIC_URL: company.PUBLIC_URL }],
+    ['OIDC_ISSUER', { OIDC_CLIENT_ID: 'auto-runtime', OIDC_CLIENT_SECRET: 'secret', PUBLIC_URL: company.PUBLIC_URL }],
+    [
+      'OIDC_ISSUER',
+      { OIDC_ISSUER: company.OIDC_ISSUER, OIDC_CLIENT_ID: 'auto-runtime', PUBLIC_URL: company.PUBLIC_URL },
+    ],
+    ['OIDC_CLIENT_SECRET', { ...company, OIDC_CLIENT_SECRET_FILE: '/run/secrets/oidc' }],
+    ['OIDC_ISSUER', { ...company, IDENTITY_ISSUER: 'https://identity.example' }],
+    ['OIDC_ISSUER', { ...company, IDENTITY_JWKS_URL: 'https://identity.example/jwks' }],
+    ['ACCESS_MODE', { ...company, HOST: '127.0.0.1', PUBLIC_URL: 'http://localhost:5555', ACCESS_MODE: 'local' }],
+    ['OIDC_SCOPES', { ...company, OIDC_SCOPES: 'profile email' }],
+    ['OIDC_ISSUER', { OIDC_ISSUER: company.OIDC_ISSUER, OIDC_CLIENT_ID: 'auto-runtime', OIDC_CLIENT_SECRET: 'secret' }],
+    ['OIDC_ISSUER', { ...company, OIDC_ISSUER: 'http://login.example.com/acme' }],
+    ['OIDC_ISSUER', { ...company, OIDC_ISSUER: 'https://login.example.com/acme?tenant=1' }],
+    ['OIDC_ISSUER', { ...company, OIDC_ISSUER: 'https://login.example.com/acme#top' }],
+    ['OIDC_ISSUER', { ...company, OIDC_CLIENT_ID: '' }],
+    ['OIDC_TOKEN_ENDPOINT_AUTH_METHOD', { ...company, OIDC_TOKEN_ENDPOINT_AUTH_METHOD: 'private_key_jwt' }],
+  ])('refuses to start, naming %s', (setting, environment) => {
+    expect(settingNamedBy(environment)).toBe(setting);
+  });
+
+  it('refuses a secret file that does not exist, that the server cannot read, or that is empty', () => {
+    const { OIDC_CLIENT_SECRET, ...withoutTheSecret } = company;
+    const files = [
+      join(tmpdir(), 'auto-runtime-no-such-secret'),
+      secretFileHolding(OIDC_CLIENT_SECRET, 0o000),
+      secretFileHolding('\n'),
+    ];
+
+    expect(files.map((file) => settingNamedBy({ ...withoutTheSecret, OIDC_CLIENT_SECRET_FILE: file }))).toEqual([
+      'OIDC_CLIENT_SECRET_FILE',
+      'OIDC_CLIENT_SECRET_FILE',
+      'OIDC_CLIENT_SECRET_FILE',
+    ]);
+  });
 });

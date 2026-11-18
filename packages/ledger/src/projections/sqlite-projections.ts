@@ -1,13 +1,12 @@
 import { SQL } from '@event-driven-io/dumbo';
-import type { StreamScope } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { sizedPositionsOf, type SizesAfter } from '../appends/stream-pages.ts';
 import { itemsInAStatement, mostValuesTheLedgerBindsOnSQLite } from '../connection/bound-values.ts';
 import { inTransactionOf, type StatementExecutor, type TransactionalPool } from '../event-store.ts';
+import { sqliteCatchUp } from '../projection-catch-up/sqlite-catch-up.ts';
 import { dataBytesOf, playbookKeyOfStream, storedBytesOf } from '../recorded/sqlite-indexes.ts';
 import {
-  type FoldedStreams,
   type HeldRead,
   type HeldTypes,
   type MessageLane,
@@ -19,16 +18,6 @@ import { projectionPartsOf, type KeptTables, type ProjectionParts } from './proj
 const defaultPartition = 'emt:default';
 
 const decodeText = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown));
-
-const streamsOfAKind: Readonly<Record<StreamScope, (kind: string) => string>> = {
-  playbook: (kind) => `*/*/*/${kind}/*`,
-  org: (kind) => `org/*/${kind}/*`,
-};
-
-function foldedBy(column: string, { scopes, kinds }: FoldedStreams): SQL {
-  const patterns = scopes.flatMap((scope) => kinds.map((kind) => streamsOfAKind[scope](kind)));
-  return SQL`EXISTS (SELECT 1 FROM json_each(${JSON.stringify(patterns)}) AS k WHERE ${SQL.plain(column)} GLOB k.value)`;
-}
 
 const columnsOfAMessage = SQL`${SQL.plain(`CAST(global_position AS TEXT) AS point,
   printf('%020d', global_position) AS ordered, stream_id AS stream, message_type AS type,
@@ -83,11 +72,10 @@ function laneAfter({ by, key }: MessageLane, read: LaneRead): SQL {
     ${limitOf(read)}`;
 }
 
-function inOrderAfter(read: LaneRead, folded?: FoldedStreams): SQL {
-  const ofTheStreams = folded === undefined ? SQL.EMPTY : SQL`${foldedBy('stream_id', folded)} AND `;
+function inOrderAfter(read: LaneRead): SQL {
   return SQL`SELECT ${columnsOf(read)}
     FROM emt_messages
-    WHERE ${ofTheStreams}global_position > ${read.after}${upTo(read)}
+    WHERE global_position > ${read.after}${upTo(read)}
       AND ${selectedOf(read)}
       AND partition = ${defaultPartition} AND is_archived = FALSE
     ORDER BY global_position
@@ -98,7 +86,7 @@ function streamsInOrder(read: LaneRead, streams: StreamsInOrder): SQL {
   if (streams.of === 'lane') {
     return laneAfter(streams.lane, read);
   }
-  return inOrderAfter(read, streams.of === 'folded' ? streams.folded : undefined);
+  return inOrderAfter(read);
 }
 
 function heldInOrder({ after, count, streams, types }: HeldRead, sized: boolean, through?: string): SQL {
@@ -119,32 +107,8 @@ const sqliteProjectionDialect: ProjectionDialect = {
   columnTypes: { text: 'TEXT', integer: 'INTEGER', boolean: 'INTEGER' },
   playbookIndexNulls: '',
   asNumber: (expression) => expression,
-  streamsAfter: (after, count, folded, types) =>
-    SQL`SELECT s.stream_id AS stream, (
-        SELECT coalesce(sum(${SQL.plain(storedBytesOf('m'))}), 0) FROM emt_messages AS m
-        WHERE m.stream_id = s.stream_id AND m.message_type IN (SELECT value FROM json_each(${JSON.stringify(types)}))
-          AND m.partition = ${defaultPartition} AND m.is_archived = FALSE
-      ) AS size
-      FROM emt_streams AS s
-      WHERE s.stream_id > ${after}
-        AND ${foldedBy('s.stream_id', folded)}
-        AND s.partition = ${defaultPartition} AND s.is_archived = FALSE
-      ORDER BY s.stream_id
-      LIMIT ${count}`,
-  messagesOf: (streams, types) =>
-    SQL`SELECT stream_id AS stream, message_type AS type, message_data AS data, message_metadata AS metadata,
-        stream_position AS position
-      FROM emt_messages
-      WHERE stream_id IN (SELECT value FROM json_each(${JSON.stringify(streams)}))
-        AND message_type IN (SELECT value FROM json_each(${JSON.stringify(types)}))
-        AND partition = ${defaultPartition} AND is_archived = FALSE
-      ORDER BY stream_id, stream_position`,
   messagesInOrderAfter: (after, count, streams, types) =>
     streamsInOrder({ after: Number(after ?? '0'), count, types }, streams),
-  sizesInOrderAfter: (after, count, streams, types) =>
-    streamsInOrder({ after: Number(after ?? '0'), count, types, sized: true }, streams),
-  messagesInOrderThrough: (after, through, streams, types) =>
-    streamsInOrder({ after: Number(after ?? '0'), count: 0, types, through: Number(through) }, streams),
   heldMessagesThrough: (read, through) => heldInOrder(read, false, through),
   heldSizesInOrderAfter: (read) => heldInOrder(read, true),
   messageAt: (stream, position) =>
@@ -169,6 +133,7 @@ const sqliteProjectionDialect: ProjectionDialect = {
   listed: (values) => SQL`SELECT value FROM json_each(${JSON.stringify(values)})`,
   storedBytesOfMessage: storedBytesOf('m'),
   forUpdate: '',
+  catchUp: sqliteCatchUp,
 };
 
 export function sqliteSizesAfter(execute: StatementExecutor): SizesAfter {
@@ -188,6 +153,11 @@ export function sqliteProjectionsOf(kept: KeptTables): ProjectionParts {
   return projectionPartsOf(sqliteProjectionDialect, kept);
 }
 
-export function preparedOn(prepare: ProjectionParts['prepare'], pool: TransactionalPool): Promise<void> {
-  return prepare(pool.execute, inTransactionOf(pool));
+export async function preparedOn(
+  { prepare, caughtUp }: Pick<ProjectionParts, 'prepare' | 'caughtUp'>,
+  pool: TransactionalPool,
+): Promise<void> {
+  const inTransaction = inTransactionOf(pool);
+  await prepare(pool.execute, inTransaction);
+  await caughtUp(inTransaction);
 }

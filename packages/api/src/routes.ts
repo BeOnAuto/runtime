@@ -24,6 +24,7 @@ export interface Routes {
   readonly onClose: (close: Close) => void;
   readonly reportThrown: ReportThrown;
   readonly resource: ProtectedResource | undefined;
+  readonly publicUrl?: string | undefined;
   readonly callContext: CallContext;
 }
 

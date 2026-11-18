@@ -55,7 +55,7 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
   } = options;
   return Layer.unwrap(
     Effect.map(Effect.context(), (context) => {
-      const { watchFailed, tableMadeAgain } = openingLogsWith(context);
+      const { watchFailed, tableMadeAgain, pageFailed } = openingLogsWith(context);
       const kept = {
         runOutcomes,
         projections,
@@ -67,6 +67,7 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
         mostBytesFilledAtOnce,
         definitionNames,
         tableMadeAgain,
+        pageFailed,
       };
       const listeners = { ...listenersOf(options), watchFailed };
       return ledgerLayerOver(() => sqliteLedgerOpened(opening, kept, listeners), { appends, content });

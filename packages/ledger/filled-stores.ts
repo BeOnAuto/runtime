@@ -16,7 +16,7 @@ export type FilledIn =
 export interface FilledStore {
   readonly ledgerOn: (projections: KeptTables['projections']) => ReturnType<typeof ledgerLayer>;
   readonly executedOn: <A>(work: (execute: StatementExecutor) => Promise<A>) => Promise<A>;
-  readonly projectionsOf: (kept: KeptTables) => Pick<ProjectionParts, 'prepare'>;
+  readonly projectionsOf: (kept: KeptTables) => Pick<ProjectionParts, 'prepare' | 'caughtUp'>;
 }
 
 async function executedOnPostgreSQL<A>(

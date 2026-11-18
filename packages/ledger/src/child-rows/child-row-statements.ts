@@ -22,7 +22,7 @@ export interface KeptChildRows extends RowPlace {
   readonly rows: ProjectedRows;
 }
 
-export interface KeptChildRow extends KeptRow {
+interface KeptChildRow extends KeptRow {
   readonly child: string;
 }
 
@@ -51,11 +51,11 @@ function childValuesOf(dialect: ProjectionDialect, projection: ProjectionDeclara
   return valuesOf(dialect, { columns }, { ...kept, row: { ...kept.row, [childKeyColumn]: kept.child } });
 }
 
-export function childRowsOf({ prefix, key, rows }: KeptChildRows): readonly KeptChildRow[] {
+function childRowsOf({ prefix, key, rows }: KeptChildRows): readonly KeptChildRow[] {
   return [...rows].map(([child, row]: readonly [string, ProjectedRow]) => ({ prefix, key, child, row }));
 }
 
-export function childRowsWrite(
+function childRowsWrite(
   dialect: ProjectionDialect,
   projection: ProjectionDeclaration,
   kept: readonly KeptChildRow[],
@@ -68,7 +68,7 @@ export function childRowsWrite(
   return SQL`INSERT INTO ${tableOf(projection)} (${columns}) VALUES ${values}`;
 }
 
-export function childRowsInAWrite(dialect: ProjectionDialect, projection: ProjectionDeclaration): number {
+function childRowsInAWrite(dialect: ProjectionDialect, projection: ProjectionDeclaration): number {
   return dialect.rowsInAWrite(projection.columns.length + 1);
 }
 

@@ -18,6 +18,11 @@ import { Config, ConfigProvider, Effect, Option, Schema } from 'effect';
 import type { LogFormat, LogLevelSetting } from '../logging/log-formats.ts';
 import { readStudioSettings } from '../studio/studio-settings.ts';
 import { asInvalidSettings, InvalidSettingsError } from './invalid-settings-error.ts';
+import {
+  openIdConnectVariables,
+  readOpenIdConnectSettings,
+  type OpenIdConnectSettings,
+} from './openid-connect-settings.ts';
 import { httpOffTheLoopbackIn, IssuerOrigin, KeySetUrl, Origin, PublicOrigin } from './origin.ts';
 
 export const accessVariables: readonly string[] = [
@@ -29,6 +34,7 @@ export const accessVariables: readonly string[] = [
   'IDENTITY_ISSUER',
   'IDENTITY_JWKS',
   'IDENTITY_JWKS_URL',
+  ...openIdConnectVariables,
 ];
 
 export interface AccessSettings {
@@ -59,6 +65,7 @@ export interface CredentialSettings {
   readonly publicUrl: string | undefined;
   readonly accessMode: DeclaredAccessMode | undefined;
   readonly signIn: SignInSettings | undefined;
+  readonly openIdConnect: OpenIdConnectSettings | undefined;
   readonly studio: StudioSettings;
 }
 
@@ -128,8 +135,9 @@ export function readCredentialSettings(environment: Environment, host: string): 
   if (refusal !== undefined) {
     throw new InvalidSettingsError({ message: refusal });
   }
+  const openIdConnect = readOpenIdConnectSettings(environment, { publicUrl, accessMode });
   const signsIn = publicUrl !== undefined && accessMode === undefined;
-  const signIn = signsIn ? { issuer: read.issuer, publicUrl } : undefined;
+  const signIn = signsIn ? { issuer: openIdConnect?.issuer ?? read.issuer, publicUrl } : undefined;
   const studio = readStudioSettings(environment, { host, apiKeys, signIn, accessMode });
   return {
     apiKeys,
@@ -138,6 +146,7 @@ export function readCredentialSettings(environment: Environment, host: string): 
     publicUrl,
     accessMode,
     signIn,
+    openIdConnect,
     studio,
   };
 }

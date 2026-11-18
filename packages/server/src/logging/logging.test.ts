@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { SignInSettings } from '@on.auto/identity';
-import { Cause, Redacted } from 'effect';
+import { Cause, Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { secretsKey } from '../testing/databases/secrets-key.ts';
@@ -21,6 +21,8 @@ import {
   logPayloadOffloading,
   logReasoning,
   logServedStudio,
+  logSignInFailed,
+  logSignInRefused,
   logStudioKeptInMemory,
   logTelemetry,
   logUnsettled,
@@ -91,6 +93,43 @@ describe('logAccessMode with credentials configured', () => {
     expect(line).toContain('"level":"INFO"');
     expect(line).toContain('"message":"Signed-in persons are admitted through the');
     expect(line).toContain('"public_url":"https://runtime.example","identity_issuer":"https://clerk.on.auto"');
+  });
+});
+
+const companySignIn = {
+  issuer: 'https://login.example.com/acme',
+  clientId: 'auto-runtime',
+  clientSecret: Redacted.make('a-client-secret-of-the-test'),
+  scopes: ['openid'],
+  tokenEndpointAuthMethod: undefined,
+  publicUrl: 'https://auto.example.com',
+  redirectUri: 'https://auto.example.com/auth/oidc/callback',
+};
+
+describe("the logs of a sign-in through the company's identity provider", () => {
+  it('name at start the provider and the redirect URI to register at it, and never the client secret', async () => {
+    const [line] = await linesLoggedBy(logAccessMode({ mode: 'credentials', signIn, openIdConnect: companySignIn }));
+
+    expect(line).toContain('"level":"INFO"');
+    expect(line).toContain(
+      '"annotations":{"public_url":"https://auto.example.com","oidc_issuer":"https://login.example.com/acme","redirect_uri":"https://auto.example.com/auth/oidc/callback"}',
+    );
+    expect(line).not.toContain('a-client-secret-of-the-test');
+  });
+
+  it('warn of a sign-in the provider refused with its error code, and of one that could not be completed', async () => {
+    const lines = await linesLoggedBy(
+      Effect.andThen(
+        logSignInRefused(companySignIn.issuer, 'invalid_client'),
+        logSignInFailed(companySignIn.issuer, 'OAUTH_JWT_CLAIM_COMPARISON_FAILED'),
+      ),
+    );
+
+    expect(lines.map((line) => line.includes('"level":"WARN"'))).toEqual([true, true]);
+    expect(lines[0]).toContain(
+      '"annotations":{"oidc_issuer":"https://login.example.com/acme","error":"invalid_client"}',
+    );
+    expect(lines[1]).toContain('"failure":"OAUTH_JWT_CLAIM_COMPARISON_FAILED"');
   });
 });
 

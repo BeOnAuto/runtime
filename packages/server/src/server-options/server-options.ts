@@ -1,5 +1,6 @@
 import type { AppRuntime, RegisterRoutes, RuntimeControl } from '@on.auto/api';
 import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identity';
+import type { SessionRows } from '@on.auto/openid-connect';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { Layer } from 'effect';
 
@@ -36,6 +37,7 @@ export interface Served {
   readonly routes: readonly RegisterRoutes[];
   readonly stopWork: () => Promise<void>;
   readonly licenseNotice?: LicenseNotice;
+  readonly sessionRows?: SessionRows;
 }
 
 export type ServedClosing = (served: Served) => Served;

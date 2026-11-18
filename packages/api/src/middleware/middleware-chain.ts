@@ -19,6 +19,8 @@ export function middlewareFor({
   allowedOrigins,
   studio,
   authenticator,
+  sessions,
+  publicUrl,
   requests,
   runtimeControl,
   installId,
@@ -29,22 +31,21 @@ export function middlewareFor({
   const isPublic = publicPathsOf(authenticator, publicPaths.has);
   const hostValidation = authenticator.mode === 'local' ? [validateHost] : [];
   const pages = { studio, allowedOrigins };
+  const addressing = { resource: authenticator.resource, publicUrl };
   const handlers = [
     ...(requests === undefined ? [] : [requests]),
     landingPageFor({
       control: runtimeControl,
       studio,
-      resource: authenticator.resource,
+      addressing,
       installId,
       licenseNotice,
       style: pageStyle,
     }),
     ...requestIdAndSecurityHeadersFor(studio),
-    ...[validateOrigin(pages, authenticator.resource), ...hostValidation].map((middleware) =>
-      exceptOn(isPublic, middleware),
-    ),
-    ...corsFor(pages, authenticator.resource),
-    exceptOn(needingNoCallerOf(isPublic, studio), authenticate(authenticator)),
+    ...[validateOrigin(pages, addressing), ...hostValidation].map((middleware) => exceptOn(isPublic, middleware)),
+    ...corsFor(pages, addressing),
+    exceptOn(needingNoCallerOf(isPublic, studio), authenticate(authenticator, sessions)),
   ];
   return { handlers, publicPaths };
 }

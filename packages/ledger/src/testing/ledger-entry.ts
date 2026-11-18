@@ -13,6 +13,7 @@ import { openChoresWith, openLedgerWith, type OpenChores } from './open-ledger.t
 export interface StreamKept {
   readonly streamProjections: readonly StreamProjection[];
   readonly mostBytesFilledAtOnce?: number;
+  readonly projections?: readonly KeptProjection[];
 }
 
 export interface LedgerEntry {

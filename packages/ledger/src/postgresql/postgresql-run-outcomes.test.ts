@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 
 import { contentTableNames } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
-import { aRecordedFillOf, mebibyte, runIdsOf, type RecordedFill } from '../outcomes/recorded-fill.ts';
 import type { Query } from '../postgresql-reads/postgresql-recorded.ts';
 import { postgresqlProjectionsOf } from './postgresql-projections.ts';
 import {
@@ -59,7 +58,12 @@ const indexes = [
 const ownTables =
   'recorded_content_heads_by_upload recorded_content_heads_expiring kept_secrets webhooks_received webhooks_received_kept_until definition_names_1 definition_names_1_by_definition projection_checkpoints';
 
-const ownRows = [...contentTableNames, ...ownTables.split(' ')].map((name) => ({ name, folded_through: null }));
+const ownRows = [...contentTableNames, ...ownTables.split(' ')].map((name) => ({
+  name,
+  projection: 'run_outcomes',
+  version: 5,
+  folded_through: null,
+}));
 
 function aLedgerWithOneRun(tables: readonly string[]): Answers {
   return (statement) => {
@@ -72,18 +76,7 @@ function aLedgerWithOneRun(tables: readonly string[]): Answers {
     if (statement.includes('pg_class')) {
       return tables.map((name) => ({ name }));
     }
-    if (statement.includes('FROM emt_streams')) {
-      return statement.includes('s.stream_id > ""') ? [{ stream: 'playbook/acme/alpha/runs/r1', size: 120 }] : [];
-    }
-    return [
-      {
-        stream: 'playbook/acme/alpha/runs/r1',
-        type: 'run_began',
-        data: { json: JSON.stringify(began.data) },
-        metadata: { at: '2026-10-01T09:00:00.000Z', by: 'tallies' },
-        position: 1,
-      },
-    ];
+    return [];
   };
 }
 
@@ -91,7 +84,7 @@ const keptRow =
   'INSERT INTO run_outcomes_5 (playbook_key, row_key, started_day, started_at, last_started_at, definition_type, name, status, duration_ms, input_tokens, output_tokens, cached_tokens, cost_micro_usd) VALUES ("playbook/acme/alpha/", "r1", "2026-10-01", "2026-10-01T09:00:00.000Z", "2026-10-01T09:00:00.000Z", "tally", "triage", "started", null, null, null, null, null) ON CONFLICT (playbook_key, row_key) DO UPDATE SET started_day = excluded.started_day,';
 
 describe('the table of the outcomes of runs on PostgreSQL, as the ledger opens', () => {
-  it("is created after the playbook's indexes, filled from the stored run streams, recorded as caught up, and analysed", async () => {
+  it("is created after the playbook's indexes, in the transaction of the migration, and recorded at the start of the store", async () => {
     const { execute, commands } = recording(aLedgerWithOneRun([]));
 
     await tallied.afterTheSchema({ execute });
@@ -99,12 +92,9 @@ describe('the table of the outcomes of runs on PostgreSQL, as the ledger opens',
     expect(commands.map((command) => command.split(' ').slice(0, 6).join(' '))).toEqual([
       'CREATE TABLE IF NOT EXISTS run_outcomes_5',
       'CREATE INDEX IF NOT EXISTS run_outcomes_5_by_playbook_and_day',
-      'INSERT INTO run_outcomes_5 (playbook_key, row_key, started_day,',
       'INSERT INTO projection_checkpoints (projection, version, folded_through)',
-      'DELETE FROM projection_checkpoints WHERE projection =',
-      'ANALYZE run_outcomes_5',
     ]);
-    expect(commands[2]?.startsWith(keptRow)).toBe(true);
+    expect(commands[2]).toContain('VALUES ("run_outcomes", 5, "0/0")');
   });
 
   it('is left as it is when it is found, and never made by a ledger without the projection', async () => {
@@ -115,33 +105,6 @@ describe('the table of the outcomes of runs on PostgreSQL, as the ledger opens',
     await untallied.afterTheSchema({ execute: without.execute });
 
     expect([found.commands, without.commands]).toEqual([[], []]);
-  });
-});
-
-async function filledOnPostgreSQL(sizes: readonly number[]): Promise<RecordedFill> {
-  const fill = aRecordedFillOf(
-    sizes,
-    (sql) => SQL.describe(sql, pgFormatter),
-    (json) => ({ json }),
-    (json): unknown => JSON.parse(json),
-  );
-  await tallied.afterTheSchema({ execute: fill.execute });
-  return fill;
-}
-
-describe('the listings of the fill on PostgreSQL', () => {
-  it('ask for one run stream, then twice as many after each batch that took them all, up to 100', async () => {
-    const fill = await filledOnPostgreSQL(Array.from({ length: 300 }, () => 120));
-
-    expect(fill.listings).toEqual([1, 2, 4, 8, 16, 32, 64, 100, 100]);
-    expect(fill.keptRuns()).toEqual(runIdsOf(300));
-  });
-
-  it('ask for one again after a run stream that holds more than 16 MiB alone, and keep every run', async () => {
-    const fill = await filledOnPostgreSQL([120, 120, 120, 20 * mebibyte, 120, 120, 120, 120, 120, 120]);
-
-    expect(fill.listings).toEqual([1, 2, 4, 1, 2, 4]);
-    expect(fill.keptRuns()).toEqual(runIdsOf(10));
   });
 });
 

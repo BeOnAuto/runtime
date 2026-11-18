@@ -1,4 +1,12 @@
-import { createApiHandler, makeAppRuntime, type ApiHandler, type AppRuntime, type PageStyle } from '@on.auto/api';
+import {
+  createApiHandler,
+  makeAppRuntime,
+  type ApiHandler,
+  type ApiOptions,
+  type AppRuntime,
+  type PageStyle,
+  type RegisterRoutes,
+} from '@on.auto/api';
 import type { Authenticator } from '@on.auto/identity';
 import { Data, Effect, Function, Layer } from 'effect';
 
@@ -31,9 +39,18 @@ class StartupError extends Data.TaggedError('StartupError')<{
   readonly cause: unknown;
 }> {}
 
+type SignInRoutes = (
+  logged: (log: Effect.Effect<void>) => void,
+  sessionRows?: Served['sessionRows'],
+) => readonly RegisterRoutes[];
+
+type SignedInApi = (sessionRows?: Served['sessionRows']) => Pick<ApiOptions, 'sessions' | 'publicUrl'>;
+
 interface Starting<R> {
   readonly settings: Settings;
   readonly authenticator: Authenticator;
+  readonly signInRoutes: SignInRoutes;
+  readonly signedInApi: SignedInApi;
   readonly telemetry: Telemetry;
   readonly options: ServerOptions<R>;
   readonly pageStyle: PageStyle;
@@ -84,6 +101,8 @@ function telemetryServing(telemetry: Telemetry, local: LocalServing | undefined)
 interface Answering<R> {
   readonly settings: Settings;
   readonly authenticator: Authenticator;
+  readonly signInRoutes: SignInRoutes;
+  readonly signedInApi: SignedInApi;
   readonly served: Served;
   readonly runtime: AppRuntime<R>;
   readonly telemetry: Telemetry;
@@ -94,7 +113,11 @@ interface Answering<R> {
 
 function apiOf<R>(answering: Answering<R>): ApiHandler {
   const { settings, authenticator, served, runtime, telemetry, local, startPing, pageStyle } = answering;
-  const { routes, licenseNotice } = served;
+  const { licenseNotice } = served;
+  const signInRoutes = answering.signInRoutes((log) => {
+    void runtime.run(log);
+  }, served.sessionRows);
+  const routes = [...served.routes, ...signInRoutes];
   return createApiHandler({
     allowedOrigins: settings.allowedOrigins,
     studio: servedStudioOf(settings, {
@@ -103,6 +126,7 @@ function apiOf<R>(answering: Answering<R>): ApiHandler {
       },
     }),
     authenticator,
+    ...answering.signedInApi(served.sessionRows),
     routes,
     pageStyle,
     reportIncident: (id, error, requestId, call) => {
@@ -129,7 +153,7 @@ function composedFor<R>(
 }
 
 export async function started<R>(starting: Starting<R>): Promise<RunningServer> {
-  const { settings, authenticator, telemetry, options, pageStyle } = starting;
+  const { settings, authenticator, telemetry, options } = starting;
   const local = options.localServingIn?.(authenticator.mode);
   const composed = await composedFor(starting, local);
   const runtime = await startRuntime(composed.services, settings, telemetry.layer);
@@ -141,7 +165,7 @@ export async function started<R>(starting: Starting<R>): Promise<RunningServer> 
   const ownOrigin = (): string => settings.publicUrl ?? ownOriginOf(settings.host, listening.port);
   const served = await servedOf(composed, runtime, ownOrigin);
   const startPing = options.usagePing?.(settings) ?? noStartPing;
-  const api = apiOf({ settings, authenticator, served, runtime, telemetry, local, startPing, pageStyle });
+  const api = apiOf({ ...starting, served, runtime, local, startPing });
   const server = createHttpServer(api.listener);
   try {
     await listen(server, settings.port, settings.host);

@@ -98,9 +98,9 @@ function filledMeasured(): Promise<Measured> {
       },
       command: (sql) => execute.command(sql),
     };
-    await store
-      .projectionsOf({ projections: [topicRows], mostBytesFilledAtOnce })
-      .prepare(measured, (work) => work(measured));
+    const parts = store.projectionsOf({ projections: [topicRows], mostBytesFilledAtOnce });
+    await parts.prepare(measured, (work) => work(measured));
+    await parts.caughtUp((work) => work(measured));
     return { held, loads };
   });
 }

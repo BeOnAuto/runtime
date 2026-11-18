@@ -57,6 +57,7 @@
     "@on.auto/lookup": "workspace:*",
     "@on.auto/meter": "workspace:*",
     "@on.auto/object-storage": "workspace:*",
+    "@on.auto/openid-connect": "workspace:*",
     "@on.auto/operations": "workspace:*",
     "@on.auto/outbound": "workspace:*",
     "@on.auto/phrasing": "workspace:*",

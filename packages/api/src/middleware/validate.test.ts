@@ -149,4 +149,17 @@ describe('the Origin check, for a page at the origin of the runtime itself', () 
       (await call(handler, '/nowhere', { headers: { origin: 'http://localhost' } })).status,
     ]).toEqual([200, 401, 403]);
   });
+
+  it('takes the PUBLIC_URL the server is given where no protected resource names one, not the address the request came in on', async () => {
+    const { handler } = createTestHandler({
+      studio: servedStudio,
+      authenticator: { ...signingIn, resource: undefined },
+      publicUrl: 'https://runtime.example',
+    });
+
+    expect([
+      (await call(handler, '/nowhere', { headers: { origin: 'https://runtime.example' } })).status,
+      (await call(handler, '/nowhere', { headers: { origin: 'http://localhost' } })).status,
+    ]).toEqual([401, 403]);
+  });
 });

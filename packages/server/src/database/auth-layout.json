@@ -1,0 +1,17 @@
+{
+  "layout": 1,
+  "catalog": [
+    {
+      "name": "auth_layout",
+      "sql": "CREATE TABLE auth_layout (one_row BOOLEAN NOT NULL PRIMARY KEY DEFAULT TRUE CHECK (one_row), layout INTEGER NOT NULL)"
+    },
+    {
+      "name": "auth_sessions",
+      "sql": "CREATE TABLE auth_sessions (sha256 TEXT NOT NULL PRIMARY KEY, issuer TEXT NOT NULL, subject TEXT NOT NULL, created_at BIGINT NOT NULL, last_used_at BIGINT NOT NULL, expires_at BIGINT NOT NULL)"
+    },
+    {
+      "name": "auth_sessions_expires_at",
+      "sql": "CREATE INDEX auth_sessions_expires_at ON auth_sessions (expires_at)"
+    }
+  ]
+}

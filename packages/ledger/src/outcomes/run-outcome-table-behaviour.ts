@@ -112,7 +112,7 @@ function aNewTableVersion(entry: LedgerEntry): void {
 
 function aFillInterruptedOrDone(entry: LedgerEntry): void {
   describe('a fill of the table of the outcomes of runs', () => {
-    it('is done again at the next open when it was interrupted, which left nothing behind', async () => {
+    it('is carried on at the next open from the page it was interrupted at, which kept the pages before it', async () => {
       const database = await entry.aDatabase();
       await fourRuns(await aLedger(entry, database));
       await noting(await aLedger(entry, database), 'playbook/acme/alpha/runs/r5', began('triage'), ended('failed', 1));
@@ -121,7 +121,7 @@ function aFillInterruptedOrDone(entry: LedgerEntry): void {
       const tablesAfterTheInterruption = await tablesIn(entry, database);
       const filled = await aLedger(entry, database, runTallies);
 
-      expect(tablesAfterTheInterruption).toEqual([]);
+      expect(tablesAfterTheInterruption).toEqual([{ name: 'run_outcomes_5' }]);
       expect(runsOf(await reading(filled))).toEqual([
         '2026-10-01 triage failed 1',
         '2026-10-01 triage rejected 1',

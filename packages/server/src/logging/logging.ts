@@ -10,6 +10,7 @@ import {
   type LedgerSettings,
   type PostgreSQLLedgerSettings,
 } from '../settings/ledger-settings.ts';
+import type { OpenIdConnectSettings } from '../settings/openid-connect-settings.ts';
 import type { SignalExport, TelemetrySettings } from '../telemetry/telemetry-settings.ts';
 import { logsFrom, logsToStderr, type LogFormat, type LogLevelSetting } from './log-formats.ts';
 
@@ -25,6 +26,7 @@ export function serverLogs({ logFormat, logLevel }: LogSettings): Layer.Layer<ne
 export interface AccessReport {
   readonly mode: AccessMode;
   readonly signIn: SignInSettings | undefined;
+  readonly openIdConnect?: OpenIdConnectSettings | undefined;
 }
 
 const localModeOn = Effect.logWarning(
@@ -46,11 +48,32 @@ function signInNotice(signIn: SignInSettings | undefined): Effect.Effect<void> {
       ).pipe(Effect.annotateLogs({ public_url: signIn.publicUrl, identity_issuer: signIn.issuer }));
 }
 
-export function logAccessMode({ mode, signIn }: AccessReport): Effect.Effect<void> {
+function companySignInNotice({ issuer, publicUrl, redirectUri }: OpenIdConnectSettings): Effect.Effect<void> {
+  return Effect.logInfo(
+    `People sign in through the identity provider at ${issuer}. The redirect URI to register with it is ${redirectUri}`,
+  ).pipe(Effect.annotateLogs({ public_url: publicUrl, oidc_issuer: issuer, redirect_uri: redirectUri }));
+}
+
+export function logAccessMode({ mode, signIn, openIdConnect }: AccessReport): Effect.Effect<void> {
   if (mode === 'local') {
     return localModeOn;
   }
+  if (openIdConnect !== undefined) {
+    return companySignInNotice(openIdConnect);
+  }
   return mode === 'closed' ? closedNotice : signInNotice(signIn);
+}
+
+export function logSignInRefused(issuer: string, code: string): Effect.Effect<void> {
+  return Effect.logWarning(`A sign-in came back from the identity provider at ${issuer} with the error ${code}`).pipe(
+    Effect.annotateLogs({ oidc_issuer: issuer, error: code }),
+  );
+}
+
+export function logSignInFailed(issuer: string, failure: string): Effect.Effect<void> {
+  return Effect.logWarning(
+    `A sign-in through the identity provider at ${issuer} could not be completed: ${failure}`,
+  ).pipe(Effect.annotateLogs({ oidc_issuer: issuer, failure }));
 }
 
 export interface StudioReport {

@@ -34,8 +34,6 @@ export const childKeyColumns = [...keyColumns, childKeyColumn] as const;
 
 const NameRows = Schema.Array(Schema.Struct({ name: Schema.String }));
 
-const StreamRows = Schema.Array(Schema.Struct({ stream: Schema.String, size: Schema.Number }));
-
 const MessageFields = {
   stream: Schema.String,
   type: Schema.String,
@@ -43,8 +41,6 @@ const MessageFields = {
   metadata: Schema.Unknown,
   position: Schema.Number,
 };
-
-const MessageRows = Schema.Array(Schema.Struct(MessageFields));
 
 const OrderedMessageRows = Schema.Array(
   Schema.Struct({ point: Schema.String, ordered: Schema.String, ...MessageFields }),
@@ -221,21 +217,6 @@ export function tableAnalysis(projection: Pick<ProjectionDeclaration, 'name' | '
 export async function namesIn(execute: StatementExecutor, query: SQL): Promise<readonly string[]> {
   const { rows } = await execute.query(query);
   return Schema.decodeUnknownSync(NameRows)(rows).map(({ name }) => name);
-}
-
-export interface SizedStream {
-  readonly stream: string;
-  readonly size: number;
-}
-
-export async function streamsIn(execute: StatementExecutor, query: SQL): Promise<readonly SizedStream[]> {
-  const { rows } = await execute.query(query);
-  return Schema.decodeUnknownSync(StreamRows)(rows);
-}
-
-export async function messagesIn(execute: StatementExecutor, query: SQL) {
-  const { rows } = await execute.query(query);
-  return Schema.decodeUnknownSync(MessageRows)(rows);
 }
 
 export async function orderedMessagesIn(execute: StatementExecutor, query: SQL) {

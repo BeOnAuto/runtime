@@ -89,7 +89,8 @@ jobs:
           - packages: [server]
             shard: { index: 4, count: 4 }
             services: true
-          - packages: [ledger, meter, workflow-host, prediction, object-storage, workflow-engine, generation]
+          - packages:
+              [ledger, meter, workflow-host, prediction, object-storage, workflow-engine, generation, openid-connect]
             services: true
           - packages:
               - activity

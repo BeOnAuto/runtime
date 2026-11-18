@@ -1,5 +1,4 @@
 import { SQL } from '@event-driven-io/dumbo';
-import type { StreamScope } from '@on.auto/operations';
 
 import { sizedPositionsOf, type SizesAfter } from '../appends/stream-pages.ts';
 import { inTransactionOn, type ContentConnections } from '../content/postgresql-content.ts';
@@ -10,8 +9,8 @@ import {
   playbookKeyOfStream,
   storedBytesOf,
 } from '../postgresql-reads/playbook-indexes.ts';
+import { postgresqlCatchUp } from '../projection-catch-up/postgresql-catch-up.ts';
 import {
-  type FoldedStreams,
   type HeldRead,
   type HeldTypes,
   type MessageLane,
@@ -27,21 +26,6 @@ const defaultPartition = 'emt:default';
 const rowsInAWrite = 500;
 
 const beforeEveryMessage = '0/0';
-
-const streamsOfAScope: Readonly<Record<StreamScope, { readonly name: string; readonly kindAt: number }>> = {
-  playbook: { name: '^[^/]+/[^/]+/[^/]+/[^/]+/[^/]+$', kindAt: 4 },
-  org: { name: '^org/[^/]+/[^/]+/[^/]+$', kindAt: 3 },
-};
-
-function foldedBy(column: string, { scopes, kinds }: FoldedStreams): SQL {
-  const stream = SQL.plain(column);
-  const ofEachScope = scopes.map((scope) => {
-    const { name, kindAt } = streamsOfAScope[scope];
-    return SQL`(${stream} ~ ${SQL.plain(`'${name}'`)} AND split_part(${stream}, '/', ${SQL.plain(String(kindAt))})
-      IN (SELECT jsonb_array_elements_text(${JSON.stringify(kinds)}::jsonb)))`;
-  });
-  return SQL`(${SQL.merge(ofEachScope, ' OR ')})`;
-}
 
 const columnsOfAMessage = SQL`${SQL.plain(`m.transaction_id::text || '/' || m.global_position::text AS point,
   lpad(m.transaction_id::text, 20, '0') || '/' || lpad(m.global_position::text, 20, '0') AS ordered,
@@ -104,7 +88,7 @@ function whichOf(streams: StreamsInOrder): SQL {
     const { by, key } = streams.lane;
     return SQL`${keyOfALane[by]} = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify([key])}::jsonb))) AND `;
   }
-  return streams.of === 'folded' ? SQL`${foldedBy('m.stream_id', streams.folded)} AND ` : SQL.EMPTY;
+  return SQL.EMPTY;
 }
 
 function orderOf(streams: StreamsInOrder): SQL {
@@ -134,30 +118,7 @@ export const postgresqlProjectionDialect: ProjectionDialect = {
   columnTypes: { text: 'text', integer: 'bigint', boolean: 'boolean' },
   playbookIndexNulls: ' NULLS FIRST',
   asNumber: (expression) => `${expression}::float8`,
-  streamsAfter: (after, count, folded, types) =>
-    SQL`SELECT s.stream_id AS stream, (
-        SELECT coalesce(sum(${SQL.plain(storedBytesOf(columnsOfTheTable('m')))}), 0)::float8 FROM emt_messages AS m
-        WHERE m.stream_id = s.stream_id
-          AND m.message_type IN (SELECT jsonb_array_elements_text(${JSON.stringify(types)}::jsonb))
-          AND m.partition = ${defaultPartition} AND m.is_archived = FALSE
-      ) AS size
-      FROM emt_streams AS s
-      WHERE s.stream_id > ${after} AND ${foldedBy('s.stream_id', folded)}
-        AND s.partition = ${defaultPartition} AND s.is_archived = FALSE
-      ORDER BY s.stream_id
-      LIMIT ${count}`,
-  messagesOf: (streams, types) =>
-    SQL`SELECT stream_id AS stream, message_type AS type, message_data AS data, message_metadata AS metadata,
-        stream_position::float8 AS position
-      FROM emt_messages
-      WHERE stream_id IN (SELECT jsonb_array_elements_text(${JSON.stringify(streams)}::jsonb))
-        AND message_type IN (SELECT jsonb_array_elements_text(${JSON.stringify(types)}::jsonb))
-        AND partition = ${defaultPartition} AND is_archived = FALSE
-      ORDER BY stream_id, stream_position`,
   messagesInOrderAfter: (after, count, streams, types) => streamsInOrder({ after, count, types }, streams),
-  sizesInOrderAfter: (after, count, streams, types) => streamsInOrder({ after, count, types, sized: true }, streams),
-  messagesInOrderThrough: (after, through, streams, types) =>
-    streamsInOrder({ after, count: 0, types, through }, streams),
   heldMessagesThrough: (read, through) => heldInOrder(read, false, through),
   heldSizesInOrderAfter: (read) => heldInOrder(read, true),
   messageAt: (stream, position) =>
@@ -184,6 +145,7 @@ export const postgresqlProjectionDialect: ProjectionDialect = {
   listed: (values) => SQL`SELECT jsonb_array_elements_text(${JSON.stringify(values)}::jsonb) AS value`,
   storedBytesOfMessage: storedBytesOf(columnsOfTheTable('m')),
   forUpdate: ' FOR UPDATE',
+  catchUp: postgresqlCatchUp,
 };
 
 export function postgresqlSizesAfter(
@@ -216,5 +178,6 @@ export function postgresqlProjectionsOf(kept: KeptTables) {
     }),
     readerOnThePool: (pool: ContentConnections, query: (sql: SQL) => Promise<readonly unknown[]>) =>
       parts.readerOn({ query, command: query, inTransaction: inTransactionOn(pool) }),
+    caughtUpOn: (pool: ContentConnections): Promise<void> => parts.caughtUp(inTransactionOn(pool)),
   };
 }

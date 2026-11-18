@@ -3,10 +3,12 @@ import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { AuthLayoutRefused } from '@on.auto/openid-connect';
 import { Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { ledgerOfAnotherVersion } from './ledger-of-another-version.ts';
+import { signInStoreRefusalExplained } from './sign-in-store-of-a-newer-version.ts';
 
 const inAnEarlierLayout = { found: 1, kept: 3, floor: 2 };
 
@@ -146,5 +148,30 @@ describe('the command that deletes a ledger file of an earlier version', () => {
     execFileSync('/bin/sh', ['-c', String(refusedFileAt(join(folder, 'ledger.db')).remedy.command)]);
 
     expect(readdirSync(folder).toSorted()).toEqual(['ledger.db-journal', 'secrets.key']);
+  });
+});
+
+describe("the sign-in's tables of a ledger, refused as they open", () => {
+  const settings = { ledger: { store: 'sqlite', file: '/data/ledger.db' } } as const;
+
+  it('are explained where a newer version of Auto Runtime carried them forward, with what to do and no command', () => {
+    const newer = new AuthLayoutRefused({ found: 2, kept: 1, message: 'in layout 2' });
+
+    expect(signInStoreRefusalExplained(newer, settings)).toMatchObject({
+      _tag: 'SignInStoreOfANewerVersion',
+      found: 2,
+      kept: 1,
+      remedy: { command: undefined },
+    });
+  });
+
+  it('are left as the store refused them otherwise, as is any other failure of the store', () => {
+    const withNoNumber = new AuthLayoutRefused({ found: undefined, kept: 1, message: 'no layout number' });
+    const beforeTheFirst = new AuthLayoutRefused({ found: 0, kept: 1, message: 'in layout 0' });
+    const notReached = new Error('The database could not be reached');
+
+    expect(signInStoreRefusalExplained(withNoNumber, settings)).toBe(withNoNumber);
+    expect(signInStoreRefusalExplained(beforeTheFirst, settings)).toBe(beforeTheFirst);
+    expect(signInStoreRefusalExplained(notReached, settings)).toBe(notReached);
   });
 });

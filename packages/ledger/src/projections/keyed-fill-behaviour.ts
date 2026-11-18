@@ -23,28 +23,34 @@ export interface FillEntry {
   readonly aDatabase: () => Promise<string>;
   readonly executedOn: <A>(database: string, work: (execute: StatementExecutor) => Promise<A>) => Promise<A>;
   readonly ledgerOn: (database: string, kept: Pick<KeptTables, 'projections' | 'holders'>) => Layer.Layer<Ledger>;
-  readonly projectionsOf: (kept: KeptTables) => Pick<ProjectionParts, 'prepare'>;
+  readonly projectionsOf: (kept: KeptTables) => Pick<ProjectionParts, 'prepare' | 'caughtUp'>;
 }
 
 type AnyLedger = Ledger['Service'];
 
 const mebibyte = 1024 * 1024;
 
-const bytesOfALargeFact = 80 * 1024;
+export const bytesOfALargeFact = 80 * 1024;
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
 const everyRow = { where: [], orderBy: [], order: 'asc', limit: 1000 } as const;
 
-const decodeData = Schema.decodeUnknownSync(Schema.Array(Schema.Struct({ data: Schema.optionalKey(Schema.Unknown) })));
-
-function dataOf(rows: readonly unknown[]): readonly unknown[] {
-  return decodeData(rows).flatMap(({ data }) => (data === undefined ? [] : [data]));
-}
+const decodeRows = Schema.decodeUnknownSync(
+  Schema.Array(
+    Schema.Struct({
+      data: Schema.optionalKey(Schema.Unknown),
+      point: Schema.optionalKey(Schema.Unknown),
+      size: Schema.optionalKey(Schema.Unknown),
+    }),
+  ),
+);
 
 interface Reads {
   readonly loads: readonly number[];
   readonly facts: readonly number[];
+  readonly points: readonly unknown[];
+  readonly windows: readonly number[];
 }
 
 interface Measured extends Reads {
@@ -52,17 +58,22 @@ interface Measured extends Reads {
 }
 
 function measuring(execute: StatementExecutor): Measured {
-  const loads: number[] = [];
-  const facts: number[] = [];
+  const [loads, facts, points, windows]: [number[], number[], unknown[], number[]] = [[], [], [], []];
   return {
     loads,
     facts,
+    points,
+    windows,
     execute: {
       query: async (sql) => {
         const answer = await execute.query(sql);
-        const read = dataOf(answer.rows);
-        loads.push(read.reduce((sum: number, data) => sum + JSON.stringify(data).length, 0));
+        const rows = decodeRows(answer.rows);
+        const read = rows.filter(({ data }) => data !== undefined);
+        loads.push(read.reduce((sum: number, { data }) => sum + JSON.stringify(data).length, 0));
         facts.push(read.length);
+        points.push(...read.map(({ point }) => point));
+        const listed = rows.filter(({ data, size }) => data === undefined && size !== undefined).length;
+        windows.push(...(listed === 0 ? [] : [listed]));
         return answer;
       },
       command: (sql) => execute.command(sql),
@@ -70,7 +81,7 @@ function measuring(execute: StatementExecutor): Measured {
   };
 }
 
-async function aLedgerOn(
+export async function aLedgerOn(
   entry: FillEntry,
   database: string,
   kept: Pick<KeptTables, 'projections' | 'holders'> = {},
@@ -88,15 +99,15 @@ function aLargeNote(index: number): TopicFact {
   return { type: 'topic_noted', data: { topic: 'autumn', note: largeText(index) } };
 }
 
-function aLargeStart(index: number): RunFact {
+export function aLargeStart(index: number): RunFact {
   return { type: 'run_began', data: { at: '2026-10-01T09:00:00.000Z', fn: largeText(index) } };
 }
 
-function indexes(count: number): readonly number[] {
+export function indexes(count: number): readonly number[] {
   return Array.from({ length: count }, (_, index) => index);
 }
 
-function notedLarge(ledger: AnyLedger, count: number): Promise<void> {
+export function notedLarge(ledger: AnyLedger, count: number): Promise<void> {
   return Effect.runPromise(
     Effect.andThen(
       ledger.execute('playbook/acme/alpha/runs/r1', topicFacts, [
@@ -121,13 +132,14 @@ function begunLarge(ledger: AnyLedger, count: number): Promise<void> {
   );
 }
 
-async function filledMeasured(entry: FillEntry, database: string, kept: KeptTables): Promise<Reads> {
-  const { loads, facts } = await entry.executedOn(database, async (execute) => {
+export function filledMeasured(entry: FillEntry, database: string, kept: KeptTables): Promise<Reads> {
+  return entry.executedOn(database, async (execute) => {
     const measured = measuring(execute);
-    await entry.projectionsOf(kept).prepare(measured.execute, (work) => work(measured.execute));
+    const parts = entry.projectionsOf(kept);
+    await parts.prepare(measured.execute, (work) => work(measured.execute));
+    await parts.caughtUp((work) => work(measured.execute));
     return measured;
   });
-  return { loads, facts };
 }
 
 async function wroteHeldPayloads(ledger: AnyLedger, appends: number, each: number): Promise<void> {
@@ -149,7 +161,7 @@ async function wroteHeldPayloads(ledger: AnyLedger, appends: number, each: numbe
   );
 }
 
-async function heldOf(ledger: AnyLedger, projection: string, column: string): Promise<readonly string[]> {
+export async function heldOf(ledger: AnyLedger, projection: string, column: string): Promise<readonly string[]> {
   const rows = await Effect.runPromise(ledger.readProjectedRows(projection, alpha, everyRow));
   return rows.map(({ row }) => String(row[column]).replace(/:.*$/su, ''));
 }

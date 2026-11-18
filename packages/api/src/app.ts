@@ -43,6 +43,7 @@ export function createApp(options: ApiOptions, callContext: CallContext): ApiApp
       },
       reportThrown,
       resource,
+      publicUrl: options.publicUrl,
       callContext,
     });
   }

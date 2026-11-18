@@ -7,7 +7,7 @@ catalog:
   vitest: 5.0.3
   '@vitest/coverage-v8': 5.0.3
   effect: 4.0.0
-  hono: 4.13.13
+  hono: 4.13.18
   jose: 6.2.12
 
 minimumReleaseAge: 10080

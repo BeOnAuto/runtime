@@ -31,7 +31,7 @@ function linksetOf(origin: string, { everyGuide }: GuideShelf): object {
 export function apiCatalogRoutes(shelf: GuideShelf): RegisterRoutes {
   return (routes) => {
     routes.addPublic('GET', apiCatalogPath, (c) => {
-      const origin = publicOriginOf(c, routes.resource);
+      const origin = publicOriginOf(c, routes);
       const catalog = cachedAnswerOf(JSON.stringify(linksetOf(origin, shelf)), apiCatalogMediaType, {
         link: apiCatalogLinkTo(`${origin}${apiCatalogPath}`),
       });

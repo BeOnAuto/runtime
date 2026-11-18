@@ -7,12 +7,17 @@ export const healthPath = '/health';
 
 export const apiCatalogPath = '/.well-known/api-catalog';
 
-export function publicOriginOfRequest(request: Request, resource: ProtectedResource | undefined): string {
-  return resource?.publicUrl ?? new URL(request.url).origin;
+export interface PublicAddressing {
+  readonly resource: ProtectedResource | undefined;
+  readonly publicUrl?: string | undefined;
 }
 
-export function publicOriginOf(c: Context<ApiEnv>, resource: ProtectedResource | undefined): string {
-  return publicOriginOfRequest(c.req.raw, resource);
+export function publicOriginOfRequest(request: Request, { resource, publicUrl }: PublicAddressing): string {
+  return resource?.publicUrl ?? publicUrl ?? new URL(request.url).origin;
+}
+
+export function publicOriginOf(c: Context<ApiEnv>, addressing: PublicAddressing): string {
+  return publicOriginOfRequest(c.req.raw, addressing);
 }
 
 export function apiCatalogLinkTo(address: string): string {

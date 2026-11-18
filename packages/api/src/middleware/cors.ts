@@ -1,8 +1,8 @@
-import { pageOriginsOf, type PageSettings, type ProtectedResource } from '@on.auto/identity';
+import { pageOriginsOf, type PageSettings } from '@on.auto/identity';
 import type { Context, MiddlewareHandler } from 'hono';
 
 import type { ApiEnv } from '../api-env.ts';
-import { publicOriginOf } from '../discovery/public-addresses.ts';
+import { publicOriginOf, type PublicAddressing } from '../discovery/public-addresses.ts';
 
 const allowedMethods = 'GET, HEAD, POST, PUT, DELETE';
 
@@ -49,10 +49,7 @@ function allowOrigin(pageOrigins: PageOriginsOf): MiddlewareHandler<ApiEnv> {
   };
 }
 
-export function corsFor(
-  pages: PageSettings,
-  resource: ProtectedResource | undefined,
-): readonly MiddlewareHandler<ApiEnv>[] {
-  const pageOrigins: PageOriginsOf = (c) => pageOriginsOf(pages, publicOriginOf(c, resource));
+export function corsFor(pages: PageSettings, addressing: PublicAddressing): readonly MiddlewareHandler<ApiEnv>[] {
+  const pageOrigins: PageOriginsOf = (c) => pageOriginsOf(pages, publicOriginOf(c, addressing));
   return [answerPreflight(pageOrigins), allowOrigin(pageOrigins)];
 }

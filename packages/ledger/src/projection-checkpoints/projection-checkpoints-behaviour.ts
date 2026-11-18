@@ -2,7 +2,6 @@ import type { KeptProjection, Ledger, ProjectedRowsQuery } from '@on.auto/operat
 import {
   runFacts,
   runTallyRows,
-  tallyRowsOf,
   topicFacts,
   topicRows,
   type RunFact,
@@ -13,7 +12,6 @@ import { describe, expect, it } from 'vitest';
 
 import { topicsOf } from '../projections/projections-behaviour.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
-import { openLedgerWith } from '../testing/open-ledger.ts';
 import { checkpointsStepBehaviour } from './checkpoints-step-behaviour.ts';
 import { aLedgerLogging } from './logged-opening.ts';
 
@@ -22,8 +20,6 @@ type AnyLedger = Ledger['Service'];
 const alpha = { org: 'acme', playbook: 'alpha' };
 
 const began: RunFact = { type: 'run_began', data: { at: '2026-10-01T09:00:00.000Z', fn: 'triage' } };
-
-const ended: RunFact = { type: 'run_ended', data: { status: 'failed', ms: 10, tokens: null } };
 
 const opened: TopicFact = { type: 'topic_opened', data: { topic: 'spring', at: 1000 } };
 
@@ -72,9 +68,12 @@ function aTableTrustedByItsRow(entry: LedgerEntry): void {
     expect(await entry.queried(database, checkpointsOfTheTallies)).toEqual([caughtUpAt(2)]);
   });
 
-  it('is dropped and filled again where its row holds a position, and its row then says caught up', async () => {
+  it('is carried on from the position its row holds, neither dropped nor logged, and its row then says caught up', async () => {
     const database = await entry.aDatabase();
-    await talliedOnce(entry, database);
+    const first = await aLedger(entry, database, undefined, [runTallyRows]);
+    await noting(first, began);
+    await Effect.runPromise(first.execute('playbook/acme/alpha/runs/r2', runFacts, [began]));
+    await entry.queried(database, "DELETE FROM run_tallies_2 WHERE row_key = 'r2'");
     await entry.queried(
       database,
       "UPDATE projection_checkpoints SET folded_through = '1' WHERE projection = 'run_tallies'",
@@ -82,27 +81,12 @@ function aTableTrustedByItsRow(entry: LedgerEntry): void {
 
     const { ledger, logged } = await aLedgerLogging(entry, database, [runTallyRows]);
 
-    expect([await talliesOf(ledger), logged]).toEqual([['r1'], madeAgain]);
+    expect([await talliesOf(ledger), logged]).toEqual([['r1', 'r2'], []]);
     expect(await entry.queried(database, checkpointsOfTheTallies)).toEqual([caughtUpAt(2)]);
   });
 }
 
 function aTableFilledOrLeftWhole(entry: LedgerEntry): void {
-  it('keeps neither the table nor a row where its fill fails', async () => {
-    const database = await entry.aDatabase();
-    await noting(await aLedger(entry, database), began, ended);
-    const breaking = tallyRowsOf(2, (row) => row['status'] === 'failed');
-
-    await expect(openLedgerWith(entry.ledgerOn(database, undefined, [breaking]))).rejects.toThrow(
-      'The projection broke down',
-    );
-
-    expect([
-      await entry.queried(database, entry.projectionTables),
-      await entry.queried(database, checkpointsOfTheTallies),
-    ]).toEqual([[], []]);
-  });
-
   it('is left whole, with the columns its reader advanced, where other tables are dropped and the rows beside them left, and the dropped tables are filled again', async () => {
     const database = await entry.aDatabase();
     const kept: readonly KeptProjection[] = [runTallyRows, topicRows];

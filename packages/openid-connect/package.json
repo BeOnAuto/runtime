@@ -1,0 +1,28 @@
+{
+  "name": "@on.auto/openid-connect",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@on.auto/content": "workspace:*",
+    "@on.auto/ledger": "workspace:*",
+    "@on.auto/phrasing": "workspace:*",
+    "effect": "catalog:",
+    "jose": "catalog:",
+    "openid-client": "6.8.9"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  }
+}

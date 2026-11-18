@@ -28,4 +28,5 @@ export interface PostgreSQLOptions extends AppendListeners {
   readonly floor?: number;
   readonly definitionNames?: DefinitionNames;
   readonly tableMadeAgain?: (table: string) => void;
+  readonly pageFailed?: (position: string) => void;
 }

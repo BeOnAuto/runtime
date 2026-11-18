@@ -1,7 +1,5 @@
 import {
-  addressedStreamOf,
   keepsChildRows,
-  rowKeyOf,
   type ChildRowsProjection,
   type KeyedProjection,
   type ProjectedMessage,
@@ -9,39 +7,22 @@ import {
 } from '@on.auto/operations';
 
 import { childRowsIn, childRowsReplaced } from '../child-rows/child-row-statements.ts';
-import type { InTransaction, StatementExecutor } from '../event-store.ts';
-import { tableKept, type Preparation } from '../projection-checkpoints/projection-checkpoints.ts';
-import { writtenInChunks, writtenOfStreams } from './fill-writes.ts';
+import type { StatementExecutor } from '../event-store.ts';
+import { writtenInChunks } from './fill-writes.ts';
 import { inTurn } from './inline-projection.ts';
-import { foldedStreamsOf } from './projection-dialect.ts';
 import {
   childRowsFoldedOver,
   filledMessageOf,
+  placedIn,
   replayedRow,
   type KeepingOf,
   type ProjectionKeeping,
 } from './projection-keeping.ts';
-import {
-  createdTable,
-  messagesIn,
-  orderedMessagesIn,
-  rowIn,
-  sizedPointsIn,
-  streamsIn,
-  type KeptRow,
-  type RowPlace,
-  type SizedStream,
-} from './projection-statements.ts';
-
-const streamsInABatch = 100;
+import { rowIn, type KeptRow, type orderedMessagesIn, type RowPlace } from './projection-statements.ts';
 
 export const messagesInABatch = 256;
 
 export const mostBytesInABatch = 16 * 1024 * 1024;
-
-interface FillKeeping extends ProjectionKeeping {
-  readonly mostBytes: number;
-}
 
 export type NamedProjection = Pick<ProjectionDeclaration, 'name'>;
 
@@ -51,11 +32,6 @@ export function versionOfTable({ name }: NamedProjection, table: string): number
   const versioned = `${name}_`;
   const version = table.startsWith(versioned) ? table.slice(versioned.length) : '';
   return versionDigits.test(version) ? Number(version) : undefined;
-}
-
-function isEarlierVersion({ projection }: ProjectionKeeping, table: string): boolean {
-  const version = versionOfTable(projection, table);
-  return version !== undefined && version < projection.version;
 }
 
 export function withinBytes<Sized extends { readonly size: number }>(
@@ -99,39 +75,6 @@ export async function batchesFilledFrom<Start>(
   }
 }
 
-interface Batch {
-  readonly after: string;
-  readonly listing: number;
-}
-
-function batchAfter(
-  { listing }: Batch,
-  listed: readonly SizedStream[],
-  taken: readonly string[],
-  mostBytes: number,
-): Batch | undefined {
-  const last = taken.at(-1);
-  if (last === undefined || (taken.length === listed.length && listed.length < listing)) {
-    return undefined;
-  }
-  return {
-    after: last,
-    listing: listingAfter({ listing, most: streamsInABatch, mostBytes }, listed.slice(0, taken.length)),
-  };
-}
-
-async function batchFilled(keeping: FillKeeping, execute: StatementExecutor, batch: Batch): Promise<Batch | undefined> {
-  const { dialect, projection } = keeping;
-  const listed = await streamsIn(
-    execute,
-    dialect.streamsAfter(batch.after, batch.listing, foldedStreamsOf(projection), projection.types),
-  );
-  const streams = withinBytes(listed, keeping.mostBytes).map(({ stream }) => stream);
-  const messages = streams.length === 0 ? [] : await messagesIn(execute, dialect.messagesOf(streams, projection.types));
-  await writtenOfStreams(keeping, execute, streams, messages);
-  return batchAfter(batch, listed, streams, keeping.mostBytes);
-}
-
 type Ordered = Awaited<ReturnType<typeof orderedMessagesIn>>[number];
 
 interface PlacedMessage {
@@ -140,15 +83,12 @@ interface PlacedMessage {
   readonly stored: string;
 }
 
-function placedMessages(keeping: ProjectionKeeping, messages: readonly Ordered[]) {
-  return messages.flatMap((message): readonly PlacedMessage[] => {
-    const named = addressedStreamOf(message.stream);
-    const key =
-      named === undefined ? undefined : rowKeyOf(keeping.projection, filledMessageOf(keeping, message), named);
-    return named === undefined || key === undefined
-      ? []
-      : [{ message, place: { prefix: named.prefix, key }, stored: `${named.prefix}${key}` }];
-  });
+function placedMessages(keeping: ProjectionKeeping, messages: readonly Ordered[]): readonly PlacedMessage[] {
+  return messages.flatMap((message) =>
+    placedIn(keeping.projection, [{ ...filledMessageOf(keeping, message), stream: message.stream }]).map(
+      ({ place }) => ({ message, place, stored: `${place.prefix}${place.key}` }),
+    ),
+  );
 }
 
 async function rowsBefore<Kept>(
@@ -208,7 +148,7 @@ async function keyedChildRowsAfter(
   });
 }
 
-function keptInOrder(
+export function keptInOrder(
   { dialect, projection }: ProjectionKeeping,
   execute: StatementExecutor,
   messages: readonly Ordered[],
@@ -216,69 +156,4 @@ function keptInOrder(
   return keepsChildRows(projection)
     ? keyedChildRowsAfter({ dialect, projection }, execute, messages)
     : keyedRowsAfter({ dialect, projection }, execute, messages);
-}
-
-interface OrderBatch {
-  readonly after?: string;
-  readonly listing: number;
-}
-
-async function batchFilledInOrder(
-  keeping: FillKeeping,
-  execute: StatementExecutor,
-  { after, listing }: OrderBatch,
-): Promise<OrderBatch | undefined> {
-  const { dialect, projection } = keeping;
-  const streams = { of: 'folded', folded: foldedStreamsOf(projection) } as const;
-  const listed = await sizedPointsIn(execute, dialect.sizesInOrderAfter(after, listing, streams, projection.types));
-  const taken = withinBytes(listed, keeping.mostBytes);
-  const through = taken.at(-1);
-  const messages =
-    through === undefined
-      ? []
-      : await orderedMessagesIn(
-          execute,
-          dialect.messagesInOrderThrough(after, through.point, streams, projection.types),
-        );
-  await keptInOrder(keeping, execute, messages);
-  const last = messages.at(-1);
-  return last !== undefined && (taken.length < listed.length || listed.length === listing)
-    ? {
-        after: last.point,
-        listing: listingAfter({ listing, most: messagesInABatch, mostBytes: keeping.mostBytes }, taken),
-      }
-    : undefined;
-}
-
-function filled(keeping: FillKeeping, execute: StatementExecutor): Promise<void> {
-  return keeping.projection.keyOf === undefined
-    ? batchesFilledFrom<Batch>({ after: '', listing: 1 }, (batch) => batchFilled(keeping, execute, batch))
-    : batchesFilledFrom<OrderBatch>({ listing: 1 }, (batch) => batchFilledInOrder(keeping, execute, batch));
-}
-
-async function created(keeping: FillKeeping, execute: StatementExecutor): Promise<void> {
-  await inTurn(createdTable(keeping.dialect, keeping.projection), (statement) => execute.command(statement));
-  await filled(keeping, execute);
-}
-
-function preparedProjection(keeping: FillKeeping, preparation: Preparation): Promise<void> {
-  return tableKept(
-    {
-      dialect: keeping.dialect,
-      projection: keeping.projection,
-      isEarlier: (table) => isEarlierVersion(keeping, table),
-      made: (transaction) => created(keeping, transaction),
-    },
-    preparation,
-  );
-}
-
-export type Preparing = (execute: StatementExecutor, inTransaction: InTransaction) => Promise<void>;
-
-export async function preparedProjections(
-  keepings: readonly ProjectionKeeping[],
-  preparation: Preparation,
-  mostBytes: number = mostBytesInABatch,
-): Promise<void> {
-  await inTurn(keepings, (keeping) => preparedProjection({ ...keeping, mostBytes }, preparation));
 }

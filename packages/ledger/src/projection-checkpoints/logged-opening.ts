@@ -11,6 +11,22 @@ const decodeLogged = Schema.decodeUnknownSync(
 
 type Logged = ReturnType<typeof decodeLogged>;
 
+interface LoggingLayer<Services> {
+  readonly layer: Layer.Layer<Services>;
+  readonly logged: readonly Logged[];
+}
+
+export function loggingLayerOf<Services>(layer: Layer.Layer<Services>): LoggingLayer<Services> {
+  const logged: Logged[] = [];
+  const logging = Logger.layer([
+    Logger.map(Logger.formatJson, (line: string) => {
+      const { level, annotations } = decodeLogged(line);
+      logged.push({ level, annotations });
+    }),
+  ]);
+  return { layer: layer.pipe(Layer.provide(logging)), logged };
+}
+
 interface LoggingLedger {
   readonly ledger: Ledger['Service'];
   readonly logged: readonly Logged[];
@@ -21,16 +37,8 @@ export async function aLedgerLogging(
   database: string,
   projections: Parameters<LedgerEntry['ledgerOn']>[2],
 ): Promise<LoggingLedger> {
-  const logged: Logged[] = [];
-  const logging = Logger.layer([
-    Logger.map(Logger.formatJson, (line: string) => {
-      const { level, annotations } = decodeLogged(line);
-      logged.push({ level, annotations });
-    }),
-  ]);
-  const { ledger, dispose } = await openLedgerWith(
-    entry.ledgerOn(database, undefined, projections).pipe(Layer.provide(logging)),
-  );
+  const { layer, logged } = loggingLayerOf(entry.ledgerOn(database, undefined, projections));
+  const { ledger, dispose } = await openLedgerWith(layer);
   onTestFinished(dispose);
   return { ledger, logged };
 }

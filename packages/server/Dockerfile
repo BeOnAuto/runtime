@@ -21,6 +21,7 @@ COPY packages/ledger/package.json packages/ledger/
 COPY packages/meter/package.json packages/meter/
 COPY packages/node-sqlite/package.json packages/node-sqlite/
 COPY packages/object-storage/package.json packages/object-storage/
+COPY packages/openid-connect/package.json packages/openid-connect/
 COPY packages/operations/package.json packages/operations/
 COPY packages/outbound/package.json packages/outbound/
 COPY packages/phrasing/package.json packages/phrasing/
@@ -76,6 +77,7 @@ COPY packages/ledger/src packages/ledger/src
 COPY packages/meter/src packages/meter/src
 COPY packages/node-sqlite/src packages/node-sqlite/src
 COPY packages/object-storage/src packages/object-storage/src
+COPY packages/openid-connect/src packages/openid-connect/src
 COPY packages/operations/src packages/operations/src
 COPY packages/outbound/src packages/outbound/src
 COPY packages/phrasing/src packages/phrasing/src

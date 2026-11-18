@@ -1,0 +1,11 @@
+{
+  "$schema": "../../node_modules/turbo/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/.turbo/services/postgresql.json"],
+      "env": ["CI"],
+      "passThroughEnv": ["LEDGER_TEST_POSTGRESQL_URL"]
+    }
+  }
+}
