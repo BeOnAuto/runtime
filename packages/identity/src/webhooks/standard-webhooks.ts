@@ -25,7 +25,7 @@ const base64Text = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}
 
 const webhookIdText = /^[\u0021-\u002B\u002D\u002F-\u007E]{1,256}$/u;
 
-const timestampText = /^[1-9]\d{0,11}$/u;
+export const timestampText = /^[1-9]\d{0,11}$/u;
 
 export type SigningKey = Redacted.Redacted<Uint8Array>;
 
@@ -39,7 +39,7 @@ export interface PresentedWebhook {
 
 export type WebhookRefusal = 'unsigned' | 'stale';
 
-function bytesOfBase64(text: string): Uint8Array | undefined {
+export function bytesOfBase64(text: string): Uint8Array | undefined {
   return text !== '' && base64Text.test(text) ? Uint8Array.from(Buffer.from(text, 'base64')) : undefined;
 }
 
@@ -72,7 +72,7 @@ function signaturesIn(header: string): readonly Readonly<Uint8Array>[] {
   });
 }
 
-function withinTheWindow(timestamp: number, nowMs: number): boolean {
+export function withinTheWindow(timestamp: number, nowMs: number): boolean {
   return Math.abs(Math.floor(nowMs / 1000) - timestamp) <= webhookToleranceSeconds;
 }
 
