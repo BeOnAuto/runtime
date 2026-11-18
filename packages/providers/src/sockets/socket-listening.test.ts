@@ -22,11 +22,11 @@ function socketOf(declared: object): Destination {
 
 const inEnvelopes = socketOf({
   type: 'websocket',
-  open: { url: 'wss://events.chat.example.com/socket' },
+  open: { method: 'POST', url: 'https://api.chat.example.com/connections.open', address: '/url' },
   credential: 'app_token',
   acknowledge: '$message.payload#/envelope/id',
   heartbeat_seconds: 30,
-  wake: {
+  filter: {
     when: { '$message.payload#/kind': ['event'] },
     conversation: '$message.payload#/event/room',
     automatic: '$message.payload#/event/bot',
@@ -36,9 +36,9 @@ const inEnvelopes = socketOf({
 
 const asTopics = socketOf({
   type: 'websocket',
-  open: { tool: 'socket_address', address: '/address' },
+  open: { method: 'GET', url: 'https://api.stream.example.com/socket', address: '/address' },
   credential: 'stream_key',
-  wake: {
+  filter: {
     when: { '$message.payload#/topic': ['comments'], '$message.payload#/action': ['created'] },
     conversation: '$message.payload#/data/thread',
   },

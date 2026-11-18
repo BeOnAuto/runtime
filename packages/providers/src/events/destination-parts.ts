@@ -33,7 +33,7 @@ const DeliveredReplySchema = Schema.Struct({
     "Where a delivery carries the person's reply, each in its body, so that Auto takes the reply as it arrives, by the rule a reading takes one by: only where verify proves every byte of the body and a time and connection names the account, and only in an entry the runtime ships",
 });
 
-export const WakeSchema = Schema.Struct({
+export const FilterSchema = Schema.Struct({
   when: ConditionsSchema.annotate({
     description:
       'The arrivals that make Auto read now: each a runtime expression, a header or a field, with the values it may equal, every one of which holds',
@@ -61,7 +61,7 @@ export const WakeSchema = Schema.Struct({
 
 export const HandshakeSchema = Schema.Struct({
   when: ConditionsSchema.annotate({
-    description: 'The arrival with which the service checks the address, as wake.when names an arrival',
+    description: 'The arrival with which the service checks the address, as filter.when names an arrival',
   }),
   challenge: Schema.String.annotate({ description: 'Where the challenge the runtime answers is' }),
   response: Schema.optionalKey(
@@ -89,13 +89,12 @@ export const ConnectionSchema = Schema.Struct({
 }).annotate({ description: 'For a destination of the app, where an arrival names whose connection it is for' });
 
 export const OpenSchema = Schema.Struct({
-  tool: Schema.optionalKey(
-    Schema.String.annotate({
-      description: "A tool of the connection that answers the socket's address, named as the server lists it",
-    }),
-  ),
-  address: Schema.optionalKey(
-    Schema.String.annotate({ description: "Beside tool, a JSON Pointer into its answer, to the socket's address" }),
-  ),
-  url: Schema.optionalKey(Schema.String.annotate({ description: "The socket's wss address, written out whole" })),
+  method: Schema.Literals(['GET', 'POST']).annotate({
+    description:
+      "The method of the HTTPS request that answers the socket's address, carrying the app's credential as a bearer token",
+  }),
+  url: Schema.String.annotate({ description: 'The https URL of that request, written out whole' }),
+  address: Schema.String.annotate({
+    description: "A JSON Pointer into what the request answers, to the socket's wss address",
+  }),
 }).annotate({ description: 'How the runtime finds the address of the socket it opens' });

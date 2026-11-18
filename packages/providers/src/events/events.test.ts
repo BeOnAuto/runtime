@@ -85,6 +85,18 @@ describe('the secret of a subscription', () => {
     ]);
   });
 
+  it('is placed in the body of a request, never in its URL, which is logged along the way', () => {
+    const inTheAddress = { ...keptByTheService, url: 'https://api.tracker.example.com/hooks/{{ secret }}' };
+    const renew = { method: 'PATCH', url: 'https://api.tracker.example.com/hooks/{{ subscription.id }}/{{ secret }}' };
+
+    expect(sentBy({ ...ofEachSubscription, subscribe: { ...inTheAddress, subscribed: { id: '/id' } } })).toEqual([
+      [`${destination}/subscribe/url`, expect.any(String)],
+    ]);
+    expect(sentBy({ ...ofEachSubscription, renew, lease_seconds: 3600 })).toEqual([
+      [`${destination}/renew/url`, expect.any(String)],
+    ]);
+  });
+
   it("is none where the app's secret proves its deliveries", () => {
     const subscribe = { ...ofEachSubscription.subscribe, body: unkeyed };
 
@@ -197,13 +209,13 @@ describe('the templates of a call', () => {
     expect(subscribedBy({ tool: 'create_hook', with: { ...keyed, owner: '{{ input.owner }}' }, ...answered })).toEqual([
       [
         `${subscribe}/with/owner`,
-        'Reads input, which a template of the call that subscribes does not have; it reads with, sent.conversation, sent.id, webhook_url, secret, lease.seconds and lease.expires_at',
+        'Reads input, which a template of the call that subscribes does not have; it reads topic, webhook_url, secret, lease.seconds and lease.expires_at',
       ],
     ]);
     expect(queuedBy({ subscribe: { ...intoAQueue.subscribe, with: { address: '{{ webhook_url }}' } } })).toEqual([
       [
         '/events/destinations/0/subscribe/with/address',
-        'Reads webhook_url, which a template of the call that subscribes does not have; it reads with, sent.conversation, sent.id, queue_url, lease.seconds and lease.expires_at',
+        'Reads webhook_url, which a template of the call that subscribes does not have; it reads topic, queue_url, lease.seconds and lease.expires_at',
       ],
     ]);
     expect(
@@ -211,7 +223,7 @@ describe('the templates of a call', () => {
     ).toEqual([
       [
         '/events/destinations/0/unsubscribe/with/until',
-        'Reads lease, which a template of the call that unsubscribes does not have; it reads with, sent.conversation, sent.id, subscription.id and subscription.expires_at',
+        'Reads lease, which a template of the call that unsubscribes does not have; it reads topic, subscription.id and subscription.expires_at',
       ],
     ]);
   });
@@ -219,7 +231,7 @@ describe('the templates of a call', () => {
   it('render text where a part of a URL or of the topic is, and hold no reference', () => {
     expect(
       subscribedBy(
-        { ...ofEachSubscription.subscribe, url: 'https://api.tracker.example.com/{{ with }}/hooks' },
+        { ...ofEachSubscription.subscribe, url: 'https://api.tracker.example.com/{{ lease }}/hooks' },
         { topic: '{{ with }}' },
       ),
     ).toEqual([
@@ -227,7 +239,7 @@ describe('the templates of a call', () => {
         '/events/destinations/0/topic',
         'Renders a value that is not text; write | json after a structured value such as with',
       ],
-      [`${subscribe}/url`, 'Renders a value that is not text; write | json after a structured value such as with'],
+      [`${subscribe}/url`, expect.any(String)],
     ]);
     expect(
       subscribedBy({
@@ -235,5 +247,42 @@ describe('the templates of a call', () => {
         body: { ...ofEachSubscription.subscribe.body, token: '${TOKEN}' },
       }),
     ).toEqual([[`${subscribe}/body/token`, 'Expected no ${ in a template, which never holds a secret']]);
+  });
+});
+
+describe('the calls of a subscription', () => {
+  it('read the topic the destination renders, never the place a request waits in', () => {
+    const renew = { method: 'PATCH', url: 'https://api.tracker.example.com/hooks/{{ subscription.id }}' };
+    const leased = { renew, lease_seconds: 3600 };
+    const unsubscribe = { method: 'DELETE', url: 'https://api.tracker.example.com/hooks/{{ subscription.id }}' };
+
+    expect(
+      subscribedBy(
+        {
+          ...ofEachSubscription.subscribe,
+          url: 'https://api.tracker.example.com/{{ topic | split: "/" | first }}/hooks',
+        },
+        { ...leased, renew: { ...renew, url: `${renew.url}?topic={{ topic }}` } },
+      ),
+    ).toEqual([]);
+    expect(
+      subscribedBy(
+        { ...ofEachSubscription.subscribe, url: 'https://api.tracker.example.com/projects/{{ with.project }}/hooks' },
+        {
+          ...leased,
+          renew: { ...renew, url: `${renew.url}?thread={{ sent.id }}` },
+          unsubscribe: { ...unsubscribe, url: `${unsubscribe.url}?channel={{ sent.conversation }}` },
+        },
+      ),
+    ).toMatchObject([
+      [`${subscribe}/url`, expect.any(String)],
+      ['/events/destinations/0/renew/url', expect.any(String)],
+      ['/events/destinations/0/unsubscribe/url', expect.any(String)],
+    ]);
+    expect(
+      queuedBy({
+        subscribe: { ...intoAQueue.subscribe, with: { resource: 'chats/{{ sent.conversation }}/messages' } },
+      }),
+    ).toMatchObject([['/events/destinations/0/subscribe/with/resource', expect.any(String)]]);
   });
 });

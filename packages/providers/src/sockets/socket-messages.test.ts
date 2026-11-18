@@ -8,7 +8,7 @@ import { acknowledgementOf, messageArrivalOf } from './socket-messages.ts';
 function acknowledgedAt(acknowledge: string | undefined): Destination {
   return {
     type: 'websocket',
-    wake: { when: { '$message.payload#/kind': ['event'] } },
+    filter: { when: { '$message.payload#/kind': ['event'] } },
     ...(acknowledge === undefined ? {} : { acknowledge }),
   };
 }

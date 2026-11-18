@@ -23,11 +23,9 @@ function opened(open: unknown) {
   return sentBy({ ...overASocket, open });
 }
 
-const notWholeAddress = "Expected a wss URL written out whole, the address of the service's socket";
-
 describe('where a request delivered to a webhook says what it is about', () => {
   it('is a runtime expression of OpenAPI into the request', () => {
-    const wake = {
+    const filter = {
       when: {
         '$request.header.X Event': ['comment'],
         '$request.header.X(Event)': ['comment'],
@@ -40,30 +38,39 @@ describe('where a request delivered to a webhook says what it is about', () => {
     };
     const connection = { account: '$request.path.team', user: '$request.body#/user' };
 
-    expect(sentBy({ ...ofTheApp, wake, connection })).toEqual([
-      [`${destination}/wake/when/$request.header.X Event`, ofTheRequest],
-      [`${destination}/wake/when/$request.header.X(Event)`, ofTheRequest],
-      [`${destination}/wake/when/$request.body`, ofTheRequest],
-      [`${destination}/wake/when/$message.payload#/type`, ofTheRequest],
-      [`${destination}/wake/conversation`, ofTheRequest],
-      [`${destination}/wake/automatic`, ofTheRequest],
+    expect(sentBy({ ...ofTheApp, filter, connection })).toEqual([
+      [`${destination}/filter/when/$request.header.X Event`, ofTheRequest],
+      [`${destination}/filter/when/$request.header.X(Event)`, ofTheRequest],
+      [`${destination}/filter/when/$request.body`, ofTheRequest],
+      [`${destination}/filter/when/$message.payload#/type`, ofTheRequest],
+      [`${destination}/filter/conversation`, ofTheRequest],
+      [`${destination}/filter/automatic`, ofTheRequest],
       [`${destination}/connection/account`, ofTheRequest],
     ]);
   });
 
   it('holds one condition at least, each with one value at least', () => {
-    expect(sentBy({ ...ofTheApp, wake: { when: {} } })).toEqual([[`${destination}/wake/when`, noConditions]]);
-    expect(sentBy({ ...ofTheApp, wake: { when: { '$request.body#/type': [] } } })).toMatchObject([
-      [`${destination}/wake/when/$request.body#/type`, expect.any(String)],
+    expect(sentBy({ ...ofTheApp, filter: { when: {} } })).toEqual([[`${destination}/filter/when`, noConditions]]);
+    expect(sentBy({ ...ofTheApp, filter: { when: { '$request.body#/type': [] } } })).toMatchObject([
+      [`${destination}/filter/when/$request.body#/type`, expect.any(String)],
     ]);
   });
 
   it('names the subscription only in an arrival of a destination per subscription', () => {
-    expect(sentBy({ ...ofTheApp, wake: { ...ofTheApp.wake, subscription: '$request.header.X-Hook' } })).toEqual([
+    expect(sentBy({ ...ofTheApp, filter: { ...ofTheApp.filter, subscription: '$request.header.X-Hook' } })).toEqual([
       [
-        `${destination}/wake/subscription`,
-        'Expected subscription only in the wake of a destination per subscription, whose arrivals name the subscription Auto made',
+        `${destination}/filter/subscription`,
+        'Expected subscription only in the filter of a destination per subscription, whose arrivals name the subscription Auto made',
       ],
+    ]);
+  });
+});
+
+describe('the filter of a destination', () => {
+  it('is named filter alone, so a destination that names it wake is refused at both places', () => {
+    expect(sentBy({ ...without(ofTheApp, 'filter'), wake: ofTheApp.filter })).toEqual([
+      [`${destination}/wake`, expect.any(String)],
+      [`${destination}/filter`, expect.any(String)],
     ]);
   });
 });
@@ -74,18 +81,18 @@ describe('where a message down a socket or out of a queue says what it is about'
       sentBy({
         ...overASocket,
         acknowledge: '$request.body#/envelope_id',
-        wake: { when: { '$message.payload': ['events_api'], '$message.header#/kind': ['events_api'] } },
+        filter: { when: { '$message.payload': ['events_api'], '$message.header#/kind': ['events_api'] } },
         connection: { account: '$request.body#/team_id', user: '$message.payload#/user' },
       }),
     ).toEqual([
-      [`${destination}/wake/when/$message.payload`, ofTheMessage],
+      [`${destination}/filter/when/$message.payload`, ofTheMessage],
       [`${destination}/connection/account`, ofTheMessage],
       [`${destination}/acknowledge`, ofTheMessage],
     ]);
   });
 });
 
-const reply = `${destination}/wake/reply`;
+const reply = `${destination}/filter/reply`;
 
 const unproven =
   'Expected reply only where verify proves every byte of the body and a time, as standard-webhooks does, and hmac where it signs {payload} and a timestamp: a secret or a signed token in a header proves who sent a delivery, not that its body is theirs, so such a destination only makes Auto read';
@@ -172,14 +179,14 @@ describe('a destination whose deliveries carry a reply', () => {
     const subscribed = {
       ...ofEachSubscription,
       verify: { scheme: 'standard-webhooks', secret: 'subscription' },
-      wake: { ...ofEachSubscription.wake, conversation: '$request.body#/channel' },
+      filter: { ...ofEachSubscription.filter, conversation: '$request.body#/channel' },
     };
 
     expect(sentBy(carrying(subscribed, aReply))).toEqual([[reply, unowned]]);
   });
 
   it('names the conversation the reply was posted in, within which alone a message is named uniquely', () => {
-    const anywhere = { ...ofTheApp, wake: without(ofTheApp.wake, 'conversation') };
+    const anywhere = { ...ofTheApp, filter: without(ofTheApp.filter, 'conversation') };
 
     expect([sentBy(carrying(anywhere, aReply)), sentBy(carrying(ofTheApp, aReply))]).toEqual([[[reply, unplaced]], []]);
   });
@@ -212,35 +219,70 @@ describe('the handshake of a destination', () => {
   });
 });
 
+const { open } = overASocket;
+
 describe('the socket a destination opens', () => {
-  it('is found by a tool of the connection and where its answer names the address', () => {
-    expect([opened({ tool: 'open connection', address: 'url' }), opened({ tool: 'open_connection' })]).toEqual([
+  it('is found by a request of the app and where its answer names the address', () => {
+    expect([
+      opened({ ...open, method: 'GET', url: `${open.url}?app=auto` }),
+      opened({ ...open, method: 'PUT' }),
+      opened({ ...open, address: 'url' }),
+    ]).toEqual([
+      [],
+      [[`${destination}/open/method`, expect.any(String)]],
       [
-        [`${destination}/open/tool`, 'Expected a tool name of 1 to 128 letters, digits, underscores, hyphens and dots'],
         [
           `${destination}/open/address`,
           'Expected a JSON Pointer such as /messages: it starts with a slash, writes ~ as ~0 and a slash within a name as ~1',
         ],
       ],
-      [[`${destination}/open`, "Expected tool and address, the JSON Pointer to the socket's address it answers"]],
-    ]);
-  });
-
-  it('is otherwise written out whole', () => {
-    expect([
-      opened({ url: 'wss://events.chat.example.com/{{ app }}' }),
-      opened({ url: 'https://events.chat.example.com/socket' }),
-      opened({ url: 'wss://events.chat.example.com/socket', tool: 'open_connection' }),
-    ]).toEqual([
-      [[`${destination}/open/url`, notWholeAddress]],
-      [[`${destination}/open/url`, notWholeAddress]],
-      [[`${destination}/open`, 'Expected tool and address, or url, and not both']],
     ]);
   });
 
   it('is opened with a value of the app named as its vendor names it', () => {
     expect(sentBy({ ...overASocket, credential: 'App Token' })).toMatchObject([
       [`${destination}/credential`, expect.stringContaining('the name of a value of the app')],
+    ]);
+  });
+});
+
+describe("the request that answers a socket's address", () => {
+  it('takes the method, the url and the address of the request, and no tool or wss address of its own', () => {
+    expect([
+      opened({ url: open.url, address: open.address }),
+      opened({ method: open.method, address: open.address }),
+      opened({ method: open.method, url: open.url }),
+      opened({ ...open, tool: 'open_connection' }),
+      opened({ tool: 'open_connection', address: '/url' }),
+      opened({ url: 'wss://events.chat.example.com/socket' }),
+    ]).toEqual([
+      [[`${destination}/open/method`, expect.any(String)]],
+      [[`${destination}/open/url`, expect.any(String)]],
+      [[`${destination}/open/address`, expect.any(String)]],
+      [[`${destination}/open/tool`, expect.any(String)]],
+      [
+        [`${destination}/open/tool`, expect.any(String)],
+        [`${destination}/open/method`, expect.any(String)],
+        [`${destination}/open/url`, expect.any(String)],
+      ],
+      [
+        [`${destination}/open/method`, expect.any(String)],
+        [`${destination}/open/address`, expect.any(String)],
+      ],
+    ]);
+  });
+
+  it("is sent to an https URL written out whole, since it carries the app's credential there", () => {
+    expect([
+      opened({ ...open, url: 'wss://events.chat.example.com/socket' }),
+      opened({ ...open, url: 'http://api.chat.example.com/connections.open' }),
+      opened({ ...open, url: 'https://api.chat.example.com/{{ app }}/connections.open' }),
+      opened({ ...open, url: 'https://{{ app }}.chat.example.com/connections.open' }),
+    ]).toEqual([
+      [[`${destination}/open/url`, expect.any(String)]],
+      [[`${destination}/open/url`, expect.any(String)]],
+      [[`${destination}/open/url`, expect.any(String)]],
+      [[`${destination}/open/url`, expect.any(String)]],
     ]);
   });
 });

@@ -110,7 +110,7 @@ describe('a provider whoever runs the runtime adds whose service sends', () => {
       [],
       [
         [
-          '/events/destinations/0/wake/reply',
+          '/events/destinations/0/filter/reply',
           'Expected no reply: only an entry the runtime ships declares one, since a reply a delivery carries can answer a request, and a provider whoever runs the runtime adds only makes Auto read',
         ],
       ],

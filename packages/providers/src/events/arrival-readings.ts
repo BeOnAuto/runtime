@@ -64,7 +64,7 @@ export interface PresentedProof {
 
 type Conditions = Readonly<Record<string, readonly string[]>>;
 
-type DeclaredReply = NonNullable<Destination['wake']['reply']>;
+type DeclaredReply = NonNullable<Destination['filter']['reply']>;
 
 type Proof = NonNullable<Destination['verify']>;
 
@@ -145,22 +145,24 @@ function replyIn(arrival: Arrival, reply: DeclaredReply, account: string | undef
     : { account, id, sender, text, to, ...timeIn(arrival, reply.time) };
 }
 
-function namedIn(arrival: Arrival, wake: Destination['wake']): Omit<ArrivalWake, 'reply'> {
-  const subscription = textIn(arrival, wake.subscription);
-  const conversation = textIn(arrival, wake.conversation);
+function namedIn(arrival: Arrival, filter: Destination['filter']): Omit<ArrivalWake, 'reply'> {
+  const subscription = textIn(arrival, filter.subscription);
+  const conversation = textIn(arrival, filter.conversation);
   return {
     ...(subscription === undefined ? {} : { subscription }),
     ...(conversation === undefined ? {} : { conversation }),
   };
 }
 
-function wakeIn(arrival: Arrival, wake: Destination['wake'], account: string | undefined): ArrivalWake | undefined {
-  if (!holds(arrival, wake.when) || holdsSomething(arrival, wake.automatic)) {
+function wakeIn(arrival: Arrival, filter: Destination['filter'], account: string | undefined): ArrivalWake | undefined {
+  if (!holds(arrival, filter.when) || holdsSomething(arrival, filter.automatic)) {
     return undefined;
   }
-  const named = namedIn(arrival, wake);
+  const named = namedIn(arrival, filter);
   const reply =
-    named.conversation === undefined || wake.reply === undefined ? undefined : replyIn(arrival, wake.reply, account);
+    named.conversation === undefined || filter.reply === undefined
+      ? undefined
+      : replyIn(arrival, filter.reply, account);
   return reply === undefined ? named : { ...named, reply };
 }
 
@@ -214,7 +216,7 @@ export function presentedProofOf({ verify }: Destination, arrival: Arrival): Pre
 export function arrivalReadingOf(destination: Destination, arrival: Arrival): ArrivalReading {
   const handshake = handshakeIn(arrival, destination.handshake);
   const connection = connectionIn(arrival, destination.connection);
-  const wake = wakeIn(arrival, destination.wake, connection?.account);
+  const wake = wakeIn(arrival, destination.filter, connection?.account);
   return {
     ...(handshake === undefined ? {} : { handshake }),
     ...(wake === undefined ? {} : { wake }),

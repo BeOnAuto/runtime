@@ -22,13 +22,13 @@ const ofEachSubscription = {
   topic: '{{ with.project }}',
   subscribe: {
     method: 'POST',
-    url: 'https://api.tracker.example.com/projects/{{ with.project }}/hooks',
+    url: 'https://api.tracker.example.com/projects/{{ topic }}/hooks',
     body: { url: '{{ webhook_url }}', secret: '{{ secret }}' },
     subscribed: { id: '/id' },
   },
   unsubscribe: {
     method: 'DELETE',
-    url: 'https://api.tracker.example.com/projects/{{ with.project }}/hooks/{{ subscription.id }}',
+    url: 'https://api.tracker.example.com/projects/{{ topic }}/hooks/{{ subscription.id }}',
   },
   verify: {
     scheme: 'hmac',
@@ -45,7 +45,7 @@ const ofEachSubscription = {
     challenge: '$request.query.hub.challenge',
     signed: false,
   },
-  wake: {
+  filter: {
     when: { '$request.header.X-Tracker-Event': ['comment'] },
     subscription: '$request.header.X-Tracker-Hook',
     conversation: '$request.body#/comment/thread',
@@ -71,7 +71,7 @@ const ofTheApp = {
     response: { token: 'challenge', proof: 'hmac' },
     signed: true,
   },
-  wake: { when: { '$request.body#/kind': ['message_posted'] }, conversation: '$request.body#/message/room' },
+  filter: { when: { '$request.body#/kind': ['message_posted'] }, conversation: '$request.body#/message/room' },
   connection: { account: '$request.body#/workspace' },
 };
 

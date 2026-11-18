@@ -1,7 +1,7 @@
 import { articled, listed } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
-import { ConnectionSchema, HandshakeSchema, OpenSchema, WakeSchema } from './destination-parts.ts';
+import { ConnectionSchema, FilterSchema, HandshakeSchema, OpenSchema } from './destination-parts.ts';
 import { RenewSchema, SubscribeSchema, UnsubscribeSchema } from './event-calls.ts';
 import { VerifySchema } from './event-proofs.ts';
 import type { ExpressionPlace } from './runtime-expressions.ts';
@@ -20,7 +20,7 @@ export const DestinationFieldsSchema = Schema.Struct({
   topic: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'Per subscription, the topic, as WebSub names the unit one subscribes to: a Liquid template over with, the arguments of the call that delivered a request, and sent.conversation and sent.id, rendering the place one subscription serves, such as a repository or a chat',
+        'Per subscription, the topic, as WebSub names the unit one subscribes to: a Liquid template over with, the arguments of the call that delivered a request, and sent.conversation and sent.id, rendering the place one subscription serves, such as a repository or a chat. The calls subscribe, renew and unsubscribe read it as topic',
     }),
   ),
   subscribe: Schema.optionalKey(SubscribeSchema),
@@ -39,7 +39,7 @@ export const DestinationFieldsSchema = Schema.Struct({
   ),
   verify: Schema.optionalKey(VerifySchema),
   handshake: Schema.optionalKey(HandshakeSchema),
-  wake: WakeSchema,
+  filter: FilterSchema,
   connection: Schema.optionalKey(ConnectionSchema),
   kind: Schema.optionalKey(
     Schema.Literals(['azure-event-hubs', 'google-cloud-pubsub', 'amazon-eventbridge']).annotate({
@@ -54,7 +54,7 @@ export const DestinationFieldsSchema = Schema.Struct({
       }),
     ).annotate({
       description:
-        'For websocket, the value of the app that opens the socket, named as the vendor names it, such as app_level_token',
+        'For websocket, the value of the app that opens the socket, named as the vendor names it, such as app_level_token, sent as a bearer token with the request of open',
     }),
   ),
   acknowledge: Schema.optionalKey(
@@ -73,7 +73,7 @@ export type Destination = typeof DestinationFieldsSchema.Type;
 
 export type DestinationIssue = Schema.FilterIssue;
 
-type Field = Exclude<keyof Destination, 'type' | 'wake'>;
+type Field = Exclude<keyof Destination, 'type' | 'filter'>;
 
 type Shape = 'webhook per subscription' | 'webhook per app' | 'queue per subscription' | 'queue per app' | 'websocket';
 

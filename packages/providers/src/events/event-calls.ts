@@ -27,7 +27,8 @@ const callFields = {
   ),
   method: Schema.optionalKey(
     Schema.Literals(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).annotate({
-      description: "Beside url, the method of an HTTP request sent with the connection's own credential",
+      description:
+        "Beside url, the method of an HTTPS request that carries the connection's own credential as a bearer token",
     }),
   ),
   url: Schema.optionalKey(
@@ -79,6 +80,7 @@ type Call = typeof UnsubscribeSchema.Type;
 const sample = {
   with: {},
   sent: { conversation: 'C0123', id: '1699.1' },
+  topic: 'C0123',
   webhook_url: 'https://runtime.example.com/v1/orgs/acme/playbooks/alpha/connections/chat/events',
   queue_url: 'https://events.example.com/queues/chat',
   secret: 'the secret of the subscription',
@@ -86,11 +88,13 @@ const sample = {
   lease: { seconds: 259_200, expires_at: sampleMoment },
 };
 
-function templatesOf(what: string, names: readonly string[]): TemplateSet {
-  return { names, what, sample, structured: 'with' };
+function templatesOf(what: string, names: readonly string[], structured: string): TemplateSet {
+  return { names, what, sample, structured };
 }
 
 const thePlace = ['with', 'sent.conversation', 'sent.id'];
+
+const theTopic = ['topic'];
 
 const theLease = ['lease.seconds', 'lease.expires_at'];
 
@@ -98,27 +102,34 @@ const theSubscription = ['subscription.id', 'subscription.expires_at'];
 
 type Receiving = 'webhook' | 'queue';
 
+const theSecret = 'secret';
+
 const theAddress: Readonly<Record<Receiving, readonly string[]>> = {
-  webhook: ['webhook_url', 'secret'],
+  webhook: ['webhook_url', theSecret],
   queue: ['queue_url'],
 };
 
-export const topicTemplates = templatesOf('a template of the topic of a subscription', thePlace);
+export const topicTemplates = templatesOf('a template of the topic of a subscription', thePlace, 'with');
 
 export function subscribeTemplates(receiving: Receiving): TemplateSet {
-  return templatesOf('a template of the call that subscribes', [...thePlace, ...theAddress[receiving], ...theLease]);
+  return templatesOf(
+    'a template of the call that subscribes',
+    [...theTopic, ...theAddress[receiving], ...theLease],
+    'lease',
+  );
 }
 
-export const renewTemplates = templatesOf('a template of the call that renews', [
-  ...thePlace,
-  ...theSubscription,
-  ...theLease,
-]);
+export const renewTemplates = templatesOf(
+  'a template of the call that renews',
+  [...theTopic, ...theSubscription, ...theLease],
+  'subscription',
+);
 
-export const unsubscribeTemplates = templatesOf('a template of the call that unsubscribes', [
-  ...thePlace,
-  ...theSubscription,
-]);
+export const unsubscribeTemplates = templatesOf(
+  'a template of the call that unsubscribes',
+  [...theTopic, ...theSubscription],
+  'subscription',
+);
 
 export interface Placed {
   readonly pointer: string;
@@ -154,13 +165,25 @@ function toolIssues(pointer: string, tool: string, call: Call, set: TemplateSet)
   ];
 }
 
+function readsTheSecret(text: string): boolean {
+  const parsed = parsedTemplate(toolBlockEngine, text, 1);
+  return Result.isSuccess(parsed) && parsed.success.variables.some(({ path }) => path[0] === theSecret);
+}
+
+const theSecretInTheAddress = 'Expected {{ secret }} in body, not in url';
+
+function secretIssuesOf(pointer: string, url: string, set: TemplateSet): readonly Placed[] {
+  return set.names.includes(theSecret) && readsTheSecret(url) ? [{ pointer, detail: theSecretInTheAddress }] : [];
+}
+
 function urlIssues(pointer: string, url: string | undefined, set: TemplateSet): readonly Placed[] {
+  const at = `${pointer}/url`;
   if (url === undefined) {
-    return [{ pointer: `${pointer}/url`, detail: 'Expected url beside method' }];
+    return [{ pointer: at, detail: 'Expected url beside method' }];
   }
   return writtenOutToItsHost.test(url)
-    ? textIssues(set, `${pointer}/url`, url)
-    : [{ pointer: `${pointer}/url`, detail: notWrittenOut }];
+    ? [...textIssues(set, at, url), ...secretIssuesOf(at, url, set)]
+    : [{ pointer: at, detail: notWrittenOut }];
 }
 
 function requestIssues(pointer: string, call: Call, set: TemplateSet): readonly Placed[] {
@@ -178,8 +201,16 @@ function requestIssues(pointer: string, call: Call, set: TemplateSet): readonly 
 const eitherWay =
   'Expected tool, or method and url, and not both: a call is a tool of the connection or a request to an address the entry names';
 
+function isWrittenAsARequest(call: Call): boolean {
+  return call.method !== undefined || call.url !== undefined;
+}
+
+export function isADeclaredRequest(call: Call | undefined): boolean {
+  return call !== undefined && call.tool === undefined && isWrittenAsARequest(call);
+}
+
 export function callIssuesOf(pointer: string, call: Call, set: TemplateSet): readonly Placed[] {
-  const asARequest = call.method !== undefined || call.url !== undefined;
+  const asARequest = isWrittenAsARequest(call);
   if (call.tool === undefined) {
     return asARequest ? requestIssues(pointer, call, set) : [{ pointer, detail: 'Expected tool, or method and url' }];
   }
@@ -188,11 +219,6 @@ export function callIssuesOf(pointer: string, call: Call, set: TemplateSet): rea
 
 export function answerIssuesOf(pointers: readonly (readonly [string, string | undefined])[]): readonly Placed[] {
   return pointerIssues(noLines, pointers);
-}
-
-function readsTheSecret(text: string): boolean {
-  const parsed = parsedTemplate(toolBlockEngine, text, 1);
-  return Result.isSuccess(parsed) && parsed.success.variables.some(({ path }) => path[0] === 'secret');
 }
 
 export function placesTheSecret(call: Call): boolean {

@@ -169,10 +169,10 @@ function addedIssuesOf({ document: written, credentials, events }: ProviderEntry
     ...credentials.flatMap(({ gateway }, index) =>
       gateway === undefined ? [] : [{ path: ['credentials', index, 'gateway'], issue: gatewayOfAnAddedProvider }],
     ),
-    ...(events?.destinations ?? []).flatMap(({ wake }, index) =>
-      wake.reply === undefined
+    ...(events?.destinations ?? []).flatMap(({ filter }, index) =>
+      filter.reply === undefined
         ? []
-        : [{ path: ['events', 'destinations', index, 'wake', 'reply'], issue: replyOfAnAddedProvider }],
+        : [{ path: ['events', 'destinations', index, 'filter', 'reply'], issue: replyOfAnAddedProvider }],
     ),
   ];
 }

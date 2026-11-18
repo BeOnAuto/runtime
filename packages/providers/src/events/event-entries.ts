@@ -2,12 +2,22 @@ import { credentialProblems } from '@on.auto/config';
 import { alternatives } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
+import { isADeclaredRequest } from './event-calls.ts';
 import type { Events } from './event-destinations.ts';
 import { pathOf, textsIn } from './json-texts.ts';
 
+interface Way {
+  readonly kind: string;
+  readonly in?: string | undefined;
+  readonly name?: string | undefined;
+  readonly scheme?: string | undefined;
+  readonly gateway?: object | undefined;
+  readonly more?: readonly { readonly name: string }[] | undefined;
+}
+
 interface WithEvents {
   readonly events?: Events | undefined;
-  readonly credentials: readonly { readonly kind: string; readonly more?: readonly { readonly name: string }[] }[];
+  readonly credentials: readonly Way[];
 }
 
 type EntryIssue = Schema.FilterIssue;
@@ -46,7 +56,36 @@ function heldIssuesOf(events: Events): readonly EntryIssue[] {
     .map(({ pointer }) => ({ path: pathOf(pointer), issue: heldCredential }));
 }
 
+function isAKeySentAsABearerToken(way: Way): boolean {
+  return way.in === 'header' && way.name?.toLowerCase() === 'authorization' && way.scheme?.toLowerCase() === 'bearer';
+}
+
+function givesABearerToken(way: Way): boolean {
+  if (way.kind === 'secret') {
+    return isAKeySentAsABearerToken(way);
+  }
+  return way.kind === 'client_credentials' || (way.kind === 'authorization' && way.gateway === undefined);
+}
+
+const callsOfASubscription = ['subscribe', 'renew', 'unsubscribe'] as const;
+
+const noBearerWay =
+  "Expected tool: a request carries the connection's credential as a bearer token, and no way of this entry gives one";
+
+function bearerIssuesOf({ credentials }: WithEvents, events: Events): readonly EntryIssue[] {
+  if (credentials.some((way) => givesABearerToken(way))) {
+    return [];
+  }
+  return events.destinations.flatMap((destination, index) =>
+    callsOfASubscription
+      .filter((call) => isADeclaredRequest(destination[call]))
+      .map((call) => ({ path: ['events', 'destinations', index, call], issue: noBearerWay })),
+  );
+}
+
 export function eventIssuesOf(entry: WithEvents): readonly EntryIssue[] {
   const { events } = entry;
-  return events === undefined ? [] : [...needsIssuesOf(entry, events), ...heldIssuesOf(events)];
+  return events === undefined
+    ? []
+    : [...needsIssuesOf(entry, events), ...heldIssuesOf(events), ...bearerIssuesOf(entry, events)];
 }

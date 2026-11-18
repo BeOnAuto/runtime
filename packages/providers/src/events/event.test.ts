@@ -10,7 +10,7 @@ import {
   sentBy,
   without,
 } from '../testing/event-destinations.ts';
-import { tracker } from '../testing/fixture-providers.ts';
+import { drive, keyMadeAt, ledgers, messages, regions, tracker } from '../testing/fixture-providers.ts';
 
 const ofASocket = 'a websocket destination takes open, credential, connection, acknowledge, and heartbeat_seconds';
 
@@ -19,7 +19,7 @@ describe('the events part of an entry', () => {
     expect([
       sentBy(ofEachSubscription, overASocket, intoAQueue),
       sentBy(ofTheApp),
-      sentBy({ ...overASocket, open: { url: 'wss://events.chat.example.com/socket?app=auto' } }),
+      sentBy({ ...overASocket, open: { ...overASocket.open, url: `${overASocket.open.url}?app=auto` } }),
       problemsOf(tracker),
     ]).toEqual([[], [], [], []]);
   });
@@ -75,9 +75,45 @@ describe('the fields of a destination', () => {
       [`${destination}/lease_seconds`, expect.stringContaining('Expected no lease_seconds')],
       [`${destination}/verify`, expect.stringContaining('Expected no verify')],
       [`${destination}/connection`, 'Expected connection, which a queue destination per app takes'],
-      [`${destination}/wake/subscription`, expect.stringContaining('Expected subscription only')],
+      [`${destination}/filter/subscription`, expect.stringContaining('Expected subscription only')],
       [`${destination}/verify/secret`, expect.stringContaining('Expected app')],
     ]);
+  });
+});
+
+function keyIn(name: string, scheme?: string) {
+  const placed = { kind: 'secret', in: 'header', name, ...(scheme === undefined ? {} : { scheme }) };
+  return { ...tracker, credentials: [{ ...placed, ...keyMadeAt('app.tracker.example.com') }] };
+}
+
+function requestedThrough(entry: object, sending: unknown = ofEachSubscription) {
+  return problemsOf({ ...entry, events: { destinations: [sending] } });
+}
+
+describe('a call of a subscription written as an HTTP request', () => {
+  const refused = [
+    [`${destination}/subscribe`, expect.any(String)],
+    [`${destination}/unsubscribe`, expect.any(String)],
+  ];
+
+  it('is declared where a way gives a bearer token: a consent, client credentials, or a key in Authorization', () => {
+    expect([
+      requestedThrough(tracker),
+      requestedThrough(drive),
+      requestedThrough(ledgers),
+      requestedThrough(keyIn('authorization', 'bearer')),
+    ]).toEqual([[], [], [], []]);
+  });
+
+  it('is refused where no way of the entry gives one, which a tool of the connection serves', () => {
+    expect([
+      requestedThrough(regions),
+      requestedThrough(messages),
+      requestedThrough(keyIn('X-Api-Key')),
+      requestedThrough(keyIn('Authorization', 'Basic')),
+      requestedThrough(regions, intoAQueue),
+      requestedThrough(regions, { ...intoAQueue, subscribe: { ...intoAQueue.subscribe, method: 'POST' } }),
+    ]).toEqual([refused, refused, refused, refused, [], [[`${destination}/subscribe`, expect.any(String)]]]);
   });
 });
 

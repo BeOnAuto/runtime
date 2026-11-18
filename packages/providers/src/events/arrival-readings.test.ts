@@ -97,7 +97,7 @@ describe('when a destination declares', () => {
       type: 'webhook',
       per: 'app',
       handshake: { when: {}, challenge: '$request.body#/challenge', signed: true },
-      wake: { when: {} },
+      filter: { when: {} },
     };
 
     expect(arrivalReadingOf(declared, aRequest({ body: { challenge: 'abc' } }))).toEqual({});
@@ -124,7 +124,7 @@ describe('the wake an arrival is', () => {
   });
 
   it('still wakes where it names neither, so Auto reads what waits through the connection', () => {
-    const declaringNeither = { ...ofEachSubscription, wake: { when: ofEachSubscription.wake.when } };
+    const declaringNeither = { ...ofEachSubscription, filter: { when: ofEachSubscription.filter.when } };
 
     expect([
       readByTheTracker(aRequest({ headers: { 'x-tracker-event': 'comment' } })),
@@ -191,7 +191,7 @@ describe('the reply a delivery does not carry', () => {
     ]);
   });
 
-  it('is one where the wake is none, or where the wake declares no reply', () => {
+  it('is one where the wake is none, or where the filter declares no reply', () => {
     expect([
       readAsSlackSends(aReplyIn({ bot_id: 'B0APP' })),
       readAsSlackSends(aRequest({ body: { type: 'url_verification', challenge: '3eZbrw1a' } })),

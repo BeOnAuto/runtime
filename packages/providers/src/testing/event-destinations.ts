@@ -20,8 +20,8 @@ export const aReply = {
   changed: '$request.body#/message/edited',
 };
 
-export function carrying(destination: { readonly wake: object }, reply: unknown): Readonly<Record<string, unknown>> {
-  return { ...destination, wake: { ...destination.wake, reply } };
+export function carrying(destination: { readonly filter: object }, reply: unknown): Readonly<Record<string, unknown>> {
+  return { ...destination, filter: { ...destination.filter, reply } };
 }
 
 export const ofEachSubscription = {
@@ -30,13 +30,13 @@ export const ofEachSubscription = {
   topic: '{{ with.project }}',
   subscribe: {
     method: 'POST',
-    url: 'https://api.tracker.example.com/projects/{{ with.project }}/hooks',
+    url: 'https://api.tracker.example.com/projects/{{ topic }}/hooks',
     body: { url: '{{ webhook_url }}', secret: '{{ secret }}', events: ['comment'] },
     subscribed: { id: '/id' },
   },
   unsubscribe: {
     method: 'DELETE',
-    url: 'https://api.tracker.example.com/projects/{{ with.project }}/hooks/{{ subscription.id }}',
+    url: 'https://api.tracker.example.com/projects/{{ topic }}/hooks/{{ subscription.id }}',
   },
   verify: {
     scheme: 'hmac',
@@ -48,7 +48,7 @@ export const ofEachSubscription = {
     encoding: 'hex',
     id: '$request.header.X-Tracker-Delivery',
   },
-  wake: {
+  filter: {
     when: { '$request.header.X-Tracker-Event': ['comment'] },
     subscription: '$request.header.X-Tracker-Hook',
   },
@@ -72,7 +72,7 @@ export const ofTheApp = {
     challenge: '$request.body#/challenge',
     signed: true,
   },
-  wake: {
+  filter: {
     when: { '$request.body#/type': ['event_callback'], '$request.body#/event/type': ['message'] },
     conversation: '$request.body#/event/channel',
     automatic: '$request.body#/event/bot_id',
@@ -82,11 +82,11 @@ export const ofTheApp = {
 
 export const overASocket = {
   type: 'websocket',
-  open: { tool: 'open_connection', address: '/url' },
+  open: { method: 'POST', url: 'https://api.chat.example.com/connections.open', address: '/url' },
   credential: 'app_level_token',
   acknowledge: '$message.payload#/envelope_id',
   heartbeat_seconds: 30,
-  wake: {
+  filter: {
     when: { '$message.payload#/type': ['events_api'] },
     conversation: '$message.payload#/payload/event/channel',
   },
@@ -101,7 +101,7 @@ export const intoAQueue = {
   subscribe: {
     tool: 'create_subscription',
     with: {
-      resource: 'chats/{{ sent.conversation }}/messages',
+      resource: 'chats/{{ topic }}/messages',
       notificationUrl: '{{ queue_url }}',
       expirationDateTime: '{{ lease.expires_at }}',
     },
@@ -114,7 +114,7 @@ export const intoAQueue = {
   },
   lease_seconds: 259_200,
   unsubscribe: { tool: 'delete_subscription', with: { id: '{{ subscription.id }}' } },
-  wake: { when: { '$message.payload#/changeType': ['created'] }, subscription: '$message.payload#/subscriptionId' },
+  filter: { when: { '$message.payload#/changeType': ['created'] }, subscription: '$message.payload#/subscriptionId' },
 };
 
 export const inHeadersAndTheQuery = {
@@ -124,7 +124,7 @@ export const inHeadersAndTheQuery = {
     challenge: '$request.query.hub.challenge',
     signed: false,
   },
-  wake: {
+  filter: {
     when: { '$request.header.X-Tracker-Event': ['comment', 'review'] },
     subscription: '$request.header.X-Tracker-Hook',
     conversation: '$request.body#/comment/thread',

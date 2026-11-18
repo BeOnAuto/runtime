@@ -735,7 +735,7 @@
                         },
                         "topic": {
                           "type": "string",
-                          "description": "Per subscription, the topic, as WebSub names the unit one subscribes to: a Liquid template over with, the arguments of the call that delivered a request, and sent.conversation and sent.id, rendering the place one subscription serves, such as a repository or a chat"
+                          "description": "Per subscription, the topic, as WebSub names the unit one subscribes to: a Liquid template over with, the arguments of the call that delivered a request, and sent.conversation and sent.id, rendering the place one subscription serves, such as a repository or a chat. The calls subscribe, renew and unsubscribe read it as topic"
                         },
                         "subscribe": {
                           "type": "object",
@@ -751,7 +751,7 @@
                             "method": {
                               "type": "string",
                               "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
-                              "description": "Beside url, the method of an HTTP request sent with the connection's own credential"
+                              "description": "Beside url, the method of an HTTPS request that carries the connection's own credential as a bearer token"
                             },
                             "url": {
                               "type": "string",
@@ -800,7 +800,7 @@
                             "method": {
                               "type": "string",
                               "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
-                              "description": "Beside url, the method of an HTTP request sent with the connection's own credential"
+                              "description": "Beside url, the method of an HTTPS request that carries the connection's own credential as a bearer token"
                             },
                             "url": {
                               "type": "string",
@@ -839,7 +839,7 @@
                             "method": {
                               "type": "string",
                               "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
-                              "description": "Beside url, the method of an HTTP request sent with the connection's own credential"
+                              "description": "Beside url, the method of an HTTPS request that carries the connection's own credential as a bearer token"
                             },
                             "url": {
                               "type": "string",
@@ -931,7 +931,7 @@
                                 },
                                 "minItems": 1
                               },
-                              "description": "The arrival with which the service checks the address, as wake.when names an arrival"
+                              "description": "The arrival with which the service checks the address, as filter.when names an arrival"
                             },
                             "challenge": {
                               "type": "string",
@@ -954,7 +954,7 @@
                           "additionalProperties": false,
                           "description": "How the service checks the address before it sends, as WebSub verifies intent"
                         },
-                        "wake": {
+                        "filter": {
                           "type": "object",
                           "properties": {
                             "when": {
@@ -1041,26 +1041,28 @@
                         "open": {
                           "type": "object",
                           "properties": {
-                            "tool": {
+                            "method": {
                               "type": "string",
-                              "description": "A tool of the connection that answers the socket's address, named as the server lists it"
-                            },
-                            "address": {
-                              "type": "string",
-                              "description": "Beside tool, a JSON Pointer into its answer, to the socket's address"
+                              "enum": ["GET", "POST"],
+                              "description": "The method of the HTTPS request that answers the socket's address, carrying the app's credential as a bearer token"
                             },
                             "url": {
                               "type": "string",
-                              "description": "The socket's wss address, written out whole"
+                              "description": "The https URL of that request, written out whole"
+                            },
+                            "address": {
+                              "type": "string",
+                              "description": "A JSON Pointer into what the request answers, to the socket's wss address"
                             }
                           },
+                          "required": ["method", "url", "address"],
                           "additionalProperties": false,
                           "description": "How the runtime finds the address of the socket it opens"
                         },
                         "credential": {
                           "type": "string",
                           "pattern": "^[a-z][a-z0-9_]{0,63}$",
-                          "description": "For websocket, the value of the app that opens the socket, named as the vendor names it, such as app_level_token"
+                          "description": "For websocket, the value of the app that opens the socket, named as the vendor names it, such as app_level_token, sent as a bearer token with the request of open"
                         },
                         "acknowledge": {
                           "type": "string",
@@ -1072,7 +1074,7 @@
                           "description": "For websocket, how often the service asks the runtime to send it a heartbeat, in seconds"
                         }
                       },
-                      "required": ["type", "wake"],
+                      "required": ["type", "filter"],
                       "additionalProperties": false
                     },
                     "minItems": 1,
