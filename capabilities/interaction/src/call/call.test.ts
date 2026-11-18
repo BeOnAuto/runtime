@@ -34,7 +34,7 @@ describe('a run that asks a system and cannot read what the tool answered', () =
     ]);
   });
 
-  it('is unworkable when what it reads takes more than a run may record, nests deeper than 512 levels, or does not match the output schema', async () => {
+  it('is unworkable when what it reads nests deeper than 512 levels, or does not match the output schema', async () => {
     const { run } = await callRuns();
     const deep = callDocument({
       tool: 'echo',
@@ -45,15 +45,9 @@ describe('a run that asks a system and cannot read what the tool answered', () =
     });
 
     expect([
-      await run(callDocument({ tool: 'large', read: null, with: ['    kib: 1024'], output: anyOutput })),
       await run(deep, { deep: nestedIn(511) }),
       await run(callDocument({ output: ['output:', '  schema: { type: string }'] })),
     ]).toEqual([
-      unworkable(
-        expect.stringMatching(
-          /^What the large tool of chat answered takes \d+ bytes as JSON with the run's record, more than the 1 MiB a run may record; point read at a smaller part, or ask the tool for less$/u,
-        ),
-      ),
       unworkable(
         'What the echo tool of chat answered nests deeper than the 512 levels a value may. The tool ran and may have changed something; a run again calls it again',
       ),

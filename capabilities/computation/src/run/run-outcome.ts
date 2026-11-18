@@ -1,11 +1,11 @@
-import { mostResultBytes, type Finished } from '@on.auto/definitions';
+import type { Finished } from '@on.auto/definitions';
 import { issuesDetail } from '@on.auto/json-schema';
 import { Conflict, Unavailable } from '@on.auto/operations';
 import type { PoolOutcome, ProgramIssue, Stopped } from '@on.auto/workflow-engine/dsl';
 import { Effect, type Schema } from 'effect';
 
 import type { ComputationFunctionDefinitionDocument } from '../document/computation-document.ts';
-import { computationBounds, mebibytes } from './run-bounds.ts';
+import { computationBounds, mebibytes, mostOutputBytesOf } from './run-bounds.ts';
 
 export interface RunFacts {
   readonly document: ComputationFunctionDefinitionDocument;
@@ -75,7 +75,7 @@ function exhaustedWith({ limit, work }: Exhausted, facts: RunFacts): Ending {
 
 type Unworkable = Extract<PoolOutcome, { readonly ran: 'oversized' | 'mismatched' | 'unfit' | 'refused' }>;
 
-function unworkableWith(outcome: Unworkable): Ending {
+function unworkableWith(outcome: Unworkable, { memoryBytes }: RunFacts): Ending {
   if (outcome.ran === 'refused') {
     return Effect.die(
       new Error(`The worker refused a program the definition was accepted with: ${outcome.issue.detail}`),
@@ -88,7 +88,7 @@ function unworkableWith(outcome: Unworkable): Ending {
   }
   return outcome.ran === 'oversized'
     ? unworkable(
-        `The program's output is more than a run may record, ${mostResultBytes / mebibytes} MiB as JSON with the run's record; return less, or give each run a part of the input`,
+        `The program's output is more than the ${mostOutputBytesOf(memoryBytes) / mebibytes} MiB of JSON a computation returns at once; return less, or give each run a part of the input`,
       )
     : unworkable(`The program's output is not JSON: ${outcome.issue.detail}`);
 }
@@ -106,5 +106,5 @@ export function endingOf(outcome: PoolOutcome, facts: RunFacts): Ending {
   if (outcome.ran === 'stopped') {
     return Effect.fail(new Unavailable({ detail: stoppedBecause[outcome.because](facts) }));
   }
-  return outcome.ran === 'crashed' ? Effect.die(new Error(outcome.detail)) : unworkableWith(outcome);
+  return outcome.ran === 'crashed' ? Effect.die(new Error(outcome.detail)) : unworkableWith(outcome, facts);
 }

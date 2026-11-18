@@ -1,17 +1,50 @@
+import { AssetKeeper, Conflict, type ValueKeeping } from '@on.auto/operations';
+import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { afterAToolThatMayAct } from '../runs/tool-refusals.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { probe } from '../testing/capabilities/probe.ts';
+import { toolUser } from '../testing/capabilities/tool-user.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
+import { admittingMeter } from '../testing/recording-meter.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-async function withPlain() {
+const anId: unknown = expect.any(String);
+
+const utf8 = new TextEncoder();
+
+interface Asked {
+  readonly run: Parameters<ValueKeeping['kept']>[0];
+  readonly value: Parameters<ValueKeeping['kept']>[1];
+}
+
+function keepingRecorded() {
+  const asked: Asked[] = [];
+  const keeper: ValueKeeping = {
+    kept: (run, value) =>
+      Effect.sync(() => {
+        asked.push({ run, value });
+        return {
+          id: '019a8f2e-6b1c-7d4a-9e3f-2a1b0c9d8e7f',
+          media_type: value.mediaType,
+          bytes: utf8.encode(value.text).byteLength,
+          sha256: 'e'.repeat(64),
+          address: null,
+          address_until: null,
+        };
+      }),
+  };
+  return { layer: Layer.merge(admittingMeter, Layer.succeed(AssetKeeper, keeper)), asked: () => asked };
+}
+
+async function withPlain(services?: Parameters<typeof harness>[0]) {
   const operations = definitionOperationsFor([probe().capability]);
-  const definitions = harness();
+  const definitions = harness(services);
   await definitions.call(
     operations.createDefinition,
     toAlpha(acmeAdmin, { type: 'probe', name: 'plain', source: 'text' }),
@@ -19,6 +52,21 @@ async function withPlain() {
   const running = (input: unknown, id = runId) =>
     definitions.call(operations.runDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'plain', input, run_id: id }));
   return { ...definitions, ...operations, running };
+}
+
+async function withToolUser(services: Parameters<typeof harness>[0]) {
+  const operations = definitionOperationsFor([toolUser().capability]);
+  const definitions = harness(services);
+  await definitions.call(
+    operations.createDefinition,
+    toAlpha(acmeAdmin, { type: 'tool-user', name: 'caller', source: 'x' }),
+  );
+  const running = (input: unknown, id: string) =>
+    definitions.call(
+      operations.runDefinition,
+      toAlpha(acmeAdmin, { type: 'tool-user', name: 'caller', input, run_id: id }),
+    );
+  return { running };
 }
 
 function inputTooLarge(bytes: number) {
@@ -97,15 +145,63 @@ describe('the output and the record of a run', () => {
     });
   });
 
-  it('fail the run above that, as a breakdown of the capability that is recorded', async () => {
-    const { call, running, getRun, reported } = await withPlain();
+  it('keep the largest members of the output above that, each as an asset of the playbook, and record the asset in their place', async () => {
+    const keeping = keepingRecorded();
+    const { running } = await withPlain(keeping.layer);
+    const text = 'x'.repeat(1_048_573);
 
-    expect(await running({ bulk: 1_048_573 })).toEqual({ status: 'failed', incident: reported()[0]?.id });
-    expect(reported().map(({ original }) => original)).toEqual([
-      new Error('The capability answered with 1048577 bytes to record, more than the 1048576 allowed'),
-    ]);
-    expect(await call(getRun, toAlpha(acmeAdmin, { run_id: runId }))).toMatchObject({
-      output: { status: 'failed' },
+    expect(await running({ bulk: text.length })).toMatchObject({
+      status: 'succeeded',
+      output: {
+        status: 'succeeded',
+        output: { id: '019a8f2e-6b1c-7d4a-9e3f-2a1b0c9d8e7f', bytes: text.length, address: null },
+      },
     });
+    expect(keeping.asked()).toEqual([
+      {
+        run: {
+          context: {
+            by: acmeAdmin.id,
+            runId: runId,
+            definitionType: 'probe',
+            definitionName: 'plain',
+            definitionVersion: 1,
+          },
+          lineage: { causationId: anId, correlationId: runId },
+        },
+        value: { pointer: '', text, mediaType: 'text/plain; charset=utf-8' },
+      },
+    ]);
+  });
+
+  it('reject the run above that as too large where the runtime keeps no asset, recording nothing of the output', async () => {
+    const { running } = await withPlain();
+
+    expect(await running({ bulk: 1_048_573 })).toMatchObject({
+      status: 'rejected',
+      reason: 'conflict',
+      kind: 'oversized',
+    });
+  });
+});
+
+describe('a refusal to keep the output of a run', () => {
+  it('says the tool ran and may have changed something once the run called a tool not marked reads, as its facts record', async () => {
+    const refusal = new Conflict({ detail: 'The playbook keeps all the assets it may', kind: 'oversized' });
+    const keeper: ValueKeeping = { kept: () => Effect.fail(refusal) };
+    const { running } = await withToolUser(Layer.merge(admittingMeter, Layer.succeed(AssetKeeper, keeper)));
+    const pastWhatARunRecords = 1_048_576;
+
+    const answers = [
+      await running({ calls: 1, bulk: pastWhatARunRecords }, runId),
+      await running({ calls: 1, bulk: pastWhatARunRecords, reads: true }, '0199a3c4-7d2e-7c1a-9b3f-000000000002'),
+      await running({ calls: 0, bulk: pastWhatARunRecords }, '0199a3c4-7d2e-7c1a-9b3f-000000000003'),
+    ];
+
+    expect(answers).toEqual(
+      [afterAToolThatMayAct(refusal.detail), refusal.detail, refusal.detail].map((detail): unknown =>
+        expect.objectContaining({ status: 'rejected', reason: 'conflict', kind: 'oversized', detail }),
+      ),
+    );
   });
 });

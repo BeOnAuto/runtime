@@ -192,7 +192,7 @@ export function compositionRootWith(
     const ledgerLayer = theLedgerLayerOf(settings, database, made, wiring);
     const holding = attemptHoldingOf(settings, clock);
     const meter = meterOf(settings, { signers, features });
-    const services = applicationLayer(ledgerLayer, meter, settings.payloads, holding);
+    const services = applicationLayer(ledgerLayer, meter, settings, holding);
     return {
       services: made.computation.closedLastOf(made.registry.closedFirstOf(services)),
       serve: servedWith({

@@ -213,12 +213,12 @@ describe('the facts of an asset as the feed shows them', () => {
     ]);
   });
 
-  it('says a file a run returned, at the place of its output it was taken from or as its output whole', () => {
+  it('says a file a run returned, in its output or as its output whole, and never the place it was taken from', () => {
     expect([
       shown('asset_kept', aPageARunReturned, onTheRun),
       shown('asset_kept', aFileARunReturnedWhole, onTheRun),
     ]).toEqual([
-      'The playbook kept a file of 3.2 MiB that a run returned at /page of its output, until 2027-01-30.',
+      'The playbook kept a file of 3.2 MiB that a run returned in its output, until 2027-01-30.',
       'The playbook kept a file of 1 MiB that a run returned as its output, until 2027-01-30.',
     ]);
   });

@@ -13,7 +13,7 @@ import { jsonBytesOf, pooledJob, type ProgramPool, type ProgramRequest } from '@
 import { Clock, Effect, type Schema } from 'effect';
 
 import type { ComputationFunctionDefinitionDocument } from '../document/computation-document.ts';
-import { computationBounds, mostKeptBytesRead, mostOutputBytes } from './run-bounds.ts';
+import { computationBounds, mostKeptBytesRead, mostOutputBytesOf } from './run-bounds.ts';
 import { endingOf } from './run-outcome.ts';
 
 export interface ComputationRunOptions {
@@ -61,7 +61,7 @@ function requestOf(
     memoryBytes,
     stackBytes: computationBounds.stackBytes,
     deadlineMs,
-    mostOutputBytes,
+    mostOutputBytes: mostOutputBytesOf(memoryBytes),
     ...checkedBy(document),
   };
 }

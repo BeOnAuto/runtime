@@ -16,6 +16,7 @@ import { isChangedSinceRead, runDecider, runDeciderAsRead, runStreamNameOf } fro
 import { stillRunning } from '../runs/run-decisions.ts';
 import { runAnswered } from '../runs/run-lookup.ts';
 import {
+  calledAToolThatMayChangeSomething,
   fencingTokenOf,
   lastModelCallOf,
   startedRunOf,
@@ -34,6 +35,10 @@ export function loadRunStream(id: string): Effect.Effect<RunStreamState, never, 
 
 export function loadRun(id: string): Effect.Effect<RunState, never, PlaybookReader> {
   return Effect.map(loadRunStream(id), startedRunOf);
+}
+
+export function runCalledAToolThatMayChangeSomething(id: string): Effect.Effect<boolean, never, PlaybookReader> {
+  return Effect.map(loadRun(id), (state) => state !== undefined && calledAToolThatMayChangeSomething(state));
 }
 
 export function loadStartedRun(id: string) {

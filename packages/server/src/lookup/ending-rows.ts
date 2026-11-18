@@ -124,15 +124,6 @@ export const unreadable: Rows = [
     unworkable('The search tool of chat answered text that is not JSON, which holds nothing at /rows'),
   ],
   [
-    'an answer past what a run may record',
-    { document: calling('large', ['    kib: 1030']) },
-    unworkable(
-      expect.stringMatching(
-        /^What the large tool of chat answered takes \d+ bytes as JSON with the run's record, more than the 1 MiB a run may record; point read at a smaller part, or ask the tool for less$/u,
-      ),
-    ),
-  ],
-  [
     'an answer nested past 512 levels',
     {
       server: { hints: { echo: reads } },

@@ -79,6 +79,27 @@ describe('what a tool’s schema declares at an argument', () => {
   });
 });
 
+describe('the media types a place declares', () => {
+  it('reads the media types a place declares of its content, through references and choices', () => {
+    const described = {
+      type: 'object',
+      properties: {
+        page: { type: 'string', contentMediaType: 'text/markdown' },
+        either: { anyOf: [{ contentMediaType: 'text/html' }, { $ref: '#/$defs/csv' }] },
+        plain: { type: 'string' },
+        odd: { type: 'string', contentMediaType: 7 },
+      },
+      $defs: { csv: { type: 'string', contentMediaType: 'text/csv' } },
+    };
+
+    expect(
+      ['/page', '/either', '/plain', '/odd', ''].map((pointer) =>
+        [...declaredAt(described, pointer).mediaTypes].toSorted(),
+      ),
+    ).toEqual([['text/markdown'], ['text/csv', 'text/html'], [], [], []]);
+  });
+});
+
 describe('how an asset is written where a tool takes it', () => {
   it('is base64 where the schema says so, a JSON value where it takes a list or an object, and text where it takes a string', () => {
     expect([

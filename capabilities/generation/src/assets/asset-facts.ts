@@ -104,9 +104,11 @@ export type AssetKeptData = AssetKept['data'];
 
 export type AssetMadeBy = AssetKeptData['made_by'];
 
-export type KindWritten = typeof KindSchema.Type;
+export type GenerationKindWritten = typeof KindSchema.Type;
 
-export type MadeByWritten = Exclude<AssetMadeBy, { readonly function_output: unknown }>;
+export type KindWritten = GenerationKindWritten | 'text';
+
+export type MadeByWritten = AssetMadeBy;
 
 export interface AssetKeptDataWritten extends Omit<AssetKeptData, 'kind' | 'made_by'> {
   readonly kind: KindWritten;

@@ -126,14 +126,6 @@ describe('a run whose program answers what cannot be its output', () => {
     );
   });
 
-  it('ends in conflict when its output takes more than a run can record', async () => {
-    expect(await ended('return "x".repeat(1100000);')).toEqual(
-      unworkable(
-        "The program's output is more than a run may record, 1 MiB as JSON with the run's record; return less, or give each run a part of the input",
-      ),
-    );
-  });
-
   it('cuts the pointer of an issue of an output the schema refuses at 1,024 bytes, and keeps what it says', async () => {
     const closed =
       'language: typescript\noutput: {schema: {type: object, properties: {total: {type: integer}}, additionalProperties: false}}';

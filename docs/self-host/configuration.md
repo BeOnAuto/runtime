@@ -255,11 +255,11 @@ A value outside its range stops the server at start, naming the setting. [Genera
 
 An asset is a file a playbook keeps as its content, such as an image a generation function made, until it expires ([The asset](../reference/generation-format.md#the-asset)). A value outside its range stops the server at start, naming the setting.
 
-| Variable                  | Default | Purpose                                                                                                                                                                                                                            |
-| ------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ASSET_MAX_FILE_MIB`      | `100`   | The maximum file size of an asset that is not an image, audio or a video, in MiB, from 1 to 4,096. Nothing of this release keeps such an asset yet                                                                                 |
-| `ASSET_STORAGE_QUOTA_MIB` | `2048`  | The storage quota of a playbook, the most its assets take together, in MiB, from 1 to 1,048,576. A run that would take the playbook past it is a `conflict` of the kind `oversized`. A content store with less space is full first |
-| `ASSET_RETENTION_DAYS`    | `90`    | How many days an asset is kept, then expires, when its function names no `expires`, from 1 to 3,650                                                                                                                                |
+| Variable                  | Default | Purpose                                                                                                                                                                                                                             |
+| ------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ASSET_MAX_FILE_MIB`      | `100`   | The maximum file size of an asset that is not an image, audio or a video, such as a part of a run's output too large to record, in MiB, from 1 to 4,096. A run that would keep a larger one is a `conflict` of the kind `oversized` |
+| `ASSET_STORAGE_QUOTA_MIB` | `2048`  | The storage quota of a playbook, the most its assets take together, in MiB, from 1 to 1,048,576. A run that would take the playbook past it is a `conflict` of the kind `oversized`. A content store with less space is full first  |
+| `ASSET_RETENTION_DAYS`    | `90`    | How many days an asset is kept, then expires, when its function names no `expires`, from 1 to 3,650                                                                                                                                 |
 
 ### The text of files
 

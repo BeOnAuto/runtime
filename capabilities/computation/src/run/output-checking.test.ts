@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { campaignPace, campaignRows } from '../testing/campaign-pace.ts';
 import { computationWith, functionOf, poolOf, programDocument } from '../testing/computation-runs.ts';
+import { mostKeptBytesRead } from './run-bounds.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -83,5 +84,25 @@ describe('the check of an output against the shape its document names', () => {
       }),
     );
     expect(requests.map(({ context }) => context)).toEqual([0, 1, 2].map(() => shapeNamed('categories').schema));
+  });
+});
+
+describe('the size of an output', () => {
+  const smallMemory = { memoryBytes: 16_777_216 };
+
+  function endedWith(body: string) {
+    return computationWith(poolOf(), smallMemory).running(programDocument(functionOf(body)), null);
+  }
+
+  it('is answered past what a run may record, up to an eighth of the sandbox, for the run to keep in part as files', async () => {
+    expect(await endedWith('return "x".repeat(1100000);')).toEqual(
+      Exit.succeed(expect.objectContaining({ output: 'x'.repeat(1_100_000) })),
+    );
+  });
+
+  it('ends in conflict past an eighth of the sandbox as JSON', async () => {
+    expect(await endedWith(`return "x".repeat(${mostKeptBytesRead(smallMemory.memoryBytes)});`)).toEqual(
+      Exit.fail(expect.objectContaining({ _tag: 'conflict', kind: 'unworkable' })),
+    );
   });
 });

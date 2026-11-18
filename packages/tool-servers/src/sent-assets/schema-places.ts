@@ -3,6 +3,7 @@ import { JsonPointer, Predicate, type Schema } from 'effect';
 export interface PlaceDeclared {
   readonly base64: boolean;
   readonly types: ReadonlySet<string> | 'any';
+  readonly mediaTypes: ReadonlySet<string>;
 }
 
 type JsonSchema = Readonly<Record<string, unknown>>;
@@ -100,10 +101,19 @@ function isBase64(schema: JsonSchema): boolean {
   return (typeof encoding === 'string' && encoding.toLowerCase() === 'base64') || schema['format'] === 'byte';
 }
 
+function mediaTypeOf(schema: JsonSchema): readonly string[] {
+  const mediaType = schema['contentMediaType'];
+  return typeof mediaType === 'string' ? [mediaType] : [];
+}
+
 function declaredBy(root: JsonSchema, schemas: readonly JsonSchema[]): PlaceDeclared {
   const all = expanded(root, schemas);
   const types = all.flatMap((schema) => typesOf(schema) ?? []);
-  return { base64: all.some((schema) => isBase64(schema)), types: types.length === 0 ? 'any' : new Set(types) };
+  return {
+    base64: all.some((schema) => isBase64(schema)),
+    types: types.length === 0 ? 'any' : new Set(types),
+    mediaTypes: new Set(all.flatMap((schema) => mediaTypeOf(schema))),
+  };
 }
 
 export function declaredAt(inputSchema: Schema.JsonObject, pointer: string): PlaceDeclared {

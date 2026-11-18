@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { campaignPace, campaignRows } from '../testing/campaign-pace.ts';
 import { computationWith, poolOf } from '../testing/computation-runs.ts';
-import { computationBounds, mostOutputBytes } from './run-bounds.ts';
+import { computationBounds, mostOutputBytesOf } from './run-bounds.ts';
 
 const checking = poolOf();
 
@@ -34,12 +34,12 @@ function ran(
     memoryBytes: computationBounds.memoryBytes,
     stackBytes: computationBounds.stackBytes,
     deadlineMs: 10_000,
-    mostOutputBytes,
+    mostOutputBytes: mostOutputBytesOf(computationBounds.memoryBytes),
     ...more,
   });
 }
 
-const smallBounds = { budget: 50, memoryBytes: 16_777_216 };
+const smallBounds = { budget: 50, memoryBytes: 16_777_216, mostOutputBytes: mostOutputBytesOf(16_777_216) };
 
 function inTurn(
   pool: ProgramPool,
@@ -63,7 +63,7 @@ function threadsAlive(): readonly unknown[] {
 const endingBadly = [
   functionOf('throw new Error("raised on purpose");'),
   functionOf('for (;;) {}'),
-  functionOf('return "x".repeat(1048576);'),
+  functionOf('return "x".repeat(2097152);'),
   functionOf('const kept = [];\n  for (;;) kept.push("y".repeat(1048576) + kept.length);'),
   functionOf('const down = (depth) => down(depth + 1);\n  return down(0);'),
 ];

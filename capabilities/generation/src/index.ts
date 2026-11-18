@@ -25,6 +25,7 @@ export { assetsDue, type AssetsDue, type ExpiryParts } from './expiry/assets-due
 export { defineGetAsset } from './operations/get-asset.ts';
 export { defineListGenerationModels } from './operations/list-generation-models.ts';
 export { generationsDue, type GenerationsDue } from './waiting/generations-due.ts';
+export { valuesKeptAsAssets } from './kept-values/kept-values.ts';
 export type { WaitingLedger, WaitingParts } from './waiting/waiting-parts.ts';
 export { generationsWaiting, generationsWaitingName } from './waiting/waiting-rows.ts';
 export type { GatewayFetch, GenerationGateway } from './gateway/generation-gateway.ts';

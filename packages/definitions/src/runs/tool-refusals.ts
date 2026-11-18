@@ -1,5 +1,11 @@
 import { Conflict } from '@on.auto/operations';
 
+const mayHaveActed = 'The tool ran and may have changed something; a run again calls it again';
+
+export function afterAToolThatMayAct(detail: string): string {
+  return `${detail}. ${mayHaveActed}`;
+}
+
 export const toolsWereCalled = new Conflict({
   detail:
     'The run called tools and did not succeed, so it is not run again under its id, since a tool may have changed something; start a new run with another run id, and read with list_playbook_events, given its run id, what it called',

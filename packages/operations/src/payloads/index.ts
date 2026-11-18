@@ -25,6 +25,7 @@ export {
   payloadChosen,
   textBytesOf,
   textPayloadText,
+  utf8Carries,
   type ChosenPayload,
   type PayloadText,
   type PayloadToKeep,

@@ -1,8 +1,6 @@
-import { Buffer } from 'node:buffer';
-
 import { issuesDetail, type CompiledSchema } from '@on.auto/json-schema';
 import { Conflict, InvalidInput, Unavailable } from '@on.auto/operations';
-import { capitalized, sizeInWords } from '@on.auto/phrasing';
+import { capitalized } from '@on.auto/phrasing';
 import {
   answerDocument,
   onlyReads,
@@ -15,7 +13,7 @@ import {
 import { measureOf, mostValueDepth } from '@on.auto/workflow-engine/dsl';
 import { Effect, Result, Schema } from 'effect';
 
-import { mostResultBytes } from '../runs/recorded-size.ts';
+import { afterAToolThatMayAct } from '../runs/tool-refusals.ts';
 import type { CallBlock } from './call-block-schemas.ts';
 import { valueAt } from './json-pointers.ts';
 
@@ -42,8 +40,6 @@ function recordOf({ call }: CalledDocument): Schema.JsonObject {
   return read === undefined ? { server, tool } : { server, tool, read };
 }
 
-const mayHaveActed = 'The tool ran and may have changed something; a run again calls it again';
-
 type Answered = Extract<AnsweredOnce, { readonly outcome: 'result' }>;
 
 interface Reading {
@@ -53,17 +49,11 @@ interface Reading {
 }
 
 function unreadableAfter(answer: Answered): (detail: string) => CallEnding {
-  return (detail) => unworkable(onlyReads(answer) ? detail : `${detail}. ${mayHaveActed}`);
+  return (detail) => unworkable(onlyReads(answer) ? detail : afterAToolThatMayAct(detail));
 }
 
 function checkedValue(document: CalledDocument, value: Schema.Json, { named, at, unreadable }: Reading): CallEnding {
   const what = `What ${named} answered${at}`;
-  const bytes = Buffer.byteLength(JSON.stringify({ output: value, record: recordOf(document) }), 'utf8');
-  if (bytes > mostResultBytes) {
-    return unreadable(
-      `${what} takes ${bytes} bytes as JSON with the run's record, more than the ${sizeInWords(mostResultBytes)} a run may record; point read at a smaller part, or ask the tool for less`,
-    );
-  }
   if (measureOf(value) === undefined) {
     return unreadable(`${what} nests deeper than the ${mostValueDepth} levels a value may`);
   }

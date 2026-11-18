@@ -1,6 +1,7 @@
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { AssetKeeper } from './asset-keeper.ts';
 import {
   assetContentOf,
   assetReferenceOf,
@@ -109,5 +110,17 @@ describe('a playbook that holds no assets', () => {
         detail: `The content of the asset ${asset.id} is no longer kept; run again what made it, for a fresh copy`,
       },
     ]);
+  });
+});
+
+describe('the keeper of a run’s values as assets', () => {
+  it('is none until a shell provides one, so a runtime composed without it keeps no value', () => {
+    const keeper = Effect.runSync(
+      Effect.gen(function* () {
+        return yield* AssetKeeper;
+      }),
+    );
+
+    expect(keeper).toBeNull();
   });
 });

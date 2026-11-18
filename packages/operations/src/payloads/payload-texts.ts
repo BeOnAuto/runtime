@@ -33,6 +33,10 @@ export function textBytesOf(text: string): number {
   return utf8.encode(text).byteLength;
 }
 
+export function utf8Carries(text: string): boolean {
+  return text.isWellFormed();
+}
+
 export function jsonPayloadText(value: Schema.Json): PayloadText {
   return { text: JSON.stringify(value), mediaType: jsonPayloadMediaType };
 }
@@ -48,7 +52,7 @@ export function payloadChosen<Value>(
   threshold: number,
 ): ChosenPayload<Value> {
   const bytes = textBytesOf(text);
-  if (!keepsOutside || bytes <= threshold || !text.isWellFormed()) {
+  if (!keepsOutside || bytes <= threshold || !utf8Carries(text)) {
     return { payload: { inline: value } };
   }
   const sha256 = sha256Of(text);

@@ -13,12 +13,24 @@ import {
   loggingIncidentReporter,
   payloadOffloadingOf,
   payloadsSharedInTheProcess,
+  valuesKeptWithin,
 } from './process-layers.ts';
+
+interface ProcessSettings {
+  readonly payloads: Parameters<typeof payloadOffloadingOf>[0];
+  readonly generation: Parameters<typeof valuesKeptWithin>[0];
+}
+
+function settledLayersOf(settings: ProcessSettings | undefined): Layer.Layer<never> {
+  return settings === undefined
+    ? Layer.empty
+    : Layer.merge(payloadOffloadingOf(settings.payloads), valuesKeptWithin(settings.generation));
+}
 
 export function applicationLayer(
   ledger: Layer.Layer<LedgerServices>,
   meter: MeterComposing = unlicensed,
-  payloads?: Parameters<typeof payloadOffloadingOf>[0],
+  settings?: ProcessSettings,
   holding?: Parameters<typeof liveAttemptsOver>[1],
 ): Layer.Layer<ServerServices> {
   return Layer.mergeAll(
@@ -28,7 +40,7 @@ export function applicationLayer(
     loggingIncidentReporter,
     liveAttemptsOver(ledger, holding),
     payloadsSharedInTheProcess(),
-    payloads === undefined ? Layer.empty : payloadOffloadingOf(payloads),
+    settledLayersOf(settings),
   );
 }
 

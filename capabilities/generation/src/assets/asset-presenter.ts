@@ -8,7 +8,7 @@ import { dayOf, kindInWords } from './asset-words.ts';
 const decodeAssetEvent = Schema.decodeUnknownSync(Schema.toCodecJson(AssetEventSchema));
 
 function placeInWords(pointer: string): string {
-  return pointer === '' ? 'as its output' : `at ${pointer} of its output`;
+  return pointer === '' ? 'as its output' : 'in its output';
 }
 
 function makerInWords(madeBy: AssetMadeBy): string {

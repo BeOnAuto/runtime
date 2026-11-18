@@ -1,7 +1,11 @@
 import {
   IncompleteDetailsSchema,
   type CancelledKind,
+  type Conflict,
   type ConflictKind,
+  type PlaybookContext,
+  type PlaybookReader,
+  type PlaybookWriter,
   type InvalidInputKind,
   type RejectionBecause,
   type UnavailableKind,
@@ -9,6 +13,7 @@ import {
 import { Effect, Schema } from 'effect';
 
 import type { CapabilityAnswer, CapabilityRejection } from '../capability/capability.ts';
+import { keptOutputOf, type OutputKeeping } from '../kept-outputs/kept-output.ts';
 import { withinResultLimit } from '../runs/recorded-size.ts';
 import type { RunOutcome, RunResult, InterruptedAttempt } from '../runs/run-commands.ts';
 import { runTaken } from '../runs/run-decisions.ts';
@@ -29,6 +34,8 @@ type Executed = typeof ExecutedSchema.Type;
 
 type Answered = Exclude<Executed, { readonly finishesLater: true }>;
 
+type Keeping = PlaybookWriter | PlaybookReader | PlaybookContext;
+
 const decodeExecuted = Schema.decodeUnknownEffect(ExecutedSchema);
 
 export const failedAttempt: RunResult = { type: 'run_failed', data: {} };
@@ -44,16 +51,25 @@ function succeededWith({ output, record, incomplete_details: incomplete }: Answe
   };
 }
 
-function recordedOutcome(ran: Executed): Effect.Effect<RunOutcome> {
+function succeededKeeping(ran: Answered, keeping: OutputKeeping): Effect.Effect<RunOutcome, Conflict, Keeping> {
+  return Effect.flatMap(keptOutputOf(ran, keeping), (output) =>
+    withinResultLimit(output, ran.record).pipe(Effect.map((): RunOutcome => succeededWith({ ...ran, output }))),
+  );
+}
+
+function recordedOutcome(ran: Executed, keeping: OutputKeeping): Effect.Effect<RunOutcome, Conflict, Keeping> {
   return 'finishesLater' in ran
     ? withinResultLimit(ran.record).pipe(
         Effect.map((): RunOutcome => ({ type: 'run_deferred', data: { record: ran.record } })),
       )
-    : withinResultLimit(ran.output, ran.record).pipe(Effect.map((): RunOutcome => succeededWith(ran)));
+    : succeededKeeping(ran, keeping);
 }
 
-function outcomeOf(ran: CapabilityAnswer): Effect.Effect<RunOutcome> {
-  return decodeExecuted(ran).pipe(Effect.orDie, Effect.flatMap(recordedOutcome));
+function outcomeOf(ran: CapabilityAnswer, keeping: OutputKeeping): Effect.Effect<RunOutcome, Conflict, Keeping> {
+  return decodeExecuted(ran).pipe(
+    Effect.orDie,
+    Effect.flatMap((decoded) => recordedOutcome(decoded, keeping)),
+  );
 }
 
 const decodeRecord = Schema.decodeUnknownEffect(Schema.JsonObject);
@@ -131,9 +147,12 @@ function rejectedAsCancelled(rejection: Cancel): Effect.Effect<RunResult> {
   return rejectedWith({ reason: 'cancelled', detail, kind }, rejection);
 }
 
-export function attempt(running: Effect.Effect<CapabilityAnswer, CapabilityRejection>): Effect.Effect<RunOutcome> {
+export function attempt(
+  running: Effect.Effect<CapabilityAnswer, CapabilityRejection>,
+  keeping: OutputKeeping,
+): Effect.Effect<RunOutcome, never, Keeping> {
   return running.pipe(
-    Effect.flatMap(outcomeOf),
+    Effect.flatMap((ran) => outcomeOf(ran, keeping)),
     Effect.catchTags({
       invalid_input: rejectedForInput,
       unavailable: rejectedAsUnavailable,

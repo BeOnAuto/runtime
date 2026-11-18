@@ -278,6 +278,10 @@ export function mayHaveChangedSomething({ mayHaveChanged }: RecordedRunState): b
   return mayHaveChanged;
 }
 
+export function calledAToolThatMayChangeSomething({ mayHaveChanged, calledOnlyReadOnly }: RecordedRunState): boolean {
+  return mayHaveChanged && !calledOnlyReadOnly;
+}
+
 export function changedNothing(state: RecordedRunState): boolean {
   return state.mayHaveChanged && state.calledOnlyReadOnly && !isRunning(state);
 }

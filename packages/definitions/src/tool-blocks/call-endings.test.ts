@@ -146,23 +146,14 @@ describe('a call whose answer cannot be read', () => {
     ]);
   });
 
-  it('is unworkable past what a run may record, deeper than a value may nest, or outside the output schema, saying a tool that may act may have', () => {
-    const large = 'x'.repeat(1_048_576);
-
+  it('is unworkable deeper than a value may nest, or outside the output schema, saying a tool that may act may have', () => {
     expect([
-      endedWith(documentOf(), answering({ content: [], structuredContent: large })),
       endedWith(documentOf(), answering({ content: [], structuredContent: nestedIn(513) }, 'acts')),
       endedWith(
         documentOf('/messages', { type: 'string' }),
         answering({ content: [], structuredContent: { messages } }),
       ),
     ]).toEqual([
-      rejectedWith({
-        kind: 'unworkable',
-        detail: expect.stringMatching(
-          /^What the thread tool of chat answered takes \d+ bytes as JSON with the run's record, more than the 1 MiB a run may record; point read at a smaller part, or ask the tool for less$/u,
-        ),
-      }),
       rejectedWith({
         kind: 'unworkable',
         detail: `What the thread tool of chat answered nests deeper than the 512 levels a value may${mayHaveActed}`,
@@ -174,6 +165,14 @@ describe('a call whose answer cannot be read', () => {
         ),
       }),
     ]);
+  });
+
+  it('answers past what a run may record as its output, which the run keeps in part as files', () => {
+    const large = 'x'.repeat(1_048_576);
+
+    expect(endedWith(documentOf(), answering({ content: [], structuredContent: large }))).toEqual(
+      Exit.succeed({ output: large, record: { server: 'chat', tool: 'thread' } }),
+    );
   });
 });
 

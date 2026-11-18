@@ -12,6 +12,7 @@ export interface Called extends GivenLineage {
 }
 
 export interface Prepared {
+  readonly type: string;
   readonly definition: VersionToRun;
   readonly prepared: PreparedDefinition;
   readonly createOnly?: true;

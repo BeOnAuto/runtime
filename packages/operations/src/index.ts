@@ -91,6 +91,7 @@ export {
 export { keptContentGraceMs, noHoldersKnown, type UnheldContentRemover } from './held-content/unheld-removal.ts';
 export { assetContentOf, assetsIn, holdsAnAsset, isAssetShaped } from './asset-references/asset-references.ts';
 export type { AssetContent, AssetReference, PlacedAsset } from './asset-references/asset-references.ts';
+export { AssetKeeper, type ValueKeeping } from './asset-references/asset-keeper.ts';
 export { assetUnusable, noAssetsHeld } from './asset-references/held-assets.ts';
 export type { AssetHolding, AssetUnusable, HeldAsset } from './asset-references/held-assets.ts';
 export { readInside, type AssetNotRead, type InsideReading, type ReaderBound } from './asset-references/read-inside.ts';

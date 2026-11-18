@@ -68,6 +68,26 @@ const keptOfAToolCall: AssetEvent = {
   },
 };
 
+const keptOfAFunctionOutput: AssetEvent = {
+  type: 'asset_kept',
+  data: {
+    media_type: 'text/markdown; charset=utf-8',
+    bytes: 3_355_443,
+    sha256: 'e7b1d3f5a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a8c0e1b3',
+    kind: 'text',
+    made_by: { function_output: { pointer: '/page' } },
+    expires_at: '2027-02-15T09:00:00.000Z',
+  },
+  context: {
+    at: '2026-11-17T09:00:00.000Z',
+    by: 'user_2q8Vb7KxN4',
+    runId: '019a8f2e-6b1c-7d4a-9e3f-2a1b0c9d8e7f',
+    definitionType: 'lookup',
+    definitionName: 'fetch-the-reference',
+    definitionVersion: 4,
+  },
+};
+
 const expired: AssetEvent = {
   type: 'asset_expired',
   data: { bytes: 182_044 },
@@ -84,7 +104,7 @@ describe('the facts of an asset', () => {
   recordedFactsBehaviour({
     schema: AssetEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.56.0': [kept, expired, removed], '0.57.0': [keptOfAToolCall] },
+    releases: { '0.56.0': [kept, expired, removed], '0.57.0': [keptOfAToolCall], '0.64.0': [keptOfAFunctionOutput] },
   });
 });
 

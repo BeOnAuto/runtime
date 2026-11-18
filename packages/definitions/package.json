@@ -22,6 +22,7 @@
   },
   "scripts": {
     "measure:checks": "node measure/measure-checks.ts",
+    "measure:kept-output": "node measure/kept-output-memory.ts",
     "measure:loads": "node measure/measure-loads.ts",
     "measure:outcomes": "node measure/measure-outcomes.ts",
     "sandbox-lib": "node write-sandbox-lib.ts",

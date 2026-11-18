@@ -6,7 +6,13 @@ import { payloadWritten, recordWritten, type PayloadWritten } from '../payloads/
 import type { InterruptedAttempt, RunOutcome } from '../runs/run-commands.ts';
 import { isTaken } from '../runs/run-decisions.ts';
 import { runAnswered } from '../runs/run-lookup.ts';
-import { answerAfterAnother, loadCalls, loadRun, recordRun } from './run-access.ts';
+import {
+  answerAfterAnother,
+  loadCalls,
+  loadRun,
+  recordRun,
+  runCalledAToolThatMayChangeSomething,
+} from './run-access.ts';
 import { attempt, failedAttempt, interruptedAttempt, isTakenByAnother } from './run-attempt.ts';
 import type { JournalledRun, Prepared } from './run-contexts.ts';
 
@@ -57,6 +63,24 @@ export interface AttemptOfARun {
 
 type Restore = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
 
+function outputKeepingOf({ id, run, context }: AttemptOfARun) {
+  const kept = {
+    context: {
+      by: context.caller.id,
+      runId: id,
+      definitionType: run.type,
+      definitionName: context.definition.name,
+      definitionVersion: context.definition.version,
+    },
+    lineage: { causationId: context.lineage.startId, correlationId: context.lineage.correlationId },
+  };
+  return {
+    run: kept,
+    schema: run.prepared.summary.outputSchema,
+    calledAToolThatMayChangeSomething: runCalledAToolThatMayChangeSomething(id),
+  };
+}
+
 const interruptedAs = Effect.fnUntraced(function* ({ id, run, context, fencingToken }: AttemptOfARun) {
   const interrupted = interruptedAttempt(run.prepared.resumesAfterMs);
   if ((yield* loadRun(id))?.cancel === undefined) {
@@ -74,7 +98,7 @@ export const attemptEnded = Effect.fnUntraced(function* (
   ran: Effect.Effect<CapabilityAnswer, CapabilityRejection>,
 ) {
   const { id, context, fencingToken } = attempting;
-  const outcome = yield* attempt(ran).pipe(
+  const outcome = yield* attempt(ran, outputKeepingOf(attempting)).pipe(
     Effect.onError((cause) =>
       Effect.ignore(
         Cause.hasInterruptsOnly(cause)

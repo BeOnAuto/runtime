@@ -1,6 +1,10 @@
+import { Buffer } from 'node:buffer';
+
 import { computationBounds } from '@on.auto/computation';
 import { campaignPace, campaignRows } from '@on.auto/computation/testing';
 import { checkingWithin } from '@on.auto/definitions/testing';
+import { callDocument } from '@on.auto/interaction/testing';
+import { lookupDocument } from '@on.auto/lookup/testing';
 import { type FakeTool, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { programPool } from '@on.auto/workflow-engine/dsl';
 import { moduleOfSource } from '@on.auto/workflow-engine/testing';
@@ -23,6 +27,16 @@ const raising = [
 ].join('\n');
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+const decodeKeptMembers = Schema.decodeUnknownSync(
+  Schema.Struct({
+    output: Schema.Tuple([
+      Schema.Struct({ id: Schema.String, sha256: Schema.String }),
+      Schema.Struct({ id: Schema.String, sha256: Schema.String }),
+      Schema.Unknown,
+    ]),
+  }),
+);
 
 const decodeHistory = Schema.decodeUnknownSync(
   Schema.Struct({
@@ -100,6 +114,70 @@ async function servingTheAdsServer(): Promise<ReasoningServer> {
   onTestFinished(ads.close);
   return servingReasoning([], { TOOL_SERVERS: JSON.stringify({ ads: { url: ads.url, org: 'acme' } }) });
 }
+
+async function servingTheFilesServer(page: string, received: (content: unknown) => void): Promise<ReasoningServer> {
+  const readPage: FakeTool = {
+    name: 'read-page',
+    inputSchema: { type: 'object', properties: {}, required: [] },
+    annotations: { readOnlyHint: true },
+    answer: () => ({ content: [{ type: 'text', text: page }] }),
+  };
+  const savePage: FakeTool = {
+    name: 'save-page',
+    inputSchema: { type: 'object', properties: { content: { type: 'string' } }, required: ['content'] },
+    answer: (given) => {
+      received(Reflect.get(new Object(given), 'content'));
+      return { content: [{ type: 'text', text: 'Saved.' }] };
+    },
+  };
+  const files = await serveFakeMcp({ tools: [readPage, savePage], mostRequestBytes: 16 * 1_048_576 });
+  onTestFinished(files.close);
+  return servingReasoning([], { TOOL_SERVERS: JSON.stringify({ files: { url: files.url, org: 'acme' } }) });
+}
+
+const anyObject = ['input:', '  schema: { type: object }'];
+
+const readingThePage = lookupDocument({
+  server: 'files',
+  tool: 'read-page',
+  read: null,
+  with: [],
+  input: anyObject,
+  output: ['output:', '  schema: { type: string }'],
+});
+
+const savingThePage = callDocument({
+  server: 'files',
+  tool: 'save-page',
+  read: null,
+  with: ["    content: '{{ input.page }}'"],
+  input: anyObject,
+  output: ['output:', '  schema: {}'],
+});
+
+const measuringThePage = [
+  '---',
+  'language: typescript',
+  '---',
+  'export default function (input: any): Json {',
+  '  const page: string = input.page;',
+  "  const same = page === 'a'.repeat(1100000) + '\\uFFFD';",
+  '  return { length: page.length, last: page.charCodeAt(page.length - 1), same };',
+  '}',
+].join('\n');
+
+const decodeKeptPage = Schema.decodeUnknownSync(
+  Schema.Struct({
+    output: Schema.Struct({
+      id: Schema.String,
+      media_type: Schema.String,
+      bytes: Schema.Number,
+      sha256: Schema.String,
+      address: Schema.NullOr(Schema.String),
+      address_until: Schema.NullOr(Schema.String),
+    }),
+  }),
+);
 
 describe('computation over http', () => {
   afterEach(async () => {
@@ -184,7 +262,7 @@ describe('computation over http', () => {
   });
 
   describe('an output too large to record, over HTTP', () => {
-    it('ends in conflict for an output larger than a run can record, kept in its sandbox, and the server answers on', async () => {
+    it('keeps the largest members of an output larger than a run can record as files of the playbook, which it reads as any asset, and the server answers on', async () => {
       await serving();
       const doubled = [
         '---',
@@ -192,21 +270,54 @@ describe('computation over http', () => {
         '---',
         'export default function (): Json {',
         "  const text = '\\u0001Ā'.repeat(500_000);",
-        '  return [text, text];',
+        '  return [text, text, { rows: 2 }];',
         '}',
       ].join('\n');
       await savedComputation('doubled', doubled);
+      const kept = { media_type: 'text/plain; charset=utf-8', bytes: 1_500_000, address: null, address_until: null };
 
-      expect(await running('doubled', { input: null })).toMatchObject({
-        status: 409,
-        body: {
-          reason: 'conflict',
-          kind: 'unworkable',
-          detail:
-            "The program's output is more than a run may record, 1 MiB as JSON with the run's record; return less, or give each run a part of the input",
-        },
+      const ranComputation = await running('doubled', { input: null, run_id: runId });
+      const [first, second] = decodeKeptMembers(ranComputation.body).output;
+
+      expect(ranComputation).toMatchObject({
+        status: 200,
+        body: { status: 'succeeded', output: [kept, kept, { rows: 2 }] },
+      });
+      expect(second.sha256).toBe(first.sha256);
+      expect(await server.call('GET', `${alpha}/assets/${first.id}`)).toMatchObject({
+        status: 200,
+        body: { media_type: kept.media_type, bytes: kept.bytes, expired: false },
       });
       expect(await running('pace', { input: campaignRows(2) })).toMatchObject({ status: 200 });
+    });
+
+    it('keeps a text with a lone surrogate as text made well formed, which a string argument of a tool takes as that text and a computation reads as it', async () => {
+      const cut = `${'a'.repeat(1_100_000)}\uD83D`;
+      const wellFormed = cut.toWellFormed();
+      const sent: unknown[] = [];
+      server = await servingTheFilesServer(cut, (content) => {
+        sent.push(content);
+      });
+      await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+      await saved('lookup', 'read-the-page', readingThePage);
+      await saved('interaction', 'save-the-page', savingThePage);
+      await savedComputation('measure-the-page', measuringThePage);
+
+      const read = await server.call('POST', `${alpha}/definitions/lookup/read-the-page/run`, { body: { input: {} } });
+      const page = decodeKeptPage(read.body).output;
+      const saving = await server.call('POST', `${alpha}/definitions/interaction/save-the-page/run`, {
+        body: { input: { page } },
+      });
+      const measured = await running('measure-the-page', { input: { page } });
+
+      expect(page).toMatchObject({ media_type: 'text/plain; charset=utf-8', bytes: Buffer.byteLength(cut, 'utf8') });
+      expect(page.bytes).toBe(Buffer.byteLength(wellFormed, 'utf8'));
+      expect(saving).toMatchObject({ status: 200, body: { status: 'succeeded' } });
+      expect(sent.map((content) => content === wellFormed)).toEqual([true]);
+      expect(measured).toMatchObject({
+        status: 200,
+        body: { output: { length: wellFormed.length, last: 0xff_fd, same: true } },
+      });
     });
   });
 

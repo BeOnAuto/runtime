@@ -63,15 +63,16 @@ const preparedOf = Effect.fnUntraced(function* (capability: Capability, definiti
 
 export const preparedDefinition = Effect.fnUntraced(function* (capability: Capability, name: string) {
   const definition = yield* runnableDefinition(capability.type, name);
-  return { definition, prepared: yield* preparedOf(capability, definition) };
+  return { type: capability.type, definition, prepared: yield* preparedOf(capability, definition) };
 });
 
 export const preparedVersion = Effect.fnUntraced(function* (capability: Capability, name: string, version: number) {
   const definition = yield* stagedVersion(capability.type, name, version);
-  return { definition, prepared: yield* preparedOf(capability, definition) };
+  return { type: capability.type, definition, prepared: yield* preparedOf(capability, definition) };
 });
 
 interface VersionPrepared {
+  readonly type: string;
   readonly definition: VersionToRun;
   readonly prepared: PreparedDefinition;
 }

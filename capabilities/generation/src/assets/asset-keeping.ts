@@ -14,6 +14,7 @@ import {
   assetStreamOf,
   type AssetKeptDataWritten,
   type AssetMadeBy,
+  type GenerationKindWritten,
   type KindWritten,
   type MadeByWritten,
 } from './asset-facts.ts';
@@ -21,7 +22,7 @@ import type { KeptAsset } from './asset-reference.ts';
 
 type Generation = Extract<AssetMadeBy, { readonly generation: unknown }>['generation'];
 
-export type MadeByAGeneration = Generation & { readonly kind: KindWritten };
+export type MadeByAGeneration = Generation & { readonly kind: GenerationKindWritten };
 
 export interface AssetToKeep {
   readonly id: string;

@@ -19,13 +19,14 @@ export interface ToolUser {
   readonly startedLate: () => Promise<readonly (number | undefined)[]>;
 }
 
-export function startOfCall(number: number): CallStarted {
+export function startOfCall(number: number, reads = false): CallStarted {
   return {
     call_id: `toolu_${number}`,
     server: 'graph',
     tool: 'search',
     arguments_bytes: 2,
     arguments_sha256: 'a'.repeat(64),
+    ...(reads ? { read_only: true } : {}),
   };
 }
 
@@ -47,6 +48,8 @@ const decodeInput = Schema.decodeUnknownSync(
     calls: Schema.Int,
     ending: Schema.optionalKey(Schema.Literals(['succeed', 'unavailable', 'conflict', 'stall'])),
     failing: Schema.optionalKey(Schema.Boolean),
+    reads: Schema.optionalKey(Schema.Boolean),
+    bulk: Schema.optionalKey(Schema.Int),
   }),
 );
 
@@ -58,10 +61,10 @@ function numbersUpTo(count: number): readonly number[] {
   return Array.from({ length: count }, (_, index) => index + 1);
 }
 
-function everyStart(count: number, journal: RunJournal) {
+function everyStart(count: number, journal: RunJournal, reads: boolean) {
   return Effect.forEach(
     numbersUpTo(count),
-    (number) => Effect.map(journal.started(startOfCall(number)), (assigned) => assigned !== undefined),
+    (number) => Effect.map(journal.started(startOfCall(number, reads)), (assigned) => assigned !== undefined),
     { concurrency: 'unbounded' },
   );
 }
@@ -73,13 +76,17 @@ function everyAnswer(count: number, journal: RunJournal, failing: boolean) {
   });
 }
 
+function outputOf(recorded: readonly boolean[], bulk: number | undefined): Schema.JsonObject {
+  return bulk === undefined ? { recorded: [...recorded] } : { recorded: [...recorded], page: 'x'.repeat(bulk) };
+}
+
 const endings: Readonly<
   Record<
     Exclude<Ending, 'stall'>,
-    (recorded: readonly boolean[]) => Effect.Effect<CapabilityAnswer, CapabilityRejection>
+    (recorded: readonly boolean[], bulk: number | undefined) => Effect.Effect<CapabilityAnswer, CapabilityRejection>
   >
 > = {
-  succeed: (recorded) => Effect.succeed({ output: { recorded: [...recorded] }, record: {} }),
+  succeed: (recorded, bulk) => Effect.succeed({ output: outputOf(recorded, bulk), record: {} }),
   unavailable: () => Effect.fail(new Unavailable({ detail: 'The tools stopped answering' })),
   conflict: () => Effect.fail(new Conflict({ detail: 'The tools cannot run as written' })),
 };
@@ -99,14 +106,14 @@ export function toolUser(): ToolUser {
     run: (_document, input, { journal }) =>
       Effect.gen(function* () {
         journals.push(journal);
-        const { calls, ending = 'succeed', failing = false } = decodeInput(input);
-        const started = yield* everyStart(calls, journal);
+        const { calls, ending = 'succeed', failing = false, reads = false, bulk } = decodeInput(input);
+        const started = yield* everyStart(calls, journal, reads);
         if (ending === 'stall') {
           stalling.resolve();
           return yield* Effect.never;
         }
         const answered = yield* everyAnswer(calls, journal, failing);
-        return yield* endings[ending]([...started, ...answered]);
+        return yield* endings[ending]([...started, ...answered], bulk);
       }),
     reachesOutside: true,
     mayChangeOutside: true,

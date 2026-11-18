@@ -209,6 +209,7 @@ export type { Describing, ToolServers } from './openapi/described-api.ts';
 export type { LeftOutOperation } from './openapi/left-out.ts';
 export { ToolServerDocumentRefused, describedToolServers } from './openapi/described-servers.ts';
 export { documentInText } from './openapi/document-reading.ts';
+export { declaredAt } from './sent-assets/schema-places.ts';
 export { mappedSchema, type SchemaObject } from './openapi/schema-translation.ts';
 export {
   ToolServerSettingsInvalid,

@@ -1,7 +1,7 @@
 import { capitalized } from '@on.auto/phrasing';
 
 import type { RunEvent } from '../runs/run-events.ts';
-import type { AskedCancel, RecordedRunState } from '../runs/run-state.ts';
+import { calledAToolThatMayChangeSomething, type AskedCancel, type RecordedRunState } from '../runs/run-state.ts';
 
 type Cancel = Pick<AskedCancel, 'kind' | 'reason'>;
 
@@ -16,10 +16,6 @@ function anActingCallIsOpen({ openActingCalls }: RecordedRunState): boolean {
 
 function calledOnlyReadingTools({ mayHaveChanged, calledOnlyReadOnly }: RecordedRunState): boolean {
   return mayHaveChanged && calledOnlyReadOnly;
-}
-
-function calledAToolThatMayChangeSomething({ mayHaveChanged, calledOnlyReadOnly }: RecordedRunState): boolean {
-  return mayHaveChanged && !calledOnlyReadOnly;
 }
 
 function effectOf(run: RecordedRunState): string | undefined {
