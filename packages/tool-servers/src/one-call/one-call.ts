@@ -1,7 +1,7 @@
 import type { AssetHolding, CallMeta } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { recordingOf, type CallJournal, type KeepIn } from '../calls/recorded-calls.ts';
+import { recordingOf, type CallJournal, type KeepIn, type Recording } from '../calls/recorded-calls.ts';
 import { journalledCall, type CallJournalling } from '../calls/tool-caller.ts';
 import type { Listing } from '../listing/server-listing.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
@@ -18,6 +18,14 @@ export interface OneCall {
   readonly meta: CallMeta;
   readonly longestRetryWaitMs?: number;
   readonly requiredMark?: 'reads';
+  readonly recordContent?: false;
+}
+
+export function recordingAsTheCallAsks(
+  recording: Recording,
+  { recordContent }: Pick<OneCall, 'recordContent'>,
+): Recording {
+  return recordContent === false ? { ...recording, content: false, detail: false } : recording;
 }
 
 export interface RunCall {
@@ -55,7 +63,7 @@ async function sentOnce(call: OneCall, link: LinkedServer['link'], opened: Opene
   if ('kind' in assets) {
     return assets;
   }
-  const recording = recordingOf(link.settings, access.secrets, access.keepIn(call));
+  const recording = recordingAsTheCallAsks(recordingOf(link.settings, access.secrets, access.keepIn(call)), call);
   const { callMs } = access.timing;
   const longestRetryWaitMs = Math.min(call.longestRetryWaitMs ?? 0, access.timing.longestRetryWaitMs);
   const forwarding = {

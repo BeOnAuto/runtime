@@ -165,14 +165,17 @@ describe('a call that fails', () => {
     expect(fake.received()).toEqual([]);
   });
 
-  it('ends at its call bound', async () => {
+  it('ends at its call bound, naming no failure of its server', async () => {
     const fake = await oneCallServer();
     const sleeping = { reference: { server: 'graph', tool: 'sleep' }, input: { ms: 5000 } };
 
-    expect(await calledOnce(oneCallAccess(fake.url, {}, { callMs: 200 }), sleeping)).toMatchObject({
+    const ended = await calledOnce(oneCallAccess(fake.url, {}, { callMs: 200 }), sleeping);
+
+    expect(ended).toMatchObject({
       ...failedWith('timed_out', 'The tool server did not answer within 200 ms'),
       failed: { because: 'timed_out', duration_ms: aNumber },
     });
+    expect(ended).not.toHaveProperty('because');
   });
 });
 

@@ -68,6 +68,31 @@ describe('a server that cannot take one call now', () => {
   });
 });
 
+const lackingScope = { 'www-authenticate': 'Bearer error="insufficient_scope", scope="notes.write"' };
+
+describe('one call its server failed once it was sent', () => {
+  it('names why in the word a call its server refused before it was sent names', async () => {
+    const fake = await oneCallServer();
+    const access = oneCallAccess(fake.url);
+
+    fake.answerNextOf('tools/call', 403, 1, lackingScope);
+    const lacking = await calledOnce(access);
+    fake.answerNextOf('tools/call', 401);
+    const refused = await calledOnce(access);
+    fake.answerNextOf('tools/call', 429);
+    const limited = await calledOnce(access);
+    fake.answerNextOf('tools/call', 503);
+    const failing = await calledOnce(access);
+
+    expect([lacking, refused, limited, failing]).toMatchObject([
+      { kind: 'answered', outcome: 'server_failure', because: 'scope_lacking' },
+      { kind: 'answered', outcome: 'server_failure', because: 'key_refused' },
+      { kind: 'answered', outcome: 'server_failure', because: 'rate_limited' },
+      { kind: 'answered', outcome: 'server_failure', because: 'failing' },
+    ]);
+  });
+});
+
 describe('one call through a tool this playbook is not offered', () => {
   it('is refused before anything is sent or recorded, for a server it does not have, of another org, or a tool not allowed', async () => {
     const fake = await oneCallServer();

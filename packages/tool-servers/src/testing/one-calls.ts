@@ -1,4 +1,3 @@
-import type { RecordedContent } from '@on.auto/content';
 import { Effect } from 'effect';
 import { afterEach } from 'vitest';
 
@@ -7,7 +6,7 @@ import type { Timing } from '../bounds/call-bounds.ts';
 import type { CalledOnce } from '../one-call/called-once.ts';
 import type { OneCall, RunCall } from '../one-call/one-call.ts';
 import { patientTiming } from './index.ts';
-import { reportingAccess } from './reporting-access.ts';
+import { reportingAccess, type ReportingAccess } from './reporting-access.ts';
 import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from './served-fakes.ts';
 
 export const oneCallKey = 'graph-api-key-4f1d9a7c2b';
@@ -38,8 +37,8 @@ export function oneCallAccess(
   url: string,
   changes: Readonly<Record<string, unknown>> = {},
   timing: Partial<Timing> = {},
-): ToolAccess & { readonly content: RecordedContent } {
-  const { access, content } = reportingAccess(
+): ToolAccess & Pick<ReportingAccess, 'content' | 'messages'> {
+  const { access, content, messages } = reportingAccess(
     {
       graph: {
         url,
@@ -52,7 +51,7 @@ export function oneCallAccess(
     { environment: { GRAPH_API_KEY: oneCallKey }, timing: { ...patientTiming, ...timing } },
   );
   closedAfter(access.close);
-  return { ...access, content };
+  return { ...access, content, messages };
 }
 
 export const echoCall: OneCall = {

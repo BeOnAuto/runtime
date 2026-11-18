@@ -4,11 +4,11 @@ import { Effect, type Redacted } from 'effect';
 
 import { secretsOfServers, type Secrets } from '../bounds/secrets.ts';
 import { recordingOf, startedFields, type KeepIn, type StartedFields } from '../calls/recorded-calls.ts';
-import type { OneCall } from '../one-call/one-call.ts';
+import { recordingAsTheCallAsks, type OneCall } from '../one-call/one-call.ts';
 import type { Served } from '../org-servers/org-servers.ts';
 import type { ServerSettings } from '../settings/server-settings.ts';
 
-export type StartingCall = Pick<OneCall, 'org' | 'playbook' | 'reference' | 'input'>;
+export type StartingCall = Pick<OneCall, 'org' | 'playbook' | 'reference' | 'input' | 'recordContent'>;
 
 export type ContentStore = Pick<RecordedContent, 'put'>;
 
@@ -46,9 +46,10 @@ const nothingKept: Pick<Served, 'record_content' | 'connection'> = { record_cont
 
 export function startedOn(
   served: Pick<Served, 'record_content' | 'connection'> | undefined,
-  { org, playbook, reference, input }: StartingCall,
+  call: StartingCall,
   { keepIn, secrets }: RecordingParts,
 ): Promise<StartedFields> {
+  const { org, playbook, reference, input } = call;
   const recording = recordingOf({ ...(served ?? nothingKept), request_id: null }, secrets, keepIn({ org, playbook }));
-  return startedFields({ ...reference, input }, recording);
+  return startedFields({ ...reference, input }, recordingAsTheCallAsks(recording, call));
 }

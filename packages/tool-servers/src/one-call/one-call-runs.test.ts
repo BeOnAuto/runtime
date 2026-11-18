@@ -1,3 +1,8 @@
+import { Buffer } from 'node:buffer';
+import { createHash } from 'node:crypto';
+
+import { keptTextOf } from '@on.auto/content/testing';
+import { recordingTracer } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -12,6 +17,10 @@ const callId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 const aDigest: unknown = expect.stringMatching(/^[0-9a-f]{64}$/u);
 
 const aNumber: unknown = expect.any(Number);
+
+const aCallsEnd = { jsonrpc_id: aNumber, duration_ms: aNumber };
+
+const alpha = { org: 'acme', playbook: 'alpha' };
 
 function seenWhenStarted(journal: CallJournal, onStart: () => void): CallJournal {
   return { ...journal, started: (fact) => Effect.sync(onStart).pipe(Effect.andThen(journal.started(fact))) };
@@ -58,6 +67,97 @@ describe('a call recorded on its run', () => {
       },
     ]);
     expect(called).toMatchObject({ kind: 'answered', outcome: 'result' });
+  });
+});
+
+const echoedValue = 'a-value-the-service-echoes-5e1b9c';
+
+const echoing = { input: { signing_key: echoedValue } };
+
+const echoedIn: unknown = expect.stringContaining(echoedValue);
+
+const sentJson = JSON.stringify(echoing.input);
+
+const answerJson = JSON.stringify({ content: [{ type: 'text', text: sentJson }] });
+
+const startOfTheCall = { server: 'graph', tool: 'echo', arguments_bytes: Buffer.byteLength(sentJson) };
+
+const digest = (text: string) => createHash('sha256').update(text).digest('hex');
+
+function keptIn({ content }: ReturnType<typeof oneCallAccess>) {
+  return Promise.all([sentJson, answerJson].map((text) => keptTextOf(content, alpha, digest(text))));
+}
+
+describe('a call recorded on its run that keeps no content', () => {
+  it('keeps neither its arguments nor the answer that echoes them, though its server keeps content, records their sizes alone, and answers its caller whole', async () => {
+    const fake = await oneCallServer();
+    const keeping = oneCallAccess(fake.url);
+    const keepingNone = oneCallAccess(fake.url);
+    const journal = recordingCallJournal();
+    const tracing = recordingTracer();
+
+    await calledOnce(keeping, echoing, { callId, journal: recordingCallJournal() });
+    const called = await Effect.runPromise(
+      Effect.withTracer(
+        keepingNone.callOnce({ ...echoCall, ...echoing, recordContent: false }, { callId, journal }),
+        tracing.tracer,
+      ),
+    );
+    const { fields } = await Effect.runPromise(
+      keepingNone.preparedCall({ ...echoCall, ...echoing, recordContent: false }),
+    );
+
+    expect([await keptIn(keeping), await keptIn(keepingNone)]).toEqual([
+      [sentJson, answerJson],
+      [undefined, undefined],
+    ]);
+    expect([journal.facts(), fields]).toEqual([
+      [
+        { number: 1, type: 'tool_call_started', data: { call_id: callId, ...startOfTheCall } },
+        {
+          number: 1,
+          type: 'tool_call_answered',
+          data: { is_error: false, result_bytes: Buffer.byteLength(answerJson), shown_format: 2, ...aCallsEnd },
+        },
+      ],
+      startOfTheCall,
+    ]);
+    expect(JSON.stringify([journal.facts(), fields, tracing.spans(), keepingNone.messages()])).not.toContain(
+      echoedValue,
+    );
+    expect(called).toMatchObject({ outcome: 'result', answer: { content: [{ type: 'text', text: sentJson }] } });
+  });
+});
+
+describe('a call recorded on its run that keeps no content and fails', () => {
+  it('records the failure without the words that echo its arguments, and hands the words to its caller alone', async () => {
+    const fake = await oneCallServer();
+    const keeping = oneCallAccess(fake.url, { allowed: ['broken'] });
+    const keepingNone = oneCallAccess(fake.url, { allowed: ['broken'] });
+    const kept = recordingCallJournal();
+    const journal = recordingCallJournal();
+    const tracing = recordingTracer();
+    const breaking = { ...echoCall, ...echoing, reference: { server: 'graph', tool: 'broken' } };
+
+    await calledOnce(keeping, breaking, { callId, journal: kept });
+    const called = await Effect.runPromise(
+      Effect.withTracer(
+        keepingNone.callOnce({ ...breaking, recordContent: false }, { callId, journal }),
+        tracing.tracer,
+      ),
+    );
+
+    expect([kept.facts()[1], journal.facts()[1]]).toEqual([
+      { number: 1, type: 'tool_call_failed', data: { because: 'server_failure', detail: echoedIn, ...aCallsEnd } },
+      { number: 1, type: 'tool_call_failed', data: { because: 'server_failure', ...aCallsEnd } },
+    ]);
+    expect([await keptIn(keeping), await keptIn(keepingNone)]).toEqual([
+      [sentJson, undefined],
+      [undefined, undefined],
+    ]);
+    expect(JSON.stringify([journal.facts(), tracing.spans(), keepingNone.messages()])).not.toContain(echoedValue);
+    expect(called).toMatchObject({ outcome: 'server_failure', because: 'failing', detail: echoedIn });
+    expect(called).not.toHaveProperty('failed.detail');
   });
 });
 

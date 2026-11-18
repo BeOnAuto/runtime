@@ -25,6 +25,7 @@ export type KeepIn = (playbook: PlaybookAddress) => KeepContent;
 
 export interface Recording {
   readonly content: boolean;
+  readonly detail: boolean;
   readonly requestId: boolean;
   readonly connection: string | null;
   readonly secrets: Pick<Secrets, 'scrub' | 'scrubJson'>;
@@ -51,6 +52,7 @@ export function recordingOf(
 ): Recording {
   return {
     content: settings.record_content,
+    detail: true,
     requestId: settings.request_id !== null,
     connection: settings.connection,
     secrets,
@@ -113,7 +115,7 @@ export interface CallFailure {
 }
 
 export function failedData(failure: CallFailure, durationMs: number, recording: Recording): CallFailed {
-  const detail = cutToFailureBound(recording.secrets.scrub(failure.message.trim()));
+  const detail = recording.detail ? cutToFailureBound(recording.secrets.scrub(failure.message.trim())) : '';
   return {
     because: failure.because,
     ...(detail === '' ? {} : { detail }),

@@ -7,7 +7,7 @@ import { resultText, type AnswerBlock, type ToolMark } from '../bounds/tool-resu
 import type { CallAnswered, CallFailed, SentCallFailedBecause } from '../calls/call-facts.ts';
 import type { SentCall } from '../calls/tool-caller.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
-import { refusalOf, type Unusable } from '../org-servers/server-refusals.ts';
+import { failedBecause, refusalOf, type Unusable } from '../org-servers/server-refusals.ts';
 import { answeredEnding, refusedEnding, traced, type TracedServer } from './traced-calls.ts';
 
 export interface CallAnswer {
@@ -29,7 +29,11 @@ export type AnsweredOnce =
       readonly answered: CallAnswered;
     })
   | (AnsweredCall & { readonly outcome: 'tool_error'; readonly answered: CallAnswered })
-  | (AnsweredCall & { readonly outcome: SentCallFailedBecause; readonly failed: CallFailed });
+  | (AnsweredCall & {
+      readonly outcome: SentCallFailedBecause;
+      readonly failed: CallFailed;
+      readonly because?: Unusable['because'];
+    });
 
 interface Unopened<Refused extends string, Because extends string> {
   readonly kind: 'unopened';
@@ -78,11 +82,16 @@ export function refusedOnce(unusable: Unusable): UnopenedOnce {
   return Predicate.isTagged(refusal, 'tool_not_offered') ? notOfferedOnce(refusal) : failedToOpenOnce(refusal);
 }
 
+function reasonOf({ outcome, failure }: Extract<SentCall, { readonly answered: false }>['done']) {
+  return outcome === 'server_failure' && failure !== null ? { because: failedBecause[failure] } : {};
+}
+
 export function answeredOnce(sent: SentCall, scrub: (text: string) => string, mark: ToolMark): AnsweredOnce {
   const answered = { kind: 'answered', mark, retryAfterMs: sent.done.retryAfterMs } as const;
   if (!sent.answered) {
     const { done, fact } = sent;
-    return { ...answered, outcome: done.outcome, failed: fact, detail: cutToFailureBound(scrub(done.message)) };
+    const detail = cutToFailureBound(scrub(done.message));
+    return { ...answered, outcome: done.outcome, failed: fact, ...reasonOf(done), detail };
   }
   const { done, fact } = sent;
   return done.outcome === 'result'

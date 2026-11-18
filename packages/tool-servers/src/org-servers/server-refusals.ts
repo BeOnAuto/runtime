@@ -11,7 +11,7 @@ export interface Unusable {
   readonly detail: string;
 }
 
-const failedBecause: Readonly<Record<FailureKind, UnavailableBecause>> = {
+export const failedBecause: Readonly<Record<FailureKind, UnavailableBecause>> = {
   unreachable: 'unreachable',
   timed_out: 'unreachable',
   closed: 'unreachable',
