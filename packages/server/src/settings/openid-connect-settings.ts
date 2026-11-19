@@ -108,6 +108,9 @@ const inLocalMode =
 const withoutAnAddress =
   'OIDC_ISSUER: needs PUBLIC_URL, the URL at which people reach the runtime, since the redirect URI is under it';
 
+const withoutHttps =
+  'OIDC_ISSUER: needs PUBLIC_URL to be an https URL, since the runtime then signs people in itself and keeps their sign-in in a cookie only https carries';
+
 const withoutOpenId = 'OIDC_SCOPES: must include openid';
 
 const requiredClaimWithoutAnIssuer =
@@ -225,6 +228,9 @@ export function readOpenIdConnectSettings(
   }
   if (deciding.publicUrl === undefined) {
     throw new InvalidSettingsError({ message: withoutAnAddress });
+  }
+  if (!deciding.publicUrl.startsWith('https://')) {
+    throw new InvalidSettingsError({ message: withoutHttps });
   }
   return settingsOf(complete, deciding.publicUrl);
 }

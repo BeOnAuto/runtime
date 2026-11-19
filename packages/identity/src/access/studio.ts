@@ -4,6 +4,24 @@ export const defaultStudioOrigin = 'https://studio.on.auto';
 
 export const servedStudioPath = '/studio/';
 
+const clientMetadataPath = '/.well-known/oauth-client-metadata';
+
+const signInReturnPath = '/oauth/callback';
+
+export interface StudioClient {
+  readonly clientId: string;
+  readonly redirectUri: string;
+  readonly postLogoutRedirectUri: string;
+}
+
+export function studioClientOf(origin: string): StudioClient {
+  return {
+    clientId: `${origin}${clientMetadataPath}`,
+    redirectUri: `${origin}${signInReturnPath}`,
+    postLogoutRedirectUri: `${origin}/`,
+  };
+}
+
 export interface StudioSettings {
   readonly origin: string;
   readonly served: boolean;

@@ -235,6 +235,7 @@ describe("readSettings refusing the company's identity provider", () => {
     ['OIDC_SCOPES', { ...company, OIDC_SCOPES: 'profile email' }],
     ['OIDC_ISSUER', { OIDC_ISSUER: company.OIDC_ISSUER, OIDC_CLIENT_ID: 'auto-runtime', OIDC_CLIENT_SECRET: 'secret' }],
     ['OIDC_ISSUER', { ...company, OIDC_ISSUER: 'http://login.example.com/acme' }],
+    ['OIDC_ISSUER', { ...company, HOST: '127.0.0.1', PUBLIC_URL: 'http://localhost:5555' }],
     ['OIDC_ISSUER', { ...company, OIDC_ISSUER: 'https://login.example.com/acme?tenant=1' }],
     ['OIDC_ISSUER', { ...company, OIDC_ISSUER: 'https://login.example.com/acme#top' }],
     ['OIDC_CLIENT_ID', { ...company, OIDC_CLIENT_ID: '' }],

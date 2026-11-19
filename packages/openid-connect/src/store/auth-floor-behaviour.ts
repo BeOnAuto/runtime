@@ -2,7 +2,6 @@ import { LedgerConnection, statementOf, type ConnectionPorts, type LedgerService
 import { Effect, ManagedRuntime, Schema, type Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { SessionRow } from '../sessions/session-rows.ts';
 import floor from './auth-floor.json' with { type: 'json' };
 import { authLayout } from './auth-layout.ts';
 import { authStoreOpened } from './auth-store.ts';
@@ -23,7 +22,7 @@ const theFloor = Schema.decodeUnknownSync(Schema.Struct({ layout: Schema.Number,
 
 const signedInAt = Date.parse('2026-11-18T09:00:00Z');
 
-const keptAtTheFloor: SessionRow = {
+const keptAtTheFloor = {
   sha256: 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9',
   issuer: 'https://login.example.com/tenant/v2.0',
   subject: 'AItOawmwtWwcT0k51BayewNvutrJUqsvl6qs7A4',
@@ -71,20 +70,17 @@ async function madeAtTheFloor(connection: ConnectionPorts): Promise<void> {
 
 export function authFloorBehaviour({ name, aDatabase }: AuthFloorEntry): void {
   describe(`the sign-in's store ${name}, made at its first layout`, () => {
-    it('is carried forward by every step to the structure of a new store, keeping the sessions it held', async () => {
+    it('is carried forward by every step to the structure of a new store, its sessions of the first layout dropped', async () => {
       const [carried, made] = [await aDatabase(), await aDatabase()];
       await onTheLedger(carried, madeAtTheFloor);
 
       const found = await onTheLedger(carried, async (connection) => {
-        const { sessionRows } = await authStoreOpened(connection);
-        return [
-          await connection.read(statementOf(['SELECT layout FROM auth_layout'], [])),
-          await sessionRows.found(keptAtTheFloor.sha256, signedInAt),
-        ];
+        await authStoreOpened(connection);
+        return connection.read(statementOf(['SELECT layout FROM auth_layout'], []));
       });
       await onTheLedger(made, authStoreOpened);
 
-      expect([theFloor.layout, found]).toEqual([1, [[{ layout: authLayout }], keptAtTheFloor]]);
+      expect([theFloor.layout, found]).toEqual([1, [{ layout: authLayout }]]);
       expect(
         await carried.structure(),
         "A database of the sign-in's store made at its first layout and carried forward by every step differs from a new one: a step leaves the store as a new store of its layout would be",

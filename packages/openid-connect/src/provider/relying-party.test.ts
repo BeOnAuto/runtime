@@ -65,12 +65,13 @@ afterEach(() => {
 });
 
 describe('the start of a sign-in', () => {
-  it('sends the person to the authorization endpoint with the code flow, PKCE with S256, and a fresh state and nonce', async () => {
+  it('sends the person to the authorization endpoint with the code flow, PKCE with S256, a fresh state and nonce, and prompt=select_account where asked (OpenID Connect Core 3.1.2.1)', async () => {
     const provider = providerWith();
     const party = await partyOf(provider);
 
     const first = await party.signInStarted();
     const second = await party.signInStarted();
+    const choosing = await party.signInStarted({ prompt: 'select_account' });
     const asked = new URL(first.authorizationUrl);
 
     expect(`${asked.origin}${asked.pathname}`).toBe(`${issuer}/authorize`);
@@ -87,6 +88,7 @@ describe('the start of a sign-in', () => {
     const drawn = [first, second].flatMap(({ pending }) => [pending.state, pending.nonce, pending.codeVerifier]);
     expect(new Set(drawn).size).toBe(6);
     expect([party.issuer, party.redirectUri]).toEqual([issuer, redirectUri]);
+    expect(new URL(choosing.authorizationUrl).searchParams.get('prompt')).toBe('select_account');
   });
 });
 

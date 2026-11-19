@@ -1,7 +1,14 @@
 import type { StudioPage } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { defaultStudioOrigin, pageOriginsOf, studioBaseOf, studioLinkOf, type StudioSettings } from '../index.ts';
+import {
+  defaultStudioOrigin,
+  pageOriginsOf,
+  studioBaseOf,
+  studioClientOf,
+  studioLinkOf,
+  type StudioSettings,
+} from '../index.ts';
 
 const ownOrigin = 'http://127.0.0.1:5555';
 
@@ -19,6 +26,16 @@ describe('the Studio a person can reach', () => {
       studioBaseOf({ origin: defaultStudioOrigin, served: false }, ownOrigin),
       studioBaseOf(elsewhere, ownOrigin),
     ]).toEqual(['https://studio.on.auto/', 'https://studio.example.com/']);
+  });
+});
+
+describe('Studio as a client of a runtime that is its own authorization server', () => {
+  it('is named by the address of its client metadata document and returns to its own sign-in page and root', () => {
+    expect(studioClientOf('https://studio.example.com')).toEqual({
+      clientId: 'https://studio.example.com/.well-known/oauth-client-metadata',
+      redirectUri: 'https://studio.example.com/oauth/callback',
+      postLogoutRedirectUri: 'https://studio.example.com/',
+    });
   });
 });
 

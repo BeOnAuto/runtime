@@ -15,7 +15,7 @@ const ada = '83f8bacd8d76fa75e99f5c9f61599419c6647d9aebe50b453a89da169899d6e1';
 
 const priya = '0c3de111680d66bea9b377080ec7d6784c7602c7bc2e4bfdd1b3ee489b0675ea';
 
-export function peopleRowsBehaviour({ name, rowsOf }: PeopleRowsEntry): void {
+function keepingBehaviour({ name, rowsOf }: PeopleRowsEntry): void {
   describe(`the people kept ${name}`, () => {
     it('keep each person by their id, with the name and the address their sign-in gave, in the order they joined', async () => {
       const rows = await rowsOf();
@@ -46,6 +46,20 @@ export function peopleRowsBehaviour({ name, rowsOf }: PeopleRowsEntry): void {
       ]);
     });
 
+    it('find one person by their id, and no one for an id never kept', async () => {
+      const rows = await rowsOf();
+      await rows.kept({ person: ada, name: 'Ada Lovelace', updatedAt: signedInAt });
+
+      expect([await rows.found(ada), await rows.found(priya)]).toEqual([
+        { person: ada, name: 'Ada Lovelace', joinedAt: signedInAt, updatedAt: signedInAt },
+        undefined,
+      ]);
+    });
+  });
+}
+
+function findingBehaviour({ name, rowsOf }: PeopleRowsEntry): void {
+  describe(`the people kept ${name}, found and forgotten`, () => {
     it('forget a person deleted, and no one else', async () => {
       const rows = await rowsOf();
       await rows.kept({ person: ada, updatedAt: signedInAt });
@@ -57,4 +71,9 @@ export function peopleRowsBehaviour({ name, rowsOf }: PeopleRowsEntry): void {
       expect(await rows.listed()).toEqual([{ person: priya, joinedAt: signedInAt, updatedAt: signedInAt }]);
     });
   });
+}
+
+export function peopleRowsBehaviour(entry: PeopleRowsEntry): void {
+  keepingBehaviour(entry);
+  findingBehaviour(entry);
 }

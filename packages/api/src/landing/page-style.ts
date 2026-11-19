@@ -9,6 +9,7 @@ export interface PageStyle {
   readonly head: (extra: string) => string;
   readonly readOnlyHeaders: Readonly<Record<string, string>>;
   readonly controlHeaders: Readonly<Record<string, string>>;
+  readonly formHeaders: (formAction: string) => Readonly<Record<string, string>>;
 }
 
 const pageStyles = `
@@ -65,6 +66,7 @@ main {
 .logo .glyph { fill: var(--paper); }
 h1 {
   margin: 14px 0 0;
+  overflow-wrap: anywhere;
   font-family: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 22px;
   font-weight: 500;
@@ -72,6 +74,7 @@ h1 {
 }
 p {
   margin: 8px 0 18px;
+  overflow-wrap: anywhere;
   font-size: 15px;
   line-height: 1.6;
   color: var(--muted);
@@ -143,6 +146,32 @@ p {
 }
 .controls button:hover { border-color: var(--ink); }
 .controls button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.choices form { margin: 0; }
+.choices button {
+  height: 40px;
+  padding: 0 20px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.choices .primary { background: var(--ink); color: var(--paper); }
+.choices .primary:hover { background: color-mix(in srgb, var(--ink) 90%, transparent); }
+.choices .secondary { border-color: var(--rule); background: transparent; color: var(--ink); }
+.choices .secondary:hover { border-color: var(--ink); }
+.choices button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (max-width: 480px) {
+  .choices button, .open { height: 44px; }
+}
 `;
 
 function stylesOf(fontFaces: string): string {
@@ -186,6 +215,7 @@ function pageStyleOf(fontFaces: string): PageStyle {
       ].join(''),
     readOnlyHeaders: pageHeadersOf(styles, "'none'", 'no-referrer'),
     controlHeaders: pageHeadersOf(styles, "'self'", 'same-origin'),
+    formHeaders: (formAction) => pageHeadersOf(styles, formAction, 'same-origin'),
   };
 }
 

@@ -2,9 +2,10 @@ import { LedgerConnection, statement, type ConnectionPorts, type Dialect, type L
 import { Effect, ManagedRuntime, Schema, type Layer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { providerRowsBehaviour } from '../authorization-server/provider-rows-behaviour.ts';
+import type { ProviderRow } from '../authorization-server/provider-rows.ts';
+import { signingKeyRowsBehaviour } from '../authorization-server/signing-key-rows-behaviour.ts';
 import { peopleRowsBehaviour } from '../people/people-rows-behaviour.ts';
-import type { SessionRow } from '../sessions/session-rows.ts';
-import { sessionRowsBehaviour } from '../testing/session-rows-behaviour.ts';
 import { authLayout, authLayoutKept, authTablePrefix, type AuthLayoutStep } from './auth-layout.ts';
 import { authStoreOpened } from './auth-store.ts';
 
@@ -71,14 +72,16 @@ const refusedWithNoNumber = { _tag: 'auth_layout_refused', found: undefined, kep
 
 const signedInAt = Date.parse('2026-11-18T09:00:00Z');
 
-const aSession: SessionRow = {
+const aSession: ProviderRow = {
+  model: 'Session',
   sha256: 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9',
-  issuer: 'https://login.example.com/tenant/v2.0',
-  subject: 'AItOawmwtWwcT0k51BayewNvutrJUqsvl6qs7A4',
-  createdAt: signedInAt,
-  lastUsedAt: signedInAt,
+  payload: '{"accountId":"a3f1"}',
+  grantId: undefined,
+  uid: 'Gx7Kq2',
   expiresAt: signedInAt + 7 * 86_400_000,
 };
+
+const keptSession = { payload: aSession.payload, grantId: undefined, consumedAt: undefined };
 
 function openingBehaviour(entry: AuthStoreEntry): void {
   const aConnection = aConnectionOf(entry);
@@ -99,15 +102,15 @@ function openingBehaviour(entry: AuthStoreEntry): void {
     it('opens a database in its layout again, as a server that restarts, keeping its sessions and changing nothing', async () => {
       const ledgerOn = await entry.aDatabase();
       const first = await connectedTo(ledgerOn());
-      await (await authStoreOpened(first.connection)).sessionRows.kept(aSession);
+      await (await authStoreOpened(first.connection)).providerRows.kept(aSession);
       const before = await relationsIn(first.connection);
       await first.closed();
 
       const { connection: again } = await connectedTo(ledgerOn());
-      const { sessionRows } = await authStoreOpened(again);
+      const { providerRows } = await authStoreOpened(again);
 
       expect([await relationsIn(again), await again.read(layoutRead)]).toEqual([before, [{ layout: authLayout }]]);
-      expect(await sessionRows.found(aSession.sha256, aSession.createdAt)).toEqual(aSession);
+      expect(await providerRows.found(aSession)).toEqual(keptSession);
     });
 
     it('lays its layout once when it is opened twice at once on a new database', async () => {
@@ -122,7 +125,7 @@ function openingBehaviour(entry: AuthStoreEntry): void {
       const connection = await aConnection();
       await authStoreOpened(connection);
       const made = await relationsIn(connection);
-      await connection.write(statement`DROP TABLE auth_sessions`);
+      await connection.write(statement`DROP TABLE auth_oidc_models`);
 
       await authStoreOpened(connection);
 
@@ -222,8 +225,8 @@ export function sessionsEndedBehaviour(entry: AuthStoreEntry): void {
   describe(`a session in the sign-in's store ${entry.name}, ended while a transaction of the ledger is open`, () => {
     it('stays ended once that transaction is rolled back, when it is ended from outside it', async () => {
       const connection = await aConnection();
-      const { sessionRows } = await authStoreOpened(connection);
-      await sessionRows.kept(aSession);
+      const { providerRows } = await authStoreOpened(connection);
+      await providerRows.kept(aSession);
       const begun = Promise.withResolvers<void>();
       const letGo = Promise.withResolvers<void>();
       const transaction = connection.readConsistently(async () => {
@@ -233,29 +236,29 @@ export function sessionsEndedBehaviour(entry: AuthStoreEntry): void {
       });
 
       await begun.promise;
-      const ending = sessionRows.ended(aSession.sha256);
+      const ending = providerRows.destroyed(aSession);
       letGo.resolve();
 
       await expect(transaction).rejects.toBe(rolledBack);
       await ending;
-      expect(await sessionRows.found(aSession.sha256, aSession.createdAt)).toBeUndefined();
+      expect(await providerRows.found(aSession)).toBeUndefined();
     });
 
     it('stays ended once that transaction is rolled back, when it is ended by code running inside it', async () => {
       const connection = await aConnection();
-      const { sessionRows } = await authStoreOpened(connection);
-      await sessionRows.kept(aSession);
+      const { providerRows } = await authStoreOpened(connection);
+      await providerRows.kept(aSession);
       const ending: { promise?: Promise<void> } = {};
 
       const transaction = connection.readConsistently(async (read) => {
-        ending.promise = sessionRows.ended(aSession.sha256);
-        await read(statement`SELECT count(*) AS sessions FROM auth_sessions`);
+        ending.promise = providerRows.destroyed(aSession);
+        await read(statement`SELECT count(*) AS sessions FROM auth_oidc_models`);
         throw rolledBack;
       });
 
       await expect(transaction).rejects.toBe(rolledBack);
       await ending.promise;
-      expect(await sessionRows.found(aSession.sha256, aSession.createdAt)).toBeUndefined();
+      expect(await providerRows.found(aSession)).toBeUndefined();
     });
   });
 }
@@ -264,9 +267,13 @@ export function authStoreBehaviour(entry: AuthStoreEntry): void {
   openingBehaviour(entry);
   carryingBehaviour(entry);
   refusingBehaviour(entry);
-  sessionRowsBehaviour({
+  providerRowsBehaviour({
     name: `in the sign-in's store ${entry.name}`,
-    rowsOf: async () => (await authStoreOpened(await aConnectionOf(entry)())).sessionRows,
+    rowsOf: async () => (await authStoreOpened(await aConnectionOf(entry)())).providerRows,
+  });
+  signingKeyRowsBehaviour({
+    name: `in the sign-in's store ${entry.name}`,
+    rowsOf: async () => (await authStoreOpened(await aConnectionOf(entry)())).signingKeyRows,
   });
   peopleRowsBehaviour({
     name: `in the sign-in's store ${entry.name}`,

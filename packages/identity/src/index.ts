@@ -13,7 +13,9 @@ export {
   defaultStudioOrigin,
   servedStudioPath,
   studioBaseOf,
+  studioClientOf,
   studioLinkOf,
+  type StudioClient,
   type StudioSettings,
 } from './access/studio.ts';
 export {

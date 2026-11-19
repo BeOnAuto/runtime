@@ -55,6 +55,13 @@ export function storedPeopleRows(database: AuthDatabase): PeopleRows {
         await database.read(statement`SELECT person, name, email_address, joined_at, updated_at
           FROM auth_people ORDER BY joined_at, person`),
       ).map((row) => rowOf(row)),
+    found: async (person) => {
+      const [row] = decodeRows(
+        await database.read(statement`SELECT person, name, email_address, joined_at, updated_at
+          FROM auth_people WHERE person = ${person}`),
+      );
+      return row === undefined ? undefined : rowOf(row);
+    },
     deleted: async (person) => {
       await database.write(statement`DELETE FROM auth_people WHERE person = ${person}`);
     },

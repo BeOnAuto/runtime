@@ -12,7 +12,7 @@ const frameHeaders = { strictTransportSecurity: false, xFrameOptions: 'DENY' } a
 
 const policyOfAnAnswer = { defaultSrc: ["'none'"], frameAncestors: ["'none'"] };
 
-const securityHeaders = secureHeaders({ ...frameHeaders, contentSecurityPolicy: policyOfAnAnswer });
+export const securityHeaders = secureHeaders({ ...frameHeaders, contentSecurityPolicy: policyOfAnAnswer });
 
 const headersOfContentAnyOriginEmbeds = secureHeaders({
   ...frameHeaders,

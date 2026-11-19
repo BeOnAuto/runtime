@@ -99,6 +99,23 @@
             "from": "package",
             "package": "hono",
             "name": ["Context"]
+          },
+          {
+            "from": "package",
+            "package": "oidc-provider",
+            "name": [
+              "KoaContextWithOIDC",
+              "Interaction",
+              "InteractionResults",
+              "Grant",
+              "Session",
+              "Client",
+              "AccessToken",
+              "RefreshToken",
+              "ClientCredentials",
+              "AdapterPayload",
+              "UnknownObject"
+            ]
           }
         ]
       }

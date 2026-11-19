@@ -34,11 +34,10 @@ export {
   type RelyingPartySettings,
   type RequiredClaim,
   type SignedInPerson,
+  type SignInAsked,
   type StandardClaims,
   type StartedSignIn,
 } from './provider/relying-party.ts';
-export type { SessionRow, SessionRows, SessionUse } from './sessions/session-rows.ts';
 export { AuthLayoutRefused } from './store/auth-layout.ts';
 export { authStoreOpened, type AuthStore } from './store/auth-store.ts';
 export type { AuthDatabase } from './store/auth-database.ts';
-export { mostLifetimeMs, mostUnusedMs, sessionsOf, type Sessions } from './sessions/sessions.ts';

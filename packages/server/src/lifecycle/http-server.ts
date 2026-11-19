@@ -1,10 +1,24 @@
 import { once } from 'node:events';
-import { createServer, type Server } from 'node:http';
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { isIP, type AddressInfo } from 'node:net';
 
 import type { ApiHandler } from '@on.auto/api';
 
-export function createHttpServer(listener: ApiHandler['listener']): Server {
+type Listener = (request: IncomingMessage, response: ServerResponse) => void | Promise<void>;
+
+export interface AnsweredBeside {
+  readonly answers: (path: string) => boolean;
+  readonly listener: Listener;
+}
+
+export function beside({ answers, listener }: AnsweredBeside, others: Listener): Listener {
+  return (request, response) => {
+    const { pathname } = new URL(String(request.url), 'http://localhost');
+    return answers(pathname) ? listener(request, response) : others(request, response);
+  };
+}
+
+export function createHttpServer(listener: ApiHandler['listener'] | Listener): Server {
   const server = createServer((request, response) => {
     response.once('finish', () => {
       closeIdleConnectionsOnceClosing(server);

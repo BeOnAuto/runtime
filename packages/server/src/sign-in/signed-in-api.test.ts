@@ -3,47 +3,76 @@ import { defaultOrg, personIdOf } from '@on.auto/openid-connect';
 import { describe, expect, it } from 'vitest';
 
 import { goalsText } from '../testing/settings/goals-kept.ts';
-import { callbackFor, cookieValueOf, signingIn, subject, type SigningIn } from './signing-in.ts';
+import {
+  allowed,
+  authorizationAskedBy,
+  bearer,
+  exchanged,
+  fieldsOf,
+  locationOf,
+  publicUrl,
+  registered,
+  signedInAs,
+  signingIn,
+  studio,
+  subject,
+} from './signing-in.ts';
 
-async function sessionAfterSigningIn(signingInHere: SigningIn): Promise<string> {
-  return cookieValueOf(await callbackFor(signingInHere, subject), '__Host-session');
-}
-
-const playbookAlpha = JSON.stringify({ playbook: 'alpha', name: 'Alpha', goals: goalsText });
+const playbookOf = (id: string) => JSON.stringify({ playbook: id, name: id, goals: goalsText });
 
 const asJson = { 'content-type': 'application/json' };
 
-describe('the API of a runtime whose people sign in through the identity provider OIDC_ISSUER names', () => {
-  it('serves a person signed in there as their id in the organization default, only with the anti-forgery header', async () => {
+const studioAsks = {
+  clientId: studio.clientId,
+  redirectUri: studio.redirectUri,
+  scope: 'openid offline_access org:read org:write',
+};
+
+describe('the API of a runtime that is its own authorization server', () => {
+  it("serves a person by a token it issued, an agent's as from the agent and Studio's as from Studio, and never by the sign-in cookie", async () => {
     const key = createApiKey({ id: 'build-bot', org: defaultOrg, permissions: ['org:read'], playbooks: '*' });
-    const signingInHere = await signingIn({ settings: { API_KEYS: JSON.stringify([key.entry]) } });
-    const { provider, address, at } = signingInHere;
-    const session = await sessionAfterSigningIn(signingInHere);
-    const fromThePage = { cookie: session, 'x-csrf': '1' };
-    const person = personIdOf({ issuer: provider.issuer, subject });
+    const signing = await signingIn({ settings: { API_KEYS: JSON.stringify([key.entry]) } });
+    const browser = signing.aBrowser();
+    const clientId = await registered(browser);
+    const consent = locationOf(await signedInAs(signing, browser, { clientId }, subject));
+    const agentToken = await exchanged(browser, await allowed(browser, consent), { clientId });
+    const studioCode = new URL(locationOf(await browser.at(authorizationAskedBy(studioAsks)))).searchParams.get('code');
+    const studioToken = await exchanged(browser, String(studioCode), studioAsks);
+    const person = personIdOf({ issuer: signing.provider.issuer, subject });
 
-    const ridden = await at('/v1/orgs/default/playbooks', {
+    const byTheAgent = await signing.at('/v1/orgs/default/playbooks', {
       method: 'POST',
-      headers: { cookie: session, ...asJson },
-      body: playbookAlpha,
+      headers: { ...asJson, ...bearer(agentToken).headers },
+      body: playbookOf('alpha'),
     });
-    const created = await at('/v1/orgs/default/playbooks', {
+    const byStudio = await signing.at('/v1/orgs/default/playbooks', {
       method: 'POST',
-      headers: { ...fromThePage, ...asJson },
-      body: playbookAlpha,
+      headers: { ...asJson, ...bearer(studioToken).headers },
+      body: playbookOf('beta'),
     });
-    const unknown = await at('/v1/orgs/default/playbooks', {
-      headers: { cookie: '__Host-session=unknown', 'x-csrf': '1' },
-    });
-    const elsewhere = await at('/v1/orgs/acme/playbooks', { headers: fromThePage });
-    const byKey = await at('/v1/orgs/default/playbooks', { headers: { authorization: `Bearer ${key.key}` } });
-    const catalog = await at('/.well-known/api-catalog');
+    const byTheCookie = await browser.at('/v1/orgs/default/playbooks', { headers: { 'x-csrf': '1' } });
+    const elsewhere = await signing.at('/v1/orgs/acme/playbooks', bearer(agentToken));
+    const byKey = await signing.at('/v1/orgs/default/playbooks', bearer(key.key));
 
-    expect([ridden.status, created.status, unknown.status, elsewhere.status, byKey.status]).toEqual([
-      401, 201, 401, 403, 200,
+    expect([byTheAgent.status, byStudio.status, byTheCookie.status, elsewhere.status, byKey.status]).toEqual([
+      201, 201, 401, 403, 200,
     ]);
-    expect(await created.json()).toMatchObject({ id: 'alpha', created_by: { id: `person:${person}`, name: person } });
-    expect(await byKey.json()).toMatchObject({ playbooks: [{ id: 'alpha' }] });
-    expect(catalog.headers.get('link')).toBe(`<${address}/.well-known/api-catalog>; rel="api-catalog"`);
+    expect(await fieldsOf(byTheAgent)).toMatchObject({ created_by: { id: `person:${person}`, name: person } });
+    expect(await fieldsOf(byStudio)).toMatchObject({ created_by: { id: `person:${person}`, name: person } });
+  });
+
+  it('names itself as the authorization server of its protected resource, and the metadata in each 401', async () => {
+    const signing = await signingIn();
+
+    const metadata = await fieldsOf(await signing.at('/.well-known/oauth-protected-resource'));
+    const refused = await signing.at('/v1/orgs/default/playbooks', bearer('a-token-it-never-issued'));
+    const catalog = await signing.at('/.well-known/api-catalog');
+
+    expect(metadata).toMatchObject({ resource: publicUrl, authorization_servers: [publicUrl] });
+    expect([refused.status, refused.headers.get('www-authenticate')]).toEqual([
+      401,
+      expect.stringContaining(`resource_metadata="${publicUrl}/.well-known/oauth-protected-resource"`),
+    ]);
+    expect(catalog.headers.get('link')).toBe(`<${publicUrl}/.well-known/api-catalog>; rel="api-catalog"`);
   });
 });

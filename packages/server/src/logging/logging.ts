@@ -1,4 +1,10 @@
-import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identity';
+import {
+  defaultStudioOrigin,
+  studioLinkOf,
+  type AccessMode,
+  type SignInSettings,
+  type StudioSettings,
+} from '@on.auto/identity';
 import type { Incident } from '@on.auto/operations';
 import { Cause, Effect, Layer } from 'effect';
 
@@ -27,6 +33,7 @@ export interface AccessReport {
   readonly mode: AccessMode;
   readonly signIn: SignInSettings | undefined;
   readonly openIdConnect?: OpenIdConnectSettings | undefined;
+  readonly studio?: StudioSettings;
 }
 
 const localModeOn = Effect.logWarning(
@@ -61,20 +68,28 @@ function companySignInWords({ issuer, redirectUri, client }: OpenIdConnectSettin
   return client === undefined ? signedIn : `${signedIn} The redirect URI to register with it is ${redirectUri}`;
 }
 
-function companySignInNotice(settings: OpenIdConnectSettings): Effect.Effect<void> {
+function studioNotice(publicUrl: string, studio: StudioSettings = defaultStudio): Effect.Effect<void> {
+  const link = studioLinkOf(studio, { ownOrigin: publicUrl, openedFrom: 'terminal', installId: undefined });
+  return Effect.logInfo(`People open Studio at ${link}`).pipe(Effect.annotateLogs({ studio_link: link }));
+}
+
+const defaultStudio: StudioSettings = { origin: defaultStudioOrigin, served: false };
+
+function companySignInNotice(settings: OpenIdConnectSettings, studio: StudioSettings | undefined): Effect.Effect<void> {
   const { issuer, publicUrl, redirectUri } = settings;
   return Effect.logInfo(companySignInWords(settings)).pipe(
     Effect.annotateLogs({ public_url: publicUrl, oidc_issuer: issuer, redirect_uri: redirectUri }),
     Effect.andThen(requiredClaimNotice(settings)),
+    Effect.andThen(studioNotice(publicUrl, studio)),
   );
 }
 
-export function logAccessMode({ mode, signIn, openIdConnect }: AccessReport): Effect.Effect<void> {
+export function logAccessMode({ mode, signIn, openIdConnect, studio }: AccessReport): Effect.Effect<void> {
   if (mode === 'local') {
     return localModeOn;
   }
   if (openIdConnect !== undefined) {
-    return companySignInNotice(openIdConnect);
+    return companySignInNotice(openIdConnect, studio);
   }
   return mode === 'closed' ? closedNotice : signInNotice(signIn);
 }

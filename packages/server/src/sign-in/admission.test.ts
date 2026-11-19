@@ -4,7 +4,7 @@ import { makeAppRuntime } from '@on.auto/api';
 import type { PeopleRows, PersonSignedIn } from '@on.auto/openid-connect';
 import { Conflict, Ledger } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import { Effect, Layer } from 'effect';
+import { Effect, Function, Layer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { linesLoggedBy } from '../testing/records/logged-lines.ts';
@@ -25,11 +25,12 @@ const ada = '83f8bacd8d76fa75e99f5c9f61599419c6647d9aebe50b453a89da169899d6e1';
 const priya = '0c3de111680d66bea9b377080ec7d6784c7602c7bc2e4bfdd1b3ee489b0675ea';
 
 describe("the decision at sign-in, on the server's ledger", () => {
-  it('makes the first person the admin of the organization default and the next a viewer, each by themselves, and says when it awaits its first admin', async () => {
+  it('makes the first person the admin of the organization default and the next a viewer, each by themselves, and says when it awaits its first admin and who holds a role', async () => {
     const ledger = memoryLedger();
     const enrolling = await enrollingOver(ledger.layer);
 
     const before = await enrolling.firstAdminAwaited();
+    const heldBefore = await enrolling.holdsARole(priya);
     const answered = [await enrolling.enrolled(ada), await enrolling.enrolled(priya), await enrolling.enrolled(ada)];
     const recorded = await Effect.runPromise(
       ledger.service.load(rolesOfTheOrg, {
@@ -49,6 +50,7 @@ describe("the decision at sign-in, on the server's ledger", () => {
       { enrolled: 'member' },
       false,
     ]);
+    expect([heldBefore, await enrolling.holdsARole(priya)]).toEqual([false, true]);
     expect(recorded.state).toEqual([
       [ada, 'admin', 'bootstrap', `person:${ada}`],
       [priya, 'viewer', 'enrolment', `person:${priya}`],
@@ -78,13 +80,18 @@ function peopleKept(): { readonly rows: PeopleRows; readonly kept: readonly Pers
         return Promise.resolve();
       },
       listed: () => Promise.resolve([]),
+      found: () => Promise.resolve().then(Function.constUndefined),
       deleted: () => Promise.resolve(),
     },
   };
 }
 
 function enrollingAs(enrolment: Awaited<ReturnType<Enrolling['enrolled']>>, awaited = true): Enrolling {
-  return { enrolled: () => Promise.resolve(enrolment), firstAdminAwaited: () => Promise.resolve(awaited) };
+  return {
+    enrolled: () => Promise.resolve(enrolment),
+    holdsARole: () => Promise.resolve(true),
+    firstAdminAwaited: () => Promise.resolve(awaited),
+  };
 }
 
 const signedInWith = {
@@ -128,6 +135,7 @@ function enrollingNoted(): { readonly enrolling: Enrolling; readonly decided: re
         decided.push(person);
         return Promise.resolve({ enrolled: 'enrolment' });
       },
+      holdsARole: () => Promise.resolve(true),
       firstAdminAwaited: () => Promise.resolve(false),
     },
   };

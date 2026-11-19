@@ -7,6 +7,7 @@ import {
   identityServiceOf,
   issuerKeysAt,
   issuerKeysGiven,
+  type AccessMode,
   type ApiKeySource,
   type Authenticator,
   type IdentityService,
@@ -17,7 +18,7 @@ import type { RunningServer, ServerOptions } from '../server-options/server-opti
 import { readSettings, type Settings } from '../settings/settings.ts';
 import { readShippedSettings } from '../settings/shipped-settings.ts';
 import { companySignInOf, type CompanySignIn } from '../sign-in/company-client.ts';
-import { signedInApiOf, signInRoutesOf } from '../sign-in/company-sign-in.ts';
+import { signInServingOf } from '../sign-in/company-sign-in.ts';
 import { startTelemetry } from '../telemetry/start-telemetry.ts';
 import { started } from './server-start.ts';
 
@@ -26,19 +27,6 @@ function issuerKeysOf(keySet: Settings['identityKeySet']): IssuerKeySource {
     return issuerKeysGiven(keySet.keySet);
   }
   return keySet.from === 'url' ? issuerKeysAt(keySet.url) : discoveredIssuerKeys;
-}
-
-function noTokenOfItsOwn(publicUrl: string): IdentityService {
-  return {
-    resource: { publicUrl, authorizationServers: [] },
-    personOf: () => Promise.resolve({ because: undefined }),
-  };
-}
-
-function companySignInAccess(settings: Settings, publicUrl: string, apiKeySource: ApiKeySource): Authenticator {
-  const identityService = noTokenOfItsOwn(publicUrl);
-  const { mode, authenticate } = authenticatorFor({ ...settings, apiKeySource, identityService });
-  return { mode, resource: undefined, authenticate };
 }
 
 async function identityServiceAccess(settings: Settings, apiKeySource: ApiKeySource): Promise<Authenticator> {
@@ -55,18 +43,23 @@ async function identityServiceAccess(settings: Settings, apiKeySource: ApiKeySou
 }
 
 interface Admitting {
-  readonly authenticator: Authenticator;
+  readonly mode: AccessMode;
+  readonly answering: (identityService: IdentityService | undefined) => Authenticator;
   readonly companySignIn: CompanySignIn | undefined;
 }
+
+const signingPeopleIn: AccessMode = 'credentials';
 
 async function admittingBy(settings: Settings): Promise<Admitting> {
   const apiKeySource = configuredApiKeys(settings.apiKeys);
   const { openIdConnect } = settings;
   if (openIdConnect === undefined) {
-    return { authenticator: await identityServiceAccess(settings, apiKeySource), companySignIn: undefined };
+    const authenticator = await identityServiceAccess(settings, apiKeySource);
+    return { mode: authenticator.mode, answering: () => authenticator, companySignIn: undefined };
   }
   return {
-    authenticator: companySignInAccess(settings, openIdConnect.publicUrl, apiKeySource),
+    mode: signingPeopleIn,
+    answering: (identityService) => authenticatorFor({ ...settings, apiKeySource, identityService }),
     companySignIn: await companySignInOf(openIdConnect),
   };
 }
@@ -77,12 +70,11 @@ export async function startServer<R>(environment: Environment, options: ServerOp
     readPageStyle(options.shippedFiles),
   ]);
   const settings = readSettings(environment, shipped);
-  const { authenticator, companySignIn } = await admittingBy(settings);
+  const { mode, answering, companySignIn } = await admittingBy(settings);
   const telemetry = startTelemetry(settings.telemetry);
   try {
-    const signInRoutes = signInRoutesOf(companySignIn);
-    const signedInApi = signedInApiOf(companySignIn);
-    return await started({ settings, authenticator, signInRoutes, signedInApi, telemetry, options, pageStyle });
+    const signInServing = signInServingOf(companySignIn);
+    return await started({ settings, mode, answering, signInServing, telemetry, options, pageStyle });
   } catch (failure) {
     await telemetry.shutdown();
     throw failure;

@@ -74,7 +74,15 @@ With sign-in on, the server checks the identity service before it accepts a requ
 
 An org's id is its organization's id: a person who signs in to the organization `acme` acts in the org `acme`. A person who signs in with no organization of their own acts in an org of their own, whose id is the subject of their token, and in no other. The runtime keeps no list of people or orgs, since each token names its org, or, naming none, its subject does.
 
-A company whose people sign in through its own identity provider connects that provider to the identity service in Studio, not in the runtime. The runtime trusts one issuer, whichever provider a person used.
+The runtime trusts one issuer, whichever provider a person used.
+
+### Single sign-on (SSO)
+
+Members of your organization can sign in with their company accounts, through your company's identity provider, with no Auto account. Set `OIDC_ISSUER` to the provider's issuer, beside an `https` `PUBLIC_URL`. Register Auto with the provider using the redirect URI the server prints at start, `{PUBLIC_URL}/auth/oidc/callback`, and set `OIDC_CLIENT_ID` with `OIDC_CLIENT_SECRET` or `OIDC_CLIENT_SECRET_FILE`. Where the provider supports dynamic client registration, leave those out and the runtime registers itself. To allow only members with a given claim, set `OIDC_REQUIRED_CLAIM` to `claim=value`.
+
+The runtime is then an OAuth 2.1 authorization server at `PUBLIC_URL`. It sends members to your provider to sign in. A session ends after 7 days without use, and after 30 days at most. Members open Studio at the link the server prints at start, which names your `PUBLIC_URL`. The first person to sign in becomes the organization's admin, and everyone after joins as a viewer. In this release the runtime records these roles and does not yet read them: every signed-in person is taken to be an Editor ([The roles](#the-roles)).
+
+A member's agent connects the same way. The runtime asks the member, on a page of its own, whether to allow the agent, and the agent then acts as that member. An agent's access lasts 90 days at most before the member signs in again.
 
 ## What signed-in people can do
 

@@ -37,6 +37,12 @@ export interface PendingSignIn extends PendingChecks {
   readonly clientId?: string;
 }
 
+type Prompt = 'select_account';
+
+export interface SignInAsked {
+  readonly prompt?: Prompt;
+}
+
 export interface StartedSignIn {
   readonly authorizationUrl: string;
   readonly pending: PendingSignIn;
@@ -60,7 +66,7 @@ export type FinishedSignIn =
 export interface RelyingParty {
   readonly issuer: string;
   readonly redirectUri: string;
-  readonly signInStarted: () => Promise<StartedSignIn>;
+  readonly signInStarted: (asked?: SignInAsked) => Promise<StartedSignIn>;
   readonly signInFinished: (callbackQuery: string, pending: PendingSignIn) => Promise<FinishedSignIn>;
 }
 
@@ -120,6 +126,7 @@ function authorizationParametersOf(
   { redirectUri, scopes }: SignInSettings,
   { state, nonce }: PendingSignIn,
   codeChallenge: string,
+  asked: SignInAsked | undefined,
 ): Readonly<Record<string, string>> {
   return {
     redirect_uri: redirectUri,
@@ -128,6 +135,7 @@ function authorizationParametersOf(
     code_challenge_method: 'S256',
     state,
     nonce,
+    ...(asked?.prompt === undefined ? {} : { prompt: asked.prompt }),
   };
 }
 
@@ -183,12 +191,12 @@ export function relyingPartyAs(settings: SignInSettings, signingInAs: SigningInA
   return {
     issuer,
     redirectUri,
-    signInStarted: async () => {
+    signInStarted: async (asked) => {
       const starting = await signingInAs.starting();
       const pending = { ...freshPendingSignIn(), ...notedBy(starting) };
       const challenge = await calculatePKCECodeChallenge(pending.codeVerifier);
       const authorizationUrl = starting.signIns.authorizationUrlOf(
-        authorizationParametersOf(settings, pending, challenge),
+        authorizationParametersOf(settings, pending, challenge, asked),
       );
       return { authorizationUrl, pending };
     },

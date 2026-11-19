@@ -211,6 +211,16 @@ describe('what the page at the root of the server loads', () => {
     expect(read).toEqual(before);
   });
 
+  it('lets a page of the server post its forms where it names, and nowhere else', async () => {
+    const style = await readPageStyle(apiFilesOnDisk);
+
+    const policy = style.formHeaders("'self' https://agent.example")['content-security-policy'];
+
+    expect(policy?.split('; ').filter((directive) => directive.startsWith('form-action'))).toEqual([
+      "form-action 'self' https://agent.example",
+    ]);
+  });
+
   it('cannot be styled when a typeface is not shipped, so the read refuses, naming the file', async () => {
     await expect(readPageStyle(shippedFilesInMemory({}))).rejects.toThrow(/No file is shipped at .*\.woff2$/u);
   });

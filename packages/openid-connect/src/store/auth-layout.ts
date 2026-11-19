@@ -3,7 +3,7 @@ import { Data, Schema } from 'effect';
 
 import type { AuthDatabase } from './auth-database.ts';
 
-export const authLayout = 2;
+export const authLayout = 3;
 
 export const authTablePrefix = 'auth_';
 
@@ -16,7 +16,18 @@ export interface AuthLayoutStep {
   readonly statements: readonly Statement[];
 }
 
-export const authLayoutSteps: readonly AuthLayoutStep[] = [{ layout: 2, statements: [] }];
+export const sessionsOfAnEarlierLayout = 'auth_sessions';
+
+export const authLayoutSteps: readonly AuthLayoutStep[] = [
+  { layout: 2, statements: [] },
+  {
+    layout: 3,
+    statements: [
+      statement`DROP INDEX IF EXISTS auth_sessions_expires_at`,
+      statement`DROP TABLE IF EXISTS auth_sessions`,
+    ],
+  },
+];
 
 export interface AuthLayoutCarrying {
   readonly kept: number;

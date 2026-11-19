@@ -1,13 +1,4 @@
-import {
-  createApiHandler,
-  makeAppRuntime,
-  type ApiHandler,
-  type ApiOptions,
-  type AppRuntime,
-  type PageStyle,
-  type RegisterRoutes,
-} from '@on.auto/api';
-import type { Authenticator } from '@on.auto/identity';
+import { createApiHandler, makeAppRuntime, type ApiHandler, type AppRuntime, type PageStyle } from '@on.auto/api';
 import { Data, Effect, Function, Layer } from 'effect';
 
 import {
@@ -31,7 +22,8 @@ import type {
 import type { Settings } from '../settings/settings.ts';
 import { servedStudioOf } from '../studio/served-studio.ts';
 import type { Telemetry } from '../telemetry/start-telemetry.ts';
-import { createHttpServer, listen, ownOriginOf, tcpPort } from './http-server.ts';
+import { beside, createHttpServer, listen, ownOriginOf, tcpPort } from './http-server.ts';
+import { answeringBy, signInServedOn, type SignInServing, type SigningInAtStart } from './served-sign-in.ts';
 import { shutDown } from './shutdown.ts';
 
 class StartupError extends Data.TaggedError('StartupError')<{
@@ -39,18 +31,8 @@ class StartupError extends Data.TaggedError('StartupError')<{
   readonly cause: unknown;
 }> {}
 
-type SignInRoutes = (
-  logged: (log: Effect.Effect<void>) => void,
-  served?: Pick<Served, 'sessionRows' | 'peopleRows' | 'enrolling' | 'signInClientRegistrations'>,
-) => Promise<readonly RegisterRoutes[]>;
-
-type SignedInApi = (sessionRows?: Served['sessionRows']) => Pick<ApiOptions, 'sessions' | 'publicUrl'>;
-
-interface Starting<R> {
+interface Starting<R> extends SigningInAtStart {
   readonly settings: Settings;
-  readonly authenticator: Authenticator;
-  readonly signInRoutes: SignInRoutes;
-  readonly signedInApi: SignedInApi;
   readonly telemetry: Telemetry;
   readonly options: ServerOptions<R>;
   readonly pageStyle: PageStyle;
@@ -100,9 +82,7 @@ function telemetryServing(telemetry: Telemetry, local: LocalServing | undefined)
 
 interface Answering<R> {
   readonly settings: Settings;
-  readonly authenticator: Authenticator;
-  readonly signInRoutes: readonly RegisterRoutes[];
-  readonly signedInApi: SignedInApi;
+  readonly authenticator: ReturnType<typeof answeringBy>;
   readonly served: Served;
   readonly runtime: AppRuntime<R>;
   readonly telemetry: Telemetry;
@@ -113,8 +93,7 @@ interface Answering<R> {
 
 function apiOf<R>(answering: Answering<R>): ApiHandler {
   const { settings, authenticator, served, runtime, telemetry, local, startPing, pageStyle } = answering;
-  const { licenseNotice } = served;
-  const routes = [...served.routes, ...answering.signInRoutes];
+  const { licenseNotice, routes } = served;
   return createApiHandler({
     allowedOrigins: settings.allowedOrigins,
     studio: servedStudioOf(settings, {
@@ -123,7 +102,6 @@ function apiOf<R>(answering: Answering<R>): ApiHandler {
       },
     }),
     authenticator,
-    ...answering.signedInApi(served.sessionRows),
     routes,
     pageStyle,
     reportIncident: (id, error, requestId, call) => {
@@ -143,15 +121,12 @@ interface Serving<R> {
 }
 
 async function servedSigningIn<R>(
-  { signInRoutes }: Pick<Starting<R>, 'signInRoutes'>,
+  starting: SigningInAtStart,
   { composed, runtime, ownOrigin }: Serving<R>,
-): Promise<{ readonly served: Served; readonly signInRoutes: readonly RegisterRoutes[] }> {
+): Promise<{ readonly served: Served; readonly signIn: SignInServing | undefined }> {
   const served = await servedOf(composed, runtime, ownOrigin);
   try {
-    const routes = await signInRoutes((log) => {
-      void runtime.run(log);
-    }, served);
-    return { served, signInRoutes: routes };
+    return { served, signIn: await signInServedOn(starting, runtime, served) };
   } catch (failure) {
     await served.stopWork();
     await runtime.dispose();
@@ -173,20 +148,20 @@ function composedFor<R>(
 }
 
 export async function started<R>(starting: Starting<R>): Promise<RunningServer> {
-  const { settings, authenticator, telemetry, options } = starting;
-  const local = options.localServingIn?.(authenticator.mode);
+  const { settings, mode, telemetry, options } = starting;
+  const local = options.localServingIn?.(mode);
   const composed = await composedFor(starting, local);
   const runtime = await startRuntime(composed.services, settings, telemetry.layer);
-  await runtime.run(logAccessMode({ ...settings, mode: authenticator.mode }));
-  await runtime.run(logServedStudio({ ...settings, mode: authenticator.mode }));
+  await runtime.run(logAccessMode({ ...settings, mode }));
+  await runtime.run(logServedStudio({ ...settings, mode }));
   await runtime.run(logConfigFile(settings.configFile));
   await runtime.run(logTelemetry(settings.telemetry));
   const listening = { port: settings.port };
   const ownOrigin = (): string => settings.publicUrl ?? ownOriginOf(settings.host, listening.port);
-  const { served, signInRoutes } = await servedSigningIn(starting, { composed, runtime, ownOrigin });
+  const { served, signIn } = await servedSigningIn(starting, { composed, runtime, ownOrigin });
   const startPing = options.usagePing?.(settings) ?? noStartPing;
-  const api = apiOf({ ...starting, signInRoutes, served, runtime, local, startPing });
-  const server = createHttpServer(api.listener);
+  const api = apiOf({ ...starting, authenticator: answeringBy(starting, signIn), served, runtime, local, startPing });
+  const server = createHttpServer(signIn === undefined ? api.listener : beside(signIn, api.listener));
   try {
     await listen(server, settings.port, settings.host);
   } catch (error) {
@@ -201,7 +176,7 @@ export async function started<R>(starting: Starting<R>): Promise<RunningServer> 
   return {
     port: listening.port,
     publicUrl: settings.publicUrl,
-    mode: authenticator.mode,
+    mode,
     signIn: settings.signIn,
     studio: settings.studio,
     install,

@@ -11,5 +11,6 @@ export type PersonSignedIn = Omit<PersonRow, 'joinedAt'>;
 export interface PeopleRows {
   readonly kept: (signedIn: PersonSignedIn) => Promise<void>;
   readonly listed: () => Promise<readonly PersonRow[]>;
+  readonly found: (person: string) => Promise<PersonRow | undefined>;
   readonly deleted: (person: string) => Promise<void>;
 }

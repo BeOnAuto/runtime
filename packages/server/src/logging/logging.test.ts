@@ -116,11 +116,18 @@ const companySignIn = {
 };
 
 describe("the logs of a sign-in through the company's identity provider", () => {
-  it('name at start the provider and the redirect URI to register at it, and never the client secret', async () => {
-    const lines = await linesLoggedBy(logAccessMode({ mode: 'credentials', signIn, openIdConnect: companySignIn }));
+  it('name at start the provider, the redirect URI to register at it and the link to Studio, and never the client secret', async () => {
+    const studio = { origin: 'https://studio.example.com', served: false };
 
-    expect(lines).toHaveLength(1);
+    const lines = await linesLoggedBy(
+      logAccessMode({ mode: 'credentials', signIn, openIdConnect: companySignIn, studio }),
+    );
+
+    expect(lines).toHaveLength(2);
     expect(lines[0]).toContain('"level":"INFO"');
+    expect(lines[1]).toContain(
+      '"annotations":{"studio_link":"https://studio.example.com/?server=https%3A%2F%2Fauto.example.com&src=terminal"}',
+    );
     expect(lines[0]).toContain(
       '"annotations":{"public_url":"https://auto.example.com","oidc_issuer":"https://login.example.com/acme","redirect_uri":"https://auto.example.com/auth/oidc/callback"}',
     );
@@ -134,7 +141,8 @@ describe("the logs of a sign-in through the company's identity provider", () => 
       logAccessMode({ mode: 'credentials', signIn, openIdConnect: { ...companySignIn, requiredClaim } }),
     );
 
-    expect(lines.map((line) => line.includes('"level":"INFO"'))).toEqual([true, true]);
+    expect(lines.map((line) => line.includes('"level":"INFO"'))).toEqual([true, true, true]);
+    expect(lines[2]).toContain('https://studio.on.auto/?server=');
     expect(lines[1]).toContain(
       '"annotations":{"oidc_issuer":"https://login.example.com/acme","oidc_required_claim":"tenant"}',
     );

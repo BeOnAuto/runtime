@@ -1,4 +1,10 @@
-import { awaitsItsFirstAdmin, enrolledAtSignIn, roleAssignmentDecider, type Enrolled } from '@on.auto/access-control';
+import {
+  awaitsItsFirstAdmin,
+  enrolledAtSignIn,
+  roleAssignmentDecider,
+  rolesHeldBy,
+  type Enrolled,
+} from '@on.auto/access-control';
 import { roleAssignmentsStreamOf } from '@on.auto/access-control/role-assignment-facts';
 import type { AppRuntime } from '@on.auto/api';
 import {
@@ -31,6 +37,7 @@ type Enrolment = { readonly enrolled: Enrolled } | { readonly failed: string };
 
 export interface Enrolling {
   readonly enrolled: (person: string) => Promise<Enrolment>;
+  readonly holdsARole: (person: string) => Promise<boolean>;
   readonly firstAdminAwaited: () => Promise<boolean>;
 }
 
@@ -58,13 +65,18 @@ const enrolledNow = Effect.fnUntraced(function* (person: string) {
   );
 });
 
-const firstAdminAwaitedNow = Effect.flatMap(Effect.service(Ledger), (ledger) =>
-  Effect.map(ledger.load(rolesOfTheOrg, roleAssignmentDecider), ({ state }) => awaitsItsFirstAdmin(state)),
-);
+const rolesNow = Effect.flatMap(Effect.service(Ledger), (ledger) => ledger.load(rolesOfTheOrg, roleAssignmentDecider));
+
+const firstAdminAwaitedNow = Effect.map(rolesNow, ({ state }) => awaitsItsFirstAdmin(state));
+
+function holdsARoleNow(person: string) {
+  return Effect.map(rolesNow, ({ state }) => rolesHeldBy(state, { type: 'person', id: person }).length > 0);
+}
 
 export function enrollingIn(runtime: AppRuntime<Ledger>): Enrolling {
   return {
     enrolled: (person) => Effect.runPromise(inRuntime(runtime, enrolledNow(person))),
+    holdsARole: (person) => Effect.runPromise(inRuntime(runtime, holdsARoleNow(person))),
     firstAdminAwaited: () => Effect.runPromise(inRuntime(runtime, firstAdminAwaitedNow)),
   };
 }

@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./authorization-server": "./src/authorization-server/authorization-server.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {
@@ -19,9 +20,11 @@
     "@on.auto/phrasing": "workspace:*",
     "effect": "catalog:",
     "jose": "catalog:",
+    "oidc-provider": "9.14.0",
     "openid-client": "6.8.9"
   },
   "devDependencies": {
+    "@types/oidc-provider": "9.13.1",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   }

@@ -19,7 +19,6 @@ export function middlewareFor({
   allowedOrigins,
   studio,
   authenticator,
-  sessions,
   publicUrl,
   requests,
   runtimeControl,
@@ -45,7 +44,7 @@ export function middlewareFor({
     ...requestIdAndSecurityHeadersFor(studio),
     ...[validateOrigin(pages, addressing), ...hostValidation].map((middleware) => exceptOn(isPublic, middleware)),
     ...corsFor(pages, addressing),
-    exceptOn(needingNoCallerOf(isPublic, studio), authenticate(authenticator, sessions)),
+    exceptOn(needingNoCallerOf(isPublic, studio), authenticate(authenticator)),
   ];
   return { handlers, publicPaths };
 }

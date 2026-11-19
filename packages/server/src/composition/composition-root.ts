@@ -87,7 +87,7 @@ async function signInAndStoresOpened(
   const { clientRegistrationsWith, ...signIn } = await signInOpened(runtime, settings);
   const opened = await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
   const signInClientRegistrations = clientRegistrationsWith(opened.stores.secrets);
-  return { ...opened, signIn: { ...signIn, signInClientRegistrations } };
+  return { ...opened, signIn: { ...signIn, signInClientRegistrations, signingSecrets: opened.stores.secrets } };
 }
 
 function receivingStoresOf<Stores>({ receiving, providers }: Composing[0], stores: Stores) {

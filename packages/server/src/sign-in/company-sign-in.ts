@@ -1,274 +1,59 @@
-import {
-  problemOf,
-  problemResponse,
-  sessionCookie,
-  type ApiOptions,
-  type CookieSessions,
-  type RegisterRoutes,
-  type RouteHandler,
-} from '@on.auto/api';
-import { signedInPersonOf, type Principal } from '@on.auto/identity';
-import {
-  ClientRegistrationError,
-  defaultOrg,
-  mostLifetimeMs,
-  personIdOf,
-  sessionsOf,
-  type FinishedSignIn,
-  type PeopleRows,
-  type SessionRows,
-  type Sessions,
-  type SignedInPerson,
-} from '@on.auto/openid-connect';
-import { allPermissions } from '@on.auto/operations';
-import type { Effect } from 'effect';
-import { deleteCookie, generateCookie, getCookie, setCookie } from 'hono/cookie';
+import { middlewareBesideTheApi, type PageStyle } from '@on.auto/api';
+import { signInScopes, type IdentityService, type PageSettings } from '@on.auto/identity';
+import type { AuthStore } from '@on.auto/openid-connect';
+import type { AuthorizationServer, StudioClient } from '@on.auto/openid-connect/authorization-server';
+import type { SecretStore } from '@on.auto/secrets';
 
-import { signInReportTo, type SignInReport } from '../logging/sign-in-logging.ts';
 import { callbackPath } from '../settings/openid-connect-settings.ts';
-import {
-  admittedAfter,
-  firstSignInNoticed,
-  type Admitted,
-  type Admitting,
-  type Enrolling,
-  type RefusedForTheClaim,
-} from './admission.ts';
-import {
-  asItsClient,
-  issuerOf,
-  type AsItsClient,
-  type ClientsServed,
-  type CompanySignIn,
-  type SignInAt,
-} from './company-client.ts';
+import type { CompanySignIn } from './company-client.ts';
+import { interactionSignInOf, keptIn, signingInOf, type Logged, type SignInStore } from './interaction-sign-in.ts';
+import { claimsIn, identityServiceOf, keptSecretsOf } from './issued-tokens.ts';
+import { signInPagesOf } from './sign-in-pages.ts';
 
-interface SigningIn extends SignInAt, Admitting, AsItsClient {
-  readonly sessions: Sessions;
+export interface SignInServing {
+  readonly identityService: IdentityService;
+  readonly answers: AuthorizationServer['answers'];
+  readonly listener: AuthorizationServer['listener'];
 }
 
-const signInPath = '/auth/oidc';
-
-const signOutPath = '/auth/sign-out';
-
-const pendingSignInCookie = 'sign-in';
-
-const pendingSignInSeconds = 600;
-
-const hostOnly = { prefix: 'host', path: '/', secure: true, httpOnly: true } as const;
-
-const pendingSignInAttributes = { ...hostOnly, sameSite: 'Lax' } as const;
-
-const sessionAttributes = { ...hostOnly, sameSite: 'Strict' } as const;
-
-const notSignedIn = problemOf(
-  'bad_request',
-  'Couldn’t sign you in. Try again, or ask whoever runs Auto at your company.',
-);
-
-const noAccess = problemOf(
-  'forbidden',
-  'You don’t have access to this organization. Ask an admin of the organization to give you a role.',
-);
-
-const notThatAccount = problemOf(
-  'forbidden',
-  'You can’t sign in here with that account. Try again and choose a different account or organization, or ask whoever runs Auto at your company.',
-);
-
-const anotherOrigin = problemOf('origin_not_allowed', 'The origin of this request is not allowed');
-
-type NotSignedIn = FinishedSignIn | { readonly failed: string } | undefined;
-
-type ApiContext = Parameters<RouteHandler>[0];
-
-const pendingSignInEnded = generateCookie(pendingSignInCookie, '', { ...pendingSignInAttributes, maxAge: 0 });
-
-function seeOther(c: ApiContext, location: string, status: 302 | 303): Response {
-  c.header('cache-control', 'no-store');
-  return c.redirect(location, status);
+export interface SignInServed extends SignInStore, Partial<Pick<AuthStore, 'providerRows' | 'signingKeyRows'>> {
+  readonly signingSecrets?: Pick<SecretStore, 'keep' | 'read' | 'forget'>;
 }
 
-function startedBy({ relyingParty }: SigningIn) {
-  return relyingParty.signInStarted().catch((failure: unknown) => {
-    if (failure instanceof ClientRegistrationError) {
-      return failure;
-    }
-    throw failure;
-  });
+export interface SignInServingParts {
+  readonly logged: Logged;
+  readonly served: SignInServed;
+  readonly pages: PageSettings;
+  readonly pageStyle: PageStyle;
+  readonly studio: StudioClient;
 }
 
-function signInStarted(signIn: SigningIn, report: SignInReport): RouteHandler {
-  return async (c) => {
-    const started = await startedBy(signIn);
-    if (started instanceof ClientRegistrationError) {
-      report.notRegistered(started.message);
-      return problemResponse(notSignedIn);
-    }
-    const value = signIn.pending.valueOf(started.pending);
-    setCookie(c, pendingSignInCookie, value, { ...pendingSignInAttributes, maxAge: pendingSignInSeconds });
-    return seeOther(c, started.authorizationUrl, 302);
-  };
-}
+export type SignInServingOf = (parts: SignInServingParts) => Promise<SignInServing>;
 
-function reported(finished: NotSignedIn, report: SignInReport): void {
-  if (finished !== undefined && 'refusedByTheProvider' in finished) {
-    report.refused(finished.refusedByTheProvider);
+export function signInServingOf(signIn?: CompanySignIn): SignInServingOf | undefined {
+  if (signIn === undefined) {
+    return undefined;
   }
-  if (finished !== undefined && 'failed' in finished) {
-    report.failed(finished.failed);
-  }
-}
-
-async function sessionEndedIn(c: ApiContext, { sessions }: SigningIn): Promise<void> {
-  const identifier = getCookie(c, sessionCookie, 'host');
-  if (identifier !== undefined) {
-    await sessions.ended(identifier);
-  }
-}
-
-function finishedIn(c: ApiContext, { relyingParty, pending: cookie }: SigningIn): Promise<FinishedSignIn> | undefined {
-  const pending = cookie.pendingIn(getCookie(c, pendingSignInCookie, 'host'));
-  return pending === undefined ? undefined : relyingParty.signInFinished(new URL(c.req.url).search, pending);
-}
-
-function notSignedInAfter(finished: NotSignedIn, report: SignInReport): Response {
-  reported(finished, report);
-  return problemResponse(notSignedIn, { 'set-cookie': pendingSignInEnded });
-}
-
-async function refusedAccess(c: ApiContext, signIn: SigningIn, problem = noAccess): Promise<Response> {
-  await sessionEndedIn(c, signIn);
-  return problemResponse(problem, { 'set-cookie': pendingSignInEnded });
-}
-
-async function signedInAs(c: ApiContext, signIn: SigningIn, person: SignedInPerson): Promise<Response> {
-  deleteCookie(c, pendingSignInCookie, pendingSignInAttributes);
-  await sessionEndedIn(c, signIn);
-  const identifier = await signIn.sessions.begun(person);
-  setCookie(c, sessionCookie, identifier, { ...sessionAttributes, maxAge: mostLifetimeMs / 1000 });
-  return seeOther(c, '/', 303);
-}
-
-interface Answering {
-  readonly c: ApiContext;
-  readonly signIn: SigningIn;
-  readonly admitted: Admitted;
-  readonly report: SignInReport;
-}
-
-const answeredAs: Readonly<Record<Admitted['enrolled'], (answering: Answering) => Promise<Response>>> = {
-  bootstrap: ({ c, signIn, admitted, report }) => {
-    report.firstAdmin(admitted.person);
-    return signedInAs(c, signIn, admitted.signedIn);
-  },
-  enrolment: ({ c, signIn, admitted }) => signedInAs(c, signIn, admitted.signedIn),
-  member: ({ c, signIn, admitted }) => signedInAs(c, signIn, admitted.signedIn),
-  removed: ({ c, signIn }) => refusedAccess(c, signIn),
-};
-
-async function admittedIn(c: ApiContext, signIn: SigningIn): Promise<Admitted | RefusedForTheClaim | NotSignedIn> {
-  const finished = await finishedIn(c, signIn);
-  return finished !== undefined && 'signedIn' in finished ? admittedAfter(signIn, finished, Date.now()) : finished;
-}
-
-function refusedForTheClaim(c: ApiContext, signIn: SigningIn, claim: string, report: SignInReport): Promise<Response> {
-  report.refusedForTheClaim(claim);
-  return refusedAccess(c, signIn, notThatAccount);
-}
-
-function signInFinished(signIn: SigningIn, report: SignInReport): RouteHandler {
-  return async (c) => {
-    const admitted = await admittedIn(c, signIn);
-    if (admitted !== undefined && 'refusedForTheClaim' in admitted) {
-      return refusedForTheClaim(c, signIn, admitted.refusedForTheClaim, report);
-    }
-    return admitted !== undefined && 'enrolled' in admitted
-      ? answeredAs[admitted.enrolled]({ c, signIn, admitted, report })
-      : notSignedInAfter(admitted, report);
-  };
-}
-
-function signedOut(signIn: SigningIn): RouteHandler {
-  const ownOrigin = new URL(signIn.publicUrl).origin;
-  return async (c) => {
-    if (c.req.header('origin') !== ownOrigin) {
-      return problemResponse(anotherOrigin);
-    }
-    await sessionEndedIn(c, signIn);
-    deleteCookie(c, sessionCookie, sessionAttributes);
-    return seeOther(c, '/', 303);
-  };
-}
-
-function companySignInRoutes(signIn: SigningIn, report: SignInReport): RegisterRoutes {
-  return (routes) => {
-    routes.addPublic('GET', signInPath, signInStarted(signIn, report));
-    routes.addPublic('GET', callbackPath, signInFinished(signIn, report));
-    routes.addPublic('POST', signOutPath, signedOut(signIn));
-  };
-}
-
-function keptIn<Kept>(kept?: Kept): Kept {
-  if (kept === undefined) {
-    throw new Error(
-      "A company sign-in keeps its sessions and its people in the sign-in's store, and decides a person's role at the ledger, which this server's composition does not open",
+  return async (parts) => {
+    const signingIn = await signingInOf(signIn, parts.logged, parts.served);
+    const { authorizationServerOf, signingKeyOf } = await import('@on.auto/openid-connect/authorization-server');
+    const { served, pages, pageStyle, studio } = parts;
+    const server = authorizationServerOf(
+      { issuer: signIn.publicUrl, studio, resourceScopes: signInScopes },
+      {
+        rows: keptIn(served.providerRows),
+        signingKey: await signingKeyOf(keptIn(served.signingKeyRows), keptSecretsOf(keptIn(served.signingSecrets))),
+        claimsOf: claimsIn(signingIn.people, signingIn.enrolling),
+        middleware: middlewareBesideTheApi({ ...pages, publicUrl: signIn.publicUrl }),
+        signIn: interactionSignInOf(signingIn),
+        pages: signInPagesOf(pageStyle),
+        signInCallbackPath: callbackPath,
+      },
     );
-  }
-  return kept;
-}
-
-interface SignInServed {
-  readonly sessionRows?: SessionRows;
-  readonly peopleRows?: PeopleRows;
-  readonly enrolling?: Enrolling;
-  readonly signInClientRegistrations?: ReturnType<ClientsServed['registrations']>;
-}
-
-function principalOfThe(person: SignedInPerson): Principal {
-  const id = personIdOf(person);
-  return signedInPersonOf({ subject: id, name: id, org: defaultOrg, permissions: allPermissions });
-}
-
-function cookieSessionsOf(sessions: Sessions): CookieSessions {
-  return {
-    principalOf: async (identifier) => {
-      const person = await sessions.personOf(identifier);
-      return person === undefined ? person : principalOfThe(person);
-    },
-  };
-}
-
-export function signedInApiOf(
-  signIn: CompanySignIn | undefined,
-): (sessionRows?: SessionRows) => Pick<ApiOptions, 'sessions' | 'publicUrl'> {
-  if (signIn === undefined) {
-    return () => ({});
-  }
-  return (sessionRows) => ({
-    sessions: cookieSessionsOf(sessionsOf(keptIn(sessionRows))),
-    publicUrl: signIn.publicUrl,
-  });
-}
-
-export function signInRoutesOf(
-  signIn: CompanySignIn | undefined,
-): (logged: (log: Effect.Effect<void>) => void, served?: SignInServed) => Promise<readonly RegisterRoutes[]> {
-  if (signIn === undefined) {
-    return () => Promise.resolve([]);
-  }
-  return async (logged, { sessionRows, peopleRows, enrolling, signInClientRegistrations } = {}) => {
-    const report = signInReportTo(logged, issuerOf(signIn));
-    const { publicUrl, requiredClaim } = signIn;
-    const signingIn: SigningIn = {
-      publicUrl,
-      requiredClaim,
-      sessions: sessionsOf(keptIn(sessionRows)),
-      people: keptIn(peopleRows),
-      enrolling: keptIn(enrolling),
-      ...(await asItsClient(signIn, { registrations: () => keptIn(signInClientRegistrations), report })),
+    return {
+      identityService: identityServiceOf(signIn.publicUrl, server.accessTokenOf),
+      answers: server.answers,
+      listener: server.listener,
     };
-    logged(firstSignInNoticed(signingIn.enrolling));
-    return [companySignInRoutes(signingIn, report)];
   };
 }

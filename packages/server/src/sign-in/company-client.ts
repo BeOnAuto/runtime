@@ -15,7 +15,7 @@ import { pendingCookieOf, type PendingCookie } from './pending-sign-in.ts';
 import { registeredClientsOf } from './registered-clients.ts';
 import { refusedAtStart } from './registration-refusals.ts';
 
-export interface SignInAt {
+interface SignInAt {
   readonly publicUrl: string;
   readonly requiredClaim: RequiredClaim | undefined;
 }
