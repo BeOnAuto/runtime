@@ -4,6 +4,7 @@ import { Effect, ManagedRuntime, type Layer, type Result } from 'effect';
 
 import { LedgerConnection, type ConnectionPorts } from '../connection/ledger-connection.ts';
 import { LedgerChores, type ChorePorts } from '../content/content-sweep.ts';
+import type { CatchUpState } from '../event-store.ts';
 import type { SQLiteLedgerFile } from '../secrets/sqlite-ledger-file.ts';
 import type { ReceivedWebhooks } from '../webhooks/received-webhooks.ts';
 
@@ -21,6 +22,8 @@ export interface OpenChores extends OpenLedger {
   readonly eraseExpired: ChorePorts['eraseExpired'];
   readonly heldContentFound: ChorePorts['heldContentFound'];
   readonly waitsEnded: () => Promise<void>;
+  readonly catchUpSlice: () => Promise<CatchUpState>;
+  readonly catchUpState: () => Promise<CatchUpState>;
 }
 
 export async function openLedgerWith(layer: Layer.Layer<Ledger>): Promise<OpenLedger> {
@@ -46,6 +49,8 @@ export async function openChoresWith(layer: Layer.Layer<Ledger | LedgerChores>):
     eraseExpired: chores.eraseExpired,
     heldContentFound: chores.heldContentFound,
     waitsEnded: () => runtime.runPromise(chores.endWaits),
+    catchUpSlice: () => runtime.runPromise(chores.catchUpSlice),
+    catchUpState: () => runtime.runPromise(chores.catchUpState),
     dispose: () => runtime.dispose(),
   };
 }

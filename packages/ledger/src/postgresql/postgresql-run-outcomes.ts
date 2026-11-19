@@ -7,7 +7,8 @@ import type { RunOutcomesStore, StatementExecutor } from '../event-store.ts';
 import { groupFields, groupOf } from '../outcomes/run-outcome-groups.ts';
 import { runOutcomesTable } from '../outcomes/run-outcome-projection.ts';
 import { keptOutcomesOnly } from '../outcomes/run-outcomes-reader.ts';
-import { binding, type Bind, type Query } from '../postgresql-reads/recorded-parts.ts';
+import { binding, formattedFor, type Bind, type Query } from '../postgresql-reads/recorded-parts.ts';
+import { servedOnceCaughtUp, type TablesCatchingUp } from '../projection-catch-up/catching-up.ts';
 
 const GroupRows = Schema.Array(Schema.Struct({ ...groupFields, durations: Schema.Array(Schema.Number) }));
 
@@ -40,8 +41,10 @@ export function postgresqlRunOutcomesReader(query: Query): RunOutcomesStore['rea
 export function postgresqlRunOutcomesOf(
   runOutcomes: RunOutcomeMapping | undefined,
   query: Query,
+  catchingUp: TablesCatchingUp,
 ): RunOutcomesStore['readRunOutcomes'] {
-  return keptOutcomesOnly(runOutcomes, postgresqlRunOutcomesReader(query));
+  const served = servedOnceCaughtUp(catchingUp, formattedFor(query));
+  return keptOutcomesOnly(runOutcomes, postgresqlRunOutcomesReader(query), served);
 }
 
 export const emmettsMigrationLock = 999_956_789;

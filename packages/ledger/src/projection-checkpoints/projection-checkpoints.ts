@@ -45,7 +45,10 @@ export function earlierVersionsForgotten({ name, version }: VersionedProjection)
 
 const FoldedRows = Schema.Array(Schema.Struct({ folded_through: Schema.NullOr(Schema.String) }));
 
-async function isCaughtUp(execute: StatementExecutor, { name, version }: VersionedProjection): Promise<boolean> {
+export async function isCaughtUp(
+  execute: Pick<StatementExecutor, 'query'>,
+  { name, version }: VersionedProjection,
+): Promise<boolean> {
   const { rows } = await execute.query(
     SQL`SELECT folded_through FROM ${checkpoints} WHERE projection = ${name} AND version = ${version}`,
   );

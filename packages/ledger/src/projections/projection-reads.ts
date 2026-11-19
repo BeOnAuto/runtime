@@ -21,6 +21,7 @@ import { Effect, Option, Schema } from 'effect';
 
 import { definitionNames } from '../definition-names/definition-names-table.ts';
 import type { InTransaction } from '../event-store.ts';
+import { servedOnceCaughtUp, type TablesCatchingUp } from '../projection-catch-up/catching-up.ts';
 import { boundOf, type ProjectionDialect } from './projection-dialect.ts';
 import {
   columnOf,
@@ -194,12 +195,19 @@ export function projectionReader(
   dialect: ProjectionDialect,
   projections: readonly KeptProjection[],
   { query, command }: ProjectionStatements,
+  catchingUp: TablesCatchingUp,
 ): ProjectionReader & ProjectionAdvancer {
   const reading = { dialect, projections, query };
+  const served = servedOnceCaughtUp(catchingUp, query);
   const withProjection = <A>(name: string, none: A, read: (projection: KeptProjection) => Promise<A>) =>
-    Effect.promise(() => {
+    Effect.suspend(() => {
       const projection = projectionNamed(projections, name);
-      return projection === undefined ? Promise.resolve(none) : read(projection);
+      return projection === undefined
+        ? Effect.succeed(none)
+        : Effect.andThen(
+            served(projection),
+            Effect.promise(() => read(projection)),
+          );
     });
   return {
     readProjectedRows: (name, address, rowsQuery) =>
@@ -210,12 +218,9 @@ export function projectionReader(
     nextDueOf: (name, column, after) =>
       withProjection(name, null, (projection) => soonest(reading, projection, column, after)),
     advanceRow: (name, address, key, advance) =>
-      Effect.promise(async () => {
-        const projection = projectionNamed(projections, name);
-        if (projection !== undefined) {
-          requireAdvancedColumns(projection, advance.set);
-          await command(rowAdvance(dialect, projection, { prefix: streamPrefixOfAddress(address), key }, advance));
-        }
+      withProjection<void>(name, undefined, async (projection) => {
+        requireAdvancedColumns(projection, advance.set);
+        await command(rowAdvance(dialect, projection, { prefix: streamPrefixOfAddress(address), key }, advance));
       }),
   };
 }

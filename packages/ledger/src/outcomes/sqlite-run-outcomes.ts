@@ -4,6 +4,7 @@ import { Schema } from 'effect';
 
 import { definitionNames } from '../definition-names/definition-names-table.ts';
 import type { RunOutcomesStore, StatementExecutor } from '../event-store.ts';
+import { servedOnceCaughtUp, type TablesCatchingUp } from '../projection-catch-up/catching-up.ts';
 import { groupFields, groupOf } from './run-outcome-groups.ts';
 import { runOutcomesTable } from './run-outcome-projection.ts';
 import { keptOutcomesOnly } from './run-outcomes-reader.ts';
@@ -40,6 +41,8 @@ function sqliteRunOutcomesReader(execute: StatementExecutor): RunOutcomesStore['
 export function sqliteRunOutcomesOf(
   runOutcomes: RunOutcomeMapping | undefined,
   execute: StatementExecutor,
+  catchingUp: TablesCatchingUp,
 ): RunOutcomesStore['readRunOutcomes'] {
-  return keptOutcomesOnly(runOutcomes, sqliteRunOutcomesReader(execute));
+  const served = servedOnceCaughtUp(catchingUp, async (sql) => (await execute.query(sql)).rows);
+  return keptOutcomesOnly(runOutcomes, sqliteRunOutcomesReader(execute), served);
 }

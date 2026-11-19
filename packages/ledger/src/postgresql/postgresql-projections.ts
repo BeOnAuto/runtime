@@ -166,7 +166,7 @@ export function postgresqlSizesAfter(
 }
 
 export function postgresqlProjectionsOf(kept: KeptTables) {
-  const parts = projectionPartsOf(postgresqlProjectionDialect, kept);
+  const parts = projectionPartsOf(postgresqlProjectionDialect, { ...kept, catchUpBudget: undefined });
   return {
     ...parts,
     afterTheSchema: async ({ execute }: { readonly execute: StatementExecutor }): Promise<void> => {
@@ -179,6 +179,6 @@ export function postgresqlProjectionsOf(kept: KeptTables) {
     }),
     readerOnThePool: (pool: ContentConnections, query: (sql: SQL) => Promise<readonly unknown[]>) =>
       parts.readerOn({ query, command: query, inTransaction: inTransactionOn(pool) }),
-    caughtUpOn: (pool: ContentConnections): Promise<void> => parts.caughtUp(inTransactionOn(pool)),
+    caughtUpOn: (pool: ContentConnections): ReturnType<typeof parts.caughtUp> => parts.caughtUp(inTransactionOn(pool)),
   };
 }

@@ -2,9 +2,9 @@ import { SQL } from '@event-driven-io/dumbo';
 import { contextOf } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import type { FactScrubStore, ScrubbedData } from '../event-store.ts';
+import type { FactScrubStore, ScrubbedData, StatementExecutor } from '../event-store.ts';
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
-import { filledMessageOf, type ProjectionKeeping } from '../projections/projection-keeping.ts';
+import { filledMessageOf, type ProjectionKeeping, type ReplayedMessage } from '../projections/projection-keeping.ts';
 import { rowsRefolded } from '../projections/projection-refold.ts';
 import type { ContentReferences } from '../references/content-references.ts';
 import type { Rider } from './append-riders.ts';
@@ -58,14 +58,18 @@ export function factAtOn(dialect: ProjectionDialect, query: ReadQuery): FactScru
   };
 }
 
-interface ScrubParts {
+export interface ScrubParts {
   readonly dialect: ProjectionDialect;
   readonly keepings: readonly ProjectionKeeping[];
   readonly references: Pick<ContentReferences, 'refolded'>;
+  readonly startedAgain: (
+    execute: StatementExecutor,
+    scrubbed: Pick<ReplayedMessage, 'stream' | 'type'>,
+  ) => Promise<readonly ProjectionKeeping[]>;
 }
 
 export function scrubWithin(
-  { dialect, keepings, references }: ScrubParts,
+  { dialect, keepings, references, startedAgain }: ScrubParts,
   stream: string,
   scrubbed: ScrubbedData,
 ): Rider {
@@ -79,7 +83,12 @@ export function scrubWithin(
           AND partition = ${defaultPartition} AND is_archived = FALSE`,
     );
     const before = filledMessageOf({ dialect }, fact);
-    await rowsRefolded(keepings, execute, { stream, before, after: { ...before, data } });
+    const started = await startedAgain(execute, fact);
+    await rowsRefolded(
+      keepings.filter((keeping) => !started.includes(keeping)),
+      execute,
+      { stream, before, after: { ...before, data } },
+    );
     await references.refolded(execute, stream);
   };
 }

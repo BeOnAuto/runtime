@@ -20,8 +20,9 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { loggingLayerOf } from '../projection-checkpoints/logged-opening.ts';
 import { caughtUpAt, checkpointsOfTheTallies } from '../projection-checkpoints/projection-checkpoints-behaviour.ts';
 import { inTurn } from '../projections/inline-projection.ts';
-import type { LedgerEntry } from '../testing/ledger-entry.ts';
+import type { EntryKept, LedgerEntry } from '../testing/ledger-entry.ts';
 import { openLedgerWith } from '../testing/open-ledger.ts';
+import { catchUpSlicesBehaviour } from './catch-up-slices-behaviour.ts';
 
 type AnyLedger = Ledger['Service'];
 
@@ -39,16 +40,23 @@ const failed: RunFact = { type: 'run_ended', data: { status: 'failed', ms: 10, t
 
 const failingOnAFailure = (version: number) => tallyRowsOf(version, (row) => row['status'] === 'failed');
 
-function inPages(entry: LedgerEntry, database: string, projections: readonly KeptProjection[]) {
-  return entry.ledgerOn(database, undefined, projections, { mostBytesFilledAtOnce: 1 });
+type Budget = EntryKept['catchUpBudget'];
+
+const onePage: Budget = { pages: 1 };
+
+const morePagesThanItTakes: Budget = { pages: 100 };
+
+function inPages(entry: LedgerEntry, database: string, projections: readonly KeptProjection[], catchUpBudget?: Budget) {
+  return entry.ledgerOn(database, undefined, projections, { mostBytesFilledAtOnce: 1, catchUpBudget });
 }
 
 async function openedInPages(
   entry: LedgerEntry,
   database: string,
   projections: readonly KeptProjection[],
+  catchUpBudget?: Budget,
 ): Promise<AnyLedger> {
-  const { ledger, dispose } = await openLedgerWith(inPages(entry, database, projections));
+  const { ledger, dispose } = await openLedgerWith(inPages(entry, database, projections, catchUpBudget));
   onTestFinished(dispose);
   return ledger;
 }
@@ -84,6 +92,35 @@ async function talliedHistory(ledger: AnyLedger): Promise<void> {
 }
 
 const tallies = 'SELECT row_key, facts FROM run_tallies_2 ORDER BY row_key';
+
+function aSliceStoppedByItsBudget(entry: LedgerEntry): void {
+  it('returns from an opening given a budget of one page once that page is done, the table holding the facts through that page and its row the position the page reached', async () => {
+    const database = await entry.aDatabase();
+    await talliedHistory(await openedInPages(entry, database, [runTallyRows]));
+    await entry.queried(database, 'DROP TABLE run_tallies_2');
+
+    await openedInPages(entry, database, [runTallyRows], onePage);
+
+    expect([await entry.queried(database, checkpointsOfTheTallies), await entry.queried(database, tallies)]).toEqual([
+      [{ projection: 'run_tallies', version: 2, folded_through: '1' }],
+      [{ row_key: 'r1', facts: 1 }],
+    ]);
+  });
+
+  it('catches up to the end in an opening given a budget of more pages than the catch-up takes', async () => {
+    const database = await entry.aDatabase();
+    await talliedHistory(await openedInPages(entry, database, [runTallyRows]));
+    const kept = await entry.queried(database, tallies);
+    await entry.queried(database, 'DROP TABLE run_tallies_2');
+
+    await openedInPages(entry, database, [runTallyRows], morePagesThanItTakes);
+
+    expect([await entry.queried(database, checkpointsOfTheTallies), await entry.queried(database, tallies)]).toEqual([
+      [caughtUpAt(2)],
+      kept,
+    ]);
+  });
+}
 
 function aFillCutOff(entry: LedgerEntry): void {
   it('fails the opening where a fold throws, logging an error with the position alone, keeps every page before it, and is carried on from that position at the next opening, counting no fact twice', async () => {
@@ -225,9 +262,11 @@ function earlierVersions(entry: LedgerEntry): void {
 
 export function catchUpBehaviour(entry: LedgerEntry): void {
   describe.skipIf(entry.itsOwnContractAlone === true)('the keyed tables caught up in pages as the ledger opens', () => {
+    aSliceStoppedByItsBudget(entry);
     aFillCutOff(entry);
     tablesFilledInPages(entry);
     windowsFoldingNothing(entry);
     earlierVersions(entry);
+    catchUpSlicesBehaviour(entry);
   });
 }

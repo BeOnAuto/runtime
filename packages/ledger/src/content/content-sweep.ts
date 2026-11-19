@@ -3,7 +3,7 @@ import type { ExpiredErased } from '@on.auto/content';
 import { orgOfStreamPrefix, randomUUIDv7, uuidV7TimeOf } from '@on.auto/operations';
 import { Context, Effect, Option, Schema } from 'effect';
 
-import type { LedgerContent, OwnContentStore, StatementExecutor } from '../event-store.ts';
+import type { CatchUpState, LedgerContent, OwnContentStore, StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import { HeldContentUnchecked, type HeldHead, type HeldHeads } from '../references/held-heads.ts';
 import { dueBy, keptExternally, keptInTheLedger, keptShelf, type Shelf } from './content-tables.ts';
@@ -19,6 +19,8 @@ export interface ChorePorts {
   readonly eraseExpired: (most: number) => Effect.Effect<ExpiredErased>;
   readonly heldContentFound: (most: number) => Effect.Effect<HeldContentFound, HeldContentUnchecked>;
   readonly endWaits: Effect.Effect<void>;
+  readonly catchUpSlice: Effect.Effect<CatchUpState>;
+  readonly catchUpState: Effect.Effect<CatchUpState>;
 }
 
 export class LedgerChores extends Context.Service<LedgerChores, ChorePorts>()('@on.auto/ledger/LedgerChores') {}

@@ -22,6 +22,8 @@ export interface ProjectionParts {
   readonly registrations: ReturnType<typeof namesKeptBy>;
   readonly prepare: Preparing;
   readonly caughtUp: CatchUpParts['caughtUp'];
+  readonly catchingUp: CatchUpParts['catchingUp'];
+  readonly startedAgain: CatchUpParts['startedAgain'];
   readonly readerOn: (statements: ProjectionStatements) => ProjectionReader & ProjectionAdvancer;
   readonly references: ContentReferences;
   readonly multiStreamAppendsOver: MultiStreamAppendsOver;
@@ -33,9 +35,9 @@ export function projectionPartsOf(dialect: ProjectionDialect, tables: KeptTables
   const keepings = kept.map((projection) => ({ dialect, projection }));
   const catchUp = catchUpPartsOf(dialect, keepings, tables);
   const references = contentReferencesOf(dialect, holders, catchUp.mostBytes);
-  const scrubs = factScrubsOf(dialect, keepings, { references });
+  const scrubs = factScrubsOf(dialect, keepings, { references, startedAgain: catchUp.startedAgain });
   const registrations = [
-    ...projectionRegistrations(dialect, kept),
+    ...projectionRegistrations(dialect, kept, catchUp.catchingUp),
     ...references.registrations,
     ...namesKeptBy(dialect, tables),
   ];
@@ -51,7 +53,9 @@ export function projectionPartsOf(dialect: ProjectionDialect, tables: KeptTables
       await references.prepare({ execute, inTransaction, madeAgain: tableMadeAgain });
     },
     caughtUp: catchUp.caughtUp,
-    readerOn: (statements) => projectionReader(dialect, kept, statements),
+    catchingUp: catchUp.catchingUp,
+    startedAgain: catchUp.startedAgain,
+    readerOn: (statements) => projectionReader(dialect, kept, statements, catchUp.catchingUp),
     references,
     multiStreamAppendsOver: multiStreamAppendsOf(registrations),
   };

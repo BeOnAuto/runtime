@@ -7,7 +7,7 @@ import type { ProjectionKeeping } from '../projections/projection-keeping.ts';
 import type { ContentReferences } from '../references/content-references.ts';
 import { afterTheHook, appendRiders, type AppendRiders } from './append-riders.ts';
 import { factScrubberOf } from './fact-scrub.ts';
-import { factAtOn, scrubWithin, type ReadQuery } from './scrubbed-facts.ts';
+import { factAtOn, scrubWithin, type ReadQuery, type ScrubParts } from './scrubbed-facts.ts';
 
 export interface FactScrubs {
   readonly riders: AppendRiders;
@@ -17,6 +17,7 @@ export interface FactScrubs {
 
 interface RefoldedBeside {
   readonly references: Pick<ContentReferences, 'refolded'>;
+  readonly startedAgain: ScrubParts['startedAgain'];
 }
 
 export function factScrubsOf(

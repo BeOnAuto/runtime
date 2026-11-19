@@ -15,6 +15,7 @@ import {
 import { Effect, Schema, type Layer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import type { LedgerChores } from '../content/content-sweep.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { openLedgerWith } from '../testing/open-ledger.ts';
 import type { KeptTables, ProjectionParts } from './projection-parts.ts';
@@ -22,8 +23,13 @@ import type { KeptTables, ProjectionParts } from './projection-parts.ts';
 export interface FillEntry {
   readonly aDatabase: () => Promise<string>;
   readonly executedOn: <A>(database: string, work: (execute: StatementExecutor) => Promise<A>) => Promise<A>;
-  readonly ledgerOn: (database: string, kept: Pick<KeptTables, 'projections' | 'holders'>) => Layer.Layer<Ledger>;
-  readonly projectionsOf: (kept: KeptTables) => Pick<ProjectionParts, 'prepare' | 'caughtUp'>;
+  readonly ledgerOn: (
+    database: string,
+    kept: Pick<KeptTables, 'projections' | 'holders'>,
+  ) => Layer.Layer<Ledger | LedgerChores>;
+  readonly projectionsOf: (
+    kept: KeptTables,
+  ) => Pick<ProjectionParts, 'prepare' | 'caughtUp' | 'registrations' | 'readerOn' | 'dialect'>;
 }
 
 type AnyLedger = Ledger['Service'];

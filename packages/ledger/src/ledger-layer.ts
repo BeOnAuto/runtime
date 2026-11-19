@@ -65,6 +65,8 @@ export function ledgerLayerOver(
           endWaits: Effect.sync(() => {
             store.endWaits();
           }),
+          catchUpSlice: Effect.promise(() => store.catchUpSlice()),
+          catchUpState: Effect.sync(() => store.catchUpState()),
         }),
       );
     }),

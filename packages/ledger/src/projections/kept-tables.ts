@@ -3,6 +3,7 @@ import type { ContentHolders, KeptProjection, RunIds, RunOutcomeMapping } from '
 import { definitionNamesRegistrations, type DefinitionNames } from '../definition-names/definition-names.ts';
 import type { InTransaction, StatementExecutor } from '../event-store.ts';
 import type { CarriedTables } from '../layout/layout-steps.ts';
+import type { CatchUpBudget } from '../projection-catch-up/caught-up.ts';
 import { runIdsRegistrations } from '../run-ids/run-ids.ts';
 import type { InlineRegistration } from './inline-projection.ts';
 import type { ProjectionDialect } from './projection-dialect.ts';
@@ -12,6 +13,7 @@ export interface KeptTables extends CarriedTables {
   readonly projections?: readonly KeptProjection[] | undefined;
   readonly holders?: ContentHolders | undefined;
   readonly mostBytesFilledAtOnce?: number | undefined;
+  readonly catchUpBudget?: CatchUpBudget | undefined;
   readonly definitionNames?: DefinitionNames | undefined;
   readonly runIds?: RunIds | undefined;
   readonly tableMadeAgain?: ((table: string) => void) | undefined;

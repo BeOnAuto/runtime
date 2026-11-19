@@ -1,7 +1,7 @@
 import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { ProjectedCondition, ProjectedRowsQuery } from '../index.ts';
+import { ProjectionCatchingUp, type ProjectedCondition, type ProjectedRowsQuery } from '../index.ts';
 import { type RunFact, runFacts } from '../run-outcomes/run-tallies.ts';
 import { memoryLedger, type MemoryLedger } from '../testing/memory-ledger.ts';
 import {
@@ -283,5 +283,17 @@ describe('the columns a reader advances', () => {
     expect(() => {
       requireAdvancedColumns(runTallyRows, { open: false });
     }).toThrow('The projection run_tallies does not let its reader advance the column open');
+  });
+});
+
+describe('a projection catching up', () => {
+  it('is a defect of its own class, which names the projection', () => {
+    const catching = new ProjectionCatchingUp('topics');
+
+    expect([catching instanceof Error, catching.name, catching.projection]).toEqual([
+      true,
+      'ProjectionCatchingUp',
+      'topics',
+    ]);
   });
 });

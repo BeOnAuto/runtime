@@ -1,3 +1,5 @@
+import { SQL } from '@event-driven-io/dumbo';
+import { sqliteFormatter } from '@event-driven-io/dumbo/sqlite';
 import {
   labelFacts,
   labelRows,
@@ -9,8 +11,10 @@ import {
   type TopicFact,
 } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
+import type { InTransaction, StatementExecutor } from '../event-store.ts';
+import type { InlineRegistration } from '../projections/inline-projection.ts';
 import {
   aLargeStart,
   aLedgerOn,
@@ -21,6 +25,7 @@ import {
   notedLarge,
   type FillEntry,
 } from '../projections/keyed-fill-behaviour.ts';
+import { openChoresWith } from '../testing/open-ledger.ts';
 
 type AnyLedger = Awaited<ReturnType<typeof aLedgerOn>>;
 
@@ -108,9 +113,137 @@ function theBoundsOfARead(entry: FillEntry): void {
   });
 }
 
+interface Handling {
+  readonly projection: Pick<InlineRegistration['projection'], 'handle'>;
+}
+
+interface Recorded {
+  readonly statements: readonly string[];
+  readonly execute: StatementExecutor;
+}
+
+function recordedOn(execute: StatementExecutor): Recorded {
+  const statements: string[] = [];
+  const recorded = (sql: SQL) => {
+    statements.push(SQL.describe(sql, sqliteFormatter));
+    return sql;
+  };
+  return {
+    statements,
+    execute: {
+      query: (sql) => execute.query(recorded(sql)),
+      command: (sql) => execute.command(recorded(sql)),
+    },
+  };
+}
+
+const alpha = { org: 'acme', playbook: 'alpha' };
+
+function appendedNote(dialect: ReturnType<FillEntry['projectionsOf']>['dialect']) {
+  return {
+    type: 'topic_noted',
+    data: dialect.storedData({ topic: 'autumn', note: 'later' }),
+    metadata: {
+      streamName: 'playbook/acme/alpha/notes/n9',
+      messageId: 'n9',
+      streamPosition: 1,
+      at: '2026-10-05T09:00:00.000Z',
+      by: 'topics',
+    },
+  };
+}
+
+function appendedAndRead(entry: FillEntry, execute: StatementExecutor): Promise<readonly string[]> {
+  const parts = entry.projectionsOf({ projections: [topicRows] });
+  const recorded = recordedOn(execute);
+  const inTransaction: InTransaction = (work) => work(recorded.execute);
+  const reader = parts.readerOn({
+    query: async (sql) => (await recorded.execute.query(sql)).rows,
+    command: (sql) => recorded.execute.command(sql),
+    inTransaction,
+  });
+  const appended = { execute: recorded.execute };
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      yield* Effect.promise(() => parts.prepare(recorded.execute, inTransaction));
+      yield* Effect.promise(() => parts.caughtUp(inTransaction));
+      const opened = recorded.statements.length;
+      yield* Effect.promise(() =>
+        Promise.all(
+          parts.registrations.map(({ projection }: Handling) =>
+            projection.handle([appendedNote(parts.dialect)], appended),
+          ),
+        ),
+      );
+      yield* reader.readProjectedRows('topics', alpha, { where: [], orderBy: [], order: 'asc', limit: 10 });
+      yield* reader.countProjectedRows('topics', alpha, []);
+      yield* reader.readDueRows('topics', { column: 'due_at', through: 10_000, limit: 10 });
+      yield* reader.nextDueOf('topics', 'due_at', 0);
+      yield* reader.advanceRow('topics', alpha, 'autumn', { set: { open: false }, when: [] });
+      return recorded.statements.slice(opened);
+    }),
+  );
+}
+
+function noBudget(entry: FillEntry): void {
+  it('folds an append and serves the five reads with statements on their own table alone, where the store was given no budget', async () => {
+    const database = await entry.aDatabase();
+    await notedLarge(await aLedgerOn(entry, database, { projections: [topicRows] }), 1);
+
+    const statements = await entry.executedOn(database, (execute) => appendedAndRead(entry, execute));
+
+    expect([statements.length > 0, statements.every((statement) => statement.includes('topics_2'))]).toEqual([
+      true,
+      true,
+    ]);
+  });
+}
+
+const theReadRefused = new Error('The read of the positions was refused');
+
+function refusingThePositions(execute: StatementExecutor): StatementExecutor {
+  return {
+    query: (sql) =>
+      SQL.describe(sql, sqliteFormatter).includes('folded_through IS NOT NULL')
+        ? Promise.reject(theReadRefused)
+        : execute.query(sql),
+    command: (sql) => execute.command(sql),
+  };
+}
+
+function aFailureNoPageLogs(entry: FillEntry): void {
+  it('fails a catch-up given a budget where the read of its positions fails, a failure no page logs, as a catch-up given none fails', async () => {
+    const database = await entry.aDatabase();
+    await notedLarge(await aLedgerOn(entry, database), 1);
+
+    await entry.executedOn(database, async (execute) => {
+      const refusing = refusingThePositions(execute);
+      const parts = entry.projectionsOf({ projections: [topicRows], catchUpBudget: { pages: 1 } });
+      await parts.prepare(refusing, (work) => work(refusing));
+
+      await expect(parts.caughtUp((work) => work(refusing))).rejects.toBe(theReadRefused);
+    });
+  });
+}
+
+function aSliceOfTheChore(entry: FillEntry): void {
+  it('answers caught up from a slice of the chore and from its state once the opening has caught every table up', async () => {
+    const database = await entry.aDatabase();
+    const { catchUpSlice, catchUpState, dispose } = await openChoresWith(
+      entry.ledgerOn(database, { projections: [topicRows] }),
+    );
+    onTestFinished(dispose);
+
+    expect([await catchUpState(), await catchUpSlice()]).toEqual(['caught_up', 'caught_up']);
+  });
+}
+
 export function catchUpReadsBehaviour(entry: FillEntry): void {
   describe('the catch-up of the keyed tables, in pages of a window of the store each', () => {
     windowsAndReads(entry);
     theBoundsOfARead(entry);
+    noBudget(entry);
+    aFailureNoPageLogs(entry);
+    aSliceOfTheChore(entry);
   });
 }

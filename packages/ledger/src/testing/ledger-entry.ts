@@ -10,10 +10,11 @@ import type { LedgerServices, OpenedLedger, OpenedWith, StoreLayerOptions } from
 import type { StreamSignal } from '../signal/append-signal.ts';
 import { openChoresWith, openLedgerWith, type OpenChores } from './open-ledger.ts';
 
-interface EntryKept {
+export interface EntryKept {
   readonly holders?: ContentHolders;
   readonly definitionNames?: NonNullable<StoreLayerOptions['definitionNames']>;
   readonly mostBytesFilledAtOnce?: number;
+  readonly catchUpBudget?: StoreLayerOptions['catchUpBudget'];
 }
 
 export interface LedgerEntry {

@@ -134,9 +134,11 @@ export function postgresqlStoreOn(
     ...recorded,
     ...projections.readerOnThePool(pool, formattedFor(query)),
     ...projections.scrubs.storeOver(store, formattedFor(query)),
-    ...postgresqlReadsOn(kept, query),
+    ...postgresqlReadsOn(kept, query, projections.catchingUp),
     ...projections.holdsOn(pool, formattedFor(query)),
     migrate: migrationOf(() => ({ pool, projections, store }), kept),
+    catchUpSlice: () => projections.caughtUpOn(pool),
+    catchUpState: () => projections.catchingUp.state(),
     close: async () => {
       recorded.endWaits();
       await store.close();

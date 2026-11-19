@@ -46,7 +46,7 @@ interface Group {
   readonly through: string | undefined;
 }
 
-function behindOf(keepings: readonly ProjectionKeeping[], rows: readonly CheckpointRow[]): readonly Behind[] {
+export function behindOf(keepings: readonly ProjectionKeeping[], rows: readonly CheckpointRow[]): readonly Behind[] {
   return keepings.flatMap((keeping): readonly Behind[] => {
     const at = rowOf(rows, keeping.projection)?.folded_through;
     return at === undefined || at === null ? [] : [{ keeping, at }];
@@ -70,7 +70,10 @@ function groupOf({ orderOf }: ProjectionDialect['catchUp'], behind: readonly Beh
   };
 }
 
-function foldsFact(projection: ProjectionDeclaration, { stream, type }: Pick<ListedFact, 'stream' | 'type'>): boolean {
+export function foldsFact(
+  projection: ProjectionDeclaration,
+  { stream, type }: Pick<ListedFact, 'stream' | 'type'>,
+): boolean {
   const named = addressedStreamOf(stream);
   return named !== undefined && foldsStream(projection, named) && projection.types.includes(type);
 }

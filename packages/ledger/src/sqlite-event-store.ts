@@ -93,7 +93,7 @@ export function sqliteEventStore<Driver extends AnyDriver>(
     ...recorded,
     ...projections.readerOn(statements),
     ...projections.scrubs.storeOver(streams, query),
-    ...sqliteReadsOn(kept, pool.execute),
+    ...sqliteReadsOn(kept, pool.execute, projections.catchingUp),
     unlessHeld: projections.references.unlessHeldOn(inTransactionOf(pool)),
     heldHeads: projections.references.heldHeadsOn(query),
     migrate: async () => {
@@ -102,6 +102,8 @@ export function sqliteEventStore<Driver extends AnyDriver>(
       await sqliteSchemaCreated(pool.execute);
       await preparedOn(projections, pool);
     },
+    catchUpSlice: () => projections.caughtUp(inTransactionOf(pool)),
+    catchUpState: () => projections.catchingUp.state(),
     close: async () => {
       recorded.endWaits();
       await streams.close();

@@ -324,6 +324,19 @@ describe('the catch-up of a projection keyed by its mapping on PostgreSQL', () =
     );
   });
 
+  it('pages to the end handed a budget of one page, since the store on PostgreSQL takes none', async () => {
+    const store = recordedAnswering(aStoreOfTopics());
+    const handedABudget = postgresqlProjectionsOf({ projections: [topicRows], catchUpBudget: { pages: 1 } });
+
+    const state = await handedABudget.caughtUp((work) => work(store.execute));
+
+    const advances = store.commands.filter((command) => command.startsWith('UPDATE projection_checkpoints'));
+    expect([state, advances.map((command) => /SET folded_through = (\S+)/u.exec(command)?.[1])]).toEqual([
+      'caught_up',
+      [...[1, 3, 7, 15, 31, 63, 127, 255, 258].map((point) => `"7/${point}"`), 'null'],
+    ]);
+  });
+
   it('ends a window at the next higher position another table holds, through it', () => {
     const window = described(postgresqlCatchUp.window({ after: '7/3', through: '9/2', count: 64 }));
 

@@ -17,6 +17,7 @@ import {
 
 import { childRowsIn, childRowsReplaced } from '../child-rows/child-row-statements.ts';
 import type { StatementExecutor } from '../event-store.ts';
+import { isCatchingUp, type TablesCatchingUp } from '../projection-catch-up/catching-up.ts';
 import {
   inlineRegistrationOf,
   inTurn,
@@ -127,10 +128,14 @@ async function keptInTurn(
   await inTurn(placed, ({ message, place }: PlacedMessage) => keptAfter(keeping, execute, place, message));
 }
 
-function keepingProjection(keeping: ProjectionKeeping): InlineProjection {
+function keepingProjection(keeping: ProjectionKeeping, catchingUp: TablesCatchingUp): InlineProjection {
   return {
     types: keeping.projection.types,
-    handle: (messages, execute) => keptInTurn(keeping, execute, placedOf(keeping, messages)),
+    handle: async (messages, execute) => {
+      if (!(await isCatchingUp(catchingUp, keeping.projection, execute))) {
+        await keptInTurn(keeping, execute, placedOf(keeping, messages));
+      }
+    },
   };
 }
 
@@ -183,6 +188,7 @@ export function replayedRow(
 export function projectionRegistrations(
   dialect: ProjectionDialect,
   projections: readonly KeptProjection[],
+  catchingUp: TablesCatchingUp,
 ): readonly InlineRegistration[] {
-  return projections.map((projection) => inlineRegistrationOf(keepingProjection({ dialect, projection })));
+  return projections.map((projection) => inlineRegistrationOf(keepingProjection({ dialect, projection }, catchingUp)));
 }

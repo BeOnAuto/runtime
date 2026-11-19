@@ -5,12 +5,18 @@ import {
   type RunOutcomeMapping,
   type KeptProjection,
   type KeyedProjection,
+  type ProjectionDeclaration,
 } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 const runOutcomesVersion = 5;
 
 export const runOutcomesTable = `run_outcomes_${runOutcomesVersion}`;
+
+export const runOutcomesVersioned: Pick<ProjectionDeclaration, 'name' | 'version'> = {
+  name: 'run_outcomes',
+  version: runOutcomesVersion,
+};
 
 const KeptOutcomeSchema = Schema.Struct({
   started_day: Schema.String,
@@ -63,8 +69,7 @@ function rowOf(outcome: RunOutcome): ProjectedRow {
 
 function runOutcomeProjectionOf({ types, rowAfter }: RunOutcomeMapping): KeyedProjection {
   return {
-    name: 'run_outcomes',
-    version: runOutcomesVersion,
+    ...runOutcomesVersioned,
     scopes: ['definition'],
     kinds: ['runs'],
     types,

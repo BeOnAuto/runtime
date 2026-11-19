@@ -39,6 +39,7 @@ export { RunUnanswered, UnansweredKindSchema, type UnansweredKind } from './outc
 export { addressOfStreamPrefix, addressedStreamOf, advancedColumnsLeftBy } from './projections/keyed-projection.ts';
 export { advancedColumnsOf, childKeyColumn, foldsStream } from './projections/keyed-projection.ts';
 export { checkedProjection } from './projections/projection-checks.ts';
+export { ProjectionCatchingUp } from './projections/projection-catching-up.ts';
 export { keepsChildRows, projectedTableOf, requireAdvancedColumns } from './projections/keyed-projection.ts';
 export { rowKeyColumn, rowKeyOf, scopesOf, streamPrefixOfAddress } from './projections/keyed-projection.ts';
 export { type AddressedStream } from './projections/keyed-projection.ts';

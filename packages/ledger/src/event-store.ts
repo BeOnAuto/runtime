@@ -7,7 +7,6 @@ import type {
   ProjectionReader,
   Lineage,
   RecordedOrder,
-  RecordedSelection,
   RunOutcomeGroup,
   RunOutcomeSelection,
   RunOutcomeWindow,
@@ -15,13 +14,14 @@ import type {
 import type { Schema } from 'effect';
 
 import type { DefinitionStreamsStore, LookupTablesStore } from './definitions/definition-reads.ts';
-import type { OrgRecordsStore, RecordedKeys } from './keys/recorded-keys.ts';
+import type { RecordedStore } from './keys/recorded-keys.ts';
 import type { LogPorts } from './log/ledger-log.ts';
 import type { MultiStreamAppends } from './multi-stream/multi-stream-appends.ts';
 import type { HeldHeads } from './references/held-heads.ts';
 import type { StreamSignal } from './signal/append-signal.ts';
 
 export type { DefinitionNamesStore, DefinitionStream, DefinitionStreamsStore } from './definitions/definition-reads.ts';
+export type { RecordedStore } from './keys/recorded-keys.ts';
 
 export interface EncodedEvent {
   readonly type: string;
@@ -164,20 +164,6 @@ export type StoredAppendedFacts =
       readonly more: boolean;
     };
 
-type ReadOf<Scope> = (scope: Scope, selection: RecordedSelection, page: StoredPageRequest) => Promise<StoredPage>;
-
-type EventReadOf<Scope> = (scope: Scope, id: string) => Promise<StoredRecord | undefined>;
-
-export interface RecordedStore extends OrgRecordsStore {
-  readonly pointLength: number;
-  readonly readRecorded: ReadOf<string>;
-  readonly readRecordedOfKeys: ReadOf<RecordedKeys>;
-  readonly readAppended: (after: RecordedPoint | undefined, most: number) => Promise<AppendedStreams>;
-  readonly readAppendedFacts: (scope: FactScope, asked: AppendedFactsAsked) => Promise<StoredAppendedFacts>;
-  readonly readRecordedEvent: EventReadOf<string>;
-  readonly readRecordedEventOfKeys: EventReadOf<RecordedKeys>;
-}
-
 export interface StreamAgesStore {
   readonly ageOfLastAppend: (stream: string) => Promise<number>;
   readonly lastPositionOf?: (stream: string) => Promise<number>;
@@ -261,6 +247,8 @@ export type UnlessHeld = <A>(owner: ContentOwner, sha256: string, within: Within
 
 export type LedgerContent = Pick<KeptOutside, 'content' | 'found' | 'removedKeptBefore' | 'eraseExpired'>;
 
+export type CatchUpState = 'catching_up' | 'caught_up';
+
 export interface LedgerStore
   extends
     EventStore,
@@ -275,6 +263,8 @@ export interface LedgerStore
   readonly heldHeads: HeldHeads;
   readonly log: LogPorts;
   readonly lastPositionOf: KeptStreamAges['lastPositionOf'];
+  readonly catchUpSlice: () => Promise<CatchUpState>;
+  readonly catchUpState: () => CatchUpState;
 }
 
 export interface StatementExecutor {
