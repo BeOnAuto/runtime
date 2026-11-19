@@ -75,14 +75,36 @@ const hearing = (name: string) =>
     }),
   ]);
 
+function sentAndTakenBy({ name, events, credentials }: ProviderEntry) {
+  return [
+    name,
+    (events?.destinations ?? []).map(({ type, credential }) => [type, credential]),
+    credentials.flatMap(({ app_credentials: named = [] }) => named.map((each) => each.name)),
+  ];
+}
+
 describe('the events parts of the shipped providers', () => {
-  it("are GitHub's alone, a webhook made for each subscription by a request to its API, where its credential goes", () => {
+  it('are written by GitHub and Slack Bot alone, so a provider of any other service that hears its events is one whoever runs the runtime adds', () => {
+    expect(declaring.map(({ entry }) => entry.name)).toEqual(['github', 'slack-bot']);
+  });
+
+  it("are GitHub's, a webhook made for each subscription by a request to its API, where its credential goes", () => {
     const github = Result.getOrThrow(providerNamed(shipped, 'github'));
 
-    expect(
-      declaring.map(({ entry }) => [entry.name, entry.events?.destinations.map(({ type, per }) => [type, per])]),
-    ).toEqual([['github', [['webhook', 'subscription']]]]);
+    expect(github.entry.events?.destinations.map(({ type, per }) => [type, per])).toEqual([
+      ['webhook', 'subscription'],
+    ]);
     expect(requestOriginsOf(github.entry)).toEqual(['https://api.github.com']);
+  });
+
+  it("are Slack Bot's, a socket opened with the app credential its way of a key takes", () => {
+    const slackBot = Result.getOrThrow(providerNamed(shipped, 'slack-bot'));
+
+    expect(sentAndTakenBy(slackBot.entry)).toEqual([
+      'slack-bot',
+      [['websocket', 'app_level_token']],
+      ['app_level_token'],
+    ]);
   });
 });
 
@@ -113,8 +135,12 @@ describe('the destination of a provider', () => {
   it('is that of a provider whoever runs the runtime adds, in place of a shipped one of the same name', () => {
     const joined = hearing('slack-bot');
 
-    expect(eventDestinationOf(joined, 'slack-bot', 'websocket')).toMatchObject({ type: 'websocket' });
-    expect(eventDestinationOf(shipped, 'slack-bot', 'websocket')).toBeUndefined();
+    expect(eventDestinationOf(joined, 'slack-bot', 'websocket')?.open).toEqual(overASocket.open);
+    expect(eventDestinationOf(shipped, 'slack-bot', 'websocket')?.open).toEqual({
+      method: 'POST',
+      url: 'https://slack.com/api/apps.connections.open',
+      address: '/url',
+    });
   });
 });
 

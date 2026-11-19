@@ -121,10 +121,10 @@ async function waysListedUnder(policy: ConnectionPolicyFields): Promise<readonly
   );
 }
 
-async function namesListedUnder(policy: ConnectionPolicyFields): Promise<readonly string[]> {
+async function namesListedUnder(policy: ConnectionPolicyFields, loopbackAllowed = false): Promise<readonly string[]> {
   const answer = await listing({
-    policy: connectionPolicyOf(policy),
-    providers: providerListOf(intranetProvider, selfHostedProvider),
+    policy: { ...connectionPolicyOf(policy), loopbackAllowed },
+    providers: providerListOf(intranetProvider, selfHostedProvider, loopbackProvider),
   });
   return listedOf(answer).output.providers.map(({ name }) => name);
 }
@@ -212,6 +212,7 @@ const selfHostedProvider = providerOf({
     host: { description: 'The host of your server', pattern: '^[a-z.]+$', example: 'wiki.example.com' },
   },
 });
+const loopbackProvider = providerOf({ ...intranetProvider.entry, name: 'loopback', url: 'http://127.0.0.1:8931/mcp' });
 
 describe('the providers the rules of the runtime could allow', () => {
   it('are those whose hosts a pattern could take, a host with a placeholder by its shape or its fixed end', async () => {
@@ -234,11 +235,12 @@ describe('the providers the rules of the runtime could allow', () => {
     ]);
   });
 
-  it('leave out a provider whose fixed host is an address only its operator may name, unless a pattern names it', async () => {
-    expect([await namesListedUnder({}), await namesListedUnder({ allowed_hosts: ['10.0.0.5'] })]).toEqual([
-      ['self-hosted'],
-      ['intranet'],
-    ]);
+  it('leave out a provider whose fixed host is an address only its operator may name, unless a pattern names it or, as adding it, the runtime may reach the loopback', async () => {
+    expect([
+      await namesListedUnder({}),
+      await namesListedUnder({ allowed_hosts: ['10.0.0.5'] }),
+      await namesListedUnder({}, true),
+    ]).toEqual([['self-hosted'], ['intranet'], ['self-hosted', 'loopback']]);
   });
 
   it('list the ways of the kinds the rules take, and no provider without one', async () => {

@@ -82,7 +82,7 @@ function namesLiterally(allowedHosts: readonly string[] | null, host: string): b
   );
 }
 
-function allowsReserved(policy: ConnectionPolicy, host: string): boolean {
+export function allowsReserved(policy: ConnectionPolicy, host: string): boolean {
   return namesLiterally(policy.allowedHosts, host) || (policy.loopbackAllowed && loopbackHostOf(host));
 }
 

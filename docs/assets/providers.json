@@ -1901,8 +1901,8 @@
         {
           "kind": "secret",
           "description": "Slack bot token",
-          "key_page": "https://api.slack.com/apps",
-          "instructions": "Find the token in your Slack app's settings at [api.slack.com/apps](https://api.slack.com/apps): choose the app, then **OAuth & Permissions**. Under **Bot Token Scopes**, add `channels:read`, `channels:history`, `users:read`, `chat:write`, `reactions:read` and `reactions:write`, and `groups:read` and `groups:history` for private channels. Select **Install to Workspace** and **Allow**, then copy the token under **OAuth Tokens**. It starts with `xoxb-`."
+          "key_page": "https://api.slack.com/apps?new_app=1&manifest_json=%7B%22display_information%22%3A%7B%22name%22%3A%22Auto%22%7D%2C%22features%22%3A%7B%22bot_user%22%3A%7B%22display_name%22%3A%22Auto%22%7D%7D%2C%22oauth_config%22%3A%7B%22scopes%22%3A%7B%22bot%22%3A%5B%22channels%3Aread%22%2C%22channels%3Ahistory%22%2C%22users%3Aread%22%2C%22chat%3Awrite%22%2C%22reactions%3Aread%22%2C%22reactions%3Awrite%22%2C%22groups%3Aread%22%2C%22groups%3Ahistory%22%5D%7D%7D%2C%22settings%22%3A%7B%22event_subscriptions%22%3A%7B%22bot_events%22%3A%5B%22message.channels%22%2C%22message.groups%22%5D%7D%2C%22socket_mode_enabled%22%3Atrue%7D%7D",
+          "instructions": "On this connection's page, select **Get a key at api.slack.com**. Slack opens with a new app filled in: choose your workspace and select **Create**. If you made the app before, open it at [api.slack.com/apps](https://api.slack.com/apps) instead. In the app's settings, select **OAuth & Permissions**, then **Install to Workspace** and **Allow**. Under **OAuth Tokens**, copy the token that starts with `xoxb-`. In Slack, add the app to each channel your playbooks use: send `/invite @` followed by the app's name."
         }
       ],
       "placeholders": [],

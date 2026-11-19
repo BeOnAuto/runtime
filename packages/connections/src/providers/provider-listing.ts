@@ -15,7 +15,7 @@ import type { ClientSource, HadSources, WayGateway, WayOAuthClient } from '@on.a
 import { Struct, type Redacted } from 'effect';
 
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
-import { hostRefusalOf } from '../policy/policy-rules.ts';
+import { allowsReserved, hostRefusalOf } from '../policy/policy-rules.ts';
 import { consentOfferedOf } from './consent-offered.ts';
 import {
   listedWayOf,
@@ -58,23 +58,21 @@ function couldBeAllowed(pattern: string, template: string): boolean {
     : fitsTheShapeOf(template, lowered);
 }
 
-function couldReach(allowedHosts: readonly string[] | null, host: string): boolean {
+function couldReach(policy: ConnectionPolicy, host: string): boolean {
+  const { allowedHosts } = policy;
   if (allowedHosts === null) {
-    return placeholdersIn(host).length > 0 || reservedHostKindOf(host) === undefined;
+    return placeholdersIn(host).length > 0 || reservedHostKindOf(host) === undefined || allowsReserved(policy, host);
   }
   return placeholdersIn(host).length === 0
     ? hostRefusalOf(allowedHosts, host.toLowerCase()) === undefined
     : allowedHosts.some((pattern) => couldBeAllowed(pattern, host));
 }
 
-function isListed(
-  provider: Provider,
-  way: CredentialWay,
-  { allowedHosts, credentialKinds }: ConnectionPolicy,
-): boolean {
+function isListed(provider: Provider, way: CredentialWay, policy: ConnectionPolicy): boolean {
+  const { credentialKinds } = policy;
   return (
     (credentialKinds === null || credentialKinds.includes(way.kind)) &&
-    hostAlternativesOf(provider, way).some((hosts) => hosts.every((host) => couldReach(allowedHosts, host)))
+    hostAlternativesOf(provider, way).some((hosts) => hosts.every((host) => couldReach(policy, host)))
   );
 }
 

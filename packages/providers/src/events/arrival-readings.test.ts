@@ -1,7 +1,9 @@
-import type { Schema } from 'effect';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
+import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { eventDestinationOf } from '../reading/provider-list.ts';
+import { providersShippedRoots, readProviders } from '../reading/shipped-providers.ts';
 import {
   asSlackSends,
   carrying,
@@ -249,5 +251,32 @@ describe('the handshake an arrival is', () => {
       handshake: { challenge: 'c0ffee' },
       wake: { subscription: '42' },
     });
+  });
+});
+
+const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
+
+function anEnvelope(event: Fields): Fields {
+  const payload = { team_id: 'T0WORKSPACE', api_app_id: 'A0APP', type: 'event_callback', event };
+  return { envelope_id: 'dbdd0ef3-1543-4f94-bfb4-133d0e6c1545', type: 'events_api', payload };
+}
+
+describe('the messages of Slack’s Socket Mode, as the shipped slack-bot reads them', () => {
+  const overSlacksSocket = eventDestinationOf(shipped, 'slack-bot', 'websocket');
+
+  function readOverSlacksSocket(payload: Fields): ArrivalReading | undefined {
+    return overSlacksSocket === undefined
+      ? undefined
+      : arrivalReadingOf(overSlacksSocket, { transport: 'message', payload });
+  }
+
+  it('wake for a person’s message in a conversation, and for nothing else the socket sends', () => {
+    expect([
+      readOverSlacksSocket(anEnvelope({ ...aPersonsMessage, thread_ts: '1.1', text: 'approve' })),
+      readOverSlacksSocket(anEnvelope({ ...aPersonsMessage, bot_id: 'B0APP' })),
+      readOverSlacksSocket(anEnvelope({ type: 'reaction_added', user: 'U0PERSON' })),
+      readOverSlacksSocket({ type: 'hello', num_connections: 1 }),
+      readOverSlacksSocket({ type: 'disconnect', reason: 'refresh_requested' }),
+    ]).toEqual([woken(), theWorkspace, theWorkspace, {}, {}]);
   });
 });

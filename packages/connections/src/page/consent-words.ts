@@ -119,7 +119,7 @@ export const unavailableWords = {
   clientUnkept: (name: string, detail: string) =>
     `The client secret of the organization's own OAuth client for the connection ${name} cannot be kept now, so nothing is changed and its link stays open: ${detail}`,
   valueUnchecked: (hosts: readonly string[]) =>
-    `Auto could not check this key with ${listed(hosts)}, so nothing was saved. If your company's network limits outgoing connections, ask whoever runs it to allow connections to ${listed(hosts)} on port 443, then approve again.`,
+    `Auto could not check this key with ${listed(hosts)}, so nothing was saved. Approve again in a few minutes. If it still fails on an Auto that you or your company runs, ask whoever runs your network to allow connections to ${listed(hosts)} on port 443.`,
 } as const;
 
 const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = {

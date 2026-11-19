@@ -1,7 +1,8 @@
 import { plainTextIn, withMcpSession } from '@on.auto/api/testing';
 import type { Provider } from '@on.auto/providers';
-import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
-import { Effect, Option } from 'effect';
+import { shippedFileIn, type ShippedFile, type ShippedFiles } from '@on.auto/shipped-files';
+import { serveFakeApi, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
+import { Effect, Option, Schema } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import { secretIdOf, secretsKey, secretStoreInFile } from '../testing/records/kept-credentials.ts';
@@ -45,6 +46,36 @@ const lostKey = keyOf(brokenOne, 'lost_1');
 
 const sealedKey = keyOf(listedWithoutAsking, 'sealed_1');
 
+const entries: ShippedFile = { package: '@on.auto/providers', path: 'src/entries' };
+
+const decodeDocument = Schema.decodeUnknownSync(Schema.Record(Schema.String, Schema.Unknown));
+
+function isTheFile(file: ShippedFile, other: ShippedFile): boolean {
+  return file.package === other.package && file.path === other.path;
+}
+
+function shippedServingAt({ entry }: Provider, server: string): (files: ShippedFiles) => ShippedFiles {
+  const document = shippedFileIn(entries, Option.getOrThrow(Option.fromNullishOr(entry.document)));
+  return (files) => {
+    const servingThere = async (): Promise<string> => {
+      const shipped: unknown = JSON.parse(await files.text(document));
+      return JSON.stringify({ ...decodeDocument(shipped), servers: [{ url: server }] });
+    };
+    return {
+      text: (file) => (isTheFile(file, document) ? servingThere() : files.text(file)),
+      bytes: async (file) =>
+        isTheFile(file, document) ? new TextEncoder().encode(await servingThere()) : files.bytes(file),
+      list: files.list,
+    };
+  };
+}
+
+const takingTheKey = {
+  status: 200,
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ ok: true }),
+};
+
 function offeredBut(...connected: readonly Provider[]) {
   const names: ReadonlySet<string> = new Set(connected.map((provider) => nameOf(provider)));
   return offeredByTheServer.filter(({ name }) => !names.has(name));
@@ -74,8 +105,11 @@ afterEach(() => {
   ledger?.remove();
 });
 
-async function served(environment: Readonly<Record<string, string>> = {}): Promise<ReasoningServer> {
-  const server = await servingReasoning([], environment);
+async function served(
+  environment: Readonly<Record<string, string>> = {},
+  parts: Parameters<typeof servingReasoning>[3] = {},
+): Promise<ReasoningServer> {
+  const server = await servingReasoning([], environment, undefined, parts);
   const stopping: { done?: Promise<void> } = {};
   const stop = (): Promise<void> => {
     stopping.done ??= server.stop();
@@ -128,12 +162,16 @@ describe('the providers the search of an org lists to the local developer', () =
 describe('a provider a connection of the org serves', () => {
   it('is left out while the connection is pending, connected or broken, its server searched with the provider, and listed again once it is removed', async () => {
     ledger = temporaryLedger();
-    const kept = { LEDGER_FILE: ledger.fileName };
-    const first = await served({ ...kept, SECRETS_KEY: secretsKey.toString('base64') });
+    const service = await serveFakeApi({ key: sealedKey });
+    onTestFinished(service.close);
+    service.answerNextWith(takingTheKey);
+    const kept = { LEDGER_FILE: ledger.fileName, SECRETS_KEY: secretsKey.toString('base64') };
+    const shipped = { shippedFilesOver: shippedServingAt(listedWithoutAsking, service.baseUrl) };
+    const first = await served(kept, shipped);
     const lost = await connectedWith(first, { provider: nameOf(brokenOne), credential: byAToken }, lostKey);
     await first.stop();
     await forgottenIn(ledger.fileName, lost);
-    const restarted = await served({ ...kept, SECRETS_KEY: secretsKey.toString('base64') });
+    const restarted = await served(kept, shipped);
     await restarted.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     const pending = await addedConnection(restarted, { provider: nameOf(pendingOne), credential: byAToken });
 

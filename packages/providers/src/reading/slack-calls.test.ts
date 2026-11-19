@@ -162,7 +162,14 @@ describe('the Slack Bot provider', () => {
       {
         succeeded: '/ok',
         code: '/error',
-        key_refused: ['invalid_auth', 'not_authed', 'token_revoked', 'token_expired', 'account_inactive'],
+        key_refused: [
+          'invalid_auth',
+          'not_authed',
+          'token_revoked',
+          'token_expired',
+          'account_inactive',
+          'not_allowed_token_type',
+        ],
         scope_lacking: ['missing_scope'],
         rate_limited: ['ratelimited', 'rate_limited'],
       },

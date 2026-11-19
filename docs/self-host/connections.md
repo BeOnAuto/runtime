@@ -459,7 +459,7 @@ connections:
           - browser_evaluate
 ```
 
-- `allowed_hosts` names `127.0.0.1`, the provider's host, by itself. Without it, `list_providers` and `search` do not offer a provider on loopback, in local mode too. Outside local mode, `add_connection` refuses it as well.
+- `allowed_hosts` names `127.0.0.1`, the provider's host, by itself. Outside local mode, without it, `list_providers` and `search` do not offer a provider on loopback, and `add_connection` refuses it.
 - `allowed_hosts` is then the whole list of hosts a connection may reach. So it names the hosts of the other connections people add too, as `*.example.com` above.
 - `marks` gives the six tools that only look at the page the mark `reads`, and the tools that move around and work the page `acts`. Microsoft's server hints a mark for each tool too, but its hints can change from one version to the next. A tool the list leaves out keeps the mark its server hints.
 

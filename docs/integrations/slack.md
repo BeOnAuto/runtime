@@ -39,27 +39,14 @@ Auto's Slack app works only in workspaces on a paid Slack plan, as Slack require
 Your company creates the app at Slack and owns it. Auto connects to it as Slack Bot, with the app's bot token, a code Slack gives the app when it is installed. A playbook can then do what [Use Slack in a playbook](#use-slack-in-a-playbook) lists, with these differences:
 
 - Your app reads and posts only in the channels you add it to.
-- Messages come from your app, under the name you give it.
+- Messages come from your app, under its name. An app made from the link is named Auto.
 - You can't talk to Auto in Slack through your app. That takes Auto's Slack app.
 - Slack doesn't tell Auto when someone replies to a request. Auto checks instead: every few seconds at first, and every five minutes at most, as [Answering by reply](../reference/interaction-format.md#answering-by-reply) sets out.
 - Slack's limit on reading a conversation, 15 messages a read and one read a minute, doesn't apply to your app.
 
-### Create your app in Slack
+### Create your app and connect it
 
-You need a Slack account in the workspace, and no code. Where your workspace takes only the apps its owners approve, a workspace owner or app manager approves your app once.
-
-1. Open [api.slack.com/apps](https://api.slack.com/apps), signed in to Slack, and select **Create New App**.
-2. Select **Pick features**, then **Continue**. Enter an **App Name**, the name people see in Slack, and select your **Workspace**. Select **Continue** until you reach **Review your app**, then select **Create**. If Slack says the app can't do anything until you add scopes, select **Create Anyway**.
-3. In the menu on the left, select **OAuth & Permissions** and scroll down to **Scopes**. Under **Bot Token Scopes**, select **Add an OAuth Scope** and add each scope below. A scope is a permission the app asks for.
-   - `channels:read`, `channels:history`, `users:read`, `chat:write`, `reactions:read` and `reactions:write`
-   - `groups:read` and `groups:history`, for private channels
-4. Scroll back to the top of **OAuth & Permissions**. Select **Install to Workspace**, then **Allow**. Where your workspace takes only approved apps, Slack asks you to request the app instead, and you install it once it is approved.
-5. Under **OAuth Tokens**, copy the token that starts with `xoxb-`. This is the app's bot token. Keep it private: anyone who has it can act as your app.
-6. In Slack, add your app to each channel your playbooks use. In the channel, send `/invite @` followed by your app's name.
-
-### Connect your app to Auto
-
-Someone with permission to change your org in Auto does these steps.
+One person does these steps: someone with permission to change your organization in Auto, who also has a Slack account in the workspace. No code is needed. Where your workspace takes only the apps its owners approve, a workspace owner or app manager approves your app once.
 
 1. Ask your agent:
 
@@ -69,7 +56,12 @@ Someone with permission to change your org in Auto does these steps.
 
    Or, in Studio, open **Settings**, then **Connections**, select **Slack Bot** under **Add a connection**, and select **Connect**.
 
-2. Open the page of Studio your agent gives you. If you started in Studio, it opens by itself. Paste the bot token under **Slack bot token**, and select **Approve**. Studio then shows the connection as connected.
+2. Open the page of Studio your agent gives you. If you started in Studio, it opens by itself.
+3. On that page, select **Get a key at api.slack.com**, signed in to Slack. Slack opens with a new app filled in, named Auto: choose your workspace and select **Create**. If you made your app before, skip this step: open it at [api.slack.com/apps](https://api.slack.com/apps), select **OAuth & Permissions** and go on from step 5.
+4. In the app's settings, select **OAuth & Permissions**, then **Install to Workspace** and **Allow**. Where your workspace takes only approved apps, Slack asks you to request the app instead, and you install it once it is approved.
+5. Under **OAuth Tokens**, copy the token that starts with `xoxb-`. This is the app's bot token. Keep it private: anyone who has it can act as your app.
+6. Back on the page of Studio, paste the bot token under **Slack bot token**, and select **Approve**. Auto checks the token with Slack before it saves it, and Studio then shows the connection as connected. If Slack refuses the token, the page says so under the field, and nothing is saved.
+7. In Slack, add your app to each channel your playbooks use. In the channel, send `/invite @` followed by your app's name.
 
 Auto keeps the token in its secret store, and your agent never sees it. Give a function in your playbook the Slack Bot tools as [Use Slack in a playbook](#use-slack-in-a-playbook) shows. To stop using your app, remove the Slack Bot connection as [In Auto](#in-auto) shows, and remove the app at Slack as [At Slack](#at-slack) shows. For help, see [Get help](#get-help).
 

@@ -153,8 +153,8 @@ await test('a way of consent publishes the words of each scope it asks, in its o
 });
 
 await test('a way of a key publishes where the key is made and how', () => {
-  assert.equal(wayAt(shipped('slack-bot'), 0).key_page, 'https://api.slack.com/apps');
-  assert.match(String(wayAt(shipped('slack-bot'), 0).instructions), /It starts with `xoxb-`\.$/u);
+  assert.equal(new URL(String(wayAt(shipped('slack-bot'), 0).key_page)).host, 'api.slack.com');
+  assert.match(String(wayAt(shipped('slack-bot'), 0).instructions), /`xoxb-`/u);
 });
 
 await test('a server is published by its hosts, each region of one reached in regions, and a placeholder by its description and its choices', () => {
