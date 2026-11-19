@@ -26,11 +26,6 @@ export function readingMeasured(database: HostDatabase): MeasuredReads {
       read.push(dataBytesOf(answer.messages));
       return answer;
     },
-    messageAt: async (stream, version) => {
-      const message = await database.store.messageAt(stream, version);
-      read.push(dataBytesOf([message].filter((each) => isAMessage(each))));
-      return message;
-    },
     lastMessageOf: async (stream) => {
       const message = await database.store.lastMessageOf(stream);
       read.push(dataBytesOf([message].filter((each) => isAMessage(each))));

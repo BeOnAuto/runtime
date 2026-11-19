@@ -1,137 +1,29 @@
 import { capturedLogs, recordingTracer } from '@on.auto/operations/testing';
-import { bearerRequestOnce, type BearerSending, type RequestedOnce } from '@on.auto/tool-servers';
-import { Effect, Function, Option, Redacted } from 'effect';
+import type { BearerSending } from '@on.auto/tool-servers';
+import { Effect, Fiber, Redacted } from 'effect';
+import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
-import { eventDestinationOf } from '../reading/provider-list.ts';
-import { ofTheApp, overASocket, trackerOverASocket } from '../testing/event-destinations.ts';
-import { providersOf } from '../testing/fixture-providers.ts';
-import { opensAsDeclared, type OpeningWays } from './socket-openings.ts';
-import type { OpenSocket, SendsABearerRequest, SocketEnded, SocketOpening } from './socket-ports.ts';
-
-type Destination = SocketOpening['destination'];
-
-type Sending = OpeningWays['sending'];
-
-type Refusal = ReturnType<Sending['reaches']>;
-
-type Ended = Pick<SocketEnded, 'end' | 'code'>;
-
-function destinationOf(declared: object, type: 'webhook' | 'websocket'): Destination {
-  const entry = { ...trackerOverASocket, events: { destinations: [declared] } };
-  return Option.getOrThrow(Option.fromNullishOr(eventDestinationOf(providersOf(entry), 'tracker', type)));
-}
-
-const theOpening = 'https://api.chat.example.com/connections.open';
-
-const theAppsValue = 'app-value-4b8e1d07';
-
-const theTicket = 'ticket-9f2c6a31';
-
-const theAddress = `wss://socket.chat.example.com/link/?ticket=${theTicket}&app_id=A1`;
-
-const theAddressAs = (scheme: string) => theAddress.replace('wss:', scheme);
-
-const overTheSocket = destinationOf(overASocket, 'websocket');
-
-function openedAt(url: string, method: 'GET' | 'POST' = 'POST'): Destination {
-  return { ...overTheSocket, open: { method, url, address: '/url' } };
-}
-
-interface Sent {
-  readonly url: string;
-  readonly method: string;
-  readonly headers: Readonly<Record<string, string>>;
-  readonly body: string;
-  readonly redirect: string;
-}
-
-interface Opened {
-  readonly ended: Ended | undefined;
-  readonly sent: readonly Sent[];
-  readonly reached: readonly string[];
-  readonly constructed: readonly Redacted.Redacted[];
-  readonly closed: number;
-}
-
-interface Setting {
-  readonly answer?: () => Response;
-  readonly destination?: Destination;
-  readonly unreached?: (url: string) => Refusal;
-  readonly sends?: SendsABearerRequest;
-  readonly besideTheSending?: Readonly<Record<string, unknown>>;
-}
-
-type Traced = (opening: Effect.Effect<Ended | undefined>) => Effect.Effect<Ended | undefined>;
-
-interface Service {
-  readonly fetch: Sending['fetch'];
-  readonly sent: () => readonly Sent[];
-}
-
-const aSocket: OpenSocket = { next: Effect.never, send: () => Effect.void, ping: Effect.void };
-
-const answering = (body: unknown) => () => Response.json(body);
-
-function serviceAnswering(answer: () => Response): Service {
-  const sent: Sent[] = [];
-  return {
-    fetch: async (...[address, init]: readonly [unknown, unknown?]) => {
-      const request = new Request(String(address), Object.assign({}, init));
-      const { url, method, redirect } = request;
-      sent.push({ url, method, headers: Object.fromEntries(request.headers), body: await request.text(), redirect });
-      return answer();
-    },
-    sent: () => [...sent],
-  };
-}
-
-async function opened(setting: Setting, traced: Traced = Function.identity): Promise<Opened> {
-  const reached: string[] = [];
-  const constructed: Redacted.Redacted[] = [];
-  let closed = 0;
-  const { answer = answering({ ok: true, url: theAddress }), unreached = Function.constUndefined } = setting;
-  const service = serviceAnswering(answer);
-  const reaches = (url: string): Refusal => {
-    reached.push(url);
-    return unreached(url);
-  };
-  const sending = { fetch: service.fetch, reaches, callMs: 30_000, mostRequestBytes: 65_536 };
-  const opens = opensAsDeclared({
-    sends: setting.sends ?? bearerRequestOnce,
-    sending: Object.assign(sending, setting.besideTheSending),
-    constructs: (address) =>
-      Effect.sync(() => constructed.push(address)).pipe(
-        Effect.andThen(
-          Effect.addFinalizer(() =>
-            Effect.sync(() => {
-              closed += 1;
-            }),
-          ),
-        ),
-        Effect.as(aSocket),
-      ),
-  });
-  const opening = { destination: setting.destination ?? overTheSocket, credential: Redacted.make(theAppsValue) };
-  const ended = await Effect.runPromise(
-    traced(
-      Effect.scoped(opens(opening)).pipe(
-        Effect.match({ onFailure: (end: Ended) => end, onSuccess: Function.constUndefined }),
-      ),
-    ),
-  );
-  return { ended, sent: service.sent(), reached, constructed, closed };
-}
-
-const notOpened = 'not opened';
-
-const endOf = (ended: Ended | undefined) => ended?.end ?? 'opened';
-
-const unopened: RequestedOnce = { kind: 'unopened', because: 'connection_not_allowed' };
-
-function carried({ origins, bearer }: BearerSending): readonly unknown[] {
-  return [origins, bearer?.kind === 'key' ? Redacted.value(bearer.token) : bearer?.kind];
-}
+import { ofTheApp } from '../testing/event-destinations.ts';
+import {
+  answering,
+  destinationOf,
+  endOf,
+  failureCodes,
+  notOpened,
+  opened,
+  openedAt,
+  theAddress,
+  theAddressAs,
+  theAppsValue,
+  theOpening,
+  theTicket,
+  unopened,
+  type Refusal,
+  type Traced,
+} from '../testing/opened-sockets.ts';
+import { openedAndClosed, socketBackoff } from './socket-listening.ts';
+import { SocketEnded, type OpensASocket, type SendsABearerRequest } from './socket-ports.ts';
 
 describe('a socket opened as its entry declares', () => {
   it("is opened at the address open's request answers, the app's value sent there alone, as a bearer token", async () => {
@@ -179,6 +71,17 @@ describe('a socket opened as its entry declares', () => {
   });
 });
 
+describe('the request that opens a socket', () => {
+  it("is handed the entry's failure codes, and never a way to break the connection", async () => {
+    const given: BearerSending[] = [];
+    const sends: SendsABearerRequest = (_request, sending) =>
+      Effect.sync(() => given.push(sending)).pipe(Effect.as(unopened));
+    await opened({ sends, failureCodes, besideTheSending: { refused: () => Promise.resolve() } });
+
+    expect(given.map(({ failureCodes: codes, refused }) => [codes, refused])).toEqual([[failureCodes, undefined]]);
+  });
+});
+
 describe('an answer that names no socket address', () => {
   it.each([
     ['no address at its pointer', answering({ ok: false, error: 'not_allowed_token_type' })],
@@ -196,10 +99,27 @@ describe('an answer that names no socket address', () => {
 });
 
 describe("a refusal of the app's value, or a redirect", () => {
-  it.each([401, 403, 500])('opens nothing where the service answers %i, the value sent once', async (status) => {
+  it.each([403, 500])('opens nothing where the service answers %i, the value sent once', async (status) => {
     const { ended, sent, constructed } = await opened({ answer: () => new Response(null, { status }) });
 
     expect([endOf(ended), sent.length, constructed]).toEqual([notOpened, 1, []]);
+  });
+
+  it("ends refused where the service refuses the app's value by a 401 or by a code the entry lists as a refused key", async () => {
+    const answers = [() => new Response(null, { status: 401 }), answering({ ok: false, error: 'invalid_auth' })];
+    const openings = await Promise.all(answers.map((answer) => opened({ answer, failureCodes })));
+
+    expect(openings.map(({ ended, sent, constructed }) => [endOf(ended), sent.length, constructed])).toEqual([
+      ['refused', 1, []],
+      ['refused', 1, []],
+    ]);
+  });
+
+  it('is never refused by a code the entry does not list, or by an answer that is no JSON', async () => {
+    const answers = [answering({ ok: false, error: 'not_allowed_token_type' }), () => new Response('invalid_auth')];
+    const openings = await Promise.all(answers.map((answer) => opened({ answer, failureCodes })));
+
+    expect(openings.map(({ ended }) => endOf(ended))).toEqual([notOpened, notOpened]);
   });
 
   it.each([301, 302, 307, 308])('follows no redirect of %i, and opens nothing', async (status) => {
@@ -244,6 +164,30 @@ describe('what the runtime reaches', () => {
   });
 });
 
+function carried({ origins, bearer }: BearerSending): readonly unknown[] {
+  return [origins, bearer?.kind === 'key' ? Redacted.value(bearer.token) : bearer?.kind];
+}
+
+const notOpenedThere = () => Effect.fail(new SocketEnded({ end: 'not opened' }));
+
+describe('the host a socket could not be opened at', () => {
+  it("is open's host where its answer names no socket, and the socket's host where that is not reached or not opened", async () => {
+    const openings = await Promise.all([
+      opened({ answer: answering({ ok: true }) }),
+      opened({ unreached: unreachedAt('socket.chat.example.com') }),
+      opened({ constructed: notOpenedThere }),
+      opened({ constructed: () => Effect.fail(new SocketEnded({ end: 'closed', code: 1006 })) }),
+    ]);
+
+    expect(openings.map(({ ended }) => [ended?.end, ended?.host])).toEqual([
+      [notOpened, 'api.chat.example.com'],
+      [notOpened, 'socket.chat.example.com'],
+      [notOpened, 'socket.chat.example.com'],
+      ['closed', undefined],
+    ]);
+  });
+});
+
 describe('a destination whose opening is no declared https request', () => {
   it.each([
     ['no open', destinationOf(ofTheApp, 'webhook')],
@@ -257,7 +201,7 @@ describe('a destination whose opening is no declared https request', () => {
   });
 });
 
-const leftOut = [theAppsValue, theTicket, 'socket.chat.example.com', '/link/'];
+const leftOut = [theAppsValue, theTicket, '/link/'];
 
 const answersHoldingTheAddress = [
   answering({ ok: true, url: theAddress }),
@@ -279,7 +223,36 @@ describe('what an opening leaves behind', () => {
     const left = JSON.stringify([failures, recording.spans(), logs.logged(), constructed]);
 
     expect([logs.logged(), constructed.length, recording.spans().length]).toEqual([[], 1, 6]);
-    expect(failures.map((ended) => endOf(ended))).toEqual(['opened', ...answersHoldingTheAddress.map(() => notOpened)]);
+    expect(failures.map((ended) => endOf(ended))).toEqual([
+      'opened',
+      notOpened,
+      notOpened,
+      'refused',
+      notOpened,
+      notOpened,
+    ]);
     expect(leftOut.filter((value) => left.includes(value))).toEqual([]);
+  });
+});
+
+describe('a socket opened once, as a value given is checked', () => {
+  it('is closed at once, and given up as not opened past the bound of an opening', async () => {
+    const closings: string[] = [];
+    const opens: OpensASocket = () =>
+      Effect.as(
+        Effect.addFinalizer(() => Effect.sync(() => closings.push('closed'))),
+        { next: Effect.never, send: () => Effect.void, ping: Effect.void },
+      );
+    const opening = { destination: openedAt(theOpening), credential: Redacted.make(theAppsValue) };
+    const hanging = Effect.gen(function* () {
+      const fiber = yield* Effect.forkChild(Effect.flip(openedAndClosed(() => Effect.never, opening)));
+      yield* TestClock.adjust(socketBackoff.openingMs);
+      return yield* Fiber.join(fiber);
+    });
+
+    await Effect.runPromise(openedAndClosed(opens, opening));
+    const ended = await Effect.runPromise(hanging.pipe(Effect.provide(TestClock.layer())));
+
+    expect([closings, ended.end]).toEqual([['closed'], 'not opened']);
   });
 });

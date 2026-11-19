@@ -55,6 +55,12 @@ function recordOf(stream: string, { type, data = {} }: Fact, context = byAdmin, 
   return record;
 }
 
+const alphaKey = 'playbook/acme/alpha/';
+
+function keyOfTheRunsOf(name: string): string {
+  return `definition/acme/${name}/`;
+}
+
 function publishedFollowedEvents(context: Context = byAdmin, correlationId: string | null = null) {
   const record = recordOf(
     'events/e1',
@@ -62,7 +68,7 @@ function publishedFollowedEvents(context: Context = byAdmin, correlationId: stri
     context,
     correlationId,
   );
-  return followedEventOf(record, 'workflow');
+  return followedEventOf(record, alphaKey);
 }
 
 function runFact(runId: string, [type, name]: readonly [string, string], correlationId: string | null) {
@@ -77,7 +83,7 @@ function runFact(runId: string, [type, name]: readonly [string, string], correla
       context,
       correlationId,
     ),
-    'workflow',
+    keyOfTheRunsOf(name),
   );
 }
 
@@ -122,7 +128,7 @@ function recordOfFollowedOutputs(stream: string, type: string, data: Schema.Json
 }
 
 function followedOf(record: RecordedEvent): FollowedEvent {
-  const followed = followedEventOf(record, 'workflow');
+  const followed = followedEventOf(record, keyOfTheRunsOf('report'));
   if (typeof followed === 'string') {
     throw new TypeError(`The record ${record.id} makes no event`);
   }
@@ -200,14 +206,14 @@ describe('an event published to a playbook, as the follower reads it', () => {
       publishedFollowedEvents(emittedBy, 'r-nested'),
       publishedFollowedEvents(emittedBy),
     ]).toMatchObject([
-      { depth: 2, emitter: { runId: 'r-nested', workflow: 'close' }, ownedBy: ['close'], topRun: 'r-top' },
+      { depth: 2, emitter: { runId: 'r-nested', workflow: 'close' }, ownedBy: [], topRun: 'r-top' },
       { topRun: undefined },
       { topRun: undefined },
     ]);
   });
 
   it('is unreadable when its record cannot be read as a publication', () => {
-    expect(followedEventOf(recordOf('events/e1', { type: 'event_published' }), 'workflow')).toBe('unreadable');
+    expect(followedEventOf(recordOf('events/e1', { type: 'event_published' }), alphaKey)).toBe('unreadable');
   });
 
   it('is unreadable, and starts no chain at depth 1, when its context names a run but not as an emitted event does', () => {
@@ -221,16 +227,16 @@ describe('an event published to a playbook, as the follower reads it', () => {
 });
 
 describe('a fact of a playbook, as the follower reads it', () => {
-  it('about a run, is owned by the workflow it ran and names the run that began the chain, one deeper', () => {
+  it('about a run, is owned by the definition it ran, the key its run is filed under, and names the run that began the chain, one deeper', () => {
     expect([runFact('r-1', ['workflow', 'close'], 'r-top'), runFact('r-2', ['reasoning', 'sum'], 'r-2')]).toMatchObject(
       [
         {
           depth: 1,
-          ownedBy: ['close'],
+          ownedBy: [keyOfTheRunsOf('close')],
           topRun: 'r-top',
           event: { type: 'run_started', subject: 'workflow/close' },
         },
-        { depth: 1, ownedBy: [], topRun: undefined, event: { subject: 'reasoning/sum' } },
+        { depth: 1, ownedBy: [keyOfTheRunsOf('sum')], topRun: undefined, event: { subject: 'reasoning/sum' } },
       ],
     );
   });
@@ -242,7 +248,7 @@ describe('a fact of a playbook, as the follower reads it', () => {
       { ...byAdmin, definitionType: 'workflow', definitionName: 'close', definitionVersion: 2 },
     );
 
-    expect(followedEventOf(retired, 'workflow')).toMatchObject({
+    expect(followedEventOf(retired, keyOfTheRunsOf('close'))).toMatchObject({
       depth: 1,
       ownedBy: [],
       topRun: undefined,
@@ -259,10 +265,10 @@ describe('a fact of a playbook that is none, or cannot be read, as the follower 
           type: 'run_started',
           data: { input: 7, calls_tools: false },
         }),
-        'workflow',
+        alphaKey,
       ),
-      followedEventOf(recordOf('runs/r-1', { type: 'call_recorded' }), 'workflow'),
-      followedEventOf(recordOf('run-logs/r-1', { type: 'input_applied' }), 'workflow'),
+      followedEventOf(recordOf('runs/r-1', { type: 'call_recorded' }), alphaKey),
+      followedEventOf(recordOf('run-logs/r-1', { type: 'input_applied' }), alphaKey),
     ]).toEqual(['unreadable', 'none', 'none']);
   });
 
@@ -270,9 +276,9 @@ describe('a fact of a playbook that is none, or cannot be read, as the follower 
     const called = { call_id: 'c-1', server: 'graph', tool: 'search', arguments_bytes: 2 };
 
     expect([
-      followedEventOf(recordOf('tool-calls/c-1', { type: 'tool_call_started', data: called }), 'workflow'),
-      followedEventOf(recordOf('tool-calls/c-1', { type: 'tool_call_answered', data: called }), 'workflow'),
-      followedEventOf(recordOf('tool-calls/c-1', { type: 'tool_call_started' }), 'page'),
+      followedEventOf(recordOf('tool-calls/c-1', { type: 'tool_call_started', data: called }), alphaKey),
+      followedEventOf(recordOf('tool-calls/c-1', { type: 'tool_call_answered', data: called }), alphaKey),
+      followedEventOf(recordOf('tool-calls/c-1', { type: 'tool_call_started' }), alphaKey),
     ]).toEqual(['none', 'none', 'none']);
   });
 });
@@ -282,8 +288,8 @@ describe('the reads and tellings of a conversation, as the follower meets them',
     const read = { call_id: 'c-1', server: 'chat', tool: 'thread_replies' };
 
     expect([
-      followedEventOf(recordOf('conversation-calls/c-1', { type: 'replies_read', data: read }), 'workflow'),
-      followedEventOf(recordOf('conversation-calls/c-1', { type: 'telling_started', data: read }), 'page'),
+      followedEventOf(recordOf('conversation-calls/c-1', { type: 'replies_read', data: read }), alphaKey),
+      followedEventOf(recordOf('conversation-calls/c-1', { type: 'telling_started', data: read }), alphaKey),
     ]).toEqual(['none', 'none']);
   });
 });

@@ -20,9 +20,9 @@ describe('the read of the outcomes of runs, bound to a call', () => {
   it('reads only the playbook of the call', async () => {
     const { dispatcher: d, ledger, run } = harness({ runOutcomes: runTallies });
     const began: RunFact = { type: 'run_began', data: { at: '2026-10-01T09:00:00.000Z', fn: 'triage' } };
-    await placedIn(ledger.service, 'd1', 'alpha');
+    await placedIn(ledger.service, 'triage', 'alpha');
     await placedIn(ledger.service, 'd2', 'beta');
-    await Effect.runPromise(ledger.service.execute('definition/acme/d1/runs/r1', runFacts, [began]));
+    await Effect.runPromise(ledger.service.execute('definition/acme/triage/runs/r1', runFacts, [began]));
     await Effect.runPromise(ledger.service.execute('definition/acme/d2/runs/r2', runFacts, [began]));
     const window = { from: '2026-10-01', to: '2026-10-01' };
 

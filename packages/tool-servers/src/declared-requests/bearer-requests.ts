@@ -16,6 +16,7 @@ export interface BearerSending {
   readonly fetch: FetchOfACall;
   readonly reaches: Reaches;
   readonly refused?: CredentialRefused;
+  readonly failureCodes?: Parameters<typeof settledRequestOf>[1];
   readonly callMs: number;
   readonly mostRequestBytes: number;
 }
@@ -104,7 +105,7 @@ function settledThrough(attempt: Attempt, sending: BearerSending): Promise<Reque
       const headers = headersOf(attempt, authorization);
       const sent = { method: request.method, headers, signal, ...(body === undefined ? {} : { body }) };
       const response = await within.send(url.href, sent);
-      return { response, settled: await settledRequestOf(response) };
+      return { response, settled: await settledRequestOf(response, sending.failureCodes) };
     },
     (settled) => 'error' in settled && isCredentialRefused(settled.error),
     { serverUrl: url, fetchFn: fetchWithin(sending.fetch, sending.reaches) },

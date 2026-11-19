@@ -8,14 +8,15 @@ import type { ReactionStart } from '../reactions/reaction-options.ts';
 import { subscriptionStarts } from '../reactions/subscription-starts.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { saidRefusals, type followedRecordOf } from './followed-records.ts';
+import { definitionKeyNamed } from './playbook-writes.ts';
 
 const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
 const topRuns: ReadonlyMap<string, string> = new Map([
-  ['r-of-close', 'close'],
-  ['r-of-other', 'other'],
+  ['r-of-close', definitionKeyNamed('close')],
+  ['r-of-other', definitionKeyNamed('other')],
 ]);
 
 export const stopsByItsMemory = '${ "stops by its memory" }';
@@ -102,7 +103,7 @@ export async function starting() {
       nextDeferredAt: Function.constant(Effect.succeed(null)),
     },
     refusals,
-    workflowOfRun: (_playbookKey, runId) => Effect.succeed(topRuns.get(runId)),
+    definitionOfRun: (_playbookKey, runId) => Effect.succeed(topRuns.get(runId)),
     match,
     stops,
     now: () => 0,

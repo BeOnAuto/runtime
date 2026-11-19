@@ -1,11 +1,12 @@
-import { appLevelToken, overASocket, providersOf, tracker } from '@on.auto/providers/testing';
-import { Schema } from 'effect';
+import { appLevelToken, ledgers, overASocket, providersOf, tracker } from '@on.auto/providers/testing';
+import { Result, Schema, Struct } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { hostsReachedBy } from '../policy/policy-rules.ts';
 import { added, billing, crm, lastFact, reconnected } from '../testing/additions.ts';
 import { fakeReads, fakeSockets, type ReadAnswer } from '../testing/harness-services.ts';
 import { ada, harness, operationNamed, recordedAs, type Harness, type HarnessOptions } from '../testing/harness.ts';
+import { appCredentialsGivenOf } from './given-apps.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -249,5 +250,33 @@ describe('the hosts a connection reaches', () => {
       'api.billing.example.com',
       'auth.billing.example.com',
     ]);
+  });
+});
+
+const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['invalid_auth'] };
+
+const namingItsFailures = providersOf({
+  ...Struct.omit(ledgers, ['headers', 'placeholders']),
+  base_url: 'https://api.ledgers.example.com/v2',
+  credentials: [{ ...trackersKey, app_credentials: [appLevelToken] }],
+  events: { destinations: [overASocket] },
+  failure_codes: failureCodes,
+});
+
+describe('an app credential of an entry that names its failures in a successful answer', () => {
+  it("is opened with the entry's failure codes, so the service's refusal of it is read as one", () => {
+    const connection = { provider: 'ledgers', credential: { kind: 'secret' } } as const;
+    const services = { providers: namingItsFailures, sockets: fakeSockets({}) };
+    const plain = { providers: tested, sockets: fakeSockets({}) };
+
+    expect([
+      Result.map(appCredentialsGivenOf(connection, { app_level_token: appToken }, services), (given) =>
+        given.map(({ failureCodes: codes }) => codes),
+      ),
+      Result.map(
+        appCredentialsGivenOf({ ...connection, provider: 'tracker' }, { app_level_token: appToken }, plain),
+        (given) => given.map(({ failureCodes: codes }) => codes),
+      ),
+    ]).toEqual([Result.succeed([failureCodes]), Result.succeed([undefined])]);
   });
 });

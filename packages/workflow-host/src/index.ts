@@ -1,3 +1,4 @@
+export { background } from './calls/background.ts';
 export type { CallAnswer, Perform, Trouble } from './calls/host-executor.ts';
 export type { CallAttempt } from './calls/call-starts.ts';
 export { closingBounds } from './closing/closed-runs.ts';
@@ -99,6 +100,7 @@ export { viewsPortOn, type ViewsPort } from './views/views-port.ts';
 export type { HostClock } from './loop/host-clock.ts';
 export {
   hostWakeUp,
+  oneWakeAtATime,
   type HostWakeUp,
   type NextWake,
   type WakeSignal,

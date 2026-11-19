@@ -23,6 +23,7 @@ export interface PlaybookContentReader {
 export interface PlaybookDefinitionsReader {
   readonly ofDefinition: (definition: string) => StreamReader & StreamAges;
   readonly holderOfName: (definitionType: string, name: string) => Effect.Effect<HeldName | undefined>;
+  readonly nameHeldBy: (definition: string) => Effect.Effect<HeldName | undefined>;
   readonly namesHeldIn: (definitionType: string) => Effect.Effect<readonly HeldName[]>;
   readonly definitionHolding: (stream: string) => Effect.Effect<string | undefined>;
 }

@@ -32,7 +32,7 @@ export type DefinitionsStreamEvent = typeof DefinitionsStreamEventSchema.Type;
 export function isPresented(
   type: RecordedDefinitionEvent['type'],
 ): type is Extract<DefinitionsStreamEvent['type'], RecordedDefinitionEvent['type']> {
-  return type !== 'definition_moved';
+  return type !== 'definition_moved' && type !== 'definition_renamed';
 }
 
 export function definitionsStreamChangesOf(definitionTypes: readonly string[]): ChangesNamed {

@@ -1,5 +1,6 @@
 import type { ProvidedOnceServed } from '../capability-registry/served-ports.ts';
 import type { GoalsPortsOver } from '../goals/goals-engine-lists.ts';
+import type { SocketsServing } from '../sockets/sockets-of-the-server.ts';
 import { workerPool, type ProgramPoolOf, type ServedComputation } from './served-computation.ts';
 import type { GenerationWiring } from './served-generation.ts';
 import { projectionWiring, type ProjectionWiring } from './served-projections.ts';
@@ -19,6 +20,7 @@ export interface ServedWiring extends Omit<FunctionWiring, 'programPoolOf'>, Too
   readonly results: boolean;
   readonly messages: boolean;
   readonly goalsPortsOver?: GoalsPortsOver | undefined;
+  readonly opens: SocketsServing['opens'];
 }
 
 export function functionWiringOf(

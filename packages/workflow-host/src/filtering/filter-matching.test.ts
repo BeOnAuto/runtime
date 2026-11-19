@@ -101,6 +101,23 @@ describe('the stops kept for a workflow', () => {
   });
 });
 
+describe('the stops of a filter of a workflow renamed', () => {
+  it('follow it to its new name, counted and failed as before, and leave nothing at the name it left', () => {
+    const stops = filterStops();
+    const renamed: FilterPlace = { ...trigger, workflow: 'close-the-month' };
+    judgedEach(stops, trigger, [stoppedByItsDeadline, stoppedByItsDeadline]);
+    stops.failedFirst(trigger);
+
+    stops.moved(trigger, renamed);
+
+    expect([
+      stops.holds(trigger),
+      stops.failedFirst(renamed),
+      stops.judged(renamed, 0, stoppedByItsDeadline).kind,
+    ]).toEqual([false, false, 'stopped']);
+  });
+});
+
 describe('the stops of a filter of a workflow that moved to another playbook', () => {
   it('follow it to the key of the other playbook, counted and failed as before, and leave nothing at the key it left', () => {
     const stops = filterStops();
@@ -109,7 +126,7 @@ describe('the stops of a filter of a workflow that moved to another playbook', (
     stops.failedFirst(trigger);
     stops.failedFirst(listener);
 
-    stops.moved(trigger.playbookKey, there.playbookKey, trigger.workflow);
+    stops.moved(trigger, there);
 
     expect([
       stops.holds(trigger),

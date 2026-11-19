@@ -1,6 +1,7 @@
 import {
-  playbookBoundProjectionReader,
   definitionBoundStreamReader,
+  playbookBoundProjectionReader,
+  streamPrefixOfPlaybook,
   type PlaybookAddress,
   type ProjectionReader,
 } from '@on.auto/operations';
@@ -32,8 +33,10 @@ function versionToPrepareOf({ source, stripped, putInPlaceBy }: VersionFound): V
 type RunVersionLedger = DefinitionVersionReader & ProjectionReader;
 
 function readModelReaderIn(ledger: RunVersionLedger, address: PlaybookAddress): ReadModelReader {
+  const playbookKey = streamPrefixOfPlaybook(address);
   return {
     ...playbookBoundProjectionReader(ledger, address),
+    holderOfName: (definitionType, name) => ledger.holderOfName({ playbookKey, definitionType, name }),
     ofDefinition: (definition) => definitionBoundStreamReader(ledger, { org: address.org, definition }),
     playbook: address,
   };

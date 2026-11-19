@@ -42,6 +42,8 @@ const defined: readonly EncodedEvent[] = [{ type: 'definition_created', data: { 
 
 const logged: readonly EncodedEvent[] = [{ type: 'run_noted', data: {} }];
 
+const registered: readonly EncodedEvent[] = [{ type: 'connection_noted', data: {} }];
+
 export const keptStreams: readonly WrittenStream[] = [
   {
     stream: `${playbookKey}runs/kept`,
@@ -59,6 +61,7 @@ export const keptStreams: readonly WrittenStream[] = [
     lineage: noLineage,
   },
   { stream: `${definitionKey}definitions/workflow`, events: defined, lineage: noLineage },
+  { stream: 'org/acme/connections', events: registered, lineage: noLineage },
 ];
 
 export const archivedRun: WrittenStream = {
@@ -79,6 +82,7 @@ export const archivedStreams: readonly WrittenStream[] = [
     lineage: noLineage,
   },
   { stream: `${playbookKey}definitions/workflow`, events: defined, lineage: noLineage },
+  { stream: 'org/beta/connections', events: registered, lineage: noLineage },
 ];
 
 export const everyStream: readonly string[] = [...keptStreams, ...archivedStreams].map(({ stream }) => stream);

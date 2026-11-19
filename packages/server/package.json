@@ -91,10 +91,12 @@
     "@opentelemetry/sdk-trace-node": "2.9.0",
     "effect": "catalog:",
     "hono": "catalog:",
-    "pg": "8.23.1"
+    "pg": "8.23.1",
+    "ws": "8.22.0"
   },
   "devDependencies": {
     "@types/pg": "8.23.1",
+    "@types/ws": "8.18.2",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   }

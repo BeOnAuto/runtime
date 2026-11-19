@@ -28,6 +28,7 @@
   "src/registry/0.59.0/definition_updated.json": "bb164240e9b77b5b426b586c95b7d20097be616ca8f2baf6a53326e2585d7cde",
   "src/registry/0.60.0/definition_created.json": "b368c6476f9a89f7a0825029eb326340f7f6eecf9dce96ca2a5229b33fbece21",
   "src/registry/0.67.0/definition_moved.json": "69f0fb699a3269608ba2b3a279c7c380b6fc8fd03b912af0feae949a9f0970d5",
+  "src/registry/0.67.0/definition_renamed.json": "ba77e90b27fce43df9b17f2b97222330a1ce1b55b807cd69f85dd950354a7bd3",
   "src/runs/0.46.0/attempt_resumed.json": "04221493d0abfc336b2a26effc50917130b28f34abe0c1213490e5c7ff2d90b7",
   "src/runs/0.46.0/model_call_answered.json": "e03ca14b39a962027031f9e4bca1f9110cfd545a27b46386eacee42cad718f12",
   "src/runs/0.46.0/model_call_failed.json": "aa7c5ed0e03fbf7e8ddffb33c0c86f94f6bfd0d20e7b6aef902408ed0a21b802",

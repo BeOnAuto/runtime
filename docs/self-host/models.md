@@ -174,6 +174,7 @@ NODE_EXTRA_CA_CERTS=/etc/ssl/certs/internal-ca.pem
 ```
 
 - `NODE_USE_ENV_PROXY=1` makes Node's `fetch` and its default HTTP agents use `HTTPS_PROXY` and `NO_PROXY`. Every model call goes through the proxy.
+- A connection that receives events over a WebSocket opens it through the same proxy. Allow outgoing HTTPS and WebSocket connections on port 443 to the service's hosts; nothing incoming is needed.
 - The AWS credential chain makes its STS and SSO calls with agents of its own. When `NODE_USE_ENV_PROXY=1` is set, the runtime gives them the same proxy settings.
 - Google's token client reads `HTTPS_PROXY` and `NO_PROXY` itself. It matches a `NO_PROXY` entry only as an exact host name, or as a suffix that starts with `.`, so write the entries that way. Azure's identity library also reads them itself.
 - The cloud credential endpoints must not go through the proxy: `169.254.169.254` (EC2, GCE and Azure instance metadata), `169.254.170.2` (ECS task roles), `169.254.170.23` (EKS Pod Identity) and `metadata.google.internal`.

@@ -2,7 +2,7 @@ import { Clock, Effect, Logger, Option, Queue, Redacted, type Scope } from 'effe
 import { TestClock } from 'effect/testing';
 
 import type { Destination } from '../events/destination-fields.ts';
-import { receivingOverASocket } from '../sockets/socket-listening.ts';
+import { receivingOverASocket, type SocketListening } from '../sockets/socket-listening.ts';
 import {
   SocketEnded,
   type Arrived,
@@ -10,6 +10,7 @@ import {
   type OpensASocket,
   type SocketArrival,
   type SocketFrame,
+  type SocketOpening,
 } from '../sockets/socket-ports.ts';
 
 type Down = SocketFrame | { readonly kind: 'close'; readonly code?: number };
@@ -28,20 +29,26 @@ class FakeSocketServer {
   readonly #attemptsAt: number[] = [];
   readonly #openedAt: number[] = [];
   readonly #credentials: Redacted.Redacted[] = [];
+  readonly #failureCodes: SocketOpening['failureCodes'][] = [];
   readonly #received: string[] = [];
   readonly #downs: Queue.Queue<Down>[] = [];
   readonly #closedBy: (ClosedBy | undefined)[] = [];
   #refusals = 0;
+  #refusesTheValue = false;
   #pings = 0;
   #hanging = false;
 
-  readonly opens: OpensASocket = ({ credential }) =>
+  readonly opens: OpensASocket = ({ credential, failureCodes }) =>
     Effect.flatMap(Clock.currentTimeMillis, (now): Effect.Effect<OpenSocket, SocketEnded, Scope.Scope> => {
       this.#attemptsAt.push(now);
       this.#credentials.push(credential);
+      this.#failureCodes.push(failureCodes);
+      if (this.#refusesTheValue) {
+        return Effect.fail(new SocketEnded({ end: 'refused' }));
+      }
       if (this.#refusals > 0) {
         this.#refusals -= 1;
-        return Effect.fail(new SocketEnded({ end: 'not opened' }));
+        return Effect.fail(new SocketEnded({ end: 'not opened', host: 'socket.chat.example.com' }));
       }
       return this.#hanging ? Effect.never : this.#opened();
     });
@@ -68,6 +75,10 @@ class FakeSocketServer {
     return this.#credentials;
   }
 
+  get failureCodes(): readonly SocketOpening['failureCodes'][] {
+    return this.#failureCodes;
+  }
+
   get received(): readonly string[] {
     return this.#received;
   }
@@ -82,6 +93,10 @@ class FakeSocketServer {
 
   readonly hang = (hanging: boolean): void => {
     this.#hanging = hanging;
+  };
+
+  readonly refuseTheValue = (refusing: boolean): void => {
+    this.#refusesTheValue = refusing;
   };
 
   #opened(): Effect.Effect<OpenSocket, never, Scope.Scope> {
@@ -124,12 +139,15 @@ export interface Heard {
   readonly server: FakeSocketServer;
   readonly arrivals: readonly SocketArrival[];
   readonly logged: readonly string[];
+  readonly told: readonly string[];
 }
 
 export interface Setting {
   readonly refusals?: number;
+  readonly refusesTheValue?: boolean;
   readonly hanging?: boolean;
   readonly hearer?: Hearer;
+  readonly failureCodes?: SocketOpening['failureCodes'];
 }
 
 export interface Listened extends Setting {
@@ -146,15 +164,38 @@ export function after(milliseconds: number): Effect.Effect<void> {
   return TestClock.adjust(milliseconds).pipe(Effect.andThen(settled));
 }
 
+function toldTo(tell: (said: string) => void): Pick<SocketListening, 'opened' | 'ended'> {
+  return {
+    opened: Effect.sync(() => {
+      tell('opened');
+    }),
+    ended: (end) =>
+      Effect.sync(() => {
+        tell(end);
+      }),
+  };
+}
+
 export async function listenedOver(listened: Listened, script: Script): Promise<Heard> {
   const server = new FakeSocketServer();
   server.refuse(listened.refusals ?? 0);
+  server.refuseTheValue(listened.refusesTheValue ?? false);
   server.hang(listened.hanging ?? false);
   const arrivals: SocketArrival[] = [];
   const logged: string[] = [];
-  const { destination, credential, hearer } = listened;
+  const told: string[] = [];
+  const { destination, credential, hearer, failureCodes } = listened;
   const arrived = hearer((arrival) => arrivals.push(arrival));
-  const listening = { destination, credential: Redacted.make(credential), opens: server.opens, arrived };
+  const listening = {
+    destination,
+    credential: Redacted.make(credential),
+    opens: server.opens,
+    arrived,
+    ...(failureCodes === undefined ? {} : { failureCodes }),
+    ...toldTo((said) => {
+      told.push(said);
+    }),
+  };
   await Effect.runPromise(
     Effect.scoped(
       Effect.forkScoped(receivingOverASocket(listening)).pipe(Effect.andThen(settled), Effect.andThen(script(server))),
@@ -163,5 +204,5 @@ export async function listenedOver(listened: Listened, script: Script): Promise<
       Effect.provide(Logger.layer([Logger.map(Logger.formatJson, (line) => logged.push(line))])),
     ),
   );
-  return { server, arrivals, logged };
+  return { server, arrivals, logged, told };
 }

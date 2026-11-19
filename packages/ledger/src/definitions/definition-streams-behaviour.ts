@@ -3,9 +3,11 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { definitionNames } from '../definition-names/definition-names-table.ts';
 import { stamped } from '../testing/happenings.ts';
-import type { LedgerEntry } from '../testing/ledger-entry.ts';
+import { aStore, type LedgerEntry } from '../testing/ledger-entry.ts';
 
-const created = [{ type: 'definition_created', data: { name: 'reviews' } }];
+const aCreation = { type: 'definition_created', data: { name: 'reviews' } };
+
+const created = [aCreation];
 
 const firstOfBeta = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71/';
 
@@ -69,6 +71,43 @@ export function definitionStreamsBehaviour(entry: LedgerEntry): void {
     });
 
     placedDefinitionStreamsBehaviour(entry);
+  });
+}
+
+const streamsOfSeveralOrgs: readonly (readonly [string, number])[] = [
+  ['org/beta/connections', 1],
+  ['org/acme/connections', 2],
+  ['org/acme/tallies', 1],
+  ['org/gamma/connections/c1', 1],
+  ['playbook/delta/alpha/connections', 1],
+  ['playbook/epsilon/alpha/runs/run-1', 1],
+  ['definition/zeta/d1/connections', 1],
+];
+
+export function orgStreamsBehaviour(entry: LedgerEntry): void {
+  describe("the orgs' streams of a name", () => {
+    it("are each org's own stream of that name with its version, ordered by the org", async () => {
+      const store = await aStore(entry);
+      await Promise.all(
+        streamsOfSeveralOrgs.map(([stream, facts]) =>
+          store.append(
+            stream,
+            Array.from({ length: facts }, () => aCreation),
+            {
+              expectedVersion: 0,
+              context: stamped,
+            },
+          ),
+        ),
+      );
+
+      expect(await store.orgStreams('connections')).toEqual([
+        { org: 'acme', version: 2 },
+        { org: 'beta', version: 1 },
+      ]);
+      expect(await store.orgStreams('tallies')).toEqual([{ org: 'acme', version: 1 }]);
+      expect(await store.orgStreams('comments')).toEqual([]);
+    });
   });
 }
 

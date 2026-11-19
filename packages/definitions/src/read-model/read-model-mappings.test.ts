@@ -63,9 +63,11 @@ function messageOf(fact: (typeof definitionFacts)[number], at: number): Projecte
 }
 
 function streamOf({ context: contextReadModelFixtures }: (typeof definitionFacts)[number]) {
-  return streamAddressed(
-    `definition/acme/d1/definitions/${String(Reflect.get(contextReadModelFixtures, 'definitionType'))}`,
+  const type = String(Reflect.get(contextReadModelFixtures, 'definitionType'));
+  const definition = String(
+    Reflect.get(contextReadModelFixtures, 'definitionId') ?? Reflect.get(contextReadModelFixtures, 'definitionName'),
   );
+  return streamAddressed(`definition/acme/${definition}/definitions/${type}`);
 }
 
 function keyedMessages(table: KeptProjection) {

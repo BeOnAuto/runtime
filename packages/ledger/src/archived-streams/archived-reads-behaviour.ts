@@ -86,6 +86,7 @@ const streamReads: readonly PortRead[] = [
   },
   { port: 'lastPositionOf', read: ({ store }) => eachOf(everyStream, (stream) => store.lastPositionOf(stream)) },
   { port: 'definitionStreams', read: ({ store }) => store.definitionStreams('workflow') },
+  { port: 'orgStreams', read: ({ store }) => store.orgStreams('connections') },
   {
     port: 'factAt',
     read: ({ store }) =>

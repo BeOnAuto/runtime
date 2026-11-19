@@ -43,7 +43,14 @@ function aLedger() {
 }
 
 function servingOver(ledger: ReturnType<typeof aLedger>): SubscriptionsServing {
-  return { ledger, tools: noCalls, secrets: noSecrets, providers: trackerOfEachSubscription, receivesOverHttp: true };
+  return {
+    ledger,
+    tools: noCalls,
+    secrets: noSecrets,
+    providers: trackerOfEachSubscription,
+    receivesOverHttp: true,
+    opensSockets: true,
+  };
 }
 
 function portsOfTheServerOver(ledger: ReturnType<typeof aLedger>) {

@@ -34,15 +34,13 @@ function deliveryLogged({ address, outcome, status, bytes }: HeardEvent): Effect
 }
 
 export function wokenBy(wake: ConnectionWake): (event: ArrivedEvent) => Effect.Effect<void> {
-  return ({ address: { org, playbook, connection }, reading }) => {
+  return ({ address: { org, connection }, reading }) => {
     const woken = reading.wake;
     if (woken === undefined) {
       return Effect.void;
     }
     const place = woken.conversation === undefined ? {} : { conversation: woken.conversation };
-    return Effect.flatMap(Clock.currentTimeMillis, (now) =>
-      wake({ playbook: { org, playbook }, connection, ...place }, now),
-    );
+    return Effect.flatMap(Clock.currentTimeMillis, (now) => wake({ org, connection, ...place }, now));
   };
 }
 

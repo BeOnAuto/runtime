@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { executorOn, postgresqlPlanOf } from '../content/postgresql-content.ts';
 import { postgresqlLayout } from '../layout/layout-dialects.ts';
-import { definitionStreamsPlan } from '../postgresql-reads/index-checks.ts';
+import { definitionStreamsPlan, orgStreamsPlan } from '../postgresql-reads/index-checks.ts';
 import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded.ts';
 import {
   appendedFactsOnStoresBehaviour,
@@ -57,17 +57,26 @@ const executedOn: LedgerEntry['executedOn'] = async (database, work) => {
   }
 };
 
-async function definitionStreamsIndexed(database: string): Promise<boolean> {
+interface Explained {
+  readonly explained: string;
+  readonly values: readonly string[];
+}
+
+async function planned(database: string, { explained, values }: Explained): Promise<readonly string[]> {
   const client = new Client({ connectionString: database });
   await client.connect();
   try {
     await client.query('SET enable_seqscan = off');
-    const { explained, values, throughTheIndex } = definitionStreamsPlan;
-    const plan = await client.query<Readonly<Record<string, unknown>>>(explained, values);
-    return plan.rows.some((row) => String(row['QUERY PLAN']).includes(throughTheIndex));
+    const plan = await client.query<Readonly<Record<string, unknown>>>(explained, [...values]);
+    return plan.rows.map((row) => String(row['QUERY PLAN']).trim());
   } finally {
     await client.end();
   }
+}
+
+async function definitionStreamsIndexed(database: string): Promise<boolean> {
+  const lines = await planned(database, definitionStreamsPlan);
+  return lines.some((line) => line.includes(definitionStreamsPlan.throughTheIndex));
 }
 
 const statementPlanOf: LedgerEntry['statementPlanOf'] = async (database, statement) => {
@@ -272,5 +281,19 @@ describe.skipIf(skipped)(`The plans of the reads over keys on PostgreSQL${notice
     expect(timesIn(runs, throughTheKindIndex)).toBe(2);
     expect(tree).toContain(throughTheTreeIndex);
     expect(org).toContain(throughTheOrgIndex);
+  });
+});
+
+describe.skipIf(skipped)(`The plan of the orgs' streams of a name on PostgreSQL${notice}`, () => {
+  it('steps from one org to the next through the index on the org, and finds each stream by the key of the streams, over the streams of many orgs', async () => {
+    const database = await aMigratedDatabase();
+    await postgresqlQueried(database, orgStreamsPlan.ledgerOfManyOrgs);
+    await postgresqlQueried(database, 'ANALYZE emt_messages, emt_streams');
+    const lines = await planned(database, orgStreamsPlan);
+    const steppingToTheNextOrg = lines.filter((line) => line.includes(orgStreamsPlan.theNextOrg));
+
+    expect(new Set(steppingToTheNextOrg.map((line) => line.split(': ')[0]))).toEqual(new Set(['Index Cond']));
+    expect(lines.filter((line) => line.startsWith(orgStreamsPlan.throughTheStreamsKey))).not.toEqual([]);
+    expect(lines.filter((line) => line.includes('Seq Scan'))).toEqual([]);
   });
 });

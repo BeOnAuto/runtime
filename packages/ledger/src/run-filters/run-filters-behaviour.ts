@@ -10,7 +10,8 @@ import {
 import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { details, inAlpha, reading, stamped, type AnyLedger, type LedgerMaker } from '../testing/happenings.ts';
+import { details, reading, stamped, type AnyLedger, type LedgerMaker } from '../testing/happenings.ts';
+import { definitionsHolding, keyOf } from '../testing/named-runs.ts';
 
 const RunFactSchema = Schema.Struct({
   type: Schema.String,
@@ -57,12 +58,25 @@ function runOfTheReport(index: number): RunFacts {
       };
 }
 
-function recordedRun(ledger: AnyLedger, run: string, facts: RunFacts): Effect.Effect<unknown, unknown> {
-  return ledger.execute(inAlpha(`runs/${run}`), runFacts, facts);
+function filedUnder({ definitionType, definitionName }: RunFacts): string {
+  return definitionType === undefined || definitionName === undefined
+    ? 'playbook/acme/alpha/'
+    : keyOf(definitionType, definitionName);
 }
+
+function recordedRun(ledger: AnyLedger, run: string, facts: RunFacts): Effect.Effect<unknown, unknown> {
+  return ledger.execute(`${filedUnder(facts)}runs/${run}`, runFacts, facts);
+}
+
+const namesOfTheReport = [
+  ['workflow', 'summary'],
+  ['reasoning', 'qualify-enquiry'],
+  ['reasoning', 'summary'],
+] as const;
 
 async function twentyEightRuns(aLedger: LedgerMaker): Promise<AnyLedger> {
   const ledger = await aLedger();
+  await definitionsHolding(ledger, namesOfTheReport);
   await Effect.runPromise(
     Effect.forEach(runsOfTheReport, (index) => recordedRun(ledger, `run-${index}`, runOfTheReport(index)), {
       discard: true,
@@ -73,8 +87,12 @@ async function twentyEightRuns(aLedger: LedgerMaker): Promise<AnyLedger> {
 
 type RunsOnAPage = readonly [runs: readonly string[], hasMore: boolean];
 
+function runOf(stream: string): string {
+  return stream.slice(stream.indexOf('/runs/') + '/runs/'.length);
+}
+
 function runsOn({ records, hasMore }: RecordedPage): RunsOnAPage {
-  const runsListed = new Set(records.map(({ stream }) => stream.slice(inAlpha('runs/').length)));
+  const runsListed = new Set(records.map(({ stream }) => runOf(stream)));
   return [[...runsListed], hasMore];
 }
 
@@ -155,6 +173,10 @@ function runOfAWeek(index: number): RunFacts {
 function theRunsNoStepStarted(aLedger: LedgerMaker): void {
   it('leave out the runs whose start names the step that started them, alone or with the type asked for', async () => {
     const ledger = await aLedger();
+    await definitionsHolding(ledger, [
+      ['workflow', 'close-the-week'],
+      ['reasoning', 'total-the-week'],
+    ]);
     await Effect.runPromise(
       Effect.forEach(
         Array.from({ length: 9 }, (_, index) => index),
@@ -203,6 +225,7 @@ const endsThatSucceeded: RecordedPageRequest = {
 function theEndsOfTheRunsThatSucceeded(aLedger: LedgerMaker): void {
   it('answer the runs of one definition that succeeded, newest first, with the data of their ends alone', async () => {
     const ledger = await aLedger();
+    await definitionsHolding(ledger, [['workflow', 'close-the-week']]);
     await Effect.runPromise(
       Effect.forEach([0, 1, 2], (index) => recordedRun(ledger, `run-${index}`, endsOfAWeek(index)), { discard: true }),
     );
@@ -213,7 +236,7 @@ function theEndsOfTheRunsThatSucceeded(aLedger: LedgerMaker): void {
       endsThatSucceeded,
     );
 
-    expect(records.map(({ stream, type, data }) => [stream.slice(inAlpha('runs/').length), type, data])).toEqual([
+    expect(records.map(({ stream, type, data }) => [runOf(stream), type, data])).toEqual([
       ['run-2', 'run_started', undefined],
       ['run-2', 'run_succeeded', { detail: 'the end of run 2' }],
       ['run-0', 'run_started', undefined],
@@ -232,8 +255,12 @@ const awkwardText = {
 };
 
 function theDefinitionOfAnAwkwardRun(aLedger: LedgerMaker): void {
-  it('is read from the context of the first message alone, exactly as recorded, whatever its data holds', async () => {
+  it('is read by the name a definition holds, never from the data of its runs', async () => {
     const ledger = await aLedger();
+    await definitionsHolding(ledger, [
+      ['reasoning', 'summary'],
+      ['reasoning', awkwardText.escapedNul],
+    ]);
     const awkward = { definition_type: 'workflow', name: 'qualify-enquiry', text: awkwardText };
     const summary = { definitionType: 'reasoning', definitionName: 'summary' };
     await Effect.runPromise(

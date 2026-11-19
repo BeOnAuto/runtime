@@ -2,7 +2,6 @@ import { Effect, Option } from 'effect';
 
 import type { OrgAddress } from '../caller/org-context.ts';
 import type { PlaybookAddress } from '../caller/playbook-context.ts';
-import { InvalidInput } from '../outcome/invalid-input.ts';
 import type {
   BoundProjectionReader,
   OrgProjectionReader,
@@ -10,25 +9,15 @@ import type {
   ProjectionReader,
 } from '../projections/keyed-projection.ts';
 import { isCalendarDay } from '../reading/calendar-days.ts';
-import { mostExaminedInAPage, mostRecordsInAPage } from '../reading/page-bounds.ts';
-import type {
-  AppendedFacts,
-  AppendedFactsRequest,
-  AppendedScope,
-  InvalidCursorKind,
-  RecordedFact,
-  RecordedPage,
-  RecordedPageRequest,
-  RecordedSelection,
-} from '../reading/recorded-read.ts';
+import { mostExaminedInAPage } from '../reading/page-bounds.ts';
+import type { AppendedFact, AppendedFacts, AppendedFactsRequest, AppendedScope } from '../reading/recorded-read.ts';
 import type { RunOutcomeWindow } from '../run-outcomes/run-outcomes.ts';
+import { namedAsHeldNow, type NamesHeldNow } from './names-held-now.ts';
 import type {
   AppendedFactsReader,
   OrgAppendedFactsReader,
   PlaybookAppendedFactsReader,
-  PlaybookRecordedReader,
   PlaybookRunOutcomesReader,
-  RecordedReader,
   RunOutcomesReader,
   StreamAges,
   StreamReader,
@@ -131,72 +120,10 @@ export function prefixedWriter(ledger: StreamWriter, prefix: string): StreamWrit
   };
 }
 
-function wellFormedSelection(selection: RecordedSelection): Effect.Effect<RecordedSelection> {
-  if (selection.kind === 'run') {
-    return wellFormed(runStreamNameOf(selection.run)).pipe(Effect.as(selection));
-  }
-  return selection.kind === 'correlated'
-    ? wellFormed(runStreamNameOf(selection.correlation)).pipe(Effect.as(selection))
-    : Effect.succeed(selection);
-}
-
-function wellFormedPage(page: RecordedPageRequest): Effect.Effect<RecordedPageRequest> {
-  if (!Number.isInteger(page.limit) || page.limit < 1 || page.limit > mostRecordsInAPage) {
-    return Effect.die(new RangeError(`A page holds 1 to ${mostRecordsInAPage} records, not ${page.limit}`));
-  }
-  return page.since === undefined || Number.isFinite(Date.parse(page.since))
-    ? Effect.succeed(page)
-    : Effect.die(new RangeError(`The time ${JSON.stringify(page.since)} a page starts from is not a time`));
-}
-
-const refusedCursors: Readonly<Record<InvalidCursorKind, InvalidInput>> = {
-  malformed: new InvalidInput({
-    detail: 'The cursor is malformed',
-    issues: [{ detail: 'Expected a next_cursor or the cursor of an event, as a read gives it', pointer: '/cursor' }],
-  }),
-  of_another_playbook: new InvalidInput({
-    detail: 'The cursor was not given by a read of this playbook',
-    issues: [
-      {
-        detail: 'Expected a next_cursor or the cursor of an event that a read of this playbook gave',
-        pointer: '/cursor',
-      },
-    ],
-  }),
-};
-
 const aDefinitionKey = /^definition\/[^/]+\/[^/]+\//u;
 
-function streamRelativeTo(prefix: string, stream: string): string {
+export function streamRelativeTo(prefix: string, stream: string): string {
   return stream.startsWith(prefix) ? stream.slice(prefix.length) : stream.replace(aDefinitionKey, '');
-}
-
-function recordRelativeTo(prefix: string): <Record extends RecordedFact>(record: Record) => Record {
-  return (record) => ({ ...record, stream: streamRelativeTo(prefix, record.stream) });
-}
-
-function relativeTo(prefix: string): (page: RecordedPage) => RecordedPage {
-  const relative = recordRelativeTo(prefix);
-  return ({ records, ...paging }) => ({ records: records.map((record) => relative(record)), ...paging });
-}
-
-export function playbookBoundRecordedReader(ledger: RecordedReader, playbook: PlaybookAddress): PlaybookRecordedReader {
-  const prefix = streamPrefixOfPlaybook(playbook);
-  return {
-    readRecorded: (selection, page) =>
-      Effect.gen(function* () {
-        const checkedSelection = yield* wellFormedSelection(selection);
-        const checkedPage = yield* wellFormedPage(page);
-        return yield* ledger.readRecorded(playbook, checkedSelection, checkedPage);
-      }).pipe(
-        Effect.map(relativeTo(prefix)),
-        Effect.mapError(({ kind }: { readonly kind: InvalidCursorKind }) => refusedCursors[kind]),
-      ),
-    readRecordedEvent: (id) =>
-      Effect.map(ledger.readRecordedEvent(playbook, id), (record) =>
-        record === undefined ? undefined : recordRelativeTo(prefix)(record),
-      ),
-  };
 }
 
 function wellFormedWindow(window: RunOutcomeWindow): Effect.Effect<RunOutcomeWindow> {
@@ -256,23 +183,27 @@ function factsRelativeTo(prefix: string): (read: AppendedFacts) => AppendedFacts
   });
 }
 
+type NamedNow = (facts: readonly AppendedFact[]) => Effect.Effect<readonly AppendedFact[]>;
+
 function boundTo(
   ledger: AppendedFactsReader,
   prefix: string,
+  named: NamedNow = Effect.succeed,
 ): (scope: AppendedScope, request: AppendedFactsRequest) => ReturnType<AppendedFactsReader['readAppendedFacts']> {
   return (scope, request) =>
     wellFormedRequest(request).pipe(
       Effect.flatMap((checked) => ledger.readAppendedFacts(scope, checked)),
+      Effect.flatMap(({ facts, ...reached }) => Effect.map(named(facts), (each) => ({ facts: each, ...reached }))),
       Effect.map(factsRelativeTo(prefix)),
     );
 }
 
 export function playbookBoundAppendedFactsReader(
-  ledger: AppendedFactsReader,
+  ledger: AppendedFactsReader & NamesHeldNow,
   playbook: PlaybookAddress,
 ): PlaybookAppendedFactsReader {
   const scope: AppendedScope = { kind: 'playbook', playbook };
-  const read = boundTo(ledger, streamPrefixOfPlaybook(playbook));
+  const read = boundTo(ledger, streamPrefixOfPlaybook(playbook), namedAsHeldNow(ledger));
   return {
     readAppendedFacts: (request) => read(scope, request),
     waitForAppend: (after, deadline) => ledger.waitForAppend(scope, after, deadline),

@@ -3,12 +3,13 @@ import { describe, expect, it } from 'vitest';
 
 import {
   runStreamOf,
+  type RunOutcome,
   type RunOutcomeGroup,
   type RunOutcomeMapping,
   type RunOutcomeSelection,
   type RunOutcomeWindow,
 } from '../index.ts';
-import { definitionsPlaced, placedIn } from '../projections-testing/definition-rows-behaviour.ts';
+import { definitionsNamedByTheirIds, placedIn } from '../projections-testing/definition-rows-behaviour.ts';
 import { memoryLedger, memoryLedgerWith, type MemoryLedger } from '../testing/memory-ledger.ts';
 import { runFacts, runTallies, type RunFact } from './run-tallies.ts';
 
@@ -34,9 +35,10 @@ function ended(
 }
 
 async function placedLedger(runOutcomes: RunOutcomeMapping): Promise<MemoryLedger> {
-  const ledger = memoryLedgerWith({ runOutcomes, definitionNames: definitionsPlaced });
-  await placedIn(ledger.service, 'd1', 'alpha');
-  await placedIn(ledger.service, 'd2', 'alpha2');
+  const ledger = memoryLedgerWith({ runOutcomes, definitionNames: definitionsNamedByTheirIds });
+  await placedIn(ledger.service, 'triage', 'alpha');
+  await placedIn(ledger.service, 'draft', 'alpha');
+  await placedIn(ledger.service, 'elsewhere', 'alpha2');
   return ledger;
 }
 
@@ -88,11 +90,11 @@ describe('a run stream', () => {
 describe('the outcomes of runs in the in-memory ledger', () => {
   it('are one row per run, from the mapping it is given, grouped by day, function and status', async () => {
     const ledger = await placedLedger(runTallies);
-    await noting(ledger, 'definition/acme/d1/runs/r1', began('triage'), ended('succeeded', 120, 40));
-    await noting(ledger, 'definition/acme/d1/runs/r2', began('triage'));
-    await noting(ledger, 'definition/acme/d1/runs/r2', ended('succeeded', 80, 2));
-    await noting(ledger, 'definition/acme/d1/runs/r3', began('triage'), ended('rejected', null));
-    await noting(ledger, 'definition/acme/d1/runs/r4', began('draft', '2026-10-02T23:59:59.999Z'));
+    await noting(ledger, 'definition/acme/triage/runs/r1', began('triage'), ended('succeeded', 120, 40));
+    await noting(ledger, 'definition/acme/triage/runs/r2', began('triage'));
+    await noting(ledger, 'definition/acme/triage/runs/r2', ended('succeeded', 80, 2));
+    await noting(ledger, 'definition/acme/triage/runs/r3', began('triage'), ended('rejected', null));
+    await noting(ledger, 'definition/acme/draft/runs/r4', began('draft', '2026-10-02T23:59:59.999Z'));
 
     const groups = await reading(ledger);
 
@@ -107,10 +109,10 @@ describe('the outcomes of runs in the in-memory ledger', () => {
 
   it('keep to the days of the window, the selection and the playbook asked for', async () => {
     const ledger = await placedLedger(runTallies);
-    await noting(ledger, 'definition/acme/d1/runs/r1', began('triage', '2026-09-30T23:59:59.999Z'));
-    await noting(ledger, 'definition/acme/d1/runs/r2', began('triage', '2026-10-01T00:00:00.000Z'));
-    await noting(ledger, 'definition/acme/d1/runs/r3', began('draft', '2026-10-01T00:00:00.000Z'));
-    await noting(ledger, 'definition/acme/d2/runs/r4', began('triage', '2026-10-01T00:00:00.000Z'));
+    await noting(ledger, 'definition/acme/triage/runs/r1', began('triage', '2026-09-30T23:59:59.999Z'));
+    await noting(ledger, 'definition/acme/triage/runs/r2', began('triage', '2026-10-01T00:00:00.000Z'));
+    await noting(ledger, 'definition/acme/draft/runs/r3', began('draft', '2026-10-01T00:00:00.000Z'));
+    await noting(ledger, 'definition/acme/elsewhere/runs/r4', began('triage', '2026-10-01T00:00:00.000Z'));
 
     const pages = await Promise.all([
       reading(ledger, { from: '2026-10-01', to: '2026-10-01' }),
@@ -128,13 +130,43 @@ describe('the outcomes of runs in the in-memory ledger', () => {
   });
 });
 
+const aFinishAlone: RunOutcome = {
+  startedDay: '2026-10-01',
+  startedAt: '2026-10-01T09:00:00.000Z',
+  lastStartedAt: '2026-10-01T09:00:00.000Z',
+  definitionType: '',
+  name: '',
+  status: 'failed',
+  durationMs: null,
+  inputTokens: null,
+  outputTokens: null,
+  cachedTokens: null,
+  costMicroUsd: null,
+};
+
+const unnamedFinishes: RunOutcomeMapping = {
+  ...runTallies,
+  rowAfter: (row, event) => runTallies.rowAfter(row, event) ?? aFinishAlone,
+};
+
+describe('the outcomes of the runs of a definition in the in-memory ledger', () => {
+  it('are one group under the name it holds now, and a row that names no definition keeps its own', async () => {
+    const ledger = await placedLedger(unnamedFinishes);
+    await noting(ledger, 'definition/acme/triage/runs/r1', began('triage-before'));
+    await noting(ledger, 'definition/acme/triage/runs/r2', began('triage'));
+    await noting(ledger, 'definition/acme/triage/runs/r3', ended('failed', 5));
+
+    expect(runsOf(await reading(ledger))).toEqual(['2026-10-01 triage started 2', '2026-10-01  failed 1']);
+  });
+});
+
 describe('the cost in the outcomes of runs in the in-memory ledger', () => {
   it('is the sum over the runs of a group that recorded one, and null when none did', async () => {
     const ledger = await placedLedger(runTallies);
-    await noting(ledger, 'definition/acme/d1/runs/r1', began('triage'), ended('succeeded', 1, null, 1500));
-    await noting(ledger, 'definition/acme/d1/runs/r2', began('triage'), ended('succeeded', 1));
-    await noting(ledger, 'definition/acme/d1/runs/r3', began('triage'), ended('succeeded', 1, null, 250));
-    await noting(ledger, 'definition/acme/d1/runs/r4', began('triage'), ended('failed', 1));
+    await noting(ledger, 'definition/acme/triage/runs/r1', began('triage'), ended('succeeded', 1, null, 1500));
+    await noting(ledger, 'definition/acme/triage/runs/r2', began('triage'), ended('succeeded', 1));
+    await noting(ledger, 'definition/acme/triage/runs/r3', began('triage'), ended('succeeded', 1, null, 250));
+    await noting(ledger, 'definition/acme/triage/runs/r4', began('triage'), ended('failed', 1));
 
     const costs = (await reading(ledger)).map(({ status, costMicroUsd }) => [status, costMicroUsd]);
 
@@ -148,15 +180,15 @@ describe('the cost in the outcomes of runs in the in-memory ledger', () => {
 describe('what the in-memory ledger keeps no outcome of', () => {
   it('is another stream, another type, and an event the mapping keeps nothing of', async () => {
     const ledger = await placedLedger(runTallies);
-    await noting(ledger, 'definition/acme/d1/run-logs/r1', began('triage'));
-    await noting(ledger, 'definition/acme/d1/runs/r2', ended('failed', 5), { type: 'run_noted', data: {} });
+    await noting(ledger, 'definition/acme/triage/run-logs/r1', began('triage'));
+    await noting(ledger, 'definition/acme/triage/runs/r2', ended('failed', 5), { type: 'run_noted', data: {} });
 
     expect(await reading(ledger)).toEqual([]);
   });
 
   it('is anything, without a mapping', async () => {
     const ledger = memoryLedger();
-    await noting(ledger, 'definition/acme/d1/runs/r1', began('triage'));
+    await noting(ledger, 'definition/acme/triage/runs/r1', began('triage'));
 
     expect(await reading(ledger)).toEqual([]);
   });

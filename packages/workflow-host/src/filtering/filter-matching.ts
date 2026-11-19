@@ -29,6 +29,8 @@ type Judgement =
   | { readonly kind: 'struck' }
   | { readonly kind: 'stopped'; readonly error: DslError };
 
+type WorkflowPlace = Pick<FilterPlace, 'playbookKey' | 'workflow'>;
+
 export interface FilterStops {
   readonly isStopped: (place: FilterPlace, index: number) => boolean;
   readonly judged: (place: FilterPlace, index: number, verdict: FilterVerdict) => Judgement;
@@ -36,7 +38,7 @@ export interface FilterStops {
   readonly holds: (place: FilterPlace) => boolean;
   readonly activated: (playbookKey: string, workflow: string, version: number) => void;
   readonly retired: (playbookKey: string, workflow: string) => void;
-  readonly moved: (from: string, to: string, workflow: string) => void;
+  readonly moved: (from: WorkflowPlace, to: WorkflowPlace) => void;
   readonly listenerEnded: (place: FilterPlace) => void;
 }
 
@@ -85,11 +87,11 @@ function ofWorkflow(playbookKey: string, workflow: string): (place: FilterPlace)
 }
 
 function movedIn(strikes: Map<string, Struck>, failed: Map<string, FilterPlace>): FilterStops['moved'] {
-  return (from, to, workflow) => {
-    const ofIt = ofWorkflow(from, workflow);
+  return (from, to) => {
+    const ofIt = ofWorkflow(from.playbookKey, from.workflow);
     for (const [key, held] of strikes) {
       if (ofIt(held.place)) {
-        const place = { ...held.place, playbookKey: to };
+        const place = { ...held.place, playbookKey: to.playbookKey, workflow: to.workflow };
         strikes.delete(key);
         strikes.set(filterKeyOf(place, held.index), { ...held, place });
       }
@@ -97,7 +99,8 @@ function movedIn(strikes: Map<string, Struck>, failed: Map<string, FilterPlace>)
     for (const [key, place] of failed) {
       if (ofIt(place)) {
         failed.delete(key);
-        failed.set(placeKeyOf({ ...place, playbookKey: to }), { ...place, playbookKey: to });
+        const followed = { ...place, playbookKey: to.playbookKey, workflow: to.workflow };
+        failed.set(placeKeyOf(followed), followed);
       }
     }
   };

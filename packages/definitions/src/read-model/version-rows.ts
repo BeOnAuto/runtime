@@ -1,24 +1,28 @@
-import type { KeyedProjection, ProjectedMessage, ProjectedRow, ProjectedStream } from '@on.auto/operations';
+import type { AddressedStream, KeyedProjection, ProjectedMessage, ProjectedRow } from '@on.auto/operations';
 
 import { isDefinitionSaved } from '../registry/definition-events.ts';
-import { definitionFactOf } from './definition-rows.ts';
+import { definitionFactOf, definitionKeyOf } from './definition-rows.ts';
 
-export function versionKeyOf(message: ProjectedMessage, { id }: ProjectedStream): string | undefined {
+export function keyOfTheVersion(definitionKey: string, version: number): string {
+  return `${definitionKey}/${version}`;
+}
+
+export function versionKeyOf(message: ProjectedMessage, stream: AddressedStream): string | undefined {
   const fact = definitionFactOf(message);
-  if (fact === undefined || !(isDefinitionSaved(fact) || fact.type === 'definition_restored')) {
-    return undefined;
-  }
-  const { definitionName, definitionVersion } = fact.context;
-  return `${id}/${definitionName}/${definitionVersion}`;
+  const definitionKey = definitionKeyOf(message, stream);
+  return fact === undefined ||
+    definitionKey === undefined ||
+    !(isDefinitionSaved(fact) || fact.type === 'definition_restored')
+    ? undefined
+    : keyOfTheVersion(definitionKey, fact.context.definitionVersion);
 }
 
 function versionRowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): ProjectedRow | undefined {
   const fact = definitionFactOf(message);
   if (fact !== undefined && isDefinitionSaved(fact)) {
-    const { definitionType, definitionName, definitionVersion, by } = fact.context;
+    const { definitionType, definitionVersion, by } = fact.context;
     return {
       definition_type: definitionType,
-      name: definitionName,
       version: definitionVersion,
       position: message.position,
       put_in_place_by: by,
@@ -29,13 +33,12 @@ function versionRowAfter(row: ProjectedRow | undefined, message: ProjectedMessag
 
 export const definitionVersionRows: KeyedProjection = {
   name: 'definition_versions',
-  version: 4,
+  version: 5,
   scopes: ['definition'],
   kinds: ['definitions'],
   types: ['definition_created', 'definition_updated', 'definition_restored'],
   columns: [
     { name: 'definition_type', kind: 'text' },
-    { name: 'name', kind: 'text' },
     { name: 'version', kind: 'integer' },
     { name: 'position', kind: 'integer' },
     { name: 'put_in_place_by', kind: 'text' },

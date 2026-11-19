@@ -2,7 +2,7 @@ import type { RecordedPoint } from '@on.auto/ledger';
 import { Function } from 'effect';
 
 import { startLoop } from '../loop/host-loop.ts';
-import { hostWakeUp } from '../loop/host-wake-up.ts';
+import { hostWakeUp, type HostWakeUp, type WakeSignal } from '../loop/host-wake-up.ts';
 import type { ProjectorSettings } from '../projector/projector-settings.ts';
 import { startProjector } from '../projector/projector.ts';
 import { startFollowing, type FollowerConsumers } from '../reactions/host-reactions.ts';
@@ -13,6 +13,7 @@ export interface ServingOptions extends PartsOptions {
   readonly consumers?: FollowerConsumers;
   readonly projector?: ProjectorSettings;
   readonly placeAtOpen: RecordedPoint;
+  readonly wakeUps?: readonly ((signal: WakeSignal) => HostWakeUp)[];
 }
 
 export interface Serving {
@@ -29,6 +30,7 @@ export function startServing(store: WorkflowStore, options: ServingOptions): Ser
   });
   const loop = startLoop(parts, (signal) => hostWakeUp(parts, signal));
   alarm.armed = loop.armed;
+  const further = (options.wakeUps ?? []).map((wakeUpWith) => startLoop(parts, wakeUpWith));
   const follower = startFollowing({ ...options, database, parts });
   const projector =
     options.projector === undefined
@@ -48,6 +50,7 @@ export function startServing(store: WorkflowStore, options: ServingOptions): Ser
     stop: async () => {
       await follower.stop();
       await loop.stop();
+      await Promise.all(further.map((each) => each.stop()));
       await projector?.stop();
       await closeHostParts(parts);
     },

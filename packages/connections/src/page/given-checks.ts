@@ -11,6 +11,7 @@ import { keyTestedOf, type TestingServices, type ValueChecked } from './tested-k
 export interface AppCredentialOpening {
   readonly destination: EventDestination;
   readonly value: Redacted.Redacted;
+  readonly failureCodes?: GivenAppCredential['failureCodes'];
 }
 
 export interface SocketChecks {
@@ -42,8 +43,8 @@ function appCredentialsChecked(
     ? Effect.succeed([])
     : Effect.forEach(
         given,
-        ({ name, value, destination }) =>
-          Effect.map(sockets.openedOnce({ destination, value: Redacted.make(value) }), (checked) => ({
+        ({ name, value, ...declared }) =>
+          Effect.map(sockets.openedOnce({ ...declared, value: Redacted.make(value) }), (checked) => ({
             pointer: appCredentialPointerOf(name),
             checked,
           })),

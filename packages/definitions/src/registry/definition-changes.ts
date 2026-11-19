@@ -23,6 +23,7 @@ export type DefinitionChange =
   | { readonly kind: 'retired'; readonly name: string }
   | { readonly kind: 'paused'; readonly name: string }
   | { readonly kind: 'moved'; readonly name: string; readonly from: string; readonly to: string }
+  | { readonly kind: 'renamed'; readonly from: string; readonly to: string }
   | { readonly kind: 'resumed'; readonly name: string; readonly at: string }
   | {
       readonly kind: 'restored' | 'created_paused';
@@ -54,6 +55,9 @@ function standingChangeOf(event: Exclude<RecordedDefinitionEvent, DefinitionWith
   const { at, definitionName: name } = event.context;
   if (event.type === 'definition_moved') {
     return { kind: 'moved', name, from: event.data.from, to: event.data.to };
+  }
+  if (event.type === 'definition_renamed') {
+    return { kind: 'renamed', from: event.data.from, to: event.data.to };
   }
   if (event.type === 'definition_paused') {
     return { kind: 'paused', name };

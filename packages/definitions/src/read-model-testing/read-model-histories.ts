@@ -6,12 +6,12 @@ import type { DefinitionCommand, DefinitionCommandData } from '../registry/defin
 import type { DefinitionContent } from '../registry/definition-events.ts';
 import type { DefinitionRegistry, RegisteredDefinition } from '../registry/definition-registry.ts';
 import { definitionVersionIn, type DefinitionVersionAddress } from '../registry/definition-versions.ts';
+import { renamedInTurn, renamedOn, type Renamed } from '../testing/renaming.ts';
 import { decidedIn, inPlaybookOf } from './in-the-playbook.ts';
 
-interface TypedCommand {
-  readonly type: string;
-  readonly command: DefinitionCommand;
-}
+type TypedCommand =
+  | { readonly type: string; readonly command: DefinitionCommand }
+  | { readonly type: string; readonly renamed: Renamed; readonly at: string };
 
 export const aReader = { id: 'person_reader', name: 'A reader' };
 
@@ -114,6 +114,12 @@ function commandOf(pick: Pick, step: number, uses: Uses) {
   return pick(commands);
 }
 
+const renamedEvery = 8;
+
+function renamedAt(type: string, step: number, at: string): TypedCommand {
+  return { type, renamed: renamedInTurn(type, step), at };
+}
+
 function generatedCommands(
   seed: number,
   steps: number,
@@ -130,17 +136,25 @@ function generatedCommands(
     ...named(first).slice(1),
     ...others.flatMap((type) => named(type)),
   ];
-  return Array.from({ length: steps }, (_, step) => {
+  return Array.from({ length: steps }, (_, step): readonly TypedCommand[] => {
     const { type } = pick(uses);
     const at = new Date(Date.UTC(2026, 10, 1, 9, step)).toISOString();
-    return { type, command: { ...commandOf(pick, step, uses), by: someone.id, at } };
-  });
+    const command = { type, command: { ...commandOf(pick, step, uses), by: someone.id, at } };
+    return step % renamedEvery === renamedEvery - 1 ? [command, renamedAt(type, step, at)] : [command];
+  }).flat();
 }
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
 function appliedTo(ledger: Ledger['Service'], commands: readonly TypedCommand[]): Effect.Effect<void> {
-  return Effect.forEach(commands, ({ type, command }) => decidedIn(ledger, alpha, type, command), { discard: true });
+  return Effect.forEach(
+    commands,
+    (step) =>
+      'renamed' in step
+        ? renamedOn(ledger, alpha, step.renamed, step.at)
+        : decidedIn(ledger, alpha, step.type, step.command),
+    { discard: true },
+  );
 }
 
 function named(type: string): readonly NamedUse[] {

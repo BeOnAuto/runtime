@@ -1,10 +1,18 @@
 import { sha256Of, textToKeep } from '@on.auto/content';
 import { memoryContentStore } from '@on.auto/content/testing';
-import { Effect, Exit } from 'effect';
+import { Effect, Exit, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { type PlaybookAddress, PlaybookContext } from '../caller/playbook-context.ts';
-import { messageIdOf, streamPrefixOfPlaybook } from '../index.ts';
+import {
+  ContextSchema,
+  factOf,
+  messageIdOf,
+  streamPrefixOfPlaybook,
+  type Context,
+  type Decider,
+  type RecordedFact,
+} from '../index.ts';
 import { answerOf, fact, made, shared as namesShared, unbounded } from '../names-testing/noted-names.ts';
 import { PayloadOffloading, textBytesOf, textPayloadText } from '../payloads/payload-texts.ts';
 import { PayloadsShared, sharedPayloadsWithin } from '../payloads/shared-payloads.ts';
@@ -192,16 +200,20 @@ describe('the names of one playbook, for code that holds the whole ledger', () =
         reader.holderOfName('reasoning', 'triage'),
         reader.holderOfName('workflow', 'triage'),
         reader.namesHeldIn('reasoning'),
+        reader.nameHeldBy('b'),
+        reader.nameHeldBy('c'),
+        reader.nameHeldBy('d'),
       ]),
     );
 
-    const [holder, none, held] = await Effect.runPromise(Effect.provideContext(read, inAlpha));
+    const [holder, none, held, ofB, ofC, ofD] = await Effect.runPromise(Effect.provideContext(read, inAlpha));
 
     expect([holder?.definitionKey, none, held.map(({ definitionKey }) => definitionKey)]).toEqual([
       'definition/acme/a/',
       undefined,
       ['definition/acme/a/', 'definition/acme/b/'],
     ]);
+    expect([ofB?.name, ofC, ofD]).toEqual(['brief', undefined, undefined]);
   });
 
   it('reads the id of the definition of that playbook under which a stream lies', async () => {
@@ -216,6 +228,61 @@ describe('the names of one playbook, for code that holds the whole ledger', () =
     );
 
     expect(await Effect.runPromise(Effect.provideContext(read, inAlpha))).toEqual(['a', undefined]);
+  });
+});
+
+const NamedRunFact = factOf('run_started', Schema.Struct({}), ContextSchema);
+
+const stampedRunStart: Decider<null, Context, typeof NamedRunFact.Type> = {
+  initialState: null,
+  evolve: () => null,
+  eventSchema: NamedRunFact,
+  decide: () => Result.succeed([{ type: 'run_started', data: {} }]),
+  context: (context) => context,
+};
+
+function namesOf(records: readonly (Pick<RecordedFact, 'stream' | 'context'> | undefined)[]) {
+  return records.map((record) => [record?.stream, record?.context.definitionName]);
+}
+
+describe('the facts of a definition, read in its playbook', () => {
+  it('name the definition as it is named now, whatever name a fact recorded, and leave every other fact as recorded', async () => {
+    const ledger = memoryLedgerWith({ definitionNames: unbounded });
+    const port = { ledger: ledger.service, names: () => Promise.resolve([]) };
+    await answerOf(port, namesShared, made('a', 'triage'));
+    const stamped = {
+      at: '2026-11-19T09:00:00.000Z',
+      by: 'tester',
+      definitionType: 'reasoning',
+      definitionName: 'triage-before',
+    };
+    await Effect.runPromise(ledger.service.execute('definition/acme/a/runs/first', stampedRunStart, stamped));
+    await Effect.runPromise(ledger.service.execute('playbook/acme/alpha/runs/second', stampedRunStart, stamped));
+    await answerOf(port, 'definition/acme/a/notes', fact('remarked', 'unnamed'));
+    const inAlpha = playbookLedgerOf(ledger.service, alpha);
+    const read = PlaybookReader.use((reader) =>
+      Effect.flatMap(reader.readRecorded({ kind: 'everything' }, { order: 'asc', limit: 10 }), ({ records }) =>
+        Effect.map(
+          Effect.forEach(records, ({ id }) => reader.readRecordedEvent(id)),
+          (each: readonly (RecordedFact | undefined)[]) => [records, each] as const,
+        ),
+      ),
+    );
+    const appended = PlaybookReader.use((reader) =>
+      reader.readAppendedFacts({ after: cursorOfParts([]), most: 10, dataOf: [] }),
+    );
+
+    const [records, each] = await Effect.runPromise(Effect.orDie(Effect.provideContext(read, inAlpha)));
+    const { facts } = await Effect.runPromise(Effect.orDie(Effect.provideContext(appended, inAlpha)));
+
+    expect(namesOf(records)).toEqual([
+      ['definitions/reasoning', undefined],
+      ['runs/first', 'triage'],
+      ['runs/second', 'triage-before'],
+      ['notes', undefined],
+    ]);
+    expect(namesOf(each)).toEqual(namesOf(records));
+    expect(namesOf(facts)).toEqual(namesOf(records));
   });
 });
 

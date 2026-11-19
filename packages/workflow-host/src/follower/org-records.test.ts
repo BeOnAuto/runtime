@@ -57,11 +57,11 @@ describe('the playbook of a record the follower of an org reads', () => {
           'org/acme/connections/c1',
           'org/acme/playbooks',
         ],
-        (stream) => playbookOf({ stream }),
+        (stream) => playbookOf({ stream, type: 'run_started' }),
       ),
     );
 
-    expect(playbooks).toEqual([
+    expect(playbooks.map((place) => place?.playbookKey)).toEqual([
       'playbook/acme/alpha/',
       'playbook/acme/beta/',
       'playbook/acme/beta/',
@@ -71,5 +71,31 @@ describe('the playbook of a record the follower of an org reads', () => {
       undefined,
     ]);
     expect(asked).toEqual([triage, summary]);
+  });
+});
+
+describe('the name a record of a definition is followed under', () => {
+  it('is the name the definition holds now, read again at each fact of the definition', async () => {
+    const asked: string[] = [];
+    const playbookOf = playbooksOfRecords({
+      nameHeldBy: (definitionKey) => {
+        asked.push(definitionKey);
+        return Promise.resolve(namesOfBeta.get(definitionKey));
+      },
+    });
+
+    const places = await Effect.runPromise(
+      Effect.forEach(
+        [
+          { stream: `${triage}runs/r1`, type: 'run_started' },
+          { stream: `${triage}definitions/workflow`, type: 'definition_renamed' },
+          { stream: `${triage}runs/r2`, type: 'run_started' },
+        ],
+        (record: { readonly stream: string; readonly type: string }) => playbookOf(record),
+      ),
+    );
+
+    expect(places.map((place) => place?.held?.name)).toEqual(['triage', 'triage', 'triage']);
+    expect(asked).toEqual([triage, triage]);
   });
 });

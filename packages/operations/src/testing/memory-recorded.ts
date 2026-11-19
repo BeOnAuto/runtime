@@ -1,5 +1,6 @@
 import { Effect, Option } from 'effect';
 
+import type { HeldName } from '../definition-names/name-judgement.ts';
 import {
   InvalidCursor,
   boundedPage,
@@ -143,10 +144,9 @@ function holdsWhatWasAsked(asked: string | undefined, held: string | undefined):
   return asked === undefined || held === asked;
 }
 
-function isOfTheDefinitionAsked({ definitionType, name, called }: RunsSelection, { context }: MemoryRecord): boolean {
+function isOfTheDefinitionAsked({ definitionType, called }: RunsSelection, { context }: MemoryRecord): boolean {
   return (
     holdsWhatWasAsked(definitionType, context.definitionType) &&
-    holdsWhatWasAsked(name, context.definitionName) &&
     (called === undefined || context.calledBy === undefined)
   );
 }
@@ -208,12 +208,11 @@ function isUnderOneOf(keys: readonly string[]): (record: MemoryRecord) => boolea
 
 function pageOf(
   log: readonly MemoryRecord[],
-  [key, ...definitions]: readonly [string, ...string[]],
+  { key, keys }: KeysOfARead,
   selection: RecordedSelection,
   page: RecordedPageRequest,
 ): (resumed: Resumed) => RecordedPage {
   return (resumed) => {
-    const keys = [key, ...definitions];
     const isBeyond = beyond(resumed, page.order);
     const isUnder = isUnderOneOf(keys);
     const inPlaybook = log.filter((record) => isUnder(record));
@@ -238,19 +237,44 @@ function pageOf(
   };
 }
 
-export function memoryRecordedReader(
-  log: readonly MemoryRecord[],
-  definitionsIn: (playbookKey: string) => readonly string[],
-): RecordedReader {
-  const keysOf = (playbook: PlaybookAddress): readonly [string, ...string[]] => {
+interface KeysOfARead {
+  readonly key: string;
+  readonly keys: readonly string[];
+}
+
+interface MemoryNamesRead {
+  readonly definitionsIn: (playbookKey: string) => readonly string[];
+  readonly held: () => readonly HeldName[];
+}
+
+function keysOfTheNameHeld(
+  names: MemoryNamesRead,
+  key: string,
+  { definitionType, name }: RunsSelection & { readonly name: string },
+): readonly string[] {
+  return names
+    .held()
+    .filter((held) => held.playbookKey === key && held.name === name)
+    .filter((held) => definitionType === undefined || held.definitionType === definitionType)
+    .map(({ definitionKey }) => definitionKey);
+}
+
+function keysOfTheSelection(names: MemoryNamesRead, key: string, selection: RecordedSelection): KeysOfARead {
+  return selection.kind === 'runs' && selection.name !== undefined
+    ? { key, keys: keysOfTheNameHeld(names, key, { ...selection, name: selection.name }) }
+    : { key, keys: [key, ...names.definitionsIn(key)] };
+}
+
+export function memoryRecordedReader(log: readonly MemoryRecord[], names: MemoryNamesRead): RecordedReader {
+  const keysOf = (playbook: PlaybookAddress): readonly string[] => {
     const key = streamPrefixOfPlaybook(playbook);
-    return [key, ...definitionsIn(key)];
+    return [key, ...names.definitionsIn(key)];
   };
   return {
     readRecorded: (playbook: PlaybookAddress, selection, page) =>
       Effect.suspend(() => {
-        const keys = keysOf(playbook);
-        return resumedFrom(page, keys[0]).pipe(Effect.map(pageOf(log, keys, selection, page)));
+        const read = keysOfTheSelection(names, streamPrefixOfPlaybook(playbook), selection);
+        return resumedFrom(page, read.key).pipe(Effect.map(pageOf(log, read, selection, page)));
       }),
     readRecordedEvent: (playbook, id) =>
       Effect.sync(() => {

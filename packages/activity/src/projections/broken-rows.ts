@@ -24,10 +24,15 @@ interface Ending {
   readonly detail: string | null;
 }
 
-function keyOf({ context: { definitionType, definitionName } }: ProjectedMessage): string | undefined {
-  return definitionType === undefined || definitionName === undefined
-    ? undefined
-    : brokenKeyOf(definitionType, definitionName);
+function nameOfTheRow(message: ProjectedMessage): string | undefined {
+  const fact = activityFactOf(message);
+  return fact?.type === 'definition_renamed' ? fact.data.from : message.context.definitionName;
+}
+
+function keyOf(message: ProjectedMessage): string | undefined {
+  const { definitionType } = message.context;
+  const name = nameOfTheRow(message);
+  return definitionType === undefined || name === undefined ? undefined : brokenKeyOf(definitionType, name);
 }
 
 function numberIn(row: ProjectedRow | undefined, column: string): number {
@@ -112,7 +117,9 @@ function rowAfterFact(row: ProjectedRow | undefined, fact: ActivityFact): Projec
   if (fact.type === 'definition_created' || fact.type === 'definition_updated') {
     return saved(row, fact.context);
   }
-  return fact.type === 'definition_retired' ? retired(row) : rowAfterRun(row, fact);
+  return fact.type === 'definition_retired' || fact.type === 'definition_renamed'
+    ? retired(row)
+    : rowAfterRun(row, fact);
 }
 
 export const brokenRows: KeyedProjection = {
@@ -124,6 +131,7 @@ export const brokenRows: KeyedProjection = {
     'definition_created',
     'definition_updated',
     'definition_retired',
+    'definition_renamed',
     'run_failed',
     'run_rejected',
     'run_succeeded',

@@ -24,7 +24,7 @@ describe('a wake where nothing waits through the connection', () => {
     const recorded = await everythingRecorded(playbook.ledger);
 
     await Effect.runPromise(
-      connectionWake({ ledger: playbook.ledger.service })({ playbook: alpha, connection: 'chat' }, 0),
+      connectionWake({ ledger: playbook.ledger.service })({ org: alpha.org, connection: 'chat' }, 0),
     );
 
     expect([await conversationRows(playbook.ledger), await everythingRecorded(playbook.ledger)]).toEqual([
@@ -57,7 +57,7 @@ describe('a wake of a conversation where requests wait that it may not read', ()
     const recorded = await everythingRecorded(playbook.ledger);
     const wake = connectionWake({ ledger: playbook.ledger.service });
 
-    await Effect.runPromise(wake({ playbook: alpha, connection: 'chat', conversation: '#approvals-ada' }, Date.now()));
+    await Effect.runPromise(wake({ org: alpha.org, connection: 'chat', conversation: '#approvals-ada' }, Date.now()));
 
     expect([await conversationRows(playbook.ledger), await everythingRecorded(playbook.ledger)]).toEqual([
       [],
@@ -112,8 +112,8 @@ describe('the wake a later piece is handed in its tests', () => {
   it('hears each wake and when it came, and reads nothing', async () => {
     const heard = wakesHeard();
 
-    await Effect.runPromise(heard.wake({ playbook: alpha, connection: 'chat', conversation: theChannel }, 1000));
+    await Effect.runPromise(heard.wake({ org: alpha.org, connection: 'chat', conversation: theChannel }, 1000));
 
-    expect(heard.heard()).toEqual([{ playbook: alpha, connection: 'chat', conversation: theChannel, at: 1000 }]);
+    expect(heard.heard()).toEqual([{ org: alpha.org, connection: 'chat', conversation: theChannel, at: 1000 }]);
   });
 });

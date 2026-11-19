@@ -7,6 +7,7 @@ import {
   type RecordedPage,
   type RecordedPageRequest,
   type RecordedReader,
+  type RecordedSelection,
 } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 
@@ -20,7 +21,7 @@ import type {
 import type { OrgPageAsked, RecordedKeys } from '../keys/recorded-keys.ts';
 import { cursorOf, pointOf, type CursorPoint } from './cursor.ts';
 
-type PlaybookKeysStore = Pick<DefinitionNamesStore, 'definitionsIn'>;
+type PlaybookKeysStore = Pick<DefinitionNamesStore, 'definitionsIn' | 'holdersOfName'>;
 
 async function keysOfThePlaybook(
   store: PlaybookKeysStore,
@@ -90,15 +91,47 @@ function recordedPageOf(playbookKey: string): (stored: StoredPage) => RecordedPa
   });
 }
 
+type RunsSelection = Extract<RecordedSelection, { readonly kind: 'runs' }>;
+
+async function runsOfTheNameHeld(
+  store: RecordedStore & PlaybookKeysStore,
+  playbook: PlaybookAddress,
+  { name, ...selection }: RunsSelection & { readonly name: string },
+  request: StoredPageRequest,
+): Promise<StoredPage> {
+  const { org } = playbook;
+  const holders = await store.holdersOfName({ playbookKey: streamPrefixOfPlaybook(playbook), name });
+  const [first, ...more] = holders
+    .filter(
+      ({ definitionType }) => selection.definitionType === undefined || definitionType === selection.definitionType,
+    )
+    .map(({ definitionKey }) => definitionKey);
+  return first === undefined
+    ? { records: [] }
+    : store.readRecordedOfKeys({ org, keys: [first, ...more] }, selection, request);
+}
+
+function isOfANamedDefinition(selection: RecordedSelection): selection is RunsSelection & { readonly name: string } {
+  return selection.kind === 'runs' && selection.name !== undefined;
+}
+
+async function pageOfThePlaybook(
+  store: RecordedStore & PlaybookKeysStore,
+  playbook: PlaybookAddress,
+  selection: RecordedSelection,
+  request: StoredPageRequest,
+): Promise<StoredPage> {
+  const playbookKey = streamPrefixOfPlaybook(playbook);
+  return isOfANamedDefinition(selection)
+    ? runsOfTheNameHeld(store, playbook, selection, request)
+    : store.readRecordedOfKeys(await keysOfThePlaybook(store, playbook, playbookKey), selection, request);
+}
+
 export function recordedReaderOf(store: RecordedStore & PlaybookKeysStore): RecordedReader['readRecorded'] {
   return (playbook, selection, page) => {
     const playbookKey = streamPrefixOfPlaybook(playbook);
     return storedRequestOf(page, playbookKey, store.pointLength).pipe(
-      Effect.flatMap((request) =>
-        Effect.promise(async () =>
-          store.readRecordedOfKeys(await keysOfThePlaybook(store, playbook, playbookKey), selection, request),
-        ),
-      ),
+      Effect.flatMap((request) => Effect.promise(() => pageOfThePlaybook(store, playbook, selection, request))),
       Effect.map(recordedPageOf(playbookKey)),
     );
   };

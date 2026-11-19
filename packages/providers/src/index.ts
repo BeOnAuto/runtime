@@ -31,7 +31,8 @@ export {
 } from './events/arrival-readings.ts';
 export type { Destination as EventDestination } from './events/destination-fields.ts';
 export { provesTheBodyAndATime, provesWhatIsReadAt } from './events/event-proofs.ts';
-export { receivingOverASocket, type SocketListening } from './sockets/socket-listening.ts';
+export { openedAndClosed, receivingOverASocket, type SocketListening } from './sockets/socket-listening.ts';
+export { socketKeyOf, socketStepsOf, stillRefused } from './sockets/socket-set.ts';
 export { opensAsDeclared, type OpeningWays } from './sockets/socket-openings.ts';
 export {
   SocketEnded,

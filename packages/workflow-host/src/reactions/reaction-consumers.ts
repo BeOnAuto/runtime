@@ -5,7 +5,7 @@ import { addressOfRun } from '../runs/run-address.ts';
 import { listenerOffers } from './listener-offers.ts';
 import type { ReactionOptions } from './reaction-options.ts';
 import type { Refusals } from './refusals.ts';
-import { workflowsOfRuns } from './run-workflows.ts';
+import { definitionsOfRuns } from './run-workflows.ts';
 import type { Starting } from './start-rates.ts';
 import { subscriptionStarts } from './subscription-starts.ts';
 
@@ -36,7 +36,7 @@ export function reactionConsumersOf(
     database,
     starting,
     refusals,
-    workflowOfRun: workflowsOfRuns(database.store, options.definitionType),
+    definitionOfRun: definitionsOfRuns(database.store),
     match,
     stops,
     now: clock.now,

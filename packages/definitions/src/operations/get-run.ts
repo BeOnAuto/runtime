@@ -7,11 +7,11 @@ import type { SubjectPages } from '../page/subject-pages-port.ts';
 import { outputOf, withItsOutputShown, withItsRecordRead } from '../payloads/run-payloads.ts';
 import { runWordsFor } from '../plain-language/run-words.ts';
 import { runDetailOf } from '../runs/run-lookup.ts';
+import { loadRunAsNamedNow } from '../runs/run-named-now.ts';
 import { RunIdInputField } from './definition-fields.ts';
-import { loadRun } from './run-access.ts';
 
 export function foundRun(id: string) {
-  return loadRun(id).pipe(Effect.flatMap((state) => runDetailOf(id, state)));
+  return loadRunAsNamedNow(id).pipe(Effect.flatMap((state) => runDetailOf(id, state)));
 }
 
 const runRead = Effect.fnUntraced(function* (pages: SubjectPages, id: string) {

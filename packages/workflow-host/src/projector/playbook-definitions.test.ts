@@ -66,6 +66,28 @@ describe('the definitions a playbook keeps', () => {
   });
 });
 
+function renamedTo(from: string, to: string) {
+  return {
+    type: 'definition_renamed',
+    data: { from, to, renamed_by: { id: 'acme-admin', name: 'acme-admin' } },
+    context: { by: 'acme-admin', at: laterAt, definitionType: 'view', definitionName: to, definitionVersion: 1 },
+  };
+}
+
+describe('the definitions a playbook keeps through a rename', () => {
+  it('keeps a function under the name it takes, as it was saved, and leaves the functions as they were for a name it keeps none of', () => {
+    const saved = savedAs('runs', { source: 'the runs document', details: { fold } });
+
+    const renamed = definitionsAfter(noDefinitions, [saved, renamedTo('runs', 'outcomes')], runnableDetailsOf);
+    const elsewhere = definitionsAfter(noDefinitions, [saved, renamedTo('other', 'outcomes')], runnableDetailsOf);
+
+    expect([[...renamed.functions], [...elsewhere.functions]]).toEqual([
+      [['outcomes', { version: 1, saved: Date.parse(savedAt), details: { fold } }]],
+      [['runs', { version: 1, saved: Date.parse(savedAt), details: { fold } }]],
+    ]);
+  });
+});
+
 describe('the definitions a playbook keeps through a retirement and a restoration', () => {
   it('brings a function back at its restoration, with the details its content carries, saved at its time', () => {
     const ofTheRuns = {

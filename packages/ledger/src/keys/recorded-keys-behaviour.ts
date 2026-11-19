@@ -2,7 +2,7 @@ import { messageIdOf, type Lineage, type RecordedSelection } from '@on.auto/oper
 import { Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { definitionStreamsBehaviour } from '../definitions/definition-streams-behaviour.ts';
+import { definitionStreamsBehaviour, orgStreamsBehaviour } from '../definitions/definition-streams-behaviour.ts';
 import type { LedgerStore, StoredPage, StoredPageRequest } from '../event-store.ts';
 import { orgRecordsBehaviour } from '../recorded/org-records-behaviour.ts';
 import { stamped } from '../testing/happenings.ts';
@@ -253,6 +253,7 @@ function oneEventAcrossKeys(entry: LedgerEntry): void {
 
 export function recordedKeysBehaviour(entry: LedgerEntry): void {
   definitionStreamsBehaviour(entry);
+  orgStreamsBehaviour(entry);
   aKeyThatNamesADefinition(entry);
   recordsOverSeveralKeys(entry);
   aPageFromATimeOverSeveralKeys(entry);

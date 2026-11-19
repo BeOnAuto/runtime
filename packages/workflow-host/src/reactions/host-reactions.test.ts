@@ -577,7 +577,7 @@ describe('the refusals recorded on the stream of a workflow', () => {
 });
 
 describe('the workflow a run began, as the starts of an event trigger learn it', () => {
-  it('is read from the first fact of the run alone, and nothing of the output of 100 KiB its end holds', async () => {
+  it('is the definition the run is filed under, read without a fact of the run or the output of 100 KiB its end holds', async () => {
     const measured = readingMeasured(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
     const stream = `${definitionKeyNamed('close')}runs/r-close`;
     const output = { text: 'x'.repeat(100 * 1024) };
@@ -590,6 +590,6 @@ describe('the workflow a run began, as the starts of an event trigger learn it',
       subscriptionStartsOn(measured.database).batchOf(followedRecordOf(null, { topRun: 'r-close' }), undefined, 10),
     );
 
-    expect([deliveries, measured.bytesRead() - readToRecord]).toEqual([[], JSON.stringify(started).length]);
+    expect([deliveries, measured.bytesRead() - readToRecord]).toEqual([[], 0]);
   });
 });

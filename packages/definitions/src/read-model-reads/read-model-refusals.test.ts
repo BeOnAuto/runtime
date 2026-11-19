@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { inThePlaybook } from '../read-model-testing/in-the-playbook.ts';
 import { aPausedGreeterAlwaysWrong } from '../read-model-testing/paused-greeter.ts';
+import { aTargetReadByAUser, underNoDefinition, withNoRowOfADefinition } from '../read-model-testing/read-users.ts';
+import { referencesTo } from './read-model-references.ts';
 import { registeredFromTheReadModel } from './read-model-stored.ts';
 import { versionFromTheReadModel } from './read-model-versions.ts';
 
@@ -35,22 +37,10 @@ describe('a row of the read model that names no save of its version', () => {
   });
 
   it('passes over a row that lies under no definition, as no row of the read model does', async () => {
-    const ledger = await aPausedGreeterAlwaysWrong();
-    const underNoDefinition = {
-      ...ledger,
-      service: Ledger.of({
-        ...ledger.service,
-        readProjectedRows: (projection, address, query) =>
-          Effect.map(ledger.service.readProjectedRows(projection, address, query), (rows) =>
-            rows.map(({ definition: _definition, ...row }) => row),
-          ),
-      }),
-    };
+    const ledger = underNoDefinition(await aPausedGreeterAlwaysWrong());
+
     expect(
-      await inThePlaybook(
-        underNoDefinition,
-        Effect.all([registeredFromTheReadModel('echo', 'greeter'), versionOutcome]),
-      ),
+      await inThePlaybook(ledger, Effect.all([registeredFromTheReadModel('echo', 'greeter'), versionOutcome])),
     ).toEqual([undefined, 'not_found']);
   });
 
@@ -60,5 +50,27 @@ describe('a row of the read model that names no save of its version', () => {
     await expect(inThePlaybook(dyingWith(ledger, new RangeError('The disk failed')), outcome)).rejects.toThrow(
       'The disk failed',
     );
+  });
+});
+
+const usersOfTheTarget = Effect.match(referencesTo('echo', 'target'), {
+  onFailure: ({ because }: { readonly because: string }) => because,
+  onSuccess: (references) => references.map(({ user_name: name }) => name),
+});
+
+describe('a use of a definition in the read model', () => {
+  it('is answered with the name its user holds now, and passed over when it lies under no definition', async () => {
+    const ledger = await aTargetReadByAUser();
+
+    expect([
+      await inThePlaybook(ledger, usersOfTheTarget),
+      await inThePlaybook(underNoDefinition(ledger), usersOfTheTarget),
+    ]).toEqual([['user'], []]);
+  });
+
+  it('is refused when its user has no row of its own, which every user has', async () => {
+    const ledger = withNoRowOfADefinition(await aTargetReadByAUser());
+
+    expect(await inThePlaybook(ledger, usersOfTheTarget)).toEqual('pointer_disagrees');
   });
 });

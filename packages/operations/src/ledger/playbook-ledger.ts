@@ -4,7 +4,6 @@ import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import {
   playbookBoundAppendedFactsReader,
   playbookBoundProjectionReader,
-  playbookBoundRecordedReader,
   playbookBoundRunOutcomesReader,
   prefixedAges,
   prefixedReader,
@@ -16,6 +15,7 @@ import {
 import { definitionsWriterOf } from './definitions-writer.ts';
 import type { LedgerPorts } from './ledger.ts';
 import { PlaybookReader } from './playbook-reader.ts';
+import { playbookBoundRecordedReader } from './playbook-recorded.ts';
 import { PlaybookWriter } from './playbook-writer.ts';
 
 function definitionPrefixIn({ org }: PlaybookAddress): (definition: string) => string {
@@ -45,6 +45,10 @@ export function playbookReaderOf(ledger: LedgerPorts, address: PlaybookAddress):
       ...prefixedAges(ledger, definitionPrefix(definition)),
     }),
     holderOfName: (definitionType, name) => ledger.holderOfName({ playbookKey: prefix, definitionType, name }),
+    nameHeldBy: (definition) =>
+      Effect.map(ledger.nameHeldBy(definitionPrefix(definition)), (held) =>
+        held?.playbookKey === prefix ? held : undefined,
+      ),
     namesHeldIn: (definitionType) => ledger.namesHeldIn({ playbookKey: prefix, definitionType }),
     definitionHolding: (stream) => Effect.map(ledger.holderOfStream({ playbookKey: prefix, stream }), definitionOfKey),
   };

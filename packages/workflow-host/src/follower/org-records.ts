@@ -6,6 +6,7 @@ import {
   type RecordedEvent,
   type RecordedPage,
 } from '@on.auto/operations';
+import type { HeldName } from '@on.auto/operations/definition-names';
 import { Effect, Function, Option } from 'effect';
 
 const recordsInAPage = 100;
@@ -44,26 +45,40 @@ export function wokenOrgOf(stream: string): string | undefined {
   return Option.getOrUndefined(Option.map(address, ({ org }) => org));
 }
 
-export type PlaybookOfARecord = (record: Pick<RecordedEvent, 'stream'>) => Effect.Effect<string | undefined>;
+export interface PlaceOfARecord {
+  readonly playbookKey: string;
+  readonly held?: HeldName;
+}
+
+export type PlaybookOfARecord = (
+  record: Pick<RecordedEvent, 'stream' | 'type'>,
+) => Effect.Effect<PlaceOfARecord | undefined>;
+
+const ofADefinition: ReadonlySet<string> = new Set(definitionFactTypes);
 
 export function playbooksOfRecords(names: Pick<LedgerStreams, 'nameHeldBy'>): PlaybookOfARecord {
-  const known = new Map<string, string | undefined>();
-  const placed = (definitionKey: string): Effect.Effect<string | undefined> =>
+  const known = new Map<string, HeldName | undefined>();
+  const heldBy = (definitionKey: string): Effect.Effect<HeldName | undefined> =>
     known.has(definitionKey)
       ? Effect.succeed(known.get(definitionKey))
       : Effect.map(
           Effect.promise(() => names.nameHeldBy(definitionKey)),
           (held) => {
-            known.set(definitionKey, held?.playbookKey);
-            return held?.playbookKey;
+            known.set(definitionKey, held);
+            return held;
           },
         );
-  const followedByNone: Effect.Effect<string | undefined> = Effect.sync(Function.constUndefined);
-  return ({ stream }) => {
+  const followedByNone: Effect.Effect<PlaceOfARecord | undefined> = Effect.sync(Function.constUndefined);
+  return ({ stream, type }) => {
     const key = playbookKeyOfStream(stream) ?? '';
     if (Option.isSome(playbookOfStreamPrefix(key))) {
-      return Effect.succeed(key);
+      return Effect.succeed({ playbookKey: key });
     }
-    return Option.isSome(definitionOfStreamPrefix(key)) ? placed(key) : followedByNone;
+    if (ofADefinition.has(type)) {
+      known.delete(key);
+    }
+    return Option.isSome(definitionOfStreamPrefix(key))
+      ? Effect.map(heldBy(key), (held) => (held === undefined ? undefined : { playbookKey: held.playbookKey, held }))
+      : followedByNone;
   };
 }

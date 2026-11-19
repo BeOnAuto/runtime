@@ -1,4 +1,5 @@
 export { definitionBoundStreamReader, definitionOfStreamPrefix, orgOfStreamPrefix } from './ledger/bound-ports.ts';
+export { namedAsHeld } from './ledger/names-held-now.ts';
 export { playbookBoundProjectionReader, playbookBoundStreamReader, runStreamNameOf } from './ledger/bound-ports.ts';
 export { playbookOfStreamPrefix, streamPrefixOfDefinition, streamPrefixOfPlaybook } from './ledger/bound-ports.ts';
 export { streamPrefixOfOrg, streamPrefixOfTheDefinitionsOf } from './ledger/bound-ports.ts';

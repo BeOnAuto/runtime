@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 
 import type { RecordedConnection } from '../registry/connection.ts';
 import { connectionsFoldOf, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
+import { holdsItUnrefused } from '../sockets/socket-holders.ts';
 
 export interface LoopConnectionsParts {
   readonly registry: Pick<StreamReader, 'load'>;
@@ -14,9 +15,18 @@ function servesThePlaybook({ status, entry }: RecordedConnection, { playbook }: 
   return status !== 'removed' && (entry.playbooks === undefined || entry.playbooks.includes(playbook));
 }
 
+type Destinations = LoopConnection['destinations'];
+
+function takenThrough(connection: RecordedConnection, destinations: Destinations): Destinations {
+  return destinations.filter(
+    ({ type, credential }) =>
+      type !== 'websocket' || (credential !== undefined && holdsItUnrefused(connection, credential)),
+  );
+}
+
 function loopConnectionOf(providers: ProviderList, connection: RecordedConnection): LoopConnection {
   const { name, provider, connected_at: connectedAt } = connection;
-  const destinations = providerFoundBy(providers, provider)?.entry.events?.destinations ?? [];
+  const destinations = takenThrough(connection, providerFoundBy(providers, provider)?.entry.events?.destinations ?? []);
   return connectedAt === null
     ? { connection: name, destinations }
     : { connection: name, connected: connectedAt, destinations };

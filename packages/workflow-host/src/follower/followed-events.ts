@@ -57,16 +57,12 @@ function published(record: RecordedEvent): EventOfRecord {
     event: publication.data.event,
     depth: depthOf(publication.context),
     emitter,
-    ownedBy: emitter === undefined ? [] : [emitter.workflow],
+    ownedBy: [],
     topRun: emitter === undefined ? undefined : otherRun(record.correlationId, emitter.runId),
   };
 }
 
-function workflowsOfSubject(subject: string | undefined, type: string): readonly string[] {
-  return subject?.startsWith(`${type}/`) === true ? [subject.slice(type.length + 1)] : [];
-}
-
-function fact(record: RecordedEvent, type: string): EventOfRecord {
+function fact(record: RecordedEvent, filedUnder: string): EventOfRecord {
   const event = playbookFactOf(record);
   if (event === undefined) {
     return 'unreadable';
@@ -80,19 +76,19 @@ function fact(record: RecordedEvent, type: string): EventOfRecord {
     event,
     depth,
     emitter: undefined,
-    ownedBy: workflowsOfSubject(event.subject, type),
+    ownedBy: [filedUnder],
     topRun: otherRun(record.correlationId, runId),
   };
 }
 
-export function followedEventOf(record: RecordedEvent, type: string): EventOfRecord {
+export function followedEventOf(record: RecordedEvent, filedUnder: string): EventOfRecord {
   const kind = streamKindOf(record.stream);
   if (kind === 'events' && record.type === 'event_published') {
     return published(record);
   }
   const isFact =
     (kind === 'runs' && runFacts.has(record.type)) || (kind === 'definitions' && definitionFacts.has(record.type));
-  return isFact ? fact(record, type) : 'none';
+  return isFact ? fact(record, filedUnder) : 'none';
 }
 
 export type FactPayloads = (playbook: PlaybookAddress) => PayloadReader;

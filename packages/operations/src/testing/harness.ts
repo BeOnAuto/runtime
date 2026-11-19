@@ -18,7 +18,7 @@ import {
   type KeyedProjection,
   type Settled,
 } from '../index.ts';
-import { definitionsPlaced } from '../projections-testing/definition-rows-behaviour.ts';
+import { definitionsNamedByTheirIds } from '../projections-testing/definition-rows-behaviour.ts';
 import { memoryLedgerWith, type MemoryLedger } from './memory-ledger.ts';
 import { memoryPlaybookRegistry } from './memory-playbook-registry.ts';
 import { recordingReporter, type ReportedIncident } from './recording-reporter.ts';
@@ -67,7 +67,7 @@ export function harness(options: HarnessOptions = {}): Harness {
     runOutcomes,
     projections = [],
   } = options;
-  const ledger = memoryLedgerWith({ runOutcomes, projections, definitionNames: definitionsPlaced });
+  const ledger = memoryLedgerWith({ runOutcomes, projections, definitionNames: definitionsNamedByTheirIds });
   const recording = recordingReporter();
   const services = Layer.mergeAll(
     ledger.layer,

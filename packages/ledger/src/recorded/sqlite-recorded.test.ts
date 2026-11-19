@@ -2,11 +2,13 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { SQL } from '@event-driven-io/dumbo';
 import { sqliteFormatter } from '@event-driven-io/dumbo/sqlite';
-import { cursorWithin, InvalidCursor } from '@on.auto/operations';
+import { cursorWithin, InvalidCursor, type RecordedSelection } from '@on.auto/operations';
+import type { HeldName } from '@on.auto/operations/definition-names';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
+import { orgStreamsQuery } from '../definitions/sqlite-definition-reads.ts';
 import type { DefinitionNamesStore, RecordedStore, StoredRecord } from '../event-store.ts';
 import type { OrgPageAsked, RecordedKeys } from '../keys/recorded-keys.ts';
 import { sqliteEventStore } from '../sqlite-event-store.ts';
@@ -87,22 +89,40 @@ const untraced: StoredRecord = {
 };
 
 interface Holding {
-  readonly store: RecordedStore & Pick<DefinitionNamesStore, 'definitionsIn'>;
+  readonly store: RecordedStore & Pick<DefinitionNamesStore, 'definitionsIn' | 'holdersOfName'>;
   readonly asked: readonly RecordedKeys[];
+  readonly selected: readonly RecordedSelection[];
 }
+
+function heldAs(definitionKey: string, definitionType: string): HeldName {
+  return {
+    definitionKey,
+    definitionType,
+    name: 'weekly',
+    playbookKey: 'playbook/acme/alpha/',
+    status: 'active',
+    hasTriggers: false,
+  };
+}
+
+const holdersOfWeekly = [heldAs('definition/acme/d1/', 'workflow'), heldAs('definition/acme/d2/', 'reasoning')];
 
 function storeHolding(record: StoredRecord, definitions: readonly string[] = []): Holding {
   const asked: RecordedKeys[] = [];
-  const store: RecordedStore & Pick<DefinitionNamesStore, 'definitionsIn'> = {
+  const selected: RecordedSelection[] = [];
+  const store: RecordedStore & Pick<DefinitionNamesStore, 'definitionsIn' | 'holdersOfName'> = {
     definitionsIn: (playbookKey) => Promise.resolve(playbookKey === 'playbook/acme/alpha/' ? definitions : []),
+    holdersOfName: ({ playbookKey, name }) =>
+      Promise.resolve(playbookKey === 'playbook/acme/alpha/' && name === 'weekly' ? holdersOfWeekly : []),
     pointLength: 1,
     readRecorded: () => Promise.reject(new Error('A read by the text of a key is not asked here')),
     readAppended: () => Promise.resolve({ streams: [], through: ['21'], more: false }),
     readAppendedFacts: () => Promise.resolve({ held: false }),
     readRecordedEvent: () => Promise.reject(new Error('A read by the text of a key is not asked here')),
     readRecordedOfOrg: () => Promise.reject(new Error('A read of an org is not asked here')),
-    readRecordedOfKeys: (keys) => {
+    readRecordedOfKeys: (keys, selection) => {
       asked.push(keys);
+      selected.push(selection);
       return Promise.resolve({ records: [record] });
     },
     readRecordedEventOfKeys: (keys, id) => {
@@ -110,7 +130,7 @@ function storeHolding(record: StoredRecord, definitions: readonly string[] = [])
       return Promise.resolve(id === record.id ? record : undefined);
     },
   };
-  return { store, asked };
+  return { store, asked, selected };
 }
 
 const alpha = { org: 'acme', playbook: 'alpha' };
@@ -233,6 +253,25 @@ describe('the read of one message by its id on SQLite', () => {
   });
 });
 
+describe("the read of the orgs' streams of a name on SQLite", () => {
+  it('steps from one org to the next through the index on the org, and finds each stream by the key of the streams', async () => {
+    const fileName = aDatabaseFile();
+    await migratedOnce(fileName);
+
+    const plan = await executedOn(fileName, async (execute) =>
+      (await execute.query(SQL`EXPLAIN QUERY PLAN ${orgStreamsQuery('connections')}`)).rows.map(
+        (row: Readonly<Record<string, unknown>>) => String(row['detail']),
+      ),
+    );
+
+    expect(plan).toContain('SEARCH emt_messages USING COVERING INDEX ledger_messages_by_org (<expr>>?)');
+    expect(plan).toContain(
+      'SEARCH s USING INDEX sqlite_autoindex_emt_streams_1 (stream_id=? AND partition=? AND is_archived=?)',
+    );
+    expect(plan.filter((step) => /^SCAN (?:emt_|s$)/u.test(step))).toEqual([]);
+  });
+});
+
 describe('the reads of a playbook', () => {
   it("ask the store for the playbook's key under the org its address names", async () => {
     const { store, asked } = storeHolding(untraced);
@@ -257,6 +296,29 @@ describe('the reads of a playbook', () => {
       keys: ['playbook/acme/alpha/', 'definition/acme/d1/', 'definition/acme/d2/'],
     };
     expect(asked).toEqual([ofItsDefinitions, ofItsDefinitions]);
+  });
+
+  it('read the runs of a name under the keys of the definitions that hold it now, of the type asked, and none where none does', async () => {
+    const { store, asked, selected } = storeHolding(untraced, ['definition/acme/d1/', 'definition/acme/d2/']);
+    const read = (selection: RecordedSelection) =>
+      Effect.runPromise(recordedReaderOf(store)(alpha, selection, { order: 'desc', limit: 5 }));
+
+    const pages = [
+      await read({ kind: 'runs', name: 'weekly' }),
+      await read({ kind: 'runs', definitionType: 'workflow', name: 'weekly', called: false }),
+      await read({ kind: 'runs', name: 'monthly' }),
+    ];
+
+    expect(pages.map(({ records, hasMore }) => [records.length, hasMore])).toEqual([
+      [1, false],
+      [1, false],
+      [0, false],
+    ]);
+    expect(asked.map(({ keys }) => keys)).toEqual([
+      ['definition/acme/d1/', 'definition/acme/d2/'],
+      ['definition/acme/d1/'],
+    ]);
+    expect(selected).toEqual([{ kind: 'runs' }, { kind: 'runs', definitionType: 'workflow', called: false }]);
   });
 });
 

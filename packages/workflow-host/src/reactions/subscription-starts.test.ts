@@ -165,7 +165,7 @@ describe('the starts a workflow is kept from', () => {
     const { database, delivered, starts, said } = await starting();
     await subscribed(database, 'close', { type: 'go' });
 
-    await delivered(followedRecordOf(null, { ownedBy: ['close'] }));
+    await delivered(followedRecordOf(null, { ownedBy: [definitionKeyNamed('close')] }));
     await delivered(followedRecordOf(null, { topRun: 'r-of-close' }));
     await delivered(followedRecordOf(null, { topRun: 'r-of-other', depth: mostReactionDepth }));
     await delivered(followedRecordOf(null, { depth: mostReactionDepth + 1 }));

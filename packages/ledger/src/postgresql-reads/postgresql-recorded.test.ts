@@ -4,7 +4,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { IndexExecutor } from '../recorded/missing-indexes.ts';
 import { createPostgreSQLPlaybookIndexes, orgOfStream } from './playbook-indexes.ts';
-import { definitionStreamsStatement, postgresqlDefinitionReads } from './postgresql-definition-reads.ts';
+import {
+  definitionStreamsStatement,
+  orgStreamsStatement,
+  postgresqlDefinitionReads,
+} from './postgresql-definition-reads.ts';
 import { postgresqlRecordedStore, type Query } from './postgresql-recorded.ts';
 
 interface Asked {
@@ -349,6 +353,23 @@ describe('the definition streams of a type on PostgreSQL', () => {
   });
 });
 
+describe("the orgs' streams of a name on PostgreSQL", () => {
+  it('are read by the name, in the default partition, each with its org and its version', async () => {
+    const { query, asked } = answering([
+      { org: 'acme', version: '4' },
+      { org: 'beta', version: '1' },
+    ]);
+
+    const streams = await postgresqlDefinitionReads(query).orgStreams('connections');
+
+    expect(streams).toEqual([
+      { org: 'acme', version: 4 },
+      { org: 'beta', version: 1 },
+    ]);
+    expect(asked).toEqual([{ text: orgStreamsStatement, values: ['connections', 'emt:default'] }]);
+  });
+});
+
 describe('one record read by its message id on PostgreSQL', () => {
   it('reads the record through the index on the org and the message id, within the playbook, with its data and its context', async () => {
     const { query, asked } = answering([storedRow]);
@@ -376,18 +397,17 @@ describe('one record read by its message id on PostgreSQL', () => {
 });
 
 describe('a read of the runs of one definition on PostgreSQL', () => {
-  it('reads the definition type and name from the metadata of the first message as plain jsonb, among a thousand runs', async () => {
+  it('reads the definition type from the metadata of the first message as plain jsonb, and never a name it recorded, among a thousand runs', async () => {
     const { query, asked } = answeringNothing();
-    const ofOneDefinition = { kind: 'runs', definitionType: 'workflow', name: 'qualify-enquiry' } as const;
+    const ofOneType = { kind: 'runs', definitionType: 'workflow' } as const;
 
-    await postgresqlRecordedStore(query).readRecorded(alpha, ofOneDefinition, { order: 'desc', limit: 5 });
+    await postgresqlRecordedStore(query).readRecorded(alpha, ofOneType, { order: 'desc', limit: 5 });
 
-    expect(asked[0]?.text).toContain(
-      "message_metadata ->> 'definitionType' = $2 AND message_metadata ->> 'definitionName' = $3 AS of_the_definition",
-    );
+    expect(asked[0]?.text).toContain("message_metadata ->> 'definitionType' = $2 AS of_the_definition");
     expect(asked[0]?.text).toContain('TRUE AND f.of_the_definition AS wanted');
+    expect(asked[0]?.text).not.toContain('definitionName');
     expect(asked[0]?.text).not.toContain('strpos');
     expect(asked[0]?.text).not.toContain('regexp_replace');
-    expect(asked[0]?.values).toEqual(['emt:default', 'workflow', 'qualify-enquiry', [`${alpha}runs/`], 1001, 1000, 7]);
+    expect(asked[0]?.values).toEqual(['emt:default', 'workflow', [`${alpha}runs/`], 1001, 1000, 7]);
   });
 });

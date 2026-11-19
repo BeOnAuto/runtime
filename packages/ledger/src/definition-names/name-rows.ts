@@ -86,6 +86,7 @@ export function definitionNamesReadOn(read: ReadQuery): DefinitionNamesStore {
     holderOfName: (named) => holderOf(read, named),
     nameHeldBy: (definitionKey) => heldBy(read, definitionKey),
     namesHeldIn: (kind) => namesOfAKind(read, kind),
+    holdersOfName: ({ playbookKey, name }) => heldWhere(read, SQL`playbook_key = ${playbookKey} AND name = ${name}`),
     definitionsIn: async (playbookKey) =>
       (await heldWhere(read, SQL`playbook_key = ${playbookKey}`)).map(({ definitionKey }) => definitionKey),
     holderOfStream: (named) => holderOfStreamIn(read, named),

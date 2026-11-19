@@ -23,9 +23,12 @@ function sendingOver(fetch: BearerSending['fetch'], callMs = 5000): BearerSendin
   };
 }
 
-function answeredWith(answer: Answered): Promise<RequestedOnce> {
-  return Effect.runPromise(bearerRequestOnce(renewing, sendingOver(answeringService(answer).fetch)));
+function answeredWith(answer: Answered, beside: Partial<BearerSending> = {}): Promise<RequestedOnce> {
+  const sending = { ...sendingOver(answeringService(answer).fetch), ...beside };
+  return Effect.runPromise(bearerRequestOnce(renewing, sending));
 }
+
+const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['invalid_auth'], rate_limited: ['ratelimited'] };
 
 function streamedUntil(signal: Readonly<AbortSignal>): ReadableStream<Uint8Array> {
   return new ReadableStream({
@@ -128,5 +131,39 @@ describe('a request that takes longer than a call may', () => {
       { kind: 'answered', outcome: 'timed_out' },
       { kind: 'answered', outcome: 'timed_out' },
     ]);
+  });
+});
+
+describe('a request whose service names its failures in a successful answer', () => {
+  it("is read by the codes it is given: a refused key's code a refusal of the key, another listed code its failure", async () => {
+    expect([
+      await answeredWith(answeredJson(200, { ok: false, error: 'invalid_auth' }), { failureCodes }),
+      await answeredWith(answeredJson(200, { ok: false, error: 'ratelimited' }), { failureCodes }),
+    ]).toEqual([
+      { kind: 'answered', outcome: 'server_failure', because: 'key_refused' },
+      { kind: 'answered', outcome: 'server_failure', because: 'rate_limited' },
+    ]);
+  });
+
+  it('is an error, never a refusal, where the code is not listed, and a result where it succeeded or is no JSON', async () => {
+    expect([
+      await answeredWith(answeredJson(200, { ok: false, error: 'channel_not_found' }), { failureCodes }),
+      await answeredWith(answeredJson(200, { ok: true, url: 'wss://socket.example.com' }), { failureCodes }),
+      await answeredWith(() => new Response('invalid_auth', { status: 200 }), { failureCodes }),
+      await answeredWith(answeredEmpty(204), { failureCodes }),
+    ]).toEqual([
+      { kind: 'answered', outcome: 'tool_error' },
+      { kind: 'answered', outcome: 'result', answer: { ok: true, url: 'wss://socket.example.com' } },
+      { kind: 'answered', outcome: 'result', answer: 'invalid_auth' },
+      { kind: 'answered', outcome: 'result' },
+    ]);
+  });
+
+  it('is read as before where no codes are given', async () => {
+    expect(await answeredWith(answeredJson(200, { ok: false, error: 'invalid_auth' }))).toEqual({
+      kind: 'answered',
+      outcome: 'result',
+      answer: { ok: false, error: 'invalid_auth' },
+    });
   });
 });

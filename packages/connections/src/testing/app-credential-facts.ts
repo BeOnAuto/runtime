@@ -16,7 +16,8 @@ export const heldAppCredentials: readonly (typeof ConnectionEventSchema.Type)[] 
     data: {
       connection: 'connection-1',
       name: 'app_level_token',
-      reason: 'The service refuses the app_level_token this connection holds',
+      reason:
+        'The provider refused the Chat app-level token this connection holds, so replies are checked on a timer, not at once. Reconnect the connection to give a new one.',
     },
     context: { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' },
   },

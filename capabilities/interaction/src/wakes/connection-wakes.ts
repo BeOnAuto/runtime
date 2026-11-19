@@ -1,7 +1,6 @@
 import {
   addressOfTheRow,
   everyDefinitionOf,
-  type PlaybookAddress,
   type ProjectedAddress,
   type ProjectedKeyedRow,
   type ProjectionAdvancer,
@@ -18,7 +17,7 @@ import { openRequestsName } from '../requests/open-requests.ts';
 import { requestRowFrom } from '../requests/request-rows.ts';
 
 export interface WokenConnection {
-  readonly playbook: PlaybookAddress;
+  readonly org: string;
   readonly connection: string;
   readonly conversation?: string;
 }
@@ -48,10 +47,10 @@ function waitingIn(kept: ProjectedKeyedRow, connection: string): readonly Waitin
     : [];
 }
 
-function rowsOfTheConnection({ ledger }: WakeParts, { playbook, connection }: WokenConnection) {
+function rowsOfTheConnection({ ledger }: WakeParts, { org, connection }: WokenConnection) {
   return ledger.readProjectedRows(
     conversationsName,
-    { org: playbook.org },
+    { org },
     {
       where: [
         { column: 'open', equals: true },
@@ -86,8 +85,8 @@ function rowsNamedBy(requests: readonly ProjectedKeyedRow[]): readonly NamedRow[
   return [...new Map(named.map((row: NamedRow) => [JSON.stringify(row), row])).values()];
 }
 
-function rowsOfTheConversation(parts: WakeParts, playbook: PlaybookAddress, conversation: string) {
-  const requests = parts.ledger.readProjectedRows(openRequestsName, everyDefinitionOf(playbook), {
+function rowsOfTheConversation(parts: WakeParts, org: string, conversation: string) {
+  const requests = parts.ledger.readProjectedRows(openRequestsName, everyDefinitionOf({ org }), {
     where: [
       { column: 'open', equals: true },
       { column: 'sent_conversation', equals: conversation },
@@ -107,7 +106,7 @@ function rowsOfTheConversation(parts: WakeParts, playbook: PlaybookAddress, conv
 function rowsWoken(parts: WakeParts, woken: WokenConnection) {
   return woken.conversation === undefined
     ? rowsOfTheConnection(parts, woken)
-    : rowsOfTheConversation(parts, woken.playbook, woken.conversation);
+    : rowsOfTheConversation(parts, woken.org, woken.conversation);
 }
 
 interface Paced {

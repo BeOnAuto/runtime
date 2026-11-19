@@ -78,7 +78,7 @@ async function askedAFloorApart(document: string, runIds: readonly string[]): Pr
     wake: (now, conversation) =>
       Effect.runPromise(
         wake(
-          { playbook: alpha, connection: 'chat', ...(conversation === undefined ? {} : { conversation }) },
+          { org: alpha.org, connection: 'chat', ...(conversation === undefined ? {} : { conversation }) },
           clockSetTo(now),
         ),
       ),

@@ -24,6 +24,7 @@ export interface SubscriptionLoopParts {
   readonly secrets: Pick<SecretKeeping, 'keep' | 'read' | 'forget'>;
   readonly providers: ProviderList;
   readonly receivesOverHttp: boolean;
+  readonly opensSockets?: boolean;
   readonly eventsAddressOf?: (place: SubscriptionPlace) => string;
 }
 
@@ -31,13 +32,20 @@ function callbackOf({ receivesOverHttp, eventsAddressOf }: SubscriptionLoopParts
   return (place, type) => (type === 'webhook' && receivesOverHttp ? eventsAddressOf?.(place) : undefined);
 }
 
+function receivesOf({
+  receivesOverHttp,
+  opensSockets = false,
+}: SubscriptionLoopParts): SubscriptionLoopPorts['receives'] {
+  return (type) => (type === 'webhook' && receivesOverHttp) || (type === 'websocket' && opensSockets);
+}
+
 export function subscriptionLoopPortsOf(parts: SubscriptionLoopParts): SubscriptionLoopPorts {
-  const { ledger, registry, waitingIn, tools, secrets, providers, receivesOverHttp } = parts;
+  const { ledger, registry, waitingIn, tools, secrets, providers } = parts;
   return {
     ...tools,
     callbackOf: callbackOf(parts),
     connectionsOf: loopConnectionsOf({ registry, providers }),
-    receives: (type) => type === 'webhook' && receivesOverHttp,
+    receives: receivesOf(parts),
     askers: [requestsAskerOf(waitingIn)],
     records: subscriptionRecordsOf(ledger),
     secrets: subscriptionSecretsOf(secrets),

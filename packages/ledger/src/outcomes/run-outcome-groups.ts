@@ -1,6 +1,8 @@
 import { RunOutcomeStatusSchema, type RunOutcomeGroup } from '@on.auto/operations';
 import { Schema } from 'effect';
 
+export const nameHeldNow = "CASE WHEN o.name = '' THEN o.name ELSE n.name END";
+
 export const groupFields = {
   day: Schema.String,
   definition_type: Schema.String,

@@ -14,12 +14,20 @@ export {
 export type { ConnectionStart, ConnectionStarts } from './policy/connection-starts.ts';
 export { receiveEventsSetting, receivesOver, type ReceivingWay } from './policy/receiving-ways.ts';
 export { registeredClientSecrets } from './registered-clients/registered-clients.ts';
-export type { RuntimeAccess } from './policy/policy-rules.ts';
+export { reachesUnder, type RuntimeAccess } from './policy/policy-rules.ts';
 export { ConnectionSchema, type Connection } from './registry/connection.ts';
 export { connectionChanges } from './registry/connection-changes.ts';
 export { ConnectionDocumentEventSchema, isConnectionDocumentStreamOfOrg } from './documents/document-streams.ts';
 export { ConnectionEventSchema } from './registry/connection-events.ts';
 export { byTheRuntime, connectionsStream, connectionsStreamOfOrg } from './registry/registry-decider.ts';
+export {
+  appCredentialRefused,
+  socketsHeldIn,
+  type HeldSockets,
+  type SocketHolder,
+  type SocketRegistries,
+} from './sockets/socket-holders.ts';
+export { socketChecksOver } from './sockets/socket-checks.ts';
 export { makeConnectionSource } from './serving/connection-source.ts';
 export {
   RegistrationEventSchema,

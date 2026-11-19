@@ -18,6 +18,7 @@ export interface GivenAppCredential {
   readonly name: string;
   readonly value: string;
   readonly destination: EventDestination;
+  readonly failureCodes?: NonNullable<Provider['entry']['failure_codes']>;
 }
 
 interface WayOfTheConnection {
@@ -75,10 +76,12 @@ export function appCredentialsGivenOf(
   if (issues.length > 0) {
     return Result.fail(refused(issues));
   }
+  const codes = found?.provider.entry.failure_codes;
+  const failureCodes = codes === undefined ? {} : { failureCodes: codes };
   return Result.succeed(
     offered.flatMap(({ credential, destination }) => {
       const value = given[credential.name];
-      return value === undefined ? [] : [{ name: credential.name, value, destination }];
+      return value === undefined ? [] : [{ name: credential.name, value, destination, ...failureCodes }];
     }),
   );
 }

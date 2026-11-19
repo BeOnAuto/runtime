@@ -1,0 +1,19 @@
+{
+  "type": "definition_renamed",
+  "data": {
+    "from": "close-the-week",
+    "to": "close-the-month",
+    "renamed_by": {
+      "id": "person:user_2ada",
+      "name": "Ada Lovelace"
+    }
+  },
+  "context": {
+    "at": "2026-11-19T10:00:00.000Z",
+    "by": "person:user_2ada",
+    "definitionType": "workflow",
+    "definitionName": "close-the-month",
+    "definitionVersion": 2,
+    "definitionId": "019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a"
+  }
+}

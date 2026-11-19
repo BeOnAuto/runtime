@@ -30,6 +30,7 @@ export interface PlaybookAppends {
   readonly subjectRetired: (subject: string) => Promise<void>;
   readonly subjectPaused: (subject: string) => Promise<void>;
   readonly subjectMoved: (subject: string, to: Playbook) => Promise<void>;
+  readonly subjectRenamed: (subject: string, to: string) => Promise<void>;
   readonly playbookPageSaved: (details: Schema.JsonObject) => Promise<void>;
   readonly playbookPageRemoved: () => Promise<void>;
   readonly ran: Ran;
@@ -140,6 +141,16 @@ function onTheSubject(append: Append, at: string, subject: string, version = 1) 
     });
 }
 
+function subjectRenamedBy(append: Append, next: () => string) {
+  return (subject: string, to: string) => {
+    const [type = '', from = ''] = subject.split('/');
+    const renamed = { from, to, renamed_by: { id: 'acme-admin', name: 'acme-admin' } };
+    const context = { by: 'acme-admin', at: next(), definitionType: type, definitionName: to, definitionVersion: 1 };
+    const stream = `${definitionKeyOfType(type, from, alphaKey)}definitions/${type}`;
+    return append(stream, [{ type: 'definition_renamed', data: renamed }], context);
+  };
+}
+
 function savedWith(version: number, page: Schema.Json | undefined): EncodedEvent {
   const content = { source: `version ${version}`, ...(page === undefined ? {} : { page }) };
   return version === 1
@@ -182,6 +193,7 @@ function pageAppendsOf(append: Append) {
           data: { from: alpha.playbook, to: to.playbook, moved_by: { id: 'acme-admin', name: 'acme-admin' } },
         },
       ]),
+    subjectRenamed: subjectRenamedBy(append, next),
     playbookPageSaved: (details: Schema.JsonObject) => onThePlaybook({ source: 'runs: |\n  Posts', details }),
     playbookPageRemoved: () => onThePlaybook(null),
   };

@@ -1,6 +1,6 @@
 import type { Decided, PlaybookAddress } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import { ofEachSubscription, providersOf, tracker } from '@on.auto/providers/testing';
+import { ofEachSubscription, overASocket, providersOf, tracker, trackerOverASocket } from '@on.auto/providers/testing';
 import { Effect, Option, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -208,6 +208,55 @@ describe('the address the ports of the loop name', () => {
     const closed = subscriptionLoopPortsOf({ ...partsOver(), eventsAddressOf, receivesOverHttp: false });
 
     expect([closed.callbackOf(place, 'webhook'), closed.receives('webhook')]).toEqual([undefined, false]);
+  });
+
+  it('takes a socket in place of a subscription where this runtime opens sockets', () => {
+    const opening = subscriptionLoopPortsOf({ ...partsOver(), eventsAddressOf, opensSockets: true });
+
+    expect([opening.receives('websocket'), opening.receives('queue')]).toEqual([true, false]);
+  });
+});
+
+const socketFirst = providersOf({
+  ...trackerOverASocket,
+  events: { destinations: [overASocket, ofEachSubscription] },
+});
+
+const heldBy = (connection: string, appSecretIds: Readonly<Record<string, string>>) =>
+  ({
+    type: 'connection_connected',
+    data: {
+      connection,
+      secret_id: 'secret-9',
+      app_secret_ids: appSecretIds,
+      connected_by: { id: 'person:ada', name: 'Ada' },
+    },
+  }) as const;
+
+describe('a socket among the destinations the loop arranges through', () => {
+  it('is left out for a connection that holds no app credential it names, or holds it refused', async () => {
+    const registry = memoryLedger().service;
+    const stream = connectionsStreamOfOrg('acme');
+    const facts = [
+      addedFact('connection-1', 'holding', 'tracker'),
+      addedFact('connection-2', 'without', 'tracker'),
+      addedFact('connection-3', 'refused', 'tracker'),
+      heldBy('connection-1', { app_level_token: 'secret-1' }),
+      heldBy('connection-2', {}),
+      heldBy('connection-3', { app_level_token: 'secret-3' }),
+      {
+        type: 'connection_app_credential_refused',
+        data: { connection: 'connection-3', name: 'app_level_token', reason: 'refused' },
+      },
+    ] as const;
+    await Effect.runPromise(registry.execute(stream, recordedAt(connectedAt), facts));
+    const connectionsOf = loopConnectionsOf({ registry, providers: socketFirst });
+
+    const types = (await Effect.runPromise(connectionsOf(alpha))).map(({ destinations }) =>
+      destinations.map(({ type }) => type),
+    );
+
+    expect(types).toEqual([['websocket', 'webhook'], ['webhook'], ['webhook']]);
   });
 });
 

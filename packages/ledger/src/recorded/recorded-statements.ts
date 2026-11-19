@@ -58,7 +58,9 @@ export interface RecordedStatements {
   readonly dataAt: (points: readonly RecordedPoint[]) => Promise<ReadonlyMap<string, unknown>>;
 }
 
-export type RunsSelected = Extract<RecordedSelection, { readonly kind: 'runs' }> & { readonly keys: Keys };
+export type RunsSelected = Omit<Extract<RecordedSelection, { readonly kind: 'runs' }>, 'name'> & {
+  readonly keys: Keys;
+};
 
 export type RecordsSelected =
   | { readonly kind: 'keys'; readonly keys: Keys }
@@ -72,10 +74,7 @@ export function pointKey(point: RecordedPoint): string {
 }
 
 function filtersTheRuns(selection: RecordedSelection): boolean {
-  return (
-    selection.kind === 'runs' &&
-    (selection.definitionType !== undefined || selection.name !== undefined || selection.called !== undefined)
-  );
+  return selection.kind === 'runs' && (selection.definitionType !== undefined || selection.called !== undefined);
 }
 
 function scopeOf(

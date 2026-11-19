@@ -167,11 +167,16 @@ const identified: readonly (typeof DefinitionEventSchema.Type)[] = [
   },
 ];
 
-const moved: readonly (typeof DefinitionEventSchema.Type)[] = [
+const movedAndRenamed: readonly (typeof DefinitionEventSchema.Type)[] = [
   {
     type: 'definition_moved',
     data: { from: 'finance', to: 'operations', moved_by: ada },
     context: { ...closing, at: '2026-11-19T09:00:00.000Z', definitionVersion: 2 },
+  },
+  {
+    type: 'definition_renamed',
+    data: { from: 'close-the-week', to: 'close-the-month', renamed_by: ada },
+    context: { ...closing, at: '2026-11-19T10:00:00.000Z', definitionName: 'close-the-month', definitionVersion: 2 },
   },
 ];
 
@@ -187,7 +192,7 @@ describe('the facts of the definitions of a playbook', () => {
       '0.58.0': keptOutsideTheFacts,
       '0.59.0': identified,
       '0.60.0': createdPaused,
-      '0.67.0': moved,
+      '0.67.0': movedAndRenamed,
     },
   });
 });
@@ -225,7 +230,7 @@ describe('a definition fact as a release recorded it', () => {
     const recorded = fixturesAsRecorded();
 
     expect(recorded.map(({ path, text }) => ({ path, text: writtenBack(text) }))).toEqual(recorded);
-    expect(recorded).toHaveLength(21);
+    expect(recorded).toHaveLength(22);
   });
 });
 

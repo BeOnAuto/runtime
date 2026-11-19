@@ -4,7 +4,7 @@ import { Schema } from 'effect';
 
 import { definitionNamesTableName } from '../definition-names/definition-names-table.ts';
 import type { RunOutcomesStore, StatementExecutor } from '../event-store.ts';
-import { groupFields, groupOf } from '../outcomes/run-outcome-groups.ts';
+import { groupFields, groupOf, nameHeldNow } from '../outcomes/run-outcome-groups.ts';
 import { runOutcomesTable } from '../outcomes/run-outcome-projection.ts';
 import { keptOutcomesOnly } from '../outcomes/run-outcomes-reader.ts';
 import { binding, formattedFor, type Bind, type Query } from '../postgresql-reads/recorded-parts.ts';
@@ -13,8 +13,8 @@ import { servedOnceCaughtUp, type TablesCatchingUp } from '../projection-catch-u
 const GroupRows = Schema.Array(Schema.Struct({ ...groupFields, durations: Schema.Array(Schema.Number) }));
 
 function selected(bind: Bind, { definitionType, name }: RunOutcomeSelection): string {
-  const ofDefinitionType = definitionType === undefined ? '' : ` AND definition_type = ${bind(definitionType)}`;
-  return name === undefined ? ofDefinitionType : `${ofDefinitionType} AND name = ${bind(name)}`;
+  const ofDefinitionType = definitionType === undefined ? '' : ` AND o.definition_type = ${bind(definitionType)}`;
+  return name === undefined ? ofDefinitionType : `${ofDefinitionType} AND ${nameHeldNow} = ${bind(name)}`;
 }
 
 export function postgresqlRunOutcomesReader(query: Query): RunOutcomesStore['readRunOutcomes'] {
@@ -22,16 +22,16 @@ export function postgresqlRunOutcomesReader(query: Query): RunOutcomesStore['rea
     const { values, bind } = binding();
     const key = bind(playbookKey);
     const rows = await query(
-      `SELECT started_day AS day, definition_type, name, status, count(*)::int AS runs,
-          coalesce(sum(input_tokens), 0)::float8 AS input_tokens,
-          coalesce(sum(output_tokens), 0)::float8 AS output_tokens,
-          coalesce(sum(cached_tokens), 0)::float8 AS cached_tokens,
-          sum(cost_micro_usd)::float8 AS cost_micro_usd,
-          coalesce(json_agg(duration_ms) FILTER (WHERE duration_ms IS NOT NULL), '[]'::json) AS durations
-        FROM ${runOutcomesTable}
-        WHERE playbook_key IN (SELECT definition_key FROM ${definitionNamesTableName} WHERE playbook_key = ${key})
-          AND started_day BETWEEN ${bind(from)} AND ${bind(to)}${selected(bind, selection)}
-        GROUP BY started_day, definition_type, name, status`,
+      `SELECT o.started_day AS day, o.definition_type, ${nameHeldNow} AS name, o.status, count(*)::int AS runs,
+          coalesce(sum(o.input_tokens), 0)::float8 AS input_tokens,
+          coalesce(sum(o.output_tokens), 0)::float8 AS output_tokens,
+          coalesce(sum(o.cached_tokens), 0)::float8 AS cached_tokens,
+          sum(o.cost_micro_usd)::float8 AS cost_micro_usd,
+          coalesce(json_agg(o.duration_ms) FILTER (WHERE o.duration_ms IS NOT NULL), '[]'::json) AS durations
+        FROM ${runOutcomesTable} AS o JOIN ${definitionNamesTableName} AS n ON n.definition_key = o.playbook_key
+        WHERE n.playbook_key = ${key}
+          AND o.started_day BETWEEN ${bind(from)} AND ${bind(to)}${selected(bind, selection)}
+        GROUP BY o.started_day, o.playbook_key, o.definition_type, ${nameHeldNow}, o.status`,
       values,
     );
     return Schema.decodeUnknownSync(GroupRows)(rows).map((row) => groupOf(row));

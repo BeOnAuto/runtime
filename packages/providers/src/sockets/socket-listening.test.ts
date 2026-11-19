@@ -93,11 +93,13 @@ const isWithin = (milliseconds: number, [least, most]: readonly [number, number]
   milliseconds >= least && milliseconds <= most;
 
 describe('a socket the runtime opens to a service', () => {
-  it('is opened once at the start, with the destination and the value of the app', async () => {
-    const { server } = await listened(inEnvelopes, () => Effect.void);
+  it("is opened once at the start, with the destination, the value of the app and the entry's failure codes", async () => {
+    const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['invalid_auth'] };
+    const { server } = await listened(inEnvelopes, () => Effect.void, { failureCodes });
 
     expect([server.attemptsAt.length, server.openedAt.length, server.closedBy()]).toEqual([1, 1, ['the runtime']]);
     expect(server.credentials.map((credential) => Redacted.value(credential))).toEqual([theAppsValue]);
+    expect(server.failureCodes).toEqual([failureCodes]);
   });
 
   it("hands each message to the evaluator, and the evaluator's reading to the arrived port", async () => {
@@ -172,7 +174,10 @@ describe('the heartbeat of a socket', () => {
 
     expect(heard.server.closedBy()).toEqual(['the runtime', 'the runtime']);
     expect(gapsOf(heard.server.openedAt)[0]).toBeGreaterThanOrEqual(60_000 + backoffAt(0)[0]);
-    expect(levelsOf(heard)).toEqual(['WARN']);
+    expect([levelsOf(heard), heard.told]).toEqual([
+      ['INFO', 'WARN', 'INFO'],
+      ['opened', 'silent', 'opened'],
+    ]);
   });
 });
 
@@ -192,8 +197,11 @@ describe('a socket that closes', () => {
 
     expect([openings, heard.server.closedBy()]).toEqual([[1], ['the service', 'the service', 'the runtime']]);
     expect(heard.logged.map((line) => Object.keys(lineIn(line).annotations).toSorted())).toEqual([
+      [],
       ['close_code', 'wait_ms'],
+      [],
       ['wait_ms'],
+      [],
     ]);
   });
 });
@@ -248,7 +256,7 @@ describe('what the socket hands on', () => {
     );
 
     expect(acknowledgedIn(heard)).toEqual([{ envelope: { id: 'e-2' } }]);
-    expect([levelsOf(heard), heard.server.openedAt.length]).toEqual([['ERROR'], 1]);
+    expect([levelsOf(heard), heard.server.openedAt.length]).toEqual([['INFO', 'ERROR'], 1]);
   });
 
   it("never writes the value of the app or a message's words in a log or a failure", async () => {
@@ -266,7 +274,26 @@ describe('what the socket hands on', () => {
     );
     const written = [...heard.logged, JSON.stringify(heard.server.credentials)].join('\n');
 
-    expect(levelsOf(heard)).toEqual(['WARN', 'ERROR', 'INFO', 'WARN']);
+    expect(levelsOf(heard)).toEqual(['WARN', 'INFO', 'ERROR', 'INFO', 'INFO', 'WARN', 'INFO']);
     expect([written.includes(theAppsValue), written.includes(thePersonsWords)]).toEqual([false, false]);
+  });
+});
+
+describe('a socket the service refuses the value of the app for', () => {
+  it('is opened no more and said to the listener, while every other end is retried, said, and logged with its host', async () => {
+    const refused = await listened(inEnvelopes, () => after(socketBackoff.longestWaitMs), { refusesTheValue: true });
+    const retried = await listened(
+      asTopics,
+      ({ closes }) =>
+        after(longestFirstWait).pipe(Effect.andThen(closes(1001)), Effect.andThen(after(longestFirstWait))),
+      { refusals: 1 },
+    );
+
+    expect([refused.server.attemptsAt.length, refused.told, levelsOf(refused)]).toEqual([1, ['refused'], ['WARN']]);
+    expect(retried.told).toEqual(['not opened', 'opened', 'closed', 'opened']);
+    expect(retried.logged.map((line) => lineIn(line).annotations)[0]).toMatchObject({
+      host: 'socket.chat.example.com',
+    });
+    expect([...refused.logged, ...retried.logged].join('\n').includes(theAppsValue)).toBe(false);
   });
 });

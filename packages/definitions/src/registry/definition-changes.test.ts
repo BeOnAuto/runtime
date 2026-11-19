@@ -47,12 +47,6 @@ describe('the change a record of a definition makes to what starts on its own', 
     ]);
   });
 
-  it('moves the definition from the playbook it was in to the one it moved to, at no new version', () => {
-    expect(
-      changeOf({ type: 'definition_moved', data: { from: 'alpha', to: 'beta', moved_by: recordedAdmin } }, 'close', 2),
-    ).toEqual({ kind: 'moved', name: 'close', from: 'alpha', to: 'beta' });
-  });
-
   it('pauses the definition, and resumes it from the time of its resumption', () => {
     expect([
       changeOf({ type: 'definition_paused', data: { paused_by: recordedAdmin, reason: 'The month is closed' } }),
@@ -79,6 +73,24 @@ describe('the change a record of a definition makes to what starts on its own', 
       unversioned({ type: 'definition_created', data: { content: reacting, created_by: recordedAdmin } }),
       unversioned({ type: 'definition_retired', data: {} }),
     ]).toEqual([{ kind: 'unreadable' }, { kind: 'unreadable' }, { kind: 'unreadable' }]);
+  });
+});
+
+describe('the change a record of a definition makes to where it is and what it is called', () => {
+  it('moves the definition from the playbook it was in to the one it moved to, at no new version', () => {
+    expect(
+      changeOf({ type: 'definition_moved', data: { from: 'alpha', to: 'beta', moved_by: recordedAdmin } }, 'close', 2),
+    ).toEqual({ kind: 'moved', name: 'close', from: 'alpha', to: 'beta' });
+  });
+
+  it('renames the definition from the name it had to the one it has now, at no new version', () => {
+    expect(
+      changeOf(
+        { type: 'definition_renamed', data: { from: 'close', to: 'close-the-month', renamed_by: recordedAdmin } },
+        'close-the-month',
+        2,
+      ),
+    ).toEqual({ kind: 'renamed', from: 'close', to: 'close-the-month' });
   });
 });
 

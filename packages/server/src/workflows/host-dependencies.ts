@@ -70,6 +70,7 @@ export interface HostParts {
   readonly consumersOf?: ConsumersOf;
   readonly holding: AttemptsWorkParts['holding'];
   readonly access: AttemptsWorkParts['access'];
+  readonly wakeUps?: HostOptions['wakeUps'];
 }
 
 export type HostRuntime = AppRuntime<ServerServices>;
@@ -93,6 +94,7 @@ export async function openedHost(
     consumersOf,
     holding,
     access,
+    wakeUps = [],
   }: HostParts,
   { names }: Pick<WorkParts, 'names'>,
 ): Promise<WorkflowHost> {
@@ -114,11 +116,8 @@ export async function openedHost(
     mostCallsAtOnce: workflows.mostCallsAtOnce,
     mostOpenCalls: workflows.mostOpenCalls,
     ...(clock === undefined ? {} : { clock }),
-    consumers: [
-      ...consumers,
-      ...(consumersOf === undefined ? [] : consumersOf({ runtime, store, evaluations })),
-      ...started.consumers,
-    ],
+    wakeUps,
+    consumers: [...consumers, ...(consumersOf?.({ runtime, store, evaluations }) ?? []), ...started.consumers],
   });
   await runtime.run(logWorkflows(workflows));
   return host;

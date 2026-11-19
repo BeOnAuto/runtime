@@ -20,7 +20,7 @@ import {
 import { eventSubscriptionsOf, namedByTheirDefinitions, type EventSubscription } from '../triggers/trigger-rows.ts';
 import { reactionRunIdOf } from './reaction-ids.ts';
 import { codesOf, type FailureDetail, type Refusal, type RefuseReaction, type RejectionCodes } from './refusals.ts';
-import type { WorkflowOfRun } from './run-workflows.ts';
+import type { DefinitionOfRun } from './run-workflows.ts';
 import type { Starting } from './start-rates.ts';
 
 export const mostReactionDepth = 8;
@@ -29,7 +29,7 @@ export interface StartParts {
   readonly database: HostDatabase;
   readonly starting: Starting;
   readonly refusals: RefuseReaction;
-  readonly workflowOfRun: WorkflowOfRun;
+  readonly definitionOfRun: DefinitionOfRun;
   readonly match: MatchFilters;
   readonly stops: FilterStops;
   readonly now: () => number;
@@ -95,13 +95,19 @@ function verdictsOf(
   );
 }
 
-function isOwn(parts: StartParts, workflow: string, { playbookKey, event }: FollowedRecord): Effect.Effect<boolean> {
-  if (event.ownedBy.includes(workflow)) {
+function isOwn(
+  parts: StartParts,
+  definitionKey: string,
+  { playbookKey, event }: FollowedRecord,
+): Effect.Effect<boolean> {
+  if (event.ownedBy.includes(definitionKey)) {
     return Effect.succeed(true);
   }
-  return event.topRun === undefined
-    ? Effect.succeed(false)
-    : Effect.map(parts.workflowOfRun(playbookKey, event.topRun), (owner) => owner === workflow);
+  const owningRuns = [event.emitter?.runId, event.topRun].filter((run) => run !== undefined);
+  return Effect.map(
+    Effect.forEach(owningRuns, (run) => parts.definitionOfRun(playbookKey, run)),
+    (owners: readonly (string | undefined)[]) => owners.includes(definitionKey),
+  );
 }
 
 function tracedBy({ traceId, spanId }: FollowedRecord['record']) {
@@ -159,7 +165,7 @@ function deliveriesOf(parts: StartParts, judged: SubscriptionVerdict, followed: 
   if (verdict !== 'matched') {
     return Effect.succeed(struck ? [matchedLater(parts, followed.playbookKey, subscription)] : []);
   }
-  return Effect.map(isOwn(parts, subscription.workflow, followed), (own) =>
+  return Effect.map(isOwn(parts, subscription.definitionKey, followed), (own) =>
     own ? [] : [startOf(parts, subscription, followed)],
   );
 }

@@ -8,16 +8,18 @@ import {
 import type { LedgerStreams, StoredPage, StoredPlace } from '@on.auto/ledger';
 import {
   addressedStreamOf,
+  namedAsHeld,
   playbookOfStreamPrefix,
   type PlaybookAddress,
   type RecordedFact,
   type Unavailable,
 } from '@on.auto/operations';
+import type { HeldName } from '@on.auto/operations/definition-names';
 import { payloadReaderOf, payloadReadsAtOnce, type PayloadReader } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import { streamWithinItsKey } from '../follower/playbook-records.ts';
+import { keyOfTheStream, streamWithinItsKey } from '../follower/playbook-records.ts';
 import type { Point } from './history-points.ts';
 
 export interface PageEvent {
@@ -84,6 +86,22 @@ export function typesToRead(named: readonly string[]): readonly string[] {
   return [...read].toSorted();
 }
 
+type NamesHeld = ReadonlyMap<string, HeldName | undefined>;
+
+function heldNamesOf(store: Pick<LedgerStreams, 'nameHeldBy'>, playbookKey: string, records: readonly StoredRecord[]) {
+  const keys = [...new Set(records.map(({ stream }) => keyOfTheStream(playbookKey, stream)))].filter(
+    (key) => key !== playbookKey,
+  );
+  return Effect.map(
+    Effect.forEach(keys, (key) => Effect.promise(async () => [key, await store.nameHeldBy(key)] as const)),
+    (held: readonly (readonly [string, HeldName | undefined])[]): NamesHeld => new Map(held),
+  );
+}
+
+function namedFactOf(playbookKey: string, record: StoredRecord, names: NamesHeld): RecordedFact {
+  return namedAsHeld(factOf(playbookKey, record), names.get(keyOfTheStream(playbookKey, record.stream)));
+}
+
 function factOf(playbookKey: string, record: StoredRecord): RecordedFact {
   const { id, causationId, correlationId, version, globalPosition, type, data, metadata, recordedAt } = record;
   return {
@@ -124,8 +142,8 @@ interface Placed {
   readonly missing?: ContentMissing;
 }
 
-function placedRead(playbookKey: string, record: StoredRecord, payloads: PayloadReader) {
-  return Effect.map(eventRead(factOf(playbookKey, record), payloads), ({ event, missing }): Placed => {
+function placedRead(fact: RecordedFact, record: StoredRecord, payloads: PayloadReader) {
+  return Effect.map(eventRead(fact, payloads), ({ event, missing }): Placed => {
     const at: RecordAt = { record: record.id, type: record.type, point: record.point };
     const placed =
       event === undefined || !hasAMoment(event)
@@ -190,9 +208,10 @@ export function readPage(
       ),
     );
     const bounded = boundedByTheirReads(playbookKey, page.records);
+    const names = yield* heldNamesOf(store, playbookKey, bounded.records);
     const read = yield* Effect.forEach(
       bounded.records.filter(({ type }) => !savesOfPages.has(type)),
-      (record) => placedRead(playbookKey, record, payloads),
+      (record) => placedRead(namedFactOf(playbookKey, record, names), record, payloads),
       { concurrency: payloadReadsAtOnce },
     );
     const placed = read.map((each) => each.placed);

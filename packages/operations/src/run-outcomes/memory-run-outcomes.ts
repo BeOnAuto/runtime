@@ -1,5 +1,6 @@
 import { Effect, Function } from 'effect';
 
+import type { HeldName } from '../definition-names/name-judgement.ts';
 import {
   runStreamOf,
   streamPrefixOfPlaybook,
@@ -64,13 +65,24 @@ function added(group: RunOutcomeGroup, row: RunOutcome): RunOutcomeGroup {
   };
 }
 
-function grouped(rows: readonly RunOutcome[]): readonly RunOutcomeGroup[] {
+function grouped(outcomes: readonly KeptOutcome[]): readonly RunOutcomeGroup[] {
   const groups = new Map<string, RunOutcomeGroup>();
-  for (const row of rows) {
-    const key = JSON.stringify([row.startedDay, row.definitionType, row.name, row.status]);
+  for (const { definitionKey, row } of outcomes) {
+    const key = JSON.stringify([row.startedDay, definitionKey, row.definitionType, row.name, row.status]);
     groups.set(key, added(groups.get(key) ?? emptyGroupOf(row), row));
   }
   return [...groups.values()];
+}
+
+function namedAsHeld(outcomes: readonly KeptOutcome[], held: readonly HeldName[]): readonly KeptOutcome[] {
+  const names = new Map(held.map(({ definitionKey, name }) => [definitionKey, name]));
+  return outcomes.flatMap(({ definitionKey, row }) => {
+    const name = names.get(definitionKey);
+    if (name === undefined) {
+      return [];
+    }
+    return [{ definitionKey, row: row.name === '' ? row : { ...row, name } }];
+  });
 }
 
 function stagedOutcomes(
@@ -91,7 +103,7 @@ function stagedOutcomes(
 
 export function memoryRunOutcomes(
   mapping: RunOutcomeMapping | undefined,
-  definitionsOf: (playbookKey: string) => readonly string[],
+  namesIn: (playbookKey: string) => readonly HeldName[],
 ): MemoryRunOutcomes {
   const kept = new Map<string, KeptOutcome>();
   const staged: MemoryRunOutcomes['staged'] = (stream, facts, firstPosition) => {
@@ -121,9 +133,8 @@ export function memoryRunOutcomes(
     },
     readRunOutcomes: (playbook, window, selection) =>
       Effect.sync(() => {
-        const keys = new Set(definitionsOf(streamPrefixOfPlaybook(playbook)));
-        const rows = [...kept.values()].flatMap((outcome) => (keys.has(outcome.definitionKey) ? [outcome.row] : []));
-        return grouped(rows.filter((row) => isSelected(row, window, selection)));
+        const named = namedAsHeld([...kept.values()], namesIn(streamPrefixOfPlaybook(playbook)));
+        return grouped(named.filter(({ row }) => isSelected(row, window, selection)));
       }),
   };
 }

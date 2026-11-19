@@ -7,6 +7,7 @@ import type { LedgerStore } from '../event-store.ts';
 import { streamPortsOf } from '../ledger-service.ts';
 import { happenings, noted, stamped } from '../testing/happenings.ts';
 import type { LedgerEntry } from '../testing/ledger-entry.ts';
+import { takenByAnother } from '../testing/named-runs.ts';
 import type { DefinitionNames } from './definition-names.ts';
 
 export interface DefinitionNamesEntry extends LedgerEntry {
@@ -26,7 +27,7 @@ const names: DefinitionNames = {
     status: 'active',
     hasTriggers: false,
   }),
-  takenBy: (claimed) => new Conflict({ detail: `${claimed.name} is held by another definition`, kind: 'taken' }),
+  takenBy: takenByAnother,
 };
 
 const triage = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a/definitions';

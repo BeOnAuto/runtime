@@ -29,24 +29,50 @@ type Activation = Extract<DefinitionChange, { readonly triggers: unknown }>;
 
 type Moved = Extract<DefinitionChange, { readonly kind: 'moved' }>;
 
+type Renamed = Extract<DefinitionChange, { readonly kind: 'renamed' }>;
+
 function movedOn(database: HostDatabase, stops: FilterStops) {
   return ({ definitionKey }: DefinitionPlace, { name, from, to }: Moved): Effect.Effect<DefinitionApplied> =>
     Option.match(definitionOfStreamPrefix(definitionKey), {
       onNone: () => Effect.succeed('unreadable'),
       onSome: ({ org }) => {
         const moved = streamPrefixOfPlaybook({ org, playbook: to });
-        stops.moved(streamPrefixOfPlaybook({ org, playbook: from }), moved, name);
+        stops.moved(
+          { playbookKey: streamPrefixOfPlaybook({ org, playbook: from }), workflow: name },
+          { playbookKey: moved, workflow: name },
+        );
         return Effect.as(triggersMoved(database, definitionKey, moved), 'applied');
       },
     });
+}
+
+function renamedOn(stops: FilterStops) {
+  return ({ playbookKey }: DefinitionPlace, { from, to }: Renamed): Effect.Effect<DefinitionApplied> => {
+    stops.moved({ playbookKey, workflow: from }, { playbookKey, workflow: to });
+    return Effect.succeed('applied');
+  };
 }
 
 function isActivation(change: DefinitionChange): change is Activation {
   return 'triggers' in change;
 }
 
-export function definitionRecordsOn(database: HostDatabase, stops: FilterStops, inZone: InZone): ApplyDefinitionRecord {
+function placedOrNamedOn(database: HostDatabase, stops: FilterStops) {
   const moved = movedOn(database, stops);
+  const renamed = renamedOn(stops);
+  return (place: DefinitionPlace, change: DefinitionChange): Effect.Effect<DefinitionApplied> => {
+    if (change.kind === 'moved') {
+      return moved(place, change);
+    }
+    if (change.kind === 'renamed') {
+      return renamed(place, change);
+    }
+    return Effect.succeed(change.kind === 'unreadable' ? 'unreadable' : 'applied');
+  };
+}
+
+export function definitionRecordsOn(database: HostDatabase, stops: FilterStops, inZone: InZone): ApplyDefinitionRecord {
+  const placedOrNamed = placedOrNamedOn(database, stops);
   return (place, record) => {
     const { id } = record;
     const { playbookKey } = place;
@@ -72,10 +98,7 @@ export function definitionRecordsOn(database: HostDatabase, stops: FilterStops, 
     if (change.kind === 'resumed') {
       return Effect.as(triggersResumed(database, place, Date.parse(change.at), inZone), 'applied');
     }
-    if (change.kind === 'moved') {
-      return moved(place, change);
-    }
-    return Effect.succeed(change.kind === 'unreadable' ? 'unreadable' : 'applied');
+    return placedOrNamed(place, change);
   };
 }
 

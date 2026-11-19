@@ -1,56 +1,24 @@
-import type { RecordedStream } from '@on.auto/ledger';
 import type { Outcome } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { functionStartAnswered, startAnswered, StartRefused } from './reaction-options.ts';
 import { reactionOfRun } from './run-attributes.ts';
-import { workflowsOfRuns } from './run-workflows.ts';
+import { definitionsOfRuns } from './run-workflows.ts';
 import { StartRejected } from './start-rejected.ts';
-
-type RecordedMessage = RecordedStream['messages'][number];
 
 const playbookKey = 'playbook/acme/alpha/';
 
-function contextOf(type: string, name: string) {
-  return {
-    by: 'acme-admin',
-    at: 'now',
-    runId: `r-${name}`,
-    definitionType: type,
-    definitionName: name,
-    definitionVersion: 1,
-  };
-}
-
-const started = { started_by: { id: 'acme-admin', name: 'acme-admin' }, playbook: 'alpha', input: {} };
-
-function startedRecord(type: string, name: string): RecordedMessage {
-  return {
-    type: 'run_started',
-    data: started,
-    context: contextOf(type, name),
-    lineage: { id: `r-${name}-1`, causationId: null, correlationId: null },
-  };
-}
-
 const definitionKey = 'definition/acme/0190a5b6-0000-7000-8000-000000000001/';
-
-const firsts: ReadonlyMap<string, RecordedMessage> = new Map([
-  [`${definitionKey}runs/r-close@1`, startedRecord('workflow', 'close')],
-  [`${definitionKey}runs/r-sum@1`, startedRecord('reasoning', 'sum')],
-]);
 
 const runsOfTheDefinition = new Set(['runs/r-close', 'runs/r-sum']);
 
 function counting() {
   const reads: string[] = [];
   const store = {
-    holderOfStream: ({ stream }: { readonly stream: string }) =>
-      Promise.resolve(runsOfTheDefinition.has(stream) ? definitionKey : undefined),
-    messageAt: (stream: string, version: number) => {
-      reads.push(`${stream.slice(definitionKey.length)}@${version}`);
-      return Promise.resolve(firsts.get(`${stream}@${version}`));
+    holderOfStream: ({ stream }: { readonly stream: string }) => {
+      reads.push(stream);
+      return Promise.resolve(runsOfTheDefinition.has(stream) ? definitionKey : undefined);
     },
   };
   return { store, reads: () => reads };
@@ -145,18 +113,18 @@ describe('the reaction a run makes, read from its attributes', () => {
   });
 });
 
-describe('the workflow of a run', () => {
-  it('is the name the run started, when it is a workflow, and is read once while it is remembered', async () => {
+describe('the definition of a run', () => {
+  it('is the key of the definition its run is filed under, read once while it is remembered', async () => {
     const { store, reads } = counting();
-    const workflowOf = workflowsOfRuns(store, 'workflow', 3);
+    const definitionOf = definitionsOfRuns(store, 3);
 
-    const workflows = await Effect.runPromise(
+    const definitions = await Effect.runPromise(
       Effect.forEach(['r-close', 'r-sum', 'r-unknown', 'r-close', 'r-other', 'r-close'], (runId) =>
-        workflowOf(playbookKey, runId),
+        definitionOf(playbookKey, runId),
       ),
     );
 
-    expect(workflows).toEqual(['close', undefined, undefined, 'close', undefined, 'close']);
-    expect(reads()).toEqual(['runs/r-close@1', 'runs/r-sum@1', 'runs/r-close@1']);
+    expect(definitions).toEqual([definitionKey, definitionKey, undefined, definitionKey, undefined, definitionKey]);
+    expect(reads()).toEqual(['runs/r-close', 'runs/r-sum', 'runs/r-unknown', 'runs/r-other', 'runs/r-close']);
   });
 });

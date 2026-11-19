@@ -56,19 +56,21 @@ export function runsOf(groups: readonly RunOutcomeGroup[]): readonly string[] {
   return groups.map(({ day, name, status, runs }) => `${day} ${name} ${status} ${runs}`);
 }
 
-export const runsOfAlpha = 'definition/acme/d1/runs/';
+export function runsUnder(definition: string): string {
+  return `definition/acme/${definition}/runs/`;
+}
 
-export async function alphaPlaced(ledger: AnyLedger): Promise<void> {
-  await placedIn(ledger, 'd1', 'alpha');
+export async function alphaPlaced(ledger: AnyLedger, ...more: readonly string[]): Promise<void> {
+  await Promise.all(['triage', 'draft', ...more].map((definition) => placedIn(ledger, definition, 'alpha')));
 }
 
 export async function fourRuns(ledger: AnyLedger): Promise<void> {
   await alphaPlaced(ledger);
-  await noting(ledger, `${runsOfAlpha}r1`, began('triage'), ended('succeeded', 120, 40, 1500));
-  await noting(ledger, `${runsOfAlpha}r2`, began('triage'));
-  await noting(ledger, `${runsOfAlpha}r2`, ended('succeeded', 80, 2));
-  await noting(ledger, `${runsOfAlpha}r3`, began('triage'), ended('rejected', null));
-  await noting(ledger, `${runsOfAlpha}r4`, began('draft', '2026-10-02T23:59:59.999Z'));
+  await noting(ledger, `${runsUnder('triage')}r1`, began('triage'), ended('succeeded', 120, 40, 1500));
+  await noting(ledger, `${runsUnder('triage')}r2`, began('triage'));
+  await noting(ledger, `${runsUnder('triage')}r2`, ended('succeeded', 80, 2));
+  await noting(ledger, `${runsUnder('triage')}r3`, began('triage'), ended('rejected', null));
+  await noting(ledger, `${runsUnder('draft')}r4`, began('draft', '2026-10-02T23:59:59.999Z'));
 }
 
 export const fourRunsKept: readonly RunOutcomeGroup[] = [
@@ -122,16 +124,18 @@ function theRowOfEachRun(aLedger: LedgerKeeping): void {
     it('keep to the days of the window, the selection, and the playbook matched exactly', async () => {
       const ledger = await aLedger(runTallies);
       await alphaPlaced(ledger);
-      await placedIn(ledger, 'd2', 'alpha2');
-      await placedIn(ledger, 'd3', 'Alpha');
-      await placedIn(ledger, 'd4', 'alph_');
-      await noting(ledger, `${runsOfAlpha}r1`, began('triage', '2026-09-30T23:59:59.999Z'));
-      await noting(ledger, `${runsOfAlpha}r2`, began('triage', '2026-10-01T00:00:00.000Z'));
-      await noting(ledger, `${runsOfAlpha}r3`, began('draft', '2026-10-01T00:00:00.000Z'));
+      await placedIn(ledger, 'beyond-2', 'alpha2');
+      await placedIn(ledger, 'beyond-3', 'Alpha');
+      await placedIn(ledger, 'beyond-4', 'alph_');
+      await noting(ledger, `${runsUnder('triage')}r1`, began('triage', '2026-09-30T23:59:59.999Z'));
+      await noting(ledger, `${runsUnder('triage')}r2`, began('triage', '2026-10-01T00:00:00.000Z'));
+      await noting(ledger, `${runsUnder('draft')}r3`, began('draft', '2026-10-01T00:00:00.000Z'));
       await Promise.all(
-        ['definition/acme/d2/runs/r4', 'definition/acme/d3/runs/r5', 'definition/acme/d4/runs/r6'].map((stream) =>
-          noting(ledger, stream, began('triage', '2026-10-01T00:00:00.000Z')),
-        ),
+        [
+          'definition/acme/beyond-2/runs/r4',
+          'definition/acme/beyond-3/runs/r5',
+          'definition/acme/beyond-4/runs/r6',
+        ].map((stream) => noting(ledger, stream, began('triage', '2026-10-01T00:00:00.000Z'))),
       );
 
       const pages = await Promise.all([
@@ -149,8 +153,25 @@ function theRowOfEachRun(aLedger: LedgerKeeping): void {
         ['2026-10-01 draft started 1'],
         [],
         ['2026-10-01 triage started 1'],
-        ['2026-10-01 triage started 1'],
+        ['2026-10-01 beyond-4 started 1'],
       ]);
+    });
+  });
+}
+
+function theRunsOfADefinitionRenamed(aLedger: LedgerKeeping): void {
+  describe('the outcomes of the runs of a definition', () => {
+    it('are one group under the name the definition holds now, whatever name a run recorded', async () => {
+      const ledger = await aLedger(runTallies);
+      await alphaPlaced(ledger);
+      await noting(ledger, `${runsUnder('triage')}r1`, began('triage-before'));
+      await noting(ledger, `${runsUnder('triage')}r2`, began('triage'));
+
+      expect([
+        runsOf(await reading(ledger)),
+        runsOf(await reading(ledger, october, { name: 'triage' })),
+        await reading(ledger, october, { name: 'triage-before' }),
+      ]).toEqual([['2026-10-01 triage started 2'], ['2026-10-01 triage started 2'], []]);
     });
   });
 }
@@ -161,9 +182,9 @@ function whatIsLeftOut(aLedger: LedgerKeeping): void {
       const ledger = await aLedger(runTallies);
       await alphaPlaced(ledger);
       await noting(ledger, 'playbook/acme/alpha/runs/r0', began('triage'));
-      await noting(ledger, 'definition/acme/d1/run-logs/r1', began('triage'));
-      await noting(ledger, `${runsOfAlpha}r2/nested`, began('triage'));
-      await noting(ledger, `${runsOfAlpha}r3`, ended('failed', 5), { type: 'run_noted', data: {} });
+      await noting(ledger, 'definition/acme/triage/run-logs/r1', began('triage'));
+      await noting(ledger, `${runsUnder('triage')}r2/nested`, began('triage'));
+      await noting(ledger, `${runsUnder('triage')}r3`, ended('failed', 5), { type: 'run_noted', data: {} });
 
       expect(await reading(ledger)).toEqual([]);
     });
@@ -172,5 +193,6 @@ function whatIsLeftOut(aLedger: LedgerKeeping): void {
 
 export function runOutcomesBehaviour(aLedger: LedgerKeeping): void {
   theRowOfEachRun(aLedger);
+  theRunsOfADefinitionRenamed(aLedger);
   whatIsLeftOut(aLedger);
 }

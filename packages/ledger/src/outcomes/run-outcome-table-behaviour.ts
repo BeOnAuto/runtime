@@ -1,5 +1,5 @@
 import type { RunOutcomeMapping } from '@on.auto/operations';
-import { definitionsPlaced, runFacts, runTallies, type RunFact } from '@on.auto/operations/testing';
+import { definitionsNamedByTheirIds, placedIn, runFacts, runTallies, type RunFact } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -15,13 +15,13 @@ import {
   reading,
   runOutcomesBehaviour,
   runsOf,
-  runsOfAlpha,
+  runsUnder,
 } from './run-outcomes-behaviour.ts';
 
 const breakingDown = 'The mapping broke down';
 
 function aPlacingLedger(entry: LedgerEntry, database?: string, runOutcomes?: RunOutcomeMapping) {
-  return aLedgerKeepingNames(entry, definitionsPlaced, { database, runOutcomes });
+  return aLedgerKeepingNames(entry, definitionsNamedByTheirIds, { database, runOutcomes });
 }
 
 const failingOnAFailure: RunOutcomeMapping = {
@@ -41,10 +41,11 @@ function tablesIn(entry: LedgerEntry, database: string): Promise<readonly unknow
 
 async function manyRuns(entry: LedgerEntry, database: string, count: number): Promise<void> {
   const ledger = await aPlacingLedger(entry, database);
+  await placedIn(ledger, 'many', 'alpha');
   await Effect.runPromise(
     Effect.forEach(
       Array.from({ length: count }, (_, index) => index),
-      (index) => ledger.execute(`${runsOfAlpha}many-${index}`, runFacts, [began('many')]),
+      (index) => ledger.execute(`${runsUnder('many')}many-${index}`, runFacts, [began('many')]),
       { concurrency: 8, discard: true },
     ),
   );
@@ -55,17 +56,17 @@ function aProjectionThatBreaksDown(entry: LedgerEntry): void {
     it('fails the append, which keeps nothing, the row it changed before included', async () => {
       const ledger = await aPlacingLedger(entry, undefined, failingOnAFailure);
       await alphaPlaced(ledger);
-      await noting(ledger, `${runsOfAlpha}r1`, began('triage'));
+      await noting(ledger, `${runsUnder('triage')}r1`, began('triage'));
 
-      await expect(noting(ledger, `${runsOfAlpha}r1`, ended('succeeded', 1), ended('failed', 2))).rejects.toThrow(
-        breakingDown,
-      );
-      await expect(noting(ledger, `${runsOfAlpha}r2`, began('triage'), ended('failed', 2))).rejects.toThrow(
+      await expect(
+        noting(ledger, `${runsUnder('triage')}r1`, ended('succeeded', 1), ended('failed', 2)),
+      ).rejects.toThrow(breakingDown);
+      await expect(noting(ledger, `${runsUnder('triage')}r2`, began('triage'), ended('failed', 2))).rejects.toThrow(
         breakingDown,
       );
 
       expect(runsOf(await reading(ledger))).toEqual(['2026-10-01 triage started 1']);
-      expect(await Effect.runPromise(ledger.load(`${runsOfAlpha}r2`, runFacts))).toEqual({
+      expect(await Effect.runPromise(ledger.load(`${runsUnder('triage')}r2`, runFacts))).toEqual({
         state: null,
         version: 0,
       });
@@ -79,14 +80,14 @@ function aStoreWithoutTheProjection(entry: LedgerEntry): void {
       const database = await entry.aDatabase();
       const keeping = await aPlacingLedger(entry, database, runTallies);
       await alphaPlaced(keeping);
-      await noting(keeping, `${runsOfAlpha}r1`, began('triage'));
+      await noting(keeping, `${runsUnder('triage')}r1`, began('triage'));
       const fresh = await entry.aDatabase();
       const freshWithout = await aPlacingLedger(entry, fresh);
       await alphaPlaced(freshWithout);
-      await noting(freshWithout, `${runsOfAlpha}r2`, began('triage'));
+      await noting(freshWithout, `${runsUnder('triage')}r2`, began('triage'));
 
       const without = await aPlacingLedger(entry, database);
-      await noting(without, `${runsOfAlpha}r1`, ended('succeeded', 5));
+      await noting(without, `${runsUnder('triage')}r1`, ended('succeeded', 5));
 
       expect(runsOf(await reading(keeping))).toEqual(['2026-10-01 triage started 1']);
       expect([await reading(without), await reading(freshWithout)]).toEqual([[], []]);
@@ -101,9 +102,9 @@ function aNewTableVersion(entry: LedgerEntry): void {
       const database = await entry.aDatabase();
       const writing = await aPlacingLedger(entry, database);
       await fourRuns(writing);
-      await noting(writing, `${runsOfAlpha}r6`, ended('failed', 1), { type: 'run_noted', data: {} });
-      await noting(writing, `${runsOfAlpha}r7/nested`, began('triage'));
-      await noting(writing, `${runsOfAlpha}r8`, { type: 'run_noted', data: {} });
+      await noting(writing, `${runsUnder('triage')}r6`, ended('failed', 1), { type: 'run_noted', data: {} });
+      await noting(writing, `${runsUnder('triage')}r7/nested`, began('triage'));
+      await noting(writing, `${runsUnder('triage')}r8`, { type: 'run_noted', data: {} });
       await manyRuns(entry, database, 1000);
       await entry.queried(database, 'CREATE TABLE run_outcomes_4 (playbook_key text, row_key text)');
 
@@ -124,7 +125,12 @@ function aFillInterruptedOrDone(entry: LedgerEntry): void {
     it('is carried on at the next open from the page it was interrupted at, which kept the pages before it', async () => {
       const database = await entry.aDatabase();
       await fourRuns(await aPlacingLedger(entry, database));
-      await noting(await aPlacingLedger(entry, database), `${runsOfAlpha}r5`, began('triage'), ended('failed', 1));
+      await noting(
+        await aPlacingLedger(entry, database),
+        `${runsUnder('triage')}r5`,
+        began('triage'),
+        ended('failed', 1),
+      );
 
       await expect(openLedgerWith(entry.ledgerOn(database, failingOnAFailure))).rejects.toThrow(breakingDown);
       const tablesAfterTheInterruption = await tablesIn(entry, database);
@@ -165,14 +171,14 @@ function aFillOfLargeRecords(entry: LedgerEntry): void {
     it('reads them at most 16 MiB at a time, and keeps every run', async () => {
       const database = await entry.aDatabase();
       const writing = await aPlacingLedger(entry, database);
-      await alphaPlaced(writing);
+      await alphaPlaced(writing, 'large');
       const notes = [1, 1, 1, 6, 6, 6].map((mebibytes) => 'x'.repeat(mebibytes * mebibyte));
       await Effect.runPromise(
         Effect.forEach(
           notes,
           (note, index) =>
             Effect.promise(() =>
-              noting(writing, `${runsOfAlpha}large-${index}`, began('large'), largeEnd(index, note)),
+              noting(writing, `${runsUnder('large')}large-${index}`, began('large'), largeEnd(index, note)),
             ),
           { concurrency: 4, discard: true },
         ),
@@ -190,19 +196,19 @@ function aFillOfAnOversizedRun(entry: LedgerEntry): void {
     it('reads that stream alone, and keeps it and every run after it', async () => {
       const database = await entry.aDatabase();
       const writing = await aPlacingLedger(entry, database);
-      await alphaPlaced(writing);
+      await alphaPlaced(writing, 'over');
       const note = 'x'.repeat(6 * mebibyte);
-      await noting(writing, `${runsOfAlpha}over-0`, began('over'), largeEnd(0, 'small'));
+      await noting(writing, `${runsUnder('over')}over-0`, began('over'), largeEnd(0, 'small'));
       await noting(
         writing,
-        `${runsOfAlpha}over-1`,
+        `${runsUnder('over')}over-1`,
         began('over'),
         largeEnd(1, note),
         largeEnd(2, note),
         largeEnd(3, note),
       );
-      await noting(writing, `${runsOfAlpha}over-2`, began('over'), largeEnd(4, 'small'));
-      await noting(writing, `${runsOfAlpha}over-3`, began('over'), largeEnd(5, 'small'));
+      await noting(writing, `${runsUnder('over')}over-2`, began('over'), largeEnd(4, 'small'));
+      await noting(writing, `${runsUnder('over')}over-3`, began('over'), largeEnd(5, 'small'));
 
       const filled = await aPlacingLedger(entry, database, runTallies);
 

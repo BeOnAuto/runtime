@@ -13,7 +13,7 @@ export const theChannel = '#approvals-sales';
 export interface ReadOnce {
   readonly playbook: ChatHarness;
   readonly readAt: number;
-  readonly wake: (now: number, place?: Partial<Omit<WokenConnection, 'playbook'>>) => Promise<void>;
+  readonly wake: (now: number, place?: Partial<Omit<WokenConnection, 'org'>>) => Promise<void>;
   readonly approve: () => void;
   readonly row: () => Promise<ProjectedRow | undefined>;
 }
@@ -30,7 +30,7 @@ export async function readOnce(runId: string): Promise<ReadOnce> {
   return {
     playbook,
     readAt,
-    wake: (now, place = {}) => Effect.runPromise(wake({ playbook: alpha, connection: 'chat', ...place }, now)),
+    wake: (now, place = {}) => Effect.runPromise(wake({ org: alpha.org, connection: 'chat', ...place }, now)),
     approve: () => {
       playbook.chat.reply({ channel: theChannel, thread, user: answererId, text: 'approve' });
     },

@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 import { expect, it } from 'vitest';
 
 import { HostElsewhere } from '../host/run-requests.ts';
+import type { HostWakeUp } from '../loop/host-wake-up.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, leaseOn, openedOn, untilRenewedBy } from '../testing/host-files.ts';
 import { databaseSettingsOf, hostIn, type ProcessDatabasesOf } from '../testing/host-processes.ts';
@@ -21,6 +22,32 @@ const anHourMs = 3_600_000;
 const listening = workflow('do:\n  - approval: { listen: { to: { one: { with: { type: com.acme.approved } } } } }');
 
 export type ClaimClock = 'database' | 'host';
+
+interface WakeUpsHeard {
+  readonly wakeUpWith: () => HostWakeUp;
+  readonly told: () => readonly string[];
+}
+
+function wakeUpsHeard(): WakeUpsHeard {
+  const told: string[] = [];
+  return {
+    wakeUpWith: () => {
+      told.push('made');
+      return {
+        wakeUp: () =>
+          Effect.sync(() => {
+            told.push('woken');
+            return { nextDueAt: null };
+          }),
+        stop: () =>
+          Effect.sync(() => {
+            told.push('stopped');
+          }),
+      };
+    },
+    told: () => [...new Set(told)],
+  };
+}
 
 const notesOfAHostAnHourAhead: Readonly<Record<ClaimClock, readonly Readonly<Record<string, string>>[]>> = {
   database: [{ kind: 'standing_by', holder: 'first' }],
@@ -63,6 +90,8 @@ export function leaseSuite(databases: ProcessDatabasesOf): void {
       { kind: 'took_over', holder: 'second' },
     ]);
   });
+
+  furtherWakeUpsSuite(databases);
 }
 
 export function claimSuite(databases: ProcessDatabasesOf, claimClock: ClaimClock): void {
@@ -92,5 +121,29 @@ export function claimSuite(databases: ProcessDatabasesOf, claimClock: ClaimClock
     });
 
     expect(ahead.notes()).toMatchObject(notesOfAHostAnHourAhead[claimClock]);
+  });
+}
+
+function furtherWakeUpsSuite(databases: ProcessDatabasesOf): void {
+  it('wakes the further wake-ups of the host that holds the claim alone, stops them as it stops, and makes them anew in the host that takes over', async () => {
+    const database = await databases();
+    const [ofTheFirst, ofTheSecond] = [wakeUpsHeard(), wakeUpsHeard()];
+    const first = await hostedOn(databaseSettingsOf(database), {
+      sweepEveryMs,
+      holder: 'first',
+      wakeUps: [ofTheFirst.wakeUpWith],
+    });
+    await until(ofTheFirst.told, (told) => told.includes('woken'));
+    await hostedOn(databaseSettingsOf(database), { sweepEveryMs, holder: 'second', wakeUps: [ofTheSecond.wakeUpWith] });
+    const whileTheFirstHeld = ofTheSecond.told();
+
+    await first.host.stop();
+    await until(ofTheSecond.told, (told) => told.includes('woken'));
+
+    expect([ofTheFirst.told(), whileTheFirstHeld, ofTheSecond.told()]).toEqual([
+      ['made', 'woken', 'stopped'],
+      [],
+      ['made', 'woken'],
+    ]);
   });
 }

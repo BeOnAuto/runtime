@@ -1,9 +1,9 @@
 import {
   recordedDecoder,
+  type AddressedStream,
   type KeyedProjection,
   type ProjectedMessage,
   type ProjectedRow,
-  type ProjectedStream,
   type RecordedCaller,
 } from '@on.auto/operations';
 import { Option } from 'effect';
@@ -22,9 +22,15 @@ export function definitionFactOf(message: ProjectedMessage): RecordedDefinitionE
   return Option.getOrUndefined(decodeFact(message));
 }
 
-export function definitionKeyOf(message: ProjectedMessage, { id }: ProjectedStream): string | undefined {
-  const fact = definitionFactOf(message);
-  return fact === undefined ? undefined : `${id}/${fact.context.definitionName}`;
+export function keyOfTheDefinition(type: string, definition: string): string {
+  return `${type}/${definition}`;
+}
+
+export function definitionKeyOf(message: ProjectedMessage, { id, address }: AddressedStream): string | undefined {
+  const { definition } = address;
+  return definition === undefined || definitionFactOf(message) === undefined
+    ? undefined
+    : keyOfTheDefinition(id, definition);
 }
 
 function jsonOf(value: unknown): string | null {
@@ -83,6 +89,9 @@ function rowAfterFact(
   if (fact.type === 'definition_moved') {
     return row;
   }
+  if (fact.type === 'definition_renamed') {
+    return { ...row, name: fact.data.to };
+  }
   if (fact.type === 'definition_updated') {
     const version = fact.context.definitionVersion;
     const saved = { ...contentColumns(fact.data.content), saved_position: position };
@@ -117,7 +126,7 @@ function definitionRowAfter(row: ProjectedRow | undefined, message: ProjectedMes
 
 export const definitionRows: KeyedProjection = {
   name: 'definitions',
-  version: 4,
+  version: 5,
   scopes: ['definition'],
   kinds: ['definitions'],
   types: [
@@ -127,6 +136,7 @@ export const definitionRows: KeyedProjection = {
     'definition_paused',
     'definition_resumed',
     'definition_restored',
+    'definition_renamed',
   ],
   columns: [
     { name: 'definition_type', kind: 'text' },

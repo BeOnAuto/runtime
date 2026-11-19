@@ -62,6 +62,9 @@ function changedName(
   held: DefinitionName,
   fact: Exclude<RecordedDefinitionEvent, { type: 'definition_created' | 'definition_moved' }>,
 ) {
+  if (fact.type === 'definition_renamed') {
+    return { ...held, name: fact.data.to };
+  }
   if (fact.type === 'definition_updated') {
     return { ...held, hasTriggers: hasTriggers(fact.data.content) };
   }

@@ -112,6 +112,9 @@ function evolvedDefinition(
   if (event.type === 'definition_moved') {
     return definition;
   }
+  if (event.type === 'definition_renamed') {
+    return { ...definition, name: event.data.to };
+  }
   if (event.type === 'definition_updated') {
     return updatedDefinition(definition, event);
   }

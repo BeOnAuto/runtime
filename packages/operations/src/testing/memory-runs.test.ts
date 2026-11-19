@@ -2,6 +2,7 @@ import { Effect, Result, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
+import type { HeldName } from '../definition-names/name-judgement.ts';
 import {
   ContextSchema,
   type Context,
@@ -11,7 +12,8 @@ import {
   type RecordedPageRequest,
   type RecordedSelection,
 } from '../index.ts';
-import { memoryLedger, type MemoryLedger } from './memory-ledger.ts';
+import { answerOf, made, shared, unbounded } from '../names-testing/noted-names.ts';
+import { memoryLedger, memoryLedgerWith, type MemoryLedger } from './memory-ledger.ts';
 import { memoryRecordedReader } from './memory-recorded.ts';
 
 const HappenedSchema = Schema.Struct({ type: Schema.String, data: Schema.Struct({}), context: ContextSchema });
@@ -92,15 +94,33 @@ const starts: Decider<null, Start, typeof StartSchema.Type> = {
   eventSchema: StartSchema,
 };
 
+const definitionsOfTheRuns = [
+  made('qualify', 'qualify-enquiry'),
+  made('summary', 'summary'),
+  made('summary-flow', 'summary', { type: 'workflow' }),
+];
+
+function keyOfTheRun(index: number): string {
+  if (index % 4 === 0) {
+    return 'definition/acme/summary-flow/';
+  }
+  return index % 4 === 1 ? 'definition/acme/qualify/' : 'definition/acme/summary/';
+}
+
 function runsWithOneInFourOfEachDefinition(ledger: MemoryLedger) {
-  return Effect.forEach(
-    Array.from({ length: 28 }, (_, index) => index),
-    (index) =>
-      ledger.service.execute(`playbook/acme/alpha/runs/r${index}`, starts, {
-        definitionType: index % 4 === 0 ? 'workflow' : 'reasoning',
-        definitionName: index % 4 === 1 ? 'qualify-enquiry' : 'summary',
-      }),
-    { discard: true },
+  return Effect.andThen(
+    Effect.promise(() =>
+      answerOf({ ledger: ledger.service, names: () => Promise.resolve([]) }, shared, ...definitionsOfTheRuns),
+    ),
+    Effect.forEach(
+      Array.from({ length: 28 }, (_, index) => index),
+      (index) =>
+        ledger.service.execute(`${keyOfTheRun(index)}runs/r${index}`, starts, {
+          definitionType: index % 4 === 0 ? 'workflow' : 'reasoning',
+          definitionName: index % 4 === 1 ? 'qualify-enquiry' : 'summary',
+        }),
+      { discard: true },
+    ),
   );
 }
 
@@ -126,7 +146,7 @@ function everyPageOf(
 
 describe('the in-memory read of the runs of one definition', () => {
   it('fills every page from the runs of the definition type or the name asked for, and has no more after the last', async () => {
-    const ledger = memoryLedger();
+    const ledger = memoryLedgerWith({ definitionNames: unbounded });
 
     const pages = await Effect.runPromise(
       runsWithOneInFourOfEachDefinition(ledger).pipe(
@@ -160,7 +180,7 @@ describe('the in-memory read of the runs of one definition', () => {
   });
 });
 
-const noDefinitions = (): readonly string[] => [];
+const noDefinitions = { definitionsIn: (): readonly string[] => [], held: (): readonly HeldName[] => [] };
 
 describe('the in-memory read of the runs of one definition, over a first record whose context names none', () => {
   it('lists the run when no definition is asked, and finds it of none when one is', async () => {

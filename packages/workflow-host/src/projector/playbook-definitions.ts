@@ -50,7 +50,20 @@ export function keptKeyOf(folder: { readonly name: string }, definitionType: str
   return JSON.stringify([folder.name, definitionType]);
 }
 
+export function renamedIn<Kept>(kept: ReadonlyMap<string, Kept>, from: string, to: string): ReadonlyMap<string, Kept> {
+  const held = kept.get(from);
+  if (held === undefined) {
+    return kept;
+  }
+  const renamed = new Map(kept);
+  renamed.delete(from);
+  return renamed.set(to, held);
+}
+
 function evolved(functions: ReadonlyMap<string, KeptFunction>, event: RecordedDefinitionEvent, keptOf: KeptOf) {
+  if (event.type === 'definition_renamed') {
+    return renamedIn(functions, event.data.from, event.data.to);
+  }
   const kept = new Map(functions);
   const { definitionName: name, definitionVersion: version, at } = event.context;
   const saved = Date.parse(at);

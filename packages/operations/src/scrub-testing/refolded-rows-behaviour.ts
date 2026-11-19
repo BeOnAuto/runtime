@@ -210,16 +210,16 @@ function runOutcomeRefolded(entry: FactScrubEntry): void {
       await Effect.runPromise(
         ledger.scrubFact(run, 1, {
           eventSchema: runFacts.eventSchema,
-          data: { at: '2026-10-05T09:00:00.000Z', fn: 'erased' },
+          data: { at: '2026-10-06T09:00:00.000Z', fn: 'erased' },
           erasure: { type: 'run_noted', data: {} },
           context: erasedContext,
         }),
       );
       const outcomes = await Effect.runPromise(
-        ledger.readRunOutcomes(alpha, { from: '2026-10-05', to: '2026-10-05' }, {}),
+        ledger.readRunOutcomes(alpha, { from: '2026-10-05', to: '2026-10-06' }, {}),
       );
 
-      expect(outcomes.map(({ name, runs }) => [name, runs])).toEqual([['erased', 1]]);
+      expect(outcomes.map(({ day, runs }) => [day, runs])).toEqual([['2026-10-06', 1]]);
     });
   });
 }

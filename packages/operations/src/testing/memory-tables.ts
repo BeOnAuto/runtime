@@ -32,7 +32,9 @@ export function keptTablesOf({ runOutcomes, projections, holders, definitionName
   const references = memoryReferences(holders);
   const names = memoryNames(definitionNames);
   return {
-    outcomes: memoryRunOutcomes(runOutcomes, names.definitionsIn),
+    outcomes: memoryRunOutcomes(runOutcomes, (playbookKey) =>
+      names.held().filter((held) => held.playbookKey === playbookKey),
+    ),
     projected: memoryProjections(projections, names.definitionsIn, (key) => names.heldBy(key)?.playbookKey),
     references,
     holders: holders ?? new Map(),

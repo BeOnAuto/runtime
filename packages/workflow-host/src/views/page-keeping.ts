@@ -23,7 +23,12 @@ import {
 import { recordedDecoder } from '@on.auto/operations';
 import { Option } from 'effect';
 
-import type { DefinitionsKeeping, KeptFunction, PlaybookDefinitions } from '../projector/playbook-definitions.ts';
+import {
+  renamedIn,
+  type DefinitionsKeeping,
+  type KeptFunction,
+  type PlaybookDefinitions,
+} from '../projector/playbook-definitions.ts';
 import { runnableDetailsOf } from './view-details.ts';
 
 const subjectTypes: readonly string[] = ['workflow', ...functionTypeOrder];
@@ -72,6 +77,9 @@ function withoutPage(pages: Pages, key: string): Pages {
 }
 
 function pagesOfASubject(type: string, pages: Pages, event: RecordedDefinitionEvent): Pages {
+  if (event.type === 'definition_renamed') {
+    return renamedIn(pages, `${type}/${event.data.from}`, `${type}/${event.data.to}`);
+  }
   const { at, definitionName, definitionVersion: version } = event.context;
   const key = `${type}/${definitionName}`;
   if (event.type === 'definition_retired') {

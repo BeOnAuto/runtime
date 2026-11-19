@@ -141,8 +141,8 @@ function boundToTheRead(
 }
 
 function followedReadingsOf(parts: StepParts, stepping: Stepping, call: CallRecord): Effect.Effect<Readings> {
-  const { record: relative } = call;
-  const event = followedEventOf(relative, parts.definitionType);
+  const { record: relative, filedUnder } = call;
+  const event = followedEventOf(relative, filedUnder);
   if (event === 'none') {
     return Effect.succeed(nothingFollowed);
   }

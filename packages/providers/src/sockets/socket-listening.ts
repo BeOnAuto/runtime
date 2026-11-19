@@ -1,15 +1,22 @@
-import { Duration, Effect, Random, Ref, type Redacted } from 'effect';
+import { Duration, Effect, Random, Ref } from 'effect';
 
 import { arrivalReadingOf, type ArrivalReading } from '../events/arrival-readings.ts';
-import type { Destination } from '../events/destination-fields.ts';
 import { acknowledgementOf, messageArrivalOf } from './socket-messages.ts';
-import { SocketEnded, type Arrived, type OpenSocket, type OpensASocket, type SocketFrame } from './socket-ports.ts';
+import {
+  SocketEnded,
+  type Arrived,
+  type OpenSocket,
+  type OpensASocket,
+  type SocketEnd,
+  type SocketFrame,
+  type SocketOpening,
+} from './socket-ports.ts';
 
-export interface SocketListening {
-  readonly destination: Destination;
-  readonly credential: Redacted.Redacted;
+export interface SocketListening extends SocketOpening {
   readonly opens: OpensASocket;
   readonly arrived: Arrived;
+  readonly opened: Effect.Effect<void>;
+  readonly ended: (end: SocketEnd) => Effect.Effect<void>;
 }
 
 export const socketBackoff = {
@@ -21,7 +28,10 @@ export const socketBackoff = {
 } as const;
 
 const socketWords = {
+  opened: "The socket to a connection's service is open",
   notOpened: "The socket to a connection's service could not be opened; it is opened again after a wait",
+  refused:
+    "The service refused the value of the app that opens the socket to a connection's service, so the socket is not opened again with it",
   closed: "The socket to a connection's service closed; it is opened again after a wait",
   silent:
     "The socket to a connection's service answered no heartbeat, so it was closed; it is opened again after a wait",
@@ -91,14 +101,26 @@ function lifeOf(listening: SocketListening, socket: OpenSocket): Effect.Effect<n
   });
 }
 
+function openingOf({ destination, credential, failureCodes }: SocketListening): SocketOpening {
+  return failureCodes === undefined ? { destination, credential } : { destination, credential, failureCodes };
+}
+
+function openedWithin(opens: OpensASocket, opening: SocketOpening) {
+  return opens(opening).pipe(
+    Effect.timeoutOrElse({
+      duration: Duration.millis(socketBackoff.openingMs),
+      orElse: () => Effect.fail(new SocketEnded({ end: 'not opened' })),
+    }),
+  );
+}
+
+export function openedAndClosed(opens: OpensASocket, opening: SocketOpening): Effect.Effect<void, SocketEnded> {
+  return Effect.scoped(Effect.asVoid(openedWithin(opens, opening)));
+}
+
 function oneSocket(listening: SocketListening, opened: Effect.Effect<void>): Effect.Effect<never, SocketEnded> {
-  const { opens, destination, credential } = listening;
   return Effect.scoped(
-    opens({ destination, credential }).pipe(
-      Effect.timeoutOrElse({
-        duration: Duration.millis(socketBackoff.openingMs),
-        orElse: () => Effect.fail(new SocketEnded({ end: 'not opened' })),
-      }),
+    openedWithin(listening.opens, openingOf(listening)).pipe(
       Effect.tap(() => opened),
       Effect.flatMap((socket) => lifeOf(listening, socket)),
     ),
@@ -111,28 +133,57 @@ export function waitAfter(endsInARow: number): Effect.Effect<number> {
   return Effect.map(Random.nextBetween(1 - spread, 1 + spread), (jitter) => Math.round(backoffMs * jitter));
 }
 
-const loggedEnds = {
+type RetriedEnd = Exclude<SocketEnd, 'refused'>;
+
+const loggedEnds: Readonly<Record<RetriedEnd, Effect.Effect<void>>> = {
   'not opened': Effect.logWarning(socketWords.notOpened),
   closed: Effect.logInfo(socketWords.closed),
   silent: Effect.logWarning(socketWords.silent),
-} as const;
+};
 
-function waitedAfter({ end, code }: Pick<SocketEnded, 'end' | 'code'>, endsInARow: number): Effect.Effect<void> {
+function annotationsOf({ code, host }: Pick<SocketEnded, 'code' | 'host'>, waitMs: number) {
+  return {
+    wait_ms: waitMs,
+    ...(code === undefined ? {} : { close_code: code }),
+    ...(host === undefined ? {} : { host }),
+  };
+}
+
+function waitedAfter(ended: Pick<SocketEnded, 'code' | 'host'>, end: RetriedEnd, endsInARow: number) {
   return Effect.flatMap(waitAfter(endsInARow), (waitMs) =>
     loggedEnds[end].pipe(
-      Effect.annotateLogs(code === undefined ? { wait_ms: waitMs } : { wait_ms: waitMs, close_code: code }),
+      Effect.annotateLogs(annotationsOf(ended, waitMs)),
       Effect.andThen(Effect.sleep(Duration.millis(waitMs))),
     ),
   );
 }
 
-export function receivingOverASocket(listening: SocketListening): Effect.Effect<never> {
+interface EndsInARow {
+  readonly reset: Effect.Effect<void>;
+  readonly counted: Effect.Effect<number>;
+}
+
+function openedNow(listening: SocketListening, endsInARow: EndsInARow): Effect.Effect<void> {
+  return endsInARow.reset.pipe(Effect.andThen(Effect.logInfo(socketWords.opened)), Effect.andThen(listening.opened));
+}
+
+function aSocketAndTheWaitAfterIt(listening: SocketListening, endsInARow: EndsInARow): Effect.Effect<boolean> {
   return Effect.gen(function* () {
-    const endsInARow = yield* Ref.make(0);
-    const aSocketAndTheWaitAfterIt = Effect.gen(function* () {
-      const ended = yield* Effect.flip(oneSocket(listening, Ref.set(endsInARow, 0)));
-      yield* waitedAfter(ended, yield* Ref.getAndUpdate(endsInARow, (ends) => ends + 1));
-    });
-    return yield* Effect.forever(aSocketAndTheWaitAfterIt);
+    const ended = yield* Effect.flip(oneSocket(listening, openedNow(listening, endsInARow)));
+    yield* listening.ended(ended.end);
+    if (ended.end === 'refused') {
+      yield* Effect.logWarning(socketWords.refused);
+      return true;
+    }
+    yield* waitedAfter(ended, ended.end, yield* endsInARow.counted);
+    return false;
+  });
+}
+
+export function receivingOverASocket(listening: SocketListening): Effect.Effect<void> {
+  return Effect.gen(function* () {
+    const ends = yield* Ref.make(0);
+    const endsInARow = { reset: Ref.set(ends, 0), counted: Ref.getAndUpdate(ends, (counted) => counted + 1) };
+    yield* Effect.repeat(aSocketAndTheWaitAfterIt(listening, endsInARow), { until: (refused) => refused });
   });
 }

@@ -190,11 +190,12 @@ describe('the read of the outcomes of runs on PostgreSQL', () => {
       ['playbook/acme/alpha/', '2026-10-01', '2026-10-07', 'tally', 'triage'],
       ['playbook/acme/alpha/', '2026-10-01', '2026-10-07'],
     ]);
+    const nameHeld = "CASE WHEN o.name = '' THEN o.name ELSE n.name END";
     expect(asked[0]?.text).toContain(
-      'WHERE playbook_key IN (SELECT definition_key FROM definition_names_1 WHERE playbook_key = $1) AND started_day BETWEEN $2 AND $3 AND definition_type = $4 AND name = $5 GROUP BY started_day, definition_type, name, status',
+      `FROM run_outcomes_5 AS o JOIN definition_names_1 AS n ON n.definition_key = o.playbook_key WHERE n.playbook_key = $1 AND o.started_day BETWEEN $2 AND $3 AND o.definition_type = $4 AND ${nameHeld} = $5 GROUP BY o.started_day, o.playbook_key, o.definition_type, ${nameHeld}, o.status`,
     );
     expect(asked[1]?.text).toContain('BETWEEN $2 AND $3 GROUP BY');
-    expect(asked[0]?.text).toContain('sum(cost_micro_usd)::float8 AS cost_micro_usd');
+    expect(asked[0]?.text).toContain('sum(o.cost_micro_usd)::float8 AS cost_micro_usd');
   });
 });
 

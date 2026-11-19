@@ -1,11 +1,11 @@
 import type { LedgerStreams } from '@on.auto/ledger';
-import { cursorWithin, type RecordedEvent, type RecordedPage } from '@on.auto/operations';
+import { cursorWithin, namedAsHeld, type RecordedEvent, type RecordedPage } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { heldAfter, heldAgain, type HeldAtARecord, type HoldParts, type PassReached } from '../holds/playbook-holds.ts';
 import type { Mode } from './delivery-loop.ts';
 import type { FollowedOrg, FollowedOrgs, HeldPlaybook, Progress } from './followed-orgs.ts';
-import { playbooksOfRecords, type OrgRecords, type PlaybookOfARecord } from './org-records.ts';
+import { playbooksOfRecords, type OrgRecords, type PlaceOfARecord, type PlaybookOfARecord } from './org-records.ts';
 import { steppingOf, type SteppingParts } from './pass-stepping.ts';
 import { noRecordTypes } from './playbook-records.ts';
 import { passedOver, stepOf, type PassEnd, type Step, type StepParts, type Stepping } from './record-steps.ts';
@@ -85,9 +85,9 @@ interface PageAt {
   readonly index: number;
 }
 
-function followedPlaybookOf(passing: OrgPassing, record: RecordedEvent): Effect.Effect<string | undefined> {
-  return Effect.map(passing.playbookOf(record), (playbookKey) =>
-    playbookKey === undefined || passing.parked.has(playbookKey) ? undefined : playbookKey,
+function followedPlaceOf(passing: OrgPassing, record: RecordedEvent): Effect.Effect<PlaceOfARecord | undefined> {
+  return Effect.map(passing.playbookOf(record), (place) =>
+    place === undefined || passing.parked.has(place.playbookKey) ? undefined : place,
   );
 }
 
@@ -99,11 +99,13 @@ function orgStepOf(
 ): (record: RecordedEvent) => Effect.Effect<Step> {
   return (record) =>
     Effect.gen(function* () {
-      const playbookKey = yield* followedPlaybookOf(passing, record);
-      if (playbookKey === undefined) {
+      const place = yield* followedPlaceOf(passing, record);
+      if (place === undefined) {
         return { progress: passedOver(record) };
       }
-      const step = yield* stepOf(parts, yield* passing.steppings.of(playbookKey), progress, record);
+      const { playbookKey } = place;
+      const named = namedAsHeld(record, place.held);
+      const step = yield* stepOf(parts, yield* passing.steppings.of(playbookKey), progress, named);
       if (step.end !== 'waiting') {
         return step;
       }
@@ -155,8 +157,8 @@ function primedBy(passing: OrgPassing, glance: RecordedPage): Effect.Effect<void
   return Effect.forEach(
     glance.records,
     (record) =>
-      Effect.flatMap(followedPlaybookOf(passing, record), (playbookKey) =>
-        playbookKey === undefined ? Effect.void : Effect.asVoid(passing.steppings.of(playbookKey)),
+      Effect.flatMap(followedPlaceOf(passing, record), (place) =>
+        place === undefined ? Effect.void : Effect.asVoid(passing.steppings.of(place.playbookKey)),
       ),
     { discard: true },
   );
@@ -217,10 +219,11 @@ function heldStepOf(
 ): (record: RecordedEvent) => Effect.Effect<HeldStep> {
   return (record) =>
     Effect.gen(function* () {
-      if ((yield* playbookOf(record)) !== held.playbookKey) {
+      const place = yield* playbookOf(record);
+      if (place?.playbookKey !== held.playbookKey) {
         return { progress: passedOver(record), stepped: false };
       }
-      const step = yield* stepOf(parts, stepping, progress, record);
+      const step = yield* stepOf(parts, stepping, progress, namedAsHeld(record, place.held));
       if (step.end !== undefined) {
         return { reached: reachedAt({ ...step, end: step.end }, record, at, at.records) };
       }

@@ -121,5 +121,6 @@ export function keptLedgerOf(tables: MemoryTables): KeptLedger {
     },
     ...keptTablesOf(tables),
   };
-  return { kept, appends, recordedReader: memoryRecordedReader(log, definitionsIn) };
+  const names = { definitionsIn, held: () => kept.names.held() };
+  return { kept, appends, recordedReader: memoryRecordedReader(log, names) };
 }

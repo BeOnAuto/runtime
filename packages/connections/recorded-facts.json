@@ -23,7 +23,7 @@
   "src/registry/0.60.0/connection_added.json": "4f5e5aa90e45f0583535757fb3cb90e2a1fbe482a46c3b463043d32e82a282e4",
   "src/registry/0.60.0/connection_connected.json": "e5134de35d2c0d36d936d86d2e8fa3a6ae7be6d229c74458473e8784f06adb67",
   "src/registry/0.60.0/connection_consent_started.json": "7a485d22b6e8bcbde5181362770f61a302050c830748a9c564c0d3f5d3dfe635",
-  "src/registry/0.67.0/connection_app_credential_refused.json": "4d47e5fc4c84aab555f059d87c56789821c8c2ad482684d26f65c1d49e10ba3e",
+  "src/registry/0.67.0/connection_app_credential_refused.json": "9e5f08764d34a28ceb64d5c439aa4e31d59eeaf2ac2661e958604ecee1d19074",
   "src/registry/0.67.0/connection_connected.json": "8cc5d85fbae42746ea6f8b290ec3a71179376d4bafe7c1be9ef4d56d2d5d3d8f",
   "src/subscriptions/0.64.0/event_subscription_failed.json": "cbd835b0905ae0c1e829a75a4f3fbe826c59ab63b99a792c3d789a5061ace78a",
   "src/subscriptions/0.64.0/event_subscription_made.json": "c9e50c241889eee23c197fb52977ff944d8c1150084410327cd498262e302770",

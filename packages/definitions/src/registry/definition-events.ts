@@ -64,6 +64,11 @@ export const DefinitionEventSchema = Schema.Union([
     Schema.Struct({ from: Schema.String, to: Schema.String, moved_by: RecordedCallerSchema }),
     DefinitionContextSchema,
   ),
+  factOf(
+    'definition_renamed',
+    Schema.Struct({ from: Schema.String, to: Schema.String, renamed_by: RecordedCallerSchema }),
+    DefinitionContextSchema,
+  ),
 ]);
 
 export type RecordedDefinitionEvent = typeof DefinitionEventSchema.Type;
@@ -90,6 +95,7 @@ export const definitionFactTypes: readonly RecordedDefinitionEvent['type'][] = [
   'definition_resumed',
   'definition_restored',
   'definition_moved',
+  'definition_renamed',
 ];
 
 export function isDefinitionSaved(event: RecordedDefinitionEvent): event is DefinitionSaved {

@@ -111,7 +111,7 @@ describe('the bounds of a page of runs', () => {
     ]);
   });
 
-  it.each([[{ status: 'failed' }], [{ type: 'relay' }], [{ name: 'wave' }]] as const)(
+  it.each([[{ status: 'failed' }], [{ type: 'relay' }]] as const)(
     'end a page filtered by %j after looking at a thousand runs, though none matched',
     async (filter) => {
       const { ledger, listing, run } = await playbookWithEchoes(0);
@@ -140,6 +140,18 @@ describe('the bounds of a page of runs', () => {
       ]);
     },
   );
+});
+
+describe('a page of the runs of a name', () => {
+  it('answers no runs in one page for a name no definition holds, looking at none', async () => {
+    const { listing } = await playbookWithEchoes(3);
+
+    const pages = await everyPage((cursor) => listing({ name: 'wave', ...withCursor(cursor) }));
+
+    expect(pages.map(({ runs, has_more: hasMore, next_cursor: next }) => [runs, hasMore, next === null])).toEqual([
+      [[], false, true],
+    ]);
+  });
 });
 
 describe('paging through the runs of one definition', () => {

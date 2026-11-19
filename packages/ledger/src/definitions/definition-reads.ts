@@ -25,10 +25,20 @@ export interface DefinitionStreamsStore {
   readonly definitionStreams: (definitionType: string) => Promise<readonly DefinitionStream[]>;
 }
 
+interface OrgStream {
+  readonly org: string;
+  readonly version: number;
+}
+
+export interface OrgStreamsStore {
+  readonly orgStreams: (name: string) => Promise<readonly OrgStream[]>;
+}
+
 export interface DefinitionNamesStore {
   readonly holderOfName: (named: NameInAPlaybook) => Promise<HeldName | undefined>;
   readonly nameHeldBy: (definitionKey: string) => Promise<HeldName | undefined>;
   readonly namesHeldIn: (kind: NamesOfAKind) => Promise<readonly HeldName[]>;
+  readonly holdersOfName: (named: Omit<NameInAPlaybook, 'definitionType'>) => Promise<readonly HeldName[]>;
   readonly definitionsIn: (playbookKey: string) => Promise<readonly string[]>;
   readonly holderOfStream: (named: StreamInAPlaybook) => Promise<string | undefined>;
 }

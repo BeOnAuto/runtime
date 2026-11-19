@@ -28,6 +28,7 @@ export interface SubscriptionsServing {
   readonly secrets: Pick<SecretKeeping, 'keep' | 'read' | 'forget'>;
   readonly providers: ProviderList;
   readonly receivesOverHttp: boolean;
+  readonly opensSockets: boolean;
   readonly eventsAddressOf?: (place: SubscriptionPlace) => string;
 }
 
@@ -68,7 +69,7 @@ export function subscriptionsServingOf(
     webhookUrl === undefined
       ? {}
       : { eventsAddressOf: (place: SubscriptionPlace) => eventsAddressAt(webhookUrl, place) };
-  return { ledger, tools, secrets, providers, receivesOverHttp: overHttp, ...addressed };
+  return { ledger, tools, secrets, providers, receivesOverHttp: overHttp, opensSockets: true, ...addressed };
 }
 
 export function subscriptionsOfTheServer(

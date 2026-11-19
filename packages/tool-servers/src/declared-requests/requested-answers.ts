@@ -5,7 +5,7 @@ import type { Schema } from 'effect';
 import { toolBounds } from '../bounds/call-bounds.ts';
 import { answerDocument } from '../bounds/tool-results.ts';
 import { AnsweredStatus, failsByItsStatus, isARedirect } from '../openapi/answered-status.ts';
-import { refusalOf } from '../openapi/failure-codes.ts';
+import { refusalOf, type FailureCodes } from '../openapi/failure-codes.ts';
 
 export type RequestSettled =
   | { readonly outcome: 'result'; readonly answer?: Schema.Json }
@@ -20,20 +20,38 @@ function isNotThere(status: number): boolean {
   return status === notFound || status === gone;
 }
 
-function readFrom(response: Readonly<Response>, text: string): RequestSettled {
+interface ReadAnswer {
+  readonly text: string;
+  readonly answer: Schema.Json | undefined;
+}
+
+function refusedIn(
+  response: Readonly<Response>,
+  { text, answer }: ReadAnswer,
+  codes: FailureCodes | undefined,
+): RequestSettled | undefined {
   const { status } = response;
   const challenge = extractWWWAuthenticateParams(response);
-  const refused = refusalOf({ status, text, challenge, json: undefined }, null);
-  if (refused !== undefined) {
-    return { error: refused.error };
+  const json = codes === undefined || answer === undefined ? undefined : { parsed: answer };
+  const refused = refusalOf({ status, text, challenge, json }, codes ?? null);
+  if (refused === undefined) {
+    return undefined;
   }
-  if (isNotThere(status)) {
+  return refused.error === undefined ? { outcome: 'tool_error' } : { error: refused.error };
+}
+
+function readFrom(response: Readonly<Response>, text: string, codes: FailureCodes | undefined): RequestSettled {
+  const answer = answerDocument({ content: text === '' ? [] : [{ type: 'text', text }] });
+  const refused = refusedIn(response, { text, answer }, codes);
+  if (refused !== undefined) {
+    return refused;
+  }
+  if (isNotThere(response.status)) {
     return { outcome: 'not_found' };
   }
-  if (status >= 300) {
+  if (response.status >= 300) {
     return { outcome: 'tool_error' };
   }
-  const answer = answerDocument({ content: text === '' ? [] : [{ type: 'text', text }] });
   return answer === undefined ? { outcome: 'result' } : { outcome: 'result', answer };
 }
 
@@ -42,7 +60,7 @@ async function unreadSettled(response: Readonly<Response>): Promise<RequestSettl
   return failsByItsStatus(response.status) ? { error: new AnsweredStatus(response.status) } : { outcome: 'tool_error' };
 }
 
-export async function settledRequestOf(response: Readonly<Response>): Promise<RequestSettled> {
+export async function settledRequestOf(response: Readonly<Response>, codes?: FailureCodes): Promise<RequestSettled> {
   if (failsByItsStatus(response.status) || isARedirect(response.status)) {
     return unreadSettled(response);
   }
@@ -51,7 +69,7 @@ export async function settledRequestOf(response: Readonly<Response>): Promise<Re
     const text = await boundedAnswerOf(response, toolBounds.readAnswerBytes, () => {
       tooLarge = true;
     }).text();
-    return readFrom(response, text);
+    return readFrom(response, text, codes);
   } catch (error) {
     return tooLarge ? { outcome: 'too_large' } : { error };
   }

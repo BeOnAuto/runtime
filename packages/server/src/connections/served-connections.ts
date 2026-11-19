@@ -3,11 +3,10 @@ import {
   makeConnectionOperations,
   makeConnectionSource,
   makeProviderOffering,
+  socketChecksOver,
   type ConnectionOperations,
   type ConnectionServices,
-  type RuntimeAccess,
 } from '@on.auto/connections';
-import { accessModeOf } from '@on.auto/identity';
 
 import { outboundFetch } from '../composition/outbound-fetch.ts';
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
@@ -16,6 +15,7 @@ import { ledgerStoresOpenedBy, type LedgerStores } from '../database/ledger-stor
 import { licenseServedBy, type ServedLicense } from '../licensing/served-license.ts';
 import { ownKeysOf, secretsKeptBy, type OwnKeysRead } from '../secrets/own-keys.ts';
 import type { Settings } from '../settings/settings.ts';
+import { accessOf, policyServedAt, socketsOpenedAt } from './connection-policies.ts';
 
 interface ServedConnectionOperations {
   readonly connections: ConnectionOperations;
@@ -32,7 +32,10 @@ export interface StoresAndConnections extends OwnKeysRead {
   readonly clientMetadata: RegisterRoutes;
   readonly license: ServedLicense;
   readonly studioAddress: { readonly studio: Settings['studio']; readonly runtime: () => string };
+  readonly opens: ConnectionOpens;
 }
+
+type ConnectionOpens = ReturnType<typeof socketsOpenedAt>;
 
 type ServingSettings = Pick<
   Settings,
@@ -49,29 +52,20 @@ type ServingSettings = Pick<
   | 'studio'
   | 'registeredClients'
   | 'license'
+  | 'toolCalls'
 >;
-
-function accessOf({ host, signIn, apiKeys, accessMode }: ServingSettings): RuntimeAccess {
-  if (accessModeOf({ host, apiKeys, signsIn: signIn !== undefined, accessMode }) === 'local') {
-    return 'local';
-  }
-  return signIn === undefined ? 'keys' : 'people';
-}
-
-function policyServedAt(settings: ServingSettings): ConnectionServices['policy'] {
-  return { ...settings.connections, loopbackAllowed: accessOf(settings) === 'local' };
-}
 
 interface Composed {
   readonly secrets: LedgerStores['secrets'];
   readonly consent: ReturnType<typeof consentClientOf>;
   readonly pages: ConnectionServices['pages'];
   readonly readOnceThrough: ReadOnceThrough;
+  readonly opens: ConnectionOpens;
 }
 
 function connectionServicesOf(
   settings: ServingSettings,
-  { secrets, consent, pages, readOnceThrough }: Composed,
+  { secrets, consent, pages, readOnceThrough, opens }: Composed,
 ): ConnectionServices {
   return {
     consent,
@@ -86,6 +80,7 @@ function connectionServicesOf(
     access: accessOf(settings),
     fetch: outboundFetch,
     readOnceThrough,
+    sockets: socketChecksOver(opens),
   };
 }
 
@@ -116,12 +111,15 @@ export async function storesAndConnectionsOf(
   const ownKeys = await ownKeysOf(runtime, stores.secrets, secretsKeptBy(settings));
   const consent = consentClientOf(runtime, settings, stores.secrets);
   const pages = { studio: settings.studio, runtime: ownOrigin };
+  const opens = socketsOpenedAt(settings);
   return {
     stores,
     ...ownKeys,
     consent,
+    opens,
     connectionsReadingThrough: (readOnceThrough) => {
-      const services = connectionServicesOf(settings, { secrets: stores.secrets, consent, pages, readOnceThrough });
+      const composed = { secrets: stores.secrets, consent, pages, readOnceThrough, opens };
+      const services = connectionServicesOf(settings, composed);
       return { connections: makeConnectionOperations(services), offering: makeProviderOffering(services) };
     },
     source: sourceServedBy(runtime, settings, { secrets: stores.secrets, pages }),

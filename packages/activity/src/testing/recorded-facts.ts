@@ -143,3 +143,11 @@ export function definitionUpdated(definition: DefinitionOf, at: string, by: stri
 export function definitionRetired(definition: DefinitionOf, at: string, by: string): RecordedFact {
   return { type: 'definition_retired', data: {}, context: definitionContext(definition, at, by) };
 }
+
+export function definitionRenamed(definition: DefinitionOf, to: string, at: string, by: string): RecordedFact {
+  return {
+    type: 'definition_renamed',
+    data: { from: definition.name, to, renamed_by: { id: by, name: by } },
+    context: definitionContext({ ...definition, name: to }, at, by),
+  };
+}

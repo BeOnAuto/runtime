@@ -7,6 +7,7 @@ import type { ReadModelStage } from '../read-model-staging/read-model-stage.ts';
 import { comparedMessage } from '../read-model-staging/shadow-comparison.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
+import { renamedIn, type Renamed } from '../testing/renaming.ts';
 import { playbookWithGoals, scriptOperationsFor, weeklyContributes } from './script-operations.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -14,6 +15,8 @@ const toAlpha = toPlaybook('acme', 'alpha');
 const greet = { type: 'echo', name: 'greet' };
 
 const weekly = { type: 'workflow', name: 'weekly' };
+
+const monthly = { type: 'workflow', name: 'monthly' };
 
 const everyMonday = {
   kind: 'cron',
@@ -39,7 +42,9 @@ const callingGreet = JSON.stringify({
   contributes: weeklyContributes,
 });
 
-type Step = readonly [PlaybookOperation, Readonly<Record<string, unknown>>, string?];
+type Step =
+  | readonly [PlaybookOperation, Readonly<Record<string, unknown>>, string?]
+  | { readonly renamed: Renamed; readonly at: string };
 
 function scriptFor(workflow: Capability, goals: boolean): readonly Step[] {
   const operations = scriptOperationsFor(workflow, goals);
@@ -48,26 +53,37 @@ function scriptFor(workflow: Capability, goals: boolean): readonly Step[] {
     [operations.createDefinition, { ...greet, source: echoing('Hello') }],
     [operations.createDefinition, { ...weekly, source: callingGreet }],
     [operations.updateDefinition, { ...greet, source: echoing('Hi') }, '2026-10-02T09:00:00.000Z'],
+    { renamed: { type: 'workflow', from: 'weekly', to: 'monthly' }, at: '2026-10-02T10:00:00.000Z' },
+    [operations.updateDefinition, { ...monthly, source: callingGreet }, '2026-10-02T11:00:00.000Z'],
     [operations.getDefinition, greet],
-    [operations.getDefinition, weekly],
+    [operations.getDefinition, monthly],
     [operations.listDefinitions, { type: 'echo' }],
     [operations.pauseDefinition, { ...greet, reason: 'The greeting is checked again' }, '2026-10-03T09:00:00.000Z'],
     [operations.runDefinition, { ...greet, run_id: '0199a3c4-7d2e-7c1a-9b3f-0000000000a1' }],
     [operations.getDefinition, greet],
     [operations.resumeDefinition, greet, '2026-10-04T09:00:00.000Z'],
     [operations.runDefinition, { ...greet, run_id: '0199a3c4-7d2e-7c1a-9b3f-0000000000a2' }],
-    [operations.retireDefinition, weekly, '2026-10-05T09:00:00.000Z'],
+    [operations.retireDefinition, monthly, '2026-10-05T09:00:00.000Z'],
     [operations.listDefinitions, { type: 'workflow', include_retired: true }],
-    [operations.restoreDefinition, weekly, '2026-10-06T09:00:00.000Z'],
+    [operations.restoreDefinition, monthly, '2026-10-06T09:00:00.000Z'],
     [operations.getDefinition, { type: 'echo', name: 'missing' }],
     [operations.listDefinitions, { type: 'workflow' }],
   ];
 }
 
+function answerOf(definitions: Harness, step: Step): Promise<readonly Outcome[]> {
+  if ('renamed' in step) {
+    return renamedIn(definitions, step.renamed, step.at).then(() => []);
+  }
+  const [operation, input, at] = step;
+  return definitions.call(operation, toAlpha(acmeAdmin, input), at).then((outcome) => [outcome]);
+}
+
 export function answeredBy(definitions: Harness, workflow: Capability, goals: boolean): Promise<readonly Outcome[]> {
   return Effect.runPromise(
-    Effect.forEach(scriptFor(workflow, goals), ([operation, input, at]) =>
-      Effect.promise(() => definitions.call(operation, toAlpha(acmeAdmin, input), at)),
+    Effect.map(
+      Effect.forEach(scriptFor(workflow, goals), (step) => Effect.promise(() => answerOf(definitions, step))),
+      (answers: readonly (readonly Outcome[])[]) => answers.flat(),
     ),
   );
 }

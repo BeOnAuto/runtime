@@ -2,6 +2,7 @@ import { InvalidCursor, type RecordedEvent, type RecordedOrder, type RecordedSel
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import type { DefinitionNames } from '../definition-names/definition-names.ts';
 import { headsBehaviour } from '../heads/heads-behaviour.ts';
 import { lineageBehaviour } from '../lineage/lineage-behaviour.ts';
 import { runFiltersBehaviour } from '../run-filters/run-filters-behaviour.ts';
@@ -17,6 +18,7 @@ import {
   type AnyLedger,
   type LedgerMaker,
 } from './happenings.ts';
+import { namesOfTheRuns } from './named-runs.ts';
 import { runsBehaviour } from './runs-behaviour.ts';
 
 const everything: RecordedSelection = { kind: 'everything' };
@@ -276,7 +278,10 @@ function theTimeAPageStartsFrom(aLedger: LedgerMaker): void {
   });
 }
 
-export function recordedBehaviour(aLedger: LedgerMaker): void {
+export function recordedBehaviour(
+  aLedger: LedgerMaker,
+  keepingNames: (names: DefinitionNames) => Promise<AnyLedger>,
+): void {
   thePlaybookOfARead(aLedger);
   pagesWhileAppending(aLedger);
   theBoundsOfAPage(aLedger);
@@ -285,7 +290,7 @@ export function recordedBehaviour(aLedger: LedgerMaker): void {
   cursorsOfARead(aLedger);
   theTimeAPageStartsFrom(aLedger);
   runsBehaviour(aLedger);
-  runFiltersBehaviour(aLedger);
+  runFiltersBehaviour(() => keepingNames(namesOfTheRuns));
   lineageBehaviour(aLedger);
   headsBehaviour(aLedger);
 }

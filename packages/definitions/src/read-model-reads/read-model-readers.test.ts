@@ -7,7 +7,7 @@ import { readModelLedgerOf } from '../read-model-testing/read-model-ledger.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { definitionFromTheReadModel } from './read-model-definitions.ts';
 import { listFromTheReadModel } from './read-model-lists.ts';
-import { referencesTo } from './read-model-rows.ts';
+import { referencesTo } from './read-model-references.ts';
 import { versionFromTheReadModel } from './read-model-versions.ts';
 
 const someWords: unknown = expect.any(String);
@@ -78,6 +78,9 @@ describe('the readers of the read model, asked for what the playbook does not ho
     });
     await expect(inThePlaybook(ledger, versionFromTheReadModel('echo', 'alpha-one', 2))).rejects.toMatchObject({
       detail: someWords,
+    });
+    await expect(inThePlaybook(ledger, versionFromTheReadModel('echo', 'nobody', 1))).rejects.toMatchObject({
+      _tag: 'not_found',
     });
   });
 });

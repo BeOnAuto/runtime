@@ -34,6 +34,7 @@ export { runIdsBehaviour, runIdsOfTheTests, type RunIdsLedger } from '../run-ids
 export {
   addressesOfRows,
   definitionRowsBehaviour,
+  definitionsNamedByTheirIds,
   definitionsPlaced,
   placedIn,
   ran,

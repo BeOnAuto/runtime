@@ -56,7 +56,7 @@ function aLife(playbook: ChatHarness, day: Day, thread: string | undefined) {
           playbook.chat.reply({ channel: theChannel, thread, user: answererId, text: 'approve' });
         }
         if (day.busyEveryMs !== undefined && ((at - T0) % day.busyEveryMs === 0 || at === day.replyAt)) {
-          await Effect.runPromise(wake({ playbook: alpha, connection: 'chat', conversation: theChannel }, at));
+          await Effect.runPromise(wake({ org: alpha.org, connection: 'chat', conversation: theChannel }, at));
         }
         const before = readsOf(playbook);
         await playbook.performReads(at);
@@ -116,7 +116,7 @@ describe('a provider that limits how often a conversation is read', () => {
     const wakeAt = T0 + 91 * SECOND;
     vi.setSystemTime(wakeAt);
     const wake = connectionWake({ ledger: playbook.ledger.service });
-    await Effect.runPromise(wake({ playbook: alpha, connection: 'chat', conversation: theChannel }, wakeAt));
+    await Effect.runPromise(wake({ org: alpha.org, connection: 'chat', conversation: theChannel }, wakeAt));
 
     expect((await conversationRows(playbook.ledger))[0]?.row).toEqual({ ...timed, due_at: wakeAt + 10 * SECOND });
 
@@ -174,7 +174,7 @@ async function anHourOfSevenConversations(delivered: boolean): Promise<number> {
       vi.setSystemTime(at);
       await playbook.performReads(at);
       if (delivered) {
-        await Effect.runPromise(wake({ playbook: alpha, connection: 'chat' }, at));
+        await Effect.runPromise(wake({ org: alpha.org, connection: 'chat' }, at));
       }
     });
   await Effect.runPromise(Effect.forEach(deliveries, deliveredAt, { discard: true }));

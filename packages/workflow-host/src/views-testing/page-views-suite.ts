@@ -138,6 +138,19 @@ function movedTests(settingsOf: SettingsOf): void {
     expect(await views.gone(morning)).toBe(true);
     expect((await views.until(morning, foldedAll(1), beta)).view).toEqual(postsOf(1));
   });
+
+  it('are dropped under the name their subject held, and made under its new name from its own runs', async () => {
+    const views = await viewHarness(await settingsOf());
+    await views.pageSaved(morning, 1, pageDetails(countingPosts));
+    await views.ran(morning, 1, { underTheSubject: true });
+    startedOnPages(views);
+    await views.until(morning, foldedAll(1));
+
+    await views.subjectRenamed(morning, 'evening-social-content');
+
+    expect(await views.gone(morning)).toBe(true);
+    expect((await views.until('workflow/evening-social-content', foldedAll(1))).view).toEqual(postsOf(1));
+  });
 }
 
 export function pageViewsSuite(settingsOf: SettingsOf): void {

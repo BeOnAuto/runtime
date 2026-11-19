@@ -49,6 +49,7 @@ const typesOfThePlaybook = [
   'definition_resumed',
   'definition_restored',
   'definition_moved',
+  'definition_renamed',
   'playbook_page_saved',
   'playbook_goals_saved',
   'playbook_goals_agreed',

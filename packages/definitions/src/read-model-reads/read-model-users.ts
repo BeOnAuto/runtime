@@ -4,8 +4,8 @@ import { Effect, Order, Schema } from 'effect';
 import { definitionTypeRankOf } from '../capability/function-terminology.ts';
 import { CallingStepSchema, type NamedDefinition } from '../used-by/called-definitions.ts';
 import type { DefinitionUser } from '../used-by/user-relations.ts';
+import { referencesTo, type ReferenceRow } from './read-model-references.ts';
 import type { ReadModelRefused } from './read-model-refused.ts';
-import { referencesTo, type ReferenceRow } from './read-model-rows.ts';
 
 const decodeSteps = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(CallingStepSchema)));
 

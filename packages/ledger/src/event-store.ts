@@ -13,14 +13,19 @@ import type {
 } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
-import type { DefinitionStreamsStore, LookupTablesStore } from './definitions/definition-reads.ts';
+import type { DefinitionStreamsStore, LookupTablesStore, OrgStreamsStore } from './definitions/definition-reads.ts';
 import type { RecordedStore } from './keys/recorded-keys.ts';
 import type { LogPorts } from './log/ledger-log.ts';
 import type { MultiStreamAppends } from './multi-stream/multi-stream-appends.ts';
 import type { HeldHeads } from './references/held-heads.ts';
 import type { StreamSignal } from './signal/append-signal.ts';
 
-export type { DefinitionNamesStore, DefinitionStream, DefinitionStreamsStore } from './definitions/definition-reads.ts';
+export type {
+  DefinitionNamesStore,
+  DefinitionStream,
+  DefinitionStreamsStore,
+  OrgStreamsStore,
+} from './definitions/definition-reads.ts';
 export type { RecordedStore } from './keys/recorded-keys.ts';
 
 export interface EncodedEvent {
@@ -199,6 +204,7 @@ export interface LedgerStreams
     LastMessagesStore,
     RecordedStore,
     DefinitionStreamsStore,
+    OrgStreamsStore,
     LookupTablesStore,
     StreamAgesStore,
     StreamVersionsStore,

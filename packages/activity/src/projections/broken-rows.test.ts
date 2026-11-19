@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { aDefinition, definitionPrefix, projected } from '../testing/projected.ts';
 import {
   definitionCreated,
+  definitionRenamed,
   definitionRetired,
   definitionUpdated,
   messageOf,
@@ -149,6 +150,19 @@ describe('a broken definition resolved', () => {
         [definitions, definitionRetired({ ...invoice, version: 1 }, at(2), 'x')],
       ),
     ).toMatchObject({ open: false });
+  });
+});
+
+describe('a broken definition renamed', () => {
+  it('resolves under the name it held, as its retirement does', async () => {
+    const one = runAt(1, 1);
+
+    expect(
+      await brokenAfter(
+        [runs(one), runFailed(one, at(1))],
+        [definitions, definitionRenamed({ ...invoice, version: 1 }, 'file-invoice', at(2), 'x')],
+      ),
+    ).toMatchObject({ open: false, definition_name: 'categorize-invoice', run_id: one.runId });
   });
 });
 

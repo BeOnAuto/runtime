@@ -21,18 +21,27 @@ export type NamingLedger = (projections: readonly KeyedProjection[], names: Defi
 
 const Remark = Schema.Struct({ text: Schema.String });
 
+function placedAs(name: string, data: unknown) {
+  return {
+    playbookKey: `playbook/acme/${Schema.decodeUnknownSync(Remark)(data).text}/`,
+    definitionType: 'workflow',
+    name,
+    status: 'active',
+    hasTriggers: false,
+  };
+}
+
 export const definitionsPlaced: DefinitionNames = {
   types: ['remark_made'],
   holdsNames: (stream) => stream.startsWith('definition/'),
   definitionKeyOf: ({ stream }) => `${stream.split('/').slice(0, 3).join('/')}/`,
-  nameAfter: (_held, { data }) => ({
-    playbookKey: `playbook/acme/${Schema.decodeUnknownSync(Remark)(data).text}/`,
-    definitionType: 'workflow',
-    name: 'placed',
-    status: 'active',
-    hasTriggers: false,
-  }),
+  nameAfter: (_held, { data }) => placedAs('placed', data),
   takenBy: (claimed) => new Conflict({ detail: `${claimed.name} is held`, kind: 'taken' }),
+};
+
+export const definitionsNamedByTheirIds: DefinitionNames = {
+  ...definitionsPlaced,
+  nameAfter: (_held, { stream, data }) => placedAs(stream.split('/').slice(2, 3).join(''), data),
 };
 
 const everyRow: ProjectedRowsQuery = { where: [], orderBy: [], order: 'asc', limit: 10 };

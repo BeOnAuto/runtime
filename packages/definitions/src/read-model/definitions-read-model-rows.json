@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "rows": {
     "definitions": [
       {
@@ -107,10 +107,10 @@
         }
       },
       {
-        "key": "workflow/close-the-week",
+        "key": "workflow/019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a",
         "row": {
           "definition_type": "workflow",
-          "name": "close-the-week",
+          "name": "close-the-month",
           "version": 2,
           "status": "retired",
           "description": null,
@@ -164,7 +164,6 @@
         "key": "workflow/follow-up-leads/1",
         "row": {
           "definition_type": "workflow",
-          "name": "follow-up-leads",
           "version": 1,
           "position": 1,
           "put_in_place_by": "key_7f3a"
@@ -174,7 +173,6 @@
         "key": "workflow/follow-up-leads/2",
         "row": {
           "definition_type": "workflow",
-          "name": "follow-up-leads",
           "version": 2,
           "position": 3,
           "put_in_place_by": "key_7f3a"
@@ -184,7 +182,6 @@
         "key": "computation/check-totals/1",
         "row": {
           "definition_type": "computation",
-          "name": "check-totals",
           "version": 1,
           "position": 4,
           "put_in_place_by": "key_7f3a"
@@ -194,7 +191,6 @@
         "key": "computation/check-totals/2",
         "row": {
           "definition_type": "computation",
-          "name": "check-totals",
           "version": 2,
           "position": 5,
           "put_in_place_by": "key_7f3a"
@@ -204,7 +200,6 @@
         "key": "workflow/close-the-month/1",
         "row": {
           "definition_type": "workflow",
-          "name": "close-the-month",
           "version": 1,
           "position": 6,
           "put_in_place_by": "key_7f3a"
@@ -214,7 +209,6 @@
         "key": "workflow/close-the-month/2",
         "row": {
           "definition_type": "workflow",
-          "name": "close-the-month",
           "version": 2,
           "position": 9,
           "put_in_place_by": "person:user_2ada"
@@ -224,7 +218,6 @@
         "key": "reasoning/greet-reasoning/1",
         "row": {
           "definition_type": "reasoning",
-          "name": "greet-reasoning",
           "version": 1,
           "position": 11,
           "put_in_place_by": "acme-admin"
@@ -234,27 +227,24 @@
         "key": "reasoning/greet-reasoning/2",
         "row": {
           "definition_type": "reasoning",
-          "name": "greet-reasoning",
           "version": 2,
           "position": 13,
           "put_in_place_by": "acme-admin"
         }
       },
       {
-        "key": "workflow/close-the-week/1",
+        "key": "workflow/019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a/1",
         "row": {
           "definition_type": "workflow",
-          "name": "close-the-week",
           "version": 1,
           "position": 14,
           "put_in_place_by": "person:user_2ada"
         }
       },
       {
-        "key": "workflow/close-the-week/2",
+        "key": "workflow/019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a/2",
         "row": {
           "definition_type": "workflow",
-          "name": "close-the-week",
           "version": 2,
           "position": 19,
           "put_in_place_by": "person:user_2ada"
@@ -264,7 +254,6 @@
         "key": "workflow/post-the-orders/1",
         "row": {
           "definition_type": "workflow",
-          "name": "post-the-orders",
           "version": 1,
           "position": 20,
           "put_in_place_by": "key_7f3a"
@@ -289,7 +278,7 @@
         "rows": []
       },
       {
-        "key": "workflow/close-the-week",
+        "key": "workflow/019a7e3c-4d2b-7c1a-9b3f-2f1e0d9c8b7a",
         "rows": []
       },
       {

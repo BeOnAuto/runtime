@@ -4,11 +4,12 @@ import { Data, type Effect, type Redacted, type Scope } from 'effect';
 import type { ArrivalReading } from '../events/arrival-readings.ts';
 import type { Destination } from '../events/destination-fields.ts';
 
-export type SocketEnd = 'not opened' | 'closed' | 'silent';
+export type SocketEnd = 'not opened' | 'closed' | 'silent' | 'refused';
 
 export class SocketEnded extends Data.TaggedError('socket_ended')<{
   readonly end: SocketEnd;
   readonly code?: number;
+  readonly host?: string;
 }> {}
 
 export type SocketFrame = { readonly kind: 'message'; readonly text: string } | { readonly kind: 'pong' };
@@ -22,6 +23,7 @@ export interface OpenSocket {
 export interface SocketOpening {
   readonly destination: Destination;
   readonly credential: Redacted.Redacted;
+  readonly failureCodes?: BearerSending['failureCodes'];
 }
 
 export type OpensASocket = (opening: SocketOpening) => Effect.Effect<OpenSocket, SocketEnded, Scope.Scope>;

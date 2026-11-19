@@ -112,7 +112,7 @@ function servedWith(serving: Serving): Serve {
   const { wiring, settings, shippedFiles, made, holding } = serving;
   return async (runtime, ownOrigin) => {
     const { ledger, workflows, identityIssuer } = settings;
-    const { signIn, stores, consent, connectionsReadingThrough, source, clientMetadata, license, ...ownKeys } =
+    const { signIn, stores, consent, connectionsReadingThrough, source, clientMetadata, license, opens, ...ownKeys } =
       await signInAndStoresOpened(runtime, serving, ownOrigin);
     const registry = await registryOpenedFor(serving, runtime, { consent, connections: source });
     const { connections, offering } = connectionsReadingThrough(registry.readOnceThrough);
@@ -122,6 +122,7 @@ function servedWith(serving: Serving): Serve {
       registry,
       connections: source,
       secrets: stores.secrets,
+      opens,
       offering,
       computation: made.computation,
       prediction: made.prediction,
