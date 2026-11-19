@@ -58,6 +58,7 @@ function slotsTest(settingsOf: SettingsOf): void {
     const watch = watchingDatasets();
     datasets.start({ through: watch.through });
     await watch.until(second.dataSha256, liveFolded(2));
+    await watch.until(first.dataSha256, liveFolded(2));
     await datasets.stop();
     await datasets.published([north('2026-10-08T10:00:00Z')]);
     const restarted = watchingDatasets();
