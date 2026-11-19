@@ -38,10 +38,18 @@ export const EachSchema = Schema.Struct({
   to: Schema.optionalKey(
     Schema.String.annotate({ description: 'A JSON Pointer within each reply to the message it answers' }),
   ),
+  time: Schema.optionalKey(
+    Schema.String.annotate({
+      description: 'A JSON Pointer within each reply to when it was written: RFC 3339 text, or seconds since the epoch',
+    }),
+  ),
 });
 
 export const ReadSchema = Schema.Struct({
-  list: Schema.String.annotate({ description: 'A JSON Pointer into what the reading tool answered, to its replies' }),
+  list: Schema.String.annotate({
+    description:
+      'A JSON Pointer into what the reading tool answered, to its replies; empty where the whole answer is the list',
+  }),
   order: ReadOrderSchema.annotate({ description: 'The order the tool lists replies in' }),
   each: EachSchema,
 });
@@ -85,13 +93,14 @@ const TellSchema = Schema.Union([
 export const RepliesSchema = Schema.Struct({
   conversation: Schema.optionalKey(
     Schema.String.annotate({
-      description: 'A Liquid template over to, sent.conversation and sent.id rendering the key the playbook reads by',
+      description:
+        'A Liquid template over input, to, sent.conversation and sent.id rendering the key the playbook reads by',
     }),
   ),
   tool: Schema.String.annotate({ description: 'The tool of the delivering server that reads what came since a point' }),
   with: Templates.annotate({
     description:
-      'The arguments of the read over to, sent.conversation, sent.id, conversation and since, written as the arguments of deliver are',
+      'The arguments of the read over input, to, sent.conversation, sent.id, conversation and since, written as the arguments of deliver are',
   }),
   read: ReadSchema,
   wait: Schema.optionalKey(

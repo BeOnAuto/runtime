@@ -107,6 +107,7 @@ interface Calling {
 
 interface PlaybookCalls {
   readonly define: (name: string, source: string) => Promise<Outcome>;
+  readonly defineAsAnEarlierRelease: (name: string, source: string) => Promise<Outcome>;
   readonly ask: (name: string, input: unknown, runId: string) => Promise<Outcome>;
   readonly runOf: (runId: string) => Promise<Outcome>;
 }
@@ -184,15 +185,25 @@ export function ledgerHoldingRuns(projections: readonly KeyedProjection[]): Memo
   return ledgerKeepingNames(projections, runContentHolders);
 }
 
-function callsIn(call: Calling, capabilities: readonly Capability[]): InteractionHarness['inPlaybook'] {
+function definingIn(call: Calling, capabilities: readonly Capability[], at: CalledAt) {
+  return (name: string, source: string) =>
+    call(
+      defineCreateDefinition(capabilities, uncheckedPages),
+      { type: 'interaction', name, source, diagram: 'none' },
+      acmeAdmin,
+      at,
+    );
+}
+
+function callsIn(
+  call: Calling,
+  capability: Capability,
+  others: readonly Capability[],
+): InteractionHarness['inPlaybook'] {
+  const capabilities = [capability, ...others];
   return (at) => ({
-    define: (name, source) =>
-      call(
-        defineCreateDefinition(capabilities, uncheckedPages),
-        { type: 'interaction', name, source, diagram: 'none' },
-        acmeAdmin,
-        at,
-      ),
+    define: definingIn(call, capabilities, at),
+    defineAsAnEarlierRelease: definingIn(call, [savedAsAnEarlierRelease(capability), ...others], at),
     ask: (name, input, runId) =>
       call(defineRunDefinition(capabilities), { type: 'interaction', name, input, run_id: runId }, acmeAdmin, at),
     runOf: (runId) => call(defineGetRun(capabilities, uncheckedPages), { run_id: runId }, acmeAdmin, at),
@@ -245,6 +256,6 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
     performAll: performedAll,
     performEach: (times) => performedEach(times, performDue),
     firstOpen: () => firstOpenOf(call),
-    inPlaybook: callsIn(call, capabilities),
+    inPlaybook: callsIn(call, capability, options.others ?? []),
   };
 }

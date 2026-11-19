@@ -120,8 +120,11 @@ const flatOfMore = threadDocument({
 
 describe('a conversation whose replies name no message, read by a second call while the first still reads it', () => {
   it('reads the second call from where the conversation was, so a reply decided before is not listed again', async () => {
-    const playbook = await chatHarness({ document: threadDocument({ replies: flatReplies }) });
-    await playbook.define('approve-plan', flatOfMore);
+    const playbook = await chatHarness({
+      document: threadDocument({ replies: flatReplies }),
+      savedByAnEarlierRelease: true,
+    });
+    await playbook.defineAsAnEarlierRelease('approve-plan', flatOfMore);
     await playbook.askInThread(answeredFirst);
     await playbook.performDue(Date.now());
     playbook.chat.reply({ channel, user: answererId, text: 'approve' });

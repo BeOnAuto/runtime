@@ -30,6 +30,8 @@ export interface Reply {
   readonly sender: string;
   readonly text: string | undefined;
   readonly to: string | undefined;
+  readonly olderThan: readonly string[];
+  readonly time?: number;
 }
 
 export type ReplyDecision =
@@ -47,13 +49,20 @@ const nothing: ReplyDecision = { kind: 'nothing' };
 interface Belonging {
   readonly request: KeptRequest | undefined;
   readonly ambiguous: boolean;
+  readonly askedBefore: readonly KeptRequest[];
 }
 
-function belongingOf({ to }: Reply, kept: readonly KeptRequest[]): Belonging {
+function writtenBefore({ olderThan, time }: Reply, { sent, row }: KeptRequest): boolean {
+  return olderThan.includes(sent.id) || (time !== undefined && time < row.requested_at);
+}
+
+function belongingOf(reply: Reply, kept: readonly KeptRequest[]): Belonging {
+  const { to } = reply;
   if (to !== undefined) {
-    return { request: kept.find(({ sent }) => sent.id === to), ambiguous: false };
+    return { request: kept.find(({ sent }) => sent.id === to), ambiguous: false, askedBefore: kept };
   }
-  return { request: kept.at(-1), ambiguous: kept.length > 1 };
+  const askedBefore = kept.filter((request) => !writtenBefore(reply, request));
+  return { request: askedBefore.at(-1), ambiguous: askedBefore.length > 1, askedBefore };
 }
 
 function refused(request: KeptRequest, because: ReplyRefusal, issues: readonly Issue[] = []): ReplyDecision {
@@ -82,12 +91,12 @@ function fromAnother(request: KeptRequest, reply: Reply, others: readonly KeptRe
 }
 
 export function decisionOf(reply: Reply, kept: readonly KeptRequest[]): ReplyDecision {
-  const { request, ambiguous } = belongingOf(reply, kept);
+  const { request, ambiguous, askedBefore } = belongingOf(reply, kept);
   if (request === undefined) {
     return nothing;
   }
   if (request.row.answerer !== reply.sender) {
-    return fromAnother(request, reply, ambiguous ? kept : []);
+    return fromAnother(request, reply, ambiguous ? askedBefore : []);
   }
   if (ambiguous) {
     return refused(request, 'ambiguous');

@@ -16,7 +16,7 @@ import {
   type ChatHarness,
   type FakeAnswer,
 } from '../testing/index.ts';
-import { flatReplies, threadRepliesWith } from '../testing/reading-documents.ts';
+import { flatReplies, threadRepliesWith, wholeAnswerReplies } from '../testing/reading-documents.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -34,7 +34,7 @@ async function deliveryEndOf(playbook: ChatHarness) {
 }
 
 async function deliveredWith(answer?: FakeAnswer, document?: string) {
-  const playbook = await chatHarness(document === undefined ? {} : { document });
+  const playbook = await chatHarness(document === undefined ? {} : { document, savedByAnEarlierRelease: true });
   if (answer !== undefined) {
     playbook.chat.answerNext(answer);
   }
@@ -58,7 +58,7 @@ function digestOf(input: object): string {
 }
 
 async function readingsOf(document: string): Promise<readonly unknown[]> {
-  const playbook = await chatHarness({ document });
+  const playbook = await chatHarness({ document, savedByAnEarlierRelease: true });
   await Promise.all([first, second].map((asked) => playbook.askInThread(asked)));
   await playbook.performDue(Date.now());
   const delivered = await recordsOf(playbook.ledger, 'delivery_succeeded');
@@ -119,6 +119,16 @@ describe('the reading a delivery records', () => {
       digestOf({ channel: '#approvals-sales', ts: '1699.000001', oldest: '0', limit: 15 }),
       digestOf({ channel: '#approvals-sales', ts: '1699.000002', oldest: '0', limit: 15 }),
     ]);
+  });
+
+  it('renders the key and the read with the input of the run, as a later read of that run renders them', async () => {
+    const { ended } = await deliveredWith(undefined, threadDocument({ replies: wholeAnswerReplies }));
+
+    expect(ended).toMatchObject({
+      data: {
+        replies_in: { key: 'sales/Spring', reading: digestOf({ channel: '#approvals-sales', campaign: 'Spring' }) },
+      },
+    });
   });
 
   it('cannot be rendered for a request whose read renders no arguments, so it takes no reply, and says why', async () => {

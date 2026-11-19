@@ -31,11 +31,15 @@ describe('a message a delivery that reads no replies cannot keep', () => {
   it('is said in the detail, with nothing about replies', () => {
     const { replies: _reading, ...delivering } = record;
 
-    expect(keptOf(delivering, { content: [{ type: 'text', text: '{"channel":"C0123"}' }] }, standingRendering)).toEqual(
-      {
-        detail: anyWords,
-      },
-    );
+    expect(
+      keptOf(
+        { record: delivering, input: {} },
+        { content: [{ type: 'text', text: '{"channel":"C0123"}' }] },
+        standingRendering,
+      ),
+    ).toEqual({
+      detail: anyWords,
+    });
   });
 });
 
@@ -43,7 +47,7 @@ describe('a recorded reading without a reply rule', () => {
   it('keeps what the message was delivered as, and no place to read replies', () => {
     const { reply: _rule, ...unruled } = record;
 
-    expect(keptOf(unruled, posted, standingRendering)).toEqual({
+    expect(keptOf({ record: unruled, input: {} }, posted, standingRendering)).toEqual({
       delivered_as: { conversation: 'C0123', id: '1699.1' },
     });
   });
@@ -58,7 +62,9 @@ describe('a message whose tool answered where it landed in a file', () => {
       text: '{"channel":"C0123","ts":"1699.1"}',
     };
 
-    expect(keptOf(unruled, { content: [{ type: 'resource', resource: file }] }, standingRendering)).toEqual({
+    expect(
+      keptOf({ record: unruled, input: {} }, { content: [{ type: 'resource', resource: file }] }, standingRendering),
+    ).toEqual({
       delivered_as: { conversation: 'C0123', id: '1699.1' },
     });
   });
@@ -66,7 +72,7 @@ describe('a message whose tool answered where it landed in a file', () => {
 
 describe('the conversation key of a recorded reading', () => {
   it('keeps no place to read when it cannot be rendered, and says so', () => {
-    expect(keptOf(record, posted, standingRendering)).toEqual({
+    expect(keptOf({ record, input: {} }, posted, standingRendering)).toEqual({
       detail:
         "The conversation's key renders to nothing, to more than 256 bytes or to a character a key may not hold, so the request takes no reply and waits for answer_interaction",
     });

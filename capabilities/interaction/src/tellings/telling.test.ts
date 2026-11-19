@@ -25,7 +25,11 @@ const channel = '#approvals-sales';
 
 describe('the message of a request that has ended', () => {
   it('is never read as a reply in a chat without threads whose connection posts as the person who answers', async () => {
-    const playbook = await chatHarness({ postsAs: answererId, document: threadDocument({ replies: flatReplies }) });
+    const playbook = await chatHarness({
+      postsAs: answererId,
+      document: threadDocument({ replies: flatReplies }),
+      savedByAnEarlierRelease: true,
+    });
     await playbook.askInThread(ended);
     await playbook.performDue(Date.now());
     await playbook.call(answerInteraction, { run_id: ended, answer: { choice: 'approve' } });
@@ -44,12 +48,21 @@ describe('the message of a request that has ended', () => {
 
 describe('a telling whose answer names the message it posted but not its conversation', () => {
   it('is the last its request makes, since the playbook cannot know where it landed', async () => {
-    const playbook = await chatHarness({ postsAs: answererId, document: threadDocument({ replies: flatReplies }) });
+    const playbook = await chatHarness({
+      postsAs: answererId,
+      document: threadDocument({ replies: flatReplies }),
+      savedByAnEarlierRelease: true,
+    });
     await playbook.askInThread(ended);
     await playbook.performDue(Date.now());
     playbook.chat.reply({ channel, user: answererId, text: 'maybe' });
     playbook.chat.answerNext(
-      answered({ messages: [{ ts: '1699.000002', channel, user: answererId, text: 'maybe' }] }),
+      answered({
+        messages: [
+          { ts: '1699.000001', channel, user: answererId, text: 'Please review' },
+          { ts: '1699.000002', channel, user: answererId, text: 'maybe' },
+        ],
+      }),
       answered({ ok: true, ts: '1699.000003' }),
     );
     await playbook.performReads(Date.now() + farAhead);
@@ -66,12 +79,21 @@ describe('a telling whose answer names the message it posted but not its convers
 
 describe('a telling whose tool answered where its message landed in a file', () => {
   it('knows the message it posted from the text of the file', async () => {
-    const playbook = await chatHarness({ postsAs: answererId, document: threadDocument({ replies: flatReplies }) });
+    const playbook = await chatHarness({
+      postsAs: answererId,
+      document: threadDocument({ replies: flatReplies }),
+      savedByAnEarlierRelease: true,
+    });
     await playbook.askInThread(ended);
     await playbook.performDue(Date.now());
     playbook.chat.reply({ channel, user: answererId, text: 'maybe' });
     playbook.chat.answerNext(
-      answered({ messages: [{ ts: '1699.000002', channel, user: answererId, text: 'maybe' }] }),
+      answered({
+        messages: [
+          { ts: '1699.000001', channel, user: answererId, text: 'Please review' },
+          { ts: '1699.000002', channel, user: answererId, text: 'maybe' },
+        ],
+      }),
       answeredInAFile({ ok: true, channel, ts: '1699.000003' }),
     );
 

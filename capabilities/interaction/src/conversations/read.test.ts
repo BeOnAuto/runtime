@@ -12,7 +12,7 @@ import {
   recordsOf,
   threadDocument,
 } from '../testing/index.ts';
-import { newestFirstReplies, threadRepliesWith } from '../testing/reading-documents.ts';
+import { newestFirstReplies, threadRepliesWith, wholeAnswerReplies } from '../testing/reading-documents.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -22,8 +22,8 @@ const fitsForTheSampleNotForTheRequest = `{% for i in (1..1048) %}${'a'.repeat(1
 
 const pastTheBoundOnceItHasACursor = '{% for i in (1..4300) %}{{ since }}{% endfor %}';
 
-async function deliveredInThread(document?: string) {
-  const playbook = await chatHarness(document === undefined ? {} : { document });
+async function deliveredInThread(document?: string, savedByAnEarlierRelease = false) {
+  const playbook = await chatHarness(document === undefined ? {} : { document, savedByAnEarlierRelease });
   await playbook.askInThread(runId);
   await playbook.performDue(Date.now());
   return playbook;
@@ -33,6 +33,7 @@ describe('a conversation read later', () => {
   it('is never joined by a request whose read renders no arguments for it, which waits for answer_interaction', async () => {
     const playbook = await deliveredInThread(
       threadRepliesWith("    ts: '{{ sent.id }}'", `    ts: '${fitsForTheSampleNotForTheRequest}'`),
+      true,
     );
 
     await playbook.performReads(Date.now() + farAhead);
@@ -196,6 +197,74 @@ describe('a conversation with nothing open in it', () => {
 
     expect([row?.row['open'], row?.row['due_at'], playbook.chat.calls()]).toMatchObject([false, null, [{}]]);
   });
+});
+
+const readingTheInput = threadDocument({ replies: wholeAnswerReplies });
+
+function readsOf(playbook: Awaited<ReturnType<typeof chatHarness>>) {
+  return playbook.chat.calls().filter(({ reference }) => reference.tool === 'thread_replies');
+}
+
+describe('a read whose arguments read the run’s input', () => {
+  it('renders them with the input of its request’s run, and takes a reply from an answer that is the list', async () => {
+    const playbook = await deliveredInThread(readingTheInput);
+    playbook.chat.answerNext(
+      answered([
+        ...playbook.chat.posted(),
+        { ts: '1699.000002', channel: '#approvals-sales', user: answererId, text: 'approve', at: Date.now() / 1000 },
+      ]),
+    );
+
+    await playbook.performReads(Date.now() + farAhead);
+    await playbook.performDue(Date.now());
+
+    expect(readsOf(playbook).map(({ input }) => input)).toEqual([{ channel: '#approvals-sales', campaign: 'Spring' }]);
+    expect(await playbook.runOf(runId)).toMatchObject({
+      output: { status: 'succeeded', output: { choice: 'approve' } },
+    });
+  });
+});
+
+const timedThread = threadRepliesWith(
+  '    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }',
+  '    each: { id: /ts, sender: /user, text: /text, to: /thread_ts, time: /at }',
+);
+
+const minute = 60_000;
+
+function spaced(writtenMs: number, offsetMinutes: number, offset: string): string {
+  return new Date(writtenMs + offsetMinutes * minute).toISOString().replace('T', ' ').replace('Z', offset);
+}
+
+const writtenForms: readonly (readonly [string, (asked: number) => unknown, string])[] = [
+  ['RFC 3339 text', (asked) => new Date(asked + minute).toISOString(), 'succeeded'],
+  ['ISO 8601 text with a space and an offset of +0000', (asked) => spaced(asked + minute, 0, '+0000'), 'succeeded'],
+  ['ISO 8601 text with an offset of -0530', (asked) => spaced(asked + minute, -330, '-0530'), 'succeeded'],
+  ['ISO 8601 text with no offset', (asked) => spaced(asked + minute, 0, ''), 'started'],
+  ['seconds as a number', (asked) => (asked + minute) / 1000, 'succeeded'],
+  ['seconds as text', (asked) => String((asked + minute) / 1000), 'succeeded'],
+  ['nothing', () => null, 'started'],
+  ['text in neither form', () => 'yesterday', 'started'],
+  ['a negative number', () => -1, 'started'],
+  ['a time more than five minutes after the read', (asked) => (asked + 60 * minute) / 1000, 'started'],
+];
+
+describe('the time a read gives each reply', () => {
+  it.each(writtenForms)(
+    'is read from %s, and a reply whose time cannot be read is passed over',
+    async (_, at, status) => {
+      const asked = Date.now();
+      const playbook = await deliveredInThread(timedThread);
+      const own = { ts: '1699.000001', user: 'playbook', text: 'Please review', at: asked / 1000 };
+      const reply = { ts: '1699.000002', user: answererId, text: 'approve', thread_ts: '1699.000001', at: at(asked) };
+      playbook.chat.answerNext(answered({ messages: [own, reply] }));
+
+      await playbook.performReads(Date.now() + farAhead);
+      await playbook.performDue(Date.now());
+
+      expect(await playbook.runOf(runId)).toMatchObject({ output: { status } });
+    },
+  );
 });
 
 describe('a listed reply without an identity or a sender that fits', () => {

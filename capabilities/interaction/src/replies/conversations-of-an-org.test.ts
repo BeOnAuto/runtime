@@ -20,9 +20,9 @@ interface Open {
 
 async function openInOneConversation(replies: readonly string[], inAnotherPlaybook: boolean): Promise<Open> {
   const document = threadDocument({ replies });
-  const playbook = await chatHarness({ document });
+  const playbook = await chatHarness({ document, savedByAnEarlierRelease: true });
   const other = inAnotherPlaybook ? playbook.inPlaybook(beta) : playbook.inPlaybook({ org: 'acme', playbook: 'alpha' });
-  await other.define('approve-plan', document);
+  await other.defineAsAnEarlierRelease('approve-plan', document);
   await playbook.askInThread(asked);
   await other.ask('approve-plan', input, askedToo);
   await playbook.performDue(Date.now());

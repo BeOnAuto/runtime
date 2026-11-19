@@ -31,14 +31,14 @@ export const renderedDeliveryTemplates: TemplateSet = {
 };
 
 export const conversationKeyTemplates: TemplateSet = {
-  names: ['to', 'sent.conversation', 'sent.id'],
+  names: ['input', 'to', 'sent.conversation', 'sent.id'],
   what: 'the conversation key of a reading',
   sample: { to: 'ada', sent },
   structured: 'sent',
 };
 
 export const readingTemplates: TemplateSet = {
-  names: ['to', 'sent.conversation', 'sent.id', 'conversation', 'since'],
+  names: ['input', 'to', 'sent.conversation', 'sent.id', 'conversation', 'since'],
   what: 'a template of a reading',
   sample: { to: 'ada', sent, conversation: 'C0123/1699.1', since: '1699.2' },
   structured: 'sent',

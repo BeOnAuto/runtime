@@ -3,9 +3,8 @@ import { Struct } from 'effect';
 
 import type { DeliveryEnded } from '../facts/run-facts.ts';
 import type { CallRendering } from '../readings/call-rendering.ts';
-import type { DeliveringRecord } from '../run/request-record.ts';
 import { endOfCall } from './call-ends.ts';
-import { keptOf } from './sent-messages.ts';
+import { keptOf, type AskedRequest } from './sent-messages.ts';
 
 type EndedData<Type extends DeliveryEnded['type']> = Omit<
   Extract<DeliveryEnded, { readonly type: Type }>['data'],
@@ -35,12 +34,12 @@ function failureFieldsOf(fields: CallAnswered | CallFailed) {
   return 'result_bytes' in fields ? answerFieldsOf(fields) : Struct.omit(fields, ['because', 'detail', 'duration_ms']);
 }
 
-function endOfAnswer(called: AnsweredOnce, record: DeliveringRecord, rendering: CallRendering): AttemptEnd {
+function endOfAnswer(called: AnsweredOnce, asked: AskedRequest, rendering: CallRendering): AttemptEnd {
   const end = endOfCall(called);
   if ('answered' in end) {
     return {
       type: 'delivery_succeeded',
-      data: { ...answerFieldsOf(end.fields), ...keptOf(record, end.answered, rendering) },
+      data: { ...answerFieldsOf(end.fields), ...keptOf(asked, end.answered, rendering) },
     };
   }
   const { because, retryAfterMs, detail, fields } = end.failed;
@@ -55,9 +54,9 @@ function endOfAnswer(called: AnsweredOnce, record: DeliveringRecord, rendering: 
   };
 }
 
-export function endOf(called: CalledOnce, record: DeliveringRecord, rendering: CallRendering): AttemptEnd {
+export function endOf(called: CalledOnce, asked: AskedRequest, rendering: CallRendering): AttemptEnd {
   if (called.kind === 'answered') {
-    return endOfAnswer(called, record, rendering);
+    return endOfAnswer(called, asked, rendering);
   }
   if (called.refused === 'asset_not_sent') {
     const because = called.because === 'too_large' ? 'too_large' : 'unworkable';

@@ -252,6 +252,7 @@ describe('the compiler', () => {
       'check.ts',
       checkHandler,
       'document.ts',
+      'events/event-time.ts',
       'checking/given-values.ts',
       'goals.ts',
       'identity/definition-names.ts',

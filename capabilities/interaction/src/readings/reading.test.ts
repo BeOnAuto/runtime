@@ -115,7 +115,7 @@ describe('a read that names its request’s message, whose replies name no messa
 describe('a thread’s read and a flat read whose replies may name their message, in one conversation', () => {
   it('reads the thread from its own start and the channel on from where the conversation was, so an earlier answer answers no later request', async () => {
     const playbook = await chatHarness({ document: threadDocument({ replies: threadOfTheChannelReplies }) });
-    await playbook.define('approve-plan', threadDocument({ replies: flatNamingReplies }));
+    await playbook.defineAsAnEarlierRelease('approve-plan', threadDocument({ replies: flatNamingReplies }));
     const plan = { team: 'sales', owner: answererId, campaign: 'Autumn' };
     await playbook.ask('approve-plan', plan, older);
     await playbook.performDue(Date.now());

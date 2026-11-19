@@ -70,7 +70,10 @@ function deliveredOn(
     Effect.flatMap(recordedStart(parts, plan, fields), (startedId) =>
       startedId === undefined
         ? Effect.undefined
-        : Effect.map(called, (once): Delivered => ({ startedId, end: endOf(once, record, { clock, mostBytes }) })),
+        : Effect.map(called, (once): Delivered => ({
+            startedId,
+            end: endOf(once, { record, input }, { clock, mostBytes }),
+          })),
     ),
   );
 }

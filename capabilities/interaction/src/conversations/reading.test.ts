@@ -29,6 +29,8 @@ function readsOf(playbook: ChatHarness): number {
   return playbook.chat.calls().filter(({ reference }) => reference.tool === 'thread_replies').length;
 }
 
+const savedFlat = { document: threadDocument({ replies: flatReplies }), savedByAnEarlierRelease: true };
+
 describe('the replies of a conversation, read once for every open request in it', () => {
   it('takes a reply from the answerer as the answer the run records with the reply as evidence, which the due work settles it from as the playbook', async () => {
     const playbook = await chatHarness();
@@ -63,7 +65,7 @@ describe('the replies of a conversation, read once for every open request in it'
   });
 
   it('reads one conversation once for three requests in it, and each thread on its own', async () => {
-    const flat = await chatHarness({ document: threadDocument({ replies: flatReplies }) });
+    const flat = await chatHarness(savedFlat);
     await deliveredInThread(flat, first, second, third);
     const threads = await chatHarness();
     await deliveredInThread(threads, first, second, third);

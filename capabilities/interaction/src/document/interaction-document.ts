@@ -51,6 +51,7 @@ interface RequestFields extends WrittenFunction {
   readonly route?: WrittenRoute;
   readonly heldForAnAgent?: HeldForAnAgent;
   readonly repliesLine: number;
+  readonly eachLine: number;
   readonly reply?: ReplyRule;
 }
 

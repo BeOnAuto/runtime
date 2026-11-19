@@ -5,6 +5,8 @@ import { Effect } from 'effect';
 
 import type { RequestDocument } from '../document/interaction-document.ts';
 import type { ConversationsOf } from '../tellings/telling-routes.ts';
+import { readsVariable } from '../tool-blocks/rendered-reads.ts';
+import type { Replies } from '../tool-blocks/tool-block-schemas.ts';
 
 export interface TellCheckPorts {
   readonly tools: Pick<ToolAccess, 'listServers'>;
@@ -49,4 +51,29 @@ export function tellCheck(
       }
     });
   };
+}
+
+const fromTheFirstMessageWords =
+  "This read can start at the conversation's first message, so an old message could be taken as the answer to a new request; write each.time, the pointer to when each message was written, or ask through deliver: agent where the messages hold no time each.time can read";
+
+function startsUntimed({ read, with: written }: Replies): boolean {
+  return read.order === 'oldest_first' && read.each.time === undefined && !readsVariable(written, 'sent.id');
+}
+
+export function firstMessageCheck({ route, eachLine }: RequestDocument): Effect.Effect<void, InvalidInput> {
+  const replies = route?.replies;
+  if (replies === undefined || !startsUntimed(replies)) {
+    return Effect.void;
+  }
+  return Effect.fail(
+    new InvalidInput({
+      detail: 'The interaction function definition has a problem',
+      issues: [
+        {
+          pointer: '',
+          detail: issueText({ line: eachLine, pointer: '/replies/read/each', detail: fromTheFirstMessageWords }),
+        },
+      ],
+    }),
+  );
 }

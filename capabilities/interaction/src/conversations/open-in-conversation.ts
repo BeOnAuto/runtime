@@ -21,6 +21,8 @@ const keptRowFrom = Schema.decodeUnknownSync(
   }),
 );
 
+const sentOfARead = Schema.decodeUnknownSync(Schema.Struct({ sent_id: Schema.String }));
+
 export function takesReplies({ standing }: Pick<OpenRequestRow, 'standing'>): boolean {
   return takingReplies.has(standing);
 }
@@ -47,6 +49,24 @@ function keptOf(placed: PlaybookProjectedRow): readonly KeptRequest[] {
 export interface OpenInConversation {
   readonly kept: readonly KeptRequest[];
   readonly more: boolean;
+}
+
+export function endedRequestMessages(
+  parts: { readonly ledger: Pick<ConversationParts['ledger'], 'readProjectedRows'> },
+  { address, key }: Pick<ConversationPlace, 'address' | 'key'>,
+): Effect.Effect<ReadonlySet<string>> {
+  return Effect.map(
+    parts.ledger.readProjectedRows(openRequestsName, everyDefinitionOf(address), {
+      where: [
+        { column: 'open', equals: false },
+        { column: 'conversation', equals: key },
+      ],
+      orderBy: ['requested_at'],
+      order: 'asc',
+      limit: conversationBounds.requestsRead,
+    }),
+    (rows) => new Set(playbookRowsOf(openRequestsName, rows).map(({ row }) => sentOfARead(row).sent_id)),
+  );
 }
 
 export function openInConversation(

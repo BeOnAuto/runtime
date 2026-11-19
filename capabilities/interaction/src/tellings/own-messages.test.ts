@@ -28,7 +28,7 @@ interface Asked {
 }
 
 async function askedOfThePersonItPostsAs(document = threadDocument()): Promise<Asked> {
-  const playbook = await chatHarness({ postsAs: answererId, document });
+  const playbook = await chatHarness({ postsAs: answererId, document, savedByAnEarlierRelease: true });
   await playbook.askInThread(runId);
   await playbook.performDue(Date.now());
   const [request] = playbook.chat.posted();

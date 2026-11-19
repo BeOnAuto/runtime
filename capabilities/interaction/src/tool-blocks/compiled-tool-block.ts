@@ -1,6 +1,7 @@
 import { issueAt, type DocumentIssue, type SourceLines } from '@on.auto/definitions/document';
 import {
   argumentsFailureWords,
+  isOversized,
   nameIssues,
   placeOf,
   pointerIssues,
@@ -8,14 +9,16 @@ import {
   smallerTemplatesRemedy,
   templateIssues,
   templatesIssues,
+  type ArgumentsFailure,
   type DocumentReading,
   type TemplatePlace,
+  type Templates,
 } from '@on.auto/definitions/tool-blocks';
 import { isServerName, isToolName, serverNameShape, toolNameShape } from '@on.auto/tool-servers/policy';
 import { readDuration } from '@on.auto/workflow-engine/dsl';
 import { Result, type Schema } from 'effect';
 
-import { readsRendered } from './rendered-reads.ts';
+import { readsVariable } from './rendered-reads.ts';
 import {
   conversationKeyTemplates,
   deliveryTemplates,
@@ -58,7 +61,7 @@ function deliveryTemplateIssues(
   renders: boolean,
 ): readonly DocumentIssue[] {
   const pointer = placeOf('deliver', 'with');
-  const reads = readsRendered(deliver.with);
+  const reads = readsVariable(deliver.with, 'rendered');
   if (renders) {
     return [
       ...(reads ? [] : [issueAt(place.lines, pointer, needsRendered)]),
@@ -84,22 +87,57 @@ function deliveryIssues(written: WrittenRoute, place: TemplatePlace, renders: bo
   ];
 }
 
+interface SampleRead {
+  readonly place: TemplatePlace;
+  readonly mostBytes: number;
+  readonly reported: (failure: ArgumentsFailure) => boolean;
+}
+
+const readArguments = placeOf('replies', 'with');
+
+function sampleReadIssues(templates: Templates, { place, mostBytes, reported }: SampleRead) {
+  return Result.match(renderedArguments(templates, readingTemplates.sample, place.clock, mostBytes), {
+    onSuccess: (): readonly DocumentIssue[] => [],
+    onFailure: (failure): readonly DocumentIssue[] =>
+      reported(failure)
+        ? [
+            issueAt(
+              place.lines,
+              failure.reason === 'too_large' ? readArguments : `${readArguments}/${failure.argument}`,
+              argumentsFailureWords(failure, 'the read over a sample reading', smallerTemplatesRemedy),
+            ),
+          ]
+        : [],
+  });
+}
+
+function everyFailure(): boolean {
+  return true;
+}
+
+function readingNoInput(templates: Templates): Templates {
+  return Object.fromEntries(
+    Object.entries(templates).filter(([, value]: readonly [string, Schema.Json]) => !readsVariable(value, 'input')),
+  );
+}
+
 function readArgumentIssues(replies: Replies, place: TemplatePlace, mostBytes: number): readonly DocumentIssue[] {
-  const pointer = placeOf('replies', 'with');
-  const written = templatesIssues(readingTemplates, replies.with, { ...place, pointer });
+  const written = templatesIssues(readingTemplates, replies.with, { ...place, pointer: readArguments });
   if (written.length > 0) {
     return written;
   }
-  return Result.match(renderedArguments(replies.with, readingTemplates.sample, place.clock, mostBytes), {
-    onSuccess: () => [],
-    onFailure: (failure) => [
-      issueAt(
-        place.lines,
-        failure.reason === 'too_large' ? pointer : `${pointer}/${failure.argument}`,
-        argumentsFailureWords(failure, 'the read over a sample reading', smallerTemplatesRemedy),
-      ),
-    ],
-  });
+  const withoutInput = readingNoInput(replies.with);
+  const issues = sampleReadIssues(withoutInput, { place, mostBytes, reported: everyFailure });
+  const readsTheInput = Object.keys(withoutInput).length < Object.keys(replies.with).length;
+  return issues.length > 0 || !readsTheInput
+    ? issues
+    : sampleReadIssues(replies.with, { place, mostBytes, reported: isOversized });
+}
+
+const wholeAnswer = '';
+
+function listPointerOf({ list }: Replies['read']): string | undefined {
+  return list === wholeAnswer ? undefined : list;
 }
 
 function readingIssues(replies: Replies, place: TemplatePlace, mostBytes: number): readonly DocumentIssue[] {
@@ -123,11 +161,12 @@ function readingIssues(replies: Replies, place: TemplatePlace, mostBytes: number
     ...readArgumentIssues(replies, place, mostBytes),
     ...templatesIssues(tellingTemplates, tell?.with ?? {}, { ...place, pointer: placeOf('replies', 'tell', 'with') }),
     ...pointerIssues(lines, [
-      [placeOf('replies', 'read', 'list'), read.list],
+      [placeOf('replies', 'read', 'list'), listPointerOf(read)],
       [placeOf('replies', 'read', 'each', 'id'), read.each.id],
       [placeOf('replies', 'read', 'each', 'sender'), read.each.sender],
       [placeOf('replies', 'read', 'each', 'text'), read.each.text],
       [placeOf('replies', 'read', 'each', 'to'), read.each.to],
+      [placeOf('replies', 'read', 'each', 'time'), read.each.time],
       [placeOf('replies', 'tell', 'sent'), tell?.sent],
     ]),
     ...waitIssues(lines, replies.wait),

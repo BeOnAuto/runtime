@@ -33,17 +33,33 @@ function partAt(document: Schema.Json, pointer: string, name: string): Result.Re
 
 const unkeyed = `The conversation's key renders to nothing, to more than ${sentBounds.partBytes} bytes or to a character a key may not hold`;
 
-function renderedKey(replies: Replies, party: string, sent: DeliveredAs, clock: RenderClock): string | undefined {
+export interface AskedRequest {
+  readonly record: DeliveringRecord;
+  readonly input: Schema.Json;
+}
+
+function renderedKey(
+  replies: Replies,
+  { record, input }: AskedRequest,
+  sent: DeliveredAs,
+  clock: RenderClock,
+): string | undefined {
   const parsed = parsedTemplate(toolBlockEngine, replies.conversation ?? firstConversation, 1);
   if (Result.isFailure(parsed)) {
     return undefined;
   }
-  const rendered = renderedText(parsed.success, { to: party, sent: { ...sent } }, sentBounds.partBytes + 1, clock);
+  const variables = { input, to: record.to, sent: { ...sent } };
+  const rendered = renderedText(parsed.success, variables, sentBounds.partBytes + 1, clock);
   return Result.isSuccess(rendered) && isBoundedPart(rendered.success) ? rendered.success : undefined;
 }
 
-function keyOf(replies: Replies, party: string, sent: DeliveredAs, clock: RenderClock): Result.Result<string, string> {
-  const key = renderedKey(replies, party, sent, clock);
+function keyOf(
+  replies: Replies,
+  asked: AskedRequest,
+  sent: DeliveredAs,
+  clock: RenderClock,
+): Result.Result<string, string> {
+  const key = renderedKey(replies, asked, sent, clock);
   return key === undefined ? Result.fail(unkeyed) : Result.succeed(key);
 }
 
@@ -52,40 +68,37 @@ function repliesReadFor(record: DeliveringRecord): Replies | undefined {
 }
 
 interface KeyedDelivery {
-  readonly record: DeliveringRecord;
+  readonly asked: AskedRequest;
   readonly replies: Replies;
   readonly sent: DeliveredAs;
   readonly key: string;
 }
 
 function placeOf(
-  { record, replies, sent, key }: KeyedDelivery,
+  { asked: { record, input }, replies, sent, key }: KeyedDelivery,
   rendering: CallRendering,
 ): Result.Result<RepliesIn, string> {
-  return Result.mapBoth(readingOf(replies, { to: record.to, sent, key }, rendering), {
+  return Result.mapBoth(readingOf(replies, { to: record.to, sent, key, input }, rendering), {
     onFailure: (failure) => argumentsFailureWords(failure, 'the read'),
     onSuccess: (reading) => ({ server: record.deliver.server, tool: replies.tool, key, reading }),
   });
 }
 
-function keptAs(
-  record: DeliveringRecord,
-  deliveredAs: DeliveredAs,
-  rendering: CallRendering,
-): Result.Result<Kept, string> {
-  const replies = repliesReadFor(record);
+function keptAs(asked: AskedRequest, deliveredAs: DeliveredAs, rendering: CallRendering): Result.Result<Kept, string> {
+  const replies = repliesReadFor(asked.record);
   if (replies === undefined) {
     return Result.succeed({ delivered_as: deliveredAs });
   }
-  return Result.flatMap(keyOf(replies, record.to, deliveredAs, rendering.clock), (key) =>
-    Result.map(placeOf({ record, replies, sent: deliveredAs, key }, rendering), (place) => ({
+  return Result.flatMap(keyOf(replies, asked, deliveredAs, rendering.clock), (key) =>
+    Result.map(placeOf({ asked, replies, sent: deliveredAs, key }, rendering), (place) => ({
       delivered_as: deliveredAs,
       replies_in: place,
     })),
   );
 }
 
-export function keptOf(record: DeliveringRecord, answer: CallAnswer, rendering: CallRendering): Kept {
+export function keptOf(asked: AskedRequest, answer: CallAnswer, rendering: CallRendering): Kept {
+  const { record } = asked;
   const { sent } = record.deliver;
   if (sent === undefined) {
     return {};
@@ -99,7 +112,7 @@ export function keptOf(record: DeliveringRecord, answer: CallAnswer, rendering: 
             conversation: partAt(document, sent.conversation, 'conversation'),
             id: partAt(document, sent.id, 'message'),
           }),
-          (deliveredAs) => keptAs(record, deliveredAs, rendering),
+          (deliveredAs) => keptAs(asked, deliveredAs, rendering),
         );
   return Result.getOrElse(kept, (what) => ({
     detail:

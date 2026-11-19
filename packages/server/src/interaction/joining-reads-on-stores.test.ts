@@ -117,6 +117,7 @@ describe.each(stores)('a conversation read on $store', ({ skipped, aLedger }) =>
       ledger: await aLedger(),
       document: threadDocument({ replies: flatReplies }),
       duringCall: meanwhile.duringCall,
+      savedByAnEarlierRelease: true,
     });
     meanwhile.hold(playbook);
     await playbook.askInThread(first);

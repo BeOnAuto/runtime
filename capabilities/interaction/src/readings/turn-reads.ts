@@ -54,7 +54,12 @@ function readOn(
       return soFar;
     }
     const since = yield* sinceOf(cursors, next);
-    const read = { reading: isLeading(cursors, next) ? undefined : next.reading, request: next.first, since };
+    const read = {
+      reading: isLeading(cursors, next) ? undefined : next.reading,
+      request: next.first,
+      since,
+      namesItsMessage: next.namesItsMessage,
+    };
     const done = yield* readReplies(turn, read, carriedOn(soFar.state));
     const askedToWait = done.answer.retryAfterMs !== null;
     const after = {

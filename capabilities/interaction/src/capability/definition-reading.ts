@@ -8,7 +8,7 @@ import { parseInteractionDocument, type DocumentBounds } from '../document/docum
 import type { InteractionFunctionDefinitionDocument } from '../document/interaction-document.ts';
 import { callCheck } from './call-check.ts';
 import { wayCheck, type WayPorts } from './request-ways.ts';
-import { tellCheck, type TellCheckPorts } from './tell-check.ts';
+import { firstMessageCheck, tellCheck, type TellCheckPorts } from './tell-check.ts';
 
 type RequestBounds = Pick<DocumentBounds, 'mostRequestBytesTo'>;
 
@@ -62,7 +62,10 @@ export function definitionReadingOf(
     check: (document: InteractionFunctionDefinitionDocument, source: string, place: PlaybookAddress) =>
       document.shape === 'call'
         ? calls(document, place)
-        : Effect.andThen(tells(document, place), ways(document, source, place)),
+        : Effect.andThen(
+            firstMessageCheck(document),
+            Effect.andThen(tells(document, place), ways(document, source, place)),
+          ),
     summarize,
   };
 }

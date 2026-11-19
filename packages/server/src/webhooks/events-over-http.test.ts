@@ -121,7 +121,7 @@ describe('a self-hosted runtime that nothing outside can reach', () => {
       () => rooms.chat.posted(),
       (posted) => posted.length > 0,
     );
-    rooms.chat.reply({ channel: theRoom, user: 'ada', text: 'approve' });
+    rooms.chat.reply({ channel: theRoom, user: 'ada', text: 'approve', at: Date.now() / 1000 });
 
     const settled = await server.settled(asked);
     const answer = await server.call('POST', eventsPathOf('alpha', 'rooms'), { body: {} });

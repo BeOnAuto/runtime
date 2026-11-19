@@ -5,7 +5,8 @@ import { Clock, Effect } from 'effect';
 
 import type { KeptRequest } from '../replies/reply-taking.ts';
 import { routeOfRequest } from '../replies/request-routes.ts';
-import { readNamesItsMessage } from './request-readings.ts';
+import { inputsOf, type InputsLedger } from './request-inputs.ts';
+import { readNamesItsMessage, readRequestOf, type RequestInputs } from './request-readings.ts';
 
 export const turnBounds = {
   readsEachTurn: 10,
@@ -24,13 +25,10 @@ export interface ReadingOfATurn {
   readonly namesItsMessage: boolean;
 }
 
-function askedBy(request: KeptRequest, key: string) {
-  return { to: request.row.party, sent: request.sent, key };
-}
-
 interface TurnRendering {
   readonly clock: RenderClock;
   readonly mostRequestBytesTo: ToolAccess['mostRequestBytesTo'];
+  readonly inputs: RequestInputs;
 }
 
 function renderingOf(request: KeptRequest, { clock, mostRequestBytesTo }: TurnRendering) {
@@ -40,9 +38,22 @@ type Requests = readonly [KeptRequest, ...KeptRequest[]];
 
 export type ReadingsOfTheTurn = readonly [ReadingOfATurn, ...ReadingOfATurn[]];
 
+function firstOfEachReading(requests: readonly KeptRequest[]): readonly KeptRequest[] {
+  return requests.filter(
+    (request, index) => requests.findIndex(({ reading }) => reading === request.reading) === index,
+  );
+}
+
+export function inputsOfTheTurn(
+  ledger: InputsLedger,
+  requests: readonly KeptRequest[],
+): Effect.Effect<RequestInputs | undefined> {
+  return inputsOf(ledger, firstOfEachReading(requests));
+}
+
 function readingOfRequests(requests: Requests, key: string, rendering: TurnRendering): ReadingOfATurn {
   const [first] = requests;
-  const asked = askedBy(first, key);
+  const asked = readRequestOf(first, key, rendering.inputs);
   const namesItsMessage = readNamesItsMessage(routeOfRequest(first).replies, asked, renderingOf(first, rendering));
   return { reading: first.reading, first, requests, namesItsMessage };
 }

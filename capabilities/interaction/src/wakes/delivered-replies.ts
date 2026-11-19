@@ -10,9 +10,13 @@ import type { DeliveryParts } from '../schedule/delivery-parts.ts';
 import { answersMarkRefused } from '../tellings/own-messages.ts';
 import { requestsNamed, type NamedRequest, type PlaceOfTheReplies } from './named-requests.ts';
 
-export interface DeliveredReply extends Reply {
+export interface DeliveredReply extends Omit<Reply, 'olderThan'> {
   readonly to: string;
   readonly time: number;
+}
+
+function carriedAlone(reply: DeliveredReply): Reply {
+  return { ...reply, olderThan: [] };
 }
 
 export interface DeliveredReplies extends PlaceOfTheReplies {
@@ -115,7 +119,7 @@ function performedOne(delivery: Delivery, { state, performed }: Pass, reply: Del
     return Effect.succeed({ state, performed: [...performed, { id: reply.id, outcome: 'passed_over' }] });
   }
   return Effect.gen(function* () {
-    const after = yield* replyTaken(intakeOf(delivery, found.request), state, reply);
+    const after = yield* replyTaken(intakeOf(delivery, found.request), state, carriedAlone(reply));
     const one = yield* performedAs(delivery, found.request, reply.id, outcomeOf(state, after));
     return { state: after, performed: [...performed, one] };
   });

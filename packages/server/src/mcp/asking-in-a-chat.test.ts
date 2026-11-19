@@ -147,6 +147,41 @@ describe('episode 9: asked to send the person a draft in the chat and take their
   });
 });
 
+const replacedForTheWholeAnswer: ReadonlyMap<string, string> = new Map([
+  ["  conversation: '{{ sent.conversation }}/{{ sent.id }}'", "  conversation: '{{ input.owner }}/drafts'"],
+  ["    ts: '{{ sent.id }}'", "    owner: '{{ input.owner }}'"],
+  ['    list: /messages', "    list: ''"],
+  [
+    '    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }',
+    '    each: { id: /ts, sender: /user, text: /text, to: /thread_ts, time: /ts }',
+  ],
+]);
+
+const linesOfTheChatFunction = approvingInTheChat.split('\n');
+
+const readingTheWholeAnswer = linesOfTheChatFunction
+  .map((line) => replacedForTheWholeAnswer.get(line) ?? line)
+  .join('\n');
+
+describe('a function whose read takes the whole answer of its reading tool as the list', () => {
+  it('is saved over MCP with the run’s input in its key and in the arguments of its read', async () => {
+    const saved = await meetings.onMcp((session) =>
+      session.callTool('create_definition', {
+        ...inMeetings,
+        type: 'interaction',
+        name: 'approve-draft-by-owner',
+        source: readingTheWholeAnswer,
+        diagram: 'none',
+      }),
+    );
+
+    expect(linesOfTheChatFunction.filter((line) => replacedForTheWholeAnswer.has(line))).toHaveLength(
+      replacedForTheWholeAnswer.size,
+    );
+    expect(saved.isError).not.toBe(true);
+  });
+});
+
 const readingAThread = [
   '---',
   'description: Read the replies of a thread in the team chat, oldest first',

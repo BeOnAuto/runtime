@@ -34,6 +34,7 @@ export interface ChatHarnessOptions {
   readonly conversations?: HarnessOptions['conversations'];
   readonly payloadOffloading?: boolean;
   readonly mostRequestBytes?: number;
+  readonly savedByAnEarlierRelease?: boolean;
 }
 
 export const answererId = 'U024BE7LH';
@@ -52,7 +53,8 @@ export async function chatHarness(options: ChatHarnessOptions = {}): Promise<Cha
   });
   const record = options.recording?.(playbook.record) ?? playbook.record;
   const reads = conversationsDue({ ledger: ledger.service, tools: chat, record });
-  await playbook.define('approve-brief', options.document ?? threadDocument());
+  const saved = options.savedByAnEarlierRelease === true ? playbook.defineAsAnEarlierRelease : playbook.define;
+  await saved('approve-brief', options.document ?? threadDocument());
   return {
     ...playbook,
     chat,

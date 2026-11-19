@@ -24,6 +24,10 @@ export const flatNamingReplies: readonly string[] = flatReplies.map((line) =>
   line === namingNoMessage ? namingTheirMessage : line,
 );
 
+export const timedReplies: readonly string[] = flatReplies.map((line) =>
+  line === namingNoMessage ? '    each: { id: /ts, sender: /user, text: /text, time: /at }' : line,
+);
+
 export const threadOfTheChannelReplies: readonly string[] = threadReplies.filter(
   (line) => !line.startsWith('  conversation:'),
 );
@@ -42,6 +46,20 @@ export const newestFirstReplies: readonly string[] = [
   '    list: /messages',
   '    order: newest_first',
   '    each: { id: /ts, sender: /user, text: /text }',
+  '  tell: none',
+];
+
+export const wholeAnswerReplies: readonly string[] = [
+  'replies:',
+  "  conversation: '{{ input.team }}/{{ input.campaign }}'",
+  '  tool: thread_replies',
+  '  with:',
+  "    channel: '{{ sent.conversation }}'",
+  "    campaign: '{{ input.campaign }}'",
+  '  read:',
+  "    list: ''",
+  '    order: oldest_first',
+  '    each: { id: /ts, sender: /user, text: /text, time: /at }',
   '  tell: none',
 ];
 

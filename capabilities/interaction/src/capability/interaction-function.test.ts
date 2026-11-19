@@ -3,13 +3,16 @@ import { onTheStandingClock } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { threadReplies } from '../testing/documents.ts';
 import {
   approvalDocument,
   chatDelivery,
   fakeTools,
   interactionHarness,
   notificationDocument,
+  threadDocument,
 } from '../testing/index.ts';
+import { flatReplies, timedReplies, wholeAnswerReplies } from '../testing/reading-documents.ts';
 import { describeAnswer, interactionRunWords } from './interaction-words.ts';
 
 describe('the interaction capability', () => {
@@ -168,5 +171,42 @@ describe('the words of an answer', () => {
     const presenters = makeDefinitionPresenters([interactionHarness().capability]);
 
     expect(presenters[0]?.publicNames['run_deferred']).toEqual(['run_deferred', 'interaction_requested']);
+  });
+});
+
+interface SavedShape {
+  readonly shape: string;
+  readonly replies: readonly string[];
+}
+
+const atTheMessages: unknown = expect.stringMatching(/^Line \d+, \/replies\/read\/each: /u);
+
+const savedShapes: readonly SavedShape[] = [
+  { shape: 'a thread read by sent.id', replies: threadReplies },
+  {
+    shape: 'a read listed newest_first that names no message',
+    replies: flatReplies.map((line) => (line === '    order: oldest_first' ? '    order: newest_first' : line)),
+  },
+  { shape: 'a read that gives each.time', replies: timedReplies },
+  { shape: 'a read of the whole answer that gives each.time', replies: wholeAnswerReplies },
+];
+
+describe('a function whose read lists oldest first, names no message of its own and gives no time', () => {
+  it('is refused when saved, at replies.read.each', async () => {
+    const playbook = interactionHarness({ tools: fakeTools() });
+
+    expect(await playbook.define('approve-plan', threadDocument({ replies: flatReplies }))).toMatchObject({
+      status: 'rejected',
+      reason: 'invalid_input',
+      issues: [{ pointer: '/source', detail: atTheMessages }],
+    });
+  });
+
+  it.each(savedShapes)('is saved as $shape', async ({ replies }) => {
+    const playbook = interactionHarness({ tools: fakeTools() });
+
+    expect(await playbook.define('approve-plan', threadDocument({ replies }))).toMatchObject({
+      status: 'succeeded',
+    });
   });
 });

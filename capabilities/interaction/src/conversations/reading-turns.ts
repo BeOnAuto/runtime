@@ -1,13 +1,13 @@
 import { renderClock } from '@on.auto/definitions/template';
 import { Clock, Effect } from 'effect';
 
-import { readingsOfTheTurn, roomForACall, turnBounds } from '../readings/turn-readings.ts';
+import { inputsOfTheTurn, readingsOfTheTurn, roomForACall, turnBounds } from '../readings/turn-readings.ts';
 import { turnRead, type TurnDone } from '../readings/turn-reads.ts';
 import { routeOfRequest } from '../replies/request-routes.ts';
 import { readFloorMsOf } from './cadence.ts';
 import { advanced, cadenceOf, resting, type ConversationParts, type ConversationPlace } from './conversation-parts.ts';
 import { isWoken, type Cadence } from './conversation-rows.ts';
-import { openInConversation, type OpenInConversation } from './open-in-conversation.ts';
+import { endedRequestMessages, openInConversation, type OpenInConversation } from './open-in-conversation.ts';
 import { cadenceAfter } from './read-cadence.ts';
 
 interface ReadEnd {
@@ -56,12 +56,18 @@ export function readNow(parts: ConversationParts, place: ConversationPlace, now:
     if (place.row.reads === 0 && now < firstRead) {
       return yield* advanced(parts, place, { ...cadenceOf(place), open: true, next_read_at: firstRead });
     }
-    const rendering = { clock: yield* renderClock, mostRequestBytesTo: parts.tools.mostRequestBytesTo };
+    const inputs = yield* inputsOfTheTurn(parts.ledger, open.kept);
+    if (inputs === undefined) {
+      return yield* Effect.void;
+    }
+    const rendering = { clock: yield* renderClock, mostRequestBytesTo: parts.tools.mostRequestBytesTo, inputs };
     const readings = readingsOfTheTurn([oldest, ...later], place.row.conversation, rendering);
     const turn = {
       parts,
       place,
       candidates: open.kept,
+      inputs,
+      endedMessages: yield* Effect.cached(endedRequestMessages(parts, place)),
       roomForACall: roomForACall(now),
       heldUntil: now + turnBounds.holdMs,
     };

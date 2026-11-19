@@ -31,7 +31,9 @@ export const toldReading: readonly string[] = [
   "      text: '{{ message }}'",
 ];
 
-export const flatReading: readonly string[] = [...readingOf([], []), '  tell: none'];
+const timed = (line: string) => (line.startsWith('    each:') ? line.replace(' }', ', time: /at }') : line);
+
+export const flatReading: readonly string[] = [...readingOf([], []).map((line) => timed(line)), '  tell: none'];
 
 const ListedSchema = Schema.Struct({
   interactions: Schema.Array(

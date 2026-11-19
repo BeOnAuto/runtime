@@ -4,6 +4,7 @@ export interface ChatMessage {
   readonly user: string;
   readonly text?: string;
   readonly thread_ts?: string;
+  readonly at?: number | undefined;
 }
 
 export interface ChatReply {
@@ -11,6 +12,7 @@ export interface ChatReply {
   readonly thread?: string | undefined;
   readonly user: string;
   readonly text: string;
+  readonly at?: number | undefined;
 }
 
 export interface FakeChat {
@@ -60,8 +62,8 @@ export function fakeChat(echoing?: string): FakeChat {
         (message) => message.channel === argument(input, 'channel') && inThread(message) && Number(message.ts) > oldest,
       );
     },
-    reply: ({ channel, thread, user, text }) =>
-      kept({ ts: nextTs(), channel, user, text, ...threadOf(thread ?? '') }).ts,
+    reply: ({ channel, thread, user, text, at }) =>
+      kept({ ts: nextTs(), channel, user, text, at, ...threadOf(thread ?? '') }).ts,
     posted: () => messages.filter(({ user }) => user === chatBot),
   };
 }

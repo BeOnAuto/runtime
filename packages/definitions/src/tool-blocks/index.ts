@@ -7,6 +7,7 @@ export { isJsonPointer, textAt, valueAt } from './json-pointers.ts';
 export { unrenderableFor, unworkable } from './render-refusals.ts';
 export {
   argumentsFailureWords,
+  isOversized,
   momentVariables,
   renderedArguments,
   smallerInputRemedy,

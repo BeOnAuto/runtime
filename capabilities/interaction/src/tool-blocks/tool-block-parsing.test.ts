@@ -143,6 +143,75 @@ describe('the pointers into what a tool answered', () => {
       `Line 24, /replies/read/each/to: ${pointer}`,
     ]);
   });
+
+  it('take time within each message as a JSON Pointer, and refuse one that is not', () => {
+    const each = '    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }';
+    const timed = (time: string) => replacing(reading, each, `${each.slice(0, -2)}, time: ${time} }`);
+
+    expect([
+      problemsOf(documentOf(delivering, timed('/ts'), answering)),
+      problemsOf(documentOf(delivering, timed('ts'), answering)),
+    ]).toEqual([[], [at('/replies/read/each/time')]]);
+  });
+
+  it('take the empty pointer at replies.read.list alone, where the whole answer is the list', () => {
+    const whole = replacing(reading, '    list: /messages', "    list: ''");
+
+    expect(problemsOf(documentOf(delivering, whole, answering))).toEqual([]);
+  });
+});
+
+const closedInput = [
+  'input:',
+  '  schema:',
+  '    type: object',
+  '    additionalProperties: false',
+  '    required: [campaign, owner]',
+  '    properties:',
+  '      campaign: { type: string }',
+  '      owner: { type: string }',
+];
+
+const keyedByTheConversation = "  conversation: '{{ sent.conversation }}/{{ sent.id }}'";
+
+function readingThe(name: string): readonly string[] {
+  return replacing(
+    replacing(reading, keyedByTheConversation, `  conversation: '{{ input.${name} }}/{{ sent.conversation }}'`),
+    "    ts: '{{ sent.id }}'",
+    `    ts: '{{ input.${name} }}'`,
+  );
+}
+
+function at(place: string): unknown {
+  return expect.stringMatching(new RegExp(`^Line \\d+, ${place}: `, 'u'));
+}
+
+describe('the run’s input in the templates of a reading', () => {
+  it('is read by the key and the arguments of the read, each checked against the input schema', () => {
+    expect([
+      problemsOf(documentOf(delivering, readingThe('campaign'), answering, closedInput)),
+      problemsOf(documentOf(delivering, readingThe('brief'), answering, closedInput)),
+    ]).toEqual([[], [at('/replies/conversation'), at('/replies/with/ts')]]);
+  });
+
+  it('leaves an argument that reads it to the run but for its size, and checks every other argument over a sample reading', () => {
+    const past = `{% for i in (1..1050) %}${'a'.repeat(1000)}{% endfor %}`;
+    const sized = replacing(
+      readingThe('campaign'),
+      "    ts: '{{ input.campaign }}'",
+      `    ts: '${past}{{ input.campaign }}'`,
+    );
+    const unrendered = replacing(
+      readingThe('campaign'),
+      `    oldest: '{{ since | default: "0" }}'`,
+      "    oldest: '{{ 1 | divided_by: 0 }}'",
+    );
+
+    expect([
+      problemsOf(documentOf(delivering, sized, answering, closedInput)),
+      problemsOf(documentOf(delivering, unrendered, answering, closedInput)),
+    ]).toEqual([[at('/replies/with/ts')], [at('/replies/with/oldest')]]);
+  });
 });
 
 const timesAThousand = (times: number) => `'{% for i in (1..${times}) %}${'a'.repeat(1000)}{% endfor %}'`;

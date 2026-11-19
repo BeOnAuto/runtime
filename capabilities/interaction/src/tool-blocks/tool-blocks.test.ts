@@ -183,10 +183,10 @@ describe('the templates of a reading and a telling', () => {
       problemsOf(documentOf(delivering, told, answering)),
     ]).toEqual([
       [
-        'Line 14, /replies/conversation: Reads since, which the conversation key of a reading does not have; it reads to, sent.conversation and sent.id',
+        'Line 14, /replies/conversation: Reads since, which the conversation key of a reading does not have; it reads input, to, sent.conversation and sent.id',
       ],
       [
-        'Line 18, /replies/with/ts: Reads sent.thread, which a template of a reading does not have; it reads to, sent.conversation, sent.id, conversation and since',
+        'Line 18, /replies/with/ts: Reads sent.thread, which a template of a reading does not have; it reads input, to, sent.conversation, sent.id, conversation and since',
       ],
       [
         'Line 30, /replies/tell/with/text: Reads since, which a template of a telling does not have; it reads to, sent.conversation, sent.id, message, reply.id and reply.to',
