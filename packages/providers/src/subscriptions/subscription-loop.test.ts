@@ -144,6 +144,20 @@ describe('a stop between the call and the record', () => {
   });
 });
 
+describe('a round handed a deadline', () => {
+  it('starts no step at or past it, says so, is due again where it stopped, and the next round goes on', async () => {
+    const loop = loopOver([over(byRequest), over(byRequest, 'chat')], [inAlpha, inC0123]);
+    const slow = portsOf(loop, { stepMs: anHour });
+    const acted = async (at: number, deadline?: number) => [await roundAt(slow, at, deadline), loop.app.acts().length];
+
+    expect([await acted(startedAt, startedAt), await acted(startedAt, startedAt + anHour)]).toEqual([
+      [{ nextDueAt: startedAt, deadlineExceeded: true }, 0],
+      [{ nextDueAt: startedAt + anHour, deadlineExceeded: true }, 1],
+    ]);
+    expect(await acted(startedAt + 2 * anHour)).toEqual([{}, 2]);
+  });
+});
+
 describe('askers', () => {
   it('two that ask for one topic share one subscription, which stays while either asks and goes after the last', async () => {
     const loop = loopOver([over(byRequest)], [inAlpha], [inAlpha]);

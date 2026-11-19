@@ -159,6 +159,17 @@ export interface Runtime {
   readonly receives?: readonly Destination['type'][];
   readonly callbacks?: Partial<Readonly<Record<Receiving, string>>>;
   readonly mostPerConnection?: number;
+  readonly stepMs?: number;
+}
+
+function takingAStep(records: SubscriptionRecords, stepMs: number | undefined): SubscriptionRecords {
+  return stepMs === undefined
+    ? records
+    : {
+        ...records,
+        moved: (playbook, key, positions) =>
+          Effect.andThen(records.moved(playbook, key, positions), TestClock.adjust(stepMs)),
+      };
 }
 
 export interface Loop {
@@ -184,9 +195,12 @@ export function loopOver(
 
 export const startedAt = Date.parse('2026-10-07T09:00:00.000Z');
 
-export function roundAt(ports: SubscriptionLoopPorts, time: number): Promise<Reconciled> {
+export function roundAt(ports: SubscriptionLoopPorts, time: number, deadline?: number): Promise<Reconciled> {
   return Effect.runPromise(
-    TestClock.setTime(time).pipe(Effect.andThen(subscriptionLoopOf(ports)(alpha)), Effect.provide(TestClock.layer())),
+    TestClock.setTime(time).pipe(
+      Effect.andThen(subscriptionLoopOf(ports)(alpha, deadline)),
+      Effect.provide(TestClock.layer()),
+    ),
   );
 }
 
@@ -198,7 +212,7 @@ export function portsOf(loop: Loop, runtime: Runtime): SubscriptionLoopPorts {
     connectionsOf: () => Effect.sync(loop.connections.now),
     receives: (type) => receives.includes(type),
     askers: loop.askers.map((asked) => askerOf(asked)),
-    records: loop.records.records,
+    records: takingAStep(loop.records.records, runtime.stepMs),
     secrets: loop.secrets.secrets,
     mostPerConnection: runtime.mostPerConnection ?? 8,
   };

@@ -86,24 +86,30 @@ describe('the playbooks whose subscriptions are due to be reconciled', () => {
 });
 
 describe('a round of the subscriptions of a playbook', () => {
-  it('runs the loop for the playbook, then sets it due at the time the loop answers, by the resync period after the round at the latest', async () => {
+  it('runs the loop for the playbook with the deadline it is handed, then sets it due at the time the loop answers, by the resync period after the round at the latest, and answers what the loop answered', async () => {
     const { ledger, records } = recordsOver();
     await at(nine, records.made(alpha, chat, made));
     await at(nine, records.made(beta, chat, made));
-    const looped: PlaybookAddress[] = [];
+    const looped: (readonly [PlaybookAddress, number | undefined])[] = [];
     const answering = (reconciled: Reconciled) =>
       subscriptionRoundOf({
-        loop: (playbook) =>
+        loop: (playbook, deadline) =>
           Effect.sync(() => {
-            looped.push(playbook);
+            looped.push([playbook, deadline]);
             return reconciled;
           }),
         ledger,
       });
-    await run(answering({ nextDueAt: nine + 30 * minute })(alpha, nine));
-    await run(answering({})(beta, nine + minute));
+    const answered = [
+      await run(answering({ nextDueAt: nine + 30 * minute })(alpha, nine)),
+      await run(answering({})(beta, nine + minute, nine + 9 * minute)),
+    ];
 
-    expect(looped).toEqual([alpha, beta]);
+    expect(looped).toEqual([
+      [alpha, undefined],
+      [beta, nine + 9 * minute],
+    ]);
+    expect(answered).toEqual([{ nextDueAt: nine + 30 * minute }, {}]);
     expect(await run(reconcileDueAfter(ledger, nine))).toBe(nine + 30 * minute);
     expect(await run(reconcileDueAfter(ledger, nine + 30 * minute))).toBe(nine + minute + resyncedAfterMs);
   });

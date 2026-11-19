@@ -60,14 +60,14 @@ export function reconcileDueSet(
 }
 
 interface RoundParts {
-  readonly loop: (playbook: PlaybookAddress) => Effect.Effect<Reconciled>;
+  readonly loop: (playbook: PlaybookAddress, deadline?: number) => Effect.Effect<Reconciled>;
   readonly ledger: SubscriptionLedger;
 }
 
 export function subscriptionRoundOf({
   loop,
   ledger,
-}: RoundParts): (playbook: PlaybookAddress, now: number) => Effect.Effect<void> {
-  return (playbook, now) =>
-    Effect.flatMap(loop(playbook), ({ nextDueAt }) => reconcileDueSet(ledger, playbook, now, nextDueAt));
+}: RoundParts): (playbook: PlaybookAddress, now: number, deadline?: number) => Effect.Effect<Reconciled> {
+  return (playbook, now, deadline) =>
+    Effect.tap(loop(playbook, deadline), ({ nextDueAt }) => reconcileDueSet(ledger, playbook, now, nextDueAt));
 }

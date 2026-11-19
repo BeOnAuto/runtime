@@ -149,4 +149,5 @@ export interface SubscriptionLoopPorts extends SubscriptionPorts {
 
 export interface Reconciled {
   readonly nextDueAt?: number;
+  readonly deadlineExceeded?: true;
 }

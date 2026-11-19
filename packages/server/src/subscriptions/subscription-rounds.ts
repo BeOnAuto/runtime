@@ -7,6 +7,7 @@ import {
   type ProjectionReader,
   type RecordedEvent,
 } from '@on.auto/operations';
+import type { Reconciled } from '@on.auto/providers';
 import type { Consumer, DueItem, DueWork } from '@on.auto/workflow-host';
 import { Effect, Option } from 'effect';
 
@@ -15,7 +16,7 @@ const subscriptionRoundsName = 'the subscriptions of the playbooks';
 const runEndings: readonly string[] = ['run_succeeded', 'run_rejected', 'run_failed'];
 
 interface RoundsParts {
-  readonly round: (playbook: PlaybookAddress, now: number) => Effect.Effect<void>;
+  readonly round: (playbook: PlaybookAddress, now: number) => Effect.Effect<Reconciled>;
   readonly ledger: DueLedger & Pick<ProjectionReader, 'readProjectedRows'>;
   readonly arrangesAWay: boolean;
 }
