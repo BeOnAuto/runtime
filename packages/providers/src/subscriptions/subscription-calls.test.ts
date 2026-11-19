@@ -20,6 +20,7 @@ import {
 } from '../testing/subscription-services.ts';
 import { subscriptionCallsOf } from './subscription-calls.ts';
 import type { HeldSubscription } from './subscription-ports.ts';
+import { topicOf } from './subscription-topics.ts';
 
 const at = '2026-10-07T09:00:00.000Z';
 
@@ -259,5 +260,25 @@ describe('the names a call reads', () => {
       { named: `alpha sub-1 ${at} 259200 ${threeDaysLater}` },
       { named: `alpha sub-1 ${at}` },
     ]);
+  });
+});
+
+describe('the topic of a request', () => {
+  const placed = { with: { project: 'site', owner: 'acme' }, sent: { conversation: 'C0123', id: '1699.1' } };
+
+  const perSubscription = destinationOf(ofEachSubscription);
+
+  const renderedOf = (topic: string) => Effect.runPromise(topicOf({ ...perSubscription, topic }, placed));
+
+  it('is its destination’s topic, rendered over the arguments of the call that delivered it and where it was sent', async () => {
+    expect(await renderedOf('{{ with.owner }}/{{ with.project }}')).toBe('acme/site');
+    expect(await renderedOf('{{ sent.conversation }}:{{ sent.id }}')).toBe('C0123:1699.1');
+  });
+
+  it('is none where the destination declares no topic, the template does not render, or renders nothing or too much', async () => {
+    expect(await Effect.runPromise(topicOf(destinationOf(overASocket, 'websocket'), placed))).toBeUndefined();
+    expect(await renderedOf('{{ with.project')).toBeUndefined();
+    expect(await renderedOf('{{ with.missing }}')).toBeUndefined();
+    expect(await renderedOf(`{{ with.project }}${'x'.repeat(300)}`)).toBeUndefined();
   });
 });

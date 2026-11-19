@@ -94,6 +94,7 @@ export { factReaderOf, factTypesOf, type FactReader } from './fact-shapes/fact-r
 export {
   ActedContextSchema,
   ActedOnRunContextSchema,
+  BoundedPart,
   CalledBySchema,
   ContextReference,
   ContextSchema,
@@ -108,6 +109,7 @@ export {
   recordedCallerOf,
   forbiddenCharactersInWords,
   holdsNoForbiddenCharacter,
+  isBoundedPart,
   leastCount,
   mostReferenceBytes,
   type ActedContext,

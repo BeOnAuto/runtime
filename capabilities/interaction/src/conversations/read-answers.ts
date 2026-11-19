@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 
 import { textAt, valueAt } from '@on.auto/definitions/tool-blocks';
+import { isBoundedPart } from '@on.auto/operations';
 import {
   answerDocument,
   toolBounds,
@@ -10,7 +11,6 @@ import {
   type UnopenedOnce,
 } from '@on.auto/tool-servers';
 
-import { isBoundedPart } from '../delivery/sent-messages.ts';
 import type { Reply } from '../replies/reply-taking.ts';
 import type { Replies } from '../tool-blocks/tool-block-schemas.ts';
 

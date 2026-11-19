@@ -24,7 +24,7 @@ export interface ConnectionRequest extends DeclaredRequest {
 export type RequestedOnce =
   | { readonly kind: 'unopened'; readonly because: NotOfferedBecause | UnavailableBecause | 'too_large' }
   | { readonly kind: 'answered'; readonly outcome: 'result'; readonly answer?: Schema.Json }
-  | { readonly kind: 'answered'; readonly outcome: 'tool_error' | 'timed_out' | 'too_large' }
+  | { readonly kind: 'answered'; readonly outcome: 'tool_error' | 'not_found' | 'timed_out' | 'too_large' }
   | { readonly kind: 'answered'; readonly outcome: 'server_failure'; readonly because: UnavailableBecause };
 
 export type Unopened = Extract<RequestedOnce, { readonly kind: 'unopened' }>;

@@ -7,6 +7,7 @@ import { ofEachSubscription } from './event-destinations.ts';
 import { providerOf, tracker } from './fixture-providers.ts';
 import {
   answeredWith,
+  failedAs,
   notOfferedAs,
   refusedByTheTool,
   requestedWith,
@@ -35,20 +36,33 @@ export const answeringItsSecret = {
   filter: { when: { '$request.header.X-Board-Event': ['card'] }, subscription: '$request.header.X-Board-Hook' },
 };
 
-export type Failing = 'connection_broken' | 'scope_lacking' | 'tool_error' | 'unreachable';
+export type Failing =
+  | 'connection_broken'
+  | 'scope_lacking'
+  | 'tool_error'
+  | 'not_found'
+  | 'unreachable'
+  | 'rate_limited'
+  | 'timed_out';
 
 const failedRequests: Readonly<Record<Failing, RequestedOnce>> = {
   connection_broken: { kind: 'unopened', because: 'connection_broken' },
   scope_lacking: { kind: 'answered', outcome: 'server_failure', because: 'scope_lacking' },
   tool_error: { kind: 'answered', outcome: 'tool_error' },
+  not_found: { kind: 'answered', outcome: 'not_found' },
   unreachable: { kind: 'answered', outcome: 'server_failure', because: 'unreachable' },
+  rate_limited: { kind: 'answered', outcome: 'server_failure', because: 'rate_limited' },
+  timed_out: { kind: 'answered', outcome: 'timed_out' },
 };
 
 const failedCalls: Readonly<Record<Failing, CalledOnce>> = {
   connection_broken: notOfferedAs('connection_broken'),
   scope_lacking: serverFailureAs('scope_lacking'),
   tool_error: refusedByTheTool(''),
+  not_found: refusedByTheTool(''),
   unreachable: serverFailureAs('unreachable'),
+  rate_limited: serverFailureAs('rate_limited'),
+  timed_out: failedAs('timed_out'),
 };
 
 interface AtTheApp {

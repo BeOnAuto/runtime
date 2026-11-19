@@ -1,0 +1,15 @@
+{
+  "type": "event_subscription_made",
+  "data": {
+    "connection": "chat",
+    "topic": "C0123",
+    "type": "webhook",
+    "id": "subscription-1",
+    "secret_id": "secret-1",
+    "declared": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "context": {
+    "at": "2026-11-18T09:00:00.000Z",
+    "by": "runtime"
+  }
+}

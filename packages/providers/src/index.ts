@@ -77,8 +77,12 @@ export {
 export { requestOriginsOf } from './events/event-destinations.ts';
 export { subscriptionCallsOf } from './subscriptions/subscription-calls.ts';
 export { subscriptionLoopOf } from './subscriptions/subscription-loop.ts';
+export { topicOf } from './subscriptions/subscription-topics.ts';
+export { resyncedAfterMs } from './subscriptions/subscription-records.ts';
 export {
   SubscriptionCallFailed,
+  SubscriptionFailedBecauseSchema,
+  SubscriptionFailureKindSchema,
   type SubscriptionFailedBecause,
   type SubscriptionFailureKind,
 } from './subscriptions/subscription-failed.ts';

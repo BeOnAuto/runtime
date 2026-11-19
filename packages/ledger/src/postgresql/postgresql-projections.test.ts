@@ -243,6 +243,20 @@ describe('the counts and due times of a projection on PostgreSQL', () => {
     ]);
   });
 
+  it('read, where asked, only a row due with none sooner of its playbook, binding the time each place it is read', async () => {
+    const { query, asked } = answering([stored]);
+    const firstOfEach = { column: 'due_at', through: 70_000, limit: 256, onePerPlaybook: true };
+
+    await Effect.runPromise(readerOf(query).readDueRows('run_tallies', firstOfEach));
+
+    expect(asked).toEqual([
+      {
+        text: 'SELECT playbook_key, row_key, fn, began_at::float8 AS began_at, status, facts::float8 AS facts, open, due_at::float8 AS due_at, last_message, (SELECT n.playbook_key FROM definition_names_1 AS n WHERE n.definition_key = t.playbook_key) AS placed_in FROM run_tallies_2 AS t WHERE due_at IS NOT NULL AND due_at <= $1 AND NOT EXISTS (SELECT 1 FROM run_tallies_2 AS s WHERE s.playbook_key = t.playbook_key AND s.due_at IS NOT NULL AND s.due_at <= $2 AND (s.due_at, s.row_key) < (t.due_at, t.row_key)) ORDER BY due_at, playbook_key, row_key LIMIT $3',
+        values: [70_000, 70_000, 256],
+      },
+    ]);
+  });
+
   it('fail for a column the projection does not have', async () => {
     const { query } = answering([]);
 

@@ -40,3 +40,16 @@ export {
   type SigningKeysOf,
   type SigningReading,
 } from './signing/signing-keys.ts';
+export { EventSubscriptionEventSchema } from './subscriptions/subscription-facts.ts';
+export { eventSubscriptions } from './subscriptions/subscription-rows.ts';
+export { subscriptionRecordsOf, type SubscriptionLedger } from './subscriptions/subscription-records.ts';
+export { subscriptionSecretsOf } from './subscriptions/subscription-secrets.ts';
+export { loopConnectionsOf } from './subscriptions/loop-connections.ts';
+export {
+  holdsASubscription,
+  playbooksDueOf,
+  reconcileDueAfter,
+  reconcileDueSet,
+  type DueLedger,
+} from './subscriptions/subscription-schedule.ts';
+export { subscriptionLayoutSteps } from './subscriptions/subscription-layout.ts';

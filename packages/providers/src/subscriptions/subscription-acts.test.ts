@@ -13,6 +13,7 @@ import {
 } from '../testing/subscription-apps.ts';
 import { inMemoryRecords, loopOver, portsOf, roundAt, startedAt, type Loop } from '../testing/subscription-loops.ts';
 import type { SubscriptionKey } from './subscription-ports.ts';
+import { resyncedAfterMs } from './subscription-records.ts';
 
 const connected = '2026-10-01T08:00:00.000Z';
 
@@ -211,6 +212,37 @@ describe('a failure that passes', () => {
 
     expect(loop.app.acts()).toEqual(['subscribe', 'renew', 'renew', 'unsubscribe', 'unsubscribe']);
     expect(loop.records.facts().map(({ type }) => type)).toEqual(['made', 'removed']);
+  });
+
+  it('is recorded once while its reason changes from one try to the next', async () => {
+    const loop = loopThrough(ofEachSubscription);
+    const ports = portsOf(loop, {});
+    loop.app.fails('unreachable', 1);
+    loop.app.fails('rate_limited', 1);
+    loop.app.fails('unreachable', 1);
+    const { nextDueAt: first = 0 } = await roundAt(ports, startedAt);
+    const { nextDueAt: second = 0 } = await roundAt(ports, first);
+    await roundAt(ports, second);
+
+    expect(loop.app.acts()).toEqual(['subscribe', 'subscribe', 'subscribe']);
+    expect(loop.records.facts()).toMatchObject([{ type: 'failed', failed: { kind: 'unreachable' } }]);
+  });
+});
+
+describe('a subscribe sent and not answered in time, which the app may have made', () => {
+  it('is tried again only after the resync period, where its method makes a new subscription', async () => {
+    const loop = loopThrough(ofEachSubscription);
+    loop.app.fails('timed_out', 1);
+
+    expect(await roundAt(portsOf(loop, {}), startedAt)).toEqual({ nextDueAt: startedAt + resyncedAfterMs });
+  });
+
+  it('is tried again after the usual wait, where its method is idempotent', async () => {
+    const loop = loopThrough({ ...ofEachSubscription, subscribe: { ...ofEachSubscription.subscribe, method: 'PUT' } });
+    loop.app.fails('timed_out', 1);
+    const { nextDueAt: retryAt = 0 } = await roundAt(portsOf(loop, {}), startedAt);
+
+    expect(retryAt - startedAt).toBeLessThanOrEqual(socketBackoff.firstWaitMs * (1 + socketBackoff.spread));
   });
 });
 

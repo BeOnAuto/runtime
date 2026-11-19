@@ -1,3 +1,3 @@
-export const ledgerLayout = 27;
+export const ledgerLayout = 28;
 
 export const ledgerLayoutFloor = 27;

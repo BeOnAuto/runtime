@@ -14,6 +14,7 @@ import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { comparedRowsBehaviour } from './compared-rows-behaviour.ts';
+import { dueRowsBehaviour } from './due-rows-behaviour.ts';
 import { orgProjectionsBehaviour } from './org-projections-behaviour.ts';
 
 type AnyLedger = Ledger['Service'];
@@ -131,34 +132,6 @@ function rowsOfAPlaybook(open: ProjectingLedger): void {
 
       expect(await runsOf(ledger, { ...byDue, order: 'asc' })).toEqual(['r2', 'r1']);
       expect(await runsOf(ledger, { ...byDue, order: 'desc' })).toEqual(['r1', 'r2']);
-    });
-  });
-}
-
-function dueRows(open: ProjectingLedger): void {
-  describe('a read of the rows due by a time', () => {
-    it('reads the rows of every playbook whose time is set and has come, none outside them, the soonest first, and the next time', async () => {
-      const ledger = await open([runTallyRows]);
-      await noting(ledger, 'playbook/acme/alpha/runs/r1', began('triage', 2));
-      await noting(ledger, 'playbook/globex/gamma/runs/r2', began('triage', 0));
-      await noting(ledger, 'playbook/acme/beta/runs/r3', began('triage', 1), ended);
-      await noting(ledger, 'org/acme/alpha/runs/r4', began('triage', 0));
-      const due = async (through: number, limit = 10) =>
-        (await Effect.runPromise(ledger.readDueRows('run_tallies', { column: 'due_at', through, limit }))).map(
-          ({ org, playbook, key }) => [org, playbook, key],
-        );
-
-      expect(await due(nine + 3 * minute)).toEqual([
-        ['globex', 'gamma', 'r2'],
-        ['acme', 'alpha', 'r1'],
-      ]);
-      expect(await due(nine + tallyDueAfterMs)).toEqual([['globex', 'gamma', 'r2']]);
-      expect(await due(nine + 3 * minute, 1)).toEqual([['globex', 'gamma', 'r2']]);
-      expect(await due(nine)).toEqual([]);
-      expect(await Effect.runPromise(ledger.nextDueOf('run_tallies', 'due_at', 0))).toBe(nine + tallyDueAfterMs);
-      expect(await Effect.runPromise(ledger.nextDueOf('run_tallies', 'due_at', nine + tallyDueAfterMs))).toBe(
-        nine + 3 * minute,
-      );
     });
   });
 }
@@ -285,7 +258,7 @@ export function projectionsBehaviour(open: ProjectingLedger): void {
   rowsKept(open);
   rowsOfAPlaybook(open);
   comparedRowsBehaviour(open);
-  dueRows(open);
+  dueRowsBehaviour(open);
   rowsKeyedByTheirMapping(open);
   rowsAdvanced(open);
   rowsAdvancedWhileUnchanged(open);

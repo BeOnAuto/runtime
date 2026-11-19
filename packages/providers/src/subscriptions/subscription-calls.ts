@@ -30,6 +30,10 @@ interface Sending {
 
 const millisOfASecond = 1000;
 
+function isNotThere({ because }: Pick<SubscriptionCallFailed, 'because'>): boolean {
+  return because === 'not_found';
+}
+
 function isWrittenAt(written: string, rendered: Schema.Json | undefined): rendered is string {
   const before = URL.parse(written);
   const after = typeof rendered === 'string' ? URL.parse(rendered) : null;
@@ -143,7 +147,10 @@ export function subscriptionCallsOf(ports: SubscriptionPorts): SubscriptionCalls
     },
     unsubscribe: ({ destination, place, topic, subscription }) => {
       const variables = { topic, ...heldIn(subscription) };
-      return Effect.asVoid(sentThrough(ports, { place, call: destination.unsubscribe, variables }));
+      return sentThrough(ports, { place, call: destination.unsubscribe, variables }).pipe(
+        Effect.asVoid,
+        Effect.catchIf(isNotThere, () => Effect.void),
+      );
     },
   };
 }

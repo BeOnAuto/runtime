@@ -1,5 +1,6 @@
 import { roleAssignmentRows } from '@on.auto/access-control';
 import { activityProjections } from '@on.auto/activity';
+import { eventSubscriptions } from '@on.auto/connections';
 import { definitionsReadModel } from '@on.auto/definitions';
 import { assets, assetTotals, generationsWaiting } from '@on.auto/generation';
 import { goalsLedger } from '@on.auto/goals';
@@ -18,4 +19,5 @@ export const keptProjections: readonly KeptProjection[] = [
   ...goalsLedger.projections,
   roleAssignmentRows,
   ...definitionsReadModel,
+  eventSubscriptions,
 ];

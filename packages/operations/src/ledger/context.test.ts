@@ -12,6 +12,7 @@ import {
   StartingTriggerSchema,
   bytesOfReference,
   checkedContext,
+  isBoundedPart,
   contextOf,
   holdsNoForbiddenCharacter,
   leastCount,
@@ -176,5 +177,13 @@ describe('the kinds of trigger that start a run', () => {
     expect(
       Result.isFailure(Schema.decodeUnknownResult(StartingTriggerSchema)({ kind: 'client', reference: '/a' })),
     ).toBe(true);
+  });
+});
+
+describe('a part that names a thing outside, such as a message, a conversation or a subscription', () => {
+  it('is some text of at most 256 bytes with no forbidden character', () => {
+    expect(
+      ['C0123', 'é'.repeat(128), '', 'é'.repeat(129), 'C\u0000', 'C\uD800'].map((part) => isBoundedPart(part)),
+    ).toEqual([true, true, false, false, false, false]);
   });
 });

@@ -1,5 +1,6 @@
 import { textAt } from '@on.auto/definitions/tool-blocks';
 import {
+  isBoundedPart,
   messageIdOf,
   playbookCallerOf,
   randomUUIDv7,
@@ -23,7 +24,6 @@ import {
 import { conversationCallIdKey } from '@on.auto/tool-servers/policy';
 import { DateTime, Effect } from 'effect';
 
-import { isBoundedPart } from '../delivery/sent-messages.ts';
 import type { TellingCall } from './telling-calls.ts';
 
 export interface Telling {

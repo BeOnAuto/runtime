@@ -146,12 +146,20 @@ function rowsUnder(reading: Reading, projection: KeptProjection, address: RowsAd
   return rowsRead(reading, projection, filter, SQL`${orderOf(projection, query)} LIMIT ${query.limit}`);
 }
 
-function dueRows(reading: Reading, projection: KeptProjection, { column, through, limit }: DueRowsQuery) {
+function noSoonerInItsPlaybook(projection: KeptProjection, due: string, through: number): SQL {
+  const ordered = [due, ...keyColumnsOf(projection).slice(1)];
+  const of = (table: string) => ordered.map((column) => `${table}.${column}`).join(', ');
+  return SQL` AND NOT EXISTS (SELECT 1 FROM ${tableOf(projection)} AS s WHERE s.playbook_key = t.playbook_key AND s.${SQL.plain(due)} IS NOT NULL AND s.${SQL.plain(due)} <= ${through} AND (${SQL.plain(of('s'))}) < (${SQL.plain(of('t'))}))`;
+}
+
+function dueRows(reading: Reading, projection: KeptProjection, query: DueRowsQuery) {
+  const { column, through, limit, onePerPlaybook = false } = query;
   const due = columnOf(projection, column);
+  const firstOfEach = onePerPlaybook ? noSoonerInItsPlaybook(projection, due, through) : SQL.EMPTY;
   return rowsRead(
     reading,
     projection,
-    SQL`${SQL.plain(due)} IS NOT NULL AND ${SQL.plain(due)} <= ${through}`,
+    SQL`${SQL.plain(due)} IS NOT NULL AND ${SQL.plain(due)} <= ${through}${firstOfEach}`,
     SQL`${SQL.plain(due)}, playbook_key, row_key LIMIT ${limit}`,
   );
 }

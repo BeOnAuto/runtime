@@ -9,8 +9,16 @@ import { refusalOf } from '../openapi/failure-codes.ts';
 
 export type RequestSettled =
   | { readonly outcome: 'result'; readonly answer?: Schema.Json }
-  | { readonly outcome: 'tool_error' | 'too_large' }
+  | { readonly outcome: 'tool_error' | 'not_found' | 'too_large' }
   | { readonly error: unknown };
+
+const notFound = 404;
+
+const gone = 410;
+
+function isNotThere(status: number): boolean {
+  return status === notFound || status === gone;
+}
 
 function readFrom(response: Readonly<Response>, text: string): RequestSettled {
   const { status } = response;
@@ -18,6 +26,9 @@ function readFrom(response: Readonly<Response>, text: string): RequestSettled {
   const refused = refusalOf({ status, text, challenge, json: undefined }, null);
   if (refused !== undefined) {
     return { error: refused.error };
+  }
+  if (isNotThere(status)) {
+    return { outcome: 'not_found' };
   }
   if (status >= 300) {
     return { outcome: 'tool_error' };

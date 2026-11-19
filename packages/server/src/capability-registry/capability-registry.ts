@@ -1,7 +1,7 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
 import type { ModelAccess, ModelTelemetry } from '@on.auto/reasoning';
-import type { ToolAccess, ToolServerDocumentRefused } from '@on.auto/tool-servers';
+import type { ToolServerDocumentRefused } from '@on.auto/tool-servers';
 import { Effect, type Layer, type Scope } from 'effect';
 
 import { processesServedBy, type ServedProcesses } from '../composition/served-processes.ts';
@@ -9,6 +9,7 @@ import { ComposedModels, modelsComposedBy, type ModelAccessOf } from '../composi
 import {
   ComposedTools,
   toolsComposedBy,
+  type MadeToolAccess,
   type ServedConnections,
   type ToolAccessWiring,
 } from '../composition/served-tool-access.ts';
@@ -18,7 +19,7 @@ import { composedOnFirstUse, scopeOfTheRuntime } from './first-use.ts';
 export interface CapabilityRegistry {
   readonly models: Effect.Effect<ModelAccess>;
   readonly modelTelemetry: ModelTelemetry | undefined;
-  readonly tools: Effect.Effect<ToolAccess, ToolServerDocumentRefused>;
+  readonly tools: Effect.Effect<MadeToolAccess, ToolServerDocumentRefused>;
   readonly processes: ServedProcesses;
 }
 

@@ -108,6 +108,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       ...wiring,
       registry,
       connections: source,
+      secrets: stores.secrets,
       offering,
       computation: made.computation,
       prediction: made.prediction,

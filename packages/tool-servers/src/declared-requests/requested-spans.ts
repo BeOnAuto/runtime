@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import { Context, Effect, Tracer } from 'effect';
 
 import type { DeclaredRequest, RequestedOnce } from './declared-requests.ts';
 
@@ -20,11 +20,14 @@ function endingOf(once: RequestedOnce): Readonly<Record<string, string>> {
   return once.outcome === 'result' ? {} : { 'error.type': once.outcome };
 }
 
+const unpropagated = { annotations: Context.make(Tracer.DisablePropagation, true) };
+
 export function tracedRequest(
   { method, url }: DeclaredRequest,
   requesting: Effect.Effect<RequestedOnce>,
 ): Effect.Effect<RequestedOnce> {
   return requesting.pipe(
+    Effect.withSpan(`${method} sent`, unpropagated),
     Effect.tap((once) => Effect.annotateCurrentSpan(endingOf(once))),
     Effect.withSpan(method, { kind: 'client', attributes: { 'http.request.method': method, ...originOf(url) } }),
   );

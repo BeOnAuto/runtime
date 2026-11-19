@@ -81,8 +81,11 @@ describe('a read of the rows of a projection in the in-memory ledger', () => {
     await noting(ledger, 'playbook/globex/gamma/runs/r2', began('triage', 0));
     await noting(ledger, 'playbook/acme/beta/runs/r3', began('triage', 1), ended);
     await noting(ledger, 'org/acme/alpha/runs/r4', began('triage', 0));
-    const due = (through: number, limit = 10) =>
-      Effect.runPromise(ledger.service.readDueRows('run_tallies', { column: 'due_at', through, limit }));
+    await noting(ledger, 'playbook/acme/alpha/runs/r5', began('triage', 3));
+    const due = (through: number, limit = 10, onePerPlaybook = false) =>
+      Effect.runPromise(
+        ledger.service.readDueRows('run_tallies', { column: 'due_at', through, limit, onePerPlaybook }),
+      );
 
     expect((await due(nine + 3 * 60_000)).map(({ org, playbook, key }) => [org, playbook, key])).toEqual([
       ['globex', 'gamma', 'r2'],
@@ -90,11 +93,12 @@ describe('a read of the rows of a projection in the in-memory ledger', () => {
     ]);
     expect((await due(nine + tallyDueAfterMs)).map(({ key }) => key)).toEqual(['r2']);
     expect((await due(nine + 3 * 60_000, 1)).map(({ key }) => key)).toEqual(['r2']);
+    expect((await due(nine + 4 * 60_000, 10, true)).map(({ key }) => key)).toEqual(['r2', 'r1']);
     expect(await Effect.runPromise(ledger.service.nextDueOf('run_tallies', 'due_at', 0))).toBe(nine + tallyDueAfterMs);
     expect(await Effect.runPromise(ledger.service.nextDueOf('run_tallies', 'due_at', nine + tallyDueAfterMs))).toBe(
       nine + 3 * 60_000,
     );
-    expect(await Effect.runPromise(ledger.service.nextDueOf('run_tallies', 'due_at', nine + 3 * 60_000))).toBeNull();
+    expect(await Effect.runPromise(ledger.service.nextDueOf('run_tallies', 'due_at', nine + 4 * 60_000))).toBeNull();
     expect(await Effect.runPromise(ledger.service.nextDueOf('nothing', 'due_at', 0))).toBeNull();
   });
 });

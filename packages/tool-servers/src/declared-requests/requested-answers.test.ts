@@ -62,7 +62,7 @@ describe('what a request answered', () => {
     expect([
       await answeredWith(answeredEmpty(403, lacking)),
       await answeredWith(answeredJson(403, { message: 'forbidden' })),
-      await answeredWith(answeredJson(404, { message: 'no such hook' })),
+      await answeredWith(answeredJson(422, { message: 'invalid' })),
       await answeredWith(answeredEmpty(429, { 'retry-after': '30' })),
       await answeredWith(answeredJson(503, { message: 'down' })),
     ]).toEqual([
@@ -91,6 +91,18 @@ describe('what a request answered', () => {
       outcome: 'server_failure',
       because: 'unreachable',
     });
+  });
+});
+
+describe('a request answered that what it names is not there', () => {
+  it('is not found, by HTTP’s own 404 Not Found and 410 Gone, whatever the service wrote', async () => {
+    expect([
+      await answeredWith(answeredJson(404, { message: 'no such hook' })),
+      await answeredWith(answeredEmpty(410)),
+    ]).toEqual([
+      { kind: 'answered', outcome: 'not_found' },
+      { kind: 'answered', outcome: 'not_found' },
+    ]);
   });
 });
 

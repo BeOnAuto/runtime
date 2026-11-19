@@ -1,23 +1,15 @@
-import { Buffer } from 'node:buffer';
-
-import { refusingForbiddenCharacters } from '@on.auto/definitions';
 import { parsedTemplate, type RenderClock } from '@on.auto/definitions/template';
 import { argumentsFailureWords, renderedText, textAt, toolBlockEngine } from '@on.auto/definitions/tool-blocks';
+import { isBoundedPart, mostReferenceBytes } from '@on.auto/operations';
 import { answerDocument, type CallAnswer } from '@on.auto/tool-servers';
-import { Result, Schema } from 'effect';
+import { Result, type Schema } from 'effect';
 
 import type { CallRendering } from '../readings/call-rendering.ts';
 import { readingOf } from '../readings/request-readings.ts';
 import type { DeliveringRecord } from '../run/request-record.ts';
 import type { DeliveredAs, Replies, RepliesIn } from '../tool-blocks/tool-block-schemas.ts';
 
-const sentBounds = { partBytes: 256 } as const;
-
-const isPartText = Schema.is(Schema.String.check(refusingForbiddenCharacters));
-
-export function isBoundedPart(part: string): boolean {
-  return part !== '' && Buffer.byteLength(part, 'utf8') <= sentBounds.partBytes && isPartText(part);
-}
+const sentBounds = { partBytes: mostReferenceBytes } as const;
 
 export interface Kept {
   readonly delivered_as?: DeliveredAs;

@@ -1,5 +1,5 @@
 import type { RequestedOnce } from '@on.auto/tool-servers';
-import { Effect, Result } from 'effect';
+import { Effect, Redacted, Result } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
@@ -20,6 +20,18 @@ import type { SubscriptionFailureKind } from './subscription-failed.ts';
 const byRequest = destinationOf(ofEachSubscription);
 
 const byTool = destinationOf(intoAQueue, 'queue');
+
+function subscribedThrough(service: FakeService) {
+  const declaring = { ...byRequest, subscribe: declared(byRequest.subscribe) };
+  const madeSecret = Effect.succeed(Redacted.make('made-by-auto-5c1e'));
+  const subscribed = subscriptionCallsOf(service.ports).subscribe({
+    destination: declaring,
+    place,
+    topic: 'alpha',
+    madeSecret,
+  });
+  return Effect.runPromise(Effect.result(subscribed).pipe(Effect.provide(TestClock.layer())));
+}
 
 function unsubscribedThrough(service: FakeService, destination: typeof byRequest) {
   const declaring = { ...destination, unsubscribe: declared(destination.unsubscribe) };
@@ -63,6 +75,7 @@ type RequestOutcome = Exclude<Extract<RequestedOnce, { readonly kind: 'answered'
 
 const ofEachRequestOutcome = {
   tool_error: { because: 'tool_error', kind: 'tool_error' },
+  not_found: { because: 'not_found', kind: 'tool_error' },
   timed_out: { because: 'timed_out', kind: 'unreachable' },
   too_large: { because: 'too_large', kind: 'tool_error' },
 } as const satisfies ClassOfEach<Exclude<RequestOutcome, 'server_failure'>>;
@@ -93,10 +106,21 @@ describe('a failure, by the reason word the connection layer gives', () => {
     expect(answers).toEqual(classed.map((each) => failureOf(each)));
   });
 
+  it('takes a removal the app answers it has no such subscription as done, and a subscribe it answers so as refused', async () => {
+    const notThere: RequestedOnce = { kind: 'answered', outcome: 'not_found' };
+
+    expect(Result.isSuccess(await unsubscribedThrough(aServiceAnsweringRequests([notThere]), byRequest))).toBe(true);
+    expect(await subscribedThrough(aServiceAnsweringRequests([notThere]))).toEqual(
+      failureOf(ofEachRequestOutcome.not_found),
+    );
+  });
+
   it('classes a request refused before it was sent by its word, and one sent by its outcome or its reason word', async () => {
     const asked = [
       ...Object.values(ofEachUnopenedReason).map((each) => refusedBeforeSending(each)),
-      ...Object.values(ofEachRequestOutcome).map((each) => endedAs(each)),
+      ...Object.values(ofEachRequestOutcome)
+        .filter(({ because }) => because !== 'not_found')
+        .map((each) => endedAs(each)),
       ...Object.values(ofEachSentReason).map((each) => sentAndFailed(each)),
     ];
     const services = asked.map(([answer]) => aServiceAnsweringRequests([answer]));

@@ -104,18 +104,29 @@ function orderedKeyOf(orderBy: readonly string[], { row, key, child }: Projected
   return [...orderBy.map((column) => row[column]), key, ...(child === undefined ? [] : [child])];
 }
 
-export function dueRowsIn(rows: ReadonlyMap<string, ProjectedKeyedRow>, { column, through, limit }: DueRowsQuery) {
-  return [...rows.values()]
-    .flatMap((kept) => dueOf(kept, column).map((due): readonly [number, ProjectedKeyedRow] => [due, kept]))
-    .filter(([due]) => due <= through)
+function soonestOfEachPlaybook(due: readonly ProjectedKeyedRow[]): readonly ProjectedKeyedRow[] {
+  const seen = new Set<string>();
+  return due.filter((kept) => {
+    const prefix = streamPrefixOfAddress(kept);
+    const first = !seen.has(prefix);
+    seen.add(prefix);
+    return first;
+  });
+}
+
+export function dueRowsIn(rows: ReadonlyMap<string, ProjectedKeyedRow>, query: DueRowsQuery) {
+  const { column, through, limit, onePerPlaybook = false } = query;
+  const due = [...rows.values()]
+    .flatMap((kept) => dueOf(kept, column).map((at): readonly [number, ProjectedKeyedRow] => [at, kept]))
+    .filter(([at]) => at <= through)
     .toSorted(([leftDue, left], [rightDue, right]) =>
       tupleCompared(
         [leftDue, streamPrefixOfAddress(left), left.key],
         [rightDue, streamPrefixOfAddress(right), right.key],
       ),
     )
-    .slice(0, limit)
     .map(([, kept]) => kept);
+  return (onePerPlaybook ? soonestOfEachPlaybook(due) : due).slice(0, limit);
 }
 
 export function pageIn(

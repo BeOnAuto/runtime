@@ -1,6 +1,6 @@
+import { isBoundedPart } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { isBoundedPart } from '../delivery/sent-messages.ts';
 import { roomForACall, turnBounds } from '../readings/turn-readings.ts';
 import { replyTaken, type Intake } from '../replies/reply-intake.ts';
 import { nothingTaken, type IntakeState } from '../replies/reply-recording.ts';

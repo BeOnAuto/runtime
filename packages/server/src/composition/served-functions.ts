@@ -1,4 +1,4 @@
-import { foldedBeforeItRuns } from '@on.auto/workflow-host';
+import { foldedBeforeItRuns, type HostDatabase } from '@on.auto/workflow-host';
 
 import { servedWithTheGoalsEngine, serverConnectedThrough } from '../goals/goals-engine-lists.ts';
 import type { Settings } from '../settings/settings.ts';
@@ -29,6 +29,16 @@ export interface ServedFunctions {
   >;
 }
 
+async function forecasterServedOn(
+  runtime: ServingRuntime,
+  prediction: ServedWiring['prediction'],
+  database: HostDatabase,
+) {
+  const { capability, folders } = prediction.provided;
+  await prediction.servedIn(runtime, database);
+  return foldedBeforeItRuns({ capability, folders, database });
+}
+
 export async function functionsServedBy(
   runtime: ServingRuntime,
   settings: Settings,
@@ -37,19 +47,19 @@ export async function functionsServedBy(
 ): Promise<ServedFunctions> {
   const { goals, results, messages } = tools;
   const toolUsers = await toolUsersServedBy(runtime, settings, tools);
-  const { reasoning, lookup, interaction, toolOperations, named, ...listing } = toolUsers;
+  const { reasoning, lookup, interaction, toolOperations, named, subscriptions, ...listing } = toolUsers;
   const generation = await generationServedBy(runtime, settings, generating);
-  const { capability, folders, operations, dueWork } = prediction.provided;
+  const { folders, operations, dueWork } = prediction.provided;
   const projections = await wiring.served({ projection: settings.projection, database }, computation.pool, folders);
-  await prediction.servedIn(runtime, projections.store.database);
-  const forecaster = foldedBeforeItRuns({ capability, folders, database: projections.store.database });
+  const forecaster = await forecasterServedOn(runtime, prediction, projections.store.database);
   const toolCapabilities = [reasoning.capability, lookup, interaction.capability];
   const computing = computation.capabilityHolding(heldForCalls(runtime).assets);
   const capabilities = [...toolCapabilities, computing, forecaster, generation.capability];
   const { facts, names, record } = factsComposedOf(runtime, capabilities);
+  const ownDueWork = [...interaction.dueWorkOf(subscriptions.recording(record)), subscriptions.dueWork];
   const lists = await servedWithTheGoalsEngine(
     { ...tools, goals: results, runtime, database: projections.store.database, pool: computation.pool },
-    [...interaction.dueWorkOf(record), ...dueWork, ...generation.dueWork],
+    [...ownDueWork, ...dueWork, ...generation.dueWork],
     [...toolOperations.inPlaybook, ...interaction.operations, ...operations],
   );
   return {
@@ -71,7 +81,7 @@ export async function functionsServedBy(
       playbookOperations: lists.playbookOperations,
       capabilityOperations: [generation],
       dueWork: lists.dueWork,
-      consumers: lists.consumers,
+      consumers: [...lists.consumers, subscriptions.consumer],
       store: projections.store,
       projector: projections.projector,
       evaluations: computation.pool.evaluations,

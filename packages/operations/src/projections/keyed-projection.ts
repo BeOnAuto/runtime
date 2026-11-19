@@ -114,6 +114,7 @@ export interface DueRowsQuery {
   readonly column: string;
   readonly through: number;
   readonly limit: number;
+  readonly onePerPlaybook?: boolean;
 }
 
 export interface ProjectionReader {

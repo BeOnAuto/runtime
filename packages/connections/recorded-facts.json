@@ -22,5 +22,8 @@
   "src/registry/0.59.0/connection_connected.json": "83bf76069f684842edf746d851cc073bbc83dde277aa469c94f480783b5bc6c8",
   "src/registry/0.60.0/connection_added.json": "4f5e5aa90e45f0583535757fb3cb90e2a1fbe482a46c3b463043d32e82a282e4",
   "src/registry/0.60.0/connection_connected.json": "e5134de35d2c0d36d936d86d2e8fa3a6ae7be6d229c74458473e8784f06adb67",
-  "src/registry/0.60.0/connection_consent_started.json": "7a485d22b6e8bcbde5181362770f61a302050c830748a9c564c0d3f5d3dfe635"
+  "src/registry/0.60.0/connection_consent_started.json": "7a485d22b6e8bcbde5181362770f61a302050c830748a9c564c0d3f5d3dfe635",
+  "src/subscriptions/0.64.0/event_subscription_failed.json": "cbd835b0905ae0c1e829a75a4f3fbe826c59ab63b99a792c3d789a5061ace78a",
+  "src/subscriptions/0.64.0/event_subscription_made.json": "c9e50c241889eee23c197fb52977ff944d8c1150084410327cd498262e302770",
+  "src/subscriptions/0.64.0/event_subscription_removed.json": "25607b688406a95f66de1bbf44714309a90c18c58b275afe822fbc2751e34b8e"
 }

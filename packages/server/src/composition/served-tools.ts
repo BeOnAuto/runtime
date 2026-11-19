@@ -1,19 +1,26 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
-import type { ConnectionSource, Timing, ToolAccess } from '@on.auto/tool-servers';
 
 import type { CapabilityRegistry } from '../capability-registry/capability-registry.ts';
 import type { Settings } from '../settings/settings.ts';
+import { subscriptionsOfTheServer, type SubscriptionsServing } from '../subscriptions/served-subscriptions.ts';
 import { interactionServedBy, type ServedInteraction } from './served-interaction.ts';
 import { lookupServedBy, type ServedLookup } from './served-lookup.ts';
 import { reasoningServedBy, type ServedReasoning } from './served-reasoning.ts';
-import { toolAccessOf } from './served-tool-access.ts';
+import {
+  requestWaysOf,
+  toolAccessOf,
+  type MadeToolAccess,
+  type ServedConnections,
+  type ToolAccessWiring,
+} from './served-tool-access.ts';
 import { toolOperationsOf, type ProvidersOffered, type ServedToolOperations } from './served-tool-operations.ts';
 
 export interface ToolUsersWiring extends ProvidersOffered {
   readonly registry: CapabilityRegistry;
-  readonly connections: Pick<ConnectionSource, 'takesConnections'>;
-  readonly toolTiming?: Timing;
+  readonly connections: Pick<ServedConnections['connections'], 'takesConnections'>;
+  readonly toolTiming?: NonNullable<ToolAccessWiring['toolTiming']>;
+  readonly secrets: SubscriptionsServing['secrets'];
   readonly results?: boolean | undefined;
 }
 
@@ -22,14 +29,15 @@ export interface ServedToolUsers {
   readonly lookup: ServedLookup;
   readonly interaction: ServedInteraction;
   readonly toolOperations: ServedToolOperations;
-  readonly listServers: ToolAccess['listServers'];
-  readonly named: ToolAccess['named'];
+  readonly listServers: MadeToolAccess['listServers'];
+  readonly named: MadeToolAccess['named'];
+  readonly subscriptions: ReturnType<typeof subscriptionsOfTheServer>;
 }
 
 export async function toolUsersServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: Settings,
-  { registry, connections, offering, goals, results, messages, toolTiming }: ToolUsersWiring,
+  { registry, connections, offering, goals, results, messages, toolTiming, secrets }: ToolUsersWiring,
 ): Promise<ServedToolUsers> {
   const tools = toolAccessOf(registry.tools, settings, connections, toolTiming);
   return {
@@ -42,5 +50,9 @@ export async function toolUsersServedBy(
     toolOperations: toolOperationsOf(tools, { offering, goals, messages }),
     listServers: tools.listServers,
     named: tools.named,
+    subscriptions: subscriptionsOfTheServer(runtime, settings, {
+      tools: { ...tools, ...requestWaysOf(registry.tools) },
+      secrets,
+    }),
   };
 }

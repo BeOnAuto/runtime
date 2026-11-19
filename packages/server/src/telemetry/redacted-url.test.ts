@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { Context, Effect, ManagedRuntime, Tracer } from 'effect';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
+import { spansIn } from '../testing/telemetry/otlp-exports.ts';
+import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
 import { redactedUrlAttributes, withoutTheTokenOfALink } from './redacted-url.ts';
+import { startTelemetry } from './start-telemetry.ts';
 
 describe('the URL of an outbound request on its span', () => {
   it('keeps the origin and the path, and redacts every value of the query and the credentials', () => {
@@ -17,6 +22,31 @@ describe('the URL of an outbound request on its span', () => {
 
   it('is left to the instrumentation when the request names no URL', () => {
     expect(redactedUrlAttributes({ origin: 'not a url', path: 'nor this' })).toEqual({});
+  });
+});
+
+async function outboundUrlsOnSpans(sentUnder: (sent: Effect.Effect<Response>) => Effect.Effect<Response>) {
+  const receiver = await receivingOtlp();
+  onTestFinished(receiver.close);
+  const target = await receivingOtlp();
+  onTestFinished(target.close);
+  const environment = { OTEL_EXPORTER_OTLP_ENDPOINT: receiver.endpoint, OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json' };
+  const telemetry = startTelemetry(readSettingsOf(environment).telemetry);
+  const runtime = ManagedRuntime.make(telemetry.layer);
+  await runtime.runPromise(sentUnder(Effect.promise(() => fetch(`${target.endpoint}/projects/acme-web/hooks`))));
+  await runtime.dispose();
+  await telemetry.shutdown();
+  return spansIn(receiver.received()).flatMap(({ attributes }) => attributes['url.full'] ?? []);
+}
+
+describe('the URL of an outbound request sent under a span that does not propagate', () => {
+  it('is on no span, where one sent under a span that propagates is on the HTTP client’s', async () => {
+    const unpropagated = { annotations: Context.make(Tracer.DisablePropagation, true) };
+
+    expect(await outboundUrlsOnSpans((sent) => sent.pipe(Effect.withSpan('a round')))).toHaveLength(1);
+    expect(
+      await outboundUrlsOnSpans((sent) => sent.pipe(Effect.withSpan('sent', unpropagated), Effect.withSpan('a round'))),
+    ).toEqual([]);
   });
 });
 

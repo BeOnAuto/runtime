@@ -1,0 +1,17 @@
+{
+  "type": "event_subscription_failed",
+  "data": {
+    "connection": "chat",
+    "topic": "C0123",
+    "kind": "scope_lacking",
+    "because": "scope_lacking",
+    "attempted": {
+      "connected": "2026-11-17T08:00:00.000Z",
+      "declared": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "context": {
+    "at": "2026-11-18T09:00:00.000Z",
+    "by": "runtime"
+  }
+}

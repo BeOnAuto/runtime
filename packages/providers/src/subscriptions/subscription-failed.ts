@@ -7,7 +7,7 @@ import type {
   ServerFailedBecause,
   UnopenedOnce,
 } from '@on.auto/tool-servers';
-import { Data } from 'effect';
+import { Data, Record as Records, Schema } from 'effect';
 
 export type SubscriptionFailedBecause =
   | NotOfferedBecause
@@ -16,9 +16,18 @@ export type SubscriptionFailedBecause =
   | 'tool_error'
   | SentCallFailedBecause
   | 'unreadable'
+  | 'not_found'
   | 'not_sent';
 
-export type SubscriptionFailureKind = 'connection_broken' | 'scope_lacking' | 'tool_error' | 'unreachable' | 'not_sent';
+export const SubscriptionFailureKindSchema = Schema.Literals([
+  'connection_broken',
+  'scope_lacking',
+  'tool_error',
+  'unreachable',
+  'not_sent',
+]);
+
+export type SubscriptionFailureKind = typeof SubscriptionFailureKindSchema.Type;
 
 export class SubscriptionCallFailed extends Data.TaggedError('subscription_call_failed')<{
   readonly kind: SubscriptionFailureKind;
@@ -40,6 +49,7 @@ const kindOfEach: Readonly<Record<SubscriptionFailedBecause, SubscriptionFailure
   asset_not_sent: 'tool_error',
   too_large: 'tool_error',
   unreadable: 'tool_error',
+  not_found: 'tool_error',
   unreachable: 'unreachable',
   failing: 'unreachable',
   rate_limited: 'unreachable',
@@ -49,6 +59,8 @@ const kindOfEach: Readonly<Record<SubscriptionFailedBecause, SubscriptionFailure
   connection_unavailable: 'unreachable',
   not_sent: 'not_sent',
 };
+
+export const SubscriptionFailedBecauseSchema = Schema.Literals(Records.keys(kindOfEach));
 
 export function failedBecause(because: SubscriptionFailedBecause): SubscriptionCallFailed {
   return new SubscriptionCallFailed({ kind: kindOfEach[because], because });

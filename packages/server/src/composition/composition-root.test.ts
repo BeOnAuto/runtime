@@ -8,6 +8,7 @@ import { declaredFact, runOutcomeMapping } from '@on.auto/definitions';
 import { renderTargetNames } from '@on.auto/interaction';
 import { nudging } from '@on.auto/interaction/testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
+import { ledgerLayout, ledgerLayoutFloor } from '@on.auto/ledger/testing';
 import { LicensedFeatures, licensedFeaturesOf } from '@on.auto/meter';
 import {
   allPermissions,
@@ -38,6 +39,7 @@ import { forecastChecked } from '../testing/extensions/declared-facts.ts';
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
 import { applicationLayer } from './application-layer.ts';
 import { factsComposedOf } from './composed-facts.ts';
+import { keptByTheLedgerWith } from './kept-by-the-ledger.ts';
 import { keptProjections } from './kept-projections.ts';
 import { factSchemasKnownWith, knownFactSchemas } from './known-facts.ts';
 import { factsKnownWith } from './known-holders.ts';
@@ -301,6 +303,17 @@ describe('the render targets the shipped providers name', () => {
   });
 });
 
+describe('the steps the server gives the ledger, from every package that owns a table in its database', () => {
+  it('lead from the floor to the layout kept, one step for each number', () => {
+    const numbers = Array.from(
+      { length: ledgerLayout - ledgerLayoutFloor },
+      (_, index) => ledgerLayoutFloor + index + 1,
+    );
+
+    expect(keptByTheLedgerWith([]).layoutSteps.map(({ layout }) => layout)).toEqual(numbers);
+  });
+});
+
 describe('the fact schemas the server gives the ledger as it opens', () => {
   it('are the ones it composes and the schema of each fact a capability declares on runs, so a declared type is read at start', () => {
     expect(typesOf(factSchemasKnownWith([forecastChecked]))).toEqual(
@@ -401,7 +414,7 @@ describe('the fact types the server gives the ledger to read', () => {
     const kept = [...new Set([...fixtureTypesUnder('packages'), ...fixtureTypesUnder('capabilities')])].toSorted();
 
     expect(factTypes).toEqual(kept);
-    expect(factTypes).toHaveLength(91);
+    expect(factTypes).toHaveLength(94);
   });
 });
 

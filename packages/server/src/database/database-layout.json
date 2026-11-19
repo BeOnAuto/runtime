@@ -1,5 +1,5 @@
 {
-  "layout": 27,
+  "layout": 28,
   "catalog": [
     {
       "name": "activity_1",
@@ -160,6 +160,18 @@
     {
       "name": "definitions_4_by_type",
       "sql": "CREATE INDEX definitions_4_by_type ON definitions_4 (playbook_key, definition_type, row_key)"
+    },
+    {
+      "name": "event_subscriptions_1",
+      "sql": "CREATE TABLE event_subscriptions_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, connection TEXT, topic TEXT, removed INTEGER, type TEXT, id TEXT, secret_id TEXT, declared TEXT, failure_kind TEXT, failure_because TEXT, failure_connected TEXT, failure_declared TEXT, failures_in_a_row INTEGER, lapses_at INTEGER, due_at INTEGER, reconcile_due_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "event_subscriptions_1_held",
+      "sql": "CREATE INDEX event_subscriptions_1_held ON event_subscriptions_1 (playbook_key, removed, row_key)"
+    },
+    {
+      "name": "event_subscriptions_1_reconcile_due",
+      "sql": "CREATE INDEX event_subscriptions_1_reconcile_due ON event_subscriptions_1 (reconcile_due_at) WHERE reconcile_due_at IS NOT NULL"
     },
     {
       "name": "generations_due_1",

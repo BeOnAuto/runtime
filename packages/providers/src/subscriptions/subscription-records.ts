@@ -53,7 +53,7 @@ export function isTheSameFailure(left: RecordedFailure | undefined, right: Recor
   return (
     left !== undefined &&
     left.kind === right.kind &&
-    left.because === right.because &&
+    (!isLasting(right.kind) || left.because === right.because) &&
     isTheSameGeneration(left.attempted, right.attempted)
   );
 }
@@ -69,4 +69,39 @@ export function earliest(...times: readonly (number | undefined)[]): number | un
 
 export function isWaitingToRetry(positions: Positions | undefined, now: number): boolean {
   return positions !== undefined && positions.failures > 0 && positions.dueAt !== undefined && positions.dueAt > now;
+}
+
+const millisOfASecond = 1000;
+
+const renewedHalfwayThrough = 0.5;
+
+export function leaseFrom(now: number, { lease_seconds: leaseSeconds }: Arranging, expiresAt?: string): Positions {
+  const declared = leaseSeconds === undefined ? undefined : now + leaseSeconds * millisOfASecond;
+  const lapsesAt = expiresAt === undefined ? declared : Date.parse(expiresAt);
+  if (lapsesAt === undefined || lapsesAt <= now) {
+    return { failures: 0 };
+  }
+  return { failures: 0, lapsesAt, dueAt: now + (lapsesAt - now) * renewedHalfwayThrough };
+}
+
+export function withLapse(positions: Positions, lapsesAt: number | undefined): Positions {
+  return lapsesAt === undefined ? positions : { ...positions, lapsesAt };
+}
+
+export const resyncedAfterMs = 10 * 60 * 60 * 1000;
+
+const idempotentMethods: ReadonlySet<string> = new Set(['GET', 'PUT', 'DELETE']);
+
+function makesAgainSafely({ subscribe }: Arranging): boolean {
+  return subscribe.method !== undefined && idempotentMethods.has(subscribe.method);
+}
+
+export interface Retrying {
+  readonly because: string;
+  readonly makes: boolean;
+}
+
+export function retryWaitOf(destination: Arranging, { because, makes }: Retrying, waitMs: number): number {
+  const outcomeUnknown = makes && because === 'timed_out' && !makesAgainSafely(destination);
+  return outcomeUnknown ? Math.max(waitMs, resyncedAfterMs) : waitMs;
 }

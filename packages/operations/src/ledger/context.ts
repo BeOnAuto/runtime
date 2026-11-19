@@ -37,6 +37,10 @@ const ContextText = Schema.String.check(refusingForbiddenCharacters);
 
 export const ContextReference = ContextText.check(refusingLongReferences);
 
+export const BoundedPart = ContextReference.check(Schema.isMinLength(1));
+
+export const isBoundedPart: (part: string) => boolean = Schema.is(BoundedPart);
+
 const Counted = Schema.Int.check(Schema.isGreaterThanOrEqualTo(leastCount));
 
 export const CalledBySchema = Schema.Struct({ runId: ContextText, reference: ContextReference, run: Counted });

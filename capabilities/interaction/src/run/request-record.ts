@@ -24,6 +24,12 @@ export type DeliveringRecord = typeof DeliveringRecordSchema.Type;
 export const deliveringRecordOf: (record: unknown) => DeliveringRecord =
   Schema.decodeUnknownSync(DeliveringRecordSchema);
 
+const decodeDelivering = Schema.decodeUnknownOption(DeliveringRecordSchema);
+
+export function deliveringRecordIn(record: unknown): DeliveringRecord | undefined {
+  return Option.getOrUndefined(decodeDelivering(record));
+}
+
 const decodeRecord = Schema.decodeUnknownOption(InteractionRequestSchema);
 
 export function requestRecordOf(record: unknown): RequestRecord | undefined {

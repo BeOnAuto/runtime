@@ -1,3 +1,4 @@
+import { subscriptionLayoutSteps } from '@on.auto/connections';
 import { definitionTypeOrder, runIds, runOutcomeMapping, type DeclaredFact } from '@on.auto/definitions';
 import { definitionNamesOf, unbounded } from '@on.auto/definitions/identity';
 
@@ -13,6 +14,7 @@ export function keptByTheLedgerWith(
     runIds,
     runOutcomes: runOutcomeMapping,
     projections: keptProjections,
+    layoutSteps: subscriptionLayoutSteps,
     ...factsKnownWith(declared),
   };
 }

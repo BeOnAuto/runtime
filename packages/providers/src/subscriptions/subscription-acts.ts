@@ -1,12 +1,11 @@
 import type { PlaybookAddress } from '@on.auto/operations';
-import { Effect, Option, Redacted, Ref, Result } from 'effect';
+import { Effect, Option, Result } from 'effect';
 
 import { waitAfter } from '../sockets/socket-listening.ts';
 import type { Renewable, Step, Through } from './subscription-decisions.ts';
 import { failedBecause, type SubscriptionCallFailed } from './subscription-failed.ts';
 import type {
   HeldSubscription,
-  KeptSecret,
   MadeSubscription,
   Positions,
   RecordedSubscription,
@@ -15,7 +14,15 @@ import type {
   SubscriptionLoopPorts,
   SubscriptionPlace,
 } from './subscription-ports.ts';
-import { isLasting, isTheSameFailure, type Arranging } from './subscription-records.ts';
+import {
+  isLasting,
+  isTheSameFailure,
+  leaseFrom,
+  retryWaitOf,
+  withLapse,
+  type Arranging,
+} from './subscription-records.ts';
+import { answeredSecretId, secretToPlace } from './subscription-secrets.ts';
 
 export interface Round {
   readonly ports: SubscriptionLoopPorts;
@@ -47,16 +54,7 @@ interface Removal {
   readonly later: Later;
 }
 
-interface SecretToPlace {
-  readonly madeSecret: Effect.Effect<Redacted.Redacted>;
-  readonly made: Effect.Effect<Option.Option<KeptSecret>>;
-}
-
 type CallFailure = Pick<SubscriptionCallFailed, 'kind' | 'because'>;
-
-const millisOfASecond = 1000;
-
-const renewedHalfwayThrough = 0.5;
 
 const nothingLater: Later = [];
 
@@ -73,15 +71,6 @@ function heldOf({ made, recorded }: Holding): HeldSubscription {
   return lapsesAt === undefined ? { id: made.id } : { id: made.id, expiresAt: new Date(lapsesAt).toISOString() };
 }
 
-function leaseFrom(now: number, { lease_seconds: leaseSeconds }: Arranging, expiresAt: string | undefined): Positions {
-  const declared = leaseSeconds === undefined ? undefined : now + leaseSeconds * millisOfASecond;
-  const lapsesAt = expiresAt === undefined ? declared : Date.parse(expiresAt);
-  if (lapsesAt === undefined || lapsesAt <= now) {
-    return { failures: 0 };
-  }
-  return { failures: 0, lapsesAt, dueAt: now + (lapsesAt - now) * renewedHalfwayThrough };
-}
-
 function forgottenSecret(round: Round, key: SubscriptionKey, secretId: string | undefined): Effect.Effect<void> {
   return secretId === undefined ? Effect.void : round.ports.secrets.forget(placeOf(round, key), secretId);
 }
@@ -96,11 +85,19 @@ function moved(round: Round, key: SubscriptionKey, positions: Positions): Effect
   return Effect.as(round.ports.records.moved(round.playbook, key, positions), laterAt(positions.dueAt));
 }
 
-function withLapse(positions: Positions, lapsesAt: number | undefined): Positions {
-  return lapsesAt === undefined ? positions : { ...positions, lapsesAt };
+interface Attempt {
+  readonly recordsWhatPasses: boolean;
+  readonly makes: boolean;
 }
 
-function failedOn(round: Round, acting: Acting, { kind, because }: CallFailure, recordsWhatPasses: boolean) {
+const aSubscribe: Attempt = { recordsWhatPasses: true, makes: true };
+
+const aSubscribeAgain: Attempt = { recordsWhatPasses: false, makes: true };
+
+const aCallOnWhatIsMade: Attempt = { recordsWhatPasses: false, makes: false };
+
+function failedOn(round: Round, acting: Acting, failure: CallFailure, { recordsWhatPasses, makes }: Attempt) {
+  const { kind, because } = failure;
   const { key, recorded, generation } = acting;
   const lasting = isLasting(kind);
   const failed = { kind, because, attempted: generation };
@@ -114,48 +111,8 @@ function failedOn(round: Round, acting: Acting, { kind, because }: CallFailure, 
       yield* round.ports.records.moved(round.playbook, key, withLapse({ failures: 0, dueAt: round.now }, lapsesAt));
       return laterAt(lapsesAt);
     }
-    const waitMs = yield* waitAfter(failures);
+    const waitMs = retryWaitOf(acting.destination, { because, makes }, yield* waitAfter(failures));
     return yield* moved(round, key, withLapse({ failures: failures + 1, dueAt: round.now + waitMs }, lapsesAt));
-  });
-}
-
-function secretToPlace(
-  round: Round,
-  place: SubscriptionPlace,
-  held: MadeSubscription | undefined,
-): Effect.Effect<SecretToPlace> {
-  const { secrets } = round.ports;
-  return Effect.gen(function* () {
-    const made = yield* Ref.make(Option.none<KeptSecret>());
-    const madeSecret = Effect.gen(function* () {
-      const reused = held?.secretId === undefined ? undefined : yield* secrets.read(place, held.secretId);
-      if (reused !== undefined) {
-        return reused;
-      }
-      const kept = yield* secrets.make(place);
-      yield* Ref.set(made, Option.some(kept));
-      return kept.secret;
-    });
-    return { madeSecret, made: Ref.get(made) };
-  });
-}
-
-function answeredSecretId(
-  round: Round,
-  place: SubscriptionPlace,
-  answered: Redacted.Redacted,
-  held: MadeSubscription | undefined,
-): Effect.Effect<string> {
-  const { secrets } = round.ports;
-  return Effect.gen(function* () {
-    const heldId = held?.secretId;
-    if (heldId !== undefined) {
-      const before = yield* secrets.read(place, heldId);
-      if (before !== undefined && Redacted.value(before) === Redacted.value(answered)) {
-        return heldId;
-      }
-    }
-    return yield* secrets.keep(place, answered);
   });
 }
 
@@ -174,7 +131,7 @@ function subscribedThrough(round: Round, subscribing: Subscribing): Effect.Effec
   const { key, destination, held } = subscribing;
   const place = placeOf(round, key);
   return Effect.gen(function* () {
-    const { madeSecret, made } = yield* secretToPlace(round, place, held);
+    const { madeSecret, made } = yield* secretToPlace(round.ports.secrets, place, held);
     const answered = yield* Effect.result(round.calls.subscribe({ destination, place, topic: key.topic, madeSecret }));
     const madeId = Option.getOrUndefined(yield* made)?.id;
     if (Result.isFailure(answered)) {
@@ -191,7 +148,9 @@ function subscribedThrough(round: Round, subscribing: Subscribing): Effect.Effec
       return { id, expiresAt };
     }
     const secretId =
-      secret === 'made' ? (madeId ?? held?.secretId) : yield* answeredSecretId(round, place, secret.answered, held);
+      secret === 'made'
+        ? (madeId ?? held?.secretId)
+        : yield* answeredSecretId(round.ports.secrets, place, secret.answered, held);
     return { id, expiresAt, secretId };
   });
 }
@@ -204,7 +163,7 @@ function madeOf({ destination, generation }: Through, { id, secretId }: Made): M
 function subscribed(round: Round, acting: Acting): Effect.Effect<Later> {
   const { key, destination } = acting;
   return Effect.matchEffect(subscribedThrough(round, { key, destination }), {
-    onFailure: (failure: CallFailure) => failedOn(round, acting, failure, true),
+    onFailure: (failure: CallFailure) => failedOn(round, acting, failure, aSubscribe),
     onSuccess: (made) =>
       round.ports.records
         .made(round.playbook, key, madeOf(acting, made))
@@ -231,7 +190,7 @@ function replacedBy(round: Round, holding: Resubscribing, made: Made): Effect.Ef
 function resubscribed(round: Round, holding: Resubscribing): Effect.Effect<Later> {
   const { key, destination, made: held } = holding;
   return Effect.matchEffect(subscribedThrough(round, { key, destination, held }), {
-    onFailure: (failure: CallFailure) => failedOn(round, holding, failure, false),
+    onFailure: (failure: CallFailure) => failedOn(round, holding, failure, aSubscribeAgain),
     onSuccess: (made) => {
       const lease = moved(round, key, leaseFrom(round.now, destination, made.expiresAt));
       const isARenewal = made.id === held.id && made.secretId === held.secretId;
@@ -251,28 +210,34 @@ function renewed(round: Round, holding: Holding & { readonly destination: Renewa
     onFailure: (failure: CallFailure) =>
       isForWantOfTheLeasesEnd(failure, holding)
         ? resubscribed(round, { ...holding, gone: false })
-        : failedOn(round, holding, failure, false),
+        : failedOn(round, holding, failure, aCallOnWhatIsMade),
     onSuccess: ({ expiresAt }) => moved(round, key, leaseFrom(round.now, destination, expiresAt)),
   });
 }
 
-function unsubscribedThrough(round: Round, holding: Holding, through: Through): Effect.Effect<Removal> {
-  const { key, made } = holding;
-  const { destination } = through;
-  const asked = { destination, place: placeOf(round, key), topic: key.topic, subscription: heldOf(holding) };
-  return Effect.matchEffect(round.calls.unsubscribe(asked), {
+function removalDone(round: Round, { key, made }: Holding): Effect.Effect<Removal> {
+  return Effect.as(forgotten(round, key, made), { removed: true, later: nothingLater });
+}
+
+function removalHeld(round: Round, acting: Acting, failure: CallFailure): Effect.Effect<Removal> {
+  return Effect.map(failedOn(round, acting, failure, aCallOnWhatIsMade), (later) => ({ removed: false, later }));
+}
+
+function unsubscribedThrough(round: Round, holding: Holding, through: Through, forgetsARefusal: boolean) {
+  const { key } = holding;
+  const asked = { destination: through.destination, place: placeOf(round, key), topic: key.topic };
+  return Effect.matchEffect(round.calls.unsubscribe({ ...asked, subscription: heldOf(holding) }), {
     onFailure: (failure: CallFailure) =>
-      Effect.map(failedOn(round, { ...holding, ...through }, failure, false), (later) => ({ removed: false, later })),
-    onSuccess: () => Effect.as(forgotten(round, key, made), { removed: true, later: nothingLater }),
+      forgetsARefusal && failure.kind === 'tool_error'
+        ? removalDone(round, holding)
+        : removalHeld(round, { ...holding, ...through }, failure),
+    onSuccess: () => removalDone(round, holding),
   });
 }
 
 function replaced(round: Round, holding: Holding & { readonly from?: Through }): Effect.Effect<Later> {
-  const { key, made, from, destination, generation } = holding;
-  const removal =
-    from === undefined
-      ? Effect.as(forgotten(round, key, made), { removed: true, later: nothingLater })
-      : unsubscribedThrough(round, holding, from);
+  const { key, from, destination, generation } = holding;
+  const removal = from === undefined ? removalDone(round, holding) : unsubscribedThrough(round, holding, from, false);
   return Effect.flatMap(removal, ({ removed, later }: Removal) =>
     removed ? subscribed(round, { key, destination, generation }) : Effect.succeed(later),
   );
@@ -286,7 +251,7 @@ export function actedOn(round: Round, step: Step): Effect.Effect<Later> {
     return Effect.as(round.ports.records.failed(round.playbook, step.key, step.failure), nothingLater);
   }
   if (step.act === 'unsubscribe') {
-    return Effect.map(unsubscribedThrough(round, step, step), ({ later }: Removal) => later);
+    return Effect.map(unsubscribedThrough(round, step, step, true), ({ later }: Removal) => later);
   }
   if (step.act === 'replace') {
     return replaced(round, step);

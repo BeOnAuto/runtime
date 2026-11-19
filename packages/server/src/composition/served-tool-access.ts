@@ -9,6 +9,7 @@ import {
   type ConnectionSource,
   type ConsentClient,
   type Describing,
+  type RequestWays,
   type Timing,
   type ToolAccess,
   type ToolAccessOptions,
@@ -41,7 +42,9 @@ interface ServedDocuments {
 
 type ToolSettings = Pick<Settings, 'toolServers' | 'registeredClients' | 'toolCalls'>;
 
-export class ComposedTools extends Context.Service<ComposedTools, ToolAccess>()('@on.auto/server/ComposedTools') {}
+export type MadeToolAccess = ToolAccess & RequestWays;
+
+export class ComposedTools extends Context.Service<ComposedTools, MadeToolAccess>()('@on.auto/server/ComposedTools') {}
 
 export function toolsComposedBy(
   runtime: AppRuntime<DispatcherServices>,
@@ -85,6 +88,11 @@ export function toolsComposedBy(
     ComposedTools,
     Effect.acquireRelease(composing, (tools) => Effect.promise(() => tools.close())),
   );
+}
+
+export function requestWaysOf(composed: Effect.Effect<RequestWays, ToolServerDocumentRefused>): RequestWays {
+  const made = Effect.orDie(composed);
+  return { requestOnce: (request) => Effect.flatMap(made, (access) => access.requestOnce(request)) };
 }
 
 export function toolAccessOf(
