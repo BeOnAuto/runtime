@@ -28,6 +28,15 @@ export const GivenSchema = Schema.String.check(Schema.isMinLength(1));
 
 export const ReturnSchema = Schema.Struct({ kind: Schema.Literals(['hosted', 'loopback']), base: GivenSchema });
 
+export const ResourceSchema = Schema.optionalKey(Schema.Union([Schema.String, Schema.Array(Schema.String)]));
+
+export function resourcesIn(resource: string | readonly string[] | undefined): readonly string[] {
+  if (resource === undefined) {
+    return [];
+  }
+  return typeof resource === 'string' ? [resource] : resource;
+}
+
 const decodeVendorError = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ error: Schema.String })));
 
 const decodeHandoff = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Struct({ verifier: GivenSchema })));
@@ -38,7 +47,7 @@ const decodeRefresh = Schema.decodeUnknownOption(
       issuer: GivenSchema,
       refresh_token: GivenSchema,
       connection_key: Schema.optionalKey(Schema.String),
-      resource: Schema.optionalKey(Schema.String),
+      resource: ResourceSchema,
     }),
   ),
 );
@@ -75,7 +84,7 @@ export interface Start {
   readonly returnTo: Return;
   readonly challenge: string;
   readonly vendorVerifier: string;
-  readonly resource: string | undefined;
+  readonly resources: readonly string[];
   readonly startedAt: number;
   readonly redeemed: boolean;
 }
@@ -180,13 +189,14 @@ export function postedToTheVendor(
   store: Store,
   path: string,
   form: Readonly<Record<string, string>>,
+  resources: readonly string[] = [],
 ): Promise<Response> {
   const { fetch = globalThis.fetch } = store.options;
-  return fetch(`${store.options.vendor.origin}${path}`, {
-    method: 'POST',
-    headers: asTheClient(),
-    body: new URLSearchParams(form),
-  });
+  const body = new URLSearchParams(form);
+  for (const resource of resources) {
+    body.append('resource', resource);
+  }
+  return fetch(`${store.options.vendor.origin}${path}`, { method: 'POST', headers: asTheClient(), body });
 }
 
 export function keptOfTheVendor(store: Store, text: string): Tokens {
@@ -232,11 +242,12 @@ export async function refreshed({ text }: Asked, store: Store): Promise<Response
   if (refuses(store, 'refresh')) {
     return problem(400, 'The authorization server refused the refresh token', { refused: 'invalid_grant' });
   }
-  const vendor = await postedToTheVendor(store, '/token', {
-    grant_type: 'refresh_token',
-    refresh_token: asked.refresh_token,
-    ...(asked.resource === undefined ? {} : { resource: asked.resource }),
-  });
+  const vendor = await postedToTheVendor(
+    store,
+    '/token',
+    { grant_type: 'refresh_token', refresh_token: asked.refresh_token },
+    resourcesIn(asked.resource),
+  );
   return vendor.ok
     ? answer({ tokens: keptOfTheVendor(store, await vendor.text()) })
     : refusalOfTheVendor(vendor, 'invalid_grant');

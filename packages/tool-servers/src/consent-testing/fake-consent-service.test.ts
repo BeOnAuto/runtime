@@ -40,7 +40,7 @@ function startOf(vendor: Pick<FakeMcpServer, 'origin'>, changes: Partial<Service
     issuer: vendor.origin,
     scope: 'files.read',
     parameters: { access_type: 'offline' },
-    resource: `${vendor.origin}/mcp`,
+    resources: [`${vendor.origin}/mcp`],
     returnTo: { kind: 'loopback', base: 'http://127.0.0.1:5555/studio/' },
     challenge: createHash('sha256').update(verifier).digest('base64url'),
     ...changes,

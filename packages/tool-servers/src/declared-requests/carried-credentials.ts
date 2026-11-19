@@ -18,7 +18,7 @@ const bearerCredentials = /^bearer +(\S+)$/iu;
 
 const authorizationHeader = 'authorization';
 
-const noKeptTokenRecordsItsResources: readonly string[] = [];
+const noResourceRecorded: readonly string[] = [];
 
 function placedKeyIn(headers: ReadonlyMap<string, Redacted.Redacted>): Redacted.Redacted | undefined {
   const placed = [...headers].find(
@@ -28,16 +28,16 @@ function placedKeyIn(headers: ReadonlyMap<string, Redacted.Redacted>): Redacted.
   return credentials === null ? undefined : Redacted.make(String(credentials[1]));
 }
 
-function audienceOf(settings: LinkedServerSettings): TokenAudience {
+function audienceOf(settings: LinkedServerSettings, tokens: TokenSource): TokenAudience {
   return {
-    recordedResources: noKeptTokenRecordsItsResources,
+    recordedResources: tokens.recordedResources?.() ?? noResourceRecorded,
     unnamedResourceBase: settings.type === 'openapi' ? settings.api.baseUrl : undefined,
   };
 }
 
 export function bearerOf(settings: LinkedServerSettings, tokens?: TokenSource): Bearer | undefined {
   if (tokens !== undefined) {
-    return { kind: 'token', tokens, audience: audienceOf(settings) };
+    return { kind: 'token', tokens, audience: audienceOf(settings, tokens) };
   }
   const key = settings.type === 'stdio' ? undefined : placedKeyIn(settings.headers);
   return key === undefined ? undefined : { kind: 'key', token: key };

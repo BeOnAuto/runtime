@@ -12,7 +12,7 @@ import type {
 } from '../consent/consent-client.ts';
 import type { ConnectionUnready } from '../org-servers/connection-source.ts';
 import { heldInMemory, type HeldInMemory } from './held-in-memory.ts';
-import { heldAmongSecrets, keptValueOf, type KeptTokens } from './kept-tokens.ts';
+import { heldAmongSecrets, keptValueOf, resourcesRecordedBy, type KeptTokens } from './kept-tokens.ts';
 import { endingOf } from './refresh-endings.ts';
 import { renewalWords } from './renewal-words.ts';
 
@@ -77,6 +77,10 @@ interface Holding {
 }
 
 class FailedUnderItsClaim extends Data.TaggedError('failed_under_its_claim')<FailedClaim> {}
+
+export interface RenewedTokens extends TokenSource {
+  readonly recordedResources: () => readonly string[];
+}
 
 function heldFrom(tokens: KeptTokens, version: number, heldAt: number, { spreadMs }: Renewal): Held {
   const endsAt = tokens.expires_at === undefined ? Number.POSITIVE_INFINITY : Date.parse(tokens.expires_at);
@@ -248,7 +252,7 @@ function underItsFailedClaim(failed: FailedClaim, held: Held, refused: boolean, 
   return !refused && now() < held.endsAt ? Effect.succeed(held.tokens.access_token) : Effect.fail(failed.failure);
 }
 
-export function renewedTokens(sourced: Sourced, renewal: Renewal): TokenSource {
+export function renewedTokens(sourced: Sourced, renewal: Renewal): RenewedTokens {
   const { served, heldAt, serving } = sourced;
   const holding: Holding = {
     held: heldFrom(served.held.tokens, served.held.version, heldAt, renewal),
@@ -290,5 +294,6 @@ export function renewedTokens(sourced: Sourced, renewal: Renewal): TokenSource {
     onUnauthorized: async () => {
       await renewedOnce(true);
     },
+    recordedResources: () => resourcesRecordedBy(holding.held.tokens),
   };
 }

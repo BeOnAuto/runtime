@@ -16,6 +16,8 @@ import {
   refreshed,
   refusalOfTheVendor,
   refuses,
+  ResourceSchema,
+  resourcesIn,
   ReturnSchema,
   studioBaseOf,
   revoked,
@@ -57,7 +59,7 @@ const decodeStart = Schema.decodeUnknownOption(
       issuer: GivenSchema,
       scope: Schema.optionalKey(Schema.String),
       parameters: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
-      resource: Schema.optionalKey(Schema.String),
+      resource: ResourceSchema,
       return: ReturnSchema,
       challenge: GivenSchema,
       challenge_method: Schema.Literal('S256'),
@@ -93,6 +95,9 @@ function authorizationUrlOf(
       url.searchParams.set(name, value);
     }
   }
+  for (const resource of start.resources) {
+    url.searchParams.append('resource', resource);
+  }
   return url.href;
 }
 
@@ -119,13 +124,13 @@ function started({ text }: Asked, store: Store): Response {
     returnTo: asked.return,
     challenge: asked.challenge,
     vendorVerifier: randomText(),
-    resource: asked.resource,
+    resources: resourcesIn(asked.resource),
     startedAt: now(),
     redeemed: false,
   };
   store.starts.set(state, start);
-  const { scope, parameters, resource } = asked;
-  const url = authorizationUrlOf(store, state, start, { ...parameters, scope, resource });
+  const { scope, parameters } = asked;
+  const url = authorizationUrlOf(store, state, start, { ...parameters, scope });
   return answer({ state, url, expires_at: isoAt(start.startedAt + tenMinutesMs) }, 201);
 }
 

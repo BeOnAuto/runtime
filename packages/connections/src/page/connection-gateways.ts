@@ -1,5 +1,5 @@
 import { Unavailable } from '@on.auto/operations';
-import { providerNamed, type ProviderList } from '@on.auto/providers';
+import { providerNamed, requestOriginsOf, type Provider, type ProviderList } from '@on.auto/providers';
 import {
   type GatewayEndAsked,
   type GatewayEndRefusal,
@@ -26,13 +26,21 @@ type Asked = Omit<GatewayEndAsked, 'key'>;
 
 const unconfirmed = 'its gateway did not confirm it';
 
+function itsProviderOf({ provider }: Pick<OfAProvider, 'provider'>, providers: ProviderList): Provider | undefined {
+  return provider === null ? undefined : Result.getOrUndefined(providerNamed(providers, provider));
+}
+
 export function gatewayOf(connection: OfAProvider, providers: ProviderList): WayGateway | undefined {
-  const { provider } = connection;
-  if (provider === null || !connectsThroughItsGateway(connection)) {
-    return undefined;
-  }
-  const named = Result.getOrUndefined(providerNamed(providers, provider));
+  const named = connectsThroughItsGateway(connection) ? itsProviderOf(connection, providers) : undefined;
   return named === undefined ? undefined : declaredGatewayOf(named);
+}
+
+export function originsItsProviderDeclares(
+  connection: Pick<OfAProvider, 'provider'>,
+  providers: ProviderList,
+): readonly string[] {
+  const named = itsProviderOf(connection, providers);
+  return named === undefined ? [] : requestOriginsOf(named.entry);
 }
 
 export function throughItsGateway(gateway: WayGateway | undefined, { sourceOf }: Sources): Sources {

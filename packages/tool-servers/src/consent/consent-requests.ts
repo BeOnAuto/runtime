@@ -1,7 +1,16 @@
 import { exchangeAuthorization, startAuthorization, type FetchLike } from '@modelcontextprotocol/client';
 import { DateTime, Effect, Redacted } from 'effect';
 
-import { answeredTokensOf, keptOf, keptValueOf, tokenAnswersReadAsBearer } from '../consent-tokens/kept-tokens.ts';
+import {
+  answeredTokensOf,
+  askedBesideTheServers,
+  keptOf,
+  keptValueOf,
+  resourcesAskedOf,
+  sentWithResourcesBeside,
+  tokenAnswersReadAsBearer,
+  type AskedResources,
+} from '../consent-tokens/kept-tokens.ts';
 import { libraryClientOf, type Requests, type ServerSource } from './acting-clients.ts';
 import type {
   CodeFinishAsked,
@@ -37,12 +46,13 @@ export interface ServerConsents {
 function consentOf(
   exchanged: unknown,
   asked: string | undefined,
+  { recorded }: AskedResources,
   revoked: Effect.Effect<void>,
 ): Effect.Effect<Omit<FinishedConsent, 'client'>, ConsentRefusal> {
   return Effect.gen(function* () {
     const tokens = answeredTokensOf(exchanged);
     const scope = yield* grantedScopeOf(tokens.scope, asked);
-    const kept = keptOf(tokens, scope, DateTime.toEpochMillis(yield* DateTime.now));
+    const kept = keptOf(tokens, scope, DateTime.toEpochMillis(yield* DateTime.now), recorded);
     return { tokens: keptValueOf(kept), scope, revoked };
   });
 }
@@ -89,6 +99,7 @@ function started(
         ...(resource === undefined ? {} : { resource }),
       }),
     );
+    askedBesideTheServers(authorizationUrl, resourcesAskedOf(resource, asked.requestOrigins));
     for (const [name, value] of Object.entries(parametersOf(asked))) {
       authorizationUrl.searchParams.set(name, value);
     }
@@ -104,6 +115,7 @@ function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
   return Effect.gen(function* () {
     const fetch = fetchFor(asked.reaches);
     const { server, resource } = yield* serverMetadataOf(asked, fetch);
+    const resources = resourcesAskedOf(resource, asked.requestOrigins);
     const client = yield* clients.recordedFor(asked);
     const observed = observedCalls('token', server.token_endpoint, fetch);
     const exchangedBy = takesNoChallenge(asked.way) ? sentWithoutAVerifier(observed.fetch) : observed.fetch;
@@ -115,7 +127,7 @@ function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
           authorizationCode: asked.code,
           codeVerifier: Redacted.value(asked.verifier),
           redirectUri: asked.returnAddress,
-          fetchFn: tokenAnswersReadAsBearer(exchangedBy),
+          fetchFn: tokenAnswersReadAsBearer(sentWithResourcesBeside(exchangedBy, resources)),
           ...(asked.iss === undefined ? {} : { iss: asked.iss }),
           ...(resource === undefined ? {} : { resource }),
           ...(client.authentication === undefined ? {} : { addClientAuthentication: client.authentication }),
@@ -124,7 +136,7 @@ function finished(asked: CodeFinishAsked, { clients, fetchFor }: Requests) {
     });
     const tokens = { access_token: exchanged.access_token, refresh_token: exchanged.refresh_token };
     const revoking = Effect.ignore(revocationOf({ server, client, tokens, fetch }));
-    return yield* consentOf(exchanged, scopeAskedOf(asked.way, server), revoking).pipe(
+    return yield* consentOf(exchanged, scopeAskedOf(asked.way, server), resources, revoking).pipe(
       Effect.map((consent) => ({ ...consent, client: asked.client })),
       Effect.onError(() => revoking),
     );

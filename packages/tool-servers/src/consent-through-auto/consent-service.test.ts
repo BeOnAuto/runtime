@@ -29,7 +29,7 @@ const start: ServiceStartAsked = {
   issuer,
   scope: undefined,
   parameters: undefined,
-  resource: undefined,
+  resources: [],
   returnTo: { kind: 'hosted', base: 'https://studio.example.com/' },
   challenge: 'a-challenge',
 };
@@ -43,7 +43,7 @@ function everyCallAt(url: string) {
     outcomeOf(calls.describe('a-state', studioSession)),
     outcomeOf(calls.redeem('a-state', studioSession, { code: 'a-code' })),
     outcomeOf(calls.takeHandoff('a-handle', Redacted.make('a-verifier'))),
-    outcomeOf(calls.refresh({ issuer, refreshToken: 'r', connectionKey: 'k', resource: undefined })),
+    outcomeOf(calls.refresh({ issuer, refreshToken: 'r', connectionKey: 'k', resources: [] })),
     outcomeOf(calls.revoke({ issuer, tokens, connectionKey: 'k' })),
   ]);
 }
@@ -116,7 +116,7 @@ function problemAnswer(status: number, members: Readonly<Record<string, unknown>
 
 async function refreshAt(answer: () => Response) {
   const calls = serviceCallsAt({ url: await answeringEvery(answer) });
-  return outcomeOf(calls.refresh({ issuer, refreshToken: 'r', connectionKey: 'k', resource: undefined }));
+  return outcomeOf(calls.refresh({ issuer, refreshToken: 'r', connectionKey: 'k', resources: [] }));
 }
 
 async function revokeAt(answer: () => Response) {

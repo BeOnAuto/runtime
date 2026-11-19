@@ -31,7 +31,7 @@ import {
   type GivenClient,
   type KeptConnection,
 } from '../registry/registry.ts';
-import { gatewayOf, throughItsGateway } from './connection-gateways.ts';
+import { gatewayOf, originsItsProviderDeclares, throughItsGateway } from './connection-gateways.ts';
 import type { ConsentNamed } from './consent-words.ts';
 
 export type ConsentAsked = Omit<StartAsked, 'state' | 'studioBase'>;
@@ -156,6 +156,7 @@ export function consentAskedOf(
     way: wayOf(connection, scope, gatewayOf(connection, services.providers)),
     returnAddress: returnAddressOf(services.pages),
     reaches: reachesUnder(services.policy, services.resolve),
+    requestOrigins: originsItsProviderDeclares(connection, services.providers),
   };
 }
 

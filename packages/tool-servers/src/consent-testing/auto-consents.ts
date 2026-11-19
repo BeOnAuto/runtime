@@ -51,8 +51,9 @@ export async function handedOffAskedOf(
 ): Promise<HandleFinishAsked> {
   const start = await Effect.runPromise(client.start(asked));
   const handle = await handleOf(service, start.url);
-  const { server, way, returnAddress, reaches } = asked;
-  return { server, way, returnAddress, reaches, client: start.client, verifier: start.verifier, handle };
+  const { server, way, returnAddress, reaches, requestOrigins } = asked;
+  const { client: chosen, verifier } = start;
+  return { server, way, returnAddress, reaches, requestOrigins, client: chosen, verifier, handle };
 }
 
 export function consentClientThrough(

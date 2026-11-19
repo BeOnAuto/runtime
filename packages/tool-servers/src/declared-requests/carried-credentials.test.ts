@@ -65,6 +65,8 @@ function tokenOf(settings: LinkedServerSettings): Bearer {
 
 const at = (address: string): URL => new URL(address);
 
+const trackerApi = 'https://api.tracker.example.com';
+
 describe('the credential a request carries', () => {
   it('is the key a connection places in its Authorization header as a bearer token, whatever the case of either', () => {
     expect(
@@ -138,5 +140,20 @@ describe('the token of a sign-in a request carries', () => {
     const key = Option.getOrThrow(Option.fromNullishOr(bearerOf(mcp({ Authorization: 'Bearer tracker-key-1' }))));
 
     expect(mayCarryTo(key, at('https://api.tracker.example.com/hooks'))).toBe(true);
+  });
+});
+
+describe('the token of a sign-in whose tokens record the resources they were asked for', () => {
+  it('is carried where a resource its tokens record covers the request, read from the tokens it holds', () => {
+    const recording = { ...heldTokens('tracker-access-token-91aa'), recordedResources: () => [trackerApi] };
+    const token = Option.getOrThrow(Option.fromNullishOr(bearerOf(mcp({}, signedIn), recording)));
+
+    expect(
+      [
+        `${trackerApi}/projects/acme-web/hooks`,
+        'https://hooks.tracker.example.com/hooks',
+        'http://api.tracker.example.com/hooks',
+      ].map((address) => mayCarryTo(token, at(address))),
+    ).toEqual([true, false, false]);
   });
 });

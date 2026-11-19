@@ -1,8 +1,8 @@
-import { Option, Redacted } from 'effect';
+import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { secretsOf } from '../bounds/secrets.ts';
-import { keptValueOf, type KeptTokens } from '../consent-tokens/kept-tokens.ts';
+import { keptTokensIn, keptValueOf, type KeptTokens } from '../consent-tokens/kept-tokens.ts';
 import { renewalWords } from '../consent-tokens/renewal-words.ts';
 import type { ConsentClient } from '../consent/consent-client.ts';
 import {
@@ -13,11 +13,13 @@ import {
   consentClientThrough,
   consentClientWith,
   cuttingTimeouts,
+  handedOffAskedOf,
   memoryTokens,
   postedTo,
   rowOf,
   servedOf,
   servedTokensOf,
+  startAskedAt,
   type ClientRegistration,
   type ConsentConnected,
   type MemoryTokens,
@@ -112,6 +114,35 @@ describe('the renewal of the tokens of a consent through Auto’s consent servic
     );
 
     expect(secrets.scrub(String(connected.first.connection_key))).toBe('[redacted]');
+  });
+});
+
+describe('the resources a renewal through Auto’s consent service asks for', () => {
+  it("are its server's and those its tokens were asked for that the entry still declares, kept again with the new tokens", async () => {
+    const api = 'https://api.files.example.com';
+    const serving = await servedThroughAuto();
+    closing.push(serving.close);
+    const consent = consentClientThrough(serving);
+    const signedIn = { ...startAskedAt(serving.fake), requestOrigins: [api, 'https://hooks.files.example.com'] };
+    const asked = await handedOffAskedOf(consent, signedIn, serving.service);
+    const { tokens } = await Effect.runPromise(consent.finish(asked));
+    const connection = {
+      fake: serving.fake,
+      client: asked.client,
+      tokens,
+      kept: Option.getOrThrow(keptTokensIn(tokens)),
+    };
+    const row = rowOf(connection, serving.clock.now);
+    const served = { ...servedOf(connection, row), requestOrigins: [api, 'https://reports.files.example.com'] };
+    const { source } = servedTokensOf(served, serving.clock.now, consent);
+
+    serving.clock.setTo(renewalTime);
+    await source.token();
+
+    expect(serving.service.calls().filter(({ path }) => path === '/tokens/refresh')).toMatchObject([
+      { body: { resource: [serving.fake.url, api] } },
+    ]);
+    expect(row.kept()?.resources).toEqual([api]);
   });
 });
 

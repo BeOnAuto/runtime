@@ -49,7 +49,7 @@ function servedOn(studioBase: string) {
     issuer: vendorOrigin,
     scope: 'files.read',
     parameters: undefined,
-    resource: undefined,
+    resources: [],
     returnTo: { kind: 'hosted', base: studioBase },
     challenge,
   });

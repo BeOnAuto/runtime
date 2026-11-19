@@ -11,7 +11,11 @@ const tokenFields = {
   token_type: Schema.String,
 };
 
-const KeptTokensSchema = Schema.Struct({ ...tokenFields, connection_key: Schema.optionalKey(Schema.String) });
+const KeptTokensSchema = Schema.Struct({
+  ...tokenFields,
+  connection_key: Schema.optionalKey(Schema.String),
+  resources: Schema.optionalKey(Schema.Array(Schema.String)),
+});
 
 export type KeptTokens = typeof KeptTokensSchema.Type;
 
@@ -66,7 +70,16 @@ function expiryOf(nowMillis: number, expiresIn: number | undefined): string | un
     : Option.getOrUndefined(Option.map(DateTime.make(nowMillis + expiresIn * millisOfASecond), DateTime.formatIso));
 }
 
-export function keptOf(answered: AnsweredTokens, scope: string | undefined, nowMillis: number): KeptTokens {
+function recordOf(resources: readonly string[]): Pick<KeptTokens, 'resources'> {
+  return resources.length === 0 ? {} : { resources };
+}
+
+export function keptOf(
+  answered: AnsweredTokens,
+  scope: string | undefined,
+  nowMillis: number,
+  resources: readonly string[],
+): KeptTokens {
   const { access_token: accessToken, refresh_token: refreshToken, token_type: tokenType } = answered;
   const expiresAt = expiryOf(nowMillis, answered.expires_in);
   return {
@@ -75,10 +88,16 @@ export function keptOf(answered: AnsweredTokens, scope: string | undefined, nowM
     ...(expiresAt === undefined ? {} : { expires_at: expiresAt }),
     ...(scope === undefined ? {} : { scope }),
     token_type: tokenType,
+    ...recordOf(resources),
   };
 }
 
-export function keptHandedOf(handed: HandedTokens, scope: string | undefined, key: string): KeptTokens {
+export function keptHandedOf(
+  handed: HandedTokens,
+  scope: string | undefined,
+  key: string,
+  resources: readonly string[],
+): KeptTokens {
   const {
     access_token: accessToken,
     refresh_token: refreshToken,
@@ -92,6 +111,7 @@ export function keptHandedOf(handed: HandedTokens, scope: string | undefined, ke
     ...(scope === undefined ? {} : { scope }),
     token_type: tokenType ?? unnamedTokenType,
     connection_key: key,
+    ...recordOf(resources),
   };
 }
 
@@ -134,4 +154,62 @@ async function readAsBearer(response: Response): Promise<Response> {
 export function tokenAnswersReadAsBearer(fetch: FetchLike): FetchLike {
   return async (...[address, init]: readonly [unknown, unknown?]) =>
     readAsBearer(await fetch(String(address), Object.assign({}, init)));
+}
+
+export interface AskedResources {
+  readonly asked: readonly string[];
+  readonly recorded: readonly string[];
+}
+
+const noneAsked: AskedResources = { asked: [], recorded: [] };
+
+const noResourceRecorded: readonly string[] = [];
+
+const resourceParameter = 'resource';
+
+export function resourcesAskedOf(
+  serverResource: string | undefined,
+  requestOrigins: readonly string[] = [],
+): AskedResources {
+  return serverResource === undefined
+    ? noneAsked
+    : { asked: [...new Set([serverResource, ...requestOrigins])], recorded: requestOrigins };
+}
+
+export function resourcesRecordedBy({
+  resources = noResourceRecorded,
+}: Pick<KeptTokens, 'resources'>): readonly string[] {
+  return resources;
+}
+
+export function originsAskedAgainOf(
+  previous: Pick<KeptTokens, 'resources'>,
+  requestOrigins: readonly string[] = [],
+): readonly string[] {
+  const recorded = resourcesRecordedBy(previous);
+  return requestOrigins.filter((origin) => recorded.includes(origin));
+}
+
+function resourcesBesideTheServersOf({ asked }: AskedResources): readonly string[] {
+  return asked.slice(1);
+}
+
+export function askedBesideTheServers(url: Readonly<URL>, resources: AskedResources): void {
+  for (const resource of resourcesBesideTheServersOf(resources)) {
+    url.searchParams.append(resourceParameter, resource);
+  }
+}
+
+export function sentWithResourcesBeside(fetch: FetchLike, resources: AskedResources): FetchLike {
+  const beside = resourcesBesideTheServersOf(resources);
+  if (beside.length === 0) {
+    return fetch;
+  }
+  return async (...[address, init]: readonly [unknown, unknown?]) => {
+    const form = new URLSearchParams(await new Request(String(address), Object.assign({}, init)).text());
+    for (const resource of beside) {
+      form.append(resourceParameter, resource);
+    }
+    return fetch(String(address), Object.assign({}, init, { body: form }));
+  };
 }

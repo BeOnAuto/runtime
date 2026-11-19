@@ -1,7 +1,8 @@
 import { readProviders, providersShippedRoots } from '@on.auto/providers';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
+import { keptTokensIn } from '@on.auto/tool-servers';
 import { clockAt, manualTimer } from '@on.auto/tool-servers/testing';
-import { Function, Option, Result, Schema } from 'effect';
+import { Function, Option, Redacted, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { reconnectionStartedAt, theOrgsOAuthClient } from '../testing/consents.ts';
@@ -71,6 +72,12 @@ const connectedOf = Schema.decodeUnknownSync(
   }),
 );
 
+function resourcesRecordedIn({ secrets }: ReturnType<typeof harnessAtTheVendor>): readonly string[] {
+  return [...secrets.values().values()].flatMap((value) =>
+    Option.toArray(keptTokensIn(Redacted.make(value))).flatMap(({ resources = [] }) => resources),
+  );
+}
+
 function parametersAsked(
   asked: Readonly<URL>,
   { parameters = {} }: VendorOfTheWay,
@@ -97,7 +104,8 @@ async function consentOf({ name, placeholders, issuer, oauthClient, vendor }: Wa
     provider: name,
     authorization_endpoint: `${asked.origin}${asked.pathname}`.replace(fake.origin, '<the fake>'),
     scope: asked.searchParams.get('scope'),
-    resource: asked.searchParams.get('resource'),
+    resources: asked.searchParams.getAll('resource'),
+    recorded: resourcesRecordedIn(h),
     code_challenge: asked.searchParams.has('code_challenge'),
     code_challenge_method: asked.searchParams.get('code_challenge_method'),
     parameters: parametersAsked(asked, theVendor),
@@ -120,7 +128,8 @@ function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string
     provider: name,
     authorization_endpoint: endpointsAt?.authorization ?? '<the fake>/authorize',
     scope: asked,
-    resource,
+    resources: resource === null ? [] : [resource],
+    recorded: [],
     ...(metadata.takesNoChallenge === true
       ? { code_challenge: false, code_challenge_method: null }
       : { code_challenge: true, code_challenge_method: 'S256' }),

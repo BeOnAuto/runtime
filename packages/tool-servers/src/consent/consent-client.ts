@@ -36,6 +36,7 @@ export interface ConsentAsked {
   readonly returnAddress: string;
   readonly reaches: Reaches;
   readonly ownClient?: OwnClient | undefined;
+  readonly requestOrigins?: readonly string[] | undefined;
 }
 
 export interface StartAsked extends ConsentAsked {

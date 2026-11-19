@@ -47,6 +47,24 @@ const aRefreshToken: unknown = expect.stringMatching(/^refresh-/u);
 
 const aConnectionKey: unknown = expect.stringMatching(/^[\w-]{43}$/u);
 
+const requestOrigins = ['https://api.files.example.com', 'https://hooks.files.example.com'];
+
+describe('the resources of a consent through Auto’s consent service', () => {
+  it("are asked of the service as a list, its server's first, and the origins of its entry's requests are kept with the tokens", async () => {
+    const serving = await throughAuto();
+    const client = consentClientThrough(serving);
+    const asked = await handedOffAskedOf(client, { ...startAskedAt(serving.fake), requestOrigins }, serving.service);
+
+    const kept = tokensKeptBy(await finished(client, asked));
+
+    expect(serving.service.calls().find(({ path }) => path === '/consents')?.body).toMatchObject({
+      resource: [serving.fake.url, ...requestOrigins],
+    });
+    expect(kept.resources).toEqual(requestOrigins);
+    expect(await admitted(serving.fake, kept.access_token)).toBe(true);
+  });
+});
+
 describe('the finish of a consent through Auto’s consent service', () => {
   it('takes the handoff with the verifier of its start, and answers the tokens with the connection key inside them', async () => {
     const serving = await throughAuto();

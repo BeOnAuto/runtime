@@ -23,6 +23,7 @@ export interface UnauthorizedContext {
 export interface TokenSource extends AuthProvider {
   readonly token: () => Promise<string>;
   readonly onUnauthorized: (context: UnauthorizedContext) => Promise<void>;
+  readonly recordedResources?: () => readonly string[];
 }
 
 export interface ConsentTokenSources {

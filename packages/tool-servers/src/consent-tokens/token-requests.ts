@@ -1,7 +1,6 @@
 import { refreshAuthorization, type FetchLike } from '@modelcontextprotocol/client';
 import { Effect } from 'effect';
 
-import type { TokenSource } from '../clients/token-source.ts';
 import { libraryClientOf, type ActingClient, type Requests } from '../consent/acting-clients.ts';
 import type { ConsentRefusal, ConsentServed, RevocationFailure, RevokeAsked } from '../consent/consent-client.ts';
 import { revocationOf } from '../consent/revocation.ts';
@@ -15,14 +14,18 @@ import {
 import {
   answeredTokensOf,
   keptOf,
+  originsAskedAgainOf,
+  resourcesAskedOf,
+  sentWithResourcesBeside,
   tokenAnswersReadAsBearer,
   type AnsweredTokens,
+  type AskedResources,
   type KeptTokens,
 } from './kept-tokens.ts';
-import { renewedTokens, type Refreshing, type Sourced } from './renewed-tokens.ts';
+import { renewedTokens, type Refreshing, type RenewedTokens, type Sourced } from './renewed-tokens.ts';
 
 export interface TokenRequests {
-  readonly tokenSource: (sourced: Sourced) => TokenSource;
+  readonly tokenSource: (sourced: Sourced) => RenewedTokens;
   readonly revoke: (asked: RevokeAsked) => Effect.Effect<void, RevocationFailure>;
 }
 
@@ -55,6 +58,7 @@ function revokedTokensOf({ access_token: accessToken, refresh_token: refreshToke
 function refreshedWith(
   { issuer, server, resource, client, fetch }: Refreshed,
   refreshToken: string,
+  resources: AskedResources,
 ): Effect.Effect<AnsweredTokens, unknown> {
   return Effect.tryPromise({
     try: async () =>
@@ -63,7 +67,7 @@ function refreshedWith(
           metadata: libraryMetadataOf(server),
           clientInformation: libraryClientOf(client.identity),
           refreshToken,
-          fetchFn: tokenAnswersReadAsBearer(fetch),
+          fetchFn: tokenAnswersReadAsBearer(sentWithResourcesBeside(fetch, resources)),
           ...(resource === undefined ? {} : { resource }),
           ...(client.authentication === undefined ? {} : { addClientAuthentication: client.authentication }),
         }),
@@ -82,10 +86,12 @@ function refreshingOf(
     const client = yield* clients.recordedFor(served);
     const refreshed: Refreshed = { ...metadata, issuer: served.way.issuer, client, fetch };
     return {
-      refreshed: (refreshToken, previous, nowMillis) =>
-        Effect.map(refreshedWith(refreshed, refreshToken), (answered) =>
-          keptOf(answered, scopeRenewedOf(answered, previous), nowMillis),
-        ),
+      refreshed: (refreshToken, previous, nowMillis) => {
+        const resources = resourcesAskedOf(metadata.resource, originsAskedAgainOf(previous, served.requestOrigins));
+        return Effect.map(refreshedWith(refreshed, refreshToken, resources), (answered) =>
+          keptOf(answered, scopeRenewedOf(answered, previous), nowMillis, resources.recorded),
+        );
+      },
       revoked: (tokens) =>
         Effect.ignore(revocationOf({ server: metadata.server, client, tokens: revokedTokensOf(tokens), fetch })),
     };

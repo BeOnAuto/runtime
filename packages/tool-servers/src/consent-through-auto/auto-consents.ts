@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { Effect, Redacted } from 'effect';
 
-import { keptHandedOf, keptValueOf } from '../consent-tokens/kept-tokens.ts';
+import { keptHandedOf, keptValueOf, resourcesAskedOf } from '../consent-tokens/kept-tokens.ts';
 import type { Requests } from '../consent/acting-clients.ts';
 import type {
   ChosenClient,
@@ -50,7 +50,7 @@ export function startedThroughAuto(
       issuer: asked.way.issuer,
       scope: scopeAskedOf(asked.way, server),
       parameters: asked.way.parameters,
-      resource,
+      resources: resourcesAskedOf(resource, asked.requestOrigins).asked,
       returnTo: { kind, base: asked.studioBase },
       challenge,
     });
@@ -64,7 +64,7 @@ export function handedOff(
   through: ThroughAuto,
 ): Effect.Effect<FinishedConsent, ConsentRefusal> {
   return Effect.gen(function* () {
-    const { server } = yield* serverMetadataOf(asked, fetchFor(asked.reaches));
+    const { server, resource } = yield* serverMetadataOf(asked, fetchFor(asked.reaches));
     const auto = autoOf(asked.client, through);
     if (auto === undefined) {
       return yield* Effect.fail(clientGone);
@@ -74,15 +74,16 @@ export function handedOff(
     const revoked = Effect.ignore(
       auto.service.revoke({
         issuer: asked.way.issuer,
-        tokens: keptHandedOf(tokens, undefined, key),
+        tokens: keptHandedOf(tokens, undefined, key, []),
         connectionKey: key,
       }),
     );
     const scope = yield* grantedScopeOf(tokens.scope, scopeAskedOf(asked.way, server)).pipe(
       Effect.onError(() => revoked),
     );
+    const { recorded } = resourcesAskedOf(resource, asked.requestOrigins);
     return {
-      tokens: keptValueOf(keptHandedOf(tokens, scope, key)),
+      tokens: keptValueOf(keptHandedOf(tokens, scope, key, recorded)),
       scope,
       revoked,
       client: chosenOf(handoff.client_id),

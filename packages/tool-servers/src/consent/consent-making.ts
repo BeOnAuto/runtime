@@ -1,10 +1,10 @@
 import { Effect } from 'effect';
 
 import { overFetches } from '../call-fetch/over-fetches.ts';
-import type { TokenSource } from '../clients/token-source.ts';
 import type { GatewayRequests } from '../consent-through-a-gateway/gateway-consents.ts';
 import { serviceClientsListed, throughAutoOf, usableClientsOf } from '../consent-through-auto/auto-clients.ts';
-import { heldAmongSecrets } from '../consent-tokens/kept-tokens.ts';
+import { heldAmongSecrets, resourcesRecordedBy } from '../consent-tokens/kept-tokens.ts';
+import type { RenewedTokens } from '../consent-tokens/renewed-tokens.ts';
 import { sourcesHad, sourceTakenOf, type ClientSource, type HadSources, type WayOfClients } from './client-sources.ts';
 import type {
   ConsentClient,
@@ -45,13 +45,16 @@ function servedTokens(
   loaded: Effect.Effect<GatewayRequests>,
   served: ConsentServed,
   serving: TokenServing,
-): TokenSource {
+): RenewedTokens {
   const heldAt = serving.now();
   heldAmongSecrets(served.held.tokens, serving);
-  const sourcing: { source?: Promise<TokenSource> } = {};
-  const sourceOnUse = (): Promise<TokenSource> => {
+  const sourcing: { source?: Promise<RenewedTokens>; sourced?: RenewedTokens } = {};
+  const sourceOnUse = (): Promise<RenewedTokens> => {
     sourcing.source ??= Effect.runPromise(
-      Effect.map(loaded, (requests) => requests.tokenSource({ served, heldAt, serving })),
+      Effect.map(loaded, (requests) => {
+        sourcing.sourced = requests.tokenSource({ served, heldAt, serving });
+        return sourcing.sourced;
+      }),
     );
     return sourcing.source;
   };
@@ -60,6 +63,8 @@ function servedTokens(
     onUnauthorized: async (context) => {
       await (await sourceOnUse()).onUnauthorized(context);
     },
+    recordedResources: () =>
+      sourcing.sourced === undefined ? resourcesRecordedBy(served.held.tokens) : sourcing.sourced.recordedResources(),
   };
 }
 

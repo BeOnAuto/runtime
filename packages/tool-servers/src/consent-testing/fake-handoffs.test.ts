@@ -38,7 +38,7 @@ function startOf(vendor: Pick<FakeMcpServer, 'origin'>, changes: Partial<Service
     issuer: vendor.origin,
     scope: 'files.read',
     parameters: { access_type: 'offline' },
-    resource: `${vendor.origin}/mcp`,
+    resources: [`${vendor.origin}/mcp`],
     returnTo: { kind: 'loopback', base: 'http://127.0.0.1:5555/studio/' },
     challenge: createHash('sha256').update(verifier).digest('base64url'),
     ...changes,
@@ -97,8 +97,8 @@ describe('the tokens the fake consent service refreshes and revokes', () => {
     const handed = await Effect.runPromise(calls.takeHandoff(handle, Redacted.make(verifier)));
     const issuer = serve.fake.origin;
     const refreshToken = String(handed.tokens.refresh_token);
-    const keyed = { issuer, refreshToken, connectionKey: handed.connection_key, resource: `${issuer}/mcp` };
-    const kept = keptHandedOf(handed.tokens, handed.tokens.scope, handed.connection_key);
+    const keyed = { issuer, refreshToken, connectionKey: handed.connection_key, resources: [`${issuer}/mcp`] };
+    const kept = keptHandedOf(handed.tokens, handed.tokens.scope, handed.connection_key, []);
     const accessAlone = {
       access_token: kept.access_token,
       token_type: kept.token_type,
@@ -108,7 +108,7 @@ describe('the tokens the fake consent service refreshes and revokes', () => {
     const key = handed.connection_key;
 
     const unkeyed = await run(calls.refresh({ ...keyed, connectionKey: 'another-key' }));
-    const refreshed = await run(calls.refresh({ ...keyed, resource: undefined }));
+    const refreshed = await run(calls.refresh({ ...keyed, resources: [] }));
     serve.service.refuseNext('refresh');
     const refused = await run(calls.refresh(keyed));
     serve.service.refuseNext('revoke');
@@ -144,7 +144,7 @@ describe('the tokens the fake consent service refreshes for the authorization se
     const refreshToken = 'a-refresh-token-nobody-issued';
 
     expect(
-      await run(calls.refresh({ issuer, refreshToken, connectionKey: handed.connection_key, resource: undefined })),
+      await run(calls.refresh({ issuer, refreshToken, connectionKey: handed.connection_key, resources: [] })),
     ).toMatchObject({ failure: { refused: 'invalid_grant' } });
   });
 });
@@ -190,8 +190,10 @@ describe('the calls of the fake consent service an authorization server fails', 
     const connectionKey = handed.connection_key;
 
     expect([
-      await run(calls.refresh({ issuer, refreshToken: 'a-refresh-token', connectionKey, resource: undefined })),
-      await run(calls.revoke({ issuer, tokens: keptHandedOf(handed.tokens, undefined, connectionKey), connectionKey })),
+      await run(calls.refresh({ issuer, refreshToken: 'a-refresh-token', connectionKey, resources: [] })),
+      await run(
+        calls.revoke({ issuer, tokens: keptHandedOf(handed.tokens, undefined, connectionKey, []), connectionKey }),
+      ),
       await run(calls.redeem(second.state, studioSession, { code: 'another-code' })),
     ]).toMatchObject([
       { failure: { refused: 'unanswered' } },

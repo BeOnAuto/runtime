@@ -1,6 +1,13 @@
 import { Effect } from 'effect';
 
-import { keptHandedOf, type HandedTokens, type KeptTokens } from '../consent-tokens/kept-tokens.ts';
+import {
+  keptHandedOf,
+  originsAskedAgainOf,
+  resourcesAskedOf,
+  type AskedResources,
+  type HandedTokens,
+  type KeptTokens,
+} from '../consent-tokens/kept-tokens.ts';
 import { RefreshEnded } from '../consent-tokens/refresh-endings.ts';
 import { renewalWords } from '../consent-tokens/renewal-words.ts';
 import type { Refreshing } from '../consent-tokens/renewed-tokens.ts';
@@ -21,11 +28,13 @@ interface Renewed {
   readonly refreshToken: string;
   readonly previous: KeptTokens;
   readonly key: string;
+  readonly resources: AskedResources;
 }
 
 interface RefreshAsked {
   readonly issuer: string;
   readonly resource: string | undefined;
+  readonly requestOrigins: readonly string[] | undefined;
   readonly endingCodes: readonly string[] | undefined;
   readonly name: string;
 }
@@ -39,9 +48,9 @@ const endings: Readonly<Record<'invalid_grant' | 'unknown_key', TokensEnded>> = 
   unknown_key: 'key_unknown',
 };
 
-function renewedOf({ handed, refreshToken, previous, key }: Renewed): KeptTokens {
+function renewedOf({ handed, refreshToken, previous, key, resources }: Renewed): KeptTokens {
   const kept = { ...handed, refresh_token: handed.refresh_token ?? refreshToken };
-  return keptHandedOf(kept, scopeRenewedOf(handed, previous), key);
+  return keptHandedOf(kept, scopeRenewedOf(handed, previous), key, resources.recorded);
 }
 
 type RefreshRefused = { readonly refused: 'unanswered' | keyof typeof endings };
@@ -57,15 +66,17 @@ function revokedThrough(auto: AutoOn, issuer: string, tokens: KeptTokens): Effec
   return key === undefined ? Effect.fail(unknownKey) : auto.service.revoke({ issuer, tokens, connectionKey: key });
 }
 
-function refreshingOf(auto: AutoOn, { issuer, resource, endingCodes, name }: RefreshAsked): Refreshing {
+function refreshingOf(auto: AutoOn, { issuer, resource, requestOrigins, endingCodes, name }: RefreshAsked): Refreshing {
   return {
     refreshed: (refreshToken, previous) => {
       const key = previous.connection_key;
       if (key === undefined) {
         return Effect.fail(new RefreshEnded({ ended: 'key_unknown' }));
       }
-      return auto.service.refresh({ issuer, refreshToken, connectionKey: key, resource, endingCodes }).pipe(
-        Effect.map((handed) => renewedOf({ handed, refreshToken, previous, key })),
+      const resources = resourcesAskedOf(resource, originsAskedAgainOf(previous, requestOrigins));
+      const asked = { issuer, refreshToken, connectionKey: key, resources: resources.asked, endingCodes };
+      return auto.service.refresh(asked).pipe(
+        Effect.map((handed) => renewedOf({ handed, refreshToken, previous, key, resources })),
         Effect.mapError((refusal) => failureOfARefresh(refusal, name)),
       );
     },
@@ -81,9 +92,10 @@ function refreshingThroughAuto(
   return Effect.gen(function* () {
     const { resource } = yield* serverMetadataOf(served, fetchFor(served.reaches));
     const auto = autoOf(served.client, through);
+    const { issuer, ending_codes: endingCodes } = served.way;
     return auto === undefined
       ? yield* Effect.fail(clientGone)
-      : refreshingOf(auto, { issuer: served.way.issuer, resource, endingCodes: served.way.ending_codes, name });
+      : refreshingOf(auto, { issuer, resource, requestOrigins: served.requestOrigins, endingCodes, name });
   });
 }
 

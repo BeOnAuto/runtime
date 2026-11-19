@@ -20,7 +20,7 @@ export interface ServiceStartAsked {
   readonly issuer: string;
   readonly scope: string | undefined;
   readonly parameters: Readonly<Record<string, string>> | undefined;
-  readonly resource: string | undefined;
+  readonly resources: readonly string[];
   readonly returnTo: ConsentReturn;
   readonly challenge: string;
 }
@@ -29,7 +29,7 @@ interface ServiceRefreshAsked {
   readonly issuer: string;
   readonly refreshToken: string;
   readonly connectionKey: string;
-  readonly resource: string | undefined;
+  readonly resources: readonly string[];
   readonly endingCodes?: readonly string[] | undefined;
 }
 
@@ -252,7 +252,12 @@ function revoked(answered: Answered): Effect.Effect<void, RevokeRefusal> {
   return answered.status >= status.ok && answered.status < 300 ? Effect.void : Effect.fail(revokeRefusalOf(answered));
 }
 
-function startBodyOf({ issuer, scope, parameters, resource, returnTo, challenge }: ServiceStartAsked) {
+function resourceFieldOf(resources: readonly string[]): string | readonly string[] | undefined {
+  return resources.length > 1 ? resources : resources[0];
+}
+
+function startBodyOf({ issuer, scope, parameters, resources, returnTo, challenge }: ServiceStartAsked) {
+  const resource = resourceFieldOf(resources);
   return { issuer, scope, parameters, resource, return: returnTo, challenge, challenge_method: challengeMethod };
 }
 
@@ -261,7 +266,8 @@ function revokeBodyOf({ issuer, tokens, connectionKey }: ServiceRevokeAsked) {
   return { issuer, access_token: accessToken, refresh_token: refreshToken, connection_key: connectionKey };
 }
 
-function refreshBodyOf({ issuer, refreshToken, connectionKey, resource, endingCodes }: ServiceRefreshAsked) {
+function refreshBodyOf({ issuer, refreshToken, connectionKey, resources, endingCodes }: ServiceRefreshAsked) {
+  const resource = resourceFieldOf(resources);
   return { issuer, refresh_token: refreshToken, connection_key: connectionKey, resource, ending_codes: endingCodes };
 }
 
