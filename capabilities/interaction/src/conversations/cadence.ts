@@ -35,6 +35,19 @@ export function waitBefore({ read, floorMs, retryAfterMs }: NextWait): number {
   return retryAfterMs === null ? floored : Math.max(floored, Math.min(retryAfterMs, replyReadWaits.mostRetryAfterMs));
 }
 
+export interface WokenRead {
+  readonly now: number;
+  readonly floorMs: number;
+  readonly reads: number;
+  readonly anchor: number;
+}
+
+export function wokenReadAt({ now, floorMs, reads, anchor }: WokenRead): number {
+  const windowMs = floorMs * reads;
+  const windowEnd = anchor + (Math.floor((now - anchor) / windowMs) + 1) * windowMs;
+  return Math.max(now + floorMs, windowEnd);
+}
+
 export function replyWaitMsOf({ wait }: Pick<Replies, 'wait'>): number {
   const reading = wait === undefined ? undefined : readDuration(wait);
   return reading !== undefined && 'milliseconds' in reading ? reading.milliseconds : firstReadWaitMs;

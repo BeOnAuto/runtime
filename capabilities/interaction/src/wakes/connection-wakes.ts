@@ -9,9 +9,10 @@ import {
 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { readFloorMsOf } from '../conversations/cadence.ts';
+import { readFloorMsOf, wokenReadAt } from '../conversations/cadence.ts';
 import { conversationRowFrom, conversationsName } from '../conversations/conversation-rows.ts';
 import { openInConversation } from '../conversations/open-in-conversation.ts';
+import { readsInATurn } from '../readings/turn-readings.ts';
 import { routeOfRequest } from '../replies/request-routes.ts';
 import { openRequestsName } from '../requests/open-requests.ts';
 import { requestRowFrom } from '../requests/request-rows.ts';
@@ -35,14 +36,15 @@ interface Waiting {
   readonly key: string;
   readonly dueAt: number;
   readonly nextReadAt: number;
+  readonly activeAt: number;
 }
 
 function waitingIn(kept: ProjectedKeyedRow, connection: string): readonly Waiting[] {
   const row = conversationRowFrom(kept.row);
-  const { due_at: dueAt, next_read_at: nextReadAt } = row;
+  const { due_at: dueAt, next_read_at: nextReadAt, active_at: activeAt } = row;
   const readThrough = row.open && row.server === connection && row.waited_after === null;
   return readThrough && dueAt !== null && nextReadAt !== null
-    ? [{ address: addressOfTheRow(kept), key: kept.key, dueAt, nextReadAt }]
+    ? [{ address: addressOfTheRow(kept), key: kept.key, dueAt, nextReadAt, activeAt }]
     : [];
 }
 
@@ -108,35 +110,56 @@ function rowsWoken(parts: WakeParts, woken: WokenConnection) {
     : rowsOfTheConversation(parts, woken.playbook, woken.conversation);
 }
 
-function broughtForward(parts: WakeParts, waiting: Waiting, now: number) {
-  return Effect.gen(function* () {
-    const [oldest] = (yield* openInConversation(parts, waiting)).kept;
+interface Paced {
+  readonly waiting: Waiting;
+  readonly floorMs: number;
+  readonly reads: number;
+}
+
+function pacedOf(parts: WakeParts, waiting: Waiting): Effect.Effect<readonly Paced[]> {
+  return Effect.map(openInConversation(parts, waiting), ({ kept }): readonly Paced[] => {
+    const [oldest] = kept;
     if (oldest === undefined) {
-      return;
+      return [];
     }
     const route = routeOfRequest(oldest);
-    const floorMs = readFloorMsOf(route.replies, route.telling.readLimit);
-    const dueAt = now + floorMs;
-    if (dueAt < waiting.dueAt && dueAt + floorMs <= waiting.nextReadAt) {
-      yield* parts.ledger.advanceRow(conversationsName, waiting.address, waiting.key, {
+    return [{ waiting, floorMs: readFloorMsOf(route.replies, route.telling.readLimit), reads: readsInATurn(kept) }];
+  });
+}
+
+function readsAskedBy(woken: WokenConnection, paced: readonly Paced[]): number {
+  return woken.conversation === undefined ? paced.reduce((asked, { reads }) => asked + reads, 0) : 1;
+}
+
+function broughtForward(parts: WakeParts, { waiting, floorMs }: Paced, dueAt: number): Effect.Effect<void> {
+  return dueAt < waiting.dueAt && dueAt + floorMs <= waiting.nextReadAt
+    ? parts.ledger.advanceRow(conversationsName, waiting.address, waiting.key, {
         set: { due_at: dueAt },
         when: [
           { column: 'open', equals: true },
           { column: 'next_read_at', equals: waiting.nextReadAt },
           { column: 'due_at', after: dueAt },
         ],
-      });
-    }
-  });
+      })
+    : Effect.void;
 }
 
 export function connectionWake(parts: WakeParts): ConnectionWake {
   return (woken, now) =>
-    Effect.flatMap(rowsWoken(parts, woken), (rows) =>
-      Effect.forEach(
-        rows.flatMap((kept) => waitingIn(kept, woken.connection)),
-        (waiting) => broughtForward(parts, waiting, now),
+    Effect.gen(function* () {
+      const rows = yield* rowsWoken(parts, woken);
+      const waiting = rows.flatMap((kept) => waitingIn(kept, woken.connection));
+      const paced = (yield* Effect.forEach(waiting, (each) => pacedOf(parts, each))).flat();
+      const reads = readsAskedBy(woken, paced);
+      yield* Effect.forEach(
+        paced,
+        (each) =>
+          broughtForward(
+            parts,
+            each,
+            wokenReadAt({ now, floorMs: each.floorMs, reads, anchor: each.waiting.activeAt }),
+          ),
         { discard: true },
-      ),
-    );
+      );
+    });
 }

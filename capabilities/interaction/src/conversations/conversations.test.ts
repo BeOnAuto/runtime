@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { readings } from '../readings/reading-rows.ts';
 import { openRequests } from '../requests/open-requests.ts';
 import { answererId, chatHarness, farAhead, ledgerKeepingNames, recordsOf } from '../testing/index.ts';
-import { replyWaitMsOf, waitBefore, waitBeforeRead } from './cadence.ts';
+import { replyWaitMsOf, waitBefore, waitBeforeRead, wokenReadAt } from './cadence.ts';
 import { conversations } from './conversation-rows.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71';
@@ -92,6 +92,22 @@ describe('the cadence of reading a conversation', () => {
     ];
 
     expect(waits.map((wait) => wait / second)).toEqual([60, 300, 120, 3600]);
+  });
+});
+
+function dueAt(reads: number, now: number, anchor: number): number {
+  return wokenReadAt({ now: now * second, floorMs: 5 * second, reads, anchor: anchor * second }) / second;
+}
+
+describe('the read a wake makes due', () => {
+  it('comes a floor after the wake where it asks one read, wherever its conversation was last active', () => {
+    expect([dueAt(1, 15, 0), dueAt(1, 15, 3), dueAt(1, 15, 7), dueAt(1, 15, 20)]).toEqual([20, 20, 20, 20]);
+  });
+
+  it('comes at the end of the window of as many floors as it asks reads, counted from when its conversation was last active, never within a floor of the wake', () => {
+    expect([dueAt(3, 15, 0), dueAt(3, 16, 0), dueAt(3, 26, 0), dueAt(3, 15, 5), dueAt(3, 15, 10)]).toEqual([
+      30, 30, 31, 20, 25,
+    ]);
   });
 });
 

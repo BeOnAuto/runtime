@@ -57,6 +57,10 @@ export function readingsOfTheTurn(
   return next === undefined ? [own] : [own, ...readingsOfTheTurn([next, ...rest], key, rendering)];
 }
 
+export function readsInATurn(requests: readonly Pick<KeptRequest, 'reading'>[]): number {
+  return Math.min(new Set(requests.map(({ reading }) => reading)).size, turnBounds.readsEachTurn);
+}
+
 export function readingsInTurn(readings: readonly ReadingOfATurn[], from: number): readonly ReadingOfATurn[] {
   const start = from % readings.length;
   return [...readings.slice(start), ...readings.slice(0, start)].slice(0, turnBounds.readsEachTurn);

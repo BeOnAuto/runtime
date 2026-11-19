@@ -149,6 +149,48 @@ const sooner: readonly (readonly [string, Day, number])[] = [
   ],
 ];
 
+const sevenRuns = Array.from({ length: 7 }, (_, index) => `0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b9${index}`);
+
+const fiveSeconds = 5 * SECOND;
+
+const hour = 3600 * SECOND;
+
+/**
+ * The reads of seven conversations asked at T0 through one connection, over an hour of deliveries that name none of
+ * them, one just after the reads of every five seconds, or with no delivery.
+ */
+async function anHourOfSevenConversations(delivered: boolean): Promise<number> {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(T0);
+  const playbook = await chatHarness({ document: everyFiveSeconds });
+  await Effect.runPromise(
+    Effect.forEach(sevenRuns, (asked) => Effect.promise(() => playbook.askInThread(asked)), { discard: true }),
+  );
+  await playbook.performDue(T0);
+  const wake = connectionWake({ ledger: playbook.ledger.service });
+  const deliveries = Array.from({ length: hour / fiveSeconds }, (_, index) => T0 + (index + 1) * fiveSeconds);
+  const deliveredAt = (at: number) =>
+    Effect.promise(async () => {
+      vi.setSystemTime(at);
+      await playbook.performReads(at);
+      if (delivered) {
+        await Effect.runPromise(wake({ playbook: alpha, connection: 'chat' }, at));
+      }
+    });
+  await Effect.runPromise(Effect.forEach(deliveries, deliveredAt, { discard: true }));
+  return readsOf(playbook);
+}
+
+describe('a connection whose deliveries name no conversation, with seven conversations waiting through it', () => {
+  it('asks the service at most once a floor beside the timed reads, over an hour of deliveries every five seconds', async () => {
+    const timerAlone = await anHourOfSevenConversations(false);
+    const woken = await anHourOfSevenConversations(true);
+
+    expect(woken).toBeGreaterThan(timerAlone);
+    expect(woken - timerAlone).toBeLessThanOrEqual(hour / fiveSeconds);
+  }, 60_000);
+});
+
 describe('a busy conversation, where every message wakes its read', () => {
   it.each(days)(
     'never takes a reply later than the timer alone, nor reads sooner than the limit, nor fails a read: %s',
