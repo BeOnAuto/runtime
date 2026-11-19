@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:26.12.1-slim@sha256:94816674c62774da0d099a947bf4613b9e1972a2733abd0d0cd80e795f8411d0 AS dependencies
+FROM node:26.13.1-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS dependencies
 WORKDIR /app
 RUN npm install --global --no-fund --no-audit pnpm@12.11.2
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -46,7 +46,7 @@ RUN case "$AZURE_IDENTITY" in \
     *) echo "AZURE_IDENTITY is true or false, not $AZURE_IDENTITY" >&2 && exit 1 ;; \
   esac
 
-FROM node:26.12.1-slim@sha256:94816674c62774da0d099a947bf4613b9e1972a2733abd0d0cd80e795f8411d0
+FROM node:26.13.1-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc
 LABEL org.opencontainers.image.licenses="Elastic-2.0"
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=5555 RUNTIME_DISTRIBUTION=docker
 WORKDIR /app
