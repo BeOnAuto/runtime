@@ -4,6 +4,8 @@ import { call } from '../testing/api-calls.ts';
 import {
   eventsPath,
   eventsServedWith,
+  githubHeaders,
+  githubsHook,
   nowSeconds,
   roomHeaders,
   roomsSecret,
@@ -137,6 +139,25 @@ describe('a proven delivery whose reading holds nothing', () => {
       [{ wake: { subscription: 'hook-7' } }, false],
       [{ wake: { subscription: 'hook-7' } }, false],
     ]);
+  });
+});
+
+describe('a delivery to a connection of GitHub, as its shipped entry declares its webhook', () => {
+  it('is proven by GitHub’s published check and its ping passed over, a new comment handed on, and another secret’s refused', async () => {
+    const { handler, served } = eventsServedWith();
+    const published = 'sha256=757107ea0eb2509fc211221cce984b8a37570b6d7586c22c46f4379c8b043e17';
+    const commented = JSON.stringify({ action: 'created', issue: { number: 1347 }, comment: { id: 1 } });
+    const ping = { ...githubHeaders('Hello, World!', { event: 'ping' }), 'x-hub-signature-256': published };
+
+    const answers = [
+      await delivered(handler, 'github', 'Hello, World!', ping),
+      await delivered(handler, 'github', commented, githubHeaders(commented)),
+      await delivered(handler, 'github', commented, githubHeaders(commented, { secret: roomsSecret })),
+    ];
+
+    expect(answers.map(({ status }) => status)).toEqual([200, 200, 401]);
+    expect(served.heard.map(({ outcome }) => outcome)).toEqual(['passed_over', 'arrived', 'mismatched']);
+    expect(served.arrived.map(({ reading }) => reading)).toEqual([{ wake: { subscription: githubsHook } }]);
   });
 });
 

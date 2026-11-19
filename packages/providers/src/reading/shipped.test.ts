@@ -7,6 +7,7 @@ import {
   eventDestinationOf,
   joinedProviders,
   type ProviderEntry,
+  providerNamed,
   providersShippedRoots,
   readProviders,
   rendersOf,
@@ -75,8 +76,13 @@ const hearing = (name: string) =>
   ]);
 
 describe('the events parts of the shipped providers', () => {
-  it('are written by none of them, so a provider that hears what its service sends is one whoever runs the runtime adds', () => {
-    expect(declaring).toEqual([]);
+  it("are GitHub's alone, a webhook made for each subscription by a request to its API, where its credential goes", () => {
+    const github = Result.getOrThrow(providerNamed(shipped, 'github'));
+
+    expect(
+      declaring.map(({ entry }) => [entry.name, entry.events?.destinations.map(({ type, per }) => [type, per])]),
+    ).toEqual([['github', [['webhook', 'subscription']]]]);
+    expect(requestOriginsOf(github.entry)).toEqual(['https://api.github.com']);
   });
 });
 

@@ -1,8 +1,9 @@
 import { createHmac } from 'node:crypto';
 
-import { eventDestinationOf, type EventDestination } from '@on.auto/providers';
+import { eventDestinationOf, providersShippedRoots, readProviders, type EventDestination } from '@on.auto/providers';
 import { providersOf, tracker } from '@on.auto/providers/testing';
-import { Option, Redacted } from 'effect';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
+import { Option, Redacted, Result } from 'effect';
 
 import { deliveredEventRoutes, type ArrivedEvent, type EventServing, type HeardEvent } from '../index.ts';
 import { deliveryBounds } from '../webhooks/delivery-bounds.ts';
@@ -88,6 +89,16 @@ export const tickets = destinationOf('tracker');
 
 export const rooms = destinationOf('rooms');
 
+const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
+
+/** The webhook GitHub's shipped entry declares, made for each subscription. */
+const githubs = Option.getOrThrow(Option.fromNullishOr(eventDestinationOf(shipped, 'github', 'webhook')));
+
+/** The secret of GitHub's published check of a delivery's signature (docs.github.com, validating webhook deliveries). */
+const githubsCheckSecret = "It's a Secret to Everybody";
+
+export const githubsHook = '480932108';
+
 interface Signing {
   readonly secret?: string;
   readonly event?: string;
@@ -105,6 +116,19 @@ export function ticketHeaders(
     'x-tracker-hook': 'hook-7',
     'x-tracker-delivery': 'delivery-31',
     'x-tracker-signature': `sha256=${createHmac('sha256', secret).update(signed).digest('hex')}`,
+  };
+}
+
+export function githubHeaders(
+  body: string,
+  { secret = githubsCheckSecret, event = 'issue_comment' }: Signing = {},
+): Readonly<Record<string, string>> {
+  return {
+    'content-type': 'application/json',
+    'x-github-event': event,
+    'x-github-hook-id': githubsHook,
+    'x-github-delivery': '72d3162e-cc78-11e3-81ab-4c9367dc0958',
+    'x-hub-signature-256': `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`,
   };
 }
 
@@ -130,11 +154,13 @@ const destinations = new Map([
   ['tickets', tickets],
   ['rooms', rooms],
   ['drafts', tickets],
+  ['github', githubs],
 ]);
 
 const secretsOf = new Map([
   ['tickets subscription', [ticketsSecret]],
   ['rooms app', [roomsSecret]],
+  ['github subscription', [githubsCheckSecret]],
 ]);
 
 export function eventsServedWith(changes: Partial<EventServing> = {}) {

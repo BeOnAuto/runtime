@@ -1,4 +1,4 @@
-import { readProviders, providersShippedRoots } from '@on.auto/providers';
+import { readProviders, providersShippedRoots, requestOriginsOf } from '@on.auto/providers';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { keptTokensIn } from '@on.auto/tool-servers';
 import { clockAt, manualTimer } from '@on.auto/tool-servers/testing';
@@ -34,6 +34,7 @@ interface WayOfConsent {
   readonly clients: readonly string[];
   readonly oauthClient: boolean;
   readonly vendor: VendorOfTheWay | undefined;
+  readonly requestOrigins: readonly string[];
 }
 
 const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entry }) =>
@@ -48,6 +49,7 @@ const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entr
             clients,
             oauthClient: oauthClient === 'required',
             vendor: vendorsOfTheShippedWays[entry.name],
+            requestOrigins: requestOriginsOf(entry),
           },
         ]
       : [],
@@ -116,7 +118,7 @@ async function consentOf({ name, placeholders, issuer, oauthClient, vendor }: Wa
   };
 }
 
-function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string) {
+function consentExpectedOf({ name, scope, vendor, requestOrigins }: WayOfConsent, source: string) {
   const {
     asked = scope ?? null,
     resource,
@@ -128,8 +130,8 @@ function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string
     provider: name,
     authorization_endpoint: endpointsAt?.authorization ?? '<the fake>/authorize',
     scope: asked,
-    resources: resource === null ? [] : [resource],
-    recorded: [],
+    resources: resource === null ? [] : [resource, ...requestOrigins],
+    recorded: resource === null ? [] : requestOrigins,
     ...(metadata.takesNoChallenge === true
       ? { code_challenge: false, code_challenge_method: null }
       : { code_challenge: true, code_challenge_method: 'S256' }),
@@ -186,7 +188,7 @@ const providersTakingConsent = [
 ];
 
 describe('every way of consent of a shipped provider, against the fake authorization server at its vendor’s addresses', () => {
-  it('starts at the issuer its server names, with its scope, what the metadata adds and the parameters it sets, by the client whoever runs Auto registered there, the one it registers itself where the way takes none registered, or the org’s own where the way requires it, and finishes connected with that scope', async () => {
+  it('starts at the issuer its server names, with its scope, what the metadata adds and the parameters it sets, by the client whoever runs Auto registered there, the one it registers itself where the way takes none registered, or the org’s own where the way requires it, asking beside its server’s resource for each origin its entry’s requests go to, and finishes connected with that scope, its tokens recording those origins', async () => {
     const consents = await Promise.all(waysOfConsent.map((consenting) => consentOf(consenting, true)));
 
     expect(consents).toEqual(

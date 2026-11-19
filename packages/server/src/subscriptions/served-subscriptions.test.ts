@@ -63,22 +63,50 @@ async function perSubscriptionInTheShippedEntries(): Promise<readonly string[]> 
 
 const theWebhookUrl = 'https://events.example.com';
 
+const theRepository = 'octo-org/approvals';
+
+interface Sent {
+  readonly method: string;
+  readonly url: string;
+}
+
+function arrangingOnce() {
+  const sent: Sent[] = [];
+  const kept: string[] = [];
+  const tools: ThroughTheConnection = {
+    ...noCalls,
+    requestOnce: ({ method, url }) =>
+      Effect.sync(() => {
+        sent.push({ method, url });
+        return { kind: 'answered', outcome: 'result', answer: { id: 480_932_108 } } as const;
+      }),
+  };
+  const secrets = {
+    ...noSecrets,
+    keep: () =>
+      Effect.sync(() => {
+        kept.push(`secret-${kept.length + 1}`);
+        return `secret-${kept.length}`;
+      }),
+  };
+  return { tools, secrets, sent, kept };
+}
+
 async function roundOverTheShippedEntries(webhookUrl?: string) {
   const ledger = aLedger();
   const providers = await theShippedEntries();
   const arranged: string[] = [];
+  const { tools, secrets, sent, kept } = arrangingOnce();
   const receiving = { overHttp: true, webhookUrl };
   const ports = subscriptionLoopPortsOf(
-    subscriptionLoopPartsOf(
-      subscriptionsServingOf(ledger, { providers, receiving }, { tools: noCalls, secrets: noSecrets }),
-    ),
+    subscriptionLoopPartsOf(subscriptionsServingOf(ledger, { providers, receiving }, { tools, secrets })),
   );
   const connections: readonly LoopConnection[] = providers.providers.map(({ entry }) => ({
     connection: entry.name,
     connected: '2026-11-19T08:00:00.000Z',
     destinations: entry.events?.destinations ?? [],
   }));
-  const reconciled = await Effect.runPromise(
+  await Effect.runPromise(
     subscriptionLoopOf({
       ...ports,
       connectionsOf: () => Effect.succeed(connections),
@@ -86,25 +114,36 @@ async function roundOverTheShippedEntries(webhookUrl?: string) {
         ({ arranged: through }) =>
           Effect.sync(() => {
             arranged.push(...through.keys());
-            return connections.map(({ connection }) => ({ connection, topic: 'C0123' }));
+            return connections.map(({ connection }) => ({ connection, topic: theRepository }));
           }),
       ],
     })(alpha),
   );
-  return { reconciled, arranged, recorded: await Effect.runPromise(subscriptionRecordsOf(ledger).read(alpha)) };
+  const recorded = await Effect.runPromise(subscriptionRecordsOf(ledger).read(alpha));
+  return {
+    arranged,
+    sent,
+    kept,
+    recorded: recorded.map(({ connection, topic, made }) => ({ connection, topic, id: made?.id })),
+  };
 }
 
 describe('the entries the runtime ships', () => {
-  it('declare no destination arranged by a call for each subscription, so a running installation arranges nothing and records nothing new', async () => {
-    expect(await perSubscriptionInTheShippedEntries()).toEqual([]);
+  it('declare one destination arranged by a call for each subscription, GitHub’s', async () => {
+    expect(await perSubscriptionInTheShippedEntries()).toEqual(['github']);
   });
 
-  it('arrange nothing, send no call, keep no secret and record nothing, for a connection of each, with WEBHOOK_URL and without', async () => {
+  it('arrange GitHub’s alone, for a connection of each, where WEBHOOK_URL is set, and nothing where it is not', async () => {
     const rounds = [await roundOverTheShippedEntries(theWebhookUrl), await roundOverTheShippedEntries()];
 
     expect(rounds).toEqual([
-      { reconciled: {}, arranged: [], recorded: [] },
-      { reconciled: {}, arranged: [], recorded: [] },
+      {
+        arranged: ['github'],
+        sent: [{ method: 'POST', url: `https://api.github.com/repos/${theRepository}/hooks` }],
+        kept: ['secret-1'],
+        recorded: [{ connection: 'github', topic: theRepository, id: '480932108' }],
+      },
+      { arranged: [], sent: [], kept: [], recorded: [] },
     ]);
   });
 });

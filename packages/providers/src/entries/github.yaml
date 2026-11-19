@@ -30,3 +30,37 @@ credentials:
     key_page: https://github.com/settings/personal-access-tokens/new
     example: github_pat_…
     pattern: ^github_pat_.+$
+events:
+  destinations:
+    - type: webhook
+      per: subscription
+      topic: '{{ with.owner }}/{{ with.repo }}'
+      subscribe:
+        method: POST
+        url: https://api.github.com/repos/{{ topic }}/hooks
+        body:
+          name: web
+          active: true
+          events: [issue_comment, pull_request_review, pull_request_review_comment]
+          config:
+            url: '{{ webhook_url }}'
+            content_type: json
+            secret: '{{ secret }}'
+        subscribed:
+          id: /id
+      unsubscribe:
+        method: DELETE
+        url: https://api.github.com/repos/{{ topic }}/hooks/{{ subscription.id }}
+      verify:
+        scheme: hmac
+        secret: subscription
+        hash: sha256
+        signed_payload: '{payload}'
+        signature: $request.header.X-Hub-Signature-256
+        prefix: sha256=
+        encoding: hex
+      filter:
+        when:
+          $request.header.X-GitHub-Event: [issue_comment, pull_request_review, pull_request_review_comment]
+          $request.body#/action: [created, submitted]
+        subscription: $request.header.X-GitHub-Hook-ID
