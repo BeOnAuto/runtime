@@ -5,6 +5,7 @@ import { Clock, Effect, Redacted, Result, type Schema } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
 import { placesTheSecret } from '../events/event-calls.ts';
+import { isAddressedAsWritten, type TopicOfARequest } from './request-addresses.ts';
 import { answeredIn, renewedIn, requestedIn, subscribedIn } from './subscription-answers.ts';
 import { failedBecause, type SubscriptionCallFailed } from './subscription-failed.ts';
 import type {
@@ -26,6 +27,7 @@ interface Sending {
   readonly place: SubscriptionPlace;
   readonly call: Call;
   readonly variables: Variables;
+  readonly topic: TopicOfARequest;
 }
 
 const millisOfASecond = 1000;
@@ -34,16 +36,13 @@ function isNotThere({ because }: Pick<SubscriptionCallFailed, 'because'>): boole
   return because === 'not_found';
 }
 
-function isWrittenAt(written: string, rendered: Schema.Json | undefined): rendered is string {
-  const before = URL.parse(written);
-  const after = typeof rendered === 'string' ? URL.parse(rendered) : null;
-  return before !== null && after !== null && after.protocol === 'https:' && after.origin === before.origin;
-}
-
-function requestOf({ place, call }: Sending, input: Variables): ConnectionRequest | undefined {
+function requestOf({ place, call, topic }: Sending, input: Variables): ConnectionRequest | undefined {
   const { method, url: written } = call;
   const { url, body } = input;
-  if (method === undefined || written === undefined || !isWrittenAt(written, url)) {
+  if (method === undefined || written === undefined || typeof url !== 'string') {
+    return undefined;
+  }
+  if (!isAddressedAsWritten(written, url, topic)) {
     return undefined;
   }
   const { org, playbook, connection: server } = place;
@@ -103,6 +102,10 @@ function heldIn({ id, expiresAt }: HeldSubscription): Variables {
   return { subscription: expiresAt === undefined ? { id } : { id, expires_at: expiresAt } };
 }
 
+function topicIn({ topic: written }: Destination, rendered: string): TopicOfARequest {
+  return { written, rendered };
+}
+
 function addressOf(receiving: Receiving, callback: string, secret: Redacted.Redacted | undefined): Variables {
   if (receiving === 'queue') {
     return { queue_url: callback };
@@ -125,7 +128,7 @@ function subscribedOver<E, R>(
     const secret = placed ? yield* madeSecret : undefined;
     const lease = yield* leaseOf(destination);
     const variables = { topic, ...addressOf(receiving, callback, secret), ...lease };
-    const document = yield* sentThrough(ports, { place, call, variables });
+    const document = yield* sentThrough(ports, { place, call, variables, topic: topicIn(destination, topic) });
     return yield* subscribedIn(document, call.subscribed, placed);
   });
 }
@@ -141,13 +144,14 @@ export function subscriptionCallsOf(ports: SubscriptionPorts): SubscriptionCalls
       return Effect.gen(function* () {
         const lease = yield* leaseOf(destination);
         const variables = { topic, ...heldIn(subscription), ...lease };
-        const document = yield* sentThrough(ports, { place, call, variables });
+        const document = yield* sentThrough(ports, { place, call, variables, topic: topicIn(destination, topic) });
         return renewedIn(document, call.renewed);
       });
     },
     unsubscribe: ({ destination, place, topic, subscription }) => {
       const variables = { topic, ...heldIn(subscription) };
-      return sentThrough(ports, { place, call: destination.unsubscribe, variables }).pipe(
+      const sending = { place, call: destination.unsubscribe, variables, topic: topicIn(destination, topic) };
+      return sentThrough(ports, sending).pipe(
         Effect.asVoid,
         Effect.catchIf(isNotThere, () => Effect.void),
       );

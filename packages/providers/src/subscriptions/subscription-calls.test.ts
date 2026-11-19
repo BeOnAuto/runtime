@@ -123,6 +123,20 @@ describe('a call by a request to the address the entry writes', () => {
   });
 });
 
+describe('a request whose values would change the address the entry writes', () => {
+  const byRequest = destinationOf(ofEachSubscription);
+
+  it('sends nothing to subscribe, renew or unsubscribe', async () => {
+    const service = aServiceAnsweringRequests([requestedWith({ id: 42 })]);
+    const renew = { method: 'PATCH', url: 'https://api.tracker.example.com/hooks/{{ subscription.id }}' } as const;
+
+    expect(await subscribedBy(service, byRequest, '../../user')).toEqual(notSent);
+    expect(await renewedBy(service, { ...byRequest, renew }, { id: '../user' })).toEqual(notSent);
+    expect(await unsubscribedBy(service, byRequest, { id: '42?all=true' })).toEqual(notSent);
+    expect(service.sent()).toEqual([]);
+  });
+});
+
 describe('a call by a tool of the connection', () => {
   const byTool = destinationOf(intoAQueue, 'queue');
 

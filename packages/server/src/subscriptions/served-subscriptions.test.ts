@@ -142,6 +142,42 @@ describe('a self-hosted runtime that nothing outside can reach', () => {
   });
 });
 
+describe('a topic whose values would change the address its entry writes', () => {
+  it('is recorded failed, with no request sent and no secret kept', async () => {
+    const ledger = aLedger();
+    const kept = new Set<string>();
+    const secrets = {
+      ...noSecrets,
+      keep: () =>
+        Effect.sync(() => {
+          kept.add('secret-1');
+          return 'secret-1';
+        }),
+      forget: (id: string) =>
+        Effect.sync(() => {
+          kept.delete(id);
+        }),
+    };
+    const receiving = { overHttp: true, webhookUrl: theWebhookUrl };
+    const serving = subscriptionsServingOf(
+      ledger,
+      { providers: trackerOfEachSubscription, receiving },
+      { tools: noCalls, secrets },
+    );
+    const round = subscriptionLoopOf({
+      ...subscriptionLoopPortsOf(subscriptionLoopPartsOf(serving)),
+      connectionsOf: () => Effect.succeed([{ connection: 'tracker', destinations: declared }]),
+      askers: [() => Effect.succeed([{ connection: 'tracker', topic: '../../user' }])],
+    });
+    await Effect.runPromise(round(alpha));
+
+    expect(await Effect.runPromise(subscriptionRecordsOf(ledger).read(alpha))).toMatchObject([
+      { connection: 'tracker', topic: '../../user', failed: { kind: 'not_sent', because: 'not_sent' } },
+    ]);
+    expect(kept.size).toBe(0);
+  });
+});
+
 describe('the asker the server composes', () => {
   it('reads the open requests of the playbook once a destination is arranged', async () => {
     const [asker] = portsOfTheServerOver(aLedger()).askers;

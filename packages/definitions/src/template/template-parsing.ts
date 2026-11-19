@@ -1,5 +1,5 @@
 import { Result } from 'effect';
-import type { StaticAnalysis, Template } from 'liquidjs';
+import { TypeGuards, type StaticAnalysis, type Template } from 'liquidjs';
 
 import { engineFailureOf } from './engine-failure.ts';
 import { templateLimits, type TemplateEngine } from './template-engine.ts';
@@ -71,6 +71,26 @@ function variableReferences(analysis: () => StaticAnalysis, firstLine: number): 
     }
   }
   return references.toSorted((first, second) => first.line - second.line);
+}
+
+const nothingGiven: ReadonlyMap<string, string> = new Map();
+
+export function literalTextOf(
+  { templates }: Pick<ParsedTemplate, 'templates'>,
+  inPlaceOf: ReadonlyMap<string, string>,
+): string {
+  let text = '';
+  let given = inPlaceOf;
+  for (const { token } of templates()) {
+    if (TypeGuards.isHTMLToken(token)) {
+      text += token.getContent();
+    } else if (TypeGuards.isOutputToken(token)) {
+      text += given.get(token.content) ?? '';
+    } else {
+      given = nothingGiven;
+    }
+  }
+  return text;
 }
 
 export function parsedTemplate(

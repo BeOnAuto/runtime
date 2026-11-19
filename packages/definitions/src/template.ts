@@ -12,6 +12,7 @@ export {
   type TemplateEngine,
 } from './template/template-engine.ts';
 export {
+  literalTextOf,
   parsedTemplate,
   type ParsedTemplate,
   type TemplateIssue,

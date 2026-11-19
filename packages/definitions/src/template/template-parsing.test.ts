@@ -2,6 +2,7 @@ import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  literalTextOf,
   parsedTemplate,
   templateEngine,
   templateLimits,
@@ -41,6 +42,27 @@ describe('a template that parses', () => {
       },
     ]);
     expect([parsed('{{ a }}').issues, parsed('{{ 1 }}').issues]).toEqual([[], []]);
+  });
+});
+
+describe('the literal text of a template', () => {
+  const inPlaceOf = new Map([['topic', 'T']]);
+
+  it('is what it writes whatever its values: its text outside every output and tag, in order', () => {
+    expect(literalTextOf(parsed('https://a.example.com/{{ id }}/b{% if id %}/c{% endif %}?d'), inPlaceOf)).toBe(
+      'https://a.example.com//b?d',
+    );
+  });
+
+  it('holds nothing for an output after a tag, which may have assigned its name', () => {
+    expect(literalTextOf(parsed('/{{ topic }}{% assign topic = "x" %}/{{ topic }}/'), inPlaceOf)).toBe('/T//');
+  });
+
+  it('holds the text given for an output that writes that name alone, and nothing for any other output', () => {
+    expect(literalTextOf(parsed('/{{ topic }}/{{topic}}/{{- topic -}}/'), inPlaceOf)).toBe('/T/T/T/');
+    expect(literalTextOf(parsed('/{{ topic | append: "/" }}/{{ topic.size }}/{{ constructor }}'), inPlaceOf)).toBe(
+      '///',
+    );
   });
 });
 
