@@ -119,8 +119,8 @@ model_aliases:
 # provider take Auto's client, through Auto's consent service, where you register
 # none at its vendor: on in local mode and off otherwise when left out.
 # receive_events lists the ways the runtime receives what a connection's service
-# sends: http, a delivery signed with the connection's signing secret at a
-# request's answer address, when left out; [] for none.
+# sends: http, webhooks, HTTP requests to the runtime's addresses that prove
+# they are the service's, when left out; [] for none.
 # connections:
 #   people_may_add: true
 #   auto_clients: true
@@ -149,6 +149,13 @@ model_aliases:
 #           key_page: https://app.crm.example.com/settings/tokens
 #           example: crm_…
 #           pattern: '^crm_[A-Za-z0-9]+$'
+
+# The public https URL of this runtime, as services outside your network reach
+# it, with no path, such as https://runtime.example.com. Auto gives a
+# connection's service an address under it when it asks the service to send a
+# webhook as soon as something happens there. Leave it unset if nothing outside
+# can reach the runtime: Auto then checks the service on a timer.
+# webhook_url: https://runtime.example.com
 
 # The origins a page in a browser may call the API from.
 allowed_origins:

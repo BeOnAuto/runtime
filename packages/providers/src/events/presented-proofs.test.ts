@@ -6,6 +6,7 @@ import { ofEachSubscription, ofTheApp, overASocket } from '../testing/event-dest
 import { providersOf, tracker } from '../testing/fixture-providers.ts';
 import { presentedProofOf, type Arrival, type PresentedProof } from './arrival-readings.ts';
 import type { Destination } from './destination-fields.ts';
+import { provesWhatIsReadAt } from './event-proofs.ts';
 
 type Reader = (arrival: Arrival) => PresentedProof | undefined;
 
@@ -25,6 +26,14 @@ function readerOf(declared: object): Reader {
 
 function verifiedAs(verify: object): Reader {
   return readerOf({ ...ofTheApp, verify: { secret: 'app', ...verify } });
+}
+
+function proofOf(verify: object): NonNullable<Destination['verify']> {
+  const { verify: proof } = destinationOf({ ...ofTheApp, verify: { secret: 'app', ...verify } });
+  if (proof === undefined) {
+    throw new Error('the test destination declares no proof');
+  }
+  return proof;
 }
 
 function aRequest(headers: Readonly<Record<string, string>>, body: Schema.Json = {}): Arrival {
@@ -131,6 +140,27 @@ describe('the proof a token or a Standard Webhooks delivery presents', () => {
       'msg_1',
       'v1,abc, v1,def',
       undefined,
+    ]);
+  });
+});
+
+describe('what a proof proves of what a delivery holds', () => {
+  it('is what is read from the body, where the proof signs the body, and never what a header or the query holds', () => {
+    const read = ['$request.body#/check/token', '$request.header.X-Check', '$request.query.check'];
+    const proofs = [
+      proofOf(ofTheApp.verify),
+      proofOf({ scheme: 'standard-webhooks' }),
+      proofOf({ scheme: 'bearer', token: '$request.header.Authorization', prefix: 'Bearer ' }),
+      proofOf({ scheme: 'jwt', token: '$request.header.Authorization', alg: 'HS256' }),
+    ];
+
+    const proven = proofs.map((proof) => read.map((expression) => provesWhatIsReadAt(proof, expression)));
+
+    expect(proven).toEqual([
+      [true, false, false],
+      [true, false, false],
+      [false, false, false],
+      [false, false, false],
     ]);
   });
 });

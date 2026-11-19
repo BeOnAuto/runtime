@@ -4,6 +4,7 @@ import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
 import { keptSecrets } from '../testing/harness-services.ts';
+import { deliverySecretsOf } from './subscription-deliveries.ts';
 import {
   EventSubscriptionEventSchema,
   eventSubscriptionStreamOf,
@@ -72,5 +73,63 @@ describe('the secret of a subscription', () => {
     await Effect.runPromise(secrets.forget(place, kept));
 
     expect(await Effect.runPromise(secrets.read(place, kept))).toBeUndefined();
+  });
+});
+
+type MadeType = 'webhook' | 'queue';
+
+function heldBy() {
+  const kept = keptSecrets({});
+  const ledger = memoryLedger(undefined, [eventSubscriptions]).service;
+  const records = subscriptionRecordsOf(ledger);
+  const made = async (playbook: string, topic: string, secret?: string, type: MadeType = 'webhook') => {
+    const secretId =
+      secret === undefined ? undefined : await Effect.runPromise(Effect.orDie(kept.keep(Redacted.make(secret))));
+    const declaredBy = { type, id: `hook-of-${topic}`, declared: 'a'.repeat(64) };
+    const key = { connection: topic.startsWith('room') ? 'rooms' : 'chat', topic };
+    await Effect.runPromise(
+      records.made({ org: 'acme', playbook }, key, secretId === undefined ? declaredBy : { ...declaredBy, secretId }),
+    );
+  };
+  const secretsOf = deliverySecretsOf({ ledger, secrets: kept });
+  const read = async (playbook: string, connection: string, provenBy: 'subscription' | 'app' = 'subscription') =>
+    (await Effect.runPromise(secretsOf({ org: 'acme', playbook, connection }, provenBy)))
+      .map((secret) => String(valueOf(secret)))
+      .toSorted((one, other) => one.localeCompare(other));
+  return { kept, records, made, read };
+}
+
+describe('the secrets a delivery to a connection’s events address is proven with', () => {
+  it('are those of the webhook subscriptions the playbook holds through that connection, and no other playbook’s or connection’s', async () => {
+    const { made, read } = heldBy();
+    await made('alpha', 'C0123', 'whsec_alpha-C0123');
+    await made('alpha', 'C0456', 'whsec_alpha-C0456');
+    await made('alpha', 'C0789', 'whsec_alpha-queue', 'queue');
+    await made('beta', 'C0123', 'whsec_beta-C0123');
+    await made('alpha', 'room-5', 'whsec_alpha-room-5');
+
+    expect([await read('alpha', 'chat'), await read('beta', 'chat'), await read('alpha', 'notes')]).toEqual([
+      ['whsec_alpha-C0123', 'whsec_alpha-C0456'],
+      ['whsec_beta-C0123'],
+      [],
+    ]);
+  });
+
+  it('are none once the subscription is removed, failed only, holding no secret or one the store no longer has, and none of the app here', async () => {
+    const { kept, records, made, read } = heldBy();
+    await made('alpha', 'C0123', 'whsec_alpha-C0123');
+    await made('alpha', 'C0456');
+    await made('beta', 'C0123', 'whsec_beta-C0123');
+    await Effect.runPromise(records.removed(alpha, chat));
+    await Effect.runPromise(
+      records.failed(alpha, { connection: 'chat', topic: 'C0999' }, { kind: 'not_sent', because: 'not_sent' }),
+    );
+    await Effect.runPromise(kept.forget('secret-2'));
+
+    expect([await read('alpha', 'chat'), await read('beta', 'chat'), await read('alpha', 'chat', 'app')]).toEqual([
+      [],
+      [],
+      [],
+    ]);
   });
 });

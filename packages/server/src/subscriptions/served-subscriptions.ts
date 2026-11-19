@@ -1,4 +1,4 @@
-import type { AppRuntime } from '@on.auto/api';
+import { eventsAddressAt, type AppRuntime } from '@on.auto/api';
 import {
   subscriptionLoopPortsOf,
   subscriptionRoundOf,
@@ -57,16 +57,24 @@ interface TheServersOwn {
   readonly secrets: SubscriptionsServing['secrets'];
 }
 
+type ServedReceiving = Pick<Settings, 'providers' | 'receiving'>;
+
+export function subscriptionsServingOf(
+  ledger: SubscriptionsLedger,
+  { providers, receiving: { overHttp, webhookUrl } }: ServedReceiving,
+  { tools, secrets }: TheServersOwn,
+): SubscriptionsServing {
+  const addressed =
+    webhookUrl === undefined
+      ? {}
+      : { eventsAddressOf: (place: SubscriptionPlace) => eventsAddressAt(webhookUrl, place) };
+  return { ledger, tools, secrets, providers, receivesOverHttp: overHttp, ...addressed };
+}
+
 export function subscriptionsOfTheServer(
   runtime: AppRuntime<DispatcherServices>,
-  { providers, receiving }: Pick<Settings, 'providers' | 'receiving'>,
-  { tools, secrets }: TheServersOwn,
+  settings: ServedReceiving,
+  own: TheServersOwn,
 ): SubscriptionRounds {
-  return subscriptionsServedBy({
-    ledger: runtimeLedger(runtime),
-    tools,
-    secrets,
-    providers,
-    receivesOverHttp: receiving.overHttp,
-  });
+  return subscriptionsServedBy(subscriptionsServingOf(runtimeLedger(runtime), settings, own));
 }

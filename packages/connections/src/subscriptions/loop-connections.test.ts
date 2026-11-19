@@ -1,6 +1,5 @@
 import type { Decided, PlaybookAddress } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import type { SubscriptionPlace, ThroughTheConnection } from '@on.auto/providers';
 import { ofEachSubscription, providersOf, tracker } from '@on.auto/providers/testing';
 import { Effect, Option, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -9,6 +8,7 @@ import { ConnectionEventSchema, type RecordedConnectionEvent } from '../registry
 import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { loopConnectionsOf } from './loop-connections.ts';
 import { subscriptionLoopPortsOf, type SubscriptionLoopParts } from './loop-ports.ts';
+import { deliveryDestinationOf } from './subscription-deliveries.ts';
 
 const theSecret = {
   kind: 'secret',
@@ -100,11 +100,67 @@ describe('the connections the loop arranges through', () => {
   });
 });
 
+const ofTheApp = {
+  type: 'webhook',
+  per: 'app',
+  verify: { scheme: 'bearer', secret: 'app', token: '$request.header.X-Rooms-Token' },
+  filter: { when: { '$request.header.X-Rooms-Event': ['message'] }, conversation: '$request.body#/room' },
+  connection: { account: '$request.body#/workspace' },
+};
+
+const withAnAppsEntry = providersOf(
+  { ...tracker, events: { destinations: [ofEachSubscription] } },
+  { ...tracker, name: 'rooms', title: 'Rooms', events: { destinations: [ofTheApp] } },
+);
+
+const addedBeside = [
+  addedFact('connection-5', 'rooms', 'rooms'),
+  addedFact('connection-6', 'sales-tracker', 'tracker', ['sales']),
+  addedFact('connection-7', 'gone-tracker', 'tracker'),
+  { type: 'connection_removed', data: { connection: 'connection-7' } },
+] as const;
+
+async function destinationsOver() {
+  const ledger = memoryLedger().service;
+  await Effect.runPromise(
+    ledger.execute(connectionsStreamOfOrg('acme'), recordedAt('2026-11-17T07:00:00.000Z'), [...added, ...addedBeside]),
+  );
+  const destinationOf = deliveryDestinationOf({ registry: ledger, providers: withAnAppsEntry });
+  return (org: string, playbook: string, connection: string) =>
+    Effect.runPromise(destinationOf({ org, playbook, connection }));
+}
+
+describe('the destination a delivery to a connection’s events address is proven against', () => {
+  it('is the webhook per subscription its entry declares, for a connection the loop arranges through', async () => {
+    const destinationOf = await destinationsOver();
+
+    expect([
+      await destinationOf('acme', 'alpha', 'tracker'),
+      await destinationOf('acme', 'sales', 'sales-tracker'),
+    ]).toEqual([declared[0], declared[0]]);
+  });
+
+  it('is none for an entry of no webhook per subscription, a connection given by hand, removed, of another playbook or org, or unknown', async () => {
+    const destinationOf = await destinationsOver();
+
+    expect(
+      await Promise.all([
+        destinationOf('acme', 'alpha', 'rooms'),
+        destinationOf('acme', 'alpha', 'notes'),
+        destinationOf('acme', 'alpha', 'gone-tracker'),
+        destinationOf('acme', 'alpha', 'sales-tracker'),
+        destinationOf('globex', 'alpha', 'tracker'),
+        destinationOf('acme', 'alpha', 'billing'),
+      ]),
+    ).toEqual([undefined, undefined, undefined, undefined, undefined, undefined]);
+  });
+});
+
 const alpha = { org: 'acme', playbook: 'alpha' };
 
 const place = { ...alpha, connection: 'tracker' };
 
-const noCalls: ThroughTheConnection = {
+const noCalls: SubscriptionLoopParts['tools'] = {
   callOnce: () => Effect.die('a call was sent'),
   requestOnce: () => Effect.die('a request was sent'),
   mostRequestBytesTo: () => 1_048_576,
@@ -123,7 +179,7 @@ function partsOver(
   return { ledger, registry: ledger, waitingIn, tools: noCalls, secrets: noSecrets, providers, receivesOverHttp: true };
 }
 
-function eventsAddressOf({ connection }: SubscriptionPlace): string {
+function eventsAddressOf({ connection }: { readonly connection: string }): string {
   return `https://runtime.example.com/${connection}`;
 }
 

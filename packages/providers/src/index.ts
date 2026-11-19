@@ -30,7 +30,7 @@ export {
   type PresentedProof,
 } from './events/arrival-readings.ts';
 export type { Destination as EventDestination } from './events/destination-fields.ts';
-export { provesTheBodyAndATime } from './events/event-proofs.ts';
+export { provesTheBodyAndATime, provesWhatIsReadAt } from './events/event-proofs.ts';
 export { receivingOverASocket, type SocketListening } from './sockets/socket-listening.ts';
 export { opensAsDeclared, type OpeningWays } from './sockets/socket-openings.ts';
 export {

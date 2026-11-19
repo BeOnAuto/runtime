@@ -1,8 +1,7 @@
 import type { Environment, FileUse } from '@on.auto/config';
-import { makeProviderResolver, receivesOver } from '@on.auto/connections';
-import { readProviders, type ProviderList } from '@on.auto/providers';
-import type { ShippedFiles } from '@on.auto/shipped-files';
-import { Effect, Result } from 'effect';
+import { makeProviderResolver } from '@on.auto/connections';
+import type { ProviderList } from '@on.auto/providers';
+import { Effect } from 'effect';
 
 import {
   readConnections,
@@ -16,11 +15,8 @@ import {
 } from '../consent/consent-settings.ts';
 import { readFunctionSettings, type FunctionSettings } from '../function-settings/function-settings.ts';
 import { readLicenseSettings, type LicenseSettings } from '../licensing/license-settings.ts';
+import { readReceivingSettings, type ReceivingSettings } from './receiving-settings.ts';
 import { readWorkflowSettings, type WorkflowSettings } from './workflow-settings.ts';
-
-interface ReceivingSettings {
-  readonly overHttp: boolean;
-}
 
 export interface ServedSettings extends FunctionSettings, ConnectionSettings {
   readonly workflows: WorkflowSettings;
@@ -31,10 +27,6 @@ export interface ServedSettings extends FunctionSettings, ConnectionSettings {
 
 export interface ShippedSettings {
   readonly providers: ProviderList;
-}
-
-export async function readShippedSettings(shippedFiles: ShippedFiles): Promise<ShippedSettings> {
-  return { providers: Result.getOrThrow(await readProviders(shippedFiles)) };
 }
 
 export function readServedSettings(
@@ -52,6 +44,6 @@ export function readServedSettings(
     workflows: Effect.runSync(readWorkflowSettings(environment)),
     autoClients: readAutoClientsSettings(environment, { ...access, written: connectionSettings.autoClientsWritten }),
     license: readLicenseSettings(environment),
-    receiving: { overHttp: receivesOver(connections.setting, 'http') },
+    receiving: readReceivingSettings(environment, connections.setting),
   };
 }

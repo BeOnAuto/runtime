@@ -41,7 +41,7 @@ export const FilterSchema = Schema.Struct({
   subscription: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'Per subscription, where an arrival names the subscription it is for, so that only the conversations waiting through that subscription are read',
+        'Per subscription, where an arrival names the subscription it is for; unlike conversation, it does not narrow which conversations are read',
     }),
   ),
   conversation: Schema.optionalKey(

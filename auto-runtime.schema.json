@@ -19,6 +19,10 @@
       "type": "boolean",
       "description": "Whether the runtime serves Studio itself at /studio/ on its own address, fetched from the Studio host and kept, since a page on a public address may not reach an address on the machine. On in local mode and off otherwise when left out. SERVE_STUDIO wins over it"
     },
+    "webhook_url": {
+      "type": "string",
+      "description": "The public https URL of this runtime, as services outside your network reach it, with no path, such as https://runtime.example.com. Auto gives a connection's service an address under it when it asks the service to send a webhook as soon as something happens there. Leave it unset if nothing outside can reach the runtime: Auto then checks the service on a timer. WEBHOOK_URL wins over it"
+    },
     "api_keys": {
       "type": "array",
       "items": {
@@ -970,7 +974,7 @@
                             },
                             "subscription": {
                               "type": "string",
-                              "description": "Per subscription, where an arrival names the subscription it is for, so that only the conversations waiting through that subscription are read"
+                              "description": "Per subscription, where an arrival names the subscription it is for; unlike conversation, it does not narrow which conversations are read"
                             },
                             "conversation": {
                               "type": "string",
@@ -1334,7 +1338,7 @@
           "items": {
             "type": "string",
             "enum": ["http"],
-            "description": "A way the runtime receives what a connection's service sends: http, a delivery signed as the Standard Webhooks specification signs a webhook, at the connection's answer addresses"
+            "description": "A way the runtime receives what a connection's service sends: http, a webhook, an HTTP request the service sends to an address of the runtime, taken only when it proves it is the service's"
           },
           "description": "The ways the runtime receives what a connection's service sends, of http; every way when left out, and none for an empty list, so a request is answered only through Auto or by reading its replies. CONNECTIONS_RECEIVE_EVENTS wins over it"
         }

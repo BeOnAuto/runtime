@@ -7,7 +7,7 @@ import { Schema } from 'effect';
 import { extensionsFileSetting } from '../extensions/extension-settings.ts';
 import { licenseFileSetting } from '../licensing/license-settings.ts';
 import { PayloadSizeThresholdBytes } from '../settings/content-settings.ts';
-import { Origin, StudioOrigin } from '../settings/origin.ts';
+import { Origin, StudioOrigin, WebhookUrl } from '../settings/origin.ts';
 import { asJson, functionFileSettings } from './function-file-settings.ts';
 
 export const fileSettings: readonly FileSetting[] = [
@@ -28,6 +28,7 @@ export const fileSettings: readonly FileSetting[] = [
     }),
     String,
   ),
+  fileSetting('WEBHOOK_URL', WebhookUrl, (url) => url),
   fileSetting(
     'API_KEYS',
     ApiKeysSchema.annotate({

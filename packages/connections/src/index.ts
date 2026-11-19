@@ -44,6 +44,7 @@ export { EventSubscriptionEventSchema } from './subscriptions/subscription-facts
 export { eventSubscriptions } from './subscriptions/subscription-rows.ts';
 export { subscriptionRecordsOf, type SubscriptionLedger } from './subscriptions/subscription-records.ts';
 export { subscriptionLoopPortsOf, type SubscriptionLoopParts } from './subscriptions/loop-ports.ts';
+export { deliveryDestinationOf, deliverySecretsOf } from './subscriptions/subscription-deliveries.ts';
 export {
   holdsASubscription,
   playbooksDueOf,

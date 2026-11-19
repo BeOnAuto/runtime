@@ -90,6 +90,14 @@ async function signInAndStoresOpened(
   return { ...opened, signIn: { ...signIn, signInClientRegistrations } };
 }
 
+function receivingStoresOf<Stores>({ receiving, providers }: Composing[0], stores: Stores) {
+  const served = { ...stores, providers };
+  return {
+    ...(receiving.overHttp ? { answerStores: served } : {}),
+    ...(receiving.overHttp && receiving.webhookUrl !== undefined ? { eventStores: served } : {}),
+  };
+}
+
 function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'] {
   const { modelAccessOf, wiring, settings, telemetry, shippedFiles, made, holding } = serving;
   return async (runtime, ownOrigin) => {
@@ -121,7 +129,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       workflows,
       identityIssuer,
       ...ownKeys,
-      ...(settings.receiving.overHttp ? { answerStores: { ...stores, providers: settings.providers } } : {}),
+      ...receivingStoresOf(settings, stores),
       shippedFiles,
       ...functions.parts,
       orgOperations: [...functions.parts.orgOperations, ...connections, ...license.operations],

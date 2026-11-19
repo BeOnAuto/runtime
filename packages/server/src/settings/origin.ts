@@ -29,15 +29,25 @@ export const KeySetUrl = Schema.String.check(
   ),
 );
 
-function aWebOriginSuchAs(example: string) {
+function anOriginOver(protocols: readonly string[], example: string) {
   return Schema.makeFilter(
     (text: string) =>
-      isOriginOf(text, ['https:', 'http:']) ||
-      `Expected an https URL with no path, query or fragment, such as ${example}`,
+      isOriginOf(text, protocols) || `Expected an https URL with no path, query or fragment, such as ${example}`,
   );
 }
 
-export const PublicOrigin = Schema.String.check(aWebOriginSuchAs('https://runtime.example.com'));
+function aWebOriginSuchAs(example: string) {
+  return anOriginOver(['https:', 'http:'], example);
+}
+
+const theRuntimesExample = 'https://runtime.example.com';
+
+export const PublicOrigin = Schema.String.check(aWebOriginSuchAs(theRuntimesExample));
+
+export const WebhookUrl = Schema.String.annotate({
+  description:
+    "The public https URL of this runtime, as services outside your network reach it, with no path, such as https://runtime.example.com. Auto gives a connection's service an address under it when it asks the service to send a webhook as soon as something happens there. Leave it unset if nothing outside can reach the runtime: Auto then checks the service on a timer. WEBHOOK_URL wins over it",
+}).check(anOriginOver(['https:'], theRuntimesExample));
 
 export const defaultConsentService = 'https://consent.on.auto';
 

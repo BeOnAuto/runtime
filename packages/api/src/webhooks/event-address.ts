@@ -23,6 +23,13 @@ export function eventAddressIn(c: Context<ApiEnv>): EventAddress | undefined {
   return wellFormed ? { org, playbook, connection } : undefined;
 }
 
+export function eventsAddressAt(publicOrigin: string, { org, playbook, connection }: EventAddress): string {
+  const path = ['orgs', org, 'playbooks', playbook, 'connections', connection, 'events'].map((segment) =>
+    encodeURIComponent(segment),
+  );
+  return `${publicOrigin}${versionPrefix}/${path.join('/')}`;
+}
+
 export function limitedAs({ org, playbook, connection }: EventAddress): string {
   return `${org}/${playbook}/${connection}`;
 }

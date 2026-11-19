@@ -1,5 +1,5 @@
 import { checkedProof, hmacOf, type DeclaredProof } from '@on.auto/identity';
-import { arrivalReadingOf, provesTheBodyAndATime, type EventDestination } from '@on.auto/providers';
+import { arrivalReadingOf, provesTheBodyAndATime, provesWhatIsReadAt, type EventDestination } from '@on.auto/providers';
 import type { Redacted } from 'effect';
 
 import { deliveryProblems } from './delivery-problems.ts';
@@ -55,7 +55,12 @@ export function handshakeAnswered(
     : door.heard({ ...seen, outcome: 'handshake' }, answer);
 }
 
-async function macKeyOf({ verify, presented, secrets, received }: Proven): Promise<MacKey | undefined> {
+async function macKeyOf({ when, challenge }: Handshake, proven: Proven): Promise<MacKey | undefined> {
+  const { verify, presented, secrets, received } = proven;
+  const readForTheCheck = [...Object.keys(when), challenge];
+  if (!readForTheCheck.every((expression) => provesWhatIsReadAt(verify, expression))) {
+    return undefined;
+  }
   const checks = await Promise.all(secrets.map((secret) => checkedProof(verify, presented, [secret], received)));
   return secrets.filter((_, index) => checks[index] === 'proven').map((secret) => ({ declared: verify, secret }))[0];
 }
@@ -66,8 +71,9 @@ export async function eventRead(door: EventDoor, delivered: DestinedDelivery, pr
   const { address, destination, arrival, body } = delivered;
   const seen = { address, bytes: body.byteLength };
   const reading = arrivalReadingOf(destination, arrival);
-  if (destination.handshake !== undefined && reading.handshake !== undefined) {
-    const answer = handshakeAnswerOf(destination.handshake, reading.handshake.challenge, await macKeyOf(proven));
+  const { handshake } = destination;
+  if (handshake !== undefined && reading.handshake !== undefined) {
+    const answer = handshakeAnswerOf(handshake, reading.handshake.challenge, await macKeyOf(handshake, proven));
     return handshakeAnswered(door, delivered, answer);
   }
   if (Object.keys(reading).length === 0) {

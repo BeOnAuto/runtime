@@ -42,6 +42,7 @@ export interface WorkflowParts extends HostParts, ServedPages, ServedGoals {
   readonly retryStateKeys: ServedCatalog['retryStateKeys'];
   readonly contentAddressKey: ServedCatalog['contentAddressKey'];
   readonly answerStores?: ServedCatalog['answerStores'];
+  readonly eventStores?: ServedCatalog['eventStores'];
   readonly shippedFiles: ServedCatalog['shippedFiles'];
 }
 
@@ -113,7 +114,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     { names },
   );
   opened(host);
-  const { identityIssuer, retryStateKeys, contentAddressKey, answerStores } = parts;
+  const { identityIssuer, retryStateKeys, contentAddressKey, answerStores, eventStores } = parts;
   const served = {
     catalog,
     directoryCatalog,
@@ -126,6 +127,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     retryStateKeys,
     contentAddressKey,
     answerStores,
+    eventStores,
     shippedFiles,
   };
   return { routes: await routesFor(runtime, served), stopWork: host.stop };

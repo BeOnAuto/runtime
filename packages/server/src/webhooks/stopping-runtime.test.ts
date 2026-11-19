@@ -1,6 +1,12 @@
+import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { holderUnlessStopped, keysUnlessStopped } from './stopping-runtime.ts';
+import {
+  destinationUnlessStopped,
+  holderUnlessStopped,
+  keysUnlessStopped,
+  secretsUnlessStopped,
+} from './stopping-runtime.ts';
 
 const stopped = { status: 'cancelled' } as const;
 
@@ -13,5 +19,16 @@ describe('a delivery that reaches a server as it stops', () => {
 
   it('finds its id held by nothing it was signed for once the server stopped keeping ids, so it is refused alike', () => {
     expect([holderUnlessStopped(stopped), holderUnlessStopped('ops/019a4131')]).toEqual(['', 'ops/019a4131']);
+  });
+
+  it('finds no destination and no secret at an events address once the server stopped reading them, so the door refuses it alike', () => {
+    const destination = { type: 'webhook', filter: { when: { '$request.header.X-Event': ['comment'] } } } as const;
+    const secrets = [Redacted.make('whsec_held')];
+
+    expect([destinationUnlessStopped(stopped), destinationUnlessStopped(destination)]).toEqual([
+      undefined,
+      destination,
+    ]);
+    expect([secretsUnlessStopped(stopped), secretsUnlessStopped(secrets)]).toEqual([[], secrets]);
   });
 });

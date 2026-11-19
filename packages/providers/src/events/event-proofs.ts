@@ -181,6 +181,17 @@ export function provesTheBodyAndATime(proof: Proof): boolean {
   return provesATime[proof.scheme](proof);
 }
 
+const provesTheBody: Readonly<Record<Scheme, boolean>> = {
+  hmac: true,
+  'standard-webhooks': true,
+  bearer: false,
+  jwt: false,
+};
+
+export function provesWhatIsReadAt(proof: Proof, expression: string): boolean {
+  return provesTheBody[proof.scheme] && expressionIssueOf(expression, inTheBody) === undefined;
+}
+
 export const VerifySchema = ProofFieldsSchema.check(
   Schema.makeFilter((proof: Proof) => [
     ...presenceIssuesOf(proof),

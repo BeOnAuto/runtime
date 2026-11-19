@@ -14,8 +14,8 @@ import {
 } from '@on.auto/identity';
 
 import type { RunningServer, ServerOptions } from '../server-options/server-options.ts';
-import { readShippedSettings } from '../settings/served-settings.ts';
 import { readSettings, type Settings } from '../settings/settings.ts';
+import { readShippedSettings } from '../settings/shipped-settings.ts';
 import { companySignInOf, type CompanySignIn } from '../sign-in/company-client.ts';
 import { signedInApiOf, signInRoutesOf } from '../sign-in/company-sign-in.ts';
 import { startTelemetry } from '../telemetry/start-telemetry.ts';

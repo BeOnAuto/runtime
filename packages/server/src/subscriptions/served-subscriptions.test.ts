@@ -5,6 +5,7 @@ import {
   readProviders,
   subscriptionLoopOf,
   type EventDestination,
+  type LoopConnection,
   type ThroughTheConnection,
 } from '@on.auto/providers';
 import { ofEachSubscription, providersOf, tracker } from '@on.auto/providers/testing';
@@ -13,9 +14,11 @@ import { Effect, Option, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { requestWaysOf } from '../composition/served-tool-access.ts';
-import { subscriptionLoopPartsOf, type SubscriptionsServing } from './served-subscriptions.ts';
+import { subscriptionLoopPartsOf, subscriptionsServingOf, type SubscriptionsServing } from './served-subscriptions.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
+
+const place = { ...alpha, connection: 'tracker' };
 
 const noCalls: ThroughTheConnection = {
   callOnce: () => Effect.die('a call was sent'),
@@ -47,16 +50,62 @@ function portsOfTheServerOver(ledger: ReturnType<typeof aLedger>) {
   return subscriptionLoopPortsOf(subscriptionLoopPartsOf(servingOver(ledger)));
 }
 
+async function theShippedEntries() {
+  return Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
+}
+
 async function perSubscriptionInTheShippedEntries(): Promise<readonly string[]> {
-  const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
+  const shipped = await theShippedEntries();
   return shipped.providers.flatMap(({ entry }) =>
     (entry.events?.destinations ?? []).filter(({ per }) => per === 'subscription').map(() => entry.name),
   );
 }
 
+const theWebhookUrl = 'https://events.example.com';
+
+async function roundOverTheShippedEntries(webhookUrl?: string) {
+  const ledger = aLedger();
+  const providers = await theShippedEntries();
+  const arranged: string[] = [];
+  const receiving = { overHttp: true, webhookUrl };
+  const ports = subscriptionLoopPortsOf(
+    subscriptionLoopPartsOf(
+      subscriptionsServingOf(ledger, { providers, receiving }, { tools: noCalls, secrets: noSecrets }),
+    ),
+  );
+  const connections: readonly LoopConnection[] = providers.providers.map(({ entry }) => ({
+    connection: entry.name,
+    connected: '2026-11-19T08:00:00.000Z',
+    destinations: entry.events?.destinations ?? [],
+  }));
+  const reconciled = await Effect.runPromise(
+    subscriptionLoopOf({
+      ...ports,
+      connectionsOf: () => Effect.succeed(connections),
+      askers: [
+        ({ arranged: through }) =>
+          Effect.sync(() => {
+            arranged.push(...through.keys());
+            return connections.map(({ connection }) => ({ connection, topic: 'C0123' }));
+          }),
+      ],
+    })(alpha),
+  );
+  return { reconciled, arranged, recorded: await Effect.runPromise(subscriptionRecordsOf(ledger).read(alpha)) };
+}
+
 describe('the entries the runtime ships', () => {
   it('declare no destination arranged by a call for each subscription, so a running installation arranges nothing and records nothing new', async () => {
     expect(await perSubscriptionInTheShippedEntries()).toEqual([]);
+  });
+
+  it('arrange nothing, send no call, keep no secret and record nothing, for a connection of each, with WEBHOOK_URL and without', async () => {
+    const rounds = [await roundOverTheShippedEntries(theWebhookUrl), await roundOverTheShippedEntries()];
+
+    expect(rounds).toEqual([
+      { reconciled: {}, arranged: [], recorded: [] },
+      { reconciled: {}, arranged: [], recorded: [] },
+    ]);
   });
 });
 
@@ -99,6 +148,36 @@ describe('the asker the server composes', () => {
     const arranged = new Map(declared.map((each) => ['tracker', each]));
 
     expect(await Effect.runPromise(Option.getOrThrow(Option.fromNullishOr(asker))({ ...alpha, arranged }))).toEqual([]);
+  });
+});
+
+function portsReceiving(overHttp: boolean, webhookUrl?: string) {
+  return subscriptionLoopPortsOf(
+    subscriptionLoopPartsOf(
+      subscriptionsServingOf(
+        aLedger(),
+        { providers: trackerOfEachSubscription, receiving: { overHttp, webhookUrl } },
+        { tools: noCalls, secrets: noSecrets },
+      ),
+    ),
+  );
+}
+
+describe('a runtime given WEBHOOK_URL', () => {
+  it('names, for a webhook, the events address of the connection at that address, and none for a queue', () => {
+    const ports = portsReceiving(true, theWebhookUrl);
+
+    expect([ports.callbackOf(place, 'webhook'), ports.callbackOf(place, 'queue')]).toEqual([
+      'https://events.example.com/v1/orgs/acme/playbooks/alpha/connections/tracker/events',
+      undefined,
+    ]);
+  });
+
+  it('names none while receive_events holds no http, and none where WEBHOOK_URL is unset, so nothing is arranged to it', () => {
+    expect([
+      portsReceiving(false, theWebhookUrl).callbackOf(place, 'webhook'),
+      portsReceiving(true).callbackOf(place, 'webhook'),
+    ]).toEqual([undefined, undefined]);
   });
 });
 

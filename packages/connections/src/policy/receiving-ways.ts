@@ -5,7 +5,7 @@ export const receiveEventsSetting = 'CONNECTIONS_RECEIVE_EVENTS';
 
 const ReceivingWaySchema = Schema.Literal('http').annotate({
   description:
-    "A way the runtime receives what a connection's service sends: http, a delivery signed as the Standard Webhooks specification signs a webhook, at the connection's answer addresses",
+    "A way the runtime receives what a connection's service sends: http, a webhook, an HTTP request the service sends to an address of the runtime, taken only when it proves it is the service's",
 });
 
 export type ReceivingWay = typeof ReceivingWaySchema.Type;

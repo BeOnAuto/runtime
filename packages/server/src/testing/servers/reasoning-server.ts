@@ -54,6 +54,7 @@ export async function servingReasoning(
     meter,
     shippedFilesOver,
     keptOutside,
+    key,
     ...composing
   }: ServedParts = {},
 ): Promise<ReasoningServer> {
@@ -81,7 +82,8 @@ export async function servingReasoning(
   );
   return {
     origin: `http://127.0.0.1:${server.port}`,
-    call: (method, path, options) => request(server.port, method, path, options),
+    call: (method, path, options) =>
+      request(server.port, method, path, key === undefined ? options : { key, ...options }),
     modelCalls: () => scripted.requests().length,
     modelRunIds: () => scripted.requests().map(({ run_id: runId }) => runId),
     stop: async () => {

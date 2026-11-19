@@ -12,6 +12,7 @@ import {
 } from '../testing/delivered-events.ts';
 import { deliveryBounds } from './delivery-bounds.ts';
 import { deliveryProblems } from './delivery-problems.ts';
+import { eventsAddressAt } from './event-address.ts';
 
 type Handler = ReturnType<typeof eventsServedWith>['handler'];
 
@@ -76,6 +77,32 @@ describe('a delivery its connection’s service proves', () => {
     await ticket(handler);
 
     expect(served.arrived).toHaveLength(2);
+  });
+});
+
+describe('the address a connection’s service is given', () => {
+  it('is the route that names its org, playbook and connection, each escaped as one segment of its path', async () => {
+    const { handler, served } = eventsServedWith();
+    const given = new URL(eventsAddressAt('https://runtime.example.com', ticketsAddress));
+    const oddGiven = new URL(
+      eventsAddressAt('https://runtime.example.com', { ...ticketsAddress, connection: 'rooms of ops/#1?' }),
+    );
+
+    await call(handler, given.pathname, { method: 'POST', headers: ticketHeaders(comment), body: comment });
+    await call(handler, oddGiven.pathname, { method: 'POST', headers: ticketHeaders(comment), body: comment });
+
+    expect([given.origin, given.search, oddGiven.search, oddGiven.hash]).toEqual([
+      'https://runtime.example.com',
+      '',
+      '',
+      '',
+    ]);
+    expect(served.arrived.map(({ address }) => address)).toEqual([ticketsAddress]);
+    expect(served.asked).toEqual([
+      'destination of tickets',
+      'secrets of tickets by subscription',
+      'destination of rooms of ops/#1?',
+    ]);
   });
 });
 

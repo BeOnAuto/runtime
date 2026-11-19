@@ -1,5 +1,6 @@
 import type { Environment } from '@on.auto/config';
 import {
+  accessModeOf,
   autoIdentityService,
   IssuerKeySetSchema,
   listensOnlyOnLoopback,
@@ -24,12 +25,14 @@ import {
   type OpenIdConnectSettings,
 } from './openid-connect-settings.ts';
 import { httpOffTheLoopbackIn, IssuerOrigin, KeySetUrl, Origin, PublicOrigin } from './origin.ts';
+import { readWebhookUrl, receivingVariables } from './receiving-settings.ts';
 
 export const accessVariables: readonly string[] = [
   'ALLOWED_ORIGINS',
   'LOG_FORMAT',
   'LOG_LEVEL',
   'PUBLIC_URL',
+  ...receivingVariables,
   'ACCESS_MODE',
   'IDENTITY_ISSUER',
   'IDENTITY_JWKS',
@@ -92,6 +95,9 @@ function addressNeededOn(host: string): string {
   return `ACCESS_MODE: local on HOST ${host} needs PUBLIC_URL, the address on ${alternatives(loopbackNames)} at which this computer reaches the runtime, such as http://localhost:5555, since local mode refuses a request whose Host names ${host}`;
 }
 
+const webhookInLocalMode =
+  'WEBHOOK_URL: local mode takes no WEBHOOK_URL, since in local mode every request acts as the local developer; set PUBLIC_URL with no ACCESS_MODE, or leave WEBHOOK_URL out';
+
 function localModeRefusalOf({ host, apiKeys, publicUrl }: Declaring): string | undefined {
   if (apiKeys !== undefined) {
     return keysInLocalMode;
@@ -126,17 +132,25 @@ function refusalOf(declaring: Declaring, accessMode: DeclaredAccessMode | undefi
   return httpRefusal ?? (accessMode === undefined ? undefined : localModeRefusalOf(declaring));
 }
 
+function webhookRefusalOf(environment: Environment, inLocalMode: boolean): string | undefined {
+  return inLocalMode && readWebhookUrl(environment) !== undefined ? webhookInLocalMode : undefined;
+}
+
 export function readCredentialSettings(environment: Environment, host: string): CredentialSettings {
   const read = Effect.runSync(asInvalidSettings(signInSettings.parse(ConfigProvider.fromEnvRecord(environment))));
   const [publicUrl, accessMode] = [Option.getOrUndefined(read.publicUrl), Option.getOrUndefined(read.accessMode)];
   const keySetGiven = { keySet: Option.getOrUndefined(read.keySet), url: Option.getOrUndefined(read.keySetUrl) };
   const apiKeys = readApiKeys(environment);
-  const refusal = refusalOf({ host, apiKeys, publicUrl }, accessMode) ?? keySetRefusalOf(keySetGiven);
+  const signsIn = publicUrl !== undefined && accessMode === undefined;
+  const inLocalMode = accessModeOf({ host, apiKeys, signsIn, accessMode }) === 'local';
+  const refusal =
+    refusalOf({ host, apiKeys, publicUrl }, accessMode) ??
+    webhookRefusalOf(environment, inLocalMode) ??
+    keySetRefusalOf(keySetGiven);
   if (refusal !== undefined) {
     throw new InvalidSettingsError({ message: refusal });
   }
   const openIdConnect = readOpenIdConnectSettings(environment, { publicUrl, accessMode });
-  const signsIn = publicUrl !== undefined && accessMode === undefined;
   const signIn = signsIn ? { issuer: openIdConnect?.issuer ?? read.issuer, publicUrl } : undefined;
   const studio = readStudioSettings(environment, { host, apiKeys, signIn, accessMode });
   return {

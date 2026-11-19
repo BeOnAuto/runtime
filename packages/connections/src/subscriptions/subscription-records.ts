@@ -24,8 +24,10 @@ export const subscriptionsInAPage = 100;
 
 const stillHeld = { column: 'removed', equals: false } as const;
 
+type HeldRowsReader = Pick<ProjectionReader, 'readProjectedRows'>;
+
 function pageAfter(
-  ledger: SubscriptionLedger,
+  ledger: HeldRowsReader,
   playbook: PlaybookAddress,
   after?: string,
 ): Effect.Effect<readonly ProjectedKeyedRow[]> {
@@ -39,7 +41,7 @@ function pageAfter(
 }
 
 export function heldRowsOf(
-  ledger: SubscriptionLedger,
+  ledger: HeldRowsReader,
   playbook: PlaybookAddress,
 ): Effect.Effect<readonly ProjectedKeyedRow[]> {
   return Effect.gen(function* () {
