@@ -3,6 +3,7 @@ import { Effect, Option } from 'effect';
 
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { connectsThroughItsGateway, type RecordedConnection } from '../registry/connection.ts';
+import { appSecretsHeldBy } from '../registry/kept-app-credentials.ts';
 import { signingSecretsHeldBy } from '../registry/kept-signing.ts';
 import { clientSecretsHeldBy, heldClientOf, type KeptConnection } from '../registry/registry.ts';
 import { newerKeyEndedOf, replacedKeyEndedOf } from './connection-gateways.ts';
@@ -59,8 +60,15 @@ function tokensRevokedOf(kept: KeptConnection, services: Forgetting): Effect.Eff
   );
 }
 
+function appSecretsForgottenOf(kept: KeptConnection, { secrets }: Pick<Forgetting, 'secrets'>): Effect.Effect<void> {
+  return Effect.forEach(appSecretsHeldBy(kept), (secretId) => secrets.forget(secretId), { discard: true });
+}
+
 export function forgottenCredentialOf(kept: KeptConnection, services: Forgetting): Effect.Effect<void> {
-  return Effect.andThen(tokensRevokedOf(kept, services), secretForgottenOf(kept, services));
+  return Effect.andThen(
+    tokensRevokedOf(kept, services),
+    Effect.andThen(secretForgottenOf(kept, services), appSecretsForgottenOf(kept, services)),
+  );
 }
 
 function forgottenClientsOf(kept: KeptConnection, { secrets }: Pick<Forgetting, 'secrets'>): Effect.Effect<void> {

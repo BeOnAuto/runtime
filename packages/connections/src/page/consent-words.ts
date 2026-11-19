@@ -1,4 +1,5 @@
 import { Forbidden, InvalidInput, Unavailable } from '@on.auto/operations';
+import { listed } from '@on.auto/phrasing';
 import type {
   ClientSource,
   ConsentCall,
@@ -117,6 +118,8 @@ export const unavailableWords = {
     `The consent of the connection ${name} cannot go on now, since the runtime cannot read the client secret of the organization's own OAuth client: ${detail}`,
   clientUnkept: (name: string, detail: string) =>
     `The client secret of the organization's own OAuth client for the connection ${name} cannot be kept now, so nothing is changed and its link stays open: ${detail}`,
+  valueUnchecked: (hosts: readonly string[]) =>
+    `Auto could not check this key with ${listed(hosts)}, so nothing was saved. If your company's network limits outgoing connections, ask whoever runs it to allow connections to ${listed(hosts)} on port 443, then approve again.`,
 } as const;
 
 const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = {

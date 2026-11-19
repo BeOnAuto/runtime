@@ -28,7 +28,7 @@ const markInWords: Readonly<Record<ActingMark, string>> = {
   unmarked: 'carries no mark, which counts as acts',
 };
 
-function notReadOnlyOnce(reference: ToolReference, mark: ActingMark): NotReadOnlyOnce {
+export function notReadOnlyOnce(reference: ToolReference, mark: ActingMark): NotReadOnlyOnce {
   return {
     kind: 'unopened',
     refused: 'tool_not_read_only',

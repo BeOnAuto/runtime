@@ -10,14 +10,14 @@ import { Effect } from 'effect';
 
 import { studioBaseFor } from '../links/connect-page.ts';
 import { defineAddConnection } from '../operations/add-connection.ts';
-import type { ConnectionServices } from '../operations/connection-services.ts';
+import { opensSockets, type ConnectionServices } from '../operations/connection-services.ts';
 import { addingRefusalOf, adderRefusalOf } from '../policy/policy-rules.ts';
 import type { ListedProvider } from './listed-providers.ts';
 import { listedProviders } from './provider-listing.ts';
 
 export type OfferingServices = Pick<
   ConnectionServices,
-  'providers' | 'providerValues' | 'policy' | 'access' | 'consent' | 'pages'
+  'providers' | 'providerValues' | 'policy' | 'access' | 'consent' | 'pages' | 'sockets'
 >;
 
 function refusalToAdd(
@@ -80,7 +80,10 @@ export function makeProviderOffering(services: ConnectionServices): ProviderOffe
     Effect.flatMap(addingRefusedTo(services, adding, caller), (refusal) =>
       refusal === null
         ? Effect.map(services.consent.hadSources(studioBaseFor(services.pages)), (consent) =>
-            offeredAmong(listedProviders({ ...services, consent }), handlingMoney(services.providers)),
+            offeredAmong(
+              listedProviders({ ...services, consent, opensSockets: opensSockets(services) }),
+              handlingMoney(services.providers),
+            ),
           )
         : Effect.undefined,
     );

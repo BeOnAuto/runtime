@@ -14,4 +14,4 @@ export {
   regions,
   tracker,
 } from './fixture-providers.ts';
-export { ofEachSubscription } from './event-destinations.ts';
+export { appLevelToken, ofEachSubscription, overASocket } from './event-destinations.ts';

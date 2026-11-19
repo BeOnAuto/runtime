@@ -6,7 +6,7 @@ import { Effect, Layer, ManagedRuntime } from 'effect';
 
 import { makeConnectionOperations } from '../src/operations/connection-operations.ts';
 import { connectionPolicyOf } from '../src/policy/connection-policy.ts';
-import { harnessConsentOf, keptSecrets } from '../src/testing/harness-services.ts';
+import { fakeReads, harnessConsentOf, keptSecrets } from '../src/testing/harness-services.ts';
 import { ada, harnessPages, operationNamed } from '../src/testing/harness.ts';
 
 const refusingEveryRequest: typeof globalThis.fetch = () => Promise.reject(new TypeError('No request is sent'));
@@ -33,6 +33,7 @@ export async function connectionsOnSQLite(fileName: string) {
     consent: harnessConsentOf(registry, secrets, { fetch: refusingEveryRequest }),
     resolve: () => Promise.resolve(['93.184.216.34']),
     fetch: refusingEveryRequest,
+    readOnceThrough: fakeReads().readOnceThrough,
   });
   return {
     registry,

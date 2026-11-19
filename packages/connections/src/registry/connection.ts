@@ -56,6 +56,20 @@ const SigningSecretSchema = Schema.Struct({
   }),
 });
 
+const AppCredentialHeldSchema = Schema.Struct({
+  name: Schema.String.annotate({ description: "Its name, as its provider's entry names it" }),
+  refused: Schema.NullOr(
+    Schema.Struct({
+      detail: Schema.String.annotate({ description: "Why, in the runtime's words, which say what mends it" }),
+      at: Schema.String.annotate({ description: 'When the service refused it, in ISO 8601 UTC' }),
+    }),
+  ).annotate({
+    description: 'Why and since when the service refused it, until the credential is given again; else null',
+  }),
+}).annotate({ description: 'An app credential the person gave beside the key, never the value' });
+
+export type AppCredentialHeld = typeof AppCredentialHeldSchema.Type;
+
 export const ConnectionSchema = Schema.Struct({
   id: Schema.String.annotate({ description: 'The id of the connection, a UUIDv7' }),
   name: Schema.String.annotate({ description: 'The name a function gives the connection in server/tool' }),
@@ -102,6 +116,10 @@ export const ConnectionSchema = Schema.Struct({
   account: Schema.NullOr(AccountSchema).annotate({
     description:
       'The account at the service the connection is for, as the service named it when the connection was connected; null where it named none',
+  }),
+  app_credentials: Schema.Array(AppCredentialHeldSchema).annotate({
+    description:
+      'The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none',
   }),
 }).annotate({ identifier: 'Connection', description: 'A tool server the org added, shared by its playbooks' });
 

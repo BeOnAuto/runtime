@@ -98,19 +98,24 @@ function receivingStoresOf<Stores>({ receiving, providers }: Composing[0], store
   };
 }
 
-function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'] {
-  const { modelAccessOf, wiring, settings, telemetry, shippedFiles, made, holding } = serving;
+type Serve = Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'];
+
+function registryOpenedFor(
+  { made, settings, wiring, modelAccessOf, telemetry }: Serving,
+  runtime: Parameters<Serve>[0],
+  served: Pick<Parameters<MadeAtStart['registry']['openedIn']>[2], 'consent' | 'connections'>,
+) {
+  return made.registry.openedIn(runtime, settings, { ...wiring, modelAccessOf, telemetry, ...served });
+}
+
+function servedWith(serving: Serving): Serve {
+  const { wiring, settings, shippedFiles, made, holding } = serving;
   return async (runtime, ownOrigin) => {
     const { ledger, workflows, identityIssuer } = settings;
-    const { signIn, stores, consent, connections, source, offering, clientMetadata, license, ...ownKeys } =
+    const { signIn, stores, consent, connectionsReadingThrough, source, clientMetadata, license, ...ownKeys } =
       await signInAndStoresOpened(runtime, serving, ownOrigin);
-    const registry = await made.registry.openedIn(runtime, settings, {
-      ...wiring,
-      modelAccessOf,
-      telemetry,
-      consent,
-      connections: source,
-    });
+    const registry = await registryOpenedFor(serving, runtime, { consent, connections: source });
+    const { connections, offering } = connectionsReadingThrough(registry.readOnceThrough);
     await made.extensions.logged(runtime);
     const functions = await functionsServedBy(runtime, settings, await ledgerConnectionIn(runtime), {
       ...wiring,

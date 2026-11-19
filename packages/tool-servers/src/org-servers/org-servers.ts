@@ -35,6 +35,10 @@ export interface OrgServer {
   readonly linked: () => Promise<Linked>;
 }
 
+export function readyAsItIs(): Promise<readonly ConnectionUnready[]> {
+  return Promise.resolve([]);
+}
+
 export function linksOf(
   linked: readonly Linked[],
 ): Effect.Effect<readonly ServerLink[], ToolNotOffered | ToolServerFailed> {

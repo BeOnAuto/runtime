@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { problemsOf } from '../testing/entry-problems.ts';
 import {
+  appLevelToken,
   firstDestination as destination,
   intoAQueue,
   ofEachSubscription,
@@ -233,5 +234,29 @@ describe('the signed payload of a keyed hash', () => {
         'Holds {id}, so expected id beside it, the header or the field of the body that holds it',
       ],
     ]);
+  });
+});
+
+const [keyAlone, ...otherWays] = tracker.credentials;
+
+function socketCredentialAmong(named: readonly Readonly<Record<string, string>>[]) {
+  return {
+    ...tracker,
+    credentials: [{ ...keyAlone, app_credentials: named }, ...otherWays],
+    events: { destinations: [overASocket] },
+  };
+}
+
+function refusedPathsOf(entry: unknown): readonly string[] {
+  return problemsOf(entry).map(([path]) => path);
+}
+
+describe('the credential a socket is opened with', () => {
+  it('is an app credential of the entry’s secret way, which a person gives beside the key', () => {
+    expect([
+      refusedPathsOf(socketCredentialAmong([appLevelToken])),
+      refusedPathsOf(socketCredentialAmong([{ ...appLevelToken, name: 'socket_token' }])),
+      refusedPathsOf({ ...tracker, events: { destinations: [overASocket] } }),
+    ]).toEqual([[], [`${destination}/credential`], [`${destination}/credential`]]);
   });
 });

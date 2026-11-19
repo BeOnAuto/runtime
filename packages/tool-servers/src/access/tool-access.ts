@@ -46,7 +46,7 @@ export interface LinkedOptions extends Omit<ToolAccessOptions, 'assets'>, Record
   readonly borrowed: Links;
 }
 
-interface LendingAccess extends ToolAccess, RequestWays {
+interface LendingAccess extends ToolAccess, RequestWays, Pick<OrgAccess, 'readOnceThrough'> {
   readonly linksSendingNoRequest: LinksLent;
   readonly listingsKept: OrgAccess['listingsKept'];
 }
@@ -100,6 +100,7 @@ export function toolAccessOf(
     }),
     ...listingWaysOf(access),
     ...requestWaysOf(access, { timing: options.timing, most: options.mostRequestBytes }),
+    readOnceThrough: access.readOnceThrough,
     linksSendingNoRequest: async () => sendingNoRequest((await linkedOnUse()).fileLinks),
     listingsKept: access.listingsKept,
     close: async () => {

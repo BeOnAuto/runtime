@@ -54,7 +54,7 @@ export interface ConnectionLinks {
   readonly close: () => Promise<void>;
 }
 
-async function stopped(link: Promise<Linking>): Promise<void> {
+export async function stopped(link: Promise<Linking>): Promise<void> {
   const linked = await link;
   if ('link' in linked) {
     await linked.link.stop();
@@ -135,7 +135,7 @@ async function linkedOnce(
   return isKeptForTheProcess(ready) ? { refused: refusal } : { unread: refusal };
 }
 
-function linkedOf(linking: Linking): Linked {
+export function linkedOf(linking: Linking): Linked {
   return 'unread' in linking ? { refused: linking.unread } : linking;
 }
 

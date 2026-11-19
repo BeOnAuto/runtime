@@ -1,5 +1,6 @@
 import { Array as Arr, Effect, Option } from 'effect';
 
+import type { ServerThrough } from '../access/through-ways.ts';
 import {
   isConnectionServerSettings,
   type ConnectionServer,
@@ -86,6 +87,18 @@ function settingsOf(
   );
   const settings = Option.getOrThrow(Arr.head(read.servers.filter((server) => isConnectionServerSettings(server))));
   return { ...settings, ...(auth === undefined ? {} : { auth }), ...(renders === undefined ? {} : { renders }) };
+}
+
+export function serverThroughOf(org: string, connection: FakeConnection): ServerThrough {
+  return {
+    connection: connection.id,
+    server: {
+      settings: settingsOf(org, connection),
+      reaches: connection.reaches ?? everyAddress,
+      refused: (answered) => Effect.succeed(answered),
+      requestOrigins: connection.requestOrigins ?? [],
+    },
+  };
 }
 
 function unreadyOf(name: string, standing: Standing): ConnectionUnready | undefined {

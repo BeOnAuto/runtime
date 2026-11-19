@@ -5,8 +5,24 @@ export function without(written: object, ...left: readonly string[]): Readonly<R
   return Object.fromEntries(Object.entries(written).filter(([key]: readonly [string, unknown]) => !left.includes(key)));
 }
 
+export const appLevelToken = {
+  name: 'app_level_token',
+  description: 'Chat app-level token',
+  instructions: 'Make a token under **Basic Information**, **App-Level Tokens**, with the scope `connections:write`.',
+  key_page: 'https://api.chat.example.com/apps',
+  example: 'xapp-…',
+  pattern: '^xapp-.+$',
+};
+
+const [aKey, ...otherWays] = tracker.credentials;
+
+export const trackerOverASocket = {
+  ...tracker,
+  credentials: [{ ...aKey, app_credentials: [appLevelToken] }, ...otherWays],
+};
+
 export function sentBy(...destinations: readonly unknown[]): readonly (readonly [string, string])[] {
-  return problemsOf({ ...tracker, events: { destinations } });
+  return problemsOf({ ...trackerOverASocket, events: { destinations } });
 }
 
 export const firstDestination = '/events/destinations/0';

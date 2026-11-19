@@ -7,6 +7,7 @@ import { makeConnectionOperations, type ConnectionOperations } from '../operatio
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import { added } from './additions.ts';
+import { fakeReads } from './harness-services.ts';
 import { ada, fixtureServing, operationNamed, type Harness, loopbackPolicy } from './harness.ts';
 
 export interface Sealed<Rows extends SecretRows = SecretRows> {
@@ -44,6 +45,7 @@ export function operationsOver(
     variables: new Map(),
     access: 'people',
     consent: h.consent,
+    readOnceThrough: fakeReads().readOnceThrough,
     ...services,
   });
 }

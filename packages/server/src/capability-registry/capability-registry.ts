@@ -1,13 +1,14 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
 import type { ModelAccess, ModelTelemetry } from '@on.auto/reasoning';
-import type { ToolServerDocumentRefused } from '@on.auto/tool-servers';
+import type { ThroughWays, ToolServerDocumentRefused } from '@on.auto/tool-servers';
 import { Effect, type Layer, type Scope } from 'effect';
 
 import { processesServedBy, type ServedProcesses } from '../composition/served-processes.ts';
 import { ComposedModels, modelsComposedBy, type ModelAccessOf } from '../composition/served-reasoning.ts';
 import {
   ComposedTools,
+  throughWaysOf,
   toolsComposedBy,
   type MadeToolAccess,
   type ServedConnections,
@@ -16,7 +17,7 @@ import {
 import type { Settings } from '../settings/settings.ts';
 import { composedOnFirstUse, scopeOfTheRuntime } from './first-use.ts';
 
-export interface CapabilityRegistry {
+export interface CapabilityRegistry extends ThroughWays {
   readonly models: Effect.Effect<ModelAccess>;
   readonly modelTelemetry: ModelTelemetry | undefined;
   readonly tools: Effect.Effect<MadeToolAccess, ToolServerDocumentRefused>;
@@ -53,8 +54,15 @@ function capabilityRegistryOf(
       ComposedTools,
       toolsComposedBy(runtime, settings, { ...wiring, documents: processes.documents }),
     ),
-    processes: Effect.succeed(processes),
-  });
+  }).pipe(
+    Effect.map(({ models, modelTelemetry, tools }) => ({
+      models,
+      modelTelemetry,
+      tools,
+      processes,
+      readOnceThrough: throughWaysOf(tools).readOnceThrough,
+    })),
+  );
 }
 
 export function capabilityRegistryHeld(): HeldRegistry {

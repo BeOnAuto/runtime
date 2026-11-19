@@ -35,6 +35,12 @@ export const GivingSchema = Schema.Struct({
   algorithm: Schema.optionalKey(
     Schema.String.annotate({ description: 'The signing algorithm of private_key, such as RS256 or ES256' }),
   ),
+  app_credentials: Schema.optionalKey(
+    Schema.Record(Schema.String, GivenField).annotate({
+      description:
+        "For secret, the app credentials given beside the key, each a value under the name list_providers lists in the way's app_credentials; each is optional, and a name the way does not list here is refused",
+    }),
+  ),
   playbooks: ChosenPlaybooksField,
 });
 
@@ -76,7 +82,7 @@ export const ClientGivenSchema = Schema.Struct({
     "The connection the organization's own OAuth client was given to, with its next client where it keeps one",
 });
 
-function refused(issues: readonly Issue[]): InvalidInput {
+export function refused(issues: readonly Issue[]): InvalidInput {
   return new InvalidInput({ detail: 'The credential cannot be taken as it is given', issues });
 }
 
@@ -109,6 +115,12 @@ function withAReadableClientId(
 }
 
 const outOfItsFormat = "Paste the key itself: this value is not in the format of the provider's keys";
+
+export const appCredentialOutOfItsFormat =
+  "This value is not in the format this field takes. Copy it again from the provider's page and paste all of it.";
+
+export const refusedByTheService =
+  "The provider refused this key. Copy it again from the provider's page and paste all of it.";
 
 export function formatMarkOf(
   { provider, credential: { pattern } }: RecordedConnection,

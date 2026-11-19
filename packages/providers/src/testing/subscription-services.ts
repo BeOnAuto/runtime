@@ -18,10 +18,11 @@ import type {
   SubscriptionPlace,
   SubscriptionPorts,
 } from '../subscriptions/subscription-ports.ts';
-import { providersOf, tracker } from './fixture-providers.ts';
+import { trackerOverASocket } from './event-destinations.ts';
+import { providersOf } from './fixture-providers.ts';
 
 export function destinationOf(written: object, type: Destination['type'] = 'webhook'): Destination {
-  const entry = { ...tracker, events: { destinations: [written] } };
+  const entry = { ...trackerOverASocket, events: { destinations: [written] } };
   return Option.getOrThrow(Option.fromNullishOr(eventDestinationOf(providersOf(entry), 'tracker', type)));
 }
 

@@ -2,18 +2,21 @@ import type { CallingClient } from '@on.auto/operations';
 import type { ClientSource } from '@on.auto/tool-servers';
 
 import { entryServing } from './connection-entry.ts';
-import type {
-  ClientGiven,
-  ConnectionAdded,
-  ConnectionBroken,
-  ConnectionConnected,
-  ConsentStarted,
-  LinkIssued,
-  PlaybooksSet,
-  RecordedConnectionEvent,
+import {
+  isOfItsSealedValues,
+  type ClientGiven,
+  type ConnectionAdded,
+  type ConnectionBroken,
+  type ConnectionConnected,
+  type ConsentStarted,
+  type LinkIssued,
+  type OfItsSealedValues,
+  type PlaybooksSet,
+  type RecordedConnectionEvent,
 } from './connection-events.ts';
 import { scopesAddedTo, scopesSaid, wordsOf, type RecordedConnection } from './connection.ts';
 import type { Credential } from './credential.ts';
+import { appCredentialsAfter, appCredentialsHeldOf, type AppSecretIds } from './kept-app-credentials.ts';
 import { signingRemoved, signingSet, signingShown, type KeptSigning } from './kept-signing.ts';
 
 export interface OpenLink {
@@ -48,6 +51,7 @@ export interface KeptConnection {
   readonly clientSecretId: string | undefined;
   readonly nextClient: GivenClient | undefined;
   readonly signing: KeptSigning | undefined;
+  readonly appSecretIds: AppSecretIds;
 }
 
 export type Registry = ReadonlyMap<string, KeptConnection>;
@@ -78,6 +82,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       broken: null,
       signing_secret: null,
       account: null,
+      app_credentials: [],
     },
     link: undefined,
     replacedLinks: new Set(),
@@ -87,6 +92,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
     clientSecretId: undefined,
     nextClient: undefined,
     signing: undefined,
+    appSecretIds: {},
   };
 }
 
@@ -152,6 +158,7 @@ function promotedOf({ nextClient }: KeptConnection, { data }: ConnectionConnecte
 function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnection {
   const { data, context } = event;
   const promoted = promotedOf(kept, event);
+  const appSecretIds = data.app_secret_ids ?? {};
   return {
     connection: {
       ...kept.connection,
@@ -163,6 +170,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
       granted_scopes: data.scope === undefined ? null : scopesSaid(data.scope, wordsOf(kept.connection.asked_scopes)),
       broken: null,
       account: data.account ?? null,
+      app_credentials: appCredentialsHeldOf(appSecretIds),
     },
     link: undefined,
     replacedLinks: kept.replacedLinks,
@@ -172,6 +180,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
     clientSecretId: promoted === undefined ? kept.clientSecretId : promoted.secret_id,
     nextClient: promoted === undefined ? kept.nextClient : undefined,
     signing: kept.signing,
+    appSecretIds,
   };
 }
 
@@ -191,13 +200,28 @@ function withPlaybooks(kept: KeptConnection, { data }: PlaybooksSet): KeptConnec
 function removed(kept: KeptConnection): KeptConnection {
   return {
     ...kept,
-    connection: { ...kept.connection, status: 'removed', broken: null, signing_secret: null },
+    connection: { ...kept.connection, status: 'removed', broken: null, signing_secret: null, app_credentials: [] },
     link: undefined,
   };
 }
 
 function withSigning(kept: KeptConnection, signing: KeptSigning | undefined): KeptConnection {
   return { ...kept, signing, connection: { ...kept.connection, signing_secret: signingShown(signing) } };
+}
+
+function withItsSealedValues(kept: KeptConnection, event: OfItsSealedValues): KeptConnection {
+  if (event.type === 'connection_signing_secret_set') {
+    return withSigning(kept, signingSet(kept.signing, event));
+  }
+  return event.type === 'connection_signing_secret_removed'
+    ? withSigning(kept, signingRemoved(kept.signing, event))
+    : {
+        ...kept,
+        connection: {
+          ...kept.connection,
+          app_credentials: appCredentialsAfter(kept.connection.app_credentials, event),
+        },
+      };
 }
 
 function evolvedConnection(
@@ -222,11 +246,8 @@ function evolvedConnection(
   if (event.type === 'connection_playbooks_set') {
     return withPlaybooks(kept, event);
   }
-  if (event.type === 'connection_signing_secret_set') {
-    return withSigning(kept, signingSet(kept.signing, event));
-  }
-  if (event.type === 'connection_signing_secret_removed') {
-    return withSigning(kept, signingRemoved(kept.signing, event));
+  if (isOfItsSealedValues(event)) {
+    return withItsSealedValues(kept, event);
   }
   return event.type === 'connection_broken' ? broken(kept, event) : removed(kept);
 }

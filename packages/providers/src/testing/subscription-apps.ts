@@ -3,8 +3,8 @@ import { Effect, Option, type Schema } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
 import type { ThroughTheConnection } from '../subscriptions/subscription-ports.ts';
-import { ofEachSubscription } from './event-destinations.ts';
-import { providerOf, tracker } from './fixture-providers.ts';
+import { ofEachSubscription, trackerOverASocket } from './event-destinations.ts';
+import { providerOf } from './fixture-providers.ts';
 import {
   answeredWith,
   failedAs,
@@ -15,7 +15,7 @@ import {
 } from './subscription-services.ts';
 
 export function declaredDestinations(...written: readonly object[]): readonly Destination[] {
-  const { entry } = providerOf({ ...tracker, events: { destinations: written } });
+  const { entry } = providerOf({ ...trackerOverASocket, events: { destinations: written } });
   return Option.getOrThrow(Option.fromNullishOr(entry.events)).destinations;
 }
 

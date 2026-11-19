@@ -130,8 +130,14 @@ export const ConnectionEventSchema = Schema.Union([
       client_source: Schema.optionalKey(ClientSourceSchema),
       scope: Schema.optionalKey(Schema.String),
       account: Schema.optionalKey(AccountSchema),
+      app_secret_ids: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
       connected_by: RecordedCallerSchema,
     }),
+    ActedContextSchema,
+  ),
+  factOf(
+    'connection_app_credential_refused',
+    Schema.Struct({ ...ofTheConnection, name: Schema.String, reason: Schema.String }),
     ActedContextSchema,
   ),
   factOf(
@@ -177,6 +183,11 @@ export type ConnectionConnected = Extract<RecordedConnectionEvent, { readonly ty
 
 export type ConnectionBroken = Extract<RecordedConnectionEvent, { readonly type: 'connection_broken' }>;
 
+export type AppCredentialRefused = Extract<
+  RecordedConnectionEvent,
+  { readonly type: 'connection_app_credential_refused' }
+>;
+
 export type PlaybooksSet = Extract<RecordedConnectionEvent, { readonly type: 'connection_playbooks_set' }>;
 
 export type SigningSecretSet = Extract<RecordedConnectionEvent, { readonly type: 'connection_signing_secret_set' }>;
@@ -187,3 +198,15 @@ export type SigningSecretRemoved = Extract<
 >;
 
 export type SigningSecretsRemoved = typeof SigningSecretsRemovedSchema.Type;
+
+export type OfItsSealedValues = SigningSecretSet | SigningSecretRemoved | AppCredentialRefused;
+
+const typesOfItsSealedValues: ReadonlySet<string> = new Set([
+  'connection_signing_secret_set',
+  'connection_signing_secret_removed',
+  'connection_app_credential_refused',
+]);
+
+export function isOfItsSealedValues(event: RecordedConnectionEvent): event is OfItsSealedValues {
+  return typesOfItsSealedValues.has(event.type);
+}

@@ -2,7 +2,7 @@ import { alternatives, articled, listed } from '@on.auto/phrasing';
 import { WayClientSourceSchema, WayPkceSchema, isScope, wayClientSources } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
-import { keyWayFields, keyWayIssuesOf } from '../keys/key-fields.ts';
+import { keyFieldNames, keyWayFields, keyWayIssuesOf } from '../keys/key-fields.ts';
 import { endingIssuesOf } from './ending-codes.ts';
 import { GatewaySchema, PermissionsSchema, gatewayIssuesOf, wayThroughAGateway } from './gateway-ways.ts';
 import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, notScopes, wordsIssuesOf } from './scope-groups.ts';
@@ -103,14 +103,16 @@ const everyField: readonly Field[] = [
   'ending_codes',
   'gateway',
   'permissions',
-  'instructions',
-  'key_page',
-  'example',
-  'pattern',
+  ...keyFieldNames,
+  'app_credentials',
+  'test',
 ];
 
 const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
-  secret: { required: ['in', 'name', 'instructions', 'key_page'], optional: ['scheme', 'example', 'pattern'] },
+  secret: {
+    required: ['in', 'name', 'instructions', 'key_page'],
+    optional: ['scheme', 'example', 'pattern', 'app_credentials', 'test'],
+  },
   client_credentials: { required: ['issuer'], optional: ['scope', 'says'] },
   none: { required: [], optional: [] },
   authorization: {

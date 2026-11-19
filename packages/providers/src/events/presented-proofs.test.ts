@@ -2,8 +2,8 @@ import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { eventDestinationOf } from '../reading/provider-list.ts';
-import { ofEachSubscription, ofTheApp, overASocket } from '../testing/event-destinations.ts';
-import { providersOf, tracker } from '../testing/fixture-providers.ts';
+import { ofEachSubscription, ofTheApp, overASocket, trackerOverASocket } from '../testing/event-destinations.ts';
+import { providersOf } from '../testing/fixture-providers.ts';
 import { presentedProofOf, type Arrival, type PresentedProof } from './arrival-readings.ts';
 import type { Destination } from './destination-fields.ts';
 import { provesWhatIsReadAt } from './event-proofs.ts';
@@ -11,7 +11,7 @@ import { provesWhatIsReadAt } from './event-proofs.ts';
 type Reader = (arrival: Arrival) => PresentedProof | undefined;
 
 function destinationOf(declared: object, type: 'webhook' | 'websocket' = 'webhook'): Destination {
-  const entry = { ...tracker, events: { destinations: [declared] } };
+  const entry = { ...trackerOverASocket, events: { destinations: [declared] } };
   const destination = eventDestinationOf(providersOf(entry), 'tracker', type);
   if (destination === undefined) {
     throw new Error('the test destination is refused');

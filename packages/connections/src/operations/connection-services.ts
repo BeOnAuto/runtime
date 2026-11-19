@@ -3,6 +3,7 @@ import type { ProviderList } from '@on.auto/providers';
 import type {
   ConsentClient,
   KeptRow,
+  ReadOnceThrough,
   SecretKeepingFailure,
   SecretReadingFailure,
   TokensClaimed,
@@ -11,6 +12,7 @@ import type {
 import type { Effect, Redacted } from 'effect';
 
 import type { ConnectPages } from '../links/connect-page.ts';
+import type { SocketChecks } from '../page/given-checks.ts';
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import type { StartsOfConnections } from '../policy/connection-starts.ts';
 import type { RuntimeAccess } from '../policy/policy-rules.ts';
@@ -41,4 +43,10 @@ export interface ConnectionServices extends StartsOfConnections {
   readonly consent: ConsentClient;
   readonly resolve?: Resolve;
   readonly fetch: typeof globalThis.fetch;
+  readonly readOnceThrough: ReadOnceThrough;
+  readonly sockets?: SocketChecks;
+}
+
+export function opensSockets({ sockets }: Pick<ConnectionServices, 'sockets'>): boolean {
+  return sockets !== undefined;
 }

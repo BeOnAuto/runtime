@@ -48,14 +48,15 @@ function consentAddressesOf(credential: Credential, provided: Provided | undefin
     : wayAddresses.map((field) => credential[field]);
 }
 
-function hostsOf(addition: Addition, provided: Provided | undefined): readonly string[] {
+export function hostsReachedBy(addition: Addition, provided: Provided | undefined): readonly string[] {
   const { type, entry, credential } = addition;
   const server = type === 'mcp' ? [entry.url] : [entry.document, entry.base_url, provided?.documentServer];
   const addresses = [...server, ...consentAddressesOf(credential, provided)];
-  return addresses.flatMap((address) => {
+  const hosts = addresses.flatMap((address) => {
     const parsed = address === undefined ? null : URL.parse(address);
     return parsed === null ? [] : [parsed.hostname];
   });
+  return [...new Set(hosts)];
 }
 
 export function hostRefusalOf(allowedHosts: readonly string[] | null, host: string): Forbidden | undefined {
@@ -119,7 +120,7 @@ function hostRefusal(
   addition: Addition,
   provided: Provided | undefined,
 ): Forbidden | undefined {
-  const refused = hostsOf(addition, provided).find((host) => hostRefusalOf(allowedHosts, host) !== undefined);
+  const refused = hostsReachedBy(addition, provided).find((host) => hostRefusalOf(allowedHosts, host) !== undefined);
   return refused === undefined ? undefined : hostRefusalOf(allowedHosts, refused);
 }
 
@@ -128,7 +129,7 @@ function reservedHostRefusal(
   addition: Addition,
   provided: Provided | undefined,
 ): Forbidden | undefined {
-  const refusals = hostsOf(addition, provided).flatMap((host) => {
+  const refusals = hostsReachedBy(addition, provided).flatMap((host) => {
     const kind = allowsReserved(policy, host) ? undefined : reservedHostKindOf(host);
     return kind === undefined ? [] : [reservedRefusalOf(host, kind)];
   });

@@ -424,6 +424,36 @@ describe('connections over http', () => {
       expect(await keptSecretOf(fileName, secretId)).toEqual({ value: undefined, endsWith: undefined });
     });
 
+    it('tests the key through the tool its provider names before it keeps anything, and refuses further values of an app here', async () => {
+      const provider = {
+        name: 'crm-tested',
+        title: 'CRM',
+        description: 'Read the records of the CRM.',
+        website: 'https://crm.example.com',
+        type: 'mcp',
+        url: crmServer.url,
+        credentials: [{ ...crmCredential, description: 'CRM API key', test: { tool: 'profile' } }],
+      };
+      const served = await serving(connectionsAllowing(['127.0.0.1'], { providers: [provider] }));
+      const { id, token } = await added(served, { provider: 'crm-tested' });
+      const fileName = String(ledger?.fileName);
+      const credential = `${connections}/${id}/credential`;
+
+      const refused = await served.call('POST', credential, { body: { token, value: 'Bearer crm-wrong' } });
+      const withAnApp = await served.call('POST', credential, {
+        body: { token, value: 'Bearer crm-0f3c', app_credentials: { app_level_token: 'xapp-1-0f3c' } },
+      });
+      const factsBefore = await connectionFactsIn(fileName, 'local');
+      const taken = await served.call('POST', credential, { body: { token, value: 'Bearer crm-0f3c' } });
+
+      expect([refused, withAnApp]).toMatchObject([
+        { status: 422, body: { reason: 'invalid_input', errors: [{ pointer: '/value' }] } },
+        { status: 422, body: { reason: 'invalid_input', errors: [{ pointer: '/app_credentials/app_level_token' }] } },
+      ]);
+      expect(factsBefore).toEqual(['connection_added', 'connection_link_issued']);
+      expect(taken).toMatchObject({ status: 200, body: { id, status: 'connected', app_credentials: [] } });
+    });
+
     it('approves one that takes no credential to give', async () => {
       const served = await serving();
       const { id, token } = await added(served, { ...crm(), credential: { kind: 'none' } });

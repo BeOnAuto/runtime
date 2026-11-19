@@ -4,13 +4,15 @@ import {
   hostAlternativesOf,
   replacedNamesOf,
   scopesIn,
+  type AppCredential,
   type CredentialWay,
+  type EventDestination,
   type Placeholder,
   type Provider,
   type ProviderList,
 } from '@on.auto/providers';
 import type { ClientSource, HadSources, WayGateway, WayOAuthClient } from '@on.auto/tool-servers';
-import type { Redacted } from 'effect';
+import { Struct, type Redacted } from 'effect';
 
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import { hostRefusalOf } from '../policy/policy-rules.ts';
@@ -28,6 +30,10 @@ export interface Listing {
   readonly policy: ConnectionPolicy;
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
   readonly consent: HadSources;
+}
+
+interface ListingOfTheRuntime extends Listing {
+  readonly opensSockets: boolean;
 }
 
 const placedHostCharacters = /^[a-z0-9-]+$/u;
@@ -194,7 +200,37 @@ function moreSaidBy({ more = [] }: CredentialWay) {
   return more.map((group) => ({ name: group.name, for: group.for, scopes: scopesSaidBy(group) }));
 }
 
-function listedProviderOf(provider: Provider, listing: Listing): readonly ListedProvider[] {
+export interface OfferedAppCredential {
+  readonly credential: AppCredential;
+  readonly destination: EventDestination;
+}
+
+function socketsByCredentialOf({ entry }: Provider): ReadonlyMap<string | undefined, EventDestination> {
+  const sockets = (entry.events?.destinations ?? []).filter(({ type }) => type === 'websocket');
+  return new Map(sockets.map((destination) => [destination.credential, destination]));
+}
+
+export function offeredAppCredentialsOf(
+  provider: Provider,
+  way: CredentialWay,
+  { opensSockets }: Pick<ListingOfTheRuntime, 'opensSockets'>,
+): readonly OfferedAppCredential[] {
+  if (!opensSockets) {
+    return [];
+  }
+  const sockets = socketsByCredentialOf(provider);
+  return (way.app_credentials ?? []).flatMap((credential) => {
+    const destination = sockets.get(credential.name);
+    return destination === undefined ? [] : [{ credential, destination }];
+  });
+}
+
+function appCredentialsListedOf(provider: Provider, way: CredentialWay, listing: ListingOfTheRuntime) {
+  const offered = offeredAppCredentialsOf(provider, way, listing);
+  return offered.length === 0 ? {} : { app_credentials: offered.map(({ credential }) => credential) };
+}
+
+function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): readonly ListedProvider[] {
   const { name, title, description, website, type, replaces } = provider.entry;
   const replaced = replaces === undefined ? {} : { replaces: replacedNamesOf(listing.providers, provider.entry) };
   const offering = offeringOf(provider, listing);
@@ -202,7 +238,8 @@ function listedProviderOf(provider: Provider, listing: Listing): readonly Listed
     .filter((way) => isListed(provider, way, listing.policy))
     .map((way) =>
       listedWayOf({
-        ...way,
+        ...Struct.omit(way, ['app_credentials', 'test']),
+        ...appCredentialsListedOf(provider, way, listing),
         scopes: scopesSaidBy(way),
         more: moreSaidBy(way),
         ...wayOfferingOf(way, offering, provider, listing),
@@ -224,6 +261,6 @@ function listedProviderOf(provider: Provider, listing: Listing): readonly Listed
       ];
 }
 
-export function listedProviders(listing: Listing): readonly ListedProvider[] {
+export function listedProviders(listing: ListingOfTheRuntime): readonly ListedProvider[] {
   return listing.providers.providers.flatMap((provider) => listedProviderOf(provider, listing));
 }

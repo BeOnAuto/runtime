@@ -184,6 +184,7 @@ describe('the changes the facts of the connections of an org make', () => {
         'connection_consent_started',
         'connection_connected',
         'connection_broken',
+        'connection_app_credential_refused',
         'connection_removed',
         'connection_playbooks_set',
         'connection_signing_secret_set',

@@ -1,16 +1,17 @@
 import { Effect, Option } from 'effect';
 
 import type { LinkedAccess } from '../access/linked-access.ts';
+import { throughWaysOf, type ThroughWays } from '../access/through-ways.ts';
 import type { Secrets } from '../bounds/secrets.ts';
 import { keptListingsOf, type KeptListings } from '../listing/kept-listings.ts';
 import type { LinkedServerSettings, ToolServers } from '../openapi/described-api.ts';
 import { connectionLinks, type LinkConnection } from './connection-links.ts';
 import type { ConnectionSource } from './connection-source.ts';
-import { withTheFileFirst, type OrgServer } from './org-servers.ts';
+import { readyAsItIs, withTheFileFirst, type OrgServer } from './org-servers.ts';
 
 export type Load = () => Promise<LinkedAccess>;
 
-export interface OrgAccess {
+export interface OrgAccess extends ThroughWays {
   readonly loaded: Load;
   readonly serversOf: (org: string) => Effect.Effect<readonly OrgServer[]>;
   readonly listingsKept: KeptListings;
@@ -29,7 +30,7 @@ function fileServer(settings: LinkedServerSettings, loaded: Load): OrgServer {
   return {
     settings,
     keptAs: `file ${settings.name}`,
-    checked: () => Promise.resolve([]),
+    checked: readyAsItIs,
     linked: async () => {
       const { fileLinks } = await loaded();
       return { link: Option.getOrThrow(Option.fromNullishOr(fileLinks.get(settings.name))) };
@@ -46,6 +47,7 @@ export function orgAccessOf(settings: ToolServers, parts: OrgAccessParts): OrgAc
     loaded,
     serversOf: (org) => Effect.map(connections.serversOf(org), (ofTheOrg) => withTheFileFirst(files, ofTheOrg)),
     listingsKept: parts.listingsKept ?? keptListingsOf(parts.now),
+    ...throughWaysOf(loaded),
     close: connections.close,
   };
 }

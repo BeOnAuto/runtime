@@ -1066,7 +1066,7 @@
                         "credential": {
                           "type": "string",
                           "pattern": "^[a-z][a-z0-9_]{0,63}$",
-                          "description": "For websocket, the value of the app that opens the socket, named as the vendor names it, such as app_level_token, sent as a bearer token with the request of open"
+                          "description": "For websocket, the value of the app that opens the socket, named as the vendor names it, such as app_level_token: an app credential of the entry's secret way, sent as a bearer token with the request of open"
                         },
                         "acknowledge": {
                           "type": "string",
@@ -1308,6 +1308,58 @@
                     "pattern": {
                       "type": "string",
                       "description": "For secret, beside example, the regular expression from ^ to $ every key matches, of at most 200 characters, by which the runtime refuses a value of another format"
+                    },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                            "description": "Its name, as the vendor names it, such as app_level_token, by which a websocket destination of the entry names it as its credential and give_credential's app_credentials takes it"
+                          },
+                          "description": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "What a person reads of it: the label of the field it is given in, beside the field of the key"
+                          },
+                          "instructions": {
+                            "type": "string",
+                            "description": "How a person makes it, in Markdown without HTML of at most 1,000 characters, which its field shows",
+                            "minLength": 1,
+                            "maxLength": 1000
+                          },
+                          "key_page": {
+                            "type": "string",
+                            "description": "The https address of the page where a person makes it"
+                          },
+                          "example": {
+                            "type": "string",
+                            "description": "What it looks like, with an ellipsis in place of its characters, which its field shows",
+                            "maxLength": 100
+                          },
+                          "pattern": {
+                            "type": "string",
+                            "description": "Beside example, the regular expression from ^ to $ every such value matches, of at most 200 characters, by which the runtime refuses a value of another format"
+                          }
+                        },
+                        "required": ["name", "description", "instructions"],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1,
+                      "description": "For secret, the app credentials a person may give beside the key, such as an app-level token, each optional to them, in the order the page shows them; one is offered only where a websocket destination of the entry names it and the runtime opens sockets, and the runtime keeps each sealed as it keeps the key"
+                    },
+                    "test": {
+                      "type": "object",
+                      "properties": {
+                        "tool": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["tool"],
+                      "additionalProperties": false,
+                      "description": "For secret, the tool that checks a key: a tool that needs no arguments and is marked reads, which the runtime calls once with the key a person gives before it keeps anything; a key the service refuses is refused, and where the call ends any other way than in a result the runtime keeps nothing and answers that the key could not be checked"
                     },
                     "description": {
                       "type": "string",

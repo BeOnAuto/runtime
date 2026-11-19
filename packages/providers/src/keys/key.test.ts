@@ -10,6 +10,14 @@ function keyProblemsOf(way: Readonly<Record<string, unknown>>) {
   return problemsOf({ ...tracker, credentials: [{ ...aKey, ...way }] });
 }
 
+function refusedAt(way: Readonly<Record<string, unknown>>): readonly string[] {
+  return keyProblemsOf(way).map(([path]) => path);
+}
+
+function marked(marks: Readonly<Record<string, readonly string[]>>): readonly string[] {
+  return problemsOf({ ...tracker, marks, credentials: [{ ...aKey, test: { tool: 'viewer' } }] }).map(([path]) => path);
+}
+
 describe('how a way of a key says its key is made', () => {
   it('is required of every way of a key, in instructions and key_page', () => {
     const { instructions: _instructions, key_page: _keyPage, ...unexplained } = { ...aKey };
@@ -226,6 +234,56 @@ describe('the bounds of the pattern of a way of a key', () => {
         '/credentials/0/example',
         'Expected example beside pattern, which shows the person the format of the key the pattern holds a value to',
       ],
+    ]);
+  });
+});
+
+describe('the app credentials a way of a key takes', () => {
+  const tokenOfTheApp = {
+    name: 'app_level_token',
+    description: 'Tracker app-level token',
+    instructions: 'Make a token under **Settings**, **App tokens**.',
+  };
+
+  it('are each named once, labelled and explained, with an example beside a pattern, on a way of a key alone', () => {
+    const [consent] = drive.credentials;
+
+    expect([
+      refusedAt({ app_credentials: [tokenOfTheApp, { ...tokenOfTheApp, name: 'signing_secret', example: 'ss_…' }] }),
+      refusedAt({ app_credentials: [] }),
+      refusedAt({ app_credentials: [tokenOfTheApp, tokenOfTheApp] }),
+      refusedAt({ app_credentials: [{ ...tokenOfTheApp, name: 'App Token', description: '' }] }),
+      refusedAt({ app_credentials: [{ ...tokenOfTheApp, pattern: '^xapp-.+$' }] }),
+      refusedAt({ app_credentials: [{ ...tokenOfTheApp, key_page: 'http://app.tracker.example.com' }] }),
+      problemsOf({ ...drive, credentials: [{ ...consent, app_credentials: [tokenOfTheApp] }] }).map(([path]) => path),
+    ]).toEqual([
+      [],
+      ['/credentials/0/app_credentials'],
+      ['/credentials/0/app_credentials/1/name'],
+      ['/credentials/0/app_credentials/0/name', '/credentials/0/app_credentials/0/description'],
+      ['/credentials/0/app_credentials/0/example'],
+      ['/credentials/0/app_credentials/0/key_page'],
+      ['/credentials/0/app_credentials'],
+    ]);
+  });
+});
+
+describe('the test of a way of a key', () => {
+  it('names one tool, as a server names its tools, on a way of a key alone', () => {
+    const [consent] = drive.credentials;
+
+    expect([
+      refusedAt({ test: { tool: 'get_viewer' } }),
+      refusedAt({ test: { tool: 'get viewer' } }),
+      problemsOf({ ...drive, credentials: [{ ...consent, test: { tool: 'about_get' } }] }).map(([path]) => path),
+    ]).toEqual([[], ['/credentials/0/test/tool'], ['/credentials/0/test']]);
+  });
+
+  it('is refused where the entry marks the tool it names acts, since the runtime calls it with every key given', () => {
+    expect([marked({ reads: ['viewer'] }), marked({ acts: ['issues.create'] }), marked({ acts: ['viewer'] })]).toEqual([
+      [],
+      [],
+      ['/credentials/0/test/tool'],
     ]);
   });
 });

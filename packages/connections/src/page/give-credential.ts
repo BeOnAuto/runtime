@@ -1,5 +1,5 @@
-import { defineHttpOperation, OrgContext } from '@on.auto/operations';
-import { Effect, Redacted } from 'effect';
+import { defineHttpOperation } from '@on.auto/operations';
+import { Effect } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
@@ -10,21 +10,19 @@ import {
   recordChangeInRegistry,
   recordedCaller,
 } from '../operations/registry-access.ts';
-import { providingOf } from '../providers/provider-providing.ts';
 import { connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
 import { forgottenCredentialOf } from './forgotten-credentials.ts';
-import { GivenConnectionSchema, GivingSchema, formatMarkOf, givenOf, unkeptRefusalOf } from './given-fields.ts';
+import { GivenConnectionSchema, GivingSchema } from './given-fields.ts';
+import { givenValuesKept } from './given-values.ts';
 
-type GivingServices = Pick<
-  ConnectionServices,
-  'secrets' | 'modelProviders' | 'providers' | 'providerValues' | 'consent' | 'policy' | 'pages'
-> & {
-  readonly bindsPerson: boolean;
-};
+type GivingServices = Pick<ConnectionServices, 'consent' | 'pages'> &
+  Parameters<typeof givenValuesKept>[2] & {
+    readonly bindsPerson: boolean;
+  };
 
 export function defineGiveCredential(services: GivingServices) {
-  const { secrets, modelProviders, providers, providerValues, bindsPerson } = services;
+  const { secrets, bindsPerson } = services;
   return defineHttpOperation('org', 'command', {
     name: 'give_credential',
     title: 'Give credential',
@@ -33,6 +31,8 @@ export function defineGiveCredential(services: GivingServices) {
       "A secret of another format than its provider's pattern is refused, and one that misses the pattern of a credential given by hand is kept and answered with pattern_unmatched.",
       'The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it.',
       'Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again.',
+      'Before it keeps anything, the runtime checks with the service each app credential given and, where the provider has a check for its key, the key: a value the service refuses is refused as invalid_input at its field, and where the check cannot be completed, as when the service cannot be reached or answers an error, it answers unavailable, keeps nothing and leaves the link open.',
+      'It takes the app credentials list_providers lists for the way in app_credentials, each optional, and refuses one it does not list here.',
       'On a runtime that signs people in, only the person who added the connection may give it.',
       'Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the approval; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.',
     ].join(' '),
@@ -45,27 +45,20 @@ export function defineGiveCredential(services: GivingServices) {
       yield* allowedToChoose(playbooks);
       const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token), bindsPerson };
       const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(services), use, yield* actedNow));
-      const { org } = yield* OrgContext;
-      const providing = providingOf(kept.connection, { providers, providerValues });
-      const checking = { org, modelProviders, providing };
-      const given = yield* Effect.fromResult(givenOf(kept.connection, giving, checking));
-      const formatMark = yield* Effect.fromResult(formatMarkOf(kept.connection, given));
-      const secretId = yield* secrets
-        .keep(Redacted.make(given.value), given.endsWith)
-        .pipe(Effect.mapError((failure) => unkeptRefusalOf(kept.connection.name, given.pointer, failure)));
-      const algorithm = given.algorithm === undefined ? {} : { algorithm: given.algorithm };
-      const client = given.clientId === undefined ? {} : { client_id: given.clientId };
+      const values = yield* givenValuesKept(kept.connection, giving, services);
+      const { given, secretId, appSecretIds } = values;
       const { before, after } = yield* recordChangeInRegistry(services, {
         type: 'give',
         ...use,
         connected_by: yield* recordedCaller,
         secret_id: secretId,
-        ...algorithm,
-        ...client,
+        ...(given.algorithm === undefined ? {} : { algorithm: given.algorithm }),
+        ...(given.clientId === undefined ? {} : { client_id: given.clientId }),
+        app_secret_ids: appSecretIds,
         ...(playbooks === undefined ? {} : { playbooks }),
-      }).pipe(Effect.onError(() => secrets.forget(secretId)));
+      }).pipe(Effect.onError(() => Effect.forEach(values.kept, secrets.forget)));
       yield* forgottenCredentialOf(before, services);
-      return { ...connectionShown(after.connection, given.endsWith ?? null), ...formatMark };
+      return { ...connectionShown(after.connection, given.endsWith ?? null), ...values.formatMark };
     }),
   });
 }

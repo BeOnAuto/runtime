@@ -2,6 +2,7 @@ import { Caller, defineHttpOperation, type Runnable } from '@on.auto/operations'
 import { Effect, Schema } from 'effect';
 
 import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
+import { opensSockets } from '../operations/connection-services.ts';
 import { startOf, type ConnectionStart, type StartsOfConnections } from '../policy/connection-starts.ts';
 import { ProvidersSchema, type ListedProvider } from './listed-providers.ts';
 import { listedProviders } from './provider-listing.ts';
@@ -47,7 +48,10 @@ export function defineListProviders(listing: OfferingServices & StartsOfConnecti
       const refusal = yield* addingRefusedTo(listing, adding, yield* Caller);
       const consent = yield* listing.consent.hadSources(studioBaseFor(listing.pages));
       return {
-        providers: yield* Effect.forEach(listedProviders({ ...listing, consent }), withWhoReconnects(listing)),
+        providers: yield* Effect.forEach(
+          listedProviders({ ...listing, consent, opensSockets: opensSockets(listing) }),
+          withWhoReconnects(listing),
+        ),
         may_add: refusal === null,
         refusal,
         return_address: returnAddressOf(listing.pages),

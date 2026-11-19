@@ -1,6 +1,7 @@
 import { articled, listed } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
+import { ValueNameSchema } from '../keys/key-fields.ts';
 import { ConnectionSchema, FilterSchema, HandshakeSchema, OpenSchema } from './destination-parts.ts';
 import { RenewSchema, SubscribeSchema, UnsubscribeSchema } from './event-calls.ts';
 import { VerifySchema } from './event-proofs.ts';
@@ -48,13 +49,9 @@ export const DestinationFieldsSchema = Schema.Struct({
   ),
   open: Schema.optionalKey(OpenSchema),
   credential: Schema.optionalKey(
-    Schema.String.check(
-      Schema.isPattern(/^[a-z][a-z0-9_]{0,63}$/u, {
-        expected: 'the name of a value of the app, 1 to 64 lowercase letters, digits and underscores',
-      }),
-    ).annotate({
+    ValueNameSchema.annotate({
       description:
-        'For websocket, the value of the app that opens the socket, named as the vendor names it, such as app_level_token, sent as a bearer token with the request of open',
+        "For websocket, the value of the app that opens the socket, named as the vendor names it, such as app_level_token: an app credential of the entry's secret way, sent as a bearer token with the request of open",
     }),
   ),
   acknowledge: Schema.optionalKey(

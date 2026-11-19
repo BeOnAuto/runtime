@@ -40,6 +40,10 @@ function unusableLinkOf({ connection, replacedLinks }: KeptConnection, tokenSha2
   return replacedLinks.has(tokenSha256) ? replacedLink(connection.name) : noOpenLink;
 }
 
+export function isConnectedAt({ connection }: KeptConnection, connectedAt: string): boolean {
+  return connection.status === 'connected' && connection.connected_at === connectedAt;
+}
+
 export function keptConnectionOf(registry: Registry, id: string): Result.Result<KeptConnection, NotFound> {
   const kept = registry.get(id);
   return kept === undefined ? Result.fail(connectionNotFound(id)) : Result.succeed(kept);

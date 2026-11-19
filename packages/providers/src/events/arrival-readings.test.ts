@@ -9,8 +9,9 @@ import {
   ofEachSubscription,
   ofTheApp,
   overASocket,
+  trackerOverASocket,
 } from '../testing/event-destinations.ts';
-import { providersOf, tracker } from '../testing/fixture-providers.ts';
+import { providersOf } from '../testing/fixture-providers.ts';
 import { arrivalReadingOf, type Arrival, type ArrivalReading } from './arrival-readings.ts';
 import type { Destination } from './destination-fields.ts';
 
@@ -29,7 +30,7 @@ function aRequest(parts: RequestParts): Arrival {
 type Reader = (arrival: Arrival) => ArrivalReading | undefined;
 
 function readerOf(declared: object, type: 'webhook' | 'websocket' = 'webhook'): Reader {
-  const entry = { ...tracker, events: { destinations: [declared] } };
+  const entry = { ...trackerOverASocket, events: { destinations: [declared] } };
   const destination = eventDestinationOf(providersOf(entry), 'tracker', type);
   return (arrival) => (destination === undefined ? undefined : arrivalReadingOf(destination, arrival));
 }

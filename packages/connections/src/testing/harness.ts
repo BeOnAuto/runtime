@@ -23,6 +23,7 @@ import { ConnectionEventSchema, type RecordedConnectionEvent } from '../registry
 import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import {
   documentsOffTheLoopback,
+  fakeReads,
   harnessConsentOf,
   keptSecrets,
   type HarnessConsenting,
@@ -144,6 +145,7 @@ function composedOf(
     consent,
     resolve: publicEverywhere,
     fetch: documentsOffTheLoopback,
+    readOnceThrough: fakeReads().readOnceThrough,
     ...given,
   };
 }

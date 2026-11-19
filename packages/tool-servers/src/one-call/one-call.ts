@@ -1,14 +1,20 @@
 import type { AssetHolding, CallMeta } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { recordingOf, type CallJournal, type KeepIn, type Recording } from '../calls/recorded-calls.ts';
+import {
+  recordingOf,
+  type CallJournal,
+  type KeepContent,
+  type KeepIn,
+  type Recording,
+} from '../calls/recorded-calls.ts';
 import { journalledCall, type CallJournalling } from '../calls/tool-caller.ts';
 import type { Listing } from '../listing/server-listing.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import type { Linked, OrgServer } from '../org-servers/org-servers.ts';
-import { admittedOnce } from './call-admission.ts';
+import { admittedOnce, notReadOnlyOnce } from './call-admission.ts';
 import { openedFor, type Opened } from './call-opening.ts';
-import { answeredOnce, refusedOnce, tracedOnce, type CalledOnce } from './called-once.ts';
+import { answeredOnce, refusedOnce, tracedOnce, type CalledOnce, type UnopenedOnce } from './called-once.ts';
 
 export interface OneCall {
   readonly org: string;
@@ -28,6 +34,8 @@ export function recordingAsTheCallAsks(
   return recordContent === false ? { ...recording, content: false, detail: false } : recording;
 }
 
+export type ReadCall = Pick<OneCall, 'org' | 'reference' | 'meta'>;
+
 export interface RunCall {
   readonly callId: string;
   readonly journal: CallJournal;
@@ -45,25 +53,35 @@ type Journalling = (readOnly: boolean) => CallJournalling;
 
 type Awaiting = <A>(effect: Effect.Effect<A>) => Promise<A>;
 
+type Forwarded = Pick<OneCall, 'reference' | 'input' | 'meta' | 'longestRetryWaitMs'>;
+
+type LinkedServer = Extract<Linked, { readonly link: unknown }>;
+
+interface Admitted {
+  readonly assets: Exclude<Awaited<ReturnType<typeof admittedOnce>>, UnopenedOnce>;
+  readonly recording: Recording;
+}
+
+type Admit = (opened: Opened, link: LinkedServer['link']) => Promise<Admitted | UnopenedOnce>;
+
 interface Calling {
   readonly access: OneCallAccess;
   readonly journalling: Journalling | undefined;
   readonly signal: Readonly<AbortSignal>;
   readonly awaited: Awaiting;
+  readonly admit: Admit;
 }
 
 const notRecorded = 'The start of the call could not be recorded on its run, so the call was not sent';
 
-type LinkedServer = Extract<Linked, { readonly link: unknown }>;
-
-async function sentOnce(call: OneCall, link: LinkedServer['link'], opened: Opened, calling: Calling) {
+async function sentOnce(call: Forwarded, link: LinkedServer['link'], opened: Opened, calling: Calling) {
   const { access, journalling, signal } = calling;
   const { slot, tool, readOnly } = opened;
-  const assets = await admittedOnce(call, opened, { ...access, awaited: calling.awaited });
-  if ('kind' in assets) {
-    return assets;
+  const admitted = await calling.admit(opened, link);
+  if ('kind' in admitted) {
+    return admitted;
   }
-  const recording = recordingAsTheCallAsks(recordingOf(link.settings, access.secrets, access.keepIn(call)), call);
+  const { assets, recording } = admitted;
   const { callMs } = access.timing;
   const longestRetryWaitMs = Math.min(call.longestRetryWaitMs ?? 0, access.timing.longestRetryWaitMs);
   const forwarding = {
@@ -83,7 +101,7 @@ async function sentOnce(call: OneCall, link: LinkedServer['link'], opened: Opene
   return answeredOnce(journey, access.secrets.scrub, tool.mark);
 }
 
-async function calledOnce(call: OneCall, { link }: LinkedServer, calling: Calling): Promise<CalledOnce> {
+async function calledOnce(call: Forwarded, { link }: LinkedServer, calling: Calling): Promise<CalledOnce> {
   const opened = await openedFor(call.reference, link, calling.access);
   if ('kind' in opened) {
     return opened;
@@ -95,7 +113,7 @@ async function calledOnce(call: OneCall, { link }: LinkedServer, calling: Callin
   }
 }
 
-async function linkedAndCalled(call: OneCall, server: OrgServer, calling: Calling): Promise<CalledOnce> {
+async function linkedAndCalled(call: Forwarded, server: OrgServer, calling: Calling): Promise<CalledOnce> {
   const linked = await server.linked();
   return 'refused' in linked ? refusedOnce(linked.refused) : calledOnce(call, linked, calling);
 }
@@ -113,11 +131,45 @@ function journallingOf(runCall: RunCall | undefined, awaited: Awaiting): Journal
       });
 }
 
-export function oneCall(
-  call: OneCall,
+function admittingOf(call: OneCall, access: OneCallAccess, awaited: Awaiting): Admit {
+  return async (opened, link) => {
+    const assets = await admittedOnce(call, opened, { ...access, awaited });
+    return 'kind' in assets
+      ? assets
+      : {
+          assets,
+          recording: recordingAsTheCallAsks(recordingOf(link.settings, access.secrets, access.keepIn(call)), call),
+        };
+  };
+}
+
+export const keptNowhere: KeepContent = () =>
+  Promise.reject(new Error('A call that only reads, through a server not kept, keeps no content'));
+
+function readingOf({ reference }: ReadCall, access: OneCallAccess): Admit {
+  return ({ tool }, link) =>
+    Promise.resolve(
+      tool.mark === 'reads'
+        ? {
+            assets: [],
+            recording: recordingAsTheCallAsks(recordingOf(link.settings, access.secrets, keptNowhere), {
+              recordContent: false,
+            }),
+          }
+        : notReadOnlyOnce(reference, tool.mark),
+    );
+}
+
+interface Admitting {
+  readonly access: OneCallAccess;
+  readonly admitting: (awaited: Awaiting) => Admit;
+  readonly runCall?: RunCall | undefined;
+}
+
+function calledThrough(
+  call: Forwarded,
   server: OrgServer,
-  access: OneCallAccess,
-  runCall?: RunCall,
+  { access, admitting, runCall }: Admitting,
 ): Effect.Effect<CalledOnce> {
   return tracedOnce(
     { server: server.settings.name, tool: call.reference.tool },
@@ -125,7 +177,23 @@ export function oneCall(
     Effect.gen(function* () {
       const awaited = Effect.runPromiseWith(yield* Effect.context());
       const journalling = journallingOf(runCall, awaited);
-      return yield* Effect.promise((signal) => linkedAndCalled(call, server, { access, journalling, signal, awaited }));
+      const admit = admitting(awaited);
+      return yield* Effect.promise((signal) =>
+        linkedAndCalled(call, server, { access, journalling, signal, awaited, admit }),
+      );
     }),
   );
+}
+
+export function oneCall(
+  call: OneCall,
+  server: OrgServer,
+  access: OneCallAccess,
+  runCall?: RunCall,
+): Effect.Effect<CalledOnce> {
+  return calledThrough(call, server, { access, admitting: (awaited) => admittingOf(call, access, awaited), runCall });
+}
+
+export function readOnce(call: ReadCall, server: OrgServer, access: OneCallAccess): Effect.Effect<CalledOnce> {
+  return calledThrough({ ...call, input: {} }, server, { access, admitting: () => readingOf(call, access) });
 }

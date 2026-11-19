@@ -13,7 +13,7 @@ import {
   requestOriginsOf,
 } from '../index.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
-import { intoAQueue, ofEachSubscription, overASocket } from '../testing/event-destinations.ts';
+import { intoAQueue, ofEachSubscription, overASocket, trackerOverASocket } from '../testing/event-destinations.ts';
 import { tracker } from '../testing/index.ts';
 
 const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
@@ -67,7 +67,11 @@ const declaring = shipped.providers.filter(({ entry }) => entry.events !== undef
 
 const hearing = (name: string) =>
   joinedProviders(shipped, [
-    Schema.decodeUnknownSync(ProviderEntrySchema)({ ...tracker, name, events: { destinations: [overASocket] } }),
+    Schema.decodeUnknownSync(ProviderEntrySchema)({
+      ...trackerOverASocket,
+      name,
+      events: { destinations: [overASocket] },
+    }),
   ]);
 
 describe('the events parts of the shipped providers', () => {
@@ -109,7 +113,7 @@ describe('the destination of a provider', () => {
 });
 
 function sending(...destinations: readonly unknown[]): ProviderEntry {
-  return decodedEntry({ ...tracker, events: { destinations } });
+  return decodedEntry({ ...trackerOverASocket, events: { destinations } });
 }
 
 describe('the origins of the requests a provider declares', () => {

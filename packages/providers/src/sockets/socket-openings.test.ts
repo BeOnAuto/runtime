@@ -4,8 +4,8 @@ import { Effect, Function, Option, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { eventDestinationOf } from '../reading/provider-list.ts';
-import { ofTheApp, overASocket } from '../testing/event-destinations.ts';
-import { providersOf, tracker } from '../testing/fixture-providers.ts';
+import { ofTheApp, overASocket, trackerOverASocket } from '../testing/event-destinations.ts';
+import { providersOf } from '../testing/fixture-providers.ts';
 import { opensAsDeclared, type OpeningWays } from './socket-openings.ts';
 import type { OpenSocket, SendsABearerRequest, SocketEnded, SocketOpening } from './socket-ports.ts';
 
@@ -18,7 +18,7 @@ type Refusal = ReturnType<Sending['reaches']>;
 type Ended = Pick<SocketEnded, 'end' | 'code'>;
 
 function destinationOf(declared: object, type: 'webhook' | 'websocket'): Destination {
-  const entry = { ...tracker, events: { destinations: [declared] } };
+  const entry = { ...trackerOverASocket, events: { destinations: [declared] } };
   return Option.getOrThrow(Option.fromNullishOr(eventDestinationOf(providersOf(entry), 'tracker', type)));
 }
 

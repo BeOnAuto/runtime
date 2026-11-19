@@ -1,6 +1,7 @@
 import { streamPrefixOfOrg, type Decider, type Fold } from '@on.auto/operations';
 import type { ProviderList } from '@on.auto/providers';
 
+import { decideAppCredentialRefusal } from './app-credential-decisions.ts';
 import type { ConnectionCommand } from './connection-commands.ts';
 import { ConnectionEventSchema, type RecordedConnectionEvent } from './connection-events.ts';
 import { factsAsNamedIn } from './facts-as-named.ts';
@@ -26,6 +27,12 @@ export function connectionsFoldOf(providers: ProviderList): Fold<Registry, Recor
   };
 }
 
+function decided(command: ConnectionCommand, registry: Registry): ReturnType<RegistryDecider['decide']> {
+  return command.type === 'refuse_app_credential'
+    ? decideAppCredentialRefusal(command, registry)
+    : decideOnRegistry(command, registry);
+}
+
 export function registryDeciderOf(providers: ProviderList): RegistryDecider {
-  return { ...connectionsFoldOf(providers), decide: decideOnRegistry, context: registryContextOf };
+  return { ...connectionsFoldOf(providers), decide: decided, context: registryContextOf };
 }

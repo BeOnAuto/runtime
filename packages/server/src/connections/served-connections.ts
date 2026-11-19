@@ -17,12 +17,18 @@ import { licenseServedBy, type ServedLicense } from '../licensing/served-license
 import { ownKeysOf, secretsKeptBy, type OwnKeysRead } from '../secrets/own-keys.ts';
 import type { Settings } from '../settings/settings.ts';
 
+interface ServedConnectionOperations {
+  readonly connections: ConnectionOperations;
+  readonly offering: ReturnType<typeof makeProviderOffering>;
+}
+
+type ReadOnceThrough = ConnectionServices['readOnceThrough'];
+
 export interface StoresAndConnections extends OwnKeysRead {
   readonly stores: LedgerStores;
   readonly consent: ReturnType<typeof consentClientOf>;
-  readonly connections: ConnectionOperations;
+  readonly connectionsReadingThrough: (readOnceThrough: ReadOnceThrough) => ServedConnectionOperations;
   readonly source: ReturnType<typeof makeConnectionSource>;
-  readonly offering: ReturnType<typeof makeProviderOffering>;
   readonly clientMetadata: RegisterRoutes;
   readonly license: ServedLicense;
   readonly studioAddress: { readonly studio: Settings['studio']; readonly runtime: () => string };
@@ -60,9 +66,13 @@ interface Composed {
   readonly secrets: LedgerStores['secrets'];
   readonly consent: ReturnType<typeof consentClientOf>;
   readonly pages: ConnectionServices['pages'];
+  readonly readOnceThrough: ReadOnceThrough;
 }
 
-function connectionServicesOf(settings: ServingSettings, { secrets, consent, pages }: Composed): ConnectionServices {
+function connectionServicesOf(
+  settings: ServingSettings,
+  { secrets, consent, pages, readOnceThrough }: Composed,
+): ConnectionServices {
   return {
     consent,
     secrets,
@@ -75,13 +85,14 @@ function connectionServicesOf(settings: ServingSettings, { secrets, consent, pag
     pages,
     access: accessOf(settings),
     fetch: outboundFetch,
+    readOnceThrough,
   };
 }
 
 function sourceServedBy(
   runtime: Parameters<typeof runtimeLedger>[0],
   settings: ServingSettings,
-  { secrets, pages }: Omit<Composed, 'consent'>,
+  { secrets, pages }: Pick<Composed, 'secrets' | 'pages'>,
 ): ReturnType<typeof makeConnectionSource> {
   return makeConnectionSource({
     registry: runtimeLedger(runtime),
@@ -105,14 +116,15 @@ export async function storesAndConnectionsOf(
   const ownKeys = await ownKeysOf(runtime, stores.secrets, secretsKeptBy(settings));
   const consent = consentClientOf(runtime, settings, stores.secrets);
   const pages = { studio: settings.studio, runtime: ownOrigin };
-  const services = connectionServicesOf(settings, { secrets: stores.secrets, consent, pages });
   return {
     stores,
     ...ownKeys,
     consent,
-    connections: makeConnectionOperations(services),
+    connectionsReadingThrough: (readOnceThrough) => {
+      const services = connectionServicesOf(settings, { secrets: stores.secrets, consent, pages, readOnceThrough });
+      return { connections: makeConnectionOperations(services), offering: makeProviderOffering(services) };
+    },
     source: sourceServedBy(runtime, settings, { secrets: stores.secrets, pages }),
-    offering: makeProviderOffering(services),
     clientMetadata: clientMetadataRoutes(servedClientMetadataDocumentOf(settings, pages)),
     license: await licenseServedBy(runtime, settings.license, stores.secrets),
     studioAddress: pages,

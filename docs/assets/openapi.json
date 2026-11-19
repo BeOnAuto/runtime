@@ -1644,7 +1644,7 @@
                               "connection"
                             ],
                             "additionalProperties": false,
-                            "description": "A connection added, connected, broken or removed, asked for more, given the organization's own OAuth client, its playbooks set, or its signing secret set or removed"
+                            "description": "A connection added, connected, broken or removed, asked for more, given the organization's own OAuth client, its playbooks set, its signing secret set or removed, or one of its app credentials refused"
                           },
                           {
                             "type": "object",
@@ -5986,6 +5986,51 @@
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
+                    },
                     "renders": {
                       "type": "string",
                       "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
@@ -6043,7 +6088,8 @@
                     "credential_ends_with",
                     "broken",
                     "signing_secret",
-                    "account"
+                    "account",
+                    "app_credentials"
                   ],
                   "additionalProperties": false,
                   "description": "The connection, and the link that approves it while there is one to open"
@@ -6643,6 +6689,51 @@
                           ],
                           "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                         },
+                        "app_credentials": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "Its name, as its provider's entry names it"
+                              },
+                              "refused": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "detail": {
+                                        "type": "string",
+                                        "description": "Why, in the runtime's words, which say what mends it"
+                                      },
+                                      "at": {
+                                        "type": "string",
+                                        "description": "When the service refused it, in ISO 8601 UTC"
+                                      }
+                                    },
+                                    "required": [
+                                      "detail",
+                                      "at"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Why and since when the service refused it, until the credential is given again; else null"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "refused"
+                            ],
+                            "additionalProperties": false,
+                            "description": "An app credential the person gave beside the key, never the value"
+                          },
+                          "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
+                        },
                         "renders": {
                           "type": "string",
                           "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
@@ -6691,6 +6782,7 @@
                         "broken",
                         "signing_secret",
                         "account",
+                        "app_credentials",
                         "more"
                       ],
                       "additionalProperties": false,
@@ -7278,6 +7370,51 @@
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
+                    },
                     "renders": {
                       "type": "string",
                       "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
@@ -7326,6 +7463,7 @@
                     "broken",
                     "signing_secret",
                     "account",
+                    "app_credentials",
                     "more"
                   ],
                   "additionalProperties": false,
@@ -7908,6 +8046,51 @@
                         }
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
                     }
                   },
                   "required": [
@@ -7929,7 +8112,8 @@
                     "credential_ends_with",
                     "broken",
                     "signing_secret",
-                    "account"
+                    "account",
+                    "app_credentials"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -8536,6 +8720,51 @@
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
+                    },
                     "renders": {
                       "type": "string",
                       "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
@@ -8593,7 +8822,8 @@
                     "credential_ends_with",
                     "broken",
                     "signing_secret",
-                    "account"
+                    "account",
+                    "app_credentials"
                   ],
                   "additionalProperties": false,
                   "description": "The connection, and the link that approves it while there is one to open"
@@ -9214,6 +9444,51 @@
                         }
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
                     }
                   },
                   "required": [
@@ -9235,7 +9510,8 @@
                     "credential_ends_with",
                     "broken",
                     "signing_secret",
-                    "account"
+                    "account",
+                    "app_credentials"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -10115,6 +10391,51 @@
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
+                    },
                     "link": {
                       "type": "object",
                       "properties": {
@@ -10291,6 +10612,7 @@
                     "broken",
                     "signing_secret",
                     "account",
+                    "app_credentials",
                     "link"
                   ],
                   "additionalProperties": false,
@@ -10918,6 +11240,51 @@
                         }
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
                     }
                   },
                   "required": [
@@ -10939,7 +11306,8 @@
                     "credential_ends_with",
                     "broken",
                     "signing_secret",
-                    "account"
+                    "account",
+                    "app_credentials"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -10997,7 +11365,7 @@
       "post": {
         "operationId": "give_credential",
         "summary": "Give credential",
-        "description": "Gives the credential of a connection through its open link, which approves the connection and uses the link up, and answers it connected. A secret of another format than its provider's pattern is refused, and one that misses the pattern of a credential given by hand is kept and answered with pattern_unmatched. The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it. Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again. On a runtime that signs people in, only the person who added the connection may give it. Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the approval; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.",
+        "description": "Gives the credential of a connection through its open link, which approves the connection and uses the link up, and answers it connected. A secret of another format than its provider's pattern is refused, and one that misses the pattern of a credential given by hand is kept and answered with pattern_unmatched. The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it. Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again. Before it keeps anything, the runtime checks with the service each app credential given and, where the provider has a check for its key, the key: a value the service refuses is refused as invalid_input at its field, and where the check cannot be completed, as when the service cannot be reached or answers an error, it answers unavailable, keeps nothing and leaves the link open. It takes the app credentials list_providers lists for the way in app_credentials, each optional, and refuses one it does not list here. On a runtime that signs people in, only the person who added the connection may give it. Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the approval; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.",
         "tags": [
           "connections"
         ],
@@ -11055,6 +11423,14 @@
                   "algorithm": {
                     "type": "string",
                     "description": "The signing algorithm of private_key, such as RS256 or ES256"
+                  },
+                  "app_credentials": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": "For secret, the app credentials given beside the key, each a value under the name list_providers lists in the way's app_credentials; each is optional, and a name the way does not list here is refused"
                   },
                   "playbooks": {
                     "anyOf": [
@@ -11591,6 +11967,51 @@
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
+                    },
                     "pattern_unmatched": {
                       "type": "boolean",
                       "enum": [
@@ -11618,7 +12039,8 @@
                     "credential_ends_with",
                     "broken",
                     "signing_secret",
-                    "account"
+                    "account",
+                    "app_credentials"
                   ],
                   "additionalProperties": false,
                   "description": "The connection its credential was given to, and whether the secret given missed its pattern"
@@ -12242,6 +12664,51 @@
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
+                    },
                     "next_client_id": {
                       "type": "string",
                       "description": "For a connection under the organization's own OAuth client, the client ID given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it"
@@ -12266,7 +12733,8 @@
                     "credential_ends_with",
                     "broken",
                     "signing_secret",
-                    "account"
+                    "account",
+                    "app_credentials"
                   ],
                   "additionalProperties": false,
                   "description": "The connection the organization's own OAuth client was given to, with its next client where it keeps one"
@@ -13088,6 +13556,51 @@
                         }
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
                     }
                   },
                   "required": [
@@ -13109,7 +13622,8 @@
                     "credential_ends_with",
                     "broken",
                     "signing_secret",
-                    "account"
+                    "account",
+                    "app_credentials"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -13377,6 +13891,45 @@
                               "description": {
                                 "type": "string",
                                 "description": "What a person reads of the way; for secret, the short name of the key, the label of the field it is given in, beside the instructions and the key page the connection's credential holds"
+                              },
+                              "app_credentials": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string",
+                                      "description": "Its name, as give_credential's app_credentials takes it beside the value of the key"
+                                    },
+                                    "description": {
+                                      "type": "string",
+                                      "description": "The label of the field it is given in"
+                                    },
+                                    "instructions": {
+                                      "type": "string",
+                                      "description": "How a person makes it, in Markdown"
+                                    },
+                                    "key_page": {
+                                      "type": "string",
+                                      "description": "The https address of the page where a person makes it"
+                                    },
+                                    "example": {
+                                      "type": "string",
+                                      "description": "What it looks like, with … in place of its characters"
+                                    },
+                                    "pattern": {
+                                      "type": "string",
+                                      "description": "The regular expression from ^ to $ every such value matches, which give_credential checks"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "description",
+                                    "instructions"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "For secret, the app credentials a person may give beside the key, such as an app-level token, each optional to them, where this runtime can use them; left out where it takes none"
                               },
                               "offered": {
                                 "type": "boolean",

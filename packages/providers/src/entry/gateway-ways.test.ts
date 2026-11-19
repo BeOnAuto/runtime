@@ -150,7 +150,8 @@ describe('the gateway and the permissions of a way of another kind', () => {
       instructions: 'Make a key under [Settings](https://messages.example.com/settings).',
       key_page: 'https://messages.example.com/settings',
     };
-    const secretTakes = 'a secret way takes in, name, instructions, key_page, scheme, example, and pattern';
+    const secretTakes =
+      'a secret way takes in, name, instructions, key_page, scheme, example, pattern, app_credentials, and test';
 
     expect(problemsOfTheWay({ ...aKey, gateway, permissions: 'application' })).toEqual([
       ['/credentials/0/gateway', `Expected no gateway: ${secretTakes}`],

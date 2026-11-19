@@ -45,6 +45,7 @@ export interface CredentialGiving extends Connecting, PlaybooksChoice {
   readonly secret_id: string;
   readonly algorithm?: string;
   readonly client_id?: string;
+  readonly app_secret_ids?: Readonly<Record<string, string>>;
 }
 
 export interface ClientGiving extends LinkUse {
@@ -93,6 +94,14 @@ export interface ConnectionBreaking {
   readonly reason: string;
 }
 
+export interface AppCredentialRefusal {
+  readonly type: 'refuse_app_credential';
+  readonly connection: string;
+  readonly connected_at: string;
+  readonly name: string;
+  readonly reason: string;
+}
+
 export interface ConnectionReconnection {
   readonly type: 'reconnect';
   readonly connection: string;
@@ -135,6 +144,7 @@ export type ConnectionCommandData =
   | ConnectionRemoval
   | PlaybooksSetting
   | ConnectionBreaking
+  | AppCredentialRefusal
   | ConnectionReconnection
   | ConnectionReplacement;
 

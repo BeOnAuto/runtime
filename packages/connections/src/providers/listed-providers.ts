@@ -55,6 +55,31 @@ const ListedWaySchema = Schema.Struct({
         "What a person reads of the way; for secret, the short name of the key, the label of the field it is given in, beside the instructions and the key page the connection's credential holds",
     }),
   ),
+  app_credentials: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({
+        name: Schema.String.annotate({
+          description: "Its name, as give_credential's app_credentials takes it beside the value of the key",
+        }),
+        description: Schema.String.annotate({ description: 'The label of the field it is given in' }),
+        instructions: Schema.String.annotate({ description: 'How a person makes it, in Markdown' }),
+        key_page: Schema.optionalKey(
+          Schema.String.annotate({ description: 'The https address of the page where a person makes it' }),
+        ),
+        example: Schema.optionalKey(
+          Schema.String.annotate({ description: 'What it looks like, with … in place of its characters' }),
+        ),
+        pattern: Schema.optionalKey(
+          Schema.String.annotate({
+            description: 'The regular expression from ^ to $ every such value matches, which give_credential checks',
+          }),
+        ),
+      }),
+    ).annotate({
+      description:
+        'For secret, the app credentials a person may give beside the key, such as an app-level token, each optional to them, where this runtime can use them; left out where it takes none',
+    }),
+  ),
   offered: Schema.Boolean.annotate({ description: 'Whether a person may connect the provider this way here' }),
   because: Schema.optionalKey(
     Schema.String.annotate({

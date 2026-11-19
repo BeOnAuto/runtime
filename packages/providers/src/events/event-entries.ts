@@ -13,6 +13,7 @@ interface Way {
   readonly scheme?: string | undefined;
   readonly gateway?: object | undefined;
   readonly more?: readonly { readonly name: string }[] | undefined;
+  readonly app_credentials?: readonly { readonly name: string }[] | undefined;
 }
 
 interface WithEvents {
@@ -83,9 +84,37 @@ function bearerIssuesOf({ credentials }: WithEvents, events: Events): readonly E
   );
 }
 
+function appCredentialsOf({ credentials }: WithEvents): readonly string[] {
+  return credentials
+    .filter(({ kind }) => kind === 'secret')
+    .flatMap(({ app_credentials: named = [] }) => named.map(({ name }) => name));
+}
+
+function credentialIssueOf(credential: string, named: readonly string[]): string | undefined {
+  if (named.length === 0) {
+    return "Expected the name of an app credential of the entry's secret way, which a person gives beside the key, and the entry's secret way names none";
+  }
+  return named.includes(credential)
+    ? undefined
+    : `Expected an app credential of the entry's secret way: ${alternatives(named)}`;
+}
+
+function credentialIssuesOf(entry: WithEvents, events: Events): readonly EntryIssue[] {
+  const named = appCredentialsOf(entry);
+  return events.destinations.flatMap(({ credential }, index): readonly EntryIssue[] => {
+    const issue = credential === undefined ? undefined : credentialIssueOf(credential, named);
+    return issue === undefined ? [] : [{ path: ['events', 'destinations', index, 'credential'], issue }];
+  });
+}
+
 export function eventIssuesOf(entry: WithEvents): readonly EntryIssue[] {
   const { events } = entry;
   return events === undefined
     ? []
-    : [...needsIssuesOf(entry, events), ...heldIssuesOf(events), ...bearerIssuesOf(entry, events)];
+    : [
+        ...needsIssuesOf(entry, events),
+        ...heldIssuesOf(events),
+        ...bearerIssuesOf(entry, events),
+        ...credentialIssuesOf(entry, events),
+      ];
 }

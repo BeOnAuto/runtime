@@ -15,7 +15,8 @@ const inOrder =
 
 const [aKey] = tracker.credentials;
 
-const secretTakes = 'a secret way takes in, name, instructions, key_page, scheme, example, and pattern';
+const secretTakes =
+  'a secret way takes in, name, instructions, key_page, scheme, example, pattern, app_credentials, and test';
 
 function consentAs(way: Readonly<Record<string, unknown>>) {
   return problemsOf({

@@ -10,6 +10,7 @@ import {
   type ConsentClient,
   type Describing,
   type RequestWays,
+  type ThroughWays,
   type Timing,
   type ToolAccess,
   type ToolAccessOptions,
@@ -42,7 +43,7 @@ interface ServedDocuments {
 
 type ToolSettings = Pick<Settings, 'toolServers' | 'registeredClients' | 'toolCalls'>;
 
-export type MadeToolAccess = ToolAccess & RequestWays;
+export type MadeToolAccess = ToolAccess & RequestWays & ThroughWays;
 
 export class ComposedTools extends Context.Service<ComposedTools, MadeToolAccess>()('@on.auto/server/ComposedTools') {}
 
@@ -93,6 +94,13 @@ export function toolsComposedBy(
 export function requestWaysOf(composed: Effect.Effect<RequestWays, ToolServerDocumentRefused>): RequestWays {
   const made = Effect.orDie(composed);
   return { requestOnce: (request) => Effect.flatMap(made, (access) => access.requestOnce(request)) };
+}
+
+export function throughWaysOf(composed: Effect.Effect<ThroughWays, ToolServerDocumentRefused>): ThroughWays {
+  const made = Effect.orDie(composed);
+  return {
+    readOnceThrough: (call, through) => Effect.flatMap(made, (access) => access.readOnceThrough(call, through)),
+  };
 }
 
 export function toolAccessOf(

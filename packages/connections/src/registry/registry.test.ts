@@ -3,12 +3,14 @@ import { readFileSync } from 'node:fs';
 import { type ActedContext, ActedContextSchema, factOf, RecordedCallerSchema, recordingOf } from '@on.auto/operations';
 import type { ProviderList } from '@on.auto/providers';
 import { messagesThrough, providerListOf, providerOf } from '@on.auto/providers/testing';
+import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { ConnectionCommand, PlaybooksChoice } from './connection-commands.ts';
 import { ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
 import { type ConnectionEvent, ConnectionEventSchema, type RecordedConnectionEvent } from './connection-events.ts';
+import { AccountSchema } from './connection.ts';
 import { type Credential, CredentialSchema } from './credential.ts';
 import { connectionsFoldOf, registryDeciderOf } from './registry-decider.ts';
 import { evolveRegistry, initialRegistry, newestFirst, type Registry } from './registry.ts';
@@ -115,6 +117,21 @@ const StartedBeforeTheGateway = factOf(
     expires_at: Schema.String,
     scope: Schema.optionalKey(Schema.String),
     says: Schema.Record(Schema.String, Schema.String),
+  }),
+  ActedContextSchema,
+);
+
+const ConnectedBeforeTheAppCredentials = factOf(
+  'connection_connected',
+  Schema.Struct({
+    connection: Schema.String,
+    secret_id: Schema.optionalKey(Schema.String),
+    algorithm: Schema.optionalKey(Schema.String),
+    client_id: Schema.optionalKey(Schema.String),
+    client_source: Schema.optionalKey(ClientSourceSchema),
+    scope: Schema.optionalKey(Schema.String),
+    account: Schema.optionalKey(AccountSchema),
+    connected_by: RecordedCallerSchema,
   }),
   ActedContextSchema,
 );
@@ -304,12 +321,14 @@ describe('an added connection, as the stream folds it', () => {
         broken: null,
         signing_secret: null,
         account: null,
+        app_credentials: [],
       },
       link: { token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
       replacedLinks: new Set(),
       secretId: undefined,
       algorithm: undefined,
       signing: undefined,
+      appSecretIds: {},
     });
   });
 
@@ -533,6 +552,125 @@ describe('a consent made through a gateway, as a release before the gateway read
       Result.isFailure(readBefore(recordedIn('0.60.0/connection_connected.json'))),
       Result.isFailure(startedBefore(recordedIn('0.60.0/connection_consent_started.json'))),
     ]).toEqual([true, true]);
+  });
+});
+
+describe('a connection connected with further values of its app, as a release before the member reads it', () => {
+  it('reads the fact recorded in 0.67.0 through that release’s schema, passing over the ids it does not know', () => {
+    const readBeforeTheAppCredentials = Schema.decodeUnknownResult(
+      Schema.toCodecJson(ConnectedBeforeTheAppCredentials),
+    );
+
+    expect(Result.getOrThrow(readBeforeTheAppCredentials(recordedIn('0.67.0/connection_connected.json')))).toEqual({
+      type: 'connection_connected',
+      data: { connection: 'connection-1', secret_id: 'secret-11', connected_by: { id: 'key_7f3a', name: 'key_7f3a' } },
+      context: { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' },
+    });
+  });
+});
+
+const tokenOfTheApp = 'app_level_token';
+
+const givenWithItsApp: ConnectionCommand = {
+  type: 'give',
+  ...linkUse,
+  connected_by: ada,
+  secret_id: 'secret-1',
+  app_secret_ids: { [tokenOfTheApp]: 'secret-2', signing_secret: 'secret-3' },
+  ...acted,
+};
+
+function afterTheGiving(...more: readonly ConnectionEvent[]): Registry {
+  const facts = [addedWith(takingASecret), linkIssued, ...Result.getOrThrow(decided(givenWithItsApp, takingASecret))];
+  return [...facts, ...more].reduce(
+    (state, event) => registryDecider.evolve(state, recorded(event, later)),
+    registryDecider.initialState,
+  );
+}
+
+function refusing(name: string, connectedAt = later.at): ConnectionCommand {
+  return {
+    type: 'refuse_app_credential',
+    connection: 'crm-id',
+    connected_at: connectedAt,
+    name,
+    reason: 'The service refuses it',
+    ...later,
+  };
+}
+
+const refusedOnce: ConnectionEvent = {
+  type: 'connection_app_credential_refused',
+  data: { connection: 'crm-id', name: tokenOfTheApp, reason: 'The service refuses it' },
+};
+
+describe('the app credentials a connection holds, as the stream folds them', () => {
+  it('are recorded by id in the connection, shown by name, and none where none is given', () => {
+    expect([
+      Result.map(decided(givenWithItsApp, takingASecret), (events) => events.at(-1)),
+      Result.map(decided(giving({}), takingASecret), (events) => events.at(-1)),
+    ]).toEqual([
+      Result.succeed({
+        type: 'connection_connected',
+        data: {
+          connection: 'crm-id',
+          secret_id: 'secret-1',
+          app_secret_ids: { [tokenOfTheApp]: 'secret-2', signing_secret: 'secret-3' },
+          connected_by: ada,
+        },
+      }),
+      Result.succeed(connectedWithItsSecret),
+    ]);
+    expect(afterTheGiving().get('crm-id')).toMatchObject({
+      connection: {
+        app_credentials: [
+          { name: tokenOfTheApp, refused: null },
+          { name: 'signing_secret', refused: null },
+        ],
+      },
+      appSecretIds: { [tokenOfTheApp]: 'secret-2', signing_secret: 'secret-3' },
+    });
+  });
+
+  it('are refused only while the connection is connected as the refusal saw it and holds one not refused yet', () => {
+    const registry = afterTheGiving();
+
+    expect([
+      registryDecider.decide(refusing(tokenOfTheApp), registry),
+      registryDecider.decide(refusing('socket_token'), registry),
+      registryDecider.decide(refusing(tokenOfTheApp, '2026-10-15T13:00:00.000Z'), registry),
+      registryDecider.decide(refusing(tokenOfTheApp), afterTheGiving(refusedOnce)),
+    ]).toEqual([Result.succeed([refusedOnce]), Result.succeed([]), Result.succeed([]), Result.succeed([])]);
+  });
+
+  it('show a refusal by name until the connection is connected again or removed, and forget none of their ids at a refusal', () => {
+    const reconnected: ConnectionEvent = {
+      type: 'connection_connected',
+      data: { connection: 'crm-id', secret_id: 'secret-3', connected_by: ada },
+    };
+    const removed: ConnectionEvent = { type: 'connection_removed', data: { connection: 'crm-id' } };
+
+    expect([
+      afterTheGiving(refusedOnce).get('crm-id'),
+      afterTheGiving(refusedOnce, reconnected).get('crm-id'),
+      afterTheGiving(removed).get('crm-id'),
+    ]).toMatchObject([
+      {
+        connection: {
+          status: 'connected',
+          app_credentials: [
+            { name: tokenOfTheApp, refused: { detail: 'The service refuses it', at: later.at } },
+            { name: 'signing_secret', refused: null },
+          ],
+        },
+        appSecretIds: { [tokenOfTheApp]: 'secret-2', signing_secret: 'secret-3' },
+      },
+      { connection: { app_credentials: [] }, appSecretIds: {} },
+      {
+        connection: { status: 'removed', app_credentials: [] },
+        appSecretIds: { [tokenOfTheApp]: 'secret-2', signing_secret: 'secret-3' },
+      },
+    ]);
   });
 });
 

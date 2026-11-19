@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { Destination } from '../events/destination-fields.ts';
 import { eventDestinationOf } from '../reading/provider-list.ts';
-import { providersOf, tracker } from '../testing/fixture-providers.ts';
+import { trackerOverASocket } from '../testing/event-destinations.ts';
+import { providersOf } from '../testing/fixture-providers.ts';
 import {
   after,
   listenedOver,
@@ -16,14 +17,14 @@ import {
 import { socketBackoff } from './socket-listening.ts';
 
 function socketOf(declared: object): Destination {
-  const entry = { ...tracker, events: { destinations: [declared] } };
+  const entry = { ...trackerOverASocket, events: { destinations: [declared] } };
   return Option.getOrThrow(Option.fromNullishOr(eventDestinationOf(providersOf(entry), 'tracker', 'websocket')));
 }
 
 const inEnvelopes = socketOf({
   type: 'websocket',
   open: { method: 'POST', url: 'https://api.chat.example.com/connections.open', address: '/url' },
-  credential: 'app_token',
+  credential: 'app_level_token',
   acknowledge: '$message.payload#/envelope/id',
   heartbeat_seconds: 30,
   filter: {
@@ -37,7 +38,7 @@ const inEnvelopes = socketOf({
 const asTopics = socketOf({
   type: 'websocket',
   open: { method: 'GET', url: 'https://api.stream.example.com/socket', address: '/address' },
-  credential: 'stream_key',
+  credential: 'app_level_token',
   filter: {
     when: { '$message.payload#/topic': ['comments'], '$message.payload#/action': ['created'] },
     conversation: '$message.payload#/data/thread',

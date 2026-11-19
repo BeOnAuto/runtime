@@ -1,10 +1,20 @@
 import type { StreamReader, StreamWriter } from '@on.auto/operations';
 import { loopbackHostOf } from '@on.auto/outbound';
 import { valuesInTheClear } from '@on.auto/secrets/testing';
-import { makeConsentClient, type ConsentClient, type ConsentClientOptions } from '@on.auto/tool-servers';
-import { DateTime, Effect } from 'effect';
+import {
+  makeConsentClient,
+  type CalledOnce,
+  type ConsentClient,
+  type ConsentClientOptions,
+  type ReadCall,
+  type ReadOnceThrough,
+  type ServerThrough,
+} from '@on.auto/tool-servers';
+import { DateTime, Effect, Redacted } from 'effect';
 
 import type { SecretKeeping } from '../operations/connection-services.ts';
+import type { AppCredentialOpening, SocketChecks } from '../page/given-checks.ts';
+import type { ValueChecked } from '../page/tested-keys.ts';
 import { makeClientRegistrations } from '../registrations/client-registrations.ts';
 
 export interface HarnessConsenting {
@@ -124,4 +134,66 @@ export function harnessConsentOf(
     registrations: makeClientRegistrations({ registry, secrets }),
     ...consenting,
   });
+}
+
+export type ReadAnswer = 'taken' | 'refused' | CalledOnce;
+
+export interface FakeReads {
+  readonly readOnceThrough: ReadOnceThrough;
+  readonly read: () => readonly (readonly [ReadCall, ServerThrough])[];
+}
+
+const answered: CalledOnce = {
+  kind: 'answered',
+  outcome: 'result',
+  answer: { content: [{ type: 'text', text: '{"ok":true}' }] },
+  answered: { is_error: false, result_bytes: 11, duration_ms: 3, jsonrpc_id: 1 },
+  detail: '',
+  retryAfterMs: null,
+  mark: 'reads',
+};
+
+const keyRefused = 'The tool server answered HTTP 401';
+
+function answerOf(answer: ReadAnswer, { server }: ServerThrough): Effect.Effect<CalledOnce> {
+  if (answer === 'taken') {
+    return Effect.succeed(answered);
+  }
+  return answer === 'refused'
+    ? Effect.map(server.refused(keyRefused), (detail): CalledOnce => ({
+        kind: 'unopened',
+        refused: 'tool_not_offered',
+        because: 'connection_broken',
+        detail,
+      }))
+    : Effect.succeed(answer);
+}
+
+export function fakeReads(answer: ReadAnswer = 'taken'): FakeReads {
+  const read: (readonly [ReadCall, ServerThrough])[] = [];
+  return {
+    readOnceThrough: (call, through) =>
+      Effect.suspend(() => {
+        read.push([call, through]);
+        return answerOf(answer, through);
+      }),
+    read: () => [...read],
+  };
+}
+
+export interface FakeSockets extends SocketChecks {
+  readonly opened: () => readonly (readonly [string | undefined, string])[];
+}
+
+export function fakeSockets(byValue: Readonly<Record<string, ValueChecked>>): FakeSockets {
+  const opened: (readonly [string | undefined, string])[] = [];
+  return {
+    openedOnce: ({ destination, value }: AppCredentialOpening) =>
+      Effect.sync(() => {
+        const given = Redacted.value(value);
+        opened.push([destination.credential, given]);
+        return byValue[given] ?? { kind: 'taken' };
+      }),
+    opened: () => [...opened],
+  };
 }

@@ -137,6 +137,20 @@ function wayIssuesOf({ credentials }: ProviderEntry): readonly EntryIssue[] {
   );
 }
 
+function testIssuesOf({ credentials, marks: marked }: ProviderEntry): readonly EntryIssue[] {
+  const acting = marked?.acts ?? [];
+  return credentials.flatMap(({ test }, index): readonly EntryIssue[] =>
+    test === undefined || !acting.includes(test.tool)
+      ? []
+      : [
+          {
+            path: ['credentials', index, 'test', 'tool'],
+            issue: `Expected a tool that only reads, since the runtime calls it with each key a person gives, and the entry marks ${test.tool} acts`,
+          },
+        ],
+  );
+}
+
 export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
   Schema.makeFilter((entry: ProviderEntry) => [
     ...nameIssuesOf(entry),
@@ -144,6 +158,7 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...websiteIssuesOf(entry),
     ...typeIssuesOf(entry),
     ...wayIssuesOf(entry),
+    ...testIssuesOf(entry),
     ...markedIssuesOf(entry),
     ...codedIssuesOf(entry),
     ...conversationIssuesOf(entry.conversations),
