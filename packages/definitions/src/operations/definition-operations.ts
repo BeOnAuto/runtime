@@ -2,8 +2,11 @@ import type { Registration, RouteRegistration } from '@on.auto/operations';
 
 import type { Capability } from '../capability/capability.ts';
 import { defineExportPlaybook } from '../exporting/export-playbook.ts';
+import { defineMoveDefinitions } from '../moving/move-definitions.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
 import { runOperations, type RunReading } from '../reading/run-operations.ts';
+import { storedTypesByStatus } from '../reading/run-status.ts';
+import { composedFactsOf } from '../run-work/declared-facts.ts';
 import { operationsOnDefinitions } from './definition-catalog.ts';
 import { noGoalsKept, type GoalsKeeping } from './saved-content.ts';
 
@@ -15,6 +18,12 @@ interface ServedOperation {
   readonly registration: RouteRegistration<'playbook'>;
 }
 
+function movesServed(capabilities: readonly Capability[], reading: RunReading, goals: boolean) {
+  const { connections, facts = composedFactsOf(capabilities) } = reading;
+  const started = storedTypesByStatus(facts.onRuns).started;
+  return connections === undefined ? [] : [defineMoveDefinitions(capabilities, { goals, started, connections })];
+}
+
 export function makeDefinitionOperations(
   capabilities: readonly Capability[],
   pages: SubjectPages,
@@ -24,6 +33,7 @@ export function makeDefinitionOperations(
   return [
     ...operationsOnDefinitions(capabilities, pages, kept),
     ...runOperations(capabilities, reading),
+    ...movesServed(capabilities, reading, kept.goals),
     ...(kept.goals ? [defineExportPlaybook(capabilities, pages)] : []),
   ];
 }

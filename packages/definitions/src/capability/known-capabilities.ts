@@ -45,7 +45,7 @@ function requireDistinctNames(names: readonly string[]): void {
   }
 }
 
-const typeMeaning = "The definition's type";
+export const typeMeaning = "The definition's type";
 
 function withTypeField(
   { schema, definitions }: JsonSchemaDocument,

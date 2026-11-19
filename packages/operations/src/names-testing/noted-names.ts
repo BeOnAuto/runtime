@@ -10,6 +10,7 @@ export interface NamesAtThePort {
   readonly ledger: Pick<
     Ledger['Service'],
     | 'execute'
+    | 'executeMultiStream'
     | 'load'
     | 'holderOfName'
     | 'nameHeldBy'
@@ -131,6 +132,15 @@ export async function answerOf(
 ): Promise<unknown> {
   const exit = await Effect.runPromiseExit(ledger.execute(stream, noting, facts));
   return Exit.isFailure(exit) ? Cause.squash(exit.cause) : null;
+}
+
+export async function answerOfSeveral(
+  { ledger }: NamesAtThePort,
+  appends: readonly (readonly [string, readonly Decided<Noted>[]])[],
+): Promise<unknown> {
+  const decisions = appends.map(([stream, facts]) => ({ stream, decider: noting, command: facts }));
+  const exit = await Effect.runPromiseExit(ledger.executeMultiStream(decisions));
+  return Exit.isFailure(exit) ? Cause.squash(exit.cause) : exit.value.map(({ version }) => version);
 }
 
 export function taken(name: string, status: string): Conflict {

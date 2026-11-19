@@ -12,6 +12,7 @@ import { makeCatalog, makeDispatcher, type RouteRegistration } from '@on.auto/op
 import {
   directoryOperationsServing,
   playbookOperationsServing,
+  type ServedConnectionAccess,
   type ServedGoals,
   type ServedPages,
 } from '../composition/playbook-operations.ts';
@@ -30,7 +31,7 @@ interface PlaybookOperation {
   readonly registration: RouteRegistration<'playbook'>;
 }
 
-export interface WorkflowParts extends HostParts, ServedPages, ServedGoals {
+export interface WorkflowParts extends HostParts, ServedPages, ServedGoals, ServedConnectionAccess {
   readonly importsOver: (capabilities: readonly Capability[]) => readonly OrgOperation[];
   readonly orgOperations: readonly OrgOperation[];
   readonly playbookOperations: readonly PlaybookOperation[];

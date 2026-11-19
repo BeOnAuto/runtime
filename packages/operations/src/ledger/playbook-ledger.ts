@@ -13,6 +13,7 @@ import {
   streamPrefixOfDefinition,
   streamPrefixOfPlaybook,
 } from './bound-ports.ts';
+import { definitionsWriterOf } from './definitions-writer.ts';
 import type { LedgerPorts } from './ledger.ts';
 import { PlaybookReader } from './playbook-reader.ts';
 import { PlaybookWriter } from './playbook-writer.ts';
@@ -54,6 +55,7 @@ export function playbookWriterOf(ledger: LedgerPorts, address: PlaybookAddress):
     ...prefixedWriter(ledger, streamPrefixOfPlaybook(address)),
     keepContent: (content) => ledger.content.put(address, content),
     ofDefinition: (definition) => prefixedWriter(ledger, definitionPrefixIn(address)(definition)),
+    ...definitionsWriterOf(ledger, address),
   };
 }
 

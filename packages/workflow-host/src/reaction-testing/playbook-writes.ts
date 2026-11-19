@@ -162,6 +162,15 @@ export function definitionRetired(store: LedgerStreams, name: string, version: n
   );
 }
 
+export function definitionMoved(store: LedgerStreams, name: string, version: number, to: string) {
+  return recorded(
+    store,
+    definitionStreamNamed(name),
+    { type: 'definition_moved', data: { from: 'alpha', to, moved_by: { id: 'acme-admin', name: 'acme-admin' } } },
+    { ...byAdmin, definitionType: 'workflow', definitionName: name, definitionVersion: version },
+  );
+}
+
 export interface StandingChange {
   readonly name: string;
   readonly version: number;

@@ -11,6 +11,7 @@ import { alpha, alphaKey, viewedType, type Playbook } from './view-documents.ts'
 interface RunOf {
   readonly at?: string;
   readonly playbook?: Playbook;
+  readonly underTheSubject?: boolean;
 }
 
 type Append = (stream: string, events: readonly EncodedEvent[], context?: Context) => Promise<void>;
@@ -28,6 +29,7 @@ export interface PlaybookAppends {
   readonly subjectSaved: (subject: string, version: number) => Promise<void>;
   readonly subjectRetired: (subject: string) => Promise<void>;
   readonly subjectPaused: (subject: string) => Promise<void>;
+  readonly subjectMoved: (subject: string, to: Playbook) => Promise<void>;
   readonly playbookPageSaved: (details: Schema.JsonObject) => Promise<void>;
   readonly playbookPageRemoved: () => Promise<void>;
   readonly ran: Ran;
@@ -58,10 +60,12 @@ function appendOn(store: LedgerStreams, appends: AppendSignal): Append {
 }
 
 function ranBy(append: Append): Ran {
-  return async (subject, output, { at = ranAt, playbook = alpha } = {}) => {
+  return async (subject, output, { at = ranAt, playbook = alpha, underTheSubject = false } = {}) => {
     const id = randomUUID();
+    const [type = '', name = ''] = subject.split('/');
+    const filedUnder = underTheSubject ? definitionKeyOfType(type, name, alphaKey) : streamPrefixOfPlaybook(playbook);
     await append(
-      `${streamPrefixOfPlaybook(playbook)}runs/${id}`,
+      `${filedUnder}runs/${id}`,
       [
         {
           type: 'run_started',
@@ -167,6 +171,17 @@ function pageAppendsOf(append: Append) {
         next(),
         subject,
       )([{ type: 'definition_paused', data: { paused_by: { id: 'acme-admin', name: 'acme-admin' } } }]),
+    subjectMoved: (subject: string, to: Playbook) =>
+      onTheSubject(
+        append,
+        next(),
+        subject,
+      )([
+        {
+          type: 'definition_moved',
+          data: { from: alpha.playbook, to: to.playbook, moved_by: { id: 'acme-admin', name: 'acme-admin' } },
+        },
+      ]),
     playbookPageSaved: (details: Schema.JsonObject) => onThePlaybook({ source: 'runs: |\n  Posts', details }),
     playbookPageRemoved: () => onThePlaybook(null),
   };

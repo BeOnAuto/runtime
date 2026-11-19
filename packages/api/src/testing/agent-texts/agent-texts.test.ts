@@ -36,11 +36,11 @@ const tallyingLines = defineQuery('playbook', {
   description: 'Counts the lines given. Use it to know how many there are. It answers the count.',
   route: { method: 'POST', path: '/tally-lines' },
   inputSchema: Schema.Struct({
-    lines: Schema.Array(Schema.Struct({ text: Schema.String.annotate({ description: 'What the line says' }) })),
+    lines: Schema.Record(Schema.String, Schema.String.annotate({ description: 'What the line says' })),
   }),
   outputSchema: Schema.Struct({ count: Schema.Number }),
   reasons: [],
-  handle: ({ lines }) => Effect.succeed({ count: lines.length }),
+  handle: ({ lines }) => Effect.succeed({ count: Object.keys(lines).length }),
   plainLanguage: plainly('tally the lines'),
 });
 

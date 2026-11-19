@@ -231,6 +231,45 @@ describe('the streams the names of definitions read', () => {
   });
 });
 
+function beyondTheStarting(factType: string): string {
+  const [, starting] = definitionNamesOf(['echo'], unbounded).bounds ?? [];
+  const inBeta = { playbookKey: 'playbook/acme/beta/', definitionType: 'echo', name: 'greet', status: 'active' };
+  const most = mostReactingDefinitions;
+  return String(starting?.beyond({ ...inBeta, hasTriggers: true }, factType, most, most).detail);
+}
+
+describe('a move the names of definitions read', () => {
+  const names = definitionNamesOf(['echo']);
+
+  it('give a held name the playbook a move names, and none for a move on a stream of no declared type', () => {
+    const held = {
+      playbookKey: 'playbook/acme/alpha/',
+      definitionType: 'echo',
+      name: 'greet',
+      status: 'paused',
+      hasTriggers: true,
+    };
+    const moved = {
+      type: 'definition_moved',
+      data: { from: 'alpha', to: 'beta', moved_by: recordedAdmin },
+      context: { ...at, definitionType: 'echo', definitionName: 'greet', definitionVersion: 1 },
+      id: 'x',
+      position: 2,
+    };
+
+    expect([
+      names.nameAfter(held, { ...moved, stream }),
+      names.nameAfter(held, { ...moved, stream: 'playbook/acme/alpha/definitions/echo' }),
+    ]).toEqual([{ ...held, playbookKey: 'playbook/acme/beta/' }, undefined]);
+  });
+
+  it('refuse one more that starts on its own in words that name the playbook a move goes into, and a save in its own', () => {
+    expect(
+      ['definition_moved', 'definition_created'].map((factType) => beyondTheStarting(factType).includes('beta')),
+    ).toEqual([true, false]);
+  });
+});
+
 describe('the bounds on the definitions a playbook keeps, as a composition holds them', () => {
   it('are unbounded for every type until the capabilities are composed, and then the most each keeps', () => {
     const bounds = definitionBoundsHeld();

@@ -1,11 +1,20 @@
-import { Effect } from 'effect';
+import { Effect, Exit, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { rejected, type PipelineStep } from '../index.ts';
+import { otherPlaybookNotAccessible } from '../authorization/authorization.ts';
+import {
+  PlaybookAdmission,
+  defineCommand,
+  rejected,
+  type AccessDecision,
+  type AccessRequest,
+  type PipelineStep,
+} from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
+import { allowedByTheTest, deniedByTheTest, recordingDecisionPoint } from '../testing/decision-points.ts';
 import { publishDraft } from '../testing/drafts.ts';
 import { harness, toPlaybook, toOrg } from '../testing/harness.ts';
-import { addNote, copyNote, getNote, listNotes } from '../testing/notes.ts';
+import { addNote, copyNote, getNote, listNotes, notebook } from '../testing/notes.ts';
 import { labelPlaybook } from '../testing/playbook-labels.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
@@ -184,5 +193,84 @@ describe('pipeline steps', () => {
       status: 'succeeded',
       output: { notes: [] },
     });
+  });
+});
+
+const readElsewhere = defineCommand('playbook', {
+  name: 'read_elsewhere',
+  title: 'Read elsewhere',
+  description: 'Reads the notes of another playbook it is admitted to.',
+  route: { method: 'POST', path: '/read-elsewhere' },
+  inputSchema: Schema.Struct({ other: Schema.String }),
+  outputSchema: Schema.Struct({ other: Schema.String, notes: Schema.Int }),
+  reasons: ['forbidden', 'not_found', 'conflict', 'unavailable'],
+  handle: Effect.fnUntraced(function* ({ other }) {
+    const { address, reader } = yield* (yield* PlaybookAdmission).admitted(other);
+    const { state } = yield* reader.load('notes', notebook);
+    return { other: address.playbook, notes: state.length };
+  }),
+});
+
+function betaDenied({ resource }: AccessRequest): AccessDecision {
+  return resource.id === 'beta' ? deniedByTheTest : allowedByTheTest;
+}
+
+describe('a playbook command admitted to another playbook', () => {
+  it('reads it once the same call is admitted there, and is refused as a call there is refused', async () => {
+    const retiredPlaybooks = [{ org: 'acme', playbook: 'old' }];
+    const { dispatcher: calls, run } = harness({ retiredPlaybooks });
+    await run(
+      calls.dispatchToPlaybook(addNote.registration, toPlaybook('acme', 'beta')(acmeAdmin, { name: 'a', text: 'b' })),
+    );
+    const asking = (caller: typeof acmeAdmin, other: string) =>
+      run(calls.dispatchToPlaybook(readElsewhere.registration, toAlpha(caller, { other })));
+
+    expect(await asking(acmeAdmin, 'beta')).toEqual({ status: 'succeeded', output: { other: 'beta', notes: 1 } });
+    expect([
+      await asking({ ...acmeAdmin, playbooks: ['alpha'] }, 'beta'),
+      await asking(acmeAdmin, 'nowhere'),
+      await asking(acmeAdmin, 'old'),
+    ]).toMatchObject([
+      { status: 'rejected', reason: 'forbidden' },
+      { status: 'rejected', reason: 'not_found' },
+      { status: 'rejected', reason: 'conflict', kind: 'retired' },
+    ]);
+  });
+
+  it('asks the policy decision point with the other playbook as the resource, and is refused as it refuses', async () => {
+    const decided = recordingDecisionPoint(betaDenied);
+    const { dispatcher: calls, run } = harness({ decidedBy: decided.decisionPoint });
+
+    const outcome = await run(
+      calls.dispatchToPlaybook(readElsewhere.registration, toAlpha(acmeAdmin, { other: 'beta' })),
+    );
+
+    expect(outcome).toMatchObject({ status: 'rejected', reason: 'forbidden', kind: 'not_allowed_token_type' });
+    expect(decided.asked().map(({ resource }) => resource)).toContainEqual({
+      type: 'playbook',
+      id: 'beta',
+      org: 'acme',
+    });
+  });
+
+  it('is admitted to no other playbook when it runs outside the dispatcher', async () => {
+    const exit = await Effect.runPromiseExit(readElsewhere.call({ other: 'beta' }));
+
+    expect(Exit.hasDies(exit)).toBe(true);
+  });
+});
+
+describe('a playbook command refused at another playbook', () => {
+  it('is refused in words that name the other playbook where the caller may not access it', async () => {
+    const { dispatcher: calls, run } = harness();
+
+    expect(
+      await run(
+        calls.dispatchToPlaybook(
+          readElsewhere.registration,
+          toAlpha({ ...acmeAdmin, playbooks: ['alpha'] }, { other: 'beta' }),
+        ),
+      ),
+    ).toEqual({ status: 'rejected', reason: 'forbidden', detail: otherPlaybookNotAccessible('beta') });
   });
 });

@@ -253,6 +253,7 @@ describe('a fact the ledger cannot write', () => {
         execute: diskFull,
         keepContent: diskFull,
         ofDefinition: () => ({ execute: diskFull }),
+        executeOnDefinitions: diskFull,
       }),
       Effect.provideService(Caller, acmeAdmin),
       Effect.provideService(PlaybookContext, alpha),

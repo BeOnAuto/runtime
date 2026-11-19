@@ -1807,6 +1807,13 @@
           ]
         },
         {
+          "as": "tool move_definitions: argument playbook",
+          "on": [
+            "/mcp",
+            "/directory"
+          ]
+        },
+        {
           "as": "tool list_playbook_events: argument playbook",
           "on": [
             "/mcp",
@@ -1979,6 +1986,14 @@
         },
         {
           "as": "tool run_definition: argument name",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        },
+        {
+          "as": "tool move_definitions: argument definitions[].name",
           "on": [
             "/mcp",
             "/orgs/{org}/playbooks/{playbook}/mcp",
@@ -2161,6 +2176,14 @@
         },
         {
           "as": "tool run_definition: argument type",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        },
+        {
+          "as": "tool move_definitions: argument definitions[].type",
           "on": [
             "/mcp",
             "/orgs/{org}/playbooks/{playbook}/mcp",
@@ -2738,6 +2761,91 @@
       ],
       "lines": [
         "false leaves out the runs a workflow's step started; true when left out"
+      ]
+    },
+    {
+      "sha256": "dc57171eb5015c63bb7ea2b6077c619fa651b6478dc9144eeb2914e6b13b9bc4",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool move_definitions: title",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "Move definitions"
+      ]
+    },
+    {
+      "sha256": "17617e79fd06f7531e1d47cc72178c17ad28d3bbe06ba4e40a6a54d4d53551ed",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool move_definitions: description",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "Moves functions and workflows from this playbook to another playbook of the org and returns them: each keeps its versions, its runs and its page, and from then on it is read, run and changed in the other playbook under the same name. Use move_definitions when the person asks to move a function or a workflow to another playbook. `definitions` lists each one by `type` and `name`, with everything each one uses and everything left in this playbook that uses one of them; a call that leaves one out moves nothing and says which to add. Nothing moves while one of them has a run that has not ended, or while the other playbook has a definition of the same type and name, even a retired one."
+      ]
+    },
+    {
+      "sha256": "8deb9d057c8ed9042fc1c4a56b9d5bc55872e34352cbd0b4802d998564dfa4a7",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool move_definitions: argument to",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The id of the playbook to move the definitions to"
+      ]
+    },
+    {
+      "sha256": "238bed9e39a30a44f21962452254babb13c4edd7cf8edb5cf466dca4adb39703",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool move_definitions: argument definitions",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The definitions to move, each by its `type` and `name`, with everything each one uses"
+      ]
+    },
+    {
+      "sha256": "f10f30702ef5429988e7a10fd2fc32757ed181267a012f510049f4845c6f5211",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool move_definitions: argument force",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "true moves them although the other playbook has no access to a connection one of them needs; the runs of the one that needs it fail there until that playbook has access. Leave it out unless the person said to move anyway"
       ]
     },
     {

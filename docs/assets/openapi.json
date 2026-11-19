@@ -20760,7 +20760,11 @@
                                 "license_required",
                                 "license_invalid",
                                 "account_closed",
-                                "blocked_by_moderation"
+                                "blocked_by_moderation",
+                                "incomplete",
+                                "in_use",
+                                "runs_in_progress",
+                                "connection_not_accessible"
                               ],
                               "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record, the output of a function with a part larger than the runtime keeps of one file, an asset a generation function made larger than the runtime keeps of one asset, or a playbook that already keeps all the assets it may; blocked_by_moderation for a generation function whose request the provider of its model refused under its moderation"
                             },
@@ -21044,6 +21048,10 @@
                             "license_invalid",
                             "account_closed",
                             "blocked_by_moderation",
+                            "incomplete",
+                            "in_use",
+                            "runs_in_progress",
+                            "connection_not_accessible",
                             "requested",
                             "deadline",
                             "overrun",
@@ -21452,7 +21460,11 @@
                                 "license_required",
                                 "license_invalid",
                                 "account_closed",
-                                "blocked_by_moderation"
+                                "blocked_by_moderation",
+                                "incomplete",
+                                "in_use",
+                                "runs_in_progress",
+                                "connection_not_accessible"
                               ],
                               "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record, the output of a function with a part larger than the runtime keeps of one file, an asset a generation function made larger than the runtime keeps of one asset, or a playbook that already keeps all the assets it may; blocked_by_moderation for a generation function whose request the provider of its model refused under its moderation"
                             },
@@ -21713,6 +21725,10 @@
                             "license_invalid",
                             "account_closed",
                             "blocked_by_moderation",
+                            "incomplete",
+                            "in_use",
+                            "runs_in_progress",
+                            "connection_not_accessible",
                             "requested",
                             "deadline",
                             "overrun",
@@ -22136,7 +22152,11 @@
                                 "license_required",
                                 "license_invalid",
                                 "account_closed",
-                                "blocked_by_moderation"
+                                "blocked_by_moderation",
+                                "incomplete",
+                                "in_use",
+                                "runs_in_progress",
+                                "connection_not_accessible"
                               ],
                               "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record, the output of a function with a part larger than the runtime keeps of one file, an asset a generation function made larger than the runtime keeps of one asset, or a playbook that already keeps all the assets it may; blocked_by_moderation for a generation function whose request the provider of its model refused under its moderation"
                             },
@@ -22378,6 +22398,10 @@
                             "license_invalid",
                             "account_closed",
                             "blocked_by_moderation",
+                            "incomplete",
+                            "in_use",
+                            "runs_in_progress",
+                            "connection_not_accessible",
                             "requested",
                             "deadline",
                             "overrun",
@@ -22765,6 +22789,10 @@
                             "license_invalid",
                             "account_closed",
                             "blocked_by_moderation",
+                            "incomplete",
+                            "in_use",
+                            "runs_in_progress",
+                            "connection_not_accessible",
                             "requested",
                             "deadline",
                             "overrun",
@@ -22950,6 +22978,10 @@
                                 "license_invalid",
                                 "account_closed",
                                 "blocked_by_moderation",
+                                "incomplete",
+                                "in_use",
+                                "runs_in_progress",
+                                "connection_not_accessible",
                                 "requested",
                                 "deadline",
                                 "overrun",
@@ -23838,6 +23870,589 @@
           {
             "openIdConnect": [
               "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/move": {
+      "post": {
+        "operationId": "move_definitions",
+        "summary": "Move definitions",
+        "description": "Moves functions and workflows from this playbook to another playbook of the org and returns them: each keeps its versions, its runs and its page, and from then on it is read, run and changed in the other playbook under the same name. Use move_definitions when the person asks to move a function or a workflow to another playbook. `definitions` lists each one by `type` and `name`, with everything each one uses and everything left in this playbook that uses one of them; a call that leaves one out moves nothing and says which to add. Nothing moves while one of them has a run that has not ended, or while the other playbook has a definition of the same type and name, even a retired one.",
+        "tags": [
+          "definitions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/move_definitions/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "to": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]{2,47}$",
+                    "description": "The id of the playbook to move the definitions to"
+                  },
+                  "definitions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "reasoning",
+                            "lookup",
+                            "interaction",
+                            "prediction",
+                            "computation",
+                            "generation",
+                            "workflow"
+                          ],
+                          "description": "The definition's type"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The definition name: 3 to 48 lowercase letters, digits and hyphens, starting with a letter",
+                          "pattern": "^[a-z][a-z0-9-]{2,47}$"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 64,
+                    "description": "The definitions to move, each by its `type` and `name`, with everything each one uses"
+                  },
+                  "force": {
+                    "type": "boolean",
+                    "description": "true moves them although the other playbook has no access to a connection one of them needs; the runs of the one that needs it fail there until that playbook has access. Leave it out unless the person said to move anyway"
+                  }
+                },
+                "required": [
+                  "to",
+                  "definitions"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/move_definitions/output",
+                  "type": "object",
+                  "properties": {
+                    "definitions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/Definition"
+                      }
+                    }
+                  },
+                  "required": [
+                    "definitions"
+                  ],
+                  "additionalProperties": false,
+                  "$defs": {
+                    "Definition": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation, generation or workflow"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                        },
+                        "definition_id": {
+                          "type": "string",
+                          "description": "The id of the definition, given when it was created and never changed"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "The definition version: 1 when created, and one more for every update that changes its document, its overview or its diagram"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "paused",
+                            "retired"
+                          ],
+                          "description": "active; paused, when it starts no runs until it is resumed; or retired, until it is restored"
+                        },
+                        "media_type": {
+                          "type": "string",
+                          "description": "The media type of the definition document, set by its runtime adapter"
+                        },
+                        "description": {
+                          "type": "string",
+                          "description": "What the definition does, as its document says"
+                        },
+                        "input_schema": {
+                          "type": "object",
+                          "description": "The JSON Schema of the input a run takes"
+                        },
+                        "output_schema": {
+                          "type": "object",
+                          "description": "The JSON Schema of the result a run produces"
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "What the parser finds in the document that may not work as written, such as an answer schema whose answers cannot be enforced while a model writes them, found again whenever the definition is read; the definition was accepted with them"
+                        },
+                        "details": {
+                          "type": "object",
+                          "properties": {
+                            "shape": {
+                              "type": "string",
+                              "description": "The output shape its output_schema is: series, categories, table, text or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
+                            },
+                            "contributes": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "goal": {
+                                    "type": "string"
+                                  },
+                                  "purpose": {
+                                    "type": "string"
+                                  },
+                                  "each": {
+                                    "type": "string"
+                                  },
+                                  "per_id": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "link": {
+                                    "type": "string"
+                                  },
+                                  "when": {
+                                    "type": "string"
+                                  },
+                                  "marks": {
+                                    "type": "string"
+                                  },
+                                  "measures": {
+                                    "type": "string"
+                                  },
+                                  "final": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "boolean",
+                                        "enum": [
+                                          true
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "as_of": {
+                                    "type": "string"
+                                  },
+                                  "says": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "goal",
+                                  "purpose"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "maxItems": 8,
+                              "description": "For a workflow, what it contributes to the playbook's goals, as the contributes list of its document says: each entry names a goal and says how a run marks or measures it"
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "What the runtime declares of the definition beside its schemas"
+                        },
+                        "triggers": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "event"
+                                    ]
+                                  },
+                                  "reference": {
+                                    "type": "string"
+                                  },
+                                  "filters": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "reference": {
+                                          "type": "string",
+                                          "description": "Where the document names it, as a JSON pointer, which no later version renumbers"
+                                        },
+                                        "type": {
+                                          "type": "string",
+                                          "description": "The type of the events the filter takes"
+                                        },
+                                        "attributes": {
+                                          "type": "object",
+                                          "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                        }
+                                      },
+                                      "required": [
+                                        "reference",
+                                        "type",
+                                        "attributes"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "description": "The filters of the events that start a run; an event that any of them matches starts one"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "reference",
+                                  "filters"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "cron"
+                                    ]
+                                  },
+                                  "reference": {
+                                    "type": "string"
+                                  },
+                                  "expression": {
+                                    "type": "string",
+                                    "description": "The five fields of its times, read in its time zone"
+                                  },
+                                  "time_zone": {
+                                    "type": "string",
+                                    "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "reference",
+                                  "expression"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "every"
+                                    ]
+                                  },
+                                  "reference": {
+                                    "type": "string"
+                                  },
+                                  "milliseconds": {
+                                    "type": "integer",
+                                    "description": "Its period, counted from when the trigger was saved as it is"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "reference",
+                                  "milliseconds"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ],
+                            "description": "A condition that starts a run on its own: an event trigger, or a cron or every schedule"
+                          },
+                          "description": "For a definition that starts runs on its own, its triggers in the order its document names them: a workflow may have an event trigger, a cron schedule and an every schedule, each kept and matched on its own"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "description": "When the definition was created, in ISO 8601 UTC"
+                        },
+                        "created_by": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The caller who created the definition, by id and name"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "description": "When the definition was last saved, retired or restored, in ISO 8601 UTC; a pause and a resumption leave it"
+                        },
+                        "paused_at": {
+                          "type": "string",
+                          "description": "When the definition was paused, in ISO 8601 UTC; only while it is paused"
+                        },
+                        "paused_by": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The caller who paused the definition, by id and name; only while it is paused"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "description": "Why the definition was paused, in the words of whoever paused it; only while it is paused"
+                        },
+                        "retired_at": {
+                          "type": "string",
+                          "description": "When the definition was retired, in ISO 8601 UTC; only while it is retired"
+                        },
+                        "source": {
+                          "type": "string",
+                          "description": "The definition document"
+                        },
+                        "overview": {
+                          "type": "string",
+                          "description": "The overview its author wrote: Markdown for the person who runs the business, kept as written with this version"
+                        },
+                        "diagram": {
+                          "type": "string",
+                          "description": "The diagram its author gave a function with this version: Mermaid source of a flowchart or a state diagram of how it works, or the word none where a picture would add nothing; left out for a workflow and for a version saved without one"
+                        },
+                        "triggers_since": {
+                          "type": "string",
+                          "description": "For an active definition with triggers, the id of the record that saved its current version: from that record on, what its triggers start is a run of this version"
+                        },
+                        "standing": {
+                          "type": "object",
+                          "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
+                        },
+                        "page": {
+                          "type": "object",
+                          "properties": {
+                            "result": {
+                              "type": "string",
+                              "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
+                            },
+                            "runs": {
+                              "type": "string",
+                              "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
+                            },
+                            "glance": {
+                              "type": "object",
+                              "description": "A workflow's glance as its page renders it over its views and its latest ended run: its headline, visual and outstanding items"
+                            },
+                            "standing": {
+                              "type": "object",
+                              "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "What the page of the definition, the page key of its document, shows when it is read"
+                        },
+                        "used_by": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "description": "The type of the definition that uses this one"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "The name of the definition that uses this one"
+                                  },
+                                  "relation": {
+                                    "type": "string",
+                                    "enum": [
+                                      "calls"
+                                    ],
+                                    "description": "calls, for a workflow that runs this one in its steps"
+                                  },
+                                  "steps": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "number": {
+                                          "type": "integer",
+                                          "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                        },
+                                        "name": {
+                                          "type": "string",
+                                          "description": "The name of its task"
+                                        }
+                                      },
+                                      "required": [
+                                        "number",
+                                        "name"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "description": "The steps of the workflow that call this one"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "name",
+                                  "relation",
+                                  "steps"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "description": "The type of the definition that uses this one"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "The name of the definition that uses this one"
+                                  },
+                                  "relation": {
+                                    "type": "string",
+                                    "enum": [
+                                      "reads"
+                                    ],
+                                    "description": "reads, for a lookup function that answers with the outputs of the runs of this one"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "name",
+                                  "relation"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "description": "The definitions of the playbook, active or paused, that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, and a lookup function that reads its runs"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "name",
+                        "definition_id",
+                        "version",
+                        "status",
+                        "media_type",
+                        "created_at",
+                        "created_by",
+                        "updated_at",
+                        "source"
+                      ],
+                      "additionalProperties": false,
+                      "description": "A saved definition, with its document"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:write"
             ]
           }
         ]
@@ -31717,6 +32332,10 @@
               "license_invalid",
               "account_closed",
               "blocked_by_moderation",
+              "incomplete",
+              "in_use",
+              "runs_in_progress",
+              "connection_not_accessible",
               "model_not_offered",
               "tool_not_offered",
               "tool_not_read_only",

@@ -37,6 +37,7 @@ const resourcesOfOperations: Readonly<Record<string, string>> = {
   answer_interaction: 'interactions',
   export_playbook: 'playbooks',
   list_generation_models: 'models',
+  move_definitions: 'definitions',
   render_playbook_page: 'playbooks',
 };
 

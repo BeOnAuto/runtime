@@ -125,6 +125,7 @@ const reserved = [
   'definition_paused',
   'definition_resumed',
   'definition_restored',
+  'definition_moved',
   'playbook_page_saved',
   'playbook_goals_saved',
   'playbook_goals_agreed',

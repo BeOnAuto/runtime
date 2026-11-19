@@ -66,8 +66,8 @@ function describedWithin(extra: number, index: number): string {
   return describedIn(leastDescription + Math.min(descriptionRoom, Math.max(0, extra - descriptionRoom * index)));
 }
 
-function tellingInTheOrg(name: string, description: string, argument: string) {
-  return defineQuery('org', {
+function telling<const S extends 'org' | 'playbook'>(scope: S, name: string, description: string, argument: string) {
+  return defineQuery(scope, {
     name,
     title: 'Tell',
     description,
@@ -85,7 +85,13 @@ function tellingInTheOrg(name: string, description: string, argument: string) {
 
 function orgToolsFilled(count: number, extra: number, argument = 'What to tell') {
   return Array.from({ length: count }, (_, index) =>
-    tellingInTheOrg(toolNameOf('tell', index), describedWithin(extra, index), argument),
+    telling('org', toolNameOf('tell', index), describedWithin(extra, index), argument),
+  );
+}
+
+function playbookToolsArguedTwice(count: number, extra: number) {
+  return Array.from({ length: count }, (_, index) =>
+    telling('playbook', toolNameOf('ask', index), describedWithin(extra, index), longestArgument),
   );
 }
 
@@ -103,23 +109,20 @@ interface Listing {
 }
 
 function ownOrgToolsFilled(extra: number): Operations {
-  return [
-    ...orgToolsFilled(11, descriptionRoom * 11, longestArgument),
-    ...playbookToolsFilled(32, extra, longestArgument),
-  ];
+  return [...orgToolsFilled(13, descriptionRoom * 13, longestArgument), ...playbookToolsArguedTwice(30, extra)];
 }
 
 const listings: readonly Listing[] = [
   {
     endpoint: 'own org',
     path: '/mcp',
-    most: 70_200,
+    most: 72_400,
     servingWith: (extra) => ({ operations: ownOrgToolsFilled(extra) }),
   },
   {
     endpoint: 'directory',
     path: '/directory',
-    most: 67_800,
+    most: 70_000,
     servingWith: (extra) => ({ operations: [], directoryOperations: ownOrgToolsFilled(extra) }),
   },
   {
@@ -131,8 +134,8 @@ const listings: readonly Listing[] = [
   {
     endpoint: 'playbook',
     path: '/orgs/acme/playbooks/alpha/mcp',
-    most: 47_400,
-    servingWith: (extra) => ({ operations: playbookToolsFilled(33, extra, longestArgument) }),
+    most: 49_600,
+    servingWith: (extra) => ({ operations: playbookToolsFilled(34, extra, longestArgument) }),
   },
 ];
 

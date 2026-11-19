@@ -13,6 +13,7 @@ export {
   type Examined,
 } from './reading/page-bounds.ts';
 export { PlaybookReader, playbookPayloadReader, type PlaybookContentReader } from './ledger/playbook-reader.ts';
+export { PlaybookAdmission, type AdmittedPlaybook, type PlaybookAdmissions } from './ledger/playbook-reader.ts';
 export { isCalendarDay } from './reading/calendar-days.ts';
 export { PlaybookContext, type PlaybookAddress } from './caller/playbook-context.ts';
 export { PlaybookLifecycle } from './caller/playbook-lifecycle.ts';
@@ -69,6 +70,7 @@ export {
   recordingOf,
   strictRecordedDecoder,
   type Decided,
+  type DecidedState,
   type Decider,
   type Fold,
   type Recorded,
@@ -239,15 +241,9 @@ export {
   type IncompleteDetails,
   type IncompleteReason,
 } from './outcome/incomplete-details.ts';
-export type {
-  PlaybookRecordedReader,
-  PlaybookRunOutcomesReader,
-  RecordedReader,
-  RunOutcomesReader,
-  StreamAges,
-  StreamReader,
-  StreamWriter,
-} from './ledger/stream-ports.ts';
+export type { MultiStreamWriter, PlaybookRecordedReader, PlaybookRunOutcomesReader } from './ledger/stream-ports.ts';
+export type { RecordedReader, RunOutcomesReader, StreamAges, StreamDecision } from './ledger/stream-ports.ts';
+export type { StreamReader, StreamWriter } from './ledger/stream-ports.ts';
 export {
   ScrubRefused,
   noStreamToScrub,

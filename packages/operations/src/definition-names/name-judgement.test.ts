@@ -75,9 +75,9 @@ const names: DefinitionNames = {
     return definition === undefined ? undefined : `definition/acme/${definition}/`;
   },
   nameAfter,
-  takenBy: (claimed, holder) =>
+  takenBy: (claimed, holder, changedBy) =>
     new Conflict({
-      detail: `${claimed.name} is held by ${holder.name} ${holder.status}`,
+      detail: `${claimed.name} is held by ${holder.name} ${holder.status}, claimed by ${changedBy.map(({ type }) => type).join(' ')}`,
       kind: 'taken',
     }),
 };
@@ -203,10 +203,10 @@ describe('a name claimed in an append', () => {
       takenRefusal(names, append, toTriage),
       takenRefusal(names, append, toTriage, held('b', 'triage')),
       takenRefusal(names, append, toKept, held('c', 'kept'))?.conflict.detail,
-    ]).toEqual([undefined, undefined, undefined, undefined, 'kept is held by kept active']);
+    ]).toEqual([undefined, undefined, undefined, undefined, 'kept is held by kept active, claimed by made']);
   });
 
-  it('refuses a name two definitions of one append claim, each in the words of the other as it stands at the end', () => {
+  it('refuses a name two definitions of one append claim, each in the words of the other as it stands at the end and of the facts that claimed it', () => {
     const append = judged(
       names,
       [],
@@ -221,11 +221,11 @@ describe('a name claimed in an append', () => {
 
     expect(claimsOf(append).map((claim) => takenRefusal(names, append, claim))).toEqual([
       {
-        conflict: new Conflict({ detail: 'triage is held by triage active', kind: 'taken' }),
+        conflict: new Conflict({ detail: 'triage is held by triage active, claimed by made paused', kind: 'taken' }),
         stream: 'definitions/reasoning',
       },
       {
-        conflict: new Conflict({ detail: 'triage is held by triage paused', kind: 'taken' }),
+        conflict: new Conflict({ detail: 'triage is held by triage paused, claimed by made', kind: 'taken' }),
         stream: 'definitions/reasoning',
       },
     ]);

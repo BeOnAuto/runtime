@@ -1,6 +1,5 @@
 import type { OperationKind } from '../caller/operation-scope.ts';
 import type { Cancelled, Failed, Rejected, RejectionReason } from '../outcome/outcome.ts';
-import type { RejectionBecause } from '../outcome/rejection-because.ts';
 import type { RejectionKind } from '../outcome/rejection.ts';
 import { connectionBecauses, connectionExplanations, connectionRemedies } from './connection-explanations.ts';
 import { credentialBecauses, credentialRemedies } from './credential-explanations.ts';
@@ -10,6 +9,7 @@ import {
   creditExplanationsByBecause,
   limitedCreditExplanationOf,
 } from './credit-explanations.ts';
+import { moveExplanationsAs } from './move-explanations.ts';
 import { roleRefusal, tokenTypeRefusal } from './plain-language.ts';
 import type { Explanation, Explanations, RefusalTerms, Remedies } from './plain-language.ts';
 import { predictionExplanations } from './prediction-explanations.ts';
@@ -73,6 +73,7 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     remedy: 'It starts no runs while it is paused; once someone resumes it, it can be run again.',
   },
   concurrent_change: { why: 'something else changed it at the same moment', remedy: 'Trying again should work.' },
+  ...moveExplanationsAs(explanationByReason.invalid_input),
   unworkable: { why: 'it cannot work as it is written', remedy: correctable },
   stalled: {
     why: 'what it keeps of the playbook’s history stopped at a recorded event it could not take in',
@@ -166,7 +167,7 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
   },
 };
 
-const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
+const explanationByBecause: Readonly<Record<NonNullable<Rejected['because']>, string>> = {
   provider_not_configured: 'because its provider is not set up on this server, though others are',
   model_not_allowed: 'because it is not among the models whoever runs the server allows',
   tool_server_not_configured:
@@ -203,7 +204,7 @@ const remedyByBecause: Remedies = {
 };
 
 const explanationByKindAndBecause: Readonly<
-  Partial<Record<RejectionKind, Partial<Record<RejectionBecause, Explanation>>>>
+  Partial<Record<RejectionKind, Partial<Record<NonNullable<Rejected['because']>, Explanation>>>>
 > = {
   dataset_not_ready: {
     stalled: {

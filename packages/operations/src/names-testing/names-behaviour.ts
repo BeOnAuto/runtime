@@ -4,6 +4,7 @@ import { Conflict } from '../outcome/conflict.ts';
 import { namesReadAtThePort } from './names-reads-behaviour.ts';
 import {
   answerOf,
+  answerOfSeveral,
   bounded,
   fact,
   heldNames,
@@ -127,11 +128,46 @@ function bounds(entry: NamesAtThePortEntry): void {
   });
 }
 
+const another = 'playbook/acme/alpha/definitions/workflow';
+
+function severalStreams(entry: NamesAtThePortEntry): void {
+  it('keeps the facts of several streams decided together, judging their names as one append', async () => {
+    const port = await entry.keeping(unbounded);
+    await answerOfSeveral(port, [
+      [shared, [made('a', 'triage')]],
+      [another, [made('b', 'brief')]],
+    ]);
+
+    const swapped = await answerOfSeveral(port, [
+      [another, [fact('renamed', 'triage', { definition: 'b' })]],
+      [shared, [fact('renamed', 'brief', { definition: 'a' })]],
+    ]);
+
+    expect(swapped).toEqual([2, 2]);
+    expect(await heldNames(port)).toEqual(['a alpha/reasoning/brief active', 'b alpha/reasoning/triage active']);
+  });
+
+  it('keeps nothing of any stream when the names refuse the fact of one of them, and answers that refusal', async () => {
+    const port = await entry.keeping(unbounded);
+    await answerOf(port, shared, made('a', 'triage'));
+
+    const refused = await answerOfSeveral(port, [
+      [another, [made('b', 'brief')]],
+      [shared, [made('c', 'triage')]],
+    ]);
+
+    expect(refused).toEqual(taken('triage', 'active'));
+    expect([await versionOf(port, shared), await versionOf(port, another)]).toEqual([1, 0]);
+    expect(await heldNames(port)).toEqual(['a alpha/reasoning/triage active']);
+  });
+}
+
 export function namesAtThePortBehaviour(entry: NamesAtThePortEntry): void {
   describe('the names of definitions, judged at the port', () => {
     claimedOnce(entry);
     changes(entry);
     bounds(entry);
+    severalStreams(entry);
   });
   namesReadAtThePort(entry);
 }

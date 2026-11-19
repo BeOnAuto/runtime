@@ -138,6 +138,26 @@ describe('a workflow paused and resumed over HTTP', () => {
   });
 });
 
+describe('a workflow moved to another playbook over HTTP', () => {
+  it('moves with the function it calls in one call, is read in that playbook, and is not found in the one it left', async () => {
+    await servingAPlaybook();
+    await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'beta', name: 'Beta' } });
+    await created('reasoning', { name: 'verdict', source: verdict, diagram: 'none' });
+    await created('workflow', { name: 'review', source: reviewing });
+    const review = { type: 'workflow', name: 'review' };
+
+    const moved = await server.call('POST', `${alpha}/move`, {
+      body: { to: 'beta', definitions: [review, { type: 'reasoning', name: 'verdict' }] },
+    });
+
+    expect(moved).toMatchObject({ status: 200, body: { definitions: [review, { name: 'verdict' }] } });
+    expect([
+      (await server.call('GET', '/v1/orgs/acme/playbooks/beta/definitions/workflow/review')).status,
+      (await server.call('GET', `${alpha}/definitions/workflow/review`)).status,
+    ]).toEqual([200, 404]);
+  });
+});
+
 describe('a workflow retired and restored over HTTP', () => {
   it('comes back paused, by whoever restored it and when, forgetting its retirement, and runs from its triggers again once resumed', async () => {
     await servingAPlaybook();

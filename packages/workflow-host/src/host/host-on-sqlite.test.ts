@@ -1,5 +1,6 @@
 import { describe } from 'vitest';
 
+import { movedReactionsSuite } from '../reaction-testing/moved-reactions-suite.ts';
 import { reactionSuite } from '../reaction-testing/reaction-suite.ts';
 import { dispatchSuite } from '../suite-testing/dispatch-suite.ts';
 import { failureSuite } from '../suite-testing/failure-suite.ts';
@@ -32,6 +33,7 @@ describe('the host on SQLite', () => {
 
   describe('the reactions of its playbooks', () => {
     reactionSuite(onSQLite);
+    movedReactionsSuite(onSQLite);
   });
 
   describe('one of two hosts on one database', () => {

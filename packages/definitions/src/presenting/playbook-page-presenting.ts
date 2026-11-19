@@ -15,12 +15,25 @@ export function playbookPageAccountOf({ data: { page } }: RecordedPageEvent): Ac
     : { summary: playbookPageSaved(), data: { source_bytes: Buffer.byteLength(page.source, 'utf8') } };
 }
 
-export type DefinitionsStreamEvent = RecordedDefinitionEvent | RecordedPageEvent;
+const [created, updated, retired, paused, resumed, restored] = DefinitionEventSchema.members;
 
 export const DefinitionsStreamEventSchema = Schema.Union([
-  ...DefinitionEventSchema.members,
+  created,
+  updated,
+  retired,
+  paused,
+  resumed,
+  restored,
   ...PageEventSchema.members,
 ]);
+
+export type DefinitionsStreamEvent = typeof DefinitionsStreamEventSchema.Type;
+
+export function isPresented(
+  type: RecordedDefinitionEvent['type'],
+): type is Extract<DefinitionsStreamEvent['type'], RecordedDefinitionEvent['type']> {
+  return type !== 'definition_moved';
+}
 
 export function definitionsStreamChangesOf(definitionTypes: readonly string[]): ChangesNamed {
   return {

@@ -111,7 +111,10 @@ function argumentsOf(schema: SchemaNode, prefix: string): readonly ShownArgument
       pattern: textIn(node, 'pattern'),
       maxLength: lengthIn(node),
     };
-    return [shown].concat(argumentsOf(node, `${shown.name}.`));
+    return [shown].concat(
+      argumentsOf(node, `${shown.name}.`),
+      argumentsOf(nodeOf(node.get('items')), `${shown.name}[].`),
+    );
   });
 }
 

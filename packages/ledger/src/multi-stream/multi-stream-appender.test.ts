@@ -1,10 +1,10 @@
 import { SQL } from '@event-driven-io/dumbo';
 import { EmmettInstrumentation } from '@event-driven-io/emmett/otel';
-import { Conflict, messageIdOf } from '@on.auto/operations';
+import { Conflict, messageIdOf, type Decider } from '@on.auto/operations';
 import { context } from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
 import { BasicTracerProvider, InMemorySpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
-import { Cause, Effect, Exit } from 'effect';
+import { Cause, Effect, Exit, Result } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
@@ -12,10 +12,12 @@ import type { EncodedEvent } from '../event-store.ts';
 import { multiStreamAppenderOf, type MultiStreamAppends, StreamRefused, VersionConflict } from '../index.ts';
 import { appendRefusedAs } from '../refusals/append-refused.ts';
 import { sqliteEventStore } from '../sqlite-event-store.ts';
+import { streamReaderOf } from '../stream-reader.ts';
 import { happenings, noted, stamped } from '../testing/happenings.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { isVersionConflict } from '../version-conflict.ts';
 import type { BeforeCommit } from './joined-appends.ts';
+import { multiStreamExecutorOf } from './multi-stream-decisions.ts';
 
 const one = 'playbook/acme/alpha/notes/one';
 
@@ -216,6 +218,88 @@ describe('the appender of decided events to several streams', () => {
     const gone = new Error('The database is gone');
 
     expect(await failureOf(rejectingWith(() => gone))).toBe(gone);
+  });
+});
+
+const countedBy: Decider<number, number, (typeof happenings.eventSchema)['Type'], 'conflict'> = {
+  eventSchema: happenings.eventSchema,
+  context: () => stamped,
+  initialState: 0,
+  evolve: (total) => total + 1,
+  decide: (by) =>
+    by < 0
+      ? Result.fail(new Conflict({ detail: 'A count goes up' }))
+      : Result.succeed(Array.from({ length: by }, () => noted('counted', by))),
+};
+
+function counted(stream: string, by: number) {
+  return { stream, decider: countedBy, command: by };
+}
+
+function movedOnceBeforeItsAppend(store: Awaited<ReturnType<typeof aStore>>): MultiStreamAppends {
+  const moved = { once: false };
+  return {
+    multiStreamAppend: async (requests) => {
+      if (!moved.once) {
+        moved.once = true;
+        await store.append(one, [{ type: 'noted', data: { detail: 0 } }], { expectedVersion: 0, context: stamped });
+      }
+      await store.multiStreamAppend(requests);
+    },
+  };
+}
+
+describe('a decision over several streams on a SQLite file', () => {
+  it('decides each stream on its own facts and appends every decision at once at the version it read, answering each state', async () => {
+    const store = await aStore();
+    const executed = multiStreamExecutorOf(store, streamReaderOf(store));
+
+    const answered = await Effect.runPromise(
+      executed([counted(one, 2), counted(other, 0)], { causationId: 'x', correlationId: null }),
+    );
+
+    expect(answered).toEqual([
+      { state: 2, version: 2, decidedOn: 0 },
+      { state: 0, version: 0, decidedOn: 0 },
+    ]);
+    expect((await store.read(one)).messages.map(({ lineage }) => lineage.causationId)).toEqual(['x', 'x']);
+    expect((await store.read(other)).version).toBe(0);
+  });
+
+  it('appends nothing for decisions of no facts, nor when one decision rejects, and answers that rejection', async () => {
+    const store = await aStore();
+    const executed = multiStreamExecutorOf(store, streamReaderOf(store));
+
+    const none = await Effect.runPromise(executed([counted(one, 0)]));
+    const rejected = await Effect.runPromiseExit(executed([counted(one, 1), counted(other, -1)]));
+
+    expect(none).toEqual([{ state: 0, version: 0, decidedOn: 0 }]);
+    expect(rejected).toEqual(Exit.fail(new Conflict({ detail: 'A count goes up' })));
+    expect([(await store.read(one)).version, (await store.read(other)).version]).toEqual([0, 0]);
+  });
+
+  it('decides again on what it reads after another write moved one of its streams, and answers a refusal as its conflict', async () => {
+    const store = await aStore();
+    const taken = new Conflict({ detail: 'The name is taken', kind: 'taken' });
+
+    const answered = await Effect.runPromise(
+      multiStreamExecutorOf(
+        movedOnceBeforeItsAppend(store),
+        streamReaderOf(store),
+      )([counted(one, 1), counted(other, 1)]),
+    );
+    const refused = await Effect.runPromiseExit(
+      multiStreamExecutorOf(
+        rejectingWith(() => appendRefusedAs(taken, one)),
+        streamReaderOf(store),
+      )([counted(one, 1)]),
+    );
+
+    expect(answered).toEqual([
+      { state: 2, version: 2, decidedOn: 1 },
+      { state: 1, version: 1, decidedOn: 0 },
+    ]);
+    expect(refused).toEqual(Exit.fail(taken));
   });
 });
 

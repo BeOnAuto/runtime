@@ -46,6 +46,7 @@ const definitionTools = [
   'get_run',
   'cancel_run',
   'list_runs',
+  'move_definitions',
   'list_playbook_events',
   'get_event',
   'publish_event',

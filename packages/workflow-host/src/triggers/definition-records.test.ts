@@ -3,7 +3,17 @@ import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { rowsOf, type HostDatabase } from '../database/host-database.ts';
-import { applying, first, retired, row, rowsIn, runningSet, saved } from '../reaction-testing/applied-records.ts';
+import {
+  about,
+  applying,
+  first,
+  retired,
+  row,
+  rowsIn,
+  runningSet,
+  saved,
+} from '../reaction-testing/applied-records.ts';
+import { definitionRecordsKeepingTheirOwnStops } from '../reaction-testing/own-stops.ts';
 import { cronTrigger, definitionKeyNamed, eventTrigger, everyTrigger } from '../reaction-testing/playbook-writes.ts';
 import { definitionRecordsIn } from './definition-records.ts';
 
@@ -199,5 +209,65 @@ describe('the records of the definitions read back from their stream', () => {
       },
       { id: 'm2', type: 'definition_retired', data: {}, context },
     ]);
+  });
+});
+
+const PlacedRow = Schema.Struct({ playbook_key: Schema.String });
+
+function playbooksIn(database: HostDatabase) {
+  return Effect.runPromise(
+    Effect.all(
+      [
+        statement`SELECT playbook_key FROM workflow_subscriptions ORDER BY reference`,
+        statement`SELECT playbook_key FROM workflow_subscription_types ORDER BY type`,
+        statement`SELECT playbook_key FROM workflow_reaction_refusals`,
+      ].map((read) => rowsOf(PlacedRow, database.read(read))),
+    ),
+  );
+}
+
+const refusedOnce = statement`INSERT INTO workflow_reaction_refusals
+  (definition_key, playbook_key, workflow, version, minute, count, reason, trigger_kind, trigger_reference)
+  VALUES (${definitionKeyNamed('close')}, 'playbook/acme/alpha/', 'close', 1, 0, 1, 'refused', 'cron', '/schedule/cron')`;
+
+const movedToBeta = {
+  id: 'm1',
+  type: 'definition_moved',
+  data: { from: 'alpha', to: 'beta', moved_by: { id: 'acme-admin', name: 'acme-admin' } },
+  context: about('close', 1, '2026-10-01T10:00:00.000Z'),
+};
+
+describe('a move of a workflow to another playbook', () => {
+  it('gives its triggers, the types they match and its refusals the key of that playbook, their times untouched', async () => {
+    const { database, applied } = await applying();
+    await applied(
+      saved({
+        id: 's1',
+        name: 'close',
+        version: 1,
+        triggers: [eventTrigger({ type: 'com.acme.closed' }), cronTrigger('0 9 * * *')],
+      }),
+    );
+    await Effect.runPromise(database.write(refusedOnce));
+    const before = await rowsIn(database);
+
+    expect(await applied(movedToBeta)).toEqual(['applied']);
+    expect(await rowsIn(database)).toEqual(before);
+    expect(await playbooksIn(database)).toEqual([
+      [{ playbook_key: 'playbook/acme/beta/' }, { playbook_key: 'playbook/acme/beta/' }],
+      [{ playbook_key: 'playbook/acme/beta/' }],
+      [{ playbook_key: 'playbook/acme/beta/' }],
+    ]);
+  });
+
+  it('is unreadable on a stream of no definition', async () => {
+    const { database } = await applying();
+    const apply = definitionRecordsKeepingTheirOwnStops(database);
+
+    expect(
+      await Effect.runPromise(
+        apply({ playbookKey: 'playbook/acme/alpha/', definitionKey: 'playbook/acme/alpha/' }, movedToBeta),
+      ),
+    ).toBe('unreadable');
   });
 });

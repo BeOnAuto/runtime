@@ -20,6 +20,10 @@ export const ConflictKindSchema = Schema.Literals([
   'license_invalid',
   'account_closed',
   'blocked_by_moderation',
+  'incomplete',
+  'in_use',
+  'runs_in_progress',
+  'connection_not_accessible',
 ]);
 
 export type ConflictKind = typeof ConflictKindSchema.Type;

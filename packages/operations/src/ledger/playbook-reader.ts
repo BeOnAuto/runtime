@@ -1,8 +1,9 @@
 import type { KeptContentHead, StreamedContent } from '@on.auto/content';
 import { Context, Effect } from 'effect';
 
-import { PlaybookContext } from '../caller/playbook-context.ts';
+import { PlaybookContext, type PlaybookAddress } from '../caller/playbook-context.ts';
 import type { HeldName } from '../definition-names/name-judgement.ts';
+import type { TypedRejection } from '../outcome/typed-rejection.ts';
 import { payloadReaderOf, type PayloadReader } from '../payloads/payload-reader.ts';
 import { PayloadsShared } from '../payloads/shared-payloads.ts';
 import type { BoundProjectionReader } from '../projections/keyed-projection.ts';
@@ -37,6 +38,26 @@ export class PlaybookReader extends Context.Service<
     PlaybookContentReader &
     PlaybookDefinitionsReader
 >()('@on.auto/operations/PlaybookReader') {}
+
+export interface AdmittedPlaybook {
+  readonly address: PlaybookAddress;
+  readonly reader: PlaybookReader['Service'];
+}
+
+export interface PlaybookAdmissions {
+  readonly admitted: (playbook: string) => Effect.Effect<AdmittedPlaybook, TypedRejection>;
+}
+
+const admittedNowhere: PlaybookAdmissions = {
+  admitted: (playbook) =>
+    Effect.die(
+      new Error(`A call the dispatcher did not admit is admitted to no other playbook, ${playbook} among them`),
+    ),
+};
+
+export const PlaybookAdmission = Context.Reference<PlaybookAdmissions>('@on.auto/operations/PlaybookAdmission', {
+  defaultValue: () => admittedNowhere,
+});
 
 export const playbookPayloadReader: Effect.Effect<PayloadReader, never, PlaybookReader | PlaybookContext> = Effect.gen(
   function* () {

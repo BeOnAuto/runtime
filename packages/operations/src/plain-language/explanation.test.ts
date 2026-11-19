@@ -127,6 +127,13 @@ describe('explanationOf', () => {
     );
   });
 
+  it('explains a move that leaves out what goes with it in the words of any input it did not take', () => {
+    expect((['incomplete', 'in_use'] as const).map((kind) => explanationOf({ reason: 'conflict', kind }))).toEqual([
+      explanationOf({ reason: 'invalid_input' }),
+      explanationOf({ reason: 'invalid_input' }),
+    ]);
+  });
+
   it.each(byConflict)('explains a conflict of the kind %s', (kind, why, remedy) => {
     expect(explanationOf({ reason: 'conflict', kind })).toEqual({ why, remedy });
   });

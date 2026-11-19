@@ -3,6 +3,7 @@ import type { ContentHolders, Presenter } from '@on.auto/operations';
 import { defineGetPlaybookAnalytics } from '../analytics/get-playbook-analytics.ts';
 import { defineCancelRun } from '../cancellation/cancel-run.ts';
 import type { Capability } from '../capability/capability.ts';
+import type { ConnectionAccess } from '../moving/move-destination.ts';
 import { makeDefinitionPresenters } from '../presenting/definition-presenters.ts';
 import { composedFactsOf, type CapabilityFacts } from '../run-work/declared-facts.ts';
 import { defineGetRunHistory } from './get-run-history.ts';
@@ -13,6 +14,7 @@ export interface RunReading {
   readonly holders: ContentHolders;
   readonly facts?: CapabilityFacts;
   readonly presenters?: readonly Presenter[];
+  readonly connections?: ConnectionAccess;
 }
 
 export function runOperations(capabilities: readonly Capability[], { holders, ...composed }: RunReading) {

@@ -45,6 +45,19 @@ export interface StreamWriter {
   ) => Effect.Effect<DecidedState<State>, Rejection<R> | Conflict>;
 }
 
+export interface StreamDecision<State, Command, Event extends Recorded, R extends DeclarableReason> {
+  readonly stream: string;
+  readonly decider: Decider<State, Command, Event, R>;
+  readonly command: Command;
+}
+
+export interface MultiStreamWriter {
+  readonly executeMultiStream: <State, Command, Event extends Recorded, R extends DeclarableReason>(
+    decisions: readonly StreamDecision<State, Command, Event, R>[],
+    lineage?: Lineage,
+  ) => Effect.Effect<readonly DecidedState<State>[], Rejection<R> | Conflict>;
+}
+
 export interface RecordedReader {
   readonly readRecorded: (
     playbook: PlaybookAddress,

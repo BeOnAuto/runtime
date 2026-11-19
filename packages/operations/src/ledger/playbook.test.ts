@@ -1,6 +1,6 @@
 import { sha256Of, textToKeep } from '@on.auto/content';
 import { memoryContentStore } from '@on.auto/content/testing';
-import { Effect } from 'effect';
+import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { type PlaybookAddress, PlaybookContext } from '../caller/playbook-context.ts';
@@ -124,6 +124,15 @@ describe('the ledger of one playbook, for code that holds the whole ledger', () 
   });
 });
 
+function notedOnTwoDefinitions(stream: string) {
+  return PlaybookWriter.use((writer) =>
+    writer.executeOnDefinitions([
+      { definition: 'd1', stream: 'notes', decider: notebook, command: { name: 'anvil', text: 'heavy' } },
+      { definition: 'd2', stream, decider: notebook, command: { name: 'bolt', text: 'light' } },
+    ]),
+  );
+}
+
 describe('the definitions of one playbook, for code that holds the whole ledger', () => {
   it("reads and writes the streams of a definition of the playbook's org under the definition's key", async () => {
     const ledger = memoryLedger();
@@ -152,6 +161,18 @@ describe('the definitions of one playbook, for code that holds the whole ledger'
         definitionBoundStreamReader(ledger.service, { org: 'acme', definition: 'd1' }).load('notes', notebook),
       ),
     ).toMatchObject({ state: [{ name: 'anvil', text: 'heavy' }] });
+  });
+
+  it('decides on the streams of several of its definitions at once, each under its own key, and refuses a malformed stream', async () => {
+    const ledger = memoryLedger();
+    const inAlpha = playbookLedgerOf(ledger.service, { org: 'acme', playbook: 'alpha' });
+
+    const answered = await Effect.runPromise(Effect.provideContext(notedOnTwoDefinitions('notes'), inAlpha));
+    const malformed = await Effect.runPromiseExit(Effect.provideContext(notedOnTwoDefinitions('../notes'), inAlpha));
+
+    expect(answered.map(({ version }) => version)).toEqual([1, 1]);
+    expect(ledger.streamNames()).toEqual(['definition/acme/d1/notes', 'definition/acme/d2/notes']);
+    expect(Exit.isFailure(malformed)).toBe(true);
   });
 });
 

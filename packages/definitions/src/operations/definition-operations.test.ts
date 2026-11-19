@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionOperations } from '../index.ts';
+import { composedFactsOf } from '../run-work/declared-facts.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { runContentHolders } from '../testing/harness.ts';
@@ -102,5 +103,26 @@ describe('the definition operations for a list of capabilities', () => {
         holders: runContentHolders,
       }),
     ).toThrow('The type echo is used more than once');
+  });
+});
+
+function named(served: readonly { readonly registration: { readonly name: string } }[]): readonly string[] {
+  return served.map(({ registration }) => registration.name).filter((name) => name === 'move_definitions');
+}
+
+describe('the definition operations of a composition that says which playbooks may use a connection', () => {
+  it('serve move_definitions beside them, and none without it', () => {
+    const connections = { hasAccess: () => Effect.succeed(true) };
+
+    expect([
+      named(
+        makeDefinitionOperations([echo], uncheckedPages, {
+          holders: runContentHolders,
+          connections,
+          facts: composedFactsOf([echo]),
+        }),
+      ),
+      named(makeDefinitionOperations([echo], uncheckedPages, { holders: runContentHolders })),
+    ]).toEqual([['move_definitions'], []]);
   });
 });

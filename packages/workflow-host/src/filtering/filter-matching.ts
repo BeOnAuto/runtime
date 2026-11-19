@@ -36,6 +36,7 @@ export interface FilterStops {
   readonly holds: (place: FilterPlace) => boolean;
   readonly activated: (playbookKey: string, workflow: string, version: number) => void;
   readonly retired: (playbookKey: string, workflow: string) => void;
+  readonly moved: (from: string, to: string, workflow: string) => void;
   readonly listenerEnded: (place: FilterPlace) => void;
 }
 
@@ -63,6 +64,7 @@ interface PlacedFilter {
 
 interface Struck {
   readonly place: FilterPlace;
+  readonly index: number;
   readonly inARow: number;
 }
 
@@ -80,6 +82,25 @@ function filterKeyOf(place: FilterPlace, index: number): string {
 
 function ofWorkflow(playbookKey: string, workflow: string): (place: FilterPlace) => boolean {
   return (place) => place.playbookKey === playbookKey && place.workflow === workflow;
+}
+
+function movedIn(strikes: Map<string, Struck>, failed: Map<string, FilterPlace>): FilterStops['moved'] {
+  return (from, to, workflow) => {
+    const ofIt = ofWorkflow(from, workflow);
+    for (const [key, held] of strikes) {
+      if (ofIt(held.place)) {
+        const place = { ...held.place, playbookKey: to };
+        strikes.delete(key);
+        strikes.set(filterKeyOf(place, held.index), { ...held, place });
+      }
+    }
+    for (const [key, place] of failed) {
+      if (ofIt(place)) {
+        failed.delete(key);
+        failed.set(placeKeyOf({ ...place, playbookKey: to }), { ...place, playbookKey: to });
+      }
+    }
+  };
 }
 
 export function filterStops(): FilterStops {
@@ -106,7 +127,7 @@ export function filterStops(): FilterStops {
         return answered;
       }
       const inARow = (strikes.get(key)?.inARow ?? 0) + 1;
-      strikes.set(key, { place, inARow });
+      strikes.set(key, { place, index, inARow });
       return inARow >= stopsInARowBeforeTheVersion ? { kind: 'stopped', error: verdict.error } : struck;
     },
     failedFirst: (place) => {
@@ -123,6 +144,7 @@ export function filterStops(): FilterStops {
       const ofIt = ofWorkflow(playbookKey, workflow);
       forgotten((place) => ofIt(place) && place.kind === 'trigger');
     },
+    moved: movedIn(strikes, failed),
     listenerEnded: (ended) => {
       forgotten((place) => placeKeyOf(place) === placeKeyOf(ended));
     },

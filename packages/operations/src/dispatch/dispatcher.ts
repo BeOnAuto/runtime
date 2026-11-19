@@ -7,7 +7,7 @@ import type { Outcome, Rejected, Succeeded } from '../outcome/outcome.ts';
 import { permittedAsDecidedBy, withoutDispatcherServices, type DispatcherServices } from './dispatcher-services.ts';
 import { withinOperation } from './operation-span.ts';
 import { runInOrg } from './org-binding.ts';
-import { runInPlaybook } from './playbook-binding.ts';
+import { playbookBindingOf, runInPlaybook } from './playbook-binding.ts';
 import type { PlaybookRequest, OrgRequest } from './request.ts';
 
 export type PipelineStep = (
@@ -56,8 +56,8 @@ export function makeDispatcher(steps: readonly PipelineStep[], options: Dispatch
         Effect.gen(function* () {
           const status = yield* admittedPlaybookCall(options, registration, request);
           yield* passSteps(registration, request);
-          const ledger = yield* Ledger;
-          return yield* runInPlaybook(registration, request, { ledger, lifecycle: { status } }).pipe(
+          const bound = yield* playbookBindingOf({ options, registration, request }, status);
+          return yield* runInPlaybook(registration, request, bound).pipe(
             withoutDispatcherServices,
             permittedAsDecidedBy(options.decidedBy),
           );

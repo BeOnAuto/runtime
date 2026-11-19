@@ -161,7 +161,15 @@ async function reasonFunctionsCalled(session: McpSession): Promise<Called> {
     ['list_playbook_events', listed],
     ['get_event', await session.callTool('get_event', inSales({ event_id: firstEventIn(listed) }))],
     ['list_playbook_events', await session.callTool('list_playbook_events', { playbook: 'old-sales' })],
+    ['move_definitions', await movedOnce(session)],
   ];
+}
+
+async function movedOnce(session: McpSession): Promise<ToolResult> {
+  const digest = { type: 'reasoning', name: 'digest' };
+  const naming = summary.replace('description:', 'tools: [graph/search]\ndescription:');
+  await session.callTool('create_definition', inSales({ ...digest, source: naming, diagram: 'none' }));
+  return session.callTool('move_definitions', inSales({ to: 'past-sales', definitions: [digest] }));
 }
 
 async function workflowsCalled(session: McpSession): Promise<Called> {

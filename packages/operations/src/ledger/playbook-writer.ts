@@ -6,13 +6,14 @@ import type { Unavailable } from '../outcome/unavailable.ts';
 import { payloadKept } from '../payloads/payload-keeping.ts';
 import type { PayloadToKeep } from '../payloads/payload-texts.ts';
 import { PayloadsShared } from '../payloads/shared-payloads.ts';
+import type { DefinitionsWriter } from './definitions-writer.ts';
 import type { StreamWriter } from './stream-ports.ts';
 
 export interface PlaybookContentWriter {
   readonly keepContent: (content: ContentToKeep) => Effect.Effect<ContentKept, ContentRefused>;
 }
 
-export interface PlaybookDefinitionsWriter {
+export interface PlaybookDefinitionsWriter extends DefinitionsWriter {
   readonly ofDefinition: (definition: string) => StreamWriter;
 }
 

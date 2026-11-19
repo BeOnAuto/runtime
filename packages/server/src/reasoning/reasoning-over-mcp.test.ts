@@ -114,7 +114,7 @@ describe('the definition tools an agent sees on the endpoint of a playbook', () 
     const tools = listedTools(await onAlpha([], (session) => session.listTools()));
     const schemas = tools.map(({ inputSchema }) => inputSchema);
 
-    expect(schemas).toHaveLength(28);
+    expect(schemas).toHaveLength(29);
     expect(schemas.map((schema) => schema['type'])).toEqual(schemas.map(() => 'object'));
     expect(schemas.flatMap((schema) => danglingReferencesIn(schema))).toEqual([]);
   });

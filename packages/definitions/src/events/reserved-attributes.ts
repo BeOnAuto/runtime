@@ -33,6 +33,7 @@ const playbookFeedTypes: Readonly<Record<PlaybookFeedType, true>> = {
   definition_paused: true,
   definition_resumed: true,
   definition_restored: true,
+  definition_moved: true,
   playbook_page_saved: true,
   playbook_goals_saved: true,
   playbook_goals_agreed: true,

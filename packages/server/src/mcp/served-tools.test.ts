@@ -115,6 +115,7 @@ const served: Readonly<Record<string, Hints>> = {
   resume_definition: [false, true, true, false],
   retire_definition: [false, true, true, false],
   restore_definition: [false, true, true, false],
+  move_definitions: [false, true, false, false],
   run_definition: [false, true, false, true],
   get_run: [true, false, true, false],
   cancel_run: [false, true, true, false],
@@ -189,8 +190,8 @@ describe('served tools', () => {
   });
 
   describe('the descriptions of the tools of /mcp', () => {
-    it('are forty-one, each under 800 characters, in three to eight sentences', () => {
-      expect(tools).toHaveLength(41);
+    it('are forty-two, each under 800 characters, in three to eight sentences', () => {
+      expect(tools).toHaveLength(42);
       expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
       expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
     });
@@ -288,8 +289,8 @@ describe('served tools with goals', () => {
   });
 
   describe('the tools of /mcp on a server that keeps goals', () => {
-    it('stay forty-three, each under 800 characters, in three to eight sentences', () => {
-      expect(tools).toHaveLength(43);
+    it('stay forty-four, each under 800 characters, in three to eight sentences', () => {
+      expect(tools).toHaveLength(44);
       expect(tools.filter((tool) => isOutsideItsBounds(tool)).map(({ name }) => name)).toEqual([]);
     });
 

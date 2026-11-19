@@ -80,6 +80,9 @@ function rowAfterFact(
   position: number,
 ): ProjectedRow {
   const { at } = fact.context;
+  if (fact.type === 'definition_moved') {
+    return row;
+  }
   if (fact.type === 'definition_updated') {
     const version = fact.context.definitionVersion;
     const saved = { ...contentColumns(fact.data.content), saved_position: position };

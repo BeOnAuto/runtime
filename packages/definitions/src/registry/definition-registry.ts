@@ -109,6 +109,9 @@ function evolvedDefinition(
   definition: RegisteredDefinition,
   event: Exclude<RecordedDefinitionEvent, DefinitionCreated>,
 ): RegisteredDefinition {
+  if (event.type === 'definition_moved') {
+    return definition;
+  }
   if (event.type === 'definition_updated') {
     return updatedDefinition(definition, event);
   }

@@ -15,7 +15,7 @@ import {
   type ToolAccessOptions,
   type ToolServerDocumentRefused,
 } from '@on.auto/tool-servers';
-import { Context, Effect, Layer } from 'effect';
+import { Array as Arr, Context, Effect, Layer } from 'effect';
 
 import { logLeftOutOperation, logMarkUnlisted, logServerMessage } from '../logging/tool-server-logging.ts';
 import type { Settings } from '../settings/settings.ts';
@@ -120,5 +120,12 @@ export function toolAccessOf(
     lookUp: (address, reference) => Effect.flatMap(tools, (access) => access.lookUp(address, reference)),
     listConnection: (org, connection) => Effect.flatMap(tools, (access) => access.listConnection(org, connection)),
     close: () => Promise.resolve(),
+  };
+}
+
+export function connectionAccessOf(listServers: ToolAccess['listServers']) {
+  return {
+    hasAccess: (playbook: Parameters<ToolAccess['listServers']>[0], connection: string) =>
+      Effect.map(listServers(playbook, connection), Arr.isReadonlyArrayNonEmpty),
   };
 }

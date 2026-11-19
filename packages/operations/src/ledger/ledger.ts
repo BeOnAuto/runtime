@@ -8,6 +8,7 @@ import type { RunIdInAnOrg } from '../run-ids/run-ids.ts';
 import type { FactScrubber } from './fact-scrub.ts';
 import type {
   AppendedFactsReader,
+  MultiStreamWriter,
   RecordedReader,
   RunOutcomesReader,
   StreamAges,
@@ -33,6 +34,7 @@ export interface ContentKeeper {
 export type LedgerPorts = StreamReader &
   StreamAges &
   StreamWriter &
+  MultiStreamWriter &
   DefinitionNamesReader &
   RunIdsReader &
   FactScrubber &

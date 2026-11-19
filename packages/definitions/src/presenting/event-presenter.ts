@@ -10,6 +10,7 @@ export interface EventPresenting<Event extends Recorded> {
   readonly streamKind: string;
   readonly eventSchema: Schema.ConstraintCodec<Event, unknown>;
   readonly types: readonly Event['type'][];
+  readonly hidden?: readonly string[];
   readonly account: (event: Event, subject: string) => Account;
   readonly changes: ChangesNamed;
 }
@@ -18,6 +19,7 @@ export function eventPresenter<Event extends Recorded>({
   streamKind,
   eventSchema,
   types,
+  hidden = [],
   account,
   changes,
 }: EventPresenting<Event>): Presenter {
@@ -25,7 +27,10 @@ export function eventPresenter<Event extends Recorded>({
   const subjectStart = streamKind.length + 1;
   return {
     streamKind,
-    publicNames: Object.fromEntries(types.map((type) => [type, [type]])),
+    publicNames: Object.fromEntries([
+      ...types.map((type): readonly [string, readonly string[]] => [type, [type]]),
+      ...hidden.map((type): readonly [string, readonly string[]] => [type, []]),
+    ]),
     present: (recorded) => {
       const event = decode(recorded);
       return [{ type: event.type, ...account(event, recorded.stream.slice(subjectStart)) }];

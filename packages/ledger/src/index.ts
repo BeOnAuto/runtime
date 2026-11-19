@@ -84,13 +84,13 @@ export type { LedgerServices, OpenedLedger } from './ledger-layer.ts';
 export { cursorOf as recordedCursorOf } from './recorded/cursor.ts';
 export {
   decisionLoop,
-  streamPortsOf,
   type Decision,
   type DecidedPlace,
   type DecisionLoop,
   type StreamAppend,
   type StreamLoad,
-} from './ledger-service.ts';
+} from './decision-loop.ts';
+export { streamPortsOf } from './ledger-service.ts';
 export { sqliteLedgerLayer, sqliteLedgerOpened } from './connection/sqlite-opening.ts';
 export { sqliteEventStore, type SQLiteStoreOptions } from './sqlite-event-store.ts';
 export { sqliteSecretRowsOn } from './secrets/sqlite-secret-rows.ts';

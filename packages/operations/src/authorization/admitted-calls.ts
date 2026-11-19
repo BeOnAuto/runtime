@@ -57,6 +57,7 @@ function authorizedPlaybookCall(
   options: DispatcherOptions,
   registration: Runnable<'playbook'>,
   request: PlaybookRequest,
+  notAccessible: string | undefined,
 ): Effect.Effect<void, Rejected> {
   return admittedAs(
     options,
@@ -65,7 +66,7 @@ function authorizedPlaybookCall(
       summary: callSummaryOf(registration.name, request, request.playbook),
       request: accessRequestOfPlaybookCall(registration, request, inAConversation),
     }),
-    authorizePlaybookCall(registration, request),
+    authorizePlaybookCall(registration, request, notAccessible),
   );
 }
 
@@ -84,9 +85,10 @@ export function admittedPlaybookCall(
   options: DispatcherOptions,
   registration: Runnable<'playbook'>,
   request: PlaybookRequest,
+  notAccessible?: string,
 ): Effect.Effect<LivePlaybookStatus, Rejected, PlaybookRegistry> {
   return Effect.gen(function* () {
-    yield* authorizedPlaybookCall(options, registration, request);
+    yield* authorizedPlaybookCall(options, registration, request, notAccessible);
     return yield* confirmPlaybookTakesCall(registration, request);
   });
 }

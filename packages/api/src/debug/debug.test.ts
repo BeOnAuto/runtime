@@ -15,7 +15,7 @@ import { textOf, withMcpSession } from '../testing/mcp-clients.ts';
 import { acmeAdmin } from '../testing/operation-server.ts';
 import { toolNamesIn } from '../testing/tool-listing.ts';
 import { debugPageAnswerOf } from './debug-routes.ts';
-import { type ShownTool, toolGroupsOf } from './shown-tools.ts';
+import { argumentsIn, type ShownTool, toolGroupsOf } from './shown-tools.ts';
 
 let served: DebugPageServer;
 
@@ -34,6 +34,27 @@ describe('a tool on the page at /debug', () => {
     expect(text).toContain('<td><code>string | null</code></td>');
     expect(text).toContain('<td>size.pages<span class="required">required</span></td>');
     expect(text).toContain('<p class="subtitle">Takes no arguments.</p>');
+  });
+
+  it('shows the arguments of each item of a list by the path of the list', () => {
+    const listed = {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { kind: { type: 'string', description: 'Its kind' } },
+            required: ['kind'],
+          },
+        },
+      },
+    };
+
+    expect(argumentsIn(listed).map(({ name, required, description }) => [name, required, description])).toEqual([
+      ['items', false, ''],
+      ['items[].kind', true, 'Its kind'],
+    ]);
   });
 
   it('shows the values an argument takes, its pattern or its longest length', () => {

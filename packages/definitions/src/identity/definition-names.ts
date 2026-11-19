@@ -1,5 +1,4 @@
-import { Conflict } from '@on.auto/operations';
-import { streamPrefixOfPlaybook } from '@on.auto/operations';
+import { Conflict, playbookOfStreamPrefix, streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
 import type {
   DefinitionName,
   DefinitionNames,
@@ -8,8 +7,10 @@ import type {
   NamedMessage,
 } from '@on.auto/operations/definition-names';
 import { plainNumber } from '@on.auto/phrasing';
+import { Option } from 'effect';
 
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
+import { takenWords } from '../moving/move-words.ts';
 import { definitionFactOf } from '../read-model/definition-rows.ts';
 import { definitionFactTypes, type RecordedDefinitionEvent } from '../registry/definition-events.ts';
 import { hasTriggers } from '../registry/definition-triggers.ts';
@@ -57,7 +58,10 @@ function createdName(
 
 const statusAfter = { definition_paused: 'paused', definition_resumed: 'active', definition_retired: 'retired' };
 
-function changedName(held: DefinitionName, fact: Exclude<RecordedDefinitionEvent, { type: 'definition_created' }>) {
+function changedName(
+  held: DefinitionName,
+  fact: Exclude<RecordedDefinitionEvent, { type: 'definition_created' | 'definition_moved' }>,
+) {
   if (fact.type === 'definition_updated') {
     return { ...held, hasTriggers: hasTriggers(fact.data.content) };
   }
@@ -67,34 +71,96 @@ function changedName(held: DefinitionName, fact: Exclude<RecordedDefinitionEvent
   return { ...held, status: statusAfter[fact.type] };
 }
 
+function movedName(
+  types: readonly string[],
+  stream: string,
+  held: DefinitionName,
+  { data }: Extract<RecordedDefinitionEvent, { type: 'definition_moved' }>,
+): NameAfter {
+  const addressed = definitionStreamOf(types, stream);
+  return addressed === undefined
+    ? undefined
+    : { ...held, playbookKey: streamPrefixOfPlaybook({ org: addressed.org, playbook: data.to }) };
+}
+
+function nameChangedBy(
+  types: readonly string[],
+  stream: string,
+  held: DefinitionName,
+  fact: Exclude<RecordedDefinitionEvent, { type: 'definition_created' }>,
+): NameAfter {
+  return fact.type === 'definition_moved' ? movedName(types, stream, held, fact) : changedName(held, fact);
+}
+
 function nameAfterIn(types: readonly string[]): DefinitionNames['nameAfter'] {
   return (held, message) => {
     const fact = definitionFactOf(message);
     if (fact?.type === 'definition_created') {
       return createdName(types, message.stream, fact);
     }
-    return held === undefined || fact === undefined ? undefined : changedName(held, fact);
+    return held === undefined || fact === undefined ? undefined : nameChangedBy(types, message.stream, held, fact);
   };
 }
 
-function takenBy(claimed: DefinitionName, holder: DefinitionName): Conflict {
+const moved = 'definition_moved';
+
+function playbookMovedInto(
+  { playbookKey }: DefinitionName,
+  factTypes: readonly string[],
+): Option.Option<PlaybookAddress> {
+  return factTypes.includes(moved) ? playbookOfStreamPrefix(playbookKey) : Option.none();
+}
+
+function takenWhere(claimed: DefinitionName, holder: DefinitionName, factTypes: readonly string[]): string {
   const label = definitionResourceLabel(claimed.definitionType);
-  return new Conflict({
-    detail:
-      holder.status === 'retired'
+  const retired = holder.status === 'retired';
+  return Option.match(playbookMovedInto(claimed, factTypes), {
+    onNone: () =>
+      retired
         ? `The ${label} ${holder.name} was retired and keeps its name; restore_definition brings it back`
         : `The playbook already has the ${label} ${holder.name}`,
+    onSome: ({ playbook }) => takenWords(playbook, { type: claimed.definitionType, name: holder.name }, retired),
+  });
+}
+
+function takenBy(claimed: DefinitionName, holder: DefinitionName, changedBy: readonly NamedMessage[]): Conflict {
+  return new Conflict({
+    detail: takenWhere(
+      claimed,
+      holder,
+      changedBy.map(({ type }) => type),
+    ),
     kind: 'taken',
   });
 }
 
-const checkedBy = ['definition_created', 'definition_updated', 'definition_restored'];
+const checkedBy = ['definition_created', 'definition_updated', 'definition_restored', moved];
+
+const savings: Readonly<Record<string, string>> = {
+  definition_created: 'creating another',
+  definition_updated: 'saving another version',
+  [moved]: 'moving another into it',
+};
 
 function savingOf(factType: string): string {
-  if (factType === 'definition_created') {
-    return 'creating another';
-  }
-  return factType === 'definition_updated' ? 'saving another version' : 'restoring one';
+  return savings[factType] ?? 'restoring one';
+}
+
+function startingOnTheirOwn(claimed: DefinitionName, factType: string): string {
+  const starting = `${mostReactingDefinitions} ${definitionResourceLabel(claimed.definitionType)}s that start on their own, the most a playbook holds`;
+  return Option.match(playbookMovedInto(claimed, [factType]), {
+    onNone: () => `The playbook already has ${starting}; retire one, or save this one without its schedule`,
+    onSome: ({ playbook }) =>
+      `The playbook ${playbook} already has ${starting}; retire one there before moving another into it, or save this one without its schedule and then move it`,
+  });
+}
+
+function keptBeyond(claimed: DefinitionName, factType: string, before: number, most: number): string {
+  const kept = `keeps ${plainNumber(before)} ${definitionResourceLabel(claimed.definitionType)}s, and a playbook may keep at most ${plainNumber(most)}`;
+  return Option.match(playbookMovedInto(claimed, [factType]), {
+    onNone: () => `The playbook ${kept}; retire one before ${savingOf(factType)}`,
+    onSome: ({ playbook }) => `The playbook ${playbook} ${kept}; retire one there before ${savingOf(factType)}`,
+  });
 }
 
 function boundsOf(mostActiveOf: (type: string) => number): readonly NameBound[] {
@@ -103,19 +169,14 @@ function boundsOf(mostActiveOf: (type: string) => number): readonly NameBound[] 
       checkedBy,
       counts: ({ status }) => status !== 'retired',
       most: mostActiveOf,
-      beyond: ({ definitionType }, factType, before, most) =>
-        new Conflict({
-          detail: `The playbook keeps ${plainNumber(before)} ${definitionResourceLabel(definitionType)}s, and a playbook may keep at most ${plainNumber(most)}; retire one before ${savingOf(factType)}`,
-        }),
+      beyond: (claimed, factType, before, most) =>
+        new Conflict({ detail: keptBeyond(claimed, factType, before, most) }),
     },
     {
       checkedBy,
       counts: (name) => name.status !== 'retired' && name.hasTriggers,
       most: () => mostReactingDefinitions,
-      beyond: ({ definitionType }) =>
-        new Conflict({
-          detail: `The playbook already has ${mostReactingDefinitions} ${definitionResourceLabel(definitionType)}s that start on their own, the most a playbook holds; retire one, or save this one without its schedule`,
-        }),
+      beyond: (claimed, factType) => new Conflict({ detail: startingOnTheirOwn(claimed, factType) }),
     },
   ];
 }

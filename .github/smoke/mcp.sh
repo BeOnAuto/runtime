@@ -42,7 +42,7 @@ grep --quiet '"id":"smoke","name":"Smoke test"' listed.txt
 test "$(answered read.json --header "authorization: Bearer $key" http://127.0.0.1:$port/v1/orgs/demo/playbooks/smoke)" = 200
 grep --quiet '"id":"smoke","name":"Smoke test"' read.json
 call_mcp /mcp '{"jsonrpc":"2.0","id":4,"method":"tools/list"}' all-tools.txt
-test "$(grep --only-matching '"name":"[a-z_]*","title"' all-tools.txt | wc -l)" -eq 43
+test "$(grep --only-matching '"name":"[a-z_]*","title"' all-tools.txt | wc -l)" -eq 44
 for tool in list_models list_generation_models list_runs get_event list_playbook_events publish_event search introspect dry_run query_connection execute_connection list_connection_tools list_interactions answer_interaction get_asset send_run_event cancel_run get_guide; do
   grep --quiet "\"name\":\"$tool\"" all-tools.txt
 done
@@ -87,7 +87,7 @@ call_mcp /mcp '{"jsonrpc":"2.0","id":10,"method":"resources/list"}' resources.tx
 test "$(grep --only-matching '"uri":"guide://[a-z-]*"' resources.txt | wc -l)" -eq 21
 grep --quiet '"uri":"guide://lookup-function"' resources.txt
 call_mcp /directory '{"jsonrpc":"2.0","id":23,"method":"tools/list"}' directory-tools.txt
-test "$(grep --only-matching '"name":"[a-z_]*","title"' directory-tools.txt | wc -l)" -eq 41
+test "$(grep --only-matching '"name":"[a-z_]*","title"' directory-tools.txt | wc -l)" -eq 42
 test "$(grep --count 'generation' directory-tools.txt)" = 0
 test "$(grep --count '"name":"get_asset"' directory-tools.txt)" = 0
 call_mcp /directory '{"jsonrpc":"2.0","id":24,"method":"resources/list"}' directory-resources.txt

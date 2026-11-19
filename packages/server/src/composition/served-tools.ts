@@ -8,6 +8,7 @@ import { interactionServedBy, type ServedInteraction } from './served-interactio
 import { lookupServedBy, type ServedLookup } from './served-lookup.ts';
 import { reasoningServedBy, type ServedReasoning } from './served-reasoning.ts';
 import {
+  connectionAccessOf,
   requestWaysOf,
   toolAccessOf,
   type MadeToolAccess,
@@ -30,6 +31,7 @@ export interface ServedToolUsers {
   readonly interaction: ServedInteraction;
   readonly toolOperations: ServedToolOperations;
   readonly listServers: MadeToolAccess['listServers'];
+  readonly connections: ReturnType<typeof connectionAccessOf>;
   readonly named: MadeToolAccess['named'];
   readonly subscriptions: ReturnType<typeof subscriptionsOfTheServer>;
 }
@@ -49,6 +51,7 @@ export async function toolUsersServedBy(
     interaction: interactionServedBy(runtime, settings, tools, results === true),
     toolOperations: toolOperationsOf(tools, { offering, goals, messages }),
     listServers: tools.listServers,
+    connections: connectionAccessOf(tools.listServers),
     named: tools.named,
     subscriptions: subscriptionsOfTheServer(runtime, settings, {
       tools: { ...tools, ...requestWaysOf(registry.tools) },

@@ -43,7 +43,7 @@ export function runStreamNameOf(id: string): string {
   return `runs/${id}`;
 }
 
-function wellFormed(stream: string): Effect.Effect<string> {
+export function wellFormed(stream: string): Effect.Effect<string> {
   return stream.length <= longestStreamName && streamNameGrammar.test(stream)
     ? Effect.succeed(stream)
     : Effect.die(new Error(`The stream name ${JSON.stringify(stream)} is malformed`));

@@ -38,7 +38,7 @@ export interface DefinitionNames {
   readonly holdsNames: (stream: string) => boolean;
   readonly definitionKeyOf: (message: NamedMessage) => string | undefined;
   readonly nameAfter: (held: DefinitionName | undefined, message: NamedMessage) => NameAfter;
-  readonly takenBy: (claimed: DefinitionName, holder: DefinitionName) => Conflict;
+  readonly takenBy: (claimed: DefinitionName, holder: DefinitionName, changedBy: readonly NamedMessage[]) => Conflict;
   readonly bounds?: readonly NameBound[];
 }
 
@@ -165,7 +165,9 @@ export function takenRefusal(
     heldAtTheEnd(judged, holder.definitionKey, claimed)
       ? holder
       : otherClaimantOf(judged, claim);
-  return holding === undefined ? undefined : { conflict: names.takenBy(claimed, holding), stream: claimant.stream };
+  return holding === undefined
+    ? undefined
+    : { conflict: names.takenBy(claimed, holding, claimant.changedBy), stream: claimant.stream };
 }
 
 function kindOf({ playbookKey, definitionType }: DefinitionName): NamesOfAKind {

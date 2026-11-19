@@ -4,4 +4,7 @@ export const ForbiddenKindSchema = Schema.Literals(['permission_denied', 'not_al
 
 export type ForbiddenKind = typeof ForbiddenKindSchema.Type;
 
-export class Forbidden extends Data.TaggedError('forbidden')<{ readonly detail: string }> {}
+export class Forbidden extends Data.TaggedError('forbidden')<{
+  readonly detail: string;
+  readonly kind?: ForbiddenKind;
+}> {}

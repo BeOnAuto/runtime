@@ -47,6 +47,12 @@ describe('the change a record of a definition makes to what starts on its own', 
     ]);
   });
 
+  it('moves the definition from the playbook it was in to the one it moved to, at no new version', () => {
+    expect(
+      changeOf({ type: 'definition_moved', data: { from: 'alpha', to: 'beta', moved_by: recordedAdmin } }, 'close', 2),
+    ).toEqual({ kind: 'moved', name: 'close', from: 'alpha', to: 'beta' });
+  });
+
   it('pauses the definition, and resumes it from the time of its resumption', () => {
     expect([
       changeOf({ type: 'definition_paused', data: { paused_by: recordedAdmin, reason: 'The month is closed' } }),

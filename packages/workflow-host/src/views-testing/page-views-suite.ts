@@ -10,8 +10,10 @@ import {
   reconciledPages,
   startedOnPages,
 } from './page-documents.ts';
-import { foldedAll, isStalled, liveAt } from './view-documents.ts';
+import { foldedAll, isStalled, liveAt, type Playbook } from './view-documents.ts';
 import { viewHarness } from './view-harness.ts';
+
+const beta: Playbook = { org: 'acme', playbook: 'beta' };
 
 function foldingTests(settingsOf: SettingsOf): void {
   it('are folded from the playbook’s history, kept under the type and the name of the page’s subject', async () => {
@@ -123,10 +125,26 @@ function versionTests(settingsOf: SettingsOf): void {
   });
 }
 
+function movedTests(settingsOf: SettingsOf): void {
+  it('are dropped at the playbook their subject moved from, and made at the one it moved to from its own runs', async () => {
+    const views = await viewHarness(await settingsOf());
+    await views.pageSaved(morning, 1, pageDetails(countingPosts));
+    await views.ran(morning, 1, { underTheSubject: true });
+    startedOnPages(views);
+    await views.until(morning, foldedAll(1));
+
+    await views.subjectMoved(morning, beta);
+
+    expect(await views.gone(morning)).toBe(true);
+    expect((await views.until(morning, foldedAll(1), beta)).view).toEqual(postsOf(1));
+  });
+}
+
 export function pageViewsSuite(settingsOf: SettingsOf): void {
   describe('the views of a page', () => {
     foldingTests(settingsOf);
     shapeAndOrderTests(settingsOf);
     versionTests(settingsOf);
+    movedTests(settingsOf);
   });
 }

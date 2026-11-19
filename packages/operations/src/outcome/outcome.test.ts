@@ -9,7 +9,12 @@ import {
   problemTypeOf,
   reasonOfKind,
 } from '../index.ts';
-import { cappedOptions } from './outcome.ts';
+import { Conflict } from './conflict.ts';
+import { Forbidden } from './forbidden.ts';
+import { NotFound } from './not-found.ts';
+import { cappedOptions, rejected } from './outcome.ts';
+import { typedRejectionOf } from './typed-rejection.ts';
+import { Unavailable } from './unavailable.ts';
 
 describe('the options a refusal offers', () => {
   it('keep the question and every choice, each choice with at most one hundred issues of a detail and a pointer', () => {
@@ -100,6 +105,26 @@ describe('the types of problems', () => {
       'conflict',
       'conflict',
       'invalid_input',
+    ]);
+  });
+});
+
+describe('a rejection a handler answers again as its own', () => {
+  it('keeps the reason, the detail and a kind of that reason, and leaves out a kind of another', () => {
+    expect([
+      typedRejectionOf(rejected('forbidden', 'Not for you', undefined, 'permission_denied')),
+      typedRejectionOf(rejected('forbidden', 'Not here')),
+      typedRejectionOf(rejected('not_found', 'Nowhere')),
+      typedRejectionOf(rejected('unavailable', 'Later')),
+      typedRejectionOf(rejected('conflict', 'Retired', undefined, 'retired')),
+      typedRejectionOf(rejected('conflict', 'In the way', undefined, 'permission_denied')),
+    ]).toEqual([
+      new Forbidden({ detail: 'Not for you', kind: 'permission_denied' }),
+      new Forbidden({ detail: 'Not here' }),
+      new NotFound({ detail: 'Nowhere' }),
+      new Unavailable({ detail: 'Later' }),
+      new Conflict({ detail: 'Retired', kind: 'retired' }),
+      new Conflict({ detail: 'In the way' }),
     ]);
   });
 });

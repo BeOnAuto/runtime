@@ -28,11 +28,21 @@ function rejectionOfCaller(registration: Runnable, { caller, org }: OrgRequest):
 
 const playbookUnnamed = 'The caller may access only some playbooks of this org; name one of them in playbook';
 
-function rejectionOfPlaybookAccess(caller: CallerIdentity, playbook: unknown): Rejected | undefined {
+const playbookNotAccessible = 'The caller may not access this playbook';
+
+export function otherPlaybookNotAccessible(playbook: string): string {
+  return `The caller may not access the playbook ${playbook}`;
+}
+
+function rejectionOfPlaybookAccess(
+  caller: CallerIdentity,
+  playbook: unknown,
+  notAccessible = playbookNotAccessible,
+): Rejected | undefined {
   if (canAccessPlaybook(caller.playbooks, playbook)) {
     return undefined;
   }
-  return rejected('forbidden', playbook === undefined ? playbookUnnamed : 'The caller may not access this playbook');
+  return rejected('forbidden', playbook === undefined ? playbookUnnamed : notAccessible);
 }
 
 function rejectionOfOrgId(org: string): Rejected | undefined {
@@ -63,9 +73,11 @@ export function authorizeOrgCall(registration: Runnable<'org'>, request: OrgRequ
 export function authorizePlaybookCall(
   registration: Runnable<'playbook'>,
   request: PlaybookRequest,
+  notAccessible?: string,
 ): Effect.Effect<void, Rejected> {
   return failWith(
-    rejectionOfCaller(registration, request) ?? rejectionOfPlaybookAccess(request.caller, request.playbook),
+    rejectionOfCaller(registration, request) ??
+      rejectionOfPlaybookAccess(request.caller, request.playbook, notAccessible),
   );
 }
 

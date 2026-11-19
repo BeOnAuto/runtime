@@ -6,7 +6,7 @@ import { defineListOrgChanges, playbookChanges, playbookOperationsOf } from '@on
 
 import { playbookGoalsServedBy } from '../goals/reads/served-playbook-goals.ts';
 import { importOperationsOf } from '../importing/import-operations.ts';
-import type { ServedGoals, ServedPages } from './playbook-operations.ts';
+import type { ServedConnectionAccess, ServedGoals, ServedPages } from './playbook-operations.ts';
 import { playbookPagesServedBy } from './served-playbook-pages.ts';
 import type { ServedReasoning } from './served-reasoning.ts';
 
@@ -33,12 +33,13 @@ type ImportsServed = Parameters<typeof importOperationsOf>[1];
 
 export function orgPartsServedBy<Operation>(
   runtime: ServingRuntime,
-  served: ImportsServed & ServedReasoning,
+  served: ImportsServed & ServedReasoning & ServedConnectionAccess,
   inOrg: readonly Operation[],
 ) {
   const { listModels, getVoice, transcribe } = served;
   return {
     importsOver: importOperationsOf(runtime, served),
+    connections: served.connections,
     orgOperations: [...orgOperationsOfPlaybooks(runtime, served), listModels, getVoice, transcribe, ...inOrg],
   };
 }

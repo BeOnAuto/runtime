@@ -71,10 +71,10 @@ interface Endpoint {
 }
 
 const endpoints: readonly Endpoint[] = [
-  { path: '/mcp', tools: 41, bytes: 64_352, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 39, bytes: 61_937, mostBytes: mostListingBytes.directory },
+  { path: '/mcp', tools: 42, bytes: 66_503, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 40, bytes: 64_075, mostBytes: mostListingBytes.directory },
   { path: '/orgs/local/mcp', tools: 18, bytes: 24_229, mostBytes: mostListingBytes.org },
-  { path: '/orgs/local/playbooks/alpha/mcp', tools: 28, bytes: 43_562, mostBytes: mostListingBytes.playbook },
+  { path: '/orgs/local/playbooks/alpha/mcp', tools: 29, bytes: 45_589, mostBytes: mostListingBytes.playbook },
 ];
 
 function outputIn(result: ToolResult): unknown {
@@ -99,10 +99,10 @@ async function listingOnTheWireServedSchemasWith(
 }
 
 const endpointsServedSchemasWith = [
-  { path: '/mcp', tools: 43, bytes: 69_631, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 41, bytes: 67_216, mostBytes: mostListingBytes.directory },
+  { path: '/mcp', tools: 44, bytes: 71_782, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 42, bytes: 69_354, mostBytes: mostListingBytes.directory },
   { path: '/orgs/local/mcp', tools: 18, bytes: 26_070, mostBytes: mostListingBytes.org },
-  { path: '/orgs/local/playbooks/alpha/mcp', tools: 30, bytes: 46_914, mostBytes: mostListingBytes.playbook },
+  { path: '/orgs/local/playbooks/alpha/mcp', tools: 31, bytes: 48_941, mostBytes: mostListingBytes.playbook },
 ] as const;
 
 describe('served schemas', () => {
