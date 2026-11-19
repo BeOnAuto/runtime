@@ -1,11 +1,10 @@
-import { eventSubscriptions, subscriptionRecordsOf } from '@on.auto/connections';
+import { eventSubscriptions, subscriptionLoopPortsOf, subscriptionRecordsOf } from '@on.auto/connections';
 import { memoryLedger } from '@on.auto/operations/testing';
 import {
   providersShippedRoots,
   readProviders,
   subscriptionLoopOf,
   type EventDestination,
-  type SubscriptionPlace,
   type ThroughTheConnection,
 } from '@on.auto/providers';
 import { ofEachSubscription, providersOf, tracker } from '@on.auto/providers/testing';
@@ -14,11 +13,9 @@ import { Effect, Option, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { requestWaysOf } from '../composition/served-tool-access.ts';
-import { requestsAskerOf, subscriptionLoopPortsOf, type SubscriptionsServing } from './served-subscriptions.ts';
+import { subscriptionLoopPartsOf, type SubscriptionsServing } from './served-subscriptions.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
-
-const place = { ...alpha, connection: 'tracker' };
 
 const noCalls: ThroughTheConnection = {
   callOnce: () => Effect.die('a call was sent'),
@@ -46,8 +43,8 @@ function servingOver(ledger: ReturnType<typeof aLedger>): SubscriptionsServing {
   return { ledger, tools: noCalls, secrets: noSecrets, providers: trackerOfEachSubscription, receivesOverHttp: true };
 }
 
-function eventsAddressOf({ connection }: SubscriptionPlace): string {
-  return `https://runtime.example.com/${connection}`;
+function portsOfTheServerOver(ledger: ReturnType<typeof aLedger>) {
+  return subscriptionLoopPortsOf(subscriptionLoopPartsOf(servingOver(ledger)));
 }
 
 async function perSubscriptionInTheShippedEntries(): Promise<readonly string[]> {
@@ -65,7 +62,7 @@ describe('the entries the runtime ships', () => {
 
 function roundOfTheTracker(ledger: ReturnType<typeof aLedger>, asked: (connection: string) => void) {
   return subscriptionLoopOf({
-    ...subscriptionLoopPortsOf(servingOver(ledger)),
+    ...portsOfTheServerOver(ledger),
     connectionsOf: () => Effect.succeed([{ connection: 'tracker', destinations: declared }]),
     askers: [
       ({ arranged }) =>
@@ -94,86 +91,14 @@ describe('a self-hosted runtime that nothing outside can reach', () => {
     expect(asked).toEqual([]);
     expect(await Effect.runPromise(subscriptionRecordsOf(ledger).read(alpha))).toEqual([]);
   });
-
-  it('names no address its services deliver to, and receives over HTTP alone, as its setting says', () => {
-    const ports = subscriptionLoopPortsOf(servingOver(aLedger()));
-
-    expect([ports.callbackOf(place, 'webhook'), ports.callbackOf(place, 'queue')]).toEqual([undefined, undefined]);
-    expect([ports.receives('webhook'), ports.receives('websocket'), ports.receives('queue')]).toEqual([
-      true,
-      false,
-      false,
-    ]);
-  });
-});
-
-const waiting = [
-  { connection: 'tracker', with: { project: 'site' }, sent: { conversation: 'C0123', id: '1699.1' } },
-  { connection: 'tracker', with: {}, sent: { conversation: 'C0123', id: '1699.2' } },
-  { connection: 'chat', with: { project: 'site' }, sent: { conversation: 'C0456', id: '1699.3' } },
-];
-
-function askerCounting(read: () => void) {
-  return requestsAskerOf(() =>
-    Effect.sync(() => {
-      read();
-      return waiting;
-    }),
-  );
-}
-
-describe('the requests the loop asks', () => {
-  it('are not read while no destination is arranged', async () => {
-    const reads = { count: 0 };
-
-    expect(
-      await Effect.runPromise(
-        askerCounting(() => {
-          reads.count += 1;
-        })({ ...alpha, arranged: new Map() }),
-      ),
-    ).toEqual([]);
-    expect(reads.count).toBe(0);
-  });
-
-  it('name the topic of each request waiting through a connection whose destination is arranged, where it renders', async () => {
-    const reads = { count: 0 };
-    const arranged = new Map(declared.map((each) => ['tracker', each]));
-
-    expect(
-      await Effect.runPromise(
-        askerCounting(() => {
-          reads.count += 1;
-        })({ ...alpha, arranged }),
-      ),
-    ).toEqual([{ connection: 'tracker', topic: 'site' }]);
-    expect(reads.count).toBe(1);
-  });
 });
 
 describe('the asker the server composes', () => {
   it('reads the open requests of the playbook once a destination is arranged', async () => {
-    const [asker] = subscriptionLoopPortsOf(servingOver(aLedger())).askers;
+    const [asker] = portsOfTheServerOver(aLedger()).askers;
     const arranged = new Map(declared.map((each) => ['tracker', each]));
 
     expect(await Effect.runPromise(Option.getOrThrow(Option.fromNullishOr(asker))({ ...alpha, arranged }))).toEqual([]);
-  });
-});
-
-describe('a runtime given the address its services deliver to', () => {
-  it('names that address for a webhook while it receives over HTTP, and none for a queue', () => {
-    const receiving = subscriptionLoopPortsOf({ ...servingOver(aLedger()), eventsAddressOf });
-
-    expect([receiving.callbackOf(place, 'webhook'), receiving.callbackOf(place, 'queue')]).toEqual([
-      'https://runtime.example.com/tracker',
-      undefined,
-    ]);
-  });
-
-  it('names none while it receives nothing over HTTP', () => {
-    const closed = subscriptionLoopPortsOf({ ...servingOver(aLedger()), eventsAddressOf, receivesOverHttp: false });
-
-    expect([closed.callbackOf(place, 'webhook'), closed.receives('webhook')]).toEqual([undefined, false]);
   });
 });
 

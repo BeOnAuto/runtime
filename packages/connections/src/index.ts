@@ -43,13 +43,12 @@ export {
 export { EventSubscriptionEventSchema } from './subscriptions/subscription-facts.ts';
 export { eventSubscriptions } from './subscriptions/subscription-rows.ts';
 export { subscriptionRecordsOf, type SubscriptionLedger } from './subscriptions/subscription-records.ts';
-export { subscriptionSecretsOf } from './subscriptions/subscription-secrets.ts';
-export { loopConnectionsOf } from './subscriptions/loop-connections.ts';
+export { subscriptionLoopPortsOf, type SubscriptionLoopParts } from './subscriptions/loop-ports.ts';
 export {
   holdsASubscription,
   playbooksDueOf,
   reconcileDueAfter,
-  reconcileDueSet,
+  subscriptionRoundOf,
   type DueLedger,
 } from './subscriptions/subscription-schedule.ts';
 export { subscriptionLayoutSteps } from './subscriptions/subscription-layout.ts';

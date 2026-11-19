@@ -1,5 +1,5 @@
 import { addressOfTheRow, playbookRowsOf, type PlaybookAddress, type ProjectionReader } from '@on.auto/operations';
-import { resyncedAfterMs } from '@on.auto/providers';
+import { resyncedAfterMs, type Reconciled } from '@on.auto/providers';
 import { Effect, Schema } from 'effect';
 
 import { heldRowsOf, type SubscriptionLedger } from './subscription-records.ts';
@@ -57,4 +57,17 @@ export function reconcileDueSet(
       { discard: true },
     ),
   );
+}
+
+interface RoundParts {
+  readonly loop: (playbook: PlaybookAddress) => Effect.Effect<Reconciled>;
+  readonly ledger: SubscriptionLedger;
+}
+
+export function subscriptionRoundOf({
+  loop,
+  ledger,
+}: RoundParts): (playbook: PlaybookAddress, now: number) => Effect.Effect<void> {
+  return (playbook, now) =>
+    Effect.flatMap(loop(playbook), ({ nextDueAt }) => reconcileDueSet(ledger, playbook, now, nextDueAt));
 }

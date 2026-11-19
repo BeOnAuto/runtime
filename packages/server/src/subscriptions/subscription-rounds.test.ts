@@ -1,4 +1,4 @@
-import { eventSubscriptions, subscriptionRecordsOf } from '@on.auto/connections';
+import { eventSubscriptions, subscriptionRecordsOf, subscriptionRoundOf } from '@on.auto/connections';
 import type { RecordWork, Work } from '@on.auto/definitions';
 import { requestPlaceFacts } from '@on.auto/interaction';
 import type { PlaybookAddress } from '@on.auto/operations';
@@ -60,7 +60,7 @@ function roundsOver(ledger: ReturnType<typeof aLedger>, answers: Reconciled = {}
       rounds.push(playbook);
       return answers;
     });
-  return { rounds, ...subscriptionRoundsOf({ loop, ledger, arrangesAWay }) };
+  return { rounds, ...subscriptionRoundsOf({ round: subscriptionRoundOf({ loop, ledger }), ledger, arrangesAWay }) };
 }
 
 async function asked({ consumer }: SubscriptionRounds, followed: FactFollowed): Promise<readonly string[]> {
@@ -82,15 +82,18 @@ function roundsAskingAgainOnce(
 ): SubscriptionRounds {
   const asking = { again: true };
   const rounds: SubscriptionRounds = subscriptionRoundsOf({
-    loop: (playbook) =>
-      Effect.promise(async () => {
-        performed(playbook);
-        if (asking.again) {
-          asking.again = false;
-          await asked(rounds, followedIn(playbook, 'fact-again'));
-        }
-        return {};
-      }),
+    round: subscriptionRoundOf({
+      loop: (playbook) =>
+        Effect.promise(async () => {
+          performed(playbook);
+          if (asking.again) {
+            asking.again = false;
+            await asked(rounds, followedIn(playbook, 'fact-again'));
+          }
+          return {};
+        }),
+      ledger,
+    }),
     ledger,
     arrangesAWay: false,
   });

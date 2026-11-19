@@ -16,7 +16,7 @@ import {
 } from '../testing/subscription-loops.ts';
 import { theQueue } from '../testing/subscription-services.ts';
 import { subscriptionLoopOf } from './subscription-loop.ts';
-import type { SubscriptionKey } from './subscription-ports.ts';
+import { requestsAskerOf } from './subscription-topics.ts';
 
 const connected = '2026-10-01T08:00:00.000Z';
 
@@ -30,9 +30,9 @@ const byRequest = declaredDestinations(ofEachSubscription);
 
 const byTool = declaredDestinations(intoAQueue);
 
-const inAlpha: SubscriptionKey = { connection: 'tracker', topic: 'alpha' };
+const inAlpha = { connection: 'tracker', topic: 'alpha' };
 
-const inC0123: SubscriptionKey = { connection: 'chat', topic: 'C0123' };
+const inC0123 = { connection: 'chat', topic: 'C0123' };
 
 function over(destinations: typeof byRequest, connection = 'tracker') {
   return { connection, connected, destinations };
@@ -156,6 +156,50 @@ describe('askers', () => {
     loop.askers[1]?.becomes();
     await roundAt(ports, startedAt + 2 * anHour);
     expect(loop.app.acts()).toEqual(['subscribe', 'unsubscribe']);
+  });
+});
+
+const waiting = [
+  { connection: 'tracker', with: { project: 'site' }, sent: { conversation: 'C0123', id: '1699.1' } },
+  { connection: 'tracker', with: {}, sent: { conversation: 'C0123', id: '1699.2' } },
+  { connection: 'chat', with: { project: 'site' }, sent: { conversation: 'C0456', id: '1699.3' } },
+];
+
+function askerCounting(read: () => void) {
+  return requestsAskerOf(() =>
+    Effect.sync(() => {
+      read();
+      return waiting;
+    }),
+  );
+}
+
+describe('the requests the loop asks', () => {
+  it('are not read while no destination is arranged', async () => {
+    const reads = { count: 0 };
+
+    expect(
+      await Effect.runPromise(
+        askerCounting(() => {
+          reads.count += 1;
+        })({ ...alpha, arranged: new Map() }),
+      ),
+    ).toEqual([]);
+    expect(reads.count).toBe(0);
+  });
+
+  it('name the topic of each request waiting through a connection whose destination is arranged, where it renders', async () => {
+    const reads = { count: 0 };
+    const arranged = new Map(byRequest.map((each) => ['tracker', each]));
+
+    expect(
+      await Effect.runPromise(
+        askerCounting(() => {
+          reads.count += 1;
+        })({ ...alpha, arranged }),
+      ),
+    ).toEqual([{ connection: 'tracker', topic: 'site' }]);
+    expect(reads.count).toBe(1);
   });
 });
 

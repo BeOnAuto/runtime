@@ -1,15 +1,12 @@
-import {
-  holdsASubscription,
-  playbooksDueOf,
-  reconcileDueAfter,
-  reconcileDueSet,
-  type DueLedger,
-  type SubscriptionLedger,
-} from '@on.auto/connections';
+import { holdsASubscription, playbooksDueOf, reconcileDueAfter, type DueLedger } from '@on.auto/connections';
 import type { RecordWork, Work } from '@on.auto/definitions';
 import { requestPlaceFacts } from '@on.auto/interaction';
-import { playbookOfStreamPrefix, type PlaybookAddress, type RecordedEvent } from '@on.auto/operations';
-import type { Reconciled } from '@on.auto/providers';
+import {
+  playbookOfStreamPrefix,
+  type PlaybookAddress,
+  type ProjectionReader,
+  type RecordedEvent,
+} from '@on.auto/operations';
 import type { Consumer, DueItem, DueWork } from '@on.auto/workflow-host';
 import { Effect, Option } from 'effect';
 
@@ -18,8 +15,8 @@ const subscriptionRoundsName = 'the subscriptions of the playbooks';
 const runEndings: readonly string[] = ['run_succeeded', 'run_rejected', 'run_failed'];
 
 interface RoundsParts {
-  readonly loop: (playbook: PlaybookAddress) => Effect.Effect<Reconciled>;
-  readonly ledger: SubscriptionLedger & DueLedger;
+  readonly round: (playbook: PlaybookAddress, now: number) => Effect.Effect<void>;
+  readonly ledger: DueLedger & Pick<ProjectionReader, 'readProjectedRows'>;
   readonly arrangesAWay: boolean;
 }
 
@@ -87,14 +84,11 @@ function owedRoundsOf(): OwedRounds {
 }
 
 function roundOf(parts: RoundsParts, owed: OwedRounds, playbook: PlaybookAddress, now: number): Effect.Effect<void> {
-  const { loop, ledger } = parts;
   return Effect.suspend(() => {
     const before = owed.askedOf(playbook);
-    return Effect.flatMap(loop(playbook), ({ nextDueAt }) =>
-      Effect.map(reconcileDueSet(ledger, playbook, now, nextDueAt), () => {
-        owed.answered(playbook, before);
-      }),
-    );
+    return Effect.map(parts.round(playbook, now), () => {
+      owed.answered(playbook, before);
+    });
   });
 }
 

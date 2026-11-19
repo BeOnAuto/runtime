@@ -1,12 +1,19 @@
+import type { PlaybookAddress } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import { resyncedAfterMs } from '@on.auto/providers';
+import { resyncedAfterMs, type Reconciled } from '@on.auto/providers';
 import { Effect } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
 import { subscriptionRecordsOf } from './subscription-records.ts';
 import { eventSubscriptions } from './subscription-rows.ts';
-import { holdsASubscription, playbooksDueOf, reconcileDueAfter, reconcileDueSet } from './subscription-schedule.ts';
+import {
+  holdsASubscription,
+  playbooksDueOf,
+  reconcileDueAfter,
+  reconcileDueSet,
+  subscriptionRoundOf,
+} from './subscription-schedule.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -75,6 +82,30 @@ describe('the playbooks whose subscriptions are due to be reconciled', () => {
 
     expect(await run(playbooksDueOf(ledger, nine + 2 * resyncedAfterMs, 10))).toEqual([]);
     expect(await run(reconcileDueAfter(ledger, nine - minute))).toBeNull();
+  });
+});
+
+describe('a round of the subscriptions of a playbook', () => {
+  it('runs the loop for the playbook, then sets it due at the time the loop answers, by the resync period after the round at the latest', async () => {
+    const { ledger, records } = recordsOver();
+    await at(nine, records.made(alpha, chat, made));
+    await at(nine, records.made(beta, chat, made));
+    const looped: PlaybookAddress[] = [];
+    const answering = (reconciled: Reconciled) =>
+      subscriptionRoundOf({
+        loop: (playbook) =>
+          Effect.sync(() => {
+            looped.push(playbook);
+            return reconciled;
+          }),
+        ledger,
+      });
+    await run(answering({ nextDueAt: nine + 30 * minute })(alpha, nine));
+    await run(answering({})(beta, nine + minute));
+
+    expect(looped).toEqual([alpha, beta]);
+    expect(await run(reconcileDueAfter(ledger, nine))).toBe(nine + 30 * minute);
+    expect(await run(reconcileDueAfter(ledger, nine + 30 * minute))).toBe(nine + minute + resyncedAfterMs);
   });
 });
 

@@ -1,12 +1,14 @@
-import type { Decided } from '@on.auto/operations';
+import type { Decided, PlaybookAddress } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
+import type { SubscriptionPlace, ThroughTheConnection } from '@on.auto/providers';
 import { ofEachSubscription, providersOf, tracker } from '@on.auto/providers/testing';
-import { Effect, Result } from 'effect';
+import { Effect, Option, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { ConnectionEventSchema, type RecordedConnectionEvent } from '../registry/connection-events.ts';
 import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { loopConnectionsOf } from './loop-connections.ts';
+import { subscriptionLoopPortsOf, type SubscriptionLoopParts } from './loop-ports.ts';
 
 const theSecret = {
   kind: 'secret',
@@ -65,12 +67,16 @@ const providers = providersOf({ ...tracker, events: { destinations: [ofEachSubsc
 
 const declared = providers.providers.flatMap(({ entry }) => entry.events?.destinations ?? []);
 
-async function connectionsOver() {
-  const ledger = memoryLedger().service;
+async function aRegistry() {
+  const registry = memoryLedger().service;
   const stream = connectionsStreamOfOrg('acme');
-  await Effect.runPromise(ledger.execute(stream, recordedAt('2026-11-17T07:00:00.000Z'), added));
-  await Effect.runPromise(ledger.execute(stream, recordedAt(connectedAt), connected));
-  const connectionsOf = loopConnectionsOf({ registry: ledger, providers });
+  await Effect.runPromise(registry.execute(stream, recordedAt('2026-11-17T07:00:00.000Z'), added));
+  await Effect.runPromise(registry.execute(stream, recordedAt(connectedAt), connected));
+  return registry;
+}
+
+async function connectionsOver() {
+  const connectionsOf = loopConnectionsOf({ registry: await aRegistry(), providers });
   return (org: string, playbook: string) => Effect.runPromise(connectionsOf({ org, playbook }));
 }
 
@@ -91,5 +97,89 @@ describe('the connections the loop arranges through', () => {
 
     expect(await names('acme', 'sales')).toEqual(['tracker', 'notes', 'sales-only']);
     expect(await names('globex', 'alpha')).toEqual([]);
+  });
+});
+
+const alpha = { org: 'acme', playbook: 'alpha' };
+
+const place = { ...alpha, connection: 'tracker' };
+
+const noCalls: ThroughTheConnection = {
+  callOnce: () => Effect.die('a call was sent'),
+  requestOnce: () => Effect.die('a request was sent'),
+  mostRequestBytesTo: () => 1_048_576,
+};
+
+const noSecrets = {
+  keep: () => Effect.die('a secret was kept'),
+  read: () => Effect.die('a secret was read'),
+  forget: () => Effect.die('a secret was forgotten'),
+};
+
+function partsOver(
+  waitingIn: SubscriptionLoopParts['waitingIn'] = () => Effect.die('a request was read'),
+): SubscriptionLoopParts {
+  const ledger = memoryLedger().service;
+  return { ledger, registry: ledger, waitingIn, tools: noCalls, secrets: noSecrets, providers, receivesOverHttp: true };
+}
+
+function eventsAddressOf({ connection }: SubscriptionPlace): string {
+  return `https://runtime.example.com/${connection}`;
+}
+
+describe('the address the ports of the loop name', () => {
+  it('is none where none is given, and the runtime receives a webhook over HTTP alone, as it does', () => {
+    const ports = subscriptionLoopPortsOf(partsOver());
+
+    expect([ports.callbackOf(place, 'webhook'), ports.callbackOf(place, 'queue')]).toEqual([undefined, undefined]);
+    expect([ports.receives('webhook'), ports.receives('websocket'), ports.receives('queue')]).toEqual([
+      true,
+      false,
+      false,
+    ]);
+  });
+
+  it('is the address given, for a webhook while the runtime receives over HTTP, and none for a queue', () => {
+    const receiving = subscriptionLoopPortsOf({ ...partsOver(), eventsAddressOf });
+
+    expect([receiving.callbackOf(place, 'webhook'), receiving.callbackOf(place, 'queue')]).toEqual([
+      'https://runtime.example.com/tracker',
+      undefined,
+    ]);
+  });
+
+  it('is none while the runtime receives nothing over HTTP', () => {
+    const closed = subscriptionLoopPortsOf({ ...partsOver(), eventsAddressOf, receivesOverHttp: false });
+
+    expect([closed.callbackOf(place, 'webhook'), closed.receives('webhook')]).toEqual([undefined, false]);
+  });
+});
+
+const waiting = [{ connection: 'tracker', with: { project: 'site' }, sent: { conversation: 'C0123', id: '1699.1' } }];
+
+describe('the ports of the loop', () => {
+  it('read the connections of the playbook from the registry given, and the requests from the reader given', async () => {
+    const read: PlaybookAddress[] = [];
+    const reading = (playbook: PlaybookAddress) =>
+      Effect.sync(() => {
+        read.push(playbook);
+        return waiting;
+      });
+    const ports = subscriptionLoopPortsOf({ ...partsOver(reading), registry: await aRegistry() });
+    const [asker] = ports.askers;
+    const arranged = new Map(declared.map((each) => ['tracker', each]));
+
+    expect((await Effect.runPromise(ports.connectionsOf(alpha))).map(({ connection }) => connection)).toEqual([
+      'tracker',
+      'notes',
+    ]);
+    expect(await Effect.runPromise(Option.getOrThrow(Option.fromNullishOr(asker))({ ...alpha, arranged }))).toEqual([
+      { connection: 'tracker', topic: 'site' },
+    ]);
+    expect(read).toEqual([alpha]);
+  });
+
+  it('hold at most 8 subscriptions through a connection', () => {
+    expect(subscriptionLoopPortsOf(partsOver()).mostPerConnection).toBe(8);
   });
 });
