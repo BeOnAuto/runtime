@@ -3,7 +3,7 @@ import { defineConfig, mergeConfig } from 'vitest/config';
 import configuration from './vitest.config.ts';
 
 const group = process.env['SERVER_TEST_GROUP'];
-if (group === undefined || !['a-b', 'c', 'd-h', 'i-l', 'm-q', 'r-t', 'u-z'].includes(group)) {
+if (group === undefined || !['a-b', 'c', 'd-f', 'g-h', 'i-k', 'l', 'm', 'n-q', 'r', 's-u', 'v-z'].includes(group)) {
   throw new Error('SERVER_TEST_GROUP must name a configured test group');
 }
 
