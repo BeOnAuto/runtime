@@ -63,9 +63,9 @@ function defineOperation<
   kind: K,
   definition: Definition<K, string, In, Out, R, Services, ReadServices>,
 ): Operation<S, K, In['Type'], Out['Type'], R, Services> {
-  const { inputSchema, outputSchema, handle } = definition;
+  const { name, inputSchema, outputSchema, handle } = definition;
   const fields = registeredFieldsOf(scope, kind, definition);
-  const decodeInput = inputDecoder(inputSchema);
+  const decodeInput = inputDecoder(name, inputSchema);
   const encodeOutput = outputEncoder(outputSchema);
   const validateInput = typeValidator(inputSchema);
   const validateOutput = typeValidator(outputSchema);

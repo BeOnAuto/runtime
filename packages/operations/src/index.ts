@@ -169,6 +169,7 @@ export { NotFound } from './outcome/not-found.ts';
 export { defineCommand, defineQuery, type Operation } from './definition/operation.ts';
 export { defineHttpOperation, type HttpOperation } from './definition/http-operation.ts';
 export { sizeBoundCheck } from './definition/codecs.ts';
+export { loggedAsTakenFromText, normalizedValue, type GivenArgument } from './given-values/normalized-values.ts';
 export type { HttpBody, OfferedLink } from './definition/definition.ts';
 export { OrgReader } from './ledger/org-reader.ts';
 export { explanationOf, unsuccessfulWords, type ExplainedRejection } from './plain-language/explanation.ts';

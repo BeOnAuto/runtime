@@ -338,6 +338,8 @@ function choiceIssuesOf(value: Schema.Json): readonly SchemaIssue[] {
 
 const textIssues = schemaCheckOf({ type: 'string' }, { what: 'answer', nesting: 4 });
 
+const choiceTextIssues = schemaCheckOf({ enum: ['approve', 'reject'] }, { what: 'answer', nesting: 4 });
+
 function valuesIn(value: Schema.Json): number {
   return typeof value === 'object' && value !== null
     ? Object.values(value).reduce((count: number, item: Schema.Json) => count + valuesIn(item), 1)
@@ -376,7 +378,7 @@ describe('a value an outside caller gives an operation, normalized by the check 
     ]);
   });
 
-  it('answers the issues of the value as given when its text is not JSON, holds a value the check refuses or one past its bounds, or holds text that holds JSON', () => {
+  it('answers the issues of the value as given when its text is not JSON, holds a value the check refuses or one past its bounds, or holds text, even text the check takes, so text is never altered', () => {
     const notTaken: readonly Schema.Json[] = [
       'approve',
       JSON.stringify({ choice: 'maybe' }),
@@ -384,10 +386,12 @@ describe('a value an outside caller gives an operation, normalized by the check 
       JSON.stringify(JSON.stringify(approving)),
       { choice: 'maybe' },
     ];
+    const quotedChoice = JSON.stringify('approve');
 
     expect(notTaken.map((value) => normalized(value))).toEqual(
       notTaken.map((value) => ({ issues: choiceIssuesOf(value) })),
     );
+    expect(normalized(quotedChoice, choiceTextIssues)).toEqual({ issues: choiceTextIssues(quotedChoice) });
   });
 
   it('answers the issues of the value as given, and no fault, when the value its text holds is nested so deep that its check overflows the stack', () => {

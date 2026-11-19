@@ -26,7 +26,7 @@ export function defineHttpOperation<
   const { name, body, inputSchema, outputSchema, handle } = definition;
   const fields = registeredFieldsOf(scope, kind, definition);
   requireClosedOutput(name, outputSchema);
-  const run = runnerOf(inputDecoder(inputSchema), handle, outputEncoder(outputSchema), fields.reasons);
+  const run = runnerOf(inputDecoder(name, inputSchema), handle, outputEncoder(outputSchema), fields.reasons);
   return {
     registration: { ...fields, servedOverHttpAlone: body, output: registeredOutputOf(outputSchema), run },
   };

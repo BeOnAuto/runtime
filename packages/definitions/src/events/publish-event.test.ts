@@ -129,6 +129,22 @@ describe('publishing an event again', () => {
   });
 });
 
+describe('publishing an event given as JSON text', () => {
+  it('answers the first record when one is given as JSON text and the other as the value, either way round', async () => {
+    const textFirst = harness();
+    const valueFirst = harness();
+    const asText = toAlpha(acmeAdmin, { event: JSON.stringify(monthClosed) });
+    await textFirst.call(publishEvent, asText);
+    await valueFirst.call(publishEvent, publishing(monthClosed));
+
+    expect([
+      await textFirst.call(publishEvent, publishing(monthClosed), later),
+      await valueFirst.call(publishEvent, asText, later),
+    ]).toStrictEqual([recordedFirst, recordedFirst]);
+    expect(await storedOn(textFirst, '/ledger/eu', 'm-2026-09')).toMatchObject({ version: 1 });
+  });
+});
+
 describe('an event the playbook does not take', () => {
   it('is rejected under a type or a source that are the playbook’s own, or a type a capability of the playbook declares', async () => {
     const definitions = harness();

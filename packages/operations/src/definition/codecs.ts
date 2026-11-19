@@ -1,5 +1,13 @@
-import { Cause, Effect, Option, Result, Schema, SchemaIssue, type SchemaAST, type StandardSchema } from 'effect';
+import { Effect, Exit, Option, Schema, SchemaIssue, type SchemaAST, type StandardSchema } from 'effect';
 
+import {
+  loggedAsTakenFromText,
+  normalizedValue,
+  overflowedTheStack,
+  textsAt,
+  valuesPlacedIn,
+  type Place,
+} from '../given-values/normalized-values.ts';
 import { rejected, type Rejected } from '../outcome/outcome.ts';
 import { pointerOf } from '../outcome/pointer.ts';
 import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
@@ -18,6 +26,10 @@ const asJsonObject = Schema.decodeUnknownEffect(Schema.Record(Schema.String, Sch
 
 function isPropertyKey(segment: IssueSegment): segment is PropertyKey {
   return typeof segment !== 'object';
+}
+
+function isPlaceKey(segment: IssueSegment): segment is string | number {
+  return typeof segment === 'string' || typeof segment === 'number';
 }
 
 const declaresASizeBound = 'declaresASizeBound';
@@ -54,26 +66,89 @@ function nestedTooDeeply(): Rejected {
   ]);
 }
 
-function overflowedTheStack<E>(cause: Cause.Cause<E>): boolean {
-  return Cause.squash(cause) instanceof RangeError;
+type Decoding<A> = (input: unknown) => Effect.Effect<A, SchemaIssue.Issue>;
+
+function decodingBy<A>(
+  decode: (input: unknown) => Effect.Effect<A, { readonly issue: SchemaIssue.Issue }>,
+): Decoding<A> {
+  return (input) => Effect.mapError(decode(input), ({ issue }) => issue);
+}
+
+function placeOf(path: readonly IssueSegment[]): Place {
+  return path.filter((segment) => isPlaceKey(segment));
+}
+
+interface Refusal {
+  readonly place: Place;
+  readonly by: 'type' | 'check' | 'other';
+}
+
+function refusedBy(issue: SchemaIssue.Issue): Refusal['by'] {
+  if (issue instanceof SchemaIssue.Filter) {
+    return 'check';
+  }
+  return issue instanceof SchemaIssue.InvalidType || issue instanceof SchemaIssue.AnyOf ? 'type' : 'other';
+}
+
+function refusalsOf(issue: SchemaIssue.Issue, place: Place): readonly Refusal[] {
+  if (issue instanceof SchemaIssue.Pointer) {
+    return refusalsOf(issue.issue, [...place, ...placeOf(issue.path)]);
+  }
+  if (issue instanceof SchemaIssue.Encoding) {
+    return refusalsOf(issue.issue, place);
+  }
+  if (issue instanceof SchemaIssue.Composite || (issue instanceof SchemaIssue.AnyOf && issue.issues.length > 0)) {
+    return issue.issues.flatMap((each) => refusalsOf(each, place));
+  }
+  return [{ place, by: refusedBy(issue) }];
+}
+
+function placesToRead(issue: SchemaIssue.Issue): readonly Place[] {
+  const refusals = refusalsOf(issue, []);
+  const checked = new Set(refusals.filter(({ by }) => by === 'check').map(({ place }) => pointerOf(place)));
+  return refusals.filter(({ place, by }) => by === 'type' && !checked.has(pointerOf(place))).map(({ place }) => place);
+}
+
+function isAnObjectOrAnArray(read: Schema.Json): boolean {
+  return typeof read === 'object' && read !== null;
+}
+
+function jsonInputTaking<In extends ObjectSchema>(schema: In) {
+  const decode = decodingBy(Schema.decodeUnknownEffect(Schema.toCodecJson(schema), strictly));
+  return (input: unknown) =>
+    normalizedValue({
+      value: input,
+      check: decode,
+      textsIn: (issue: SchemaIssue.Issue) => textsAt(input, placesToRead(issue)),
+      withValuesRead: (read) => valuesPlacedIn(input, read),
+      takes: isAnObjectOrAnArray,
+    });
 }
 
 export function inputDecoder<In extends ObjectSchema>(
+  operation: string,
   schema: In,
 ): (input: unknown, encoding: InputEncoding) => Effect.Effect<In['Type'], Rejected> {
-  const decoders = {
-    json: Schema.decodeUnknownEffect(Schema.toCodecJson(schema), strictly),
-    strings: Schema.decodeUnknownEffect(Schema.toCodecStringTree(schema), strictly),
+  const takeJson = jsonInputTaking(schema);
+  const decoders: Readonly<Record<InputEncoding, Decoding<In['Type']>>> = {
+    json: (input) =>
+      takeJson(input).pipe(
+        Effect.tap(({ readFrom }) =>
+          readFrom.length === 0
+            ? Effect.void
+            : loggedAsTakenFromText(
+                operation,
+                readFrom.map((place) => pointerOf(place)),
+              ),
+        ),
+        Effect.map(({ taken }) => taken),
+      ),
+    strings: decodingBy(Schema.decodeUnknownEffect(Schema.toCodecStringTree(schema), strictly)),
   };
-  const decode = Effect.fnUntraced(function* (input: unknown, encoding: InputEncoding) {
-    const decoded = yield* Effect.result(decoders[encoding](input));
-    if (Result.isFailure(decoded)) {
-      return yield* Effect.fail(invalidInput(decoded.failure.issue));
-    }
-    return decoded.success;
-  });
   return (input, encoding) =>
-    Effect.catchCauseIf(decode(input, encoding), overflowedTheStack, () => Effect.fail(nestedTooDeeply()));
+    Effect.catchCauseIf(Effect.mapError(decoders[encoding](input), invalidInput), overflowedTheStack, () =>
+      Effect.fail(nestedTooDeeply()),
+    );
 }
 
 export function outputEncoder<Out extends ObjectSchema>(
@@ -96,13 +171,22 @@ function registeredPlainLanguage<In extends ObjectSchema, Out extends ObjectSche
   inputSchema: In,
   outputSchema: Out,
 ): RegisteredPlainLanguage {
+  const takeJson = jsonInputTaking(inputSchema);
+  const inputAsTaken = (input: unknown): unknown =>
+    Exit.match(Effect.runSyncExit(takeJson(input)), { onFailure: () => input, onSuccess: ({ value }) => value });
   const decodeOfferedInput = Schema.decodeUnknownOption(Schema.toCodecJson(inputSchema));
   const decodeAcceptedInput = Schema.decodeUnknownSync(Schema.toCodecJson(inputSchema));
+  const offeredInput = (input: unknown) =>
+    Option.orElse(decodeOfferedInput(input), () => decodeOfferedInput(inputAsTaken(input)));
   const decodeOutput = Schema.decodeUnknownSync(Schema.toCodecJson(outputSchema));
   return {
     attempt: (input) =>
-      Option.match(decodeOfferedInput(input), { onNone: () => attemptAsOffered?.(input) ?? task, onSome: attempt }),
-    outcome: (output, input) => outcome(decodeOutput(output), decodeAcceptedInput(input)),
+      Option.match(offeredInput(input), { onNone: () => attemptAsOffered?.(input) ?? task, onSome: attempt }),
+    outcome: (output, input) =>
+      outcome(
+        decodeOutput(output),
+        Option.getOrElse(offeredInput(input), () => decodeAcceptedInput(input)),
+      ),
     ...(relayed === undefined ? {} : { relayed: (output: unknown) => relayed(decodeOutput(output)) }),
     remedies,
     explanations,

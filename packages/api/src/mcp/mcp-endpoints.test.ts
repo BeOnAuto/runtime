@@ -129,6 +129,12 @@ function endpoint(path: string, key: string): McpConnection {
   return { url: `${listening.origin}${path}`, headers: { authorization: `Bearer ${key}` } };
 }
 
+function checkingLines(lines: string): Promise<ToolResult> {
+  return withMcpSession('current revision', endpoint('/orgs/acme/playbooks/alpha/mcp', acmeAdmin.key), (session) =>
+    session.callTool('check_lines', { lines }),
+  );
+}
+
 function problemOf(result: ToolResult): unknown {
   return { isError: result.isError, problem: problemIn(result) };
 }
@@ -472,6 +478,17 @@ describe('mcp boundary', () => {
           session.callTool('add_note', { name: 'read-only', text: 'no' }),
         ),
       ).rejects.toThrow('Tool add_note not found');
+    });
+  });
+
+  describe('an argument given as JSON text', () => {
+    it('is taken as the value its text holds, and answered in the words of that value', async () => {
+      const result = await checkingLines(JSON.stringify(['Fine', 'Also fine']));
+
+      expect({ isError: result.isError, structuredContent: result.structuredContent }).toEqual({
+        isError: undefined,
+        structuredContent: { in_words: anyWords, accepted: 2 },
+      });
     });
   });
 

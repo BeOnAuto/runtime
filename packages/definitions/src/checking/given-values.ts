@@ -1,4 +1,5 @@
-import { Cause, Effect, Option, Schema } from 'effect';
+import { loggedAsTakenFromText, normalizedValue, type GivenArgument } from '@on.auto/operations';
+import { Effect, Function, type Schema } from 'effect';
 
 type IssuesOf<Issue> = (value: Schema.Json) => readonly Issue[];
 
@@ -6,55 +7,20 @@ type Normalized<Issue> =
   | { readonly value: Schema.Json; readonly from: 'value' | 'text' }
   | { readonly issues: readonly Issue[] };
 
-interface GivenArgument {
-  readonly operation: string;
-  readonly argument: string;
+function checkedBy<Issue>(issuesOf: IssuesOf<Issue>) {
+  return (value: Schema.Json): Effect.Effect<Schema.Json, readonly Issue[]> => {
+    const issues = issuesOf(value);
+    return issues.length === 0 ? Effect.succeed(value) : Effect.fail(issues);
+  };
 }
 
-const takenFromText = 'An argument given as JSON text was taken as the value the text holds';
-
-const jsonHeldIn = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Json));
-
-function overflowedTheStack<E>(cause: Cause.Cause<E>): boolean {
-  return Cause.squash(cause) instanceof RangeError;
+function textOfTheWhole(value: Schema.Json) {
+  return typeof value === 'string' ? [{ place: [], text: value }] : [];
 }
 
-function heldValueTaken<Issue>(text: string, issuesOf: IssuesOf<Issue>): Effect.Effect<Option.Option<Schema.Json>> {
-  return Effect.catchCauseIf(
-    Effect.sync(() => Option.filter(jsonHeldIn(text), (held) => issuesOf(held).length === 0)),
-    overflowedTheStack,
-    () => Effect.succeedNone,
-  );
-}
-
-function takenAs<Issue>(from: 'value' | 'text', value: Schema.Json): Normalized<Issue> {
-  return { value, from };
-}
-
-function refusedWith<Issue>(issues: readonly Issue[]): Normalized<Issue> {
-  return { issues };
-}
-
-function normalizedValueOf<Issue>(given: Schema.Json, issuesOf: IssuesOf<Issue>): Effect.Effect<Normalized<Issue>> {
-  return Effect.suspend(() => {
-    const issues = issuesOf(given);
-    if (issues.length === 0) {
-      return Effect.succeed(takenAs<Issue>('value', given));
-    }
-    const held = typeof given === 'string' ? heldValueTaken(given, issuesOf) : Effect.succeedNone;
-    return Effect.map(
-      held,
-      Option.match({ onNone: () => refusedWith(issues), onSome: (value) => takenAs<Issue>('text', value) }),
-    );
-  });
-}
-
-function loggedWhenTakenFromText<Issue>(
-  { operation, argument }: GivenArgument,
-  normalized: Normalized<Issue>,
-): Effect.Effect<void> {
+function loggedWhenTakenFromText<Issue>(given: GivenArgument, normalized: Normalized<Issue>): Effect.Effect<void> {
   return 'from' in normalized && normalized.from === 'text'
-    ? Effect.logInfo(takenFromText).pipe(Effect.annotateLogs({ operation, argument }))
+    ? loggedAsTakenFromText(given.operation, [given.argument])
     : Effect.void;
 }
 
@@ -63,5 +29,21 @@ export function normalizedArgument<Issue>(
   value: Schema.Json,
   issuesOf: IssuesOf<Issue>,
 ): Effect.Effect<Normalized<Issue>> {
-  return Effect.tap(normalizedValueOf(value, issuesOf), (normalized) => loggedWhenTakenFromText(given, normalized));
+  const normalized = normalizedValue({
+    value,
+    check: checkedBy(issuesOf),
+    textsIn: () => textOfTheWhole(value),
+    withValuesRead: ([read]) => read.value,
+    takes: Function.constTrue,
+  });
+  return normalized.pipe(
+    Effect.match({
+      onFailure: (issues): Normalized<Issue> => ({ issues }),
+      onSuccess: ({ taken, readFrom }): Normalized<Issue> => ({
+        value: taken,
+        from: readFrom.length === 0 ? 'value' : 'text',
+      }),
+    }),
+    Effect.tap((taken) => loggedWhenTakenFromText(given, taken)),
+  );
 }

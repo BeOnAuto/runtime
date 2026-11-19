@@ -145,6 +145,36 @@ describe('the attempt of input that does not decode', () => {
   });
 });
 
+const shelvingTitles = defineCommand('org', {
+  name: 'shelve_titles',
+  title: 'Shelve titles',
+  description: 'Shelves titles.',
+  route: { method: 'POST', path: '/titles' },
+  inputSchema: Schema.Struct({ titles: Schema.Array(Title) }),
+  outputSchema: Schema.Struct({ shelved: Schema.Int }),
+  reasons: [],
+  handle: ({ titles }) => Effect.succeed({ shelved: titles.length }),
+  plainLanguage: {
+    task: 'shelve titles',
+    attempt: ({ titles }) => `shelve ${titles.join(', ')}`,
+    outcome: ({ shelved }, { titles }) => `Shelved ${String(shelved)}: ${titles.join(', ')}.`,
+  },
+});
+
+describe('the words of input given as JSON text', () => {
+  it('are those of the value the text holds, where the input schema takes that value as a call does', () => {
+    const words = shelvingTitles.registration.plainLanguage;
+    const titles = ['Poetry', 'Prose'];
+    const asText = { titles: JSON.stringify(titles) };
+
+    expect([words?.attempt(asText), words?.outcome({ shelved: 2 }, asText)]).toEqual([
+      words?.attempt({ titles }),
+      words?.outcome({ shelved: 2 }, { titles }),
+    ]);
+    expect(() => words?.outcome({ shelved: 2 }, { titles: '2' })).toThrow(Schema.SchemaError);
+  });
+});
+
 describe('the words a registration relays', () => {
   it('are those the operation gives from the encoded output, none where the output holds none', () => {
     expect([
