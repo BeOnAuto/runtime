@@ -11,15 +11,14 @@ import type { InvalidInput } from '@on.auto/operations';
 import type { Noun } from '@on.auto/phrasing';
 import { Effect, type Schema } from 'effect';
 
-import { checkedExpressions, checkedWithoutGoals, type ExpressionCheck } from '../document/expression-check.ts';
 import { runnableDocument, workflowReaderOf, type ReadWorkflow } from '../document/workflow-document.ts';
 import { definitionsNamedIn, summaryOf } from '../document/workflow-summary.ts';
 import { runPresenter } from '../presenting/run-presenter.ts';
 import { started, type WorkflowStarts } from '../runs/run-start.ts';
 import { guideVariablesOf } from './guide-variables.ts';
+import { checkedWhenSaved, type SaveChecks } from './save-checks.ts';
 
-export interface WorkflowAdapterDependencies extends WorkflowStarts {
-  readonly check: ExpressionCheck;
+export interface WorkflowAdapterDependencies extends WorkflowStarts, SaveChecks {
   readonly names: PlaybookOwnNames;
   readonly goals?: boolean;
 }
@@ -48,7 +47,7 @@ export function makeWorkflowAdapter(dependencies: WorkflowAdapterDependencies): 
     mediaType: 'application/yaml',
     parse: (source: string): Effect.Effect<ReadWorkflow, InvalidInput> =>
       readWorkflowDocument(source, dependencies.mostDurationMs),
-    check: goals ? checkedExpressions(dependencies.check) : checkedWithoutGoals(dependencies.check),
+    check: checkedWhenSaved(dependencies, goals),
     summarize: ({ document, contributes }) => summaryOf(document, contributes),
     definitionsNamed: ({ document }) => definitionsNamedIn(document),
     run: (read, input, run, stripped) =>

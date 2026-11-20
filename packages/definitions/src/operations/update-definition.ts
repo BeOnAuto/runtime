@@ -53,7 +53,7 @@ export function defineUpdateDefinition(
             ? yield* definitionRenamed(renamer, { type, from: name, to: change.rename })
             : {
                 ...(yield* savedFrom(
-                  { capability, pages, written: { ...texts, ...change }, goals, messages },
+                  { capability, pages, written: { ...texts, ...change, name }, goals, messages },
                   (content) => ({ type: 'update', name, content, blanksRefused: goals }),
                 )),
                 savedAgain: [],

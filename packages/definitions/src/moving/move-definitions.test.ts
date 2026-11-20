@@ -259,9 +259,13 @@ describe('move_definitions refusing runs that have not ended', () => {
 });
 
 describe('move_definitions refusing connections, and its words', () => {
-  it('refuses a connection the other playbook has no access to unless forced, and never one that serves every playbook', async () => {
+  it('refuses a connection the other playbook has no access to, used or listened to, unless forced, and never one that serves every playbook', async () => {
     const definitions = harness();
-    await inAlpha(definitions, callsGreet({ call: { server: 'billing' }, tools: ['everywhere/send', 'crm/find'] }));
+    const on = [
+      ...['/connections/ledger', '/connections/crm', '/ledger/eu'].map((source) => ({ type: 'closed', source })),
+      { type: 'opened' },
+    ];
+    await inAlpha(definitions, callsGreet({ call: { server: 'billing' }, tools: ['everywhere/send', 'crm/find'], on }));
 
     const refused = await moving(definitions, both);
     const record = await recordOfTheRefusal(definitions, both);
@@ -272,7 +276,12 @@ describe('move_definitions refusing connections, and its words', () => {
       { status: 'rejected', kind: 'connection_not_accessible' },
       { status: 'succeeded' },
     ]);
-    expect(record).toEqual({ connections: [{ connection: 'billing', definitions: [weekly] }] });
+    expect(record).toEqual({
+      connections: [
+        { connection: 'billing', definitions: [weekly] },
+        { connection: 'ledger', definitions: [weekly] },
+      ],
+    });
     expect(heldWhenRefused).toEqual(unmoved);
     expect(heldIn(definitions)).toEqual(['beta echo greet', 'beta workflow weekly']);
   });

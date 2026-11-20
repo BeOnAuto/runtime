@@ -9141,7 +9141,7 @@
       ]
     },
     {
-      "sha256": "ded6866e81fff7a0c1a1705834de98f81457bc0e5988376ba60e123f27c649bc",
+      "sha256": "34eee8040fe0a99a284580b6dd906a53491eb585498364377dc47fe6994dce91",
       "tier": 3,
       "received": [
         {
@@ -9220,7 +9220,7 @@
         "| `type` | Required; exactly this type |",
         "| `source` | Optional; exactly this source |",
         "| `subject` | Optional; exactly this subject, such as `workflow/morning-social-content` for the runs of one workflow |",
-        "| Any other attribute | Optional; exactly this value, such as `triggerkind: event` or `caller: playbook:finance`: a whole number from 1 for `depth`, `calldepth` and `definitionversion`, and text for any other |",
+        "| Any other attribute | Optional; exactly this value, such as `triggerkind: event` or `caller: playbook:finance`: a whole number from 1 for `depth`, `calldepth` and `definitionversion`, `true` or `false` for `automatic`, and text for any other |",
         "| `data` | Optional; data equal to this value, or data for which an expression such as `'${ $data.revenue > 100 }'` holds; the expression reads the event's data as `$data` and nothing else |",
         "",
         "- An event is taken when it matches any of the filters, and once only, however many it matches.",

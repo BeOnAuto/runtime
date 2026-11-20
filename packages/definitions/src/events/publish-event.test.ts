@@ -152,6 +152,7 @@ describe('an event the playbook does not take', () => {
     expect([
       await definitions.call(publishEvent, publishing({ source: '/runs/0199a3c4', type: 'run_succeeded' })),
       await definitions.call(publishEvent, publishing({ source: '/ledger/eu', type: 'nudge_sent' })),
+      await definitions.call(publishEvent, publishing({ source: '/connections/tracker', type: 'com.example.added' })),
     ]).toMatchObject([
       {
         status: 'rejected',
@@ -159,6 +160,7 @@ describe('an event the playbook does not take', () => {
         issues: [{ pointer: '/event/type' }, { pointer: '/event/source' }],
       },
       { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/event/type' }] },
+      { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/event/source' }] },
     ]);
     expect(definitions.ledger.streamNames()).toEqual([]);
   });
@@ -181,6 +183,20 @@ describe('an event the playbook does not take', () => {
       reason: 'invalid_input',
       issues: [{ pointer: '/event/causationid' }, { pointer: '/event/correlationid' }],
     });
+    expect(definitions.ledger.streamNames()).toEqual([]);
+  });
+});
+
+describe('an event that claims automatic, the mark the runtime gives what an app or a bot did', () => {
+  it('is rejected, as every attribute only the runtime sets is', async () => {
+    const definitions = harness();
+
+    expect(
+      await definitions.call(
+        publishEvent,
+        publishing({ source: '/ledger/eu', type: 'com.acme.approved', automatic: true }),
+      ),
+    ).toMatchObject({ status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/event/automatic' }] });
     expect(definitions.ledger.streamNames()).toEqual([]);
   });
 });

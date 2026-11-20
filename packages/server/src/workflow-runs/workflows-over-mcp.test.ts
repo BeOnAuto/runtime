@@ -252,6 +252,21 @@ describe('workflows over mcp', () => {
   });
 });
 
+const refusalOf = Schema.decodeUnknownSync(
+  Schema.Struct({
+    reason: Schema.String,
+    errors: Schema.Array(Schema.Struct({ pointer: Schema.String, detail: Schema.String })),
+  }),
+);
+
+const onAnIssue = `schedule:
+  on:
+    one:
+      with: { type: com.github.issues.opened, source: /connections/github, subject: acme/site }
+do:
+  - note: { set: { a: 1 } }
+`;
+
 describe('reactions over mcp', () => {
   afterEach(async () => {
     await server.stop();
@@ -271,6 +286,33 @@ describe('reactions over mcp', () => {
 
       expect(seen.runs.runs).toEqual([{ status: 'succeeded', started_by: { id: 'playbook:alpha', name: 'alpha' } }]);
       expect(seen.feed).toEqual(expect.arrayContaining(['event_published', 'run_started', 'run_succeeded']));
+    });
+  });
+
+  describe('a connection’s events, over MCP', () => {
+    it('refuse a workflow whose trigger names a connection this runtime does not receive from, and an event published under a connection’s source', async () => {
+      const seen = await onAlphaReactions(async (session) => {
+        await server.call('POST', '/v1/orgs/acme/connections', { body: { provider: 'github' } });
+        const onIssues = await session.callTool('create_definition', {
+          type: 'workflow',
+          name: 'on-issues',
+          source: workflowSource('on-issues', onAnIssue),
+        });
+        const asAConnection = await session.callTool('publish_event', {
+          event: { source: '/connections/ledger', type: 'com.acme.ledger.closed', data: { month: 'august' } },
+        });
+        return { onIssues, asAConnection };
+      });
+
+      const refused = refusalOf(problemIn(seen.onIssues));
+      expect(refused.reason).toBe('invalid_input');
+      expect(
+        refused.errors.map(({ pointer, detail }) => [pointer, detail.includes('/schedule/on/one/with/type')]),
+      ).toEqual([['/source', true]]);
+      expect({ isError: seen.asAConnection.isError, problem: problemIn(seen.asAConnection) }).toMatchObject({
+        isError: true,
+        problem: { reason: 'invalid_input', errors: [{ pointer: '/event/source' }] },
+      });
     });
   });
 });

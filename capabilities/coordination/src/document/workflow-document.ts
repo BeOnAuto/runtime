@@ -76,7 +76,7 @@ function compiledInputOf(document: JsonObject, rejections: readonly Rejection[])
   });
 }
 
-function refusedIn(locate: ReadWorkflow['locate']) {
+export function refusedIn(locate: ReadWorkflow['locate']) {
   return (problems: readonly Problem[]): Effect.Effect<never, InvalidInput> =>
     Effect.fail(
       invalidDocument(

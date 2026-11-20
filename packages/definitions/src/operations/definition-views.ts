@@ -60,6 +60,7 @@ export const noticesOfASave: Effect.Effect<NoticesOfASave> = Effect.gen(function
 });
 
 export interface WrittenDefinition {
+  readonly name: string;
   readonly source: string;
   readonly overview?: string;
   readonly diagram?: string;
@@ -135,7 +136,7 @@ function preparedContentOf(
   return Effect.gen(function* () {
     const prepared = yield* capability.prepare(withoutThePage(written.source, writtenIn));
     const place = yield* PlaybookContext;
-    const stripped = yield* prepared.check(place);
+    const stripped = yield* prepared.check({ ...place, name: written.name });
     if (keepNotices !== undefined) {
       yield* keepNotices(yield* noticesWithinBudget(prepared, place));
     }

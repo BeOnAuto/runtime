@@ -3,6 +3,7 @@ import type { RunStart, WorkflowHost } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
 import { makeWorkflowAdapter } from '../capability/workflow.ts';
+import { connectionsReporting } from './connection-events.ts';
 import { testExpressionCheck } from './expression-checks.ts';
 import { testPlaybookNames } from './test-sandbox.ts';
 
@@ -27,6 +28,7 @@ export function recordingWorkflows(recording: Pick<WorkflowHost, 'start'>): Capa
   return makeWorkflowAdapter({
     runs: recording,
     check: testExpressionCheck,
+    connectionEvents: connectionsReporting({}),
     mostDurationMs: 2_592_000_000,
     longestCallMs: 1000,
     names: testPlaybookNames,

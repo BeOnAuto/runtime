@@ -1,58 +1,16 @@
-import { lineageAttributeNames } from '@on.auto/operations';
+import { connectionSourcePrefix, runtimeAttributeTypes } from '@on.auto/workflow-engine';
 import { Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import type {
-  RecordedGoalEvent,
-  RecordedPlaybookGoalAgreementsEvent,
-  RecordedPlaybookGoalsEvent,
-} from '../goals/goals-facts.ts';
-import type { RecordedPageEvent } from '../page/page-facts.ts';
-import type { DefinitionEvent } from '../registry/definition-events.ts';
 import { composedFactsOf, type CapabilityFacts } from '../run-work/declared-facts.ts';
 import { coreRunFactTypes } from '../runs/run-events.ts';
-import type { EventPublished } from './published-events.ts';
-import type { ReactionRefused } from './reaction-refusals.ts';
+import { playbookFeedTypes } from './playbook-feed-types.ts';
 
 export const runSourcePrefix = '/runs/';
 
 export const definitionSourcePrefix = '/definitions/';
 
 export const callerSourcePrefix = '/callers/';
-
-type PlaybookFeedType =
-  | DefinitionEvent['type']
-  | RecordedPageEvent['type']
-  | RecordedPlaybookGoalsEvent['type']
-  | RecordedPlaybookGoalAgreementsEvent['type']
-  | RecordedGoalEvent['type']
-  | 'playbook_import_started'
-  | 'playbook_imported'
-  | EventPublished['type']
-  | ReactionRefused['type'];
-
-const playbookFeedTypes: Readonly<Record<PlaybookFeedType, true>> = {
-  definition_created: true,
-  definition_updated: true,
-  definition_retired: true,
-  definition_paused: true,
-  definition_resumed: true,
-  definition_restored: true,
-  definition_moved: true,
-  definition_renamed: true,
-  playbook_page_saved: true,
-  playbook_goals_saved: true,
-  playbook_goals_agreed: true,
-  goal_created: true,
-  goal_updated: true,
-  goal_reordered: true,
-  goal_agreed: true,
-  goal_removed: true,
-  playbook_import_started: true,
-  playbook_imported: true,
-  event_published: true,
-  reaction_refused: true,
-};
 
 type NamingCapability = Pick<Capability, 'type' | 'facts'> & Partial<Pick<Capability, 'runWords'>>;
 
@@ -70,11 +28,16 @@ function playbookTypesOf(capabilities: readonly NamingCapability[], facts: Capab
     ...facts.onRuns.map(({ type }) => type),
     ...deferralTypesOf(capabilities),
     ...streamTypesOf(facts),
-    ...Object.keys(playbookFeedTypes),
+    ...playbookFeedTypes,
   ]);
 }
 
-const reservedSourcePrefixes: readonly string[] = [runSourcePrefix, definitionSourcePrefix, callerSourcePrefix];
+const reservedSourcePrefixes: readonly string[] = [
+  runSourcePrefix,
+  definitionSourcePrefix,
+  callerSourcePrefix,
+  connectionSourcePrefix,
+];
 
 export const reservedSourcesInWords = new Intl.ListFormat('en-GB', { type: 'disjunction' }).format(
   reservedSourcePrefixes,
@@ -90,17 +53,7 @@ export function isReservedSource(source: string): boolean {
   return reservedSourcePrefixes.some((prefix) => source.startsWith(prefix));
 }
 
-const contextAttributeNames: readonly string[] = [
-  'caller',
-  'definitionversion',
-  'depth',
-  'calldepth',
-  'calledby',
-  'triggerkind',
-  'triggerreference',
-];
-
-const reservedAttributeNames: readonly string[] = [...lineageAttributeNames, ...contextAttributeNames];
+const reservedAttributeNames: readonly string[] = [...runtimeAttributeTypes.keys()];
 
 const reservedAttributesInWords = new Intl.ListFormat('en-GB', { type: 'conjunction' }).format(reservedAttributeNames);
 
@@ -131,7 +84,7 @@ function playbookOwnAttributesOf(types: ReadonlySet<string>) {
         ? [
             {
               path: ['source'],
-              issue: `Expected a source of your own, not one under ${reservedSourcesInWords}, which the playbook records itself`,
+              issue: `Expected a source of your own, not one under ${reservedSourcesInWords}, which the playbook keeps for itself`,
             },
           ]
         : []),

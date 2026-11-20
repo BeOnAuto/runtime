@@ -4,6 +4,7 @@ import type { WorkflowHost } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { connectionsReporting } from '../testing/connection-events.ts';
 import { testExpressionCheck } from '../testing/expression-checks.ts';
 import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { testPlaybookNames } from '../testing/test-sandbox.ts';
@@ -31,6 +32,7 @@ describe('a run whose call is cancelled while its workflow starts', () => {
     const workflow = makeWorkflowAdapter({
       runs: slowlyStarting,
       check: testExpressionCheck,
+      connectionEvents: connectionsReporting({}),
       mostDurationMs: 2_592_000_000,
       longestCallMs: 1000,
       names: testPlaybookNames,
@@ -81,6 +83,7 @@ describe('the values the workflow guide names', () => {
     const workflow = makeWorkflowAdapter({
       runs: { start: () => Effect.die('A workflow started') },
       check: testExpressionCheck,
+      connectionEvents: connectionsReporting({}),
       mostDurationMs: 3 * hour,
       longestCallMs: 660_000,
       names: testPlaybookNames,

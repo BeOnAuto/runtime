@@ -7,7 +7,8 @@ import { forbidden, rejection, type Rejection } from '../dsl/policy-checks.ts';
 import { eventFilterRejections, eventFiltersOf, type LocatedFilter } from '../dsl/task-policy.ts';
 import { pointerTo } from '../dsl/tasks.ts';
 import type { DslError } from '../machine/dsl-error.ts';
-import { attributeHolds, filterAttributesOf } from './attribute-match.ts';
+import { attributeHolds, filterAttributesOf, mayTake } from './attribute-match.ts';
+import { attributeTypeOf, type RuntimeAttributeType } from './runtime-attributes.ts';
 
 type ExpressionVerdict = (expression: string, value: Json) => Json;
 
@@ -23,13 +24,13 @@ export type FilterVerdict = boolean | { readonly error: DslError; readonly stopp
 
 const filterKeys: ReadonlySet<string> = new Set(['with', 'correlate']);
 
-const wholeNumberAttributes: ReadonlySet<string> = new Set(['depth', 'calldepth', 'definitionversion']);
-
 const attributeName = /^[a-z0-9]{1,20}$/u;
 
 export function hasAttributes(event: JsonObject, attributes: JsonObject, verdictOf: ExpressionVerdict): boolean {
-  return filterAttributesOf(attributes, Function.identity).every((attribute) =>
-    attributeHolds(attribute, event, (expression, actual) => verdictOf(expression, actual)),
+  const filter = filterAttributesOf(attributes, Function.identity);
+  return (
+    mayTake(filter, event) &&
+    filter.every((attribute) => attributeHolds(attribute, event, (expression, actual) => verdictOf(expression, actual)))
   );
 }
 
@@ -58,16 +59,27 @@ function wholeNumberRejection(name: string, expected: Json, pointer: string): re
     : [rejection(pointer, countedAttributeWords(name))];
 }
 
-function literalRejection(name: string, expected: Json, pointer: string): readonly Rejection[] {
-  if (wholeNumberAttributes.has(name)) {
-    return wholeNumberRejection(name, expected, pointer);
-  }
+function booleanRejection(name: string, expected: Json, pointer: string): readonly Rejection[] {
+  return typeof expected === 'boolean'
+    ? []
+    : [rejection(pointer, `${name} is true or false, written out without quotes`)];
+}
+
+function textRejection(name: string, expected: Json, pointer: string): readonly Rejection[] {
   if (typeof expected !== 'string' || expected === '') {
     return [rejection(pointer, `${name} is text that is not empty`)];
   }
   return enclosedBody(expected) === undefined
     ? []
     : [forbidden(pointer, `${name} is written out, not computed by an expression, so that it is matched as it is`)];
+}
+
+const typedRejections: Readonly<
+  Record<RuntimeAttributeType, (name: string, expected: Json, pointer: string) => readonly Rejection[]>
+> = { text: textRejection, 'whole number': wholeNumberRejection, boolean: booleanRejection };
+
+function literalRejection(name: string, expected: Json, pointer: string): readonly Rejection[] {
+  return typedRejections[attributeTypeOf(name)](name, expected, pointer);
 }
 
 function literalRejections(attributes: JsonObject, pointer: string): readonly Rejection[] {

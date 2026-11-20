@@ -9,6 +9,7 @@ import {
   type Decider,
   uuidV5,
 } from '@on.auto/operations';
+import { isConnectionSource } from '@on.auto/workflow-engine';
 import { Effect, Equal, Option, Result, Schema } from 'effect';
 
 import { CloudEventSchema, type CloudEvent } from './cloud-event.ts';
@@ -78,7 +79,9 @@ function decideOnPublishing(
     const { event, filled } = publish;
     return Result.succeed([{ type: 'event_published', data: { event, filled } }]);
   }
-  return isSameEvent(published, publish) ? Result.succeed([]) : Result.fail(anotherEvent);
+  return isConnectionSource(publish.event.source) || isSameEvent(published, publish)
+    ? Result.succeed([])
+    : Result.fail(anotherEvent);
 }
 
 function emitterContextOf(

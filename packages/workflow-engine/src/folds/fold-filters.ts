@@ -1,5 +1,5 @@
 import { field, jsonOfText, type Json, type JsonObject } from '../dsl/json.ts';
-import { attributeHolds, filterAttributesOf, type FilterAttribute } from '../filters/attribute-match.ts';
+import { attributeHolds, filterAttributesOf, mayTake, type FilterAttribute } from '../filters/attribute-match.ts';
 import type { FilterContext, FilterTest } from '../programs/kept-contexts.ts';
 import type { ProgramFailure, ProgramRun } from '../programs/program-run.ts';
 
@@ -23,6 +23,9 @@ export function preparedFilters(
 }
 
 function filterMatching({ attributes }: PreparedFilter, event: JsonObject, runTest: RunTest): Matching {
+  if (!mayTake(attributes, event)) {
+    return { matched: false, work: 0 };
+  }
   const tested: { work: number; stopped?: Stopped } = { work: 0 };
   const matched = attributes.every((attribute) =>
     attributeHolds(attribute, event, (test, actual) => {

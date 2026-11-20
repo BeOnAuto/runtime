@@ -19,6 +19,7 @@ import { Predicate, Schema } from 'effect';
 import satisfies from 'semver/functions/satisfies.js';
 
 import { specificationSdk, type SpecificationSdk } from './dsl-libraries.ts';
+import { withoutSourcesReadAsReferences } from './event-sources.ts';
 import { problemsOf, type Problem } from './schema-problems.ts';
 import { schemaChecksOf } from './specification-schema.ts';
 
@@ -72,7 +73,7 @@ function withoutRuntimeKeys(document: JsonObject): JsonObject {
 
 function read(document: JsonObject): Reading {
   try {
-    const text = JSON.stringify(withoutRuntimeKeys(document), standardErrors);
+    const text = JSON.stringify(withoutSourcesReadAsReferences(withoutRuntimeKeys(document)), standardErrors);
     return { text, document: standardOf(text) };
   } catch (error) {
     return { problems: [{ pointer: '', detail: messageOf(error) }] };

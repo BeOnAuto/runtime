@@ -13,6 +13,7 @@ import {
   directoryOperationsServing,
   playbookOperationsServing,
   type ServedConnectionAccess,
+  type ServedConnectionEvents,
   type ServedGoals,
   type ServedPages,
 } from '../composition/playbook-operations.ts';
@@ -30,7 +31,8 @@ interface PlaybookOperation {
   readonly registration: RouteRegistration<'playbook'>;
 }
 
-export interface WorkflowParts extends HostParts, ServedPages, ServedGoals, ServedConnectionAccess {
+export interface WorkflowParts
+  extends HostParts, ServedPages, ServedGoals, ServedConnectionAccess, ServedConnectionEvents {
   readonly importsOver: (capabilities: readonly Capability[]) => readonly OrgOperation[];
   readonly orgOperations: readonly OrgOperation[];
   readonly playbookOperations: readonly PlaybookOperation[];
@@ -91,6 +93,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
   const workflow = makeWorkflowAdapter({
     runs,
     check: parts.check,
+    connectionEvents: parts.connectionEvents,
     mostDurationMs: parts.workflows.mostDurationMs,
     longestCallMs: longestCallOf(parts.capabilities),
     names,

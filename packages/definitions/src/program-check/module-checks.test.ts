@@ -258,6 +258,7 @@ describe('the compiler', () => {
       'goals.ts',
       'identity/names-of-a-playbook.ts',
       'importing.ts',
+      'read-model-reads/listened-connections.ts',
       'page.ts',
       'portable.ts',
       'template.ts',

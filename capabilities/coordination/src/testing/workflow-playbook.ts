@@ -4,6 +4,7 @@ import { Schema } from 'effect';
 import { expect, vi } from 'vitest';
 
 import { makeWorkflowAdapter } from '../capability/workflow.ts';
+import { connectionsReporting } from './connection-events.ts';
 import { testExpressionCheck } from './expression-checks.ts';
 import { playbookOn, type Playbook, namingLedger } from './playbook.ts';
 import { testHost } from './test-host.ts';
@@ -33,6 +34,7 @@ export async function workflowPlaybook({
     makeWorkflowAdapter({
       runs: host,
       check: testExpressionCheck,
+      connectionEvents: connectionsReporting({}),
       mostDurationMs,
       longestCallMs: 660_000,
       names: testPlaybookNames,

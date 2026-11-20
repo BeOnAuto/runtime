@@ -5,7 +5,7 @@ import type { DslError } from '../machine/dsl-error.ts';
 import { argumentTextOf, type ArgumentText } from '../programs/argument-texts.ts';
 import type { Evaluation, Limit, ProgramFailure, ProgramRun } from '../programs/program-run.ts';
 import { meterOf, type Meter } from '../runner/run-tables.ts';
-import { attributeHoldsLater, filterAttributesOf, type FilterAttribute } from './attribute-match.ts';
+import { attributeHoldsLater, filterAttributesOf, mayTake, type FilterAttribute } from './attribute-match.ts';
 import type { FilterVerdict, LiteralFilter } from './event-filter.ts';
 
 type AskedTest = (value: ArgumentText, evaluation: Evaluation) => Promise<ProgramRun>;
@@ -97,6 +97,10 @@ async function attributesHold(
   return (await attributeHoldsLater(attribute, event, verdictIn(testing))) && attributesHold(rest, event, testing);
 }
 
+function filterHolds({ attributes }: PreparedFilter, event: JsonObject, testing: Testing): Promise<boolean> {
+  return mayTake(attributes, event) ? attributesHold(attributes, event, testing) : Promise.resolve(false);
+}
+
 async function verdictsUntilLimited(
   filters: readonly PreparedFilter[],
   event: JsonObject,
@@ -118,7 +122,7 @@ async function verdictsUntilLimited(
     },
   };
   const verdict = await verdictUnlessRaised(
-    () => attributesHold(filter.attributes, event, testing),
+    () => filterHolds(filter, event, testing),
     (error) => ({ error, stopped: state.limit !== undefined && limitsNoEventCauses.has(state.limit) }),
   );
   if (state.limit !== undefined) {

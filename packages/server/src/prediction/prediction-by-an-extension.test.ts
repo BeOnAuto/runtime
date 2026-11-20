@@ -21,7 +21,7 @@ const closing: (() => Promise<void>)[] = [];
 
 const unnamed = "{ name: 'prediction-function' }";
 
-function forecastsFilling(namePredictionByAn: string, contract = 2, guide = unnamed): ScratchPackage {
+function forecastsFilling(namePredictionByAn: string, contract = 2, guide = unnamed, check = ''): ScratchPackage {
   const capability = `(ports) => ({
     ...datasetsProvidedOn(ports),
     capability: defineCapability({
@@ -41,13 +41,14 @@ function forecastsFilling(namePredictionByAn: string, contract = 2, guide = unna
             record: { answered_by: '${namePredictionByAn}' },
           }),
         ),
-      mostActive: 1000,
+      mostActive: 1000,${check}
     }),
   })`;
   return {
     name: namePredictionByAn,
     module: [
       "import { defineCapability } from '@on.auto/definitions';",
+      "import { InvalidInput } from '@on.auto/operations';",
       "import { datasetsProvidedOn, datasetTables } from '@on.auto/prediction';",
       "import { statementOf } from '@on.auto/workflow-host';",
       "import { Effect } from 'effect';",
@@ -100,6 +101,10 @@ async function servingWith(
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return server;
 }
+
+const refusingInItsPlaybook = `
+      check: (_source, _text, place) =>
+        Effect.fail(new InvalidInput({ detail: 'Refused.', issues: [{ pointer: '/' + place.playbook, detail: 'Refused.' }] })),`;
 
 const naming = `{ name: 'prediction-function', variables: { 'prediction.most_active': { value: ports.mostFunctions + ' functions', default: '32 functions' } } }`;
 
@@ -231,8 +236,24 @@ describe('prediction by an extension', () => {
   describe('a runtime an extension fills capability/prediction of', () => {
     it('does not start for an extension built against another contract, naming it, the point and both contracts', async () => {
       await expect(servingWith([forecastsFilling('@acme/forecasts', 1)])).rejects.toThrow(
-        'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 8',
+        'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 9',
       );
+    });
+
+    it('starts for an extension built against an earlier contract, whose check is told the playbook a definition is saved in as before', async () => {
+      const server = await servingWith([forecastsFilling('@acme/forecasts', 8, unnamed, refusingInItsPlaybook)]);
+
+      const saved = await server.call('POST', `${alpha}/definitions/prediction`, {
+        body: { name: 'daily-visits', source: dailyVisits, diagram: 'none' },
+      });
+
+      expect([saved.status, saved.body]).toEqual([
+        422,
+        expect.objectContaining({
+          reason: 'invalid_input',
+          errors: [expect.objectContaining({ pointer: '/source/alpha' })],
+        }),
+      ]);
     });
 
     it('does not start for an extension whose capability lacks a member, naming it, and closes the pool it opened', async () => {

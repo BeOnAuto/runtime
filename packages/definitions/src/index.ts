@@ -37,7 +37,7 @@ export {
   type Standing,
   type StandingRequest,
 } from './capability/capability.ts';
-export type { CapabilityGuide, GuideVariables } from './capability/capability.ts';
+export type { CapabilityGuide, DefinitionPlace, GuideVariables } from './capability/capability.ts';
 export {
   inTheDirectoryListing,
   operationsInTheDirectoryListing,

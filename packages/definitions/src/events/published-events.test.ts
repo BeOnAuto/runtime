@@ -137,6 +137,23 @@ describe('publishing the same event again', () => {
   });
 });
 
+describe('an event a connection reports, recorded again', () => {
+  it('records nothing for the same source and id, whatever else it holds, where a caller’s other event is refused', () => {
+    const reported: CloudEvent = { ...monthClosed, source: '/connections/ledger' };
+    const recorded: RecordedEventPublished = { ...published, data: { event: reported, filled: [] } };
+    const changed = { region: 'us' };
+
+    expect([
+      decidedAfter(
+        { ...first, event: { ...reported, data: changed, time: '2026-10-01T09:01:00Z' }, ...again },
+        recorded,
+      ),
+      decidedAfter({ ...first, event: reported, ...again }, recorded),
+      decidedAfter({ ...first, event: { ...monthClosed, data: changed }, ...again }),
+    ]).toStrictEqual([Result.succeed([]), Result.succeed([]), anotherEvent]);
+  });
+});
+
 describe('the publication a stream holds', () => {
   it('is the event it recorded, and a defect when it holds none', async () => {
     expect(await Effect.runPromise(recordedPublication(published))).toBe(published);

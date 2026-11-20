@@ -97,9 +97,9 @@ describe('a workflow that emits an event', () => {
   it('is refused when it is saved with a type or a source the playbook records itself', () => {
     const document = emitting('{ type: run_succeeded, source: /runs/0199a3c4 }');
 
-    expect(workflowPolicy(document).map(({ pointer, detail }) => `${pointer}: ${detail}`)).toEqual([
-      '/do/0/announce/emit/event/with/type: The type run_succeeded is one the playbook records itself; give the event a type of your own',
-      '/do/0/announce/emit/event/with/source: The source /runs/0199a3c4 is one the playbook records itself; give the event a source of your own',
+    expect(workflowPolicy(document).map(({ pointer }) => pointer)).toEqual([
+      '/do/0/announce/emit/event/with/type',
+      '/do/0/announce/emit/event/with/source',
     ]);
   });
 

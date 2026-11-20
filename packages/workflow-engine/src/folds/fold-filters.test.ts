@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Json, JsonObject } from '../dsl/json.ts';
+import { connectionSourcePrefix } from '../filters/connection-sources.ts';
 import { sourcesUnderTest, type SourceUnderTest } from '../pool-testing/test-pools.ts';
 import { argumentTextOf } from '../programs/argument-texts.ts';
 import { filterContextOf, type FilterContext } from '../programs/kept-contexts.ts';
@@ -39,6 +40,26 @@ function workOf(matching: Matching): number {
 }
 
 const rejected = [{ ...reviewed, data: '${ $data.output.verdict.toUpperCase() == "REJECT" }' }];
+
+const reported: JsonObject = {
+  type: 'com.example.item.added',
+  source: `${connectionSourcePrefix}tracker`,
+  data: { title: 'A new item' },
+};
+
+const connectionFilters: readonly JsonObject[] = [
+  { type: 'com.example.item.added' },
+  { type: 'com.example.item.added', source: `${connectionSourcePrefix}tracker` },
+  { type: 'com.example.item.added', source: `${connectionSourcePrefix}tracker`, automatic: true },
+];
+
+const taken: Matching = { matched: true, work: 0 };
+
+const notTaken: Matching = { matched: false, work: 0 };
+
+function eachTaking(context: FilterContext, event: JsonObject): readonly Matching[] {
+  return connectionFilters.map((filter) => matched(context, [filter], event));
+}
 
 const busyApproval = {
   type: 'run_succeeded',
@@ -81,5 +102,12 @@ describe.each(prepared)('the filters of a view on $name instances', ({ context }
     expect(matched(context, [busyApproval], succeeded('approve'), 1)).toMatchObject({
       stopped: { ran: 'exhausted', limit: 'work' },
     });
+  });
+
+  it('take an event a connection reports only by a filter that names its source, and one an app made only by a filter that also names automatic: true', () => {
+    expect([eachTaking(context, reported), eachTaking(context, { ...reported, automatic: true })]).toEqual([
+      [notTaken, taken, notTaken],
+      [notTaken, notTaken, taken],
+    ]);
   });
 });

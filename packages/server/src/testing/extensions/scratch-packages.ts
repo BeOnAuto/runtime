@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import type { ExtensionPoint } from '@on.auto/definitions';
 import { onTestFinished } from 'vitest';
 
 import type { InstalledPackages, ListedExtension } from '../../extensions/extension-loading.ts';
@@ -60,4 +61,20 @@ export function scratchPackages(fixtures: readonly ScratchPackage[], within?: st
 
 export function configured(...packages: readonly string[]): readonly ListedExtension[] {
   return packages.map((name) => ({ package: name, provenance: 'configured', ofTheRelease: false }));
+}
+
+function namedAsAWord(part: number | string): string {
+  const escaped = String(part).replaceAll(/[$()*+.?[\\\]^{|}]/gu, String.raw`\$&`);
+  return String.raw`(?=.*(?<!\S)${escaped}(?![^\s,]))`;
+}
+
+export function refusalNaming(
+  extension: string,
+  contract: number,
+  { contracts }: Pick<ExtensionPoint, 'contracts'>,
+): RegExp {
+  return new RegExp(
+    [extension, contract, contracts.least, contracts.most].map((part) => namedAsAWord(part)).join(''),
+    'u',
+  );
 }

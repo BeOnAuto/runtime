@@ -28,10 +28,11 @@ function textsRenamed({ named, stored }: RenameMember, renaming: Renaming) {
 }
 
 export const renamedTexts = Effect.fnUntraced(function* (member: RenameMember, renaming: Renaming) {
-  const { type, stored } = member;
+  const { type, name, stored } = member;
   const texts = yield* textsRead(stored).pipe(Effect.mapError(refusedToAnswerFor(type, stored)));
   const written: WrittenDefinition = {
     ...texts,
+    name,
     source: renamedIn(texts.source, writtenInOf(type), textsRenamed(member, renaming)),
   };
   return written.source === texts.source ? undefined : written;

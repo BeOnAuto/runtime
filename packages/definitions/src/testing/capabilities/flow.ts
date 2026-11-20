@@ -9,7 +9,13 @@ const flowDocument = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Recor
 
 const Named = Schema.Array(Schema.Struct({ type: Schema.String, name: Schema.String }));
 
-const Filters = Schema.Array(Schema.Struct({ type: Schema.String, subject: Schema.optionalKey(Schema.String) }));
+const Filters = Schema.Array(
+  Schema.Struct({
+    type: Schema.String,
+    source: Schema.optionalKey(Schema.String),
+    subject: Schema.optionalKey(Schema.String),
+  }),
+);
 
 const namedIn = Schema.decodeUnknownSync(
   Schema.Struct({

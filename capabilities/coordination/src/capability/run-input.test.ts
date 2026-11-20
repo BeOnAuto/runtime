@@ -3,6 +3,7 @@ import { HostElsewhere } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { connectionsReporting } from '../testing/connection-events.ts';
 import { testExpressionCheck } from '../testing/expression-checks.ts';
 import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { testPlaybookNames } from '../testing/test-sandbox.ts';
@@ -13,6 +14,7 @@ const anyWords: unknown = expect.any(String);
 const neverStarted: WorkflowAdapterDependencies = {
   runs: { start: () => Effect.die('A workflow started') },
   check: testExpressionCheck,
+  connectionEvents: connectionsReporting({}),
   mostDurationMs: 30 * 24 * 3_600_000,
   longestCallMs: 660_000,
   names: testPlaybookNames,

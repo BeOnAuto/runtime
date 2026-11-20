@@ -105,6 +105,34 @@ describe('the matching of a page of a dataset', () => {
   });
 });
 
+describe('the matching of a dataset whose filters are written out', () => {
+  it('takes an event a connection reports only by a filter that names its source, and one an app made only by a filter that also names automatic: true, as its data tests do', async () => {
+    const reported = { ...placed.event, source: '/connections/shop' };
+    const host = answeredBy(() => Promise.reject(new Error('No page is judged')));
+    const writtenOut: DatasetData['events'] = [
+      { type: 'order.placed' },
+      { type: 'order.placed', source: '/connections/shop' },
+      { type: 'order.placed', source: '/connections/shop', automatic: true },
+    ];
+    const kindsOf = (marks: Readonly<Record<string, boolean>>) =>
+      Promise.all(
+        writtenOut.map(async (filter) => {
+          const matching = datasetMatchingOf({ ...dataNamedFirst, events: [filter] }, host.filters);
+          const [matched] = await Effect.runPromise(
+            matching.matchesOf([{ ...placed, event: { ...reported, ...marks } }]),
+          );
+          return matched?.match.kind;
+        }),
+      );
+
+    expect([await kindsOf({}), await kindsOf({ automatic: true })]).toEqual([
+      ['not_taken', 'taken', 'not_taken'],
+      ['not_taken', 'not_taken', 'taken'],
+    ]);
+    expect(host.asked).toEqual([]);
+  });
+});
+
 describe('the matching of a page of a dataset the host’s filters were stopped at', () => {
   it('ends the page at the first event the host’s filters were stopped at, or answered no verdict of', async () => {
     const stoppedAtTheSecond = answeredBy(() =>

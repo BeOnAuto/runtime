@@ -5,7 +5,7 @@ import type { CapabilityPorts } from '@on.auto/workflow-host';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { configured } from '../testing/extensions/scratch-packages.ts';
+import { configured, refusalNaming } from '../testing/extensions/scratch-packages.ts';
 import { sharedPooledPorts } from '../testing/servers/worker-pools.ts';
 import {
   predictionCapabilityFilled,
@@ -262,11 +262,11 @@ describe('the prediction capability of a runtime', () => {
 });
 
 describe('an extension filling capability/prediction that a runtime refuses, so that it does not start', () => {
-  it.each<readonly [string, Filling, string]>([
+  it.each<readonly [string, Filling, Readonly<RegExp> | string]>([
     [
-      'built against a contract other than the release’s',
-      ['@acme/forecasts', makingOnly(wholeCapability()), 1],
-      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 8',
+      'built against a contract outside the range the release serves',
+      ['@acme/forecasts', makingOnly(wholeCapability()), predictionCapabilityFilled.contracts.least - 1],
+      refusalNaming('@acme/forecasts', predictionCapabilityFilled.contracts.least - 1, predictionCapabilityFilled),
     ],
     [
       'whose implementation makes nothing',

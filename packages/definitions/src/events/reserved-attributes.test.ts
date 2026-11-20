@@ -1,3 +1,4 @@
+import { runtimeAttributeTypes } from '@on.auto/workflow-engine';
 import { Result, Schema, SchemaIssue } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -10,7 +11,7 @@ const { types, refusingThePlaybooksOwnAttributes } = playbookOwnNamesOf([echo, a
 
 const EventSchema = Schema.StructWithRest(
   Schema.Struct({ type: Schema.String, source: Schema.optionalKey(Schema.String) }),
-  [Schema.Record(Schema.String, Schema.Union([Schema.String, Schema.Int]))],
+  [Schema.Record(Schema.String, Schema.Union([Schema.String, Schema.Int, Schema.Boolean]))],
 ).check(refusingThePlaybooksOwnAttributes);
 
 const decode = Schema.decodeUnknownResult(EventSchema, { errors: 'all' });
@@ -64,6 +65,23 @@ const typesOfThePlaybook = [
   'reaction_refused',
 ];
 
+describe('the sources of what the playbook records itself', () => {
+  it('are those under /runs/, /definitions/, /callers/ and /connections/, the last the source of what a connected app reports', () => {
+    expect(
+      [
+        '/runs/1',
+        '/definitions/reasoning/summary',
+        '/callers/acme-admin',
+        '/connections/tracker',
+        '/runs',
+        'runs/1',
+        '/connection/tracker',
+        '/ledger/eu',
+      ].map((source) => isReservedSource(source)),
+    ).toEqual([true, true, true, true, false, false, false, false]);
+  });
+});
+
 describe('the types and sources of what the playbook records itself', () => {
   it('are reserved for the playbook: every type its runs and definitions record, those its capabilities declare, and every type its feed shows', () => {
     expect([...types]).toEqual(typesOfThePlaybook);
@@ -71,11 +89,6 @@ describe('the types and sources of what the playbook records itself', () => {
       Object.values(publicNames).flat(),
     );
     expect(shown.filter((name) => !types.has(name))).toEqual([]);
-    expect(
-      ['/runs/1', '/definitions/reasoning/summary', '/callers/acme-admin', '/runs', 'runs/1', '/ledger/eu'].map(
-        (source) => isReservedSource(source),
-      ),
-    ).toEqual([true, true, true, false, false, false]);
   });
 
   it('are none of a capability beyond the playbook’s own when no capability declares a fact', () => {
@@ -92,7 +105,10 @@ describe('the types and sources of what the playbook records itself', () => {
   it('are refused in an event from outside, each where it is given', () => {
     expect(refusals({ type: 'run_succeeded', source: '/runs/0199a3c4' })).toEqual([
       `/type: Expected a type of your own, not one the playbook records itself: ${typesOfThePlaybook.join(', ')}`,
-      '/source: Expected a source of your own, not one under /runs/, /definitions/ or /callers/, which the playbook records itself',
+      expect.stringMatching(/^\/source: /u),
+    ]);
+    expect(refusals({ type: 'com.example.item.added', source: '/connections/tracker' })).toEqual([
+      expect.stringMatching(/^\/source: /u),
     ]);
     expect(
       [
@@ -111,14 +127,15 @@ describe('the types and sources of what the playbook records itself', () => {
   });
 });
 
-const reservedInWords =
-  'causationid, correlationid, caller, definitionversion, depth, calldepth, calledby, triggerkind and triggerreference are the lineage and context the playbook gives its own records, which no event may claim';
+function refusedAt(event: unknown): readonly string[] {
+  return refusals(event).map((refusal) => refusal.slice(0, refusal.indexOf(':')));
+}
 
 describe('the lineage and the context the playbook gives its own records', () => {
   it('are refused in an event from outside, which may not claim them', () => {
-    expect(refusals({ type: 'com.acme.approved', causationid: 'm-1', correlationid: 'r-1' })).toEqual([
-      `/causationid: Expected no causationid: ${reservedInWords}`,
-      `/correlationid: Expected no correlationid: ${reservedInWords}`,
+    expect(refusedAt({ type: 'com.acme.approved', causationid: 'm-1', correlationid: 'r-1' })).toEqual([
+      '/causationid',
+      '/correlationid',
     ]);
   });
 
@@ -132,9 +149,10 @@ describe('the lineage and the context the playbook gives its own records', () =>
       calledby: 'r-0',
       triggerkind: 'event',
       triggerreference: '/schedule/on',
+      automatic: true,
     };
 
-    expect(refusals(claimed).map((refusal) => refusal.slice(0, refusal.indexOf(':')))).toEqual([
+    expect(refusedAt(claimed)).toEqual([
       '/caller',
       '/definitionversion',
       '/depth',
@@ -142,6 +160,15 @@ describe('the lineage and the context the playbook gives its own records', () =>
       '/calledby',
       '/triggerkind',
       '/triggerreference',
+      '/automatic',
     ]);
+  });
+
+  it('are the attributes a filter types as the runtime declares them, one list, each refused where it is given', () => {
+    const declared = [...runtimeAttributeTypes.keys()];
+
+    expect(declared.map((name) => refusedAt({ type: 'com.acme.approved', [name]: true }))).toEqual(
+      declared.map((name) => [`/${name}`]),
+    );
   });
 });

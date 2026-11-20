@@ -107,14 +107,14 @@ describe('the check of a document when it is saved', () => {
 });
 
 describe('the check of a document, given the playbook it is saved in', () => {
-  it('is handed that playbook on a create and on an update', async () => {
+  it('is handed that playbook and the name of the definition on a create and on an update', async () => {
     const { create, update, places } = saving();
     await create('greet', 'right');
     await update('greet', 'righter');
 
     expect(places()).toEqual([
-      { org: 'acme', playbook: 'alpha' },
-      { org: 'acme', playbook: 'alpha' },
+      { org: 'acme', playbook: 'alpha', name: 'greet' },
+      { org: 'acme', playbook: 'alpha', name: 'greet' },
     ]);
   });
 

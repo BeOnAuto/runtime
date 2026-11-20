@@ -67,6 +67,16 @@ describe('creating a workflow definition', () => {
     });
   });
 
+  it('stores a trigger that names a source of the playbook’s own, as the reference on triggers shows it', async () => {
+    const on =
+      'schedule:\n  on:\n    one: { with: { type: definition_created, source: /definitions/reasoning/summarize } }\n';
+
+    expect(await creating('summary-flow', `${header}${on}do:\n  - note: { set: { a: 1 } }\n`)).toMatchObject({
+      status: 'succeeded',
+      output: { triggers: [{ kind: 'event', reference: '/schedule/on' }] },
+    });
+  });
+
   it('is rejected for a document that breaks the DSL, with the line of each problem', async () => {
     expect(await creating('broken-flow', `${header}do:\n  - loop:\n      for: { each: item }\n      do: []\n`)).toEqual(
       {

@@ -104,7 +104,7 @@ function emitRejectionsOf({ types }: PlaybookOwnNames) {
         ? [
             rejection(
               `${pointer}/source`,
-              `The source ${source} is one the playbook records itself; give the event a source of your own`,
+              `The source ${source} is one the playbook keeps for itself; give the event a source of your own`,
             ),
           ]
         : [];

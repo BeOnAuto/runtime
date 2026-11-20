@@ -16,6 +16,7 @@
     "./goals": "./src/goals.ts",
     "./identity": "./src/identity/names-of-a-playbook.ts",
     "./importing": "./src/importing.ts",
+    "./listened-connections": "./src/read-model-reads/listened-connections.ts",
     "./page": "./src/page.ts",
     "./portable": "./src/portable.ts",
     "./template": "./src/template.ts",

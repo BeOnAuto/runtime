@@ -1,9 +1,7 @@
-import type { AppRuntime } from '@on.auto/api';
-import type { DispatcherServices } from '@on.auto/operations';
-
 import type { CapabilityRegistry } from '../capability-registry/capability-registry.ts';
 import type { Settings } from '../settings/settings.ts';
 import { subscriptionsOfTheServer, type SubscriptionsServing } from '../subscriptions/served-subscriptions.ts';
+import { connectionEventsOf } from './served-connection-events.ts';
 import { interactionServedBy, type ServedInteraction } from './served-interaction.ts';
 import { lookupServedBy, type ServedLookup } from './served-lookup.ts';
 import { reasoningServedBy, type ServedReasoning } from './served-reasoning.ts';
@@ -16,6 +14,8 @@ import {
   type ToolAccessWiring,
 } from './served-tool-access.ts';
 import { toolOperationsOf, type ProvidersOffered, type ServedToolOperations } from './served-tool-operations.ts';
+
+type ServingRuntime = Parameters<typeof interactionServedBy>[0];
 
 export interface ToolUsersWiring extends ProvidersOffered {
   readonly registry: CapabilityRegistry;
@@ -32,12 +32,13 @@ export interface ServedToolUsers {
   readonly toolOperations: ServedToolOperations;
   readonly listServers: MadeToolAccess['listServers'];
   readonly connections: ReturnType<typeof connectionAccessOf>;
+  readonly connectionEvents: ReturnType<typeof connectionEventsOf>;
   readonly named: MadeToolAccess['named'];
   readonly subscriptions: ReturnType<typeof subscriptionsOfTheServer>;
 }
 
 export async function toolUsersServedBy(
-  runtime: AppRuntime<DispatcherServices>,
+  runtime: ServingRuntime,
   settings: Settings,
   { registry, connections, offering, goals, results, messages, toolTiming, secrets }: ToolUsersWiring,
 ): Promise<ServedToolUsers> {
@@ -52,6 +53,7 @@ export async function toolUsersServedBy(
     toolOperations: toolOperationsOf(tools, { offering, goals, messages }),
     listServers: tools.listServers,
     connections: connectionAccessOf(tools.listServers),
+    connectionEvents: connectionEventsOf(runtime, tools.listServers, settings),
     named: tools.named,
     subscriptions: subscriptionsOfTheServer(runtime, settings, {
       tools: { ...tools, ...requestWaysOf(registry.tools) },

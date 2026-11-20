@@ -774,11 +774,11 @@ A playbook keeps one event for each `source` and `id`, so a request can be retri
 
 Some types, sources and attributes are reserved for what the runtime records itself. An event that uses one returns `invalid_input`:
 
-| Reserved   | Names                                                                                                                                 | Refused at                         |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| Types      | Every type the playbook's events show and every fact the playbook's capabilities declare, listed below                                | `/event/type`                      |
-| Sources    | Those beginning `/runs/`, `/definitions/` or `/callers/`                                                                              | `/event/source`                    |
-| Attributes | `causationid`, `correlationid`, `caller`, `definitionversion`, `depth`, `calldepth`, `calledby`, `triggerkind` and `triggerreference` | `/event/` and the attribute's name |
+| Reserved   | Names                                                                                                                                              | Refused at                         |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| Types      | Every type the playbook's events show and every fact the playbook's capabilities declare, listed below                                             | `/event/type`                      |
+| Sources    | Those beginning `/runs/`, `/definitions/`, `/callers/` or `/connections/`                                                                          | `/event/source`                    |
+| Attributes | `causationid`, `correlationid`, `caller`, `definitionversion`, `depth`, `calldepth`, `calledby`, `triggerkind`, `triggerreference` and `automatic` | `/event/` and the attribute's name |
 
 The reserved types are `run_started`, `run_deferred`, `attempt_resumed`, `run_succeeded`, `run_rejected`, `run_failed`, `run_cancel_requested`, `tool_call_started`, `tool_call_answered`, `tool_call_failed`, `model_call_started`, `model_call_answered`, `model_call_failed`, `request_answered`, `delivery_started`, `delivery_succeeded`, `delivery_failed`, `delivery_refused`, `reply_refused`, `telling_started`, `telling_succeeded`, `telling_failed`, `replies_read`, `reading_failed`, `interaction_requested`, `asset_kept`, `asset_expired`, `asset_content_removed`, `definition_created`, `definition_updated`, `definition_retired`, `definition_paused`, `definition_resumed`, `playbook_page_saved`, `event_published`, `workflow_input_applied`, `step_started`, `step_waiting`, `step_finished`, `step_failed`, `step_skipped` and `reaction_refused`.
 

@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { makeWorkflowAdapter } from '../capability/workflow.ts';
+import { connectionsReporting } from '../testing/connection-events.ts';
 import { testExpressionCheck } from '../testing/expression-checks.ts';
 import { playbookOn, namingLedger } from '../testing/playbook.ts';
 import { testPlaybookNames } from '../testing/test-sandbox.ts';
@@ -15,6 +16,7 @@ function saving(check: ExpressionCheck) {
   const workflow = makeWorkflowAdapter({
     runs: { start: () => Effect.die('A workflow started') },
     check,
+    connectionEvents: connectionsReporting({}),
     mostDurationMs: 2_592_000_000,
     longestCallMs: 1000,
     names: testPlaybookNames,

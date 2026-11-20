@@ -1,9 +1,11 @@
 import { Conflict, type PlaybookAddress, type PlaybookReader } from '@on.auto/operations';
+import { connectionNamedBy } from '@on.auto/workflow-engine';
 import { Effect, Option } from 'effect';
 
 import { refusedToAnswerFor } from '../operations/unread-texts.ts';
 import { textRead } from '../payloads/kept-texts.ts';
 import { serversNamedBy } from '../portable/portable-export.ts';
+import type { EventTrigger, TriggerFilter } from '../registry/definition-triggers.ts';
 import type { Member } from './move-members.ts';
 import { connectionNotAccessibleWords, takenWords, type Named } from './move-words.ts';
 
@@ -40,11 +42,25 @@ interface Needed {
   readonly definitions: readonly Named[];
 }
 
+function connectionListenedToBy({ attributes: { source } }: TriggerFilter): readonly string[] {
+  const connection = typeof source === 'string' ? connectionNamedBy(source) : undefined;
+  return connection === undefined ? [] : [connection];
+}
+
+function connectionsListenedToBy({ triggers = [] }: Member['stored']): readonly string[] {
+  return triggers
+    .filter((trigger): trigger is EventTrigger => trigger.kind === 'event')
+    .flatMap(({ filters }) => filters)
+    .flatMap((filter) => connectionListenedToBy(filter));
+}
+
 function connectionsNamedBy({ type, name, stored }: Member) {
   return textRead('source', stored.source).pipe(
     Effect.mapError(refusedToAnswerFor(type, stored)),
     Effect.map((source) =>
-      [...new Set(serversNamedBy({ type, source }))].map((connection): ANeed => ({ connection, type, name })),
+      [...new Set([...serversNamedBy({ type, source }), ...connectionsListenedToBy(stored)])].map(
+        (connection): ANeed => ({ connection, type, name }),
+      ),
     ),
   );
 }

@@ -190,6 +190,25 @@ describe('the rules of the DSL beyond its schema', () => {
   });
 });
 
+describe('the source of an event filter', () => {
+  it('is read as CloudEvents reads a source, a URI-reference, where the DSL asks for an absolute URI, in a trigger and a listen task alike', async () => {
+    const sources = [
+      '/definitions/reasoning/summarize',
+      '/connections/tracker',
+      'https://example.com/ledger',
+      '\'${ "/ledger" }\'',
+      "'/ledger eu'",
+    ];
+    const filters = [...sources.map((source) => `{ with: { type: closed, source: ${source} } }`), "'not a filter'"];
+    const listening = '  - wait: { listen: { to: { one: { with: { type: opened, source: /connections/tracker } } } } }';
+    const document = workflow(`schedule:\n  on:\n    any: [${filters.join(', ')}]\ndo:\n${listening}`);
+
+    expect(pointersOf(await connected(document))).toEqual(
+      new Set(['/schedule/on/any/4/with/source', '/schedule/on/any/5']),
+    );
+  });
+});
+
 function expectedCircularity(document: { readonly [key: string]: Json }): string {
   try {
     JSON.stringify(document);

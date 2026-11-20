@@ -2,6 +2,7 @@ import type { Outcome } from '@on.auto/operations';
 import { Effect, Struct } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { connectionsReporting } from '../testing/connection-events.ts';
 import { testExpressionCheck } from '../testing/expression-checks.ts';
 import { testPlaybookNames } from '../testing/test-sandbox.ts';
 import { workflowPlaybook, type WorkflowPlaybook } from '../testing/workflow-playbook.ts';
@@ -131,6 +132,7 @@ describe('a saved workflow that carries contributes', () => {
     const notKeeping = makeWorkflowAdapter({
       runs: kept.host,
       check: testExpressionCheck,
+      connectionEvents: connectionsReporting({}),
       mostDurationMs: 2_592_000_000,
       longestCallMs: 660_000,
       names: testPlaybookNames,

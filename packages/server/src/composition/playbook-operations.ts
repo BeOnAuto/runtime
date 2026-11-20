@@ -1,5 +1,5 @@
 import { commentChanges, commentOperations } from '@on.auto/activity';
-import { eventSubscriptionPresenter } from '@on.auto/connections';
+import { eventSubscriptionPresenter, type ConnectionsReporting } from '@on.auto/connections';
 import {
   definePublishEvent,
   makeDefinitionOperations,
@@ -38,6 +38,10 @@ export interface ServedConnectionAccess {
   readonly connections: {
     readonly hasAccess: (playbook: PlaybookAddress, connection: string) => Effect.Effect<boolean>;
   };
+}
+
+export interface ServedConnectionEvents {
+  readonly connectionEvents: ConnectionsReporting;
 }
 
 interface PlaybookOperation {

@@ -1,5 +1,6 @@
 import {
   enclosedBody,
+  filterMayTake,
   type FilterVerdict,
   type MatchedFilter,
   type PageFilters,
@@ -80,7 +81,7 @@ interface Placed {
 
 function literalMatchOf(data: DatasetData, { event }: PageEvent): Literal {
   const typed = data.events.filter(({ type }) => type === event.type);
-  if (typed.some((filter) => !isTested(filter) && holdsLiterally(filter, event))) {
+  if (typed.some((filter) => !isTested(filter) && filterMayTake(filter, event) && holdsLiterally(filter, event))) {
     return taken;
   }
   return typed.some((filter) => isTested(filter)) ? 'tested' : notTaken;

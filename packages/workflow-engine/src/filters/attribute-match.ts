@@ -1,5 +1,17 @@
+import { Function } from 'effect';
+
 import { enclosedBody } from '../dsl/expressions.ts';
-import { entriesOf, field, isTruthy, jsonEquals, type Json, type JsonEntry, type JsonObject } from '../dsl/json.ts';
+import {
+  entriesOf,
+  field,
+  isTruthy,
+  jsonEquals,
+  textField,
+  type Json,
+  type JsonEntry,
+  type JsonObject,
+} from '../dsl/json.ts';
+import { isConnectionSource } from './connection-sources.ts';
 
 export type FilterAttribute<Test> =
   | { readonly name: string; readonly expected: Json }
@@ -15,6 +27,25 @@ export function filterAttributesOf<Test>(
     const source = enclosedBody(expected);
     return source === undefined ? { name, expected } : { name, source, test: define(source) };
   });
+}
+
+function namesAsWritten<Test>(attributes: readonly FilterAttribute<Test>[], name: string, value: Json): boolean {
+  return attributes.some(
+    (attribute) => attribute.name === name && 'expected' in attribute && jsonEquals(attribute.expected, value),
+  );
+}
+
+export function mayTake<Test>(attributes: readonly FilterAttribute<Test>[], event: JsonObject): boolean {
+  const source = textField(event, 'source');
+  if (source === undefined || !isConnectionSource(source)) {
+    return true;
+  }
+  const askedFor = field(event, 'automatic') !== true || namesAsWritten(attributes, 'automatic', true);
+  return askedFor && namesAsWritten(attributes, 'source', source);
+}
+
+export function filterMayTake(attributes: JsonObject, event: JsonObject): boolean {
+  return mayTake(filterAttributesOf(attributes, Function.identity), event);
 }
 
 function actualOf<Test>(attribute: FilterAttribute<Test>, event: JsonObject): Json {

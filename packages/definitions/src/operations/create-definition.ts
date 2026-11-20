@@ -56,13 +56,13 @@ export function defineCreateDefinition(capabilities: readonly Capability[], page
       }),
       outputSchema: savedDefinitionSchemaOf(goals),
       reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
-      handle: Effect.fnUntraced(function* ({ type, name, ...written }) {
+      handle: Effect.fnUntraced(function* ({ type, ...written }) {
         const capability = yield* known.capabilityOfType(type);
         const createdBy = recordedCallerOf(yield* Caller);
         const definitionId = yield* Effect.sync(randomUUIDv7);
         const created = yield* createdFrom({ capability, pages, written, goals, messages }, known.types, (content) => ({
           type: 'create',
-          name,
+          name: written.name,
           content,
           created_by: createdBy,
           blanksRefused: goals,

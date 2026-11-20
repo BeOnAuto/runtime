@@ -21,7 +21,7 @@ export function definitionCreatedPaused(capabilities: readonly Capability[], pag
     const capability = yield* known.capabilityOfType(type);
     const createdBy = recordedCallerOf(yield* Caller);
     const definitionId = yield* Effect.sync(randomUUIDv7);
-    const { stored } = yield* savedFrom({ capability, pages, written, goals }, (content) => ({
+    const { stored } = yield* savedFrom({ capability, pages, written: { ...written, name }, goals }, (content) => ({
       type: 'create',
       name,
       content,

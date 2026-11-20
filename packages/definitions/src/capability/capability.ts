@@ -41,6 +41,10 @@ export interface DefinitionSummary {
   readonly details?: Schema.JsonObject;
 }
 
+export interface DefinitionPlace extends PlaybookAddress {
+  readonly name?: string;
+}
+
 export interface StandingRequest {
   readonly org: string;
   readonly playbook: string;
@@ -100,7 +104,7 @@ export interface CapabilityDeclaration<Parsed> {
   readonly check?: (
     parsed: NoInfer<Parsed>,
     source: string,
-    place: PlaybookAddress,
+    place: DefinitionPlace,
   ) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly notices?: (parsed: NoInfer<Parsed>, place: PlaybookAddress) => Effect.Effect<readonly Notice[]>;
   readonly summarize: (parsed: NoInfer<Parsed>) => DefinitionSummary;
@@ -132,7 +136,7 @@ export interface CapabilityDeclaration<Parsed> {
 
 export interface PreparedDefinition {
   readonly summary: DefinitionSummary;
-  readonly check: (place: PlaybookAddress) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
+  readonly check: (place: DefinitionPlace) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly notices?: (place: PlaybookAddress) => Effect.Effect<readonly Notice[]>;
   readonly definitionsNamed?: DefinitionsNamed;
   readonly run: (input: Schema.Json, context: RunContext) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
@@ -184,7 +188,7 @@ export interface Capability {
   readonly prepare: (source: string, stripped?: StrippedForms) => Effect.Effect<PreparedDefinition, InvalidInput>;
 }
 
-export const capabilityContract = 8;
+export const capabilityContract = 9;
 
 export const earliestCapabilityContractServed = 2;
 
