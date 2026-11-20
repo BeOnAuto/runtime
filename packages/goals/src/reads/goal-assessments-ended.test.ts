@@ -234,41 +234,50 @@ describe('the number an ended assessment of an after window was judged on', () =
 });
 
 describe('an assessment missed by its deadline', () => {
-  it('ends failed, judged by its deadline, with no number, though a late measurement came in', async () => {
+  it('ends failed, judged by its deadline, and lists the final measurement that came after as its number', async () => {
     const book = assessmentBookOf();
     const monday = await book.opened(controlsGoal, firstDay, { window: daySpan(firstDay) });
     const { due } = daySpan(firstDay);
     await book.overdue(monday, due);
-    await book.observed(monday, due + hour, { measurement: { value: 3, final: true, as_of: due + hour } });
     await book.assessed(monday, 'failed', due, 'deadline');
+    await book.observed(monday, due + day, { measurement: { value: 3, final: true, as_of: due + day } });
 
     const goal = await read(book, controlsGoal);
 
     expect(goal.closed).toMatchObject({ total: 1, failed: 1, no_result: 0 });
+    const late = { value: 3, as_of: instantText(due + day), at: instantText(due + day), run: 'run-1' };
     expect(goal.closed.latest).toEqual([
       {
         id: monday,
         outcome: 'failed',
         at: instantText(due),
-        window: {
-          opens: instantText(firstDay),
-          closes: instantText(firstDay + day),
-          due: instantText(due),
-        },
+        window: { opens: instantText(firstDay), closes: instantText(firstDay + day), due: instantText(due) },
+        value: 3,
         by: 'deadline',
         rule: { settles: 'on_crossing', target: { at_most: 0 } },
         milestones: [],
         marks: [],
-        measurement: {
-          value: 3,
-          final: true,
-          as_of: instantText(due + hour),
-          at: instantText(due + hour),
-          run: 'run-1',
-        },
+        measurement: { ...late, final: true },
+        final_measurement: late,
       },
     ]);
-    expect(goal.current).toMatchObject({ id: monday, verdict: 'failed', verdict_by: 'deadline' });
+    expect(goal.current).toMatchObject({ id: monday, verdict_by: 'deadline', final_measurement: late });
     expect(goal.current?.overdue_since).toBeUndefined();
+  });
+
+  it('ends failed, judged by its deadline, with no number when nothing measured it', async () => {
+    const book = assessmentBookOf();
+    const monday = await book.opened(controlsGoal, firstDay, { window: daySpan(firstDay) });
+    const { due } = daySpan(firstDay);
+    await book.overdue(monday, due);
+    await book.assessed(monday, 'failed', due, 'deadline');
+
+    const goal = await read(book, controlsGoal);
+
+    expect(goal.closed.latest).toEqual([
+      expect.objectContaining({ id: monday, outcome: 'failed', at: instantText(due), by: 'deadline' }),
+    ]);
+    expect(goal.closed.latest[0]).not.toHaveProperty('value');
+    expect(goal.closed.latest[0]).not.toHaveProperty('final_measurement');
   });
 });

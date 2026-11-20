@@ -40,24 +40,58 @@ const answered = (book: TraceBook, at: number, hours: number) =>
 
 const rung = (book: TraceBook, at: number) => book.ring(at).map((appended) => wordsOf(appended, named));
 
-describe('a request whose deadline passed without an answer', () => {
-  it('is missed by its deadline, though the answer came later, and the late answer is kept as evidence', () => {
+describe('a request answered after its close', () => {
+  it('is missed with its number as soon as an answer comes after its close and over the target', () => {
     const book = traceBookOf(replies, day(-1));
     received(book, day(0, 9));
 
     expect(rung(book, day(1, 10))).toEqual(['Harbour overdue quiet']);
-    expect(answered(book, day(1, 10, 20), 25.33)).toEqual(['Harbour observed marks answered 25.33 final']);
-    expect(rung(book, day(2, 9, 59))).toEqual([]);
-    expect(rung(book, day(2, 10))).toEqual(['Harbour assessed failed deadline now']);
+    expect(answered(book, day(1, 10, 20), 25.33)).toEqual([
+      'Harbour observed marks answered 25.33 final',
+      'Harbour assessed failed final now',
+    ]);
+    expect(rung(book, day(2, 10))).toEqual([]);
+    expect(book.state(harbour)).toMatchObject({
+      verdict: 'failed',
+      verdictAt: day(1, 10, 20),
+      verdictBy: 'final',
+      lateMeasurement: { value: 25.33, as_of: day(1, 10, 20) },
+    });
+    expect(book.state(harbour).finalMeasurement).toBeUndefined();
+  });
+
+  it('keeps its miss and gains its number when the answer comes after it was missed', () => {
+    const book = traceBookOf(replies, day(-1));
+    received(book, day(0, 9));
+    rung(book, day(1, 10));
+    rung(book, day(2, 10));
+
+    expect(answered(book, day(3, 8), 71)).toEqual(['Harbour observed marks answered 71 final']);
     expect(book.state(harbour)).toMatchObject({
       verdict: 'failed',
       verdictAt: day(1, 10),
       verdictBy: 'deadline',
-      measurement: { value: 25.33 },
+      lateMeasurement: { value: 71, as_of: day(3, 8) },
     });
-    expect(book.state(harbour).ended).toBeUndefined();
+    expect(answered(book, day(3, 9), 72)).toEqual(['Harbour observed 72 final']);
+    expect(book.state(harbour)).toMatchObject({ verdictBy: 'deadline', lateMeasurement: { value: 72 } });
   });
 
+  it('is still missed by its deadline when an answer after its close is within the target, and keeps that number', () => {
+    const book = traceBookOf({ ...replies, success: { settles: 'at_close', target: { at_most: 30 } } }, day(-1));
+    received(book, day(0, 9));
+    rung(book, day(1, 10));
+
+    expect(answered(book, day(1, 12), 27)).toEqual(['Harbour observed marks answered 27 final']);
+    expect(rung(book, day(2, 10))).toEqual(['Harbour assessed failed deadline now']);
+    expect(book.state(harbour)).toMatchObject({
+      verdictBy: 'deadline',
+      lateMeasurement: { value: 27, as_of: day(1, 12) },
+    });
+  });
+});
+
+describe('a request whose deadline passed without an answer', () => {
   it('is missed by its deadline when no answer ever comes', () => {
     const book = traceBookOf(replies, day(-1));
     received(book, day(0, 9));

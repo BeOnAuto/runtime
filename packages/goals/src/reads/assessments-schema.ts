@@ -64,7 +64,9 @@ const FinalMeasurementSchema = Schema.Struct({
   as_of: Instant('The moment the number is true through'),
   at: Instant('When the run that reported it ended'),
   run: Schema.String.annotate({ description: 'The id of the run that reported it' }),
-}).annotate({ description: 'The latest final measurement' });
+}).annotate({
+  description: "The latest final measurement true by the window's close, else the latest one that came after the close",
+});
 
 const StoppedSchema = Schema.Struct({
   at: Instant('When that run ended'),
@@ -86,7 +88,7 @@ const DismissedSchema = Schema.Struct({
 
 const JudgedBySchema = Schema.Literals(['crossing', 'final', 'deadline']).annotate({
   description:
-    'How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided; deadline, the deadline passed with no final measurement that counts, so it failed with no number',
+    'How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided, or one that came after the close and missed the target; deadline, the deadline passed with no final measurement that counts, so it failed; a final measurement that came after the close is its number',
 });
 
 const NoticeSchema = Schema.Struct({
@@ -131,7 +133,12 @@ export const ClosedAssessmentSchema = Schema.Struct({
   at: Instant('When it ended'),
   per: Schema.optionalKey(SubjectSchema),
   window: Schema.optionalKey(AssessmentWindowSchema),
-  value: Schema.optionalKey(Schema.Finite.annotate({ description: 'The number it was judged on' })),
+  value: Schema.optionalKey(
+    Schema.Finite.annotate({
+      description:
+        'The number it was judged on; for a miss at its deadline, the final measurement that came after the close, if one did',
+    }),
+  ),
   rule: Schema.optionalKey(
     Schema.Struct({ settles: SettlesSchema, target: TargetSchema }).annotate({
       description: 'How it was judged, as pinned when it opened',

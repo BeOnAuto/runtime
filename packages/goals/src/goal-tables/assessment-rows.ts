@@ -196,7 +196,7 @@ const goalIndex = (name: string, columns: readonly string[]) => ({ name, columns
 
 export const assessmentRows: KeyedProjection = {
   name: assessmentsName,
-  version: 5,
+  version: 6,
   kinds: [assessmentsKind],
   types: [
     'goal_assessment_opened',

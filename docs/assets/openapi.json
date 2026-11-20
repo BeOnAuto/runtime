@@ -26758,7 +26758,7 @@
                             "run"
                           ],
                           "additionalProperties": false,
-                          "description": "The latest final measurement"
+                          "description": "The latest final measurement true by the window's close, else the latest one that came after the close"
                         },
                         "verdict": {
                           "type": "string",
@@ -26780,7 +26780,7 @@
                             "final",
                             "deadline"
                           ],
-                          "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided; deadline, the deadline passed with no final measurement that counts, so it failed with no number"
+                          "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided, or one that came after the close and missed the target; deadline, the deadline passed with no final measurement that counts, so it failed; a final measurement that came after the close is its number"
                         },
                         "overdue_since": {
                           "type": "string",
@@ -27338,7 +27338,7 @@
                                           "final",
                                           "deadline"
                                         ],
-                                        "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided; deadline, the deadline passed with no final measurement that counts, so it failed with no number"
+                                        "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided, or one that came after the close and missed the target; deadline, the deadline passed with no final measurement that counts, so it failed; a final measurement that came after the close is its number"
                                       },
                                       "at": {
                                         "type": "string",
@@ -27392,7 +27392,7 @@
                                       },
                                       "value": {
                                         "type": "number",
-                                        "description": "The number it was judged on"
+                                        "description": "The number it was judged on; for a miss at its deadline, the final measurement that came after the close, if one did"
                                       },
                                       "rule": {
                                         "type": "object",
@@ -27569,7 +27569,7 @@
                                           "run"
                                         ],
                                         "additionalProperties": false,
-                                        "description": "The latest final measurement"
+                                        "description": "The latest final measurement true by the window's close, else the latest one that came after the close"
                                       }
                                     },
                                     "required": [
@@ -28018,7 +28018,7 @@
                               "final",
                               "deadline"
                             ],
-                            "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided; deadline, the deadline passed with no final measurement that counts, so it failed with no number"
+                            "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided, or one that came after the close and missed the target; deadline, the deadline passed with no final measurement that counts, so it failed; a final measurement that came after the close is its number"
                           },
                           "at": {
                             "type": "string",
@@ -28072,7 +28072,7 @@
                           },
                           "value": {
                             "type": "number",
-                            "description": "The number it was judged on"
+                            "description": "The number it was judged on; for a miss at its deadline, the final measurement that came after the close, if one did"
                           },
                           "rule": {
                             "type": "object",
@@ -28249,7 +28249,7 @@
                               "run"
                             ],
                             "additionalProperties": false,
-                            "description": "The latest final measurement"
+                            "description": "The latest final measurement true by the window's close, else the latest one that came after the close"
                           }
                         },
                         "required": [
@@ -28409,7 +28409,7 @@
                               "final",
                               "deadline"
                             ],
-                            "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided; deadline, the deadline passed with no final measurement that counts, so it failed with no number"
+                            "description": "How the verdict came: crossing, a measurement crossed the target; final, the final measurement decided, or one that came after the close and missed the target; deadline, the deadline passed with no final measurement that counts, so it failed; a final measurement that came after the close is its number"
                           },
                           "at": {
                             "type": "string",
@@ -28463,7 +28463,7 @@
                           },
                           "value": {
                             "type": "number",
-                            "description": "The number it was judged on"
+                            "description": "The number it was judged on; for a miss at its deadline, the final measurement that came after the close, if one did"
                           },
                           "rule": {
                             "type": "object",
@@ -28640,7 +28640,7 @@
                               "run"
                             ],
                             "additionalProperties": false,
-                            "description": "The latest final measurement"
+                            "description": "The latest final measurement true by the window's close, else the latest one that came after the close"
                           }
                         },
                         "required": [

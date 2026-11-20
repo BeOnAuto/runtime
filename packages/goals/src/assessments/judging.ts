@@ -2,7 +2,7 @@ import type { GoalRule, Instant, WindowSpan } from '../goal-rules/goal-rule.ts';
 import { missedAtOf } from '../goal-windows/calendar-windows.ts';
 import type { AssessmentFact } from './assessment-facts.ts';
 import { isUndecided, textOf, type AssessmentState, type PinnedRule } from './assessment-state.ts';
-import { assessedFact, decidedBy, endedFact, toldOf } from './verdict-rule.ts';
+import { assessedFact, decidedBy, decidingMeasurementOf, endedFact, toldOf } from './verdict-rule.ts';
 
 export interface Judging {
   readonly goal: GoalRule | undefined;
@@ -16,10 +16,11 @@ function atDue(
   goal: GoalRule,
   window: WindowSpan,
 ): readonly AssessmentFact[] {
-  if (state.finalMeasurement !== undefined) {
+  const deciding = decidingMeasurementOf(state, pinned.target);
+  if (deciding !== undefined) {
     return [
       assessedFact(goal, {
-        verdict: decidedBy(pinned.target, state.finalMeasurement.value),
+        verdict: decidedBy(pinned.target, deciding.value),
         at: window.due,
         by: 'final',
       }),

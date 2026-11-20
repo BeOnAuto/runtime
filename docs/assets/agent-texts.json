@@ -5853,7 +5853,7 @@
       ]
     },
     {
-      "sha256": "32e1af5387b7ab39961ff8fd5b989fa7d37c9e8e75d19e557dd753352253b096",
+      "sha256": "263563d26a773d30501d7994b856fae2155f29adb80ef84dff11af524808c4b4",
       "tier": 3,
       "received": [
         {
@@ -6012,8 +6012,10 @@
         "",
         "- With `on_crossing` and `at_least`, a measurement at or above the target while the window is open passes immediately. With `at_most`, a measurement above it fails immediately.",
         "- At the close plus its grace, the latest final measurement decides, for both kinds of `settles`.",
-        "- When no final measurement has arrived by then, the judging becomes overdue. A final measurement that arrives later still decides it, but only when its `as_of` lies at or before the window's close. A measurement with no `as_of` is true as of when its run ended, so one from a run that ended after the close does not decide it. One that is still overdue one more window later fails: its deadline passed with nothing that counts, so it is a miss with no number. A late measurement is still recorded, but it never turns the miss into a pass. So tell the person that a thing nothing measured, such as one waiting on an answer that never came, shows overdue once its close and grace pass, and is missed only one window later.",
-        "- A verdict is final. Later measurements change nothing, though milestones are still marked.",
+        "- When no final measurement has arrived by then, the judging becomes overdue. A final measurement whose `as_of` lies at or before the window's close still decides it when it arrives. A measurement with no `as_of` is true as of when its run ended.",
+        "- A final measurement whose `as_of` lies after the close is late. A late one that misses the target fails the judging with that number once the close and its grace have passed: a reply that took 23 hours against at most 8 is a miss that reads 23. A late one that meets the target never makes a pass: the judging stays overdue and keeps it as its number.",
+        "- A judging still overdue one more window later fails, since its deadline passed with nothing that counts. A final measurement that arrives after that becomes its number, and it stays a miss. So tell the person that a thing nothing measured, such as one waiting on an answer that never came, shows overdue once its close and grace pass, and is missed only one window later.",
+        "- A verdict is final. Later measurements never change it, though milestones are still marked.",
         "",
         "## What a workflow contributes",
         "",
@@ -6669,7 +6671,7 @@
       ]
     },
     {
-      "sha256": "3f843666573d2ef513b6c4073d3d9255170e49446b7770d841bc5879f9f208fe",
+      "sha256": "0e72779c29d5479c9b17db5d7bff20860a44127175badd319d8257bc482f2fb2",
       "tier": 3,
       "received": [
         {
@@ -6733,7 +6735,7 @@
         "",
         "A request waits on a member of the org when its party, its `to` as rendered, is an email address, one that holds an `@`: it waits on the member whose address that is, compared without regard to case. A party that is a person's id, `person:` and an id, waits on that person. Any other party, such as a channel, a role or a name, waits on any member of the org, whether the request goes through a connection or is held for an agent. Whom a request waits on does not limit who may answer it: any caller that may write to the playbook can answer, as Answering a request says.",
         "",
-        "So write `to: \"{{ input.reviewer }}\"`, given the reviewer's address such as `priya@acme.example`, for a request one person should see as theirs. A request answered by reply takes a reply only when the reading tool names its sender exactly as the answerer is written: `from`, or `to` when there is no `from`. So a chat request that waits on an address also writes `from` as the chat names the person, and gives the sending tool the conversation to post in from the input rather than from `to`; see Answering by reply. [The organization's activity](https://on.auto/docs/reference/http#the-organization-s-activity) shows each open request as a `needs_you` row whose `waits_on` holds the address in lower case, the person's id or `any_member`. It counts a request for the caller whose id it names, or for every caller where it waits on any member, and one that names an address for no caller, since the runtime knows a caller by their id and never by an address: a client that knows the person's address, as Auto Studio does, tells them which of those are theirs.",
+        "So write `to: \"{{ input.reviewer }}\"`, given the reviewer's address such as `priya@acme.example`, for a request one person should see as theirs. A request answered by reply takes a reply from its answerer only when the reading tool names its sender exactly as the answerer is written: `from`, or `to` when there is no `from`. So a chat request that waits on an address also writes `from` as the chat names the person, and gives the sending tool the conversation to post in from the input rather than from `to`; see Answering by reply. [The organization's activity](https://on.auto/docs/reference/http#the-organization-s-activity) shows each open request as a `needs_you` row whose `waits_on` holds the address in lower case, the person's id or `any_member`. It counts a request for the caller whose id it names, or for every caller where it waits on any member, and one that names an address for no caller, since the runtime knows a caller by their id and never by an address: a client that knows the person's address, as Auto Studio does, tells them which of those are theirs.",
         "",
         "## A function document",
         "",
@@ -6950,7 +6952,7 @@
         "| `description` | Optional explanation, 1 to 1,000 characters |",
         "| `call` | The tool the function asks: `server`, `tool`, `with` and `read`; see `call`. With it, `output.schema` is required and `to`, `expires`, `deliver`, `replies`, `from`, `reply`, `render` and the body are refused |",
         "| `to` | Required without `call`, refused with it. A template that renders the party the request goes to: a name the playbook's readers filter by, which a delivery's templates may use as the tool's address |",
-        "| `from` | Optional. A template, as `to` is, that renders the party whose reply counts, the answerer; `to` when left out. A request sent to a room names the person here |",
+        "| `from` | Optional. A template, as `to` is, that renders the party whose reply counts, the answerer; `to` when left out. Write it to have one person answer a request sent to a channel |",
         "| `expires` | Required without `call`, refused with it. An ISO 8601 duration from one minute to thirty days, such as `PT4H` or `P2D`, after which a request nobody answered ends |",
         "| `deliver` | The tool the request is sent through: `server` and `tool` as `search` names them, and `with`, the call's arguments. `sent` holds two JSON Pointers into the tool's answer, to the conversation and to the message's identity; see `deliver`. Or `agent`, for a request held for an agent. Required without `call` |",
         "| `replies` | Only with the tool of `deliver`, its `sent` and `output.schema`: how the replies to the message are read, with `conversation`, `tool`, `with`, `read`, `wait` and `tell`; see `replies` |",
@@ -7087,14 +7089,14 @@
         "| Key | Required | What it points to, within each message |",
         "| --- | --- | --- |",
         "| `id` | Yes | The message's identity. The newest message's becomes `since` |",
-        "| `sender` | Yes | Who wrote it. Only the answerer's answer is taken |",
+        "| `sender` | Yes | Who wrote it |",
         "| `text` | Yes | Its words, which the reply rule reads. A message with nothing there reads as empty and is refused |",
         "| `to` | No | The message it replies to, such as the first message of its thread |",
         "| `time` | No, unless the read lists oldest first and does not name the request's own message | When it was written, not when it was last changed: RFC 3339 text such as `2026-10-05T09:00:00Z`, also with a space in place of the `T` or an offset written as `+0000`, or seconds since the epoch as a number or as text |",
         "",
         "- A message whose `id` or `sender` is not a text or a whole number of at most 256 bytes, without a control character, is passed over.",
         "- A message the connection's provider marks as posted by an app, such as one with a `bot_id` in Slack, is passed over too, so Auto never answers another program.",
-        "- A message from anyone but the answerer is passed over, unless the rule reads it as an answer and its sender answers none of the open requests it could be meant for. Then it is refused once a request, keeping who sent it and never their words.",
+        "- A message from anyone who may not answer is passed over, unless the rule reads it as an answer and its sender answers none of the open requests it could be meant for. Then it is refused once a request, keeping who sent it and never their words.",
         "- A message whose `id` is one the playbook sent in the conversation, such as the first message of a thread it started, is the playbook's own and not a reply. It is passed over and not counted, so a read that finds nothing else has found nothing and records no `replies_read`.",
         "- The message of a request that has ended is the playbook's own too. It is neither taken nor refused, though the read counts it.",
         "- A message a telling of the playbook posted is the playbook's own too, whoever the chat names as its sender, as through a connection that posts as the person who answers. The playbook knows it by the id the telling's tool answered and where it landed, read at `deliver.sent.id` and `deliver.sent.conversation` where the telling goes through `deliver.tool`, and neither takes nor refuses it. Unlike the request's own message, it is still counted among the replies the read found, so a read that finds only a telling records `replies_read` with one reply, none taken and none refused.",
@@ -7189,7 +7191,7 @@
         "Where a function reads replies, the person answers by replying to the message the playbook sent, in the chat where it reached them. While the request stands open, the playbook reads the conversation's new replies:",
         "",
         "- every few seconds at first, and every five minutes at most, never more often than the function's `wait`;",
-        "- taking a reply only from the answerer: the function's `from`, or `to` when it gives no `from`. A reply from anyone else is passed over and kept nowhere.",
+        "- taking a reply from the answerer: the function's `from`, or `to` when it gives no `from`. With no `from` and a `to` that is neither an address nor a person's id, such as a channel, a reply in the thread of the request's message counts from anyone. A reply from anyone else is passed over and kept nowhere.",
         "",
         "The `reply` rule reads the answer from a reply. It maps each top-level string property of `output.schema` to where in the reply its value comes from:",
         "",

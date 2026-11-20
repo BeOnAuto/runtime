@@ -155,3 +155,46 @@ describe('a store whose goal facts hold a dismissal, opened by a release that ke
     });
   });
 });
+
+describe('a store whose goal facts hold a final that came after the close, opened by a release that keeps goal_assessments_6', () => {
+  it('fills goal_assessments_6 from the facts, the letterhead request missed at its deadline with that final as its number', async () => {
+    const file = temporaryLedger();
+    onTestFinished(file.remove);
+    const late: readonly Fact[] = [
+      { type: 'goal_overdue', data: { since: window.due, told: 'quiet' }, context: byThePlaybook(window.due) },
+      {
+        type: 'goal_observed',
+        data: {
+          source: { record: 'record-late', run: 'run-late', workflow: 'prepare-revision', version: 2, entry: 2 },
+          at: '2026-11-18T09:00:00.000Z',
+          measurement: { value: 0, final: true, as_of: '2026-11-18T09:00:00.000Z' },
+        },
+        context: byThePlaybook('2026-11-18T09:00:01.000Z'),
+      },
+      {
+        type: 'goal_assessed',
+        data: { verdict: 'failed', at: window.due, by: 'deadline', told: 'quiet' },
+        context: byThePlaybook('2026-11-18T22:25:00.000Z'),
+      },
+    ];
+    const before = await ledgerOn(file.fileName, false);
+    await Effect.runPromise(
+      Effect.forEach(
+        [...recordedBefore.slice(0, 2), ...late],
+        (fact) => before.execute(`playbook/acme/studio/assessments/${letterhead}`, verbatim, fact),
+        { discard: true },
+      ),
+    );
+
+    const after = await ledgerOn(file.fileName, true);
+    const [kept] = await Effect.runPromise(
+      after.readProjectedRows('goal_assessments', studio, { where: [], orderBy: [], order: 'asc', limit: 5 }),
+    );
+
+    expect(kept?.row).toMatchObject({ open: false, verdict: 'failed', outcome: 'failed' });
+    expect(JSON.parse(String(kept?.row['state']))).toMatchObject({
+      verdictBy: 'deadline',
+      lateMeasurement: { value: 0, as_of: Date.parse('2026-11-18T09:00:00.000Z'), run: 'run-late' },
+    });
+  });
+});

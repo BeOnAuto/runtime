@@ -304,8 +304,10 @@ How a judging ends:
 
 - With `on_crossing` and `at_least`, a measurement at or above the target while the window is open passes immediately. With `at_most`, a measurement above it fails immediately.
 - At the close plus its grace, the latest final measurement decides, for both kinds of `settles`.
-- When no final measurement has arrived by then, the judging becomes overdue. A final measurement that arrives later still decides it, but only when its `as_of` lies at or before the window's close. A measurement with no `as_of` is true as of when its run ended, so one from a run that ended after the close does not decide it, and no message follows. One that is still overdue one more window later fails: its deadline passed with nothing that counts, so it is a miss with no number. A late measurement is still recorded, but it never turns the miss into a pass. So tell the person that a thing nothing measured, such as one waiting on an answer that never came, shows overdue once its close and grace pass, and is missed only one window later.
-- A verdict is final. Later measurements change nothing, though milestones are still marked.
+- When no final measurement has arrived by then, the judging becomes overdue. A final measurement whose `as_of` lies at or before the window's close still decides it when it arrives. A measurement with no `as_of` is true as of when its run ended.
+- A final measurement whose `as_of` lies after the close is late. A late one that misses the target fails the judging with that number once the close and its grace have passed: a reply that took 23 hours against at most 8 is a miss that reads 23. A late one that meets the target never makes a pass: the judging stays overdue and keeps it as its number.
+- A judging still overdue one more window later fails, since its deadline passed with nothing that counts. A final measurement that arrives after that becomes its number, and it stays a miss. So tell the person that a thing nothing measured, such as one waiting on an answer that never came, shows overdue once its close and grace pass, and is missed only one window later.
+- A verdict is final. Later measurements never change it, though milestones are still marked.
 
 <!-- end -->
 
@@ -313,8 +315,10 @@ How a judging ends:
 
 - With `on_crossing` and `at_least`, a measurement at or above the target while the window is open passes immediately. With `at_most`, a measurement above it fails immediately.
 - At the close plus its grace, the latest final measurement decides, for both kinds of `settles`.
-- When no final measurement has arrived by then, the judging becomes overdue. A final measurement that arrives later still decides it, but only when its `as_of` lies at or before the window's close. A measurement with no `as_of` is true as of when its run ended, so one from a run that ended after the close does not decide it. One that is still overdue one more window later fails: its deadline passed with nothing that counts, so it is a miss with no number. A late measurement is still recorded, but it never turns the miss into a pass. So tell the person that a thing nothing measured, such as one waiting on an answer that never came, shows overdue once its close and grace pass, and is missed only one window later.
-- A verdict is final. Later measurements change nothing, though milestones are still marked.
+- When no final measurement has arrived by then, the judging becomes overdue. A final measurement whose `as_of` lies at or before the window's close still decides it when it arrives. A measurement with no `as_of` is true as of when its run ended.
+- A final measurement whose `as_of` lies after the close is late. A late one that misses the target fails the judging with that number once the close and its grace have passed: a reply that took 23 hours against at most 8 is a miss that reads 23. A late one that meets the target never makes a pass: the judging stays overdue and keeps it as its number.
+- A judging still overdue one more window later fails, since its deadline passed with nothing that counts. A final measurement that arrives after that becomes its number, and it stays a miss. So tell the person that a thing nothing measured, such as one waiting on an answer that never came, shows overdue once its close and grace pass, and is missed only one window later.
+- A verdict is final. Later measurements never change it, though milestones are still marked.
 
 <!-- end -->
 

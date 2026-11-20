@@ -186,60 +186,60 @@
       "sql": "CREATE INDEX generations_due_1_polls_due ON generations_due_1 (poll_due_at) WHERE poll_due_at IS NOT NULL"
     },
     {
-      "name": "goal_assessments_5",
-      "sql": "CREATE TABLE goal_assessments_5 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, goal TEXT, goals_version INTEGER, per_id TEXT, window_opens INTEGER, window_closes INTEGER, window_due INTEGER, title TEXT, link TEXT, next_milestone TEXT, mark_1 TEXT, mark_2 TEXT, mark_3 TEXT, mark_4 TEXT, mark_5 TEXT, mark_6 TEXT, mark_7 TEXT, verdict TEXT, verdict_at INTEGER, verdict_told TEXT, overdue INTEGER, overdue_since INTEGER, overdue_told TEXT, outcome TEXT, open INTEGER, opened_at INTEGER, observed_at INTEGER, closed_at INTEGER, closed_recorded_at INTEGER, overdue_recorded_at INTEGER, judging_due_at INTEGER, no_result_at INTEGER, notice_due_at INTEGER, notices TEXT, noticed_at INTEGER, notice_refusals TEXT, notice_refused_at INTEGER, stopped_at INTEGER, stopped_run TEXT, dismissed INTEGER, dismissed_at INTEGER, dismissed_by TEXT, state TEXT, PRIMARY KEY (playbook_key, row_key))"
+      "name": "goal_assessments_6",
+      "sql": "CREATE TABLE goal_assessments_6 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, goal TEXT, goals_version INTEGER, per_id TEXT, window_opens INTEGER, window_closes INTEGER, window_due INTEGER, title TEXT, link TEXT, next_milestone TEXT, mark_1 TEXT, mark_2 TEXT, mark_3 TEXT, mark_4 TEXT, mark_5 TEXT, mark_6 TEXT, mark_7 TEXT, verdict TEXT, verdict_at INTEGER, verdict_told TEXT, overdue INTEGER, overdue_since INTEGER, overdue_told TEXT, outcome TEXT, open INTEGER, opened_at INTEGER, observed_at INTEGER, closed_at INTEGER, closed_recorded_at INTEGER, overdue_recorded_at INTEGER, judging_due_at INTEGER, no_result_at INTEGER, notice_due_at INTEGER, notices TEXT, noticed_at INTEGER, notice_refusals TEXT, notice_refused_at INTEGER, stopped_at INTEGER, stopped_run TEXT, dismissed INTEGER, dismissed_at INTEGER, dismissed_by TEXT, state TEXT, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "goal_assessments_5_closed",
-      "sql": "CREATE INDEX goal_assessments_5_closed ON goal_assessments_5 (playbook_key, goal, open, closed_at, row_key)"
+      "name": "goal_assessments_6_closed",
+      "sql": "CREATE INDEX goal_assessments_6_closed ON goal_assessments_6 (playbook_key, goal, open, closed_at, row_key)"
     },
     {
-      "name": "goal_assessments_5_closed_recorded",
-      "sql": "CREATE INDEX goal_assessments_5_closed_recorded ON goal_assessments_5 (playbook_key, goal, open, closed_recorded_at, row_key)"
+      "name": "goal_assessments_6_closed_recorded",
+      "sql": "CREATE INDEX goal_assessments_6_closed_recorded ON goal_assessments_6 (playbook_key, goal, open, closed_recorded_at, row_key)"
     },
     {
-      "name": "goal_assessments_5_dismissed",
-      "sql": "CREATE INDEX goal_assessments_5_dismissed ON goal_assessments_5 (playbook_key, dismissed, dismissed_at, row_key)"
+      "name": "goal_assessments_6_dismissed",
+      "sql": "CREATE INDEX goal_assessments_6_dismissed ON goal_assessments_6 (playbook_key, dismissed, dismissed_at, row_key)"
     },
     {
-      "name": "goal_assessments_5_in_flight",
-      "sql": "CREATE INDEX goal_assessments_5_in_flight ON goal_assessments_5 (playbook_key, goal, open, dismissed, overdue, window_due, row_key)"
+      "name": "goal_assessments_6_in_flight",
+      "sql": "CREATE INDEX goal_assessments_6_in_flight ON goal_assessments_6 (playbook_key, goal, open, dismissed, overdue, window_due, row_key)"
     },
     {
-      "name": "goal_assessments_5_judging_due",
-      "sql": "CREATE INDEX goal_assessments_5_judging_due ON goal_assessments_5 (judging_due_at) WHERE judging_due_at IS NOT NULL"
+      "name": "goal_assessments_6_judging_due",
+      "sql": "CREATE INDEX goal_assessments_6_judging_due ON goal_assessments_6 (judging_due_at) WHERE judging_due_at IS NOT NULL"
     },
     {
-      "name": "goal_assessments_5_newest",
-      "sql": "CREATE INDEX goal_assessments_5_newest ON goal_assessments_5 (playbook_key, goal, open, dismissed, opened_at, row_key)"
+      "name": "goal_assessments_6_newest",
+      "sql": "CREATE INDEX goal_assessments_6_newest ON goal_assessments_6 (playbook_key, goal, open, dismissed, opened_at, row_key)"
     },
     {
-      "name": "goal_assessments_5_notice_due",
-      "sql": "CREATE INDEX goal_assessments_5_notice_due ON goal_assessments_5 (notice_due_at) WHERE notice_due_at IS NOT NULL"
+      "name": "goal_assessments_6_notice_due",
+      "sql": "CREATE INDEX goal_assessments_6_notice_due ON goal_assessments_6 (notice_due_at) WHERE notice_due_at IS NOT NULL"
     },
     {
-      "name": "goal_assessments_5_noticed",
-      "sql": "CREATE INDEX goal_assessments_5_noticed ON goal_assessments_5 (playbook_key, goal, noticed_at, row_key)"
+      "name": "goal_assessments_6_noticed",
+      "sql": "CREATE INDEX goal_assessments_6_noticed ON goal_assessments_6 (playbook_key, goal, noticed_at, row_key)"
     },
     {
-      "name": "goal_assessments_5_outcomes",
-      "sql": "CREATE INDEX goal_assessments_5_outcomes ON goal_assessments_5 (playbook_key, goal, outcome, closed_at, row_key)"
+      "name": "goal_assessments_6_outcomes",
+      "sql": "CREATE INDEX goal_assessments_6_outcomes ON goal_assessments_6 (playbook_key, goal, outcome, closed_at, row_key)"
     },
     {
-      "name": "goal_assessments_5_overdue_recorded",
-      "sql": "CREATE INDEX goal_assessments_5_overdue_recorded ON goal_assessments_5 (playbook_key, goal, open, overdue, overdue_recorded_at, row_key)"
+      "name": "goal_assessments_6_overdue_recorded",
+      "sql": "CREATE INDEX goal_assessments_6_overdue_recorded ON goal_assessments_6 (playbook_key, goal, open, overdue, overdue_recorded_at, row_key)"
     },
     {
-      "name": "goal_assessments_5_refused_notices",
-      "sql": "CREATE INDEX goal_assessments_5_refused_notices ON goal_assessments_5 (playbook_key, goal, notice_refused_at, row_key)"
+      "name": "goal_assessments_6_refused_notices",
+      "sql": "CREATE INDEX goal_assessments_6_refused_notices ON goal_assessments_6 (playbook_key, goal, notice_refused_at, row_key)"
     },
     {
-      "name": "goal_assessments_5_stopped",
-      "sql": "CREATE INDEX goal_assessments_5_stopped ON goal_assessments_5 (playbook_key, goal, open, dismissed, stopped_at, row_key)"
+      "name": "goal_assessments_6_stopped",
+      "sql": "CREATE INDEX goal_assessments_6_stopped ON goal_assessments_6 (playbook_key, goal, open, dismissed, stopped_at, row_key)"
     },
     {
-      "name": "goal_assessments_5_waiting",
-      "sql": "CREATE INDEX goal_assessments_5_waiting ON goal_assessments_5 (playbook_key, goal, open, dismissed, next_milestone, row_key)"
+      "name": "goal_assessments_6_waiting",
+      "sql": "CREATE INDEX goal_assessments_6_waiting ON goal_assessments_6 (playbook_key, goal, open, dismissed, next_milestone, row_key)"
     },
     {
       "name": "goal_clocks_1",

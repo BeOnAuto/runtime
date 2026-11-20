@@ -102,6 +102,33 @@ describe('the results of a goal kept to one outcome, across every day', () => {
   });
 });
 
+describe('the results of a goal missed at a deadline', () => {
+  it('lists each miss at its deadline, with the number of a final that came after it and none for one nothing measured', async () => {
+    const book = assessmentBookOf();
+    await book.goalsSaved([experimentsGoal]);
+    const unmeasured = await book.opened(experimentsGoal, nov10, { per: 'unmeasured' });
+    await book.overdue(unmeasured, nov10 + day);
+    await book.assessed(unmeasured, 'failed', nov10 + day, 'deadline');
+    const answered = await book.opened(experimentsGoal, nov10 + minute, { per: 'answered' });
+    await book.overdue(answered, nov10 + day + minute);
+    await book.assessed(answered, 'failed', nov10 + day + minute, 'deadline');
+    await book.observed(answered, nov10 + 3 * day, { measurement: { value: 9, final: true, as_of: nov10 + 3 * day } });
+
+    const { items } = await resultsOf(book, { outcome: 'failed' });
+
+    expect(items.map(({ id }) => id)).toEqual([answered, unmeasured]);
+    expect(items[0]).toMatchObject({
+      outcome: 'failed',
+      by: 'deadline',
+      at: instantText(nov10 + day + minute),
+      value: 9,
+      final_measurement: { value: 9, as_of: instantText(nov10 + 3 * day) },
+    });
+    expect(items[1]).toMatchObject({ outcome: 'failed', by: 'deadline', at: instantText(nov10 + day) });
+    expect(items[1]).not.toHaveProperty('value');
+  });
+});
+
 describe('the results of a goal with nothing to read', () => {
   it('are empty for a goal that ended nothing, and refuse a goal the playbook does not hold', async () => {
     const book = assessmentBookOf();

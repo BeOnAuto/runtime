@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { askedRun, deliveringTo } from '../testing/delivered-conversations.ts';
+import { askedRun, deliveringTo, throughTheProvider } from '../testing/delivered-conversations.ts';
+import { channelAnswers, threadDocument, threadRepliesTelling } from '../testing/documents.ts';
 import { answererId, conversationRows, recordsOf } from '../testing/index.ts';
 import { theChannel } from '../testing/woken-conversations.ts';
 
@@ -111,6 +112,21 @@ describe('a delivered reply of anyone but the answerer', () => {
     expect(performed).toEqual([{ id: chatter.id, outcome: 'passed_over' }]);
     expect(await recordsOf(delivering.playbook.ledger, 'reply_refused', 'request_answered')).toEqual([]);
     expect(delivering.lines()).toEqual([]);
+  });
+});
+
+describe('a delivered reply in the thread of a request sent to a channel, whose function names no answerer', () => {
+  it('is taken as the answer from whichever member of the channel wrote it', async () => {
+    const document = threadDocument({ party: channelAnswers, replies: threadRepliesTelling() });
+    const delivering = await deliveringTo({ ...throughTheProvider, document });
+    const approve = delivering.written('approve', 'U0SOMEONE');
+
+    const performed = await delivering.delivered([approve]);
+
+    expect(performed).toEqual([{ id: approve.id, outcome: 'taken' }]);
+    expect(await recordsOf(delivering.playbook.ledger, 'request_answered')).toMatchObject([
+      { data: { reply: { sender: 'U0SOMEONE', to: delivering.thread }, delivered: true } },
+    ]);
   });
 });
 

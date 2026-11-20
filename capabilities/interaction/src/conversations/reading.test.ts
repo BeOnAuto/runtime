@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { channelAnswers } from '../testing/documents.ts';
 import {
   answered,
   answeredInAFile,
@@ -152,5 +153,84 @@ describe('a read of replies that finds nothing to take', () => {
     expect(playbook.chat.posted()).toHaveLength(1);
     expect(await recordsOf(playbook.ledger, 'replies_read')).toEqual([]);
     expect(row?.row).toMatchObject({ open: true, reads: 1, since: null });
+  });
+});
+
+const askedInTheChannel = { document: threadDocument({ party: channelAnswers }) };
+
+describe('a request sent to a channel, whose function names no answerer', () => {
+  it('takes its answer from whoever replies in the thread of its message', async () => {
+    const playbook = await chatHarness(askedInTheChannel);
+    const [thread] = await deliveredInThread(playbook, first);
+    playbook.chat.reply({ channel: '#approvals-sales', thread, user: 'U0MEMBER', text: 'approve' });
+
+    await playbook.performReads(Date.now() + farAhead);
+    await playbook.performDue(Date.now());
+
+    expect(await recordsOf(playbook.ledger, 'request_answered')).toMatchObject([
+      { data: { answer: { choice: 'approve' }, reply: { sender: 'U0MEMBER', to: thread } } },
+    ]);
+    expect(await playbook.runOf(first)).toMatchObject({ output: { status: 'succeeded' } });
+  });
+
+  it('keeps waiting on a reply in its thread the rule cannot read, refused as no answer and told how to answer', async () => {
+    const playbook = await chatHarness(askedInTheChannel);
+    const [thread] = await deliveredInThread(playbook, first);
+    playbook.chat.reply({ channel: '#approvals-sales', thread, user: 'U0MEMBER', text: 'maybe' });
+
+    await playbook.performReads(Date.now() + farAhead);
+
+    expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toMatchObject([
+      { data: { reply: { sender: 'U0MEMBER' }, because: 'not_an_answer', told: true } },
+    ]);
+    expect(await playbook.firstOpen()).toMatchObject({ standing: 'delivered' });
+  });
+
+  it('takes the first answer in its thread, and a later one from another member changes nothing', async () => {
+    const playbook = await chatHarness(askedInTheChannel);
+    const [thread] = await deliveredInThread(playbook, first);
+    playbook.chat.reply({ channel: '#approvals-sales', thread, user: 'U0MEMBER', text: 'approve' });
+    playbook.chat.reply({ channel: '#approvals-sales', thread, user: 'U0OTHER', text: 'reject' });
+
+    await playbook.performReads(Date.now() + farAhead);
+    await playbook.performDue(Date.now());
+
+    expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toMatchObject([
+      { data: { reply: { sender: 'U0MEMBER' } } },
+    ]);
+    expect(await playbook.runOf(first)).toMatchObject({ output: { output: { choice: 'approve' } } });
+  });
+});
+
+describe('a reply naming no message, to a request sent to a channel whose function names no answerer', () => {
+  it('is no answer, since only the thread says which request it answers', async () => {
+    const document = threadDocument({ party: channelAnswers, replies: flatReplies });
+    const playbook = await chatHarness({ ...savedFlat, document });
+    await deliveredInThread(playbook, first);
+    playbook.chat.reply({ channel: '#approvals-sales', user: 'U0MEMBER', text: 'approve' });
+
+    await playbook.performReads(Date.now() + farAhead);
+
+    expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toMatchObject([
+      { data: { because: 'not_the_answerer' } },
+    ]);
+  });
+});
+
+describe('a request sent to an address, whose function names no answerer', () => {
+  it('takes no answer in its thread from anyone but that address', async () => {
+    const playbook = await chatHarness({ document: threadDocument({ party: ["to: '{{ input.owner }}'"] }) });
+    await playbook.askInThread(first, 'priya@acme.example');
+    await playbook.performDue(Date.now());
+    const [thread] = playbook.chat.posted().map(({ ts }) => ts);
+    playbook.chat.reply({ channel: 'priya@acme.example', thread, user: 'U0MEMBER', text: 'approve' });
+    playbook.chat.reply({ channel: 'priya@acme.example', thread, user: 'priya@acme.example', text: 'reject' });
+
+    await playbook.performReads(Date.now() + farAhead);
+
+    expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toMatchObject([
+      { type: 'reply_refused', data: { reply: { sender: 'U0MEMBER' }, because: 'not_the_answerer' } },
+      { type: 'request_answered', data: { reply: { sender: 'priya@acme.example' } } },
+    ]);
   });
 });

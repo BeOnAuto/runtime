@@ -36,7 +36,7 @@ describe('the tables of goals', () => {
 
     expect(goalsLedger.projections.flatMap(({ types }) => types).filter((type) => !goalTypes.has(type))).toEqual([]);
     expect(goalsLedger.projections.map(({ name, version }) => `${name}_${String(version)}`)).toEqual([
-      'goal_assessments_5',
+      'goal_assessments_6',
       'goal_clocks_1',
       'goal_refusals_1',
       'goal_notice_days_1',

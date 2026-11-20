@@ -1,7 +1,7 @@
 import type { GoalRule, Instant, Target, Told, Verdict } from '../goal-rules/goal-rule.ts';
 import type { ObservationSource } from '../observations/observation.ts';
 import type { AssessmentFact, JudgedBy } from './assessment-facts.ts';
-import { textOf } from './assessment-state.ts';
+import { textOf, type AssessmentState, type FinalMeasurement } from './assessment-state.ts';
 
 export function crossingOf(target: Target, value: number): Verdict | undefined {
   if ('at_least' in target) {
@@ -15,6 +15,16 @@ export function decidedBy(target: Target, value: number): Verdict {
     return value >= target.at_least ? 'passed' : 'failed';
   }
   return value <= target.at_most ? 'passed' : 'failed';
+}
+
+export function decidingMeasurementOf(state: AssessmentState, target: Target): FinalMeasurement | undefined {
+  const { finalMeasurement, lateMeasurement } = state;
+  if (finalMeasurement !== undefined) {
+    return finalMeasurement;
+  }
+  return lateMeasurement !== undefined && decidedBy(target, lateMeasurement.value) === 'failed'
+    ? lateMeasurement
+    : undefined;
 }
 
 export function toldOf(goal: GoalRule, change: Verdict | 'overdue'): Told {

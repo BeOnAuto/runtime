@@ -77,6 +77,8 @@ Once Slack is connected, ask your agent to give a function in your playbook the 
 | Add a reaction, and see the reactions on a message                                                       | "Add a check mark to each question in the support channel we answered today."             |
 | Ask someone to approve in a channel. Auto marks their reply when it is taken, and says so when it is not | "Ask the campaign owner in the marketing channel to approve the brief."                   |
 
+A request in Slack is answered by a reply in the thread of its message. When it asks a channel and your agent didn't name who answers, anyone who replies in that thread can answer it. To have one person answer, ask your agent to name them, and replies from others are then not taken. See [Answering by reply](../reference/interaction-format.md#answering-by-reply).
+
 The `slack-bot` row of [the providers Auto ships](../self-host/connections.md#the-providers-auto-ships) is the full list of what a function may do with Slack, through @Auto or your own app.
 
 Searching Slack messages is not available yet.

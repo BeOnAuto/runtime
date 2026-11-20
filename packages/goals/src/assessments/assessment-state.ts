@@ -10,9 +10,10 @@ import type {
 import type { AssessmentFact, AssessmentOpened, EndReason, GoalObserved, JudgedBy } from './assessment-facts.ts';
 import type { NoticeChange } from './assessment-identity.ts';
 import { dismissedAfter, type Dismissed } from './dismissing.ts';
+import { measuredChangeOf, openingPart, type Measured } from './measured-change.ts';
 import { refusedAfter, startedAfter } from './notice-owing.ts';
 import { stoppedAfterObserving, stoppedOf, type Stopped } from './stopping.ts';
-import { countsIn, opensInRun } from './window-counting.ts';
+import { opensInRun } from './window-counting.ts';
 
 const recentSources = 32;
 
@@ -63,6 +64,7 @@ export interface AssessmentState {
   readonly marks: readonly Mark[];
   readonly measurement?: StandingMeasurement;
   readonly finalMeasurement?: FinalMeasurement;
+  readonly lateMeasurement?: FinalMeasurement;
   readonly title?: string;
   readonly link?: string;
   readonly verdict: 'open' | Verdict;
@@ -105,64 +107,6 @@ export function isMarked(state: AssessmentState, milestone: string): boolean {
 
 export function pinsMilestone(state: AssessmentState, milestone: string): boolean {
   return state.pinned?.milestones.some(({ id }) => id === milestone) === true;
-}
-
-export interface Measured {
-  readonly value: number;
-  readonly final: boolean;
-  readonly as_of: Instant;
-  readonly at: Instant;
-  readonly run: string;
-  readonly says?: string;
-  readonly opening?: true;
-}
-
-export interface MeasuredChange {
-  readonly measurement?: StandingMeasurement;
-  readonly finalMeasurement?: FinalMeasurement;
-}
-
-function openingPart(opening: boolean): { readonly opening?: true } {
-  return opening ? { opening: true } : {};
-}
-
-function settlesFinally(rule: WindowRule | undefined, window: WindowSpan | undefined, measured: Measured): boolean {
-  return measured.final && rule !== undefined && window !== undefined && countsIn(rule, window, measured);
-}
-
-function isRepeated(state: AssessmentState, window: WindowSpan | undefined, measured: Measured): boolean {
-  const { measurement } = state;
-  if (measurement === undefined || measurement.value !== measured.value) {
-    return false;
-  }
-  if (window !== undefined && !measured.final && measured.at > window.closes) {
-    return true;
-  }
-  if (measurement.final !== measured.final) {
-    return false;
-  }
-  const rule = state.pinned?.window;
-  return rule === undefined || (window !== undefined && countsIn(rule, window, measurement));
-}
-
-export function measuredChangeOf(
-  state: AssessmentState,
-  window: WindowSpan | undefined,
-  measured: Measured,
-): MeasuredChange {
-  if (state.verdict !== 'open' || isRepeated(state, window, measured)) {
-    return {};
-  }
-  const standing =
-    state.measurement === undefined || measured.opening === true || measured.as_of > state.measurement.as_of;
-  const final =
-    settlesFinally(state.pinned?.window, window, measured) &&
-    (state.finalMeasurement === undefined || measured.as_of > state.finalMeasurement.as_of);
-  const { value, as_of, at, run } = measured;
-  return {
-    ...(standing ? { measurement: measured } : {}),
-    ...(final ? { finalMeasurement: { value, as_of, at, run, ...openingPart(measured.opening === true) } } : {}),
-  };
 }
 
 export function pinnedOf(data: AssessmentOpened): PinnedRule {

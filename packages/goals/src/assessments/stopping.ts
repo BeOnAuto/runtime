@@ -1,6 +1,7 @@
 import type { Instant } from '../goal-rules/goal-rule.ts';
 import type { AssessmentFact, GoalObserved, GoalStopped } from './assessment-facts.ts';
-import type { AssessmentState, Mark, MeasuredChange, PinnedRule, StandingMeasurement } from './assessment-state.ts';
+import type { AssessmentState, Mark, PinnedRule, StandingMeasurement } from './assessment-state.ts';
+import type { MeasuredChange } from './measured-change.ts';
 
 export interface Stopped {
   readonly at: Instant;

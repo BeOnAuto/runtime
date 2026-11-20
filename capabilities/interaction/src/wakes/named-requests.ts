@@ -8,7 +8,7 @@ import { Effect } from 'effect';
 
 import { keptRequestOf, takesReplies } from '../conversations/open-in-conversation.ts';
 import { repliesSeenBy, type SeenReplies } from '../facts/work-rules.ts';
-import type { KeptRequest } from '../replies/reply-taking.ts';
+import { mayAnswer, type KeptRequest } from '../replies/reply-taking.ts';
 import { routeOfRequest, tellsTakenAndRefused } from '../replies/request-routes.ts';
 import { openRequestsName } from '../requests/open-requests.ts';
 import { requestRowFrom } from '../requests/request-rows.ts';
@@ -115,7 +115,7 @@ function typingFor(
   { request, answered }: Candidate,
   reply: RepliedTo,
 ): Effect.Effect<boolean> {
-  if (answered || request.row.answerer !== reply.sender || !tellsTakenAndRefused(request)) {
+  if (answered || !mayAnswer(request, reply) || !tellsTakenAndRefused(request)) {
     return Effect.succeed(false);
   }
   return Effect.map(repliesSeenBy(parts.ledger, { ...playbook, id: request.runId }), (seen) => !seen(reply.id));

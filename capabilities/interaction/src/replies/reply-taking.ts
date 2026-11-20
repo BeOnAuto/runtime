@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-import type { Issue, PlaybookAddress, ProjectedAddress } from '@on.auto/operations';
+import { signedInPersonPrefix, type Issue, type PlaybookAddress, type ProjectedAddress } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import type { ReplyRefusal } from '../facts/run-facts.ts';
@@ -81,8 +81,25 @@ function answeredBy(request: KeptRequest, words: string): ReplyDecision {
   return issues.length === 0 ? { kind: 'take', request, answer } : refused(request, 'invalid', issues);
 }
 
-function answersOneOf(kept: readonly KeptRequest[], { sender }: Reply): boolean {
-  return kept.some(({ row }) => row.answerer === sender);
+function namesAPerson(party: string): boolean {
+  return party.startsWith(signedInPersonPrefix) || party.includes('@');
+}
+
+function answeredByTheRoom({ row }: KeptRequest): boolean {
+  return row.answerer === row.party && !namesAPerson(row.party);
+}
+
+interface Replier {
+  readonly sender: string;
+  readonly to: string | undefined;
+}
+
+export function mayAnswer(request: KeptRequest, { sender, to }: Replier): boolean {
+  return request.row.answerer === sender || (to === request.sent.id && answeredByTheRoom(request));
+}
+
+function answersOneOf(kept: readonly KeptRequest[], reply: Reply): boolean {
+  return kept.some((request) => mayAnswer(request, reply));
 }
 
 function fromAnother(request: KeptRequest, reply: Reply, others: readonly KeptRequest[]): ReplyDecision {
@@ -95,7 +112,7 @@ export function decisionOf(reply: Reply, kept: readonly KeptRequest[]): ReplyDec
   if (request === undefined) {
     return nothing;
   }
-  if (request.row.answerer !== reply.sender) {
+  if (!mayAnswer(request, reply)) {
     return fromAnother(request, reply, ambiguous ? askedBefore : []);
   }
   if (ambiguous) {

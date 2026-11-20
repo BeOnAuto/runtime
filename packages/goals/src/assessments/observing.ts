@@ -6,15 +6,15 @@ import {
   assessmentAfter,
   isMarked,
   isUndecided,
-  measuredChangeOf,
   pinnedOf,
   pinsMilestone,
   textOf,
   type AssessmentState,
   type PinnedRule,
 } from './assessment-state.ts';
+import { measuredChangeOf } from './measured-change.ts';
 import { openedFact, openingOf } from './opening.ts';
-import { assessedFact, crossingOf, decidedBy, endedFact } from './verdict-rule.ts';
+import { assessedFact, crossingOf, decidedBy, decidingMeasurementOf, endedFact } from './verdict-rule.ts';
 import { afterMilestoneOf, countsIn, opensInRun } from './window-counting.ts';
 
 export interface Observing {
@@ -84,7 +84,12 @@ function measurementCounts(
     run: observation.source.run,
     ...openedHere(windows.opening),
   });
-  return crossing !== undefined || change.measurement !== undefined || change.finalMeasurement !== undefined;
+  return (
+    crossing !== undefined ||
+    change.measurement !== undefined ||
+    change.finalMeasurement !== undefined ||
+    change.lateMeasurement !== undefined
+  );
 }
 
 function isRetitled(state: AssessmentState, observation: Observation): boolean {
@@ -157,13 +162,14 @@ function verdictAfter(
   observation: Observation,
   now: Instant,
 ): AssessmentFact | undefined {
-  const { window, finalMeasurement, pinned } = state;
-  if (pinned === undefined || state.verdict !== 'open' || window === undefined || finalMeasurement === undefined) {
+  const { window, pinned } = state;
+  if (pinned === undefined || state.verdict !== 'open' || window === undefined) {
     return undefined;
   }
-  return now >= window.due
+  const deciding = decidingMeasurementOf(state, pinned.target);
+  return deciding !== undefined && now >= window.due
     ? assessedFact(goal, {
-        verdict: decidedBy(pinned.target, finalMeasurement.value),
+        verdict: decidedBy(pinned.target, deciding.value),
         at: Math.max(observation.at, window.due),
         by: 'final',
         source: observation.source,

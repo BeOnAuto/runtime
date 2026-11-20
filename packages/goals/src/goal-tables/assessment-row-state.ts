@@ -65,6 +65,7 @@ const AssessmentStateSchema = Schema.Struct({
   marks: Schema.Array(MarkSchema),
   measurement: Schema.optionalKey(StandingSchema),
   finalMeasurement: Schema.optionalKey(FinalSchema),
+  lateMeasurement: Schema.optionalKey(FinalSchema),
   title: Schema.optionalKey(Schema.String),
   link: Schema.optionalKey(Schema.String),
   verdict: Schema.Literals(['open', 'passed', 'failed']),

@@ -128,18 +128,23 @@ export interface ThreadOptions {
   readonly rule?: readonly string[];
   readonly replies?: readonly string[];
   readonly answer?: readonly string[];
+  readonly party?: readonly string[];
 }
+
+const ownerAnswers: readonly string[] = ["to: '#approvals-{{ input.team }}'", "from: '{{ input.owner }}'"];
+
+export const channelAnswers: readonly string[] = ["to: '#approvals-{{ input.team }}'"];
 
 export function threadDocument({
   rule = replyRuleLines,
   replies = threadReplies,
   answer = answerSchema,
+  party = ownerAnswers,
 }: ThreadOptions = {}): string {
   return [
     '---',
     "description: Ask the campaign's owner to approve a brief",
-    "to: '#approvals-{{ input.team }}'",
-    "from: '{{ input.owner }}'",
+    ...party,
     'expires: P2D',
     ...teamDelivery,
     ...replies,

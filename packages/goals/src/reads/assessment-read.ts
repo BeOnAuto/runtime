@@ -58,7 +58,13 @@ function saying(says: string | undefined) {
   return says === undefined ? {} : { says };
 }
 
-function measurementsOf({ measurement, finalMeasurement }: AssessmentState) {
+function finalOf({ finalMeasurement, lateMeasurement }: AssessmentState) {
+  return finalMeasurement ?? lateMeasurement;
+}
+
+function measurementsOf(state: AssessmentState) {
+  const { measurement } = state;
+  const finalMeasurement = finalOf(state);
   const standing =
     measurement === undefined
       ? {}
@@ -169,7 +175,7 @@ function judgedValueOf(held: HeldAssessment): number | undefined {
   if (held.state.verdict === 'open') {
     return undefined;
   }
-  return decidedByCrossing(held) ? held.state.measurement?.value : held.state.finalMeasurement?.value;
+  return decidedByCrossing(held) ? held.state.measurement?.value : finalOf(held.state)?.value;
 }
 
 type ClosedOutcome = ClosedRead['outcome'];
