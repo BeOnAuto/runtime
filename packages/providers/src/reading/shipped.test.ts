@@ -97,7 +97,7 @@ describe('the events parts of the shipped providers', () => {
     expect(requestOriginsOf(github.entry)).toEqual(['https://api.github.com']);
   });
 
-  it("are Slack Bot's, a socket opened with the app credential its way of a key takes", () => {
+  it("are Slack Bot's, a socket opened with the app credential its way of a key takes, pinged every 30 seconds", () => {
     const slackBot = Result.getOrThrow(providerNamed(shipped, 'slack-bot'));
 
     expect(sentAndTakenBy(slackBot.entry)).toEqual([
@@ -105,6 +105,7 @@ describe('the events parts of the shipped providers', () => {
       [['websocket', 'app_level_token']],
       ['app_level_token'],
     ]);
+    expect(eventDestinationOf(shipped, 'slack-bot', 'websocket')?.heartbeat_seconds).toBe(30);
   });
 });
 

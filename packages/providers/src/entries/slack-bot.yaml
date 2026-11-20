@@ -62,6 +62,7 @@ events:
         address: /url
       credential: app_level_token
       acknowledge: $message.payload#/envelope_id
+      heartbeat_seconds: 30
       filter:
         when:
           '$message.payload#/type': [events_api]
