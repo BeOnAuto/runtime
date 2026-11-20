@@ -20,12 +20,12 @@ Send requests to the server's address, such as `https://auto.example.com`, the `
 
 Each API key belongs to one org and has permissions for a set of playbooks:
 
-| Permission       | Lets the caller                                                                                                                                                                                                            |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `org:read`       | Read the org's playbooks and connections, list models and providers, search the org's tool servers, read the org's activity and mark it seen, make, read and resolve the org's own comments, and list who holds which role |
-| `org:write`      | Create, update and retire playbooks, add, reconnect and remove connections, set which playbooks may use one, and, for a person whose role lets them, give or take away a role                                              |
-| `playbook:read`  | Read definitions, runs, history, events, requests and analytics, search and read tools, make, read and resolve comments, and transcribe a recording                                                                        |
-| `playbook:write` | Create, change, retire or run a function or workflow, cancel a run, send or publish an event, answer a request and call a tool                                                                                             |
+| Permission       | Lets the caller                                                                                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `org:read`       | Read the org's playbooks and connections, list models and providers, search the org's tool servers, read the org's activity and mark it seen, make, read and resolve the org's own comments, and list the members and who holds which role |
+| `org:write`      | Create, update and retire playbooks, add, reconnect and remove connections, set which playbooks may use one, and, for a person whose role lets them, give or take away a role                                                              |
+| `playbook:read`  | Read definitions, runs, history, events, requests and analytics, search and read tools, make, read and resolve comments, and transcribe a recording                                                                                        |
+| `playbook:write` | Create, change, retire or run a function or workflow, cancel a run, send or publish an event, answer a request and call a tool                                                                                                             |
 
 Each route table below names the permission a route needs.
 
@@ -48,7 +48,7 @@ These five need no key, and neither does [content at a signed address](#content-
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
 - Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`, `make_comment_in_org`, `list_comments_in_org`, `resolve_comment_in_org` and `reopen_comment_in_org` for the org's own comments, and `list_generation_models_in_org` for the org's `list_generation_models`. Its summary is its title. Its tag names the resource it acts on.
-- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the six routes of Studio's connection page, `read_link`, `approve`, `give_credential`, `give_client`, `start` and `finish`; `get_connection`, `set_connection_playbooks`, `set_connection_signing_secret`, `remove_connection_signing_secret` and `list_providers`; `get_run_history`, `get_playbook_analytics`, `render_page`, `render_playbook_page` and `validate`; `make_comment` and `make_comment_in_org`, and `reopen_comment` and `reopen_comment_in_org`; `list_org_changes`, `list_playbook_changes`, `list_activity` and `mark_activity_seen`; `list_role_assignments`, `assign_role` and `unassign_role`; `transcribe` and `get_voice`; `get_content`, the route of [content at a signed address](#content-at-a-signed-address); and `get_license`, `activate_allocation` and `report_allocation`.
+- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the six routes of Studio's connection page, `read_link`, `approve`, `give_credential`, `give_client`, `start` and `finish`; `get_connection`, `set_connection_playbooks`, `set_connection_signing_secret`, `remove_connection_signing_secret` and `list_providers`; `get_run_history`, `get_playbook_analytics`, `render_page`, `render_playbook_page` and `validate`; `make_comment` and `make_comment_in_org`, and `reopen_comment` and `reopen_comment_in_org`; `list_org_changes`, `list_playbook_changes`, `list_activity` and `mark_activity_seen`; `list_role_assignments`, `assign_role` and `unassign_role`, and, where the runtime signs people in, `invite_admin`, `resend_invitation`, `revoke_invitation`, `set_member_role` and `remove_member`; `transcribe` and `get_voice`; `get_content`, the route of [content at a signed address](#content-at-a-signed-address); and `get_license`, `activate_allocation` and `report_allocation`.
 - Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
@@ -1596,6 +1596,100 @@ Authorization: Bearer <token>
   "principal": { "type": "person", "id": "user_7kLm2" },
   "scope": { "type": "org", "id": "acme" },
   "roles": [{ "type": "built_in", "id": "viewer" }]
+}
+```
+
+### Members
+
+Where the runtime signs people in ([Let people sign in](../self-host/security.md#let-people-sign-in)), it serves the members of its org, everyone who holds a role there, with the name and address their sign-in gave, and the invitations to join it.
+
+| Operation           | Method and route                                | Permission  | Input                                                         |
+| ------------------- | ----------------------------------------------- | ----------- | ------------------------------------------------------------- |
+| `list_members`      | `GET /members`                                  | `org:read`  | None                                                          |
+| `invite_member`     | `POST /members/invitations`                     | `org:write` | `email_address`, and an optional `role`, `editor` or `viewer` |
+| `invite_admin`      | `POST /members/admin-invitations`               | `org:write` | `email_address`                                               |
+| `resend_invitation` | `POST /members/invitations/{invitation}/resend` | `org:write` | The invitation's id, in path                                  |
+| `revoke_invitation` | `DELETE /members/invitations/{invitation}`      | `org:write` | The invitation's id, in path                                  |
+| `set_member_role`   | `PUT /members/{member}/role`                    | `org:write` | The member's id, in path, and `role`, in the body             |
+| `remove_member`     | `DELETE /members/{member}`                      | `org:write` | The member's id, in path                                      |
+
+A member holds:
+
+| Field        | What it holds                                                                                         |
+| ------------ | ----------------------------------------------------------------------------------------------------- |
+| `id`         | The person's id in Auto                                                                               |
+| `name`       | Their name, as their last sign-in gave it, or `null`                                                  |
+| `identifier` | Their email address, as their last sign-in gave it, or `null`                                         |
+| `role`       | `admin`, `editor` or `viewer`                                                                         |
+| `joined_at`  | When they first signed in, or, for someone given a role before they ever signed in, when it was given |
+
+An invitation holds:
+
+| Field           | What it holds                                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `id`            | The invitation's id                                                                                                |
+| `email_address` | The address it was made for, as it was typed                                                                       |
+| `role`          | `admin`, `editor` or `viewer`, the role of whoever accepts it                                                      |
+| `status`        | `pending`, or `revoked` in the answer of `revoke_invitation`                                                       |
+| `invited_at`    | When it was made                                                                                                   |
+| `expires_at`    | When it ends, 30 days after it was made                                                                            |
+| `link`          | Only in the answer of the call that made it: the address that accepts it, `{PUBLIC_URL}/invitations/` and a secret |
+
+- An invitation is a link. The runtime sends no email: whoever made the invitation shares the link. The invited person opens it in a browser, which keeps the invitation for an hour and goes on to Studio. The next sign-in in that browser accepts it, if the person who signs in holds no role in the org, and they join with its role. A link works once and ends 30 days after it was made. No listing holds the link: a lost link is replaced by `resend_invitation`. A link that no longer works shows a page that says so.
+- `list_members` answers `members`, the earliest to join first, at most 500, and `members_total`, how many there are, and `invitations`, those pending, the earliest made first, at most 500, and `invitations_total`. Anyone in the org lists them, and an agent is offered `list_members` as a tool.
+- `invite_member` invites a person as an editor, or as the `role` asked, and an agent is offered it as a tool. An admin or an editor invites. `invite_admin` invites a person as an admin.
+- `resend_invitation` replaces an invitation pending with a new one, to the same address in the same role, and answers it with its new link; the earlier link stops working. `revoke_invitation` ends an invitation pending, so its link accepts nothing, and answers it as `revoked`.
+- `set_member_role` gives a member the role `role`, in place of the one they held, and answers them in it.
+- `remove_member` ends the member's role and signs them out at once: their sign-ins and every agent's access they allowed end, so a token they hold is refused from their next call. It answers the member as they were. The workflow runs they started keep running ([What happens when access is revoked](authentication.md#what-happens-when-access-is-revoked)). A removed person comes back by a new invitation.
+- `set_member_role` and `remove_member` also revoke the invitations pending to the address the runtime holds for the member, in any letter case.
+- Only an admin signed in to Studio invites an admin, resends or revokes an invitation, gives a role or removes a member, and the org always keeps an admin, as with `assign_role`.
+
+| Case                                                                                                                                                                                      | Response                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| An `email_address` not shaped like `name@example.com` (an `@`, a dot somewhere after it, and no spaces), or longer than 254 characters, or a `role` it does not take                      | `invalid_input`                 |
+| An `email_address` that is a member's address or that of an invitation pending, in any letter case                                                                                        | `conflict` of kind `taken`      |
+| An `invite_member` from a caller who is not a person, such as a key                                                                                                                       | `forbidden`                     |
+| Any other change from a caller who is not a person signed in to Studio, such as a key or an agent                                                                                         | `forbidden`                     |
+| A person whose role does not allow the change, such as a viewer who invites anyone, or an editor who invites an admin, resends or revokes an invitation, gives a role or removes a member | `forbidden`                     |
+| A `resend_invitation` or a `revoke_invitation` for an invitation that is not pending                                                                                                      | `not_found`                     |
+| A `set_member_role` or a `remove_member` for someone who holds no role, such as a person removed already                                                                                  | `not_found`                     |
+| A change that would leave the org without an admin                                                                                                                                        | `conflict` of kind `unworkable` |
+
+```http
+POST /v1/orgs/default/members/invitations
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "email_address": "sam@example.com", "role": "viewer" }
+```
+
+```json
+{
+  "id": "9b74c9897bac770ffc029102a200c5de1f8b7c1f3b6e1ad2f0d2b3e1c4a5f6e7",
+  "email_address": "sam@example.com",
+  "role": "viewer",
+  "status": "pending",
+  "invited_at": "2026-11-20T09:00:00.000Z",
+  "expires_at": "2026-12-20T09:00:00.000Z",
+  "link": "https://runtime.example.com/invitations/kQ2x9mY4vPbL7sT1nR8wD3fH6jK0aZcE5gU2iO9qW1e"
+}
+```
+
+```http
+PUT /v1/orgs/default/members/0c3de111680d66bea9b377080ec7d6784c7602c7bc2e4bfdd1b3ee489b0675ea/role
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "role": "editor" }
+```
+
+```json
+{
+  "id": "0c3de111680d66bea9b377080ec7d6784c7602c7bc2e4bfdd1b3ee489b0675ea",
+  "name": "Priya Shah",
+  "identifier": "priya@example.com",
+  "role": "editor",
+  "joined_at": "2026-11-18T10:00:00.000Z"
 }
 ```
 

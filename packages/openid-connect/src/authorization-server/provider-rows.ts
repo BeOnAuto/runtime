@@ -16,9 +16,15 @@ export interface StoredPayload {
   readonly consumedAt: number | undefined;
 }
 
+export interface ListedRow {
+  readonly sha256: string;
+  readonly payload: string;
+}
+
 export interface ProviderRows {
   readonly kept: (row: ProviderRow) => Promise<void>;
   readonly found: (key: ModelRowKey) => Promise<StoredPayload | undefined>;
+  readonly listed: (model: string) => Promise<readonly ListedRow[]>;
   readonly foundByUid: (model: string, uid: string) => Promise<StoredPayload | undefined>;
   readonly consumed: (key: ModelRowKey, at: number) => Promise<boolean>;
   readonly destroyed: (key: ModelRowKey) => Promise<void>;

@@ -1,7 +1,9 @@
 import { Predicate } from 'effect';
 import { errors, type InteractionResults, type KoaContextWithOIDC, type Provider } from 'oidc-provider';
 
+import { redirectedTo, shown, signInCookieAttributes } from './answering.ts';
 import type { InteractionSignIn, PageShown, SignInOutcome, SignInPages, SignInRefusal } from './interaction-pages.ts';
+import { invitationCarriedAndCleared, invitationOpened, invitationSecretIn } from './invitation-link.ts';
 import { abortedStep, confirmedStep, federatedStep, interactionAddressOf, interactionPath } from './paths.ts';
 
 type Interaction = Awaited<ReturnType<Provider['interactionDetails']>>;
@@ -13,10 +15,6 @@ type Params = Interaction['params'];
 const pendingSignInCookie = '__Host-Http-sign-in';
 
 const pendingSignInMs = 600_000;
-
-const pendingSignInAttributes = { httpOnly: true, secure: true, sameSite: 'lax', path: '/', overwrite: true } as const;
-
-const seeOther = 303;
 
 const selectAccount = 'select_account';
 
@@ -39,20 +37,6 @@ export interface InteractionsServed {
 }
 
 type Next = () => Promise<unknown>;
-
-export async function shown(ctx: KoaContextWithOIDC, pages: SignInPages, page: PageShown): Promise<void> {
-  const { status, html, headers } = await pages(page);
-  ctx.status = status;
-  ctx.set(headers);
-  ctx.type = 'html';
-  ctx.body = html;
-}
-
-function redirectedTo(ctx: KoaContextWithOIDC, location: string): void {
-  ctx.set('cache-control', 'no-store');
-  ctx.status = seeOther;
-  ctx.redirect(location);
-}
 
 async function interactionIn(
   ctx: KoaContextWithOIDC,
@@ -109,7 +93,7 @@ async function signInStarted(
     return;
   }
   ctx.cookies.set(pendingSignInCookie, `${interaction.uid}.${started.pending}`, {
-    ...pendingSignInAttributes,
+    ...signInCookieAttributes,
     maxAge: pendingSignInMs,
   });
   redirectedTo(ctx, started.location);
@@ -229,13 +213,18 @@ function refusalShown(uid: string, refused: SignInRefusal): PageShown {
 
 async function signInFinished(ctx: KoaContextWithOIDC, served: InteractionsServed, uid: string): Promise<void> {
   const pending = pendingOf(ctx);
-  ctx.cookies.set(pendingSignInCookie, null, pendingSignInAttributes);
+  const invitation = invitationCarriedAndCleared(ctx);
+  ctx.cookies.set(pendingSignInCookie, null, signInCookieAttributes);
   const interaction = await interactionIn(ctx, served.models, uid);
   if (interaction === undefined) {
     await notOpen(ctx, served, uid);
     return;
   }
-  const outcome = await served.signIn.finished(ctx.search, pending?.uid === uid ? pending.pending : undefined);
+  const outcome = await served.signIn.finished(
+    ctx.search,
+    pending?.uid === uid ? pending.pending : undefined,
+    invitation,
+  );
   if ('refused' in outcome) {
     await shown(ctx, served.pages, refusalShown(uid, outcome.refused));
     return;
@@ -276,6 +265,10 @@ export function interactionsOf(served: InteractionsServed): (ctx: KoaContextWith
   return (ctx, next) => {
     if (ctx.method === 'GET' && ctx.path === served.signInCallbackPath) {
       return signInCallbackAnswered(ctx, served);
+    }
+    const secret = ctx.method === 'GET' ? invitationSecretIn(ctx.path) : undefined;
+    if (secret !== undefined) {
+      return invitationOpened(ctx, served, secret);
     }
     return answeredStep(ctx, served) ?? next();
   };

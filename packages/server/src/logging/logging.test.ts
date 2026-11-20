@@ -257,8 +257,9 @@ describe("the logs of a sign-in through the company's identity provider", () => 
     report.registeredElsewhereFirst('client-3', 'client-4');
     report.nameUnread('a-person-id', 'OAUTH_WWW_AUTHENTICATE_CHALLENGE');
     report.notRevoked('invalid_client');
+    report.addressNotForgotten();
 
-    expect(logged).toHaveLength(3);
+    expect(logged).toHaveLength(4);
   });
 });
 

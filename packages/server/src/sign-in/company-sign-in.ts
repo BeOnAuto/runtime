@@ -1,5 +1,5 @@
 import { middlewareBesideTheApi, type PageStyle } from '@on.auto/api';
-import { signInScopes, type IdentityService, type PageSettings } from '@on.auto/identity';
+import { signInScopes, studioLinkOf, type IdentityService, type PageSettings } from '@on.auto/identity';
 import type { AuthStore } from '@on.auto/openid-connect';
 import type { AuthorizationServer, StudioClient } from '@on.auto/openid-connect/authorization-server';
 import type { SecretStore } from '@on.auto/secrets';
@@ -35,7 +35,12 @@ export function signInServingOf(signIn?: CompanySignIn): SignInServingOf | undef
     return undefined;
   }
   return async (parts) => {
-    const signingIn = await signingInOf(signIn, parts.logged, parts.served);
+    const studioOpenedAt = studioLinkOf(parts.pages.studio, {
+      ownOrigin: signIn.publicUrl,
+      openedFrom: 'runtime-page',
+      installId: undefined,
+    });
+    const signingIn = await signingInOf(signIn, { logged: parts.logged, served: parts.served, studioOpenedAt });
     const { authorizationServerOf, signingKeyOf } = await import('@on.auto/openid-connect/authorization-server');
     const { served, pages, pageStyle, studio } = parts;
     const server = authorizationServerOf(

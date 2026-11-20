@@ -1,6 +1,10 @@
 {
-  "layout": 3,
+  "layout": 4,
   "catalog": [
+    {
+      "name": "auth_invitations",
+      "sql": "CREATE TABLE auth_invitations (invitation TEXT NOT NULL PRIMARY KEY, email_address TEXT NOT NULL, invited_at BIGINT NOT NULL)"
+    },
     {
       "name": "auth_layout",
       "sql": "CREATE TABLE auth_layout (one_row BOOLEAN NOT NULL PRIMARY KEY DEFAULT TRUE CHECK (one_row), layout INTEGER NOT NULL)"

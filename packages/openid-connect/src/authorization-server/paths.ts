@@ -16,6 +16,8 @@ export const abortedStep = 'abort';
 
 export const federatedStep = 'federated';
 
+export const invitationPath = '/invitations';
+
 const metadataPaths = ['/.well-known/openid-configuration', '/.well-known/oauth-authorization-server'];
 
 const { authorization, registration, end_session: endSession } = authorizationServerRoutes;
@@ -35,7 +37,7 @@ const oneSegment = '[^/]+';
 const steps = [confirmedStep, abortedStep, federatedStep].join('|');
 
 const pathsWithAnId = new RegExp(
-  `^(?:${authorization}/${oneSegment}|${registration}/${oneSegment}|${interactionPath}/${oneSegment}(?:/(?:${steps}))?)$`,
+  `^(?:${authorization}/${oneSegment}|${registration}/${oneSegment}|${invitationPath}/${oneSegment}|${interactionPath}/${oneSegment}(?:/(?:${steps}))?)$`,
   'u',
 );
 

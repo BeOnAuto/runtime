@@ -24,7 +24,6 @@ import { adminRecovered } from './recovered-admin.ts';
 import type { AdminRecovered } from './role-assignment-commands.ts';
 import {
   beyondYourRole,
-  enrolledAs,
   lastAssigner,
   noRoleThatAssigns,
   roleAssignmentDecider,
@@ -136,19 +135,6 @@ describe('the state the decider folds', () => {
       ['user_priya', 'viewer'],
     ]);
     expect(roleAssignmentDecider.context(given(ada, priya, 'viewer'), folded)).toEqual(acted);
-  });
-
-  it('keeps how the last role of a person who now holds none was ended, and nothing of one who never held a role', () => {
-    const folded = stateOf(
-      recordedNow(
-        change('role_assigned', ada, 'admin'),
-        change('role_assigned', priya, 'editor'),
-        change('role_unassigned', priya, 'editor'),
-        change('role_unassigned', dana, 'viewer'),
-      ),
-    );
-
-    expect([enrolledAs(folded, priya), enrolledAs(folded, dana)]).toEqual(['removed', 'enrolment']);
   });
 });
 

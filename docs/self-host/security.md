@@ -83,7 +83,7 @@ The runtime trusts one issuer, whichever provider a person used.
 
 Members of your organization can sign in with their company accounts, through your company's identity provider, with no Auto account. Set `OIDC_ISSUER` to the provider's issuer, beside an `https` `PUBLIC_URL`. Register Auto with the provider using the redirect URI the server prints at start, `{PUBLIC_URL}/auth/oidc/callback`, and set `OIDC_CLIENT_ID` with `OIDC_CLIENT_SECRET` or `OIDC_CLIENT_SECRET_FILE`. Where the provider supports dynamic client registration, leave those out and the runtime registers itself. To allow only members with a given claim, set `OIDC_REQUIRED_CLAIM` to `claim=value`.
 
-The runtime is then an OAuth 2.1 authorization server at `PUBLIC_URL`. It sends members to your provider to sign in. A session ends after 7 days without use, and after 30 days at most. Members open Studio at the link the server prints at start, which names your `PUBLIC_URL`. The first person to sign in becomes the organization's admin, and everyone after joins as a viewer. An admin changes roles ([The roles](#the-roles)).
+The runtime is then an OAuth 2.1 authorization server at `PUBLIC_URL`. It sends members to your provider to sign in. A session ends after 7 days without use, and after 30 days at most. Members open Studio at the link the server prints at start, which names your `PUBLIC_URL`. The first person to sign in becomes the organization's admin. Everyone after joins as a viewer, or with the role of the invitation they bring. An admin invites people, changes roles and removes members ([The roles](#the-roles)).
 
 A member's agent connects the same way. The runtime asks the member, on a page of its own, whether to allow the agent, and the agent then acts as that member. An agent's access lasts 90 days at most before the member signs in again.
 
@@ -94,7 +94,7 @@ A signed-in person acts in the org `default`, over every playbook. What they may
 - Through an agent or an agent gateway, they send an access token the runtime issued. They have the permissions the agent asked for, which they allowed on the runtime's page when it connected.
 - Through Studio, they have every permission their role allows.
 
-An access token lasts 15 minutes, and the agent or Studio refreshes it. A change of role holds from the person's next call, in Studio and through their agents alike. A person who no longer holds a role is refused every call from then on, and at their next refresh or sign-in. The workflow runs they started keep running, and a caller who may write to the playbook can cancel them ([What happens when access is revoked](../reference/authentication.md#what-happens-when-access-is-revoked)).
+An access token lasts 15 minutes, and the agent or Studio refreshes it. A change of role holds from the person's next call, in Studio and through their agents alike. A person who no longer holds a role is refused every call from then on, and at their next refresh or sign-in. An admin who removes a member also signs them out: their sign-ins and their agents' access end at once, so a token they hold is refused from their next call. The workflow runs they started keep running, and a caller who may write to the playbook can cancel them ([What happens when access is revoked](../reference/authentication.md#what-happens-when-access-is-revoked)).
 
 The [Sign-in and token reference](../reference/authentication.md) sets out the tokens the runtime issues, [how scopes grant permissions](../reference/authentication.md#how-scopes-grant-permissions) and [the name recorded for a signed-in person](../reference/authentication.md#the-name-recorded-for-a-signed-in-person).
 
@@ -106,7 +106,9 @@ The server loads the policies as it starts, and logs once which engine and how m
 
 ### The roles
 
-The policies hold three roles. The runtime records who holds which ([Roles](../reference/http.md#roles)), and decides each call of a signed-in person by the role they hold as they make it. The first person to sign in is the admin, and everyone after joins as a viewer. An admin changes roles.
+The policies hold three roles. The runtime records who holds which ([Roles](../reference/http.md#roles)), and decides each call of a signed-in person by the role they hold as they make it. The first person to sign in is the admin, and everyone after joins as a viewer, or with the role of the invitation they bring. An admin changes roles and removes members. A person an admin removed stays removed when they sign in again.
+
+An invitation is a link that an admin or an editor makes and shares. Only an admin invites an admin. The server sends no email. The invited person opens the link and signs in, in the same browser, and joins with the invitation's role. A link works once and expires after 30 days. A member who was removed comes back by a new invitation.
 
 | Role   | What a person with it may do                                                      |
 | ------ | --------------------------------------------------------------------------------- |

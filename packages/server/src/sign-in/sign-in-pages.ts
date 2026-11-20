@@ -21,7 +21,7 @@ const refusals: Readonly<Record<SignInRefusal, Refusal>> = {
     triedAgain: true,
   },
   no_access: {
-    sentence: 'You don’t have access to this organization. Ask an admin of the organization to give you a role.',
+    sentence: 'You need an invitation to join this organization. Ask an admin of the organization to invite you.',
     status: 403,
     triedAgain: false,
   },
@@ -35,6 +35,12 @@ const refusals: Readonly<Record<SignInRefusal, Refusal>> = {
 const tryAgain = 'Try again';
 
 const notOpenStatus = 400;
+
+const invitationEnded: Refusal = {
+  sentence: 'This invitation link has stopped working. Ask an admin of the organization for a new invitation.',
+  status: 404,
+  triedAgain: false,
+};
 
 function sourceOf(address: string): string {
   const { origin, protocol } = new URL(address);
@@ -100,7 +106,7 @@ async function notOpenPageOf(client: string | undefined): Page {
   return page;
 }
 
-async function refusalPageOf({ sentence, triedAgain }: Refusal, tryAgainAt: string | undefined): Page {
+async function refusalPageOf({ sentence, triedAgain }: Refusal, tryAgainAt?: string): Page {
   const page = await html`<p>${sentence}</p>
     ${triedAgain && tryAgainAt !== undefined ? html`<a class="open" href="${tryAgainAt}">${tryAgain}</a>` : ''}`;
   return page;
@@ -143,6 +149,10 @@ function bodyShownOf(style: PageStyle, shown: PageShown): Shown {
   }
   if ('signingOut' in shown) {
     return signingOutShownBy(style, shown.signingOut);
+  }
+  if ('invitationEnded' in shown) {
+    const { status } = invitationEnded;
+    return { status, body: refusalPageOf(invitationEnded), headers: style.readOnlyHeaders };
   }
   const refusal = refusals[shown.refused];
   return { status: refusal.status, body: refusalPageOf(refusal, shown.tryAgainAt), headers: style.readOnlyHeaders };

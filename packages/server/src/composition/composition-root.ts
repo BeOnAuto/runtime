@@ -1,13 +1,13 @@
 import type { MadeAtStart, StartWiring } from '../capability-registry/made-at-start.ts';
-import { storesAndConnectionsOf } from '../connections/served-connections.ts';
 import { ledgerConnectionIn, withHeldRequestsEndedFirst, type LedgerDatabase } from '../database/ledger-database.ts';
 import { serverOptionsComposing, type ComposedServerOptions } from '../server-options/composed-options.ts';
 import { serveWorkflows, type WorkflowParts } from '../workflows/workflows.ts';
 import { applicationLayer, withLiveAttemptsClosedFirst } from './application-layer.ts';
 import { functionWiringOf, type FunctionWiring, type ServedWiring } from './function-wiring.ts';
-import { ledgerOpenedAtStart, signInOpened } from './ledger-store.ts';
+import { ledgerOpenedAtStart } from './ledger-store.ts';
 import { functionsServedBy } from './served-functions.ts';
 import { loggedModelAccess, type ModelAccessOf } from './served-reasoning.ts';
+import { signInAndStoresOpened } from './sign-in-and-stores.ts';
 
 export interface CompositionParts {
   readonly programPoolOf?: FunctionWiring['programPoolOf'];
@@ -72,19 +72,6 @@ function meterOf(
   };
 }
 
-type Opening = Parameters<typeof signInOpened>[0] & Parameters<typeof storesAndConnectionsOf>[0];
-
-async function signInAndStoresOpened(
-  runtime: Opening,
-  { settings, database }: Pick<Serving, 'settings' | 'database'>,
-  ownOrigin: () => string,
-) {
-  const { clientRegistrationsWith, ...signIn } = await signInOpened(runtime, settings);
-  const opened = await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
-  const signInClientRegistrations = clientRegistrationsWith(opened.stores.secrets);
-  return { ...opened, signIn: { ...signIn, signInClientRegistrations, signingSecrets: opened.stores.secrets } };
-}
-
 function receivingStoresOf<Stores>({ receiving, providers }: Composing[0], stores: Stores) {
   const served = { ...stores, providers };
   return {
@@ -107,8 +94,8 @@ function servedWith(serving: Serving): Serve {
   const { wiring, settings, shippedFiles, made, holding } = serving;
   return async (runtime, ownOrigin) => {
     const { ledger, workflows, signIn: signingIn } = settings;
-    const { signIn, stores, consent, connectionsReadingThrough, source, clientMetadata, license, opens, ...ownKeys } =
-      await signInAndStoresOpened(runtime, serving, ownOrigin);
+    const { opened, signIn, members } = await signInAndStoresOpened(runtime, serving, ownOrigin);
+    const { stores, consent, connectionsReadingThrough, source, clientMetadata, license, opens, ...ownKeys } = opened;
     const registry = await registryOpenedFor(serving, runtime, { consent, connections: source });
     const { connections, offering } = connectionsReadingThrough(registry.readOnceThrough);
     await made.extensions.logged(runtime);
@@ -133,7 +120,7 @@ function servedWith(serving: Serving): Serve {
       ...receivingStoresOf(settings, stores),
       shippedFiles,
       ...functions.parts,
-      orgOperations: [...functions.parts.orgOperations, ...connections, ...license.operations],
+      orgOperations: [...functions.parts.orgOperations, ...connections, ...license.operations, ...members],
       dueWork: [...functions.parts.dueWork, ...license.dueWork],
       holding,
       access: settings,

@@ -8,6 +8,7 @@ export interface Browser {
   readonly cookies: ReadonlyMap<string, string>;
   readonly setCookies: readonly string[];
   readonly at: (address: string, asking?: Asking) => Promise<Response>;
+  readonly cookieSet: (name: string, value: string) => void;
 }
 
 function cookieHeaderOf(cookies: ReadonlyMap<string, string>): string {
@@ -28,6 +29,9 @@ export function browserAt(at: string, publicUrl: string): Browser {
   return {
     cookies,
     setCookies,
+    cookieSet: (name, value) => {
+      cookies.set(name, value);
+    },
     at: async (address, { method = 'GET', headers = {}, body } = {}) => {
       const local = `${at}${address.startsWith(publicUrl) ? address.slice(publicUrl.length) : address}`;
       const sent = { ...headers, cookie: cookieHeaderOf(cookies) };

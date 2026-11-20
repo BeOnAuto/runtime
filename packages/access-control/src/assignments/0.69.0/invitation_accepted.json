@@ -1,0 +1,22 @@
+{
+  "type": "invitation_accepted",
+  "data": {
+    "invitation": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
+    "role": {
+      "type": "built_in",
+      "id": "editor"
+    },
+    "scope": {
+      "type": "org",
+      "id": "acme"
+    },
+    "principal": {
+      "type": "person",
+      "id": "user_7kLm2"
+    }
+  },
+  "context": {
+    "at": "2026-11-14T15:20:00.000Z",
+    "by": "person:user_7kLm2"
+  }
+}

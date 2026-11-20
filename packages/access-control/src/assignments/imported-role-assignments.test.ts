@@ -11,7 +11,11 @@ import {
   type DeclaredMember,
 } from './imported-role-assignments.ts';
 import { roleAssignmentDecider } from './role-assignment-decider.ts';
-import { roleAssignmentsStreamOf, roleOfIdentityServiceKey } from './role-assignment-facts.ts';
+import {
+  RoleAssignmentChangeSchema,
+  roleAssignmentsStreamOf,
+  roleOfIdentityServiceKey,
+} from './role-assignment-facts.ts';
 import { roleAssignmentRows } from './role-assignment-rows.ts';
 import { enrolledAtSignIn } from './role-assignments-at-sign-in.ts';
 
@@ -44,7 +48,7 @@ function importing() {
           ledger.service.load(`${streamPrefixOfOrg({ org: 'acme' })}${acmeStream}`, {
             initialState: noSources,
             evolve: (sources: readonly string[], { data }) => [...sources, `${data.principal.id} ${data.source}`],
-            eventSchema: roleAssignmentDecider.eventSchema,
+            eventSchema: RoleAssignmentChangeSchema,
           }),
           ({ state }) => state,
         ),

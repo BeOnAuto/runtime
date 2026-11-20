@@ -7,6 +7,7 @@ import {
   type AssignedRole,
   type AssignmentScope,
   type AssignmentSource,
+  type RoleAssignmentChange,
   type RoleAssignmentEvent,
 } from './role-assignment-facts.ts';
 
@@ -20,16 +21,26 @@ interface HeldBy {
   readonly roles: readonly AssignedRole[];
 }
 
+type InvitationStatus = 'pending' | 'accepted' | 'revoked';
+
+interface KnownInvitation {
+  readonly role: AssignedRole;
+  readonly expiresAt: string;
+  readonly status: InvitationStatus;
+}
+
 export interface HeldAssignments {
   readonly byPrincipal: HashMap.HashMap<string, HeldBy>;
   readonly holders: Readonly<Record<BuiltInRoleId, number>>;
   readonly lastEndedBy: HashMap.HashMap<string, AssignmentSource>;
+  readonly invitations: HashMap.HashMap<string, KnownInvitation>;
 }
 
 export const noneHeld: HeldAssignments = {
   byPrincipal: HashMap.empty(),
   holders: { admin: 0, editor: 0, viewer: 0 },
   lastEndedBy: HashMap.empty(),
+  invitations: HashMap.empty(),
 };
 
 interface Named {
@@ -50,6 +61,38 @@ export function heldAssignmentsIn(state: HeldAssignments): readonly HeldAssignme
   );
 }
 
+export interface PendingInvitation {
+  readonly invitation: string;
+  readonly role: AssignedRole;
+  readonly expiresAt: string;
+}
+
+function isPendingAt({ status, expiresAt }: KnownInvitation, at: string): boolean {
+  return status === 'pending' && Date.parse(expiresAt) > Date.parse(at);
+}
+
+export function pendingInvitationOf(
+  state: HeldAssignments,
+  invitation: string | undefined,
+  at: string,
+): PendingInvitation | undefined {
+  const known = invitation === undefined ? Option.none() : HashMap.get(state.invitations, invitation);
+  const pending = Option.filter(known, (each) => isPendingAt(each, at));
+  return Option.getOrUndefined(
+    Option.map(pending, ({ role, expiresAt }) => ({ invitation: String(invitation), role, expiresAt })),
+  );
+}
+
+export function pendingInvitationsIn(state: HeldAssignments, at: string): readonly PendingInvitation[] {
+  return [...HashMap.entries(state.invitations)].flatMap(([invitation, known]: readonly [string, KnownInvitation]) =>
+    isPendingAt(known, at) ? [{ invitation, role: known.role, expiresAt: known.expiresAt }] : [],
+  );
+}
+
+export function hasEnded(state: HeldAssignments, invitation: string): boolean {
+  return Option.exists(HashMap.get(state.invitations, invitation), ({ status }) => status !== 'pending');
+}
+
 interface Changed {
   readonly key: string;
   readonly held: readonly AssignedRole[];
@@ -64,12 +107,13 @@ function lastEndedAfter({ lastEndedBy }: HeldAssignments, { key, held, roles, so
   return held.length > 0 ? HashMap.set(lastEndedBy, key, source) : lastEndedBy;
 }
 
-export function evolvedBy(state: HeldAssignments, { type, data }: RoleAssignmentEvent): HeldAssignments {
+function changedBy(state: HeldAssignments, { type, data }: RoleAssignmentChange): HeldAssignments {
   const key = principalKeyOf(data.principal);
   const held = rolesHeldBy(state, data.principal);
   const others = held.filter(({ id }) => id !== data.role.id);
   const roles = type === 'role_assigned' ? [...others, data.role] : others;
   return {
+    ...state,
     byPrincipal:
       roles.length === 0
         ? HashMap.remove(state.byPrincipal, key)
@@ -79,11 +123,34 @@ export function evolvedBy(state: HeldAssignments, { type, data }: RoleAssignment
   };
 }
 
+function endedAs(state: HeldAssignments, invitation: string, status: InvitationStatus): HeldAssignments {
+  return {
+    ...state,
+    invitations: HashMap.modify(state.invitations, invitation, (known) => ({ ...known, status })),
+  };
+}
+
+export function evolvedBy(state: HeldAssignments, event: RoleAssignmentEvent): HeldAssignments {
+  if (event.type === 'member_invited') {
+    const { invitation, role, expires_at: expiresAt } = event.data;
+    return {
+      ...state,
+      invitations: HashMap.set(state.invitations, invitation, { role, expiresAt, status: 'pending' }),
+    };
+  }
+  if (event.type === 'invitation_revoked') {
+    return endedAs(state, event.data.invitation, 'revoked');
+  }
+  return event.type === 'invitation_accepted'
+    ? endedAs(state, event.data.invitation, 'accepted')
+    : changedBy(state, event);
+}
+
 export function assignedOf(
   { principal, role }: HeldAssignment,
   scope: AssignmentScope,
   source: AssignmentSource,
-): RoleAssignmentEvent {
+): RoleAssignmentChange {
   return { type: 'role_assigned', data: { principal, role, scope, source } };
 }
 
@@ -91,7 +158,7 @@ export function unassignedOf(
   { principal, role }: HeldAssignment,
   scope: AssignmentScope,
   source: AssignmentSource,
-): RoleAssignmentEvent {
+): RoleAssignmentChange {
   return { type: 'role_unassigned', data: { principal, role, scope, source } };
 }
 

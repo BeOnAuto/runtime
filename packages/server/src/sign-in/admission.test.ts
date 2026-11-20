@@ -1,5 +1,4 @@
-import { roleAssignmentDecider } from '@on.auto/access-control';
-import { roleAssignmentsStreamOf } from '@on.auto/access-control/role-assignment-facts';
+import { RoleAssignmentChangeSchema, roleAssignmentsStreamOf } from '@on.auto/access-control/role-assignment-facts';
 import { makeAppRuntime } from '@on.auto/api';
 import { personIdOf, type PeopleRows, type PersonSignedIn, type SignedInWith } from '@on.auto/openid-connect';
 import { Conflict, Ledger } from '@on.auto/operations';
@@ -20,7 +19,11 @@ type Setup = Admitting['setup'];
 
 const setupUnasked: Setup = { requiredClaimSet: () => Promise.reject(new Error('Not asked')) };
 
-const unreported: Admitting['report'] = { nameUnread: Function.constVoid, notRevoked: Function.constVoid };
+const quiet = Function.constVoid;
+
+const unreported: Admitting['report'] = { nameUnread: quiet, notRevoked: quiet, addressNotForgotten: quiet };
+
+const quietly = { invitations: { forgotten: () => Promise.resolve() }, report: unreported };
 
 const rolesOfTheOrg = `org/default/${roleAssignmentsStreamOf({ type: 'org', id: 'default' })}`;
 
@@ -45,7 +48,7 @@ describe("the decision at sign-in, on the server's ledger", () => {
           ...facts,
           [data.principal.id, data.role.id, data.source, context.by],
         ],
-        eventSchema: roleAssignmentDecider.eventSchema,
+        eventSchema: RoleAssignmentChangeSchema,
       }),
     );
 
@@ -97,6 +100,7 @@ function enrollingAs(enrolment: Awaited<ReturnType<Enrolling['enrolled']>>, awai
     enrolled: () => Promise.resolve(enrolment),
     holdsARole: () => Promise.resolve(true),
     firstAdminAwaited: () => Promise.resolve(awaited),
+    invitationPending: () => Promise.resolve(false),
   };
 }
 
@@ -108,7 +112,7 @@ const signedInWith = {
 describe('a person admitted at sign-in', () => {
   it('is kept with the name and the address their sign-in gave once their role is decided, and not kept where it could not be', async () => {
     const [decided, undecided] = [peopleKept(), peopleKept()];
-    const admitting = { setup: setupUnasked, requiredClaim: undefined, report: unreported };
+    const admitting = { setup: setupUnasked, requiredClaim: undefined, ...quietly };
 
     const admitted = await admittedAfter(
       { ...admitting, enrolling: enrollingAs({ enrolled: 'enrolment' }), people: decided.rows },
@@ -143,6 +147,7 @@ function enrollingNoted(): { readonly enrolling: Enrolling; readonly decided: re
       },
       holdsARole: () => Promise.resolve(true),
       firstAdminAwaited: () => Promise.resolve(false),
+      invitationPending: () => Promise.resolve(false),
     },
   };
 }
@@ -152,7 +157,7 @@ describe('a person admitted at sign-in where the server requires a claim', () =>
     const { enrolling, decided } = enrollingNoted();
     const people = peopleKept();
     const requiredClaim = { claim: 'tenant', requiredValue: 'acme' };
-    const admitting = { enrolling, setup: setupUnasked, people: people.rows, requiredClaim, report: unreported };
+    const admitting = { enrolling, setup: setupUnasked, people: people.rows, requiredClaim, ...quietly };
     const carrying: readonly SignedInWith[] = [
       signedInWith,
       { ...signedInWith, valueOfTheRequiredClaim: 'ACME' },
@@ -204,7 +209,7 @@ function trustedOnFirstUse(): { readonly setup: Setup; readonly asked: readonly 
 
 function admittingBy(setup: Setup) {
   const [{ enrolling, decided }, people] = [enrollingNoted(), peopleKept()];
-  const admitting = { enrolling, setup, people: people.rows, requiredClaim: valueRecorded, report: unreported };
+  const admitting = { enrolling, setup, people: people.rows, requiredClaim: valueRecorded, ...quietly };
   return { admitting, decided, people };
 }
 

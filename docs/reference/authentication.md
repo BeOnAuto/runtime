@@ -99,6 +99,7 @@ An access token issued to an agent names that client beside the person: its clie
 The runtime checks an access token on every request, against the grants and tokens it keeps.
 
 - A person who no longer holds a role is refused every call from then on, and at their next refresh, authorization or sign-in.
+- A member an admin removes is signed out: every sign-in and grant of theirs ends at once, so a token they hold is refused from their next call, through Studio and their agents alike.
 - A token a client revokes at the runtime's revocation endpoint is refused from then on.
 - `admin reset-setup` signs everyone out: every sign-in, grant and token ends at once, and people and their agents sign in again.
 - A workflow run keeps acting as the identity that started it, with that identity's permissions and playbooks, for as long as it runs. A run is one unit of work that identity asked for. Revoking the person's access refuses them as the bullets above say, but does not stop the runs they already started. A caller who may write to the playbook can cancel those runs.

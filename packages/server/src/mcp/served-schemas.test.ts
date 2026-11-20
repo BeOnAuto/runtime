@@ -8,11 +8,16 @@ import {
   type ToolResult,
   withMcpSession,
 } from '@on.auto/api/testing';
+import { defaultOrg } from '@on.auto/openid-connect';
 import { internalTermsIn } from '@on.auto/operations/testing';
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Option, Schema } from 'effect';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
+import { compositionRoot } from '../composition/composition-root.ts';
+import { startServer } from '../lifecycle/lifecycle.ts';
+import { personSigningIn } from '../sign-in/person-signing-in.ts';
+import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { servingReasoningWithGoals } from '../testing/settings/goals-kept.ts';
 
@@ -49,10 +54,20 @@ function toolCountIn(body: string): number | undefined {
   return Option.getOrUndefined(Option.map(listingMessageOf(message), ({ result }) => result.tools.length));
 }
 
-async function listingOnTheWire(path: string): Promise<ListingOnTheWire> {
-  const answer = await fetch(`${server.origin}${path}`, {
+interface Reached {
+  readonly origin: string;
+  readonly headers: Readonly<Record<string, string>>;
+}
+
+function listingOnTheWire(path: string): Promise<ListingOnTheWire> {
+  return listingOnTheWireAt({ origin: server.origin, headers: {} }, path);
+}
+
+async function listingOnTheWireAt({ origin, headers }: Reached, path: string): Promise<ListingOnTheWire> {
+  const answer = await fetch(`${origin}${path}`, {
     method: 'POST',
     headers: {
+      ...headers,
       'content-type': 'application/json',
       accept: 'application/json, text/event-stream',
       'mcp-protocol-version': '2025-11-25',
@@ -104,6 +119,13 @@ const endpointsServedSchemasWith = [
   { path: '/orgs/local/mcp', tools: 18, bytes: 26_407, mostBytes: mostListingBytes.org },
   { path: '/orgs/local/playbooks/alpha/mcp', tools: 31, bytes: 49_475, mostBytes: mostListingBytes.playbook },
 ] as const;
+
+const endpointsOfTheShippedServerSigningPeopleIn: readonly Endpoint[] = [
+  { path: '/mcp', tools: 46, bytes: 73_881, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 44, bytes: 71_453, mostBytes: mostListingBytes.directory },
+  { path: `/orgs/${defaultOrg}/mcp`, tools: 20, bytes: 27_635, mostBytes: mostListingBytes.org },
+  { path: `/orgs/${defaultOrg}/playbooks/alpha/mcp`, tools: 31, bytes: 49_475, mostBytes: mostListingBytes.playbook },
+];
 
 describe('served schemas', () => {
   beforeAll(async () => {
@@ -222,5 +244,31 @@ describe('served schemas with goals', () => {
         expect(bytes).toBeLessThanOrEqual(mostBytes);
       },
     );
+  });
+});
+
+describe('served schemas of the server as it ships, signing people in', () => {
+  it('lists each endpoint to its admin, list_members and invite_member among the tools, in its pinned tools and bytes on the wire, within the bound the server starts with', async () => {
+    const signing = await personSigningIn();
+    const ledger = temporaryLedger();
+    const shipped = await startServer(
+      { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: ledger.fileName, ...signing.environment },
+      compositionRoot,
+    );
+    onTestFinished(async () => {
+      await shipped.stop();
+      ledger.remove();
+    });
+    const origin = `http://127.0.0.1:${shipped.port}`;
+    const reached = { origin, headers: { authorization: `Bearer ${await signing.agentTokenAt(origin, 'Ada')}` } };
+
+    const listings = await Promise.all(
+      endpointsOfTheShippedServerSigningPeopleIn.map(({ path }) => listingOnTheWireAt(reached, path)),
+    );
+
+    expect(listings).toEqual(
+      endpointsOfTheShippedServerSigningPeopleIn.map(({ tools, bytes }) => ({ status: 200, bytes, toolCount: tools })),
+    );
+    expect(endpointsOfTheShippedServerSigningPeopleIn.filter(({ bytes, mostBytes }) => bytes > mostBytes)).toEqual([]);
   });
 });

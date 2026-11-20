@@ -17,6 +17,7 @@ import {
   pairsIn,
   priya,
   recordedNow,
+  stateOf,
   taken,
   type Pair,
 } from '../testing/role-assignment-states.ts';
@@ -27,8 +28,9 @@ import type {
   RolesDeprovisioned,
   RolesProvisioned,
 } from './role-assignment-commands.ts';
-import { awaitsItsFirstAdmin, enrolledAs, lastAssigner, roleAssignmentDecider } from './role-assignment-decider.ts';
+import { lastAssigner, roleAssignmentDecider } from './role-assignment-decider.ts';
 import type { AssignedPrincipal } from './role-assignment-facts.ts';
+import { awaitsItsFirstAdmin, enrolledAs } from './sign-in-decisions.ts';
 
 const decide = roleAssignmentDecider.decide;
 
@@ -187,6 +189,21 @@ describe('a person who signs in, where nobody holds a role that gives roles', ()
   });
 });
 
+describe('the state the decider folds, read at sign-in', () => {
+  it('keeps how the last role of a person who now holds none was ended, and nothing of one who never held a role', () => {
+    const folded = stateOf(
+      recordedNow(
+        change('role_assigned', ada, 'admin'),
+        change('role_assigned', priya, 'editor'),
+        change('role_unassigned', priya, 'editor'),
+        change('role_unassigned', dana, 'viewer'),
+      ),
+    );
+
+    expect([enrolledAs(folded, priya), enrolledAs(folded, dana)]).toEqual(['removed', 'enrolment']);
+  });
+});
+
 describe('a person who signs in, where someone gives roles', () => {
   it('is given the lowest role, by enrolment, the first time, and nothing at every later sign-in, whatever they hold', () => {
     const state = held([ada, 'admin'], [dana, 'editor']);
@@ -237,7 +254,9 @@ describe('two people signing in at once where nobody holds a role that gives rol
     const priyas = await Effect.runPromise(loop('role-assignments/acme', enrolled(priya)));
 
     expect(enrolledAs(priyas.loaded.state, priya)).toBe('enrolment');
-    expect(priyas.events.map(({ data }) => data.source)).toEqual(['enrolment']);
+    expect(priyas.events.map(({ type, data }) => ({ type, data }))).toEqual([
+      change('role_assigned', priya, 'viewer', 'enrolment'),
+    ]);
     expect(pairsIn(stream.state())).toEqual([
       ['user_ada', 'admin'],
       ['user_priya', 'viewer'],

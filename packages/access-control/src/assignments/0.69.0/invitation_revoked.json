@@ -1,0 +1,19 @@
+{
+  "type": "invitation_revoked",
+  "data": {
+    "invitation": "9b74c9897bac770ffc029102a200c5de1f8b7c1f3b6e1ad2f0d2b3e1c4a5f6e7",
+    "role": {
+      "type": "built_in",
+      "id": "editor"
+    },
+    "scope": {
+      "type": "org",
+      "id": "acme"
+    },
+    "reason": "resent"
+  },
+  "context": {
+    "at": "2026-11-14T15:20:00.000Z",
+    "by": "person:user_2ada"
+  }
+}

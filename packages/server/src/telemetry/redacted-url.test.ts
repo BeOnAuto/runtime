@@ -51,6 +51,20 @@ describe('the URL of an outbound request sent under a span that does not propaga
 });
 
 describe('the URL of an inbound request on its span', () => {
+  it('masks the secret of an invitation link, after /invitations/ at the root, and leaves an invitation’s id in the API as it is', () => {
+    expect(
+      [
+        'https://auto.example.com/invitations/kQ2_x-9pendingInvitation',
+        'https://auto.example.com/invitations/kQ2_x-9pendingInvitation?view=1',
+        'http://127.0.0.1:5555/v1/orgs/default/members/invitations/9b74c9897bac770ffc029102a200c5de1f8b7c1f3b6e1ad2f0d2b3e1c4a5f6e7',
+      ].map((url) => withoutTheTokenOfALink(url)),
+    ).toEqual([
+      'https://auto.example.com/invitations/REDACTED',
+      'https://auto.example.com/invitations/REDACTED?view=1',
+      'http://127.0.0.1:5555/v1/orgs/default/members/invitations/9b74c9897bac770ffc029102a200c5de1f8b7c1f3b6e1ad2f0d2b3e1c4a5f6e7',
+    ]);
+  });
+
   it('masks the token of a link, after /connections/<id>/link/, and leaves every other URL as it is', () => {
     expect(
       [

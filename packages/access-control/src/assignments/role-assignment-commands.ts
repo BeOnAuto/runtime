@@ -1,7 +1,14 @@
-import type { PrincipalReference } from '@on.auto/operations';
+import type { PrincipalReference, Rejection } from '@on.auto/operations';
+import type { Result } from 'effect';
 
 import type { HeldAssignment } from './held-assignments.ts';
-import type { AssignedPrincipal, AssignmentScope, AssignmentSource } from './role-assignment-facts.ts';
+import type {
+  AssignedPrincipal,
+  AssignedRole,
+  AssignmentScope,
+  AssignmentSource,
+  RoleAssignmentEvent,
+} from './role-assignment-facts.ts';
 
 interface Asked {
   readonly scope: AssignmentScope;
@@ -9,7 +16,11 @@ interface Asked {
   readonly by: string;
 }
 
-export interface RoleGiven extends Asked, HeldAssignment {
+interface RevokingTheirInvitations {
+  readonly invitations?: readonly string[];
+}
+
+export interface RoleGiven extends Asked, HeldAssignment, RevokingTheirInvitations {
   readonly kind: 'assign';
   readonly actor: PrincipalReference;
 }
@@ -29,7 +40,7 @@ export interface RolesProvisioned extends Asked {
 
 export type DeprovisioningSource = Extract<AssignmentSource, 'manual' | 'identity_service'>;
 
-export interface RolesDeprovisioned extends Asked {
+export interface RolesDeprovisioned extends Asked, RevokingTheirInvitations {
   readonly kind: 'deprovision';
   readonly source: DeprovisioningSource;
   readonly principal: AssignedPrincipal;
@@ -38,11 +49,30 @@ export interface RolesDeprovisioned extends Asked {
 export interface PersonEnrolled extends Asked {
   readonly kind: 'enrol';
   readonly principal: AssignedPrincipal;
+  readonly invitation?: string | undefined;
 }
 
 export interface AdminRecovered extends Asked {
   readonly kind: 'recover';
   readonly principal: AssignedPrincipal;
+}
+
+export interface MemberInvited extends Asked {
+  readonly kind: 'invite';
+  readonly inviter: AssignedPrincipal;
+  readonly invitation: string;
+  readonly role: AssignedRole;
+}
+
+export interface InvitationRevoked extends Asked {
+  readonly kind: 'revoke';
+  readonly invitation: string;
+}
+
+export interface InvitationResent extends Asked {
+  readonly kind: 'resend';
+  readonly invitation: string;
+  readonly replacement: string;
 }
 
 export type RoleAssignmentCommand =
@@ -51,4 +81,11 @@ export type RoleAssignmentCommand =
   | RolesProvisioned
   | RolesDeprovisioned
   | PersonEnrolled
-  | AdminRecovered;
+  | AdminRecovered
+  | MemberInvited
+  | InvitationRevoked
+  | InvitationResent;
+
+export type RoleAssignmentRefusal = 'forbidden' | 'conflict';
+
+export type Decision = Result.Result<readonly RoleAssignmentEvent[], Rejection<RoleAssignmentRefusal>>;

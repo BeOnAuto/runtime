@@ -26,7 +26,21 @@ export interface RolesAtSignIn {
 
 export const builtInRolesAtSignIn: RolesAtSignIn = { bootstrap: 'admin', enrolment: 'viewer' };
 
+function permitsNoMoreThan(table: RoleTable, held: BuiltInRoleId, asked: BuiltInRoleId): boolean {
+  return table[asked].permits.every((permission) => table[held].permits.includes(permission));
+}
+
 export function mayAssign(table: RoleTable, held: BuiltInRoleId, asked: BuiltInRoleId): boolean {
+  return table[held].assignsRoles && permitsNoMoreThan(table, held, asked);
+}
+
+const invitingPermission: Permission = 'org:write';
+
+export function mayInvite(table: RoleTable, held: BuiltInRoleId, asked: BuiltInRoleId): boolean {
   const holder = table[held];
-  return holder.assignsRoles && table[asked].permits.every((permission) => holder.permits.includes(permission));
+  return (
+    holder.permits.includes(invitingPermission) &&
+    permitsNoMoreThan(table, held, asked) &&
+    (holder.assignsRoles || !table[asked].assignsRoles)
+  );
 }

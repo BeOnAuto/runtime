@@ -5,6 +5,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { providerRowsBehaviour } from '../authorization-server/provider-rows-behaviour.ts';
 import type { ProviderRow } from '../authorization-server/provider-rows.ts';
 import { signingKeyRowsBehaviour } from '../authorization-server/signing-key-rows-behaviour.ts';
+import { invitationAddressesBehaviour } from '../people/invitation-addresses-behaviour.ts';
 import { peopleRowsBehaviour } from '../people/people-rows-behaviour.ts';
 import { authLayout, authLayoutKept, authTablePrefix, type AuthLayoutStep } from './auth-layout.ts';
 import { authStoreOpened } from './auth-store.ts';
@@ -278,6 +279,10 @@ export function authStoreBehaviour(entry: AuthStoreEntry): void {
   peopleRowsBehaviour({
     name: `in the sign-in's store ${entry.name}`,
     rowsOf: async () => (await authStoreOpened(await aConnectionOf(entry)())).peopleRows,
+  });
+  invitationAddressesBehaviour({
+    name: `in the sign-in's store ${entry.name}`,
+    rowsOf: async () => (await authStoreOpened(await aConnectionOf(entry)())).invitationAddresses,
   });
   sessionsEndedBehaviour(entry);
 }

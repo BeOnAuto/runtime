@@ -42,6 +42,19 @@ function findingBehaviour({ name, rowsOf }: ProviderRowsEntry): void {
       );
     });
 
+    it('list every row of a model, by its key and its payload, and none of another', async () => {
+      const rows = await rowsOf();
+      const sessions = [rowOf('Session', 'sha256-15'), rowOf('Session', 'sha256-16')];
+      await Promise.all([...sessions, rowOf('Grant', 'sha256-17')].map((row) => rows.kept(row)));
+
+      const listed = await rows.listed('Session');
+
+      expect(listed.toSorted((one, other) => one.sha256.localeCompare(other.sha256))).toEqual(
+        sessions.map(({ sha256, payload }) => ({ sha256, payload })),
+      );
+      expect(await rows.listed('Interaction')).toEqual([]);
+    });
+
     it('find a session by its uid', async () => {
       const rows = await rowsOf();
       const session = rowOf('Session', 'sha256-3', { uid: 'uid-1', grantId: undefined });

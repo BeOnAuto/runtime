@@ -24,6 +24,10 @@ export const providerModelTables: readonly Statement[] = [
 
 const WholeNumber = Schema.Union([Schema.Finite, Schema.FiniteFromString]);
 
+const decodeListedRows = Schema.decodeUnknownSync(
+  Schema.Array(Schema.Struct({ sha256: Schema.String, payload: Schema.String })),
+);
+
 const decodeRows = Schema.decodeUnknownSync(
   Schema.Array(
     Schema.Struct({
@@ -58,6 +62,10 @@ export function storedProviderRows(database: AuthDatabase): ProviderRows {
       firstOf(
         await database.read(statement`SELECT payload, grant_id, consumed_at FROM auth_oidc_models
           WHERE model = ${model} AND sha256 = ${sha256}`),
+      ),
+    listed: async (model) =>
+      decodeListedRows(
+        await database.read(statement`SELECT sha256, payload FROM auth_oidc_models WHERE model = ${model}`),
       ),
     foundByUid: async (model, uid) =>
       firstOf(

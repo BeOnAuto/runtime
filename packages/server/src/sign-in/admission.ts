@@ -1,6 +1,7 @@
 import {
   awaitsItsFirstAdmin,
   enrolledAtSignIn,
+  pendingInvitationOf,
   roleAssignmentDecider,
   rolesHeldBy,
   type Enrolled,
@@ -11,6 +12,7 @@ import {
   defaultOrg,
   personIdOf,
   personSignedInOf,
+  type InvitationAddresses,
   type PeopleRows,
   type RequiredClaim,
   type SignedInPerson,
@@ -26,7 +28,7 @@ import {
 } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
-import { logFirstSignInAwaited, type TokensReport } from '../logging/sign-in-logging.ts';
+import { logFirstSignInAwaited, type AdmissionReport } from '../logging/sign-in-logging.ts';
 import { inRuntime } from '../workflows/in-runtime.ts';
 import { clientRegistrationsIn } from './client-registrations.ts';
 import { setupIn, type RequiredClaimSet, type Setup } from './setup.ts';
@@ -34,9 +36,10 @@ import { setupIn, type RequiredClaimSet, type Setup } from './setup.ts';
 type Enrolment = { readonly enrolled: Enrolled } | { readonly failed: string };
 
 export interface Enrolling {
-  readonly enrolled: (person: string) => Promise<Enrolment>;
+  readonly enrolled: (person: string, invitation?: string) => Promise<Enrolment>;
   readonly holdsARole: (person: string) => Promise<boolean>;
   readonly firstAdminAwaited: () => Promise<boolean>;
+  readonly invitationPending: (invitation: string) => Promise<boolean>;
 }
 
 const streamsOfTheOrg = streamPrefixOfOrg({ org: defaultOrg });
@@ -50,10 +53,10 @@ export function writerOfTheOrg(ledger: Ledger['Service']) {
   });
 }
 
-const enrolledNow = Effect.fnUntraced(function* (person: string) {
+const enrolledNow = Effect.fnUntraced(function* (person: string, invitation: string | undefined) {
   const ledger = yield* Effect.service(Ledger);
   const at = DateTime.formatIso(yield* DateTime.now);
-  const enrolling = enrolledAtSignIn(defaultOrg, person, { at, by: `${signedInPersonPrefix}${person}` });
+  const enrolling = enrolledAtSignIn(defaultOrg, person, { at, by: `${signedInPersonPrefix}${person}`, invitation });
   return yield* enrolling.pipe(
     Effect.provideService(OrgWriter, writerOfTheOrg(ledger)),
     Effect.map((enrolled): Enrolment => ({ enrolled })),
@@ -71,11 +74,19 @@ function holdsARoleNow(person: string) {
   return Effect.map(rolesNow, ({ state }) => rolesHeldBy(state, { type: 'person', id: person }).length > 0);
 }
 
+function invitationPendingNow(invitation: string) {
+  return Effect.gen(function* () {
+    const { state } = yield* rolesNow;
+    return pendingInvitationOf(state, invitation, DateTime.formatIso(yield* DateTime.now)) !== undefined;
+  });
+}
+
 export function enrollingIn(runtime: AppRuntime<Ledger>): Enrolling {
   return {
-    enrolled: (person) => Effect.runPromise(inRuntime(runtime, enrolledNow(person))),
+    enrolled: (person, invitation) => Effect.runPromise(inRuntime(runtime, enrolledNow(person, invitation))),
     holdsARole: (person) => Effect.runPromise(inRuntime(runtime, holdsARoleNow(person))),
     firstAdminAwaited: () => Effect.runPromise(inRuntime(runtime, firstAdminAwaitedNow)),
+    invitationPending: (invitation) => Effect.runPromise(inRuntime(runtime, invitationPendingNow(invitation))),
   };
 }
 
@@ -97,8 +108,9 @@ export interface Admitting {
   readonly enrolling: Enrolling;
   readonly setup: Setup;
   readonly people: PeopleRows;
+  readonly invitations: Pick<InvitationAddresses, 'forgotten'>;
   readonly requiredClaim: RequiredClaim | undefined;
-  readonly report: TokensReport;
+  readonly report: AdmissionReport;
 }
 
 export interface Admitted {
@@ -141,7 +153,7 @@ async function requiredClaimNotCarried(
 }
 
 async function claimsOnceReleased(
-  report: TokensReport,
+  report: AdmissionReport,
   { signedIn, claims, held }: SignedInWith,
   nameAsked: boolean,
 ): Promise<StandardClaims> {
@@ -158,10 +170,22 @@ async function claimsOnceReleased(
   return name === undefined ? claims : { ...claims, name };
 }
 
+async function acceptedForgotten(
+  { invitations, report }: Pick<Admitting, 'invitations' | 'report'>,
+  carried: readonly string[],
+): Promise<void> {
+  try {
+    await invitations.forgotten(carried);
+  } catch {
+    report.addressNotForgotten();
+  }
+}
+
 export async function admittedAfter(
-  { enrolling, setup, people, requiredClaim, report }: Admitting,
+  { enrolling, setup, people, invitations, requiredClaim, report }: Admitting,
   signedInWith: SignedInWith,
   at: number,
+  invitation?: string,
 ): Promise<Admitted | NotAdmitted> {
   const notCarried = await requiredClaimNotCarried({ requiredClaim, setup }, signedInWith);
   const claims = await claimsOnceReleased(report, signedInWith, notCarried === undefined);
@@ -170,11 +194,15 @@ export async function admittedAfter(
   }
   const { signedIn } = signedInWith;
   const kept = personSignedInOf(signedIn, claims, at);
-  const enrolment = await enrolling.enrolled(kept.person);
+  const carried = invitation === undefined ? [] : [invitation];
+  const enrolment = await enrolling.enrolled(kept.person, invitation);
   if ('failed' in enrolment) {
     return enrolment;
   }
   await people.kept(kept);
+  if (enrolment.enrolled === 'invitation') {
+    await acceptedForgotten({ invitations, report }, carried);
+  }
   return { signedIn, person: kept.person, enrolled: enrolment.enrolled };
 }
 

@@ -106,7 +106,7 @@ The runtime checks an address's form. For a comment on a definition or a step it
 
 ## From an address to a call
 
-The segments of an address are the arguments of the tools that read and change the thing. These tools are those of the [MCP reference](mcp.md#tools), each with the same name over HTTP, apart from `list_members` and `invite_member`, which hosted Auto serves and a self-hosted runtime does not.
+The segments of an address are the arguments of the tools that read and change the thing. These tools are those of the [MCP reference](mcp.md#tools), each with the same name over HTTP. A self-hosted runtime serves `list_members` and `invite_member` where it signs people in.
 
 | Address                   | Read it with                                                                                                                                                                   | Act on it with                                                                                                                                                         |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

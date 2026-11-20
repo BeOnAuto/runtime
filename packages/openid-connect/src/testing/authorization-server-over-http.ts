@@ -31,6 +31,10 @@ export const studioOrigin = 'https://studio.example.test';
 
 const upstreamState = 'upstream-state';
 
+export const pendingInvitationSecret = 'kQ2_x-9pendingInvitation';
+
+export const studioOpenedAt = `${studioOrigin}/?server=${encodeURIComponent(issuer)}`;
+
 export const signingIn: InteractionSignIn = {
   started: () =>
     Promise.resolve({
@@ -39,6 +43,8 @@ export const signingIn: InteractionSignIn = {
     }),
   finished: (_query, pending) =>
     Promise.resolve(pending === upstreamState ? { admitted: signedInPerson } : { refused: 'not_signed_in' }),
+  invitationOpened: (secret) =>
+    Promise.resolve(secret === pendingInvitationSecret ? { location: studioOpenedAt } : { ended: true }),
 };
 
 const middleware: ApiMiddleware = (request) =>

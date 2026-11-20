@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Predicate } from 'effect';
 import { errors, Provider, type Configuration, type ErrorOut, type KoaContextWithOIDC } from 'oidc-provider';
 
+import { shown } from './answering.ts';
 import {
   configurationOf,
   type AuthorizationServerSettings,
@@ -10,7 +11,7 @@ import {
   type ServersPages,
 } from './configuration.ts';
 import type { InteractionSignIn, SignInPages } from './interaction-pages.ts';
-import { interactionsOf, notOpen, shown, type InteractionModels } from './interactions.ts';
+import { interactionsOf, notOpen, type InteractionModels } from './interactions.ts';
 import { answeredPathsOf } from './paths.ts';
 import type { ProviderRows } from './provider-rows.ts';
 import type { SigningKey } from './signing-key.ts';
@@ -223,6 +224,7 @@ export type { AuthorizationServerSettings, PersonClaims, StudioClient } from './
 export type {
   AllowAsked,
   InteractionSignIn,
+  InvitationOpened,
   NotStarted,
   PageShown,
   SignInAskedOf,

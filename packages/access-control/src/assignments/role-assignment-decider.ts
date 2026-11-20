@@ -1,6 +1,11 @@
-import { Conflict, Forbidden, type Decider, type PrincipalReference, type Rejection } from '@on.auto/operations';
-import { HashMap, Option, Result } from 'effect';
+import { Conflict, Forbidden, type Decider, type PrincipalReference } from '@on.auto/operations';
+import { Result } from 'effect';
 
+import {
+  decidedOfInvitations,
+  isOfInvitations,
+  withTheirInvitationsRevoked,
+} from '../invitations/invitation-decisions.ts';
 import {
   builtInRoles,
   builtInRolesAtSignIn,
@@ -19,10 +24,10 @@ import {
   type HeldAssignments,
 } from './held-assignments.ts';
 import type {
-  AdminRecovered,
+  Decision,
   DeprovisioningSource,
-  PersonEnrolled,
   RoleAssignmentCommand,
+  RoleAssignmentRefusal,
   RoleGiven,
   RolesDeprovisioned,
   RolesProvisioned,
@@ -31,18 +36,11 @@ import type {
 import {
   RoleAssignmentEventSchema,
   principalKeyOf,
-  type AssignedPrincipal,
   type AssignedRole,
-  type AssignmentSource,
   type RecordedRoleAssignmentEvent,
   type RoleAssignmentEvent,
 } from './role-assignment-facts.ts';
-
-export type Enrolled = 'bootstrap' | 'enrolment' | 'member' | 'removed';
-
-type RoleAssignmentRefusal = 'forbidden' | 'conflict';
-
-type Decision = Result.Result<readonly RoleAssignmentEvent[], Rejection<RoleAssignmentRefusal>>;
+import { decidedEnrolment, decidedRecovery, type Deciding } from './sign-in-decisions.ts';
 
 type RoleAssignmentDecider = Decider<
   HeldAssignments,
@@ -88,10 +86,11 @@ function decidedGiving(table: RoleTable, command: RoleGiven, state: HeldAssignme
     return Result.fail(refusal);
   }
   const alreadyHeld = held.length > replaced.length;
-  return keepingAnAssigner(table, state, [
+  const given = keepingAnAssigner(table, state, [
     ...replaced.map((role) => unassignedOf({ principal: command.principal, role }, command.scope, 'manual')),
     ...(alreadyHeld ? [] : [assignedOf(command, command.scope, 'manual')]),
   ]);
+  return Result.map(given, (events) => withTheirInvitationsRevoked({ ...command, state }, 'role_changed', events));
 }
 
 function decidedTaking(table: RoleTable, command: RoleTaken, state: HeldAssignments): Decision {
@@ -149,109 +148,16 @@ function decidedDeprovisioning(table: RoleTable, command: RolesDeprovisioned, st
   const ended = rolesHeldBy(state, command.principal).map((role) =>
     unassignedOf({ principal: command.principal, role }, command.scope, command.source),
   );
-  return membershipEndedAlready[command.source] ? Result.succeed(ended) : keepingAnAssigner(table, state, ended);
-}
-
-function mayBeEnrolled({ lastEndedBy }: HeldAssignments, principal: AssignedPrincipal): boolean {
-  return Option.match(HashMap.get(lastEndedBy, principalKeyOf(principal)), {
-    onNone: () => true,
-    onSome: (source) => source !== 'manual',
-  });
-}
-
-function enrolledOver(table: RoleTable, state: HeldAssignments, principal: AssignedPrincipal): Enrolled {
-  if (!holdsAnAssigner(table, state)) {
-    return 'bootstrap';
-  }
-  if (rolesHeldBy(state, principal).length > 0) {
-    return 'member';
-  }
-  return mayBeEnrolled(state, principal) ? 'enrolment' : 'removed';
-}
-
-export function enrolledAs(state: HeldAssignments, principal: AssignedPrincipal): Enrolled {
-  return enrolledOver(builtInRoles, state, principal);
-}
-
-export function awaitsItsFirstAdmin(state: HeldAssignments): boolean {
-  return !holdsAnAssigner(builtInRoles, state);
-}
-
-interface Enrolling {
-  readonly atSignIn: RolesAtSignIn;
-  readonly command: PersonEnrolled;
-  readonly state: HeldAssignments;
-}
-
-function givenAtSignIn(
-  { atSignIn, command: { principal, scope } }: Enrolling,
-  source: keyof RolesAtSignIn,
-): RoleAssignmentEvent {
-  return assignedOf({ principal, role: { type: 'built_in', id: atSignIn[source] } }, scope, source);
-}
-
-interface InPlaceOfTheRolesHeld {
-  readonly state: HeldAssignments;
-  readonly command: PersonEnrolled | AdminRecovered;
-  readonly source: AssignmentSource;
-}
-
-function givenInPlaceOfTheRolesHeld(
-  { state, command: { principal, scope }, source }: InPlaceOfTheRolesHeld,
-  given: RoleAssignmentEvent,
-): readonly RoleAssignmentEvent[] {
-  return [...rolesHeldBy(state, principal).map((role) => unassignedOf({ principal, role }, scope, source)), given];
-}
-
-const enrolledWith: Readonly<Record<Enrolled, (enrolling: Enrolling) => readonly RoleAssignmentEvent[]>> = {
-  bootstrap: (enrolling) =>
-    givenInPlaceOfTheRolesHeld({ ...enrolling, source: 'bootstrap' }, givenAtSignIn(enrolling, 'bootstrap')),
-  enrolment: (enrolling) => [givenAtSignIn(enrolling, 'enrolment')],
-  member: () => [],
-  removed: () => [],
-};
-
-interface Deciding {
-  readonly table: RoleTable;
-  readonly atSignIn: RolesAtSignIn;
-}
-
-function decidedEnrolment({ table, atSignIn }: Deciding, command: PersonEnrolled, state: HeldAssignments): Decision {
-  return Result.succeed(enrolledWith[enrolledOver(table, state, command.principal)]({ atSignIn, command, state }));
-}
-
-type Recovered = 'given' | 'held_already';
-
-function roleOfTheFirstSignIn({ atSignIn }: Pick<Deciding, 'atSignIn'>): AssignedRole {
-  return { type: 'built_in', id: atSignIn.bootstrap };
-}
-
-function recoveredOver(
-  deciding: Pick<Deciding, 'atSignIn'>,
-  state: HeldAssignments,
-  principal: AssignedPrincipal,
-): Recovered {
-  const { id } = roleOfTheFirstSignIn(deciding);
-  return rolesHeldBy(state, principal).some((held) => held.id === id) ? 'held_already' : 'given';
-}
-
-export function recoveredAs(state: HeldAssignments, principal: AssignedPrincipal): Recovered {
-  return recoveredOver({ atSignIn: builtInRolesAtSignIn }, state, principal);
-}
-
-function decidedRecovery(deciding: Deciding, command: AdminRecovered, state: HeldAssignments): Decision {
-  if (recoveredOver(deciding, state, command.principal) === 'held_already') {
-    return Result.succeed([]);
-  }
-  const given = assignedOf(
-    { principal: command.principal, role: roleOfTheFirstSignIn(deciding) },
-    command.scope,
-    'command',
-  );
-  return Result.succeed(givenInPlaceOfTheRolesHeld({ state, command, source: 'command' }, given));
+  const decision = membershipEndedAlready[command.source]
+    ? Result.succeed(ended)
+    : keepingAnAssigner(table, state, ended);
+  return Result.map(decision, (events) => withTheirInvitationsRevoked({ ...command, state }, 'member_removed', events));
 }
 
 function decided(deciding: Deciding, command: RoleAssignmentCommand, state: HeldAssignments): Decision {
+  if (isOfInvitations(command)) {
+    return decidedOfInvitations(deciding.table, command, state);
+  }
   if (command.kind === 'recover') {
     return decidedRecovery(deciding, command, state);
   }

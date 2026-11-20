@@ -48,6 +48,7 @@ const enrollingRefused: SigningIn['enrolling'] = {
   enrolled: () => Promise.resolve({ failed: 'contended' }),
   holdsARole: (person) => Promise.resolve(person === ada.person),
   firstAdminAwaited: () => Promise.resolve(false),
+  invitationPending: () => Promise.resolve(false),
 };
 
 type Logged = (log: Effect.Effect<void>) => void;
@@ -59,6 +60,8 @@ function stepWith(party: Partial<RelyingParty>, logged: Logged = Function.constV
     report: signInReportTo(logged, relyingParty.issuer),
     requiredClaim: undefined,
     people: peopleWithAda,
+    invitations: { forgotten: () => Promise.resolve() },
+    studioOpenedAt: 'https://studio.on.auto/?server=https%3A%2F%2Fauto.example.test&src=runtime-page',
     enrolling: enrollingRefused,
     setup: { requiredClaimSet: () => Promise.reject(new Error('Not asked')) },
   });

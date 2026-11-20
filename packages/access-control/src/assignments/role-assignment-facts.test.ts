@@ -8,6 +8,7 @@ import {
   checkedProjection,
   type KeptProjection,
   Ledger,
+  type ProjectedMessage,
   type ProjectedRowsQuery,
   streamPrefixOfOrg,
 } from '@on.auto/operations';
@@ -53,6 +54,30 @@ const firstAdmin: readonly RecordedRoleAssignmentEvent[] = [
   {
     type: 'role_assigned',
     data: { principal: priya, role: { type: 'built_in', id: 'admin' }, scope: acme, source: 'bootstrap' },
+    context: { at: acted.at, by: `person:${priya.id}` },
+  },
+];
+
+const invited = '9b74c9897bac770ffc029102a200c5de1f8b7c1f3b6e1ad2f0d2b3e1c4a5f6e7';
+
+const resent = '0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0';
+
+const anEditor = { type: 'built_in', id: 'editor' } as const;
+
+const invitations: readonly RecordedRoleAssignmentEvent[] = [
+  {
+    type: 'member_invited',
+    data: { invitation: invited, role: anEditor, scope: acme, expires_at: '2026-12-14T15:20:00.000Z' },
+    context: acted,
+  },
+  {
+    type: 'invitation_revoked',
+    data: { invitation: invited, role: anEditor, scope: acme, reason: 'resent' },
+    context: acted,
+  },
+  {
+    type: 'invitation_accepted',
+    data: { invitation: resent, role: anEditor, scope: acme, principal: priya },
     context: { at: acted.at, by: `person:${priya.id}` },
   },
 ];
@@ -247,7 +272,7 @@ describe('the facts of role assignments', () => {
   recordedFactsBehaviour({
     schema: RoleAssignmentEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.57.0': baseline, '0.65.0': firstAdmin },
+    releases: { '0.57.0': baseline, '0.65.0': firstAdmin, '0.69.0': invitations },
   });
 });
 
@@ -258,6 +283,30 @@ describe('what a fact of a role assignment holds', () => {
 
   it('refuses another kind of principal, a role the runtime does not ship, an unnamed or malformed scope, an unknown source, an empty or unbounded id, and a role written as the identity service’s key', () => {
     expect(refused.map((data) => readWith(data))).toEqual(refused.map(() => false));
+  });
+});
+
+function invitationReadWith(type: string, data: Changed): boolean {
+  const made = invitations.find((fact) => fact.type === type);
+  return Result.isSuccess(decoded({ ...made, data: { ...made?.data, ...data } }));
+}
+
+describe('what a fact of an invitation holds', () => {
+  it('names the invitation by an id of at most 64 letters, digits, dashes and underscores, its role and the org, never an address, a name or the link', () => {
+    expect([
+      invitationReadWith('member_invited', {}),
+      invitationReadWith('invitation_revoked', { reason: 'revoked' }),
+      invitationReadWith('invitation_revoked', { reason: 'member_removed' }),
+      invitationReadWith('invitation_revoked', { reason: 'role_changed' }),
+      invitationReadWith('invitation_accepted', {}),
+    ]).toEqual([true, true, true, true, true]);
+    expect([
+      invitationReadWith('member_invited', { invitation: 'i'.repeat(65) }),
+      invitationReadWith('member_invited', { invitation: 'an id/with a slash' }),
+      invitationReadWith('member_invited', { role: { type: 'built_in', id: 'member' } }),
+      invitationReadWith('invitation_revoked', { reason: 'expired' }),
+      invitationReadWith('invitation_accepted', { principal: { type: 'key', id: 'ci' } }),
+    ]).toEqual([false, false, false, false, false]);
   });
 });
 
@@ -345,5 +394,24 @@ describe('the read model of role assignments', () => {
       'person:user_priya',
     );
     expect(roleAssignmentRows.rowsAfter(new Map(), message)).toBeUndefined();
+  });
+
+  it('passes over every fact of an invitation, keying and changing no row, whatever rows it holds', () => {
+    const rows = new Map([['org/acme/built_in/viewer', { role_id: 'viewer' }]]);
+    const messages: readonly ProjectedMessage[] = invitations.map(({ type, data, context }, position) => ({
+      id: `b7e1f0c2-3a4d-5e6f-8a9b-0c1d2e3f4a5${String(position)}`,
+      position,
+      type,
+      data,
+      context,
+    }));
+
+    expect(
+      messages.map((message) => [
+        roleAssignmentRows.keyOf?.(message, streamAddressed('org/acme/role-assignments/x')),
+        roleAssignmentRows.rowsAfter(rows, message),
+      ]),
+    ).toEqual(messages.map(() => [undefined, undefined]));
+    expect(roleAssignmentRows.types).toEqual(['role_assigned', 'role_unassigned']);
   });
 });

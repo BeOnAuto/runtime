@@ -3,7 +3,7 @@ import { Data, Schema } from 'effect';
 
 import type { AuthDatabase } from './auth-database.ts';
 
-export const authLayout = 3;
+export const authLayout = 4;
 
 export const authTablePrefix = 'auth_';
 
@@ -27,6 +27,7 @@ export const authLayoutSteps: readonly AuthLayoutStep[] = [
       statement`DROP TABLE IF EXISTS auth_sessions`,
     ],
   },
+  { layout: 4, statements: [] },
 ];
 
 export interface AuthLayoutCarrying {

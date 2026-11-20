@@ -2,6 +2,8 @@ const redacted = 'REDACTED';
 
 const tokenOfALink = /(?<=\/connections\/[^/?#]+\/link\/)[^/?#]+/u;
 
+const secretOfAnInvitation = /(?<=^[^:/?#]+:\/\/[^/?#]+\/invitations\/)[^/?#]+/u;
+
 export interface RequestTarget {
   readonly origin: string;
   readonly path: string;
@@ -21,5 +23,5 @@ export function redactedUrlAttributes({ origin, path }: RequestTarget): Readonly
 }
 
 export function withoutTheTokenOfALink(url: string): string {
-  return url.replace(tokenOfALink, redacted);
+  return url.replace(tokenOfALink, redacted).replace(secretOfAnInvitation, redacted);
 }

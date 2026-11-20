@@ -30,7 +30,7 @@ import {
   runDefinition,
   type TestOperation,
 } from '../testing/access-testing.ts';
-import { builtInRoleIds, builtInRoles, builtInRolesAtSignIn, mayAssign } from './built-in-roles.ts';
+import { builtInRoleIds, builtInRoles, builtInRolesAtSignIn, mayAssign, mayInvite } from './built-in-roles.ts';
 import { assignmentsReadAtOnce, roleAssignmentsFrom, roleAssignmentsRecordedIn } from './recorded-role-assignments.ts';
 import { editorRoleForEveryPerson } from './role-assignments.ts';
 
@@ -115,6 +115,14 @@ describe('the built-in roles the decider reads', () => {
     expect(
       builtInRoleIds.flatMap((held) => builtInRoleIds.map((asked) => mayAssign(builtInRoles, held, asked))),
     ).toEqual([true, true, true, false, false, false, false, false, false]);
+  });
+});
+
+describe('the roles that invite', () => {
+  it('let an admin invite to any of them, an editor invite an editor or a viewer, and a viewer invite nobody', () => {
+    expect(
+      builtInRoleIds.flatMap((held) => builtInRoleIds.map((asked) => mayInvite(builtInRoles, held, asked))),
+    ).toEqual([true, true, true, false, true, true, false, false, false]);
   });
 });
 

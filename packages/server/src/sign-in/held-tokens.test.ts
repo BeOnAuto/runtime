@@ -27,8 +27,10 @@ function admittedBy(requiredClaim?: RequiredClaim): Admitted {
       enrolled: () => Promise.resolve({ enrolled: 'enrolment' }),
       holdsARole: () => Promise.resolve(true),
       firstAdminAwaited: () => Promise.resolve(false),
+      invitationPending: () => Promise.resolve(false),
     },
     setup: { requiredClaimSet: () => Promise.reject(new Error('Not asked')) },
+    invitations: { forgotten: () => Promise.resolve() },
     people: {
       kept: (signedInPerson) => {
         kept.push(signedInPerson);
@@ -45,6 +47,9 @@ function admittedBy(requiredClaim?: RequiredClaim): Admitted {
       },
       notRevoked: (failure) => {
         reported.push(['notRevoked', failure]);
+      },
+      addressNotForgotten: () => {
+        reported.push(['addressNotForgotten']);
       },
     },
   };

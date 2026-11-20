@@ -7,15 +7,15 @@ import {
 import { Option } from 'effect';
 
 import {
-  RoleAssignmentEventSchema,
+  RoleAssignmentChangeSchema,
   principalKeyOf,
   roleAssignmentsKind,
-  type RecordedRoleAssignmentEvent,
+  type RecordedRoleAssignmentChange,
 } from './role-assignment-facts.ts';
 
 export const roleAssignmentsName = 'role_assignments';
 
-const roleAssignmentFactOf = recordedDecoder(RoleAssignmentEventSchema);
+const roleAssignmentFactOf = recordedDecoder(RoleAssignmentChangeSchema);
 
 interface Referenced {
   readonly type: string;
@@ -37,7 +37,7 @@ function rowsWithout(rows: ProjectedRows, child: string): ProjectedRows | undefi
 
 function rowsAfterFact(
   rows: ProjectedRows,
-  { type, data, context }: RecordedRoleAssignmentEvent,
+  { type, data, context }: RecordedRoleAssignmentChange,
 ): ProjectedRows | undefined {
   const child = assignmentKeyOf(data);
   if (type === 'role_unassigned') {

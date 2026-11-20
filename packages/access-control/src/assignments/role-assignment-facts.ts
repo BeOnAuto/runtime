@@ -66,9 +66,38 @@ const RoleAssignmentDataSchema = Schema.Struct({
   source: AssignmentSourceSchema,
 });
 
+const roleAssigned = factOf('role_assigned', RoleAssignmentDataSchema, ActedContextSchema);
+
+const roleUnassigned = factOf('role_unassigned', RoleAssignmentDataSchema, ActedContextSchema);
+
+export const RoleAssignmentChangeSchema = Schema.Union([roleAssigned, roleUnassigned]);
+
+export type RecordedRoleAssignmentChange = typeof RoleAssignmentChangeSchema.Type;
+
+export type RoleAssignmentChange = Decided<RecordedRoleAssignmentChange>;
+
+export const InvitationIdSchema = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{1,64}$/u));
+
+const invitationRevokedReasons = ['revoked', 'resent', 'member_removed', 'role_changed'] as const;
+
+export type InvitationRevokedReason = (typeof invitationRevokedReasons)[number];
+
+const invitationFields = { invitation: InvitationIdSchema, role: AssignedRoleSchema, scope: AssignmentScopeSchema };
+
 export const RoleAssignmentEventSchema = Schema.Union([
-  factOf('role_assigned', RoleAssignmentDataSchema, ActedContextSchema),
-  factOf('role_unassigned', RoleAssignmentDataSchema, ActedContextSchema),
+  roleAssigned,
+  roleUnassigned,
+  factOf('member_invited', Schema.Struct({ ...invitationFields, expires_at: Schema.String }), ActedContextSchema),
+  factOf(
+    'invitation_revoked',
+    Schema.Struct({ ...invitationFields, reason: Schema.Literals(invitationRevokedReasons) }),
+    ActedContextSchema,
+  ),
+  factOf(
+    'invitation_accepted',
+    Schema.Struct({ ...invitationFields, principal: AssignedPrincipalSchema }),
+    ActedContextSchema,
+  ),
 ]);
 
 export type RecordedRoleAssignmentEvent = typeof RoleAssignmentEventSchema.Type;

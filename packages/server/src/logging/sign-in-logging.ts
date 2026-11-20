@@ -147,12 +147,22 @@ export interface ClientsReport {
   readonly notRegistered: (failure: string) => void;
 }
 
-export interface TokensReport {
+interface TokensReport {
   readonly nameUnread: (person: string, failure: string) => void;
   readonly notRevoked: (failure: string) => void;
 }
 
-export interface SignInReport extends ClientsReport, TokensReport {
+export interface AdmissionReport extends TokensReport {
+  readonly addressNotForgotten: () => void;
+}
+
+function logInvitationAddressNotForgotten(org: string): Effect.Effect<void> {
+  return Effect.logError(
+    'The address of an invitation accepted at a sign-in could not be forgotten now; the next change of the members forgets it',
+  ).pipe(Effect.annotateLogs({ org }));
+}
+
+export interface SignInReport extends ClientsReport, AdmissionReport {
   readonly refused: (code: string) => void;
   readonly refusedForTheClaim: (required: RequiredClaim) => void;
   readonly failed: (failure: string) => void;
@@ -182,6 +192,9 @@ export function signInReportTo(logged: (log: Effect.Effect<void>) => void, issue
     },
     notRevoked: (failure) => {
       logged(logRefreshTokenNotRevoked(issuer, failure));
+    },
+    addressNotForgotten: () => {
+      logged(logInvitationAddressNotForgotten(defaultOrg));
     },
     registered: (clientId, replacing) => {
       logged(logClientRegistered(issuer, clientId, replacing));

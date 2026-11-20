@@ -18,9 +18,16 @@ export interface NotStarted {
   readonly notStarted: true;
 }
 
+export type InvitationOpened = { readonly location: string } | { readonly ended: true };
+
 export interface InteractionSignIn {
   readonly started: (asked: SignInAskedOf) => Promise<UpstreamSignInStarted | NotStarted>;
-  readonly finished: (callbackQuery: string, pending: string | undefined) => Promise<SignInOutcome>;
+  readonly finished: (
+    callbackQuery: string,
+    pending: string | undefined,
+    invitation?: string,
+  ) => Promise<SignInOutcome>;
+  readonly invitationOpened: (secret: string) => Promise<InvitationOpened>;
 }
 
 export interface AllowAsked {
@@ -40,6 +47,7 @@ export type PageShown =
   | { readonly allow: AllowAsked }
   | { readonly signingOut: SigningOut }
   | { readonly notOpen: { readonly client: string | undefined } }
+  | { readonly invitationEnded: true }
   | { readonly refused: SignInRefusal; readonly tryAgainAt: string | undefined };
 
 export interface SignInPage {

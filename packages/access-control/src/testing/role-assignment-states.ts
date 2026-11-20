@@ -3,7 +3,14 @@ import { recordingOf, type PrincipalReference } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { heldAssignmentsIn, type HeldAssignment, type HeldAssignments } from '../assignments/held-assignments.ts';
-import type { RoleGiven, RoleTaken } from '../assignments/role-assignment-commands.ts';
+import type {
+  InvitationResent,
+  InvitationRevoked,
+  MemberInvited,
+  PersonEnrolled,
+  RoleGiven,
+  RoleTaken,
+} from '../assignments/role-assignment-commands.ts';
 import { roleAssignmentDecider } from '../assignments/role-assignment-decider.ts';
 import {
   RoleAssignmentEventSchema,
@@ -11,9 +18,16 @@ import {
   type AssignmentScope,
   type AssignmentSource,
   type RecordedRoleAssignmentEvent,
+  type RoleAssignmentChange,
   type RoleAssignmentEvent,
 } from '../assignments/role-assignment-facts.ts';
 import type { BuiltInRoleId } from '../roles/built-in-roles.ts';
+
+export const toSam = '9b74c9897bac770ffc029102a200c5de1f8b7c1f3b6e1ad2f0d2b3e1c4a5f6e7';
+
+export const toNoor = '0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0';
+
+export const aMonthOn = '2026-12-14T15:20:00.000Z';
 
 export const acme: AssignmentScope = { type: 'org', id: 'acme' };
 
@@ -67,12 +81,60 @@ export function taken(by: AssignedPrincipal, from: AssignedPrincipal, id: BuiltI
   return { kind: 'unassign', actor: actor(by), principal: from, role: role(id), scope: acme, ...acted };
 }
 
+export function invitedBy(
+  inviter: AssignedPrincipal,
+  invitation: string,
+  id: BuiltInRoleId,
+  at = acted.at,
+): MemberInvited {
+  return { kind: 'invite', inviter, invitation, role: role(id), scope: acme, ...acted, at };
+}
+
+export function revoking(invitation: string, at = acted.at): InvitationRevoked {
+  return { kind: 'revoke', invitation, scope: acme, ...acted, at };
+}
+
+export function resending(invitation: string, replacement: string, at = acted.at): InvitationResent {
+  return { kind: 'resend', invitation, replacement, scope: acme, ...acted, at };
+}
+
+export function signingIn(principal: AssignedPrincipal, invitation?: string, at = acted.at): PersonEnrolled {
+  return {
+    kind: 'enrol',
+    principal,
+    scope: acme,
+    ...acted,
+    at,
+    by: `person:${principal.id}`,
+    invitation,
+  };
+}
+
+export function invitedAs(invitation: string, id: BuiltInRoleId, expiresAt = aMonthOn): RoleAssignmentEvent {
+  return {
+    type: 'member_invited',
+    data: { invitation, role: role(id), scope: acme, expires_at: expiresAt },
+  };
+}
+
+export function revokedAs(
+  invitation: string,
+  id: BuiltInRoleId,
+  reason: 'revoked' | 'resent' | 'member_removed' | 'role_changed',
+): RoleAssignmentEvent {
+  return { type: 'invitation_revoked', data: { invitation, role: role(id), scope: acme, reason } };
+}
+
+export function acceptedAs(invitation: string, id: BuiltInRoleId, principal: AssignedPrincipal): RoleAssignmentEvent {
+  return { type: 'invitation_accepted', data: { invitation, role: role(id), scope: acme, principal } };
+}
+
 export function change(
-  type: RoleAssignmentEvent['type'],
+  type: RoleAssignmentChange['type'],
   principal: AssignedPrincipal,
   id: BuiltInRoleId,
   source: AssignmentSource = 'manual',
-): RoleAssignmentEvent {
+): RoleAssignmentChange {
   return { type, data: { principal, role: role(id), scope: acme, source } };
 }
 

@@ -1,3 +1,4 @@
+export type { InvitationAddress, InvitationAddresses } from './people/invitation-addresses.ts';
 export type { PeopleRows, PersonRow, PersonSignedIn } from './people/people-rows.ts';
 export { defaultOrg, personIdOf, personSignedInOf } from './people/signed-in-people.ts';
 export {
@@ -41,7 +42,8 @@ export {
 export type { TokensHeld, TokensReleased } from './provider/sign-in-tokens.ts';
 export type { StandardClaims } from './provider/standard-claims.ts';
 export type { ProviderRows } from './authorization-server/provider-rows.ts';
-export { everyoneSignedOut } from './authorization-server/signed-out.ts';
+export { invitationPath } from './authorization-server/paths.ts';
+export { everyoneSignedOut, personSignedOut } from './authorization-server/signed-out.ts';
 export { AuthLayoutRefused } from './store/auth-layout.ts';
 export { authStoreOpened, type AuthStore } from './store/auth-store.ts';
 export type { AuthDatabase } from './store/auth-database.ts';

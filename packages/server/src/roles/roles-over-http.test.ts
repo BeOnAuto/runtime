@@ -1,4 +1,5 @@
 import { toolNamesIn, withMcpSession } from '@on.auto/api/testing';
+import { browserAt } from '@on.auto/openid-connect/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
@@ -125,5 +126,133 @@ describe('every call of a runtime that signs people in, decided by the role each
       false,
     ]);
     expect(offeredAsAnEditor).toContain('create_playbook');
+  });
+});
+
+function askingWithABody(origin: string) {
+  return async (token: string, method: string, path: string, body?: unknown) => {
+    const authorization = `Bearer ${token}`;
+    const answer = await fetch(`${origin}/v1/orgs/default${path}`, {
+      method,
+      ...(body === undefined
+        ? { headers: { authorization } }
+        : { headers: { authorization, 'content-type': 'application/json' }, body: JSON.stringify(body) }),
+    });
+    return { status: answer.status, body: Object.fromEntries(Object.entries(new Object(await answer.json()))) };
+  };
+}
+
+describe('the members of a runtime that signs people in, over HTTP', () => {
+  it('are listed to anyone in the org and offered to their agents, changed and removed by its admin alone, and a member removed is signed out at once and refused when they sign in again', async () => {
+    const signing = await personSigningIn();
+    const origin = await servedTo(signing, temporaryLedger());
+    const asked = askingAt(origin);
+    const ada = await signing.tokenAt(origin, 'Ada');
+    const priya = await signing.tokenAt(origin, 'Priya');
+    const priyasAgent = await signing.agentTokenAt(origin, 'Priya');
+    const [theAdmin, theViewer] = [signing.personOf('Ada'), signing.personOf('Priya')];
+
+    const listedToTheViewer = await asked(priya, 'GET', '/members');
+    const refusedTheViewer = await asked(priya, 'PUT', `/members/${theAdmin}/role`, { role: 'viewer' });
+    const offeredToTheViewersAgent = await toolsOfferedAt(origin, priyasAgent);
+    const madeAnEditor = await asked(ada, 'PUT', `/members/${theViewer}/role`, { role: 'editor' });
+    const removed = await asked(ada, 'DELETE', `/members/${theViewer}`);
+    const askedOnceRemoved = [await asked(priya, 'GET', '/playbooks'), await asked(priyasAgent, 'GET', '/playbooks')];
+    const signingInOnceRemoved = await signing.signedInWithTheCookie(origin, 'Priya', 'no-invitation');
+    const givenARoleOnceRemoved = await asked(ada, 'PUT', `/members/${theViewer}/role`, { role: 'viewer' });
+
+    const bothViewing = [
+      { id: theAdmin, role: 'admin' },
+      { id: theViewer, role: 'viewer' },
+    ];
+    expect(listedToTheViewer).toMatchObject({
+      status: 200,
+      body: { members: bothViewing, members_total: 2, invitations: [], invitations_total: 0 },
+    });
+    expect(refusedTheViewer).toMatchObject({ status: 403, body: { reason: 'forbidden', kind: 'permission_denied' } });
+    const offered = ['list_members', 'invite_member', 'set_member_role'].map((tool) =>
+      offeredToTheViewersAgent.includes(tool),
+    );
+    expect(offered).toEqual([true, false, false]);
+    const asAnEditor = { status: 200, body: { id: theViewer, role: 'editor' } };
+    expect([madeAnEditor, removed, ...askedOnceRemoved]).toMatchObject([
+      asAnEditor,
+      asAnEditor,
+      { status: 401 },
+      { status: 401 },
+    ]);
+    expect([signingInOnceRemoved.status, givenARoleOnceRemoved.status]).toEqual([403, 404]);
+  });
+});
+
+function invitingAt(origin: string) {
+  const asked = askingWithABody(origin);
+  return {
+    asked,
+    invited: async (token: string, path: string, emailAddress: string) => {
+      const answered = await asked(token, 'POST', path, { email_address: emailAddress });
+      return { ...answered, id: String(answered.body['id']), link: String(answered.body['link']) };
+    },
+  };
+}
+
+describe('the invitations of a runtime that signs people in, made by an agent and over HTTP', () => {
+  it('give a link that signs in once whoever it reaches, a removed person among them, while an id in its place accepts nothing', async () => {
+    const signing = await personSigningIn();
+    const origin = await servedTo(signing, temporaryLedger());
+    const { asked, invited } = invitingAt(origin);
+    const [ada, adasAgent] = [await signing.tokenAt(origin, 'Ada'), await signing.agentTokenAt(origin, 'Ada')];
+    await signing.tokenAt(origin, 'Priya');
+    await asked(ada, 'DELETE', `/members/${signing.personOf('Priya')}`);
+
+    const offered = await toolsOfferedAt(origin, adasAgent);
+    const byTheAgent = await withMcpSession(
+      'current revision',
+      { url: `${origin}/mcp`, headers: { authorization: `Bearer ${adasAgent}` } },
+      (session) => session.callTool('invite_member', { email_address: 'sam@example.com' }),
+    );
+    const linkOfSam = String(Reflect.get(new Object(byTheAgent.structuredContent), 'link'));
+    const toPriya = await invited(ada, '/members/invitations', 'priya@example.com');
+    const toLee = await invited(ada, '/members/admin-invitations', 'lee@example.com');
+    const byItsId = await signing.signedInWithTheCookie(origin, 'Priya', toLee.id);
+    const sam = await signing.signedInCarrying(origin, 'Sam', linkOfSam);
+    const priya = await signing.signedInCarrying(origin, 'Priya', toPriya.link);
+    const usedAgain = await browserAt(origin, signing.publicUrl).at(linkOfSam);
+
+    expect([offered.includes('invite_member'), byTheAgent.isError === true, toPriya.status, toLee.status]).toEqual([
+      true,
+      false,
+      201,
+      201,
+    ]);
+    const toStudio: unknown = expect.stringContaining(`server=${encodeURIComponent(signing.publicUrl)}`);
+    expect([sam.opened.status, sam.opened.headers.get('location')]).toEqual([303, toStudio]);
+    expect([byItsId.status, sam.finished.status, priya.finished.status, usedAgain.status]).toEqual([
+      403, 303, 303, 404,
+    ]);
+    expect([sam.stillCarried, priya.stillCarried]).toEqual([false, false]);
+    expect(await asked(ada, 'GET', '/members')).toMatchObject({
+      body: { members_total: 3, invitations: [{ id: toLee.id, role: 'admin' }] },
+    });
+  });
+});
+
+describe('the invitations of a runtime that signs people in, resent and revoked by its admin over HTTP', () => {
+  it('replace a link by a new one and end it, each earlier link working no more', async () => {
+    const signing = await personSigningIn();
+    const origin = await servedTo(signing, temporaryLedger());
+    const { asked, invited } = invitingAt(origin);
+    const opened = (link: unknown) => browserAt(origin, signing.publicUrl).at(String(link));
+    const ada = await signing.tokenAt(origin, 'Ada');
+    const toLee = await invited(ada, '/members/invitations', 'lee@example.com');
+
+    const resent = await asked(ada, 'POST', `/members/invitations/${toLee.id}/resend`);
+    const replaced = await opened(toLee.link);
+    const revoked = await asked(ada, 'DELETE', `/members/invitations/${String(resent.body['id'])}`);
+    const afterTheRevoke = await opened(resent.body['link']);
+
+    expect([resent.status, revoked.status, revoked.body['status']]).toEqual([201, 200, 'revoked']);
+    expect([replaced.status, afterTheRevoke.status]).toEqual([404, 404]);
+    expect(await asked(ada, 'GET', '/members')).toMatchObject({ body: { invitations: [], invitations_total: 0 } });
   });
 });
