@@ -14,13 +14,13 @@ import {
 
 export const mostAddressCharacters = 512;
 
-const stepsSegment = 'steps';
+export const stepsSegment = 'steps';
 
 const eventsSegment = 'events';
 
 const resultSegment = 'result';
 
-const partsSegment = 'parts';
+export const partsSegment = 'parts';
 
 const connectionsSegment = 'connections';
 

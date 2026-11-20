@@ -91,6 +91,8 @@ describe('the comment rows of the activity, in particular', () => {
     await resolve(onBlock, 'acted');
     expect(listedOf(await list(ada, { kind: 'new,comment' }, later)).rows.map(({ address }) => address)).toEqual([
       `finance/comments/${onStep}`,
+      expect.stringMatching(/^finance\/definitions\//u),
+      expect.stringMatching(/^finance\/definitions\//u),
       expect.stringMatching(/^playbooks\/sales\//u),
       expect.stringMatching(/^playbooks\/finance\//u),
     ]);

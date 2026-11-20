@@ -31,6 +31,14 @@ const made: RecordedCommentEvent = {
   context: madeAt,
 };
 
+const closeTheWeek = '019a3f00-0000-7000-8000-000000000004';
+
+const madeOnTheDefinition: RecordedCommentEvent = {
+  type: 'comment_made',
+  data: { address, text, made_by: priya, anchor, definition: closeTheWeek },
+  context: madeAt,
+};
+
 const madeWithoutAnchor: RecordedCommentEvent = {
   type: 'comment_made',
   data: { address, text, made_by: priya },
@@ -43,13 +51,22 @@ const resolved: RecordedCommentEvent = { type: 'comment_resolved', data: { how: 
 
 const reopened: RecordedCommentEvent = { type: 'comment_reopened', data: {}, context: reopenedAt };
 
-const open: CommentState = { address, text, anchor, madeBy: priya, at: madeAt.at, resolution: null, reopening: null };
+const open: CommentState = {
+  address,
+  definition: null,
+  text,
+  anchor,
+  madeBy: priya,
+  at: madeAt.at,
+  resolution: null,
+  reopening: null,
+};
 
 describe('the facts of a comment', () => {
   recordedFactsBehaviour({
     schema: CommentEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.56.0': [made, resolved, reopened] },
+    releases: { '0.56.0': [made, resolved, reopened], '0.68.0': [madeOnTheDefinition] },
   });
 });
 
@@ -85,7 +102,7 @@ describe('the stream of a comment', () => {
 });
 
 describe('the decision to make a comment', () => {
-  const make: MakeComment = { kind: 'make', address, text, anchor, madeBy: priya, ...madeAt };
+  const make: MakeComment = { kind: 'make', address, definition: null, text, anchor, madeBy: priya, ...madeAt };
 
   it('records what was said, about what, where on it and by whom, as and by whom the caller made it', () => {
     expect(commentDecider.decide(make, null)).toEqual(
@@ -98,6 +115,15 @@ describe('the decision to make a comment', () => {
     expect(commentDecider.decide({ ...make, anchor: null }, null)).toEqual(
       Result.succeed([{ type: 'comment_made', data: { address, text, made_by: priya } }]),
     );
+  });
+
+  it('records the definition a comment on a definition or a step is about, by its id, and folds to it', () => {
+    expect(commentDecider.decide({ ...make, definition: closeTheWeek }, null)).toEqual(
+      Result.succeed([
+        { type: 'comment_made', data: { address, text, made_by: priya, anchor, definition: closeTheWeek } },
+      ]),
+    );
+    expect(commentDecider.evolve(null, madeOnTheDefinition)).toEqual({ ...open, definition: closeTheWeek });
   });
 
   it('records nothing on a stream that holds a comment already', () => {

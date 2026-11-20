@@ -96,13 +96,13 @@ A comment on the organization's things is the organization's own: it is kept wit
 
 ## What the runtime checks
 
-The runtime checks an address's form, and never that the thing exists.
+The runtime checks an address's form. For a comment on a definition or a step it also checks that the playbook holds a definition of that type and name. It checks nothing else about whether the thing exists.
 
-- [`make_comment`](http.md#making-a-comment) of a playbook refuses an address that is not of a form a comment takes, that names another playbook or that is the organization's, with `invalid_input` at `/address`. The organization's `make_comment` refuses every address but those of the organization's things and their parts, the same way. So does [`list_comments`](http.md#listing-comments) of each, which with `under` also takes a definition without its version, `<playbook>/definitions/<type>/<name>`.
+- [`make_comment`](http.md#making-a-comment) of a playbook refuses an address that is not of a form a comment takes, that names another playbook or that is the organization's, with `invalid_input` at `/address`. The organization's `make_comment` refuses every address but those of the organization's things and their parts, the same way. So does [`list_comments`](http.md#listing-comments) of each, which with `under` also takes a definition without its version, `<playbook>/definitions/<type>/<name>`. `make_comment` refuses the address of a definition or a step whose type and name no definition of the playbook holds, with `not_found`; `list_comments` answers no comments for it.
 - With `under`, an address holds its parts. A run also holds its events and the blocks of its result, a definition at a version its steps, and a definition without its version every version, their steps and their parts. Any other address holds its parts alone: the playbook's `playbooks/<playbook>` holds none of what the playbook holds, `org` none of the organization's connections, members or pages, and a step nested in another is not under it. A step, an event, a block and a request, which take no parts, hold nothing but themselves.
 - [`mark_activity_seen`](http.md#marking-items-seen) refuses an item whose address is not of a form the activity names.
 - A comment made on a page saved as a definition of its own is read as a comment on its subject, without a version, so `under` on the subject holds it.
-- A comment on a thing that is gone, or never was, is still a comment. A comment on a retired definition, on version 3 after version 4 was saved, on a connection since removed or on a member who has left stays as it was made. The thing's own read says what became of it.
+- A comment on a thing that is gone is still a comment. A comment on a retired definition, on version 3 after version 4 was saved, on a connection since removed or on a member who has left stays as it was made. The thing's own read says what became of it. A comment on a definition or a step belongs to the definition: when the definition moves to another playbook or is renamed, the comment goes with it, and its address names the playbook and the name the definition has now.
 
 ## From an address to a call
 

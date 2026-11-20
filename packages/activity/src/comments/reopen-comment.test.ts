@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { commentDecider } from '../facts/comment-facts.ts';
-import { addressesIn, commenting, minute, reader, run, step } from '../testing/commenting.ts';
+import { addressesIn, closeTheWeek, commenting, minute, reader, run, step } from '../testing/commenting.ts';
 import { ada, listedOf, markedOf, outputOf, priya } from '../testing/harness.ts';
 import { reopenComment, reopenCommentInOrg } from './reopen-comment.ts';
 
@@ -179,7 +179,11 @@ describe('reopen_comment', () => {
 
     expect(outputOf(await reopen(id))).toMatchObject({ open: true, reopened_at: null, reopened_by: null });
     expect(
-      (await Effect.runPromise(ledger.service.load(`playbook/acme/finance/comments/${id}`, commentDecider))).version,
+      (
+        await Effect.runPromise(
+          ledger.service.load(`definition/acme/${closeTheWeek.id}/comments/${id}`, commentDecider),
+        )
+      ).version,
     ).toBe(1);
   });
 });

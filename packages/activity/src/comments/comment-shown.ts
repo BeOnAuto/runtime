@@ -38,7 +38,7 @@ export const CommentSchema = Schema.Struct({
 
 type ShownComment = typeof CommentSchema.Type;
 
-type KeptComment = Omit<ShownComment, 'studio'>;
+export type KeptComment = Omit<ShownComment, 'studio'>;
 
 const CommentColumnsSchema = Schema.Struct({
   address: Schema.String,

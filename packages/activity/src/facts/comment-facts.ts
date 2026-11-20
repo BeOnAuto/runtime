@@ -41,6 +41,7 @@ const CommentMadeSchema = factOf(
     text: Schema.String,
     made_by: RecordedCallerSchema,
     anchor: Schema.optionalKey(AnchorSchema),
+    definition: Schema.optionalKey(Schema.String),
   }),
   ActedContextSchema,
 );
@@ -70,6 +71,7 @@ interface CommentResolution extends Acting {
 
 export interface CommentState {
   readonly address: string;
+  readonly definition: string | null;
   readonly text: string;
   readonly anchor: Anchor | null;
   readonly madeBy: RecordedCaller;
@@ -81,6 +83,7 @@ export interface CommentState {
 export interface MakeComment extends Acting {
   readonly kind: 'make';
   readonly address: string;
+  readonly definition: string | null;
   readonly text: string;
   readonly anchor: Anchor | null;
   readonly madeBy: RecordedCaller;
@@ -99,8 +102,8 @@ type CommentCommand = MakeComment | ResolveComment | ReopenComment;
 
 function evolved(state: CommentState | null, recorded: RecordedCommentEvent): CommentState | null {
   if (recorded.type === 'comment_made') {
-    const { address, text, made_by: madeBy, anchor = null } = recorded.data;
-    return { address, text, anchor, madeBy, at: recorded.context.at, resolution: null, reopening: null };
+    const { address, definition = null, text, made_by: madeBy, anchor = null } = recorded.data;
+    return { address, definition, text, anchor, madeBy, at: recorded.context.at, resolution: null, reopening: null };
   }
   if (state === null) {
     return null;
@@ -110,11 +113,15 @@ function evolved(state: CommentState | null, recorded: RecordedCommentEvent): Co
     : { ...state, resolution: null, reopening: recorded.context };
 }
 
+function madeOf({ address, definition, text, anchor, madeBy }: MakeComment): Decided<RecordedCommentEvent> {
+  const placed = anchor === null ? {} : { anchor };
+  const about = definition === null ? {} : { definition };
+  return { type: 'comment_made', data: { address, text, made_by: madeBy, ...placed, ...about } };
+}
+
 function decided(command: CommentCommand, state: CommentState | null): readonly Decided<RecordedCommentEvent>[] {
   if (command.kind === 'make') {
-    const { address, text, anchor, madeBy } = command;
-    const placed = anchor === null ? {} : { anchor };
-    return state === null ? [{ type: 'comment_made', data: { address, text, made_by: madeBy, ...placed } }] : [];
+    return state === null ? [madeOf(command)] : [];
   }
   if (state === null) {
     return [];

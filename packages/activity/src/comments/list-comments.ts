@@ -21,9 +21,18 @@ import {
   pagesOfTheirOwnOf,
   type PagesOfTheirOwn,
 } from '../positions/current-addresses.ts';
+import {
+  aboutTheDefinition,
+  addressedAsHeld,
+  definitionNamed,
+  namesADefinition,
+  namesHeldNow,
+  type HeldDefinitions,
+  type NamingADefinition,
+} from '../positions/definition-addresses.ts';
 import { commentsName } from '../projections/comment-rows.ts';
 import { AddressInputField, CursorField, LimitField, commentsInAPage, refusedAt } from './comment-fields.ts';
-import { CommentSchema, keptOfRow, shownComment } from './comment-shown.ts';
+import { CommentSchema, keptOfRow, shownComment, type KeptComment } from './comment-shown.ts';
 
 const ListCommentsInputSchema = Schema.Struct({
   address: Schema.optionalKey(
@@ -60,10 +69,14 @@ const isCursor = Schema.is(CursorSchema);
 
 const ofTheOrg = '';
 
+type Where = readonly ProjectedCondition[];
+
 interface Owner {
   readonly playbook: string | undefined;
   readonly named: string;
   readonly pages: PagesOfTheirOwn;
+  readonly wheresAt: (target: ListedTarget, address: string, under: boolean) => Effect.Effect<readonly Where[]>;
+  readonly namedNow: (rows: readonly ProjectedKeyedRow[]) => Effect.Effect<readonly KeptComment[]>;
 }
 
 function ownedBy(owner: Owner): string {
@@ -80,28 +93,47 @@ function afterOf(owner: Owner, cursor: string | undefined) {
     : Effect.fail(refusedAt('/cursor', `Expected the next_cursor of a page of list_comments of ${owner.named}`));
 }
 
-function underOf(target: ListedTarget, address: string, pages: PagesOfTheirOwn): readonly ProjectedCondition[] {
+function underOf(target: ListedTarget, address: string): ProjectedCondition {
   if (isPart(target)) {
-    return [{ column: 'address', equals: address }];
+    return { column: 'about', equals: address };
   }
-  if (target.kind === 'run') {
-    return [{ column: 'about_run', equals: target.run }];
+  return target.kind === 'run'
+    ? { column: 'about_run', equals: target.run }
+    : { column: 'about_thing', equals: address };
+}
+
+function wheresAtTheThing(target: ListedTarget, address: string, under: boolean): readonly Where[] {
+  return [[under ? underOf(target, address) : { column: 'about', equals: address }]];
+}
+
+function wheresOnTheDefinition(definition: string, target: NamingADefinition, under: boolean, pages: PagesOfTheirOwn) {
+  if (target.kind === 'every_version') {
+    return [definition, ...pagesOfTheirOwnOf(pages, target.type, target.name)].map((each): Where => [
+      { column: 'about_definition', equals: each },
+    ]);
   }
-  if (target.kind === 'definition') {
-    return [{ column: 'about_version', equals: `${target.type}/${target.name}/${target.version}` }];
+  const about = aboutTheDefinition(definition, target);
+  if (!under || isPart(target)) {
+    return [[{ column: 'about', equals: about.about }]];
   }
-  return target.kind === 'every_version'
-    ? [`${target.type}/${target.name}`, ...pagesOfTheirOwnOf(pages, target.type, target.name)].map((definition) => ({
-        column: 'about_definition',
-        equals: definition,
-      }))
-    : [{ column: 'about_thing', equals: address }];
+  return target.kind === 'step'
+    ? [[{ column: 'about_thing', equals: about.about_thing }]]
+    : [[{ column: 'about_version', equals: about.about_version }]];
+}
+
+function wheresInThePlaybook(names: HeldDefinitions, pages: PagesOfTheirOwn): Owner['wheresAt'] {
+  return (target, address, under) =>
+    namesADefinition(target)
+      ? Effect.map(definitionNamed(names, target.type, target.name), (definition) =>
+          definition === undefined ? [] : wheresOnTheDefinition(definition, target, under, pages),
+        )
+      : Effect.succeed(wheresAtTheThing(target, address, under));
 }
 
 function addressedIn(
   owner: Owner,
   { address, under = false }: ListCommentsInput,
-): Effect.Effect<readonly (readonly ProjectedCondition[])[], InvalidInput> {
+): Effect.Effect<readonly Where[], InvalidInput> {
   if (address === undefined) {
     return under
       ? Effect.fail(refusedAt('/under', 'Expected an address to list the comments under'))
@@ -115,11 +147,30 @@ function addressedIn(
   ) {
     return Effect.fail(refusedAt('/address', `Expected the address of something of ${owner.named}`));
   }
-  return Effect.succeed(
-    under
-      ? underOf(target, address, owner.pages).map((condition) => [condition])
-      : [[{ column: 'address', equals: address }]],
-  );
+  return owner.wheresAt(target, address, under);
+}
+
+interface KeptUnder {
+  readonly comment: KeptComment;
+  readonly definition: string | undefined;
+}
+
+function namedAsHeldNow(names: HeldDefinitions): Owner['namedNow'] {
+  return (rows) => {
+    const kept = rows.flatMap((row) =>
+      keptOfRow(row).map((comment): KeptUnder => ({ comment, definition: row.definition })),
+    );
+    return Effect.map(
+      namesHeldNow(
+        names,
+        kept.flatMap(({ definition }: KeptUnder) => definition ?? []),
+      ),
+      (held) =>
+        kept.map(({ comment, definition }: KeptUnder) =>
+          addressedAsHeld(comment, definition === undefined ? undefined : held.get(definition)),
+        ),
+    );
+  };
 }
 
 function listedWith(reader: BoundProjectionReader, owner: Owner, input: ListCommentsInput) {
@@ -141,10 +192,7 @@ function listedWith(reader: BoundProjectionReader, owner: Owner, input: ListComm
     const last = page.at(-1);
     const hasMore = rows.length > limit && last !== undefined;
     return {
-      comments: yield* Effect.forEach(
-        page.flatMap((row) => keptOfRow(row)),
-        (comment) => shownComment(comment, owner.pages),
-      ),
+      comments: yield* Effect.forEach(yield* owner.namedNow(page), (comment) => shownComment(comment, owner.pages)),
       has_more: hasMore,
       next_cursor: hasMore ? cursorOfParts([ownedBy(owner), Number(last.row['at']), last.key]) : null,
     };
@@ -153,13 +201,28 @@ function listedWith(reader: BoundProjectionReader, owner: Owner, input: ListComm
 
 const listed = Effect.fnUntraced(function* (input: ListCommentsInput) {
   const { playbook } = yield* PlaybookContext;
-  const owner = { playbook, named: `the playbook ${playbook}`, pages: yield* pagesOfTheirOwn };
-  return yield* listedWith(yield* PlaybookReader, owner, input);
+  const reader = yield* PlaybookReader;
+  const pages = yield* pagesOfTheirOwn;
+  const owner: Owner = {
+    playbook,
+    named: `the playbook ${playbook}`,
+    pages,
+    wheresAt: wheresInThePlaybook(reader, pages),
+    namedNow: namedAsHeldNow(reader),
+  };
+  return yield* listedWith(reader, owner, input);
 });
 
+const ofTheOrgItself: Owner = {
+  playbook: undefined,
+  named: "the organization's own",
+  pages: noPagesOfTheirOwn,
+  wheresAt: (target, address, under) => Effect.succeed(wheresAtTheThing(target, address, under)),
+  namedNow: (rows) => Effect.succeed(rows.flatMap((row) => keptOfRow(row))),
+};
+
 const listedInOrg = Effect.fnUntraced(function* (input: ListCommentsInput) {
-  const owner = { playbook: undefined, named: "the organization's own", pages: noPagesOfTheirOwn };
-  return yield* listedWith(yield* OrgReader, owner, input);
+  return yield* listedWith(yield* OrgReader, ofTheOrgItself, input);
 });
 
 function commentsInWords(count: number, open: boolean | undefined): string {

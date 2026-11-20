@@ -3,8 +3,8 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { commentDecider } from '../facts/comment-facts.ts';
-import { commentOf, commenting, minute, reader, run, step } from '../testing/commenting.ts';
-import { ada, outputOf, priya } from '../testing/harness.ts';
+import { closeTheWeek, commentOf, commenting, minute, reader, run, step } from '../testing/commenting.ts';
+import { ada, outputOf, priya, studioPageOf } from '../testing/harness.ts';
 import { resolveComment } from './resolve-comment.ts';
 
 const inStudio: unknown = expect.stringContaining('studio.example');
@@ -46,8 +46,34 @@ describe('resolve_comment', () => {
 
     expect(outputOf(again)).toMatchObject({ resolved_how: 'dismissed', resolved_by: ada.id, resolved_at: minute(31) });
     expect(
-      (await Effect.runPromise(ledger.service.load(`playbook/acme/finance/comments/${id}`, commentDecider))).version,
+      (
+        await Effect.runPromise(
+          ledger.service.load(`definition/acme/${closeTheWeek.id}/comments/${id}`, commentDecider),
+        )
+      ).version,
     ).toBe(2);
+  });
+});
+
+describe('resolve_comment on a definition that moved to another playbook', () => {
+  it('closes the comment where the definition is now, answering its address there, and finds none where it was', async () => {
+    const { made, moved, resolve, inPlaybook } = await commenting();
+    const id = await made(step, minute(1));
+    await moved(closeTheWeek, 'sales');
+    const inSales = await inPlaybook(resolveComment, { caller: ada, playbook: 'sales', input: { id, how: 'acted' } });
+
+    expect(await resolve(id, 'acted', ada)).toMatchObject({ status: 'rejected', reason: 'not_found' });
+    expect(outputOf(inSales)).toMatchObject({
+      id,
+      address: 'sales/definitions/workflow/close-the-week/4/steps/do/1/review',
+      open: false,
+      studio: studioPageOf({
+        kind: 'comment',
+        playbook: 'sales',
+        comment: id,
+        on: { kind: 'definition', type: 'workflow', name: 'close-the-week', version: 4, step: 'do/1/review' },
+      }),
+    });
   });
 });
 

@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { addressesIn, commenting, listedOf, minute, otherRun, reader, run, step } from '../testing/commenting.ts';
+import {
+  addressesIn,
+  closeTheWeek,
+  commenting,
+  listedOf,
+  minute,
+  otherRun,
+  reader,
+  run,
+  step,
+} from '../testing/commenting.ts';
 import { ada, outputOf, priya } from '../testing/harness.ts';
 import { listComments } from './list-comments.ts';
 
@@ -152,6 +162,39 @@ describe('the resolved comments and those list_comments cannot place', () => {
 
     expect(listedOf(await comments()).comments).toHaveLength(1);
     expect(JSON.stringify(outputOf(await comments()))).not.toContain('"studio"');
+  });
+});
+
+describe('the comments on a definition, after it moves to another playbook or is renamed', () => {
+  it('are listed where the definition is now, at its address there, and no longer where it was', async () => {
+    const { comments, made, moved } = await commenting();
+    await made(step, minute(1));
+    await made(version, minute(2));
+    await made(theRun, minute(3));
+    await moved(closeTheWeek, 'sales');
+    const there = 'sales/definitions/workflow/close-the-week';
+
+    expect(addressesIn(await comments({}, ada, 'sales'))).toEqual([`${there}/4`, `${there}/4/steps/do/1/review`]);
+    expect(addressesIn(await comments({ address: there, under: 'true' }, ada, 'sales'))).toHaveLength(2);
+    expect(addressesIn(await comments())).toEqual([theRun]);
+    expect(addressesIn(await comments({ address: version, under: 'true' }))).toEqual([]);
+  });
+
+  it('are listed under the new name, and a filter by the old name finds none', async () => {
+    const { comments, made, renamed } = await commenting();
+    await made(step, minute(1));
+    await made(`${version}/parts/source`, minute(2));
+    await renamed(closeTheWeek, 'end-the-week');
+    const renamedTo = 'finance/definitions/workflow/end-the-week/4';
+    const byTheOldName: readonly Readonly<Record<string, string>>[] = [
+      { address: step },
+      { address: version, under: 'true' },
+    ];
+
+    expect(addressesIn(await comments())).toEqual([`${renamedTo}/parts/source`, `${renamedTo}/steps/do/1/review`]);
+    expect(addressesIn(await comments({ address: `${renamedTo}/parts/source` }))).toHaveLength(1);
+    expect(addressesIn(await comments({ address: renamedTo, under: 'true' }))).toHaveLength(2);
+    expect(await Promise.all(byTheOldName.map(async (input) => addressesIn(await comments(input))))).toEqual([[], []]);
   });
 });
 

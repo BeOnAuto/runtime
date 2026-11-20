@@ -151,3 +151,16 @@ export function definitionRenamed(definition: DefinitionOf, to: string, at: stri
     context: definitionContext({ ...definition, name: to }, at, by),
   };
 }
+
+interface Moved {
+  readonly from: string;
+  readonly to: string;
+}
+
+export function definitionMoved(definition: DefinitionOf, { from, to }: Moved, at: string, by: string): RecordedFact {
+  return {
+    type: 'definition_moved',
+    data: { from, to, moved_by: { id: by, name: by } },
+    context: definitionContext(definition, at, by),
+  };
+}

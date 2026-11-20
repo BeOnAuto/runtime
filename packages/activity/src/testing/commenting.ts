@@ -6,6 +6,8 @@ import { makeComment, makeCommentInOrg } from '../comments/make-comment.ts';
 import { reopenComment, reopenCommentInOrg } from '../comments/reopen-comment.ts';
 import { resolveComment, resolveCommentInOrg } from '../comments/resolve-comment.ts';
 import { activityHarness, ada, outputOf, priya } from './harness.ts';
+import { definitionMoved, definitionRenamed, definitionRetired, type RecordedFact } from './recorded-facts.ts';
+import { definitionStreamOf, definitions, filed, type FiledDefinition } from './scenario.ts';
 
 export const run = '019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e';
 
@@ -42,12 +44,40 @@ export const listedOf = (outcome: Outcome) => Schema.decodeUnknownSync(ListedSch
 
 export const addressesIn = (outcome: Outcome) => listedOf(outcome).comments.map(({ address }) => address);
 
+const filedAt = '2026-11-01T10:30:00.000Z';
+
+export const { closeTheWeek } = definitions;
+
+const { categorize } = definitions;
+
+const asFiled = (definition: FiledDefinition) => ({ ...definition, version: 1 });
+
+type Recording = (stream: string, ...facts: readonly RecordedFact[]) => Promise<void>;
+
+function definitionChanges(record: Recording) {
+  const changed = (definition: FiledDefinition, fact: RecordedFact) => record(definitionStreamOf(definition), fact);
+  return {
+    moved: (definition: FiledDefinition, to: string, at = minute(20)) =>
+      changed(definition, definitionMoved(asFiled(definition), { from: definition.playbook, to }, at, ada.id)),
+    renamed: (definition: FiledDefinition, to: string, at = minute(20)) =>
+      changed(definition, definitionRenamed(asFiled(definition), to, at, ada.id)),
+    retiredDefinition: (definition: FiledDefinition, at = minute(20)) =>
+      changed(definition, definitionRetired(asFiled(definition), at, ada.id)),
+  };
+}
+
 export async function commenting() {
   const harness = activityHarness();
   await harness.created(priya, 'finance', '2026-11-01T10:00:00.000Z');
   await harness.created(ada, 'sales', '2026-11-01T10:00:00.000Z');
+  await Promise.all(
+    [closeTheWeek, categorize].map((definition: FiledDefinition) =>
+      harness.record(definitionStreamOf(definition), filed(definition, filedAt, priya.id)),
+    ),
+  );
   return {
     ...harness,
+    ...definitionChanges(harness.record),
     make: (caller: CallerIdentity, input: Schema.JsonObject, at = minute(0), playbook = 'finance') =>
       harness.inPlaybook(makeComment, { caller, playbook, input, at }),
     made: async (address: string, at: string, caller: CallerIdentity = priya) =>

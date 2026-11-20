@@ -10,25 +10,24 @@ import {
 } from '../facts/comment-facts.ts';
 import { commentTargetOf, thingAddressOf, type CommentTarget } from '../positions/comment-addresses.ts';
 import { pageOfItsOwnIn } from '../positions/current-addresses.ts';
+import { aboutTheDefinition, isOnADefinition } from '../positions/definition-addresses.ts';
 import { millisecondsOf } from './activity-facts.ts';
 
 export const commentsName = 'comments';
 
 const commentFactOf = recordedDecoder(CommentEventSchema);
 
-interface About {
+type CommentMade = Extract<RecordedCommentEvent, { type: 'comment_made' }>;
+
+interface AboutARun {
   readonly about_run: string | null;
   readonly about_version: string | null;
   readonly about_definition: string | null;
 }
 
-const aboutNothing: About = { about_run: null, about_version: null, about_definition: null };
+const aboutNothing: AboutARun = { about_run: null, about_version: null, about_definition: null };
 
-function aboutOf(target: CommentTarget): About {
-  if (target.kind === 'definition' || target.kind === 'step') {
-    const definition = `${target.type}/${target.name}`;
-    return { ...aboutNothing, about_version: `${definition}/${target.version}`, about_definition: definition };
-  }
+function aboutARunOf(target: CommentTarget): AboutARun {
   return target.kind === 'run' || target.kind === 'event' || target.kind === 'block'
     ? { ...aboutNothing, about_run: target.run }
     : aboutNothing;
@@ -50,9 +49,19 @@ function aboutAPageOfItsOwn(address: string) {
 
 function aboutAddress(address: string) {
   const target = commentTargetOf(address);
-  return target === undefined
-    ? aboutAPageOfItsOwn(address)
-    : { ...aboutOf(target), about_thing: thingAddressOf(target) };
+  const about =
+    target === undefined
+      ? aboutAPageOfItsOwn(address)
+      : { ...aboutARunOf(target), about_thing: thingAddressOf(target) };
+  return { ...about, about: address };
+}
+
+function aboutOfMade({ address, definition }: CommentMade['data']) {
+  const target = commentTargetOf(address);
+  if (!isOnADefinition(target)) {
+    return aboutAddress(address);
+  }
+  return definition === undefined ? undefined : { about_run: null, ...aboutTheDefinition(definition, target) };
 }
 
 function anchorColumnsOf(anchor: Anchor | undefined) {
@@ -61,8 +70,12 @@ function anchorColumnsOf(anchor: Anchor | undefined) {
     : { anchor_x: tenThousandthsOf(anchor.x), anchor_y: tenThousandthsOf(anchor.y) };
 }
 
-function rowOfMade(fact: Extract<RecordedCommentEvent, { type: 'comment_made' }>): ProjectedRow {
+function rowOfMade(fact: CommentMade): ProjectedRow | undefined {
   const { address, text, made_by: madeBy, anchor } = fact.data;
+  const about = aboutOfMade(fact.data);
+  if (about === undefined) {
+    return undefined;
+  }
   const at = millisecondsOf(fact.context.at);
   return {
     address,
@@ -79,7 +92,7 @@ function rowOfMade(fact: Extract<RecordedCommentEvent, { type: 'comment_made' }>
     reopened_by: null,
     listed_at: at,
     listed_by: madeBy.id,
-    ...aboutAddress(address),
+    ...about,
   };
 }
 
@@ -113,8 +126,8 @@ const keptInOrder = ['open', 'at', 'row_key'];
 
 export const commentRows: KeyedProjection = {
   name: commentsName,
-  version: 2,
-  scopes: ['playbook', 'org'],
+  version: 3,
+  scopes: ['playbook', 'definition', 'org'],
   kinds: [commentStreamKind],
   types: ['comment_made', 'comment_resolved', 'comment_reopened'],
   columns: [
@@ -137,12 +150,13 @@ export const commentRows: KeyedProjection = {
     { name: 'about_version', kind: 'text' },
     { name: 'about_definition', kind: 'text' },
     { name: 'about_thing', kind: 'text' },
+    { name: 'about', kind: 'text' },
   ],
   indexes: [
     { name: 'open', columns: keptInOrder },
     { name: 'listed', columns: ['open', 'listed_at', 'row_key'] },
     { name: 'listed_by', columns: ['open', 'listed_by', 'listed_at', 'row_key'] },
-    { name: 'address', columns: ['address', ...keptInOrder] },
+    { name: 'about', columns: ['about', ...keptInOrder] },
     { name: 'about_run', columns: ['about_run', ...keptInOrder] },
     { name: 'about_version', columns: ['about_version', ...keptInOrder] },
     { name: 'about_definition', columns: ['about_definition', ...keptInOrder] },

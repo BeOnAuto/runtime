@@ -42,10 +42,10 @@ describe('a comment made on a page saved as a definition of its own', () => {
     const scene = await withAPageOfItsOwn();
     await scene.made('finance/definitions/workflow/close-the-week/4/parts/runs-2', minute(2));
     await scene.made('finance/definitions/workflow/close-the-week/4', minute(3));
-    await scene.made('finance/definitions/workflow/other/4', minute(4));
+    await scene.made('finance/definitions/reasoning/categorize-invoice/4', minute(4));
 
     expect(addressesIn(await scene.comments())).toEqual([
-      'finance/definitions/workflow/other/4',
+      'finance/definitions/reasoning/categorize-invoice/4',
       'finance/definitions/workflow/close-the-week/4',
       'finance/definitions/workflow/close-the-week/4/parts/runs-2',
       'finance/definitions/workflow/close-the-week',

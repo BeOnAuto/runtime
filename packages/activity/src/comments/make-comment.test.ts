@@ -1,8 +1,9 @@
 import type { CommentedPlace } from '@on.auto/operations';
-import type { Schema } from 'effect';
+import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { commentOf, commenting, minute, reader, run, step } from '../testing/commenting.ts';
+import { commentDecider } from '../facts/comment-facts.ts';
+import { addressesIn, closeTheWeek, commentOf, commenting, minute, reader, run, step } from '../testing/commenting.ts';
 import { ada, outputOf, priya, studioPageOf } from '../testing/harness.ts';
 import { makeComment } from './make-comment.ts';
 
@@ -14,6 +15,7 @@ const event = `${run}_2`;
 
 describe('make_comment', () => {
   it('is a command of the playbook at POST /comments, over HTTP alone, answering 201, for a reader of the playbook', () => {
+    expect(makeComment.registration.reasons).toContain('not_found');
     expect(makeComment.registration).toMatchObject({
       scope: 'playbook',
       kind: 'command',
@@ -52,6 +54,42 @@ describe('make_comment', () => {
         on: { kind: 'definition', type: 'workflow', name: 'close-the-week', version: 4, step: 'do/1/review' },
       }),
     });
+  });
+});
+
+describe('make_comment on a definition or a step', () => {
+  it('files the comment under the definition the playbook holds by that type and name, and records its id', async () => {
+    const { make, ledger } = await commenting();
+    const { id } = commentOf(await make(reader, { address: step, text }, minute(14)));
+    const filed = await Effect.runPromise(
+      ledger.service.load(`definition/acme/${closeTheWeek.id}/comments/${id}`, commentDecider),
+    );
+
+    expect([filed.version, filed.state?.definition]).toEqual([1, closeTheWeek.id]);
+    expect(ledger.streamNames()).not.toContain(`playbook/acme/finance/comments/${id}`);
+  });
+
+  it('takes one on a retired definition, which still holds its name, and lists it', async () => {
+    const { make, comments, retiredDefinition } = await commenting();
+    await retiredDefinition(closeTheWeek);
+    await make(reader, { address: step, text }, minute(14));
+
+    expect(addressesIn(await comments({ address: step }))).toEqual([step]);
+  });
+
+  it('refuses one on a definition or a step whose type and name the playbook does not hold', async () => {
+    const { make, ledger } = await commenting();
+    const before = ledger.streamNames().length;
+    const refused = await Promise.all(
+      [
+        'finance/definitions/workflow/open-the-week/4',
+        'finance/definitions/reasoning/close-the-week/1/parts/source',
+        'sales/definitions/workflow/close-the-week/4/steps/do/1/review',
+      ].map((address) => make(priya, { address, text }, minute(14), address.slice(0, address.indexOf('/')))),
+    );
+
+    expect(refused).toMatchObject(Array.from({ length: 3 }, () => ({ status: 'rejected', reason: 'not_found' })));
+    expect(ledger.streamNames()).toHaveLength(before);
   });
 });
 

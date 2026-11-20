@@ -113,6 +113,29 @@ describe('a comment resolved over HTTP', () => {
   });
 });
 
+describe('a comment on a definition over HTTP', () => {
+  it('is named among the changes of its playbook, and follows the definition when it moves to another playbook', async () => {
+    const { ofTheAdmin } = commented;
+    const changes = `${ofTheAdmin.playbook}/changes`;
+    const { cursor } = ChangesSchemaOf((await ofTheAdmin.call('GET', changes)).body);
+    const { id } = await made(addresses.version);
+    const changed = ChangesSchemaOf((await ofTheAdmin.call('GET', `${changes}?since=${cursor}`)).body);
+    await ofTheAdmin.call('POST', '/v1/orgs/acme/playbooks', { playbook: 'beta', name: 'Beta' });
+    const moved = await ofTheAdmin.call('POST', `${ofTheAdmin.playbook}/move`, {
+      to: 'beta',
+      definitions: [{ type: 'computation', name: 'tally' }],
+    });
+    const inBeta = commentsOf((await ofTheAdmin.call('GET', '/v1/orgs/acme/playbooks/beta/comments')).body);
+
+    expect(changed.changes).toContainEqual({ kind: 'comment', comment_id: id });
+    expect([moved.status, inBeta.comments]).toMatchObject([
+      200,
+      [{ id, address: 'beta/definitions/computation/tally/1' }],
+    ]);
+    expect((await listed()).comments).toEqual([]);
+  });
+});
+
 describe('a comment over HTTP, refused', () => {
   it('names an address of no form a comment takes, or of another playbook, and text over 4,000 characters', async () => {
     const answers = await Promise.all([

@@ -2,6 +2,7 @@ import {
   Caller,
   NotFound,
   OrgWriter,
+  PlaybookReader,
   PlaybookWriter,
   defineCommand,
   type PlainLanguage,
@@ -11,8 +12,9 @@ import { DateTime, Effect, Schema } from 'effect';
 
 import { commentDecider, commentStreamOf, type ResolvedHow } from '../facts/comment-facts.ts';
 import { noPagesOfTheirOwn, pagesOfTheirOwn, type PagesOfTheirOwn } from '../positions/current-addresses.ts';
+import { addressedAsHeld } from '../positions/definition-addresses.ts';
 import { CommentIdField, HowInputField } from './comment-fields.ts';
-import { CommentSchema, keptOfState, shownComment } from './comment-shown.ts';
+import { CommentSchema, keptOfState, shownComment, type KeptComment } from './comment-shown.ts';
 
 interface Resolving {
   readonly id: string;
@@ -21,36 +23,63 @@ interface Resolving {
 
 type CommentAct = { readonly kind: 'resolve'; readonly how: ResolvedHow } | { readonly kind: 'reopen' };
 
-export const notFoundInPlaybook = 'There is no such comment in this playbook';
-
-const notFoundInOrg = 'There is no such comment of the organization';
-
-export const ofTheOrg = { notFound: notFoundInOrg, pages: noPagesOfTheirOwn };
-
 interface ActedOn {
   readonly notFound: string;
   readonly pages: PagesOfTheirOwn;
+  readonly writerOf: (stream: string) => Effect.Effect<StreamWriter>;
+  readonly namedNow: (kept: KeptComment, definition: string | null) => Effect.Effect<KeptComment>;
 }
 
-export function actedOnComment(writer: StreamWriter, id: string, act: CommentAct, { notFound, pages }: ActedOn) {
+export const inThePlaybook: Effect.Effect<ActedOn, never, PlaybookReader | PlaybookWriter> = Effect.gen(function* () {
+  const reader = yield* PlaybookReader;
+  const writer = yield* PlaybookWriter;
+  return {
+    notFound: 'There is no such comment in this playbook',
+    pages: yield* pagesOfTheirOwn,
+    writerOf: (stream) =>
+      Effect.map(reader.definitionHolding(stream), (definition) =>
+        definition === undefined ? writer : writer.ofDefinition(definition),
+      ),
+    namedNow: (kept, definition) =>
+      definition === null
+        ? Effect.succeed(kept)
+        : Effect.map(reader.nameHeldBy(definition), (held) => addressedAsHeld(kept, held)),
+  };
+});
+
+export const inTheOrg: Effect.Effect<ActedOn, never, OrgWriter> = Effect.gen(function* () {
+  const writer = yield* OrgWriter;
+  return {
+    notFound: 'There is no such comment of the organization',
+    pages: noPagesOfTheirOwn,
+    writerOf: () => Effect.succeed(writer),
+    namedNow: (kept) => Effect.succeed(kept),
+  };
+});
+
+export function actedOnComment(id: string, act: CommentAct, { notFound, pages, writerOf, namedNow }: ActedOn) {
   return Effect.gen(function* () {
     const caller = yield* Caller;
-    const { state } = yield* writer.execute(commentStreamOf(id), commentDecider, {
+    const stream = commentStreamOf(id);
+    const writer = yield* writerOf(stream);
+    const { state } = yield* writer.execute(stream, commentDecider, {
       ...act,
       at: DateTime.formatIso(yield* DateTime.now),
       by: caller.id,
     });
-    return yield* state === null ? new NotFound({ detail: notFound }) : shownComment(keptOfState(id, state), pages);
+    if (state === null) {
+      return yield* new NotFound({ detail: notFound });
+    }
+    return yield* shownComment(yield* namedNow(keptOfState(id, state), state.definition), pages);
   });
 }
 
 const resolved = Effect.fnUntraced(function* ({ id, how }: Resolving) {
-  const inThePlaybook = { notFound: notFoundInPlaybook, pages: yield* pagesOfTheirOwn };
-  return yield* actedOnComment(yield* PlaybookWriter, id, { kind: 'resolve', how }, inThePlaybook);
+  return yield* actedOnComment(id, { kind: 'resolve', how }, yield* inThePlaybook);
 });
 
 const resolvedInOrg = Effect.fnUntraced(function* ({ id, how }: Resolving) {
-  return yield* actedOnComment(yield* OrgWriter, id, { kind: 'resolve', how }, ofTheOrg);
+  return yield* actedOnComment(id, { kind: 'resolve', how }, yield* inTheOrg);
 });
 
 const ResolveCommentInputSchema = Schema.Struct({ id: CommentIdField, how: HowInputField });

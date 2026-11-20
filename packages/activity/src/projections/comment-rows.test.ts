@@ -1,7 +1,7 @@
 import type { ProjectedRow } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { financePrefix, projected } from '../testing/projected.ts';
+import { aDefinition, definitionPrefix, financePrefix, projected } from '../testing/projected.ts';
 import { messageOf, type RecordedFact } from '../testing/recorded-facts.ts';
 import { commentRows } from './comment-rows.ts';
 
@@ -13,13 +13,25 @@ const priya = { id: 'person:user_7kLm2', name: 'Priya Raman' };
 
 const at = (minute: number) => `2026-11-02T10:${String(minute).padStart(2, '0')}:00.000Z`;
 
-function made(address: string, minute = 0, anchor?: { readonly x: number; readonly y: number }): RecordedFact {
+const categorize = '019a3f00-0000-7000-8000-000000000002';
+
+type Anchor = { readonly x: number; readonly y: number } | undefined;
+
+function made(address: string, minute = 0, anchor?: Anchor, definition?: string): RecordedFact {
   return {
     type: 'comment_made',
-    data: { address, text: 'Flag it.', made_by: priya, ...(anchor === undefined ? {} : { anchor }) },
+    data: {
+      address,
+      text: 'Flag it.',
+      made_by: priya,
+      ...(anchor === undefined ? {} : { anchor }),
+      ...(definition === undefined ? {} : { definition }),
+    },
     context: { at: at(minute), by: priya.id },
   };
 }
+
+const madeOn = (definition: string, address: string) => made(address, 0, undefined, definition);
 
 function resolved(how: string, minute: number): RecordedFact {
   return { type: 'comment_resolved', data: { how }, context: { at: at(minute), by: 'person:user_3pQr8' } };
@@ -29,6 +41,8 @@ function reopened(minute: number): RecordedFact {
   return { type: 'comment_reopened', data: {}, context: { at: at(minute), by: 'person:user_9xYz4' } };
 }
 
+const closeTheWeek = aDefinition.definition;
+
 const stream = (index: number) => `${financePrefix}comments/${id(index)}`;
 
 const about = (row: ProjectedRow | undefined) => [
@@ -36,12 +50,16 @@ const about = (row: ProjectedRow | undefined) => [
   row?.['about_version'],
   row?.['about_definition'],
   row?.['about_thing'],
+  row?.['about'],
 ];
 
 describe('the comments of a playbook', () => {
-  it('keeps each comment made, open, keyed by its id, with what its address is about for the reads under it', async () => {
-    const { record, rows } = projected(commentRows);
-    await record(stream(1), made('finance/definitions/workflow/close-the-week/4/steps/do/1/review'));
+  it('keeps each comment made, open, keyed by its id, with what it is about for the reads under it, a definition by its id', async () => {
+    const { record, rows } = projected(commentRows, aDefinition);
+    await record(
+      `${definitionPrefix}comments/${id(1)}`,
+      madeOn(closeTheWeek, 'finance/definitions/workflow/close-the-week/4/steps/do/1/review'),
+    );
 
     expect((await rows())[id(1)]).toEqual({
       address: 'finance/definitions/workflow/close-the-week/4/steps/do/1/review',
@@ -60,10 +78,19 @@ describe('the comments of a playbook', () => {
       listed_at: Date.parse(at(0)),
       listed_by: priya.id,
       about_run: null,
-      about_version: 'workflow/close-the-week/4',
-      about_definition: 'workflow/close-the-week',
-      about_thing: 'finance/definitions/workflow/close-the-week/4/steps/do/1/review',
+      about_version: `${closeTheWeek}/4`,
+      about_definition: closeTheWeek,
+      about_thing: `${closeTheWeek}/4/steps/do/1/review`,
+      about: `${closeTheWeek}/4/steps/do/1/review`,
     });
+  });
+
+  it('keeps no row of a comment on a definition or a step that names no definition by its id', async () => {
+    const { record, rows } = projected(commentRows);
+    await record(stream(1), made('finance/definitions/workflow/close-the-week/4/steps/do/1/review'));
+    await record(stream(2), made('finance/definitions/reasoning/categorize-invoice/7/parts/source'));
+
+    expect(await rows()).toEqual({});
   });
 });
 
@@ -79,45 +106,36 @@ describe('the anchor and the thing of a comment of a playbook', () => {
 describe('what the address of a comment of a playbook is about', () => {
   it('names the run of a run, an event or a block, and nothing of a request, the playbook or an address it cannot read', async () => {
     const { record, rows } = projected(commentRows);
-    const addresses = [
-      `finance/runs/${run}`,
-      `finance/runs/${run}/events/${run}_2`,
-      `finance/runs/${run}/result/2`,
-      'finance/definitions/reasoning/categorize-invoice/7',
-      `finance/${run}`,
-      'playbooks/finance',
-      'finance/somewhere',
-      'playbooks/finance/parts/ledger',
-      'finance/definitions/reasoning/categorize-invoice/7/parts/source',
-      `finance/runs/${run}/parts/output`,
+    const addresses: readonly (readonly [string, string?])[] = [
+      [`finance/runs/${run}`],
+      [`finance/runs/${run}/events/${run}_2`],
+      [`finance/runs/${run}/result/2`],
+      ['finance/definitions/reasoning/categorize-invoice/7', categorize],
+      [`finance/${run}`],
+      ['playbooks/finance'],
+      ['finance/somewhere'],
+      ['playbooks/finance/parts/ledger'],
+      ['finance/definitions/reasoning/categorize-invoice/7/parts/source', categorize],
+      [`finance/runs/${run}/parts/output`],
     ];
     await addresses.reduce(
-      (done: Promise<void>, address, index) => done.then(() => record(stream(index), made(address))),
+      (done: Promise<void>, [address, definition], index) =>
+        done.then(() => record(stream(index), made(address, 0, undefined, definition))),
       Promise.resolve(),
     );
     const kept = await rows();
 
     expect(addresses.map((_, index) => about(kept[id(index)]))).toEqual([
-      [run, null, null, `finance/runs/${run}`],
-      [run, null, null, `finance/runs/${run}/events/${run}_2`],
-      [run, null, null, `finance/runs/${run}/result/2`],
-      [
-        null,
-        'reasoning/categorize-invoice/7',
-        'reasoning/categorize-invoice',
-        'finance/definitions/reasoning/categorize-invoice/7',
-      ],
-      [null, null, null, `finance/${run}`],
-      [null, null, null, 'playbooks/finance'],
-      [null, null, null, 'finance/somewhere'],
-      [null, null, null, 'playbooks/finance'],
-      [
-        null,
-        'reasoning/categorize-invoice/7',
-        'reasoning/categorize-invoice',
-        'finance/definitions/reasoning/categorize-invoice/7',
-      ],
-      [run, null, null, `finance/runs/${run}`],
+      [run, null, null, `finance/runs/${run}`, `finance/runs/${run}`],
+      [run, null, null, `finance/runs/${run}/events/${run}_2`, `finance/runs/${run}/events/${run}_2`],
+      [run, null, null, `finance/runs/${run}/result/2`, `finance/runs/${run}/result/2`],
+      [null, `${categorize}/7`, categorize, `${categorize}/7`, `${categorize}/7`],
+      [null, null, null, `finance/${run}`, `finance/${run}`],
+      [null, null, null, 'playbooks/finance', 'playbooks/finance'],
+      [null, null, null, 'finance/somewhere', 'finance/somewhere'],
+      [null, null, null, 'playbooks/finance', 'playbooks/finance/parts/ledger'],
+      [null, `${categorize}/7`, categorize, `${categorize}/7`, `${categorize}/7/parts/source`],
+      [run, null, null, `finance/runs/${run}`, `finance/runs/${run}/parts/output`],
     ]);
   });
 });
@@ -135,8 +153,8 @@ describe('the comments of the organization', () => {
 
     expect(kept[id(1)]).toMatchObject({ anchor_x: 1800, anchor_y: 5000, open: true });
     expect([about(kept[id(1)]), about(kept[id(2)])]).toEqual([
-      [null, null, null, `org/connections/${connection}`],
-      [null, null, null, 'org'],
+      [null, null, null, `org/connections/${connection}`, `org/connections/${connection}/parts/tools`],
+      [null, null, null, 'org', 'org'],
     ]);
   });
 });

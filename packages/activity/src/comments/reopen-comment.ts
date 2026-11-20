@@ -1,22 +1,20 @@
-import { OrgWriter, PlaybookWriter, defineHttpOperation } from '@on.auto/operations';
+import { defineHttpOperation } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { pagesOfTheirOwn } from '../positions/current-addresses.ts';
 import { CommentIdField } from './comment-fields.ts';
 import { CommentSchema } from './comment-shown.ts';
-import { actedOnComment, notFoundInPlaybook, ofTheOrg } from './resolve-comment.ts';
+import { actedOnComment, inTheOrg, inThePlaybook } from './resolve-comment.ts';
 
 interface Reopening {
   readonly id: string;
 }
 
 const reopened = Effect.fnUntraced(function* ({ id }: Reopening) {
-  const inThePlaybook = { notFound: notFoundInPlaybook, pages: yield* pagesOfTheirOwn };
-  return yield* actedOnComment(yield* PlaybookWriter, id, { kind: 'reopen' }, inThePlaybook);
+  return yield* actedOnComment(id, { kind: 'reopen' }, yield* inThePlaybook);
 });
 
 const reopenedInOrg = Effect.fnUntraced(function* ({ id }: Reopening) {
-  return yield* actedOnComment(yield* OrgWriter, id, { kind: 'reopen' }, ofTheOrg);
+  return yield* actedOnComment(id, { kind: 'reopen' }, yield* inTheOrg);
 });
 
 const ReopenCommentInputSchema = Schema.Struct({ id: CommentIdField });

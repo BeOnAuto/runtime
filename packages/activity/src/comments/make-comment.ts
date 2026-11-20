@@ -2,6 +2,7 @@ import {
   Caller,
   OrgWriter,
   PlaybookContext,
+  PlaybookReader,
   PlaybookWriter,
   defineHttpOperation,
   randomUUIDv7,
@@ -12,7 +13,8 @@ import {
 import { DateTime, Effect, Schema } from 'effect';
 
 import { commentDecider, commentStreamOf, type CommentState } from '../facts/comment-facts.ts';
-import { commentTargetOf, playbookOfTarget } from '../positions/comment-addresses.ts';
+import { commentTargetOf, playbookOfTarget, type CommentTarget } from '../positions/comment-addresses.ts';
+import { definitionHeldFor, isOnADefinition } from '../positions/definition-addresses.ts';
 import { AddressInputField, AnchorInputField, TextInputField, refusedAt } from './comment-fields.ts';
 import { CommentSchema, keptOfState, shownComment } from './comment-shown.ts';
 
@@ -24,19 +26,24 @@ const MakeCommentInputSchema = Schema.Struct({
 
 type MakeCommentInput = typeof MakeCommentInputSchema.Type;
 
-function addressOf(owner: string | undefined, address: string, refusal: string): Effect.Effect<string, InvalidInput> {
+function targetOf(
+  owner: string | undefined,
+  address: string,
+  refusal: string,
+): Effect.Effect<CommentTarget, InvalidInput> {
   const target = commentTargetOf(address);
   return target !== undefined && playbookOfTarget(target) === owner
-    ? Effect.succeed(address)
+    ? Effect.succeed(target)
     : Effect.fail(refusedAt('/address', refusal));
 }
 
-function madeWith(input: MakeCommentInput, address: string, writer: StreamWriter) {
+function madeWith(input: MakeCommentInput, definition: string | null, writer: StreamWriter) {
   return Effect.gen(function* () {
     const caller = yield* Caller;
     const id = randomUUIDv7();
     const comment: Omit<CommentState, 'resolution' | 'reopening'> = {
-      address,
+      address: input.address,
+      definition,
       text: input.text.trim(),
       anchor: input.anchor ?? null,
       madeBy: recordedCallerOf(caller),
@@ -50,22 +57,22 @@ function madeWith(input: MakeCommentInput, address: string, writer: StreamWriter
 const made = Effect.fnUntraced(function* (input: MakeCommentInput) {
   const { playbook } = yield* PlaybookContext;
   const writer = yield* PlaybookWriter;
-  const address = yield* addressOf(
+  const target = yield* targetOf(
     playbook,
     input.address,
     `Expected the address of something of the playbook ${playbook} a comment takes`,
   );
-  return yield* madeWith(input, address, writer);
+  if (!isOnADefinition(target)) {
+    return yield* madeWith(input, null, writer);
+  }
+  const definition = yield* definitionHeldFor(yield* PlaybookReader, target);
+  return yield* madeWith(input, definition, writer.ofDefinition(definition));
 });
 
 const madeInOrg = Effect.fnUntraced(function* (input: MakeCommentInput) {
   const writer = yield* OrgWriter;
-  const address = yield* addressOf(
-    undefined,
-    input.address,
-    "Expected the address of one of the organization's things a comment takes",
-  );
-  return yield* madeWith(input, address, writer);
+  yield* targetOf(undefined, input.address, "Expected the address of one of the organization's things a comment takes");
+  return yield* madeWith(input, null, writer);
 });
 
 const answered = 'It answers the comment, open, with its place in Studio.';
@@ -84,7 +91,7 @@ export const makeComment = defineHttpOperation('playbook', 'command', {
   body: { kind: 'json' },
   inputSchema: MakeCommentInputSchema,
   outputSchema: CommentSchema,
-  reasons: ['invalid_input', 'conflict'],
+  reasons: ['invalid_input', 'not_found', 'conflict'],
   handle: made,
 });
 
