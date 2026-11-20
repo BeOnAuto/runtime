@@ -88,19 +88,6 @@ describe('the OpenAPI document the server serves, as it is kept and named', () =
     expect(document).toMatchObject({ info: { version: release.version } });
   });
 
-  it('names the OpenID Connect metadata of the Auto identity service when IDENTITY_ISSUER is not set', () => {
-    expect(document).toMatchObject({
-      components: {
-        securitySchemes: {
-          openIdConnect: {
-            type: 'openIdConnect',
-            openIdConnectUrl: 'https://clerk.on.auto/.well-known/openid-configuration',
-          },
-        },
-      },
-    });
-  });
-
   it('says none of the old words the vocabulary of the repository refuses', () => {
     expect(oldWordsIn(text)).toEqual([]);
   });

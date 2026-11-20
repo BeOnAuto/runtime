@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
-import type { Environment } from '@on.auto/config';
 import { runKeyCommand } from '@on.auto/identity';
 import { Effect } from 'effect';
 
+import { adminHelp, noCommandIn, whereTheAdminCommandsRun } from '../admin-command/admin-words.ts';
 import { instanceStartedInBackground } from '../background-start/background-process.ts';
 import { release } from '../composition/release.ts';
 import type { LocalStarting } from '../local-runtime/local-control.ts';
@@ -12,7 +12,7 @@ import { runtimePortOf } from '../local-runtime/runtime-port.ts';
 import { localSettings, type LocalPlace } from './local-settings.ts';
 
 export interface CommandLineHost extends RuntimeAsking {
-  readonly environment: Environment;
+  readonly environment: Parameters<typeof localSettings>[0];
   readonly place: LocalPlace;
   readonly startServer: (settings: Readonly<Record<string, string>>, starting: LocalStarting) => Promise<unknown>;
   readonly relay: (port: number) => Promise<unknown>;
@@ -31,6 +31,7 @@ const usage = [
   '  license allocation <a> Give the Auto Runtime running on this computer the offline credits Auto signed, as their JSON',
   '  license report         Print the next signed report of what it spent of its offline credits, to upload in Studio',
   '  key --org <org id>     Issue an API key for a machine or a pipeline; --help after it lists its options',
+  ...adminHelp.map((line) => `  ${line}`),
   '  --version              Print the version',
   '  --help                 Print this help',
   '',
@@ -40,6 +41,7 @@ const usage = [
   'auto-runtime.yaml in the current directory is the configuration file.',
   'The ledger is kept in ~/.auto-runtime/ledger.db unless LEDGER_FILE or DATABASE_URL says otherwise.',
   'Started by mcp, Auto Runtime reads its settings from ~/.auto-runtime and writes its log to ~/.auto-runtime/runtime.log.',
+  whereTheAdminCommandsRun,
 ].join('\n');
 
 type Answer = (rest: readonly string[], host: CommandLineHost) => number;
@@ -60,7 +62,7 @@ function answered(args: readonly string[], host: CommandLineHost): number {
   const [name = '', ...rest] = args;
   const answer = Object.hasOwn(answers, name) ? answers[name] : undefined;
   if (answer === undefined) {
-    host.console.error(`auto-runtime has no command "${args.join(' ')}"`);
+    host.console.error(noCommandIn(args));
     host.console.error(usage);
     return 1;
   }
@@ -85,6 +87,12 @@ async function relayed(host: CommandLineHost): Promise<number> {
   return 0;
 }
 
+async function administered(args: readonly string[], host: CommandLineHost): Promise<number> {
+  const { runAdminCommand } = await import('../admin-command/run-admin-command.ts');
+  const environment = localSettings(host.environment, host.place);
+  return runAdminCommand(args.slice(1), { environment, console: host.console, usage });
+}
+
 export function runCommandLine(args: readonly string[], host: CommandLineHost): Promise<number | undefined> {
   const starting = startingOf(args);
   if (starting !== undefined) {
@@ -93,6 +101,9 @@ export function runCommandLine(args: readonly string[], host: CommandLineHost): 
   const [name = ''] = args;
   if (args.length === 1 && name === 'mcp') {
     return relayed(host);
+  }
+  if (name === 'admin') {
+    return administered(args, host);
   }
   const command = runtimeCommandOf(args);
   if (command !== undefined) {

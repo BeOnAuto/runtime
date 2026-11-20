@@ -48,7 +48,7 @@ belongs to.
 
 Where the ids come from:
 
-- In [local mode](security.md#local-mode), which `npx @on.auto/runtime` runs in until you set `PUBLIC_URL` or `API_KEYS`, the org is `local`. With sign-in on, your org is the organization you signed in to, and its id is that organization's id ([Organizations](security.md#organizations)).
+- In [local mode](security.md#local-mode), which `npx @on.auto/runtime` runs in until you set `PUBLIC_URL` or `API_KEYS`, the org is `local`. With sign-in on, the org is `default` ([Organizations](security.md#organizations)).
 - No tool returns the org id on its own. Every event a playbook records names it: each event's `metadata.stream` begins `playbook/<org>/<playbook>/`.
 - Every playbook in your org names the same org, so any of them will do. A new playbook lists no events until something is recorded in it, such as a saved definition. In an org where nothing is recorded yet, neither place shows the org until someone saves a first definition.
 - `list_playbooks` returns the id of each playbook.

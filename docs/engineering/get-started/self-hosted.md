@@ -48,7 +48,7 @@ Next, connect your AI assistant to `http://localhost:5555/mcp`. The server is in
 - **VS Code**, in `.vscode/mcp.json`: `{"servers": {"auto-runtime": {"type": "http", "url": "http://localhost:5555/mcp"}}}`
 - **Other assistants** take the entry under [Connecting an agent over MCP](../reference/mcp.md), without its header.
 
-Local mode trusts every request on your machine as the local developer, needs no key, and keeps the playbooks an agent makes in the org `local`; the scripts and the HTTP walkthrough below use it. To sign people in through the Auto identity service instead, put `PUBLIC_URL=http://localhost:5555` in `.env`: the server restarts, and the first time your assistant connects it opens the identity service in your browser, where you sign in and choose your organization.
+Local mode trusts every request on your machine as the local developer, needs no key, and keeps the playbooks an agent makes in the org `local`; the scripts and the HTTP walkthrough below use it. Signing people in needs an `https` `PUBLIC_URL` ([Let people sign in](../../self-host/security.md#let-people-sign-in)).
 
 You can begin by asking: "Given what you know about my work, suggest a small reusable function we could build in Auto. Tell me what information it needs before creating anything." For a concrete first run, follow the example below.
 

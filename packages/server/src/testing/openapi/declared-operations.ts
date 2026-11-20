@@ -10,7 +10,7 @@ const playbookParameter = '#/components/parameters/playbook';
 const inOrgSuffix = '_in_org';
 
 export function permissionsOf({ operation }: DocumentedOperation): readonly string[] {
-  return operation.security.flatMap((requirement) => requirement['openIdConnect'] ?? []);
+  return [...new Set(operation.security.flatMap((requirement) => Object.values(requirement).flat()))];
 }
 
 function isInAPlaybook({ operation }: DocumentedOperation): boolean {

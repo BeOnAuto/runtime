@@ -28,7 +28,7 @@ export async function servingAToolThatWaits(): Promise<WaitingServer> {
       serve: async (runtime) =>
         servedBy(
           await routesServing([...playbookOperations, waitForeverAnnouncing(calling.resolve)], {
-            identityIssuer: settings.identityIssuer,
+            authorizationServer: settings.signIn?.publicUrl,
             retryStateKeys: { current: keyInHandOf({ from: 'start' }) },
             contentAddressKey: keyInHandOf({ from: 'start' }),
             shippedFiles,

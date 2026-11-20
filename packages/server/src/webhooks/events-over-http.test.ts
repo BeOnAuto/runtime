@@ -1,7 +1,7 @@
-import { signInScopes } from '@on.auto/identity';
+import { defaultOrg } from '@on.auto/openid-connect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { accessTokenOf, issuerOverHttps } from '../sign-in/issuer-over-https.ts';
+import { personSigningIn } from '../sign-in/person-signing-in.ts';
 import { servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import {
   delivered,
@@ -18,27 +18,28 @@ import {
   theWebhookUrl,
 } from '../testing/interaction-servers/room-events.ts';
 import { connectionsAllowing } from '../testing/servers/loopback-connections.ts';
-import { alpha } from '../testing/servers/reasoning-server.ts';
+import { alphaIn } from '../testing/servers/reasoning-server.ts';
 import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const arrivedLine = '"outcome":"arrived"';
 
-const theRuntimesAddress = 'http://localhost:5555';
+const alpha = alphaIn(defaultOrg);
+
+const eventsOf = (playbook: string, connection: string) => eventsPathOf(playbook, connection, defaultOrg);
 
 async function signingPeopleIn() {
-  const issuer = await issuerOverHttps();
-  const person = await accessTokenOf(issuer, theRuntimesAddress, signInScopes.join(' '));
+  const signing = await personSigningIn();
   return {
-    signingIn: { IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: theRuntimesAddress, WEBHOOK_URL: theWebhookUrl },
-    asThePerson: { key: person },
+    signingIn: { ...signing.environment, WEBHOOK_URL: theWebhookUrl },
+    asThePerson: { key: (origin: string) => signing.tokenAt(origin, 'Ada') },
   };
 }
 
 async function signingInWithRooms(environment: Readonly<Record<string, string>> = {}) {
   const rooms = await roomsServer();
   const { signingIn, asThePerson } = await signingPeopleIn();
-  const server = await servedWithRooms(rooms, { ...signingIn, ...environment }, asThePerson);
+  const server = await servedWithRooms(rooms, { ...signingIn, ...environment }, asThePerson, defaultOrg);
   return { rooms, server };
 }
 
@@ -68,7 +69,7 @@ describe('a server that signs people in, given WEBHOOK_URL, whose request waits 
     await server.stop();
     const exported = receiver.received();
 
-    expect(hook).toMatchObject({ room: theRoom, callback: `${theWebhookUrl}${eventsPathOf('alpha', 'rooms')}` });
+    expect(hook).toMatchObject({ room: theRoom, callback: `${theWebhookUrl}${eventsOf('alpha', 'rooms')}` });
     expect(taken).toBe('200 ');
     expect(arrived.filter((line) => line.includes(arrivedLine))).toEqual([
       expect.stringContaining('"connection":"rooms"'),
@@ -89,10 +90,10 @@ describe('a delivery to the events address that no subscription of the playbook 
     const boards = { 'x-boards-event': 'card', 'x-boards-token': hook.secret };
 
     const refused = [
-      await delivered(server, eventsPathOf('alpha', 'rooms'), signedWith('whsec_another-secret')),
-      await delivered(server, eventsPathOf('beta', 'rooms'), signedWith(hook.secret)),
-      await delivered(server, eventsPathOf('alpha', 'boards'), boards),
-      await delivered(server, eventsPathOf('alpha', 'billing'), signedWith(hook.secret)),
+      await delivered(server, eventsOf('alpha', 'rooms'), signedWith('whsec_another-secret')),
+      await delivered(server, eventsOf('beta', 'rooms'), signedWith(hook.secret)),
+      await delivered(server, eventsOf('alpha', 'boards'), boards),
+      await delivered(server, eventsOf('alpha', 'billing'), signedWith(hook.secret)),
     ];
 
     expect(new Set(refused).size).toBe(1);
@@ -104,7 +105,7 @@ describe('a delivery to the events address that no subscription of the playbook 
 describe('a connection whose entry declares a handshake that comes before any secret', () => {
   it('answers the handshake a connection of another shape declares before any secret exists, as WebSub verifies intent', async () => {
     const { server } = await signingInWithRooms();
-    const asked = `${eventsPathOf('alpha', 'boards')}?hub.mode=subscribe&hub.challenge=c-81`;
+    const asked = `${eventsOf('alpha', 'boards')}?hub.mode=subscribe&hub.challenge=c-81`;
 
     const answer = await fetch(`${server.origin}${asked}`, { method: 'POST' });
 
@@ -141,16 +142,18 @@ describe('the events address of a server that signs people in, given WEBHOOK_URL
         roomsDelivery,
         { ...receivingAt(rooms.url, signingIn), CONNECTIONS_RECEIVE_EVENTS: '' },
         asThePerson,
+        defaultOrg,
       ),
       await servingInteractions(
         roomsDelivery,
         { ...connectionsAllowing(['127.0.0.1'], { receive_events: [] }), ...signingIn },
         asThePerson,
+        defaultOrg,
       ),
     ];
 
     const answers = await Promise.all(
-      servers.map((server) => server.call('POST', eventsPathOf('alpha', 'rooms'), { body: {} })),
+      servers.map((server) => server.call('POST', eventsOf('alpha', 'rooms'), { body: {} })),
     );
 
     expect(answers.map(({ status }) => status)).toEqual([404, 404]);

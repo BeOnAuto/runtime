@@ -14,6 +14,18 @@ const organizationScope = 'user:org:read';
 
 export const signInScopes: readonly string[] = [organizationScope, ...allPermissions];
 
+export interface DefaultIdentityProvider {
+  readonly issuer: string;
+  readonly scopes: readonly string[];
+  readonly requiredClaim: { readonly claim: string };
+}
+
+export const defaultIdentityProvider: DefaultIdentityProvider = {
+  issuer: autoIdentityService,
+  scopes: ['openid', 'profile', 'email', organizationScope],
+  requiredClaim: { claim: 'org_id' },
+};
+
 export interface ProtectedResource {
   readonly publicUrl: string;
   readonly authorizationServers: readonly string[];

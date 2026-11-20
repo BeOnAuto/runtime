@@ -115,7 +115,7 @@ describe('the console log format', () => {
       Effect.all(
         [
           logWorkflows({ mostDurationMs: 604_800_000, mostCallsAtOnce: 8, sweepEveryMs: 250 }),
-          logAccessMode({ mode: 'closed', signIn: undefined }),
+          logAccessMode({ mode: 'closed' }),
           logUnsettled({
             org: 'acme',
             definition: 'alpha-definition',

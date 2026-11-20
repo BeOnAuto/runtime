@@ -3,6 +3,7 @@ import { Predicate, Schema } from 'effect';
 import { errors, type Adapter, type AdapterFactory, type AdapterPayload } from 'oidc-provider';
 
 import type { ProviderRows, StoredPayload } from './provider-rows.ts';
+import { modelsOfAGrant } from './signed-out.ts';
 
 const PayloadSchema = Schema.Record(Schema.String, Schema.Unknown);
 
@@ -54,8 +55,6 @@ function sweeping({ rows, now }: HashedAdapting): () => Promise<void> {
     await rows.swept(at - keptAfterItsEndMs);
   };
 }
-
-const modelsOfAGrant = ['AccessToken', 'AuthorizationCode', 'RefreshToken'];
 
 async function grantEnded(rows: ProviderRows, grantId: string): Promise<void> {
   await Promise.all(modelsOfAGrant.map((model) => rows.revokedByGrant(model, grantId)));

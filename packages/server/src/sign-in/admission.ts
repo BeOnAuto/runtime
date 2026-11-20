@@ -9,10 +9,12 @@ import { roleAssignmentsStreamOf } from '@on.auto/access-control/role-assignment
 import type { AppRuntime } from '@on.auto/api';
 import {
   defaultOrg,
+  personIdOf,
   personSignedInOf,
   type PeopleRows,
   type RequiredClaim,
   type SignedInPerson,
+  type SignedInWith,
   type StandardClaims,
 } from '@on.auto/openid-connect';
 import {
@@ -24,14 +26,10 @@ import {
 } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
-import { runtimeLedger } from '../composition/runtime-ledger.ts';
-import { logFirstSignInAwaited } from '../logging/sign-in-logging.ts';
+import { logFirstSignInAwaited, type TokensReport } from '../logging/sign-in-logging.ts';
 import { inRuntime } from '../workflows/in-runtime.ts';
-import {
-  signInClientRegistrationsOf,
-  type RegistrationServices,
-  type SignInClientRegistrations,
-} from './client-registrations.ts';
+import { clientRegistrationsIn } from './client-registrations.ts';
+import { setupIn, type RequiredClaimSet, type Setup } from './setup.ts';
 
 type Enrolment = { readonly enrolled: Enrolled } | { readonly failed: string };
 
@@ -45,7 +43,7 @@ const streamsOfTheOrg = streamPrefixOfOrg({ org: defaultOrg });
 
 const rolesOfTheOrg = `${streamsOfTheOrg}${roleAssignmentsStreamOf({ type: 'org', id: defaultOrg })}`;
 
-function writerOfTheOrg(ledger: Ledger['Service']) {
+export function writerOfTheOrg(ledger: Ledger['Service']) {
   return OrgWriter.of({
     execute: (stream, decider, command, lineage) =>
       ledger.execute(`${streamsOfTheOrg}${stream}`, decider, command, lineage),
@@ -81,22 +79,26 @@ export function enrollingIn(runtime: AppRuntime<Ledger>): Enrolling {
   };
 }
 
-export function clientRegistrationsIn(
-  runtime: AppRuntime<DispatcherServices>,
-): (secrets: RegistrationServices['secrets']) => SignInClientRegistrations {
-  return (secrets) => signInClientRegistrationsOf({ registry: runtimeLedger(runtime), secrets });
+export interface AdmissionOpened {
+  readonly enrolling: Enrolling;
+  readonly setup: Setup;
+  readonly clientRegistrationsWith: ReturnType<typeof clientRegistrationsIn>;
+}
+
+export function admissionIn(runtime: AppRuntime<DispatcherServices>): AdmissionOpened {
+  return {
+    enrolling: enrollingIn(runtime),
+    setup: setupIn(runtime),
+    clientRegistrationsWith: clientRegistrationsIn(runtime),
+  };
 }
 
 export interface Admitting {
   readonly enrolling: Enrolling;
+  readonly setup: Setup;
   readonly people: PeopleRows;
   readonly requiredClaim: RequiredClaim | undefined;
-}
-
-export interface SignedInWith {
-  readonly signedIn: SignedInPerson;
-  readonly claims: StandardClaims;
-  readonly valueOfTheRequiredClaim?: string;
+  readonly report: TokensReport;
 }
 
 export interface Admitted {
@@ -105,29 +107,68 @@ export interface Admitted {
   readonly enrolled: Enrolled;
 }
 
-export interface RefusedForTheClaim {
-  readonly refusedForTheClaim: string;
+interface RefusedForTheClaim {
+  readonly refusedForTheClaim: RequiredClaim;
 }
 
-function requiredClaimNotCarried(
-  requiredClaim: RequiredClaim | undefined,
-  { valueOfTheRequiredClaim }: SignedInWith,
-): string | undefined {
-  return requiredClaim === undefined || valueOfTheRequiredClaim === requiredClaim.requiredValue
-    ? undefined
-    : requiredClaim.claim;
+type NotAdmitted = RefusedForTheClaim | { readonly failed: string };
+
+function carries(inForce: RequiredClaimSet, asked: RequiredClaimSet): boolean {
+  return inForce.issuer === asked.issuer && inForce.claim === asked.claim && inForce.value === asked.value;
+}
+
+async function requiredClaimNotCarried(
+  { requiredClaim, setup }: Pick<Admitting, 'requiredClaim' | 'setup'>,
+  { signedIn, valueOfTheRequiredClaim: value }: SignedInWith,
+): Promise<NotAdmitted | undefined> {
+  if (requiredClaim === undefined) {
+    return undefined;
+  }
+  const refused = { refusedForTheClaim: requiredClaim };
+  const { claim, requiredValue } = requiredClaim;
+  if (value === undefined) {
+    return refused;
+  }
+  if (requiredValue !== undefined) {
+    return value === requiredValue ? undefined : refused;
+  }
+  const asked = { issuer: signedIn.issuer, claim, value, person: personIdOf(signedIn) };
+  const inForce = await setup.requiredClaimSet(asked);
+  if ('failed' in inForce) {
+    return inForce;
+  }
+  return carries(inForce, asked) ? undefined : refused;
+}
+
+async function claimsOnceReleased(
+  report: TokensReport,
+  { signedIn, claims, held }: SignedInWith,
+  nameAsked: boolean,
+): Promise<StandardClaims> {
+  if (held === undefined) {
+    return claims;
+  }
+  const { name, nameUnread, notRevoked } = await held.released(nameAsked);
+  if (nameUnread !== undefined) {
+    report.nameUnread(personIdOf(signedIn), nameUnread);
+  }
+  if (notRevoked !== undefined) {
+    report.notRevoked(notRevoked);
+  }
+  return name === undefined ? claims : { ...claims, name };
 }
 
 export async function admittedAfter(
-  { enrolling, people, requiredClaim }: Admitting,
+  { enrolling, setup, people, requiredClaim, report }: Admitting,
   signedInWith: SignedInWith,
   at: number,
-): Promise<Admitted | RefusedForTheClaim | { readonly failed: string }> {
-  const notCarried = requiredClaimNotCarried(requiredClaim, signedInWith);
+): Promise<Admitted | NotAdmitted> {
+  const notCarried = await requiredClaimNotCarried({ requiredClaim, setup }, signedInWith);
+  const claims = await claimsOnceReleased(report, signedInWith, notCarried === undefined);
   if (notCarried !== undefined) {
-    return { refusedForTheClaim: notCarried };
+    return notCarried;
   }
-  const { signedIn, claims } = signedInWith;
+  const { signedIn } = signedInWith;
   const kept = personSignedInOf(signedIn, claims, at);
   const enrolment = await enrolling.enrolled(kept.person);
   if ('failed' in enrolment) {

@@ -84,7 +84,7 @@ const localModes: ReadonlyArray<readonly [string, Readonly<Record<string, string
 ];
 
 const outOfLocalMode: ReadonlyArray<Readonly<Record<string, string>>> = [
-  { PUBLIC_URL: 'http://localhost:5555' },
+  { PUBLIC_URL: 'https://auto.example.com' },
   { API_KEYS: '[]' },
 ];
 

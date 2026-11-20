@@ -1,16 +1,11 @@
-import { madeAtStart, type MadeAtStart, type StartWiring } from '../capability-registry/made-at-start.ts';
+import type { MadeAtStart, StartWiring } from '../capability-registry/made-at-start.ts';
 import { storesAndConnectionsOf } from '../connections/served-connections.ts';
-import {
-  ledgerConnectionIn,
-  ledgerDatabaseOf,
-  withARefusedLayoutExplained,
-  withHeldRequestsEndedFirst,
-} from '../database/ledger-database.ts';
+import { ledgerConnectionIn, withHeldRequestsEndedFirst, type LedgerDatabase } from '../database/ledger-database.ts';
 import { serverOptionsComposing, type ComposedServerOptions } from '../server-options/composed-options.ts';
 import { serveWorkflows, type WorkflowParts } from '../workflows/workflows.ts';
 import { applicationLayer, withLiveAttemptsClosedFirst } from './application-layer.ts';
 import { functionWiringOf, type FunctionWiring, type ServedWiring } from './function-wiring.ts';
-import { ledgerLayerFor, signInOpened } from './ledger-store.ts';
+import { ledgerOpenedAtStart, signInOpened } from './ledger-store.ts';
 import { functionsServedBy } from './served-functions.ts';
 import { loggedModelAccess, type ModelAccessOf } from './served-reasoning.ts';
 
@@ -39,7 +34,7 @@ interface Serving {
   readonly settings: Composing[0];
   readonly telemetry: Composing[1];
   readonly shippedFiles: Composing[2];
-  readonly database: Awaited<ReturnType<typeof ledgerDatabaseOf>>;
+  readonly database: LedgerDatabase;
   readonly made: MadeAtStart;
   readonly goals: boolean;
   readonly results: boolean;
@@ -111,7 +106,7 @@ function registryOpenedFor(
 function servedWith(serving: Serving): Serve {
   const { wiring, settings, shippedFiles, made, holding } = serving;
   return async (runtime, ownOrigin) => {
-    const { ledger, workflows, identityIssuer } = settings;
+    const { ledger, workflows, signIn: signingIn } = settings;
     const { signIn, stores, consent, connectionsReadingThrough, source, clientMetadata, license, opens, ...ownKeys } =
       await signInAndStoresOpened(runtime, serving, ownOrigin);
     const registry = await registryOpenedFor(serving, runtime, { consent, connections: source });
@@ -133,7 +128,7 @@ function servedWith(serving: Serving): Serve {
     const parts = {
       ledger,
       workflows,
-      identityIssuer,
+      authorizationServer: signingIn?.publicUrl,
       ...ownKeys,
       ...receivingStoresOf(settings, stores),
       shippedFiles,
@@ -161,22 +156,6 @@ function goalsSwitchesOf(
   messages = false,
 ): Pick<Serving, 'goals' | 'results' | 'messages'> {
   return { goals, results: goals && results, messages: goals && results && messages };
-}
-
-function theLedgerLayerOf(
-  settings: Composing[0],
-  database: Serving['database'],
-  made: Serving['made'],
-  wiring: Serving['wiring'],
-) {
-  return withARefusedLayoutExplained(
-    ledgerLayerFor(settings, database, {
-      declared: made.prediction.provided.capability.facts.onRuns,
-      appends: wiring.projections.appends,
-      mostActiveOf: made.bounds.mostActiveOf,
-    }),
-    settings,
-  );
 }
 
 function aStopOfThisProcess() {
@@ -215,9 +194,13 @@ export function compositionRootWith(
 ): ComposedServerOptions {
   const wiring = functionWiringOf(programPoolOf, toolTiming, clock?.now);
   return serverOptionsComposing(async (settings, telemetry, shippedFiles) => {
-    const database = await ledgerDatabaseOf(settings, telemetry.appended);
-    const made = await madeAtStart(settings, { programPoolOf: wiring.programPoolOf, shippedFiles, installed });
-    const ledgerLayer = theLedgerLayerOf(settings, database, made, wiring);
+    const { database, made, ledgerLayer } = await ledgerOpenedAtStart(settings, {
+      programPoolOf: wiring.programPoolOf,
+      shippedFiles,
+      installed,
+      appended: telemetry.appended,
+      appends: wiring.projections.appends,
+    });
     const holding = attemptHoldingOf(settings, clock);
     const meter = meterOf(settings, { signers, features });
     const services = applicationLayer(ledgerLayer, meter, settings, holding);

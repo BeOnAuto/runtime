@@ -23,32 +23,38 @@ const bearer = {
   description: [
     'An API key, sent as Authorization: Bearer <key>.',
     'A key belongs to one org and holds permissions, such as playbook:read and playbook:write, for some or all of its playbooks.',
-    'A server on a loopback address with neither PUBLIC_URL nor API_KEYS set is in local mode, and answers requests from its own machine without a key.',
+    'Each permission that permits an operation is a role of one of its requirements.',
   ].join(' '),
 };
 
-function securitySchemesOf(identityIssuer: string): OpenApiObject {
+function openIdConnectOf(authorizationServer: string): OpenApiObject {
   return {
-    bearer,
-    openIdConnect: {
-      type: 'openIdConnect',
-      openIdConnectUrl: `${identityIssuer}/.well-known/openid-configuration`,
-      description: [
-        'An access token of the Auto identity service, sent as Authorization: Bearer <token>, for a person signed in there.',
-        'A server whose PUBLIC_URL is set takes a token whose audience is that URL.',
-        'The person acts in the org their organization in the identity service names, or, where their token names none, in the org whose id is their subject, over every playbook, with the permissions among the scopes their token was granted.',
-        'Each permission that permits an operation is the scope of one of its requirements.',
-      ].join(' '),
-    },
+    type: 'openIdConnect',
+    openIdConnectUrl: `${authorizationServer}/.well-known/openid-configuration`,
+    description: [
+      'An access token of a person signed in at this server, sent as Authorization: Bearer <token>.',
+      'This server is their OAuth 2.1 authorization server, which openIdConnectUrl describes.',
+      'The person acts in the org whose id is default, over every playbook, with the permissions among the scopes their token was granted.',
+      'Each permission that permits an operation is the scope of one of its requirements.',
+    ].join(' '),
   };
 }
 
-export function componentsOf(problems: readonly ProblemAnswer[], identityIssuer: string): OpenApiObject {
+function securitySchemesOf(authorizationServer: string | undefined): OpenApiObject {
+  return authorizationServer === undefined
+    ? { bearer }
+    : { bearer, openIdConnect: openIdConnectOf(authorizationServer) };
+}
+
+export function componentsOf(
+  problems: readonly ProblemAnswer[],
+  authorizationServer: string | undefined,
+): OpenApiObject {
   const responses = problems.toSorted((one, other) => one.status - other.status);
   return {
     schemas: { problem: problemSchema },
     responses: Object.fromEntries(responses.map(({ name, response }) => [name, response])),
     parameters,
-    securitySchemes: securitySchemesOf(identityIssuer),
+    securitySchemes: securitySchemesOf(authorizationServer),
   };
 }

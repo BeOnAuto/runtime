@@ -142,6 +142,16 @@ describe('the request that registers a client', () => {
     expect([client.tokenEndpointAuthMethod, client.secretExpiresAt]).toEqual(['client_secret_post', 0]);
     expect(Redacted.value(client.clientSecret)).not.toBe('');
   });
+
+  it('gives the client_uri beside the name where the settings give one, and none where they do not', async () => {
+    const provider = fakeProvider(issuer);
+    const clientUri = 'https://auto.example.com';
+
+    await (await registeringProviderOf({ ...settingsOf(provider), clientUri }, provider.requests)).registered();
+    await (await registeringAt(provider)).registered();
+
+    expect(provider.registrationsAsked().map((asked) => asked['client_uri'])).toEqual([clientUri, undefined]);
+  });
 });
 
 async function clientRegisteredWith(registrationAnswer: Claims) {

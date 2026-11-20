@@ -59,8 +59,10 @@ export { runKeyCommand, type Console as KeyCommandConsole } from './key-command/
 export { UnusableIdentityServiceError } from './identity-service/unusable-identity-service-error.ts';
 export {
   autoIdentityService,
+  defaultIdentityProvider,
   identityServiceOf,
   signInScopes,
+  type DefaultIdentityProvider,
   type IdentityService,
   type ProtectedResource,
   type SignInSettings,

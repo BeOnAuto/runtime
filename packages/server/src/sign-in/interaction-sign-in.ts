@@ -1,5 +1,6 @@
 import {
   ClientRegistrationError,
+  UnusableIdentityProviderError,
   type FinishedSignIn,
   type PeopleRows,
   type SignInAsked,
@@ -21,6 +22,7 @@ export type Logged = (log: Effect.Effect<void>) => void;
 export interface SignInStore {
   readonly peopleRows?: PeopleRows;
   readonly enrolling?: Enrolling;
+  readonly setup?: Admitting['setup'];
   readonly signInClientRegistrations?: ReturnType<ClientsServed['registrations']>;
 }
 
@@ -46,6 +48,10 @@ async function startedBy(
   } catch (failure) {
     if (failure instanceof ClientRegistrationError) {
       report.notRegistered(failure.message);
+      return { notStarted: true };
+    }
+    if (failure instanceof UnusableIdentityProviderError) {
+      report.notBegun(failure.message);
       return { notStarted: true };
     }
     throw failure;
@@ -110,6 +116,7 @@ export async function signingInOf(signIn: CompanySignIn, logged: Logged, served:
     requiredClaim,
     people: keptIn(served.peopleRows),
     enrolling,
+    setup: keptIn(served.setup),
     report,
     ...(await asItsClient(signIn, { registrations, report })),
   };

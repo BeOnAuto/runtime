@@ -34,6 +34,7 @@ export interface ClientRegistering {
   readonly scopes: readonly string[];
   readonly tokenEndpointAuthMethod: ClientAuthenticationMethod;
   readonly clientName: string;
+  readonly clientUri?: string;
 }
 
 const secretThatNeverEnds = 0;
@@ -63,10 +64,11 @@ export function clientRegistrationError(
   return new ClientRegistrationError({ issuer, redirectUri, refusal, message: wordsOf(registering, refusal) });
 }
 
-function requestOf({ redirectUri, scopes, tokenEndpointAuthMethod, clientName }: ClientRegistering): string {
+function requestOf({ redirectUri, scopes, tokenEndpointAuthMethod, clientName, clientUri }: ClientRegistering): string {
   return JSON.stringify({
     redirect_uris: [redirectUri],
     client_name: clientName,
+    ...(clientUri === undefined ? {} : { client_uri: clientUri }),
     response_types: ['code'],
     grant_types: ['authorization_code'],
     application_type: 'web',

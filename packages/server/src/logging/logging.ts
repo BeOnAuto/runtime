@@ -1,10 +1,4 @@
-import {
-  defaultStudioOrigin,
-  studioLinkOf,
-  type AccessMode,
-  type SignInSettings,
-  type StudioSettings,
-} from '@on.auto/identity';
+import type { AccessMode, StudioSettings } from '@on.auto/identity';
 import type { Incident } from '@on.auto/operations';
 import { Cause, Effect, Layer } from 'effect';
 
@@ -19,6 +13,7 @@ import {
 import type { OpenIdConnectSettings } from '../settings/openid-connect-settings.ts';
 import type { SignalExport, TelemetrySettings } from '../telemetry/telemetry-settings.ts';
 import { logsFrom, logsToStderr, type LogFormat, type LogLevelSetting } from './log-formats.ts';
+import { logSignInAtStart } from './sign-in-logging.ts';
 
 export interface LogSettings {
   readonly logFormat: LogFormat;
@@ -31,8 +26,8 @@ export function serverLogs({ logFormat, logLevel }: LogSettings): Layer.Layer<ne
 
 export interface AccessReport {
   readonly mode: AccessMode;
-  readonly signIn: SignInSettings | undefined;
   readonly openIdConnect?: OpenIdConnectSettings | undefined;
+  readonly openIdConnectByDefault?: OpenIdConnectSettings | undefined;
   readonly studio?: StudioSettings;
 }
 
@@ -47,51 +42,22 @@ const closedNotice = Effect.logWarning(
   `No request can authenticate: API_KEYS lists no keys, so every path answers 401 except ${keylessPaths}`,
 );
 
-function signInNotice(signIn: SignInSettings | undefined): Effect.Effect<void> {
-  return signIn === undefined
-    ? Effect.void
-    : Effect.logInfo(
-        `Signed-in persons are admitted through the identity service at ${signIn.issuer}, by tokens whose audience is ${signIn.publicUrl}`,
-      ).pipe(Effect.annotateLogs({ public_url: signIn.publicUrl, identity_issuer: signIn.issuer }));
-}
-
-function requiredClaimNotice({ issuer, requiredClaim }: OpenIdConnectSettings): Effect.Effect<void> {
-  return requiredClaim === undefined
-    ? Effect.void
-    : Effect.logInfo(
-        `Only a person whose ID Token carries the claim ${requiredClaim.claim} with the value OIDC_REQUIRED_CLAIM gives can sign in`,
-      ).pipe(Effect.annotateLogs({ oidc_issuer: issuer, oidc_required_claim: requiredClaim.claim }));
-}
-
-function companySignInWords({ issuer, redirectUri, client }: OpenIdConnectSettings): string {
-  const signedIn = `People sign in through the identity provider at ${issuer}.`;
-  return client === undefined ? signedIn : `${signedIn} The redirect URI to register with it is ${redirectUri}`;
-}
-
-function studioNotice(publicUrl: string, studio: StudioSettings = defaultStudio): Effect.Effect<void> {
-  const link = studioLinkOf(studio, { ownOrigin: publicUrl, openedFrom: 'terminal', installId: undefined });
-  return Effect.logInfo(`People open Studio at ${link}`).pipe(Effect.annotateLogs({ studio_link: link }));
-}
-
-const defaultStudio: StudioSettings = { origin: defaultStudioOrigin, served: false };
-
-function companySignInNotice(settings: OpenIdConnectSettings, studio: StudioSettings | undefined): Effect.Effect<void> {
-  const { issuer, publicUrl, redirectUri } = settings;
-  return Effect.logInfo(companySignInWords(settings)).pipe(
-    Effect.annotateLogs({ public_url: publicUrl, oidc_issuer: issuer, redirect_uri: redirectUri }),
-    Effect.andThen(requiredClaimNotice(settings)),
-    Effect.andThen(studioNotice(publicUrl, studio)),
-  );
-}
-
-export function logAccessMode({ mode, signIn, openIdConnect, studio }: AccessReport): Effect.Effect<void> {
+export function logAccessMode({
+  mode,
+  openIdConnect,
+  openIdConnectByDefault,
+  studio,
+}: AccessReport): Effect.Effect<void> {
   if (mode === 'local') {
     return localModeOn;
   }
   if (openIdConnect !== undefined) {
-    return companySignInNotice(openIdConnect, studio);
+    return logSignInAtStart(openIdConnect, 'given', studio);
   }
-  return mode === 'closed' ? closedNotice : signInNotice(signIn);
+  if (openIdConnectByDefault !== undefined) {
+    return logSignInAtStart(openIdConnectByDefault, 'by default', studio);
+  }
+  return mode === 'closed' ? closedNotice : Effect.void;
 }
 
 export interface StudioReport {

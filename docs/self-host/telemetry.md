@@ -165,7 +165,7 @@ Left out unless `TELEMETRY_CONTENT` is `true`:
 - the arguments and results of the tools a model called;
 - the data of each event.
 
-Each caller appears under its recorded name, such as `person:<subject>` for a signed-in person ([The name recorded for a signed-in person](../reference/authentication.md#the-name-recorded-for-a-signed-in-person)). So send telemetry only to a collector you trust with the names of your orgs, playbooks, functions and callers.
+Each caller appears under its recorded name, such as `person:<id>` for a signed-in person ([The name recorded for a signed-in person](../reference/authentication.md#the-name-recorded-for-a-signed-in-person)). So send telemetry only to a collector you trust with the names of your orgs, playbooks, functions and callers.
 
 Never recorded, whatever `TELEMETRY_CONTENT` is:
 

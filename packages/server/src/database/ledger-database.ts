@@ -30,6 +30,7 @@ interface KeptByTheLedger {
   readonly definitionNames?: DefinitionNames;
   readonly layoutSteps?: readonly LayoutStep[];
   readonly factSchemas?: readonly FactSchemaRead[];
+  readonly floor?: number;
   readonly appends?: AppendSignal;
   readonly content?: ContentStore;
 }

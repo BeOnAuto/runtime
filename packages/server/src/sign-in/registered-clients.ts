@@ -57,16 +57,39 @@ async function named({ place, registrations, remembered }: Clients, clientId: st
   return client === undefined ? client : remembered.remember(client);
 }
 
-async function registeredInPlaceOf(clients: Clients, replacing: string | undefined): Promise<RegisteredClient> {
-  const { provider, place, registrations, report, remembered } = clients;
+export interface KeptInPlace {
+  readonly inUse: RegisteredClient;
+  readonly registered: RegisteredClient;
+  readonly recordedFirstElsewhere: boolean;
+  readonly replacing: string | undefined;
+}
+
+async function keptInPlaceOf(
+  { provider, place, registrations }: Pick<Clients, 'provider' | 'place' | 'registrations'>,
+  replacing: string | undefined,
+): Promise<KeptInPlace> {
   const registered = await provider.registered();
   const { inUse, recordedFirstElsewhere } = await registrations.kept(place, registered, replacing);
+  return { inUse, registered, recordedFirstElsewhere, replacing };
+}
+
+async function registeredInPlaceOf(clients: Clients, replacing: string | undefined): Promise<RegisteredClient> {
+  const { report, remembered } = clients;
+  const { inUse, registered, recordedFirstElsewhere } = await keptInPlaceOf(clients, replacing);
   if (recordedFirstElsewhere) {
     report.registeredElsewhereFirst(inUse.clientId, registered.clientId);
   } else {
     report.registered(inUse.clientId, replacing);
   }
   return remembered.remember(inUse);
+}
+
+export async function registeredAgain(
+  provider: Pick<RegisteringProvider, 'issuer' | 'redirectUri' | 'registered'>,
+  registrations: SignInClientRegistrations,
+): Promise<KeptInPlace> {
+  const place = { issuer: provider.issuer, redirectUri: provider.redirectUri };
+  return keptInPlaceOf({ provider, place, registrations }, await registrations.latestAt(place));
 }
 
 function registeredOnce(clients: Clients, replacing: string | undefined): Promise<RegisteredClient> {

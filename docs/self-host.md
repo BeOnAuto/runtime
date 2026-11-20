@@ -16,7 +16,7 @@ Self-hosting is for an organization that wants its playbooks and runs on its own
 | Auto Runtime and its ledger | Your infrastructure. The ledger, the record of every playbook, definition and run, is a SQLite file or a PostgreSQL database                                  |
 | Model providers             | Your own provider accounts or gateways, which reasoning functions call                                                                                        |
 | Auto Studio                 | `https://studio.on.auto`, which calls your runtime from your browser, as you                                                                                  |
-| Sign-in                     | The Auto identity service, the same one Studio uses. Machines and pipelines use API keys instead                                                              |
+| Sign-in                     | People sign in at your runtime, with their Auto accounts or through your company's identity provider. Machines and pipelines use API keys instead             |
 | License reporting           | With a key, the runtime reports its id and how many runs it admitted, every hour, and never what a run or a playbook holds. Without a key, it reports nothing |
 
 Each time it starts, the runtime also sends an anonymous [usage ping](self-host/configuration.md#usage-ping), which `DO_NOT_TRACK=1` turns off.

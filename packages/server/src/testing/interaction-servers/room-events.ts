@@ -4,7 +4,7 @@ import { serveFakeMcp, type FakeMcpServer, type FakeTool } from '@on.auto/tool-s
 import { Schema } from 'effect';
 import { onTestFinished, vi } from 'vitest';
 
-import { connectedWith } from '../servers/connected-servers.ts';
+import { connectedWith, connectionsIn } from '../servers/connected-servers.ts';
 import { connectionsAllowing } from '../servers/loopback-connections.ts';
 import type { ServedParts } from '../servers/served-parts.ts';
 import { until } from '../waiting/until.ts';
@@ -125,10 +125,11 @@ export async function servedWithRooms(
   rooms: FakeMcpServer,
   environment: Readonly<Record<string, string>>,
   parts: ServedParts = {},
+  org = 'acme',
 ): Promise<InteractionServer> {
-  const server = await servingInteractions(roomsDelivery, receivingAt(rooms.url, environment), parts);
-  await connectedWith(server, { provider: 'rooms' }, roomsKey);
-  await connectedWith(server, { provider: 'boards' }, roomsKey);
+  const server = await servingInteractions(roomsDelivery, receivingAt(rooms.url, environment), parts, org);
+  await connectedWith(server, { provider: 'rooms' }, roomsKey, connectionsIn(org));
+  await connectedWith(server, { provider: 'boards' }, roomsKey, connectionsIn(org));
   return server;
 }
 
@@ -156,8 +157,8 @@ export function signedWith(secret: string): Readonly<Record<string, string>> {
   return { 'content-type': 'application/json', 'x-rooms-event': 'message', 'x-rooms-signature': `sha256=${signature}` };
 }
 
-export function eventsPathOf(playbook: string, connection: string): string {
-  return `/v1/orgs/acme/playbooks/${playbook}/connections/${connection}/events`;
+export function eventsPathOf(playbook: string, connection: string, org = 'acme'): string {
+  return `/v1/orgs/${org}/playbooks/${playbook}/connections/${connection}/events`;
 }
 
 export async function delivered(

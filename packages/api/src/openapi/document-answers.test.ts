@@ -6,14 +6,13 @@ import { testShelf } from '../testing/guides.ts';
 import { httpAloneOperations } from '../testing/http-alone-operations.ts';
 import { listNotesOfTheOrg, notebookOperations } from '../testing/notebook.ts';
 import { operationsIn } from '../testing/openapi/openapi-document.ts';
-import { testIdentityIssuer, testServerInfo } from '../testing/operation-server.ts';
+import { testServerInfo } from '../testing/operation-server.ts';
 import { openApiDocumentOf } from './openapi-document.ts';
 
 const document = openApiDocumentOf(
   makeCatalog([...notebookOperations, listNotesOfTheOrg, ...httpAloneOperations]),
   testServerInfo,
   testShelf,
-  testIdentityIssuer,
 );
 
 const ComponentsSchema = Schema.Struct({
@@ -112,14 +111,23 @@ describe('the components of the document', () => {
     expect(components.securitySchemes['bearer']).toMatchObject({ type: 'http', scheme: 'bearer' });
   });
 
-  it('name the identity service beside the bearer key, by the OpenID Connect metadata of the issuer it is given', () => {
-    expect(components.securitySchemes['openIdConnect']).toMatchObject({
-      type: 'openIdConnect',
-      openIdConnectUrl: 'https://identity.example/.well-known/openid-configuration',
-    });
-  });
+  it("name the server's own sign-in beside the bearer key, by its OpenID Connect metadata, only where it signs people in", () => {
+    const signingIn = Schema.decodeUnknownSync(ComponentsSchema)(
+      openApiDocumentOf(makeCatalog(notebookOperations), testServerInfo, testShelf, 'https://auto.example.com'),
+    );
 
-  it('tag each operation by the resource its route names, and the content and the guides by their own, with what each tag holds', () => {
+    expect([Object.keys(components.securitySchemes), signingIn.components.securitySchemes['openIdConnect']]).toEqual([
+      ['bearer'],
+      expect.objectContaining({
+        type: 'openIdConnect',
+        openIdConnectUrl: 'https://auto.example.com/.well-known/openid-configuration',
+      }),
+    ]);
+  });
+});
+
+describe('the document', () => {
+  it('tags each operation by the resource its route names, and the content and the guides by their own, with what each tag holds', () => {
     expect(tags).toEqual([
       { name: 'notes' },
       { name: 'lines' },

@@ -3,6 +3,7 @@ import { Option, Result, Schema } from 'effect';
 import type { ServerMetadata } from 'openid-client';
 
 import { answerAt, type ProviderRequests } from './provider-requests.ts';
+import type { EndpointsDeclared } from './sign-in-tokens.ts';
 
 export const clientAuthenticationMethods = ['client_secret_basic', 'client_secret_post', 'client_secret_jwt'] as const;
 
@@ -14,6 +15,7 @@ export interface ProviderMetadata {
   readonly server: ServerMetadata;
   readonly method: ClientAuthenticationMethod;
   readonly registrationEndpoint: string | undefined;
+  readonly declares: EndpointsDeclared;
 }
 
 const MetadataDocument = Schema.Record(Schema.String, Schema.MutableJson);
@@ -25,6 +27,8 @@ const DeclaredMetadata = Schema.Struct({
   jwks_uri: Schema.optionalKey(Schema.Unknown),
   token_endpoint_auth_methods_supported: Schema.optionalKey(Schema.Array(Schema.String)),
   registration_endpoint: Schema.optionalKey(Schema.Unknown),
+  userinfo_endpoint: Schema.optionalKey(Schema.Unknown),
+  revocation_endpoint: Schema.optionalKey(Schema.Unknown),
 });
 
 type Declared = typeof DeclaredMetadata.Type;
@@ -94,6 +98,10 @@ function metadataIn(
     server: { ...document.value, issuer },
     method,
     registrationEndpoint: httpsEndpointIn(declared.value),
+    declares: {
+      userinfo: isAnHttpsUrl(declared.value.userinfo_endpoint),
+      revocation: isAnHttpsUrl(declared.value.revocation_endpoint),
+    },
   }));
 }
 

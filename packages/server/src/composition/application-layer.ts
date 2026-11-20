@@ -27,6 +27,12 @@ function settledLayersOf(settings: ProcessSettings | undefined): Layer.Layer<nev
     : Layer.merge(payloadOffloadingOf(settings.payloads), valuesKeptWithin(settings.generation));
 }
 
+export function dispatcherServicesOver(
+  ledger: Layer.Layer<LedgerServices>,
+): Layer.Layer<DispatcherServices | LedgerServices> {
+  return Layer.mergeAll(ledger, ledgerPlaybookRegistry.pipe(Layer.provide(ledger)), loggingIncidentReporter);
+}
+
 export function applicationLayer(
   ledger: Layer.Layer<LedgerServices>,
   meter: MeterComposing = unlicensed,
@@ -34,10 +40,8 @@ export function applicationLayer(
   holding?: Parameters<typeof liveAttemptsOver>[1],
 ): Layer.Layer<ServerServices> {
   return Layer.mergeAll(
-    ledger,
-    ledgerPlaybookRegistry.pipe(Layer.provide(ledger)),
+    dispatcherServicesOver(ledger),
     meterLayerOver(ledger, meter),
-    loggingIncidentReporter,
     liveAttemptsOver(ledger, holding),
     payloadsSharedInTheProcess(),
     settledLayersOf(settings),

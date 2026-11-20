@@ -39,7 +39,7 @@ export interface WorkflowParts extends HostParts, ServedPages, ServedGoals, Serv
   readonly check: ExpressionCheck;
   readonly facts: CapabilityFacts;
   readonly names: PlaybookOwnNames;
-  readonly identityIssuer: string;
+  readonly authorizationServer: ServedCatalog['authorizationServer'];
   readonly retryStateKeys: ServedCatalog['retryStateKeys'];
   readonly contentAddressKey: ServedCatalog['contentAddressKey'];
   readonly answerStores?: ServedCatalog['answerStores'];
@@ -115,7 +115,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     { names },
   );
   opened(host);
-  const { identityIssuer, retryStateKeys, contentAddressKey, answerStores, eventStores } = parts;
+  const { authorizationServer, retryStateKeys, contentAddressKey, answerStores, eventStores } = parts;
   const served = {
     catalog,
     directoryCatalog,
@@ -124,7 +124,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     pages: true,
     goals: parts.goals,
     messages: parts.messages,
-    identityIssuer,
+    authorizationServer,
     retryStateKeys,
     contentAddressKey,
     answerStores,

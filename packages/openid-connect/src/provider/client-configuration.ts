@@ -15,6 +15,8 @@ import {
 import type { RelyingPartyClient } from './client-registration.ts';
 import { providerMetadataOf, type ClientAuthenticationMethod } from './provider-metadata.ts';
 import { boundedFetchOf, providerAnswerSeconds, type ProviderRequests } from './provider-requests.ts';
+import { tokensHeldBy, type EndpointsDeclared, type TokensHeld } from './sign-in-tokens.ts';
+import { textClaim } from './standard-claims.ts';
 
 export const leewaySeconds = 60;
 
@@ -28,9 +30,14 @@ export interface PendingChecks {
   readonly codeVerifier: string;
 }
 
+interface CodeExchanged {
+  readonly claims: unknown;
+  readonly held: TokensHeld | undefined;
+}
+
 export interface SignInsAs {
   readonly authorizationUrlOf: (parameters: Readonly<Record<string, string>>) => string;
-  readonly claimsOf: (callbackQuery: string, pending: PendingChecks) => Promise<unknown>;
+  readonly codeExchanged: (callbackQuery: string, pending: PendingChecks) => Promise<CodeExchanged>;
 }
 
 export interface UsableProvider {
@@ -61,16 +68,25 @@ function checksOf({ state, nonce, codeVerifier }: PendingChecks) {
   return { pkceCodeVerifier: codeVerifier, expectedState: state, expectedNonce: nonce, idTokenExpected: true };
 }
 
-function signInsOf(configuration: Readonly<Configuration>, redirectUri: string): SignInsAs {
+function signInsOf(
+  configuration: Readonly<Configuration>,
+  redirectUri: string,
+  declares: EndpointsDeclared,
+): SignInsAs {
   return {
     authorizationUrlOf: (parameters) => buildAuthorizationUrl(configuration, parameters).href,
-    claimsOf: async (callbackQuery, pending) => {
+    codeExchanged: async (callbackQuery, pending) => {
       const tokens = await authorizationCodeGrant(
         configuration,
         callbackAt(redirectUri, callbackQuery),
         checksOf(pending),
       );
-      return tokens.claims();
+      const claims = tokens.claims();
+      const read = {
+        subject: String(Reflect.get(new Object(claims), 'sub')),
+        named: textClaim(claims, 'name').name !== undefined,
+      };
+      return { claims, held: tokensHeldBy(configuration, declares, tokens, read) };
     },
   };
 }
@@ -85,7 +101,7 @@ export async function usableProviderOf(
       message: `The identity provider at ${issuer} cannot be used: ${read.failure}`,
     });
   }
-  const { server, method, registrationEndpoint } = read.success;
+  const { server, method, registrationEndpoint, declares } = read.success;
   return {
     method,
     registrationEndpoint,
@@ -95,7 +111,7 @@ export async function usableProviderOf(
       configuration[customFetch] = boundedFetchOf(requests);
       configuration.timeout = providerAnswerSeconds;
       enableNonRepudiationChecks(configuration);
-      return signInsOf(configuration, redirectUri);
+      return signInsOf(configuration, redirectUri, declares);
     },
   };
 }

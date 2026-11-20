@@ -7,6 +7,10 @@ import type { ReasoningServer } from './reasoning-server.ts';
 
 export const connectionsOfAcme = '/v1/orgs/acme/connections';
 
+export function connectionsIn(org: string): string {
+  return `/v1/orgs/${org}/connections`;
+}
+
 export const shippedList = shippedSettings.providers;
 
 export const shippedProviders = shippedList.providers;
@@ -57,16 +61,21 @@ export function linkIn(answered: unknown): AddedConnection {
   return { id, token };
 }
 
-export async function addedConnection(server: Pick<ReasoningServer, 'call'>, body: unknown): Promise<AddedConnection> {
-  return linkIn((await server.call('POST', connectionsOfAcme, { body })).body);
+export async function addedConnection(
+  server: Pick<ReasoningServer, 'call'>,
+  body: unknown,
+  connections = connectionsOfAcme,
+): Promise<AddedConnection> {
+  return linkIn((await server.call('POST', connections, { body })).body);
 }
 
 export async function connectedWith(
   server: Pick<ReasoningServer, 'call'>,
   body: unknown,
   value: string,
+  connections = connectionsOfAcme,
 ): Promise<string> {
-  const { id, token } = await addedConnection(server, body);
-  await server.call('POST', `${connectionsOfAcme}/${id}/credential`, { body: { token, value } });
+  const { id, token } = await addedConnection(server, body, connections);
+  await server.call('POST', `${connections}/${id}/credential`, { body: { token, value } });
   return id;
 }

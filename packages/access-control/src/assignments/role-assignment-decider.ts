@@ -18,55 +18,25 @@ import {
   type HeldAssignment,
   type HeldAssignments,
 } from './held-assignments.ts';
+import type {
+  AdminRecovered,
+  DeprovisioningSource,
+  PersonEnrolled,
+  RoleAssignmentCommand,
+  RoleGiven,
+  RolesDeprovisioned,
+  RolesProvisioned,
+  RoleTaken,
+} from './role-assignment-commands.ts';
 import {
   RoleAssignmentEventSchema,
   principalKeyOf,
   type AssignedPrincipal,
   type AssignedRole,
-  type AssignmentScope,
   type AssignmentSource,
   type RecordedRoleAssignmentEvent,
   type RoleAssignmentEvent,
 } from './role-assignment-facts.ts';
-
-interface Asked {
-  readonly scope: AssignmentScope;
-  readonly at: string;
-  readonly by: string;
-}
-
-export interface RoleGiven extends Asked, HeldAssignment {
-  readonly kind: 'assign';
-  readonly actor: PrincipalReference;
-}
-
-export interface RoleTaken extends Asked, HeldAssignment {
-  readonly kind: 'unassign';
-  readonly actor: PrincipalReference;
-}
-
-export type ProvisioningSource = Exclude<AssignmentSource, 'manual' | 'bootstrap'>;
-
-export interface RolesProvisioned extends Asked {
-  readonly kind: 'provision';
-  readonly source: ProvisioningSource;
-  readonly assignments: readonly HeldAssignment[];
-}
-
-export type DeprovisioningSource = Extract<AssignmentSource, 'manual' | 'identity_service'>;
-
-export interface RolesDeprovisioned extends Asked {
-  readonly kind: 'deprovision';
-  readonly source: DeprovisioningSource;
-  readonly principal: AssignedPrincipal;
-}
-
-export interface PersonEnrolled extends Asked {
-  readonly kind: 'enrol';
-  readonly principal: AssignedPrincipal;
-}
-
-export type RoleAssignmentCommand = RoleGiven | RoleTaken | RolesProvisioned | RolesDeprovisioned | PersonEnrolled;
 
 export type Enrolled = 'bootstrap' | 'enrolment' | 'member' | 'removed';
 
@@ -220,13 +190,22 @@ function givenAtSignIn(
   return assignedOf({ principal, role: { type: 'built_in', id: atSignIn[source] } }, scope, source);
 }
 
+interface InPlaceOfTheRolesHeld {
+  readonly state: HeldAssignments;
+  readonly command: PersonEnrolled | AdminRecovered;
+  readonly source: AssignmentSource;
+}
+
+function givenInPlaceOfTheRolesHeld(
+  { state, command: { principal, scope }, source }: InPlaceOfTheRolesHeld,
+  given: RoleAssignmentEvent,
+): readonly RoleAssignmentEvent[] {
+  return [...rolesHeldBy(state, principal).map((role) => unassignedOf({ principal, role }, scope, source)), given];
+}
+
 const enrolledWith: Readonly<Record<Enrolled, (enrolling: Enrolling) => readonly RoleAssignmentEvent[]>> = {
-  bootstrap: (enrolling) => [
-    ...rolesHeldBy(enrolling.state, enrolling.command.principal).map((role) =>
-      unassignedOf({ principal: enrolling.command.principal, role }, enrolling.command.scope, 'bootstrap'),
-    ),
-    givenAtSignIn(enrolling, 'bootstrap'),
-  ],
+  bootstrap: (enrolling) =>
+    givenInPlaceOfTheRolesHeld({ ...enrolling, source: 'bootstrap' }, givenAtSignIn(enrolling, 'bootstrap')),
   enrolment: (enrolling) => [givenAtSignIn(enrolling, 'enrolment')],
   member: () => [],
   removed: () => [],
@@ -241,7 +220,41 @@ function decidedEnrolment({ table, atSignIn }: Deciding, command: PersonEnrolled
   return Result.succeed(enrolledWith[enrolledOver(table, state, command.principal)]({ atSignIn, command, state }));
 }
 
+type Recovered = 'given' | 'held_already';
+
+function roleOfTheFirstSignIn({ atSignIn }: Pick<Deciding, 'atSignIn'>): AssignedRole {
+  return { type: 'built_in', id: atSignIn.bootstrap };
+}
+
+function recoveredOver(
+  deciding: Pick<Deciding, 'atSignIn'>,
+  state: HeldAssignments,
+  principal: AssignedPrincipal,
+): Recovered {
+  const { id } = roleOfTheFirstSignIn(deciding);
+  return rolesHeldBy(state, principal).some((held) => held.id === id) ? 'held_already' : 'given';
+}
+
+export function recoveredAs(state: HeldAssignments, principal: AssignedPrincipal): Recovered {
+  return recoveredOver({ atSignIn: builtInRolesAtSignIn }, state, principal);
+}
+
+function decidedRecovery(deciding: Deciding, command: AdminRecovered, state: HeldAssignments): Decision {
+  if (recoveredOver(deciding, state, command.principal) === 'held_already') {
+    return Result.succeed([]);
+  }
+  const given = assignedOf(
+    { principal: command.principal, role: roleOfTheFirstSignIn(deciding) },
+    command.scope,
+    'command',
+  );
+  return Result.succeed(givenInPlaceOfTheRolesHeld({ state, command, source: 'command' }, given));
+}
+
 function decided(deciding: Deciding, command: RoleAssignmentCommand, state: HeldAssignments): Decision {
+  if (command.kind === 'recover') {
+    return decidedRecovery(deciding, command, state);
+  }
   if (command.kind === 'assign') {
     return decidedGiving(deciding.table, command, state);
   }

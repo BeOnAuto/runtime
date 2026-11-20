@@ -8,9 +8,9 @@ head:
 
 # Run with Docker
 
-This guide runs Auto Runtime with Docker, the tool that runs packaged programs in isolated environments called containers. You start Auto from its image (Auto Runtime packaged to run in a container) on Docker Hub, check that it responds, connect your agent and sign in through the Auto identity service. Then you add a model provider and give a machine or a pipeline an API key.
+This guide runs Auto Runtime with Docker, the tool that runs packaged programs in isolated environments called containers. You start Auto from its image (Auto Runtime packaged to run in a container) on Docker Hub, check that it responds, connect your agent and sign in with your Auto account. Then you add a model provider and give a machine or a pipeline an API key.
 
-You need Docker Engine or Docker Desktop, a terminal, and the `https` address your team will reach Auto at, such as `https://auto.example.com`, served by a reverse proxy on this machine that forwards to Auto's port ([Put HTTPS in front](production.md#put-https-in-front)). To try Auto on this machine alone first, with a browser on it to sign in with, write `http://localhost:5555` wherever this page writes `https://auto.example.com`.
+You need Docker Engine or Docker Desktop, a terminal, and the `https` address your team will reach Auto at, such as `https://auto.example.com`, served by a reverse proxy on this machine that forwards to Auto's port ([Put HTTPS in front](production.md#put-https-in-front)). To try Auto on this machine alone first, where no one signs in, write `http://localhost:5555` wherever this page writes `https://auto.example.com`, and give Auto the settings of [On your own machine](#on-your-own-machine) in step 1.
 
 ## Choose a variant
 
@@ -57,7 +57,7 @@ echo 'IMAGE=docker.on.auto/onauto/runtime:0.9.1' > .env
 
 Replace `0.9.1` with the newest version on the [releases page](https://github.com/BeOnAuto/runtime/releases). Every command below takes the image from this line, so an upgrade changes only this line.
 
-People sign in through the Auto identity service. Auto needs the address at which people reach it, `PUBLIC_URL`, your team's `https` address, and a key to seal the secrets it keeps under, `SECRETS_KEY`, 32 random bytes in base64. Put both in `auto-runtime.env`, the file that holds Auto's own settings, one `NAME=value` per line. Later steps add to it. A container needs `PUBLIC_URL` or `API_KEYS`: it listens on every interface, so without either it stops at start ([Who can call a server](security.md#who-can-call-a-server)), unless you declare local mode for yourself alone, beside a `PUBLIC_URL` on `localhost` ([On your own machine](#on-your-own-machine)). Then create a volume for the ledger:
+People sign in with their Auto accounts. Auto needs the address at which people reach it, `PUBLIC_URL`, your team's `https` address, and a key to seal the secrets it keeps under, `SECRETS_KEY`, 32 random bytes in base64. Put both in `auto-runtime.env`, the file that holds Auto's own settings, one `NAME=value` per line. Later steps add to it. A container needs `PUBLIC_URL` or `API_KEYS`: it listens on every interface, so without either it stops at start ([Who can call a server](security.md#who-can-call-a-server)), unless you declare local mode for yourself alone, beside a `PUBLIC_URL` on `localhost` ([On your own machine](#on-your-own-machine)). Then create a volume for the ledger:
 
 ```bash
 echo 'PUBLIC_URL=https://auto.example.com' > auto-runtime.env
@@ -86,7 +86,7 @@ chmod +x start-runtime.sh
 What the script does:
 
 - `. ./.env` reads the release you chose, so `"$IMAGE"` names it.
-- `--publish 127.0.0.1:5555:5555` makes port `5555` reachable from this machine only. It publishes the port on the loopback address `127.0.0.1`, the machine's own address, which other machines cannot reach, so people reach Auto only through the proxy that serves your `https` address ([Put HTTPS in front](production.md#put-https-in-front)), and an `http` `PUBLIC_URL` on `localhost` stays on this machine ([Let people sign in](security.md#let-people-sign-in) says why).
+- `--publish 127.0.0.1:5555:5555` makes port `5555` reachable from this machine only. It publishes the port on the loopback address `127.0.0.1`, the machine's own address, which other machines cannot reach, so people reach Auto only through the proxy that serves your `https` address ([Put HTTPS in front](production.md#put-https-in-front)), and an `http` `PUBLIC_URL` on `localhost` stays on this machine ([On your own machine](#on-your-own-machine) says why).
 - `--volume auto-runtime-data:/data` keeps the ledger on the named volume when the container is replaced. Without it, Docker gives each container an empty anonymous volume, and its playbooks last only as long as that container.
 - `--env-file auto-runtime.env` passes the settings and secrets. Docker reads the file when it creates the container, so `docker restart auto-runtime` does not pick up a change to it. Run `./start-runtime.sh` instead.
 
@@ -121,7 +121,7 @@ curl --include http://localhost:5555/v1/orgs/acme/playbooks
 
 - where the ledger is kept;
 - which model providers are configured;
-- the identity service people sign in through, and the audience of their tokens;
+- how people sign in, and the link at which they open Studio;
 - a warning for anything missing.
 
 If the check fails, see [Troubleshooting](troubleshooting.md).
@@ -140,7 +140,7 @@ In Codex:
 codex mcp add auto-runtime --url https://auto.example.com/mcp
 ```
 
-The first time your agent connects, it opens the Auto identity service in your browser. Sign in, choose your organization, and grant the permissions on the consent screen. [What signed-in people can do](security.md#what-signed-in-people-can-do) describes what you may then do. In Claude Code, `/mcp` shows whether `auto-runtime` is connected, and offers the sign-in while it is not.
+The first time your agent connects, it opens your browser at your server, which sends you to sign in with your Auto account. Choose your organization and allow access on Auto's screen, then allow your agent on your server's page. As the first person to sign in, you become the admin, and the server is tied to your organization ([Auto accounts](security.md#auto-accounts)). [What signed-in people can do](security.md#what-signed-in-people-can-do) describes what you may then do. In Claude Code, `/mcp` shows whether `auto-runtime` is connected, and offers the sign-in while it is not.
 
 To see and manage its playbooks, open Studio on it at `https://studio.on.auto/?server=https://auto.example.com`, the link the button on its page at `https://auto.example.com` opens too. Studio asks once whether it is your team's runtime ([Open Studio on a runtime](security.md#open-studio-on-a-runtime)).
 

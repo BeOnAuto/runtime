@@ -10,7 +10,7 @@ import {
   rolesProvisioned,
   type DeclaredMember,
 } from './imported-role-assignments.ts';
-import { roleAssignmentDecider, type ProvisioningSource } from './role-assignment-decider.ts';
+import { roleAssignmentDecider } from './role-assignment-decider.ts';
 import { roleAssignmentsStreamOf, roleOfIdentityServiceKey } from './role-assignment-facts.ts';
 import { roleAssignmentRows } from './role-assignment-rows.ts';
 import { enrolledAtSignIn } from './role-assignments-at-sign-in.ts';
@@ -35,7 +35,7 @@ function importing() {
   return {
     appends,
     imported: (members: readonly DeclaredMember[]) => run(rolesImported('acme', members, importedAs)),
-    provisioned: (source: ProvisioningSource, assignments: readonly HeldAssignment[]) =>
+    provisioned: (source: Parameters<typeof rolesProvisioned>[1], assignments: readonly HeldAssignment[]) =>
       run(rolesProvisioned('acme', source, assignments, importedAs)),
     enrolled: (person: string) => run(enrolledAtSignIn('acme', person, { ...importedAs, by: `person:${person}` })),
     sources: () =>

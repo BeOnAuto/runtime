@@ -20,17 +20,14 @@ import {
   taken,
   type Pair,
 } from '../testing/role-assignment-states.ts';
-import {
-  awaitsItsFirstAdmin,
-  enrolledAs,
-  lastAssigner,
-  roleAssignmentDecider,
-  type DeprovisioningSource,
-  type PersonEnrolled,
-  type ProvisioningSource,
-  type RolesDeprovisioned,
-  type RolesProvisioned,
-} from './role-assignment-decider.ts';
+import type {
+  DeprovisioningSource,
+  PersonEnrolled,
+  ProvisioningSource,
+  RolesDeprovisioned,
+  RolesProvisioned,
+} from './role-assignment-commands.ts';
+import { awaitsItsFirstAdmin, enrolledAs, lastAssigner, roleAssignmentDecider } from './role-assignment-decider.ts';
 import type { AssignedPrincipal } from './role-assignment-facts.ts';
 
 const decide = roleAssignmentDecider.decide;

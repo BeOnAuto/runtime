@@ -30,10 +30,10 @@ function pathItemsOf(described: readonly DescribedOperation[]): OpenApiObject {
   );
 }
 
-export function documentPathsOf(catalog: Catalog, shelf: GuideShelf): DocumentPaths {
+export function documentPathsOf(catalog: Catalog, shelf: GuideShelf, signsPeopleIn: boolean): DocumentPaths {
   const operationIdOf = operationIdsOf(catalog);
   const described = catalog.operations.map((registration) =>
-    describedOperationOf(registration, operationIdOf(registration)),
+    describedOperationOf(registration, operationIdOf(registration), signsPeopleIn),
   );
   return {
     paths: { ...pathItemsOf(described), [contentPath]: contentPathItem, [guidePath]: guidePathItemOf(shelf) },

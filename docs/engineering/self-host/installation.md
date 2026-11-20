@@ -13,7 +13,7 @@ The repository pins pnpm and Node in `package.json`; pnpm downloads the required
 
 ## Development server
 
-`pnpm dev` starts the server, which runs workflows itself, and nothing else. It listens on `127.0.0.1` with neither `PUBLIC_URL` nor `API_KEYS`, so it is in [local mode](../../self-host/security.md#local-mode): every request on your machine acts as the local developer, with no sign-in. `PUBLIC_URL=http://localhost:5555` in `.env` signs people in through the Auto identity service instead. The ledger, and with it the workflows, lives in `packages/server/.data/ledger.db`, so playbooks, definitions and waiting workflows are still there after a restart; delete that directory to start over.
+`pnpm dev` starts the server, which runs workflows itself, and nothing else. It listens on `127.0.0.1` with neither `PUBLIC_URL` nor `API_KEYS`, so it is in [local mode](../../self-host/security.md#local-mode): every request on your machine acts as the local developer, with no sign-in. Signing people in needs an `https` `PUBLIC_URL` ([Let people sign in](../../self-host/security.md#let-people-sign-in)). The ledger, and with it the workflows, lives in `packages/server/.data/ledger.db`, so playbooks, definitions and waiting workflows are still there after a restart; delete that directory to start over.
 
 Saving a `.ts` file other than a test under the `src` of any package of the repository, or `packages/server/dev.env`, `.env` or the configuration file, restarts the server through its clean shutdown; a workflow waiting for an event or a timer goes on after the restart, and a call cut off by it runs again. A server that does not start says why and starts again on the next save. Ctrl-C stops it.
 

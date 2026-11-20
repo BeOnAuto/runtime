@@ -40,8 +40,6 @@ export interface OperationServer {
 
 export const testServerInfo = { name: '@on.auto/runtime', version: '0.0.0-test' };
 
-export const testIdentityIssuer = 'https://identity.example';
-
 export const testRetryStateKeys: RetryStateKeys = { current: Redacted.make(new Uint8Array(32).fill(7)) };
 
 export const acmeAdmin = createApiKey({ id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' });
@@ -77,7 +75,7 @@ export const globexAdmin = createApiKey({
   playbooks: '*',
 });
 
-const documented = { serverInfo: testServerInfo, identityIssuer: testIdentityIssuer };
+const documented = { serverInfo: testServerInfo, authorizationServer: undefined };
 
 const keyHolders = authenticatorFor({
   host: '0.0.0.0',

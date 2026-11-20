@@ -69,6 +69,7 @@ export interface ServedOverHttp {
   readonly at: string;
   readonly server: AuthorizationServer;
   readonly connection: ConnectionPorts;
+  readonly rows: ProviderRows;
   readonly pagesShown: readonly PageShown[];
   readonly close: () => Promise<void>;
 }
@@ -106,6 +107,16 @@ export interface ServedWith {
   readonly rowsOver?: (rows: ProviderRows) => ProviderRows;
 }
 
+const servedSettings = {
+  issuer,
+  studio: {
+    clientId: `${studioOrigin}/.well-known/oauth-client-metadata`,
+    redirectUri: `${studioOrigin}/oauth/callback`,
+    postLogoutRedirectUri: `${studioOrigin}/`,
+  },
+  resourceScopes: ['org:read', 'org:write'],
+};
+
 export async function servedOverHttp({
   signIn = signingIn,
   claimsOf = () => Promise.resolve({ name: 'Ada Lovelace', email: 'ada@example.test' }),
@@ -114,28 +125,17 @@ export async function servedOverHttp({
   const { store, connection, close } = await authStoreOnAFile();
   const { providerRows, signingKeyRows } = store;
   const pagesShown: PageShown[] = [];
-  const server = authorizationServerOf(
-    {
-      issuer,
-      studio: {
-        clientId: `${studioOrigin}/.well-known/oauth-client-metadata`,
-        redirectUri: `${studioOrigin}/oauth/callback`,
-        postLogoutRedirectUri: `${studioOrigin}/`,
-      },
-      resourceScopes: ['org:read', 'org:write'],
-    },
-    {
-      rows: rowsOver(providerRows),
-      signingKey: await signingKeyOf(signingKeyRows, keptSecretsInMemory()),
-      claimsOf,
-      middleware,
-      signIn,
-      pages: pagesInto((page) => {
-        pagesShown.push(page);
-      }),
-      signInCallbackPath,
-    },
-  );
+  const server = authorizationServerOf(servedSettings, {
+    rows: rowsOver(providerRows),
+    signingKey: await signingKeyOf(signingKeyRows, keptSecretsInMemory()),
+    claimsOf,
+    middleware,
+    signIn,
+    pages: pagesInto((page) => {
+      pagesShown.push(page);
+    }),
+    signInCallbackPath,
+  });
   const http = createServer((request, response) => {
     if (server.answers(new URL(String(request.url), issuer).pathname)) {
       server.listener(request, response);
@@ -149,6 +149,7 @@ export async function servedOverHttp({
     at: `http://127.0.0.1:${String(portOf(http.address()))}`,
     server,
     connection,
+    rows: providerRows,
     pagesShown,
     close: async () => {
       http.close();

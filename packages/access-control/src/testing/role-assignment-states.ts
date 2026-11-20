@@ -3,7 +3,8 @@ import { recordingOf, type PrincipalReference } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { heldAssignmentsIn, type HeldAssignment, type HeldAssignments } from '../assignments/held-assignments.ts';
-import { roleAssignmentDecider, type RoleGiven, type RoleTaken } from '../assignments/role-assignment-decider.ts';
+import type { RoleGiven, RoleTaken } from '../assignments/role-assignment-commands.ts';
+import { roleAssignmentDecider } from '../assignments/role-assignment-decider.ts';
 import {
   RoleAssignmentEventSchema,
   type AssignedPrincipal,

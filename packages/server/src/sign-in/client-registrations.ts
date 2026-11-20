@@ -1,3 +1,4 @@
+import type { AppRuntime } from '@on.auto/api';
 import { byTheRuntime } from '@on.auto/connections';
 import { clientAuthenticationMethods, type RegisteredClient } from '@on.auto/openid-connect';
 import {
@@ -7,11 +8,14 @@ import {
   type Context,
   type Decided,
   type Decider,
+  type DispatcherServices,
   type StreamReader,
   type StreamWriter,
 } from '@on.auto/operations';
 import type { SecretStore } from '@on.auto/secrets';
 import { Data, DateTime, Effect, Redacted, Result, Schema } from 'effect';
+
+import { runtimeLedger } from '../composition/runtime-ledger.ts';
 
 export const signInClientRegistrationsStream = 'runtime/sign-in-client-registrations';
 
@@ -93,6 +97,7 @@ export class SignInClientUnavailable extends Data.TaggedError('SignInClientUnava
 export interface RegistrationServices {
   readonly registry: StreamReader & StreamWriter;
   readonly secrets: Pick<SecretStore, 'keep' | 'read' | 'forget'>;
+  readonly by?: string;
 }
 
 export interface Kept {
@@ -199,7 +204,7 @@ export function keptClientAt(
       client_id: client.clientId,
       secret_id: secretId,
       replacing,
-      by: byTheRuntime,
+      by: services.by ?? byTheRuntime,
       at,
     };
     return yield* services.registry.execute(signInClientRegistrationsStream, signInClientsDecider, registering).pipe(
@@ -215,10 +220,17 @@ export interface SignInClientRegistrations {
   readonly kept: (place: RegistrationPlace, client: RegisteredClient, replacing: string | undefined) => Promise<Kept>;
 }
 
-export function signInClientRegistrationsOf(services: RegistrationServices): SignInClientRegistrations {
+function signInClientRegistrationsOf(services: RegistrationServices): SignInClientRegistrations {
   return {
     latestAt: (place) => Effect.runPromise(latestClientAt(services, place)),
     named: (place, clientId) => Effect.runPromise(namedClientAt(services, place, clientId)),
     kept: (place, client, replacing) => Effect.runPromise(keptClientAt(services, place, client, replacing)),
   };
+}
+
+export function clientRegistrationsIn(
+  runtime: AppRuntime<DispatcherServices>,
+): (secrets: RegistrationServices['secrets'], by?: string) => SignInClientRegistrations {
+  return (secrets, by) =>
+    signInClientRegistrationsOf({ registry: runtimeLedger(runtime), secrets, ...(by === undefined ? {} : { by }) });
 }

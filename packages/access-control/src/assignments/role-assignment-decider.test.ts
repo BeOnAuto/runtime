@@ -1,11 +1,13 @@
 import { decisionLoop } from '@on.auto/ledger';
-import { Conflict, Forbidden } from '@on.auto/operations';
+import { Conflict, Forbidden, OrgWriter } from '@on.auto/operations';
+import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { builtInRoles, builtInRolesAtSignIn } from '../roles/built-in-roles.ts';
 import {
   aStreamAnotherWriterAppendsTo,
+  acme,
   acted,
   ada,
   change,
@@ -18,6 +20,8 @@ import {
   stateOf,
   taken,
 } from '../testing/role-assignment-states.ts';
+import { adminRecovered } from './recovered-admin.ts';
+import type { AdminRecovered } from './role-assignment-commands.ts';
 import {
   beyondYourRole,
   enrolledAs,
@@ -179,5 +183,52 @@ describe('two changes made at once', () => {
       ['user_dana', 'viewer'],
       ['user_priya', 'editor'],
     ]);
+  });
+});
+
+function recovered(principal: AdminRecovered['principal']): AdminRecovered {
+  return { kind: 'recover', principal, scope: acme, ...acted, by: 'command' };
+}
+
+describe('an admin recovered by a command of whoever runs the server', () => {
+  it('is given the role the first sign-in gives, by command, in place of the roles they hold, while others hold it, ending nobody else’s', () => {
+    expect(decide(recovered(priya), held([ada, 'admin'], [priya, 'editor'], [dana, 'viewer']))).toEqual(
+      Result.succeed([
+        change('role_unassigned', priya, 'editor', 'command'),
+        change('role_assigned', priya, 'admin', 'command'),
+      ]),
+    );
+    expect(decide(recovered(dana), held())).toEqual(
+      Result.succeed([change('role_assigned', dana, 'admin', 'command')]),
+    );
+  });
+
+  it('is given it after an admin removed them, and nothing is recorded where they hold it already', () => {
+    const removed = stateOf(
+      recordedNow(
+        change('role_assigned', ada, 'admin'),
+        change('role_assigned', priya, 'viewer'),
+        change('role_unassigned', priya, 'viewer'),
+      ),
+    );
+
+    expect(decide(recovered(priya), removed)).toEqual(
+      Result.succeed([change('role_assigned', priya, 'admin', 'command')]),
+    );
+    expect(decide(recovered(ada), held([ada, 'admin'], [ada, 'editor']))).toEqual(Result.succeed([]));
+  });
+
+  it('answers through the org’s writer whether the role was given or held already, recording each once', async () => {
+    const { service } = memoryLedger();
+    const writer = OrgWriter.of({
+      execute: (stream, decider, command, lineage) => service.execute(`org/acme/${stream}`, decider, command, lineage),
+    });
+    const asked = Effect.provideService(
+      adminRecovered('acme', priya.id, { ...acted, by: 'command' }),
+      OrgWriter,
+      writer,
+    );
+
+    expect(await Effect.runPromise(Effect.all([asked, asked]))).toEqual(['given', 'held_already']);
   });
 });

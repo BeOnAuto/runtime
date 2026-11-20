@@ -16,7 +16,8 @@ import { Effect, ManagedRuntime, Result, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { type BuiltInRoleId, builtInRoleIds } from '../roles/built-in-roles.ts';
-import { type RoleAssignmentCommand, roleAssignmentDecider } from './role-assignment-decider.ts';
+import type { RoleAssignmentCommand } from './role-assignment-commands.ts';
+import { roleAssignmentDecider } from './role-assignment-decider.ts';
 import {
   type AssignedPrincipal,
   type AssignmentScope,

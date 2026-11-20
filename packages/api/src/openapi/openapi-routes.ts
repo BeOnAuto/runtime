@@ -5,14 +5,19 @@ import type { RegisterRoutes } from '../routes.ts';
 import { openApiDocumentOf } from './openapi-document.ts';
 
 export interface OpenApiServing extends Pick<McpServing, 'catalog' | 'serverInfo' | 'shelf'> {
-  readonly identityIssuer: string;
+  readonly authorizationServer: string | undefined;
 }
 
 export const openApiPath = `${versionPrefix}/openapi.json`;
 
-export function openApiDocumentRoutes({ catalog, serverInfo, shelf, identityIssuer }: OpenApiServing): RegisterRoutes {
+export function openApiDocumentRoutes({
+  catalog,
+  serverInfo,
+  shelf,
+  authorizationServer,
+}: OpenApiServing): RegisterRoutes {
   const document = cachedAnswerOf(
-    JSON.stringify(openApiDocumentOf(catalog, serverInfo, shelf, identityIssuer)),
+    JSON.stringify(openApiDocumentOf(catalog, serverInfo, shelf, authorizationServer)),
     'application/json',
   );
   return (routes) => {

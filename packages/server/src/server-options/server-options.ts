@@ -1,5 +1,5 @@
 import type { AppRuntime, RegisterRoutes, RuntimeControl } from '@on.auto/api';
-import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identity';
+import type { AccessMode, DefaultIdentityProvider, SignInSettings, StudioSettings } from '@on.auto/identity';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { Layer } from 'effect';
 
@@ -63,6 +63,7 @@ export interface ServerOptions<R> {
   readonly shippedFiles: ShippedFiles;
   readonly localServingIn?: (mode: AccessMode) => LocalServing;
   readonly usagePing?: UsagePing;
+  readonly defaultIdentityProvider?: DefaultIdentityProvider;
 }
 
 export function servedBy(routes: readonly RegisterRoutes[]): Served {

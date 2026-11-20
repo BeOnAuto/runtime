@@ -1,5 +1,4 @@
 import { editorRoleForEveryPerson, loadedMessage } from '@on.auto/access-control';
-import { signInScopes } from '@on.auto/identity';
 import { reportedDifferenceMessage } from '@on.auto/operations';
 import { type ShippedFile, shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
@@ -10,7 +9,7 @@ import { Cause, Effect, Layer, ManagedRuntime, Schema } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import { shippedRoots } from '../server-options/shipped-roots.ts';
-import { accessTokenOf, issuerOverHttps } from '../sign-in/issuer-over-https.ts';
+import { personSigningIn } from '../sign-in/person-signing-in.ts';
 import { logLinesOf, requestTo, workflowProcess } from '../testing/processes/workflow-process.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
@@ -112,8 +111,6 @@ function shippedWithAnEntryThroughAGateway(files: ShippedFiles): ShippedFiles {
       isTheEntries(folder) ? [...(await files.list(folder)), 'messages.yaml'] : files.list(folder),
   };
 }
-
-const publicUrl = 'http://localhost:5555';
 
 const notHere =
   "The provider messages connects through a service that Auto's cloud runs, which this runtime does not have";
@@ -275,14 +272,14 @@ describe('the pool of workers of a server', () => {
 
 describe('a provider whose shipped entry connects through a gateway, on the server a self-hosted or local runtime runs', () => {
   it('is listed as not offered, saying why, and its addition is refused at /provider with nothing recorded, by a server answering the local developer and one that signs people in alike', async () => {
-    const issuer = await issuerOverHttps();
+    const signing = await personSigningIn();
     const local = await servedWith({});
-    const signingIn = await servedWith({ IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: publicUrl });
-    const person = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
+    const signingIn = await servedWith(signing.environment);
+    const person = await signing.tokenAt(signingIn.origin, 'Ada');
 
     const answered = [
       await answeredFor(local, { org: 'local' }),
-      await answeredFor(signingIn, { org: 'acme', token: person }),
+      await answeredFor(signingIn, { org: 'default', token: person }),
     ];
 
     expect(answered).toMatchObject([refusedThroughAGateway, refusedThroughAGateway]);

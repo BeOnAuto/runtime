@@ -24,6 +24,7 @@ export interface RelyingPartyClients {
 
 export interface RegisteringSettings extends Omit<RelyingPartySettings, 'clientId' | 'clientSecret'> {
   readonly clientName: string;
+  readonly clientUri?: string;
 }
 
 export interface RegisteringProvider {
@@ -66,7 +67,7 @@ export async function registeringProviderOf(
 ): Promise<RegisteringProvider> {
   const provider = await usableProviderOf(settings, requests);
   const endpoint = await registrationEndpointAt(settings, provider.registrationEndpoint, requests);
-  const { issuer, redirectUri, scopes, clientName } = settings;
+  const { issuer, redirectUri, scopes, clientName, clientUri } = settings;
   const registering: ClientRegistering = {
     issuer,
     redirectUri,
@@ -74,6 +75,7 @@ export async function registeringProviderOf(
     scopes,
     tokenEndpointAuthMethod: provider.method,
     clientName,
+    ...(clientUri === undefined ? {} : { clientUri }),
   };
   const signInsAs = signInsKeptBy(provider.signInsAs);
   return {

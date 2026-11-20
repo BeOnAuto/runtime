@@ -418,10 +418,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -594,15 +591,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -849,10 +843,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           }
@@ -1189,10 +1180,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -1364,10 +1352,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -1539,10 +1524,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -1720,15 +1702,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -2327,15 +2306,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -2515,15 +2491,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -2805,15 +2778,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -3121,15 +3091,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -3393,15 +3360,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -3639,15 +3603,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -3864,10 +3825,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           }
@@ -4039,10 +3997,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -4212,10 +4167,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -4300,15 +4252,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -4486,10 +4435,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           }
@@ -4572,10 +4518,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -4694,10 +4637,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -5057,15 +4997,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -5268,10 +5205,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           }
@@ -6133,10 +6067,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -6826,10 +6757,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           }
@@ -7505,10 +7433,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           }
@@ -8157,10 +8082,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -8867,10 +8789,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -9555,10 +9474,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -9705,10 +9621,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -9836,10 +9749,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -10657,10 +10567,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -11351,10 +11258,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -12084,10 +11988,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -12778,10 +12679,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -12938,10 +12836,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -13667,10 +13562,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -14065,10 +13957,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           }
@@ -14539,10 +14428,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -14986,15 +14872,12 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           },
           {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -15151,10 +15034,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -15304,10 +15184,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -15704,10 +15581,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:write"
             ]
           }
@@ -15943,10 +15817,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "org:read"
             ]
           }
@@ -16561,10 +16432,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -16981,10 +16849,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -17534,10 +17399,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -18178,10 +18040,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -18738,10 +18597,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -18850,10 +18706,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -19407,10 +19260,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -19957,10 +19807,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -20507,10 +20354,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -21057,10 +20901,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -21814,10 +21655,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -22485,10 +22323,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -23161,10 +22996,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -23713,10 +23545,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -24040,10 +23869,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -24482,10 +24308,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -25069,10 +24892,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -25343,10 +25163,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -25735,10 +25552,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -25911,10 +25725,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -26178,10 +25989,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -26434,10 +26242,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -27819,10 +27624,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -27982,10 +27784,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -28400,10 +28199,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -28792,10 +28588,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -29012,10 +28805,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -29300,10 +29090,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -29614,10 +29401,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -29884,10 +29668,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -30128,10 +29909,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -30419,10 +30197,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -30576,10 +30351,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -30730,10 +30502,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -30977,10 +30746,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -31157,10 +30923,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -31337,10 +31100,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -31514,10 +31274,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -31910,10 +31667,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -32094,10 +31848,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -32336,10 +32087,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:read"
             ]
           }
@@ -32532,10 +32280,7 @@
         },
         "security": [
           {
-            "bearer": []
-          },
-          {
-            "openIdConnect": [
+            "bearer": [
               "playbook:write"
             ]
           }
@@ -33273,12 +33018,7 @@
       "bearer": {
         "type": "http",
         "scheme": "bearer",
-        "description": "An API key, sent as Authorization: Bearer <key>. A key belongs to one org and holds permissions, such as playbook:read and playbook:write, for some or all of its playbooks. A server on a loopback address with neither PUBLIC_URL nor API_KEYS set is in local mode, and answers requests from its own machine without a key."
-      },
-      "openIdConnect": {
-        "type": "openIdConnect",
-        "openIdConnectUrl": "https://clerk.on.auto/.well-known/openid-configuration",
-        "description": "An access token of the Auto identity service, sent as Authorization: Bearer <token>, for a person signed in there. A server whose PUBLIC_URL is set takes a token whose audience is that URL. The person acts in the org their organization in the identity service names, or, where their token names none, in the org whose id is their subject, over every playbook, with the permissions among the scopes their token was granted. Each permission that permits an operation is the scope of one of its requirements."
+        "description": "An API key, sent as Authorization: Bearer <key>. A key belongs to one org and holds permissions, such as playbook:read and playbook:write, for some or all of its playbooks. Each permission that permits an operation is a role of one of its requirements."
       }
     }
   }

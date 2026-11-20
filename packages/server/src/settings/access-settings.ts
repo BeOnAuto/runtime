@@ -1,20 +1,17 @@
 import type { Environment } from '@on.auto/config';
 import {
   accessModeOf,
-  autoIdentityService,
-  IssuerKeySetSchema,
   listensOnlyOnLoopback,
   loopbackNames,
   namesTheLoopback,
   readApiKeys,
   type ApiKey,
   type DeclaredAccessMode,
-  type IssuerKeySet,
   type SignInSettings,
   type StudioSettings,
 } from '@on.auto/identity';
 import { alternatives } from '@on.auto/phrasing';
-import { Config, ConfigProvider, Effect, Option, Schema } from 'effect';
+import { Config, ConfigProvider, Effect, Option } from 'effect';
 
 import type { LogFormat, LogLevelSetting } from '../logging/log-formats.ts';
 import { readStudioSettings } from '../studio/studio-settings.ts';
@@ -22,9 +19,10 @@ import { asInvalidSettings, InvalidSettingsError } from './invalid-settings-erro
 import {
   openIdConnectVariables,
   readOpenIdConnectSettings,
+  type OpenIdConnectRead,
   type OpenIdConnectSettings,
 } from './openid-connect-settings.ts';
-import { httpOffTheLoopbackIn, IssuerOrigin, KeySetUrl, Origin, PublicOrigin } from './origin.ts';
+import { httpOffTheLoopbackIn, Origin, PublicOrigin } from './origin.ts';
 import { readWebhookUrl, receivingVariables } from './receiving-settings.ts';
 
 export const accessVariables: readonly string[] = [
@@ -34,9 +32,6 @@ export const accessVariables: readonly string[] = [
   'PUBLIC_URL',
   ...receivingVariables,
   'ACCESS_MODE',
-  'IDENTITY_ISSUER',
-  'IDENTITY_JWKS',
-  'IDENTITY_JWKS_URL',
   ...openIdConnectVariables,
 ];
 
@@ -56,29 +51,29 @@ export function readAccessSettings(environment: Environment): Effect.Effect<Acce
   return asInvalidSettings(accessSettings.parse(ConfigProvider.fromEnvRecord(environment)));
 }
 
-type IdentityKeySet =
-  | { readonly from: 'discovery' }
-  | { readonly from: 'given'; readonly keySet: IssuerKeySet }
-  | { readonly from: 'url'; readonly url: string };
-
-export interface CredentialSettings {
+export interface CredentialSettings extends OpenIdConnectRead {
   readonly apiKeys: readonly ApiKey[] | undefined;
-  readonly identityIssuer: string;
-  readonly identityKeySet: IdentityKeySet;
   readonly publicUrl: string | undefined;
   readonly accessMode: DeclaredAccessMode | undefined;
   readonly signIn: SignInSettings | undefined;
-  readonly openIdConnect: OpenIdConnectSettings | undefined;
   readonly studio: StudioSettings;
 }
 
 const signInSettings = Config.all({
   publicUrl: Config.option(Config.schema(PublicOrigin, 'PUBLIC_URL')),
-  issuer: Config.schema(IssuerOrigin, 'IDENTITY_ISSUER').pipe(Config.withDefault(autoIdentityService)),
-  keySet: Config.option(Config.schema(Schema.fromJsonString(IssuerKeySetSchema), 'IDENTITY_JWKS')),
-  keySetUrl: Config.option(Config.schema(KeySetUrl, 'IDENTITY_JWKS_URL')),
   accessMode: Config.option(Config.Literals(['local'], 'ACCESS_MODE')),
 });
+
+const unsupportedSettings: readonly string[] = ['IDENTITY_ISSUER', 'IDENTITY_JWKS', 'IDENTITY_JWKS_URL'];
+
+function unsupported(setting: string): string {
+  return `${setting}: is no longer supported, so leave it out; a runtime with PUBLIC_URL signs people in itself, with their Auto accounts, or through the identity provider OIDC_ISSUER names`;
+}
+
+function unsupportedSettingRefusalOf(environment: Environment): string | undefined {
+  const given = unsupportedSettings.find((setting) => (environment[setting] ?? '') !== '');
+  return given === undefined ? undefined : unsupported(given);
+}
 
 interface Declaring {
   readonly host: string;
@@ -108,27 +103,10 @@ function localModeRefusalOf({ host, apiKeys, publicUrl }: Declaring): string | u
   return namesTheLoopback(new URL(publicUrl).hostname) ? undefined : publicInLocalMode;
 }
 
-const keySetGivenTwice = 'IDENTITY_JWKS: Set one of IDENTITY_JWKS and IDENTITY_JWKS_URL, not more';
-
-interface KeySetGiven {
-  readonly keySet: IssuerKeySet | undefined;
-  readonly url: string | undefined;
-}
-
-function keySetRefusalOf({ keySet, url }: KeySetGiven): string | undefined {
-  return keySet !== undefined && url !== undefined ? keySetGivenTwice : undefined;
-}
-
-function identityKeySetOf({ keySet, url }: KeySetGiven): IdentityKeySet {
-  if (keySet !== undefined) {
-    return { from: 'given', keySet };
-  }
-  return url === undefined ? { from: 'discovery' } : { from: 'url', url };
-}
-
 function refusalOf(declaring: Declaring, accessMode: DeclaredAccessMode | undefined): string | undefined {
   const { publicUrl } = declaring;
-  const httpRefusal = publicUrl === undefined ? undefined : httpOffTheLoopbackIn('PUBLIC_URL', publicUrl);
+  const httpRefusal =
+    publicUrl === undefined ? undefined : httpOffTheLoopbackIn('PUBLIC_URL', publicUrl, 'ACCESS_MODE=local');
   return httpRefusal ?? (accessMode === undefined ? undefined : localModeRefusalOf(declaring));
 }
 
@@ -136,31 +114,42 @@ function webhookRefusalOf(environment: Environment, inLocalMode: boolean): strin
   return inLocalMode && readWebhookUrl(environment) !== undefined ? webhookInLocalMode : undefined;
 }
 
-export function readCredentialSettings(environment: Environment, host: string): CredentialSettings {
-  const read = Effect.runSync(asInvalidSettings(signInSettings.parse(ConfigProvider.fromEnvRecord(environment))));
-  const [publicUrl, accessMode] = [Option.getOrUndefined(read.publicUrl), Option.getOrUndefined(read.accessMode)];
-  const keySetGiven = { keySet: Option.getOrUndefined(read.keySet), url: Option.getOrUndefined(read.keySetUrl) };
-  const apiKeys = readApiKeys(environment);
-  const signsIn = publicUrl !== undefined && accessMode === undefined;
-  const inLocalMode = accessModeOf({ host, apiKeys, signsIn, accessMode }) === 'local';
-  const refusal =
-    refusalOf({ host, apiKeys, publicUrl }, accessMode) ??
-    webhookRefusalOf(environment, inLocalMode) ??
-    keySetRefusalOf(keySetGiven);
+function refusedIf(refusal: string | undefined): void {
   if (refusal !== undefined) {
     throw new InvalidSettingsError({ message: refusal });
   }
-  const openIdConnect = readOpenIdConnectSettings(environment, { publicUrl, accessMode });
-  const signIn = signsIn ? { issuer: openIdConnect?.issuer ?? read.issuer, publicUrl } : undefined;
+}
+
+function signInOf(signingIn: OpenIdConnectSettings | undefined): SignInSettings | undefined {
+  return signingIn === undefined ? undefined : { issuer: signingIn.issuer, publicUrl: signingIn.publicUrl };
+}
+
+export function readCredentialSettings(
+  environment: Environment,
+  host: string,
+  defaults?: Parameters<typeof readOpenIdConnectSettings>[2],
+): CredentialSettings {
+  refusedIf(unsupportedSettingRefusalOf(environment));
+  const read = Effect.runSync(asInvalidSettings(signInSettings.parse(ConfigProvider.fromEnvRecord(environment))));
+  const [publicUrl, accessMode] = [Option.getOrUndefined(read.publicUrl), Option.getOrUndefined(read.accessMode)];
+  const apiKeys = readApiKeys(environment);
+  const signsIn = publicUrl !== undefined && accessMode === undefined;
+  const inLocalMode = accessModeOf({ host, apiKeys, signsIn, accessMode }) === 'local';
+  refusedIf(refusalOf({ host, apiKeys, publicUrl }, accessMode) ?? webhookRefusalOf(environment, inLocalMode));
+  const { openIdConnect, openIdConnectByDefault } = readOpenIdConnectSettings(
+    environment,
+    { publicUrl, accessMode },
+    defaults,
+  );
+  const signIn = signInOf(openIdConnect ?? openIdConnectByDefault);
   const studio = readStudioSettings(environment, { host, apiKeys, signIn, accessMode });
   return {
     apiKeys,
-    identityIssuer: read.issuer,
-    identityKeySet: identityKeySetOf(keySetGiven),
     publicUrl,
     accessMode,
     signIn,
     openIdConnect,
+    openIdConnectByDefault,
     studio,
   };
 }

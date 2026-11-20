@@ -1,26 +1,23 @@
 import { rolesImported } from '@on.auto/access-control';
-import { signInScopes } from '@on.auto/identity';
-import type { FakeIssuer } from '@on.auto/identity/testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
+import { defaultOrg } from '@on.auto/openid-connect';
 import { Ledger, OrgWriter, streamPrefixOfOrg } from '@on.auto/operations';
 import { Effect, ManagedRuntime } from 'effect';
 
-export async function importedBeforeTheRelease(fileName: string): Promise<void> {
+export interface ImportedRole {
+  readonly person: string;
+  readonly roleKey: string;
+}
+
+export async function importedBeforeTheRelease(fileName: string, roles: readonly ImportedRole[]): Promise<void> {
   const runtime = ManagedRuntime.make(ledgerLayer({ fileName }));
   try {
     await runtime.runPromise(
       Effect.flatMap(Effect.service(Ledger), (ledger) =>
-        rolesImported(
-          'acme',
-          [
-            { person: 'user|ada', roleKey: 'org:admin' },
-            { person: 'user|priya', roleKey: 'org:member' },
-          ],
-          { at: '2026-11-14T09:00:00.000Z', by: 'runtime' },
-        ).pipe(
+        rolesImported(defaultOrg, roles, { at: '2026-11-14T09:00:00.000Z', by: 'runtime' }).pipe(
           Effect.provideService(OrgWriter, {
             execute: (stream, decider, command, lineage) =>
-              ledger.execute(`${streamPrefixOfOrg({ org: 'acme' })}${stream}`, decider, command, lineage),
+              ledger.execute(`${streamPrefixOfOrg({ org: defaultOrg })}${stream}`, decider, command, lineage),
           }),
         ),
       ),
@@ -28,18 +25,4 @@ export async function importedBeforeTheRelease(fileName: string): Promise<void> 
   } finally {
     await runtime.dispose();
   }
-}
-
-export function tokenOf(issuer: FakeIssuer, audience: string, subject: string): Promise<string> {
-  const seconds = Math.floor(Date.now() / 1000);
-  return issuer.sign({
-    iss: issuer.issuer,
-    sub: subject,
-    name: subject,
-    aud: audience,
-    iat: seconds,
-    exp: seconds + 300,
-    org_id: 'acme',
-    scope: signInScopes.join(' '),
-  });
 }

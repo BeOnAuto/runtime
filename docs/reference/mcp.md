@@ -32,7 +32,7 @@ For hosted Auto, use `https://mcp.on.auto`. It serves the caller's organization 
 - The answer to a request the runtime handles comes as an event stream that carries a heartbeat, an SSE comment, every 5 seconds while the request runs, so an MCP client can tell a call that is still running from a server that has stopped. A request refused before it is handled keeps its JSON answer and its status, and a notification is answered `202 Accepted`. A stream that breaks is not resumed: closing it cancels the request.
 - When the runtime stops while it handles a request, it answers the request with the JSON-RPC error `Auto Runtime stopped while it handled this request, so it may or may not have taken effect` before the stream ends, and a request that comes while it stops gets a `503`.
 - The runtime supports protocol revision `2026-07-28` and the compatible revisions `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05` and `2024-10-07`. An MCP client handles the negotiation.
-- On `/mcp`, the org is the caller's own: an API key's org, or the org a signed-in person's token names. In local mode it is the org `local`. No tool takes an org argument.
+- On `/mcp`, the org is the caller's own: an API key's org, or a signed-in person's org. In local mode it is the org `local`. No tool takes an org argument.
 - A connection lists only the tools its key or token may call. A read-only key sees the tools that read, and none that creates or runs a function. A key that may only read inside some playbooks is offered `list_playbooks`, which lists those playbooks.
 - Which tools a connection lists depends on both the endpoint and the caller's permissions. A missing `create_definition` can mean either. The connection may be to the org endpoint, or its key or token may lack `playbook:write`.
 - The org and playbook a scoped endpoint names stay subject to the caller's access. Choosing a more specific endpoint grants no extra permission.
@@ -78,7 +78,7 @@ Hosted Auto signs you in when your agent connects; account creation is part of t
 
 An MCP client sends the same credentials as any HTTP caller, and has the same permissions; see [Requests and access](http.md#requests-and-access). A client connects in one of three ways:
 
-- Signed in. Hosted Auto uses this flow by default. For a self-hosted runtime, the operator enables sign-in with `PUBLIC_URL`. Your agent discovers the identity service and opens the browser for you to sign in.
+- Signed in. Hosted Auto uses this flow by default. For a self-hosted runtime, the operator enables sign-in with `PUBLIC_URL`. Your agent discovers where to sign you in and opens the browser for you.
 - With no credential, when a self-hosted server runs in [local mode](../self-host/security.md#local-mode). It listens only on a loopback address and trusts requests from that computer. Never expose local mode through a tunnel or public proxy.
 - With an [API key](../self-host/security.md#api-keys), sent as `Authorization: Bearer <key>`. Keep it in the connection configuration, outside prompts and function documents.
 
@@ -89,10 +89,10 @@ An MCP client sends the same credentials as any HTTP caller, and has the same pe
 With sign-in on, each endpoint is an OAuth 2.1 protected resource, as the MCP authorization specification describes. A client that supports that flow signs the person in by itself. So does an agent gateway that obtains tokens on the person's behalf:
 
 1. It connects without a token and gets `401`, with a challenge that points to the endpoint's protected resource metadata.
-2. It signs the person in at the identity service the metadata names, and asks for a token for that endpoint.
+2. It signs the person in at the authorization server the metadata names, and asks for a token for that endpoint.
 3. It connects again with `Authorization: Bearer <token>`.
 
-The connection then acts as the person in the org their token names, which is also the org `/mcp` acts in. It lists only the tools the token's granted scopes allow. [Discovery and challenges](authentication.md#discovery-and-challenges) gives the metadata and every challenge. [How scopes grant permissions](authentication.md#how-scopes-grant-permissions) says what each scope allows.
+The connection then acts as the person in their org, which is also the org `/mcp` acts in. It lists only the tools the token's granted scopes allow. [Discovery and challenges](authentication.md#discovery-and-challenges) gives the metadata and every challenge. [How scopes grant permissions](authentication.md#how-scopes-grant-permissions) says what each scope allows.
 
 ## Tools
 

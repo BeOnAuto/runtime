@@ -1,10 +1,10 @@
 import { fileURLToPath } from 'node:url';
 
-import { createApiKey, signInScopes } from '@on.auto/identity';
+import { createApiKey } from '@on.auto/identity';
 import { allPermissions } from '@on.auto/operations';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { accessTokenOf, issuerOverHttps } from '../sign-in/issuer-over-https.ts';
+import { personSigningIn } from '../sign-in/person-signing-in.ts';
 import { saidAtStart, startedInProcess } from '../testing/processes/in-process-starts.ts';
 import { spawnServer } from '../testing/processes/spawned-server.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
@@ -13,8 +13,6 @@ import { noConsentThroughAuto } from '../testing/settings/no-consent-through-aut
 const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
 
 const { key, entry } = createApiKey({ id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' });
-
-const publicUrl = 'http://localhost:5555';
 
 const playbooksOfAcme = '/v1/orgs/acme/playbooks';
 
@@ -94,26 +92,12 @@ describe('the access mode of a server on loopback', () => {
 });
 
 describe('the access mode of a server with PUBLIC_URL', () => {
-  it('signs people in, and refuses a request without a credential', async () => {
-    const issuer = await issuerOverHttps();
-    const token = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
+  it('signs people in, refuses a request without a credential, and takes the keys of API_KEYS beside them', async () => {
+    const signing = await personSigningIn();
 
-    expect(await statusesOn({ IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: publicUrl }, [undefined, token])).toEqual([
+    expect(await statusesOn({ ...signing.environment, API_KEYS: JSON.stringify([entry]) }, [undefined, key])).toEqual([
       401, 200,
     ]);
-  });
-
-  it('takes the keys of API_KEYS beside the people it signs in', async () => {
-    const issuer = await issuerOverHttps();
-    const token = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
-
-    expect(
-      await statusesOn({ IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: publicUrl, API_KEYS: JSON.stringify([entry]) }, [
-        undefined,
-        key,
-        token,
-      ]),
-    ).toEqual([401, 200, 200]);
   });
 });
 

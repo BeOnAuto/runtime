@@ -60,6 +60,7 @@ function stepWith(party: Partial<RelyingParty>, logged: Logged = Function.constV
     requiredClaim: undefined,
     people: peopleWithAda,
     enrolling: enrollingRefused,
+    setup: { requiredClaimSet: () => Promise.reject(new Error('Not asked')) },
   });
 }
 

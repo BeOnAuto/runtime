@@ -88,7 +88,28 @@ function endingBehaviour({ name, rowsOf }: ProviderRowsEntry): void {
   });
 }
 
+function signingOutBehaviour({ name, rowsOf }: ProviderRowsEntry): void {
+  describe(`the rows of the authorization server ${name}, as everyone is signed out`, () => {
+    it('end every row of the models named at once, and keep every row of any other', async () => {
+      const rows = await rowsOf();
+      const kept = [
+        rowOf('Session', 'sha256-11', { grantId: undefined }),
+        rowOf('Grant', 'sha256-12', { grantId: undefined }),
+        rowOf('RefreshToken', 'sha256-13'),
+        rowOf('Client', 'sha256-14', { grantId: undefined, expiresAt: undefined }),
+      ];
+      await Promise.all(kept.map((row) => rows.kept(row)));
+
+      await rows.endedEvery(['Session', 'Grant', 'RefreshToken']);
+
+      const found = await Promise.all(kept.map((row) => rows.found(row)));
+      expect(found.map((row) => row !== undefined)).toEqual([false, false, false, true]);
+    });
+  });
+}
+
 export function providerRowsBehaviour(entry: ProviderRowsEntry): void {
+  signingOutBehaviour(entry);
   findingBehaviour(entry);
   endingBehaviour(entry);
 }

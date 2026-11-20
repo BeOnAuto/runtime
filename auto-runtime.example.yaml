@@ -177,7 +177,7 @@ allowed_origins:
 
 # The API keys the server accepts, each as pnpm key prints it. With the list
 # set, even empty, local mode is off and every request needs a key, or, where
-# PUBLIC_URL is set, an access token of the Auto identity service.
+# PUBLIC_URL is set, an access token of a person signed in at this runtime.
 # api_keys:
 #   - id: ci
 #     org: acme

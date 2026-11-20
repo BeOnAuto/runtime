@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ClientsReport } from '../logging/sign-in-logging.ts';
 import type { SignInClientRegistrations } from './client-registrations.ts';
 import { registeredClientsOf } from './registered-clients.ts';
-import { refusedAtStart } from './registration-refusals.ts';
+import { refusedAtStart, refusedToACommand } from './registration-refusals.ts';
 
 const issuer = 'https://login.example.com/tenant/v2.0';
 
@@ -199,24 +199,27 @@ describe('the client the identity provider refused', () => {
   });
 });
 
+const everyRefusal: readonly RegistrationRefusal[] = [
+  { notOffered: ['https://login.example.com/.well-known/openid-configuration'] },
+  { refused: 'invalid_client_metadata' },
+  { unreached: 'cannot be reached' },
+  { unusable: 'it answered no client_secret' },
+  { withoutScopes: ['profile'] },
+];
+
+function failureOf(refusal: RegistrationRefusal): ClientRegistrationError {
+  return new ClientRegistrationError({ issuer, redirectUri, refusal, message: 'Refused by the test' });
+}
+
 function settingNamedBy(refusal: RegistrationRefusal): string | undefined {
-  const failure = new ClientRegistrationError({ issuer, redirectUri, refusal, message: 'Refused by the test' });
-  return /^([A-Z_]+):/u.exec(String(Reflect.get(new Object(refusedAtStart(failure)), 'message')))?.[1];
+  return /^([A-Z_]+):/u.exec(String(Reflect.get(new Object(refusedAtStart(failureOf(refusal))), 'message')))?.[1];
 }
 
 describe('a start the registration of its client refuses', () => {
   it('names the setting to change, and leaves any other failure as it is', async () => {
     const other = new Error('Another failure');
 
-    const refusals: readonly RegistrationRefusal[] = [
-      { notOffered: ['https://login.example.com/.well-known/openid-configuration'] },
-      { refused: 'invalid_client_metadata' },
-      { unreached: 'cannot be reached' },
-      { unusable: 'it answered no client_secret' },
-      { withoutScopes: ['profile'] },
-    ];
-
-    expect(refusals.map((refusal) => settingNamedBy(refusal))).toEqual([
+    expect(everyRefusal.map((refusal) => settingNamedBy(refusal))).toEqual([
       'OIDC_CLIENT_ID',
       'OIDC_ISSUER',
       'OIDC_ISSUER',
@@ -227,6 +230,16 @@ describe('a start the registration of its client refuses', () => {
     await expect(clientsOver(keptClients(), failingFirst(), reported()).inUse()).rejects.toBeInstanceOf(
       ClientRegistrationError,
     );
+  });
+});
+
+describe('a command the registration refuses on a server that signs people in with Auto accounts', () => {
+  it('names no setting, since that server takes none of those that could change it', () => {
+    const settingsNamed = everyRefusal.map((refusal) =>
+      refusedToACommand(failureOf(refusal), true).match(/\b[A-Z]+_[A-Z_]+\b/gu),
+    );
+
+    expect(settingsNamed).toEqual([null, null, null, null, null]);
   });
 });
 

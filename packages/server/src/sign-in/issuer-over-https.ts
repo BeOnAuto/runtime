@@ -57,20 +57,6 @@ async function servedOverHttps<Served extends Answering>(made: (origin: string) 
   return served.promise;
 }
 
-export function accessTokenOf(issuer: FakeIssuer, audience: string, scope: string): Promise<string> {
-  const seconds = Math.floor(Date.now() / 1000);
-  return issuer.sign({
-    iss: issuer.issuer,
-    sub: 'user|ada',
-    name: 'Ada Lovelace',
-    aud: audience,
-    iat: seconds,
-    exp: seconds + 300,
-    org_id: 'acme',
-    scope,
-  });
-}
-
 export function issuerOverHttps(options: FakeIssuerOptions = {}): Promise<FakeIssuer> {
   return servedOverHttps((origin) => fakeIssuer(origin, options));
 }

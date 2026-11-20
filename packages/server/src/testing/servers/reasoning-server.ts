@@ -18,7 +18,11 @@ export interface ReasoningServer {
   readonly stop: () => Promise<void>;
 }
 
-export const alpha = '/v1/orgs/acme/playbooks/alpha';
+export function alphaIn(org: string): string {
+  return `/v1/orgs/${org}/playbooks/alpha`;
+}
+
+export const alpha = alphaIn('acme');
 
 export function loopbackSettingsOver(ledger: TemporaryLedger): Readonly<Record<string, string>> {
   return {
@@ -40,6 +44,16 @@ async function startedRemovingOnFailure<Started>(start: Promise<Started>, remove
     removeOwn();
     throw failure;
   }
+}
+
+async function callsAt(port: number, key: ServedParts['key']): Promise<Pick<ReasoningServer, 'origin' | 'call'>> {
+  const origin = `http://127.0.0.1:${port}`;
+  const given = typeof key === 'function' ? await key(origin) : key;
+  return {
+    origin,
+    call: (method, path, options) =>
+      request(port, method, path, given === undefined ? options : { key: given, ...options }),
+  };
 }
 
 export async function servingReasoning(
@@ -81,9 +95,7 @@ export async function servingReasoning(
     removeOwn,
   );
   return {
-    origin: `http://127.0.0.1:${server.port}`,
-    call: (method, path, options) =>
-      request(server.port, method, path, key === undefined ? options : { key, ...options }),
+    ...(await callsAt(server.port, key)),
     modelCalls: () => scripted.requests().length,
     modelRunIds: () => scripted.requests().map(({ run_id: runId }) => runId),
     stop: async () => {

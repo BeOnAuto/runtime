@@ -2,7 +2,7 @@ import { agentDelivery, approvalDocument, notificationDocument } from '@on.auto/
 import { Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
-import { alpha, noNetwork, servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
+import { alphaIn, noNetwork, servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
 import type { ServedParts } from '../servers/served-parts.ts';
 import { runIdIn, settledRun, workflowSource } from '../servers/workflow-server.ts';
 import { until } from '../waiting/until.ts';
@@ -53,7 +53,9 @@ function once(stop: () => Promise<void>): () => Promise<void> {
 export async function interactionServerOn(
   environment: Readonly<Record<string, string>>,
   parts: ServedParts = {},
+  org = 'acme',
 ): Promise<InteractionServer> {
+  const alpha = alphaIn(org);
   const server = await servingReasoning([], environment, noNetwork, parts);
   const stop = once(server.stop);
   onTestFinished(stop);
@@ -92,9 +94,11 @@ export async function servingInteractions(
   delivery: readonly string[] = agentDelivery,
   environment: Readonly<Record<string, string>> = {},
   parts: ServedParts = {},
+  org = 'acme',
 ): Promise<InteractionServer> {
-  const server = await interactionServerOn(environment, parts);
-  await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+  const alpha = alphaIn(org);
+  const server = await interactionServerOn(environment, parts, org);
+  await server.call('POST', `/v1/orgs/${org}/playbooks`, { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/interaction`, {
     body: { name: 'approve-brief', source: approvalDocument(delivery), diagram: 'none' },
   });

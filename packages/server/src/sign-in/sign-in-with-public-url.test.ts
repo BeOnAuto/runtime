@@ -1,4 +1,3 @@
-import { signInScopes } from '@on.auto/identity';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { compositionRoot } from '../composition/composition-root.ts';
@@ -6,17 +5,23 @@ import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { accessTokenOf, issuerOverHttps } from './issuer-over-https.ts';
+import {
+  authorizationAskedBy,
+  backFrom,
+  claimOfTheDefault,
+  fieldsOf,
+  locationOf,
+  publicUrl,
+  registered,
+  signingIn,
+  toTheProvider,
+  type Running,
+} from './signing-in.ts';
 
 async function startedOn(port: number, environment: Readonly<Record<string, string>>): Promise<RunningServer> {
   const ledger = temporaryLedger();
   const server = await startServer(
-    {
-      HOST: '127.0.0.1',
-      PORT: String(port),
-      LEDGER_FILE: ledger.fileName,
-      ...environment,
-    },
+    { HOST: '127.0.0.1', PORT: String(port), LEDGER_FILE: ledger.fileName, ...environment },
     compositionRoot,
   );
   onTestFinished(async () => {
@@ -24,13 +29,6 @@ async function startedOn(port: number, environment: Readonly<Record<string, stri
     ledger.remove();
   });
   return server;
-}
-
-async function statusOfPlaybooks(port: number, token: string): Promise<number> {
-  const answer = await fetch(`http://127.0.0.1:${port}/v1/orgs/acme/playbooks`, {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  return answer.status;
 }
 
 describe('a runtime on its own loopback address', () => {
@@ -42,60 +40,79 @@ describe('a runtime on its own loopback address', () => {
     expect(server.signIn).toBeUndefined();
     expect([metadata.status, playbooks.status]).toEqual([404, 200]);
   });
+});
 
-  it('signs people in with PUBLIC_URL set to http://localhost and its port, the audience their tokens name', async () => {
-    const issuer = await issuerOverHttps();
-    const port = await aPortNothingListensOn();
-    const ownAddress = `http://localhost:${port}`;
+async function returnedAs(signing: Running, who: string, idToken: Readonly<Record<string, unknown>>) {
+  const browser = signing.aBrowser();
+  const upstream = await toTheProvider(browser, { clientId: await registered(browser) });
+  return backFrom(browser, signing.provider.signedIn(upstream, who, idToken));
+}
 
-    const server = await startedOn(port, { IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: ownAddress });
-    const metadata = await fetch(`http://127.0.0.1:${port}/.well-known/oauth-protected-resource/mcp`);
-    const refused = await fetch(`http://127.0.0.1:${port}/v1/orgs/acme/playbooks`);
-    const forItsAddress = await accessTokenOf(issuer, ownAddress, signInScopes.join(' '));
-    const forAnotherAddress = await accessTokenOf(issuer, 'http://localhost:1', signInScopes.join(' '));
+describe('a runtime with PUBLIC_URL and no OIDC_ISSUER, signing people in at its default identity provider', () => {
+  it('is its own authorization server, and shows a sign-in that cannot begin at the default provider as one that failed', async () => {
+    const signing = await signingIn({ byDefault: true, provider: { registrationError: 'invalid_client_metadata' } });
+    const browser = signing.aBrowser();
+    const registeredAtStart = signing.provider.registrationsAsked().length;
 
-    expect(server.signIn).toEqual({ issuer: issuer.issuer, publicUrl: ownAddress });
-    expect(await metadata.json()).toMatchObject({
-      resource: `${ownAddress}/mcp`,
-      authorization_servers: [issuer.issuer],
-    });
-    expect([await statusOfPlaybooks(port, forItsAddress), await statusOfPlaybooks(port, forAnotherAddress)]).toEqual([
-      200, 401,
-    ]);
-    expect(refused.status).toBe(401);
-    expect(refused.headers.get('www-authenticate')).toBe(
-      `Bearer resource_metadata="${ownAddress}/.well-known/oauth-protected-resource", scope="${signInScopes.join(' ')}"`,
-    );
+    const metadata = await fieldsOf(await signing.at('/.well-known/oauth-protected-resource'));
+    const asked = await browser.at(authorizationAskedBy({ clientId: await registered(browser) }));
+    const begun = await browser.at(locationOf(asked));
+
+    expect([registeredAtStart, signing.provider.registrationsAsked().length, begun.status]).toEqual([0, 1, 400]);
+    expect(metadata['authorization_servers']).toEqual([publicUrl]);
   });
 });
 
-const everySignInScope = signInScopes.join(' ');
+describe('a runtime with PUBLIC_URL and no OIDC_ISSUER, as its first sign-in sets it up', () => {
+  it('registers itself as the first sign-in begins, records the value of the claim that sign-in carries, and from then on admits only a person carrying it, after a restart too', async () => {
+    const signing = await signingIn({ byDefault: true });
+    const registeredAtStart = signing.provider.registrationsAsked().length;
 
-describe('a runtime given the key set of its identity service', () => {
-  it('reads nothing of the service at start with IDENTITY_JWKS, and admits a token signed with a key of the set', async () => {
-    const issuer = await issuerOverHttps();
-    const keySet = await (await issuer.answer(new Request(`${issuer.issuer}/jwks`))).text();
-    const port = await aPortNothingListensOn();
-    const ownAddress = `http://localhost:${port}`;
+    const first = await returnedAs(signing, 'Ada', { [claimOfTheDefault]: 'acme' });
+    const another = await returnedAs(signing, 'Priya', { [claimOfTheDefault]: 'another' });
+    await signing.restarted();
+    const anotherAgain = await returnedAs(signing, 'Priya', { [claimOfTheDefault]: 'another' });
+    const colleague = await returnedAs(signing, 'Grace', { [claimOfTheDefault]: 'acme' });
 
-    await startedOn(port, { IDENTITY_ISSUER: issuer.issuer, IDENTITY_JWKS: keySet, PUBLIC_URL: ownAddress });
-
-    expect(await statusOfPlaybooks(port, await accessTokenOf(issuer, ownAddress, everySignInScope))).toBe(200);
-    expect(issuer.keySetReads()).toBe(1);
+    expect([registeredAtStart, first.status, another.status, anotherAgain.status, colleague.status]).toEqual([
+      0, 303, 403, 403, 303,
+    ]);
+    expect(signing.provider.registrationsAsked().map((asked) => asked['client_uri'])).toEqual([publicUrl]);
+    expect((await signing.peopleKept()).length).toBe(2);
+    expect([
+      await signing.factsKept('required_claim_set', 'value'),
+      await signing.factsKept('role_assigned', 'source'),
+    ]).toEqual([[{ field: 'acme' }], [{ field: 'bootstrap' }, { field: 'enrolment' }]]);
   });
 
-  it('reads the key set at IDENTITY_JWKS_URL, and not the metadata, which names another', async () => {
-    const issuer = await issuerOverHttps({ metadata: { jwks_uri: 'http://127.0.0.1/jwks' } });
-    const port = await aPortNothingListensOn();
-    const ownAddress = `http://localhost:${port}`;
-
-    await startedOn(port, {
-      IDENTITY_ISSUER: issuer.issuer,
-      IDENTITY_JWKS_URL: `${issuer.issuer}/jwks`,
-      PUBLIC_URL: ownAddress,
+  it('admits a person whose ID Token carries the value OIDC_REQUIRED_CLAIM gives of the claim, and no one else, recording no value of its own', async () => {
+    const signing = await signingIn({
+      byDefault: true,
+      settings: { OIDC_REQUIRED_CLAIM: `${claimOfTheDefault}=acme` },
     });
 
-    expect(await statusOfPlaybooks(port, await accessTokenOf(issuer, ownAddress, everySignInScope))).toBe(200);
-    expect(issuer.keySetReads()).toBe(1);
+    const carrying = await returnedAs(signing, 'Ada', { [claimOfTheDefault]: 'acme' });
+    const another = await returnedAs(signing, 'Priya', { [claimOfTheDefault]: 'another' });
+
+    expect([carrying.status, another.status]).toEqual([303, 403]);
+    expect([(await signing.peopleKept()).length, await signing.factsKept('required_claim_set', 'value')]).toEqual([
+      1,
+      [],
+    ]);
+  });
+});
+
+describe('a runtime signing people in at its default identity provider, as it is sent more than it asks for', () => {
+  it('reads the name of a person it admits at the UserInfo endpoint the provider declares, and hands back every refresh token it is sent unasked, a refused person’s too, whose name it never asks for', async () => {
+    const provider = { userInfo: { name: 'Ada Lovelace' }, refreshTokens: true, revocation: true };
+    const signing = await signingIn({ byDefault: true, provider });
+
+    const first = await returnedAs(signing, 'Ada', { [claimOfTheDefault]: 'acme' });
+    const another = await returnedAs(signing, 'Priya', { [claimOfTheDefault]: 'another' });
+
+    const { userInfoReads, refreshTokensIssued, tokensRevoked } = signing.provider;
+    expect([first.status, another.status, userInfoReads()]).toEqual([303, 403, 1]);
+    expect(await signing.peopleKept()).toEqual([expect.objectContaining({ name: 'Ada Lovelace' })]);
+    expect([refreshTokensIssued().length, tokensRevoked()]).toEqual([2, refreshTokensIssued()]);
   });
 });

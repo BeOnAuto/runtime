@@ -15,9 +15,9 @@ export function openApiDocumentOf(
   catalog: Catalog,
   { version }: ServerInfo,
   shelf: GuideShelf,
-  identityIssuer: string,
+  authorizationServer?: string,
 ): OpenApiObject {
-  const { paths, tags, problems } = documentPathsOf(catalog, shelf);
+  const { paths, tags, problems } = documentPathsOf(catalog, shelf, authorizationServer !== undefined);
   return {
     openapi: openApiVersion,
     jsonSchemaDialect,
@@ -25,6 +25,6 @@ export function openApiDocumentOf(
     servers: [{ url: versionPrefix }],
     tags,
     paths,
-    components: componentsOf(problems, identityIssuer),
+    components: componentsOf(problems, authorizationServer),
   };
 }

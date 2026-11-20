@@ -1,6 +1,5 @@
 import { Schema, type Redacted } from 'effect';
 import {
-  AuthorizationResponseError,
   calculatePKCECodeChallenge,
   randomNonce,
   randomPKCECodeVerifier,
@@ -12,15 +11,17 @@ import {
 import { usableProviderOf, type PendingChecks, type SignInsAs } from './client-configuration.ts';
 import type { ClientAuthenticationMethod } from './provider-metadata.ts';
 import {
-  failureOfAnAnswer,
-  isAnErrorCode,
+  failureOf,
   providerRequestsOverTheNetwork,
+  refusalCodeOf,
   type ProviderRequests,
 } from './provider-requests.ts';
+import type { TokensHeld } from './sign-in-tokens.ts';
+import { standardClaimsIn, type StandardClaims } from './standard-claims.ts';
 
 export interface RequiredClaim {
   readonly claim: string;
-  readonly requiredValue: string;
+  readonly requiredValue?: string;
 }
 
 export interface RelyingPartySettings {
@@ -53,15 +54,14 @@ export interface SignedInPerson {
   readonly subject: string;
 }
 
-export interface StandardClaims {
-  readonly name?: string;
-  readonly email?: string;
+export interface SignedInWith {
+  readonly signedIn: SignedInPerson;
+  readonly claims: StandardClaims;
+  readonly valueOfTheRequiredClaim?: string;
+  readonly held?: TokensHeld;
 }
 
-export type FinishedSignIn =
-  | { readonly signedIn: SignedInPerson; readonly claims: StandardClaims; readonly valueOfTheRequiredClaim?: string }
-  | { readonly refusedByTheProvider: string }
-  | { readonly failed: string };
+export type FinishedSignIn = SignedInWith | { readonly refusedByTheProvider: string } | { readonly failed: string };
 
 export interface RelyingParty {
   readonly issuer: string;
@@ -76,26 +76,11 @@ const decodeClaims = Schema.decodeUnknownSync(IdTokenClaims);
 
 const unauthorized = 401;
 
-function refusalCodeOf(error: unknown): string | undefined {
-  const isRefusal = error instanceof AuthorizationResponseError || error instanceof ResponseBodyError;
-  return isRefusal && isAnErrorCode(error.error) ? error.error : undefined;
-}
-
 function isTheClientRefused(error: unknown): boolean {
   return (
     (error instanceof ResponseBodyError && error.error === 'invalid_client') ||
     (error instanceof WWWAuthenticateChallengeError && error.status === unauthorized)
   );
-}
-
-function textClaim(claims: object, name: keyof StandardClaims): StandardClaims {
-  const value: unknown = Reflect.get(claims, name);
-  return typeof value === 'string' ? { [name]: value } : {};
-}
-
-function standardClaimsIn(claims: unknown): StandardClaims {
-  const fields = new Object(claims);
-  return { ...textClaim(fields, 'name'), ...textClaim(fields, 'email') };
 }
 
 function requiredClaimIn(
@@ -108,16 +93,9 @@ function requiredClaimIn(
   return typeof value === 'string' ? { valueOfTheRequiredClaim: value } : {};
 }
 
-function codeOf(error: unknown): string {
-  return String(Reflect.get(new Object(error), 'code'));
-}
-
 function finishedAfter(error: unknown): FinishedSignIn {
   const refusal = refusalCodeOf(error);
-  if (refusal !== undefined) {
-    return { refusedByTheProvider: refusal };
-  }
-  return { failed: failureOfAnAnswer(error) ?? codeOf(error) };
+  return refusal === undefined ? { failed: failureOf(error) } : { refusedByTheProvider: refusal };
 }
 
 type SignInSettings = Pick<RelyingPartySettings, 'issuer' | 'redirectUri' | 'scopes' | 'requiredClaim'>;
@@ -171,12 +149,13 @@ async function finishedAs(
   pending: PendingSignIn,
 ): Promise<FinishedSignIn> {
   try {
-    const claims = await signIns.claimsOf(callbackQuery, pending);
+    const { claims, held } = await signIns.codeExchanged(callbackQuery, pending);
     const { iss, sub } = decodeClaims(claims);
     return {
       signedIn: { issuer: iss, subject: sub },
       claims: standardClaimsIn(claims),
       ...requiredClaimIn(claims, requiredClaim),
+      ...(held === undefined ? {} : { held }),
     };
   } catch (error) {
     if (isTheClientRefused(error)) {

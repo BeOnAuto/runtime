@@ -5,13 +5,9 @@ export {
   type HeldAssignments,
 } from './assignments/held-assignments.ts';
 export { mostImportedInOneAppend, rolesImported, rolesProvisioned } from './assignments/imported-role-assignments.ts';
-export {
-  awaitsItsFirstAdmin,
-  roleAssignmentDecider,
-  type DeprovisioningSource,
-  type Enrolled,
-  type ProvisioningSource,
-} from './assignments/role-assignment-decider.ts';
+export { adminRecovered } from './assignments/recovered-admin.ts';
+export type { DeprovisioningSource, ProvisioningSource } from './assignments/role-assignment-commands.ts';
+export { awaitsItsFirstAdmin, roleAssignmentDecider, type Enrolled } from './assignments/role-assignment-decider.ts';
 export { RoleAssignmentEventSchema } from './assignments/role-assignment-facts.ts';
 export { roleAssignmentRows } from './assignments/role-assignment-rows.ts';
 export { enrolledAtSignIn } from './assignments/role-assignments-at-sign-in.ts';

@@ -1,0 +1,13 @@
+{
+  "type": "required_claim_set",
+  "data": {
+    "issuer": "https://login.example.com/tenant/v2.0",
+    "claim": "tenant",
+    "value": "a-value-of-the-test",
+    "person": "83f8bacd8d76fa75e99f5c9f61599419c6647d9aebe50b453a89da169899d6e1"
+  },
+  "context": {
+    "at": "2026-11-18T09:00:00.000Z",
+    "by": "person:83f8bacd8d76fa75e99f5c9f61599419c6647d9aebe50b453a89da169899d6e1"
+  }
+}

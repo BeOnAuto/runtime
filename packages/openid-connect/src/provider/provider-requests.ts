@@ -1,5 +1,5 @@
 import { Data, Predicate, Result } from 'effect';
-import type { CustomFetch, FetchBody } from 'openid-client';
+import { AuthorizationResponseError, ResponseBodyError, type CustomFetch, type FetchBody } from 'openid-client';
 
 export type ProviderFetch = (request: Readonly<Request>) => Promise<Response>;
 
@@ -117,6 +117,19 @@ export function boundedFetchOf(requests: ProviderRequests): CustomFetch {
   };
 }
 
-export function failureOfAnAnswer(error: unknown): string | undefined {
+function failureOfAnAnswer(error: unknown): string | undefined {
   return Predicate.hasProperty(error, 'cause') && error.cause instanceof UnreadAnswer ? error.cause.message : undefined;
+}
+
+export function refusalCodeOf(error: unknown): string | undefined {
+  const isRefusal = error instanceof AuthorizationResponseError || error instanceof ResponseBodyError;
+  return isRefusal && isAnErrorCode(error.error) ? error.error : undefined;
+}
+
+function codeOf(error: unknown): string {
+  return String(Reflect.get(new Object(error), 'code'));
+}
+
+export function failureOf(error: unknown): string {
+  return refusalCodeOf(error) ?? failureOfAnAnswer(error) ?? codeOf(error);
 }

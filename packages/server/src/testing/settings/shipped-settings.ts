@@ -10,6 +10,6 @@ const providersFiles = shippedFilesOnDisk(providersShippedRoots());
 
 export const shippedSettings: ShippedSettings = await readShippedSettings(providersFiles);
 
-export function readSettingsOf(environment: Environment): Settings {
-  return readSettings(environment, shippedSettings);
+export function readSettingsOf(environment: Environment, defaults?: Parameters<typeof readSettings>[2]): Settings {
+  return readSettings(environment, shippedSettings, defaults);
 }

@@ -48,11 +48,15 @@ function sourcesOf(file: FileUse | undefined): ConfigFileSources | undefined {
   return file === undefined ? undefined : { path: file.path, fromFile: file.fromFile, overridden: file.overridden };
 }
 
-export function readSettings(given: Environment, shipped: ShippedSettings): Settings {
+export function readSettings(
+  given: Environment,
+  shipped: ShippedSettings,
+  defaults?: Parameters<typeof readCredentialSettings>[2],
+): Settings {
   const { environment, file } = Result.getOrThrow(configurationOf(given, fileSettings));
   const { host, port } = readServerConfig(environment);
   const { allowedOrigins, logFormat, logLevel } = Effect.runSync(readAccessSettings(environment));
-  const credentials = readCredentialSettings(environment, host);
+  const credentials = readCredentialSettings(environment, host, defaults);
   const { ledger, secrets, keepers } = Effect.runSync(readLedgerAndSecrets(environment));
   const content = Effect.runSync(readContentSettings(environment));
   const payloads = Effect.runSync(readPayloadSettings(environment));

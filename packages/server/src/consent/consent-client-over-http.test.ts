@@ -1,16 +1,16 @@
-import { signInScopes } from '@on.auto/identity';
 import { audiences } from '@on.auto/providers/testing';
 import { serveFakeApi, serveFakeMcp, type FakeApiServer, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { consentRegistration, consentSecret } from '@on.auto/tool-servers/testing';
 import { Option } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { accessTokenOf, issuerOverHttps } from '../sign-in/issuer-over-https.ts';
+import { personSigningIn } from '../sign-in/person-signing-in.ts';
+import { publicUrl } from '../sign-in/signing-in.ts';
 import { secretsKey } from '../testing/records/kept-credentials.ts';
 import { connectedByConsent, consentStartedBy, servedStudioReturn } from '../testing/servers/consents-over-http.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
-const runtimeAddress = 'https://runtime.example.com';
+const runtimeAddress = publicUrl;
 
 const documentAddress = `${runtimeAddress}/oauth/client.json`;
 
@@ -49,16 +49,11 @@ interface SignedIn {
   readonly key: string;
 }
 
-async function signedInAt(publicUrl: string, environment: Environment): Promise<SignedIn> {
-  const issuer = await issuerOverHttps();
-  const served = await servingReasoning([], {
-    IDENTITY_ISSUER: issuer.issuer,
-    PUBLIC_URL: publicUrl,
-    ...sealing,
-    ...environment,
-  });
+async function signedIn(environment: Environment): Promise<SignedIn> {
+  const signing = await personSigningIn();
+  const served = await servingReasoning([], { ...signing.environment, ...sealing, ...environment });
   onTestFinished(served.stop);
-  return { served, key: await accessTokenOf(issuer, publicUrl, signInScopes.join(' ')) };
+  return { served, key: await signing.tokenAt(served.origin, 'Ada') };
 }
 
 async function documentingFake(returnAddress: string): Promise<FakeMcpServer> {
@@ -91,11 +86,11 @@ describe('the client metadata document over HTTP', () => {
     'is answered without a key and with one where PUBLIC_URL is https, naming the client a consent %s asks with',
     async (_, studio, returnAddress) => {
       const fake = await documentingFake(returnAddress);
-      const signedIn = await signedInAt(runtimeAddress, { ...documentedAt(fake), ...studio });
+      const { served, key } = await signedIn({ ...documentedAt(fake), ...studio });
 
-      const withoutKey = await signedIn.served.call('GET', '/oauth/client.json');
-      const withKey = await signedIn.served.call('GET', '/oauth/client.json', { key: signedIn.key });
-      const { authorize } = await consentStartedBy(signedIn.served, { org: 'acme', key: signedIn.key });
+      const withoutKey = await served.call('GET', '/oauth/client.json');
+      const withKey = await served.call('GET', '/oauth/client.json', { key });
+      const { authorize } = await consentStartedBy(served, { org: 'default', key });
 
       expect(withoutKey).toMatchObject({ status: 200, body: documentHolding(returnAddress) });
       expect(withKey.text).toBe(withoutKey.text);
@@ -112,26 +107,23 @@ describe('the client metadata document over HTTP', () => {
 
   it('refuses another method as the API refuses one, without a key', async () => {
     const fake = await documentingFake('https://studio.on.auto/connect-return');
-    const { served } = await signedInAt(runtimeAddress, documentedAt(fake));
+    const { served } = await signedIn(documentedAt(fake));
 
     const posted = await served.call('POST', '/oauth/client.json');
 
     expect([posted.status, posted.headers.get('allow')]).toEqual([405, 'GET, HEAD']);
   });
 
-  it('is not served where PUBLIC_URL is http, nor where it is not set, nor in local mode at an https loopback address', async () => {
-    const http = await signedInAt('http://localhost:5555', {});
+  it('is not served where PUBLIC_URL is not set, nor in local mode at an https loopback address', async () => {
     const local = await servingReasoning([], {});
     onTestFinished(local.stop);
     const declared = await servingReasoning([], { ACCESS_MODE: 'local', PUBLIC_URL: 'https://localhost:5555' });
     onTestFinished(declared.stop);
 
     expect([
-      await http.served.call('GET', '/oauth/client.json', { key: http.key }),
-      await http.served.call('GET', '/oauth/client.json'),
       await local.call('GET', '/oauth/client.json'),
       await declared.call('GET', '/oauth/client.json'),
-    ]).toMatchObject([{ status: 404 }, { status: 401 }, { status: 404 }, { status: 404 }]);
+    ]).toMatchObject([{ status: 404 }, { status: 404 }]);
   });
 });
 

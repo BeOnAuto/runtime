@@ -1,10 +1,11 @@
-import { createApiKey, signInScopes } from '@on.auto/identity';
+import { createApiKey } from '@on.auto/identity';
 import { Layer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { servedBy, type ServerOptions } from '../server-options/server-options.ts';
-import { accessTokenOf, issuerOverHttps } from '../sign-in/issuer-over-https.ts';
+import { personSigningIn } from '../sign-in/person-signing-in.ts';
 import { optionsServing, defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { localControlOf, type LocalControl } from './local-control.ts';
 import { runsInFlight } from './runs-in-flight.ts';
@@ -118,14 +119,13 @@ describe('a server of the auto-runtime command that takes keys', () => {
 
 describe('a server of the auto-runtime command that signs people in', () => {
   it('has no control, as a server the command did not start, though it listens on loopback', async () => {
-    const issuer = await issuerOverHttps();
-    const publicUrl = 'http://localhost:5555';
-    const token = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
+    const signing = await personSigningIn();
     const server = await startServer(
-      { ...loopback, IDENTITY_ISSUER: issuer.issuer, PUBLIC_URL: publicUrl },
-      controlledBy(startedInATerminal()),
+      { ...loopback, ...signing.environment, LEDGER_FILE: ':memory:' },
+      { ...compositionRoot, localServingIn: startedInATerminal().servingIn },
     );
     onTestFinished(() => server.stop());
+    const token = await signing.tokenAt(`http://127.0.0.1:${server.port}`, 'Ada');
 
     const { statuses, page } = await answersOf(server.port, token);
 

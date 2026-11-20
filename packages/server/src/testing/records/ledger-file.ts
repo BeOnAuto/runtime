@@ -39,6 +39,14 @@ export function rowsOfTheLedgerIn(file: string, table: string): Promise<readonly
   return readOfTheLedgerIn(file, statementOf([`SELECT * FROM ${table}`], []));
 }
 
+export function fieldOfEachFactIn(file: string, type: string, field: string): Promise<readonly unknown[]> {
+  return readOfTheLedgerIn(
+    file,
+    statement`SELECT json_extract(message_data, ${`$.${field}`}) AS field FROM emt_messages
+      WHERE message_type = ${type} ORDER BY global_position`,
+  );
+}
+
 const CatalogRowsSchema = Schema.Array(Schema.Struct({ name: Schema.String, sql: Schema.String }));
 
 export type CatalogRows = typeof CatalogRowsSchema.Type;

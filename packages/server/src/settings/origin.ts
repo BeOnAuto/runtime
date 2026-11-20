@@ -13,22 +13,6 @@ export const Origin = Schema.String.check(
   ),
 );
 
-export const IssuerOrigin = Schema.String.check(
-  Schema.makeFilter(
-    (text: string) =>
-      isOriginOf(text, ['https:']) ||
-      'Expected the https URL of the identity service, with no path, query or fragment, such as https://clerk.on.auto',
-  ),
-);
-
-export const KeySetUrl = Schema.String.check(
-  Schema.makeFilter(
-    (text: string) =>
-      URL.parse(text)?.protocol === 'https:' ||
-      'Expected the https URL of the key set of the identity service, such as https://identity.example.com/.well-known/jwks.json',
-  ),
-);
-
 function anOriginOver(protocols: readonly string[], example: string) {
   return Schema.makeFilter(
     (text: string) =>
@@ -57,8 +41,10 @@ export const StudioOrigin = Schema.String.annotate({
   description: `The origin Studio is served from, an https URL, or an http URL on localhost, 127.0.0.1 or [::1], with no path; a page there may call the API, and the runtime fetches Studio from it when it serves Studio. ${defaultStudioOrigin} when left out. STUDIO_ORIGIN wins over it`,
 }).check(aWebOriginSuchAs(defaultStudioOrigin));
 
-export function httpOffTheLoopbackIn(setting: string, origin: string): string | undefined {
+export function httpOffTheLoopbackIn(setting: string, origin: string, onlyBeside?: string): string | undefined {
+  const where = alternatives(loopbackNames);
+  const taken = onlyBeside === undefined ? `for ${where}` : `beside ${onlyBeside}, on ${where}`;
   return origin.startsWith('https://') || namesTheLoopback(new URL(origin).hostname)
     ? undefined
-    : `${setting}: Expected an https URL; an http URL is taken only for ${alternatives(loopbackNames)}`;
+    : `${setting}: Expected an https URL; an http URL is taken only ${taken}`;
 }

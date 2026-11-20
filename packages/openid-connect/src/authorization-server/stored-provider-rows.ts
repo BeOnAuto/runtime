@@ -1,4 +1,4 @@
-import { statement, type Statement } from '@on.auto/ledger';
+import { statement, statementOf, type Statement } from '@on.auto/ledger';
 import { Schema } from 'effect';
 
 import type { AuthDatabase } from '../store/auth-database.ts';
@@ -74,6 +74,10 @@ export function storedProviderRows(database: AuthDatabase): ProviderRows {
     },
     revokedByGrant: async (model, grantId) => {
       await database.write(statement`DELETE FROM auth_oidc_models WHERE model = ${model} AND grant_id = ${grantId}`);
+    },
+    endedEvery: async (models) => {
+      const parts = models.map((_, at) => (at === 0 ? 'DELETE FROM auth_oidc_models WHERE model IN (' : ', '));
+      await database.write(statementOf([...parts, ')'], models));
     },
     swept: async (endedBefore) => {
       await database.write(statement`DELETE FROM auth_oidc_models WHERE expires_at <= ${endedBefore}`);

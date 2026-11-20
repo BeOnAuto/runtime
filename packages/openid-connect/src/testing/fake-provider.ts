@@ -11,10 +11,11 @@ import {
   type ClientsAnswering,
   type FakeClients,
 } from './fake-clients.ts';
+import { fakeTokens, type FakeTokens, type TokensAnswering } from './fake-tokens.ts';
 
 export type Claims = Readonly<Record<string, unknown>>;
 
-export interface FakeProviderOptions extends ClientsAnswering {
+export interface FakeProviderOptions extends ClientsAnswering, TokensAnswering {
   readonly metadata?: Claims;
   readonly authorizationServerMetadata?: Claims;
   readonly idToken?: Claims;
@@ -33,6 +34,9 @@ export interface FakeProvider {
   readonly keySetReads: () => number;
   readonly withdraw: FakeClients['withdraw'];
   readonly registrationsAsked: FakeClients['registrationsAsked'];
+  readonly userInfoReads: FakeTokens['userInfoReads'];
+  readonly refreshTokensIssued: FakeTokens['refreshTokensIssued'];
+  readonly tokensRevoked: FakeTokens['tokensRevoked'];
 }
 
 interface Granted {
@@ -67,6 +71,7 @@ interface ProviderState {
   readonly grants: Grants;
   readonly keys: Keys;
   readonly clients: FakeClients;
+  readonly tokens: FakeTokens;
   readonly options: FakeProviderOptions;
 }
 
@@ -113,7 +118,7 @@ function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 }
 
-function metadataOf({ issuer, base, options }: ProviderState): Claims {
+function metadataOf({ issuer, base, tokens, options }: ProviderState): Claims {
   return {
     issuer,
     authorization_endpoint: `${base}/authorize`,
@@ -126,6 +131,7 @@ function metadataOf({ issuer, base, options }: ProviderState): Claims {
     token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post', 'client_secret_jwt'],
     code_challenge_methods_supported: ['S256'],
     authorization_response_iss_parameter_supported: true,
+    ...tokens.declared(base),
     ...options.metadata,
   };
 }
@@ -159,12 +165,26 @@ async function tokensOf(state: ProviderState, grant: Granted): Promise<Response>
     nonce: grant.nonce,
   };
   const idToken = await state.keys.current().sign({ ...claims, ...state.options.idToken, ...grant.idToken });
-  return json({ access_token: randomUUID(), token_type: 'Bearer', expires_in: 300, id_token: idToken });
+  return json({ ...state.tokens.issued(grant.subject), token_type: 'Bearer', expires_in: 300, id_token: idToken });
+}
+
+function authenticatedClientOf(
+  state: ProviderState,
+  request: Readonly<Request>,
+  form: Readonly<URLSearchParams>,
+): Promise<string | undefined> {
+  return state.clients.authenticated(request, form, [state.issuer, `${state.base}/token`]);
+}
+
+async function revocationAnswer(state: ProviderState, request: Readonly<Request>): Promise<Response> {
+  const form = new URLSearchParams(await request.text());
+  const clientId = await authenticatedClientOf(state, request, form);
+  return clientId === undefined ? state.clients.refusedClient() : state.tokens.revoked(form);
 }
 
 async function tokenAnswer(state: ProviderState, request: Readonly<Request>): Promise<Response> {
   const form = new URLSearchParams(await request.text());
-  const clientId = await state.clients.authenticated(request, form, [state.issuer, `${state.base}/token`]);
+  const clientId = await authenticatedClientOf(state, request, form);
   if (clientId === undefined) {
     return state.clients.refusedClient();
   }
@@ -179,9 +199,13 @@ function answerOf(state: ProviderState): FakeProvider['answer'] {
     const posted = new Map<string, () => Promise<Response>>([
       ['/token', () => tokenAnswer(state, request)],
       ['/register', () => state.clients.registered(request)],
+      ['/revoke', () => revocationAnswer(state, request)],
     ]).get(path);
     if (posted !== undefined && request.method === 'POST') {
       return posted();
+    }
+    if (path === '/userinfo') {
+      return Promise.resolve(state.tokens.userInfo(request));
     }
     const documents = new Map<string, () => unknown>([
       [`${state.base}/.well-known/openid-configuration`, () => metadataOf(state)],
@@ -218,7 +242,8 @@ export function fakeProvider(issuer: string, options: FakeProviderOptions = {}):
   const base = issuer.replace(/\/$/u, '');
   const keys = keysKept();
   const clients = fakeClients(options);
-  const state: ProviderState = { issuer, base, grants: grantsKept(), keys, clients, options };
+  const tokens = fakeTokens(options);
+  const state: ProviderState = { issuer, base, grants: grantsKept(), keys, clients, tokens, options };
   const answer = answerOf(state);
   const origin = new URL(issuer).origin;
   return {
@@ -236,5 +261,8 @@ export function fakeProvider(issuer: string, options: FakeProviderOptions = {}):
     keySetReads: keys.reads,
     withdraw: clients.withdraw,
     registrationsAsked: clients.registrationsAsked,
+    userInfoReads: tokens.userInfoReads,
+    refreshTokensIssued: tokens.refreshTokensIssued,
+    tokensRevoked: tokens.tokensRevoked,
   };
 }

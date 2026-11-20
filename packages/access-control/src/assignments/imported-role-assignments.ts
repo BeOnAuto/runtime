@@ -2,7 +2,8 @@ import { OrgWriter } from '@on.auto/operations';
 import { Effect, HashMap } from 'effect';
 
 import type { HeldAssignment } from './held-assignments.ts';
-import { roleAssignmentDecider, type ProvisioningSource } from './role-assignment-decider.ts';
+import type { ProvisioningSource } from './role-assignment-commands.ts';
+import { roleAssignmentDecider } from './role-assignment-decider.ts';
 import { roleAssignmentsStreamOf, roleOfIdentityServiceKey, type AssignmentScope } from './role-assignment-facts.ts';
 
 export const mostImportedInOneAppend = 8;

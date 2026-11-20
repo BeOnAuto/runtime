@@ -1,7 +1,6 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { SignInSettings } from '@on.auto/identity';
 import { Cause, Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -34,7 +33,12 @@ import {
   logClientNotRegistered,
   logClientRegistered,
   logClientRegisteredElsewhereFirst,
+  logNameUnread,
+  logRefreshTokenNotRevoked,
+  logRequiredClaimSet,
+  logSetupReopened,
   logSignInFailed,
+  logSignInNotBegun,
   logSignInRefused,
   logSignInRefusedForTheClaim,
   signInReportTo,
@@ -55,8 +59,6 @@ function syntaxErrorParsing(text: string): SyntaxError {
 
 const serveWithTestRoutes = fileURLToPath(new URL('../testing/entries/serve-with-test-routes.ts', import.meta.url));
 
-const signIn: SignInSettings = { issuer: 'https://clerk.on.auto', publicUrl: 'https://runtime.example' };
-
 const served = { origin: 'https://studio.on.auto', served: true };
 
 const serveWithSelfCausedError = fileURLToPath(
@@ -76,14 +78,14 @@ function stderrOnceItContains(child: SpawnedServer, text: string): Promise<strin
 
 describe('logAccessMode', () => {
   it('warns that local mode trusts every request, and what a machine reachable through a proxy sets instead', async () => {
-    const [line] = await linesLoggedBy(logAccessMode({ mode: 'local', signIn: undefined }));
+    const [line] = await linesLoggedBy(logAccessMode({ mode: 'local' }));
 
     expect(line).toContain('"level":"WARN"');
     expect(line).toContain('"message":"Local mode is on');
   });
 
   it('warns in one line that no request can authenticate when API_KEYS lists no keys', async () => {
-    const lines = await linesLoggedBy(logAccessMode({ mode: 'closed', signIn: undefined }));
+    const lines = await linesLoggedBy(logAccessMode({ mode: 'closed' }));
 
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('"level":"WARN"');
@@ -93,15 +95,7 @@ describe('logAccessMode', () => {
 
 describe('logAccessMode with credentials configured', () => {
   it('says nothing when API keys alone are configured', async () => {
-    expect(await linesLoggedBy(logAccessMode({ mode: 'credentials', signIn: undefined }))).toEqual([]);
-  });
-
-  it('names the identity service persons sign in through, and the audience of their tokens', async () => {
-    const [line] = await linesLoggedBy(logAccessMode({ mode: 'credentials', signIn }));
-
-    expect(line).toContain('"level":"INFO"');
-    expect(line).toContain('"message":"Signed-in persons are admitted through the');
-    expect(line).toContain('"public_url":"https://runtime.example","identity_issuer":"https://clerk.on.auto"');
+    expect(await linesLoggedBy(logAccessMode({ mode: 'credentials' }))).toEqual([]);
   });
 });
 
@@ -115,13 +109,26 @@ const companySignIn = {
   requiredClaim: undefined,
 };
 
+describe('the logs at start of a sign-in through the default identity provider', () => {
+  it('name the provider and the redirect URI, then the claim it admits by, saying where no value of it is known, then the link to Studio', async () => {
+    const byDefault = { ...companySignIn, client: undefined, requiredClaim: { claim: 'tenant' } };
+
+    const lines = await linesLoggedBy(logAccessMode({ mode: 'credentials', openIdConnectByDefault: byDefault }));
+
+    expect(lines.map((line) => line.includes('"level":"INFO"'))).toEqual([true, true, true]);
+    expect(lines.map((line) => /"annotations":(\{[^}]*\})/u.exec(line)?.[1])).toEqual([
+      '{"public_url":"https://auto.example.com","oidc_issuer":"https://login.example.com/acme","redirect_uri":"https://auto.example.com/auth/oidc/callback"}',
+      '{"oidc_issuer":"https://login.example.com/acme","oidc_required_claim":"tenant"}',
+      '{"studio_link":"https://studio.on.auto/?server=https%3A%2F%2Fauto.example.com&src=terminal"}',
+    ]);
+  });
+});
+
 describe("the logs of a sign-in through the company's identity provider", () => {
   it('name at start the provider, the redirect URI to register at it and the link to Studio, and never the client secret', async () => {
     const studio = { origin: 'https://studio.example.com', served: false };
 
-    const lines = await linesLoggedBy(
-      logAccessMode({ mode: 'credentials', signIn, openIdConnect: companySignIn, studio }),
-    );
+    const lines = await linesLoggedBy(logAccessMode({ mode: 'credentials', openIdConnect: companySignIn, studio }));
 
     expect(lines).toHaveLength(2);
     expect(lines[0]).toContain('"level":"INFO"');
@@ -138,7 +145,7 @@ describe("the logs of a sign-in through the company's identity provider", () => 
     const requiredClaim = { claim: 'tenant', requiredValue: 'a-tenant-of-the-test' };
 
     const lines = await linesLoggedBy(
-      logAccessMode({ mode: 'credentials', signIn, openIdConnect: { ...companySignIn, requiredClaim } }),
+      logAccessMode({ mode: 'credentials', openIdConnect: { ...companySignIn, requiredClaim } }),
     );
 
     expect(lines.map((line) => line.includes('"level":"INFO"'))).toEqual([true, true, true]);
@@ -149,26 +156,49 @@ describe("the logs of a sign-in through the company's identity provider", () => 
     expect(lines.join('\n')).not.toContain('a-tenant-of-the-test');
   });
 
-  it('warn of a sign-in the provider refused with its error code, of one refused for the claim it lacked, and of one that could not be completed', async () => {
+  it('warn of a sign-in the provider refused with its error code, of one refused for the claim it lacked, whether its value is given or recorded, and of one that could not be completed', async () => {
     const lines = await linesLoggedBy(
       Effect.all(
         [
           logSignInRefused(companySignIn.issuer, 'invalid_client'),
-          logSignInRefusedForTheClaim(companySignIn.issuer, 'tenant'),
+          logSignInRefusedForTheClaim(companySignIn.issuer, { claim: 'tenant', requiredValue: 'a-tenant-of-the-test' }),
+          logSignInRefusedForTheClaim(companySignIn.issuer, { claim: 'tenant' }),
           logSignInFailed(companySignIn.issuer, 'OAUTH_JWT_CLAIM_COMPARISON_FAILED'),
         ],
         { discard: true },
       ),
     );
 
-    expect(lines.map((line) => line.includes('"level":"WARN"'))).toEqual([true, true, true]);
+    expect(lines.map((line) => line.includes('"level":"WARN"'))).toEqual([true, true, true, true]);
     expect(lines[0]).toContain(
       '"annotations":{"oidc_issuer":"https://login.example.com/acme","error":"invalid_client"}',
     );
-    expect(lines[1]).toContain(
-      '"annotations":{"oidc_issuer":"https://login.example.com/acme","oidc_required_claim":"tenant"}',
+    expect([lines[1], lines[2]].map((line) => /"annotations":(\{[^}]*\})/u.exec(String(line))?.[1])).toEqual([
+      '{"oidc_issuer":"https://login.example.com/acme","oidc_required_claim":"tenant"}',
+      '{"oidc_issuer":"https://login.example.com/acme","oidc_required_claim":"tenant"}',
+    ]);
+    expect(lines[1]).not.toEqual(lines[2]);
+    expect(lines.join('\n')).not.toContain('a-tenant-of-the-test');
+    expect(lines[3]).toContain('"failure":"OAUTH_JWT_CLAIM_COMPARISON_FAILED"');
+  });
+
+  it('tell that the first sign-in set the server up, by the claim and the id of the person alone, and that set-up is open again', async () => {
+    const lines = await linesLoggedBy(
+      Effect.andThen(logRequiredClaimSet(companySignIn.issuer, 'tenant', 'a-person-id'), logSetupReopened),
     );
-    expect(lines[2]).toContain('"failure":"OAUTH_JWT_CLAIM_COMPARISON_FAILED"');
+
+    expect(lines.map((line) => line.includes('"level":"INFO"'))).toEqual([true, true]);
+    expect(lines.map((line) => /"annotations":(\{[^}]*\})/u.exec(line)?.[1])).toEqual([
+      '{"oidc_issuer":"https://login.example.com/acme","oidc_required_claim":"tenant","person":"a-person-id"}',
+      '{}',
+    ]);
+  });
+
+  it('warn of a sign-in that could not begin, by the issuer and the failure', async () => {
+    const [line] = await linesLoggedBy(logSignInNotBegun(companySignIn.issuer, 'unreachable'));
+
+    expect(line).toContain('"level":"WARN"');
+    expect(line).toContain('"annotations":{"oidc_issuer":"https://login.example.com/acme","failure":"unreachable"}');
   });
 
   it('say until someone has signed in that the first person to do so becomes its admin, and once they did, by their id alone', async () => {
@@ -203,14 +233,32 @@ describe("the logs of a sign-in through the company's identity provider", () => 
     ]);
   });
 
-  it('are what the report of a sign-in logs of its client', () => {
+  it('warn of a name that could not be read, by the person’s id alone, and of a refresh token that could not be revoked, by the issuer and the failure', async () => {
+    const lines = await linesLoggedBy(
+      Effect.andThen(
+        logNameUnread(companySignIn.issuer, 'a-person-id', 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED'),
+        logRefreshTokenNotRevoked(companySignIn.issuer, 'invalid_client'),
+      ),
+    );
+
+    expect(lines.map((line) => line.includes('"level":"WARN"'))).toEqual([true, true]);
+    expect(lines.map((line) => /"annotations":(\{[^}]*\})/u.exec(line)?.[1])).toEqual([
+      '{"oidc_issuer":"https://login.example.com/acme","person":"a-person-id","failure":"OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED"}',
+      '{"oidc_issuer":"https://login.example.com/acme","failure":"invalid_client"}',
+    ]);
+  });
+
+  it('are what the report of a sign-in logs of its client and of the tokens it releases', () => {
     const logged: unknown[] = [];
 
-    signInReportTo((log) => {
+    const report = signInReportTo((log) => {
       logged.push(log);
-    }, companySignIn.issuer).registeredElsewhereFirst('client-3', 'client-4');
+    }, companySignIn.issuer);
+    report.registeredElsewhereFirst('client-3', 'client-4');
+    report.nameUnread('a-person-id', 'OAUTH_WWW_AUTHENTICATE_CHALLENGE');
+    report.notRevoked('invalid_client');
 
-    expect(logged).toHaveLength(1);
+    expect(logged).toHaveLength(3);
   });
 });
 

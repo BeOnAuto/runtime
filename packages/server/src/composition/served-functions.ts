@@ -21,7 +21,7 @@ export interface ServedFunctions {
     WorkflowParts,
     | 'ledger'
     | 'workflows'
-    | 'identityIssuer'
+    | 'authorizationServer'
     | 'retryStateKeys'
     | 'contentAddressKey'
     | 'shippedFiles'

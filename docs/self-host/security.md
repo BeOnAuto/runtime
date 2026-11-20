@@ -12,13 +12,11 @@ Every request to the runtime comes from a caller. This page covers the tasks of 
 
 The runtime recognizes three kinds of caller:
 
-| Caller              | Who uses it                                                                                        | How it authenticates                                                                                                  | What it may do                                                                                                                                |
-| ------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| A signed-in person  | People, through their agent, an agent gateway, Auto Studio or a page you allow                     | Signs in through the Auto identity service, then sends a token or a page's session as `Authorization: Bearer <token>` | Acts in the org they signed in to, or in their own where they signed in to none, over every playbook, with the permissions their token grants |
-| An API key          | A machine, a pipeline or an agent that does not sign in, or any caller that needs a narrower grant | Sends a key listed in `API_KEYS` as `Authorization: Bearer <key>`                                                     | Acts in its one org, with the permissions and playbooks its entry lists                                                                       |
-| The local developer | You, on your own machine, in [local mode](#local-mode)                                             | Nothing: every request is trusted                                                                                     | Acts with every permission in whichever org a request names                                                                                   |
-
-An [org](../concepts/terminology.md#orgs-and-callers) is the runtime's name for an organization in the Auto identity service, or for the org of a person who signs in with none, whose id is their subject.
+| Caller              | Who uses it                                                                                        | How it authenticates                                                                                                                                                            | What it may do                                                                          |
+| ------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| A signed-in person  | People, through their agent, an agent gateway, Auto Studio or a page you allow                     | Signs in at the runtime, with their Auto account or through your company's identity provider, then sends the access token the runtime issued as `Authorization: Bearer <token>` | Acts in the org `default`, over every playbook, with the permissions their token grants |
+| An API key          | A machine, a pipeline or an agent that does not sign in, or any caller that needs a narrower grant | Sends a key listed in `API_KEYS` as `Authorization: Bearer <key>`                                                                                                               | Acts in its one org, with the permissions and playbooks its entry lists                 |
+| The local developer | You, on your own machine, in [local mode](#local-mode)                                             | Nothing: every request is trusted                                                                                                                                               | Acts with every permission in whichever org a request names                             |
 
 ## Who can call a server
 
@@ -33,7 +31,7 @@ Who can call a server follows from two settings, `PUBLIC_URL` and `API_KEYS`, an
 | `API_KEYS=[]`, no `PUBLIC_URL`                                                                   | Any address                                                                       | Nobody: see [When the key list is empty](#when-the-key-list-is-empty)                                   |
 | `ACCESS_MODE=local`, no `API_KEYS`, a `PUBLIC_URL` only on the loopback, which a container needs | Any address, such as a container whose port Docker publishes on `127.0.0.1` alone | Anyone who reaches its port, as the local developer: [local mode](#local-mode)                          |
 
-So on your own machine, `npx @on.auto/runtime` and `pnpm dev` run in local mode with nothing set. To sign people in there, put `PUBLIC_URL=http://localhost:5555` in `.env`, with no `ACCESS_MODE`, and start the server again. A container needs `PUBLIC_URL`, `API_KEYS` or both, unless you declare local mode for it on your own machine with `ACCESS_MODE=local`, which needs a `PUBLIC_URL` on `localhost` there too ([Run with Docker](docker.md#on-your-own-machine)).
+So on your own machine, `npx @on.auto/runtime` and `pnpm dev` run in local mode with nothing set. Signing people in needs an `https` `PUBLIC_URL` ([Let people sign in](#let-people-sign-in)). A container needs `PUBLIC_URL`, `API_KEYS` or both, unless you declare local mode for it on your own machine with `ACCESS_MODE=local`, which needs a `PUBLIC_URL` on `localhost` there too ([Run with Docker](docker.md#on-your-own-machine)).
 
 These paths need no caller, since nothing they return is secret:
 
@@ -47,32 +45,37 @@ These paths need no caller, since nothing they return is secret:
 
 ## Let people sign in
 
-People sign in through the Auto identity service at `https://clerk.on.auto`, the same service that signs them in to Studio. The first time a person's agent connects, it opens the service in their browser. They sign in and choose an organization.
+`PUBLIC_URL` turns sign-in on. It is the `https` address at which people and their agents reach the runtime, such as `https://auto.example.com`. The runtime is then an OAuth 2.1 authorization server at that address, and people sign in there in one of two ways:
 
-`PUBLIC_URL` turns sign-in on. It is the URL at which people and their agents reach the runtime, and every access token must name it as its audience.
+- with their Auto accounts, by default ([Auto accounts](#auto-accounts));
+- with their company accounts, through your company's identity provider ([Single sign-on (SSO)](#single-sign-on-sso)).
 
-| Where the runtime runs                                         | What to set                                                                                                                                                        |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| On your own machine, with `npx @on.auto/runtime` or `pnpm dev` | `PUBLIC_URL=http://localhost:5555` in `.env`, then start the server again. Without it, the server runs in [local mode](#local-mode)                                |
-| In a container you reach from the same machine                 | `PUBLIC_URL=http://localhost:5555`. Publish the port on `127.0.0.1` alone, as `--publish 127.0.0.1:5555:5555` does, so no other machine reaches it over plain HTTP |
-| Behind a proxy                                                 | `PUBLIC_URL` set to the public address, such as `https://runtime.example.com`: the address of the proxy, not of the container                                      |
-| Against the development instance of the identity service       | `IDENTITY_ISSUER` set to that instance, with `PUBLIC_URL` as above                                                                                                 |
+| Where the runtime runs                                         | What to set                                                                                                                                                         |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Behind a proxy                                                 | `PUBLIC_URL` set to the public address, such as `https://runtime.example.com`: the address of the proxy, not of the container                                       |
+| On your own machine, with `npx @on.auto/runtime` or `pnpm dev` | Nothing: the server runs in [local mode](#local-mode), where no one signs in                                                                                        |
+| In a container you reach from the same machine                 | `ACCESS_MODE=local` and `PUBLIC_URL=http://localhost:5555`, for [local mode](#local-mode), where no one signs in ([Run with Docker](docker.md#on-your-own-machine)) |
 
 Rules for `PUBLIC_URL`:
 
-- It is an `https` URL with no path, query or fragment, such as `https://runtime.example.com`.
-- It may instead be an `http` URL whose host is `localhost`, `127.0.0.1` or `[::1]`, whatever `HOST` is. That suits a runtime that people reach from the same machine.
-- An `http` URL with any other host stops the start with an `InvalidSettingsError`, since a token sent over plain HTTP between machines can be read on the way. Any other value stops the start too.
-- It has no default, since every access token names it as its audience. Whoever wants people to sign in sets it.
+- It is an `https` URL with no path, query or fragment, such as `https://runtime.example.com`. The runtime keeps a person's sign-in in a cookie that only `https` carries.
+- An `http` URL is taken only beside `ACCESS_MODE=local`, on `localhost`, `127.0.0.1` or `[::1]`, where it names the server's address and signs no one in. Any other `http` URL, or any other value, stops the start with an `InvalidSettingsError`.
+- It has no default. Whoever wants people to sign in sets it.
 - Without `PUBLIC_URL`, the runtime signs no one in and serves no protected resource metadata. It accepts the keys `API_KEYS` lists where that is set. Otherwise it runs in local mode on a loopback address, and stops at start on any other address.
 
-`IDENTITY_ISSUER` is an `https` URL with no path, query or fragment, and `https://clerk.on.auto` when not set. Any other value stops the start.
+Once it has started, the server logs how people sign in and the link at which they open Studio.
 
-With sign-in on, the server checks the identity service before it accepts a request. It stops with an `UnusableIdentityServiceError` when it cannot use the service ([What the server checks at start](../reference/authentication.md#what-the-server-checks-at-start)). Once it has started, it logs which identity service people sign in through and which audience their tokens must name.
+### Auto accounts
+
+With `PUBLIC_URL` set and no `OIDC_ISSUER`, members of your organization sign in with their Auto accounts. You set nothing else: the runtime registers itself with Auto's identity service at the first sign-in, as `Auto Runtime at` followed by your server's host, the name Auto's screen shows when a person allows access.
+
+The first person to sign in chooses their organization on Auto's screen, and the server is then tied to that organization: only its members can sign in after them. To tie the server to your organization before anyone signs in, set `OIDC_REQUIRED_CLAIM` to `org_id=` followed by your organization's id. If the first sign-in tied the server to the wrong organization, run `admin reset-setup` ([Admin commands](#admin-commands)).
+
+Everything else is as with [single sign-on](#single-sign-on-sso): the first person to sign in becomes the organization's admin, members open Studio at the link the server prints at start, and a member's agent connects the same way.
 
 ### Organizations
 
-An org's id is its organization's id: a person who signs in to the organization `acme` acts in the org `acme`. A person who signs in with no organization of their own acts in an org of their own, whose id is the subject of their token, and in no other. The runtime keeps no list of people or orgs, since each token names its org, or, naming none, its subject does.
+A runtime that signs people in keeps every person in one org, `default`, whichever way they sign in, and its playbooks are that org's. An API key acts in the org its entry names, so a key for the playbooks people work on names `default`.
 
 The runtime trusts one issuer, whichever provider a person used.
 
@@ -86,14 +89,14 @@ A member's agent connects the same way. The runtime asks the member, on a page o
 
 ## What signed-in people can do
 
-A signed-in person acts in their org, over every playbook. What they may do there depends on how they reach the runtime:
+A signed-in person acts in the org `default`, over every playbook. What they may do there depends on how they reach the runtime:
 
-- Through an agent or an agent gateway, they send an access token. They have the permissions they granted on the identity service's consent screen.
-- Through Studio, or a page at an origin you allow, they send a session. They have every permission in their org.
+- Through an agent or an agent gateway, they send an access token the runtime issued. They have the permissions the agent asked for, which they allowed on the runtime's page when it connected.
+- Through Studio, they have every permission in the org.
 
-When the identity service stops issuing tokens to a person, the runtime refuses them once their last token expires. The workflow runs they started keep running, and a caller who may write to the playbook can cancel them ([What happens when access is revoked](../reference/authentication.md#what-happens-when-access-is-revoked)).
+An access token lasts 15 minutes, and the agent or Studio refreshes it. A person who no longer holds a role is refused at their next refresh or sign-in, and an access token they already hold ends within those 15 minutes. The workflow runs they started keep running, and a caller who may write to the playbook can cancel them ([What happens when access is revoked](../reference/authentication.md#what-happens-when-access-is-revoked)).
 
-The [Sign-in and token reference](../reference/authentication.md) sets out the token forms, what a token must hold, [how scopes grant permissions](../reference/authentication.md#how-scopes-grant-permissions) and [the name recorded for a signed-in person](../reference/authentication.md#the-name-recorded-for-a-signed-in-person).
+The [Sign-in and token reference](../reference/authentication.md) sets out the tokens the runtime issues, [how scopes grant permissions](../reference/authentication.md#how-scopes-grant-permissions) and [the name recorded for a signed-in person](../reference/authentication.md#the-name-recorded-for-a-signed-in-person).
 
 ## Policies in report-only mode
 
@@ -189,6 +192,18 @@ A workflow run keeps acting for the caller who started it, with the permissions 
 - It responds with `401` on every path except [the ones that need no caller](#who-can-call-a-server).
 - It warns at start that no request can authenticate, because `API_KEYS` lists no keys.
 
+## Admin commands
+
+Three commands help whoever runs a server that signs people in. Run them as `npx @on.auto/runtime admin …`, or in the container as `docker exec <container> node packages/server/src/admin-command.ts …`. The admin commands read and write the server's ledger: run them where the server runs, with its settings. The server can be running or stopped.
+
+| Command                     | What it does                                                                                                |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `admin grant-admin <email>` | Make a person who has signed in an Admin, for when every Admin has left                                     |
+| `admin reset-setup`         | Start setup over, for when the first sign-in tied this server to the wrong organization. Signs everyone out |
+| `admin register-client`     | Register this server with the identity provider again, for when its registration there was deleted          |
+
+[Troubleshooting](troubleshooting.md#every-admin-has-left) says what each fixes.
+
 ## Local mode
 
 Local mode is for one person on their own computer. No one signs in and no key is needed. Every request acts as the local developer, with every permission in whichever org it names. On `/mcp`, which names no org, the local developer acts in the org `local`.
@@ -200,7 +215,7 @@ A server is in local mode when both of these hold:
 
 A server whose port only this computer reaches, though it listens on every address, is in local mode where its operator declares it with `ACCESS_MODE=local`, `access_mode: local` in the file. A container is one: Docker publishes its port on `127.0.0.1` alone, which the server inside cannot see ([Run with Docker](docker.md#on-your-own-machine)). The declaration trusts that publish, so never give it with a wider one, and every container on the same Docker network reaches the port whatever the publish, acting as the local developer. It stops the start beside `API_KEYS`, even `[]`, beside a `PUBLIC_URL` that is not on `localhost`, `127.0.0.1` or `[::1]`, and without a `PUBLIC_URL` on a server that listens beyond the loopback, such as a container. There the `PUBLIC_URL` names the address this computer reaches the server at, which its links point at, and signs no one in. The server then behaves as in local mode on a loopback address. Local mode, declared or not, stops the start beside a `WEBHOOK_URL`.
 
-`npx @on.auto/runtime` and `pnpm dev` listen on `127.0.0.1`, so they run in local mode until you set `PUBLIC_URL` or `API_KEYS`. To sign people in on your own machine, put `PUBLIC_URL=http://localhost:5555` in `.env`, with no `ACCESS_MODE`, and start the server again ([Let people sign in](#let-people-sign-in)).
+`npx @on.auto/runtime` and `pnpm dev` listen on `127.0.0.1`, so they run in local mode until you set `PUBLIC_URL` or `API_KEYS`. Signing people in needs an `https` `PUBLIC_URL` ([Let people sign in](#let-people-sign-in)).
 
 > **Warning:** never run a server in local mode on a machine that can be reached through a proxy; set `PUBLIC_URL` or `API_KEYS` there, and no `ACCESS_MODE`. A reverse proxy on the same machine, such as nginx with its default settings, forwards remote requests to the loopback address with a localhost `Host` header. The server would trust every remote client as the local developer.
 
@@ -222,10 +237,10 @@ A web page may call the API from the Studio host, `https://studio.on.auto` unles
 
 - A request from a page at any other origin gets `403`.
 - A request with no `Origin` header, such as one from a script or an agent, passes this check.
-- An allowed page still sends a credential where credentials are enforced: a key, or the session of the person signed in to it.
-- A page that sends a person's session acts as that person, with every permission in their org. So list in `ALLOWED_ORIGINS` only origins whose pages you trust as you trust Studio.
+- An allowed page still sends a credential where credentials are enforced: a key, or an access token the runtime issued to a person.
+- A page that sends a person's access token acts as that person. So list in `ALLOWED_ORIGINS` only origins whose pages you trust as you trust Studio.
 
-[Calls from a browser](../reference/authentication.md#calls-from-a-browser) in the reference sets out when a session is accepted and how the server responds to CORS requests.
+[Calls from a browser](../reference/authentication.md#calls-from-a-browser) in the reference sets out how the server checks them and responds to CORS requests.
 
 ## Secrets at rest
 

@@ -39,7 +39,7 @@ export interface ServedCatalog extends DeliveryStores {
   readonly pages: boolean;
   readonly goals: boolean;
   readonly messages: boolean;
-  readonly identityIssuer: string;
+  readonly authorizationServer: string | undefined;
   readonly retryStateKeys: RetryStateKeys;
   readonly contentAddressKey: ContentAddressKey;
   readonly shippedFiles: ShippedFiles;
@@ -55,7 +55,7 @@ export async function routesFor(
     pages,
     goals,
     messages,
-    identityIssuer,
+    authorizationServer,
     retryStateKeys,
     contentAddressKey,
     answerStores,
@@ -70,7 +70,7 @@ export async function routesFor(
   const debugStyle = await readDebugStyle(shippedFiles);
   return [
     operationRoutes({ catalog, dispatcher, runCall: runtime.run }),
-    openApiDocumentRoutes({ catalog, serverInfo: release, shelf, identityIssuer }),
+    openApiDocumentRoutes({ catalog, serverInfo: release, shelf, authorizationServer }),
     contentAddressRoutes({ key: contentAddressKey, content: runtimeLedger(runtime).content }),
     ...deliveryRoutesOf(runtime, { answerStores, eventStores }),
     guideRoutes(shelf),
@@ -94,11 +94,11 @@ export async function routesFor(
 export function routesServing(
   operations: Operations,
   {
-    identityIssuer,
+    authorizationServer,
     retryStateKeys,
     contentAddressKey,
     shippedFiles,
-  }: Pick<ServedCatalog, 'identityIssuer' | 'retryStateKeys' | 'contentAddressKey' | 'shippedFiles'>,
+  }: Pick<ServedCatalog, 'authorizationServer' | 'retryStateKeys' | 'contentAddressKey' | 'shippedFiles'>,
 ): (runtime: AppRuntime<DispatcherServices>) => Promise<readonly RegisterRoutes[]> {
   const catalog = makeCatalog(operations);
   const served = {
@@ -109,7 +109,7 @@ export function routesServing(
     pages: false,
     goals: false,
     messages: false,
-    identityIssuer,
+    authorizationServer,
     retryStateKeys,
     contentAddressKey,
     shippedFiles,

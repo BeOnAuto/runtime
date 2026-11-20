@@ -7,7 +7,7 @@ import { testShelf } from '../testing/guides.ts';
 import { httpAloneOperations } from '../testing/http-alone-operations.ts';
 import { listNotesOfTheOrg, notebookOperations } from '../testing/notebook.ts';
 import { openApiErrorsIn, operationsIn, unresolvedSchemasIn } from '../testing/openapi/openapi-document.ts';
-import { testIdentityIssuer, testServerInfo } from '../testing/operation-server.ts';
+import { testServerInfo } from '../testing/operation-server.ts';
 import { openApiDocumentOf } from './openapi-document.ts';
 
 const NoteName = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9-]{0,31}$/u)).annotate({ identifier: 'NoteName' });
@@ -73,7 +73,7 @@ const operations = [
 
 const catalog = makeCatalog(operations);
 
-const document = openApiDocumentOf(catalog, testServerInfo, testShelf, testIdentityIssuer);
+const document = openApiDocumentOf(catalog, testServerInfo, testShelf);
 
 function operationNamed(id: string) {
   const found = operationsIn(document).find(({ operation }) => operation.operationId === id);
@@ -88,6 +88,10 @@ function keysIn(value: unknown): readonly string[] {
     return [];
   }
   return Object.entries(value).flatMap(([key, member]: readonly [string, unknown]) => [key].concat(keysIn(member)));
+}
+
+function countNotesIn(served: unknown) {
+  return operationsIn(served).find(({ operation }) => operation.operationId === 'count_notes')?.operation.security;
 }
 
 const schemaBase = 'https://on.auto/schemas/runtime';
@@ -130,13 +134,13 @@ describe('the OpenAPI document of a catalog', () => {
     expect(operationNamed('add_note').operation).toMatchObject({
       summary: 'Add note',
       tags: ['notes'],
-      security: [{ bearer: [] }, { openIdConnect: ['playbook:write'] }],
+      security: [{ bearer: ['playbook:write'] }],
     });
     expect(keysIn(document).filter((key) => key.startsWith('x-'))).toEqual([]);
   });
 
   it('refuses a query by GET that takes one of several inputs, which its query parameters cannot tell apart', () => {
-    expect(() => openApiDocumentOf(makeCatalog([measureNote]), testServerInfo, testShelf, testIdentityIssuer)).toThrow(
+    expect(() => openApiDocumentOf(makeCatalog([measureNote]), testServerInfo, testShelf)).toThrow(
       'The query measure_note takes one of several inputs, which its query parameters cannot tell apart',
     );
   });
@@ -222,7 +226,7 @@ describe('the input of a command', () => {
 });
 
 describe('the security of the operations of the document', () => {
-  it('takes on every operation but the content and the guides a key, or an access token granted the permission it needs as a scope', () => {
+  it('takes on every operation but the content and the guides a key that holds the permission it needs, as a role', () => {
     const {
       get_content: content,
       get_guide: guides,
@@ -231,21 +235,28 @@ describe('the security of the operations of the document', () => {
 
     expect([content, guides]).toEqual([[], []]);
     expect(others).toMatchObject({
-      list_notes: [{ bearer: [] }, { openIdConnect: ['playbook:read'] }],
-      add_note: [{ bearer: [] }, { openIdConnect: ['playbook:write'] }],
-      list_notes_in_org: [{ bearer: [] }, { openIdConnect: ['org:read'] }],
-      label_playbook: [{ bearer: [] }, { openIdConnect: ['org:write'] }],
+      list_notes: [{ bearer: ['playbook:read'] }],
+      add_note: [{ bearer: ['playbook:write'] }],
+      list_notes_in_org: [{ bearer: ['org:read'] }],
+      label_playbook: [{ bearer: ['org:write'] }],
     });
-    expect(new Set(Object.values(others).map((security) => JSON.stringify(security[0])))).toEqual(
-      new Set(['{"bearer":[]}']),
-    );
+    expect(
+      new Set(Object.values(others).flatMap((security) => security.flatMap((requirement) => Object.keys(requirement)))),
+    ).toEqual(new Set(['bearer']));
   });
 
-  it('names each permission that permits an operation as the scope of a requirement of its own, any of which serves', () => {
-    expect(operationNamed('count_notes').operation.security).toEqual([
-      { bearer: [] },
-      { openIdConnect: ['org:read'] },
-      { openIdConnect: ['playbook:read'] },
+  it('names each permission that permits an operation as a requirement of its own, any of which serves, and as a scope too where the server signs people in', () => {
+    const signingIn = openApiDocumentOf(catalog, testServerInfo, testShelf, 'https://auto.example.com');
+
+    expect([countNotesIn(document), countNotesIn(signingIn)]).toEqual([
+      [{ bearer: ['org:read'] }, { bearer: ['playbook:read'] }],
+      [
+        { bearer: ['org:read'] },
+        { bearer: ['playbook:read'] },
+        { openIdConnect: ['org:read'] },
+        { openIdConnect: ['playbook:read'] },
+      ],
     ]);
+    expect(openApiErrorsIn(signingIn)).toEqual([]);
   });
 });

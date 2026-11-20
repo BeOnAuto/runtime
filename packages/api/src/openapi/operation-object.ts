@@ -85,7 +85,17 @@ function successOf(registration: RouteRegistration, operationId: string): OpenAp
   };
 }
 
-export function describedOperationOf(registration: RouteRegistration, operationId: string): DescribedOperation {
+function securityOf({ permissions }: RouteRegistration, signsPeopleIn: boolean): readonly OpenApiObject[] {
+  const byKey = permissions.map((permission) => ({ bearer: [permission] }));
+  const byToken = signsPeopleIn ? permissions.map((permission) => ({ openIdConnect: [permission] })) : [];
+  return [...byKey, ...byToken];
+}
+
+export function describedOperationOf(
+  registration: RouteRegistration,
+  operationId: string,
+  signsPeopleIn: boolean,
+): DescribedOperation {
   const problems = problemAnswersOfOperation(registration);
   const { parameters, requestBody } = inputPartsOf(registration, operationId);
   const tag = tagOf(registration);
@@ -105,7 +115,7 @@ export function describedOperationOf(registration: RouteRegistration, operationI
         [registration.successStatus]: successOf(registration, operationId),
         ...referencesTo(problems),
       },
-      security: [{ bearer: [] }, ...registration.permissions.map((permission) => ({ openIdConnect: [permission] }))],
+      security: securityOf(registration, signsPeopleIn),
     },
   };
 }

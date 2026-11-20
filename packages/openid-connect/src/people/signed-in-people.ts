@@ -1,6 +1,7 @@
 import { sha256Of } from '@on.auto/content';
 
-import type { SignedInPerson, StandardClaims } from '../provider/relying-party.ts';
+import type { SignedInPerson } from '../provider/relying-party.ts';
+import type { StandardClaims } from '../provider/standard-claims.ts';
 import type { PersonSignedIn } from './people-rows.ts';
 
 export const defaultOrg = 'default';

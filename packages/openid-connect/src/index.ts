@@ -34,10 +34,14 @@ export {
   type RelyingPartySettings,
   type RequiredClaim,
   type SignedInPerson,
+  type SignedInWith,
   type SignInAsked,
-  type StandardClaims,
   type StartedSignIn,
 } from './provider/relying-party.ts';
+export type { TokensHeld, TokensReleased } from './provider/sign-in-tokens.ts';
+export type { StandardClaims } from './provider/standard-claims.ts';
+export type { ProviderRows } from './authorization-server/provider-rows.ts';
+export { everyoneSignedOut } from './authorization-server/signed-out.ts';
 export { AuthLayoutRefused } from './store/auth-layout.ts';
 export { authStoreOpened, type AuthStore } from './store/auth-store.ts';
 export type { AuthDatabase } from './store/auth-database.ts';

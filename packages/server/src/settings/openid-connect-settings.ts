@@ -2,6 +2,7 @@ import { accessSync, constants, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import type { Environment } from '@on.auto/config';
+import { defaultIdentityProvider, type DefaultIdentityProvider } from '@on.auto/identity';
 import {
   clientAuthenticationMethods,
   type ClientAuthenticationMethod,
@@ -43,6 +44,11 @@ export interface OpenIdConnectDeciding {
   readonly accessMode: 'local' | undefined;
 }
 
+export interface OpenIdConnectRead {
+  readonly openIdConnect: OpenIdConnectSettings | undefined;
+  readonly openIdConnectByDefault: OpenIdConnectSettings | undefined;
+}
+
 const IssuerUrl = Schema.String.check(
   Schema.makeFilter(
     (text: string) =>
@@ -73,7 +79,7 @@ const settingsGiven = Config.all({
   clientId: Config.map(Config.option(Config.schema(Schema.NonEmptyString, 'OIDC_CLIENT_ID')), Option.getOrUndefined),
   clientSecret: Config.map(Config.option(Config.Redacted('OIDC_CLIENT_SECRET')), Option.getOrUndefined),
   clientSecretFile: Config.map(Config.option(Config.String('OIDC_CLIENT_SECRET_FILE')), Option.getOrUndefined),
-  scopes: Config.String('OIDC_SCOPES').pipe(Config.withDefault(defaultScopes)),
+  scopes: Config.map(Config.option(Config.String('OIDC_SCOPES')), Option.getOrUndefined),
   tokenEndpointAuthMethod: Config.map(
     Config.option(Config.Literals(clientAuthenticationMethods, 'OIDC_TOKEN_ENDPOINT_AUTH_METHOD')),
     Option.getOrUndefined,
@@ -82,9 +88,6 @@ const settingsGiven = Config.all({
     Config.option(Config.schema(RequiredClaimText, 'OIDC_REQUIRED_CLAIM')),
     Option.getOrUndefined,
   ),
-  identityIssuer: Config.map(Config.option(Config.String('IDENTITY_ISSUER')), Option.getOrUndefined),
-  identityKeySet: Config.map(Config.option(Config.String('IDENTITY_JWKS')), Option.getOrUndefined),
-  identityKeySetUrl: Config.map(Config.option(Config.String('IDENTITY_JWKS_URL')), Option.getOrUndefined),
 });
 
 type Given = typeof settingsGiven extends Config.Config<infer A> ? A : never;
@@ -111,17 +114,29 @@ const withoutAnAddress =
 const withoutHttps =
   'OIDC_ISSUER: needs PUBLIC_URL to be an https URL, since the runtime then signs people in itself and keeps their sign-in in a cookie only https carries';
 
+const byDefaultWithoutHttps =
+  'PUBLIC_URL: needs to be an https URL, since the runtime then signs people in itself, with their Auto accounts, and keeps their sign-in in a cookie only https carries; where only this computer reaches the runtime, ACCESS_MODE=local declares local mode instead';
+
 const withoutOpenId = 'OIDC_SCOPES: must include openid';
 
-const requiredClaimWithoutAnIssuer =
-  'OIDC_REQUIRED_CLAIM: needs OIDC_ISSUER, the identity provider whose ID Tokens carry the claim';
+const requiredClaimWithoutSignIn =
+  'OIDC_REQUIRED_CLAIM: needs PUBLIC_URL, the URL at which people reach the runtime, since only a runtime that signs people in checks the claim';
+
+const requiredClaimInLocalMode =
+  'ACCESS_MODE: local takes no OIDC_REQUIRED_CLAIM, since in local mode every request acts as the local developer; set one or the other';
+
+const scopesWithoutAnIssuer =
+  'OIDC_SCOPES: needs OIDC_ISSUER, the identity provider that grants them, since without it people sign in with their Auto accounts';
+
+const methodWithoutAnIssuer =
+  'OIDC_TOKEN_ENDPOINT_AUTH_METHOD: needs OIDC_ISSUER, the identity provider whose token endpoint it names, since without it people sign in with their Auto accounts';
 
 function scopesIn(text: string): readonly string[] {
   return text.split(' ').filter((scope) => scope !== '');
 }
 
-function isAnyGiven({ issuer, clientId, clientSecret, clientSecretFile }: Given): boolean {
-  return [issuer, clientId, clientSecret, clientSecretFile].some((value) => value !== undefined);
+function isAClientGiven({ clientId, clientSecret, clientSecretFile }: Given): boolean {
+  return [clientId, clientSecret, clientSecretFile].some((value) => value !== undefined);
 }
 
 function completeOf(read: Given, issuer: string): Complete {
@@ -138,22 +153,11 @@ function completeOf(read: Given, issuer: string): Complete {
   return { ...read, issuer, given: { clientId, secret } };
 }
 
-function identityServiceRefusalOf({ identityIssuer, identityKeySet, identityKeySetUrl }: Given): string | undefined {
-  const named: readonly (readonly [string, string | undefined])[] = [
-    ['IDENTITY_ISSUER', identityIssuer],
-    ['IDENTITY_JWKS', identityKeySet],
-    ['IDENTITY_JWKS_URL', identityKeySetUrl],
-  ];
-  const [setting] = named.find(([, value]) => value !== undefined) ?? [];
-  return setting === undefined ? undefined : `OIDC_ISSUER: Set one of OIDC_ISSUER and ${setting}, not more`;
-}
-
 function refusalOf(read: Complete, accessMode: OpenIdConnectDeciding['accessMode']): string | undefined {
   const refusals: readonly (string | undefined)[] = [
     read.clientSecret !== undefined && read.clientSecretFile !== undefined ? secretGivenTwice : undefined,
-    identityServiceRefusalOf(read),
     accessMode === 'local' ? inLocalMode : undefined,
-    scopesIn(read.scopes).includes('openid') ? undefined : withoutOpenId,
+    scopesIn(read.scopes ?? defaultScopes).includes('openid') ? undefined : withoutOpenId,
   ];
   return refusals.find((refusal) => refusal !== undefined);
 }
@@ -199,7 +203,7 @@ function settingsOf(read: Complete, publicUrl: string): OpenIdConnectSettings {
   return {
     issuer,
     client: clientOf(given),
-    scopes: scopesIn(scopes),
+    scopes: scopesIn(scopes ?? defaultScopes),
     tokenEndpointAuthMethod,
     publicUrl,
     redirectUri: `${publicUrl}${callbackPath}`,
@@ -207,30 +211,72 @@ function settingsOf(read: Complete, publicUrl: string): OpenIdConnectSettings {
   };
 }
 
-export function readOpenIdConnectSettings(
-  environment: Environment,
-  deciding: OpenIdConnectDeciding,
-): OpenIdConnectSettings | undefined {
-  const read = Effect.runSync(asInvalidSettings(settingsGiven.parse(ConfigProvider.fromEnvRecord(environment))));
-  if (read.requiredClaim !== undefined && read.issuer === undefined) {
-    throw new InvalidSettingsError({ message: requiredClaimWithoutAnIssuer });
-  }
-  if (!isAnyGiven(read)) {
-    return undefined;
-  }
-  if (read.issuer === undefined) {
-    throw new InvalidSettingsError({ message: together });
-  }
-  const complete = completeOf(read, read.issuer);
-  const refusal = refusalOf(complete, deciding.accessMode);
+function refusedIf(refusal: string | undefined): void {
   if (refusal !== undefined) {
     throw new InvalidSettingsError({ message: refusal });
   }
+}
+
+function refusalWithoutSignIn(read: Given, accessMode: OpenIdConnectDeciding['accessMode']): string | undefined {
+  if (read.requiredClaim !== undefined) {
+    return accessMode === 'local' ? requiredClaimInLocalMode : requiredClaimWithoutSignIn;
+  }
+  return isAClientGiven(read) ? together : undefined;
+}
+
+function isHttps(publicUrl: string): boolean {
+  return publicUrl.startsWith('https://');
+}
+
+function refusalByDefault(read: Given, publicUrl: string): string | undefined {
+  const refusals: readonly (string | undefined)[] = [
+    isAClientGiven(read) ? together : undefined,
+    read.scopes === undefined ? undefined : scopesWithoutAnIssuer,
+    read.tokenEndpointAuthMethod === undefined ? undefined : methodWithoutAnIssuer,
+    isHttps(publicUrl) ? undefined : byDefaultWithoutHttps,
+  ];
+  return refusals.find((refusal) => refusal !== undefined);
+}
+
+function settingsByDefault(read: Given, publicUrl: string, defaults: DefaultIdentityProvider): OpenIdConnectSettings {
+  return {
+    issuer: defaults.issuer,
+    client: undefined,
+    scopes: defaults.scopes,
+    tokenEndpointAuthMethod: undefined,
+    publicUrl,
+    redirectUri: `${publicUrl}${callbackPath}`,
+    requiredClaim: requiredClaimOf(read.requiredClaim) ?? defaults.requiredClaim,
+  };
+}
+
+function byDefaultOf(
+  read: Given,
+  { publicUrl, accessMode }: OpenIdConnectDeciding,
+  defaults: DefaultIdentityProvider,
+): OpenIdConnectSettings | undefined {
+  if (publicUrl === undefined || accessMode !== undefined) {
+    refusedIf(refusalWithoutSignIn(read, accessMode));
+    return undefined;
+  }
+  refusedIf(refusalByDefault(read, publicUrl));
+  return settingsByDefault(read, publicUrl, defaults);
+}
+
+export function readOpenIdConnectSettings(
+  environment: Environment,
+  deciding: OpenIdConnectDeciding,
+  defaults: DefaultIdentityProvider = defaultIdentityProvider,
+): OpenIdConnectRead {
+  const read = Effect.runSync(asInvalidSettings(settingsGiven.parse(ConfigProvider.fromEnvRecord(environment))));
+  if (read.issuer === undefined) {
+    return { openIdConnect: undefined, openIdConnectByDefault: byDefaultOf(read, deciding, defaults) };
+  }
+  const complete = completeOf(read, read.issuer);
+  refusedIf(refusalOf(complete, deciding.accessMode));
   if (deciding.publicUrl === undefined) {
     throw new InvalidSettingsError({ message: withoutAnAddress });
   }
-  if (!deciding.publicUrl.startsWith('https://')) {
-    throw new InvalidSettingsError({ message: withoutHttps });
-  }
-  return settingsOf(complete, deciding.publicUrl);
+  refusedIf(isHttps(deciding.publicUrl) ? undefined : withoutHttps);
+  return { openIdConnect: settingsOf(complete, deciding.publicUrl), openIdConnectByDefault: undefined };
 }

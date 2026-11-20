@@ -7,7 +7,7 @@ import { onTestFinished } from 'vitest';
 import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
-import { rowsOfTheLedgerIn } from '../testing/records/ledger-file.ts';
+import { fieldOfEachFactIn, rowsOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { providerOverHttps } from './issuer-over-https.ts';
 
@@ -31,6 +31,7 @@ export interface SigningIn {
   readonly at: (path: string, init?: Asking) => Promise<Response>;
   readonly aBrowser: () => Browser;
   readonly peopleKept: () => Promise<readonly unknown[]>;
+  readonly factsKept: (type: string, field: string) => Promise<readonly unknown[]>;
 }
 
 type Environment = Readonly<Record<string, string>>;
@@ -39,6 +40,7 @@ export interface SigningInAs {
   readonly provider?: FakeProviderOptions;
   readonly settings?: Environment;
   readonly registersItself?: boolean;
+  readonly byDefault?: boolean;
 }
 
 function environmentOf(provider: FakeProvider, port: number, registersItself: boolean): Environment {
@@ -46,6 +48,26 @@ function environmentOf(provider: FakeProvider, port: number, registersItself: bo
     ? {}
     : { OIDC_CLIENT_ID: provider.clientId, OIDC_CLIENT_SECRET: provider.clientSecret };
   return { HOST: '127.0.0.1', PORT: String(port), PUBLIC_URL: publicUrl, OIDC_ISSUER: provider.issuer, ...client };
+}
+
+export const claimOfTheDefault = 'tenant';
+
+function optionsOf(provider: FakeProvider, byDefault: boolean): typeof compositionRoot {
+  return byDefault
+    ? {
+        ...compositionRoot,
+        defaultIdentityProvider: {
+          issuer: provider.issuer,
+          scopes: ['openid', 'profile', 'email'],
+          requiredClaim: { claim: claimOfTheDefault },
+        },
+      }
+    : compositionRoot;
+}
+
+function byDefaultIn(environment: Environment, byDefault: boolean): Environment {
+  const { OIDC_ISSUER: _issuer, OIDC_CLIENT_ID: _id, OIDC_CLIENT_SECRET: _secret, ...withoutAnyProvider } = environment;
+  return byDefault ? withoutAnyProvider : environment;
 }
 
 type RunningServer = Awaited<ReturnType<typeof startServer>>;
@@ -59,12 +81,15 @@ export async function signingIn({
   provider: options = {},
   settings = {},
   registersItself = false,
+  byDefault = false,
 }: SigningInAs = {}): Promise<Running> {
   const provider = await providerOverHttps('/tenant/v2.0', options);
   const port = await aPortNothingListensOn();
   const ledger = temporaryLedger();
-  const environment = { ...environmentOf(provider, port, registersItself), ...settings, LEDGER_FILE: ledger.fileName };
-  const running = { server: await startServer(environment, compositionRoot) };
+  const given = byDefaultIn(environmentOf(provider, port, registersItself), byDefault);
+  const environment = { ...given, ...settings, LEDGER_FILE: ledger.fileName };
+  const serverOptions = optionsOf(provider, byDefault);
+  const running = { server: await startServer(environment, serverOptions) };
   onTestFinished(async () => {
     await running.server.stop();
     ledger.remove();
@@ -76,10 +101,11 @@ export async function signingIn({
     at: (path, init = {}) => browserAt(local, publicUrl).at(path, init),
     aBrowser: () => browserAt(local, publicUrl),
     peopleKept: () => rowsOfTheLedgerIn(ledger.fileName, 'auth_people'),
+    factsKept: (type, field) => fieldOfEachFactIn(ledger.fileName, type, field),
     server: () => running.server,
     restarted: async () => {
       await running.server.stop();
-      running.server = await startServer(environment, compositionRoot);
+      running.server = await startServer(environment, serverOptions);
       return running.server;
     },
   };

@@ -1,7 +1,9 @@
 import {
+  ClientRegistrationError,
   providerRequestsOverTheNetwork,
   registeringProviderOf,
   relyingPartyOf,
+  UnusableIdentityProviderError,
   type ProviderRequests,
   type RegisteringProvider,
   type RelyingParty,
@@ -28,10 +30,26 @@ interface SignInAsARegisteredClient extends SignInAt {
   readonly registering: RegisteringProvider;
 }
 
-export type CompanySignIn = SignInAsAGivenClient | SignInAsARegisteredClient;
+interface SignInRegisteredAtFirstUse extends SignInAt {
+  readonly issuer: string;
+  readonly redirectUri: string;
+  readonly registeringAtFirstUse: () => Promise<RegisteringProvider>;
+}
+
+export type CompanySignIn = SignInAsAGivenClient | SignInAsARegisteredClient | SignInRegisteredAtFirstUse;
 
 function clientNameAt(publicUrl: string): string {
   return `Auto Runtime at ${new URL(publicUrl).host}`;
+}
+
+export function registeringProviderFor(
+  settings: OpenIdConnectSettings,
+  byDefault: boolean,
+  requests: ProviderRequests,
+): Promise<RegisteringProvider> {
+  const { publicUrl } = settings;
+  const introduced = byDefault ? { clientUri: publicUrl } : {};
+  return registeringProviderOf({ ...settings, clientName: clientNameAt(publicUrl), ...introduced }, requests);
 }
 
 export async function companySignInOf(
@@ -42,15 +60,31 @@ export async function companySignInOf(
   if (client !== undefined) {
     return { relyingParty: await relyingPartyOf({ ...settings, ...client }, requests), publicUrl, requiredClaim };
   }
-  const clientName = clientNameAt(publicUrl);
-  const registering = await registeringProviderOf({ ...settings, clientName }, requests).catch((failure: unknown) => {
+  const registering = await registeringProviderFor(settings, false, requests).catch((failure: unknown) => {
     throw refusedAtStart(failure);
   });
   return { registering, publicUrl, requiredClaim };
 }
 
+export function signInByDefaultOf(
+  settings: OpenIdConnectSettings,
+  requests: ProviderRequests = providerRequestsOverTheNetwork,
+): CompanySignIn {
+  const { issuer, redirectUri, publicUrl, requiredClaim } = settings;
+  return {
+    issuer,
+    redirectUri,
+    publicUrl,
+    requiredClaim,
+    registeringAtFirstUse: () => registeringProviderFor(settings, true, requests),
+  };
+}
+
 export function issuerOf(signIn: CompanySignIn): string {
-  return 'relyingParty' in signIn ? signIn.relyingParty.issuer : signIn.registering.issuer;
+  if ('relyingParty' in signIn) {
+    return signIn.relyingParty.issuer;
+  }
+  return 'registering' in signIn ? signIn.registering.issuer : signIn.issuer;
 }
 
 export interface AsItsClient {
@@ -63,12 +97,64 @@ export interface ClientsServed {
   readonly report: ClientsReport;
 }
 
+function onceMade<Made>(make: () => Promise<Made>): () => Promise<Made> {
+  const kept: { making?: Promise<Made> } = {};
+  return () => {
+    kept.making ??= make().catch((failure: unknown) => {
+      delete kept.making;
+      throw failure;
+    });
+    return kept.making;
+  };
+}
+
+function asUnusable(failure: unknown): unknown {
+  return failure instanceof ClientRegistrationError
+    ? new UnusableIdentityProviderError({ message: failure.message })
+    : failure;
+}
+
+function registeredAtFirstUse(
+  signIn: SignInRegisteredAtFirstUse,
+  registrations: SignInClientRegistrations,
+  report: ClientsReport,
+): RelyingParty {
+  const prepared = onceMade(async () => {
+    const registering = await signIn.registeringAtFirstUse();
+    const clients = registeredClientsOf(registering, registrations, report);
+    await clients.inUse();
+    return registering.relyingPartyOf(clients);
+  });
+  const usable = () =>
+    prepared().catch((failure: unknown) => {
+      throw asUnusable(failure);
+    });
+  return {
+    issuer: signIn.issuer,
+    redirectUri: signIn.redirectUri,
+    signInStarted: async (asked) => (await usable()).signInStarted(asked),
+    signInFinished: (callbackQuery, pending) =>
+      usable().then(
+        (relyingParty) => relyingParty.signInFinished(callbackQuery, pending),
+        (failure: unknown) => {
+          if (failure instanceof UnusableIdentityProviderError) {
+            return { failed: failure.message };
+          }
+          throw failure;
+        },
+      ),
+  };
+}
+
 export async function asItsClient(
   signIn: CompanySignIn,
   { registrations, report }: ClientsServed,
 ): Promise<AsItsClient> {
   if ('relyingParty' in signIn) {
     return { relyingParty: signIn.relyingParty, pending: pendingCookieOf(false) };
+  }
+  if ('registeringAtFirstUse' in signIn) {
+    return { relyingParty: registeredAtFirstUse(signIn, registrations(), report), pending: pendingCookieOf(true) };
   }
   const clients = registeredClientsOf(signIn.registering, registrations(), report);
   await clients.inUse().catch((failure: unknown) => {

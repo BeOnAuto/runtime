@@ -1,120 +1,38 @@
 ---
-description: 'The rules Auto Runtime applies to credentials: how it reads one, what a token must hold, what a signed-in person may do and what a refused client is told.'
+description: 'The rules Auto Runtime applies to credentials: how it reads one, the tokens it issues, what a signed-in person may do and what a refused client is told.'
 ---
 
 # Sign-in and token reference
 
-This page sets out the rules the runtime applies to credentials: how it reads one, what a token must hold, what a signed-in person may do and what a refused client is told. It also sets out how the runtime checks calls from a browser and requests in local mode. [Authentication and security](../self-host/security.md) covers the tasks: turning sign-in on, making API keys, local mode and calls from a browser.
+This page sets out the rules the runtime applies to credentials: how it reads one, the tokens it issues, what a signed-in person may do and what a refused client is told. It also sets out how the runtime checks calls from a browser and requests in local mode. [Authentication and security](../self-host/security.md) covers the tasks: turning sign-in on, making API keys, local mode and calls from a browser.
 
-A signed-in person acts in an [org](../concepts/terminology.md#orgs-and-callers), the runtime's name for an organization in the Auto identity service, or, for a person who signs in with none, for an org of their own, whose id is their subject.
+A person signed in at the runtime acts in its one [org](../concepts/terminology.md#orgs-and-callers), `default`.
 
 ## How a credential is read
 
 - A caller sends its credential as `Authorization: Bearer <credential>`.
 - A header that is not exactly one `Bearer <key or token>` is refused `400`, in local mode too.
-- A credential that has the form of an API key, which starts with `abk_`, is checked as a key. Any other is checked as a token. Keys and sign-in work side by side.
-- A token is a JWT that the Auto identity service signed, in one of [two forms](#the-two-token-forms).
+- A credential that has the form of an API key, which starts with `abk_`, is checked as a key. Any other is checked as an access token. Keys and sign-in work side by side.
+- An access token is one the runtime issued itself, as the OAuth 2.1 authorization server at `PUBLIC_URL` ([Access tokens](#access-tokens)).
 
 ## What the server checks at start
 
-With sign-in on, the server reads the identity service before it accepts a request:
+- With `OIDC_ISSUER`, the server reads the identity provider's metadata as it starts, and stops at start on a provider it cannot use.
+- With Auto accounts, the server makes no contact with Auto's identity service as it starts. It reads Auto's metadata and registers itself there when the first sign-in begins. When it cannot read Auto's metadata or register there, the person is told the sign-in failed, and the next sign-in tries again.
 
-1. It reads the service's metadata from `/.well-known/oauth-authorization-server`. When that cannot be used, it reads `/.well-known/openid-configuration` instead. This is the order of the MCP authorization specification.
-2. The metadata must name the issuer exactly as `IDENTITY_ISSUER` writes it, and an `https` `jwks_uri`.
-3. It reads the key set at that `jwks_uri`, which must hold a key.
+## Access tokens
 
-Each read waits at most 10 seconds for a response and reads at most 64 KiB. It follows no redirect: an address that responds with one is refused, like an address that does not respond.
+The runtime issues an access token at its token endpoint to the client a person signed in through, Studio or an agent:
 
-The key set may instead be given, for a service that publishes its keys another way, or a server that should read nothing of the service at start:
+- It is opaque. The runtime keeps a hash of it, and a client can read nothing in it.
+- It lasts 15 minutes. The client then uses its refresh token, which is replaced at each use: a refresh token used twice ends the whole grant. A refresh token lasts 30 days from its latest use, within a grant of 90 days.
+- It holds the scopes the person allowed ([How scopes grant permissions](#how-scopes-grant-permissions)).
 
-- With `IDENTITY_JWKS_URL`, the server reads no metadata, and reads the key set at that `https` URL in place of the `jwks_uri`, as step 3 does, with the same bounds.
-- With `IDENTITY_JWKS`, the JSON of the key set itself, which must hold a key, the server reads nothing of the service, at start or later.
-
-Setting both stops the start with an `InvalidSettingsError`. The tokens are checked the same way whichever gives the key set.
-
-A service whose metadata or key set cannot be used stops the start with an `UnusableIdentityServiceError`. The error names the service and each address the server read.
-
-## The two token forms
-
-| Form         | Holds `aud` | Who holds it                                                                                                                                                                                                                  | Where it is accepted                                                                                                                                                                             | Permissions                                     |
-| ------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| Access token | Yes         | A third party acting for a person: an agent that obtains it through the authorization flow, or an agent gateway that obtains it on the person's behalf. The person grants its scopes on the identity service's consent screen | Wherever its `aud` names the runtime; see [The audience of a token](#the-audience-of-a-token)                                                                                                    | The permissions among the scopes it was granted |
-| Session      | No          | A page the person signs in to: Studio, Auto's own app (signed in to once, with no consent screen), or a page at an origin in `ALLOWED_ORIGINS`                                                                                | Only when its `azp` names the Studio host's origin, `PUBLIC_URL` where the runtime serves Studio, or one of `ALLOWED_ORIGINS`, and only on a request whose `Origin` header is exactly that `azp` | Every permission in the person's org            |
-
-A token that holds `aud` is an access token, even when it also holds an `azp`.
-
-## What a token must hold
-
-The runtime accepts a token only when it meets every rule:
-
-| Claim or property | Rule                                                                                                                                                                                                                                                                                                                          |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Size              | At most 8 KiB                                                                                                                                                                                                                                                                                                                 |
-| `alg` (header)    | `RS256`, `PS256`, `ES256`, or `EdDSA` on `Ed25519`. `none` and every other algorithm are refused                                                                                                                                                                                                                              |
-| `typ` (header)    | `at+jwt`, `application/at+jwt`, `JWT` or `application/jwt`, in any letter case, or none                                                                                                                                                                                                                                       |
-| Signature         | By a key of the service's key set that verifies its algorithm, chosen by the token's `kid`. A token without a `kid` uses the only key of its type in the set; one that several keys fit is refused                                                                                                                            |
-| Signing key       | Never an RSA key under 2048 bits, a key meant for encryption, or a key named for another algorithm                                                                                                                                                                                                                            |
-| `iss`             | The issuer, `IDENTITY_ISSUER`                                                                                                                                                                                                                                                                                                 |
-| `aud`             | For an access token, an audience the runtime accepts: see [The audience of a token](#the-audience-of-a-token)                                                                                                                                                                                                                 |
-| `azp`             | For a session, an origin the runtime allows, equal to the request's `Origin` header                                                                                                                                                                                                                                           |
-| `exp`             | Present and not past, with 60 seconds of leeway                                                                                                                                                                                                                                                                               |
-| `nbf` and `iat`   | Not ahead, with 60 seconds of leeway                                                                                                                                                                                                                                                                                          |
-| `sub`             | A non-empty string of at most 256 bytes, without control characters, unpaired surrogates or noncharacters. These are the bounds of a name in the facts, since `sub` becomes part of the name recorded for the person. For a token that names no org, an org id other than `local` too, since it is the org the person acts in |
-| `name`            | Present, and a non-empty string of at most 256 bytes, without control characters, unpaired surrogates or noncharacters. It is the person's name as the identity service gives it, which the runtime records beside their id as who did what they did, and names in the instructions of an MCP connection                      |
-| `org_id`          | For an access token that names an org: present, and an org id of 1 to 64 letters, digits, `_` and `-`, other than `local`. It is the id of the organization the person signed in to. The identity service puts it in the token when the person grants `user:org:read`                                                         |
-| `o`               | For a session that names an org: an object whose `id` is an org id under the same rule. Version 2 of the service's session token names the organization in `o`, beside its slug, the person's role, their permissions and a feature-permission map. The runtime reads only the `id`                                           |
-| `scope`           | For an access token that holds it, a string of scopes separated by spaces, as the identity service issues it. The `scope` of a session is not read                                                                                                                                                                            |
-
-The org comes from the org claim of the token's form: `org_id` for an access token, the `id` of `o` for a session. A token that holds neither `org_id` nor `o` names no org, as the token of a person signed in with no organization of their own does, such as a session issued while the person has no active organization. It acts in the org whose id is its `sub`, and in no other, and the runtime's rules then hold there as in any org. A token that holds the org claim of the other form without its own is refused. No org is taken from anything else the token holds. That includes the `org_id` of a session and the `o` of an access token.
-
-## How the key set is kept
-
-A key set read at start, through the metadata or at `IDENTITY_JWKS_URL`, is kept this way:
-
-- The server reads the key set again for a `kid` it does not hold, once 60 seconds have passed since the last read that succeeded.
-- It reads the set again at the first token after the set is ten minutes old. So a key the service removes is trusted for ten minutes at most.
-- When it cannot read the set again for an unknown `kid`, the keys it held stay in use.
-- When it cannot read the set once ten minutes have passed, every token is refused. An identity service that is unreachable for longer than that keeps sign-ins out until it responds again.
-
-A key set that `IDENTITY_JWKS` gives is read from nowhere: its keys are the ones trusted until the server restarts with others, and a token signed with any other key is refused.
-
-## When a token is refused
-
-A token that fails any rule is refused `401` with `invalid_token`, and so is an opaque token. The problem's `detail` names the rule or the claim the token failed, and never a value it holds:
-
-| Token                                                                                   | Detail                                                                                                                                            |
-| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| An expired token                                                                        | `The token was refused: ERR_JWT_EXPIRED on its exp claim`                                                                                         |
-| An access token without `org_id` that holds an `o`                                      | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its org_id claim`                                                                      |
-| An access token whose `org_id` is not an org id other than `local`                      | `The token was refused: its org_id claim is not an org id other than local`                                                                       |
-| A session without `o` that holds an `org_id`                                            | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its o claim`                                                                           |
-| A session whose `o` is no object, or holds no `id` that is an org id other than `local` | `The token was refused: its o.id claim is not an org id other than local`                                                                         |
-| A token that names no org, whose `sub` is not an org id other than `local`              | `The token was refused: its sub claim is not an org id other than local`                                                                          |
-| A session without `name`                                                                | `The token was refused: ERR_JWT_CLAIM_VALIDATION_FAILED on its name claim`                                                                        |
-| A token whose `name` is empty, longer than 256 bytes or holds a control character       | `The token was refused: its name is not a non-empty string of at most 256 bytes without control characters, unpaired surrogates or noncharacters` |
-| An access token for another resource                                                    | Ends `on its aud claim`                                                                                                                           |
-| A session given to a page at an origin the runtime does not allow, or naming no origin  | Ends `on its azp claim`                                                                                                                           |
-| A session sent without an `Origin` header, or from another origin than its `azp`        | `The token was refused: the session was not presented by the page it was issued to`                                                               |
+A token the runtime did not issue, one that has ended or was revoked, and one issued for another resource are refused `401` with `invalid_token`.
 
 ## The audience of a token
 
-The runtime accepts an access token only when its `aud` names the runtime as one of these:
-
-- `PUBLIC_URL`, alone or with a final `/`;
-- on an MCP endpoint, `PUBLIC_URL` followed by the path of the endpoint the request reached, such as `https://runtime.example.com/orgs/acme/mcp`. A standards client asks for a token for this resource when the metadata of that endpoint names it.
-
-So the runtime refuses these, though the same service signed them:
-
-- a token the identity service issued for another service;
-- an identity token sent by mistake;
-- a token that another resource server received and passes on.
-
-A session names no audience. The runtime checks its `azp` instead, which is the origin of the page that the identity service issued it to:
-
-- A session issued to a page that the runtime does not allow is refused.
-- A session issued to a page that it allows is accepted only on a request whose `Origin` is that page's origin. This holds on the MCP endpoints as on every other path.
-- A page's calls to a runtime are always cross-origin, so its browser always sends `Origin`.
-- A session serves a page and never an agent.
+The runtime accepts an access token only when it was issued for the runtime itself: its audience is `PUBLIC_URL`. A client gets one by asking for `PUBLIC_URL`, or an address under it such as the `resource` the protected resource metadata names, as its `resource` (RFC 8707), or by asking for one of the runtime's scopes with no `resource`. A token asked for with neither serves the UserInfo endpoint alone, and the API refuses it.
 
 The audience is the check that a public server needs. Requests reach it through proxies and under any `Host`, and the audience ties the token to the runtime rather than to the host name a request used. So a public server, whose callers present credentials, does not check `Host`. Local mode is different, since it trusts every request without a credential. There, the `Host` check stops a page in a browser from reaching the server through a name that resolves to the loopback address.
 
@@ -126,13 +44,8 @@ The runtime checks the `Origin` header a browser sends with every request:
 - A request whose `Origin` names any other origin is refused `403`.
 - A request with no `Origin` header, such as one from a script or an agent, passes this check.
 - The paths that need no caller skip the `Origin` and `Host` checks: `/health`, the OpenAPI document, the guides, the API catalog, the page at `/` and, where sign-in is on, the protected resource metadata. Under `/studio/`, where the runtime serves Studio, no caller is needed either, and the `Origin` and `Host` checks still apply.
-- Being allowed lets a page reach the API. Where credentials are enforced, the page still sends a key or a session in the `Authorization` header. There is no wildcard origin and no credentials mode.
-
-A page that a person signed in to sends the session that the identity service issued to it, as `Authorization: Bearer <session>`. It then acts as that person, with every permission in their org.
-
-- A session is accepted only from its own page: the request's `Origin` header must be the origin the session names as `azp`.
-- A session sent without `Origin` (by a script outside a browser, or by an agent) or from another page is refused `401`. [When a token is refused](#when-a-token-is-refused) gives the detail it carries.
-- In local mode no key is needed, so a script served from the Studio host, or by the runtime itself under `/studio/`, can act as the local developer. The session it sends is ignored.
+- Being allowed lets a page reach the API. Where credentials are enforced, the page still sends a key or an access token in the `Authorization` header. There is no wildcard origin and no credentials mode.
+- In local mode no key is needed, so a script served from the Studio host, or by the runtime itself under `/studio/`, can act as the local developer. Any credential it sends is ignored.
 
 For an allowed origin, the server responds to CORS like this:
 
@@ -145,7 +58,7 @@ For an allowed origin, the server responds to CORS like this:
 
 A server is in [local mode](../self-host/security.md#local-mode) when it listens only on a loopback address and neither `PUBLIC_URL` nor `API_KEYS` is set, or when its operator declares it with `ACCESS_MODE=local`, for a server whose port only this computer reaches, such as a container whose port is published on `127.0.0.1` alone. The declaration takes no `API_KEYS`, and a `PUBLIC_URL` only on `localhost`, `127.0.0.1` or `[::1]`, which names the server's address, signs no one in, and is needed on a server that listens beyond the loopback. The runtime then signs no one in and serves no protected resource metadata. It trusts every request as the local developer, with every permission in whichever org the request names. It still checks how a request arrives:
 
-- The credential a request presents is ignored, since a page signed in to Auto sends its session to every server it calls. A request with a session, an access token or a key acts as the local developer.
+- The credential a request presents is ignored: a request with an access token or a key acts as the local developer.
 - An `Authorization` header that is not one `Bearer <key or token>` is still refused `400`.
 - A request whose `Host` header is not `localhost`, `127.0.0.1` or `[::1]`, with or without a port, is refused `403`. This stops a web page from driving the server through a name that resolves to the loopback address.
 - As always, a request whose `Origin` is neither the Studio host's, nor the runtime's own while it serves Studio, as it does by default in local mode, nor in `ALLOWED_ORIGINS` is refused `403`.
@@ -154,27 +67,22 @@ A server is in [local mode](../self-host/security.md#local-mode) when it listens
 
 ## How scopes grant permissions
 
-A sign-in asks the identity service for five scopes:
+A client asks for the scopes the protected resource metadata names:
 
-- `user:org:read`, which binds the token to the organization the person signs in to;
-- `org:read`, `org:write`, `playbook:read` and `playbook:write`, the four permissions.
+- `org:read`, `org:write`, `playbook:read` and `playbook:write`, the four permissions;
+- `user:org:read`, which grants no permission.
 
-The identity service defines each permission as a scope of its own, with a sentence that it shows on its consent screen, so a person can read what they grant.
+The runtime asks the person, on a page of its own, whether to allow an agent. What a token then allows:
 
-What a token then allows:
-
-- A session admits the person to the org the `id` of its `o` names, over every playbook, with all four permissions, as they act in Studio. The role and permissions its `o` names do not change that.
-- A token that names no org admits the person to the org whose id is its `sub`, over every playbook, with the permissions of its form: every permission for a session, and those among its scopes for an access token.
-- An access token admits the person to the org its `org_id` names, over every playbook, with the permissions among the scopes in its `scope` claim. Only `org:read`, `org:write`, `playbook:read` and `playbook:write` are permissions. Any other scope grants none, `user:org:read` included.
-- An access token that grants none of the four, or holds no `scope`, still admits the person to their org, with no permission. Every operation then refuses them `403` with `insufficient_scope`. The challenge's `scope` names the permissions the operation needs, so a client asks the identity service for a token with more.
-- For an access token, `org_id` binds the org, not `user:org:read`. An access token that holds `org_id` and the four permissions, but not `user:org:read`, admits the person to that org with all four permissions.
-- Every other org refuses the person `403` with `insufficient_scope`, over HTTP and on the MCP endpoints. `/mcp` serves them the org their token names.
+- An access token admits the person to the org `default`, over every playbook, with the permissions among the scopes it holds. Only `org:read`, `org:write`, `playbook:read` and `playbook:write` are permissions. Any other scope grants none, `user:org:read` included.
+- An access token that grants none of the four still admits the person, with no permission. Every operation then refuses them `403` with `insufficient_scope`. The challenge's `scope` names the permissions the operation needs, so a client asks for a token with more.
+- Every other org refuses the person `403` with `insufficient_scope`, over HTTP and on the MCP endpoints. `/mcp` serves them the org `default`.
 
 API keys cover what sign-in does not: a machine, a pipeline or an agent that does not sign in, and a grant over only some of an org's playbooks, such as reading one playbook.
 
 ## The name recorded for a signed-in person
 
-A signed-in person acts under the id `person:<subject>`, where the subject is the token's `sub`, unchanged, and the name the token's `name` claim gives, or the subject where an access token holds no `name`, as an identity service may issue one. The id lets a reader of the facts tell a person from a key.
+A signed-in person acts under the id `person:<id>`, where the id is a SHA-256 of their identity provider's issuer and their subject there, the same at every sign-in. The facts record that id as the person's name too. The id lets a reader of the facts tell a person from a key.
 
 - The id is the `by` of every fact the person records.
 - The id and the name, as `{ id, name }`, are the `created_by` of a playbook and a definition they create, the `added_by` and the `connected_by` of a connection they add and connect, the `started_by` of a run they start and the `answered_by` of a request they answer.
@@ -182,17 +90,18 @@ A signed-in person acts under the id `person:<subject>`, where the subject is th
 
 ## The client a person calls through
 
-An access token that holds `client_id`, the client it was issued to, names that client beside the person. The runtime reads it under the bounds of `sub`, and with it `client_name`, the client's name, where the token holds one under the same bounds. A `client_id` that is an `https` address is the address of the client's metadata document, and its host is the client's domain. A session names no client, since it serves its own page, and a `client_id` or `client_name` outside the bounds is not read; neither refuses the token.
+An access token issued to an agent names that client beside the person: its client ID, and its name where it gave one. A client ID that is an `https` address is the address of its client ID metadata document, and its host is the client's domain. A token issued to Studio names no client.
 
-`add_connection` and `reconnect_connection` record the client with the link they give, as `asked_by`, `{ id, name, domain }`, with `name` and `domain` `null` where the token gives none, and `read_link` answers the client of the link it reads. A link asked for with an API key, with a session or with a token that holds no `client_id` records none.
+`add_connection` and `reconnect_connection` record the client with the link they give, as `asked_by`, `{ id, name, domain }`, with `name` and `domain` `null` where the token gives none, and `read_link` answers the client of the link it reads. A link asked for with an API key or through Studio records none.
 
 ## What happens when access is revoked
 
-The runtime verifies a token on every request and keeps none.
+The runtime checks an access token on every request, against the grants and tokens it keeps.
 
-- When the identity service stops issuing tokens to a person, the runtime refuses them once their last token expires.
-- A token the service revokes before it expires is still accepted until it expires, since the runtime does not ask the service.
-- A workflow run keeps acting as the identity that started it, with that identity's permissions and playbooks, for as long as it runs. A run is one unit of work that identity asked for. Revoking the person stops their next request, not the runs they already started. A caller who may write to the playbook can cancel those runs.
+- A person who no longer holds a role is refused at their next refresh, authorization or sign-in. An access token they hold is accepted until it ends, within 15 minutes.
+- A token a client revokes at the runtime's revocation endpoint is refused from then on.
+- `admin reset-setup` signs everyone out: every sign-in, grant and token ends at once, and people and their agents sign in again.
+- A workflow run keeps acting as the identity that started it, with that identity's permissions and playbooks, for as long as it runs. A run is one unit of work that identity asked for. Revoking the person's access refuses them as the bullets above say, but does not stop the runs they already started. A caller who may write to the playbook can cancel those runs.
 
 ## Discovery and challenges
 
@@ -200,12 +109,12 @@ With sign-in on, a client finds out from the server itself how to sign in. This 
 
 1. The client connects to an MCP endpoint without a token, and is challenged.
 2. It reads the protected resource metadata the challenge points to.
-3. It asks the authorization server the metadata names for a token for that resource.
+3. It asks the authorization server the metadata names, the runtime itself, for a token for that resource.
 4. It connects again with that token.
 
 An agent gateway that obtains tokens on a person's behalf does the same as any other client.
 
-Signing in through a browser, registering clients and refreshing tokens are the authorization server's work. The runtime never issues a token. It never passes a token it receives on to a tool server; it calls each tool server under that server's own credential.
+Signing in through a browser, registering clients and refreshing tokens are the authorization server's work, which the runtime does at `PUBLIC_URL`. A client names itself by its client ID metadata document or registers itself (RFC 7591). The runtime never passes a token it receives on to a tool server; it calls each tool server under that server's own credential.
 
 ### Protected resource metadata
 
@@ -214,7 +123,7 @@ With sign-in on, `GET /.well-known/oauth-protected-resource` returns the protect
 | Field                      | Value                                                                                                          |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `resource`                 | `PUBLIC_URL` followed by the path the metadata describes                                                       |
-| `authorization_servers`    | The one issuer, `IDENTITY_ISSUER`                                                                              |
+| `authorization_servers`    | The runtime itself, `PUBLIC_URL`                                                                               |
 | `bearer_methods_supported` | `["header"]`                                                                                                   |
 | `scopes_supported`         | `["user:org:read", "org:read", "org:write", "playbook:read", "playbook:write"]`, the scopes a sign-in asks for |
 | `resource_documentation`   | The [MCP reference](mcp.md)                                                                                    |

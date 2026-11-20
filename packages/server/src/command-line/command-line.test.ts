@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -192,6 +192,18 @@ describe('the other commands of auto-runtime', () => {
 
     await expect(runCommandLine(['key'], host)).resolves.toBe(1);
     expect(errors.at(-1)).toMatch(/^Arguments: --org <org id>/u);
+  });
+
+  it('runs an admin command on the ledger the settings of this computer name, with no runtime running', async () => {
+    const { host, logged, errors } = recordedHost();
+    const ledgerFile = join(directory, 'ledger-of-an-admin-command.db');
+    writeFileSync(ledgerFile, '');
+
+    await expect(
+      runCommandLine(['admin', 'reset-setup'], { ...host, environment: { LEDGER_FILE: ledgerFile } }),
+    ).resolves.toBe(0);
+    expect([logged.length, errors]).toEqual([2, []]);
+    expect(logged[1]).toContain(ledgerFile);
   });
 
   it('prints the release version with --version', async () => {

@@ -33,7 +33,7 @@ export interface ServedParts {
   readonly consumersOf?: NonNullable<CompositionParts['consumersOf']>;
   readonly goalsPortsOver?: NonNullable<CompositionParts['goalsPortsOver']>;
   readonly keptOutside?: boolean;
-  readonly key?: string;
+  readonly key?: string | ((origin: string) => Promise<string>);
 }
 
 function composedWithTheLedgerOver(options: ComposedServerOptions, ledgerOver: LedgerOver): ComposedServerOptions {

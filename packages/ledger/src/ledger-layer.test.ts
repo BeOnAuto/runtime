@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ledgerLayoutFloor } from './layout/ledger-layout.ts';
 import { aSQLiteFileInLayout, ledgerLayer } from './sqlite.ts';
 import { openLedgerWith } from './testing/open-ledger.ts';
-import { tally } from './testing/tally.ts';
+import { tally, tallyInterruptedBy } from './testing/tally.ts';
 import { temporaryDatabase, type TemporaryDatabase } from './testing/temporary-database.ts';
 
 const databases: TemporaryDatabase[] = [];
@@ -93,6 +93,27 @@ describe('a ledger on a database file given a floor of its own', () => {
       _tag: 'ledger_layout_refused',
       found: ledgerLayoutFloor - 2,
       floor: ledgerLayoutFloor - 1,
+    });
+  });
+});
+
+describe('two ledgers on one database file, as a server and a command run beside it', () => {
+  it('never both append at one version: the one the other got ahead of decides again on what the other wrote', async () => {
+    const fileName = aDatabaseFile();
+    const server = await openLedgerWith(ledgerLayer({ fileName }));
+    const command = await openLedgerWith(ledgerLayer({ fileName }));
+    await Effect.runPromise(server.ledger.execute(tallies, tally, [1]));
+    const serverTakesOneFirst = Effect.orDie(server.ledger.execute(tallies, tally, [-1]));
+
+    const decided = await Effect.runPromise(
+      command.ledger.execute(tallies, tallyInterruptedBy(serverTakesOneFirst, 1), [5]),
+    );
+    const loaded = await Effect.runPromise(server.ledger.load(tallies, tally));
+    await Promise.all([server.dispose(), command.dispose()]);
+
+    expect({ decided, loaded }).toEqual({
+      decided: { state: 5, version: 3, decidedOn: 0 },
+      loaded: { state: 5, version: 3 },
     });
   });
 });

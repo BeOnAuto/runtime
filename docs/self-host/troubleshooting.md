@@ -32,7 +32,7 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Fix.**
 
-- Check the agent's MCP entry. For a team's runtime, it is `/mcp` at the runtime's `PUBLIC_URL`, over HTTP, such as `https://auto.example.com/mcp`. For Auto on your computer, [Run Auto on your computer](../get-started/local.md#connect-your-agent) gives it: the `mcp` command of `@on.auto/runtime`, run by `npx`; an agent that connects over HTTP instead, as one that signs you in does, uses `http://localhost:5555/mcp`, or the port you set.
+- Check the agent's MCP entry. For a team's runtime, it is `/mcp` at the runtime's `PUBLIC_URL`, over HTTP, such as `https://auto.example.com/mcp`. For Auto on your computer, [Run Auto on your computer](../get-started/local.md#connect-your-agent) gives it: the `mcp` command of `@on.auto/runtime`, run by `npx`; an agent that connects over HTTP instead uses `http://localhost:5555/mcp`, or the port you set.
 - Restart the agent session.
 - For Auto on your computer, confirm that the agent runs on the same computer as Auto Runtime.
 
@@ -73,16 +73,27 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Fix.** Use a concrete model reference that your configured provider supports, such as a model id from the provider's own documentation. A wildcard such as `provider/*` is not a model to run. When the list says `narrowed: true`, a model it leaves out may be one that [`allowed_models`](../reference/model-settings.md#allowed-models) does not allow, and a definition can name it only once the setting allows it. [Listing the models](../reference/model-settings.md#listing-the-models) explains where each list comes from.
 
-## The server says the identity service cannot be used {#identity-service}
+## Every Admin has left {#every-admin-has-left}
 
-**Symptom.** The server stops at start with an `UnusableIdentityServiceError`, naming the Auto identity service and each address it read.
+**Symptom.** No one who still signs in is an Admin, so no one can give roles.
 
-**Cause.** A runtime that signs people in reads the metadata and the key set of the Auto identity service, `https://clerk.on.auto`, as it starts. It could not reach them.
+**Fix.** Run `admin grant-admin` with the email address of a colleague who has signed in ([Admin commands](security.md#admin-commands)). They are an Admin at once, and nobody is signed out.
 
-**Fix.**
+## The server is tied to the wrong organization {#tied-to-the-wrong-organization}
 
-- Check that the machine reaches `https://clerk.on.auto`. Where the machine has an outbound proxy, the server must go through it, as [Set up a model provider](models.md#behind-an-outbound-proxy-with-a-private-certificate-authority) sets out.
-- For development on a machine that cannot reach the service, remove `PUBLIC_URL` from `.env` and start the server again. A server on a loopback address without `API_KEYS` then runs in [local mode](security.md#local-mode), which signs no one in.
+**Symptom.** Members of your organization are told "You can’t sign in here with that account." when they sign in with their Auto accounts.
+
+**Cause.** The first person to sign in chose another organization on Auto's screen, and the server was tied to it ([Auto accounts](security.md#auto-accounts)).
+
+**Fix.** Run `admin reset-setup` ([Admin commands](security.md#admin-commands)). It signs everyone out, and the next person to sign in ties the server to their organization. If they are not an Admin afterwards, run `admin grant-admin` with their email address.
+
+## The identity provider shows an error about the client {#identity-provider-client-error}
+
+**Symptom.** People who sign in see an error page of the identity provider, such as Auto's identity service, about the client or the application, and never come back to Auto.
+
+**Cause.** The server's registration at the identity provider was deleted there.
+
+**Fix.** Run `admin register-client` ([Admin commands](security.md#admin-commands)). It registers the server again, and people can sign in at once, with no restart. Where `OIDC_CLIENT_ID` gives the client, register Auto with the provider by hand again, then set `OIDC_CLIENT_ID` together with `OIDC_CLIENT_SECRET` or `OIDC_CLIENT_SECRET_FILE`.
 
 ## The server stops at start, naming `PUBLIC_URL` and `API_KEYS` {#reachable-without-credentials}
 

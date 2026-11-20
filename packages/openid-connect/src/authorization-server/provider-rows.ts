@@ -23,5 +23,6 @@ export interface ProviderRows {
   readonly consumed: (key: ModelRowKey, at: number) => Promise<boolean>;
   readonly destroyed: (key: ModelRowKey) => Promise<void>;
   readonly revokedByGrant: (model: string, grantId: string) => Promise<void>;
+  readonly endedEvery: (models: readonly [string, ...string[]]) => Promise<void>;
   readonly swept: (endedBefore: number) => Promise<void>;
 }
