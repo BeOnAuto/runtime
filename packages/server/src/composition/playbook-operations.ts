@@ -1,4 +1,5 @@
 import { commentChanges, commentOperations } from '@on.auto/activity';
+import { eventSubscriptionPresenter } from '@on.auto/connections';
 import {
   definePublishEvent,
   makeDefinitionOperations,
@@ -57,7 +58,11 @@ export function playbookOperationsServing(
     connections,
   }: Pick<ComposedFacts, 'facts' | 'names'> & ServedPages & ServedGoals & ServedConnectionAccess,
 ): readonly PlaybookOperation[] {
-  const presenters = [...makeDefinitionPresenters(capabilities, facts), ...goalPresenters(goals)];
+  const presenters = [
+    ...makeDefinitionPresenters(capabilities, facts),
+    ...goalPresenters(goals),
+    eventSubscriptionPresenter,
+  ];
   const { holders } = factsKnownWith(facts.onRuns);
   return [
     ...makeDefinitionOperations(capabilities, pages, { facts, presenters, holders, connections }, { goals, messages }),

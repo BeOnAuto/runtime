@@ -861,6 +861,7 @@ A step that starts and finishes in one input shows only `step_finished`.
 - tool calls, and tests of a tool;
 - the playbook's reads of a conversation, `replies_read` or `reading_failed`;
 - its tellings, `telling_started` and then `telling_succeeded` or `telling_failed`;
+- its subscriptions at the service of a connection, through which the service tells it when something changes in a place a request waits in: `event_subscription_made` and `event_subscription_removed`, each with the `connection` and the place as `topic`, and `event_subscription_failed`, with the same, the failure's `kind` and its closer cause as `because`. A `kind` is `connection_broken`, the connection is not connected; `scope_lacking`, it lacks the access subscribing takes; `tool_error`, the call failed or its answer could not be read; `unreachable`, the service did not take the call, and the playbook tries again; or `not_sent`, the call was not made;
 - the inputs workflow runs took;
 - the events published to the playbook;
 - a goal's things dismissed and restored, where goals are kept: `thing.dismissed`, with the thing's `goal`, its `id`, its `per` where it has one, who dismissed it as `by` and the run ids of the open requests it set aside as `requests`, and `thing.restored`, with the same `goal`, `id`, `per` and `by`, whose `by` is the playbook itself, `playbook:` and its name, where a request asked about the thing after its dismissal restored it. The `goal` and `id` are what `dismiss_goal_thing` takes to restore the thing.

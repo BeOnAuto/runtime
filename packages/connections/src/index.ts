@@ -49,6 +49,7 @@ export {
   type SigningReading,
 } from './signing/signing-keys.ts';
 export { EventSubscriptionEventSchema } from './subscriptions/subscription-facts.ts';
+export { eventSubscriptionPresenter } from './subscriptions/subscription-presenter.ts';
 export { eventSubscriptions } from './subscriptions/subscription-rows.ts';
 export { subscriptionRecordsOf, type SubscriptionLedger } from './subscriptions/subscription-records.ts';
 export { subscriptionLoopPortsOf, type SubscriptionLoopParts } from './subscriptions/loop-ports.ts';

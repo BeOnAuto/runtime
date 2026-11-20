@@ -4229,7 +4229,7 @@
       ]
     },
     {
-      "sha256": "e6ef8390d310fdc45afbcfabe79c6de180257243bc25f1642783cc8aeaebcbb4",
+      "sha256": "c9a7d0ca6276610877ba4f1c4c77879fab3418acfe7bd0df6be426abf04ebf0e",
       "tier": 3,
       "received": [
         {
@@ -4255,6 +4255,7 @@
         "6. Once list_connections says a connection is connected, read what the service holds with query_connection, and tell the person what you found and what you would reuse. For an HTTP API whose document you wrote, read with one of its calls first and tell the person what came back: a call the document declares as GET or HEAD is marked reads, which query_connection calls; any other may change something, so call it with execute_connection, once the person agrees. Where the service answers that first read by saying a path or a parameter is wrong, correct the document: read the connection with list_connections, remove it with remove_connection, and add it again with what list_connections answered for it, its `name`, `type`, `credential` and its whole `entry`, with the document corrected in `document_text`; then tell the person they will approve it and paste the key once more, or make a new key where the service shows a key only once.",
         "7. Show the person what you would create and change. Once they agree, make each change with execute_connection and read it back with query_connection. Where no connected tool can make a change, tell the person exactly what to change in the service and where, and read it back once they say it is done. Never make a function or workflow to set a service up or to check that it is set up: that is your work, with these tools, before the first run and whenever something there changes.",
         "8. Keep the ids you read of what must exist, for the functions that use them. Then tell the person what is set up and what the connection can do, and give the playbook its tools with the give-tools recipe.",
+        "9. Once a function's request waits for replies through a connection, read the playbook's events with list_playbook_events. Where an `event_subscription_failed` is newer than any `event_subscription_made` of the same `connection` and `topic`, the subscription there failed, and the playbook still looks for replies itself, so an answer may be taken later. Its `kind` says what to do: for `connection_broken`, reconnect the connection, as above; for `scope_lacking`, ask for the access it lacks, as above; for `unreachable`, nothing, since Auto tries again; for `tool_error` or `not_sent`, there is nothing to correct here.",
         ""
       ]
     },
@@ -10183,7 +10184,7 @@
       ]
     },
     {
-      "sha256": "c9b179c5f6fd91daa14f1ad56598bd07940a2a9f04cf2558c06c752ea40460d5",
+      "sha256": "0af06a451f76d179517cafe7f8b2c8b6e669a61968e1e2eb1991109a9e8989b1",
       "tier": 3,
       "received": [
         {
@@ -10209,6 +10210,7 @@
         "6. Once list_connections says a connection is connected, read what the service holds with query_connection, and tell the person what you found and what you would reuse. For an HTTP API whose document you wrote, read with one of its calls first and tell the person what came back: a call the document declares as GET or HEAD is marked reads, which query_connection calls; any other may change something, so call it with execute_connection, once the person agrees. Where the service answers that first read by saying a path or a parameter is wrong, correct the document: read the connection with list_connections, remove it with remove_connection, and add it again with what list_connections answered for it, its `name`, `type`, `credential` and its whole `entry`, with the document corrected in `document_text`; then tell the person they will approve it and paste the key once more, or make a new key where the service shows a key only once.",
         "7. Show the person what you would create and change. Once they agree, make each change with execute_connection and read it back with query_connection. Where no connected tool can make a change, tell the person exactly what to change in the service and where, and read it back once they say it is done. Never make a function or workflow to set a service up or to check that it is set up: that is your work, with these tools, before the first run and whenever something there changes.",
         "8. Keep the ids you read of what must exist, for the functions that use them. Then tell the person what is set up and what the connection can do, and give the playbook its tools with the give-tools recipe.",
+        "9. Once a function's request waits for replies through a connection, read the playbook's events with list_playbook_events. Where an `event_subscription_failed` is newer than any `event_subscription_made` of the same `connection` and `topic`, the subscription there failed, and the playbook still looks for replies itself, so an answer may be taken later. Its `kind` says what to do: for `connection_broken`, reconnect the connection, as above; for `scope_lacking`, ask for the access it lacks, as above; for `unreachable`, nothing, since Auto tries again; for `tool_error` or `not_sent`, there is nothing to correct here.",
         ""
       ]
     },

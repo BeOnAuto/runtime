@@ -54,7 +54,7 @@ async function tracedWithRooms() {
 }
 
 describe('a server that signs people in, given WEBHOOK_URL, whose request waits through a connection that declares a webhook per subscription', () => {
-  it('subscribes at its service with its events address, and takes a delivery the service signs with the secret it gave', async () => {
+  it('subscribes at its service with its events address, shows it among the playbook’s events, and takes a delivery the service signs with the secret it gave', async () => {
     const lines = loggedLines();
     const { receiver, rooms, server } = await tracedWithRooms();
     await server.ask('approve-brief');
@@ -62,6 +62,7 @@ describe('a server that signs people in, given WEBHOOK_URL, whose request waits 
     const hook = await hookMadeAt(rooms);
     const taken = await takenOnceRecorded(server, hook);
     const arrived = await until(lines, (seen) => seen.some((line) => line.includes(arrivedLine)));
+    const made = await server.call('GET', `${alpha}/events?type=event_subscription_made`);
     const kept = [
       JSON.stringify((await server.call('GET', `${alpha}/events`)).body),
       JSON.stringify((await server.call('GET', `${alpha}/interactions`)).body),
@@ -70,6 +71,10 @@ describe('a server that signs people in, given WEBHOOK_URL, whose request waits 
     const exported = receiver.received();
 
     expect(hook).toMatchObject({ room: theRoom, callback: `${theWebhookUrl}${eventsOf('alpha', 'rooms')}` });
+    expect(made).toMatchObject({
+      status: 200,
+      body: { events: [{ type: 'event_subscription_made', data: { connection: 'rooms', topic: theRoom } }] },
+    });
     expect(taken).toBe('200 ');
     expect(arrived.filter((line) => line.includes(arrivedLine))).toEqual([
       expect.stringContaining('"connection":"rooms"'),

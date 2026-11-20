@@ -29,6 +29,7 @@ export const outlines: readonly RecipeOutline[] = [
       'remove_connection',
       'query_connection',
       'execute_connection',
+      'list_playbook_events',
     ],
     request: ({ service }) => `Connect ${String(service)} to Auto for my team, then tell me what it can do.`,
   },

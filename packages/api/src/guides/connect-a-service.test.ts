@@ -37,6 +37,7 @@ describe('the connect-a-service recipe', () => {
       'remove_connection',
       'query_connection',
       'execute_connection',
+      'list_playbook_events',
     ]);
   });
 });

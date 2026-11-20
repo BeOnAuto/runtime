@@ -25256,7 +25256,10 @@
                 "step_failed",
                 "step_skipped",
                 "thing.dismissed",
-                "thing.restored"
+                "thing.restored",
+                "event_subscription_made",
+                "event_subscription_failed",
+                "event_subscription_removed"
               ],
               "description": "Only the events of this type, by its public name"
             }
