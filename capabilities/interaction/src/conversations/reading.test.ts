@@ -217,20 +217,23 @@ describe('a reply naming no message, to a request sent to a channel whose functi
   });
 });
 
-describe('a request sent to an address, whose function names no answerer', () => {
-  it('takes no answer in its thread from anyone but that address', async () => {
-    const playbook = await chatHarness({ document: threadDocument({ party: ["to: '{{ input.owner }}'"] }) });
-    await playbook.askInThread(first, 'priya@acme.example');
-    await playbook.performDue(Date.now());
-    const [thread] = playbook.chat.posted().map(({ ts }) => ts);
-    playbook.chat.reply({ channel: 'priya@acme.example', thread, user: 'U0MEMBER', text: 'approve' });
-    playbook.chat.reply({ channel: 'priya@acme.example', thread, user: 'priya@acme.example', text: 'reject' });
+describe('a request sent to a person, whose function names no answerer', () => {
+  it.each(['priya@acme.example', answererId])(
+    'takes no answer in its thread from anyone but that person, %s',
+    async (person) => {
+      const playbook = await chatHarness({ document: threadDocument({ party: ["to: '{{ input.owner }}'"] }) });
+      await playbook.askInThread(first, person);
+      await playbook.performDue(Date.now());
+      const [thread] = playbook.chat.posted().map(({ ts }) => ts);
+      playbook.chat.reply({ channel: person, thread, user: 'U0MEMBER', text: 'approve' });
+      playbook.chat.reply({ channel: person, thread, user: person, text: 'reject' });
 
-    await playbook.performReads(Date.now() + farAhead);
+      await playbook.performReads(Date.now() + farAhead);
 
-    expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toMatchObject([
-      { type: 'reply_refused', data: { reply: { sender: 'U0MEMBER' }, because: 'not_the_answerer' } },
-      { type: 'request_answered', data: { reply: { sender: 'priya@acme.example' } } },
-    ]);
-  });
+      expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toMatchObject([
+        { type: 'reply_refused', data: { reply: { sender: 'U0MEMBER' }, because: 'not_the_answerer' } },
+        { type: 'request_answered', data: { reply: { sender: person } } },
+      ]);
+    },
+  );
 });

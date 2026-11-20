@@ -511,7 +511,7 @@ The list pages with `limit` and `cursor`. Every reader of the playbook sees each
 Where a function reads replies, the person answers by replying to the message the playbook sent, in the chat where it reached them. While the request stands open, the playbook reads the conversation's new replies:
 
 - every few seconds at first, and every five minutes at most, never more often than the function's `wait`;
-- taking a reply from the answerer: the function's `from`, or `to` when it gives no `from`. With no `from` and a `to` that is neither an address nor a person's id, such as a channel, a reply in the thread of the request's message counts from anyone. A reply from anyone else is passed over and kept nowhere.
+- taking a reply from the answerer: the function's `from`, or `to` when it gives no `from`. With no `from` and a `to` that is a channel written with `#`, such as `#paid-media`, a reply in the thread of the request's message counts from anyone. A reply from anyone else is passed over and kept nowhere.
 
 The `reply` rule reads the answer from a reply. It maps each top-level string property of `output.schema` to where in the reply its value comes from:
 

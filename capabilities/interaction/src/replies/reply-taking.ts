@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-import { signedInPersonPrefix, type Issue, type PlaybookAddress, type ProjectedAddress } from '@on.auto/operations';
+import type { Issue, PlaybookAddress, ProjectedAddress } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import type { ReplyRefusal } from '../facts/run-facts.ts';
@@ -81,12 +81,10 @@ function answeredBy(request: KeptRequest, words: string): ReplyDecision {
   return issues.length === 0 ? { kind: 'take', request, answer } : refused(request, 'invalid', issues);
 }
 
-function namesAPerson(party: string): boolean {
-  return party.startsWith(signedInPersonPrefix) || party.includes('@');
-}
+const channelSign = '#';
 
 function answeredByTheRoom({ row }: KeptRequest): boolean {
-  return row.answerer === row.party && !namesAPerson(row.party);
+  return row.answerer === row.party && row.party.startsWith(channelSign);
 }
 
 interface Replier {
