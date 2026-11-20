@@ -13,6 +13,7 @@ export { roleAssignmentRows } from './assignments/role-assignment-rows.ts';
 export { enrolledAtSignIn } from './assignments/role-assignments-at-sign-in.ts';
 export {
   cedarDecisionPoint,
+  cedarDecisionPointLoaded,
   loadedMessage,
   type CedarDecisionPointParts,
 } from './decision-point/cedar-decision-point.ts';

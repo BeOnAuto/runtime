@@ -1,4 +1,4 @@
-import { editorRoleForEveryPerson, loadedMessage } from '@on.auto/access-control';
+import { loadedMessage, type RoleAssignments } from '@on.auto/access-control';
 import { makeAppRuntime } from '@on.auto/api';
 import { playbookOwnNamesOf } from '@on.auto/definitions';
 import { echo } from '@on.auto/definitions/testing';
@@ -8,7 +8,7 @@ import {
   type Outcome,
   playbookCallerOf,
   type PlaybookRequest,
-  reportedDifferenceMessage,
+  undecidedMessage,
 } from '@on.auto/operations';
 import { capturedLogs, memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
@@ -65,6 +65,14 @@ const services = Layer.mergeAll(
   memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
   recordingReporter().layer,
 );
+
+const holdingNoRole: RoleAssignments = { heldBy: () => Effect.succeed([]) };
+
+const refusedByTheDecisionPoint: ReadonlySet<string> = new Set(['rejected forbidden', 'rejected unavailable']);
+
+function reasonOf(outcome: Outcome): string {
+  return outcome.status === 'rejected' ? `rejected ${outcome.reason}` : outcome.status;
+}
 
 const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
@@ -170,25 +178,25 @@ describe('the operations the workflow host is handed', () => {
     ]);
   });
 
-  it('are each declared to the decision point the server composes, so each dispatch the host is handed is decided as the check decides it', async () => {
+  it('are each declared to the decision point the server composes, which lets the playbook acting as itself make each of them', async () => {
     const host = hostOperationsOf([echo]);
-    const reporting = makeDispatcher([], {
-      reportOnly: decisionPointServing(
-        { catalogs: [], host },
-        shippedFilesOnDisk(shippedRoots),
-        editorRoleForEveryPerson,
-      ),
-    });
     const logs = capturedLogs();
 
-    await Effect.runPromise(
-      Effect.forEach(Object.values(hostDispatchesOf(reporting, host)), (dispatch) => dispatch(asAlphaItself)).pipe(
+    const outcomes = await Effect.runPromise(
+      decisionPointServing({ catalogs: [], host }, shippedFilesOnDisk(shippedRoots), holdingNoRole).pipe(
+        Effect.flatMap((decisionPoint) =>
+          Effect.forEach(
+            Object.values(hostDispatchesOf(makeDispatcher([], { decidedBy: decisionPoint }), host)),
+            (dispatch) => dispatch(asAlphaItself),
+          ),
+        ),
         Effect.provide(logs.layer),
         Effect.provide(services),
       ),
     );
 
-    expect(logs.logged().filter(({ message }) => message === reportedDifferenceMessage)).toEqual([]);
+    expect(outcomes.filter((outcome) => refusedByTheDecisionPoint.has(reasonOf(outcome)))).toEqual([]);
+    expect(logs.logged().filter(({ message }) => message === undecidedMessage)).toEqual([]);
     expect(logs.logged().filter(({ message }) => message === loadedMessage)).toMatchObject([
       { annotations: { operations: hostRegistrationsOf(host).length } },
     ]);

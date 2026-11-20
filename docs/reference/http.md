@@ -1549,7 +1549,7 @@ A request with several faults is refused for the first, the fields in the order 
 
 ## Roles
 
-A person of the org holds a role there: `admin`, who manages the members; `editor`, who builds, runs and changes playbooks; or `viewer`, who views and comments. The runtime records each role given and taken away as a fact, `role_assigned` and `role_unassigned`, on the org's own stream of its role assignments, and keeps who holds what as they are recorded. In this release the roles are recorded and listed alone: what a caller may do is still decided by the permissions of their credential, as [Requests and access](#requests-and-access) sets out.
+A person of the org holds a role there: `admin`, who manages the members; `editor`, who builds, runs and changes playbooks; or `viewer`, who views and comments. The runtime records each role given and taken away as a fact, `role_assigned` and `role_unassigned`, on the org's own stream of its role assignments, and keeps who holds what as they are recorded. A signed-in person may do what their role allows, within the permissions of their credential, and a change of role holds from their next call ([The roles](../self-host/security.md#the-roles)). A key and the local developer hold no role, and may do what their credential grants, as [Requests and access](#requests-and-access) sets out.
 
 | Operation               | Method and route                           | Permission                    | Input                                 |
 | ----------------------- | ------------------------------------------ | ----------------------------- | ------------------------------------- |

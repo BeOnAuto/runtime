@@ -1,4 +1,4 @@
-import { cedarDecisionPoint, cedarModuleIn, type RoleAssignments } from '@on.auto/access-control';
+import type { RoleAssignments } from '@on.auto/access-control';
 import {
   allPermissions,
   enforcedDecisionOf,
@@ -7,11 +7,13 @@ import {
   type ArrivedVia,
   type Permission,
   type PlaybookAccess,
+  type PolicyDecisionPoint,
   type PrincipalReference,
 } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Effect } from 'effect';
 
+import { decisionPointOver } from '../../composition/served-access-control.ts';
 import { shippedRoots } from '../../server-options/shipped-roots.ts';
 import { actionOf, type ServedDeclaration } from '../openapi/declared-operations.ts';
 
@@ -64,6 +66,7 @@ const callerKinds: readonly CallerKind[] = [
     permissions: ['playbook:read', 'playbook:write'],
     playbooks: ['alpha'],
   },
+  { caller: 'The local developer', principal: { type: 'local_developer', id: 'local' }, via: 'local' },
 ];
 
 const heldRoles: readonly (readonly [string, string, string])[] = [
@@ -158,8 +161,11 @@ function refusedFor(cause: 'role' | 'token_type', decided: readonly Decided[]): 
 
 const files = shippedFilesOnDisk(shippedRoots);
 
-async function rowOf(operations: readonly ServedDeclaration[], kind: CallerKind): Promise<DecisionRow> {
-  const decisionPoint = cedarDecisionPoint({ module: cedarModuleIn(files), files, operations, roles });
+async function rowOf(
+  decisionPoint: PolicyDecisionPoint,
+  operations: readonly ServedDeclaration[],
+  kind: CallerKind,
+): Promise<DecisionRow> {
   const decided = await Promise.all(
     operations.map(async (operation): Promise<Decided> => {
       const allowed = await Promise.all(
@@ -195,6 +201,7 @@ async function rowOf(operations: readonly ServedDeclaration[], kind: CallerKind)
   };
 }
 
-export function decisionTableOf(operations: readonly ServedDeclaration[]): Promise<readonly DecisionRow[]> {
-  return Promise.all(callerKinds.map((kind) => rowOf(operations, kind)));
+export async function decisionTableOf(operations: readonly ServedDeclaration[]): Promise<readonly DecisionRow[]> {
+  const decisionPoint = await Effect.runPromise(decisionPointOver(operations, files, roles));
+  return Promise.all(callerKinds.map((kind) => rowOf(decisionPoint, operations, kind)));
 }

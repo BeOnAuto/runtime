@@ -71,6 +71,26 @@ function loadedLine({ cedar, policies }: PreparedPolicies, operations: number): 
   );
 }
 
+function decidedAsked(
+  roles: RoleAssignments,
+  prepared: PreparedPolicies,
+  request: AccessRequest,
+): Effect.Effect<AccessDecision> {
+  return roles.heldBy(request.principal, orgOfResource(request.resource)).pipe(
+    Effect.map((assignments) => decidedWith(prepared, request, assignments)),
+    Effect.catchCauseIf(Predicate.not(Cause.hasInterruptsOnly), () => Effect.succeed(deniedFor([unreadRoles]))),
+  );
+}
+
+export function cedarDecisionPointLoaded(parts: CedarDecisionPointParts): Effect.Effect<PolicyDecisionPoint, string> {
+  return Effect.tryPromise({ try: () => loaded(parts), catch: messageOf }).pipe(
+    Effect.tap((prepared) => loadedLine(prepared, parts.operations.length)),
+    Effect.map((prepared): PolicyDecisionPoint => ({
+      decide: (request) => decidedAsked(parts.roles, prepared, request),
+    })),
+  );
+}
+
 export function cedarDecisionPoint(parts: CedarDecisionPointParts): PolicyDecisionPoint {
   const preparing = onceStarted(() => loaded(parts));
   const said = { loaded: false, unloaded: false };
@@ -82,18 +102,13 @@ export function cedarDecisionPoint(parts: CedarDecisionPointParts): PolicyDecisi
       }
       return deniedFor([message]);
     });
-  const decidedAsked = (prepared: PreparedPolicies, request: AccessRequest) =>
-    parts.roles.heldBy(request.principal, orgOfResource(request.resource)).pipe(
-      Effect.map((assignments) => decidedWith(prepared, request, assignments)),
-      Effect.catchCauseIf(Predicate.not(Cause.hasInterruptsOnly), () => Effect.succeed(deniedFor([unreadRoles]))),
-    );
   const decidedOnce = (prepared: PreparedPolicies, request: AccessRequest) =>
     Effect.gen(function* () {
       if (!said.loaded) {
         said.loaded = true;
         yield* loadedLine(prepared, parts.operations.length);
       }
-      return yield* decidedAsked(prepared, request);
+      return yield* decidedAsked(parts.roles, prepared, request);
     });
   return {
     decide: (request) =>

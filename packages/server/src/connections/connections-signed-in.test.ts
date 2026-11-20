@@ -53,6 +53,14 @@ async function signedInServer(environment: Readonly<Record<string, string>> = {}
   };
 }
 
+async function graceMadeAnEditorBy(admin: string, signing: PersonSigningIn, served: ReasoningServer) {
+  const signedIn = await signing.tokenAt(served.origin, 'Grace');
+  await served.call('PUT', `/v1/orgs/${defaultOrg}/role-assignments/${signing.personOf('Grace')}/editor`, {
+    key: admin,
+  });
+  return signedIn;
+}
+
 function linkRoutesOf(id: string, token: string) {
   return [
     ['GET', `${connections}/${id}/link/${token}`, undefined],
@@ -71,7 +79,7 @@ describe('a connection on a runtime that signs people in', () => {
   it('links to the page with PUBLIC_URL as the server, and is approved by the person who added it alone', async () => {
     const { signing, served, tokenOf } = await signedInServer(connectionsOnLoopback);
     const ada = await tokenOf('Ada');
-    const grace = await tokenOf('Grace');
+    const grace = await graceMadeAnEditorBy(ada, signing, served);
 
     const answer = await served.call('POST', connections, { key: ada, body: notes() });
     const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(answer.body);
@@ -91,9 +99,9 @@ describe('a connection on a runtime that signs people in', () => {
 
 describe('the playbooks named as a connection is approved on a runtime that signs people in', () => {
   it('are recorded with the approval of the person who added it, and the approval another person tries changes nothing', async () => {
-    const { served, tokenOf } = await signedInServer(connectionsOnLoopback);
+    const { signing, served, tokenOf } = await signedInServer(connectionsOnLoopback);
     const ada = await tokenOf('Ada');
-    const grace = await tokenOf('Grace');
+    const grace = await graceMadeAnEditorBy(ada, signing, served);
     const answer = await served.call('POST', connections, { key: ada, body: notes() });
     const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(answer.body);
     const { token } = linkOf(connect.url);

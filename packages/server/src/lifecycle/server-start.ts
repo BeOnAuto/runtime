@@ -93,7 +93,7 @@ interface Answering<R> {
 
 function apiOf<R>(answering: Answering<R>): ApiHandler {
   const { settings, authenticator, served, runtime, telemetry, local, startPing, pageStyle } = answering;
-  const { licenseNotice, routes } = served;
+  const { licenseNotice, routes, callContext } = served;
   return createApiHandler({
     allowedOrigins: settings.allowedOrigins,
     studio: servedStudioOf(settings, {
@@ -111,6 +111,7 @@ function apiOf<R>(answering: Answering<R>): ApiHandler {
     ...(local?.runtimeControl === undefined ? {} : { runtimeControl: local.runtimeControl }),
     installId: startPing.installId,
     ...(authenticator.mode === 'local' && licenseNotice !== undefined ? { licenseNotice } : {}),
+    ...(callContext === undefined ? {} : { callContext }),
   });
 }
 

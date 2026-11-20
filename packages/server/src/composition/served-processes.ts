@@ -16,10 +16,10 @@ export function processesServedBy({ documents }: { readonly documents: DocumentS
   const documentPool = processPool({ processes, longJobs: 1, memoryBytes: processMemoryMebibytes * mebibyte, path });
   return {
     documents: documentsReadIn(documentPool),
-    withDocumentsClosed: ({ routes, stopWork }) => ({
-      routes,
+    withDocumentsClosed: (served) => ({
+      ...served,
       stopWork: async () => {
-        await stopWork();
+        await served.stopWork();
         await documentPool.close();
       },
     }),

@@ -12,11 +12,11 @@ Every request to the runtime comes from a caller. This page covers the tasks of 
 
 The runtime recognizes three kinds of caller:
 
-| Caller              | Who uses it                                                                                        | How it authenticates                                                                                                                                                            | What it may do                                                                          |
-| ------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| A signed-in person  | People, through their agent, an agent gateway, Auto Studio or a page you allow                     | Signs in at the runtime, with their Auto account or through your company's identity provider, then sends the access token the runtime issued as `Authorization: Bearer <token>` | Acts in the org `default`, over every playbook, with the permissions their token grants |
-| An API key          | A machine, a pipeline or an agent that does not sign in, or any caller that needs a narrower grant | Sends a key listed in `API_KEYS` as `Authorization: Bearer <key>`                                                                                                               | Acts in its one org, with the permissions and playbooks its entry lists                 |
-| The local developer | You, on your own machine, in [local mode](#local-mode)                                             | Nothing: every request is trusted                                                                                                                                               | Acts with every permission in whichever org a request names                             |
+| Caller              | Who uses it                                                                                        | How it authenticates                                                                                                                                                            | What it may do                                                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| A signed-in person  | People, through their agent, an agent gateway, Auto Studio or a page you allow                     | Signs in at the runtime, with their Auto account or through your company's identity provider, then sends the access token the runtime issued as `Authorization: Bearer <token>` | Acts in the org `default`, over every playbook, as their role allows and within the permissions their token grants |
+| An API key          | A machine, a pipeline or an agent that does not sign in, or any caller that needs a narrower grant | Sends a key listed in `API_KEYS` as `Authorization: Bearer <key>`                                                                                                               | Acts in its one org, with the permissions and playbooks its entry lists                                            |
+| The local developer | You, on your own machine, in [local mode](#local-mode)                                             | Nothing: every request is trusted                                                                                                                                               | Acts with every permission in whichever org a request names                                                        |
 
 ## Who can call a server
 
@@ -83,34 +83,34 @@ The runtime trusts one issuer, whichever provider a person used.
 
 Members of your organization can sign in with their company accounts, through your company's identity provider, with no Auto account. Set `OIDC_ISSUER` to the provider's issuer, beside an `https` `PUBLIC_URL`. Register Auto with the provider using the redirect URI the server prints at start, `{PUBLIC_URL}/auth/oidc/callback`, and set `OIDC_CLIENT_ID` with `OIDC_CLIENT_SECRET` or `OIDC_CLIENT_SECRET_FILE`. Where the provider supports dynamic client registration, leave those out and the runtime registers itself. To allow only members with a given claim, set `OIDC_REQUIRED_CLAIM` to `claim=value`.
 
-The runtime is then an OAuth 2.1 authorization server at `PUBLIC_URL`. It sends members to your provider to sign in. A session ends after 7 days without use, and after 30 days at most. Members open Studio at the link the server prints at start, which names your `PUBLIC_URL`. The first person to sign in becomes the organization's admin, and everyone after joins as a viewer. In this release the runtime records these roles and does not yet read them: every signed-in person is taken to be an Editor ([The roles](#the-roles)).
+The runtime is then an OAuth 2.1 authorization server at `PUBLIC_URL`. It sends members to your provider to sign in. A session ends after 7 days without use, and after 30 days at most. Members open Studio at the link the server prints at start, which names your `PUBLIC_URL`. The first person to sign in becomes the organization's admin, and everyone after joins as a viewer. An admin changes roles ([The roles](#the-roles)).
 
 A member's agent connects the same way. The runtime asks the member, on a page of its own, whether to allow the agent, and the agent then acts as that member. An agent's access lasts 90 days at most before the member signs in again.
 
 ## What signed-in people can do
 
-A signed-in person acts in the org `default`, over every playbook. What they may do there depends on how they reach the runtime:
+A signed-in person acts in the org `default`, over every playbook. What they may do there is what their role allows ([The roles](#the-roles)), and no more than the way they reach the runtime allows:
 
 - Through an agent or an agent gateway, they send an access token the runtime issued. They have the permissions the agent asked for, which they allowed on the runtime's page when it connected.
-- Through Studio, they have every permission in the org.
+- Through Studio, they have every permission their role allows.
 
-An access token lasts 15 minutes, and the agent or Studio refreshes it. A person who no longer holds a role is refused at their next refresh or sign-in, and an access token they already hold ends within those 15 minutes. The workflow runs they started keep running, and a caller who may write to the playbook can cancel them ([What happens when access is revoked](../reference/authentication.md#what-happens-when-access-is-revoked)).
+An access token lasts 15 minutes, and the agent or Studio refreshes it. A change of role holds from the person's next call, in Studio and through their agents alike. A person who no longer holds a role is refused every call from then on, and at their next refresh or sign-in. The workflow runs they started keep running, and a caller who may write to the playbook can cancel them ([What happens when access is revoked](../reference/authentication.md#what-happens-when-access-is-revoked)).
 
 The [Sign-in and token reference](../reference/authentication.md) sets out the tokens the runtime issues, [how scopes grant permissions](../reference/authentication.md#how-scopes-grant-permissions) and [the name recorded for a signed-in person](../reference/authentication.md#the-name-recorded-for-a-signed-in-person).
 
-## Policies in report-only mode
+## How a call is decided
 
-Every call is checked as this page sets out, and that check decides. The server also asks a second check about each call, a policy decision point, which decides from policies the release ships, written for [Cedar](https://www.cedarpolicy.com), an open-source policy engine that runs inside the server. It does not yet read the roles the runtime records: it takes every signed-in person to hold the role Editor, which allows what their token grants.
+The server decides every call from policies the release ships, written for [Cedar](https://www.cedarpolicy.com), an open-source policy engine that runs inside the server, and from the roles it records. A signed-in person may do what their role allows, within what their token grants. An API key and the local developer may do what their key or local mode grants, but give or take away no role.
 
-It is in report-only mode: it decides nothing. Where it and the check answer a call differently, the server logs a warning, `The policy decision point, in report-only mode, decided a call otherwise than the check that decides it`, with the operation, the org, the playbook, the caller's id and the two answers, and nothing of the call's input or of the person's name. The decision point loads on the first call and logs once which engine and how many policies and operations it loaded. If it cannot load, it logs why once as an error, and the calls still answer as the check decides. [Plan memory](production.md#plan-memory) has what it adds.
+The server loads the policies as it starts, and logs once which engine and how many policies and operations it loaded. If it cannot load them, it stops at start with an `UnusableAccessPoliciesError`, which says why. A call that cannot be decided, such as when the roles cannot be read, is refused with `503`, and nothing is done. [Plan memory](production.md#plan-memory) has what the policies add.
 
 ### The roles
 
-The policies hold three roles. The runtime records who holds which ([Roles](../reference/http.md#roles)), but in this release neither the check nor the policies read those records: every signed-in person is taken to be an Editor, as above.
+The policies hold three roles. The runtime records who holds which ([Roles](../reference/http.md#roles)), and decides each call of a signed-in person by the role they hold as they make it. The first person to sign in is the admin, and everyone after joins as a viewer. An admin changes roles.
 
 | Role   | What a person with it may do                                                      |
 | ------ | --------------------------------------------------------------------------------- |
-| Admin  | Manages members, billing and settings. Can do everything an editor can.           |
+| Admin  | Manages members. Can do everything an editor can.                                 |
 | Editor | Builds, runs and changes playbooks, and connects accounts.                        |
 | Viewer | Views playbooks, runs and results, and can comment. Can't run or change anything. |
 
@@ -272,7 +272,7 @@ Auto Studio calls the runtime from your browser, as you. How you open it on a ru
 - A `?server=` link opens a runtime on `https`, or one on your own machine. Studio ignores a link that names any other address, and says so.
 - In its settings, Studio accepts an `https` address, or an `http` address on your own machine.
 - Studio keeps an address only for its browser tab. A new tab opens hosted Auto again.
-- Studio signs you in to a team's runtime with a sign-in that works at that runtime alone, so the runtime needs sign-in on, through `PUBLIC_URL` ([Let people sign in](#let-people-sign-in)). You then act in your org with every permission ([What signed-in people can do](#what-signed-in-people-can-do)).
+- Studio signs you in to a team's runtime with a sign-in that works at that runtime alone, so the runtime needs sign-in on, through `PUBLIC_URL` ([Let people sign in](#let-people-sign-in)). You then act in your org as your role allows ([What signed-in people can do](#what-signed-in-people-can-do)).
 
 ## Studio served by the runtime
 

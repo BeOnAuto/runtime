@@ -46,8 +46,11 @@ const protectedPath = '/v1/orgs/demo/playbooks';
 const noModelProvider =
   'No model provider is configured, so reasoning functions cannot run; set ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY or MODEL_GATEWAYS';
 
+const decisionPointLoaded = 'The policy decision point loaded its engine and its policies';
+
 const functionsRun: readonly unknown[] = [
   "Reasoning functions run in this server: the model calls of a run add up to at most 2,000,000 input tokens, and each answer of a tool is read whole where it fits the model's context window",
+  decisionPointLoaded,
   'Workflows run in this server: a run lasts at most 30 days, at most 32 of their calls run at once, and the runs are swept every 1000 ms',
 ];
 
@@ -62,8 +65,6 @@ const keptIn: readonly unknown[] = [
 ];
 
 const extensionsLoaded = 'Extensions loaded, in their order of precedence: none';
-
-const decisionPointLoaded = 'The policy decision point loaded its engine and its policies';
 
 function startInLocalMode(...after: readonly string[]): readonly unknown[] {
   return [
@@ -168,13 +169,7 @@ describe('main with settings', () => {
     expect({ withoutKey: withoutKey.status, withKey: withKey.status }).toEqual({ withoutKey: 401, withKey: 200 });
     expect(withoutKey.headers.get('www-authenticate')).toBe('Bearer');
     expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
-    expect(messagesOf(child.output().stderr)).toEqual([
-      ...keptIn,
-      extensionsLoaded,
-      noModelProvider,
-      ...functionsRun,
-      decisionPointLoaded,
-    ]);
+    expect(messagesOf(child.output().stderr)).toEqual([...keptIn, extensionsLoaded, noModelProvider, ...functionsRun]);
   });
 
   it('does not start with a setting it cannot read, naming the error in one line on stderr and writing nothing to stdout', async () => {
@@ -247,7 +242,7 @@ describe('main over MCP', () => {
       exitCode: 0,
     });
     expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
-    expect(messagesOf(child.output().stderr)).toEqual(startInLocalMode(decisionPointLoaded));
+    expect(messagesOf(child.output().stderr)).toEqual(startInLocalMode());
   });
 
   it('logs what the MCP layer reports as a warning on stderr, answering with its JSON-RPC error', async () => {

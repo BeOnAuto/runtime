@@ -1,4 +1,4 @@
-import type { AppRuntime, RegisterRoutes, RuntimeControl } from '@on.auto/api';
+import type { AppRuntime, CallContext, RegisterRoutes, RuntimeControl } from '@on.auto/api';
 import type { AccessMode, DefaultIdentityProvider, SignInSettings, StudioSettings } from '@on.auto/identity';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { Layer } from 'effect';
@@ -37,6 +37,7 @@ export interface Served extends SignInServed {
   readonly routes: readonly RegisterRoutes[];
   readonly stopWork: () => Promise<void>;
   readonly licenseNotice?: LicenseNotice;
+  readonly callContext?: CallContext;
 }
 
 export type ServedClosing = (served: Served) => Served;

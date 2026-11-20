@@ -187,6 +187,7 @@ describe('workflow lifecycle', () => {
         ),
         'INFO Extensions loaded, in their order of precedence: none',
         "INFO Reasoning functions run in this server: the model calls of a run add up to at most 2,000,000 input tokens, and each answer of a tool is read whole where it fits the model's context window",
+        'INFO The policy decision point loaded its engine and its policies',
         'INFO Workflows run in this server: a run lasts at most 30 days, at most 32 of their calls run at once, and the runs are swept every 1000 ms',
       ]);
       expect(startUpLines[0]).toMatch(/^WARN Local mode is on: /u);

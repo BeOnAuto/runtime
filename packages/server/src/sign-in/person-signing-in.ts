@@ -1,15 +1,27 @@
 import { signInScopes } from '@on.auto/identity';
 import { personIdOf } from '@on.auto/openid-connect';
 import { browserAt } from '@on.auto/openid-connect/testing';
+import { allPermissions } from '@on.auto/operations';
 
 import { providerOverHttps } from './issuer-over-https.ts';
-import { backFrom, exchanged, locationOf, publicUrl, studio, toTheProvider } from './signing-in.ts';
+import {
+  allowed,
+  backFrom,
+  exchanged,
+  locationOf,
+  publicUrl,
+  registered,
+  signedInAs,
+  studio,
+  toTheProvider,
+} from './signing-in.ts';
 
 export interface PersonSigningIn {
   readonly publicUrl: string;
   readonly environment: Readonly<Record<string, string>>;
   readonly personOf: (who: string) => string;
   readonly tokenAt: (origin: string, who: string, scopes?: readonly string[]) => Promise<string>;
+  readonly agentTokenAt: (origin: string, who: string) => Promise<string>;
 }
 
 export async function personSigningIn(): Promise<PersonSigningIn> {
@@ -33,6 +45,12 @@ export async function personSigningIn(): Promise<PersonSigningIn> {
       const upstream = await toTheProvider(browser, asked);
       const resumed = await browser.at(locationOf(await backFrom(browser, provider.signedIn(upstream, who))));
       return exchanged(browser, String(new URL(locationOf(resumed)).searchParams.get('code')), asked);
+    },
+    agentTokenAt: async (origin, who) => {
+      const browser = browserAt(origin, publicUrl);
+      const clientId = await registered(browser);
+      const consent = await signedInAs({ provider }, browser, { clientId, scope: allPermissions.join(' ') }, who);
+      return exchanged(browser, await allowed(browser, locationOf(consent)), { clientId });
     },
   };
 }

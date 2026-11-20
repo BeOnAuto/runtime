@@ -36,10 +36,10 @@ export async function ledgerStoresOpenedBy(
   return {
     secrets: store,
     received,
-    withSecretsClosed: ({ routes, stopWork }) => ({
-      routes,
+    withSecretsClosed: (served) => ({
+      ...served,
       stopWork: async () => {
-        await stopWork();
+        await served.stopWork();
         await store.close();
         await received.close();
       },

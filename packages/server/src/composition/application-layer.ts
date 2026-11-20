@@ -48,15 +48,12 @@ export function applicationLayer(
   );
 }
 
-export function withLiveAttemptsClosedFirst(
-  runtime: AppRuntime<DispatcherServices>,
-  { routes, stopWork }: Served,
-): Served {
+export function withLiveAttemptsClosedFirst(runtime: AppRuntime<DispatcherServices>, served: Served): Served {
   return {
-    routes,
+    ...served,
     stopWork: async () => {
       await runtime.run(liveAttemptsClosed);
-      await stopWork();
+      await served.stopWork();
     },
   };
 }

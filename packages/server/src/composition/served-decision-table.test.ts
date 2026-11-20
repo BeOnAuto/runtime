@@ -22,9 +22,7 @@ beforeAll(async () => {
   table = await decisionTableOf(operations);
 });
 
-afterAll(async () => {
-  await server.stop();
-});
+afterAll(() => server.stop());
 
 const declared = [
   'org/activate_allocation: org:write',
@@ -239,6 +237,7 @@ const pinned = [
   { caller: 'An API key', allowed: everythingButWhatManagesPermissions },
   { caller: 'An API key that reads', allowed: whatReadingPermits },
   { caller: 'Playbook alpha, in a run a trigger or a schedule started', allowed: whatPlaybookAlphaMayDoAsItself },
+  { caller: 'The local developer', allowed: everythingButWhatManagesPermissions },
 ];
 
 describe('every operation the server serves, as its API document declares it', () => {
@@ -274,9 +273,10 @@ const refusedForTheRoleOrTheTokenType = [
   { caller: 'An API key', forTheRole: [], forTheTokenType: whatManagesPermissions },
   { caller: 'An API key that reads', forTheRole: [], forTheTokenType: whatManagesPermissions },
   { caller: 'Playbook alpha, in a run a trigger or a schedule started', forTheRole: [], forTheTokenType: [] },
+  { caller: 'The local developer', forTheRole: [], forTheTokenType: whatManagesPermissions },
 ];
 
-describe('every operation the server serves, decided for each role and each kind of caller', () => {
+describe('every operation the server serves, decided for each role and each kind of caller by the decision point the server loads at start', () => {
   it('is allowed as this table says, so an operation added or a declaration changed shows as a changed row', () => {
     expect(table.map(({ caller, allowed }) => ({ caller, allowed }))).toEqual(pinned);
   });
@@ -286,7 +286,7 @@ describe('every operation the server serves, decided for each role and each kind
   });
 });
 
-describe('every operation the server serves, where the decision point decides, for each role and each kind of caller', () => {
+describe('every operation the server serves, as the server refuses it, for each role and each kind of caller', () => {
   it('is allowed exactly where the decision point allows it, and refused, where a credential granted everything would still be refused, for the type of credential where the same person in Studio would be allowed or the caller holds no role, and for the role otherwise', () => {
     expect(
       table.map(({ caller, refusedForTheRole, refusedForTheTokenType }) => ({

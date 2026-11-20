@@ -17,11 +17,19 @@ import {
   rolesHeld,
   runDefinition,
 } from '../testing/access-testing.ts';
-import { cedarDecisionPoint, loadedMessage, unloadedMessage, unreadRoles } from './cedar-decision-point.ts';
+import {
+  cedarDecisionPoint,
+  cedarDecisionPointLoaded,
+  loadedMessage,
+  unloadedMessage,
+  unreadRoles,
+} from './cedar-decision-point.ts';
 
 const acme: ScopeReference = { type: 'org', id: 'acme' };
 
 const alpha: ResourceReference = { type: 'playbook', id: 'alpha', org: 'acme' };
+
+const theOrg: ResourceReference = { type: 'org', id: 'acme' };
 
 const people = rolesHeld({
   admin: [builtIn('admin', acme)],
@@ -45,6 +53,12 @@ function countedLoad(): Promise<WebAssembly.Module> {
 function misplacedEngine(): Promise<WebAssembly.Module> {
   return Promise.reject(new Error('the engine is not where it was put'));
 }
+
+const saidOnceLoaded = {
+  message: loadedMessage,
+  level: 'INFO',
+  annotations: { engine: 'Cedar 4.14.0', policies: 12, operations: declaredOperations.length },
+};
 
 async function decidedAs(id: string, operation: typeof getDefinition): Promise<string> {
   const { decision, determiningPolicies }: AccessDecision = await decidedBy(people)(
@@ -91,13 +105,80 @@ describe('the policy decision point', () => {
     );
 
     expect(loads.count - loadsBefore).toBe(1);
-    expect(logs.logged()).toEqual([
-      {
-        message: loadedMessage,
-        level: 'INFO',
-        annotations: { engine: 'Cedar 4.14.0', policies: 12, operations: declaredOperations.length },
-      },
-    ]);
+    expect(logs.logged()).toEqual([saidOnceLoaded]);
+  });
+});
+
+const everyRoleAsksEveryOperation = ['admin', 'editor', 'viewer', 'nobody'].flatMap((id) =>
+  declaredOperations.map((operation) =>
+    requestOf({
+      principal: { type: 'person', id },
+      operation,
+      resource: operation.scope === 'playbook' ? alpha : theOrg,
+    }),
+  ),
+);
+
+function inAnyOrder(decided: AccessDecision): AccessDecision {
+  return { ...decided, determiningPolicies: decided.determiningPolicies.toSorted() };
+}
+
+const policiesThatDoNotPassTheSchema =
+  '@id("by-name") permit (principal, action, resource) when { principal.name == "Ada" };';
+
+async function filesWithThePolicies(policies: string) {
+  return shippedFilesInMemory({
+    '@on.auto/access-control': {
+      [accessSchemaFile.path]: await filesOnDisk.text(accessSchemaFile),
+      [builtInPoliciesFile.path]: policies,
+    },
+  });
+}
+
+describe('a policy decision point loaded before its first request', () => {
+  it('loads the engine and reads its policies once, says so once as it loads, and decides every request as one loaded on its first', async () => {
+    const logs = capturedLogs();
+    const loadsBefore = loads.count;
+    const parts = { files: filesOnDisk, operations: declaredOperations, roles: people };
+
+    const loaded = await Effect.runPromise(
+      cedarDecisionPointLoaded({ ...parts, module: countedLoad }).pipe(Effect.provide(logs.layer)),
+    );
+    const loggedAsItLoaded = logs.logged();
+    const onFirstUse = cedarDecisionPoint({ ...parts, module: cedarOnDisk });
+    const [decided, decidedOnFirstUse] = await Effect.runPromise(
+      Effect.all([
+        Effect.forEach(everyRoleAsksEveryOperation, (request) => loaded.decide(request)),
+        Effect.forEach(everyRoleAsksEveryOperation, (request) => onFirstUse.decide(request)),
+      ]),
+    );
+
+    expect(loads.count - loadsBefore).toBe(1);
+    expect(loggedAsItLoaded).toEqual([saidOnceLoaded]);
+    expect(decided.map((each) => inAnyOrder(each))).toEqual(decidedOnFirstUse.map((each) => inAnyOrder(each)));
+    expect(new Set(decided.map(({ decision }) => decision))).toEqual(new Set(['allow', 'deny']));
+  });
+
+  it('fails, saying why and logging nothing, where its engine cannot be loaded or its policies do not pass the schema in strict mode', async () => {
+    const logs = capturedLogs();
+    const parts = { operations: declaredOperations, roles: people };
+
+    const failures = await Effect.runPromise(
+      Effect.all([
+        Effect.flip(cedarDecisionPointLoaded({ ...parts, module: misplacedEngine, files: filesOnDisk })),
+        Effect.flip(
+          cedarDecisionPointLoaded({
+            ...parts,
+            module: cedarOnDisk,
+            files: await filesWithThePolicies(policiesThatDoNotPassTheSchema),
+          }),
+        ),
+      ]).pipe(Effect.provide(logs.layer)),
+    );
+
+    expect(failures[0]).toBe('the engine is not where it was put');
+    expect(failures[1]).toContain('by-name');
+    expect(logs.logged()).toEqual([]);
   });
 });
 
@@ -151,13 +232,7 @@ describe('a policy decision point that cannot load', () => {
   });
 
   it('denies every request while its policies do not pass the schema in strict mode', async () => {
-    const files = shippedFilesInMemory({
-      '@on.auto/access-control': {
-        [accessSchemaFile.path]: await filesOnDisk.text(accessSchemaFile),
-        [builtInPoliciesFile.path]:
-          '@id("by-name") permit (principal, action, resource) when { principal.name == "Ada" };',
-      },
-    });
+    const files = await filesWithThePolicies(policiesThatDoNotPassTheSchema);
     const decisionPoint = cedarDecisionPoint({
       module: cedarOnDisk,
       files,
