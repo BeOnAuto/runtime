@@ -61,7 +61,12 @@ const keptFields = { media_type: Schema.String, bytes: BytesSchema, sha256: Dige
 
 const AssetKeptNowSchema = factOf(
   'asset_kept',
-  Schema.Struct({ ...keptFields, kind: KindReadSchema, made_by: MadeBySchema, expires_at: Schema.String }),
+  Schema.Struct({
+    ...keptFields,
+    kind: KindReadSchema,
+    made_by: MadeBySchema,
+    expires_at: Schema.optionalKey(Schema.String),
+  }),
   RunContextSchema,
   { content: { holds: ['/sha256'] } },
 );
@@ -120,6 +125,10 @@ type AssetEventWritten =
   | Exclude<AssetEvent, AssetKept>;
 
 export type DecidedAssetEvent = Decided<AssetEventWritten>;
+
+export function expiryOf(at: number, keptForMs: number | undefined): Pick<AssetKeptDataWritten, 'expires_at'> {
+  return keptForMs === undefined ? {} : { expires_at: new Date(at + keptForMs).toISOString() };
+}
 
 export function assetStreamOf(id: string): string {
   return `${assetsKind}/${id}`;

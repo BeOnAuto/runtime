@@ -1,6 +1,5 @@
 import {
   contentAddressesUnder,
-  contentAddressLastsSeconds,
   type ContentAddressCheck,
   type ContentAddressKey,
   type ContentSignature,
@@ -21,6 +20,8 @@ export interface ContentAddressServing {
   readonly now?: () => number;
 }
 
+const secondsALastingAddressIsCached = 31_536_000;
+
 const contentRoutePath = `${versionPrefix}/orgs/:org/playbooks/:playbook/content/:sha256`;
 
 export const servesContentAt = pathMatcherOf(contentRoutePath);
@@ -33,6 +34,10 @@ const refusals: Readonly<Record<Exclude<ContentAddressCheck, 'signed'>, (until: 
     ),
   not_for_this_content: () => problemOf('forbidden', 'The address is not one this runtime signed for this content'),
 };
+
+function secondsLeftOf(until: string | undefined, nowSeconds: number): number {
+  return until === undefined ? secondsALastingAddressIsCached : Math.max(0, Number(until) - nowSeconds);
+}
 
 function addressedIn(c: Context<ApiEnv>): Addressed {
   return {
@@ -52,7 +57,7 @@ export function contentAddressRoutes({ key, content, now = Date.now }: ContentAd
       return problemResponse(refusals[checked](until));
     }
     return contentAnsweredAt(content, addressed, {
-      secondsLeft: Math.min(contentAddressLastsSeconds, Math.max(0, Number(until) - Math.floor(now() / 1000))),
+      secondsLeft: secondsLeftOf(presented.until, Math.floor(now() / 1000)),
       headOnly: c.req.method === 'HEAD',
       range: c.req.header('range'),
     });

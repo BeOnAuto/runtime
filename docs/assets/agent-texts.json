@@ -3864,7 +3864,7 @@
       ]
     },
     {
-      "sha256": "9802adb662087627439eedc3fb9c0489ecce2614d6183918be2ab13f2df4ea3a",
+      "sha256": "106ecaed6bee63346b975d811fc2405dd28105bf55986e5892b32df488f6b316",
       "tier": 1,
       "received": [
         {
@@ -3876,7 +3876,7 @@
         }
       ],
       "lines": [
-        "Reads one asset of the playbook by its id: its media type, size and SHA-256, the model that made it, if any, when it was kept and when it expires or expired, and whether its content was removed. It answers an `address` its bytes are read at without a key, signed as it is read, until `address_until` 15 minutes later; both are null once the asset expired or where the runtime signs none. Use it to show an asset after the address in its run's output expired, or an image a tool answered. `id` is the asset's id, as either gives it."
+        "Reads one asset of the playbook by its id, as a run's output or a tool's image gives it: its media type, size and SHA-256, the model that made it, if any, when it was kept, when it expires or expired, if it has an expiry, and whether its content was removed. It answers an `address` its bytes are read at without a key while the asset is kept, and `address_until`, when the asset expires, or null if it has no expiry; both are null once it expired or where the runtime signs none. Use it to show an asset, or to check that it is still kept."
       ]
     },
     {
@@ -8611,7 +8611,7 @@
       ]
     },
     {
-      "sha256": "925a44e190c60db9ba94e41e94fd22f38394dbd4fea1a194a58f437f1ba6da7e",
+      "sha256": "20011093be34fe99387b98e1aa1ea47e95eaa5845c4f14a346f2f4ba291257f9",
       "tier": 3,
       "received": [
         {
@@ -8648,7 +8648,6 @@
         "parameters:",
         "  size: 1024x1024",
         "  quality: high",
-        "expires: P30D",
         "page:",
         "  data:",
         "    language: typescript",
@@ -8719,8 +8718,8 @@
         "  \"media_type\": \"image/png\",",
         "  \"bytes\": 1843021,",
         "  \"sha256\": \"497790947d4666760ce38f3c00e852c71fdb66cae849bae8e9ede352719e1581\",",
-        "  \"address\": \"https://runtime.example.com/v1/orgs/acme/playbooks/shop/content/4977…?until=1793527200&sig=…\",",
-        "  \"address_until\": \"2026-11-01T10:15:00.000Z\"",
+        "  \"address\": \"https://runtime.example.com/v1/orgs/acme/playbooks/shop/content/4977…?sig=…\",",
+        "  \"address_until\": null",
         "}",
         "```",
         "",
@@ -8734,7 +8733,7 @@
         "| `input.schema` | No | A JSON Schema of the input. The input is a JSON object; one the schema does not allow is `invalid_input` |",
         "| `parameters` | No | The parameters of the kind, each within the limits of the model |",
         "| `references` | No | JSON Pointers into the input, such as `/photo`, each at the `id` of an asset of the playbook the model takes as a reference; see References |",
-        "| `expires` | No | How long the asset is kept, an ISO 8601 duration from one hour to 3,650 days, such as `P30D`. Without it, an asset is kept for 90 days |",
+        "| `expires` | No | How long the asset is kept before it expires, an ISO 8601 duration from one hour to 3,650 days, such as `P30D`. Without it, an asset does not expire |",
         "| `page` | No | The [page](https://on.auto/docs/reference/page-format) that presents its runs |",
         "",
         "The prompt is everything after the front matter. It is a [template](https://on.auto/docs/reference/template) that reads `input`, `today`, the date as `YYYY-MM-DD`, and `now`, the time in ISO 8601, and it must render text: a list or an object written whole is refused. For audio, the prompt is the text the model speaks.",
@@ -8815,7 +8814,7 @@
         "",
         "- `id` is the asset's id, which a later run takes as a reference;",
         "- `media_type`, `bytes` and `sha256` describe its bytes;",
-        "- `address` is a [signed address](https://on.auto/docs/reference/http#content-at-a-signed-address) its bytes are read at without a key, which lasts 15 minutes, until `address_until`. Both are `null` where the runtime signs no address. An address in the record of an earlier run has expired: `get_asset` reads the asset again by its `id`, with the model that made it, when it expires and an address signed as it is read, until the asset expires.",
+        "- `address` is a [signed address](https://on.auto/docs/reference/http#content-at-a-signed-address) its bytes are read at without a key, which works for as long as the playbook keeps the asset. `address_until` is when the asset expires, or `null` for an asset with no expiry. Both are `null` where the runtime signs no address. `get_asset` reads the asset again by its `id`, with the model that made it, when it expires, if it does, and its address.",
         "",
         "## How a run works",
         "",
@@ -8864,7 +8863,7 @@
         "| One asset of audio | 50 MiB |",
         "| One video | 200 MiB |",
         "| The storage quota of a playbook's assets | 2,048 MiB |",
-        "| How long an asset is kept without `expires` | 90 days |",
+        "| An asset without `expires` | does not expire |",
         "| The prompt | The model's |",
         "| References | The model's |",
         "| Waiting for the gateway | 240 seconds |",
@@ -8880,7 +8879,7 @@
         "",
         "A generation function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what the function made:",
         "",
-        "- `result`: the asset the run produced, said in the function's own words with its kind and size, such as `A picture of the product for its listing, 1.8 MB.`, and linked at its `address`. The run's output is the asset's reference, not the prompt it rendered, so `result` names what the function makes as its description does. The address lasts 15 minutes after the run, so the link opens the asset only until `address_until`, and a client shows an image as a link, never in the page, as in the example.",
+        "- `result`: the asset the run produced, said in the function's own words with its kind and size, such as `A picture of the product for its listing, 1.8 MB.`, and linked at its `address`. The run's output is the asset's reference, not the prompt it rendered, so `result` names what the function makes as its description does. The link opens the asset for as long as the playbook keeps it. A client shows an image as a link, never in the page, as in the example.",
         "- `runs`: what was produced over time, such as the assets made each week by kind, as a count, or a table of the latest, each with its kind and size.",
         "",
         "Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. The page guide, [Page format](https://on.auto/docs/reference/page-format), gives the whole format of a page.",

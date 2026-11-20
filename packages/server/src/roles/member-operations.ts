@@ -1,24 +1,12 @@
 import { MemberField, MemberSchema, MembersSchema, RoleField, roleAssignmentDecider } from '@on.auto/access-control';
 import { personSignedOut, type AuthStore } from '@on.auto/openid-connect';
-import {
-  Caller,
-  Forbidden,
-  NotFound,
-  OrgWriter,
-  defineHttpOperation,
-  defineQuery,
-  roleRefusalDetail,
-  roleRefusalKind,
-  signedInPersonPrefix,
-  tokenTypeRefusalDetail,
-  type CallerIdentity,
-  type PrincipalReference,
-} from '@on.auto/operations';
+import { Caller, NotFound, OrgWriter, defineHttpOperation, defineQuery } from '@on.auto/operations';
 import { counted } from '@on.auto/phrasing';
 import { Effect, Schema } from 'effect';
 
 import { invitationOperationsOf } from './invitation-operations.ts';
-import { forgottenOnceEnded, writtenNow } from './member-changes.ts';
+import { joiningOperations } from './joining-operations.ts';
+import { NothingAsked, actorOf, forgottenOnceEnded, inApprovedWords, writtenNow } from './member-changes.ts';
 import {
   aPerson,
   addressesOf,
@@ -38,23 +26,11 @@ export const noSuchMember = 'This organization has no such member.';
 const signInsNotEndedMessage =
   'A member was removed and their sign-ins could not be ended now; each is refused while they hold no role, and ends as it expires';
 
-const NothingAsked = Schema.Record(Schema.String, Schema.Never);
-
 const mostListed = 500;
 
 const MEMBER = { one: 'member', other: 'members' };
 
 const INVITATION = { one: 'invitation', other: 'invitations' };
-
-function actorOf({ id, client }: CallerIdentity): Effect.Effect<PrincipalReference, Forbidden> {
-  return id.startsWith(signedInPersonPrefix) && client === undefined
-    ? Effect.succeed({ type: 'person', id: id.slice(signedInPersonPrefix.length) })
-    : Effect.fail(new Forbidden({ detail: tokenTypeRefusalDetail, kind: 'not_allowed_token_type' }));
-}
-
-function inApprovedWords<E>(refusal: E): E | Forbidden {
-  return refusal instanceof Forbidden ? new Forbidden({ detail: roleRefusalDetail, kind: roleRefusalKind }) : refusal;
-}
 
 function defineListMembers(kept: MembersKept) {
   return defineQuery('org', {
@@ -172,6 +148,7 @@ export function memberOperationsOf(kept: MembersKept) {
     ...invitationOperationsOf(kept),
     defineSetMemberRole(kept),
     defineRemoveMember(kept),
+    ...joiningOperations,
   ] as const;
 }
 

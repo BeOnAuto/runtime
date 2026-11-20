@@ -216,18 +216,17 @@ describe('the headers of a content at its address', () => {
   });
 });
 
-describe('the content at an address signed by a server whose clock is ahead', () => {
-  it('is kept in a cache for 15 minutes at the most', async () => {
-    const ahead = contentAddressesUnder(key, at(signedAt + 29));
-    const address = pathOf(ahead.signedContentAddress('http://localhost', alpha, sha256, signedAt + 2000));
+describe('the content at an address signed with no time', () => {
+  it('is answered however much later it is asked for, and kept privately in a cache for a year', async () => {
+    const lasting = pathOf(signing.signedContentAddress('http://localhost', alpha, sha256));
 
-    const answer = await call(servedAt(signedAt, await holding()), address);
+    const answer = await call(servedAt(signedAt + 10 * 365 * 86_400, await holding()), lasting);
 
-    expect([
-      answer.status,
-      address.includes(`until=${String(signedAt + 929)}`),
-      answer.headers.get('cache-control'),
-    ]).toEqual([200, true, 'private, max-age=900']);
+    expect([answer.status, answer.text, answer.headers.get('cache-control')]).toEqual([
+      200,
+      text,
+      'private, max-age=31536000',
+    ]);
   });
 });
 

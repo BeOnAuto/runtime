@@ -1,4 +1,3 @@
-import { contentAddressLastsSeconds } from '@on.auto/identity';
 import type { PlaybookAddress } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
@@ -22,11 +21,14 @@ export function addressOf(
   addresses: AssetAddresses | undefined,
   playbook: PlaybookAddress,
   sha256: string,
-  now: number,
+  expiresAt: number | null,
 ): AssetAddress {
-  const until = Math.floor(now / 1000) + contentAddressLastsSeconds;
+  const until = expiresAt === null ? undefined : Math.floor(expiresAt / 1000);
   const address = addresses?.signedContentAddress(addresses.ownOrigin(), playbook, sha256, until);
-  return address === undefined ? noAddress : { address, address_until: new Date(until * 1000).toISOString() };
+  if (address === undefined) {
+    return noAddress;
+  }
+  return { address, address_until: until === undefined ? null : new Date(until * 1000).toISOString() };
 }
 
 export function assetReferenceOf(asset: KeptAsset, address: AssetAddress): Schema.JsonObject {

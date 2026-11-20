@@ -43,7 +43,7 @@ const RunSchema = Schema.Struct({
     bytes: Schema.Int,
     sha256: Schema.String,
     address: Schema.String,
-    address_until: Schema.String,
+    address_until: Schema.NullOr(Schema.String),
   }),
   record: Schema.Struct({ model: Schema.String, own_key: Schema.Boolean, cost_usd: Schema.Number }),
 });
@@ -298,7 +298,7 @@ describe('the audio of a generation function at its address', () => {
 });
 
 describe('an asset read again by its id', () => {
-  it('answers what the playbook keeps of it and an address signed as it is read, which answers its bytes without a key', async () => {
+  it('answers what the playbook keeps of it and the lasting address the run answered, which answers its bytes without a key', async () => {
     const gateway = await gatewayOnTheLoopback();
     const { server } = await withAFunction(gateway, aLedger(), picture);
     onTestFinished(server.stop);
@@ -314,10 +314,12 @@ describe('an asset read again by its id', () => {
       bytes: onePixelPng.byteLength,
       sha256: run.output.sha256,
       model: 'gateway/openai/gpt-image-2',
+      expires_at: null,
       expired_at: null,
       content_removed: false,
+      address: run.output.address,
+      address_until: null,
     });
-    expect(Date.parse(String(read.address_until))).toBeGreaterThanOrEqual(Date.parse(run.output.address_until));
     expect(await bytesAt(String(read.address))).toEqual({ status: 200, type: 'image/png', bytes: [...onePixelPng] });
   });
 
@@ -335,7 +337,7 @@ describe('an asset read again by its id', () => {
 });
 
 describe('an asset past its time', () => {
-  it('expires as the server finds it due, its expiry in the feed and its read, and its content, kept again within the hour before, read at its address until the address ends', async () => {
+  it('expires as the server finds it due, its expiry in the feed and its read, and its content, kept again within the hour before, still read at the address the run answered', async () => {
     const gateway = await gatewayOnTheLoopback();
     const ledger = aLedger();
     const { server: first } = await withAFunction(gateway, ledger, picture);

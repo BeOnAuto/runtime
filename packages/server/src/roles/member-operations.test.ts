@@ -28,6 +28,8 @@ const routed = [
   ['revoke_invitation', 'command', { method: 'DELETE', path: '/members/invitations/{invitation}' }, ['org:write']],
   ['set_member_role', 'command', { method: 'PUT', path: '/members/{member}/role' }, ['org:write']],
   ['remove_member', 'command', { method: 'DELETE', path: '/members/{member}' }, ['org:write']],
+  ['get_enrolment', 'query', { method: 'GET', path: '/enrolment' }, ['org:read']],
+  ['set_enrolment', 'command', { method: 'PUT', path: '/enrolment' }, ['org:write']],
 ];
 
 describe('the members operations of a server that signs people in', () => {
@@ -43,6 +45,8 @@ describe('the members operations of a server that signs people in', () => {
       true,
       true,
       true,
+      true,
+      true,
     ]);
     expect(theRegistrations.map(({ permissionsManagement }) => permissionsManagement)).toEqual([
       false,
@@ -51,6 +55,8 @@ describe('the members operations of a server that signs people in', () => {
       true,
       true,
       true,
+      true,
+      false,
       true,
     ]);
   });
@@ -77,7 +83,7 @@ describe('what list_members says to an agent', () => {
   });
 });
 
-const listing = ['org/list_members'];
+const listing = ['org/list_members', 'org/get_enrolment'];
 
 const inviting = ['org/invite_member'];
 
@@ -87,28 +93,35 @@ const changing = [
   'org/revoke_invitation',
   'org/set_member_role',
   'org/remove_member',
+  'org/set_enrolment',
 ];
 
+const servedOrder = theRegistrations.map(({ name }) => `org/${name}`);
+
+function inServedOrder(...groups: readonly (readonly string[])[]): readonly string[] {
+  return groups.flat().toSorted((one, other) => servedOrder.indexOf(one) - servedOrder.indexOf(other));
+}
+
 const allowedAndRefused = [
-  ['Admin, in Studio', [...listing, ...inviting, ...changing], [], []],
-  ['Admin, through their connected agent', [...listing, ...inviting], [], changing],
-  ['Admin, asking @Auto in Slack', [...listing, ...inviting], [], changing],
-  ['Admin, in a run they started', [...listing, ...inviting], [], []],
-  ['Editor, in Studio', [...listing, ...inviting], changing, []],
-  ['Editor, through their connected agent', [...listing, ...inviting], changing, []],
-  ['Editor, asking @Auto in Slack', [...listing, ...inviting], changing, []],
-  ['Editor, in a run they started', [...listing, ...inviting], [], []],
+  ['Admin, in Studio', inServedOrder(listing, inviting, changing), [], []],
+  ['Admin, through their connected agent', inServedOrder(listing, inviting), [], changing],
+  ['Admin, asking @Auto in Slack', inServedOrder(listing, inviting), [], changing],
+  ['Admin, in a run they started', inServedOrder(listing, inviting), [], []],
+  ['Editor, in Studio', inServedOrder(listing, inviting), changing, []],
+  ['Editor, through their connected agent', inServedOrder(listing, inviting), changing, []],
+  ['Editor, asking @Auto in Slack', inServedOrder(listing, inviting), changing, []],
+  ['Editor, in a run they started', inServedOrder(listing, inviting), [], []],
   ['Editor, through an agent they approved to read', listing, changing, []],
-  ['Viewer, in Studio', listing, [...inviting, ...changing], []],
-  ['Viewer, through their connected agent', listing, [...inviting, ...changing], []],
-  ['Viewer, asking @Auto in Slack', listing, [...inviting, ...changing], []],
-  ['Viewer, in a run they started', [...listing, ...inviting], [], []],
-  ['A person with no role, in Studio', [], [...listing, ...inviting, ...changing], []],
-  ['An Editor of another org, in Studio', [], [...listing, ...inviting, ...changing], []],
-  ['An API key', [...listing, ...inviting], [], changing],
+  ['Viewer, in Studio', listing, inServedOrder(inviting, changing), []],
+  ['Viewer, through their connected agent', listing, inServedOrder(inviting, changing), []],
+  ['Viewer, asking @Auto in Slack', listing, inServedOrder(inviting, changing), []],
+  ['Viewer, in a run they started', inServedOrder(listing, inviting), [], []],
+  ['A person with no role, in Studio', [], inServedOrder(listing, inviting, changing), []],
+  ['An Editor of another org, in Studio', [], inServedOrder(listing, inviting, changing), []],
+  ['An API key', inServedOrder(listing, inviting), [], changing],
   ['An API key that reads', listing, [], changing],
   ['Playbook alpha, in a run a trigger or a schedule started', [], [], []],
-  ['The local developer', [...listing, ...inviting], [], changing],
+  ['The local developer', inServedOrder(listing, inviting), [], changing],
 ];
 
 describe('the members operations, decided for each role and each kind of caller by the decision point the server loads', () => {

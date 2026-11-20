@@ -48,7 +48,6 @@ describe('a run of a generation function that produces video', () => {
       cost_usd: 0.8,
       own_key: true,
       handle: askedHandle,
-      kept_for_ms: 90 * day,
       asked_at: new Date(harnessStartsAt).toISOString(),
       waits_until: new Date(harnessStartsAt + 10 * minute).toISOString(),
     });

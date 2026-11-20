@@ -136,7 +136,7 @@ describe('a generation function over MCP, on the endpoint of its playbook', () =
 });
 
 describe('an asset a generation function made, over MCP', () => {
-  it('is read again by its id, with an address signed as it is read, in plain words that name no internal term', async () => {
+  it('is read again by its id, with its address, in plain words that name no internal term', async () => {
     const server = await servingAPicture();
 
     const { ran, read } = await onAlphaOf(server, async (session) => {
@@ -158,7 +158,7 @@ describe('an asset a generation function made, over MCP', () => {
     expect(
       String(read.structuredContent?.['address']).startsWith(`${server.origin}/v1/orgs/acme/playbooks/alpha/content/`),
     ).toBe(true);
-    expect(plainTextIn(read)).toContain('its address, in the details below, opens it for 15 minutes.');
+    expect(plainTextIn(read)).toContain('its address, in the details below, opens it');
     expect(internalTermsIn(plainTextIn(read))).toEqual([]);
   });
 });
@@ -204,8 +204,8 @@ describe('the guide of generation functions a server serves', () => {
     expect(serving.guide).toContain('| One asset of audio | 7 MiB |');
     expect(serving.guide).toContain('| One video | 17 MiB |');
     expect(serving.guide).toContain("| The storage quota of a playbook's assets | 11 MiB |");
-    expect(serving.guide).toContain('| How long an asset is kept without `expires` | 13 days |');
-    expect(serving.guide).toContain('Without it, an asset is kept for 13 days |');
+    expect(serving.guide).toContain('| An asset without `expires` | expires after 13 days |');
+    expect(serving.guide).toContain('Without it, an asset expires after 13 days |');
     expect(serving.guide).toContain(changedOnlyByWhoeverRunsIt);
     expect(serving.guide).toContain('such as `images/openai/gpt-image-2` for `openai/gpt-image-2`.');
     expect(serving.guide).not.toMatch(/20 MiB|50 MiB|2,048 MiB|90 days|gateway\/openai|data-audience|data-variable/u);

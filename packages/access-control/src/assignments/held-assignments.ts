@@ -1,12 +1,13 @@
 import { HashMap, Option } from 'effect';
 
-import { builtInRoleIds, type BuiltInRoleId, type RoleTable } from '../roles/built-in-roles.ts';
+import { builtInRoleIds, type BuiltInRoleId, type DefaultRoleId, type RoleTable } from '../roles/built-in-roles.ts';
 import {
   principalKeyOf,
   type AssignedPrincipal,
   type AssignedRole,
   type AssignmentScope,
   type AssignmentSource,
+  type Enrolment,
   type RoleAssignmentChange,
   type RoleAssignmentEvent,
 } from './role-assignment-facts.ts';
@@ -29,11 +30,17 @@ interface KnownInvitation {
   readonly status: InvitationStatus;
 }
 
+export interface Joining {
+  readonly enrolment: Enrolment;
+  readonly defaultRole: DefaultRoleId;
+}
+
 export interface HeldAssignments {
   readonly byPrincipal: HashMap.HashMap<string, HeldBy>;
   readonly holders: Readonly<Record<BuiltInRoleId, number>>;
   readonly lastEndedBy: HashMap.HashMap<string, AssignmentSource>;
   readonly invitations: HashMap.HashMap<string, KnownInvitation>;
+  readonly joiningSet: Joining | undefined;
 }
 
 export const noneHeld: HeldAssignments = {
@@ -41,6 +48,7 @@ export const noneHeld: HeldAssignments = {
   holders: { admin: 0, editor: 0, viewer: 0 },
   lastEndedBy: HashMap.empty(),
   invitations: HashMap.empty(),
+  joiningSet: undefined,
 };
 
 interface Named {
@@ -130,7 +138,12 @@ function endedAs(state: HeldAssignments, invitation: string, status: InvitationS
   };
 }
 
-export function evolvedBy(state: HeldAssignments, event: RoleAssignmentEvent): HeldAssignments {
+type InvitationEvent = Extract<
+  RoleAssignmentEvent,
+  { readonly type: 'member_invited' | 'invitation_revoked' | 'invitation_accepted' }
+>;
+
+function invitationsChangedBy(state: HeldAssignments, event: InvitationEvent): HeldAssignments {
   if (event.type === 'member_invited') {
     const { invitation, role, expires_at: expiresAt } = event.data;
     return {
@@ -138,12 +151,16 @@ export function evolvedBy(state: HeldAssignments, event: RoleAssignmentEvent): H
       invitations: HashMap.set(state.invitations, invitation, { role, expiresAt, status: 'pending' }),
     };
   }
-  if (event.type === 'invitation_revoked') {
-    return endedAs(state, event.data.invitation, 'revoked');
+  return endedAs(state, event.data.invitation, event.type === 'invitation_revoked' ? 'revoked' : 'accepted');
+}
+
+export function evolvedBy(state: HeldAssignments, event: RoleAssignmentEvent): HeldAssignments {
+  if (event.type === 'role_assigned' || event.type === 'role_unassigned') {
+    return changedBy(state, event);
   }
-  return event.type === 'invitation_accepted'
-    ? endedAs(state, event.data.invitation, 'accepted')
-    : changedBy(state, event);
+  return event.type === 'enrolment_set'
+    ? { ...state, joiningSet: { enrolment: event.data.enrolment, defaultRole: event.data.role.id } }
+    : invitationsChangedBy(state, event);
 }
 
 export function assignedOf(

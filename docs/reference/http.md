@@ -48,7 +48,7 @@ These five need no key, and neither does [content at a signed address](#content-
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
 - Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`, `make_comment_in_org`, `list_comments_in_org`, `resolve_comment_in_org` and `reopen_comment_in_org` for the org's own comments, and `list_generation_models_in_org` for the org's `list_generation_models`. Its summary is its title. Its tag names the resource it acts on.
-- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the six routes of Studio's connection page, `read_link`, `approve`, `give_credential`, `give_client`, `start` and `finish`; `get_connection`, `set_connection_playbooks`, `set_connection_signing_secret`, `remove_connection_signing_secret` and `list_providers`; `get_run_history`, `get_playbook_analytics`, `render_page`, `render_playbook_page` and `validate`; `make_comment` and `make_comment_in_org`, and `reopen_comment` and `reopen_comment_in_org`; `list_org_changes`, `list_playbook_changes`, `list_activity` and `mark_activity_seen`; `list_role_assignments`, `assign_role` and `unassign_role`, and, where the runtime signs people in, `invite_admin`, `resend_invitation`, `revoke_invitation`, `set_member_role` and `remove_member`; `transcribe` and `get_voice`; `get_content`, the route of [content at a signed address](#content-at-a-signed-address); and `get_license`, `activate_allocation` and `report_allocation`.
+- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the six routes of Studio's connection page, `read_link`, `approve`, `give_credential`, `give_client`, `start` and `finish`; `get_connection`, `set_connection_playbooks`, `set_connection_signing_secret`, `remove_connection_signing_secret` and `list_providers`; `get_run_history`, `get_playbook_analytics`, `render_page`, `render_playbook_page` and `validate`; `make_comment` and `make_comment_in_org`, and `reopen_comment` and `reopen_comment_in_org`; `list_org_changes`, `list_playbook_changes`, `list_activity` and `mark_activity_seen`; `list_role_assignments`, `assign_role` and `unassign_role`, and, where the runtime signs people in, `invite_admin`, `resend_invitation`, `revoke_invitation`, `set_member_role`, `remove_member`, `get_enrolment` and `set_enrolment`; `transcribe` and `get_voice`; `get_content`, the route of [content at a signed address](#content-at-a-signed-address); and `get_license`, `activate_allocation` and `report_allocation`.
 - Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
@@ -81,16 +81,17 @@ The document, the guides and the catalog change only when a new release of the s
 
 This route serves the bytes a playbook keeps by their digest at an address the runtime signs. The address carries its own credential, so a person or a browser can follow it without a key.
 
-| Method and route                                                                   | Returns                                                   |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `GET /v1/orgs/{org}/playbooks/{playbook}/content/{sha256}?until={until}&sig={sig}` | The content's bytes, with the media type it was kept with |
+| Method and route                                                     | Returns                                                   |
+| -------------------------------------------------------------------- | --------------------------------------------------------- |
+| `GET /v1/orgs/{org}/playbooks/{playbook}/content/{sha256}?sig={sig}` | The content's bytes, with the media type it was kept with |
 
 - `sha256` is the SHA-256 of the bytes, in lowercase hex.
-- `until` is the time the address lasts until, in whole seconds since 1970-01-01T00:00:00Z. An address lasts 15 minutes at the most. The runtime accepts an `until` up to 30 seconds later than that, for servers whose clocks differ, and refuses one beyond it.
-- `sig` is the runtime's signature of the org, the playbook, the digest and `until`, under a key the runtime keeps for itself.
+- `until` is present only on the address of an asset that expires, `?until={until}&sig={sig}`: the time the asset expires, in whole seconds since 1970-01-01T00:00:00Z. Past it, the address is refused. An address without `until` works for as long as the playbook keeps the content.
+- `sig` is the runtime's signature of the org, the playbook, the digest and `until`, if the address has one, under a key the runtime keeps for itself.
+- Anyone with the address can read the content, so share it only with people who may see it.
 - The runtime signs an address only on an `https` origin or on `localhost`, `127.0.0.1` or `[::1]`, as it does for [links to Studio](#links-to-studio).
-- An asset a generation function made has its address in the output of its run, and [`get_asset`](#generation-functions) answers a new one each time it reads the asset, as it does for an image a tool answered a run.
-- The response carries `Content-Type`, `Content-Length` and `Cache-Control: private, max-age={seconds}`, the seconds the address has left, at most 900.
+- An asset a generation function made has its address in the output of its run, and [`get_asset`](#generation-functions) answers the same address when it reads the asset, as it does for an image a tool answered a run.
+- The response carries `Content-Type`, `Content-Length` and `Cache-Control: private, max-age={seconds}`: the seconds the address has left, or a year for an address without `until`.
 - The route takes no key and makes no `Origin` check. `HEAD` returns the headers without the bytes, and any other method gets `405`.
 - Every response of this route carries `Cross-Origin-Resource-Policy: cross-origin`, so a page on another origin can embed the bytes in an `img`, `audio` or `video` element. Every other route answers `same-origin`.
 - Every response of this route carries a `Content-Security-Policy` with `sandbox`, so HTML or SVG content opened at the address runs no script and submits no form. An image still displays.
@@ -469,18 +470,18 @@ The assets of a playbook have an operation of their own, relative to `/v1/orgs/{
 | ----------- | ------------------ | --------------- | ---------------- |
 | `get_asset` | `GET /assets/{id}` | `playbook:read` | Asset id in path |
 
-| Field                      | Value                                                                                                                                                                                                                                                |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                       | The asset's id, as the output of the run that made it gives it, or the result of the tool call that answered it                                                                                                                                      |
-| `media_type`, `bytes`      | The media type and the size of its bytes                                                                                                                                                                                                             |
-| `sha256`                   | The SHA-256 of its bytes, in lowercase hex                                                                                                                                                                                                           |
-| `model`                    | The model that made it, or `null` where no model made it, such as an image a tool answered                                                                                                                                                           |
-| `kept_at`                  | When the playbook kept it                                                                                                                                                                                                                            |
-| `expires_at`               | When it expires, or `null` once its expiry is recorded                                                                                                                                                                                               |
-| `expired_at`               | When its expiry was recorded, or `null` while it is kept                                                                                                                                                                                             |
-| `expired`                  | `true` from the moment the asset expires, whether or not its expiry is recorded yet                                                                                                                                                                  |
-| `content_removed`          | `true` once its content was removed, which happens when it expires and nothing else of the playbook holds the same bytes                                                                                                                             |
-| `address`, `address_until` | A [signed address](#content-at-a-signed-address) its bytes are read at without a key, signed as it is read and answered for 15 minutes, until `address_until`; both `null` from the moment the asset expires, and where the runtime signs no address |
+| Field                      | Value                                                                                                                                                                                                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                       | The asset's id, as the output of the run that made it gives it, or the result of the tool call that answered it                                                                                                                                                    |
+| `media_type`, `bytes`      | The media type and the size of its bytes                                                                                                                                                                                                                           |
+| `sha256`                   | The SHA-256 of its bytes, in lowercase hex                                                                                                                                                                                                                         |
+| `model`                    | The model that made it, or `null` where no model made it, such as an image a tool answered                                                                                                                                                                         |
+| `kept_at`                  | When the playbook kept it                                                                                                                                                                                                                                          |
+| `expires_at`               | When it expires, or `null` if it has no expiry or its expiry is already recorded                                                                                                                                                                                   |
+| `expired_at`               | When its expiry was recorded, or `null` while it is kept                                                                                                                                                                                                           |
+| `expired`                  | `true` from the moment the asset expires, whether or not its expiry is recorded yet                                                                                                                                                                                |
+| `content_removed`          | `true` once its content was removed, which happens when it expires and nothing else of the playbook holds the same bytes                                                                                                                                           |
+| `address`, `address_until` | A [signed address](#content-at-a-signed-address) its bytes are read at without a key, and the time it stops working: when the asset expires, or `null` for an asset with no expiry. Both are `null` once the asset expires, and where the runtime signs no address |
 
 | Case                                                                           | Response                                               |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
@@ -1601,17 +1602,19 @@ Authorization: Bearer <token>
 
 ### Members
 
-Where the runtime signs people in ([Let people sign in](../self-host/security.md#let-people-sign-in)), it serves the members of its org, everyone who holds a role there, with the name and address their sign-in gave, and the invitations to join it.
+Where the runtime signs people in ([Let people sign in](../self-host/security.md#let-people-sign-in)), it serves the members of its org, everyone who holds a role there, with the name and address their sign-in gave, the invitations to join it, and how people join it.
 
-| Operation           | Method and route                                | Permission  | Input                                                         |
-| ------------------- | ----------------------------------------------- | ----------- | ------------------------------------------------------------- |
-| `list_members`      | `GET /members`                                  | `org:read`  | None                                                          |
-| `invite_member`     | `POST /members/invitations`                     | `org:write` | `email_address`, and an optional `role`, `editor` or `viewer` |
-| `invite_admin`      | `POST /members/admin-invitations`               | `org:write` | `email_address`                                               |
-| `resend_invitation` | `POST /members/invitations/{invitation}/resend` | `org:write` | The invitation's id, in path                                  |
-| `revoke_invitation` | `DELETE /members/invitations/{invitation}`      | `org:write` | The invitation's id, in path                                  |
-| `set_member_role`   | `PUT /members/{member}/role`                    | `org:write` | The member's id, in path, and `role`, in the body             |
-| `remove_member`     | `DELETE /members/{member}`                      | `org:write` | The member's id, in path                                      |
+| Operation           | Method and route                                | Permission  | Input                                                                                                        |
+| ------------------- | ----------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------ |
+| `list_members`      | `GET /members`                                  | `org:read`  | None                                                                                                         |
+| `invite_member`     | `POST /members/invitations`                     | `org:write` | `email_address`, and an optional `role`, `editor` or `viewer`                                                |
+| `invite_admin`      | `POST /members/admin-invitations`               | `org:write` | `email_address`                                                                                              |
+| `resend_invitation` | `POST /members/invitations/{invitation}/resend` | `org:write` | The invitation's id, in path                                                                                 |
+| `revoke_invitation` | `DELETE /members/invitations/{invitation}`      | `org:write` | The invitation's id, in path                                                                                 |
+| `set_member_role`   | `PUT /members/{member}/role`                    | `org:write` | The member's id, in path, and `role`, in the body                                                            |
+| `remove_member`     | `DELETE /members/{member}`                      | `org:write` | The member's id, in path                                                                                     |
+| `get_enrolment`     | `GET /enrolment`                                | `org:read`  | None                                                                                                         |
+| `set_enrolment`     | `PUT /enrolment`                                | `org:write` | `enrolment`, `invitation` or `join_without_invitation`, and an optional `default_role`, `editor` or `viewer` |
 
 A member holds:
 
@@ -1643,17 +1646,20 @@ An invitation holds:
 - `remove_member` ends the member's role and signs them out at once: their sign-ins and every agent's access they allowed end, so a token they hold is refused from their next call. It answers the member as they were. The workflow runs they started keep running ([What happens when access is revoked](authentication.md#what-happens-when-access-is-revoked)). A removed person comes back by a new invitation.
 - `set_member_role` and `remove_member` also revoke the invitations pending to the address the runtime holds for the member, in any letter case.
 - Only an admin signed in to Studio invites an admin, resends or revokes an invitation, gives a role or removes a member, and the org always keeps an admin, as with `assign_role`.
+- `get_enrolment` answers `enrolment`, how people join the org, and `default_role`, the role a person gets when they join without an invitation. With `join_without_invitation`, a person who signs in and holds no role joins with the default role. With `invitation`, that person needs an invitation, and signing in without one shows a page that says so. Either way, the first person to sign in becomes the admin. A person who brings an invitation joins with its role, and a person an admin removed needs a new invitation. Until an admin changes them, `enrolment` is `join_without_invitation` and `default_role` is `viewer`.
+- `set_enrolment` sets `enrolment` and, when it is given, `default_role`; without it, the default role stays as it is. The change holds for people who join after it, and members keep their role. It answers both as they now are. Only an admin signed in to Studio changes them. The default role is `editor` or `viewer`, never `admin`.
 
-| Case                                                                                                                                                                                      | Response                        |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| An `email_address` not shaped like `name@example.com` (an `@`, a dot somewhere after it, and no spaces), or longer than 254 characters, or a `role` it does not take                      | `invalid_input`                 |
-| An `email_address` that is a member's address or that of an invitation pending, in any letter case                                                                                        | `conflict` of kind `taken`      |
-| An `invite_member` from a caller who is not a person, such as a key                                                                                                                       | `forbidden`                     |
-| Any other change from a caller who is not a person signed in to Studio, such as a key or an agent                                                                                         | `forbidden`                     |
-| A person whose role does not allow the change, such as a viewer who invites anyone, or an editor who invites an admin, resends or revokes an invitation, gives a role or removes a member | `forbidden`                     |
-| A `resend_invitation` or a `revoke_invitation` for an invitation that is not pending                                                                                                      | `not_found`                     |
-| A `set_member_role` or a `remove_member` for someone who holds no role, such as a person removed already                                                                                  | `not_found`                     |
-| A change that would leave the org without an admin                                                                                                                                        | `conflict` of kind `unworkable` |
+| Case                                                                                                                                                                                                               | Response                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| An `email_address` not shaped like `name@example.com` (an `@`, a dot somewhere after it, and no spaces), or longer than 254 characters, or a `role` it does not take                                               | `invalid_input`                 |
+| An `email_address` that is a member's address or that of an invitation pending, in any letter case                                                                                                                 | `conflict` of kind `taken`      |
+| An `invite_member` from a caller who is not a person, such as a key                                                                                                                                                | `forbidden`                     |
+| Any other change from a caller who is not a person signed in to Studio, such as a key or an agent                                                                                                                  | `forbidden`                     |
+| A person whose role does not allow the change, such as a viewer who invites anyone, or an editor who invites an admin, resends or revokes an invitation, gives a role, removes a member or changes how people join | `forbidden`                     |
+| A `default_role` other than `editor` or `viewer`, or an `enrolment` other than `invitation` or `join_without_invitation`                                                                                           | `invalid_input`                 |
+| A `resend_invitation` or a `revoke_invitation` for an invitation that is not pending                                                                                                                               | `not_found`                     |
+| A `set_member_role` or a `remove_member` for someone who holds no role, such as a person removed already                                                                                                           | `not_found`                     |
+| A change that would leave the org without an admin                                                                                                                                                                 | `conflict` of kind `unworkable` |
 
 ```http
 POST /v1/orgs/default/members/invitations

@@ -1,6 +1,6 @@
 import type { Finished } from '@on.auto/definitions';
 import { uuidV5 } from '@on.auto/operations';
-import { Clock, Effect } from 'effect';
+import { Effect } from 'effect';
 
 import type { KeptByARun } from '../assets/asset-keeping.ts';
 import { assetRowFrom, assetRowOf, assetsName, type AssetRow } from '../assets/asset-projections.ts';
@@ -30,14 +30,14 @@ function finishedFrom(
   { playbook }: WaitingPlace,
   waiting: Waiting,
   kept: AssetRow & { readonly id: string },
-) {
-  return Effect.map(Clock.currentTimeMillis, (now): Finished => ({
+): Finished {
+  return {
     output: assetReferenceOf(
       { id: kept.id, media_type: kept.media_type, bytes: kept.bytes, sha256: kept.sha256 },
-      addressOf(parts.addresses, playbook, kept.sha256, now),
+      addressOf(parts.addresses, playbook, kept.sha256, kept.expires_at),
     ),
     record: recordOf(waiting.madeBy, kept.kept_at - Date.parse(waiting.wait.asked_at)),
-  }));
+  };
 }
 
 function keptRowOf(parts: WaitingParts, { playbook, row }: WaitingPlace) {
@@ -58,15 +58,15 @@ export function keptBefore(
   waiting: Waiting,
 ): Effect.Effect<Finished | undefined> {
   const id = assetIdOfTheWait(place.row.deferred_id);
-  return Effect.flatMap(keptRowOf(parts, place), (found) => {
+  return Effect.map(keptRowOf(parts, place), (found) => {
     const kept = assetRowOf(found);
-    return kept === undefined ? Effect.undefined : finishedFrom(parts, place, waiting, { ...kept, id });
+    return kept === undefined ? undefined : finishedFrom(parts, place, waiting, { ...kept, id });
   });
 }
 
 function keptByAnother(parts: WaitingParts, place: WaitingPlace, waiting: Waiting): Effect.Effect<Finished> {
   const id = assetIdOfTheWait(place.row.deferred_id);
-  return Effect.flatMap(keptRowOf(parts, place), (found) =>
+  return Effect.map(keptRowOf(parts, place), (found) =>
     finishedFrom(parts, place, waiting, { ...assetRowFrom(found), id }),
   );
 }

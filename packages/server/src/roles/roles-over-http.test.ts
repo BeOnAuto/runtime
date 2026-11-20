@@ -256,3 +256,31 @@ describe('the invitations of a runtime that signs people in, resent and revoked 
     expect(await asked(ada, 'GET', '/members')).toMatchObject({ body: { invitations: [], invitations_total: 0 } });
   });
 });
+
+describe('how people join a runtime that signs people in, set by its admin over HTTP', () => {
+  it('is answered to anyone in the org, changed with the role people join with by its admin alone, and decides each next sign-in', async () => {
+    const signing = await personSigningIn();
+    const origin = await servedTo(signing, temporaryLedger());
+    const asked = askingWithABody(origin);
+    const [ada, priya] = [await signing.tokenAt(origin, 'Ada'), await signing.tokenAt(origin, 'Priya')];
+
+    const read = await asked(priya, 'GET', '/enrolment');
+    const refusedTheViewer = await asked(priya, 'PUT', '/enrolment', { enrolment: 'invitation' });
+    const refusedAnAdminAsTheRole = await asked(ada, 'PUT', '/enrolment', {
+      enrolment: 'join_without_invitation',
+      default_role: 'admin',
+    });
+    const byInvitation = await asked(ada, 'PUT', '/enrolment', { enrolment: 'invitation', default_role: 'editor' });
+    const uninvited = await signing.signedInWithTheCookie(origin, 'Sam', 'no-invitation');
+    await asked(ada, 'PUT', '/enrolment', { enrolment: 'join_without_invitation' });
+    await signing.tokenAt(origin, 'Lee');
+
+    expect(read).toMatchObject({ status: 200, body: { enrolment: 'join_without_invitation', default_role: 'viewer' } });
+    expect([refusedTheViewer.status, refusedAnAdminAsTheRole.status, byInvitation.status, uninvited.status]).toEqual([
+      403, 422, 200, 403,
+    ]);
+    expect(await asked(ada, 'GET', '/members')).toMatchObject({
+      body: { members: [{ role: 'admin' }, { role: 'viewer' }, { id: signing.personOf('Lee'), role: 'editor' }] },
+    });
+  });
+});

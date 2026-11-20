@@ -6,6 +6,7 @@ import {
   isOfInvitations,
   withTheirInvitationsRevoked,
 } from '../invitations/invitation-decisions.ts';
+import { decidedEnrolmentSetting, isEnrolmentSetting } from '../joining/joining-decisions.ts';
 import {
   builtInRoles,
   builtInRolesAtSignIn,
@@ -157,6 +158,9 @@ function decidedDeprovisioning(table: RoleTable, command: RolesDeprovisioned, st
 function decided(deciding: Deciding, command: RoleAssignmentCommand, state: HeldAssignments): Decision {
   if (isOfInvitations(command)) {
     return decidedOfInvitations(deciding.table, command, state);
+  }
+  if (isEnrolmentSetting(command)) {
+    return decidedEnrolmentSetting(deciding, command, state);
   }
   if (command.kind === 'recover') {
     return decidedRecovery(deciding, command, state);

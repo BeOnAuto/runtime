@@ -163,11 +163,11 @@ describe('the assets a playbook keeps', () => {
     expect(await playbook.totals()).toEqual({ bytes: 2 * onePixelPng.byteLength, assets: 2 });
   });
 
-  it('signs an address of fifteen minutes to the bytes where the runtime is given a signer and its own origin', async () => {
+  it('signs an address to the bytes until the asset expires where the runtime is given a signer and its own origin', async () => {
     const signing = contentAddressesUnder(Redacted.make(new Uint8Array(32).fill(3)), () => harnessStartsAt);
     const playbook = numberedHarness({ addresses: { signedContentAddress: signing.signedContentAddress, ownOrigin } });
     await playbook.define('picture', imageSource);
-    const until = Math.floor(harnessStartsAt / 1000) + 900;
+    const until = Math.floor((harnessStartsAt + 30 * day) / 1000);
 
     expect(await ran(playbook, 'picture', { product: 'a teapot' })).toMatchObject({
       output: {
@@ -175,6 +175,20 @@ describe('the assets a playbook keeps', () => {
           address: signing.signedContentAddress(ownOrigin(), alpha, pngDigest, until),
           address_until: new Date(until * 1000).toISOString(),
         },
+      },
+    });
+  });
+});
+
+describe('an asset that does not expire', () => {
+  it('has an address with no time to its bytes', async () => {
+    const signing = contentAddressesUnder(Redacted.make(new Uint8Array(32).fill(3)), () => harnessStartsAt);
+    const playbook = numberedHarness({ addresses: { signedContentAddress: signing.signedContentAddress, ownOrigin } });
+    await playbook.define('picture', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-2']));
+
+    expect(await ran(playbook, 'picture', {})).toMatchObject({
+      output: {
+        output: { address: signing.signedContentAddress(ownOrigin(), alpha, pngDigest), address_until: null },
       },
     });
   });
@@ -201,15 +215,15 @@ describe('the time a generation keeps its asset, and what it records of its key 
     ]);
   });
 
-  it('keeps an asset 90 days where neither the document nor the runtime says otherwise, and waits as long as it is told', async () => {
+  it('keeps an asset with no expiry where neither the document nor the runtime names one, and waits as long as it is told', async () => {
     const playbook = generationHarness({ answerMs: 60_000 });
     await playbook.define('picture', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-2']));
 
     const outcome = await ran(playbook, 'picture', {});
 
-    expect(keptDataOf(await playbook.factsOf(assetIdIn(outcome))).expires_at).toBe(
-      new Date(harnessStartsAt + 90 * day).toISOString(),
-    );
+    expect(keptDataOf(await playbook.factsOf(assetIdIn(outcome)))).not.toHaveProperty('expires_at');
+    expect(await playbook.rowOf(assetIdIn(outcome))).toMatchObject({ expires_at: null, live: true });
+    expect(await playbook.expireAt(harnessStartsAt + 3650 * day)).toBe(0);
   });
 });
 

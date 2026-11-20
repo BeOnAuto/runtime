@@ -32,7 +32,7 @@ function bytesKeptBy(ledger: TotalsReading, playbook: PlaybookAddress): Effect.E
 
 function full(kept: number, most: number): Conflict {
   return new Conflict({
-    detail: `The playbook keeps ${sizeInWords(kept)} of assets, and may keep ${sizeInWords(most)}; an asset makes room as it expires`,
+    detail: `The playbook keeps ${sizeInWords(kept)} of assets, and may keep ${sizeInWords(most)}; only an asset whose function sets \`expires\` makes room, as it expires`,
     kind: 'oversized',
   });
 }

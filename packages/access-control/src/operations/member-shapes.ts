@@ -1,7 +1,7 @@
 import { ContextReference } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import { InvitationIdSchema } from '../assignments/role-assignment-facts.ts';
+import { DefaultRoleSchema, InvitationIdSchema } from '../assignments/role-assignment-facts.ts';
 
 const ProfileFields = {
   id: Schema.String,
@@ -44,6 +44,15 @@ export const invitedRoles = ['editor', 'viewer'] as const;
 
 export const InvitedRoleField = Schema.Literals(invitedRoles).annotate({
   description: 'editor, who builds, runs and changes playbooks, or viewer, who views and comments; editor if left out',
+});
+
+export const DefaultRoleField = DefaultRoleSchema.fields.id.annotate({
+  description: 'editor, who builds, runs and changes playbooks, or viewer, who views and comments',
+});
+
+export const DefaultRoleAskedField = DefaultRoleSchema.fields.id.annotate({
+  description:
+    'editor, who builds, runs and changes playbooks, or viewer, who views and comments; unchanged if left out',
 });
 
 const mostEmailAddressCharacters = 254;

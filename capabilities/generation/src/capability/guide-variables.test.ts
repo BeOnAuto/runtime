@@ -19,7 +19,7 @@ const asThePagesWriteThem = {
   'generation.most_audio': '50 MiB',
   'generation.most_video': '200 MiB',
   'generation.most_kept': '2,048 MiB',
-  'generation.kept': '90 days',
+  'generation.kept': 'does not expire',
   'generation.bounds_changed_by': 'can be changed only by whoever runs the server',
   'generation.example_image_model': 'gateway/openai/gpt-image-2',
   'generation.example_audio_model': 'gateway/vertex_ai/gemini-3.8-flash-tts',
@@ -71,7 +71,7 @@ describe('the values the guide of generation functions names', () => {
       'generation.most_audio': '32 MiB',
       'generation.most_video': '32 MiB',
       'generation.most_kept': '1,024,000 MiB',
-      'generation.kept': '1 day',
+      'generation.kept': 'expires after 1 day',
       'generation.bounds_changed_by': 'can be changed only by whoever runs the server',
       'generation.example_image_model': 'images/openai/gpt-image-2',
       'generation.example_audio_model': 'images/vertex_ai/gemini-3.8-flash-tts',
@@ -162,12 +162,12 @@ describe('an asset a run of the capability keeps, against the values its guide n
     const kept = await ran(playbook, 'picture', {}, 1);
     const full = await ran(playbook, 'picture', {}, 2);
     const keptFor =
-      (Date.parse(keptDataOf(await playbook.factsOf(assetIdIn(kept))).expires_at) - harnessStartsAt) / day;
+      (Date.parse(String(keptDataOf(await playbook.factsOf(assetIdIn(kept))).expires_at)) - harnessStartsAt) / day;
 
     expect(assetIdIn(kept)).toBe(assetIdOf(1));
-    expect(`${String(keptFor)} days`).toBe(said(playbook.capability, 'generation.kept'));
-    expect(refusalOf(full).detail).toBe(
-      `The playbook keeps ${said(playbook.capability, 'generation.most_kept')} of assets, and may keep ${said(playbook.capability, 'generation.most_kept')}; an asset makes room as it expires`,
+    expect(`expires after ${String(keptFor)} days`).toBe(said(playbook.capability, 'generation.kept'));
+    expect(refusalOf(full).detail).toContain(
+      `The playbook keeps ${said(playbook.capability, 'generation.most_kept')} of assets, and may keep ${said(playbook.capability, 'generation.most_kept')};`,
     );
   });
 });

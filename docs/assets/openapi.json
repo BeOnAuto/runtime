@@ -31798,7 +31798,7 @@
       "get": {
         "operationId": "get_asset",
         "summary": "Get asset",
-        "description": "Reads one asset of the playbook by its id: its media type, size and SHA-256, the model that made it, if any, when it was kept and when it expires or expired, and whether its content was removed. It answers an `address` its bytes are read at without a key, signed as it is read, until `address_until` 15 minutes later; both are null once the asset expired or where the runtime signs none. Use it to show an asset after the address in its run's output expired, or an image a tool answered. `id` is the asset's id, as either gives it.",
+        "description": "Reads one asset of the playbook by its id, as a run's output or a tool's image gives it: its media type, size and SHA-256, the model that made it, if any, when it was kept, when it expires or expired, if it has an expiry, and whether its content was removed. It answers an `address` its bytes are read at without a key while the asset is kept, and `address_until`, when the asset expires, or null if it has no expiry; both are null once it expired or where the runtime signs none. Use it to show an asset, or to check that it is still kept.",
         "tags": [
           "assets"
         ],
@@ -31871,7 +31871,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "When it expires, in ISO 8601 UTC, or null once its expiry is recorded"
+                      "description": "When it expires, in ISO 8601 UTC, or null if it has no expiry or its expiry is already recorded"
                     },
                     "expired_at": {
                       "anyOf": [
@@ -31901,7 +31901,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "An address its bytes are read at without a key until address_until, signed as it was read, or null once it expired or where the runtime signs none"
+                      "description": "An address its bytes are read at without a key for as long as it is kept, or null once it expired or where the runtime signs none"
                     },
                     "address_until": {
                       "anyOf": [
@@ -31912,7 +31912,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "When the address stops being answered, or null"
+                      "description": "When the address stops being answered, as the asset expires, or null where it does not expire"
                     }
                   },
                   "required": [
@@ -32411,7 +32411,7 @@
       "get": {
         "operationId": "get_content",
         "summary": "Get content",
-        "description": "Answers the bytes of a content a playbook keeps, with the media type it was kept with, at an address the runtime signed for that content. The address is what a browser follows, so it needs no credential: its signature and the time it lasts until are its credential, and it lasts 15 minutes at the most. An address past its time, or not signed for this content, is refused as forbidden. One range of bytes asked in Range, from a first byte to a last or to the end, is answered with that part, and any other range with the whole content.",
+        "description": "Answers the bytes of a content a playbook keeps, with the media type it was kept with, at an address the runtime signed for that content. The address is what a browser follows, so it needs no credential: its signature is its credential. An address without `until` keeps working for as long as the playbook keeps the content. An address with `until` lasts until that time, the time its asset expires. An address past its time, or not signed for this content, is refused as forbidden. One range of bytes asked in Range, from a first byte to a last or to the end, is answered with that part, and any other range with the whole content.",
         "tags": [
           "content"
         ],
@@ -32449,8 +32449,8 @@
           {
             "name": "until",
             "in": "query",
-            "required": true,
-            "description": "The time the address lasts until, in whole seconds since 1970-01-01T00:00:00Z",
+            "required": false,
+            "description": "The time the address lasts until, in whole seconds since 1970-01-01T00:00:00Z, where its asset expires; an address without it does not expire",
             "schema": {
               "type": "integer",
               "minimum": 0
@@ -32460,7 +32460,7 @@
             "name": "sig",
             "in": "query",
             "required": true,
-            "description": "The signature the runtime made of the org, the playbook, the digest and the time, in lowercase hex",
+            "description": "The signature the runtime made of the org, the playbook, the digest and the time, if any, in lowercase hex",
             "schema": {
               "type": "string",
               "pattern": "^[0-9a-f]{64}$"
@@ -32481,7 +32481,7 @@
             "description": "The content's bytes, with the media type it was kept with as their Content-Type",
             "headers": {
               "Cache-Control": {
-                "description": "private, with a max-age of the seconds the address has left",
+                "description": "private, with a max-age of the seconds the address has left, or of a year for an address without `until`",
                 "schema": {
                   "type": "string"
                 }
@@ -32507,7 +32507,7 @@
                 }
               },
               "Cache-Control": {
-                "description": "private, with a max-age of the seconds the address has left",
+                "description": "private, with a max-age of the seconds the address has left, or of a year for an address without `until`",
                 "schema": {
                   "type": "string"
                 }

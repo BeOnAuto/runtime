@@ -9,7 +9,7 @@ const HandleSchema = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLeng
 const WaitSchema = Schema.Struct({
   ...madeByFields,
   handle: HandleSchema,
-  kept_for_ms: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  kept_for_ms: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
   asked_at: Schema.String,
   waits_until: Schema.String,
 });

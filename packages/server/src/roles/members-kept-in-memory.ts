@@ -152,8 +152,17 @@ export function membersKeptInMemory(
 ) {
   const ledger = memoryLedger(undefined, [roleAssignmentRows]);
   const call = callingIn(ledger);
-  const [listMembers, inviteMember, inviteAdmin, resendInvitation, revokeInvitation, setMemberRole, removeMember] =
-    memberOperationsOf({ people: peopleKept(people), invitations: addresses, signedOut, publicUrl });
+  const [
+    listMembers,
+    inviteMember,
+    inviteAdmin,
+    resendInvitation,
+    revokeInvitation,
+    setMemberRole,
+    removeMember,
+    getEnrolment,
+    setEnrolment,
+  ] = memberOperationsOf({ people: peopleKept(people), invitations: addresses, signedOut, publicUrl });
   return {
     ...rolesRecordedIn(writingIn(ledger)),
     addresses,
@@ -169,5 +178,8 @@ export function membersKeptInMemory(
     roleSet: (caller: CallerIdentity, member: string, role: Role) =>
       call(setMemberRole, caller, { member, role }, askedAt),
     removed: (caller: CallerIdentity, member: string) => call(removeMember, caller, { member }, askedAt),
+    joining: (caller: CallerIdentity) => call(getEnrolment, caller, {}, askedAt),
+    enrolmentSet: (caller: CallerIdentity, asked: Readonly<Record<string, unknown>>) =>
+      call(setEnrolment, caller, asked, askedAt),
   };
 }

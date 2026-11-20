@@ -9,7 +9,7 @@ import {
 } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import { builtInRoleIds, type BuiltInRoleId } from '../roles/built-in-roles.ts';
+import { builtInRoleIds, defaultRoleIds, type BuiltInRoleId } from '../roles/built-in-roles.ts';
 
 export const roleAssignmentsKind = 'role-assignments';
 
@@ -84,6 +84,19 @@ export type InvitationRevokedReason = (typeof invitationRevokedReasons)[number];
 
 const invitationFields = { invitation: InvitationIdSchema, role: AssignedRoleSchema, scope: AssignmentScopeSchema };
 
+export const enrolments = ['invitation', 'join_without_invitation'] as const;
+
+export type Enrolment = (typeof enrolments)[number];
+
+const EnrolmentSchema = Schema.Literals(enrolments);
+
+export const DefaultRoleSchema = Schema.Struct({
+  type: Schema.Literal('built_in'),
+  id: Schema.Literals(defaultRoleIds),
+});
+
+export type DefaultRole = typeof DefaultRoleSchema.Type;
+
 export const RoleAssignmentEventSchema = Schema.Union([
   roleAssigned,
   roleUnassigned,
@@ -96,6 +109,17 @@ export const RoleAssignmentEventSchema = Schema.Union([
   factOf(
     'invitation_accepted',
     Schema.Struct({ ...invitationFields, principal: AssignedPrincipalSchema }),
+    ActedContextSchema,
+  ),
+  factOf(
+    'enrolment_set',
+    Schema.Struct({
+      enrolment: EnrolmentSchema,
+      previous_enrolment: EnrolmentSchema,
+      role: DefaultRoleSchema,
+      previous_role: DefaultRoleSchema,
+      scope: AssignmentScopeSchema,
+    }),
     ActedContextSchema,
   ),
 ]);

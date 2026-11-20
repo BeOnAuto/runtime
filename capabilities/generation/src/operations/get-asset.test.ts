@@ -86,11 +86,11 @@ async function onePictureIn(playbook: GenerationHarness, source = imageSource): 
 }
 
 describe('an asset read by its id', () => {
-  it('answers what the playbook keeps of it and the model that made it, with an address signed as it is read for fifteen minutes', async () => {
+  it('answers what the playbook keeps of it and the model that made it, with an address signed until it expires', async () => {
     const { playbook, signing, passes } = signedHarness();
     const id = await onePictureIn(playbook);
     passes(20 * minute);
-    const until = Math.floor((harnessStartsAt + 20 * minute) / 1000) + 900;
+    const until = Math.floor((harnessStartsAt + 30 * day) / 1000);
 
     const read = await readOf(playbook, id);
 
@@ -110,7 +110,7 @@ describe('an asset read by its id', () => {
     });
     expect(signing.checkedAddress(alpha, pngDigest, presentedIn(read.address))).toBe('signed');
     expect(wordsOf(read)).toBe(
-      `The asset, an image of ${onePixelPng.byteLength} bytes, is kept until 2026-12-01; its address, in the details below, opens it for 15 minutes.`,
+      `The asset, an image of ${onePixelPng.byteLength} bytes, is kept until 2026-12-01, and its address, in the details below, opens it until then.`,
     );
   });
 });
@@ -157,10 +157,17 @@ describe('a file a run returned, of a kind a later release keeps, read by its id
 
     const read = await readOf(playbook, assetIdOf(7));
 
-    expect(read).toMatchObject({ media_type: 'text/markdown', bytes: page.bytes, model: null, expired: false });
+    expect(read).toMatchObject({
+      media_type: 'text/markdown',
+      bytes: page.bytes,
+      model: null,
+      expires_at: null,
+      expired: false,
+      address_until: null,
+    });
     expect(signing.checkedAddress(alpha, page.sha256, presentedIn(read.address))).toBe('signed');
     expect(wordsOf(read)).toBe(
-      'The asset, a file of 15.6 KiB, is kept until 2027-01-30; its address, in the details below, opens it for 15 minutes.',
+      'The asset, a file of 15.6 KiB, is kept with no expiry, and its address, in the details below, opens it.',
     );
   });
 });

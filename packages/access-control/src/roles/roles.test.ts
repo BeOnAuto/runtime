@@ -30,7 +30,14 @@ import {
   runDefinition,
   type TestOperation,
 } from '../testing/access-testing.ts';
-import { builtInRoleIds, builtInRoles, builtInRolesAtSignIn, mayAssign, mayInvite } from './built-in-roles.ts';
+import {
+  builtInRoleIds,
+  builtInRoles,
+  builtInRolesAtSignIn,
+  defaultRoleIds,
+  mayAssign,
+  mayInvite,
+} from './built-in-roles.ts';
 import { assignmentsReadAtOnce, roleAssignmentsFrom, roleAssignmentsRecordedIn } from './recorded-role-assignments.ts';
 import { editorRoleForEveryPerson } from './role-assignments.ts';
 
@@ -133,6 +140,12 @@ describe('the roles given at sign-in', () => {
 
     expect([builtInRoles[bootstrap].assignsRoles, builtInRoles[enrolment].permits.length]).toEqual([true, fewest]);
     expect(builtInRoleIds.filter((role) => builtInRoles[role].permits.length === fewest)).toEqual([enrolment]);
+  });
+});
+
+describe('the roles a default role may be', () => {
+  it('are every role that gives no roles, and no other, so a person who joins without an invitation is never an admin', () => {
+    expect(defaultRoleIds).toEqual(builtInRoleIds.filter((role) => !builtInRoles[role].assignsRoles));
   });
 });
 

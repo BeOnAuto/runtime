@@ -16,7 +16,7 @@ function errorFrom(environment: Readonly<Record<string, string>>): string {
 const mebibyte = 1_048_576;
 
 describe('the generation function settings and the asset settings', () => {
-  it('keep the defaults of the capability, 20 MiB of an image, 50 of audio, 200 of a video, 100 MiB of a file, a storage quota of 2 GiB a playbook, each asset for 90 days, and ten minutes of waiting for a video', () => {
+  it('keep the defaults of the capability, 20 MiB of an image, 50 of audio, 200 of a video, 100 MiB of a file, a storage quota of 2 GiB a playbook, no expiry of an asset, and ten minutes of waiting for a video', () => {
     expect(readSettingsOf({}).generation).toEqual(generationBounds);
   });
 

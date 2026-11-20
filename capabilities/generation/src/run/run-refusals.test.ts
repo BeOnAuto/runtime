@@ -50,7 +50,7 @@ describe('the bytes a playbook may keep of assets', () => {
     expect(refusalOf(refused)).toEqual({
       reason: 'conflict',
       kind: 'oversized',
-      detail: `The playbook keeps ${2 * onePixelPng.byteLength} bytes of assets, and may keep ${most} bytes; an asset makes room as it expires`,
+      detail: `The playbook keeps ${2 * onePixelPng.byteLength} bytes of assets, and may keep ${most} bytes; only an asset whose function sets \`expires\` makes room, as it expires`,
     });
     expect(playbook.gateway.asked()).toHaveLength(2);
   });
@@ -65,7 +65,7 @@ describe('the bytes a playbook may keep of assets', () => {
     expect(refusalOf(atTheMost)).toEqual({
       reason: 'conflict',
       kind: 'oversized',
-      detail: `The playbook keeps ${onePixelPng.byteLength} bytes of assets, and may keep ${onePixelPng.byteLength} bytes; an asset makes room as it expires`,
+      detail: `The playbook keeps ${onePixelPng.byteLength} bytes of assets, and may keep ${onePixelPng.byteLength} bytes; only an asset whose function sets \`expires\` makes room, as it expires`,
     });
     expect(full.gateway.asked()).toHaveLength(1);
   });

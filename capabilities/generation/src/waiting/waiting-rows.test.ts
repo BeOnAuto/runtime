@@ -20,6 +20,8 @@ const wait: GenerationWait = {
   waits_until: '2026-11-01T10:10:01.000Z',
 };
 
+const { kept_for_ms: _keptForMs, ...waitWithNoExpiry } = wait;
+
 const onTheRun = {
   at: '2026-11-01T10:00:01.000Z',
   by: 'key_7f3a',
@@ -33,7 +35,10 @@ describe('the deferral of a generation the playbook waits for', () => {
   recordedFactsBehaviour({
     schema: GenerationDeferredSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.56.0': [{ type: 'run_deferred', data: { record: wait }, context: onTheRun }] },
+    releases: {
+      '0.56.0': [{ type: 'run_deferred', data: { record: wait }, context: onTheRun }],
+      '0.68.0': [{ type: 'run_deferred', data: { record: waitWithNoExpiry }, context: onTheRun }],
+    },
   });
 
   it('is read from the record of a run, and a record of no generation that waits is none', () => {

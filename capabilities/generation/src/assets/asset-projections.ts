@@ -75,7 +75,7 @@ function rowOfTheAsset(row: ProjectedRow | undefined, message: ProjectedMessage)
       model: modelOf(data.made_by),
       run: context.runId,
       kept_at: Date.parse(context.at),
-      expires_at: Date.parse(data.expires_at),
+      expires_at: data.expires_at === undefined ? null : Date.parse(data.expires_at),
       expired_at: null,
       live: true,
     };

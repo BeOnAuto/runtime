@@ -70,8 +70,14 @@ function keptIn(
   );
 }
 
-async function keptAs(playbook: GenerationHarness, value: ValueToKeep): Promise<AssetReference> {
-  const kept = await keptIn(playbook, value);
+const keptNinetyDays: GenerationBounds = { ...generationBounds, keptMs: 90 * day };
+
+async function keptAs(
+  playbook: GenerationHarness,
+  value: ValueToKeep,
+  bounds: GenerationBounds = generationBounds,
+): Promise<AssetReference> {
+  const kept = await keptIn(playbook, value, bounds);
   if (Exit.isFailure(kept)) {
     throw new Error('The value was not kept');
   }
@@ -79,7 +85,7 @@ async function keptAs(playbook: GenerationHarness, value: ValueToKeep): Promise<
 }
 
 describe('a value a run returned, kept as an asset of its playbook', () => {
-  it('is kept as text made by the output of the run at its place, for as long as the playbook keeps an asset, under an id of the run, the place and the bytes', async () => {
+  it('is kept as text made by the output of the run at its place, with no expiry, under an id of the run, the place and the bytes', async () => {
     const playbook = await withTheRun(generationHarness());
 
     const kept = await keptAs(playbook, page);
@@ -98,12 +104,17 @@ describe('a value a run returned, kept as an asset of its playbook', () => {
         data: {
           kind: 'text',
           made_by: { function_output: { pointer: '/page' } },
-          expires_at: new Date(harnessStartsAt + generationBounds.keptMs).toISOString(),
         },
         context: { ...run.context, at: new Date(harnessStartsAt).toISOString() },
       },
     ]);
-    expect(await playbook.rowOf(kept.id)).toMatchObject({ kind: 'text', model: null, run: run.context.runId });
+    expect((await playbook.factsOf(kept.id))[0]?.data).not.toHaveProperty('expires_at');
+    expect(await playbook.rowOf(kept.id)).toMatchObject({
+      kind: 'text',
+      model: null,
+      run: run.context.runId,
+      expires_at: null,
+    });
     expect(await playbook.totals()).toEqual({ bytes: kept.bytes, assets: 1 });
   });
 
@@ -185,12 +196,12 @@ describe('a value a run returned that is not kept', () => {
 });
 
 describe('every reader of the assets of a playbook', () => {
-  it('reads a kept value as it reads any asset: get_asset, and its expiry, which removes its content', async () => {
+  it('reads a kept value as it reads any asset: get_asset, and its expiry where the runtime sets one, which removes its content', async () => {
     const playbook = await withTheRun(generationHarness());
-    const kept = await keptAs(playbook, page);
+    const kept = await keptAs(playbook, page, keptNinetyDays);
 
     const read = await playbook.assetOf(kept.id);
-    const expired = await playbook.expireAt(harnessStartsAt + generationBounds.keptMs + day);
+    const expired = await playbook.expireAt(harnessStartsAt + 91 * day);
 
     expect(read).toMatchObject({
       status: 'succeeded',

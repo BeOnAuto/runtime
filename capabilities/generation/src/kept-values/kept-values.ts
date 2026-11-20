@@ -15,7 +15,7 @@ import { sizeInWords } from '@on.auto/phrasing';
 import { Clock, Effect } from 'effect';
 
 import { assetDecider, type AssetCommand } from '../assets/asset-decider.ts';
-import { assetStreamOf, type AssetKeptDataWritten } from '../assets/asset-facts.ts';
+import { assetStreamOf, expiryOf, type AssetKeptDataWritten } from '../assets/asset-facts.ts';
 import { assetRowFrom, assetsName, rowKeyed } from '../assets/asset-projections.ts';
 import { generationBounds, type GenerationBounds } from '../capability/generation-ports.ts';
 import { roomLeft, type TotalsReading } from '../run/asset-room.ts';
@@ -94,7 +94,7 @@ function keptValue(bounds: KeptValueBounds, run: RunOfAKeptValue, value: ValueTo
       sha256: held.sha256,
       kind: 'text',
       made_by: { function_output: { pointer: value.pointer } },
-      expires_at: new Date(at + bounds.keptMs).toISOString(),
+      ...expiryOf(at, bounds.keptMs),
     };
     const command: AssetCommand = {
       event: { type: 'asset_kept', data },

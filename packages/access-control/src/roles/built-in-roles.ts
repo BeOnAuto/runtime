@@ -19,9 +19,13 @@ export const builtInRoles: RoleTable = {
   viewer: { permits: ['org:read', 'playbook:read'], assignsRoles: false },
 };
 
+export const defaultRoleIds = ['editor', 'viewer'] as const satisfies readonly BuiltInRoleId[];
+
+export type DefaultRoleId = (typeof defaultRoleIds)[number];
+
 export interface RolesAtSignIn {
   readonly bootstrap: BuiltInRoleId;
-  readonly enrolment: BuiltInRoleId;
+  readonly enrolment: DefaultRoleId;
 }
 
 export const builtInRolesAtSignIn: RolesAtSignIn = { bootstrap: 'admin', enrolment: 'viewer' };

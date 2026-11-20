@@ -88,6 +88,33 @@ const keptOfAFunctionOutput: AssetEvent = {
   },
 };
 
+const keptWithNoExpiry: AssetEvent = {
+  type: 'asset_kept',
+  data: {
+    media_type: 'image/png',
+    bytes: 182_044,
+    sha256,
+    kind: 'image',
+    made_by: {
+      generation: {
+        model: 'gateway/openai/gpt-image-2',
+        prompt: 'A studio photograph of a teapot on a white table.',
+        parameters: { size: '1024x1024' },
+        references: [],
+        own_key: true,
+      },
+    },
+  },
+  context: {
+    at: '2026-11-20T10:00:00.000Z',
+    by: 'key_7f3a',
+    runId: '019aa0b1-2c3d-7e4f-8a5b-6c7d8e9f0a1b',
+    definitionType: 'generation',
+    definitionName: 'product-photo',
+    definitionVersion: 4,
+  },
+};
+
 const expired: AssetEvent = {
   type: 'asset_expired',
   data: { bytes: 182_044 },
@@ -104,7 +131,12 @@ describe('the facts of an asset', () => {
   recordedFactsBehaviour({
     schema: AssetEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.56.0': [kept, expired, removed], '0.57.0': [keptOfAToolCall], '0.64.0': [keptOfAFunctionOutput] },
+    releases: {
+      '0.56.0': [kept, expired, removed],
+      '0.57.0': [keptOfAToolCall],
+      '0.64.0': [keptOfAFunctionOutput],
+      '0.68.0': [keptWithNoExpiry],
+    },
   });
 });
 

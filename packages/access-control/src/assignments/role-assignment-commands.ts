@@ -7,6 +7,8 @@ import type {
   AssignedRole,
   AssignmentScope,
   AssignmentSource,
+  DefaultRole,
+  Enrolment,
   RoleAssignmentEvent,
 } from './role-assignment-facts.ts';
 
@@ -75,6 +77,13 @@ export interface InvitationResent extends Asked {
   readonly replacement: string;
 }
 
+export interface EnrolmentSet extends Asked {
+  readonly kind: 'set_enrolment';
+  readonly actor: PrincipalReference;
+  readonly enrolment: Enrolment;
+  readonly role?: DefaultRole | undefined;
+}
+
 export type RoleAssignmentCommand =
   | RoleGiven
   | RoleTaken
@@ -84,7 +93,8 @@ export type RoleAssignmentCommand =
   | AdminRecovered
   | MemberInvited
   | InvitationRevoked
-  | InvitationResent;
+  | InvitationResent
+  | EnrolmentSet;
 
 export type RoleAssignmentRefusal = 'forbidden' | 'conflict';
 

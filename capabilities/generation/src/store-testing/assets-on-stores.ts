@@ -167,7 +167,8 @@ function boundOfAPlaybook(ledgerOn: LedgerOn): void {
     expect(await Effect.runPromise(Effect.provide(program, layer))).toEqual({
       room: 'room',
       refused: new Conflict({
-        detail: 'The playbook keeps 1.2 KiB of assets, and may keep 1,000 bytes; an asset makes room as it expires',
+        detail:
+          'The playbook keeps 1.2 KiB of assets, and may keep 1,000 bytes; only an asset whose function sets `expires` makes room, as it expires',
         kind: 'oversized',
       }),
     });
@@ -188,7 +189,8 @@ function boundPastAPage(ledgerOn: LedgerOn): void {
     expect(await Effect.runPromise(Effect.provide(program, layer))).toEqual({
       room: 'room',
       refused: new Conflict({
-        detail: 'The playbook keeps 101 bytes of assets, and may keep 101 bytes; an asset makes room as it expires',
+        detail:
+          'The playbook keeps 101 bytes of assets, and may keep 101 bytes; only an asset whose function sets `expires` makes room, as it expires',
         kind: 'oversized',
       }),
     });

@@ -131,18 +131,18 @@ A text of Markdown.
 
 ### asset
 
-An asset a generation function made: an image, audio or a video the playbook keeps until it expires.
+An asset a generation function made: an image, audio or a video the playbook keeps.
 
-| Field           | Required | Value                                                                                                                               |
-| --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `id`            | Yes      | The asset's id, a UUID, which another generation function takes as a reference                                                      |
-| `media_type`    | Yes      | The media type of its bytes, such as `image/png` or `audio/mpeg`                                                                    |
-| `bytes`         | Yes      | Its size in bytes                                                                                                                   |
-| `sha256`        | Yes      | The SHA-256 of its bytes, in lowercase hex                                                                                          |
-| `address`       | Yes      | A [signed address](http.md#content-at-a-signed-address) its bytes are read at without a key, or `null` where the runtime signs none |
-| `address_until` | Yes      | When the address stops being answered, 15 minutes after the run at the most, or `null`                                              |
+| Field           | Required | Value                                                                                                                                                                           |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | Yes      | The asset's id, a UUID, which another generation function takes as a reference                                                                                                  |
+| `media_type`    | Yes      | The media type of its bytes, such as `image/png` or `audio/mpeg`                                                                                                                |
+| `bytes`         | Yes      | Its size in bytes                                                                                                                                                               |
+| `sha256`        | Yes      | The SHA-256 of its bytes, in lowercase hex                                                                                                                                      |
+| `address`       | Yes      | A [signed address](http.md#content-at-a-signed-address) its bytes are read at without a key for as long as the playbook keeps the asset, or `null` where the runtime signs none |
+| `address_until` | Yes      | When the address stops working, the time the asset expires, or `null` for an asset with no expiry                                                                               |
 
-`get_asset` reads the asset again by its `id`, with an address signed as it is read, while the playbook keeps it ([Generation functions](http.md#generation-functions)).
+`get_asset` reads the asset again by its `id`, with its address, while the playbook keeps it ([Generation functions](http.md#generation-functions)).
 
 ## Examples
 

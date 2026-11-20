@@ -1,3 +1,4 @@
+import type { Enrolled } from '@on.auto/access-control';
 import {
   ClientRegistrationError,
   UnusableIdentityProviderError,
@@ -72,6 +73,8 @@ function notAdmittedAfter(finished: NotSignedIn, report: SignInReport): SignInOu
   return { refused: 'not_signed_in' };
 }
 
+const refusedAccess: ReadonlySet<Enrolled> = new Set(['removed', 'invitation_needed']);
+
 async function admittedBy(
   signIn: SigningIn,
   finished: SignedIn,
@@ -89,7 +92,7 @@ async function admittedBy(
   if (admitted.enrolled === 'bootstrap') {
     signIn.report.firstAdmin(admitted.person);
   }
-  return admitted.enrolled === 'removed' ? { refused: 'no_access' } : { admitted: admitted.person };
+  return refusedAccess.has(admitted.enrolled) ? { refused: 'no_access' } : { admitted: admitted.person };
 }
 
 async function invitationOpenedBy(signIn: SigningIn, secret: string): Promise<InvitationOpened> {

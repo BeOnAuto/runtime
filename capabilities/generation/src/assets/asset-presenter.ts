@@ -20,12 +20,16 @@ function makerInWords(madeBy: AssetMadeBy): string {
     : 'a generation function made';
 }
 
+function untilInWords(expiresAt: string | undefined): string {
+  return expiresAt === undefined ? '' : `, until ${dayOf(expiresAt)}`;
+}
+
 function presentedFactOf(event: AssetEvent): PresentedFact {
   if (event.type === 'asset_kept') {
     const { data } = event;
     return {
       type: event.type,
-      summary: `The playbook kept ${kindInWords[data.kind]} of ${sizeInWords(data.bytes)} that ${makerInWords(data.made_by)}, until ${dayOf(data.expires_at)}.`,
+      summary: `The playbook kept ${kindInWords[data.kind]} of ${sizeInWords(data.bytes)} that ${makerInWords(data.made_by)}${untilInWords(data.expires_at)}.`,
       data,
     };
   }

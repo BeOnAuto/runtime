@@ -86,10 +86,10 @@ interface Endpoint {
 }
 
 const endpoints: readonly Endpoint[] = [
-  { path: '/mcp', tools: 42, bytes: 67_374, mostBytes: mostListingBytes['own org'] },
+  { path: '/mcp', tools: 42, bytes: 67_383, mostBytes: mostListingBytes['own org'] },
   { path: '/directory', tools: 40, bytes: 64_946, mostBytes: mostListingBytes.directory },
   { path: '/orgs/local/mcp', tools: 18, bytes: 24_566, mostBytes: mostListingBytes.org },
-  { path: '/orgs/local/playbooks/alpha/mcp', tools: 29, bytes: 46_123, mostBytes: mostListingBytes.playbook },
+  { path: '/orgs/local/playbooks/alpha/mcp', tools: 29, bytes: 46_132, mostBytes: mostListingBytes.playbook },
 ];
 
 function outputIn(result: ToolResult): unknown {
@@ -114,17 +114,17 @@ async function listingOnTheWireServedSchemasWith(
 }
 
 const endpointsServedSchemasWith = [
-  { path: '/mcp', tools: 44, bytes: 72_653, mostBytes: mostListingBytes['own org'] },
+  { path: '/mcp', tools: 44, bytes: 72_662, mostBytes: mostListingBytes['own org'] },
   { path: '/directory', tools: 42, bytes: 70_225, mostBytes: mostListingBytes.directory },
   { path: '/orgs/local/mcp', tools: 18, bytes: 26_407, mostBytes: mostListingBytes.org },
-  { path: '/orgs/local/playbooks/alpha/mcp', tools: 31, bytes: 49_475, mostBytes: mostListingBytes.playbook },
+  { path: '/orgs/local/playbooks/alpha/mcp', tools: 31, bytes: 49_484, mostBytes: mostListingBytes.playbook },
 ] as const;
 
 const endpointsOfTheShippedServerSigningPeopleIn: readonly Endpoint[] = [
-  { path: '/mcp', tools: 46, bytes: 73_881, mostBytes: mostListingBytes['own org'] },
+  { path: '/mcp', tools: 46, bytes: 73_890, mostBytes: mostListingBytes['own org'] },
   { path: '/directory', tools: 44, bytes: 71_453, mostBytes: mostListingBytes.directory },
   { path: `/orgs/${defaultOrg}/mcp`, tools: 20, bytes: 27_635, mostBytes: mostListingBytes.org },
-  { path: `/orgs/${defaultOrg}/playbooks/alpha/mcp`, tools: 31, bytes: 49_475, mostBytes: mostListingBytes.playbook },
+  { path: `/orgs/${defaultOrg}/playbooks/alpha/mcp`, tools: 31, bytes: 49_484, mostBytes: mostListingBytes.playbook },
 ];
 
 describe('served schemas', () => {

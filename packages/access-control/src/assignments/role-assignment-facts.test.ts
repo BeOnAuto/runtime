@@ -82,6 +82,20 @@ const invitations: readonly RecordedRoleAssignmentEvent[] = [
   },
 ];
 
+const howPeopleJoin: readonly RecordedRoleAssignmentEvent[] = [
+  {
+    type: 'enrolment_set',
+    data: {
+      enrolment: 'join_without_invitation',
+      previous_enrolment: 'invitation',
+      role: anEditor,
+      previous_role: { type: 'built_in', id: 'viewer' },
+      scope: acme,
+    },
+    context: acted,
+  },
+];
+
 const decoded = Schema.decodeUnknownResult(RoleAssignmentEventSchema);
 
 type Changed = Readonly<Record<string, unknown>>;
@@ -272,7 +286,7 @@ describe('the facts of role assignments', () => {
   recordedFactsBehaviour({
     schema: RoleAssignmentEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.57.0': baseline, '0.65.0': firstAdmin, '0.69.0': invitations },
+    releases: { '0.57.0': baseline, '0.65.0': firstAdmin, '0.69.0': [...invitations, ...howPeopleJoin] },
   });
 });
 
@@ -307,6 +321,30 @@ describe('what a fact of an invitation holds', () => {
       invitationReadWith('invitation_revoked', { reason: 'expired' }),
       invitationReadWith('invitation_accepted', { principal: { type: 'key', id: 'ci' } }),
     ]).toEqual([false, false, false, false, false]);
+  });
+});
+
+function joiningReadWith(type: string, data: Changed): boolean {
+  const made = howPeopleJoin.find((fact) => fact.type === type);
+  return Result.isSuccess(decoded({ ...made, data: { ...made?.data, ...data } }));
+}
+
+describe('what a fact of how people join holds', () => {
+  it('names one of the two ways of joining and a role that gives no roles, each with what it was before, and the org, never a person', () => {
+    expect([
+      joiningReadWith('enrolment_set', {}),
+      joiningReadWith('enrolment_set', { enrolment: 'invitation', previous_enrolment: 'join_without_invitation' }),
+      joiningReadWith('enrolment_set', { role: { type: 'built_in', id: 'viewer' }, previous_role: anEditor }),
+    ]).toEqual([true, true, true]);
+    expect([
+      joiningReadWith('enrolment_set', { enrolment: 'automatic_invitation' }),
+      joiningReadWith('enrolment_set', { previous_enrolment: undefined }),
+      joiningReadWith('enrolment_set', { role: undefined }),
+      joiningReadWith('enrolment_set', { role: { type: 'built_in', id: 'admin' } }),
+      joiningReadWith('enrolment_set', { role: { type: 'built_in', id: 'owner' } }),
+      joiningReadWith('enrolment_set', { previous_role: { type: 'built_in', id: 'admin' } }),
+      joiningReadWith('enrolment_set', { scope: undefined }),
+    ]).toEqual([false, false, false, false, false, false, false]);
   });
 });
 
@@ -396,15 +434,17 @@ describe('the read model of role assignments', () => {
     expect(roleAssignmentRows.rowsAfter(new Map(), message)).toBeUndefined();
   });
 
-  it('passes over every fact of an invitation, keying and changing no row, whatever rows it holds', () => {
+  it('passes over every fact of an invitation and of how people join, keying and changing no row, whatever rows it holds', () => {
     const rows = new Map([['org/acme/built_in/viewer', { role_id: 'viewer' }]]);
-    const messages: readonly ProjectedMessage[] = invitations.map(({ type, data, context }, position) => ({
-      id: `b7e1f0c2-3a4d-5e6f-8a9b-0c1d2e3f4a5${String(position)}`,
-      position,
-      type,
-      data,
-      context,
-    }));
+    const messages: readonly ProjectedMessage[] = [...invitations, ...howPeopleJoin].map(
+      ({ type, data, context }, position) => ({
+        id: `b7e1f0c2-3a4d-5e6f-8a9b-0c1d2e3f4a5${String(position)}`,
+        position,
+        type,
+        data,
+        context,
+      }),
+    );
 
     expect(
       messages.map((message) => [

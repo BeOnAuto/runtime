@@ -39,6 +39,6 @@ export function madeByOf(
 export function keptForMsOf(
   ports: Pick<GenerationPorts, 'bounds'>,
   document: GenerationFunctionDefinitionDocument,
-): number {
+): number | undefined {
   return document.expiresMs ?? (ports.bounds ?? generationBounds).keptMs;
 }

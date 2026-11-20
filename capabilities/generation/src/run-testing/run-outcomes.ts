@@ -133,8 +133,6 @@ interface LedgerOfPages extends StreamWriter {
   readonly content: Pick<RecordedContent, 'put'>;
 }
 
-const ninetyDays = 90 * 86_400_000;
-
 export async function aPageARunReturned(
   ledger: LedgerOfPages,
   { playbook, definitionKey }: { readonly playbook: PlaybookAddress; readonly definitionKey: string },
@@ -157,7 +155,6 @@ export async function aPageARunReturned(
         sha256: page.sha256,
         kind: 'text',
         made_by: { function_output: { pointer: '/page' } },
-        expires_at: new Date(keptAt + ninetyDays).toISOString(),
       },
       context: {
         at: moment,

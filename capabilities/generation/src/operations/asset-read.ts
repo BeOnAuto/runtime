@@ -26,7 +26,7 @@ export const AssetReadSchema = Schema.Struct({
     'The model that made it, as its function names it, or null where no model made it, such as an image a tool answered',
   ),
   kept_at: Schema.String.annotate({ description: 'When the playbook kept it, in ISO 8601 UTC' }),
-  expires_at: nullOr('When it expires, in ISO 8601 UTC, or null once its expiry is recorded'),
+  expires_at: nullOr('When it expires, in ISO 8601 UTC, or null if it has no expiry or its expiry is already recorded'),
   expired_at: nullOr('When its expiry was recorded, in ISO 8601 UTC, or null while it is kept'),
   expired: Schema.Boolean.annotate({
     description: 'Whether it has expired, from the moment it expires, whether or not its expiry is recorded yet',
@@ -35,9 +35,11 @@ export const AssetReadSchema = Schema.Struct({
     description: 'Whether its content was removed as it expired, since nothing else of the playbook held it',
   }),
   address: nullOr(
-    'An address its bytes are read at without a key until address_until, signed as it was read, or null once it expired or where the runtime signs none',
+    'An address its bytes are read at without a key for as long as it is kept, or null once it expired or where the runtime signs none',
   ),
-  address_until: nullOr('When the address stops being answered, or null'),
+  address_until: nullOr(
+    'When the address stops being answered, as the asset expires, or null where it does not expire',
+  ),
 }).annotate({ identifier: 'Asset', description: 'An asset of the playbook, as it keeps it now' });
 
 export type AssetRead = typeof AssetReadSchema.Type;
@@ -79,7 +81,7 @@ export function assetRead(addresses: AssetAddresses | undefined, id: string) {
       expired_at: momentOf(row.expired_at),
       expired,
       content_removed: standing === 'removed',
-      ...(expired ? noAddress : addressOf(addresses, playbook, row.sha256, now)),
+      ...(expired ? noAddress : addressOf(addresses, playbook, row.sha256, row.expires_at)),
     };
     return read;
   });

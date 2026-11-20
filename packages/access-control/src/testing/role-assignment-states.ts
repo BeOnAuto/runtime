@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 
 import { heldAssignmentsIn, type HeldAssignment, type HeldAssignments } from '../assignments/held-assignments.ts';
 import type {
+  EnrolmentSet,
   InvitationResent,
   InvitationRevoked,
   MemberInvited,
@@ -17,11 +18,12 @@ import {
   type AssignedPrincipal,
   type AssignmentScope,
   type AssignmentSource,
+  type Enrolment,
   type RecordedRoleAssignmentEvent,
   type RoleAssignmentChange,
   type RoleAssignmentEvent,
 } from '../assignments/role-assignment-facts.ts';
-import type { BuiltInRoleId } from '../roles/built-in-roles.ts';
+import type { BuiltInRoleId, DefaultRoleId } from '../roles/built-in-roles.ts';
 
 export const toSam = '9b74c9897bac770ffc029102a200c5de1f8b7c1f3b6e1ad2f0d2b3e1c4a5f6e7';
 
@@ -107,6 +109,35 @@ export function signingIn(principal: AssignedPrincipal, invitation?: string, at 
     at,
     by: `person:${principal.id}`,
     invitation,
+  };
+}
+
+export function enrolmentSetBy(by: AssignedPrincipal, enrolment: Enrolment, id?: DefaultRoleId): EnrolmentSet {
+  return {
+    kind: 'set_enrolment',
+    actor: actor(by),
+    enrolment,
+    ...(id === undefined ? {} : { role: { type: 'built_in', id } }),
+    scope: acme,
+    ...acted,
+  };
+}
+
+interface JoiningAs {
+  readonly enrolment: Enrolment;
+  readonly role: DefaultRoleId;
+}
+
+export function enrolmentSetAs(after: JoiningAs, before: JoiningAs): RoleAssignmentEvent {
+  return {
+    type: 'enrolment_set',
+    data: {
+      enrolment: after.enrolment,
+      previous_enrolment: before.enrolment,
+      role: { type: 'built_in', id: after.role },
+      previous_role: { type: 'built_in', id: before.role },
+      scope: acme,
+    },
   };
 }
 

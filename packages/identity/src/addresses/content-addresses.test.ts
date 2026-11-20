@@ -4,7 +4,7 @@ import { sha256Of } from '@on.auto/content';
 import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { contentAddressesUnder, contentAddressLastsSeconds, contentPathOf, type ContentSignature } from '../index.ts';
+import { contentAddressesUnder, contentPathOf, type ContentSignature } from '../index.ts';
 
 const keyBytes = new Uint8Array(32).fill(7);
 
@@ -30,6 +30,10 @@ function signedWithTheKey(digest: string, until: number): ContentSignature {
   return { until: String(until), sig: signatureOf(JSON.stringify(['acme', 'alpha', digest, String(until)])) };
 }
 
+function signedToLast(digest: string): ContentSignature {
+  return { until: undefined, sig: signatureOf(JSON.stringify(['acme', 'alpha', digest])) };
+}
+
 function signatureIn(address: string | undefined): ContentSignature {
   const { searchParams } = new URL(String(address));
   return { until: searchParams.get('until') ?? undefined, sig: searchParams.get('sig') ?? undefined };
@@ -49,13 +53,12 @@ describe('the address of a content the runtime signs', () => {
     expect(contentPathOf(alpha, sha256)).toBe(`/v1/orgs/acme/playbooks/alpha/content/${sha256}`);
   });
 
-  it('lasts 15 minutes at the most, a time later than that brought back to it and a part of a second dropped', () => {
-    const lasting = [now + 2 * contentAddressLastsSeconds, now + 30.9].map(
+  it('lasts until any time it is given, however far ahead, a part of a second dropped', () => {
+    const lasting = [now + 10 * 365 * 86_400, now + 30.9].map(
       (until) => signatureIn(addresses.signedContentAddress('http://localhost:5555', alpha, sha256, until)).until,
     );
 
-    expect(contentAddressLastsSeconds).toBe(900);
-    expect(lasting).toEqual([String(now + 900), String(now + 30)]);
+    expect(lasting).toEqual([String(now + 10 * 365 * 86_400), String(now + 30)]);
   });
 
   it('is made for an https origin or one on this computer alone, as the links to Studio are', () => {
@@ -79,27 +82,48 @@ describe('the address of a content the runtime signs', () => {
   });
 });
 
-describe('an address the runtime could never have signed', () => {
-  it('is not for any content where its digest is not 64 lowercase hex digits, or it lasts longer than an address may and the 30 seconds two clocks may differ by, however it is signed', () => {
-    expect([
-      addresses.checkedAddress(alpha, sha256, signedWithTheKey(sha256, now + 930)),
-      addresses.checkedAddress(alpha, sha256, signedWithTheKey(sha256, now + 931)),
-      addresses.checkedAddress(alpha, sha256.toUpperCase(), signedWithTheKey(sha256.toUpperCase(), now + 60)),
-      addresses.checkedAddress(alpha, 'an-image', signedWithTheKey('an-image', now + 60)),
-    ]).toEqual(['signed', 'not_for_this_content', 'not_for_this_content', 'not_for_this_content']);
+describe('the address of a content the runtime signs with no time', () => {
+  it('has none, and its signature is the HMAC-SHA256 of the playbook and the digest alone', () => {
+    const address = addresses.signedContentAddress('https://runtime.example', alpha, sha256);
+
+    expect(address).toBe(
+      `https://runtime.example/v1/orgs/acme/playbooks/alpha/content/${sha256}?sig=${signatureOf(
+        JSON.stringify(['acme', 'alpha', sha256]),
+      )}`,
+    );
   });
 });
 
-describe('an address signed by a server whose clock is ahead of the one that checks it', () => {
-  it('is signed for its whole life when the signer is 29 seconds ahead, and not for the content 31 seconds past the most an address lasts', () => {
-    const ahead = contentAddressesUnder(key, () => (now + 29) * 1000);
-    const signedAhead = signatureIn(ahead.signedContentAddress('https://runtime.example', alpha, sha256, now + 2000));
+describe('an address the runtime could never have signed', () => {
+  it('is not for any content where its digest is not 64 lowercase hex digits, however it is signed', () => {
+    expect([
+      addresses.checkedAddress(alpha, sha256.toUpperCase(), signedWithTheKey(sha256.toUpperCase(), now + 60)),
+      addresses.checkedAddress(alpha, 'an-image', signedWithTheKey('an-image', now + 60)),
+      addresses.checkedAddress(alpha, 'an-image', signedToLast('an-image')),
+    ]).toEqual(['not_for_this_content', 'not_for_this_content', 'not_for_this_content']);
+  });
+});
+
+describe('an address of a content presented to the runtime with no time', () => {
+  const presented = signatureIn(addresses.signedContentAddress('https://runtime.example', alpha, sha256));
+
+  it('is signed however much later it is presented', () => {
+    expect([
+      addresses.checkedAddress(alpha, sha256, presented),
+      later(10 * 365 * 86_400).checkedAddress(alpha, sha256, presented),
+    ]).toEqual(['signed', 'signed']);
+  });
+
+  it('is not for another content, for a time added to it, with an empty time, or under the signature of a timed one', () => {
+    const timed = signatureIn(addresses.signedContentAddress('https://runtime.example', alpha, sha256, now + 60));
 
     expect([
-      signedAhead.until,
-      addresses.checkedAddress(alpha, sha256, signedAhead),
-      addresses.checkedAddress(alpha, sha256, signedWithTheKey(sha256, now + contentAddressLastsSeconds + 31)),
-    ]).toEqual([String(now + 929), 'signed', 'not_for_this_content']);
+      addresses.checkedAddress(alpha, sha256Of('another image'), presented),
+      addresses.checkedAddress({ ...alpha, playbook: 'beta' }, sha256, presented),
+      addresses.checkedAddress(alpha, sha256, { ...presented, until: String(now + 60) }),
+      addresses.checkedAddress(alpha, sha256, { ...presented, until: '' }),
+      addresses.checkedAddress(alpha, sha256, { until: undefined, sig: timed.sig }),
+    ]).toEqual(Array.from({ length: 5 }, () => 'not_for_this_content'));
   });
 });
 
@@ -131,6 +155,7 @@ describe('an address of a content presented to the runtime', () => {
     const writtenOtherwise: readonly ContentSignature[] = [
       { until: undefined, sig },
       { until, sig: undefined },
+      { until: undefined, sig: undefined },
       { until: `0${until}`, sig },
       { until: `${until}.0`, sig },
       { until: '9'.repeat(16), sig },
@@ -141,7 +166,7 @@ describe('an address of a content presented to the runtime', () => {
     ];
 
     expect(writtenOtherwise.map((signature) => addresses.checkedAddress(alpha, sha256, signature))).toEqual(
-      Array.from({ length: 9 }, () => 'not_for_this_content'),
+      Array.from({ length: 10 }, () => 'not_for_this_content'),
     );
   });
 });

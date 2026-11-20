@@ -119,12 +119,11 @@ describe('the words and the bounds of the generation capability', () => {
     ]);
   });
 
-  it('keeps 20 MiB of an image, 50 MiB of audio and 200 MiB of a video, 100 MiB of a file, 2 GiB a playbook and an asset 90 days, and waits ten minutes for a video, unless told otherwise', () => {
+  it('keeps 20 MiB of an image, 50 MiB of audio and 200 MiB of a video, 100 MiB of a file, and 2 GiB a playbook, never expires an asset, and waits ten minutes for a video, unless told otherwise', () => {
     expect(generationBounds).toEqual({
       mostBytes: { image: 20 * 1_048_576, audio: 50 * 1_048_576, video: 200 * 1_048_576 },
       mostFileBytes: 100 * 1_048_576,
       mostPlaybookBytes: 2048 * 1_048_576,
-      keptMs: 90 * 86_400_000,
       waitMs: 600_000,
     });
   });

@@ -18,7 +18,7 @@ export interface Keeping {
   readonly playbook: PlaybookAddress;
   readonly generated: Pick<Generated, 'bytes' | 'mediaType'>;
   readonly madeBy: MadeByAGeneration;
-  readonly keptForMs: number;
+  readonly keptForMs: number | undefined;
   readonly context: KeptByARun;
   readonly lineage: Lineage;
   readonly startedAt: number;
@@ -53,8 +53,8 @@ export function finishedAsset(ports: FinishingPorts, keeping: Keeping): Effect.E
       context: keeping.context,
       lineage: keeping.lineage,
     }),
-    ({ asset, at }) => ({
-      output: assetReferenceOf(asset, addressOf(ports.addresses, keeping.playbook, asset.sha256, at)),
+    ({ asset, at, expiresAt }) => ({
+      output: assetReferenceOf(asset, addressOf(ports.addresses, keeping.playbook, asset.sha256, expiresAt)),
       record: recordOf(keeping.madeBy, at - keeping.startedAt),
     }),
   );

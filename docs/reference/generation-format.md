@@ -31,7 +31,6 @@ input:
 parameters:
   size: 1024x1024
   quality: high
-expires: P30D
 page:
   data:
     language: typescript
@@ -112,8 +111,8 @@ A run answers the [asset](output-shapes.md#asset) it made:
   "media_type": "image/png",
   "bytes": 1843021,
   "sha256": "497790947d4666760ce38f3c00e852c71fdb66cae849bae8e9ede352719e1581",
-  "address": "https://runtime.example.com/v1/orgs/acme/playbooks/shop/content/4977…?until=1793527200&sig=…",
-  "address_until": "2026-11-01T10:15:00.000Z"
+  "address": "https://runtime.example.com/v1/orgs/acme/playbooks/shop/content/4977…?sig=…",
+  "address_until": null
 }
 ```
 
@@ -127,7 +126,7 @@ A run answers the [asset](output-shapes.md#asset) it made:
 | `input.schema` | No       | A JSON Schema of the input. The input is a JSON object; one the schema does not allow is `invalid_input`                                                                                                                                                                                                              |
 | `parameters`   | No       | The [parameters](#parameters) of the kind, each within the limits of the model                                                                                                                                                                                                                                        |
 | `references`   | No       | JSON Pointers into the input, such as `/photo`, each at the `id` of an asset of the playbook the model takes as a reference; see [References](#references)                                                                                                                                                            |
-| `expires`      | No       | How long the asset is kept, an ISO 8601 duration from one hour to 3,650 days, such as `P30D`. Without it, an asset is kept for <span data-variable="generation.kept">90 days</span><span data-audience="operator">, unless the runtime's operator sets another</span>                                                 |
+| `expires`      | No       | How long the asset is kept before it expires, an ISO 8601 duration from one hour to 3,650 days, such as `P30D`. Without it, an asset <span data-variable="generation.kept">does not expire</span><span data-audience="operator">, unless the runtime's operator sets how long assets are kept</span>                  |
 | `page`         | No       | The [page](page-format.md) that presents its runs                                                                                                                                                                                                                                                                     |
 
 The prompt is everything after the front matter. It is a [template](template.md) that reads `input`, `today`, the date as `YYYY-MM-DD`, and `now`, the time in ISO 8601, and it must render text: a list or an object written whole is refused. For audio, the prompt is the text the model speaks.
@@ -235,7 +234,7 @@ A reference is never an address. Each one is checked as the run starts, and the 
 
 <div data-audience="developer">
 
-A run keeps the bytes the model made as content of the playbook, at once, and records the asset on a stream of its own, `assets/{id}`, as the fact `asset_kept`. The fact holds the asset's media type, size and SHA-256, the kind, what made it as `made_by`, and when the asset expires, `expires_at`. For a generation function, `made_by.generation` holds the model, the prompt as rendered, the parameters sent, the references taken, each by its id and digest, the cost the gateway answered as `cost_usd` where it answered one, and `own_key`. Its context names the run and the definition that made it. An image a tool answers a reasoning function's run is an asset too, made by that call, `made_by.tool_call` ([The run's history](reasoning-format.md#the-run-s-history)).
+A run keeps the bytes the model made as content of the playbook, at once, and records the asset on a stream of its own, `assets/{id}`, as the fact `asset_kept`. The fact holds the asset's media type, size and SHA-256, the kind, what made it as `made_by`, and, where the asset expires, when, as `expires_at`. For a generation function, `made_by.generation` holds the model, the prompt as rendered, the parameters sent, the references taken, each by its id and digest, the cost the gateway answered as `cost_usd` where it answered one, and `own_key`. Its context names the run and the definition that made it. An image a tool answers a reasoning function's run is an asset too, made by that call, `made_by.tool_call` ([The run's history](reasoning-format.md#the-run-s-history)).
 
 </div>
 
@@ -243,11 +242,11 @@ The reference a run answers is the [asset shape](output-shapes.md#asset):
 
 - `id` is the asset's id, which a later run takes as a reference;
 - `media_type`, `bytes` and `sha256` describe its bytes<span data-audience="developer">. An image's media type is read from its bytes; audio's is the one the gateway answers, or that of its format</span>;
-- `address` is a [signed address](http.md#content-at-a-signed-address) its bytes are read at without a key, which lasts 15 minutes, until `address_until`. Both are `null` where the runtime signs no address<span data-audience="operator">: where its own address is neither `https` nor a loopback address</span>. An address in the record of an earlier run has expired: `get_asset` reads the asset again by its `id`, with the model that made it, when it expires and an address signed as it is read, until the asset expires<span data-audience="developer"> ([Generation functions](http.md#generation-functions))</span>.
+- `address` is a [signed address](http.md#content-at-a-signed-address) its bytes are read at without a key, which works for as long as the playbook keeps the asset. `address_until` is when the asset expires, or `null` for an asset with no expiry. Both are `null` where the runtime signs no address<span data-audience="operator">: where its own address is neither `https` nor a loopback address</span>. `get_asset` reads the asset again by its `id`, with the model that made it, when it expires, if it does, and its address<span data-audience="developer"> ([Generation functions](http.md#generation-functions))</span>.
 
 <div data-audience="developer">
 
-When the asset expires, the runtime records `asset_expired` on the asset's stream, with its size, and its id as a reference is then refused. It then removes the content, unless another part of the playbook holds the same bytes, such as another asset made the same, or they were kept again within the last hour. Bytes another asset holds are removed when the last asset that holds them expires. Once the content is removed, the runtime records `asset_content_removed` on the asset's stream, with its size and digest, and an address answered before reads nothing more.
+An asset expires only where its function sets `expires` or the runtime's operator sets how long assets are kept. When it expires, the runtime records `asset_expired` on the asset's stream, with its size, and its id as a reference is then refused. It then removes the content, unless another part of the playbook holds the same bytes, such as another asset made the same, or they were kept again within the last hour. Bytes another asset holds are removed when the last asset that holds them expires. Once the content is removed, the runtime records `asset_content_removed` on the asset's stream, with its size and digest, and an address answered before reads nothing more.
 
 </div>
 
@@ -314,17 +313,17 @@ Each run counts once on the runtime's meter, as a run of every other function do
 
 ## Bounds
 
-| Bound                                       | Limit                                                       |
-| ------------------------------------------- | ----------------------------------------------------------- |
-| One image                                   | <span data-variable="generation.most_image">20 MiB</span>   |
-| One asset of audio                          | <span data-variable="generation.most_audio">50 MiB</span>   |
-| One video                                   | <span data-variable="generation.most_video">200 MiB</span>  |
-| The storage quota of a playbook's assets    | <span data-variable="generation.most_kept">2,048 MiB</span> |
-| How long an asset is kept without `expires` | <span data-variable="generation.kept">90 days</span>        |
-| The prompt                                  | The model's                                                 |
-| References                                  | The model's                                                 |
-| Waiting for the gateway                     | 240 seconds                                                 |
-| A run                                       | 300 seconds                                                 |
+| Bound                                    | Limit                                                        |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| One image                                | <span data-variable="generation.most_image">20 MiB</span>    |
+| One asset of audio                       | <span data-variable="generation.most_audio">50 MiB</span>    |
+| One video                                | <span data-variable="generation.most_video">200 MiB</span>   |
+| The storage quota of a playbook's assets | <span data-variable="generation.most_kept">2,048 MiB</span>  |
+| An asset without `expires`               | <span data-variable="generation.kept">does not expire</span> |
+| The prompt                               | The model's                                                  |
+| References                               | The model's                                                  |
+| Waiting for the gateway                  | 240 seconds                                                  |
+| A run                                    | 300 seconds                                                  |
 
 The limits for one image, one asset of audio, one video, a playbook's assets and how long an asset is kept without `expires` <span data-variable="generation.bounds_changed_by">can be changed only by whoever runs the server</span>. A run refused for the storage quota says the quota in force: how much the playbook keeps, and how much it may keep.
 
@@ -365,7 +364,7 @@ A limit above that has a setting below is a default, which holds where the runti
 
 A generation function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what the function made:
 
-- `result`: the asset the run produced, said in the function's own words with its kind and size, such as `A picture of the product for its listing, 1.8 MB.`, and linked at its `address`. The run's output is the asset's reference, not the prompt it rendered, so `result` names what the function makes as its description does. The address lasts 15 minutes after the run, so the link opens the asset only until `address_until`, and a client shows an image as a link, never in the page, as in [the example](#a-function-document).
+- `result`: the asset the run produced, said in the function's own words with its kind and size, such as `A picture of the product for its listing, 1.8 MB.`, and linked at its `address`. The run's output is the asset's reference, not the prompt it rendered, so `result` names what the function makes as its description does. The link opens the asset for as long as the playbook keeps it. A client shows an image as a link, never in the page, as in [the example](#a-function-document).
 - `runs`: what was produced over time, such as the assets made each week by kind, as a count, or a table of the latest, each with its kind and size.
 
 Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. The page guide, [Page format](page-format.md), gives the whole format of a page.

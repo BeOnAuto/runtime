@@ -1,7 +1,14 @@
 import { HashMap, Option, Result } from 'effect';
 
 import { acceptedBy } from '../invitations/invitation-decisions.ts';
-import { builtInRoles, builtInRolesAtSignIn, type RolesAtSignIn, type RoleTable } from '../roles/built-in-roles.ts';
+import { joiningOver } from '../joining/joining-decisions.ts';
+import {
+  builtInRoles,
+  builtInRolesAtSignIn,
+  type BuiltInRoleId,
+  type RolesAtSignIn,
+  type RoleTable,
+} from '../roles/built-in-roles.ts';
 import {
   assignedOf,
   holdsAnAssigner,
@@ -20,7 +27,7 @@ import {
   type RoleAssignmentEvent,
 } from './role-assignment-facts.ts';
 
-export type Enrolled = 'bootstrap' | 'enrolment' | 'invitation' | 'member' | 'removed';
+export type Enrolled = 'bootstrap' | 'enrolment' | 'invitation' | 'invitation_needed' | 'member' | 'removed';
 
 export interface Deciding {
   readonly table: RoleTable;
@@ -41,16 +48,16 @@ interface InvitationCarried {
 
 const noInvitationCarried: InvitationCarried = { invitation: undefined, at: '' };
 
-type Enrolment =
+type EnrolmentDecided =
   | { readonly enrolled: Exclude<Enrolled, 'invitation'> }
   | { readonly enrolled: 'invitation'; readonly invited: PendingInvitation };
 
 function enrolmentOver(
-  table: RoleTable,
+  { table, atSignIn }: Deciding,
   state: HeldAssignments,
   principal: AssignedPrincipal,
   { invitation, at }: InvitationCarried,
-): Enrolment {
+): EnrolmentDecided {
   if (!holdsAnAssigner(table, state)) {
     return { enrolled: 'bootstrap' };
   }
@@ -61,7 +68,10 @@ function enrolmentOver(
   if (invited !== undefined) {
     return { enrolled: 'invitation', invited };
   }
-  return { enrolled: mayBeEnrolled(state, principal) ? 'enrolment' : 'removed' };
+  if (!mayBeEnrolled(state, principal)) {
+    return { enrolled: 'removed' };
+  }
+  return { enrolled: joiningOver(atSignIn, state).enrolment === 'invitation' ? 'invitation_needed' : 'enrolment' };
 }
 
 export function enrolledAs(
@@ -69,7 +79,7 @@ export function enrolledAs(
   principal: AssignedPrincipal,
   carried: InvitationCarried = noInvitationCarried,
 ): Enrolled {
-  return enrolmentOver(builtInRoles, state, principal, carried).enrolled;
+  return enrolmentOver({ table: builtInRoles, atSignIn: builtInRolesAtSignIn }, state, principal, carried).enrolled;
 }
 
 export function awaitsItsFirstAdmin(state: HeldAssignments): boolean {
@@ -83,10 +93,11 @@ interface Enrolling {
 }
 
 function givenAtSignIn(
-  { atSignIn, command: { principal, scope } }: Enrolling,
+  { command: { principal, scope } }: Enrolling,
   source: keyof RolesAtSignIn,
+  id: BuiltInRoleId,
 ): RoleAssignmentEvent {
-  return assignedOf({ principal, role: { type: 'built_in', id: atSignIn[source] } }, scope, source);
+  return assignedOf({ principal, role: { type: 'built_in', id } }, scope, source);
 }
 
 interface InPlaceOfTheRolesHeld {
@@ -106,25 +117,27 @@ const enrolledWith: Readonly<
   Record<Exclude<Enrolled, 'invitation'>, (enrolling: Enrolling) => readonly RoleAssignmentEvent[]>
 > = {
   bootstrap: (enrolling) =>
-    givenInPlaceOfTheRolesHeld({ ...enrolling, source: 'bootstrap' }, givenAtSignIn(enrolling, 'bootstrap')),
-  enrolment: (enrolling) => [givenAtSignIn(enrolling, 'enrolment')],
+    givenInPlaceOfTheRolesHeld(
+      { ...enrolling, source: 'bootstrap' },
+      givenAtSignIn(enrolling, 'bootstrap', enrolling.atSignIn.bootstrap),
+    ),
+  enrolment: (enrolling) => [
+    givenAtSignIn(enrolling, 'enrolment', joiningOver(enrolling.atSignIn, enrolling.state).defaultRole),
+  ],
+  invitation_needed: () => [],
   member: () => [],
   removed: () => [],
 };
 
-export function decidedEnrolment(
-  { table, atSignIn }: Deciding,
-  command: PersonEnrolled,
-  state: HeldAssignments,
-): Decision {
-  const enrolment = enrolmentOver(table, state, command.principal, {
+export function decidedEnrolment(deciding: Deciding, command: PersonEnrolled, state: HeldAssignments): Decision {
+  const enrolment = enrolmentOver(deciding, state, command.principal, {
     invitation: command.invitation,
     at: command.at,
   });
   return Result.succeed(
     enrolment.enrolled === 'invitation'
       ? acceptedBy(command, enrolment.invited)
-      : enrolledWith[enrolment.enrolled]({ atSignIn, command, state }),
+      : enrolledWith[enrolment.enrolled]({ atSignIn: deciding.atSignIn, command, state }),
   );
 }
 

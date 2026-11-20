@@ -24,9 +24,12 @@ const modelsOfTheExamples = {
   video: 'vertex_ai/veo-3.1-fast-generate-001',
 };
 
-function daysIn(milliseconds: number): string {
+function keptFor(milliseconds: number | undefined): string {
+  if (milliseconds === undefined) {
+    return 'does not expire';
+  }
   const days = milliseconds / day;
-  return `${counted.format(days)} ${days === 1 ? 'day' : 'days'}`;
+  return `expires after ${counted.format(days)} ${days === 1 ? 'day' : 'days'}`;
 }
 
 const wordsOfEachValue: Readonly<Record<string, Words>> = {
@@ -34,7 +37,7 @@ const wordsOfEachValue: Readonly<Record<string, Words>> = {
   'generation.most_audio': ({ bounds }) => sizeInWords(bounds.mostBytes.audio),
   'generation.most_video': ({ bounds }) => sizeInWords(bounds.mostBytes.video),
   'generation.most_kept': ({ bounds }) => sizeInWords(bounds.mostPlaybookBytes),
-  'generation.kept': ({ bounds }) => daysIn(bounds.keptMs),
+  'generation.kept': ({ bounds }) => keptFor(bounds.keptMs),
   'generation.bounds_changed_by': () => changedOnlyByWhoeverRunsTheServer,
   'generation.example_image_model': ({ gateway }) => `${gateway}/${modelsOfTheExamples.image}`,
   'generation.example_audio_model': ({ gateway }) => `${gateway}/${modelsOfTheExamples.audio}`,

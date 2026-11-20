@@ -83,7 +83,7 @@ The runtime trusts one issuer, whichever provider a person used.
 
 Members of your organization can sign in with their company accounts, through your company's identity provider, with no Auto account. Set `OIDC_ISSUER` to the provider's issuer, beside an `https` `PUBLIC_URL`. Register Auto with the provider using the redirect URI the server prints at start, `{PUBLIC_URL}/auth/oidc/callback`, and set `OIDC_CLIENT_ID` with `OIDC_CLIENT_SECRET` or `OIDC_CLIENT_SECRET_FILE`. Where the provider supports dynamic client registration, leave those out and the runtime registers itself. To allow only members with a given claim, set `OIDC_REQUIRED_CLAIM` to `claim=value`.
 
-The runtime is then an OAuth 2.1 authorization server at `PUBLIC_URL`. It sends members to your provider to sign in. A session ends after 7 days without use, and after 30 days at most. Members open Studio at the link the server prints at start, which names your `PUBLIC_URL`. The first person to sign in becomes the organization's admin. Everyone after joins as a viewer, or with the role of the invitation they bring. An admin invites people, changes roles and removes members ([The roles](#the-roles)).
+The runtime is then an OAuth 2.1 authorization server at `PUBLIC_URL`. It sends members to your provider to sign in. A session ends after 7 days without use, and after 30 days at most. Members open Studio at the link the server prints at start, which names your `PUBLIC_URL`. The first person to sign in becomes the organization's admin. Everyone after joins with the organization's default role, a viewer unless an admin changes it, or with the role of the invitation they bring. An admin can also require an invitation to join. An admin invites people, changes roles and removes members ([The roles](#the-roles)).
 
 A member's agent connects the same way. The runtime asks the member, on a page of its own, whether to allow the agent, and the agent then acts as that member. An agent's access lasts 90 days at most before the member signs in again.
 
@@ -106,7 +106,7 @@ The server loads the policies as it starts, and logs once which engine and how m
 
 ### The roles
 
-The policies hold three roles. The runtime records who holds which ([Roles](../reference/http.md#roles)), and decides each call of a signed-in person by the role they hold as they make it. The first person to sign in is the admin, and everyone after joins as a viewer, or with the role of the invitation they bring. An admin changes roles and removes members. A person an admin removed stays removed when they sign in again.
+The policies hold three roles. The runtime records who holds which ([Roles](../reference/http.md#roles)), and decides each call of a signed-in person by the role they hold as they make it. The first person to sign in is the admin. Everyone after joins with the role of the invitation they bring or, without one, with the organization's default role, a viewer unless an admin changes it. Where an admin requires an invitation to join, a person who signs in without one is refused. An admin changes roles and removes members. A person an admin removed stays removed when they sign in again.
 
 An invitation is a link that an admin or an editor makes and shares. Only an admin invites an admin. The server sends no email. The invited person opens the link and signs in, in the same browser, and joins with the invitation's role. A link works once and expires after 30 days. A member who was removed comes back by a new invitation.
 

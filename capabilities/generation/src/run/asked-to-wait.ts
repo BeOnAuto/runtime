@@ -9,6 +9,10 @@ import { videoAskedOf } from '../gateway/video-call.ts';
 import type { GenerationWait } from '../waiting/generation-wait.ts';
 import { keptForMsOf, madeByOf, type Asked } from './made-by.ts';
 
+function keptForOf(keptForMs: number | undefined): Pick<GenerationWait, 'kept_for_ms'> {
+  return keptForMs === undefined ? {} : { kept_for_ms: keptForMs };
+}
+
 export function askedToWait(
   ports: GenerationPorts,
   document: GenerationFunctionDefinitionDocument,
@@ -21,7 +25,7 @@ export function askedToWait(
     const wait: GenerationWait = {
       ...madeByOf(ports, document, asked, video.costUsd),
       handle: video.handle,
-      kept_for_ms: keptForMsOf(ports, document),
+      ...keptForOf(keptForMsOf(ports, document)),
       asked_at: new Date(asked.startedAt).toISOString(),
       waits_until: new Date(now + (ports.bounds ?? generationBounds).waitMs).toISOString(),
     };

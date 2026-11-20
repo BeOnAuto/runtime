@@ -24,12 +24,12 @@ import { toolImagesKept } from './tool-images.ts';
 
 const notKept = `The content of the asset ${assetIdOf(1)} is no longer kept; run again what made it, for a fresh copy`;
 
-async function keptImage(playbook: GenerationHarness): Promise<string> {
+async function keptImage(playbook: GenerationHarness, bounds = generationBounds): Promise<string> {
   const definitionKey = await aRunIn(playbook, 'run-1');
   const keep = toolImagesKept({
     ledger: playbook.ledger.service,
     content: playbook.ledger.service.content,
-    bounds: generationBounds,
+    bounds,
     newAssetId: () => assetIdOf(1),
   });
   await at(
@@ -152,7 +152,7 @@ describe('an asset a step names and cannot use', () => {
 
   it('is refused once it has expired, and once its content is no longer kept as it is opened', async () => {
     const playbook = generationHarness();
-    await keptImage(playbook);
+    await keptImage(playbook, { ...generationBounds, keptMs: 90 * day });
     const reference = await referenceOf(playbook, assetIdOf(1));
     const reading = readingOf(playbook);
     const expired = await refusedAt(reading, harnessStartsAt + 91 * day, alpha, reference);
@@ -177,5 +177,17 @@ describe('an asset a step names and cannot use', () => {
     );
 
     expect(refused.map(({ detail }) => detail)).toEqual([notKept, notKept]);
+  });
+});
+
+describe('an asset a step names, kept with no expiry', () => {
+  it('is held years later where the runtime keeps an asset without end', async () => {
+    const playbook = generationHarness();
+    await keptImage(playbook);
+    const reference = await referenceOf(playbook, assetIdOf(1));
+
+    const held = await heldAt(readingOf(playbook), harnessStartsAt + 3650 * day, alpha, reference);
+
+    expect(held.sha256).toBe(reference.sha256);
   });
 });

@@ -1,4 +1,3 @@
-import { contentAddressLastsSeconds } from '@on.auto/identity';
 import { OrgIdSchema, PlaybookIdSchema } from '@on.auto/operations';
 
 import { scopeParameterOf } from '../openapi/document-components.ts';
@@ -16,7 +15,8 @@ const hex = { type: 'string', pattern: '^[0-9a-f]{64}$' };
 
 const description = [
   'Answers the bytes of a content a playbook keeps, with the media type it was kept with, at an address the runtime signed for that content.',
-  `The address is what a browser follows, so it needs no credential: its signature and the time it lasts until are its credential, and it lasts ${String(contentAddressLastsSeconds / 60)} minutes at the most.`,
+  'The address is what a browser follows, so it needs no credential: its signature is its credential.',
+  'An address without `until` keeps working for as long as the playbook keeps the content. An address with `until` lasts until that time, the time its asset expires.',
   'An address past its time, or not signed for this content, is refused as forbidden.',
   'One range of bytes asked in Range, from a first byte to a last or to the end, is answered with that part, and any other range with the whole content.',
 ].join(' ');
@@ -34,15 +34,17 @@ const parameters = [
   {
     name: 'until',
     in: 'query',
-    required: true,
-    description: 'The time the address lasts until, in whole seconds since 1970-01-01T00:00:00Z',
+    required: false,
+    description:
+      'The time the address lasts until, in whole seconds since 1970-01-01T00:00:00Z, where its asset expires; an address without it does not expire',
     schema: { type: 'integer', minimum: 0 },
   },
   {
     name: 'sig',
     in: 'query',
     required: true,
-    description: 'The signature the runtime made of the org, the playbook, the digest and the time, in lowercase hex',
+    description:
+      'The signature the runtime made of the org, the playbook, the digest and the time, if any, in lowercase hex',
     schema: hex,
   },
   {
@@ -58,7 +60,9 @@ function headerOf(words: string): OpenApiObject {
   return { description: words, schema: { type: 'string' } };
 }
 
-const cacheControl = headerOf('private, with a max-age of the seconds the address has left');
+const cacheControl = headerOf(
+  'private, with a max-age of the seconds the address has left, or of a year for an address without `until`',
+);
 
 const acceptRanges = headerOf('bytes, as every answer of the content says');
 

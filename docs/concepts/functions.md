@@ -91,9 +91,9 @@ Choose computation for arithmetic a language model should not do, and for any ch
 
 ## Generation
 
-A generation function produces an asset, an image, audio or a video, from a prompt. A model the runtime reaches through a model gateway makes it, and the playbook keeps the asset until it expires, 90 days unless the function or the runtime says otherwise. [The asset](../reference/generation-format.md#the-asset) sets out what is removed when it expires.
+A generation function produces an asset, an image, audio or a video, from a prompt. A model the runtime reaches through a model gateway makes it, and the playbook keeps the asset. It expires only where the function or the runtime sets a time for it. [The asset](../reference/generation-format.md#the-asset) sets out what is removed when it expires.
 
-For example, a workflow writes a product's description with a reasoning function, then a generation function makes a picture of the product from it. The run answers a reference to the picture: its id, its size and an address it can be read at for a few minutes. Another generation function can take that id as a reference, to place the same product in a new scene.
+For example, a workflow writes a product's description with a reasoning function, then a generation function makes a picture of the product from it. The run answers a reference to the picture: its id, its size and an address it can be read at. Another generation function can take that id as a reference, to place the same product in a new scene.
 
 Choose generation when the result is a picture or spoken words. Writing the text is reasoning's work. A generation function reaches outside the playbook, and each run asks the model again, so a second run of it makes a second asset.
 

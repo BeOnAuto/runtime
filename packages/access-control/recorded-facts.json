@@ -2,6 +2,7 @@
   "src/assignments/0.57.0/role_assigned.json": "236f2da232aa42d64b9ba8377f0b06f3232ce9364243504090688efffe692eed",
   "src/assignments/0.57.0/role_unassigned.json": "16e71c9f37018cc737f48bdf80d6da256b916c4ed23749ca33dcb339deffae8d",
   "src/assignments/0.65.0/role_assigned.json": "28cc0a388e9402ca1de923aa434277368c026008b0fb55e8b0dee4dc93055f32",
+  "src/assignments/0.69.0/enrolment_set.json": "3d820f114875b5be4974897ce377940fe3503b40e5f89b698f047964ad505044",
   "src/assignments/0.69.0/invitation_accepted.json": "dfd4d70dd414beced99347c3f6581559a0b18158057871ad97e75abca90bb852",
   "src/assignments/0.69.0/invitation_revoked.json": "bc8b749cb43d1aa1e970c2b281762c10a75dacd035d585d562159c44e508bd0d",
   "src/assignments/0.69.0/member_invited.json": "5c7ee9e44c2ed8f31fb878df63b8bea965d48bb3c04ad420315b0797129ebf00"

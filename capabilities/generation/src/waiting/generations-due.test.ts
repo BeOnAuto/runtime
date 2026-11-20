@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { generationBounds } from '../capability/generation-ports.ts';
-import { day, runIdOf } from '../run-testing/run-outcomes.ts';
+import { runIdOf } from '../run-testing/run-outcomes.ts';
 import {
   flying,
   making,
@@ -67,7 +67,7 @@ describe('a video the provider makes in time', () => {
 });
 
 describe('the asset of a video made in time', () => {
-  it('is recorded with what made it, the run that asked and until when it is kept', async () => {
+  it('is recorded with what made it and the run that asked, with no expiry where its function names none', async () => {
     const playbook = await flying();
     await playbook.pollAt(harnessStartsAt + 5000);
     const { deferred_id: deferredId } = await waitingRowIn(playbook);
@@ -91,7 +91,6 @@ describe('the asset of a video made in time', () => {
               own_key: true,
             },
           },
-          expires_at: new Date(harnessStartsAt + 10_000 + 90 * day).toISOString(),
         },
         context: {
           at: new Date(harnessStartsAt + 10_000).toISOString(),

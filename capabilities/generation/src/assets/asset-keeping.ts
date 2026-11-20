@@ -14,6 +14,7 @@ import { Clock, Effect } from 'effect';
 import { assetDecider } from './asset-decider.ts';
 import {
   assetStreamOf,
+  expiryOf,
   type AssetKeptDataWritten,
   type AssetMadeBy,
   type GenerationKindWritten,
@@ -33,7 +34,7 @@ export interface AssetToKeep {
   readonly mediaType: string;
   readonly kind: KindWritten;
   readonly madeBy: MadeByWritten;
-  readonly keptForMs: number;
+  readonly keptForMs: number | undefined;
   readonly context: KeptByARun;
   readonly lineage: Lineage;
 }
@@ -48,6 +49,7 @@ export interface AssetKeeping {
 export interface KeptAt {
   readonly asset: KeptAsset;
   readonly at: number;
+  readonly expiresAt: number | null;
 }
 
 export function assetStreamIn(definitionKey: string, id: string): string {
@@ -84,7 +86,7 @@ export function keptAsset(keeping: AssetKeeping, asset: AssetToKeep): Effect.Eff
       sha256: held.sha256,
       kind: asset.kind,
       made_by: asset.madeBy,
-      expires_at: new Date(at + asset.keptForMs).toISOString(),
+      ...expiryOf(at, asset.keptForMs),
     };
     yield* ledger.execute(
       assetStreamIn(definitionKey, asset.id),
@@ -92,6 +94,10 @@ export function keptAsset(keeping: AssetKeeping, asset: AssetToKeep): Effect.Eff
       { event: { type: 'asset_kept', data }, context: { ...asset.context, at: new Date(at).toISOString() } },
       asset.lineage,
     );
-    return { asset: { id: asset.id, media_type: held.mediaType, bytes: held.bytes, sha256: held.sha256 }, at };
+    return {
+      asset: { id: asset.id, media_type: held.mediaType, bytes: held.bytes, sha256: held.sha256 },
+      at,
+      expiresAt: asset.keptForMs === undefined ? null : at + asset.keptForMs,
+    };
   });
 }

@@ -19,9 +19,12 @@ export const assetShape: OutputShape = shapeOf({
       type: ['string', 'null'],
       format: 'uri',
       description:
-        'A signed address its bytes are read at without a key until address_until, or null where the runtime signs none',
+        'A signed address its bytes are read at without a key, until address_until where it has one, or null where the runtime signs none',
     },
-    address_until: { ...addressedUntilNull, description: 'When the address stops being answered, or null' },
+    address_until: {
+      ...addressedUntilNull,
+      description: 'When the address stops being answered, as the asset expires, or null where it does not',
+    },
   },
   required: ['id', 'media_type', 'bytes', 'sha256', 'address', 'address_until'],
   further: noFurtherIssues,

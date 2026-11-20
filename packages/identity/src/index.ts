@@ -20,7 +20,6 @@ export {
 } from './access/studio.ts';
 export {
   contentAddressesUnder,
-  contentAddressLastsSeconds,
   contentPathOf,
   type ContentAddressCheck,
   type ContentAddresses,

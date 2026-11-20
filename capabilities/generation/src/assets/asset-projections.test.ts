@@ -128,6 +128,18 @@ describe('the projection of the assets of a playbook', () => {
   });
 });
 
+describe('the projection of an asset kept with no expiry', () => {
+  it('keeps the row of an asset kept with no expiry out of the expiring index', () => {
+    const { expires_at: _expiresAt, ...lasting } = keptData;
+
+    expect(assets.rowAfter(undefined, message('asset_kept', lasting, onTheRun))).toMatchObject({
+      expires_at: null,
+      expired_at: null,
+      live: true,
+    });
+  });
+});
+
 describe('the projection of the assets of a playbook, of a kind a later release keeps', () => {
   it("keeps the row of an asset of the kind text or file that a run returned, which no model made, and counts it among the playbook's bytes", () => {
     const page = assets.rowAfter(undefined, message('asset_kept', aPageARunReturned, onTheRun));
@@ -211,6 +223,14 @@ describe('the facts of an asset as the feed shows them', () => {
       'An asset of 2 KiB expired.',
       'The content of an expired asset, 2 KiB, was removed, since nothing else of the playbook holds it.',
     ]);
+  });
+
+  it('says no time for an asset kept with no expiry', () => {
+    const { expires_at: _expiresAt, ...lasting } = keptData;
+
+    expect(shown('asset_kept', lasting, onTheRun)).toBe(
+      'The playbook kept audio of 2 KiB that a generation function made.',
+    );
   });
 
   it('says a file a run returned, in its output or as its output whole, and never the place it was taken from', () => {

@@ -44,7 +44,7 @@ await test('the published pages name only values a server declares, each with it
       ['generation.most_audio', '50 MiB'],
       ['generation.most_video', '200 MiB'],
       ['generation.most_kept', '2,048 MiB'],
-      ['generation.kept', '90 days'],
+      ['generation.kept', 'does not expire'],
       ['generation.bounds_changed_by', 'can be changed only by whoever runs the server'],
       ['generation.example_image_model', 'gateway/openai/gpt-image-2'],
       ['generation.example_audio_model', 'gateway/vertex_ai/gemini-3.8-flash-tts'],
