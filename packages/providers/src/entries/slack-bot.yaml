@@ -30,6 +30,30 @@ conversations:
         timestamp: '{{ reply.id }}'
         name: white_check_mark
 events:
+  types:
+    - type: com.slack.message
+      title: A message is posted
+      subject:
+        title: Channel
+        required: false
+      data:
+        type: object
+        properties:
+          text:
+            type: string
+            description: The words of the message.
+          user:
+            type: string
+            description: The Slack ID of whoever posted the message.
+          channel:
+            type: string
+            description: The Slack ID of the channel the message was posted in.
+          ts:
+            type: string
+            description: The message's timestamp. Slack uses it as the message's ID within its channel.
+          thread_ts:
+            type: string
+            description: The timestamp of the first message of its thread, when the message is a reply in a thread.
   destinations:
     - type: websocket
       open:
@@ -44,6 +68,25 @@ events:
           '$message.payload#/payload/event/type': [message]
         conversation: $message.payload#/payload/event/channel
         automatic: $message.payload#/payload/event/bot_id
+      events:
+        - type: com.slack.message
+          when:
+            '$message.payload#/type': [events_api]
+            '$message.payload#/payload/type': [event_callback]
+            '$message.payload#/payload/event/type': [message]
+            '$message.payload#/payload/event/channel_type': [channel, group]
+            '$message.payload#/payload/event/subtype': [null, thread_broadcast, file_share, me_message, bot_message]
+          id: ['$message.payload#/payload/event/channel', '$message.payload#/payload/event/ts']
+          time: $message.payload#/payload/event/ts
+          subject: $message.payload#/payload/event/channel
+          data:
+            text: $message.payload#/payload/event/text
+            user: $message.payload#/payload/event/user
+            channel: $message.payload#/payload/event/channel
+            ts: $message.payload#/payload/event/ts
+            thread_ts: $message.payload#/payload/event/thread_ts
+          automatic: $message.payload#/payload/event/bot_id
+          changed: $message.payload#/payload/event/hidden
       connection:
         account: $message.payload#/payload/team_id
 credentials:

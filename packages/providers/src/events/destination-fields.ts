@@ -2,7 +2,13 @@ import { articled, listed } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
 import { ValueNameSchema } from '../keys/key-fields.ts';
-import { ConnectionSchema, FilterSchema, HandshakeSchema, OpenSchema } from './destination-parts.ts';
+import {
+  ConnectionSchema,
+  EventMappingSchema,
+  FilterSchema,
+  HandshakeSchema,
+  OpenSchema,
+} from './destination-parts.ts';
 import { RenewSchema, SubscribeSchema, UnsubscribeSchema } from './event-calls.ts';
 import { VerifySchema } from './event-proofs.ts';
 import type { ExpressionPlace } from './runtime-expressions.ts';
@@ -41,6 +47,12 @@ export const DestinationFieldsSchema = Schema.Struct({
   verify: Schema.optionalKey(VerifySchema),
   handshake: Schema.optionalKey(HandshakeSchema),
   filter: FilterSchema,
+  events: Schema.optionalKey(
+    Schema.Array(EventMappingSchema).check(Schema.isMinLength(1)).annotate({
+      description:
+        'Which deliveries are events the service reports. A delivery is the event of the first item it matches. Only a provider that ships with the runtime can declare them.',
+    }),
+  ),
   connection: Schema.optionalKey(ConnectionSchema),
   kind: Schema.optionalKey(
     Schema.Literals(['azure-event-hubs', 'google-cloud-pubsub', 'amazon-eventbridge']).annotate({
@@ -70,7 +82,7 @@ export type Destination = typeof DestinationFieldsSchema.Type;
 
 export type DestinationIssue = Schema.FilterIssue;
 
-type Field = Exclude<keyof Destination, 'type' | 'filter'>;
+type Field = Exclude<keyof Destination, 'type' | 'filter' | 'events'>;
 
 type Shape = 'webhook per subscription' | 'webhook per app' | 'queue per subscription' | 'queue per app' | 'websocket';
 
@@ -131,6 +143,10 @@ function shapeOf({ type, per }: Destination): Shape | undefined {
 export function arrangesNoSubscription(destination: Destination): boolean {
   const shape = shapeOf(destination);
   return shape !== undefined && !shape.endsWith('per subscription');
+}
+
+export function subscribesForEachPlace(destination: Destination): boolean {
+  return shapeOf(destination)?.endsWith('per subscription') === true;
 }
 
 export function transportOf({ type }: Destination): ExpressionPlace['transport'] {

@@ -722,6 +722,49 @@
               "events": {
                 "type": "object",
                 "properties": {
+                  "types": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "The type of the event, as a trigger names it: the reverse domain name of whoever defines the event, followed by their name for it, as in com.example.invoice.paid."
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "What happened, in a short sentence a person reads, such as \"A message is posted\"."
+                        },
+                        "subject": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "What the service calls the place, such as \"Channel\" or \"Repository\"."
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "Whether a trigger must name one place to listen in. Set it to true where a destination made per subscription writes this event's topic from subject."
+                            }
+                          },
+                          "required": ["title", "required"],
+                          "additionalProperties": false,
+                          "description": "The place an event of this type happens in, such as a channel or a repository."
+                        },
+                        "data": {
+                          "type": "object",
+                          "description": "The JSON Schema of the data an event of this type carries."
+                        }
+                      },
+                      "required": ["type", "title", "data"],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "description": "The kinds of events the service reports. Only a provider that ships with the runtime can declare them."
+                  },
                   "destinations": {
                     "type": "array",
                     "items": {
@@ -931,7 +974,14 @@
                               "additionalProperties": {
                                 "type": "array",
                                 "items": {
-                                  "type": "string"
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
                                 },
                                 "minItems": 1
                               },
@@ -966,11 +1016,18 @@
                               "additionalProperties": {
                                 "type": "array",
                                 "items": {
-                                  "type": "string"
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
                                 },
                                 "minItems": 1
                               },
-                              "description": "The arrivals that make Auto read now: each a runtime expression, a header or a field, with the values it may equal, every one of which holds"
+                              "description": "The arrivals that make Auto read now: each a runtime expression, a header or a field, with the values it may equal, every one of which holds. Put null among the values to let a header or field that is missing or null pass"
                             },
                             "subscription": {
                               "type": "string",
@@ -1020,6 +1077,132 @@
                           "required": ["when"],
                           "additionalProperties": false,
                           "description": "Which arrivals make Auto read the conversations that wait, through the reading it does"
+                        },
+                        "events": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of event such a delivery is. It must be one of the types declared under types."
+                              },
+                              "when": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 1
+                                },
+                                "description": "Which deliveries are this event. Each key is a runtime expression into a field of the delivery, and its value lists the values that field may equal. Every condition must hold. Put null in a list to let a field that is missing or null pass."
+                              },
+                              "id": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "minItems": 1,
+                                "description": "Where a delivery holds the event's ID, as one or more runtime expressions whose values are unique together. A delivery is this event only where each of them holds text or a number, so an event the service sends twice has the same ID both times."
+                              },
+                              "time": {
+                                "type": "string",
+                                "description": "Where a delivery says when the event happened, in seconds since the epoch or as an RFC 3339 date-time."
+                              },
+                              "subject": {
+                                "type": "string",
+                                "description": "Where a delivery names the place the event happened in."
+                              },
+                              "data": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "string"
+                                },
+                                "description": "Where a delivery holds each field of the event's data, by the field's name."
+                              },
+                              "automatic": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 1
+                                    }
+                                  }
+                                ],
+                                "description": "How to tell that an app or a bot did what a delivery reports: a runtime expression into a field that holds a value only then, or conditions written like those in when. Such an event is marked as one an app or a bot caused."
+                              },
+                              "changed": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 1
+                                    }
+                                  }
+                                ],
+                                "description": "How to tell that a delivery reports no new item, such as an edit, a deletion or a notice: a runtime expression into a field that holds a value only then, or conditions written like those in when. Such a delivery is not an event."
+                              },
+                              "own": {
+                                "type": "array",
+                                "prefixItems": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
+                                ],
+                                "maxItems": 2,
+                                "minItems": 2,
+                                "description": "Two runtime expressions: the field that names the account that did what a delivery reports, and the field that names the account the connection acts as. Where both name the same account, the connection did it itself, and the delivery is not an event."
+                              },
+                              "topic": {
+                                "type": "string",
+                                "description": "The topic Auto subscribes to for this event in one place, as a Liquid template that reads subject, the place the event happens in. It must render the same topic as the destination's own topic renders for a request waiting in that place. Each event of a destination made per subscription needs one, and no other event takes one."
+                              }
+                            },
+                            "required": ["type", "when", "id"],
+                            "additionalProperties": false,
+                            "description": "One kind of delivery that is an event, and the fields of the delivery that hold the event's ID, time, place and data."
+                          },
+                          "minItems": 1,
+                          "description": "Which deliveries are events the service reports. A delivery is the event of the first item it matches. Only a provider that ships with the runtime can declare them."
                         },
                         "connection": {
                           "type": "object",

@@ -1,6 +1,9 @@
 import { Schema } from 'effect';
 
-const ConditionsSchema = Schema.Record(Schema.String, Schema.Array(Schema.String).check(Schema.isMinLength(1)));
+const ConditionsSchema = Schema.Record(
+  Schema.String,
+  Schema.Array(Schema.NullOr(Schema.String)).check(Schema.isMinLength(1)),
+);
 
 const DeliveredReplySchema = Schema.Struct({
   id: Schema.String.annotate({
@@ -36,7 +39,7 @@ const DeliveredReplySchema = Schema.Struct({
 export const FilterSchema = Schema.Struct({
   when: ConditionsSchema.annotate({
     description:
-      'The arrivals that make Auto read now: each a runtime expression, a header or a field, with the values it may equal, every one of which holds',
+      'The arrivals that make Auto read now: each a runtime expression, a header or a field, with the values it may equal, every one of which holds. Put null among the values to let a header or field that is missing or null pass',
   }),
   subscription: Schema.optionalKey(
     Schema.String.annotate({
@@ -58,6 +61,65 @@ export const FilterSchema = Schema.Struct({
   ),
   reply: Schema.optionalKey(DeliveredReplySchema),
 }).annotate({ description: 'Which arrivals make Auto read the conversations that wait, through the reading it does' });
+
+const ExpressionSchema = Schema.String;
+
+const WhereItAppliesSchema = Schema.Union([ExpressionSchema, ConditionsSchema]);
+
+export const EventMappingSchema = Schema.Struct({
+  type: Schema.String.annotate({
+    description: 'The type of event such a delivery is. It must be one of the types declared under types.',
+  }),
+  when: ConditionsSchema.annotate({
+    description:
+      'Which deliveries are this event. Each key is a runtime expression into a field of the delivery, and its value lists the values that field may equal. Every condition must hold. Put null in a list to let a field that is missing or null pass.',
+  }),
+  id: Schema.Array(ExpressionSchema).check(Schema.isMinLength(1)).annotate({
+    description:
+      "Where a delivery holds the event's ID, as one or more runtime expressions whose values are unique together. A delivery is this event only where each of them holds text or a number, so an event the service sends twice has the same ID both times.",
+  }),
+  time: Schema.optionalKey(
+    ExpressionSchema.annotate({
+      description:
+        'Where a delivery says when the event happened, in seconds since the epoch or as an RFC 3339 date-time.',
+    }),
+  ),
+  subject: Schema.optionalKey(
+    ExpressionSchema.annotate({ description: 'Where a delivery names the place the event happened in.' }),
+  ),
+  data: Schema.optionalKey(
+    Schema.Record(Schema.String, ExpressionSchema).annotate({
+      description: "Where a delivery holds each field of the event's data, by the field's name.",
+    }),
+  ),
+  automatic: Schema.optionalKey(
+    WhereItAppliesSchema.annotate({
+      description:
+        'How to tell that an app or a bot did what a delivery reports: a runtime expression into a field that holds a value only then, or conditions written like those in when. Such an event is marked as one an app or a bot caused.',
+    }),
+  ),
+  changed: Schema.optionalKey(
+    WhereItAppliesSchema.annotate({
+      description:
+        'How to tell that a delivery reports no new item, such as an edit, a deletion or a notice: a runtime expression into a field that holds a value only then, or conditions written like those in when. Such a delivery is not an event.',
+    }),
+  ),
+  own: Schema.optionalKey(
+    Schema.Tuple([ExpressionSchema, ExpressionSchema]).annotate({
+      description:
+        'Two runtime expressions: the field that names the account that did what a delivery reports, and the field that names the account the connection acts as. Where both name the same account, the connection did it itself, and the delivery is not an event.',
+    }),
+  ),
+  topic: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        "The topic Auto subscribes to for this event in one place, as a Liquid template that reads subject, the place the event happens in. It must render the same topic as the destination's own topic renders for a request waiting in that place. Each event of a destination made per subscription needs one, and no other event takes one.",
+    }),
+  ),
+}).annotate({
+  description:
+    "One kind of delivery that is an event, and the fields of the delivery that hold the event's ID, time, place and data.",
+});
 
 export const HandshakeSchema = Schema.Struct({
   when: ConditionsSchema.annotate({

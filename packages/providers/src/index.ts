@@ -22,13 +22,8 @@ export {
 export { isPinnableTemplate, pinnedTemplateShape } from './entry/entry-values.ts';
 export { aliasesTakenIn, providerNamesOf, type AliasTaken } from './entry/provider-names.ts';
 export { ConversationsSchema, conversationTemplates, type Conversations } from './entry/conversation-parts.ts';
-export {
-  arrivalReadingOf,
-  presentedProofOf,
-  type Arrival,
-  type ArrivalReading,
-  type PresentedProof,
-} from './events/arrival-readings.ts';
+export { arrivalReadingOf, type Arrival, type ArrivalReading } from './events/arrival-readings.ts';
+export { presentedProofOf, type PresentedProof } from './events/presented-proofs.ts';
 export type { Destination as EventDestination } from './events/destination-fields.ts';
 export {
   EventsByHandSchema,

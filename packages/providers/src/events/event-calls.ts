@@ -111,6 +111,15 @@ const theAddress: Readonly<Record<Receiving, readonly string[]>> = {
 
 export const topicTemplates = templatesOf('a template of the topic of a subscription', thePlace, 'with');
 
+const theSubject = 'subject';
+
+export const eventTopicTemplates: TemplateSet = {
+  names: [theSubject],
+  what: 'a template of the topic of an event',
+  sample: { subject: 'C0123' },
+  structured: 'the list that split makes',
+};
+
 export function subscribeTemplates(receiving: Receiving): TemplateSet {
   return templatesOf(
     'a template of the call that subscribes',
@@ -165,9 +174,17 @@ function toolIssues(pointer: string, tool: string, call: Call, set: TemplateSet)
   ];
 }
 
-function readsTheSecret(text: string): boolean {
+function readsTheName(text: string, name: string): boolean {
   const parsed = parsedTemplate(toolBlockEngine, text, 1);
-  return Result.isSuccess(parsed) && parsed.success.variables.some(({ path }) => path[0] === theSecret);
+  return Result.isSuccess(parsed) && parsed.success.variables.some(({ path }) => path[0] === name);
+}
+
+function readsTheSecret(text: string): boolean {
+  return readsTheName(text, theSecret);
+}
+
+export function readsTheSubject(topic: string): boolean {
+  return readsTheName(topic, theSubject);
 }
 
 const theSecretInTheAddress = 'Expected {{ secret }} in body, not in url';

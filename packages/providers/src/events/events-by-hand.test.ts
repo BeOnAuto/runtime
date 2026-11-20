@@ -2,10 +2,12 @@ import { Result, Schema, SchemaIssue } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  aPost,
   aReply,
   intoAQueue,
   ofEachSubscription,
   ofTheApp,
+  postTypes,
   throughItsTools,
   without,
 } from '../testing/event-destinations.ts';
@@ -66,6 +68,22 @@ describe('events given by hand', () => {
     expect(
       placesRefusedBy({ ...throughItsTools, unsubscribe: { tool: 'delete_hook', with: { thread: '{{ sent.id }}' } } }),
     ).toEqual([`${byHand}/unsubscribe/with/thread`]);
+  });
+});
+
+describe('events given by hand, declaring the events a service reports', () => {
+  it('are refused them at each place whatever they hold, since only an entry the runtime ships declares them', () => {
+    const reported = { ...throughItsTools, events: [{ ...aPost, topic: '{{ subject }}' }] };
+
+    expect([
+      placesRefusedBy(reported),
+      placesRefusedBy({ ...throughItsTools, events: 'every post' }),
+      Result.match(decodedByHand({ types: postTypes, destinations: [throughItsTools] }), {
+        onSuccess: () => [],
+        onFailure: ({ issue }: { readonly issue: SchemaIssue.Issue }) =>
+          formatted(issue).issues.map(({ path = [] }) => `/${path.map(String).join('/')}`),
+      }),
+    ]).toEqual([[`${byHand}/events`], [`${byHand}/events`], ['/types']]);
   });
 });
 

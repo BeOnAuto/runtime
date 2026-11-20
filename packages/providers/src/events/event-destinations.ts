@@ -1,12 +1,16 @@
+import { shapeIssues } from '@on.auto/json-schema';
 import { Schema } from 'effect';
 
 import { arrivalIssuesOf } from './arrival-checks.ts';
 import {
   DestinationFieldsSchema,
   presenceIssuesOf,
+  subscribesForEachPlace,
   type Destination,
   type DestinationIssue,
 } from './destination-fields.ts';
+import { readsTheSubject } from './event-calls.ts';
+import { pathOf } from './json-texts.ts';
 import { subscriptionIssuesOf } from './subscription-checks.ts';
 
 export function destinationIssuesOf(destination: Destination): readonly DestinationIssue[] {
@@ -27,18 +31,108 @@ function typeIssuesOf(destinations: readonly Destination[]): readonly Destinatio
   );
 }
 
+const NamedSchema = Schema.String.check(Schema.isMinLength(1));
+
+const EventTypeFieldsSchema = Schema.Struct({
+  type: NamedSchema.annotate({
+    description:
+      'The type of the event, as a trigger names it: the reverse domain name of whoever defines the event, followed by their name for it, as in com.example.invoice.paid.',
+  }),
+  title: NamedSchema.annotate({
+    description: 'What happened, in a short sentence a person reads, such as "A message is posted".',
+  }),
+  subject: Schema.optionalKey(
+    Schema.Struct({
+      title: NamedSchema.annotate({
+        description: 'What the service calls the place, such as "Channel" or "Repository".',
+      }),
+      required: Schema.Boolean.annotate({
+        description:
+          "Whether a trigger must name one place to listen in. Set it to true where a destination made per subscription writes this event's topic from subject.",
+      }),
+    }).annotate({
+      description: 'The place an event of this type happens in, such as a channel or a repository.',
+    }),
+  ),
+  data: Schema.JsonObject.annotate({ description: 'The JSON Schema of the data an event of this type carries.' }),
+});
+
+type EventType = typeof EventTypeFieldsSchema.Type;
+
+function dataIssuesOf({ data }: EventType): readonly DestinationIssue[] {
+  return shapeIssues(data).map(({ pointer, detail }) => ({ path: ['data', ...pathOf(pointer)], issue: detail }));
+}
+
+const EventTypeSchema = EventTypeFieldsSchema.check(Schema.makeFilter(dataIssuesOf)).annotate({
+  description: 'One kind of event the service reports.',
+});
+
 const EventsFieldsSchema = Schema.Struct({
+  types: Schema.optionalKey(
+    Schema.Array(EventTypeSchema).check(Schema.isMinLength(1)).annotate({
+      description:
+        'The kinds of events the service reports. Only a provider that ships with the runtime can declare them.',
+    }),
+  ),
   destinations: Schema.Array(DestinationSchema).check(Schema.isMinLength(1)).annotate({
     description:
       'The ways the service sends what happens where a request waits, one of each type, in the order the runtime tries them, the first it can take serving',
   }),
 });
 
-export const EventsSchema = EventsFieldsSchema.check(
-  Schema.makeFilter(({ destinations }: typeof EventsFieldsSchema.Type) => typeIssuesOf(destinations)),
-).annotate({
+type EventsFields = typeof EventsFieldsSchema.Type;
+
+const oneOfEachEventType =
+  'Expected a type that no earlier item of types declares, since each type of event is declared once';
+
+const undeclaredType = 'Expected a type this entry declares under types';
+
+const subjectToName =
+  'Expected subject with required set to true, because a destination made per subscription writes the topic of this event from subject';
+
+function declaredTypeIssuesOf(types: readonly EventType[]): readonly DestinationIssue[] {
+  const named = types.map(({ type }) => type);
+  return named.flatMap((type, index): readonly DestinationIssue[] =>
+    named.indexOf(type) === index ? [] : [{ path: ['types', index, 'type'], issue: oneOfEachEventType }],
+  );
+}
+
+function mappedTypeIssuesOf(types: readonly EventType[], destinations: readonly Destination[]) {
+  const named = new Set(types.map(({ type }) => type));
+  return destinations.flatMap((destination, index) =>
+    (destination.events ?? []).flatMap((declared, each): readonly DestinationIssue[] =>
+      named.has(declared.type)
+        ? []
+        : [{ path: ['destinations', index, 'events', each, 'type'], issue: undeclaredType }],
+    ),
+  );
+}
+
+function subjectIssuesOf(types: readonly EventType[], destinations: readonly Destination[]) {
+  const placed = new Set(
+    destinations
+      .filter((destination) => subscribesForEachPlace(destination))
+      .flatMap(({ events = [] }) =>
+        events.filter(({ topic }) => topic !== undefined && readsTheSubject(topic)).map(({ type }) => type),
+      ),
+  );
+  return types.flatMap(({ type, subject }, index): readonly DestinationIssue[] =>
+    placed.has(type) && subject?.required !== true ? [{ path: ['types', index, 'subject'], issue: subjectToName }] : [],
+  );
+}
+
+function eventsIssuesOf({ types = [], destinations }: EventsFields): readonly DestinationIssue[] {
+  return [
+    ...typeIssuesOf(destinations),
+    ...declaredTypeIssuesOf(types),
+    ...mappedTypeIssuesOf(types, destinations),
+    ...subjectIssuesOf(types, destinations),
+  ];
+}
+
+export const EventsSchema = EventsFieldsSchema.check(Schema.makeFilter(eventsIssuesOf)).annotate({
   description:
-    "How the service tells Auto that something changed where a request waits, so that Auto reads its replies at once: data alone, which makes Auto read through the reading it does, or, where a destination's filter says where, carries the reply itself",
+    "How the service tells Auto that something changed where a request waits, so that Auto reads its replies at once: data alone, which makes Auto read through the reading it does, or, where a destination's filter says where, carries the reply itself. It also says which events the service reports.",
 });
 
 export type Events = typeof EventsSchema.Type;

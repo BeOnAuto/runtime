@@ -1,9 +1,9 @@
 import { Result, Schema, SchemaIssue } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { AddedProviderEntrySchema, joinedProviders, type ProviderEntry } from '../index.ts';
+import { AddedProviderEntrySchema, joinedProviders, ProviderEntrySchema, type ProviderEntry } from '../index.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
-import { aReply, carrying, ofTheApp } from '../testing/event-destinations.ts';
+import { aPost, aReply, carrying, mapping, ofTheApp, postTypes } from '../testing/event-destinations.ts';
 import { fixtureProviders, ledgers, metrics, tracker } from '../testing/fixture-providers.ts';
 
 const decodeAdded = Schema.decodeUnknownResult(AddedProviderEntrySchema, { errors: 'all', onExcessProperty: 'error' });
@@ -115,5 +115,15 @@ describe('a provider whoever runs the runtime adds whose service sends', () => {
         ],
       ],
     ]);
+  });
+
+  it('is refused the events its service reports, which only an entry the runtime ships declares, as a shipped entry is not', () => {
+    const reporting = { ...notes, events: { types: postTypes, destinations: [mapping(ofTheApp, aPost)] } };
+
+    expect(addedProblemsOf(reporting).map(([path]) => path)).toEqual([
+      '/events/types',
+      '/events/destinations/0/events',
+    ]);
+    expect(Result.isSuccess(Schema.decodeUnknownResult(ProviderEntrySchema)(reporting))).toBe(true);
   });
 });

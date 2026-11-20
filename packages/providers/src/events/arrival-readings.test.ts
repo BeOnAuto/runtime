@@ -95,6 +95,21 @@ describe('when a destination declares', () => {
     ]).toEqual([{ wake: { subscription: '42' } }, {}, theWorkspace, {}, {}]);
   });
 
+  it('holds where an expression holds nothing, missing or null, and its values name null', () => {
+    const subtypes = { '$request.body#/event/subtype': [null, 'thread_broadcast'] };
+    const read = readerOf({
+      ...ofTheApp,
+      filter: { ...ofTheApp.filter, when: { ...ofTheApp.filter.when, ...subtypes } },
+    });
+
+    expect([
+      read(anEvent({})),
+      read(anEvent({ subtype: null })),
+      read(anEvent({ subtype: 'thread_broadcast' })),
+      read(anEvent({ subtype: 'channel_join' })),
+    ]).toEqual([woken(), woken(), woken(), theWorkspace]);
+  });
+
   it('holds nothing where it names no expression', () => {
     const declared: Destination = {
       type: 'webhook',

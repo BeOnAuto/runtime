@@ -28,6 +28,10 @@ const noAppSecret =
 const onlyMakesAutoRead =
   "Expected no reply: remove it, because a webhook from this service only tells Auto to read the replies now. The function's own replies says how they are read";
 
+function startsNoWorkflow(field: string): string {
+  return `Expected no ${field}: remove them, because a webhook from this service only tells Auto to read the replies now. It cannot start a workflow`;
+}
+
 function takenByNone(field: string): string {
   return `Expected no ${field}: remove it, because a connection added without a provider does not take ${field}`;
 }
@@ -64,11 +68,11 @@ interface Place {
 }
 
 const places = {
-  events: { named: 'events', takes: ['destinations'] },
+  events: { named: 'events', takes: ['destinations'], refusedOtherwise: ['types'] },
   destination: {
     named: 'a destination in events',
     takes: fieldsOfADestination,
-    refusedOtherwise: fieldsOfOtherWays,
+    refusedOtherwise: [...fieldsOfOtherWays, 'events'],
   },
   subscribe: { named: 'subscribe', takes: ['tool', 'with', 'subscribed'] },
   renew: { named: 'renew', takes: ['tool', 'with', 'renewed'] },
@@ -174,6 +178,7 @@ function destinationIssuesIn(destination: JsonObject, path: Path): readonly Issu
     ...fieldsOfOtherWays
       .filter((field) => destination[field] !== undefined)
       .map((field) => ({ path: [...path, field], issue: takenByNone(field) })),
+    ...(destination['events'] === undefined ? [] : [{ path: [...path, 'events'], issue: startsNoWorkflow('events') }]),
     ...unknownKeysIn(destination, path, places.destination),
   ];
 }
@@ -182,6 +187,7 @@ export function narrowedIssuesIn(events: JsonObject): readonly Issue[] {
   const { destinations } = events;
   const written = isAList(destinations) ? destinations : [];
   return [
+    ...(events['types'] === undefined ? [] : [{ path: ['types'], issue: startsNoWorkflow('types') }]),
     ...unknownKeysIn(events, [], places.events),
     ...written.flatMap((destination, index) =>
       isAnObject(destination) ? destinationIssuesIn(destination, ['destinations', index]) : [],

@@ -178,6 +178,50 @@ const answeringItsChallenge = {
   handshake: { ...ofTheApp.handshake, response: { challenge: 'challenge' } },
 };
 
+const aPostsData = { type: 'object', properties: { words: { type: 'string' }, by: { type: 'string' } } };
+
+export const unplacedPostType = { type: 'com.example.chat.post', title: 'A post is made', data: aPostsData };
+
+export const postType = { ...unplacedPostType, subject: { title: 'Room', required: false } };
+
+export const roomType = {
+  type: 'com.example.chat.room.opened',
+  title: 'A room is opened',
+  data: { type: 'object', properties: { name: { type: 'string' } } },
+};
+
+export const postTypes = [postType, roomType];
+
+export const aPost = {
+  type: 'com.example.chat.post',
+  when: { '$request.body#/kind': ['post'] },
+  id: ['$request.body#/post/room', '$request.body#/post/seq'],
+  time: '$request.body#/post/at',
+  subject: '$request.body#/post/room',
+  data: { words: '$request.body#/post/words', by: '$request.body#/post/by' },
+  automatic: '$request.body#/post/app',
+  changed: '$request.body#/post/edit_of',
+  own: ['$request.body#/post/by', '$request.body#/installation/member'],
+};
+
+export const aRoomOpened = {
+  type: 'com.example.chat.room.opened',
+  when: { '$request.body#/kind': ['room'] },
+  id: ['$request.body#/room/key'],
+  data: { name: '$request.body#/room/name' },
+};
+
+export function mapping(destination: object, ...events: readonly object[]): Readonly<Record<string, unknown>> {
+  return { ...destination, events };
+}
+
+export function reporting(
+  destinations: readonly unknown[],
+  types: readonly unknown[] = postTypes,
+): readonly (readonly [string, string])[] {
+  return problemsOf({ ...trackerOverASocket, events: { types, destinations } });
+}
+
 export const asSlackSends = carrying(answeringItsChallenge, {
   id: '$request.body#/event/ts',
   sender: '$request.body#/event/user',

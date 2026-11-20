@@ -186,6 +186,10 @@ const gatewayOfAnAddedProvider =
 const replyOfAnAddedProvider =
   'Expected no reply: only an entry the runtime ships declares one, since a reply a delivery carries can answer a request, and a provider whoever runs the runtime adds only makes Auto read';
 
+function eventsOfAnAddedProvider(field: string): string {
+  return `Expected no ${field}: only a provider that ships with the runtime can declare the events its service reports, because an event would start workflows with what its delivery carries. A provider added in the configuration file can only tell Auto to read the replies now`;
+}
+
 function addedIssuesOf({ document: written, credentials, events }: ProviderEntry): readonly EntryIssue[] {
   return [
     ...(isADocumentBesideTheEntries(written) ? [{ path: ['document'], issue: documentByItsAddress }] : []),
@@ -196,6 +200,12 @@ function addedIssuesOf({ document: written, credentials, events }: ProviderEntry
       filter.reply === undefined
         ? []
         : [{ path: ['events', 'destinations', index, 'filter', 'reply'], issue: replyOfAnAddedProvider }],
+    ),
+    ...(events?.types === undefined ? [] : [{ path: ['events', 'types'], issue: eventsOfAnAddedProvider('types') }]),
+    ...(events?.destinations ?? []).flatMap((destination, index) =>
+      destination.events === undefined
+        ? []
+        : [{ path: ['events', 'destinations', index, 'events'], issue: eventsOfAnAddedProvider('events') }],
     ),
   ];
 }

@@ -1,11 +1,19 @@
-import { arrangesNoSubscription, transportOf, type Destination, type DestinationIssue } from './destination-fields.ts';
-import { answerIssuesOf } from './event-calls.ts';
-import { provesTheBodyAndATime } from './event-proofs.ts';
+import {
+  arrangesNoSubscription,
+  subscribesForEachPlace,
+  transportOf,
+  type Destination,
+  type DestinationIssue,
+} from './destination-fields.ts';
+import { answerIssuesOf, eventTopicTemplates, textIssues } from './event-calls.ts';
+import { provesTheBody, provesTheBodyAndATime } from './event-proofs.ts';
 import { pathOf } from './json-texts.ts';
 import { expressionIssueOf, inEveryPlaceOf, type ExpressionPlace } from './runtime-expressions.ts';
 
+type Path = readonly (string | number)[];
+
 function expressionIssuesAt(
-  path: readonly string[],
+  path: Path,
   expression: string | undefined,
   place: ExpressionPlace,
 ): readonly DestinationIssue[] {
@@ -15,11 +23,9 @@ function expressionIssuesAt(
 
 const noConditions = 'Expected at least one runtime expression with the values it may equal';
 
-function conditionIssuesOf(
-  path: readonly string[],
-  when: Readonly<Record<string, readonly string[]>>,
-  place: ExpressionPlace,
-): readonly DestinationIssue[] {
+type Conditions = Readonly<Record<string, readonly (string | null)[]>>;
+
+function conditionIssuesOf(path: Path, when: Conditions, place: ExpressionPlace): readonly DestinationIssue[] {
   const expressions = Object.keys(when);
   return expressions.length === 0
     ? [{ path, issue: noConditions }]
@@ -79,6 +85,94 @@ function replyIssuesOf(destination: Destination): readonly DestinationIssue[] {
   ];
 }
 
+type DeclaredEvent = NonNullable<Destination['events']>[number];
+
+const placesOfAnEvent: readonly ('time' | 'subject')[] = ['time', 'subject'];
+
+const whereEachApplies: readonly ('automatic' | 'changed')[] = ['automatic', 'changed'];
+
+function whereItAppliesIssuesOf(
+  path: Path,
+  declared: string | Conditions | undefined,
+  place: ExpressionPlace,
+): readonly DestinationIssue[] {
+  return typeof declared === 'object'
+    ? conditionIssuesOf(path, declared, place)
+    : expressionIssuesAt(path, declared, place);
+}
+
+function eventPlaceOf(destination: Destination): ExpressionPlace {
+  return transportOf(destination) === 'request'
+    ? {
+        transport: 'request',
+        sources: ['body'],
+        because: 'since an event is read from the body alone, which the proof covers',
+      }
+    : {
+        transport: 'message',
+        sources: ['payload'],
+        because: "since an event is read from the message's payload alone",
+      };
+}
+
+const unprovenEvents =
+  'Expected events only on a websocket, or on a webhook whose verify proves every byte of the body, as standard-webhooks does, and as hmac does where it signs {payload}. A secret or a signed token in a header proves who sent a delivery but not that its body is theirs, and nothing proves what a queue holds, so such a destination can only tell Auto to read the replies now';
+
+const noTopic =
+  'Expected topic, because this destination is made per subscription. Write the topic Auto subscribes to for this event, as a Liquid template that reads subject';
+
+const topicOnlyPerSubscription =
+  'Expected no topic, because only an event of a destination made per subscription takes one';
+
+function eventTopicIssuesOf(destination: Destination, { topic }: DeclaredEvent, at: Path): readonly DestinationIssue[] {
+  const subscribing = subscribesForEachPlace(destination);
+  if (topic === undefined) {
+    return subscribing ? [{ path: at, issue: noTopic }] : [];
+  }
+  if (!subscribing) {
+    return [{ path: [...at, 'topic'], issue: topicOnlyPerSubscription }];
+  }
+  return textIssues(eventTopicTemplates, '/topic', topic).map(({ pointer, detail }) => ({
+    path: [...at, ...pathOf(pointer)],
+    issue: detail,
+  }));
+}
+
+function mappingIssuesOf(
+  destination: Destination,
+  declared: DeclaredEvent,
+  index: number,
+): readonly DestinationIssue[] {
+  const at = ['events', index];
+  const place = eventPlaceOf(destination);
+  return [
+    ...conditionIssuesOf([...at, 'when'], declared.when, place),
+    ...declared.id.flatMap((part, each) => expressionIssuesAt([...at, 'id', each], part, place)),
+    ...placesOfAnEvent.flatMap((field) => expressionIssuesAt([...at, field], declared[field], place)),
+    ...whereEachApplies.flatMap((field) => whereItAppliesIssuesOf([...at, field], declared[field], place)),
+    ...Object.entries(declared.data ?? {}).flatMap(([field, expression]: readonly [string, string]) =>
+      expressionIssuesAt([...at, 'data', field], expression, place),
+    ),
+    ...(declared.own ?? []).flatMap((part, each) => expressionIssuesAt([...at, 'own', each], part, place)),
+    ...eventTopicIssuesOf(destination, declared, at),
+  ];
+}
+
+function isProvenWhole({ type, verify }: Destination): boolean {
+  return type === 'websocket' || (verify !== undefined && provesTheBody(verify));
+}
+
+function eventIssuesOf(destination: Destination): readonly DestinationIssue[] {
+  const { events } = destination;
+  if (events === undefined) {
+    return [];
+  }
+  return [
+    ...events.flatMap((declared, index) => mappingIssuesOf(destination, declared, index)),
+    ...(isProvenWhole(destination) ? [] : [{ path: ['events'], issue: unprovenEvents }]),
+  ];
+}
+
 const onlyAnHmacKeys =
   "Expected hmac only where the destination's proof is hmac, whose hash, encoding and secret key it";
 
@@ -129,6 +223,7 @@ export function arrivalIssuesOf(destination: Destination): readonly DestinationI
   return [
     ...filterIssuesOf(destination),
     ...replyIssuesOf(destination),
+    ...eventIssuesOf(destination),
     ...handshakeIssuesOf(destination),
     ...connectionIssuesOf(destination),
     ...openIssuesOf(destination),

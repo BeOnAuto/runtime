@@ -31,6 +31,99 @@ credentials:
     example: github_pat_…
     pattern: ^github_pat_.+$
 events:
+  types:
+    - type: com.github.issues.opened
+      title: An issue is opened
+      subject:
+        title: Repository
+        required: true
+      data:
+        type: object
+        properties:
+          number:
+            type: integer
+            description: The number of the issue in its repository.
+          title:
+            type: string
+            description: The title of the issue.
+          body:
+            type: string
+            description: What the issue says, in Markdown.
+          author:
+            type: string
+            description: The GitHub username of whoever opened the issue.
+          html_url:
+            type: string
+            description: The link to the issue on GitHub.
+    - type: com.github.issue_comment.created
+      title: A comment is added to an issue or pull request
+      subject:
+        title: Repository
+        required: true
+      data:
+        type: object
+        properties:
+          number:
+            type: integer
+            description: The number of the issue or pull request the comment is on.
+          title:
+            type: string
+            description: The title of the issue or pull request the comment is on.
+          body:
+            type: string
+            description: What the comment says, in Markdown.
+          author:
+            type: string
+            description: The GitHub username of whoever wrote the comment.
+          html_url:
+            type: string
+            description: The link to the comment on GitHub.
+    - type: com.github.pull_request.opened
+      title: A pull request is opened
+      subject:
+        title: Repository
+        required: true
+      data:
+        type: object
+        properties:
+          number:
+            type: integer
+            description: The number of the pull request in its repository.
+          title:
+            type: string
+            description: The title of the pull request.
+          body:
+            type: string
+            description: What the pull request says, in Markdown.
+          author:
+            type: string
+            description: The GitHub username of whoever opened the pull request.
+          html_url:
+            type: string
+            description: The link to the pull request on GitHub.
+    - type: com.github.pull_request.closed
+      title: A pull request is closed
+      subject:
+        title: Repository
+        required: true
+      data:
+        type: object
+        properties:
+          number:
+            type: integer
+            description: The number of the pull request in its repository.
+          title:
+            type: string
+            description: The title of the pull request.
+          author:
+            type: string
+            description: The GitHub username of whoever opened the pull request.
+          html_url:
+            type: string
+            description: The link to the pull request on GitHub.
+          merged:
+            type: boolean
+            description: Whether the pull request was merged. It is false when it was closed without merging.
   destinations:
     - type: webhook
       per: subscription
@@ -64,3 +157,64 @@ events:
           $request.header.X-GitHub-Event: [issue_comment, pull_request_review, pull_request_review_comment]
           $request.body#/action: [created, submitted]
         subscription: $request.header.X-GitHub-Hook-ID
+      events:
+        - type: com.github.issues.opened
+          when:
+            $request.body#/action: [opened]
+          id: [$request.body#/issue/node_id]
+          time: $request.body#/issue/created_at
+          subject: $request.body#/repository/full_name
+          topic: '{{ subject }}'
+          automatic:
+            $request.body#/sender/type: [Bot]
+          data:
+            number: $request.body#/issue/number
+            title: $request.body#/issue/title
+            body: $request.body#/issue/body
+            author: $request.body#/issue/user/login
+            html_url: $request.body#/issue/html_url
+        - type: com.github.issue_comment.created
+          when:
+            $request.body#/action: [created]
+          id: [$request.body#/issue/node_id, $request.body#/comment/node_id]
+          time: $request.body#/comment/created_at
+          subject: $request.body#/repository/full_name
+          topic: '{{ subject }}'
+          automatic:
+            $request.body#/sender/type: [Bot]
+          data:
+            number: $request.body#/issue/number
+            title: $request.body#/issue/title
+            body: $request.body#/comment/body
+            author: $request.body#/comment/user/login
+            html_url: $request.body#/comment/html_url
+        - type: com.github.pull_request.opened
+          when:
+            $request.body#/action: [opened]
+          id: [$request.body#/pull_request/node_id]
+          time: $request.body#/pull_request/created_at
+          subject: $request.body#/repository/full_name
+          topic: '{{ subject }}'
+          automatic:
+            $request.body#/sender/type: [Bot]
+          data:
+            number: $request.body#/pull_request/number
+            title: $request.body#/pull_request/title
+            body: $request.body#/pull_request/body
+            author: $request.body#/pull_request/user/login
+            html_url: $request.body#/pull_request/html_url
+        - type: com.github.pull_request.closed
+          when:
+            $request.body#/action: [closed]
+          id: [$request.body#/pull_request/node_id, $request.body#/pull_request/closed_at]
+          time: $request.body#/pull_request/closed_at
+          subject: $request.body#/repository/full_name
+          topic: '{{ subject }}'
+          automatic:
+            $request.body#/sender/type: [Bot]
+          data:
+            number: $request.body#/pull_request/number
+            title: $request.body#/pull_request/title
+            author: $request.body#/pull_request/user/login
+            html_url: $request.body#/pull_request/html_url
+            merged: $request.body#/pull_request/merged

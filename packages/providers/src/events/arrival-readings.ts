@@ -1,5 +1,6 @@
+import { isTime } from '@on.auto/definitions/event-time';
 import { valueAt } from '@on.auto/definitions/tool-blocks';
-import type { Schema } from 'effect';
+import { Schema } from 'effect';
 
 import type { Destination } from './destination-fields.ts';
 import {
@@ -48,31 +49,27 @@ interface ArrivalConnection {
   readonly user?: string;
 }
 
+interface ArrivalEvent {
+  readonly type: string;
+  readonly id: string;
+  readonly time?: string;
+  readonly subject?: string;
+  readonly data: Readonly<Record<string, Schema.Json>>;
+  readonly automatic?: boolean;
+}
+
 export interface ArrivalReading {
   readonly handshake?: ArrivalHandshake;
   readonly wake?: ArrivalWake;
   readonly connection?: ArrivalConnection;
+  readonly event?: ArrivalEvent;
 }
 
-export interface PresentedProof {
-  readonly signature?: string;
-  readonly timestamp?: string | number;
-  readonly id?: string;
-  readonly token?: string;
-  readonly header?: (name: string) => string | undefined;
-}
-
-type Conditions = Readonly<Record<string, readonly string[]>>;
+type Conditions = Readonly<Record<string, readonly (string | null)[]>>;
 
 type DeclaredReply = NonNullable<Destination['filter']['reply']>;
 
-type Proof = NonNullable<Destination['verify']>;
-
-type ProofPart = 'signature' | 'timestamp' | 'id' | 'token';
-
-const proofParts: readonly ProofPart[] = ['signature', 'timestamp', 'id', 'token'];
-
-function headerIn(headers: Readonly<Record<string, string>>, name: string): string | undefined {
+export function headerIn(headers: Readonly<Record<string, string>>, name: string): string | undefined {
   const named = name.toLowerCase();
   const values = Object.entries(headers).flatMap(([field, value]: readonly [string, string]) =>
     field.toLowerCase() === named ? [value] : [],
@@ -103,11 +100,11 @@ export function valueIn(arrival: Arrival, expression: string): unknown {
   return reference === undefined ? undefined : inTheMessage(arrival, reference);
 }
 
-function declaredValueIn(arrival: Arrival, expression: string | undefined): unknown {
+export function declaredValueIn(arrival: Arrival, expression: string | undefined): unknown {
   return expression === undefined ? undefined : valueIn(arrival, expression);
 }
 
-function textIn(arrival: Arrival, expression: string | undefined): string | undefined {
+export function textIn(arrival: Arrival, expression: string | undefined): string | undefined {
   const value = declaredValueIn(arrival, expression);
   return typeof value === 'string' && value !== '' ? value : undefined;
 }
@@ -116,15 +113,25 @@ function holdsSomething(arrival: Arrival, expression: string | undefined): boole
   return (declaredValueIn(arrival, expression) ?? null) !== null;
 }
 
+function isOneOf(value: unknown, values: readonly (string | null)[]): boolean {
+  return (value ?? null) === null ? values.includes(null) : typeof value === 'string' && values.includes(value);
+}
+
 function holds(arrival: Arrival, when: Conditions): boolean {
   const conditions = Object.entries(when);
   return (
     conditions.length > 0 &&
-    conditions.every(([expression, values]: readonly [string, readonly string[]]) => {
-      const value = valueIn(arrival, expression);
-      return typeof value === 'string' && values.includes(value);
-    })
+    conditions.every(([expression, values]: readonly [string, readonly (string | null)[]]) =>
+      isOneOf(valueIn(arrival, expression), values),
+    )
   );
+}
+
+function applies(arrival: Arrival, declared: string | Conditions | undefined): boolean {
+  if (declared === undefined) {
+    return false;
+  }
+  return typeof declared === 'string' ? holdsSomething(arrival, declared) : holds(arrival, declared);
 }
 
 function timeIn(arrival: Arrival, expression: string | undefined): Pick<DeliveredReply, 'time'> {
@@ -183,43 +190,108 @@ function handshakeIn(arrival: Arrival, handshake: Destination['handshake']): Arr
   return challenge === undefined ? {} : { challenge };
 }
 
-function sendingTimeIn(arrival: Arrival, expression: string | undefined): string | number | undefined {
+type DeclaredEvent = NonNullable<Destination['events']>[number];
+
+interface Matched {
+  readonly declared: DeclaredEvent;
+  readonly id: string;
+}
+
+function idPartIn(arrival: Arrival, expression: string): string | undefined {
+  const value = valueIn(arrival, expression);
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
+function idIn(arrival: Arrival, parts: readonly string[]): string | undefined {
+  const read = parts.map((part) => idPartIn(arrival, part));
+  return read.every((part): part is string => part !== undefined)
+    ? read.map((part) => encodeURIComponent(part)).join('/')
+    : undefined;
+}
+
+function matchedIn(arrival: Arrival, mappings: readonly DeclaredEvent[]): Matched | undefined {
+  return mappings.flatMap((declared): readonly Matched[] => {
+    const id = holds(arrival, declared.when) ? idIn(arrival, declared.id) : undefined;
+    return id === undefined ? [] : [{ declared, id }];
+  })[0];
+}
+
+const secondsSinceTheEpoch = /^(?<whole>\d{1,15})(?:\.(?<fraction>\d+))?$/u;
+
+const mostFractionDigits = 9;
+
+function writtenAsATime(seconds: string): string | undefined {
+  const { whole, fraction } = secondsSinceTheEpoch.exec(seconds)?.groups ?? {};
+  const instant = new Date(Number(whole) * 1000);
+  if (Number.isNaN(instant.getTime())) {
+    return undefined;
+  }
+  const fractionWritten = fraction === undefined ? '' : `.${fraction.slice(0, mostFractionDigits)}`;
+  const written = `${instant.toISOString().slice(0, 19)}${fractionWritten}Z`;
+  return isTime(written) ? written : undefined;
+}
+
+function eventTimeIn(arrival: Arrival, expression: string | undefined): string | undefined {
   const value = declaredValueIn(arrival, expression);
-  return typeof value === 'number' || (typeof value === 'string' && value !== '') ? value : undefined;
+  if (typeof value === 'string' && isTime(value)) {
+    return value;
+  }
+  return typeof value === 'string' || typeof value === 'number' ? writtenAsATime(String(value)) : undefined;
 }
 
-function proofPartsIn(arrival: Arrival, verify: Proof): Pick<PresentedProof, ProofPart> {
-  const signature = textIn(arrival, verify.signature);
-  const timestamp = sendingTimeIn(arrival, verify.timestamp);
-  const id = textIn(arrival, verify.id);
-  const token = textIn(arrival, verify.token);
+const isJson = Schema.is(Schema.Json);
+
+function dataIn(arrival: Arrival, data: DeclaredEvent['data'] = {}): Readonly<Record<string, Schema.Json>> {
+  return Object.fromEntries(
+    Object.entries(data).flatMap(([field, expression]: readonly [string, string]) => {
+      const value = valueIn(arrival, expression);
+      return value === null || !isJson(value) ? [] : [[field, value]];
+    }),
+  );
+}
+
+function isItsOwn(arrival: Arrival, own: DeclaredEvent['own']): boolean {
+  if (own === undefined) {
+    return false;
+  }
+  const [doneBy, actingAs] = own;
+  const account = textIn(arrival, doneBy);
+  return account !== undefined && account === textIn(arrival, actingAs);
+}
+
+function eventIn(arrival: Arrival, mappings: Destination['events']): ArrivalEvent | undefined {
+  const matched = matchedIn(arrival, mappings ?? []);
+  if (matched === undefined) {
+    return undefined;
+  }
+  const { declared, id } = matched;
+  if (applies(arrival, declared.changed) || isItsOwn(arrival, declared.own)) {
+    return undefined;
+  }
+  const time = eventTimeIn(arrival, declared.time);
+  const subject = textIn(arrival, declared.subject);
   return {
-    ...(signature === undefined ? {} : { signature }),
-    ...(timestamp === undefined ? {} : { timestamp }),
-    ...(id === undefined ? {} : { id }),
-    ...(token === undefined ? {} : { token }),
+    type: declared.type,
+    id,
+    ...(time === undefined ? {} : { time }),
+    ...(subject === undefined ? {} : { subject }),
+    data: dataIn(arrival, declared.data),
+    ...(applies(arrival, declared.automatic) ? { automatic: true } : {}),
   };
-}
-
-export function presentedProofOf({ verify }: Destination, arrival: Arrival): PresentedProof | undefined {
-  if (verify === undefined || arrival.transport !== 'request') {
-    return undefined;
-  }
-  const parts = proofPartsIn(arrival, verify);
-  if (proofParts.some((part) => verify[part] !== undefined && parts[part] === undefined)) {
-    return undefined;
-  }
-  const { headers } = arrival;
-  return verify.scheme === 'standard-webhooks' ? { ...parts, header: (name) => headerIn(headers, name) } : parts;
 }
 
 export function arrivalReadingOf(destination: Destination, arrival: Arrival): ArrivalReading {
   const handshake = handshakeIn(arrival, destination.handshake);
   const connection = connectionIn(arrival, destination.connection);
   const wake = wakeIn(arrival, destination.filter, connection?.account);
+  const event = eventIn(arrival, destination.events);
   return {
     ...(handshake === undefined ? {} : { handshake }),
     ...(wake === undefined ? {} : { wake }),
     ...(connection === undefined ? {} : { connection }),
+    ...(event === undefined ? {} : { event }),
   };
 }

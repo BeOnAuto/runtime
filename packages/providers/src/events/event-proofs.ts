@@ -215,15 +215,23 @@ export function provesTheBodyAndATime(proof: Proof): boolean {
   return provesATime[proof.scheme](proof);
 }
 
-const provesTheBody: Readonly<Record<Scheme, boolean>> = {
-  hmac: true,
-  'standard-webhooks': true,
-  bearer: false,
-  jwt: false,
+function signsThePayload({ signed_payload: signed = '' }: Proof): boolean {
+  return namesSignedIn(signed).includes('payload');
+}
+
+const coversTheBody: Readonly<Record<Scheme, (proof: Proof) => boolean>> = {
+  hmac: signsThePayload,
+  'standard-webhooks': () => true,
+  bearer: () => false,
+  jwt: () => false,
 };
 
+export function provesTheBody(proof: Proof): boolean {
+  return coversTheBody[proof.scheme](proof);
+}
+
 export function provesWhatIsReadAt(proof: Proof, expression: string): boolean {
-  return provesTheBody[proof.scheme] && expressionIssueOf(expression, inTheBody) === undefined;
+  return provesTheBody(proof) && expressionIssueOf(expression, inTheBody) === undefined;
 }
 
 export const VerifySchema = ProofFieldsSchema.check(
