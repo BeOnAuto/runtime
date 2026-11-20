@@ -3,7 +3,7 @@ import { Effect, Option, type Schema } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
 import type { ThroughTheConnection } from '../subscriptions/subscription-ports.ts';
-import { ofEachSubscription, trackerOverASocket } from './event-destinations.ts';
+import { aPost, mapping, ofEachSubscription, postType, roomType, trackerOverASocket } from './event-destinations.ts';
 import { providerOf } from './fixture-providers.ts';
 import {
   answeredWith,
@@ -15,9 +15,23 @@ import {
 } from './subscription-services.ts';
 
 export function declaredDestinations(...written: readonly object[]): readonly Destination[] {
-  const { entry } = providerOf({ ...trackerOverASocket, events: { destinations: written } });
+  return reportedDestinations([], ...written);
+}
+
+function reportedDestinations(types: readonly object[], ...written: readonly object[]): readonly Destination[] {
+  const events = types.length === 0 ? { destinations: written } : { types, destinations: written };
+  const { entry } = providerOf({ ...trackerOverASocket, events });
   return Option.getOrThrow(Option.fromNullishOr(entry.events)).destinations;
 }
+
+export const postedType = aPost.type;
+
+const placedPostTypes = [{ ...postType, subject: { title: 'Room', required: true } }, roomType];
+
+export const postsOfEachRoom = reportedDestinations(
+  placedPostTypes,
+  mapping(ofEachSubscription, { ...aPost, topic: '{{ subject }}' }),
+);
 
 export const leasedWithoutRenewal = { ...ofEachSubscription, lease_seconds: 3600 };
 

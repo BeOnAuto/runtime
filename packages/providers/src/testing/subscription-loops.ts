@@ -18,10 +18,19 @@ import type {
   SubscriptionRecords,
   SubscriptionSecrets,
 } from '../subscriptions/subscription-ports.ts';
-import { anApp, type FakeApp } from './subscription-apps.ts';
+import type { ConnectionTrigger, WaitingRequest } from '../subscriptions/subscription-topics.ts';
+import { anApp, postedType, type FakeApp } from './subscription-apps.ts';
 import { theCallback, theQueue } from './subscription-services.ts';
 
 export const alpha: PlaybookAddress = { org: 'acme', playbook: 'alpha' };
+
+export function aPostIn(subject?: string, connection = 'tracker'): ConnectionTrigger {
+  return subject === undefined ? { connection, type: postedType } : { connection, type: postedType, subject };
+}
+
+export function waitingIn(project: string, connection = 'tracker'): WaitingRequest {
+  return { connection, with: { project }, sent: { conversation: 'C0123', id: '1699.1' } };
+}
 
 type Fact =
   | { readonly type: 'made'; readonly key: SubscriptionKey; readonly made: MadeSubscription }
@@ -136,12 +145,12 @@ function inMemorySecrets(): FakeSecrets {
   };
 }
 
-interface Changing<Value> {
+export interface Changing<Value> {
   readonly now: () => readonly Value[];
   readonly becomes: (...values: readonly Value[]) => void;
 }
 
-function changing<Value>(...values: readonly Value[]): Changing<Value> {
+export function changing<Value>(...values: readonly Value[]): Changing<Value> {
   const held: Value[] = [...values];
   return {
     now: () => [...held],

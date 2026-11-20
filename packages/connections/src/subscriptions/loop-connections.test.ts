@@ -8,7 +8,7 @@ import {
   tracker,
   trackerOverASocket,
 } from '@on.auto/providers/testing';
-import { Effect, Option } from 'effect';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { addedFact, givenByHand, registryOf } from '../testing/loop-registries.ts';
@@ -140,9 +140,11 @@ const noSecrets = {
 
 function partsOver(
   waitingIn: SubscriptionLoopParts['waitingIn'] = () => Effect.die('a request was read'),
+  triggersIn: SubscriptionLoopParts['triggersIn'] = () => Effect.die('a trigger was read'),
 ): SubscriptionLoopParts {
   const ledger = memoryLedger().service;
-  return { ledger, registry: ledger, waitingIn, tools: noCalls, secrets: noSecrets, providers, receivesOverHttp: true };
+  const given = { tools: noCalls, secrets: noSecrets, providers, receivesOverHttp: true };
+  return { ledger, registry: ledger, waitingIn, triggersIn, ...given };
 }
 
 function eventsAddressOf({ connection }: { readonly connection: string }): string {
@@ -227,25 +229,28 @@ describe('a socket among the destinations the loop arranges through', () => {
 const waiting = [{ connection: 'tracker', with: { project: 'site' }, sent: { conversation: 'C0123', id: '1699.1' } }];
 
 describe('the ports of the loop', () => {
-  it('read the connections of the playbook from the registry given, and the requests from the reader given', async () => {
-    const read: Readonly<typeof alpha>[] = [];
-    const reading = (playbook: Readonly<typeof alpha>) =>
-      Effect.sync(() => {
-        read.push(playbook);
-        return waiting;
-      });
-    const ports = subscriptionLoopPortsOf({ ...partsOver(reading), registry: await aRegistry() });
-    const [asker] = ports.askers;
+  it('read the connections of the playbook from the registry given, and the requests and the triggers from the readers given', async () => {
+    const read: string[] = [];
+    const readOf =
+      <A>(what: string, answer: readonly A[]) =>
+      ({ playbook }: Readonly<typeof alpha>) =>
+        Effect.as(
+          Effect.sync(() => read.push(`${what} of ${playbook}`)),
+          answer,
+        );
+    const parts = partsOver(readOf('requests', waiting), readOf('triggers', []));
+    const ports = subscriptionLoopPortsOf({ ...parts, registry: await aRegistry() });
     const arranged = new Map(declared.map((each) => ['tracker', each]));
 
     expect((await Effect.runPromise(ports.connectionsOf(alpha))).map(({ connection }) => connection)).toEqual([
       'tracker',
       'notes',
     ]);
-    expect(await Effect.runPromise(Option.getOrThrow(Option.fromNullishOr(asker))({ ...alpha, arranged }))).toEqual([
-      { connection: 'tracker', topic: 'site' },
+    expect(await Effect.runPromise(Effect.forEach(ports.askers, (asker) => asker({ ...alpha, arranged })))).toEqual([
+      [{ connection: 'tracker', topic: 'site' }],
+      [],
     ]);
-    expect(read).toEqual([alpha]);
+    expect(read).toEqual(['requests of alpha', 'triggers of alpha']);
   });
 
   it('hold at most 8 subscriptions through a connection', () => {

@@ -1,6 +1,8 @@
 import type { PlaybookAddress, StreamReader } from '@on.auto/operations';
 import {
   requestsAskerOf,
+  triggersAskerOf,
+  type ConnectionTrigger,
   type ProviderList,
   type SubscriptionLoopPorts,
   type SubscriptionPlace,
@@ -20,6 +22,7 @@ export interface SubscriptionLoopParts {
   readonly ledger: SubscriptionLedger;
   readonly registry: Pick<StreamReader, 'load'>;
   readonly waitingIn: (playbook: PlaybookAddress) => Effect.Effect<readonly WaitingRequest[]>;
+  readonly triggersIn: (playbook: PlaybookAddress) => Effect.Effect<readonly ConnectionTrigger[]>;
   readonly tools: ThroughTheConnection;
   readonly secrets: Pick<SecretKeeping, 'keep' | 'read' | 'forget'>;
   readonly providers: ProviderList;
@@ -40,13 +43,13 @@ function receivesOf({
 }
 
 export function subscriptionLoopPortsOf(parts: SubscriptionLoopParts): SubscriptionLoopPorts {
-  const { ledger, registry, waitingIn, tools, secrets, providers } = parts;
+  const { ledger, registry, waitingIn, triggersIn, tools, secrets, providers } = parts;
   return {
     ...tools,
     callbackOf: callbackOf(parts),
     connectionsOf: loopConnectionsOf({ registry, providers }),
     receives: receivesOf(parts),
-    askers: [requestsAskerOf(waitingIn)],
+    askers: [requestsAskerOf(waitingIn), triggersAskerOf(triggersIn)],
     records: subscriptionRecordsOf(ledger),
     secrets: subscriptionSecretsOf(secrets),
     mostPerConnection: mostSubscriptionsThroughAConnection,

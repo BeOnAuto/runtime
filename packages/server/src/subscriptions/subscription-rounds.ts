@@ -1,5 +1,6 @@
 import { holdsASubscription, playbooksDueOf, reconcileDueAfter, type DueLedger } from '@on.auto/connections';
 import type { RecordWork, Work } from '@on.auto/definitions';
+import { changesConnectionTriggers, connectionTriggerFacts } from '@on.auto/definitions/connection-triggers';
 import { requestPlaceFacts } from '@on.auto/interaction';
 import {
   playbookOfStreamPrefix,
@@ -23,7 +24,7 @@ interface RoundsParts {
 
 export interface FactFollowed {
   readonly playbook: PlaybookAddress;
-  readonly record: Pick<RecordedEvent, 'id' | 'context'>;
+  readonly record: Pick<RecordedEvent, 'id' | 'type' | 'context'>;
 }
 
 interface OwedDelivery {
@@ -122,15 +123,19 @@ function wantedIn(parts: RoundsParts, playbookKey: string): Effect.Effect<boolea
   });
 }
 
+function owesARound(record: FactFollowed['record']): boolean {
+  return runEndings.includes(record.type) || changesConnectionTriggers(record);
+}
+
 function consumerOf(parts: RoundsParts, owed: OwedRounds): FactsConsumer {
   return {
     name: subscriptionRoundsName,
-    types: runEndings,
+    types: [...runEndings, ...connectionTriggerFacts],
     skippedAfterSweeps: Number.POSITIVE_INFINITY,
     wants: (playbookKey) => wantedIn(parts, playbookKey),
     batchOf: ({ playbook, record }, after) =>
       Effect.succeed(
-        after === undefined
+        after === undefined && owesARound(record)
           ? {
               deliveries: [
                 {

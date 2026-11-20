@@ -27,5 +27,6 @@ export { onTheStandingClock, standingClock, standingRenderClock, steppingClock }
 export { shapeNamed } from './shapes.ts';
 export { uncheckedPages } from './page-ports.ts';
 export { aGeneratedHistory } from '../read-model-testing/read-model-histories.ts';
+export { decidedIn } from '../read-model-testing/in-the-playbook.ts';
 export { definitionsReadModelOf } from '../read-model/definitions-read-model.ts';
 export { definitionNamesWith } from '../read-model-testing/staged-ledger.ts';

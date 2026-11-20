@@ -103,7 +103,7 @@ function rowsOf(
 }
 
 export function everyRowOf(
-  reader: ReadModelReader,
+  reader: Pick<ReadModelReader, 'readProjectedRows'>,
   table: string,
   where: readonly ProjectedCondition[],
   after: readonly (string | number)[] = [],

@@ -9,6 +9,7 @@
     "./attempts": "./src/attempts/index.ts",
     "./check": "./src/check.ts",
     "./check-handler": "./src/program-check/handed-checks.ts",
+    "./connection-triggers": "./src/read-model-reads/connection-triggers.ts",
     "./document": "./src/document.ts",
     "./event-time": "./src/events/event-time.ts",
     "./given-values": "./src/checking/given-values.ts",

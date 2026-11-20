@@ -15,43 +15,87 @@ export interface WaitingRequest extends PlaceOfARequest {
   readonly connection: string;
 }
 
+export interface ConnectionTrigger {
+  readonly connection: string;
+  readonly type: string;
+  readonly subject?: string;
+}
+
 const firstLine = 1;
 
-export function topicOf(destination: Destination, place: PlaceOfARequest): Effect.Effect<string | undefined> {
-  const { topic } = destination;
-  const parsed = topic === undefined ? undefined : parsedTemplate(toolBlockEngine, topic, firstLine);
-  if (parsed === undefined || Result.isFailure(parsed)) {
+function renderedTopic(
+  template: string,
+  variables: Readonly<Record<string, Schema.Json>>,
+): Effect.Effect<string | undefined> {
+  const parsed = parsedTemplate(toolBlockEngine, template, firstLine);
+  if (Result.isFailure(parsed)) {
     return Effect.undefined;
   }
   return Effect.map(renderClock, (clock) => {
-    const variables = { with: place.with, sent: { ...place.sent } };
     const rendered = renderedText(parsed.success, variables, mostReferenceBytes + 1, clock);
     return Result.isSuccess(rendered) && rendered.success !== '' ? rendered.success : undefined;
   });
 }
 
-function topicsOf(
-  waiting: Effect.Effect<readonly WaitingRequest[]>,
+export function topicOf(destination: Destination, place: PlaceOfARequest): Effect.Effect<string | undefined> {
+  const { topic } = destination;
+  return topic === undefined ? Effect.undefined : renderedTopic(topic, { with: place.with, sent: { ...place.sent } });
+}
+
+function triggerTopicsOf(
+  destination: Destination,
+  { type, subject }: ConnectionTrigger,
+): Effect.Effect<readonly (string | undefined)[]> {
+  const templates = (destination.events ?? []).flatMap((event) =>
+    event.type === type && event.topic !== undefined ? [event.topic] : [],
+  );
+  return Effect.forEach(templates, (template) => renderedTopic(template, subject === undefined ? {} : { subject }));
+}
+
+interface Through {
+  readonly connection: string;
+}
+
+type TopicsOf<Asked> = (destination: Destination, asked: Asked) => Effect.Effect<readonly (string | undefined)[]>;
+
+function keysOf(connection: string, topics: readonly (string | undefined)[]): readonly SubscriptionKey[] {
+  return topics.flatMap((topic) => (topic === undefined ? [] : [{ connection, topic }]));
+}
+
+function keysAskedBy<Asked extends Through>(
+  asking: Effect.Effect<readonly Asked[]>,
   arranged: ReadonlyMap<string, Destination>,
+  topicsOf: TopicsOf<Asked>,
 ): Effect.Effect<readonly SubscriptionKey[]> {
-  return Effect.flatMap(waiting, (requests) =>
+  return Effect.flatMap(asking, (asked) =>
     Effect.map(
-      Effect.forEach(requests, (request) => {
-        const destination = arranged.get(request.connection);
+      Effect.forEach(asked, (each) => {
+        const destination = arranged.get(each.connection);
         return destination === undefined
-          ? Effect.undefined
-          : Effect.map(topicOf(destination, request), (topic) =>
-              topic === undefined ? undefined : { connection: request.connection, topic },
-            );
+          ? Effect.succeed([])
+          : Effect.map(topicsOf(destination, each), (topics) => keysOf(each.connection, topics));
       }),
-      (keys: readonly (SubscriptionKey | undefined)[]) => keys.filter((key) => key !== undefined),
+      (keys: readonly (readonly SubscriptionKey[])[]) => keys.flat(),
     ),
   );
+}
+
+function askerOver<Asked extends Through>(
+  readIn: (playbook: PlaybookAddress) => Effect.Effect<readonly Asked[]>,
+  topicsOf: TopicsOf<Asked>,
+): Asker {
+  return ({ org, playbook, arranged }) =>
+    arranged.size === 0 ? Effect.succeed([]) : keysAskedBy(readIn({ org, playbook }), arranged, topicsOf);
 }
 
 export function requestsAskerOf(
   waitingIn: (playbook: PlaybookAddress) => Effect.Effect<readonly WaitingRequest[]>,
 ): Asker {
-  return ({ org, playbook, arranged }) =>
-    arranged.size === 0 ? Effect.succeed([]) : topicsOf(waitingIn({ org, playbook }), arranged);
+  return askerOver(waitingIn, (destination, request) => Effect.map(topicOf(destination, request), (topic) => [topic]));
+}
+
+export function triggersAskerOf(
+  triggersIn: (playbook: PlaybookAddress) => Effect.Effect<readonly ConnectionTrigger[]>,
+): Asker {
+  return askerOver(triggersIn, triggerTopicsOf);
 }

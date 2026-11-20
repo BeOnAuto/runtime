@@ -1,5 +1,5 @@
 import { eventSubscriptions, subscriptionRecordsOf, subscriptionRoundOf } from '@on.auto/connections';
-import type { RecordWork, Work } from '@on.auto/definitions';
+import { connectionTriggerFacts } from '@on.auto/definitions/connection-triggers';
 import { requestPlaceFacts } from '@on.auto/interaction';
 import type { PlaybookAddress } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
@@ -29,11 +29,16 @@ function aLedger() {
 }
 
 function followedIn(playbook: PlaybookAddress, id: string): FactFollowed {
-  return { playbook, record: { id, context: acted } };
+  return { playbook, record: { id, type: 'run_succeeded', context: acted } };
 }
 
 function followedOfAWorkflow(playbook: PlaybookAddress, id: string): FactFollowed {
-  return { playbook, record: { id, context: { ...acted, definitionName: 'approve' } } };
+  return { playbook, record: { id, type: 'run_failed', context: { ...acted, definitionName: 'approve' } } };
+}
+
+function savedIn(playbook: PlaybookAddress, id: string, definitionType: string): FactFollowed {
+  const context = { ...acted, definitionType, definitionName: 'triage', definitionVersion: 2 };
+  return { playbook, record: { id, type: 'definition_updated', context } };
 }
 
 function run<A>(effect: Effect.Effect<A, unknown>): Promise<A> {
@@ -104,8 +109,8 @@ describe('the facts a round of the subscriptions follows', () => {
   it('are the ends of runs, after which a request no longer waits, each owing its playbook one round', async () => {
     const rounds = roundsOver(aLedger());
 
-    expect(rounds.consumer.types).toEqual(['run_succeeded', 'run_rejected', 'run_failed']);
-    expect(rounds.consumer.types.filter((type) => !requestPlaceFacts.includes(type))).toEqual([]);
+    expect(rounds.consumer.types).toEqual(['run_succeeded', 'run_rejected', 'run_failed', ...connectionTriggerFacts]);
+    expect(rounds.consumer.types.filter((type) => !requestPlaceFacts.includes(type))).toEqual(connectionTriggerFacts);
     expect(await asked(rounds, followedOfAWorkflow(alpha, 'fact-1'))).toEqual(['fact-1 approve']);
     expect(await asked(rounds, followedIn(alpha, 'fact-2'))).toEqual(['fact-2 ']);
     expect(await run(rounds.consumer.batchOf(followedIn(alpha, 'fact-1'), 'fact-1', 100))).toEqual({
@@ -113,6 +118,14 @@ describe('the facts a round of the subscriptions follows', () => {
       through: 'fact-1',
       more: false,
     });
+  });
+
+  it('are also the facts of a workflow’s definition, after which its triggers may name other places, and no fact of another type', async () => {
+    const rounds = roundsOver(aLedger());
+
+    expect(await asked(rounds, savedIn(alpha, 'fact-1', 'workflow'))).toEqual(['fact-1 triage']);
+    expect(await asked(rounds, savedIn(beta, 'fact-2', 'reasoning'))).toEqual([]);
+    expect(await performedAt(rounds, nine)).toEqual([`${JSON.stringify(['acme', 'alpha'])} true`]);
   });
 
   it('are due as one item a playbook that calls out, performed once, and then owed no more', async () => {
@@ -182,11 +195,13 @@ describe('the playbooks the rounds want the facts of', () => {
   });
 });
 
+type RecordWork = Parameters<SubscriptionRounds['recording']>[0];
+
 const recordedNow: RecordWork = () => Effect.succeed({ id: 'fact-1', at: acted.at });
 
 const lineage = { causationId: null, correlationId: 'run-1' };
 
-async function recordedThrough(rounds: SubscriptionRounds, work: Work): Promise<void> {
+async function recordedThrough(rounds: SubscriptionRounds, work: Parameters<RecordWork>[1]): Promise<void> {
   await run(rounds.recording(recordedNow)({ ...alpha, id: 'run-1' }, work, lineage));
 }
 

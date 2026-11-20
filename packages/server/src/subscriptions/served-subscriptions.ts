@@ -7,6 +7,7 @@ import {
   type SubscriptionLedger,
   type SubscriptionLoopParts,
 } from '@on.auto/connections';
+import { connectionTriggersOf } from '@on.auto/definitions/connection-triggers';
 import { waitingRequestsOf, type WaitingParts } from '@on.auto/interaction';
 import type { DispatcherServices } from '@on.auto/operations';
 import {
@@ -38,6 +39,7 @@ export function subscriptionLoopPartsOf(serving: SubscriptionsServing): Subscrip
     ...serving,
     registry: ledger,
     waitingIn: (playbook) => waitingRequestsOf({ ledger, mostRequestBytesTo: tools.mostRequestBytesTo }, playbook),
+    triggersIn: (playbook) => connectionTriggersOf(ledger, playbook),
   };
 }
 
