@@ -22,6 +22,7 @@ import type {
   StreamReader,
   StreamWriter,
 } from '../index.ts';
+import type { OrgDefinitionsReader } from '../ledger/org-reader.ts';
 import type { PlaybookDefinitionsReader } from '../ledger/playbook-reader.ts';
 import type { PlaybookDefinitionsWriter } from '../ledger/playbook-writer.ts';
 import type { OrgAppendedFactsReader, PlaybookAppendedFactsReader } from '../ledger/stream-ports.ts';
@@ -63,7 +64,9 @@ describe('the ports a handler sees', () => {
   it('bind every port a handler sees to the org or playbook of the call', () => {
     expectTypeOf<OrgContext['Service']>().toEqualTypeOf<OrgAddress>();
     expectTypeOf<PlaybookContext['Service']>().toEqualTypeOf<PlaybookAddress>();
-    expectTypeOf<OrgReader['Service']>().toEqualTypeOf<StreamReader & OrgAppendedFactsReader & OrgProjectionReader>();
+    expectTypeOf<OrgReader['Service']>().toEqualTypeOf<
+      StreamReader & OrgAppendedFactsReader & OrgProjectionReader & OrgDefinitionsReader
+    >();
     expectTypeOf<OrgWriter['Service']>().toEqualTypeOf<StreamWriter>();
     expectTypeOf<PlaybookReader['Service']>().toEqualTypeOf<
       StreamReader &

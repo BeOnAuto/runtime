@@ -36,6 +36,7 @@ export interface ActivityRow {
   readonly waits_on: string | null;
   readonly expires_at: number | null;
   readonly about: string | null;
+  readonly definitionId?: string;
   readonly reopenedBy?: string;
   readonly goal?: GoalShown;
 }
@@ -106,7 +107,7 @@ export function addressOfRow({ form, position: { playbook, key } }: ActivityRow)
 }
 
 export function servedRow(
-  { form, position, expires_at: expiresAt, reopenedBy: _reopenedBy, ...row }: ActivityRow,
+  { form, position, expires_at: expiresAt, definitionId: _definitionId, reopenedBy: _reopenedBy, ...row }: ActivityRow,
   seen: boolean | null,
 ): ServedActivityRow {
   return {

@@ -16,6 +16,7 @@ import {
   type ActivityTable,
   type PageBounds,
 } from './activity-tables.ts';
+import { commentNamedNow, heldByDefinition, namesAskedBy } from './comment-activity-rows.ts';
 import { setAsideIn, type RequestsSetAside } from './needs-you.ts';
 import type { PlaybookRegister } from './playbook-register.ts';
 
@@ -93,6 +94,20 @@ function startedBy(row: ActivityRow) {
   });
 }
 
+function namedNow(rows: readonly ActivityRow[]) {
+  return Effect.gen(function* () {
+    const reader = yield* OrgReader;
+    const read = yield* Effect.forEach(
+      namesAskedBy(rows),
+      (asked) =>
+        Effect.map(reader.namesHeldInPlaybook(asked.playbook, asked.type), (held) => heldByDefinition(asked, held)),
+      { concurrency: readsAtOnce },
+    );
+    const names = new Map(read.flat());
+    return rows.map((row) => commentNamedNow(row, names));
+  });
+}
+
 function changesShown({ changes }: PlaybookRegister, asked: PageAsked): readonly ActivityRow[] {
   return asked.kinds.has('new')
     ? changes.filter(
@@ -133,7 +148,9 @@ export function pageOf(
     const merged = [...read.flat(), ...changesShown(register, asked)].toSorted((left, right) =>
       newestFirst(left.position, right.position),
     );
-    const rows = yield* Effect.forEach(merged.slice(0, asked.limit), startedBy, { concurrency: readsAtOnce });
+    const rows = yield* namedNow(
+      yield* Effect.forEach(merged.slice(0, asked.limit), startedBy, { concurrency: readsAtOnce }),
+    );
     const hasMore = merged.length > asked.limit;
     const last = rows.at(-1);
     const page: Page = { rows, hasMore, nextCursor: hasMore && last !== undefined ? cursorOf(last.position) : null };

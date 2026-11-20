@@ -9,6 +9,7 @@ import {
   prefixedReader,
   prefixedWriter,
   streamPrefixOfOrg,
+  streamPrefixOfPlaybook,
 } from '../ledger/bound-ports.ts';
 import type { LedgerPorts } from '../ledger/ledger.ts';
 import { OrgReader } from '../ledger/org-reader.ts';
@@ -29,6 +30,8 @@ export function runInOrg<A extends Succeeded>(
       ...prefixedReader(ledger, prefix),
       ...orgBoundAppendedFactsReader(ledger, { org }),
       ...orgBoundProjectionReader(ledger, { org }),
+      namesHeldInPlaybook: (playbook, definitionType) =>
+        ledger.namesHeldIn({ playbookKey: streamPrefixOfPlaybook({ org, playbook }), definitionType }),
     }),
   );
   return registration.kind === 'query'

@@ -81,6 +81,34 @@ describe('the comments in the activity of the org, over HTTP', () => {
   });
 });
 
+describe('a comment on a definition in the activity of the org, over HTTP', () => {
+  it('names the playbook and the name the definition has now, once it moves to another playbook and is renamed', async () => {
+    const { ofTheAdmin } = commented;
+    const { id } = await made(addresses.version);
+    const changed = [
+      await ofTheAdmin.call('POST', '/v1/orgs/acme/playbooks', { playbook: 'beta', name: 'Beta' }),
+      await ofTheAdmin.call('POST', `${ofTheAdmin.playbook}/move`, {
+        to: 'beta',
+        definitions: [{ type: 'computation', name: 'tally' }],
+      }),
+      await ofTheAdmin.call('PUT', '/v1/orgs/acme/playbooks/beta/definitions/computation/tally', { new_name: 'count' }),
+    ];
+    const read = await ofTheAdmin.call('GET', '/v1/orgs/acme/activity?kind=comment');
+
+    expect(changed.map(({ status }) => status)).toEqual([201, 200, 200]);
+    expect(read.body).toMatchObject({
+      rows: [
+        {
+          address: `beta/comments/${id}`,
+          playbook: 'beta',
+          about: 'beta/definitions/computation/count/1',
+          definition: { type: 'computation', name: 'count', version: 1 },
+        },
+      ],
+    });
+  });
+});
+
 const ChangesSchema = Schema.Struct({ cursor: Schema.String });
 
 describe('the changes of a playbook, over HTTP', () => {

@@ -1,14 +1,31 @@
-import { Effect } from 'effect';
+import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { RunOutcomeWindow } from '../index.ts';
+import { OrgReader, defineQuery, type RunOutcomeWindow } from '../index.ts';
 import { placedIn } from '../projections-testing/definition-rows-behaviour.ts';
 import { readTallyRows, runTallyRows } from '../projections/tally-rows.ts';
 import { readRunTallies, runFacts, runTallies, type RunFact } from '../run-outcomes/run-tallies.ts';
-import { acmeAdmin } from '../testing/callers.ts';
-import { harness, toPlaybook } from '../testing/harness.ts';
+import { acmeAdmin, globexAdmin } from '../testing/callers.ts';
+import { harness, toOrg, toPlaybook } from '../testing/harness.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
+
+const NamesAskedSchema = Schema.Struct({ playbook: Schema.String, type: Schema.String });
+
+const listNamesHeld = defineQuery('org', {
+  name: 'list_names_held',
+  title: 'List names held',
+  description: 'Lists the names one playbook of the org holds, of one type of definition.',
+  route: { method: 'GET', path: '/playbooks/{playbook}/names' },
+  inputSchema: NamesAskedSchema,
+  outputSchema: Schema.Struct({ names: Schema.Array(Schema.String) }),
+  reasons: [],
+  handle: ({ playbook, type }) =>
+    Effect.map(
+      OrgReader.use((reader) => reader.namesHeldInPlaybook(playbook, type)),
+      (held) => ({ names: held.map(({ name }) => name) }),
+    ),
+});
 
 const unreadableWindows: readonly (readonly [RunOutcomeWindow, string])[] = [
   [{ from: '2026-10-02', to: '2026-10-01' }, 'RangeError: The days from "2026-10-02" to "2026-10-01" are not a window'],
@@ -45,6 +62,31 @@ describe('the read of the outcomes of runs, bound to a call', () => {
       status: 'failed',
     });
     expect(reported().map(({ original }) => String(original))).toEqual([defect]);
+  });
+});
+
+describe('the read of the names one playbook of the org holds, bound to an org call', () => {
+  it('reads the names of a type that playbook holds, and nothing of another playbook, type or org', async () => {
+    const { dispatcher: d, ledger, run } = harness();
+    await placedIn(ledger.service, 'triage', 'alpha');
+    await placedIn(ledger.service, 'brief', 'alpha');
+    await placedIn(ledger.service, 'd2', 'beta');
+    const namesOf = (asked: typeof NamesAskedSchema.Type, caller = acmeAdmin) =>
+      run(d.dispatchToOrg(listNamesHeld.registration, toOrg(caller.org)(caller, asked)));
+
+    expect(
+      await Promise.all([
+        namesOf({ playbook: 'alpha', type: 'workflow' }),
+        namesOf({ playbook: 'beta', type: 'workflow' }),
+        namesOf({ playbook: 'alpha', type: 'reasoning' }),
+        namesOf({ playbook: 'alpha', type: 'workflow' }, globexAdmin),
+      ]),
+    ).toEqual([
+      { status: 'succeeded', output: { names: ['brief', 'triage'] } },
+      { status: 'succeeded', output: { names: ['d2'] } },
+      { status: 'succeeded', output: { names: [] } },
+      { status: 'succeeded', output: { names: [] } },
+    ]);
   });
 });
 

@@ -1,6 +1,8 @@
+import type { Ledger } from '@on.auto/operations';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { commenting, minute, reader, run, step } from '../testing/commenting.ts';
+import { closeTheWeek, commenting, minute, reader, run, step } from '../testing/commenting.ts';
 import { ada, listedOf, markedOf, outputOf, priya } from '../testing/harness.ts';
 
 const later = '2026-11-02T12:00:00.000Z';
@@ -96,6 +98,71 @@ describe('the comment rows of the activity, in particular', () => {
       expect.stringMatching(/^playbooks\/sales\//u),
       expect.stringMatching(/^playbooks\/finance\//u),
     ]);
+  });
+});
+
+function namesAsked(answered: 'as held' | 'none') {
+  const asked: string[] = [];
+  const reads = (ledger: Ledger['Service']): Ledger['Service'] => ({
+    ...ledger,
+    namesHeldIn: (kind) => {
+      asked.push(`${kind.playbookKey}${kind.definitionType}`);
+      return answered === 'none' ? Effect.succeed([]) : ledger.namesHeldIn(kind);
+    },
+  });
+  return { asked, reads };
+}
+
+const onTheVersion = 'finance/definitions/workflow/close-the-week/4/parts/source';
+
+const named = (name: string) => ({ type: 'workflow', name, version: 4 });
+
+describe('the comments on a definition in the activity, after it moves to another playbook or is renamed', () => {
+  it('name the playbook and the name it has now, at the version, step and part they were made on', async () => {
+    const watching = namesAsked('as held');
+    const { list, made, moved, renamed } = await commenting(watching.reads);
+    const onStep = await made(step, minute(1));
+    const onPart = await made(onTheVersion, minute(2), reader);
+    await moved(closeTheWeek, 'sales');
+    const toTheReader = listedOf(await list(reader, { kind: 'comment', playbook: 'finance' }, later)).rows;
+    const askedForTheReader = [...watching.asked];
+    const afterTheMove = outputOf(await list(ada, { kind: 'comment' }, later));
+    const askedAfterTheMove = [...watching.asked];
+    await renamed(closeTheWeek, 'end-the-week', minute(21));
+    const afterTheRename = outputOf(await list(ada, { kind: 'comment' }, later));
+
+    expect([toTheReader, askedForTheReader, askedAfterTheMove]).toEqual([[], [], ['playbook/acme/sales/workflow']]);
+    expect(afterTheMove).toMatchObject({
+      rows: [
+        {
+          address: `sales/comments/${onPart}`,
+          playbook: 'sales',
+          about: 'sales/definitions/workflow/close-the-week/4/parts/source',
+          definition: named('close-the-week'),
+        },
+        {
+          address: `sales/comments/${onStep}`,
+          about: 'sales/definitions/workflow/close-the-week/4/steps/do/1/review',
+          definition: named('close-the-week'),
+        },
+      ],
+    });
+    expect(afterTheRename).toMatchObject({
+      rows: [
+        { about: 'sales/definitions/workflow/end-the-week/4/parts/source', definition: named('end-the-week') },
+        { about: 'sales/definitions/workflow/end-the-week/4/steps/do/1/review', definition: named('end-the-week') },
+      ],
+    });
+  });
+
+  it('keep the address they were made on where the names of the playbook answer nothing for them', async () => {
+    const { list, made, renamed } = await commenting(namesAsked('none').reads);
+    await made(step, minute(1));
+    await renamed(closeTheWeek, 'end-the-week');
+
+    expect(outputOf(await list(ada, { kind: 'comment' }, later))).toMatchObject({
+      rows: [{ about: step, definition: named('close-the-week') }],
+    });
   });
 });
 

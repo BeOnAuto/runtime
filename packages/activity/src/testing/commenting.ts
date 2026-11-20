@@ -5,7 +5,7 @@ import { listComments, listCommentsInOrg } from '../comments/list-comments.ts';
 import { makeComment, makeCommentInOrg } from '../comments/make-comment.ts';
 import { reopenComment, reopenCommentInOrg } from '../comments/reopen-comment.ts';
 import { resolveComment, resolveCommentInOrg } from '../comments/resolve-comment.ts';
-import { activityHarness, ada, outputOf, priya } from './harness.ts';
+import { activityHarness, ada, outputOf, priya, type LedgerReads } from './harness.ts';
 import { definitionMoved, definitionRenamed, definitionRetired, type RecordedFact } from './recorded-facts.ts';
 import { definitionStreamOf, definitions, filed, type FiledDefinition } from './scenario.ts';
 
@@ -66,8 +66,8 @@ function definitionChanges(record: Recording) {
   };
 }
 
-export async function commenting() {
-  const harness = activityHarness();
+export async function commenting(reads?: LedgerReads) {
+  const harness = activityHarness(reads);
   await harness.created(priya, 'finance', '2026-11-01T10:00:00.000Z');
   await harness.created(ada, 'sales', '2026-11-01T10:00:00.000Z');
   await Promise.all(
