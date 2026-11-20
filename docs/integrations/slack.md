@@ -39,9 +39,9 @@ Auto's Slack app works only in workspaces on a paid Slack plan, as Slack require
 Your company creates the app at Slack and owns it. Auto connects to it as Slack Bot, with the app's bot token, a code Slack gives the app when it is installed. A playbook can then do what [Use Slack in a playbook](#use-slack-in-a-playbook) lists, with these differences:
 
 - Your app reads and posts only in the channels you add it to.
-- Messages come from your app, under its name. An app made from the link is named Auto.
+- Messages come from your app, under its name. An app made with **Create your Slack app** is named Auto.
 - You can't talk to Auto in Slack through your app. That takes Auto's Slack app.
-- Slack doesn't tell Auto when someone replies to a request. Auto checks instead: every few seconds at first, and every five minutes at most, as [Answering by reply](../reference/interaction-format.md#answering-by-reply) sets out.
+- On an Auto that you or your company runs, Slack tells Auto when someone replies to a request, once you give it your app's app-level token, as step 5 of [Create your app and connect it](#create-your-app-and-connect-it) shows. Without that token, and on Auto Cloud, Auto checks for replies on a timer: every few seconds at first, and every five minutes at most, as [Answering by reply](../reference/interaction-format.md#answering-by-reply) sets out.
 - Slack's limit on reading a conversation, 15 messages a read and one read a minute, doesn't apply to your app.
 
 ### Create your app and connect it
@@ -56,14 +56,29 @@ One person does these steps: someone with permission to change your organization
 
    Or, in Studio, open **Settings**, then **Connections**, select **Slack Bot** under **Add a connection**, and select **Connect**.
 
-2. Open the page of Studio your agent gives you. If you started in Studio, it opens by itself.
-3. On that page, select **Get a key at api.slack.com**, signed in to Slack. Slack opens with a new app filled in, named Auto: choose your workspace and select **Create**. If you made your app before, skip this step: open it at [api.slack.com/apps](https://api.slack.com/apps), select **OAuth & Permissions** and go on from step 5.
-4. In the app's settings, select **OAuth & Permissions**, then **Install to Workspace** and **Allow**. Where your workspace takes only approved apps, Slack asks you to request the app instead, and you install it once it is approved.
-5. Under **OAuth Tokens**, copy the token that starts with `xoxb-`. This is the app's bot token. Keep it private: anyone who has it can act as your app.
-6. Back on the page of Studio, paste the bot token under **Slack bot token**, and select **Approve**. Auto checks the token with Slack before it saves it, and Studio then shows the connection as connected. If Slack refuses the token, the page says so under the field, and nothing is saved.
-7. In Slack, add your app to each channel your playbooks use. In the channel, send `/invite @` followed by your app's name.
+2. Open the page of Studio your agent gives you, **Approve a connection**. If you started in Studio, it opens by itself. The steps below follow the steps on that page.
+3. Under **Create the app in Slack**, select **Create your Slack app**, signed in to Slack. Slack opens in a new tab with the app already filled in, named Auto. It shows the app's settings as a block of code, with two notices. That is expected: leave everything as it is, choose your workspace, then select **Next** and **Create**. If you made your app before, skip this step: open it at [api.slack.com/apps](https://api.slack.com/apps), select **OAuth & Permissions** and copy its token as step 4 says.
+4. Under **Install the app and copy its token**, the page tells you what to do in Slack: select **OAuth & Permissions**, then **Install to Workspace** and **Allow**. Where your workspace takes only approved apps, Slack asks you to request the app instead, and you install it once it is approved. Copy the **Bot User OAuth Token**, which starts with `xoxb-`, and paste it on the page of Studio under **Slack bot token**. Keep it private: anyone who has it can act as your app.
+5. On an Auto that you or your company runs, the page has one more step, **Get replies instantly**, marked **Optional**. With it, Slack tells Auto when someone replies to a request. Without it, Auto checks for replies on a timer. In Slack, select **Basic Information**, then under **App-Level Tokens** select **Generate Token and Scopes**. Enter any name, add the scope `connections:write`, select **Generate**, then copy the token, which starts with `xapp-`, and paste it under **Slack app-level token**. On Auto Cloud the page doesn't have this step.
+6. Under **Choose which playbooks can use it**, select **All playbooks** or **Only select playbooks**. A playbook your agent asked for is already chosen, and you can change it.
+7. Select **Approve**. Auto checks what you pasted with Slack before it saves it, and the page then says the connection is connected. If Slack refuses a token, the page says so under its field, and nothing is saved.
+8. Under **One more thing, in Slack**, the page reminds you to add your app to each channel your playbooks use. In the channel, type `/invite @Auto` and send it. If your app has another name, type that name in place of Auto.
 
-Auto keeps the token in its secret store, and your agent never sees it. Give a function in your playbook the Slack Bot tools as [Use Slack in a playbook](#use-slack-in-a-playbook) shows. To stop using your app, remove the Slack Bot connection as [In Auto](#in-auto) shows, and remove the app at Slack as [At Slack](#at-slack) shows. For help, see [Get help](#get-help).
+Auto keeps each token in its secret store, and your agent never sees it. Give a function in your playbook the Slack Bot tools as [Use Slack in a playbook](#use-slack-in-a-playbook) shows. To stop using your app, remove the Slack Bot connection as [In Auto](#in-auto) shows, and remove the app at Slack as [At Slack](#at-slack) shows. For help, see [Get help](#get-help).
+
+On an Auto that you or your company runs, the server needs outgoing HTTPS and WebSocket connections on port 443 to `slack.com` and to the address Slack gives Auto for the connection, such as `wss.slack.com`. Nothing incoming is needed. If Auto can't reach an address when you select **Approve**, the page names it. If Auto's own settings limit the hosts connections may reach, whoever runs your Auto allows these hosts there too.
+
+### An app you made before
+
+This is for an Auto that you or your company runs. An app you made by hand, without **Create your Slack app**, needs three more settings before Slack can tell Auto when someone replies. Or make the app again, as step 3 above shows.
+
+1. In the app's settings at [api.slack.com/apps](https://api.slack.com/apps), select **Socket Mode** and turn on **Enable Socket Mode**.
+2. Under **Event Subscriptions**, turn on events and subscribe to the bot events `message.channels` and `message.groups`.
+3. Under **OAuth & Permissions**, install the app again.
+4. Make the app-level token, as step 5 above shows.
+5. In Studio, select **Connect again** on the Slack Bot connection's row. The page opens with its steps again: skip **Create the app in Slack**, paste the bot token under **Slack bot token** and the app-level token under **Slack app-level token**, and select **Approve**.
+
+Keep Socket Mode on. With it off, Auto still shows the connection as connected, and checks for replies on a timer.
 
 ## Use Slack in a playbook
 
