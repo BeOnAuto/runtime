@@ -135,6 +135,66 @@ describe('a card made for Slack', () => {
   });
 });
 
+function markedAsLink(value?: string): CardElement {
+  const card: CardElement = {
+    type: 'card',
+    children: [
+      {
+        type: 'actions',
+        children: [
+          {
+            type: 'button',
+            id: 'auto-link:a',
+            label: 'Go',
+            style: 'primary',
+            ...(value === undefined ? {} : { value }),
+          },
+        ],
+      },
+    ],
+  };
+  return card;
+}
+
+describe('a button marked as a link', () => {
+  it('is a link button with its style', () => {
+    const card: CardElement = {
+      type: 'card',
+      children: [
+        {
+          type: 'actions',
+          children: [
+            { type: 'button', id: 'auto-link:a', label: 'Go', style: 'danger', value: 'https://example.com' },
+            { type: 'button', id: 'auto-link:b', label: 'Next', value: 'https://example.com/next' },
+          ],
+        },
+      ],
+    };
+
+    expect(slackCardOf(card)).toEqual(
+      Result.succeed({
+        type: 'card',
+        children: [
+          {
+            type: 'actions',
+            children: [
+              { type: 'link-button', label: 'Go', url: 'https://example.com', style: 'danger' },
+              { type: 'link-button', label: 'Next', url: 'https://example.com/next' },
+            ],
+          },
+        ],
+      }),
+    );
+  });
+
+  it('is refused when its value is no address', () => {
+    const refusal = Result.fail(['The url of a LinkButton must be a web address']);
+
+    expect(slackCardOf(markedAsLink('nowhere'))).toEqual(refusal);
+    expect(slackCardOf(markedAsLink())).toEqual(refusal);
+  });
+});
+
 describe('a card Slack cannot show', () => {
   it('refuses a button in actions, which Slack would take clicks on', () => {
     const card: CardElement = {

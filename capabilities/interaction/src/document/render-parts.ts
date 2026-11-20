@@ -44,12 +44,13 @@ function renderedBodyOf(
   render: string,
   parts: DocumentParts,
   inputSchema: Schema.JsonObject | undefined,
+  takesAnswer: boolean,
 ): Checked<RequestBody> {
   if (!isRenderTargetName(render)) {
     return Result.fail([]);
   }
   return Result.flatMap(readCardBody(parts), ({ card, lines: bodyLines }) => {
-    const issues = cardBodyIssues(render, card, bodyLines, inputSchema);
+    const issues = cardBodyIssues(render, card, bodyLines, { inputSchema, takesAnswer });
     return issues.length > 0 ? Result.fail(issues) : Result.succeed({ render: { target: render, card } });
   });
 }
@@ -65,7 +66,7 @@ export function bodyOf(
     return Result.map(messageOf(parts, inputSchema), (message) => ({ message }));
   }
   const refused = [...targetIssues(render, lines), ...wayIssues(written, lines)];
-  const body = renderedBodyOf(render, parts, inputSchema);
+  const body = renderedBodyOf(render, parts, inputSchema, written.output?.schema !== undefined);
   const found = [...refused, ...(Result.isFailure(body) ? body.failure : [])];
   return found.length > 0 ? Result.fail(found) : body;
 }

@@ -7,8 +7,8 @@ import { Effect, Result, type Schema } from 'effect';
 import { parseInteractionDocument, type DocumentBounds } from '../document/document-parsing.ts';
 import type { InteractionFunctionDefinitionDocument } from '../document/interaction-document.ts';
 import { callCheck } from './call-check.ts';
+import { requestCheck, type RequestCheckPorts } from './request-checks.ts';
 import { wayCheck, type WayPorts } from './request-ways.ts';
-import { firstMessageCheck, tellCheck, type TellCheckPorts } from './tell-check.ts';
 
 type RequestBounds = Pick<DocumentBounds, 'mostRequestBytesTo'>;
 
@@ -52,20 +52,17 @@ export function summarize(document: InteractionFunctionDefinitionDocument): Defi
 
 export function definitionReadingOf(
   tools: WayPorts & RequestBounds,
-  conversationsOf: TellCheckPorts['conversationsOf'],
+  conversationsOf: RequestCheckPorts['conversationsOf'],
 ) {
   const calls = callCheck(tools);
   const ways = wayCheck(tools);
-  const tells = tellCheck({ tools, conversationsOf });
+  const requests = requestCheck({ tools, conversationsOf });
   return {
     parse: (source: string) => parse(source, tools),
     check: (document: InteractionFunctionDefinitionDocument, source: string, place: PlaybookAddress) =>
       document.shape === 'call'
         ? calls(document, place)
-        : Effect.andThen(
-            firstMessageCheck(document),
-            Effect.andThen(tells(document, place), ways(document, source, place)),
-          ),
+        : Effect.andThen(requests(document, place), ways(document, source, place)),
     summarize,
   };
 }

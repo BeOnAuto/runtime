@@ -7,6 +7,7 @@ import { attempted } from './render-failures.ts';
 import type { RenderedMessage, RenderState } from './rendered-message.ts';
 import { slackMessageOfCard } from './slack-cards.ts';
 import { slackLimits } from './slack-limits.ts';
+import { withStyledLinksAsButtons } from './styled-links.ts';
 import { isList, isRecord } from './written-values.ts';
 
 type WrittenCard = Parameters<typeof toCard>[0];
@@ -34,10 +35,11 @@ export function slackMessageOf(
   written: unknown,
   state: RenderState,
 ): Result.Result<RenderedMessage, readonly string[]> {
-  if (!isWrittenCard(written)) {
+  const rewritten = withStyledLinksAsButtons(written);
+  if (!isWrittenCard(rewritten)) {
     return Result.fail(['The body is not a card: write `root` and `elements`']);
   }
-  const writtenCard = { ...written, state: { ...state } };
+  const writtenCard = { ...rewritten, state: { ...state } };
   const attemptedCard = attempted(() => toCard(writtenCard, { limits: slackLimits }));
   return Result.flatMap(attemptedCard, (built: ReadonlyDeep<CardElement>) => slackMessageOfCard(built));
 }

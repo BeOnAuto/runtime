@@ -27,10 +27,13 @@ const reviewCard: readonly string[] = [
   '  card:',
   '    type: Card',
   '    props: { title: Campaign brief review }',
-  '    children: [review]',
+  '    children: [review, footnote]',
   '  review:',
   '    type: Text',
   '    props: { content: { $state: /input/review } }',
+  '  footnote:',
+  '    type: Text',
+  '    props: { content: Nothing to do, style: muted }',
 ];
 
 export interface RenderedDocumentParts {

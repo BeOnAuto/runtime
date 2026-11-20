@@ -14,13 +14,15 @@ export type WrittenWay = WrittenRoute | typeof forAnAgent | null;
 export function wayOf(
   way: WrittenWay,
   lines: SourceLines,
-): Pick<RequestDocument, 'route' | 'heldForAnAgent' | 'repliesLine' | 'eachLine'> {
+): Pick<RequestDocument, 'route' | 'heldForAnAgent' | 'repliesLine' | 'eachLine' | 'deliverLine'> {
+  const deliverLine = issueAt(lines, '/deliver', '').line;
   const lineOf = {
     repliesLine: issueAt(lines, '/replies/tell', '').line,
     eachLine: issueAt(lines, '/replies/read/each', '').line,
+    deliverLine,
   };
   if (way === null || way === forAnAgent) {
-    return { heldForAnAgent: { said: way === forAnAgent, line: issueAt(lines, '/deliver', '').line }, ...lineOf };
+    return { heldForAnAgent: { said: way === forAnAgent, line: deliverLine }, ...lineOf };
   }
   return { route: way, ...lineOf };
 }

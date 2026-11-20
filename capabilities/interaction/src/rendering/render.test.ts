@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { problemsOf, renderedDocumentOf } from '../testing/route-documents.ts';
 import { renderedCard } from './card-rendering.ts';
+import { layoutGuide } from './layout-guide.ts';
 import { attempted } from './render-failures.ts';
 import {
   renderCompanionGuides,
@@ -111,7 +112,32 @@ describe('the refusals and limits of the guide of a render target', () => {
   });
 
   it('is short enough to read in one call', () => {
-    expect(Buffer.byteLength(guide)).toBeLessThan(10_000);
+    expect(Buffer.byteLength(guide)).toBeLessThan(14_000);
+  });
+});
+
+describe('the layout of the guide of a render target', () => {
+  it('lays the card out before it shows any example', () => {
+    expect(guide).toContain(`\n${layoutGuide}\n## An example\n`);
+    expect(guide.indexOf('## Lay the card out')).toBeGreaterThan(guide.indexOf('# Cards for Slack'));
+    expect(guide.indexOf('## Lay the card out')).toBeLessThan(guide.indexOf('## An example'));
+    expect(guide).toContain('**Check before saving.**');
+  });
+
+  it('shows three shapes after the example, as component names only', () => {
+    expect(guide.indexOf('## Shapes')).toBeGreaterThan(guide.indexOf('## An example'));
+    expect(guide.indexOf('## Shapes')).toBeLessThan(guide.indexOf('## In the front matter'));
+    expect(guide).toContain('none is a pattern to copy.');
+    expect(guide).toContain(
+      'A question:\n\n```text\nCard (title, subtitle)\n  Text\n  Fields\n  Text (input prose)\n  Divider\n  Text (bold)\n  Fields (one per answer)\n  Text (muted)\n  Actions\n    LinkButton\n```',
+    );
+    expect(guide).toContain('Something happened, nothing to do:');
+    expect(guide).toContain('A report:\n\n```text\nCard (title, subtitle)\n  Text\n  Fields\n  Chart\n  Table\n');
+  });
+
+  it('says that a message through a connection that shows cards must be a card, and what is refused for layout', () => {
+    expect(guide).toContain('must be a card, so a function with no `render` is refused there.');
+    expect(guide).toContain('When it is saved, for layout:');
   });
 });
 

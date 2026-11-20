@@ -1,5 +1,6 @@
 import { interactionType } from '../capability/interaction-type.ts';
 import { interactionBounds } from '../run/run-bounds.ts';
+import { layoutGuide } from './layout-guide.ts';
 import { renderTargetNames, renderTargetOf, type RenderTargetName } from './render-targets.ts';
 import type { CatalogEntry } from './slack-catalog.ts';
 import { entriesOf, hasKey, isList, isRecord } from './written-values.ts';
@@ -123,11 +124,52 @@ function limitsOf({ limits }: Target): string {
   ].join('\n');
 }
 
+const shapes: readonly (readonly [string, readonly string[]])[] = [
+  [
+    'Something happened, nothing to do:',
+    ['Card (title, subtitle)', '  Fields', '  Actions', '    LinkButton', '  Text (muted)'],
+  ],
+  [
+    'A question:',
+    [
+      'Card (title, subtitle)',
+      '  Text',
+      '  Fields',
+      '  Text (input prose)',
+      '  Divider',
+      '  Text (bold)',
+      '  Fields (one per answer)',
+      '  Text (muted)',
+      '  Actions',
+      '    LinkButton',
+    ],
+  ],
+  ['A report:', ['Card (title, subtitle)', '  Text', '  Fields', '  Chart', '  Table', '  Actions', '    LinkButton']],
+];
+
+const fence = '```';
+
+function skeletonOf([label, lines]: readonly [string, readonly string[]]): string {
+  return [label, '', `${fence}text`, ...lines, fence].join('\n');
+}
+
+function shapesOf(): string {
+  return [
+    '## Shapes',
+    '',
+    'These three skeletons show how the zones fall for different messages, and none is a pattern to copy.',
+    '',
+    shapes.map((shape) => skeletonOf(shape)).join('\n\n'),
+    '',
+  ].join('\n');
+}
+
 function introductionOf(name: RenderTargetName, { label, renderedAs, example }: Target): string {
   return `# Cards for ${label}
 
 A message to a person can be a card with text, fields, a table, a chart and link buttons. Write \`render: ${name}\` in the front matter of an interaction function. The body after the front matter is then a card in YAML, not a Liquid text, and the run turns it into ${renderedAs} and offers it to \`deliver.with\` as \`rendered\`. This guide holds everything about the card. The \`interaction-function\` guide holds the other keys of the function: \`to\`, \`expires\`, \`deliver\`, \`replies\`, \`input\` and \`output\`.
 
+${layoutGuide}
 ## An example
 
 This function tells a team how the week's orders went. It takes no answer, so it is a notification.
@@ -137,8 +179,10 @@ This function tells a team how the week's orders went. It takes no answer, so it
 ${example.trimEnd()}
 \`\`\`
 
+${shapesOf()}
 ## In the front matter
 
+- A message sent through a connection that shows cards must be a card, so a function with no \`render\` is refused there.
 - \`render: ${name}\` is the only value that renders. It is refused with \`call\`, with no \`deliver\`, and with \`deliver: agent\`, since an agent reads text.
 - \`deliver.with\` must read \`rendered\`, and a function with no \`render\` must not. In it, \`rendered\` is ${renderedAs} and \`message\` is the plain text of the same card. \`'{{ rendered }}'\` alone is sent as the list; among other text it is refused.
 - \`deliver\` names the tool of a connection that sends a message with blocks, as the \`interaction-function\` guide sets out. Read what the tool takes with \`introspect\` first.
@@ -165,7 +209,8 @@ A prop may read the run instead of holding a value:
 function refusedWhenOf(name: RenderTargetName): string {
   return `## What is refused when
 
-- When the function is saved: a \`render\` that is not \`${name}\`; a body that is not YAML, or not a mapping of \`root\` and \`elements\`; an element that is not a mapping, has a \`type\` not listed above, or has \`children\` that are not ids under \`elements\`; a path that does not start with \`/input\`, \`/today\` or \`/now\`, or names a property \`input.schema\` does not allow; props that do not fit the type, in an element with no expression and no \`repeat\`.
+- When the function is saved: a \`render\` that is not \`${name}\`; a body that is not YAML, or not a mapping of \`root\` and \`elements\`; an element that is not a mapping, has a \`type\` not listed above, or has \`children\` that are not ids under \`elements\`; a path that does not start with \`/input\`, \`/today\` or \`/now\`, or names a property \`input.schema\` does not allow; props that do not fit the type, in an element with no expression and no \`repeat\`; a LinkButton \`style\` that is not \`primary\` or \`danger\`.
+- When it is saved, for layout: a function that sends through a connection that shows cards and writes no \`render\`, and a card that breaks the rules of "Lay the card out" in what it writes literally: a Card with no title or fewer than two children, a Text that holds a link, two or more \`Label: value\` lines or more than 600 characters, more than one bold Text, more than one LinkButton with \`style: primary\`, or no muted Text in a function that takes an answer. A prop that reads the input is not judged.
 - When it runs: a card that cannot be made ends the run \`invalid_input\` with an issue for each problem, such as a root that is not a \`Card\`, a value read from the input that does not fit its prop, a row with the wrong number of cells, a series with the wrong number of values, a \`Field\` outside \`Fields\`, an empty card, or a limit passed. Text or blocks over the limits end it \`conflict\`, kind \`unworkable\`.
 `;
 }

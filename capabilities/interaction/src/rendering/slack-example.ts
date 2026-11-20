@@ -48,5 +48,5 @@ elements:
     children: [report]
   report:
     type: LinkButton
-    props: { label: Open the report, url: { $state: /input/reportUrl } }
+    props: { label: Open the report, url: { $state: /input/reportUrl }, style: primary }
 `;

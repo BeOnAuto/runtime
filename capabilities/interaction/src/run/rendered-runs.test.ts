@@ -38,6 +38,7 @@ describe('a request with render slack, once its run asks', () => {
           rendered: [
             { type: 'header', text: { type: 'plain_text', text: 'Campaign brief review' } },
             { type: 'section', text: { type: 'mrkdwn', text: 'The headline is clear and the offer is on page one.' } },
+            { type: 'context', elements: [{ type: 'mrkdwn', text: 'Nothing to do' }] },
           ],
           deliver: { with: { blocks: '{{ rendered }}', text: '{{ message }}' } },
         },
@@ -58,8 +59,9 @@ describe('a request with render slack, once its run asks', () => {
           blocks: [
             { type: 'header', text: { type: 'plain_text', text: 'Campaign brief review' } },
             { type: 'section', text: { type: 'mrkdwn', text: review.review } },
+            { type: 'context', elements: [{ type: 'mrkdwn', text: 'Nothing to do' }] },
           ],
-          text: `*Campaign brief review*\n${review.review}`,
+          text: `*Campaign brief review*\n${review.review}\nNothing to do`,
         },
       },
     ]);
@@ -88,10 +90,12 @@ describe('the moment a card of a request with render reads', () => {
       '  card:',
       '    type: Card',
       '    props: { title: { $template: "Due ${/today}" } }',
-      '    children: [when]',
+      '    children: [when, rule]',
       '  when:',
       '    type: Text',
       '    props: { content: { $state: /now } }',
+      '  rule:',
+      '    type: Divider',
     ];
     const { playbook, asked } = await askedWith(renderedDocument({ card }), review);
 
@@ -101,7 +105,7 @@ describe('the moment a card of a request with render reads', () => {
       output: {
         record: {
           message: containing(`Due ${today}`),
-          rendered: [{ text: { text: `Due ${today}` } }, { text: { text: containing(today) } }],
+          rendered: [{ text: { text: `Due ${today}` } }, { text: { text: containing(today) } }, { type: 'divider' }],
         },
       },
     });
@@ -128,7 +132,9 @@ const chartCard = [
   '  card:',
   '    type: Card',
   '    props: { title: Weekly active users }',
-  '    children: [chart]',
+  '    children: [chart, rule]',
+  '  rule:',
+  '    type: Divider',
   '  chart:',
   '    type: Chart',
   '    props:',
@@ -169,6 +175,7 @@ describe('a request with render slack whose card draws a chart from lists of the
                 ],
               },
             },
+            { type: 'divider' },
           ],
           text: containing('W4 | 148 | 130'),
         },
@@ -185,10 +192,12 @@ describe('a request with render slack whose card cannot be made', () => {
       '  card:',
       '    type: Card',
       '    props: { title: T }',
-      '    children: [body]',
+      '    children: [body, rule]',
       '  body:',
       '    type: Text',
       '    props: { content: { $state: /input/note } }',
+      '  rule:',
+      '    type: Divider',
     ];
     const { asked, tools, playbook } = await askedWith(renderedDocument({ card }), review);
 

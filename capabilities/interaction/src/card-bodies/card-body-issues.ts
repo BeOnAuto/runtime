@@ -3,6 +3,7 @@ import { inputVariableIssues } from '@on.auto/definitions/template';
 import type { Schema } from 'effect';
 
 import { cardIssues } from '../rendering/card-issues.ts';
+import { layoutIssues } from '../rendering/layout-issues.ts';
 import type { RenderTargetName } from '../rendering/render-targets.ts';
 import { stateReadsOf, type StateRead } from '../rendering/state-reads.ts';
 
@@ -34,14 +35,20 @@ function readIssues(
   );
 }
 
+export interface CardAsked {
+  readonly inputSchema: Schema.JsonObject | undefined;
+  readonly takesAnswer: boolean;
+}
+
 export function cardBodyIssues(
   target: RenderTargetName,
   card: Schema.Json,
   lines: SourceLines,
-  inputSchema: Schema.JsonObject | undefined,
+  { inputSchema, takesAnswer }: CardAsked,
 ): readonly DocumentIssue[] {
   return [
     ...cardIssues(target, card).map(({ pointer, detail }) => issueAt(lines, pointer, detail)),
     ...stateReadsOf(card).flatMap((read) => readIssues(read, lines, inputSchema)),
+    ...layoutIssues(card, takesAnswer).map(({ pointer, detail }) => issueAt(lines, pointer, detail)),
   ];
 }

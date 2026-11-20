@@ -69,6 +69,44 @@ describe('the check of the elements of a card for slack', () => {
   });
 });
 
+function withLinkStyle(style: unknown) {
+  return withElements({
+    card: { type: 'Card', props: { title: 'T' }, children: ['link'] },
+    link: { type: 'LinkButton', props: { label: 'Go', url: 'https://example.com', style } },
+  });
+}
+
+describe('the style of a LinkButton', () => {
+  const refusal = [
+    { pointer: '/elements/link/props/style', detail: "A LinkButton's style is primary or danger, or left out" },
+  ];
+
+  it('is refused unless it is primary or danger', () => {
+    expect(cardIssues('slack', withLinkStyle('green'))).toEqual(refusal);
+    expect(cardIssues('slack', withLinkStyle('default'))).toEqual(refusal);
+    expect(cardIssues('slack', withLinkStyle(null))).toEqual(refusal);
+  });
+
+  it('is accepted as primary, danger or an expression', () => {
+    expect(cardIssues('slack', withLinkStyle('primary'))).toEqual([]);
+    expect(cardIssues('slack', withLinkStyle('danger'))).toEqual([]);
+    expect(cardIssues('slack', withLinkStyle({ $state: '/input/style' }))).toEqual([]);
+  });
+
+  it('is judged only on a LinkButton that writes one', () => {
+    const card = withElements({
+      card: { type: 'Card', props: { title: 'T' }, children: ['plain', 'bare', 'text'] },
+      plain: { type: 'LinkButton', props: { label: 'Go', url: 'https://example.com' } },
+      bare: { type: 'LinkButton' },
+      text: { type: 'Text', props: { content: 'x', style: 'bold' } },
+    });
+
+    const pointers = cardIssues('slack', card).map(({ pointer }) => pointer);
+
+    expect(pointers.filter((pointer) => pointer.endsWith('/style'))).toEqual([]);
+  });
+});
+
 describe('the check of the interactive components of a card for slack', () => {
   it('refuses a Button, for a click is not an answer, and points to a LinkButton', () => {
     const card = withElements({

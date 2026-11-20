@@ -264,6 +264,7 @@ A request sent through a connection may write `render: slack`, the only target, 
 
 - `render` names another target, or is written with `call`, with no `deliver`, or with `deliver: agent`.
 - `deliver.with` reads no `rendered`, or the function has no `render` and reads it.
+- The function has no `render` and sends through a connection that shows cards: a message through one must be a card.
 
 ## Fields
 

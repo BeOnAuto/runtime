@@ -12,6 +12,8 @@ type Written = Readonly<Record<string, unknown>>;
 type Target = ReturnType<typeof renderTargetOf>;
 
 const bindingKeys = new Set(['$bindState', '$bindItem']);
+const linkStyleWords = "A LinkButton's style is primary or danger, or left out";
+const linkStyles = new Set<unknown>(['primary', 'danger']);
 
 function topLevelIssues(card: Written): readonly CardIssue[] {
   const { root, elements } = card;
@@ -81,6 +83,18 @@ function bindingIssues(propsPointer: string, props: unknown): readonly CardIssue
     }));
 }
 
+function linkStyleIssues(element: Written, pointer: string): readonly CardIssue[] {
+  const { type, props } = element;
+  if (type !== 'LinkButton' || !isRecord(props) || !hasKey(props, 'style')) {
+    return [];
+  }
+  const { style } = props;
+  if (linkStyles.has(style) || isRecord(style)) {
+    return [];
+  }
+  return [{ pointer: pointerTo(pointerTo(pointer, 'props'), 'style'), detail: linkStyleWords }];
+}
+
 function propsFitIssues(target: Target, element: Written, pointer: string): readonly CardIssue[] {
   const { type, props, repeat } = element;
   const definition = typeof type === 'string' && hasKey(target.components, type) ? target.components[type] : undefined;
@@ -101,7 +115,11 @@ function propsIssues(target: Target, element: Written, pointer: string): readonl
   if (props !== undefined && !isRecord(props)) {
     return [{ pointer: propsPointer, detail: 'Write `props` as a mapping' }];
   }
-  return [...bindingIssues(propsPointer, props), ...propsFitIssues(target, element, pointer)];
+  return [
+    ...bindingIssues(propsPointer, props),
+    ...propsFitIssues(target, element, pointer),
+    ...linkStyleIssues(element, pointer),
+  ];
 }
 
 function elementIssues(target: Target, elements: Written, id: string, element: unknown): readonly CardIssue[] {

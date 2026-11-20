@@ -14,6 +14,7 @@ import type { ReadonlyDeep } from './readonly-deep.ts';
 import { attempted } from './render-failures.ts';
 import type { RenderedMessage } from './rendered-message.ts';
 import { slackShows } from './slack-limits.ts';
+import { styledLinkMarker } from './styled-links.ts';
 
 type Child = ReadonlyDeep<CardChild>;
 type Chart = ReadonlyDeep<ChartDefinition>;
@@ -23,9 +24,32 @@ function unsupported(what: string): Result.Result<never, Issues> {
   return Result.fail([`Slack cannot show ${what} here: write only ${slackShows}`]);
 }
 
+type ActionChild = Extract<CardChild, { type: 'actions' }>['children'][number];
+type BuiltButton = ReadonlyDeep<Extract<ActionChild, { type: 'button' }>>;
+
+function isStyledLinkButton(button: BuiltButton): boolean {
+  return button.id.startsWith(styledLinkMarker);
+}
+
+function styledLinkOf(button: BuiltButton): Result.Result<SlackLinkButtonElement, Issues> {
+  const { label, value, style } = button;
+  if (value === undefined || !URL.canParse(value)) {
+    return Result.fail(['The url of a LinkButton must be a web address']);
+  }
+  return Result.succeed({
+    type: 'link-button',
+    label,
+    url: value,
+    ...(style === undefined ? {} : { style }),
+  });
+}
+
 function linkButtonsOf(children: ReadonlyDeep<CardChild & { type: 'actions' }>['children']) {
   return Result.all(
     children.map((button): Result.Result<SlackLinkButtonElement, Issues> => {
+      if (button.type === 'button' && isStyledLinkButton(button)) {
+        return styledLinkOf(button);
+      }
       if (button.type !== 'link-button') {
         return unsupported(`a ${button.type} in actions`);
       }

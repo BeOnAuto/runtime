@@ -18,8 +18,9 @@ describe('a request with render', () => {
       card: {
         root: 'card',
         elements: {
-          card: { type: 'Card', props: { title: 'Campaign brief review' }, children: ['review'] },
+          card: { type: 'Card', props: { title: 'Campaign brief review' }, children: ['review', 'footnote'] },
           review: { type: 'Text', props: { content: { $state: '/input/review' } } },
+          footnote: { type: 'Text', props: { content: 'Nothing to do', style: 'muted' } },
         },
       },
     });
@@ -113,10 +114,12 @@ describe('the body of a request with render, at save', () => {
       '  card:',
       '    type: Card',
       '    props: { title: T }',
-      '    children: [body]',
+      '    children: [body, rule]',
       '  body:',
       '    type: Button',
       '    props: { label: Go }',
+      '  rule:',
+      '    type: Divider',
     ];
 
     expect(problemsOf(renderedDocument({ card }))).toEqual([
@@ -136,10 +139,12 @@ describe('the state a request with render reads, at save', () => {
       '  card:',
       '    type: Card',
       '    props: { title: { $state: /user/name } }',
-      '    children: [body]',
+      '    children: [body, rule]',
       '  body:',
       '    type: Text',
       '    props: { content: { $state: /input/missing } }',
+      '  rule:',
+      '    type: Divider',
     ];
     const closed = [
       'input:',
