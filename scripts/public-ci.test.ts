@@ -233,9 +233,9 @@ await test('the package job lets one row fail without failing CI, Alpine on arm6
   assert.deepEqual(stepsAllowedToFail(ci.jobs), []);
 });
 
-await test('the smokes, the image build, the npm package and the AWS checks never come from a cache', () => {
+await test('the smokes, the image build and the npm package never come from a cache', () => {
   assert.deepEqual(
-    ['container', 'package', 'secrets-aws'].flatMap((name) => cachedIn(jobOf(ci.jobs, name))),
+    ['container', 'package'].flatMap((name) => cachedIn(jobOf(ci.jobs, name))),
     [],
   );
 });

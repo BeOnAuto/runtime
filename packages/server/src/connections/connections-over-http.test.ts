@@ -5,7 +5,7 @@ import { createApiKey } from '@on.auto/identity';
 import { localDeveloper } from '@on.auto/identity/testing';
 import { allPermissions } from '@on.auto/operations';
 import { fixtureProviders } from '@on.auto/providers/testing';
-import { serveFakeKms } from '@on.auto/secrets/served-fakes';
+import { serveFakeKms, serveFakeParameterStore } from '@on.auto/secrets/served-fakes';
 import { type FakeMcpServer, servedForConsent, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Effect, Option, Redacted, Schema } from 'effect';
 import { afterAll, afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
@@ -13,7 +13,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, onTestFinished, v
 import {
   connectionFactsIn,
   keptSecretOf,
+  ownKeyFactsIn,
   secretIdOf,
+  secretRowsInFile,
   secretsKey,
   secretStoreInFile,
 } from '../testing/records/kept-credentials.ts';
@@ -204,6 +206,59 @@ function executedConnectionsUnderKms(serverConnectionsUnderKms: ReasoningServer)
   return serverConnectionsUnderKms.call('POST', `${alpha}/tool-servers/crm/tools/echo/execute`, {
     body: { arguments: {} },
   });
+}
+
+const parameterStore = await serveFakeParameterStore();
+
+const prefix = '/auto-runtime/secrets';
+
+const crmKeyInParameterStore = 'crm-api-key-8a3f6c19';
+
+const awsCredentials = {
+  accessKeyId: 'an-access-key-of-the-tests',
+  secretAccessKey: 'a-secret-access-key-of-the-tests',
+};
+
+function parameterStoreOfTheEnvironmentAtTheFake(): void {
+  vi.stubEnv('AWS_ENDPOINT_URL_SSM', parameterStore.url);
+  vi.stubEnv('AWS_ACCESS_KEY_ID', awsCredentials.accessKeyId);
+  vi.stubEnv('AWS_SECRET_ACCESS_KEY', awsCredentials.secretAccessKey);
+  onTestFinished(() => {
+    vi.unstubAllEnvs();
+  });
+}
+
+async function servedInTheParameterStore(fileName: string): Promise<ReasoningServer> {
+  const serverInTheParameterStore = await servingReasoning([], {
+    LEDGER_FILE: fileName,
+    SECRETS_KEEPER: `aws-parameter-store:${prefix}`,
+    AWS_REGION: 'eu-west-1',
+    ...connectionsOnLoopback,
+  });
+  const stopping: { done?: Promise<void> } = {};
+  const stop = (): Promise<void> => {
+    stopping.done ??= serverInTheParameterStore.stop();
+    return stopping.done;
+  };
+  onTestFinished(stop);
+  return { ...serverInTheParameterStore, stop };
+}
+
+async function rowsInTheLedger(fileName: string, secretId: string) {
+  const rows = await secretRowsInFile(fileName);
+  const row = await Effect.runPromise(rows.read(secretId));
+  const sealed = await Effect.runPromise(rows.heldBy({ keptBy: 'ledger' }, 10));
+  await rows.close();
+  return { holding: row?.holding, sealed };
+}
+
+async function ownKeysIn(fileName: string): Promise<readonly string[]> {
+  const kept = await ownKeyFactsIn(fileName);
+  return kept.flatMap(({ data }) => parameterStore.parameter(`${prefix}/${data.secret_id}`)?.versions ?? []);
+}
+
+function loggedBy(logged: { readonly mock: { readonly calls: readonly (readonly unknown[])[] } }): string {
+  return logged.mock.calls.flat().map(String).join('\n');
 }
 
 const keyRefused =
@@ -620,6 +675,58 @@ describe('connections under kms', () => {
       expect(new Set(fake.calls().map(({ keyId: asked, context }) => `${asked} ${JSON.stringify(context)}`))).toEqual(
         new Set([`${keyArn} {"on.auto/runtime":"secret data key"}`]),
       );
+    });
+  });
+});
+
+describe('connections in aws parameter store', () => {
+  afterAll(parameterStore.close);
+
+  describe('a connection whose credential AWS Parameter Store keeps', () => {
+    it('keeps the value there and none of it in the ledger, calls with it after a restart, deletes the parameter with the connection, and logs no value, key or credential', async () => {
+      const logged = vi.spyOn(console, 'error');
+      onTestFinished(() => {
+        logged.mockRestore();
+      });
+      parameterStoreOfTheEnvironmentAtTheFake();
+      const crmInParameterStore = await serveFakeMcp({ bearer: crmKeyInParameterStore });
+      onTestFinished(crmInParameterStore.close);
+      const { fileName, remove } = temporaryLedger();
+      onTestFinished(remove);
+      const value = `Bearer ${crmKeyInParameterStore}`;
+      const first = await servedInTheParameterStore(fileName);
+      await first.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+      const id = await connectedWith(first, aSecretHeader('crm', crmInParameterStore.url), value);
+      await first.stop();
+
+      const restarted = await servedInTheParameterStore(fileName);
+      const read = await restarted.call('GET', `/v1/orgs/acme/connections/${id}`);
+      const called = await executed(restarted);
+      const secretId = String(await secretIdOf(fileName, 'acme', id));
+      const parameter = `${prefix}/${secretId}`;
+      const keptThere = parameterStore.parameter(parameter);
+      const inTheLedger = await rowsInTheLedger(fileName, secretId);
+      const ownKeys = await ownKeysIn(fileName);
+      const removed = await restarted.call('DELETE', `/v1/orgs/acme/connections/${id}`);
+      await restarted.stop();
+      const log = loggedBy(logged);
+
+      expect(read.body).toMatchObject({ status: 'connected', credential_ends_with: crmKeyInParameterStore.slice(-4) });
+      expect(called.status).toBe(200);
+      expect(keptThere?.versions).toEqual([value]);
+      expect(inTheLedger).toEqual({
+        holding: { keptBy: 'aws-parameter-store', held: `${parameter}:1` },
+        sealed: [],
+      });
+      expect(removed).toMatchObject({ status: 200, body: { status: 'removed' } });
+      expect(parameterStore.parameter(parameter)).toBeUndefined();
+      expect(ownKeys).toHaveLength(2);
+      expect(log).not.toBe('');
+      expect(
+        [value, crmKeyInParameterStore, ...ownKeys, awsCredentials.accessKeyId, awsCredentials.secretAccessKey].filter(
+          (secret) => log.includes(secret),
+        ),
+      ).toEqual([]);
     });
   });
 });

@@ -30,3 +30,14 @@ export function modelLinesOf(stderr: string): readonly ModelLine[] {
       return { message, level, annotations };
     });
 }
+
+const AnnotatedLineSchema = Schema.Struct({ annotations: Schema.Record(Schema.String, Schema.Unknown) });
+
+const decodeAnnotatedLine = Schema.decodeUnknownSync(Schema.fromJsonString(AnnotatedLineSchema));
+
+export function annotationsOf(stderr: string): readonly Readonly<Record<string, unknown>>[] {
+  return stderr
+    .split('\n')
+    .filter((line) => line.startsWith('{'))
+    .map((line) => decodeAnnotatedLine(line).annotations);
+}

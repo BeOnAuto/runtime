@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { Effect } from 'effect';
-import { afterAll, describe } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { serveFakeKms } from '../fakes/fake-kms.ts';
 import { inMemoryEntry, type TestCustodians } from '../testing/secrets-entry.ts';
@@ -32,5 +32,12 @@ const onTheFake: TestCustodians = {
 };
 
 describe('the secret store over keys in KMS, each data key wrapped by Encrypt and unwrapped by Decrypt', () => {
+  const warned = vi.spyOn(console, 'warn');
+
   storeBehaviour(inMemoryEntry(), onTheFake);
+
+  it('writes nothing to console.warn from the SDK while it wraps and unwraps', () => {
+    expect(fake.calls().map(({ operation }) => operation)).toEqual(expect.arrayContaining(['Encrypt', 'Decrypt']));
+    expect(warned).not.toHaveBeenCalled();
+  });
 });

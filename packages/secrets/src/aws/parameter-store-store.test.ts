@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { afterAll, describe } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { serveFakeParameterStore } from '../fakes/fake-parameter-store.ts';
 import type { TestKeepers } from '../fakes/memory-keeper.ts';
@@ -47,5 +47,14 @@ const onTheFake: TestKeepers = {
 };
 
 describe('the secret store over values kept in Parameter Store, each a SecureString parameter of its own', () => {
+  const warned = vi.spyOn(console, 'warn');
+
   keeperBehaviour(inMemoryEntry(), onTheFake);
+
+  it('writes nothing to console.warn from the SDK while it writes, reads and deletes', () => {
+    expect(fake.calls().map(({ operation }) => operation)).toEqual(
+      expect.arrayContaining(['PutParameter', 'GetParameter', 'DeleteParameter']),
+    );
+    expect(warned).not.toHaveBeenCalled();
+  });
 });

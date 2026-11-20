@@ -70,7 +70,6 @@ const stepsOf = Schema.decodeUnknownSync(
       Schema.Struct({
         steps: Schema.Array(
           Schema.Struct({
-            run: Schema.optionalKey(Schema.String),
             env: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
           }),
         ),
@@ -153,21 +152,11 @@ const variablesOfTheTests = [
   ...new Set([...defaultVariables, ...testedPackages.flatMap((tested) => variablesFor(tested))]),
 ];
 
-const jobs = stepsOf(workflow).jobs;
+const testJobSteps = stepsOf(workflow).jobs['test']?.steps ?? [];
 
-const awsJob = 'secrets-aws';
-
-function variablesSetBy(job: string): readonly string[] {
-  return (jobs[job]?.steps ?? [])
-    .flatMap(({ env }) => Object.keys(env ?? {}))
-    .filter((name) => variablesOfTheTests.includes(name));
-}
-
-const variablesOfTheServices = variablesSetBy('test');
-
-const variablesOfAws = variablesSetBy(awsJob);
-
-const variablesSetByAJob = new Set([...variablesOfTheServices, ...variablesOfAws]);
+const variablesOfTheServices = testJobSteps
+  .flatMap(({ env }) => Object.keys(env ?? {}))
+  .filter((name) => variablesOfTheTests.includes(name));
 
 function readsAnyOf({ folder }: TestedPackage, variables: readonly string[]): boolean {
   const sources = join(root, folder, 'src');
@@ -177,12 +166,6 @@ function readsAnyOf({ folder }: TestedPackage, variables: readonly string[]): bo
       const source = readFileSync(join(sources, file), 'utf8');
       return variables.some((variable) => source.includes(variable));
     });
-}
-
-function packagesRunBy(job: string): readonly string[] {
-  return (jobs[job]?.steps ?? []).flatMap(({ run = '' }) =>
-    [...run.matchAll(/--filter (@on\.auto\/[\w-]+) test/gu)].map(([, name = '']: readonly string[]) => name),
-  );
 }
 
 await test('the workspace names its packages by folder, or as every folder in a folder, so the groups can be checked against it', () => {
@@ -233,13 +216,9 @@ await test('a group starts PostgreSQL and the object store exactly when the test
   );
 });
 
-await test('the job against moto runs the tests of exactly the packages that read the variables it sets, and every variable that reaches the tests is set by it or by the test job', () => {
-  const readers = testedPackages.filter((tested) => readsAnyOf(tested, variablesOfAws)).map(({ name }) => name);
-  assert.ok(variablesOfAws.length > 0);
-  assert.ok(readers.length > 0);
-  assert.deepEqual(packagesRunBy(awsJob), readers);
+await test('every variable that names a server and reaches the tests is set by the test job', () => {
   assert.deepEqual(
-    variablesOfTheTests.filter((name) => !variablesSetByAJob.has(name)),
+    variablesOfTheTests.filter((name) => !variablesOfTheServices.includes(name)),
     [],
   );
 });

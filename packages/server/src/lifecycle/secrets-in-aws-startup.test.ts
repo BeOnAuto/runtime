@@ -7,6 +7,7 @@ import { Effect, Redacted } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import { spawnServer } from '../testing/processes/spawned-server.ts';
+import { annotationsOf } from '../testing/processes/stderr-lines.ts';
 import { ownKeyFactsIn, secretRowsInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 
@@ -168,8 +169,18 @@ describe('a server whose secrets AWS Parameter Store keeps, as it starts', () =>
   });
 });
 
+function ownKeysInTheManager(kept: Awaited<ReturnType<typeof ownKeyFactsIn>>): readonly string[] {
+  return kept.flatMap(({ data }) => parameterStore.parameter(`${prefix}/${data.secret_id}`)?.versions ?? []);
+}
+
+function movedIntoTheManager(stderr: string): readonly unknown[] {
+  return annotationsOf(stderr)
+    .filter(({ secrets_keeper: keeper }) => keeper === 'aws-parameter-store')
+    .map(({ secrets_moved: moved }) => moved);
+}
+
 describe('a server that moves its secrets into AWS Parameter Store, as it starts', () => {
-  it('moves the keys it keeps for itself from the ledger with the secrets, and starts under the manager alone with them', async () => {
+  it('moves the keys it keeps for itself from the ledger with the secrets, starts under the manager alone with them, and logs how many it moved and nothing of a key or a credential', async () => {
     const { fileName, remove } = temporaryLedger();
     onTestFinished(remove);
     const key = { SECRETS_KEY: Buffer.alloc(32, 9).toString('base64') };
@@ -178,10 +189,19 @@ describe('a server that moves its secrets into AWS Parameter Store, as it starts
 
     const moving = await startedUnder({ ...inTheManager(fileName), ...key, SECRETS_KEEPER_PREVIOUS: 'ledger' });
     const alone = await startedUnder(inTheManager(fileName));
+    const ownKeys = ownKeysInTheManager(kept);
+    const stderr = [sealed, moving, alone].join('\n');
 
     expect(sealed).toContain('and 0 sealed under the previous key were sealed again under it"');
     expect(moving).toContain(`"message":"Secrets are kept in AWS Parameter`);
     expect(alone).toContain(`Secrets are kept in AWS Parameter Store under ${prefix} in eu-west-1, and 0 kept`);
+    expect([movedIntoTheManager(moving), movedIntoTheManager(alone)]).toEqual([[kept.length], [0]]);
+    expect(ownKeys).toHaveLength(kept.length);
+    expect(
+      [key.SECRETS_KEY, ...ownKeys, credentials.accessKeyId, credentials.secretAccessKey].filter((secret) =>
+        stderr.includes(secret),
+      ),
+    ).toEqual([]);
     expect(await heldInTheManager(fileName)).toEqual(
       kept.map(({ data }) => ({
         id: data.secret_id,
