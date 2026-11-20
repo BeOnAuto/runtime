@@ -1,4 +1,4 @@
-import { goalStandingIn, type Goal } from '@on.auto/definitions/goals';
+import { playbookGoalsIn, type HeldGoal } from '@on.auto/definitions/goals';
 import { PlaybookReader, type PlaybookContext } from '@on.auto/operations';
 import { Effect } from 'effect';
 
@@ -35,19 +35,19 @@ interface AskingChain {
 
 const noCallers = { serviceCallers: new Set<string>() };
 
-function thingOf(goal: Goal, { id, pinned, state }: HeldAssessment): OpenThing {
+function thingOf({ goal }: HeldGoal, { id, pinned, state }: HeldAssessment): OpenThing {
   const per = pinned.per === undefined ? {} : { per: pinned.per };
   return { thing: { goal: goal.id, id, ...per }, acts: actsOf(state) };
 }
 
 function openThingsOf(
   reader: PlaybookReader['Service'],
-  goal: Goal,
+  held: HeldGoal,
   asked: DismissedAsked,
 ): Effect.Effect<readonly OpenThing[]> {
   return Effect.map(
-    openRowsOf(goalRowsOf(reader, goal), asked).read([], ['opened_at'], 'desc', mostOpenItemsSearched),
-    (rows) => rows.flatMap((row) => heldAssessmentsOf(row).map((held) => thingOf(goal, held))),
+    openRowsOf(goalRowsOf(reader, held), asked).read([], ['opened_at'], 'desc', mostOpenItemsSearched),
+    (rows) => rows.flatMap((row) => heldAssessmentsOf(row).map((assessment) => thingOf(held, assessment))),
   );
 }
 
@@ -89,8 +89,8 @@ export function thingsAskedAboutOver<E>(
       return chains.map(() => []);
     }
     const reader = yield* PlaybookReader;
-    const { goals } = yield* goalStandingIn;
-    const open = goals.filter(({ retired }) => retired !== true);
+    const { held } = yield* playbookGoalsIn;
+    const open = held.filter(({ goal }) => goal.retired !== true);
     const things = (yield* Effect.forEach(open, (goal) => openThingsOf(reader, goal, dismissed))).flat();
     const walks = walksOf(reads);
     return yield* Effect.forEach(chains, ([asked, ...before]) =>

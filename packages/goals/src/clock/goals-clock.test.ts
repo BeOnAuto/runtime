@@ -3,15 +3,18 @@ import { describe, expect, it } from 'vitest';
 
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import { experimentId, measuring, results } from '../assessor/assessor-fixtures.ts';
-import { controls, deliveredAll, experiments, finished, sales } from '../assessor/assessor-ledger.ts';
+import { controls, deliveredAll, experiments, finished, goalIdentityOf, sales } from '../assessor/assessor-ledger.ts';
 import { assessmentsName } from '../goal-tables/assessment-rows.ts';
 import { clockKey, clocksName } from '../goal-tables/clock-rows.ts';
 import { clockHarnessOf } from './clock-harness.ts';
-import { goalsClockName } from './goals-clock.ts';
+import { goalsClockName, goalsClockOf } from './goals-clock.ts';
 
 const checking = [{ goal: 'controls-hold', purpose: 'Checks every control each morning.', measures: '/failed' }];
 
-const mondayId = assessmentIdOf({ goal: 'controls-hold', window_start: Date.parse('2026-11-09T00:00:00.000Z') });
+const mondayId = assessmentIdOf({
+  definition: goalIdentityOf('controls-hold'),
+  window_start: Date.parse('2026-11-09T00:00:00.000Z'),
+});
 
 const run = <A>(effect: Effect.Effect<A, unknown>) => Effect.runPromise(effect);
 
@@ -51,7 +54,7 @@ describe('the clock of a calendar goal', () => {
 
     expect(await run(harness.clock.nextDueAt(0))).toBe(at);
     expect((await run(harness.clock.due(at, 256, false))).map(({ key, callsOut }) => [key, callsOut])).toEqual([
-      [`${sales.org}/${sales.playbook}/${clocksName}/${clockKey}`, false],
+      [`definition/${sales.org}/${goalIdentityOf('controls-hold')}/${clocksName}/${clockKey}`, false],
     ]);
     expect(await run(harness.clock.due(at, 256, true))).toEqual([]);
     expect(await run(harness.clock.nextDueAt(0, true))).toBeNull();
@@ -65,11 +68,11 @@ describe('the clock of a calendar goal', () => {
     const later = Date.parse('2026-11-12T00:00:00.000Z');
 
     expect((await run(harness.clock.due(later, 1, false))).map(({ key }) => key)).toEqual([
-      `${sales.org}/${sales.playbook}/${clocksName}/${clockKey}`,
+      `definition/${sales.org}/${goalIdentityOf('controls-hold')}/${clocksName}/${clockKey}`,
     ]);
     expect((await run(harness.clock.due(later, 2, false))).map(({ key }) => key)).toEqual([
-      `${sales.org}/${sales.playbook}/${clocksName}/${clockKey}`,
-      `${sales.org}/${sales.playbook}/${assessmentsName}/${mondayId}`,
+      `definition/${sales.org}/${goalIdentityOf('controls-hold')}/${clocksName}/${clockKey}`,
+      `definition/${sales.org}/${goalIdentityOf('controls-hold')}/${assessmentsName}/${mondayId}`,
     ]);
   });
 });
@@ -83,10 +86,15 @@ describe('a due row of a calendar goal with nothing to do', () => {
     const early = Date.parse('2026-11-09T06:00:00.000Z');
     const advanced = (judging: number) =>
       run(
-        harness.book.ledger.advanceRow(assessmentsName, sales, mondayId, {
-          set: { judging_due_at: judging },
-          when: [],
-        }),
+        harness.book.ledger.advanceRow(
+          assessmentsName,
+          { org: sales.org, definition: goalIdentityOf('controls-hold') },
+          mondayId,
+          {
+            set: { judging_due_at: judging },
+            when: [],
+          },
+        ),
       );
 
     await advanced(early);
@@ -99,7 +107,7 @@ describe('a due row of a calendar goal with nothing to do', () => {
     expect([performedEarly, performedDecided]).toEqual([1, 1]);
     expect(movedToDue).toMatchObject({ judging_due_at: Date.parse('2026-11-10T01:00:00.000Z'), verdict: 'open' });
     expect(await harness.row(assessmentsName, mondayId)).toMatchObject({ judging_due_at: null, verdict: 'failed' });
-    expect(await harness.book.factsOf(`assessments/${mondayId}`)).toEqual([
+    expect(await harness.book.factsOf('controls-hold', `assessments/${mondayId}`)).toEqual([
       'goal_assessment_opened',
       'goal_observed',
       'goal_assessed',
@@ -122,13 +130,19 @@ describe('a clock row read before an observation opened its window', () => {
     );
     await run(Effect.forEach(items, (item) => item.perform(at + 30_000)));
 
-    expect(await harness.book.factsOf(`assessments/${mondayId}`)).toEqual(['goal_assessment_opened', 'goal_observed']);
+    expect(await harness.book.factsOf('controls-hold', `assessments/${mondayId}`)).toEqual([
+      'goal_assessment_opened',
+      'goal_observed',
+    ]);
     expect(await harness.row(clocksName, clockKey)).toMatchObject({ opens_at: Date.parse('2026-11-10T00:00:00.000Z') });
     expect(await run(harness.clock.due(at + 30_000, 256, false))).toEqual([]);
   });
 });
 
-const tuesdayId = assessmentIdOf({ goal: 'controls-hold', window_start: Date.parse('2026-11-11T00:00:00.000Z') });
+const tuesdayId = assessmentIdOf({
+  definition: goalIdentityOf('controls-hold'),
+  window_start: Date.parse('2026-11-11T00:00:00.000Z'),
+});
 
 async function resumedMidDay() {
   const harness = clockHarnessOf('2026-11-08T07:00:00.000Z');
@@ -164,7 +178,7 @@ describe('the clock of a calendar goal whose only contribution is paused', () =>
         .map((row) => Number(row['window_opens']))
         .toSorted((one, other) => one - other),
     ).toEqual([Date.parse('2026-11-12T00:00:00.000Z'), Date.parse('2026-11-13T00:00:00.000Z')]);
-    expect(await harness.book.factsOf(`assessments/${tuesdayId}`)).toEqual([]);
+    expect(await harness.book.factsOf('controls-hold', `assessments/${tuesdayId}`)).toEqual([]);
   });
 
   it('opens the window it was resumed in only by a run that falls in it', async () => {
@@ -172,10 +186,43 @@ describe('the clock of a calendar goal whose only contribution is paused', () =>
     await harness.observed('t1', { failed: 1 }, '2026-11-11T11:00:00.000Z', 'check');
     await harness.until('2026-11-12T02:00:00.000Z');
 
-    expect(await harness.book.factsOf(`assessments/${tuesdayId}`)).toEqual([
+    expect(await harness.book.factsOf('controls-hold', `assessments/${tuesdayId}`)).toEqual([
       'goal_assessment_opened',
       'goal_observed',
       'goal_assessed',
     ]);
+  });
+});
+
+function elsewhereOf<Row extends { readonly playbook?: string }>(kept: Row): Row {
+  return { ...kept, playbook: 'elsewhere' };
+}
+
+function readElsewhere(ports: Parameters<typeof goalsClockOf>[0]) {
+  return goalsClockOf({
+    ...ports,
+    ledger: {
+      ...ports.ledger,
+      readDueRows: (table, query) =>
+        Effect.map(ports.ledger.readDueRows(table, query), (rows) => rows.map((kept) => elsewhereOf(kept))),
+    },
+  });
+}
+
+describe('a due row read under a playbook that no longer holds its goal', () => {
+  it('is left as it is, for the playbook that holds the goal now to work', async () => {
+    const harness = clockHarnessOf('2026-11-08T07:00:00.000Z');
+    await harness.book.workflowSaved('check', 1, checking);
+    await harness.goalsSaved([controls], '2026-11-08T12:00:00.000Z');
+    await harness.until('2026-11-09T00:00:00.000Z');
+    const at = Date.parse('2026-11-10T02:00:00.000Z');
+    const elsewhere = clockHarnessOf('2026-11-10T02:00:00.000Z', harness.book, readElsewhere);
+    const before = [await harness.row(clocksName, clockKey), await harness.row(assessmentsName, mondayId)];
+
+    const items = await run(elsewhere.clock.due(at, 256, false));
+    await run(Effect.forEach(items, (item) => item.perform(at)));
+
+    expect(items).toHaveLength(2);
+    expect([await harness.row(clocksName, clockKey), await harness.row(assessmentsName, mondayId)]).toEqual(before);
   });
 });

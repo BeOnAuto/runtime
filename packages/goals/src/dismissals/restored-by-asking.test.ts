@@ -4,13 +4,21 @@ import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { built, experimentId, results, startedAs } from '../assessor/assessor-fixtures.ts';
-import { deliveredAll, finished, monday, sales, salesKey, type Book } from '../assessor/assessor-ledger.ts';
+import {
+  deliveredAll,
+  finished,
+  goalIdentityOf,
+  monday,
+  sales,
+  salesKey,
+  type Book,
+} from '../assessor/assessor-ledger.ts';
 import { assessorOf } from '../assessor/assessor.ts';
 import { restoredByAskingOf } from './restored-by-asking.ts';
 
 const minute = 60_000;
 
-const measured = finished({ id: 'measured', data: results(0) });
+const measured = finished({ id: 'measured', data: results(0, 0) });
 
 const thing = experimentId('MAR-41');
 
@@ -60,11 +68,11 @@ function deferred({ at, by = 'run-measured', record = asked, context = {} }: Def
 async function measuredAndDismissedAt(at: number) {
   const { book, ports } = await built(startedAs(measured), () => monday + 30 * minute);
   await deliveredAll(assessorOf(ports), measured);
-  await book.append(
-    `assessments/${thing}`,
+  await book.appendWhole(
+    `definition/acme/${goalIdentityOf('paying-customers')}/assessments/${thing}`,
     'goal_dismissed',
-    { goal: 'paying-customers', per: 'MAR-41', at: iso(at), by: owner, requests: [] },
-    { at: iso(at) },
+    { per: 'MAR-41', at: iso(at), by: owner, requests: [] },
+    { at: iso(at), definitionId: goalIdentityOf('paying-customers'), definitionName: 'paying-customers' },
   );
   return { book, consumer: restoredByAskingOf(ports) };
 }
@@ -92,7 +100,7 @@ function delivered(consumer: ReturnType<typeof restoredByAskingOf>, record: Reco
 const standing = async (book: Book) => (await book.rows(dismissalsName))[thing]?.['dismissed'];
 
 describe('a request asked about a dismissed thing after its dismissal', () => {
-  it('restores the thing, recorded by Auto, once however often the request is delivered', async () => {
+  it('restores the thing, recorded by Auto, once however often the request is delivered, and no thing the request is about that stands', async () => {
     const { book, consumer } = await measuredAndDismissedAt(monday + 10 * minute);
 
     const first = await delivered(consumer, deferred({ at: monday + 20 * minute }));
@@ -100,7 +108,11 @@ describe('a request asked about a dismissed thing after its dismissal', () => {
     const resumed = await delivered(consumer, deferred({ at: monday + 20 * minute }), 'asked');
 
     expect([first, again, resumed]).toEqual([['asked'], ['asked'], []]);
-    expect(await book.factsOf(`assessments/${thing}`)).toEqual([
+    expect(await book.factsOf('paying-customers', `assessments/${experimentId('MAR-42')}`)).toEqual([
+      'goal_assessment_opened',
+      'goal_observed',
+    ]);
+    expect(await book.factsOf('paying-customers', `assessments/${thing}`)).toEqual([
       'goal_assessment_opened',
       'goal_observed',
       'goal_dismissed',
@@ -137,7 +149,7 @@ describe('a deferral that leaves a dismissed thing dismissed', () => {
 
     expect(deliveredEach).toEqual([['asked'], ['asked'], [], []]);
     expect(await standing(book)).toBe(true);
-    expect(await book.factsOf(`assessments/${thing}`)).toEqual([
+    expect(await book.factsOf('paying-customers', `assessments/${thing}`)).toEqual([
       'goal_assessment_opened',
       'goal_observed',
       'goal_dismissed',

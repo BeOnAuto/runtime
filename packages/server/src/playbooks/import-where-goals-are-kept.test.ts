@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import type { LedgerOver } from '../testing/servers/served-parts.ts';
-import { servingReasoningWithGoals } from '../testing/settings/goals-kept.ts';
+import { savedSourceOf, servingReasoningWithGoals, versionsOf } from '../testing/settings/goals-kept.ts';
 
 const goals = [
   '- id: first-customer',
@@ -157,7 +157,7 @@ describe('an import on a server that keeps goals', () => {
         name: 'Beta',
         status: 'active',
         page: { source: page },
-        goals: { source: goals, version: 1 },
+        goals: { source: savedSourceOf(goals), versions: versionsOf(['first-customer', 1]) },
         models_not_offered: ['anthropic/claude-sonnet-4-5'],
       },
     });

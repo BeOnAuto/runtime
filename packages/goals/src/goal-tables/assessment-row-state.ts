@@ -21,8 +21,7 @@ const WindowRuleSchema = Schema.Union([
 ]);
 
 const PinnedRuleSchema = Schema.Struct({
-  goal: Schema.String,
-  goalsVersion: Schema.Int,
+  goalVersion: Schema.Int,
   per: Schema.optionalKey(Schema.String),
   settles: Schema.Literals(['on_crossing', 'at_close']),
   target: TargetSchema,

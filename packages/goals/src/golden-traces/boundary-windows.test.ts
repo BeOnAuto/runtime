@@ -6,6 +6,7 @@ import { clockWorkAt } from '../goal-clock/goal-clock.ts';
 import type { GoalRule, Target } from '../goal-rules/goal-rule.ts';
 import { aDay } from '../goal-windows/goal-durations.ts';
 import { traceBookOf, type TraceBook } from './trace-book.ts';
+import { tracedGoalId } from './trace-book.ts';
 import { wordsOf } from './trace-words.ts';
 
 const day = (offset: number, hour = 0) => Date.UTC(2026, 10, 9 + offset, hour);
@@ -17,7 +18,7 @@ const daily = (target: Target, settles: 'on_crossing' | 'at_close' = 'on_crossin
   notify: { passed: 'now', failed: 'now', overdue: 'now' },
 });
 
-const monday = assessmentIdOf({ goal: 'daily-check', window_start: day(0) });
+const monday = assessmentIdOf({ definition: tracedGoalId, window_start: day(0) });
 
 const named = { [monday]: 'Monday' };
 
@@ -116,8 +117,9 @@ it('ends a window that fell due while the playbook was retired, owing no notice'
 it('opens nothing while the playbook is retired and moves its clock to the next UTC midnight, or to the first at or after its boundary if later', () => {
   const retiredAt = (now: number) =>
     clockWorkAt({
+      definition: tracedGoalId,
       goal: daily({ at_most: 0 }),
-      goalsVersion: 1,
+      goalVersion: 1,
       now,
       firstSavedAt: day(-1),
       reporting: true,
@@ -127,8 +129,9 @@ it('opens nothing while the playbook is retired and moves its clock to the next 
   expect(retiredAt(day(0, 6))).toEqual({ nextAt: day(1) });
   expect(
     clockWorkAt({
+      definition: tracedGoalId,
       goal: { ...daily({ at_most: 0 }), window: { calendar: 'month' } },
-      goalsVersion: 1,
+      goalVersion: 1,
       now: day(0, 6),
       firstSavedAt: 0,
       reporting: true,
@@ -154,12 +157,12 @@ it('keeps the target an assessment opened with when the target is edited while i
 
   expect(measured(book, day(0, 9), { value: 2, final: false })).toEqual(['Monday observed 2']);
   rung(book, day(1));
-  const tuesday = assessmentIdOf({ goal: 'daily-check', window_start: day(1) });
+  const tuesday = assessmentIdOf({ definition: tracedGoalId, window_start: day(1) });
   expect([book.state(monday).pinned?.target, book.state(tuesday).pinned?.target]).toEqual([
     { at_least: 5 },
     { at_least: 1 },
   ]);
-  expect(book.state(tuesday).pinned?.goalsVersion).toBe(2);
+  expect(book.state(tuesday).pinned?.goalVersion).toBe(2);
 });
 
 it('keeps the window rule an assessment opened with when the goal under that id changes its unit', () => {
@@ -201,7 +204,7 @@ const shipped = (success: GoalRule['success']): GoalRule => ({
   notify: { passed: 'now', failed: 'now', overdue: 'now' },
 });
 
-const release = assessmentIdOf({ goal: 'defects', per: 'R-1' });
+const release = assessmentIdOf({ definition: tracedGoalId, per: 'R-1' });
 
 const releaseNamed = { [release]: 'R-1' };
 
@@ -283,7 +286,7 @@ it('leaves a measurement through midnight out of the day that opens then, for th
   const book = traceBookOf(daily({ at_most: 0 }), day(-1));
   rung(book, day(0));
   rung(book, day(1));
-  const tuesday = assessmentIdOf({ goal: 'daily-check', window_start: day(1) });
+  const tuesday = assessmentIdOf({ definition: tracedGoalId, window_start: day(1) });
 
   expect(measured(book, day(1, 0) + 60_000, { value: 1, final: true, through: day(1) })).toEqual([
     'Monday observed 1 final',

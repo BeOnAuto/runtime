@@ -1,7 +1,9 @@
-import { playbookGoalsIn, type Goal } from '@on.auto/definitions/goals';
+import { heldGoalOfIdentity, playbookGoalsIn } from '@on.auto/definitions/goals';
 import {
+  addressOfTheRow,
   playbookLedgerOf,
   playbookRowsOf,
+  streamPrefixOfAddress,
   type PlaybookAddress,
   type PlaybookProjectedRow,
   type RecordedCaller,
@@ -9,58 +11,63 @@ import {
 import type { DueItem, DueWork } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
-import { clocksName, goalClocksIn } from '../goal-tables/clock-rows.ts';
+import { clocksName, goalClockIn, type GoalClockEntry } from '../goal-tables/clock-rows.ts';
 import type { StartsMade } from '../notice-limits/notice-day-limit.ts';
 import { countedPortsOf, type CountedPorts, type NoticePorts } from '../notices/notice-ledger.ts';
 import { summaryDue } from './summary-starts.ts';
-import { advancedPast, summaryDueColumn, summaryTimeOf, type Moment, type Summary } from './summary-times.ts';
+import { advancedPast, summaryDueColumn, summaryTimeOf, type Moment } from './summary-times.ts';
 
 const summariesDueName = 'the summaries of goals due';
 
-function goalsOf(ports: CountedPorts, address: PlaybookAddress): Effect.Effect<readonly Goal[]> {
-  return Effect.map(
+interface SummaryOwed {
+  readonly address: PlaybookAddress;
+  readonly kept: PlaybookProjectedRow;
+  readonly clock: GoalClockEntry;
+  readonly due: number;
+  readonly now: number;
+}
+
+function summaryAnswered(
+  ports: CountedPorts,
+  { address, kept, clock, due, now }: SummaryOwed,
+  owner: RecordedCaller | undefined,
+): Effect.Effect<void, unknown> {
+  return Effect.flatMap(
     Effect.provideContext(playbookGoalsIn, playbookLedgerOf(ports.ledger, address)),
-    ({ goals }) => goals,
+    (goals): Effect.Effect<void, unknown> => {
+      const held = heldGoalOfIdentity(goals, kept.definition);
+      if (held === undefined) {
+        return Effect.void;
+      }
+      const goal = { org: address.org, definition: held.definition };
+      const answered =
+        held.goal.retired === true
+          ? Effect.succeed<Moment>(null)
+          : summaryDue(ports, { address, goal, clock, due, now }, held.goal, owner);
+      return Effect.flatMap(answered, (wait) => advancedPast(ports, goal, { wait, now }));
+    },
   );
 }
 
-function goalAnswered(
-  ports: CountedPorts,
-  summary: Summary,
-  goals: readonly Goal[],
-  owner: RecordedCaller | undefined,
-): Effect.Effect<readonly [string, Moment], unknown> {
-  const goal = goals.find(({ id, retired }) => id === summary.clock.id && retired !== true);
-  const answered = goal === undefined ? Effect.succeed<Moment>(null) : summaryDue(ports, summary, goal, owner);
-  return Effect.map(answered, (moment): readonly [string, Moment] => [summary.clock.id, moment]);
-}
-
-function summariesPerformed(ports: CountedPorts, { org, playbook, row }: PlaybookProjectedRow, now: number) {
+function summariesPerformed(ports: CountedPorts, kept: PlaybookProjectedRow, now: number) {
+  const { org, playbook } = kept;
   const address = { org, playbook };
-  const due: readonly Summary[] = goalClocksIn(row).flatMap((clock): readonly Summary[] => {
-    const time = summaryTimeOf(clock, now);
-    return time.due === undefined ? [] : [{ address, clock, due: time.due, now }];
-  });
-  if (due.length === 0) {
-    return advancedPast(ports, address, { waits: new Map(), now });
+  const goal = addressOfTheRow(kept);
+  const clock = goalClockIn(kept.row);
+  const due = clock === undefined ? undefined : summaryTimeOf(clock, now).due;
+  if (clock === undefined || due === undefined) {
+    return advancedPast(ports, goal, { now });
   }
-  return Effect.flatMap(ports.playbookOf(address), ({ status, owner }) => {
-    if (status !== 'active') {
-      return advancedPast(ports, address, { waits: new Map(), now, retired: true });
-    }
-    return Effect.flatMap(goalsOf(ports, address), (goals) =>
-      Effect.flatMap(
-        Effect.forEach(due, (summary) => goalAnswered(ports, summary, goals, owner)),
-        (answers: readonly (readonly [string, Moment])[]) =>
-          advancedPast(ports, address, { waits: new Map(answers), now }),
-      ),
-    );
-  });
+  return Effect.flatMap(ports.playbookOf(address), ({ status, owner }) =>
+    status === 'active'
+      ? summaryAnswered(ports, { address, kept, clock, due, now }, owner)
+      : advancedPast(ports, goal, { now, retired: true }),
+  );
 }
 
 function itemOf(ports: CountedPorts, due: PlaybookProjectedRow): DueItem {
   return {
-    key: `${due.org}/${due.playbook}/goal-summaries`,
+    key: `${streamPrefixOfAddress(due)}goal-summaries`,
     callsOut: false,
     perform: (now) => Effect.suspend(() => summariesPerformed(ports, due, now)),
   };

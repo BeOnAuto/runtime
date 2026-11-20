@@ -4,7 +4,7 @@ import { Layer, Logger } from 'effect';
 
 import { runOutcomeMapping } from '../analytics/run-outcome-mapping.ts';
 import { definitionTypeOrder } from '../capability/function-terminology.ts';
-import { definitionNamesOf, unbounded } from '../identity/definition-names.ts';
+import { definitionAndGoalNamesOf, unbounded } from '../identity/names-of-a-playbook.ts';
 import { DefinitionsReadModel, stagedOver, type ReadModelStage } from '../read-model-staging/read-model-stage.ts';
 import { definitionsReadModelOf } from '../read-model/definitions-read-model.ts';
 import { runIds } from '../runs/run-starts.ts';
@@ -50,7 +50,7 @@ const typesOfTheTests = [
 ];
 
 export function definitionNamesWith(types: readonly string[]): DefinitionNames {
-  return definitionNamesOf([...definitionTypeOrder, ...types], unbounded);
+  return definitionAndGoalNamesOf([...definitionTypeOrder, ...types], unbounded);
 }
 
 const harnessNames = definitionNamesWith(typesOfTheTests);

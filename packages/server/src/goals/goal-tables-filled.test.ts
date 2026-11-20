@@ -1,7 +1,7 @@
 import { goalsLedger, summaryRunIdOf } from '@on.auto/goals';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
-import { ContextSchema, Ledger, projectedTableOf, type Decider } from '@on.auto/operations';
+import { ContextSchema, Ledger, projectedTableOf, streamPrefixOfDefinition, type Decider } from '@on.auto/operations';
 import { Effect, ManagedRuntime, Result, Schema, type Layer } from 'effect';
 import { Client } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -18,9 +18,11 @@ const { projections } = goalsLedger;
 
 const tables = projections.map((projection) => projectedTableOf(projection));
 
-const sales = { org: 'acme', playbook: 'sales' };
+const goal = '019a8f00-0000-7000-8000-00000000c0a1';
 
-const prefix = 'playbook/acme/sales/';
+const ofTheGoal = { org: 'acme', definition: goal };
+
+const prefix = streamPrefixOfDefinition(ofTheGoal);
 
 const FactSchema = Schema.Struct({ type: Schema.String, data: Schema.Json, context: ContextSchema });
 
@@ -34,7 +36,7 @@ const verbatim: Decider<null, Fact, Fact> = {
   eventSchema: FactSchema,
 };
 
-const at = (moment: string) => ({ at: moment, by: 'playbook:sales' });
+const at = (moment: string) => ({ at: moment, by: 'playbook:sales', definitionId: goal });
 
 const daily = {
   id: 'controls-hold',
@@ -57,8 +59,7 @@ const tuesday = '7a2d8b3f-4c5e-5f60-9b0a-1d2e3f4a5b6c';
 const openedOn = (opens: string, closes: string, due: string): Fact => ({
   type: 'goal_assessment_opened',
   data: {
-    goal: 'controls-hold',
-    goals_version: 1,
+    goal_version: 1,
     window: { opens, closes, due },
     rule: { settles: 'on_crossing', target: { at_most: 0 }, window: { calendar: 'day' } },
     milestones: [],
@@ -68,10 +69,10 @@ const openedOn = (opens: string, closes: string, due: string): Fact => ({
 
 const history: readonly (readonly [string, Fact])[] = [
   [
-    'goals/playbook',
+    'goals/goal',
     {
-      type: 'playbook_goals_saved',
-      data: { source: 'goals', goals: [daily], version: 1 },
+      type: 'goal_created',
+      data: { playbook: 'sales', position: 0, goal: daily },
       context: at('2026-11-08T12:00:00.000Z'),
     },
   ],
@@ -132,12 +133,12 @@ const history: readonly (readonly [string, Fact])[] = [
     `assessments/${tuesday}`,
     {
       type: 'goal_dismissed',
-      data: { goal: 'controls-hold', at: '2026-11-11T02:00:00.000Z', by: { id: 'ada', name: 'Ada' }, requests: ['r'] },
+      data: { at: '2026-11-11T02:00:00.000Z', by: { id: 'ada', name: 'Ada' }, requests: ['r'] },
       context: at('2026-11-11T02:00:00.000Z'),
     },
   ],
   [
-    'goal-refusals/controls-hold.check-controls',
+    'goal-refusals/check-controls',
     {
       type: 'goal_observation_refused',
       data: { run: 'run-2', detail: 'The measure is not a number' },
@@ -145,19 +146,19 @@ const history: readonly (readonly [string, Fact])[] = [
     },
   ],
   [
-    'goal-summaries/controls-hold',
+    'goal-summaries/summary',
     {
       type: 'goal_summary_started',
       data: {
         due: '2026-11-13T09:00:00.000Z',
         window: { from: '2026-11-08T12:00:00.000Z', to: '2026-11-13T09:00:00.000Z' },
-        run: summaryRunIdOf('controls-hold', Date.parse('2026-11-13T09:00:00.000Z')),
+        run: summaryRunIdOf(goal, Date.parse('2026-11-13T09:00:00.000Z')),
       },
       context: at('2026-11-13T09:00:05.000Z'),
     },
   ],
   [
-    'goal-summaries/controls-hold',
+    'goal-summaries/summary',
     {
       type: 'goal_notice_refused',
       data: { change: 'summary', attempt: 1, detail: 'unavailable', retry_at: '2026-11-20T09:05:00.000Z' },
@@ -235,7 +236,7 @@ async function rowsOf(ledger: Ledger['Service']) {
   const read = await Promise.all(
     projections.map((projection) =>
       Effect.runPromise(
-        ledger.readProjectedRows(projection.name, sales, { where: [], orderBy: [], order: 'asc', limit: 50 }),
+        ledger.readProjectedRows(projection.name, ofTheGoal, { where: [], orderBy: [], order: 'asc', limit: 50 }),
       ),
     ),
   );
@@ -265,15 +266,15 @@ describe.each(stores)('the tables of goals on $store', ({ skipped, aPlace }) => 
       const kept = { rows: await rowsOf(ledger), dues: await duesOf(ledger) };
       await Effect.runPromise(
         Effect.all([
-          ledger.advanceRow('goal_clocks', sales, 'clock', {
+          ledger.advanceRow('goal_clocks', ofTheGoal, 'clock', {
             set: { opens_at: instant('2026-11-12T00:00:00.000Z') },
             when: [],
           }),
-          ledger.advanceRow('goal_assessments', sales, monday, {
+          ledger.advanceRow('goal_assessments', ofTheGoal, monday, {
             set: { notice_due_at: instant('2026-11-12T00:00:00.000Z') },
             when: [],
           }),
-          ledger.advanceRow('goal_summaries', sales, 'controls-hold', {
+          ledger.advanceRow('goal_summaries', ofTheGoal, 'summary', {
             set: { retry_at: instant('2026-11-21T00:00:00.000Z') },
             when: [],
           }),

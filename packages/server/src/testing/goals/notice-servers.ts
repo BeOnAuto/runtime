@@ -8,7 +8,7 @@ import { interactionServerOn, type InteractionServer } from '../interaction-serv
 import type { TemporaryLedger } from '../records/temporary-ledger.ts';
 import { alpha } from '../servers/reasoning-server.ts';
 import { createdWithGoals } from '../settings/goals-kept.ts';
-import { assessedIn, factsIn, tellOwner } from './notice-facts.ts';
+import { assessedIn, factsIn, goalIdentityOf, tellOwner, type NoticedIds } from './notice-facts.ts';
 
 export interface Noticing {
   readonly ledger?: TemporaryLedger;
@@ -22,9 +22,10 @@ export interface NoticeServer {
   readonly chat: Awaited<ReturnType<typeof chatServer>>;
   readonly starting: () => Promise<StartingParts>;
   readonly performs: () => number;
-  readonly assessed: (told: string, at: number) => Promise<void>;
+  readonly assessed: (told: string, at: number) => Promise<NoticedIds>;
   readonly runs: () => Promise<readonly string[]>;
-  readonly factsOf: (stream: string) => Promise<readonly string[]>;
+  readonly goalOf: (name: string) => Promise<string>;
+  readonly factsOf: (goal: string, stream: string) => Promise<readonly string[]>;
 }
 
 interface Counter {
@@ -95,7 +96,8 @@ export async function servingGoalNotices(noticing: Noticing = {}): Promise<Notic
     starting: () => parts.promise,
     performs: counter.count,
     assessed: async (told, at) => assessedIn(await runtime(), told, at),
-    factsOf: async (stream) => factsIn(await runtime(), stream),
+    goalOf: async (name) => goalIdentityOf(await runtime(), name),
+    factsOf: async (goal, stream) => factsIn(await runtime(), goal, stream),
     runs: async () =>
       Schema.decodeUnknownSync(RunsSchema)((await server.call('GET', `${alpha}/runs`)).body).runs.map(
         ({ run_id: id }) => id,

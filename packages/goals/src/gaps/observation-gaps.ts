@@ -1,9 +1,8 @@
-import type { Goal } from '@on.auto/definitions/goals';
+import type { Goal, HeldGoal } from '@on.auto/definitions/goals';
 import { PlaybookReader } from '@on.auto/operations';
 import type { GoalGap } from '@on.auto/playbooks';
 import { Effect } from 'effect';
 
-import { goalRefusalsStreamIdOf } from '../goal-tables/goal-streams.ts';
 import { observationsName, observedEntryKeyOf } from '../goal-tables/observation-rows.ts';
 import { refusalsName } from '../goal-tables/refusal-rows.ts';
 import type { GoalsStanding, StandingWorkflow } from './goal-gaps.ts';
@@ -48,7 +47,9 @@ function contributingTo({ id }: Goal, workflows: readonly StandingWorkflow[]): r
   });
 }
 
-function observedSince(reader: PlaybookReader['Service'], { workflow, entries }: Contributing, at: number) {
+type GoalReader = ReturnType<PlaybookReader['Service']['ofDefinition']>;
+
+function observedSince(reader: GoalReader, { workflow, entries }: Contributing, at: number) {
   return Effect.map(
     Effect.forEach(entries, (entry) =>
       reader.countProjectedRows(observationsName, [
@@ -63,11 +64,11 @@ function observedSince(reader: PlaybookReader['Service'], { workflow, entries }:
   );
 }
 
-function gapOf(reader: PlaybookReader['Service'], goal: Goal, contributing: Contributing) {
+function gapOf(reader: GoalReader, goal: Goal, contributing: Contributing) {
   const workflow = contributing.workflow.name;
   return Effect.flatMap(
     reader.readProjectedRows(refusalsName, {
-      where: [{ column: 'row_key', equals: goalRefusalsStreamIdOf({ goal: goal.id, workflow }) }],
+      where: [{ column: 'row_key', equals: workflow }],
       orderBy: [],
       order: 'asc',
       limit: 1,
@@ -86,14 +87,17 @@ function gapOf(reader: PlaybookReader['Service'], goal: Goal, contributing: Cont
 }
 
 export function observationGapsIn({
-  goals,
+  held,
   workflows,
-}: Pick<GoalsStanding, 'goals' | 'workflows'>): Effect.Effect<readonly GoalGap[], never, PlaybookReader> {
+}: Pick<GoalsStanding, 'held' | 'workflows'>): Effect.Effect<readonly GoalGap[], never, PlaybookReader> {
   return Effect.gen(function* () {
     const reader = yield* PlaybookReader;
     const gaps = yield* Effect.forEach(
-      goals.filter(({ retired }) => retired !== true),
-      (goal) => Effect.forEach(contributingTo(goal, workflows), (contributing) => gapOf(reader, goal, contributing)),
+      held.filter(({ goal }) => goal.retired !== true),
+      ({ definition, goal }: HeldGoal) =>
+        Effect.forEach(contributingTo(goal, workflows), (contributing) =>
+          gapOf(reader.ofDefinition(definition), goal, contributing),
+        ),
     );
     return gaps.flat(2);
   });

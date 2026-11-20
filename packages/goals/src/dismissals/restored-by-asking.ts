@@ -5,7 +5,6 @@ import {
   playbookCallerOf,
   playbookLedgerOf,
   recordedCallerOf,
-  streamPrefixOfPlaybook,
   type PlaybookAddress,
   type RecordedEvent,
 } from '@on.auto/operations';
@@ -15,8 +14,8 @@ import { Effect, Schema } from 'effect';
 import { thingsAskedAboutOver } from '../asked-things/asked-things.ts';
 import { deliveryDoing } from '../assessor/assessor-deliveries.ts';
 import type { AssessorPorts } from '../assessor/run-planner.ts';
-import { assessmentsKind } from '../goal-facts/goal-facts.ts';
-import { restoringAsked } from './asked-again.ts';
+import { assessmentStreamOf } from '../goal-facts/goal-facts.ts';
+import { restoringAsked, type RestoringGoal } from './asked-again.ts';
 
 const restoredByAskingName = 'dismissed things asked about again';
 
@@ -54,8 +53,13 @@ function dismissedBefore<E>(ports: RestoringPorts<E>, playbook: PlaybookAddress,
       order: 'desc',
       limit: mostStandingDismissalsSearched,
     }),
-    (rows): ReadonlySet<string> => new Set(rows.map(({ key }) => key)),
+    (rows): ReadonlyMap<string, string | undefined> => new Map(rows.map(({ key, definition }) => [key, definition])),
   );
+}
+
+interface Restoring {
+  readonly id: string;
+  readonly goal: RestoringGoal;
 }
 
 function restoreAskedAbout<E>(ports: RestoringPorts<E>, playbook: PlaybookAddress, asked: Asking) {
@@ -73,12 +77,16 @@ function restoreAskedAbout<E>(ports: RestoringPorts<E>, playbook: PlaybookAddres
     );
     const caller = playbookCallerOf(playbook);
     const at = ports.now();
+    const restoring = things.flatMap(({ goal, id }): readonly Restoring[] => {
+      const definition = standing.get(id);
+      return definition === undefined ? [] : [{ id, goal: { definition, name: goal } }];
+    });
     yield* Effect.forEach(
-      things.filter(({ id }) => standing.has(id)),
-      ({ id }) =>
+      restoring,
+      ({ id, goal }) =>
         ports.ledger.execute(
-          `${streamPrefixOfPlaybook(playbook)}${assessmentsKind}/${id}`,
-          restoringAsked(caller.id, at),
+          assessmentStreamOf({ org: playbook.org, definition: goal.definition }, id),
+          restoringAsked(caller.id, at, goal),
           { asked: asked.at, at, by: recordedCallerOf(caller) },
         ),
       { discard: true },

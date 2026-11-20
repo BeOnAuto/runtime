@@ -105,7 +105,7 @@ const wakesFrom = (harness: ClockHarness, from: string) =>
 
 async function factsOf({ harness }: Together): Promise<readonly string[]> {
   const assessed = Object.keys(await harness.book.rows(assessmentsName));
-  const facts = await Promise.all(assessed.map((key) => harness.book.factsOf(`assessments/${key}`)));
+  const facts = await Promise.all(assessed.map((key) => harness.book.factsOf('controls-hold', `assessments/${key}`)));
   return facts.flat();
 }
 
@@ -115,8 +115,8 @@ async function restored({ harness, seen }: Together): Promise<readonly boolean[]
   await harness.until('2026-11-13T00:00:00.000Z');
   const references = seen.starts.slice(from).map(({ trigger }) => trigger.reference);
   return [
-    references.some((reference) => reference.startsWith('goals/controls-hold/assessments/')),
-    references.includes('goals/controls-hold/summaries/2026-11-13T00:00:00.000Z'),
+    references.some((reference) => reference.startsWith('goals/goal-of-controls-hold/assessments/')),
+    references.includes('goals/goal-of-controls-hold/summaries/2026-11-13T00:00:00.000Z'),
   ];
 }
 
@@ -251,7 +251,7 @@ describe('the clock, the notices and the summaries of a retired playbook whose g
 
       expect(together.seen.starts.length).toBeGreaterThanOrEqual(2);
       expect(wakes).toEqual(retiredMidnights);
-      expect(summaries).toEqual(['goals/controls-hold/summaries/2026-11-16T09:00:00.000Z']);
+      expect(summaries).toEqual(['goals/goal-of-controls-hold/summaries/2026-11-16T09:00:00.000Z']);
       expect(wakesFrom(together.harness, '2026-11-16T12:00:00.000Z')).toEqual(['2026-11-17T00:00:00.000Z']);
     },
   );

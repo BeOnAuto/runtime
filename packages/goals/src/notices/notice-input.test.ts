@@ -23,7 +23,7 @@ const day = { opens: monday, closes: monday + 86_400_000, due: monday + 90_000_0
 
 const measured: AssessmentState = {
   ...unopened,
-  pinned: { goal: controls.id, goalsVersion: 1, settles: 'on_crossing', target: { at_most: 0 }, milestones: [] },
+  pinned: { goalVersion: 1, settles: 'on_crossing', target: { at_most: 0 }, milestones: [] },
   window: day,
   measurement: { value: 2, final: false, as_of: monday, at: monday, run: 'r-1' },
 };
@@ -62,8 +62,7 @@ describe('the input of a notice with evidence', () => {
       ...measured,
       pinned: {
         ...measured.pinned,
-        goal: controls.id,
-        goalsVersion: 1,
+        goalVersion: 1,
         settles: 'on_crossing',
         target: { at_least: 1 },
         milestones: [],
@@ -171,8 +170,7 @@ const opens = monday + 81_000;
 const early: AssessmentState = {
   ...unopened,
   pinned: {
-    goal: checks.id,
-    goalsVersion: 1,
+    goalVersion: 1,
     per: 'run-1',
     settles: 'on_crossing',
     target: { at_most: 0 },

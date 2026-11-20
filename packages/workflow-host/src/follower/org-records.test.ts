@@ -99,3 +99,30 @@ describe('the name a record of a definition is followed under', () => {
     expect(asked).toEqual([triage, triage]);
   });
 });
+
+describe('the playbook a record of a goal is followed under', () => {
+  it('is the playbook the goal is in now, read again at each fact of the goal, so a goal removed is followed under none', async () => {
+    const goal = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7c/';
+    const held = {
+      definitionKey: goal,
+      playbookKey: 'playbook/acme/beta/',
+      definitionType: 'goal',
+      name: 'weekly-leads',
+      status: 'active',
+      hasTriggers: false,
+    };
+    const names = new Map([[goal, held]]);
+    const playbookOf = playbooksOfRecords({ nameHeldBy: (definitionKey) => Promise.resolve(names.get(definitionKey)) });
+
+    const before = await Effect.runPromise(playbookOf({ stream: `${goal}assessments/a1`, type: 'goal_observed' }));
+    names.delete(goal);
+    const kept = await Effect.runPromise(playbookOf({ stream: `${goal}assessments/a1`, type: 'goal_observed' }));
+    const after = await Effect.runPromise(playbookOf({ stream: `${goal}goals/goal`, type: 'goal_removed' }));
+
+    expect([before, kept, after].map((place) => place?.playbookKey)).toEqual([
+      'playbook/acme/beta/',
+      'playbook/acme/beta/',
+      undefined,
+    ]);
+  });
+});

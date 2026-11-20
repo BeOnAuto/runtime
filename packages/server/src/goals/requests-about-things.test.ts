@@ -28,6 +28,10 @@ async function requestsOf({ server }: WatchedServer, query = ''): Promise<Intera
   return Schema.decodeUnknownSync(Listed)(body).interactions;
 }
 
+async function orderOf(watched: WatchedServer, per: string): Promise<string> {
+  return assessmentIdOf({ definition: await watched.goalOf('orders'), per });
+}
+
 function eachAboutAThing(interactions: Interactions): boolean {
   return interactions.length === 2 && interactions.every(({ about }) => about !== undefined && about.length > 0);
 }
@@ -41,13 +45,10 @@ describe('a question a workflow asks about an order another workflow started by 
     const asked = await movingUntil(watched, () => requestsOf(watched), eachAboutAThing);
 
     const byMessage = Object.fromEntries(asked.map(({ message, about }) => [message, about]));
+    const [first, second] = [await orderOf(watched, 'ORD-1'), await orderOf(watched, 'ORD-2')];
     expect(byMessage).toEqual({
-      'Accept wholesale order ORD-1?': [
-        { goal: 'orders', id: assessmentIdOf({ goal: 'orders', per: 'ORD-1' }), per: 'ORD-1' },
-      ],
-      'Accept wholesale order ORD-2?': [
-        { goal: 'orders', id: assessmentIdOf({ goal: 'orders', per: 'ORD-2' }), per: 'ORD-2' },
-      ],
+      'Accept wholesale order ORD-1?': [{ goal: 'orders', id: first, per: 'ORD-1' }],
+      'Accept wholesale order ORD-2?': [{ goal: 'orders', id: second, per: 'ORD-2' }],
     });
     expect(asked.map(({ causes }) => causes)).toEqual([[expect.any(String)], [expect.any(String)]]);
   }, 120_000);
@@ -143,7 +144,7 @@ describe('an order a question is about, dismissed over HTTP', () => {
     const watched = await playbookServed();
     expect((await anOrderArrived(watched, 'ORD-3', 'Juniper Cafe')).status).toBe(200);
     await movingUntil(watched, () => requestsOf(watched), oneAboutAThing);
-    const id = assessmentIdOf({ goal: 'orders', per: 'ORD-3' });
+    const id = await orderOf(watched, 'ORD-3');
 
     const dismissed = await dismissedOver(watched, id, {});
     const counted = await openCountsOf(watched);
@@ -186,8 +187,8 @@ describe('two orders dismissed one after the other over HTTP', () => {
     expect((await anOrderArrived(watched, 'ORD-6', 'Harbor Deli')).status).toBe(200);
     await movingUntil(watched, () => requestsOf(watched), eachAboutAThing);
 
-    const first = await dismissedOver(watched, assessmentIdOf({ goal: 'orders', per: 'ORD-5' }), {});
-    const second = await dismissedOver(watched, assessmentIdOf({ goal: 'orders', per: 'ORD-6' }), {});
+    const first = await dismissedOver(watched, await orderOf(watched, 'ORD-5'), {});
+    const second = await dismissedOver(watched, await orderOf(watched, 'ORD-6'), {});
 
     expect([first.answer.notices, second.answer.notices]).toEqual([
       [{ kind: 'dismissed_for_everyone' }, { kind: 'question_still_waits' }],
@@ -201,7 +202,7 @@ describe('a dismissed order a new question is asked about', () => {
     const watched = await playbookServed();
     expect((await anOrderArrived(watched, 'ORD-4', 'Juniper Cafe')).status).toBe(200);
     await movingUntil(watched, () => requestsOf(watched), oneAboutAThing);
-    const id = assessmentIdOf({ goal: 'orders', per: 'ORD-4' });
+    const id = await orderOf(watched, 'ORD-4');
     expect((await dismissedOver(watched, id, {})).answer.dismissed).toBe(true);
     const [waiting] = await requestsOf(watched, '?dismissed=include');
     watched.clock.moveTo(watched.clock.now() + 60_000);
@@ -245,7 +246,7 @@ describe('an order a question is about, dismissed over MCP', () => {
     const watched = await playbookServed();
     expect((await anOrderArrived(watched, 'ORD-4', 'Harbor Deli')).status).toBe(200);
     await movingUntil(watched, () => requestsOf(watched), oneAboutAThing);
-    const id = assessmentIdOf({ goal: 'orders', per: 'ORD-4' });
+    const id = await orderOf(watched, 'ORD-4');
     const thing = { goal: 'orders', id };
 
     const seen = await onMcp(watched, async (session) => {

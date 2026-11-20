@@ -3,6 +3,7 @@ import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { assessing, savedWorkflow, type Assessing } from '../../testing/goals/assessed-runs.ts';
+import { goalOf } from '../../testing/goals/goal-identities.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
 import { goalsText } from '../../testing/settings/goals-kept.ts';
@@ -109,7 +110,7 @@ function refusedEvidenceShown(read: GoalsRead): boolean {
   return (read.goals[0]?.gaps ?? []).some(({ kind }) => kind === 'observation_refused');
 }
 
-const mar = (index: number) => assessmentIdOf({ goal: 'paying-customers', per: `MAR-${String(index)}` });
+const mar = (definition: string, index: number) => assessmentIdOf({ definition, per: `MAR-${String(index)}` });
 
 describe('the goals read of a Node server whose schedules judge things', () => {
   it('counts the experiments by milestone, lists twelve in flight with the one that has a due first, and passes it', async () => {
@@ -118,6 +119,7 @@ describe('the goals read of a Node server whose schedules judge things', () => {
     expect(await savedWorkflow(assessed.server, 'prepare', marking('prepared', 2, 3))).toBe(201);
     expect(await savedWorkflow(assessed.server, 'go-live', marking('live', 3, 3))).toBe(201);
     const marked = await readHolding(assessed, threeMilestonesMarked);
+    const experiments = await goalOf(assessed, 'paying-customers');
 
     expect(experimentsOf(marked)).toMatchObject({
       open_count: 14,
@@ -127,7 +129,7 @@ describe('the goals read of a Node server whose schedules judge things', () => {
     });
     expect(experimentsOf(marked)?.in_flight).toHaveLength(12);
     expect(experimentsOf(marked)?.in_flight[0]).toMatchObject({
-      id: mar(3),
+      id: mar(experiments, 3),
       per: { id: 'MAR-3' },
       next: 'measured',
       marks: [{ milestone: 'chosen' }, { milestone: 'prepared' }, { milestone: 'live' }],
@@ -141,7 +143,7 @@ describe('the goals read of a Node server whose schedules judge things', () => {
     expect(experimentsOf(passed)?.closed).toMatchObject({
       total: 1,
       passed: 1,
-      latest: [{ id: mar(3), outcome: 'passed', per: { id: 'MAR-3' }, value: 1 }],
+      latest: [{ id: mar(experiments, 3), outcome: 'passed', per: { id: 'MAR-3' }, value: 1 }],
     });
   });
 });

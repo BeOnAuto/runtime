@@ -23,7 +23,7 @@ type Decision = Result.Result<readonly DefinitionEvent[], Rejection<'not_found' 
 
 const nothingToRecord: Decision = Result.succeed([]);
 
-const changedMeanwhile = new Conflict({
+export const changedMeanwhile = new Conflict({
   detail: 'The state changed while the command was decided',
   kind: 'concurrent_change',
 });

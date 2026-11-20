@@ -100,7 +100,9 @@ const askAboutOrder = [
 
 const goalsReadOf = Schema.decodeUnknownSync(GoalsReadSchema);
 
-const juniper = assessmentIdOf({ goal: 'orders', per: 'ORD-1' });
+async function juniperOf(watched: WatchedServer): Promise<string> {
+  return assessmentIdOf({ definition: await watched.goalOf('orders'), per: 'ORD-1' });
+}
 
 async function ordersOf({ server }: WatchedServer): Promise<Assessments> {
   const { body } = await server.call('GET', `${alpha}/goals`);
@@ -170,7 +172,7 @@ describe('an order whose email started one workflow that marked it and another t
     );
 
     expect(stopped.open_count).toBe(1);
-    expect(stopped.in_flight[0]).toMatchObject({ id: juniper, verdict: 'open', next: 'priced' });
+    expect(stopped.in_flight[0]).toMatchObject({ id: await juniperOf(watched), verdict: 'open', next: 'priced' });
     expect(stopped.in_flight[0]?.stopped?.reason).toContain(gaveUp);
   }, 120_000);
 });
@@ -204,7 +206,7 @@ describe('a ledger whose release passed the run that gave up without stopping th
 
     expect(JSON.stringify(passed)).toContain('ask-about-order');
     expect(unstopped).toMatchObject({ open_count: 1, stopped_count: 0 });
-    expect(stopped.in_flight[0]?.id).toBe(juniper);
+    expect(stopped.in_flight[0]?.id).toBe(await juniperOf(after));
     expect(stopped.in_flight[0]?.stopped?.reason).toContain(gaveUp);
   }, 120_000);
 });

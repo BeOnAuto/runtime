@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 
 import { assessmentIdOf, GoalsReadSchema } from '@on.auto/goals';
-import { ledgerLayer } from '@on.auto/ledger/sqlite';
-import { ContextSchema, Ledger, type Decider } from '@on.auto/operations';
-import { Effect, ManagedRuntime, Result, Schema } from 'effect';
+import { ContextSchema, streamPrefixOfDefinition, type Decider } from '@on.auto/operations';
+import { Effect, Result, Schema } from 'effect';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { assessing, type Assessing } from '../../testing/goals/assessed-runs.ts';
+import { goalOf } from '../../testing/goals/goal-identities.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
 
@@ -84,7 +84,7 @@ function factsOf([key, verdict, at, by, said]: Judged): readonly Fact[] {
   return [
     {
       type: 'goal_assessment_opened',
-      data: { goal: 'compliance-checks', goals_version: 1, per: { id: per }, rule, milestones },
+      data: { goal_version: 1, per: { id: per }, rule, milestones },
       context,
     },
     {
@@ -105,20 +105,25 @@ function factsOf([key, verdict, at, by, said]: Judged): readonly Fact[] {
   ];
 }
 
-async function recordedByAnEarlierRelease(fileName: string): Promise<void> {
-  const before = ManagedRuntime.make(ledgerLayer({ fileName, projections: [] }));
-  const ledger = await before.runPromise(Ledger);
+async function judgedUnderTheGoal(served: Assessing): Promise<void> {
+  const ledger = await served.ledger();
+  const definition = await goalOf(served, 'compliance-checks');
+  const prefix = streamPrefixOfDefinition({ org: 'acme', definition });
   await Effect.runPromise(
     Effect.forEach(
       recorded.judged,
       (judged) => {
-        const stream = `playbook/acme/alpha/assessments/${assessmentIdOf({ goal: 'compliance-checks', per: `run-${judged[0]}` })}`;
-        return Effect.forEach(factsOf(judged), (fact) => ledger.execute(stream, verbatim, fact), { discard: true });
+        const stream = `${prefix}assessments/${assessmentIdOf({ definition, per: `run-${judged[0]}` })}`;
+        return Effect.forEach(
+          factsOf(judged),
+          ({ type, data, context }) =>
+            ledger.execute(stream, verbatim, { type, data, context: { ...context, definitionId: definition } }),
+          { discard: true },
+        );
       },
       { discard: true },
     ),
   );
-  await before.dispose();
 }
 
 const exactly = Schema.decodeUnknownSync(GoalsReadSchema, { onExcessProperty: 'error' });
@@ -147,8 +152,8 @@ let assessed: Assessing;
 
 beforeAll(async () => {
   const ledger = temporaryLedger();
-  await recordedByAnEarlierRelease(ledger.fileName);
   assessed = await assessing({ ledger, goals: checksText });
+  await judgedUnderTheGoal(assessed);
   return async () => {
     await assessed.server.stop();
     ledger.remove();

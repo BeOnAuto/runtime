@@ -1,23 +1,34 @@
-import type { Goal } from '@on.auto/definitions/goals';
+import type { Goal, HeldGoal } from '@on.auto/definitions/goals';
 import { playbookLedgerOf, type PlaybookReader, PlaybookContext } from '@on.auto/operations';
-import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
+import type { MemoryLedger } from '@on.auto/operations/testing';
 import { Effect, type Schema } from 'effect';
 
-import { assessmentIdOf } from '../assessments/assessment-identity.ts';
-import { goalsLedger } from '../engine/goals-engine.ts';
-import { runStartedByAnEventIn, verbatim } from './run-samples.ts';
+import { goalIdentityOf, goalsMemoryLedger, goalsSavedBy } from '../assessor/assessor-ledger.ts';
+import {
+  afterSpan,
+  appendingTo,
+  instantText,
+  observedData,
+  openedDataOf,
+  openingIdOf,
+  refusedIn,
+  thingsOf,
+  type Observed,
+  type Span,
+} from './assessment-appends.ts';
+import { runStartedByAnEventIn } from './run-samples.ts';
+
+export { afterSpan, day, daySpan, instantText } from './assessment-appends.ts';
 
 const sales = { org: 'acme', playbook: 'sales' };
 
 const salesKey = 'playbook/acme/sales/';
 
-export const day = 86_400_000;
+export function heldGoalOf(goal: Goal, version = 1): HeldGoal {
+  return { definition: goalIdentityOf(goal.id), version, goal };
+}
 
 export const firstDay = Date.parse('2026-11-02T00:00:00.000Z');
-
-export function instantText(instant: number): string {
-  return new Date(instant).toISOString();
-}
 
 const milestones: NonNullable<Goal['milestones']> = [
   { id: 'chosen', label: 'Idea chosen', by: 'person' },
@@ -89,33 +100,6 @@ export const oneOffGoal: Goal = {
   notify: { passed: 'now', failed: 'now', through: 'tell-owner' },
 };
 
-export interface Span {
-  readonly opens: number;
-  readonly closes: number;
-  readonly due: number;
-}
-
-function spanText({ opens, closes, due }: Span) {
-  return { opens: instantText(opens), closes: instantText(closes), due: instantText(due) };
-}
-
-export function afterSpan(live: number): Span {
-  return { opens: live, closes: live + 7 * day, due: live + 8 * day };
-}
-
-export function daySpan(opens: number): Span {
-  return { opens, closes: opens + day, due: opens + day + 3_600_000 };
-}
-
-interface Observed {
-  readonly marks?: string;
-  readonly measurement?: { readonly value: number; readonly final: boolean; readonly as_of: number };
-  readonly title?: string;
-  readonly link?: string;
-  readonly says?: string;
-  readonly window?: Span;
-}
-
 export interface AssessmentBook {
   readonly opened: (
     goal: Goal,
@@ -148,108 +132,40 @@ export interface AssessmentBook {
   readonly ledger: MemoryLedger['layer'];
 }
 
-function windowOfData(window: Span | undefined) {
-  return window === undefined ? {} : { window: spanText(window) };
-}
-
-function observedData(run: string, at: number, { measurement, window, ...words }: Observed) {
-  return {
-    source: { record: `record-${run}`, run, workflow: 'measure', version: 1, entry: 0 },
-    at: instantText(at),
-    ...words,
-    ...(measurement === undefined
-      ? {}
-      : { measurement: { value: measurement.value, final: measurement.final, as_of: instantText(measurement.as_of) } }),
-    ...windowOfData(window),
-  };
-}
-
-type Append = (stream: string, type: string, data: Schema.Json, at: number) => Promise<void>;
-
-interface Opening {
-  readonly per?: string;
-  readonly window?: Span;
-}
-
-function openingIdOf(goal: Goal, { per, window }: Opening): string {
-  if (per !== undefined) {
-    return assessmentIdOf({ goal: goal.id, per });
-  }
-  return assessmentIdOf({ goal: goal.id, ...(window === undefined ? {} : { window_start: window.opens }) });
-}
-
-function openedDataOf(goal: Goal, { per, window }: Opening) {
-  return {
-    goal: goal.id,
-    goals_version: 1,
-    ...(per === undefined ? {} : { per: { id: per } }),
-    ...windowOfData(window),
-    rule: {
-      settles: goal.success.settles,
-      target: goal.success.target,
-      ...(goal.window === undefined ? {} : { window: goal.window }),
-    },
-    milestones: goal.milestones ?? [],
-  };
-}
-
-function appendingTo(service: ReturnType<typeof memoryLedger>['service']): Append {
-  return (stream, type, data, at) =>
-    Effect.runPromise(
-      Effect.asVoid(
-        service.execute(`${salesKey}${stream}`, verbatim, {
-          type,
-          data,
-          context: { at: instantText(at), by: 'playbook:sales' },
-        }),
-      ),
-    );
-}
-
-const refusedOutput = '/contributes/0: The output at /customers is no finite number';
-
 export function assessmentBookOf(): AssessmentBook {
-  const { service, layer } = memoryLedger(undefined, goalsLedger.projections);
+  const { service, layer } = goalsMemoryLedger();
   const append = appendingTo(service);
+  const { kept, toIt, dismissal } = thingsOf(append);
   let runs = 0;
-  const things = new Map<string, { readonly goal: string; readonly per?: string }>();
-  const toIt = (id: string, type: string, data: Schema.Json, at: number) => append(`assessments/${id}`, type, data, at);
-  const dismissal = (id: string, by: string, at: number) => ({
-    ...things.get(id),
-    at: instantText(at),
-    by: { id: by, name: by },
-  });
   return {
     opened: async (goal, at, thing = {}) => {
       const id = openingIdOf(goal, thing);
-      things.set(id, { goal: goal.id, ...(thing.per === undefined ? {} : { per: thing.per }) });
-      await toIt(id, 'goal_assessment_opened', openedDataOf(goal, thing), at);
+      kept(id, { goal: goal.id, ...(thing.per === undefined ? {} : { per: thing.per }) });
+      await toIt(id, { type: 'goal_assessment_opened', data: openedDataOf(goal, thing) }, at);
       return id;
     },
     observed: (id, at, observed) => {
       runs += 1;
-      return toIt(id, 'goal_observed', observedData(`run-${String(runs)}`, at, observed), at);
+      return toIt(id, { type: 'goal_observed', data: observedData(`run-${String(runs)}`, at, observed) }, at);
     },
     assessed: (id, verdict, at, by = 'crossing') =>
-      toIt(id, 'goal_assessed', { verdict, at: instantText(at), by, told: 'now' }, at),
-    overdue: (id, since) => toIt(id, 'goal_overdue', { since: instantText(since), told: 'now' }, since),
-    ended: (id, reason, at) => toIt(id, 'goal_assessment_ended', { reason }, at),
-    stopped: (id, run, at, reason) => toIt(id, 'goal_stopped', { run, at: instantText(at), reason }, at),
-    dismissed: (id, by, at, requests = []) =>
-      toIt(id, 'goal_dismissed', { ...dismissal(id, by, at), requests: [...requests] }, at),
-    restored: (id, by, at) => toIt(id, 'goal_restored', dismissal(id, by, at), at),
-    noticeStarted: (id, change, at) => toIt(id, 'goal_notice_started', { change, run: `notice-${change}` }, at),
-    noticeEnded: (change, type, data, at) => append(`runs/notice-${change}`, type, data, at),
-    refused: (goal, workflow, at, detail = refusedOutput) =>
-      append(
-        `goal-refusals/${goal}.${workflow}`,
-        'goal_observation_refused',
-        { run: `refused-${String(at)}`, detail },
-        at,
-      ),
+      toIt(id, { type: 'goal_assessed', data: { verdict, at: instantText(at), by, told: 'now' } }, at),
+    overdue: (id, since) => toIt(id, { type: 'goal_overdue', data: { since: instantText(since), told: 'now' } }, since),
+    ended: (id, reason, at) => toIt(id, { type: 'goal_assessment_ended', data: { reason } }, at),
+    stopped: (id, run, at, reason) =>
+      toIt(id, { type: 'goal_stopped', data: { run, at: instantText(at), reason } }, at),
+    dismissed: (id, by, at, requests = []) => dismissal('goal_dismissed', { id, by, at, requests }),
+    restored: (id, by, at) => dismissal('goal_restored', { id, by, at }),
+    noticeStarted: (id, change, at) =>
+      toIt(id, { type: 'goal_notice_started', data: { change, run: `notice-${change}` } }, at),
+    noticeEnded: (change, type, data, at) => append(`${salesKey}runs/notice-${change}`, { type, data }, at),
+    refused: refusedIn(append),
     runStartedByAnEvent: runStartedByAnEventIn(service),
-    goalsSaved: (goals) =>
-      append('goals/playbook', 'playbook_goals_saved', { source: 'goals', goals, version: 1 }, firstDay),
+    goalsSaved: goalsSavedBy(
+      (stream, type, data, context) =>
+        append(stream, { type, data, context: { by: 'person:owner', ...context } }, firstDay),
+      sales,
+    ),
     inThePlaybook: (work) =>
       Effect.runPromise(
         Effect.provideContext(Effect.provideService(work, PlaybookContext, sales), playbookLedgerOf(service, sales)),

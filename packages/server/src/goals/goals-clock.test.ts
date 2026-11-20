@@ -7,6 +7,7 @@ import {
   succeededRunsOf,
   type Assessing,
 } from '../testing/goals/assessed-runs.ts';
+import { assessmentRowsOfGoals } from '../testing/goals/goal-identities.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { until } from '../testing/waiting/until.ts';
 
@@ -49,18 +50,23 @@ async function served(goals: string): Promise<Assessing> {
   return assessed;
 }
 
-type Rows = Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+type Rows = Awaited<ReturnType<typeof assessmentRowsOfGoals>>;
 
 const ofGoal = (rows: Rows, goal: string, opens?: unknown) =>
-  Object.values(rows).filter((row) => row['goal'] === goal && (opens === undefined || row['window_opens'] === opens));
+  (rows.get(goal) ?? []).filter((row) => opens === undefined || row['window_opens'] === opens);
 
-function rowsHolding(assessed: Assessing, holds: (rows: Rows) => boolean): Promise<Rows> {
-  return until(() => assessed.rowsOf('goal_assessments'), holds);
+function rowsHolding(assessed: Assessing, goals: readonly string[], holds: (rows: Rows) => boolean): Promise<Rows> {
+  return until(() => assessmentRowsOfGoals(assessed, goals), holds);
 }
+
+const traceAHolding = (assessed: Assessing, holds: (rows: Rows) => boolean) =>
+  rowsHolding(assessed, ['checked-daily', 'never-checked'], holds);
+
+const firstOf = (rows: Rows, goal: string, opens?: unknown) => ofGoal(rows, goal, opens)[0];
 
 async function reportedToday(assessed: Assessing, today: number): Promise<void> {
   await ranOnItsSchedule(assessed, 'check');
-  const rows = await rowsHolding(assessed, (held) =>
+  const rows = await traceAHolding(assessed, (held) =>
     ofGoal(held, 'checked-daily', today).some((row) => row['observed_at'] !== null),
   );
   expect(ofGoal(rows, 'never-checked')).toEqual([]);
@@ -69,7 +75,7 @@ async function reportedToday(assessed: Assessing, today: number): Promise<void> 
 
 async function openedWithNoRun(assessed: Assessing, today: number, tomorrow: number): Promise<void> {
   assessed.clock.moveTo(tomorrow);
-  const rows = await rowsHolding(assessed, (held) => ofGoal(held, 'never-checked', tomorrow).length === 1);
+  const rows = await traceAHolding(assessed, (held) => ofGoal(held, 'never-checked', tomorrow).length === 1);
   expect(ofGoal(rows, 'never-checked', tomorrow)[0]).toMatchObject({
     verdict: 'open',
     open: true,
@@ -85,7 +91,7 @@ async function openedWithNoRun(assessed: Assessing, today: number, tomorrow: num
 
 async function passedAtItsDue(assessed: Assessing, today: number, tomorrow: number): Promise<void> {
   assessed.clock.moveTo(tomorrow + hour);
-  const rows = await rowsHolding(assessed, (held) => ofGoal(held, 'checked-daily', today)[0]?.['outcome'] === 'passed');
+  const rows = await traceAHolding(assessed, (held) => firstOf(held, 'checked-daily', today)?.['outcome'] === 'passed');
   expect(ofGoal(rows, 'checked-daily', today)[0]).toMatchObject({
     verdict: 'passed',
     verdict_at: tomorrow + hour,
@@ -98,7 +104,7 @@ async function passedAtItsDue(assessed: Assessing, today: number, tomorrow: numb
 
 async function overdueAfterItsDue(assessed: Assessing, tomorrow: number): Promise<void> {
   assessed.clock.moveTo(tomorrow + day + hour);
-  const rows = await rowsHolding(assessed, (held) => ofGoal(held, 'never-checked', tomorrow)[0]?.['overdue'] === true);
+  const rows = await traceAHolding(assessed, (held) => firstOf(held, 'never-checked', tomorrow)?.['overdue'] === true);
   expect(ofGoal(rows, 'never-checked', tomorrow)[0]).toMatchObject({
     verdict: 'open',
     overdue_since: tomorrow + day + hour,
@@ -111,9 +117,9 @@ async function overdueAfterItsDue(assessed: Assessing, tomorrow: number): Promis
 
 async function missedByItsDeadline(assessed: Assessing, today: number, tomorrow: number): Promise<void> {
   assessed.clock.moveTo(tomorrow + 2 * day + hour);
-  const rows = await rowsHolding(
+  const rows = await traceAHolding(
     assessed,
-    (held) => ofGoal(held, 'never-checked', tomorrow)[0]?.['outcome'] === 'failed',
+    (held) => firstOf(held, 'never-checked', tomorrow)?.['outcome'] === 'failed',
   );
   expect(ofGoal(rows, 'never-checked', tomorrow)[0]).toMatchObject({
     verdict: 'failed',
@@ -189,6 +195,8 @@ const readAtOf = (early: boolean, now: number) => (early ? new Date(now).toISOSt
 
 const finalAsOf = (readAt: string | undefined, opens: unknown) => (readAt === undefined ? opens : Date.parse(readAt));
 
+const released = ['found-at-once', 'found-by-the-close'];
+
 const bothMarked = (held: Rows) =>
   ofGoal(held, 'found-at-once')[0]?.['outcome'] === 'failed' && ofGoal(held, 'found-by-the-close').length === 1;
 
@@ -211,7 +219,7 @@ describe('an after window opened by the scheduled run that measures in it, on a 
         () => succeededRunsOf(assessed, 'release'),
         (runs) => runs > 0,
       );
-      const marked = await rowsHolding(assessed, bothMarked);
+      const marked = await rowsHolding(assessed, released, bothMarked);
       const [atOnce] = ofGoal(marked, 'found-at-once');
       const [byTheClose] = ofGoal(marked, 'found-by-the-close');
       expect(atOnce).toMatchObject({ verdict: 'failed', verdict_at: atOnce?.['window_opens'] });
@@ -223,6 +231,7 @@ describe('an after window opened by the scheduled run that measures in it, on a 
       assessed.clock.moveTo(Number(byTheClose?.['window_due']));
       const judged = await rowsHolding(
         assessed,
+        released,
         (held) => ofGoal(held, 'found-by-the-close')[0]?.['outcome'] === 'failed',
       );
       expect(ofGoal(judged, 'found-by-the-close')[0]).toMatchObject({
@@ -263,7 +272,7 @@ describe('a daily goal on a Node server whose only contribution is paused', () =
       (row) => row?.['opens_at'] === midnight + day,
     );
     await movedThroughDays(assessed, midnight + 1000, 3);
-    const whilePaused = ofGoal(await assessed.rowsOf('goal_assessments'), 'checked-daily');
+    const whilePaused = ofGoal(await assessmentRowsOfGoals(assessed, ['checked-daily']), 'checked-daily');
     const resumedAt = midnight + 3 * day + 10 * hour;
     assessed.clock.moveTo(resumedAt);
     const mocked = vi.spyOn(Date, 'now').mockReturnValue(resumedAt);
@@ -273,9 +282,9 @@ describe('a daily goal on a Node server whose only contribution is paused', () =
         mocked.mockRestore();
       });
     const afterTheResume = await clockRowOf(assessed);
-    const resumedDay = ofGoal(await assessed.rowsOf('goal_assessments'), 'checked-daily');
+    const resumedDay = ofGoal(await assessmentRowsOfGoals(assessed, ['checked-daily']), 'checked-daily');
     assessed.clock.moveTo(midnight + 4 * day + 1000);
-    const rows = await rowsHolding(assessed, (held) => ofGoal(held, 'checked-daily').length === 1);
+    const rows = await rowsHolding(assessed, ['checked-daily'], (held) => ofGoal(held, 'checked-daily').length === 1);
 
     expect(paused.status).toBe(200);
     expect(quiet).toMatchObject({ opens_at: midnight + day });

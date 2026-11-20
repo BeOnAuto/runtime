@@ -1,4 +1,5 @@
 import { goalsText, leadGoalId, plainGoalId } from '@on.auto/playbooks/testing';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -15,7 +16,7 @@ import {
   passedHere,
   passedHereRow,
 } from '../testing/goal-activity.ts';
-import { ada, listedOf, outputOf } from '../testing/harness.ts';
+import { ada, listedOf, outputOf, type LedgerReads } from '../testing/harness.ts';
 import { wordsIn } from './goal-words.ts';
 
 const anyWords: unknown = expect.any(String);
@@ -78,7 +79,7 @@ describe('mark_activity_seen where goals are kept', () => {
   it('counts a verdict judged after its mark as unseen again', async () => {
     const harness = await goalsKept();
     await harness.mark(ada, { items: [{ address: `finance/assessments/${overdueHere}`, at: at('12:00') }] });
-    await harness.record(assessments('finance', overdueHere), assessed('passed', 'now', '14:00'));
+    await harness.record(assessments('finance', leadGoalId, overdueHere), assessed('passed', 'now', '14:00'));
 
     expect(outputOf(await harness.list(ada, { kind: 'goal' }))).toMatchObject({
       rows: [{ address: `finance/assessments/${overdueHere}`, seen: false }, {}, {}],
@@ -91,7 +92,7 @@ describe('mark_activity_seen where goals are kept', () => {
     const [newest] = listedOf(await harness.list(ada, { kind: 'goal' })).rows.map(({ cursor }) => cursor);
     const through = { through: String(newest) };
     const before = outputOf(await harness.mark(ada, through));
-    await harness.record(assessments('finance', overdueHere), {
+    await harness.record(assessments('finance', leadGoalId, overdueHere), {
       ...assessed('failed', 'now', '14:00'),
       data: { verdict: 'failed', at: at('01:00'), by: 'final', told: 'now' },
     });
@@ -141,7 +142,7 @@ describe('list_activity where goals are kept', () => {
 
   it('closes an overdue once its assessment is judged, and lists the verdict in its place', async () => {
     const harness = await goalsKept();
-    await harness.record(assessments('finance', overdueHere), assessed('failed', 'now', '14:00'));
+    await harness.record(assessments('finance', leadGoalId, overdueHere), assessed('failed', 'now', '14:00'));
 
     expect(outputOf(await harness.list(ada, ofGoals))).toMatchObject({
       rows: [
@@ -184,5 +185,18 @@ describe('what list_activity refuses where goals are kept', () => {
         },
       ],
     });
+  });
+});
+
+const goalsUnnamed: LedgerReads = (ledger) => ({
+  ...ledger,
+  namesHeldIn: (kind) => (kind.definitionType === 'goal' ? Effect.succeed([]) : ledger.namesHeldIn(kind)),
+});
+
+describe('list_activity where a goal left the playbook between the read of its rows and of its name', () => {
+  it('leaves out the rows of a goal the playbook no longer names, which are the other playbook’s now', async () => {
+    const { list } = await goalsKept(goalsUnnamed);
+
+    expect(listedOf(await list(ada, ofGoals)).rows).toEqual([]);
   });
 });

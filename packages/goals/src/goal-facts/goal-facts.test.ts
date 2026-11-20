@@ -136,6 +136,33 @@ const observationRefused = {
   context: ofThePlaybook,
 } as const;
 
+const definitionId = '019a8f00-0000-7000-8000-000000000001';
+
+const ofTheGoal = { ...ofThePlaybook, definitionId };
+
+const { goal: _goal, goals_version: _goalsVersion, ...openedData } = opened.data;
+
+const { goal: _dismissedGoal, ...dismissedData } = dismissed.data;
+
+const { goal: _restoredGoal, ...restoredData } = restored.data;
+
+const named = { definitionId, definitionName: 'paying-customers' };
+
+const underTheGoal = {
+  opened: { ...opened, data: { ...openedData, goal_version: 2 }, context: ofTheGoal },
+  observed: { ...observed, context: ofTheGoal },
+  assessed: { ...assessed, context: ofTheGoal },
+  overdue: { ...overdue, context: ofTheGoal },
+  noticeStarted: { ...noticeStarted, context: ofTheGoal },
+  noticeRefused: { ...noticeRefused, context: ofTheGoal },
+  ended: { ...ended, context: ofTheGoal },
+  stopped: { ...stopped, context: ofTheGoal },
+  dismissed: { ...dismissed, data: dismissedData, context: { ...dismissed.context, ...named } },
+  restored: { ...restored, data: restoredData, context: { ...restored.context, ...named } },
+  summaryStarted: { ...summaryStarted, context: ofTheGoal },
+  observationRefused: { ...observationRefused, context: ofTheGoal },
+} as const;
+
 const folder = new URL('.', import.meta.url);
 
 describe('the facts of an assessment', () => {
@@ -146,6 +173,18 @@ describe('the facts of an assessment', () => {
       '0.57.0': [opened, observed, assessed, overdue, noticeStarted, noticeRefused, ended],
       '0.59.0': [dismissed, restored],
       '0.63.0': [stopped],
+      '0.68.0': [
+        underTheGoal.opened,
+        underTheGoal.observed,
+        underTheGoal.assessed,
+        underTheGoal.overdue,
+        underTheGoal.noticeStarted,
+        underTheGoal.noticeRefused,
+        underTheGoal.ended,
+        underTheGoal.stopped,
+        underTheGoal.dismissed,
+        underTheGoal.restored,
+      ],
     },
   });
 });
@@ -154,7 +193,10 @@ describe('the facts of the summaries of a goal', () => {
   recordedFactsBehaviour({
     schema: GoalSummaryEventSchema,
     folder,
-    releases: { '0.57.0': [summaryStarted, noticeRefused] },
+    releases: {
+      '0.57.0': [summaryStarted, noticeRefused],
+      '0.68.0': [underTheGoal.summaryStarted, underTheGoal.noticeRefused],
+    },
   });
 });
 
@@ -162,6 +204,6 @@ describe('the facts of the observations a goal refused', () => {
   recordedFactsBehaviour({
     schema: GoalRefusalEventSchema,
     folder,
-    releases: { '0.57.0': [observationRefused] },
+    releases: { '0.57.0': [observationRefused], '0.68.0': [underTheGoal.observationRefused] },
   });
 });

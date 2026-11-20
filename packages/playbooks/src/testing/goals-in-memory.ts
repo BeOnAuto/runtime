@@ -42,6 +42,11 @@ function goalIdsOf(source: string): readonly CheckedGoal[] {
     .flatMap((line) => (line.startsWith(goalIdLine) ? [{ id: line.slice(goalIdLine.length) }] : []));
 }
 
+function versionsAfter(before: GoalsKept | undefined, { goals }: CheckedGoals): GoalsKept['versions'] {
+  const versionBefore = new Map(before?.versions.map(({ id, version }) => [id, version]));
+  return goals.map(({ id }) => ({ id, version: (versionBefore.get(id) ?? 0) + 1 }));
+}
+
 export function goalsInMemory(
   pages: PlaybookPages = pagesInMemory(),
   messages = true,
@@ -65,7 +70,7 @@ export function goalsInMemory(
       if (before?.source === goals.source) {
         return 'unchanged';
       }
-      kept.set(keyOf(address), { source: goals.source, version: (before?.version ?? 0) + 1 });
+      kept.set(keyOf(address), { source: goals.source, versions: versionsAfter(before, goals) });
       return 'saved';
     });
   return {

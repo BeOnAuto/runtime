@@ -4,6 +4,7 @@ import { judgingDueOf, nextMilestoneOf } from '../assessments/assessment-dues.ts
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import type { GoalRule } from '../goal-rules/goal-rule.ts';
 import { traceBookOf } from './trace-book.ts';
+import { tracedGoalId } from './trace-book.ts';
 import type { Appended } from './trace-ledger.ts';
 import { rowsAndCoreOf } from './trace-rows.ts';
 import { wordsOf } from './trace-words.ts';
@@ -27,7 +28,7 @@ const experiments: GoalRule = {
   notify: { passed: 'now', failed: 'now', overdue: 'now' },
 };
 
-const thing = (per: string) => assessmentIdOf({ goal: 'paying-customers', per });
+const thing = (per: string) => assessmentIdOf({ definition: tracedGoalId, per });
 
 const names = Object.fromEntries(['MAR-41', 'MAR-42', 'MAR-43', 'MAR-52', 'MAR-62'].map((per) => [thing(per), per]));
 

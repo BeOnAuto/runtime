@@ -119,23 +119,23 @@ Never record a yes the person did not give. agree_playbook_goals is their answer
 
 ## After the create, show the saved goals and record the yes
 
-The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with their `version`. Give the person the link, so that they can see what was saved. When the saved goals are the ones they said yes to, unchanged, record that yes with agree_playbook_goals and the `version` saved, without asking again. When anything changed, show them what changed and the link in one message, and end it with the same question: Did I get all that right? Yes, or tell me what to change.
+The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with each goal's `version`. Give the person the link, so that they can see what was saved. When the saved goals are the ones they said yes to, unchanged, record that yes with agree_playbook_goals, naming each goal with its `version` as saved, without asking again. When anything changed, show them what changed and the link in one message, and end it with the same question: Did I get all that right? Yes, or tell me what to change.
 
-Change the goals with update_playbook until they say yes. A save that changes them answers with a new `version`, and update_playbook's answer carries no `studio` link, so say the changed goals back in their words.
+Change the goals with update_playbook until they say yes. A save that changes a goal answers with a new `version` for that goal, and update_playbook's answer carries no `studio` link, so say the changed goals back in their words.
 
-agree_playbook_goals records their yes to every goal that is not retired; name goals by id in `ids` only when they said yes to some and not the others. Build nothing before that call: no function and no workflow.
+agree_playbook_goals records their yes to the goals you name in `goals`; name every goal they said yes to, and leave out any they did not. Build nothing before that call: no function and no workflow.
 
-A yes holds only for the goals as the person saw them. A save that changes a goal, its name included, drops the yes to that goal. So after the yes, put a change to the person first, save it as they agreed it, and call agree_playbook_goals again with the new version before you build on it. When the call answers that the goals changed since the version you gave, show the person the saved goals again and ask before you record a yes.
+A yes holds only for the goals as the person saw them. A save that changes a goal, its name included, drops the yes to that goal. So after the yes, put a change to the person first, save it as they agreed it, and call agree_playbook_goals again with that goal's new version before you build on it. When the call answers that a goal changed since the version you gave, show the person that goal as it is saved and ask before you record a yes.
 
 <!-- with messages -->
 
-The answers of create_playbook, update_playbook and get_playbook carry `goals`: the text as saved, its version and its gaps. A gap is not a refusal. It says what the goals still lack before they can be judged or told, such as a measure that no workflow reports yet. Most gaps close as you save the workflows and the notification function. [Gaps, and who fixes each](#gaps-and-who-fixes-each) lists them.
+The answers of create_playbook, update_playbook and get_playbook carry `goals`: the text as saved, each goal's version and the gaps. A gap is not a refusal. It says what the goals still lack before they can be judged or told, such as a measure that no workflow reports yet. Most gaps close as you save the workflows and the notification function. [Gaps, and who fixes each](#gaps-and-who-fixes-each) lists them.
 
 <!-- end -->
 
 <!-- without messages -->
 
-The answers of create_playbook, update_playbook and get_playbook carry `goals`: the text as saved, its version and its gaps. A gap is not a refusal. It says what the goals still lack before they can be judged, such as a measure that no workflow reports yet. Most gaps close as you save the workflows. [Gaps, and who fixes each](#gaps-and-who-fixes-each) lists them.
+The answers of create_playbook, update_playbook and get_playbook carry `goals`: the text as saved, each goal's version and the gaps. A gap is not a refusal. It says what the goals still lack before they can be judged, such as a measure that no workflow reports yet. Most gaps close as you save the workflows. [Gaps, and who fixes each](#gaps-and-who-fixes-each) lists them.
 
 <!-- end -->
 
@@ -480,7 +480,7 @@ Keep the function active. A paused or retired one sends nothing, and the goal sh
 A playbook made before goals keeps running as it is. The next time you save one of its workflows, create_definition or update_definition refuses it with "Ask the person: What should this playbook achieve for you, and how will you know it worked?" Then:
 
 1. Learn the goals with the person, as above.
-2. Send the goals with update_playbook once they say yes to the proposal, and record that yes with agree_playbook_goals and the version saved, as above. update_playbook's answer carries no `studio` link.
+2. Send the goals with update_playbook once they say yes to the proposal, and record that yes with agree_playbook_goals, naming each goal with its `version` as saved, as above. update_playbook's answer carries no `studio` link.
 3. Save the workflow again, with its `contributes`.
 
 Its other workflows keep running, and each shows as a gap until you next save it with a contribution.

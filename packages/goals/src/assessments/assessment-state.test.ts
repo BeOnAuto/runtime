@@ -36,7 +36,7 @@ function observed(at: number, parts: Partial<Observation> = {}): Observation {
 }
 
 const observe = (state: AssessmentState, now: number, ...observations: readonly Observation[]) =>
-  factsObserving(state, { goal: daily, goalsVersion: 1, now, observations });
+  factsObserving(state, { goal: daily, goalVersion: 1, now, observations });
 
 const after = (state: AssessmentState, facts: readonly AssessmentFact[]) =>
   facts.reduce((before, fact) => assessmentAfter(before, fact), state);
@@ -64,7 +64,7 @@ describe('opening by an observation', () => {
     expect(
       factsObserving(unopened, {
         goal: noWindow,
-        goalsVersion: 1,
+        goalVersion: 1,
         now: 0,
         observations: [observed(0, { marks: 'other' })],
       }),
@@ -110,7 +110,7 @@ describe('a window after a milestone the goal does not list', () => {
     expect(
       factsObserving(unopened, {
         goal: odd,
-        goalsVersion: 1,
+        goalVersion: 1,
         now: 0,
         observations: [observed(0, { marks: 'checked' }), observed(0, { marks: 'unlisted' })],
       }).map(({ data }) => 'window' in data),
@@ -206,7 +206,7 @@ const reported = (goal: GoalRule, state: AssessmentState, { at, value, final = f
     state,
     factsObserving(state, {
       goal,
-      goalsVersion: 1,
+      goalVersion: 1,
       now: at,
       observations: [observed(at, { measurement: { value, final, as_of: at } })],
     }),
@@ -215,7 +215,7 @@ const reported = (goal: GoalRule, state: AssessmentState, { at, value, final = f
 const observedCount = (state: AssessmentState, at: number) =>
   factsObserving(state, {
     goal: whole,
-    goalsVersion: 1,
+    goalVersion: 1,
     now: at,
     observations: [observed(at, { measurement: { value: 12, final: false, as_of: at } })],
   });
@@ -263,7 +263,7 @@ describe('a number reported again once an after window opens', () => {
       unopened,
       factsObserving(unopened, {
         goal: live,
-        goalsVersion: 1,
+        goalVersion: 1,
         now: hour(8),
         observations: [observed(hour(8), { marks: 'chosen', measurement: { value: 3, final: true, as_of: hour(8) } })],
       }),
@@ -272,7 +272,7 @@ describe('a number reported again once an after window opens', () => {
       marked,
       factsObserving(marked, {
         goal: live,
-        goalsVersion: 1,
+        goalVersion: 1,
         now: hour(9),
         observations: [observed(hour(9), { marks: 'live' })],
       }),

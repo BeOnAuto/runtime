@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { noticeGapsIn } from '../notices/notice-gaps.ts';
 import { assessment, experiments, monday, noticeBookOf, runOf, type NoticeBook } from '../notices/notice-samples.ts';
+import { heldGoalOf } from '../reads/assessment-samples.ts';
 import { newestNoticeOf, noticesDeliveredIn, noticeUndeliveredGap } from './notice-deliveries.ts';
 
 const anyWords: unknown = expect.any(String);
@@ -32,7 +33,7 @@ async function startedBook(): Promise<NoticeBook> {
 }
 
 async function noticeStarted(book: NoticeBook, change: 'passed' | 'failed' | 'overdue', at: number): Promise<void> {
-  await book.append(
+  await book.ofTheGoal(
     `assessments/${assessment}`,
     'goal_notice_started',
     { change, run: runOf(change) },
@@ -70,7 +71,7 @@ describe('the gap of a notice that was not delivered', () => {
     await noticeStarted(book, 'passed', monday);
     await book.append(`runs/${runOf('passed')}`, 'run_rejected', rejection);
 
-    expect(await book.inThePlaybook(noticeGapsIn([experimentsGoal]))).toEqual([
+    expect(await book.inThePlaybook(noticeGapsIn([heldGoalOf(experimentsGoal)]))).toEqual([
       {
         kind: 'notice_undelivered',
         goal: experiments.id,
@@ -90,8 +91,8 @@ describe('the words of the gap of a notice that was not delivered', () => {
     await noticeStarted(other, 'failed', monday);
     await other.append(`runs/${runOf('failed')}`, 'run_rejected', {});
 
-    const [failed] = await book.inThePlaybook(noticeGapsIn([experimentsGoal]));
-    const [rejected] = await other.inThePlaybook(noticeGapsIn([experimentsGoal]));
+    const [failed] = await book.inThePlaybook(noticeGapsIn([heldGoalOf(experimentsGoal)]));
+    const [rejected] = await other.inThePlaybook(noticeGapsIn([heldGoalOf(experimentsGoal)]));
 
     expect([failed?.detail, rejected?.detail]).toEqual([
       'The message saying the goal paying-customers became overdue was not delivered: its run failed. Check the connection, the address and the expiry of tell-owner (an hour at least).',
@@ -113,10 +114,10 @@ describe('a notice that leaves no gap', () => {
     await noticeStarted(older, 'passed', monday + minute);
 
     expect([
-      await going.inThePlaybook(noticeGapsIn([experimentsGoal])),
-      await delivered.inThePlaybook(noticeGapsIn([experimentsGoal])),
-      await older.inThePlaybook(noticeGapsIn([experimentsGoal])),
-      await (await startedBook()).inThePlaybook(noticeGapsIn([experimentsGoal])),
+      await going.inThePlaybook(noticeGapsIn([heldGoalOf(experimentsGoal)])),
+      await delivered.inThePlaybook(noticeGapsIn([heldGoalOf(experimentsGoal)])),
+      await older.inThePlaybook(noticeGapsIn([heldGoalOf(experimentsGoal)])),
+      await (await startedBook()).inThePlaybook(noticeGapsIn([heldGoalOf(experimentsGoal)])),
     ]).toEqual([[], [], [], []]);
   });
 });

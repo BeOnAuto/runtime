@@ -3,7 +3,8 @@ import { Effect, Exit, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { assessmentIdOf, summaryRunIdOf } from '../assessments/assessment-identity.ts';
-import { performedAt, sales } from '../notices/notice-samples.ts';
+import { goalIdentityOf } from '../assessor/assessor-ledger.ts';
+import { experimentsGoal, performedAt, sales } from '../notices/notice-samples.ts';
 import { noticesSeenOf } from '../notices/notices-seen.ts';
 import { summaryRecorded, summarySeenIn } from './summary-ledger.ts';
 import {
@@ -41,7 +42,7 @@ describe('what is taken for the start of a summary', () => {
         context: { ...record.context, trigger: { kind: 'goal', reference: `goals/${weekly.id}/summaries/never` } },
       }),
     ]).toEqual([
-      { goal: weekly.id, due: friday, run: fridayRun() },
+      { definition: experimentsGoal, due: friday, run: fridayRun() },
       undefined,
       undefined,
       undefined,
@@ -64,7 +65,7 @@ describe('the start of a summary seen by the consumer', () => {
     await Effect.runPromise(Effect.forEach(batch.deliveries, ({ skipped }) => skipped()));
 
     expect(batch.deliveries.map(({ workflow }) => workflow)).toEqual(['goal notices seen']);
-    expect(await summary.book.factsOf('goal-summaries/another-goal')).toEqual([]);
+    expect(await summary.summaryFacts()).toEqual([]);
   });
 
   it('fails the delivery for a retry when the start cannot be recorded now', async () => {
@@ -102,14 +103,18 @@ describe('a refusal of a summary already sent', () => {
     await summary.book.runStarted(fridayRun(), summaryReference());
     await performedAt(summary.work, friday);
     await Effect.runPromise(
-      summaryRecorded(summary.book.ledger, sales, weekly.id, {
-        kind: 'refused',
-        due: friday,
-        attempt: 1,
-        detail: 'Too late',
-        at: iso(friday + 60_000),
-        by: 'playbook:sales',
-      }),
+      summaryRecorded(
+        summary.book.ledger,
+        { org: sales.org, definition: experimentsGoal },
+        {
+          kind: 'refused',
+          due: friday,
+          attempt: 1,
+          detail: 'Too late',
+          at: iso(friday + 60_000),
+          by: 'playbook:sales',
+        },
+      ),
     );
 
     expect(await summary.summaryFacts()).toEqual(['goal_summary_started']);
@@ -176,7 +181,7 @@ describe('the lines of a summary', () => {
   });
 });
 
-const lateThing = `assessments/${assessmentIdOf({ goal: weekly.id, per: 'experiment-late' })}`;
+const lateThing = `assessments/${assessmentIdOf({ definition: goalIdentityOf(weekly.id), per: 'experiment-late' })}`;
 
 async function fridaySeen(summary: SummaryBook): Promise<void> {
   await performedAt(summary.work, friday);
@@ -188,12 +193,11 @@ async function fridaySeen(summary: SummaryBook): Promise<void> {
 
 async function linesAcrossTwoFridays(type: string, data: Schema.Json, recordedAt: number) {
   const summary = await summaryBookOf();
-  await summary.book.append(
+  await summary.book.ofTheGoal(
     lateThing,
     'goal_assessment_opened',
     {
-      goal: weekly.id,
-      goals_version: 1,
+      goal_version: 1,
       per: { id: 'experiment-late' },
       rule: { settles: 'on_crossing', target: { at_least: 1 } },
       milestones: [],
@@ -201,7 +205,7 @@ async function linesAcrossTwoFridays(type: string, data: Schema.Json, recordedAt
     { at: iso(savedAt), by: 'playbook:sales' },
   );
   await fridaySeen(summary);
-  await summary.book.append(lateThing, type, data, { at: iso(recordedAt), by: 'playbook:sales' });
+  await summary.book.ofTheGoal(lateThing, type, data, { at: iso(recordedAt), by: 'playbook:sales' });
   await performedAt(summary.work, friday + week);
   return summary.starts.map((start) => linesOf(start).length);
 }

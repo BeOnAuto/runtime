@@ -2,15 +2,16 @@ import type { Goal } from '@on.auto/definitions/goals';
 import { describe, expect, it } from 'vitest';
 
 import {
+  type AssessmentBook,
   assessmentBookOf,
   costGoal,
   day,
   experimentsGoal,
   firstDay,
+  heldGoalOf,
   instantText,
   oneOffGoal,
   thingAt,
-  type AssessmentBook,
 } from './assessment-samples.ts';
 import { goalAssessmentsIn } from './goal-assessments.ts';
 
@@ -19,7 +20,7 @@ const hour = 3_600_000;
 const live = firstDay + day;
 
 function read(book: AssessmentBook, goal: Goal = experimentsGoal) {
-  return book.inThePlaybook(goalAssessmentsIn(goal));
+  return book.inThePlaybook(goalAssessmentsIn(heldGoalOf(goal)));
 }
 
 const sevenDays = 'Billing traced no paying customer to this experiment in seven days.';

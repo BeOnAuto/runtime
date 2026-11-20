@@ -13,13 +13,14 @@ import { assessmentAfter, unopened } from '../assessments/assessment-state.ts';
 import { mostRequestsSetAside } from '../assessments/dismissing.ts';
 import { AssessmentEventSchema } from '../goal-facts/goal-facts.ts';
 import {
+  type AssessmentBook,
   assessmentBookOf,
   controlsGoal,
   day,
   experimentsGoal,
   firstDay,
+  heldGoalOf,
   thingAt,
-  type AssessmentBook,
 } from '../reads/assessment-samples.ts';
 import { goalAssessmentsIn } from '../reads/goal-assessments.ts';
 import { dismissGoalThingAsking, type AskedAbout, type ThingOfAGoal } from './dismiss-goal-thing.ts';
@@ -79,7 +80,7 @@ function factsOn(book: AssessmentBook, id: string): Promise<number> {
 }
 
 function openRead(book: AssessmentBook) {
-  return book.inThePlaybook(goalAssessmentsIn(experimentsGoal, undefined, 1, {}));
+  return book.inThePlaybook(goalAssessmentsIn(heldGoalOf(experimentsGoal), undefined, {}));
 }
 
 describe('dismiss_goal_thing', () => {

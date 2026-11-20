@@ -1,4 +1,6 @@
+import { goalsDocumentOf, goalsSourceOf } from '@on.auto/definitions/goals';
 import { goalsText } from '@on.auto/playbooks/testing';
+import { Result } from 'effect';
 
 import { servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
 import type { ServedParts } from '../servers/served-parts.ts';
@@ -19,6 +21,16 @@ export function servingReasoningWithGoals(
     ...parts,
     goals: true,
   });
+}
+
+/** The goals as the server answers them once saved: the text written out again from the goals it holds, in order. */
+export function savedSourceOf(text: string): string {
+  return goalsSourceOf(Result.getOrThrow(goalsDocumentOf(text)).goals);
+}
+
+/** Each goal of a text with the version it is at, as the answers of create, update and get carry them. */
+export function versionsOf(...versions: readonly (readonly [string, number])[]) {
+  return versions.map(([id, version]) => ({ id, version }));
 }
 
 interface Creating {

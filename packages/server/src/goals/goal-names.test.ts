@@ -28,7 +28,6 @@ function goalsNamed(name: string): string {
 }
 
 const GoalsSchema = Schema.Struct({
-  version: Schema.Number,
   goals: Schema.Array(
     Schema.Struct({
       id: Schema.String,
@@ -55,7 +54,7 @@ describe('the name of a goal, and a goal that leaves notify out, on a Node serve
 
     expect([created.status, renamed.status]).toEqual([201, 200]);
     expect(first.goals).toMatchObject([{ id: 'weekly-orders', name: 'Weekly orders' }]);
-    expect(second).toMatchObject({ version: 2, goals: [{ id: 'weekly-orders', name: 'Shop orders' }] });
+    expect(second).toMatchObject({ goals: [{ id: 'weekly-orders', name: 'Shop orders' }] });
   });
 
   it('owes nothing for a goal with no notify: it has no notify on the read and no gap about telling', async () => {

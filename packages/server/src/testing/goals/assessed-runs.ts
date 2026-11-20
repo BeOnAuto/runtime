@@ -22,6 +22,7 @@ export interface Assessing {
   readonly asked: readonly string[];
   readonly watched: Watched;
   readonly rowsOf: (table: string, playbook?: string) => Promise<Readonly<Record<string, ProjectedRow>>>;
+  readonly ledger: () => Promise<Ledger['Service']>;
   readonly ranAMinuteOn: () => void;
 }
 
@@ -128,6 +129,7 @@ export async function assessing({ ledger, goals, watching = '', ...switches }: S
       );
       return Object.fromEntries(rows.map(({ key, row }) => [key, row]));
     },
+    ledger: () => composed.promise,
     ranAMinuteOn: () => {
       clock.moveTo(Math.max(clock.now(), Date.now()) + aMinuteAndASecond);
     },

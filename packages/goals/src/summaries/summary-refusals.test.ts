@@ -4,17 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 import { mostNoticesADay } from '../notice-limits/notice-day-limit.ts';
 import { noticeGapsIn } from '../notices/notice-gaps.ts';
-import { performedAt, sales } from '../notices/notice-samples.ts';
-import {
-  friday,
-  fridayRun,
-  inTurn,
-  savedAt,
-  summaryBookOf,
-  summaryReference,
-  week,
-  weekly,
-} from './summary-samples.ts';
+import { experimentsGoal, performedAt, sales } from '../notices/notice-samples.ts';
+import { heldGoalOf } from '../reads/assessment-samples.ts';
+import { friday, fridayRun, inTurn, summaryBookOf, summaryReference, week, weekly } from './summary-samples.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -50,7 +42,10 @@ describe('a summary the runtime cannot start now', () => {
     const summary = await summaryBookOf({ answers: () => 'unavailable' });
     await performedAt(summary.work, friday);
     await Effect.runPromise(
-      summary.book.ledger.advanceRow('goal_clocks', sales, 'clock', { set: { summary_at: friday }, when: [] }),
+      summary.book.ledger.advanceRow('goal_clocks', { org: sales.org, definition: experimentsGoal }, 'clock', {
+        set: { summary_at: friday },
+        when: [],
+      }),
     );
     await performedAt(summary.work, friday + 1000);
 
@@ -64,7 +59,10 @@ describe('a summary refused for good', () => {
     const summary = await summaryBookOf({ answers: () => 'rejected' });
     await performedAt(summary.work, friday);
     await Effect.runPromise(
-      summary.book.ledger.advanceRow('goal_clocks', sales, 'clock', { set: { summary_at: friday }, when: [] }),
+      summary.book.ledger.advanceRow('goal_clocks', { org: sales.org, definition: experimentsGoal }, 'clock', {
+        set: { summary_at: friday },
+        when: [],
+      }),
     );
     await performedAt(summary.work, friday + minute);
 
@@ -102,15 +100,13 @@ describe('a summary refused for good', () => {
 describe('a summary refused for good', () => {
   it('is refused past the 200 a day, and still counted toward them when it goes', async () => {
     const summary = await summaryBookOf();
-    const started = {
-      due: new Date(friday).toISOString(),
-      window: { from: new Date(savedAt).toISOString(), to: new Date(friday).toISOString() },
-      run: 'other',
-    };
-    await inTurn(Array.from({ length: mostNoticesADay }), async () => {
-      await summary.book.append('goal-summaries/other', 'goal_summary_started', started, {
-        at: new Date(friday).toISOString(),
-      });
+    await inTurn(Array.from({ length: mostNoticesADay }), async (_, index) => {
+      await summary.book.ofTheGoal(
+        `assessments/other-${String(index)}`,
+        'goal_notice_started',
+        { change: 'passed', run: `other-${String(index)}` },
+        { at: new Date(friday).toISOString() },
+      );
     });
     await performedAt(summary.work, friday);
 
@@ -158,7 +154,7 @@ const quietGoal: Goal = { ...weeklyGoal, id: 'quiet-goal', notify: { passed: 'qu
 describe('the gap of a summary refused for good', () => {
   it('shows once it is refused, names the function that sends it, and goes once a summary is sent', async () => {
     const summary = await summaryBookOf({ goals: [weeklyGoal], answers: () => 'rejected' });
-    const gapsNow = () => summary.book.inThePlaybook(noticeGapsIn([weeklyGoal, quietGoal]));
+    const gapsNow = () => summary.book.inThePlaybook(noticeGapsIn([heldGoalOf(weeklyGoal), heldGoalOf(quietGoal)]));
     const before = await gapsNow();
     await performedAt(summary.work, friday);
     const refused = await gapsNow();
@@ -184,6 +180,6 @@ describe('the gap of a summary still to be tried again', () => {
     const summary = await summaryBookOf({ goals: [weeklyGoal], answers: () => 'unavailable' });
     await performedAt(summary.work, friday);
 
-    expect(await summary.book.inThePlaybook(noticeGapsIn([weeklyGoal]))).toEqual([]);
+    expect(await summary.book.inThePlaybook(noticeGapsIn([heldGoalOf(weeklyGoal)]))).toEqual([]);
   });
 });

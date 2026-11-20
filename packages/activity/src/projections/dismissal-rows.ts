@@ -9,7 +9,7 @@ import { Option, Schema } from 'effect';
 
 export const dismissalsName = 'activity_dismissals';
 
-const ThingOfAGoalSchema = { goal: Schema.String, at: Schema.String, by: Schema.Struct({ id: Schema.String }) };
+const ThingOfAGoalSchema = { at: Schema.String, by: Schema.Struct({ id: Schema.String }) };
 
 const DismissalFactSchema = Schema.Union([
   Schema.Struct({
@@ -31,7 +31,6 @@ function rowAfter(_row: ProjectedRow | undefined, message: ProjectedMessage): Pr
     Option.map(dismissalFactOf(message), ({ type, data }) => ({
       dismissed: type === 'goal_dismissed',
       at: Date.parse(data.at),
-      goal: data.goal,
       by: data.by.id,
       requests: JSON.stringify('requests' in data ? data.requests : []),
     })),
@@ -40,13 +39,13 @@ function rowAfter(_row: ProjectedRow | undefined, message: ProjectedMessage): Pr
 
 export const dismissalRows: KeyedProjection = {
   name: dismissalsName,
-  version: 1,
+  version: 2,
+  scopes: ['definition'],
   kinds: ['assessments'],
   types: ['goal_dismissed', 'goal_restored'],
   columns: [
     { name: 'dismissed', kind: 'boolean' },
     { name: 'at', kind: 'integer' },
-    { name: 'goal', kind: 'text' },
     { name: 'by', kind: 'text' },
     { name: 'requests', kind: 'text' },
   ],

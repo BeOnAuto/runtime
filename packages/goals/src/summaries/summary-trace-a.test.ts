@@ -1,6 +1,7 @@
 import type { Goal } from '@on.auto/definitions/goals';
 import { expect, it } from 'vitest';
 
+import { goalIdentityOf } from '../assessor/assessor-ledger.ts';
 import { traceBookOf } from '../golden-traces/trace-book.ts';
 import type { Appended } from '../golden-traces/trace-ledger.ts';
 import { performedAt } from '../notices/notice-samples.ts';
@@ -31,21 +32,19 @@ const controls: Goal = {
   },
 };
 
+const controlsKey = `definition/acme/${goalIdentityOf(controls.id)}/`;
+
 async function weekOfTraceA() {
   const summary = await summaryBookOf({ goals: [] });
-  await summary.book.append(
-    'goals/playbook',
-    'playbook_goals_saved',
-    { source: 'goals', goals: [controls], version: 2 },
-    { at: iso(day(-1, 12)) },
-  );
-  const book = traceBookOf(controls, day(-1, 12));
+  await summary.book.goalsSaved([controls], iso(day(-1, 12)));
+  const book = traceBookOf(controls, day(-1, 12), goalIdentityOf(controls.id));
   const recorded = (at: number, appended: readonly Appended[]) =>
     appended.reduce<Promise<void>>(async (before, { assessment, fact }) => {
       await before;
-      await summary.book.append(`assessments/${assessment}`, fact.type, fact.data, {
+      await summary.book.appendAt(`${controlsKey}assessments/${assessment}`, fact.type, fact.data, {
         at: iso(at),
         by: 'playbook:sales',
+        definitionId: goalIdentityOf(controls.id),
       });
     }, Promise.resolve());
   const check = (at: number, failed: number, allReported: boolean) =>
@@ -81,7 +80,7 @@ it('sums up the week of trace A on Friday at 09:00, one line a day in its latest
   await performedAt(summary.work, day(4, 9));
 
   expect(summary.starts.map(({ runId, trigger }) => [runId, trigger.reference])).toEqual([
-    [expect.any(String), `goals/controls-hold/summaries/${iso(day(4, 9))}`],
+    [expect.any(String), `goals/${goalIdentityOf(controls.id)}/summaries/${iso(day(4, 9))}`],
   ]);
   expect(inputOf(summary.starts[0])).toEqual({
     change: 'summary',

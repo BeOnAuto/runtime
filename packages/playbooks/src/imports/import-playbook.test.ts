@@ -63,7 +63,7 @@ describe('import_playbook', () => {
         created_by: { id: 'acme-admin', name: 'acme-admin' },
         updated_at: firstMoment,
         page: { source: written.page },
-        goals: { source: goals, version: 1, gaps: [] },
+        goals: { source: goals, versions: [{ id: 'paying-customers', version: 1 }], gaps: [] },
         studio: 'studio:goal/alpha/paying-customers',
         models_not_offered: [],
       },
@@ -116,7 +116,10 @@ describe('import_playbook sent again', () => {
 
     expect(await imported()).toMatchObject({ status: 'rejected' });
     expect(imports.copied(inAcme)).toEqual(['first', 'second']);
-    expect(await imported()).toMatchObject({ status: 'succeeded', output: { goals: { version: 1 } } });
+    expect(await imported()).toMatchObject({
+      status: 'succeeded',
+      output: { goals: { versions: [{ id: 'paying-customers', version: 1 }] } },
+    });
     expect(await imported()).toMatchObject({
       status: 'succeeded',
       output: { id: 'alpha', studio: 'studio:goal/alpha/paying-customers' },

@@ -1,4 +1,4 @@
-import { goalStandingIn } from '@on.auto/definitions/goals';
+import { heldGoalNamed, playbookGoalsIn, type HeldGoal } from '@on.auto/definitions/goals';
 import {
   Caller,
   defineCommand,
@@ -81,11 +81,18 @@ const assessmentFold = {
   eventSchema: AssessmentEventSchema,
 };
 
-const dismissing: Decider<AssessmentState, Dismissing, RecordedAssessmentEvent> = {
-  ...assessmentFold,
-  decide: (asked, state) => Result.succeed(factsDismissing(state, asked)),
-  context: ({ at, by }) => ({ at: new Date(at).toISOString(), by: by.id }),
-};
+function dismissingOf({ definition, goal }: HeldGoal): Decider<AssessmentState, Dismissing, RecordedAssessmentEvent> {
+  return {
+    ...assessmentFold,
+    decide: (asked, state) => Result.succeed(factsDismissing(state, asked)),
+    context: ({ at, by }) => ({
+      at: new Date(at).toISOString(),
+      by: by.id,
+      definitionId: definition,
+      definitionName: goal.id,
+    }),
+  };
+}
 
 function streamOf(id: string): string {
   return `${assessmentsKind}/${id}`;
@@ -108,15 +115,15 @@ function dismissedOf(goal: string, id: string, state: AssessmentState): GoalThin
 }
 
 const thingIn = Effect.fnUntraced(function* ({ goal, id }: ThingOfAGoal) {
-  const { goals } = yield* goalStandingIn;
-  if (!goals.some((saved) => saved.id === goal)) {
+  const held = heldGoalNamed(yield* playbookGoalsIn, goal);
+  if (held === undefined) {
     return yield* Effect.fail(new NotFound({ detail: `There is no goal ${goal} in this playbook` }));
   }
-  const { state } = yield* (yield* PlaybookReader).load(streamOf(id), assessmentFold);
-  if (state.pinned?.goal !== goal) {
+  const { state } = yield* (yield* PlaybookReader).ofDefinition(held.definition).load(streamOf(id), assessmentFold);
+  if (state.pinned === undefined) {
     return yield* Effect.fail(new NotFound({ detail: `The goal ${goal} has no thing with the id ${id}` }));
   }
-  return state;
+  return { held, state };
 });
 
 function requestsOf(
@@ -133,12 +140,13 @@ function requestsOf(
 function handledWith(askedAbout: AskedAbout | undefined) {
   return Effect.fnUntraced(function* ({ goal, id, dismissed = true }: typeof DismissGoalThingInputSchema.Type) {
     const thing = { goal, id };
-    const before = yield* thingIn(thing);
+    const { held, state: before } = yield* thingIn(thing);
     const requests = yield* requestsOf(askedAbout, thing, dismissed, before);
     const caller = yield* Caller;
     const at = DateTime.toEpochMillis(yield* DateTime.now);
     const by = recordedCallerOf(caller);
-    const { state, decidedOn } = yield* (yield* PlaybookWriter).execute(streamOf(id), dismissing, {
+    const writer = (yield* PlaybookWriter).ofDefinition(held.definition);
+    const { state, decidedOn } = yield* writer.execute(streamOf(id), dismissingOf(held), {
       dismissed,
       at,
       by,

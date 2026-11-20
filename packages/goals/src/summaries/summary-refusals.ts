@@ -12,12 +12,12 @@ export function refusedForNow(
   attempt: number,
   detail: string,
 ): Effect.Effect<Moment, unknown> {
-  const { address, clock, due, now } = summary;
+  const { address, goal, due, now } = summary;
   const retried = attempt < mostNoticeAttempts;
   const retryAt = now + retryDelayOf(attempt);
   const words = retried ? detail : `${detail}; it was tried ${String(attempt)} times and is not tried again`;
   return Effect.as(
-    summaryRecorded(ports.ledger, address, clock.id, {
+    summaryRecorded(ports.ledger, goal, {
       kind: 'refused',
       due,
       attempt,
@@ -35,9 +35,9 @@ export function refusedOnce(
   attempt: number,
   detail: string,
 ): Effect.Effect<Moment, unknown> {
-  const { address, clock, due, now } = summary;
+  const { address, goal, due, now } = summary;
   return Effect.as(
-    summaryRecorded(ports.ledger, address, clock.id, {
+    summaryRecorded(ports.ledger, goal, {
       kind: 'refused',
       due,
       attempt: attempt + 1,

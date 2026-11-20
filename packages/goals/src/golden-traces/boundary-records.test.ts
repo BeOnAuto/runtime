@@ -8,6 +8,7 @@ import { factsObserving } from '../assessments/observing.ts';
 import { clockWorkAt } from '../goal-clock/goal-clock.ts';
 import type { GoalRule } from '../goal-rules/goal-rule.ts';
 import { traceBookOf } from './trace-book.ts';
+import { tracedGoalId } from './trace-book.ts';
 import { wordsOf } from './trace-words.ts';
 
 const day = (offset: number, hour = 0) => Date.UTC(2026, 10, 9 + offset, hour);
@@ -25,7 +26,7 @@ const experiments: GoalRule = {
   notify: { passed: 'now', failed: 'now', overdue: 'now' },
 };
 
-const thing = (per: string) => assessmentIdOf({ goal: 'paying-customers', per });
+const thing = (per: string) => assessmentIdOf({ definition: tracedGoalId, per });
 
 const markLive = { per_id: '/id', marks: 'live' };
 
@@ -97,7 +98,8 @@ it('ends the open assessments of a retired goal and opens no window for it', () 
         notify: { passed: 'now', failed: 'now' },
         retired: true,
       },
-      goalsVersion: 1,
+      definition: tracedGoalId,
+      goalVersion: 1,
       now: day(0),
       firstSavedAt: 0,
       reporting: true,
@@ -115,8 +117,8 @@ it('keeps the verdict of a settled assessment when its goal is retired, on the c
   const settled = book.state(thing('A'));
 
   expect(book.ring(day(20))).toEqual([]);
-  expect(factsObserving(settled, { goal: retired, goalsVersion: 2, now: day(20), observations: [] })).toEqual([]);
-  expect(factsObserving(settled, { goal: undefined, goalsVersion: 2, now: day(20), observations: [] })).toEqual([]);
+  expect(factsObserving(settled, { goal: retired, goalVersion: 2, now: day(20), observations: [] })).toEqual([]);
+  expect(factsObserving(settled, { goal: undefined, goalVersion: 2, now: day(20), observations: [] })).toEqual([]);
   expect([settled.verdict, book.state(thing('A')).ended]).toEqual(['passed', undefined]);
 });
 
@@ -124,7 +126,7 @@ it('ends an open assessment whose goal the goals no longer hold, on an observati
   const opened = assessmentOf(
     factsObserving(unopened, {
       goal: experiments,
-      goalsVersion: 1,
+      goalVersion: 1,
       now: day(0),
       observations: [
         {
@@ -139,16 +141,17 @@ it('ends an open assessment whose goal the goals no longer hold, on an observati
   );
   const ended = [{ type: 'goal_assessment_ended', data: { reason: 'goal_retired' } }];
 
-  expect(factsObserving(opened, { goal: undefined, goalsVersion: 2, now: day(1), observations: [] })).toEqual(ended);
+  expect(factsObserving(opened, { goal: undefined, goalVersion: 2, now: day(1), observations: [] })).toEqual(ended);
   expect(factsAtMoment(opened, { goal: undefined, now: day(1), playbookRetired: false })).toEqual(ended);
-  expect(factsObserving(unopened, { goal: undefined, goalsVersion: 2, now: day(1), observations: [] })).toEqual([]);
+  expect(factsObserving(unopened, { goal: undefined, goalVersion: 2, now: day(1), observations: [] })).toEqual([]);
 });
 
 it('observes nothing for a playbook with no goals, whose clock is never due', () => {
   expect(
     clockWorkAt({
+      definition: tracedGoalId,
       goal: undefined,
-      goalsVersion: 0,
+      goalVersion: 0,
       now: day(0),
       firstSavedAt: 0,
       reporting: true,
@@ -206,7 +209,7 @@ it('opens no window that started before the goals were first saved, as for a cop
     },
     day(2, 15),
   );
-  const thursday = assessmentIdOf({ goal: 'daily-check', window_start: day(3) });
+  const thursday = assessmentIdOf({ definition: tracedGoalId, window_start: day(3) });
 
   expect(book.ring(day(2, 16))).toEqual([]);
   expect(book.ring(day(3)).map((appended) => wordsOf(appended, { [thursday]: 'Thursday' }))).toEqual([

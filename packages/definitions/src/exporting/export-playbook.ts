@@ -2,7 +2,7 @@ import { defineHttpOperation } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { playbookGoalsIn } from '../goals/goals-stream.ts';
+import { playbookGoalsIn } from '../goals/playbook-goals.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
 import { portableExportOf } from '../portable/portable-export.ts';
 import { PORTABLE_FORMAT } from '../portable/portable-package.ts';

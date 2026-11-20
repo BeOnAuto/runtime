@@ -1,4 +1,4 @@
-import type { Goal } from '@on.auto/definitions/goals';
+import type { Goal, HeldGoal } from '@on.auto/definitions/goals';
 import { PlaybookReader, type ProjectedCondition, type ProjectedKeyedRow } from '@on.auto/operations';
 import { Effect } from 'effect';
 
@@ -120,10 +120,8 @@ function none(): Effect.Effect<number> {
   return Effect.succeed(0);
 }
 
-function pinnedNowBy(rows: OpenRows, openCount: number, goalsVersion: number | undefined): Effect.Effect<boolean> {
-  return goalsVersion === undefined
-    ? Effect.succeed(false)
-    : Effect.map(rows.count([{ column: 'goals_version', equals: goalsVersion }]), (pinned) => pinned === openCount);
+function pinnedNowBy(rows: OpenRows, openCount: number, goalVersion: number): Effect.Effect<boolean> {
+  return Effect.map(rows.count([{ column: 'goal_version', equals: goalVersion }]), (pinned) => pinned === openCount);
 }
 
 function markedBy(rows: OpenRows, ids: readonly string[], pinnedNow: boolean) {
@@ -133,13 +131,13 @@ function markedBy(rows: OpenRows, ids: readonly string[], pinnedNow: boolean) {
   };
 }
 
-function milestoneCountsOf(rows: OpenRows, goal: Goal, openCount: number, goalsVersion: number | undefined) {
+function milestoneCountsOf(rows: OpenRows, goal: Goal, openCount: number, goalVersion: number) {
   const ids = (goal.milestones ?? []).map(({ id }) => id);
   return Effect.gen(function* () {
     if (openCount === 0 || ids.length === 0) {
       return { by_milestone: yield* countsOf(ids, none), waiting: yield* countsOf(ids, none) };
     }
-    const pinnedNow = yield* pinnedNowBy(rows, openCount, goalsVersion);
+    const pinnedNow = yield* pinnedNowBy(rows, openCount, goalVersion);
     return {
       by_milestone: yield* countsOf(ids, markedBy(rows, ids, pinnedNow)),
       waiting: yield* countsOf(ids, (id) => rows.count([{ column: 'next_milestone', equals: id }])),
@@ -211,20 +209,20 @@ function readOf(delivered: NoticesDelivered) {
 }
 
 export function goalAssessmentsIn(
-  goal: Goal,
+  held: HeldGoal,
   delivered: NoticesDelivered = noticesDeliveredIn,
-  goalsVersion?: number,
   asked: GoalsAsked = {},
 ): Effect.Effect<Assessments, never, PlaybookReader> {
   return Effect.gen(function* () {
+    const { goal } = held;
     const reader = yield* PlaybookReader;
-    const rows = goalRowsOf(reader, goal);
+    const rows = goalRowsOf(reader, held);
     const openRows = openRowsOf(rows, asked);
     const openCount = yield* openRows.count([]);
     const stoppedCount = openCount === 0 ? 0 : yield* openRows.count([{ column: 'stopped_at', after: set }]);
     const dismissedCount = yield* rows.count([open, dismissedNow]);
     const inFlight = heldOf(yield* inFlightOf(openRows, openCount));
-    const counts = yield* milestoneCountsOf(openRows, goal, openCount, goalsVersion);
+    const counts = yield* milestoneCountsOf(openRows, goal, openCount, held.version);
     const ended = yield* closedOf(rows, asked);
     const current = yield* currentOf(openRows, ended.latest);
     const read = readOf(delivered);

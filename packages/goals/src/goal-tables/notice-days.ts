@@ -22,7 +22,8 @@ function startedIn(row: ProjectedRow | undefined): number {
 
 export const noticeDays: KeyedProjection = {
   name: noticeDaysName,
-  version: 1,
+  version: 2,
+  scopes: ['definition'],
   kinds: [assessmentsKind, goalSummariesKind],
   types: [...startTypes],
   columns: [{ name: 'started', kind: 'integer' }],

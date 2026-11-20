@@ -1,4 +1,4 @@
-import type { Goal } from '@on.auto/definitions/goals';
+import type { HeldGoal } from '@on.auto/definitions/goals';
 import type { PlaybookReader, ProjectedCondition, ProjectedKeyedRow, ProjectedValue } from '@on.auto/operations';
 import type { Effect } from 'effect';
 
@@ -22,20 +22,19 @@ export interface GoalRows {
   readonly count: (where: readonly ProjectedCondition[]) => Effect.Effect<number>;
 }
 
-export function goalRowsOf(reader: PlaybookReader['Service'], { id }: Pick<Goal, 'id'>): GoalRows {
-  const ofGoal = (where: readonly ProjectedCondition[]) => [{ column: 'goal', equals: id }, ...where];
+export function goalRowsOf(reader: PlaybookReader['Service'], { definition }: Pick<HeldGoal, 'definition'>): GoalRows {
+  const ofGoal = reader.ofDefinition(definition);
   return {
-    read: (where, orderBy, order, limit) =>
-      reader.readProjectedRows(assessmentsName, { where: ofGoal(where), orderBy, order, limit }),
+    read: (where, orderBy, order, limit) => ofGoal.readProjectedRows(assessmentsName, { where, orderBy, order, limit }),
     readAfter: (where, orderBy, order, { limit, after }) =>
-      reader.readProjectedRows(assessmentsName, {
-        where: ofGoal(where),
+      ofGoal.readProjectedRows(assessmentsName, {
+        where,
         orderBy,
         order,
         limit,
         ...(after === undefined ? {} : { after }),
       }),
-    count: (where) => reader.countProjectedRows(assessmentsName, ofGoal(where)),
+    count: (where) => ofGoal.countProjectedRows(assessmentsName, where),
   };
 }
 

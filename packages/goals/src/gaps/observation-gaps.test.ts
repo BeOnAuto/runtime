@@ -1,7 +1,7 @@
 import { internalTermsIn } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
-import { assessmentBookOf, experimentsGoal, firstDay } from '../reads/assessment-samples.ts';
+import { assessmentBookOf, experimentsGoal, firstDay, heldGoalOf } from '../reads/assessment-samples.ts';
 import type { StandingWorkflow } from './goal-gaps.ts';
 import { observationGapsIn, observationRefusedGap } from './observation-gaps.ts';
 
@@ -27,7 +27,7 @@ describe('the gap of evidence that could not be read', () => {
     await book.refused(experimentsGoal.id, 'tidy', firstDay + 60_000);
 
     const gaps = await book.inThePlaybook(
-      observationGapsIn({ goals: [experimentsGoal], workflows: [measuring, elsewhere] }),
+      observationGapsIn({ held: [heldGoalOf(experimentsGoal)], workflows: [measuring, elsewhere] }),
     );
 
     expect(gaps).toEqual([
@@ -48,9 +48,9 @@ describe('the gap of evidence that could not be read', () => {
     await book.refused(experimentsGoal.id, 'measure', firstDay);
     await book.observed(id, firstDay + 60_000, { marks: 'chosen' });
 
-    expect(await book.inThePlaybook(observationGapsIn({ goals: [experimentsGoal], workflows: [measuring] }))).toEqual(
-      [],
-    );
+    expect(
+      await book.inThePlaybook(observationGapsIn({ held: [heldGoalOf(experimentsGoal)], workflows: [measuring] })),
+    ).toEqual([]);
   });
 });
 
@@ -59,9 +59,18 @@ describe('the gap of evidence that could not be read, where it is not shown', ()
     const book = assessmentBookOf();
     await book.refused(experimentsGoal.id, 'measure', firstDay);
 
-    const paused = observationGapsIn({ goals: [experimentsGoal], workflows: [{ ...measuring, paused: true }] });
-    const retired = observationGapsIn({ goals: [{ ...experimentsGoal, retired: true }], workflows: [measuring] });
-    const unrefused = observationGapsIn({ goals: [experimentsGoal], workflows: [{ ...measuring, name: 'count' }] });
+    const paused = observationGapsIn({
+      held: [heldGoalOf(experimentsGoal)],
+      workflows: [{ ...measuring, paused: true }],
+    });
+    const retired = observationGapsIn({
+      held: [heldGoalOf({ ...experimentsGoal, retired: true })],
+      workflows: [measuring],
+    });
+    const unrefused = observationGapsIn({
+      held: [heldGoalOf(experimentsGoal)],
+      workflows: [{ ...measuring, name: 'count' }],
+    });
 
     expect(await book.inThePlaybook(paused)).toEqual([]);
     expect(await book.inThePlaybook(retired)).toEqual([]);

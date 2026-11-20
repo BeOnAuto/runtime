@@ -58,11 +58,14 @@ describe('the goals read as an operation', () => {
     });
   });
 
-  it('answers a playbook with no goals from its own ledger: version 0, no goals and the gap no_goal', async () => {
-    expect(await readOfAnEmptyPlaybook()).toMatchObject({
+  it('answers a playbook with no goals from its own ledger: no goals and the gap no_goal', async () => {
+    const read = await readOfAnEmptyPlaybook();
+
+    expect(read).toMatchObject({
       status: 'succeeded',
-      output: { version: 0, gaps: [{ kind: 'no_goal', fixed_by: 'person' }], goals: [] },
+      output: { gaps: [{ kind: 'no_goal', fixed_by: 'person' }], goals: [] },
     });
+    expect(read).not.toHaveProperty('output.version');
   });
 });
 
@@ -96,8 +99,8 @@ describe('the query of the goals read', () => {
 
 function outcomeOf(messages: boolean) {
   return goalsOperationsServed(true, true, messages)[1]?.registration.plainLanguage?.outcome(
-    { version: 1, goals: [] },
-    { version: 1 },
+    { goals: [] },
+    { goals: [{ id: 'weekly-leads', version: 1 }] },
   );
 }
 
@@ -107,8 +110,8 @@ describe('whether the goals read says the engine judges the goals', () => {
     const [kept] = goalsOperationsServed(true, false);
 
     expect(goalsOperationsServed(false, true)).toEqual([]);
-    expect(await readOfAnEmptyPlaybook(judged?.registration)).toMatchObject({ output: { version: 0, results: true } });
-    expect(await readOfAnEmptyPlaybook(kept?.registration)).toMatchObject({ output: { version: 0, results: false } });
+    expect(await readOfAnEmptyPlaybook(judged?.registration)).toMatchObject({ output: { results: true } });
+    expect(await readOfAnEmptyPlaybook(kept?.registration)).toMatchObject({ output: { results: false } });
   });
 
   it('serve the yes that says no goal messages are sent only where messages are off', () => {
@@ -117,13 +120,17 @@ describe('whether the goals read says the engine judges the goals', () => {
 });
 
 describe('the goal change', () => {
-  const fact = { id: 'fact-1', type: 'playbook_goals_saved', context: { at: '2026-10-05T09:00:00.000Z', by: 'x' } };
+  const fact = { id: 'fact-1', type: 'goal_created', context: { at: '2026-10-05T09:00:00.000Z', by: 'x' } };
 
-  it('is named, with no fields, for goals saved or agreed or evidence refused, where goals are kept', () => {
+  it('is named, with no fields, for a goal saved, agreed or removed or evidence refused, where goals are kept', () => {
     const catalog = changeCatalogOf(goalChangeNamings(true));
 
-    expect(catalog.changesOf({ ...fact, stream: 'goals' })).toEqual([{ kind: 'goal' }]);
-    expect(catalog.changesOf({ ...fact, type: 'playbook_goals_agreed', stream: 'goals' })).toEqual([{ kind: 'goal' }]);
+    expect(
+      ['goal_created', 'goal_updated', 'goal_reordered', 'goal_agreed', 'goal_removed'].flatMap((type) =>
+        catalog.changesOf({ ...fact, type, stream: 'goals/goal' }),
+      ),
+    ).toEqual(Array.from({ length: 5 }, () => ({ kind: 'goal' })));
+    expect(catalog.changesOf({ ...fact, type: 'playbook_goals_saved', stream: 'goals/playbook' })).toEqual([]);
     expect(catalog.changesOf({ ...fact, type: 'goal_observation_refused', stream: 'goal-refusals' })).toEqual([
       { kind: 'goal' },
     ]);

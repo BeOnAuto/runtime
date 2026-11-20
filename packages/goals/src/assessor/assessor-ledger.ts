@@ -1,11 +1,12 @@
 import { definitionTypeOrder } from '@on.auto/definitions';
-import { definitionNamesOf } from '@on.auto/definitions/identity';
+import { definitionAndGoalNamesOf } from '@on.auto/definitions/identity';
 import {
   ContextSchema,
   type Context,
   type Decider,
   type Fold,
   type Ledger,
+  type PlaybookAddress,
   type ProjectedRow,
   type ProjectedRowsQuery,
   type RecordedEvent,
@@ -70,10 +71,45 @@ export const controls = {
   notify: { passed: 'quiet', failed: 'now', overdue: 'now', through: 'tell-owner' },
 };
 
+export function goalIdentityOf(id: string): string {
+  return `goal-of-${id}`;
+}
+
+type Appending = (stream: string, type: string, data: Schema.Json, context: Partial<Context>) => Promise<void>;
+
+export type GoalsSaving = (goals: Schema.Json, at?: string) => Promise<void>;
+
+const listedOf = Schema.decodeUnknownSync(Schema.Array(Schema.Json));
+
+const idOf = Schema.decodeUnknownSync(Schema.Struct({ id: Schema.String }));
+
+export function goalsSavedBy(appendedTo: Appending, { org, playbook }: PlaybookAddress): GoalsSaving {
+  const held = new Map<string, string>();
+  const savedOne = (goal: Schema.Json, position: number, at: string | undefined): Promise<void> => {
+    const { id } = idOf(goal);
+    const definition = goalIdentityOf(id);
+    const stream = `definition/${org}/${definition}/goals/goal`;
+    const context = { ...(at === undefined ? {} : { at }), definitionId: definition };
+    const content = JSON.stringify(goal);
+    const before = held.get(id);
+    held.set(id, content);
+    if (before === undefined) {
+      return appendedTo(stream, 'goal_created', { playbook, position, goal }, context);
+    }
+    return before === content ? Promise.resolve() : appendedTo(stream, 'goal_updated', { goal }, context);
+  };
+  return (goals, at) =>
+    listedOf(goals).reduce<Promise<void>>(async (before, goal, position) => {
+      await before;
+      await savedOne(goal, position, at);
+    }, Promise.resolve());
+}
+
 export interface Book {
   readonly ledger: Ledger['Service'];
   readonly append: (stream: string, type: string, data: Schema.Json, context?: Partial<Context>) => Promise<void>;
-  readonly goalsSaved: (goals: Schema.Json, version?: number) => Promise<void>;
+  readonly appendWhole: (stream: string, type: string, data: Schema.Json, context?: Partial<Context>) => Promise<void>;
+  readonly goalsSaved: GoalsSaving;
   readonly workflowSaved: (name: string, version: number, contributes?: Schema.Json, at?: string) => Promise<void>;
   readonly workflowChanged: (name: string, type: string, data: Schema.Json, context: Partial<Context>) => Promise<void>;
   readonly definitionChanged: (
@@ -82,8 +118,8 @@ export interface Book {
     data: Schema.Json,
     context: Partial<Context>,
   ) => Promise<void>;
-  readonly rows: (table: string) => Promise<Readonly<Record<string, ProjectedRow>>>;
-  readonly factsOf: (stream: string) => Promise<readonly string[]>;
+  readonly rows: (table: string, goal?: string) => Promise<Readonly<Record<string, ProjectedRow>>>;
+  readonly factsOf: (goal: string, stream: string) => Promise<readonly string[]>;
 }
 
 function definitionStreamOf(type: string, name: string): string {
@@ -115,11 +151,15 @@ function workflowSaveOf(
   ];
 }
 
-export function bookOf(): Book {
-  const { service } = memoryLedgerWith({
+export function goalsMemoryLedger() {
+  return memoryLedgerWith({
     projections: goalsLedger.projections,
-    definitionNames: definitionNamesOf(definitionTypeOrder),
+    definitionNames: definitionAndGoalNamesOf(definitionTypeOrder),
   });
+}
+
+export function bookOf(): Book {
+  const { service } = goalsMemoryLedger();
   const at = new Date(monday - 3_600_000).toISOString();
   const appendedTo = (stream: string, type: string, data: Schema.Json, context: Partial<Context> = {}) =>
     Effect.runPromise(
@@ -136,19 +176,22 @@ export function bookOf(): Book {
   return {
     ledger: service,
     append,
-    goalsSaved: (goals, version = 1) =>
-      append('goals/playbook', 'playbook_goals_saved', { source: 'goals', goals, version }),
+    appendWhole: appendedTo,
+    goalsSaved: goalsSavedBy(appendedTo, sales),
     workflowChanged: (name, type, data, context) => appendedTo(workflowStreamOf(name), type, data, context),
     definitionChanged: ({ type, name }, fact, data, context) =>
       appendedTo(definitionStreamOf(type, name), fact, data, context),
     workflowSaved: (name, version, contributes, savedAt) =>
       appendedTo(workflowStreamOf(name), ...workflowSaveOf(name, version, contributes, savedAt)),
-    rows: async (table) => {
-      const kept = await Effect.runPromise(service.readProjectedRows(table, sales, allOf));
+    rows: async (table, goal) => {
+      const under = goal === undefined ? sales : { org: sales.org, definition: goalIdentityOf(goal) };
+      const kept = await Effect.runPromise(service.readProjectedRows(table, under, allOf));
       return Object.fromEntries(kept.map(({ key, row }) => [key, row]));
     },
-    factsOf: async (stream) => {
-      const { state } = await Effect.runPromise(service.load(`${salesKey}${stream}`, typesFold));
+    factsOf: async (goal, stream) => {
+      const { state } = await Effect.runPromise(
+        service.load(`definition/${sales.org}/${goalIdentityOf(goal)}/${stream}`, typesFold),
+      );
       return state;
     },
   };

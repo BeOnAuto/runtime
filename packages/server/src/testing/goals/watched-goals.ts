@@ -10,6 +10,7 @@ import type { TemporaryLedger } from '../records/temporary-ledger.ts';
 import type { ReasoningServer } from '../servers/reasoning-server.ts';
 import { servingReasoning } from '../servers/reasoning-server.ts';
 import { until } from '../waiting/until.ts';
+import { goalIdentityIn } from './goal-identities.ts';
 
 interface GoalsWatch {
   readonly asked: readonly string[];
@@ -145,7 +146,8 @@ export interface WatchedServer {
   readonly server: ReasoningServer;
   readonly clock: MovedClock;
   readonly watch: GoalsWatch;
-  readonly assessmentRows: () => Promise<readonly ProjectedRow[]>;
+  readonly assessmentRows: (goal?: string) => Promise<readonly ProjectedRow[]>;
+  readonly goalOf: (name: string) => Promise<string>;
 }
 
 export type GoalsPortsTurned = (ports: GoalsPorts) => GoalsPorts;
@@ -176,17 +178,18 @@ export async function servedWatched(
     server,
     clock,
     watch,
-    assessmentRows: async () => {
+    assessmentRows: async (goal) => {
       const kept = await composed.promise;
+      const address =
+        goal === undefined
+          ? { org: 'acme', playbook: 'alpha' }
+          : { org: 'acme', definition: await Effect.runPromise(goalIdentityIn(kept, goal)) };
       const rows = await Effect.runPromise(
-        kept.readProjectedRows(
-          'goal_assessments',
-          { org: 'acme', playbook: 'alpha' },
-          { where: [], orderBy: [], order: 'asc', limit: 1000 },
-        ),
+        kept.readProjectedRows('goal_assessments', address, { where: [], orderBy: [], order: 'asc', limit: 1000 }),
       );
       return rows.map(({ row }) => row);
     },
+    goalOf: async (name) => Effect.runPromise(goalIdentityIn(await composed.promise, name)),
   };
 }
 
@@ -213,8 +216,9 @@ export function movingUntil<A>(
 export function rowsHolding(
   watched: WatchedServer,
   holds: (rows: readonly ProjectedRow[]) => boolean,
+  goal?: string,
 ): Promise<readonly ProjectedRow[]> {
-  return movingUntil(watched, watched.assessmentRows, holds);
+  return movingUntil(watched, () => watched.assessmentRows(goal), holds);
 }
 
 export interface GoalFact {

@@ -2,7 +2,15 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { goalSummariesKind } from '../goal-facts/goal-facts.ts';
-import { experiments, monday, noticeBookOf, performedAt, sales, startsAnswering } from '../notices/notice-samples.ts';
+import {
+  experiments,
+  experimentsGoal,
+  monday,
+  noticeBookOf,
+  performedAt,
+  sales,
+  startsAnswering,
+} from '../notices/notice-samples.ts';
 import { noticesOwedOf } from '../notices/notice-starts.ts';
 import { noticedPlaybookIn } from '../notices/noticed-playbooks.ts';
 import {
@@ -16,16 +24,24 @@ import {
 
 const hour = 3_600_000;
 
+const anotherGoal = 'goal-of-replies';
+
 async function bookWithStarts(earlier: number, at = monday - hour) {
   const book = noticeBookOf();
   await book.playbookCreated();
   await book.goalsSaved([experiments]);
+  await book.appendAt(
+    `definition/acme/${anotherGoal}/goals/goal`,
+    'goal_created',
+    { playbook: 'sales', position: 1, goal: { ...experiments, id: 'replies' } },
+    { definitionId: anotherGoal },
+  );
   await book.opened();
   await book.assessed('passed', 'now');
   await Promise.all(
     Array.from({ length: earlier }, (_, index) =>
-      book.append(
-        `${goalSummariesKind}/goal-${String(index)}`,
+      book.appendAt(
+        `definition/acme/${index % 2 === 0 ? experimentsGoal : anotherGoal}/${goalSummariesKind}/summary-${String(index)}`,
         index % 2 === 0 ? 'goal_summary_started' : 'goal_notice_started',
         { due: new Date(at).toISOString(), run: `run-${String(index)}` },
         { at: new Date(at).toISOString(), by: 'playbook:sales' },
@@ -38,7 +54,7 @@ async function bookWithStarts(earlier: number, at = monday - hour) {
 }
 
 describe('the most notices and summaries a playbook sends in a UTC day', () => {
-  it('counts the starts seen in the ledger on the day of the moment asked, and none on a day with none', async () => {
+  it('counts the starts seen in the ledger on the day of the moment asked, of every goal the playbook holds, and none on a day with none', async () => {
     const { book } = await bookWithStarts(3);
 
     expect([

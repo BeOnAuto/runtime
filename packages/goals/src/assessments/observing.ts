@@ -19,7 +19,7 @@ import { afterMilestoneOf, countsIn, opensInRun } from './window-counting.ts';
 
 export interface Observing {
   readonly goal: GoalRule | undefined;
-  readonly goalsVersion: number;
+  readonly goalVersion: number;
   readonly observations: readonly Observation[];
   readonly now: Instant;
   readonly clearing?: readonly string[];
@@ -191,7 +191,7 @@ function openedFor(
   if (state.pinned !== undefined) {
     return { facts: [], state, pinned: state.pinned };
   }
-  const opening = openingOf(observing.goal, observing.goalsVersion, observation);
+  const opening = openingOf(observing.goal, observing.goalVersion, observation);
   if (opening === undefined) {
     return undefined;
   }

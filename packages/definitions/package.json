@@ -14,7 +14,7 @@
     "./event-time": "./src/events/event-time.ts",
     "./given-values": "./src/checking/given-values.ts",
     "./goals": "./src/goals.ts",
-    "./identity": "./src/identity/definition-names.ts",
+    "./identity": "./src/identity/names-of-a-playbook.ts",
     "./importing": "./src/importing.ts",
     "./page": "./src/page.ts",
     "./portable": "./src/portable.ts",

@@ -50,7 +50,12 @@ export function wordsOfRows(goals: GoalsRead, rows: readonly ActivityRow[]) {
   });
 }
 
-export function wordOf(words: WordsOfPlaybooks, playbook: string, { goal, outcome }: GoalShown): string | null {
+export function wordOf(
+  words: WordsOfPlaybooks,
+  playbook: string,
+  goal: string,
+  outcome: GoalShown['outcome'],
+): string | null {
   const said = words.get(playbook)?.get(goal);
   if (said === undefined || outcome === 'overdue') {
     return null;

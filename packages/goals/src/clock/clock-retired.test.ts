@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import { experimentId, measuring, results } from '../assessor/assessor-fixtures.ts';
 import { controls, deliveredAll, experiments, finished } from '../assessor/assessor-ledger.ts';
+import { goalIdentityOf } from '../assessor/assessor-ledger.ts';
 import { assessmentsName } from '../goal-tables/assessment-rows.ts';
 import { clockKey, clocksName } from '../goal-tables/clock-rows.ts';
 import { clockHarnessOf, type ClockHarness } from './clock-harness.ts';
@@ -12,7 +13,7 @@ import { mostHeldInARead } from './retired-day.ts';
 const checking = [{ goal: 'controls-hold', purpose: 'Checks every control each morning.', measures: '/failed' }];
 
 const dayOf = (day: string) =>
-  assessmentIdOf({ goal: 'controls-hold', window_start: Date.parse(`${day}T00:00:00.000Z`) });
+  assessmentIdOf({ definition: goalIdentityOf('controls-hold'), window_start: Date.parse(`${day}T00:00:00.000Z`) });
 
 const stamps = (harness: ClockHarness) =>
   harness.wakes.map(({ at, performs }) => `${new Date(at).toISOString()} ${String(performs)}`);
@@ -68,14 +69,14 @@ describe('a retired goal', () => {
     const counts = Array.from({ length: mostEndedInARead + 1 }, () => 0);
     await harness.observed('r1', results(...counts).output, '2026-11-09T09:00:00.000Z', 'measure');
 
-    await harness.goalsSaved([{ ...experiments, retired: true }], '2026-11-10T09:00:00.000Z', 2);
+    await harness.goalsSaved([{ ...experiments, retired: true }], '2026-11-10T09:00:00.000Z');
     const rows = Object.values(await harness.book.rows(assessmentsName));
 
     expect(rows).toHaveLength(mostEndedInARead + 1);
     expect(new Set(rows.map((row) => `${String(row['outcome'])} ${String(row['notice_due_at'])}`))).toEqual(
       new Set(['goal_retired null']),
     );
-    expect(await harness.book.factsOf(`assessments/${experimentId('MAR-41')}`)).toEqual([
+    expect(await harness.book.factsOf('paying-customers', `assessments/${experimentId('MAR-41')}`)).toEqual([
       'goal_assessment_opened',
       'goal_observed',
       'goal_assessment_ended',
@@ -87,7 +88,7 @@ describe('a retired goal', () => {
   it('ends its calendar assessments too, and opens no window of it again', async () => {
     const harness = await monitored();
 
-    await harness.goalsSaved([{ ...controls, retired: true }], '2026-11-09T12:00:00.000Z', 2);
+    await harness.goalsSaved([{ ...controls, retired: true }], '2026-11-09T12:00:00.000Z');
     await harness.until('2026-11-12T00:00:00.000Z');
 
     expect(await harness.row(assessmentsName, dayOf('2026-11-09'))).toMatchObject({
@@ -108,12 +109,7 @@ describe('a goal retired just before another goal’s window opens', () => {
     await harness.book.workflowSaved('check', 1, checking);
     const opening = Date.parse('2026-11-09T10:00:30.000Z');
 
-    await harness.book.append(
-      'goals/playbook',
-      'playbook_goals_saved',
-      { source: 'goals', goals: [{ ...experiments, retired: true }, controls], version: 2 },
-      { at: '2026-11-09T10:00:00.000Z' },
-    );
+    await harness.book.goalsSaved([{ ...experiments, retired: true }, controls], '2026-11-09T10:00:00.000Z');
     harness.movedTo(opening);
     await deliveredAll(
       harness.assessor,
@@ -124,7 +120,10 @@ describe('a goal retired just before another goal’s window opens', () => {
     expect(performs).toBe(1);
     expect(await harness.row(assessmentsName, experimentId('MAR-41'))).toMatchObject({ outcome: 'goal_retired' });
     expect(await harness.row(assessmentsName, dayOf('2026-11-09'))).toMatchObject({ verdict: 'open' });
-    expect(await harness.row(clocksName, clockKey)).toMatchObject({ opens_at: Date.parse('2026-11-10T00:00:00.000Z') });
+    expect(await harness.row(clocksName, clockKey, 'paying-customers')).toMatchObject({ opens_at: null });
+    expect(await harness.row(clocksName, clockKey, 'controls-hold')).toMatchObject({
+      opens_at: Date.parse('2026-11-10T00:00:00.000Z'),
+    });
   });
 });
 
@@ -136,7 +135,7 @@ describe('a retired playbook whose retired goal left assessments open', () => {
     await harness.observed('r1', results(0).output, '2026-11-09T09:00:00.000Z', 'measure');
 
     harness.statusIs('retired');
-    await harness.goalsSaved([{ ...experiments, retired: true }], '2026-11-10T09:00:00.000Z', 2);
+    await harness.goalsSaved([{ ...experiments, retired: true }], '2026-11-10T09:00:00.000Z');
     await harness.until('2026-11-12T12:00:00.000Z');
     const whileRetired = await harness.row(assessmentsName, experimentId('MAR-41'));
     harness.statusIs('active');

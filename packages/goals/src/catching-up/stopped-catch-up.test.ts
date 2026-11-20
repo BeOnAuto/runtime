@@ -75,7 +75,7 @@ describe('a store whose follower passed a failed run before this release judged 
     expect(rows[orderId('ORD-1')]).toMatchObject({ open: true, verdict: 'open', stopped_run: 'run-decide-1' });
     expect(String(rows[orderId('ORD-1')]?.['state'])).toContain(words);
     expect(rows[orderId('ORD-2')]).toMatchObject({ stopped_at: null });
-    expect(await book.factsOf(`assessments/${orderId('ORD-1')}`)).toEqual([
+    expect(await book.factsOf('orders', `assessments/${orderId('ORD-1')}`)).toEqual([
       'goal_assessment_opened',
       'goal_observed',
       'goal_stopped',
@@ -120,7 +120,7 @@ describe('the catching up of stopped things', () => {
     expect(await performedOnce(stoppedCatchUpOf(ports))).toEqual([
       'acme/sales/the stopped things of the goals caught up',
     ]);
-    expect(await book.factsOf(`assessments/${orderId('ORD-1')}`)).toHaveLength(3);
+    expect(await book.factsOf('orders', `assessments/${orderId('ORD-1')}`)).toHaveLength(3);
     expect(await Effect.runPromise(stopping.due(later, 10, true))).toEqual([]);
     expect(await Effect.runPromise(stopping.nextDueAt(later))).toBeNull();
   });

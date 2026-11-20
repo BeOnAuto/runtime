@@ -15,8 +15,9 @@ const daily: GoalRule = {
 };
 
 const moment = (parts: Partial<ClockMoment>): ClockMoment => ({
+  definition: 'daily-check-goal',
   goal: daily,
-  goalsVersion: 3,
+  goalVersion: 3,
   now: day(0, 0),
   firstSavedAt: day(-1, 12),
   reporting: true,
@@ -51,7 +52,7 @@ describe('the work of a goal clock at a moment', () => {
 
     expect(work).toEqual({
       open: {
-        assessment: assessmentIdOf({ goal: 'daily-check', window_start: day(3) }),
+        assessment: assessmentIdOf({ definition: 'daily-check-goal', window_start: day(3) }),
         opens: day(3),
         opened: openedData(daily, 3, { window: { opens: day(3), closes: day(4), due: day(4, 1) } }),
       },

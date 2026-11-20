@@ -49,8 +49,8 @@ describe('an output kept outside the run fact', () => {
 
     const delivered = await deliveredAll(assessorOf(ports), finished({ id: 'large', data }));
 
-    expect(delivered).toMatchObject({ keys: ['r:paying-customers.measure'], failed: [] });
-    expect(await book.factsOf('goal-refusals/paying-customers.measure')).toEqual(['goal_observation_refused']);
+    expect(delivered).toMatchObject({ keys: ['r:goal-of-paying-customers/measure'], failed: [] });
+    expect(await book.factsOf('paying-customers', 'goal-refusals/measure')).toEqual(['goal_observation_refused']);
   });
 });
 
@@ -70,7 +70,7 @@ describe('a host that stops between the deliveries of one run', () => {
 
     expect([first.deliveries.length, first.more, rest.deliveries.length, rest.more]).toEqual([1, true, 2, false]);
     expect(again.keys).toHaveLength(3);
-    expect(await Promise.all(streams.map((stream) => book.factsOf(stream)))).toEqual(
+    expect(await Promise.all(streams.map((stream) => book.factsOf('paying-customers', stream)))).toEqual(
       streams.map(() => ['goal_assessment_opened', 'goal_observed', 'goal_assessed']),
     );
   });

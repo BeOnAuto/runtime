@@ -1,9 +1,9 @@
-import { withinDetailBytes, type Goal } from '@on.auto/definitions/goals';
+import { withinDetailBytes, type Goal, type HeldGoal } from '@on.auto/definitions/goals';
 import { PlaybookReader } from '@on.auto/operations';
 import type { GoalGap } from '@on.auto/playbooks';
 import { Effect } from 'effect';
 
-import { goalSummariesStreamIdOf } from '../goal-tables/goal-streams.ts';
+import { summariesStreamId } from '../goal-facts/goal-facts.ts';
 import { summariesName } from '../goal-tables/summary-rows.ts';
 import { isDayLimitDetail, lowered, sendingResumes, withoutClosingPeriod } from '../notice-limits/notice-day-limit.ts';
 
@@ -24,14 +24,17 @@ export function summaryNotStartedGap(goal: Goal, detail: string): GoalGap {
   };
 }
 
-export function summaryGapsIn(goal: Goal): Effect.Effect<readonly GoalGap[], never, PlaybookReader> {
+export function summaryGapsIn({
+  definition,
+  goal,
+}: HeldGoal): Effect.Effect<readonly GoalGap[], never, PlaybookReader> {
   if (goal.notify?.summary === undefined) {
     return Effect.succeed([]);
   }
   return PlaybookReader.use((reader) =>
     Effect.map(
-      reader.readProjectedRows(summariesName, {
-        where: [{ column: 'row_key', equals: goalSummariesStreamIdOf(goal.id) }],
+      reader.ofDefinition(definition).readProjectedRows(summariesName, {
+        where: [{ column: 'row_key', equals: summariesStreamId }],
         orderBy: [],
         order: 'asc',
         limit: 1,

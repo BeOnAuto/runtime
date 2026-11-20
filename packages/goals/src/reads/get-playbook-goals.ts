@@ -1,4 +1,4 @@
-import { goalAgreementsIn, goalStandingIn } from '@on.auto/definitions/goals';
+import { goalStandingIn } from '@on.auto/definitions/goals';
 import { defineHttpOperation } from '@on.auto/operations';
 import { Effect } from 'effect';
 
@@ -19,12 +19,10 @@ const description = [
 export function goalsReadWith(delivered?: NoticesDelivered, connected?: ServerConnected, asked: GoalsAsked = {}) {
   return Effect.gen(function* () {
     const standing = yield* goalStandingIn;
-    const assessed = yield* Effect.forEach(standing.goals, (goal) =>
-      goalAssessmentsIn(goal, delivered, standing.version, asked),
-    );
-    const byGoal = new Map(standing.goals.map((goal, index) => [goal.id, assessed[index]]));
-    const engineGaps = [...(yield* noticeGapsIn(standing.goals)), ...(yield* observationGapsIn(standing))];
-    const read = goalsReadOf(standing, (goal) => byGoal.get(goal.id), engineGaps, yield* goalAgreementsIn);
+    const assessed = yield* Effect.forEach(standing.held, (held) => goalAssessmentsIn(held, delivered, asked));
+    const byGoal = new Map(standing.held.map(({ goal }, index) => [goal.id, assessed[index]]));
+    const engineGaps = [...(yield* noticeGapsIn(standing.held)), ...(yield* observationGapsIn(standing))];
+    const read = goalsReadOf(standing, (goal) => byGoal.get(goal.id), engineGaps);
     return yield* readWithTheConnections(read, standing.workflows, connected);
   });
 }

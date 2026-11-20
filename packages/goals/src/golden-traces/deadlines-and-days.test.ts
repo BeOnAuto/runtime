@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import type { GoalRule } from '../goal-rules/goal-rule.ts';
 import { traceBookOf, type TraceBook } from './trace-book.ts';
+import { tracedGoalId } from './trace-book.ts';
 import { wordsOf } from './trace-words.ts';
 
 const day = (offset: number, hour = 0, minute = 0) => Date.UTC(2026, 10, 9 + offset, hour, minute);
@@ -20,7 +21,7 @@ const replies: GoalRule = {
   notify: { passed: 'quiet', failed: 'now', overdue: 'quiet' },
 };
 
-const harbour = assessmentIdOf({ goal: 'catering-replies', per: 'harbour-bookshop' });
+const harbour = assessmentIdOf({ definition: tracedGoalId, per: 'harbour-bookshop' });
 
 const named = { [harbour]: 'Harbour' };
 
@@ -136,7 +137,7 @@ const stock: GoalRule = {
 
 const dayNamed = Object.fromEntries(
   ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'next Monday'].map((name, offset) => [
-    assessmentIdOf({ goal: 'coffee-stock', window_start: day(offset) }),
+    assessmentIdOf({ definition: tracedGoalId, window_start: day(offset) }),
     name,
   ]),
 );

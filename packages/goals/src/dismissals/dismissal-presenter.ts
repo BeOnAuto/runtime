@@ -21,11 +21,15 @@ const assessmentsPresenter: Presenter = {
   publicNames: Object.fromEntries(assessmentRows.types.map((type) => [type, shownNames[type] ?? []])),
   present: (recorded) => {
     const event = dismissalOf(recorded);
+    const goal = event.context.definitionName;
+    if (goal === undefined) {
+      return [];
+    }
     const by = {
       id: cutAtCodePoint(event.data.by.id, mostDismissedByBytes),
       name: cutAtCodePoint(event.data.by.name, mostNameBytes),
     };
-    const { goal, per } = event.data;
+    const { per } = event.data;
     const thing = { goal, id: recorded.stream.slice(subjectStart), ...(per === undefined ? {} : { per }) };
     return [
       event.type === 'goal_dismissed'

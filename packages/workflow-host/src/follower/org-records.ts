@@ -1,4 +1,5 @@
 import { definitionFactTypes } from '@on.auto/definitions';
+import { goalFactTypes } from '@on.auto/definitions/goals';
 import { orgRecordedReaderOf, playbookKeyOfStream, type LedgerStreams } from '@on.auto/ledger';
 import {
   definitionOfStreamPrefix,
@@ -54,7 +55,7 @@ export type PlaybookOfARecord = (
   record: Pick<RecordedEvent, 'stream' | 'type'>,
 ) => Effect.Effect<PlaceOfARecord | undefined>;
 
-const ofADefinition: ReadonlySet<string> = new Set(definitionFactTypes);
+const ofADefinition: ReadonlySet<string> = new Set([...definitionFactTypes, ...goalFactTypes]);
 
 export function playbooksOfRecords(names: Pick<LedgerStreams, 'nameHeldBy'>): PlaybookOfARecord {
   const known = new Map<string, HeldName | undefined>();

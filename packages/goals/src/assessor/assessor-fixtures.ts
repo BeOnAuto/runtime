@@ -5,7 +5,7 @@ import { Effect, Struct } from 'effect';
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import type { ChainReads } from '../chain-origins/chain-origins.ts';
 import { opened } from '../conditions/condition-samples.ts';
-import { bookOf, controls, experiments, finished, monday, type Book } from './assessor-ledger.ts';
+import { bookOf, controls, experiments, finished, goalIdentityOf, monday, type Book } from './assessor-ledger.ts';
 import type { AssessorPorts } from './run-planner.ts';
 
 export const measuring = [
@@ -22,7 +22,8 @@ export const results = (...customers: readonly number[]) => ({
   output: { results: customers.map((count, index) => ({ issue: `MAR-${String(41 + index)}`, customers: count })) },
 });
 
-export const experimentId = (issue: string) => assessmentIdOf({ goal: 'paying-customers', per: issue });
+export const experimentId = (issue: string) =>
+  assessmentIdOf({ definition: goalIdentityOf('paying-customers'), per: issue });
 
 const readOfNothing = () => Effect.die(new Error('A run on a schedule needs no read of who began it'));
 

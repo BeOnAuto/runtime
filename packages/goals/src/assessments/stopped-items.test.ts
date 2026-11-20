@@ -43,7 +43,7 @@ const after = (state: AssessmentState, facts: readonly AssessmentFact[]) =>
   facts.reduce((before, fact) => assessmentAfter(before, fact), state);
 
 const observing = (state: AssessmentState, now: number, ...observations: readonly Observation[]) =>
-  after(state, factsObserving(state, { goal: changeRequests, goalsVersion: 1, now, observations }));
+  after(state, factsObserving(state, { goal: changeRequests, goalVersion: 1, now, observations }));
 
 const foundIt = observing(
   unopened,
@@ -98,7 +98,7 @@ describe('an item a final measurement does not stop', () => {
       unopened,
       factsObserving(unopened, {
         goal: atClose,
-        goalsVersion: 1,
+        goalVersion: 1,
         now: minutes(0),
         observations: [observed('find', minutes(0), { marks: 'found' })],
       }),
@@ -107,7 +107,7 @@ describe('an item a final measurement does not stop', () => {
       opened,
       factsObserving(opened, {
         goal: atClose,
-        goalsVersion: 1,
+        goalVersion: 1,
         now: minutes(1),
         observations: [notRevised('prepare', minutes(1))],
       }),
@@ -180,7 +180,7 @@ describe('an item a failed run stopped', () => {
     const judged = assessmentOf([
       ...factsObserving(unopened, {
         goal: changeRequests,
-        goalsVersion: 1,
+        goalVersion: 1,
         now: minutes(0),
         observations: [observed('find', minutes(0), { marks: 'found' })],
       }),

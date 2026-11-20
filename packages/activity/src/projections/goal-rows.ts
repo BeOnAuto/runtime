@@ -22,7 +22,7 @@ const ToldSchema = Schema.Literals(['now', 'summary', 'quiet']);
 const GoalBellFactSchema = Schema.Union([
   Schema.Struct({
     type: Schema.Literal('goal_assessment_opened'),
-    data: Schema.Struct({ goal: Schema.String }),
+    data: Schema.Struct({}),
     context: ActedContextSchema,
   }),
   Schema.Struct({
@@ -55,8 +55,8 @@ function keyOf(_message: ProjectedMessage, { id }: ProjectedStream): string {
   return assessmentKeyOf(id);
 }
 
-function openedOf(goal: string, shown: ProjectedRow): ProjectedRow {
-  return { ...shown, at: null, goal, outcome: null, title: null, says: null };
+function openedOf(shown: ProjectedRow): ProjectedRow {
+  return { ...shown, at: null, outcome: null, title: null, says: null };
 }
 
 function observedAfter(row: ProjectedRow, { title, says }: { readonly title?: string; readonly says?: string }) {
@@ -74,7 +74,7 @@ function isTold(told: string): boolean {
 
 function verdictAfter(row: ProjectedRow | undefined, fact: GoalBellFact): ProjectedRow | undefined {
   if (fact.type === 'goal_assessment_opened') {
-    return row === undefined ? openedOf(fact.data.goal, { listed: false, by: null, result_at: null }) : undefined;
+    return row === undefined ? openedOf({ listed: false, by: null, result_at: null }) : undefined;
   }
   if (row === undefined) {
     return undefined;
@@ -96,7 +96,7 @@ function verdictAfter(row: ProjectedRow | undefined, fact: GoalBellFact): Projec
 
 function overdueAfter(row: ProjectedRow | undefined, fact: GoalBellFact): ProjectedRow | undefined {
   if (fact.type === 'goal_assessment_opened') {
-    return row === undefined ? openedOf(fact.data.goal, { open: false }) : undefined;
+    return row === undefined ? openedOf({ open: false, by: null }) : undefined;
   }
   if (row === undefined) {
     return undefined;
@@ -106,7 +106,13 @@ function overdueAfter(row: ProjectedRow | undefined, fact: GoalBellFact): Projec
   }
   if (fact.type === 'goal_overdue') {
     return row['outcome'] === null
-      ? { ...row, open: isTold(fact.data.told), outcome: 'overdue', at: Date.parse(fact.data.since) }
+      ? {
+          ...row,
+          open: isTold(fact.data.told),
+          by: fact.context.by,
+          outcome: 'overdue',
+          at: Date.parse(fact.data.since),
+        }
       : undefined;
   }
   return row['open'] === true ? { ...row, open: false } : undefined;
@@ -119,7 +125,7 @@ function folding(after: (row: ProjectedRow | undefined, fact: GoalBellFact) => P
 
 const shownColumns: readonly ProjectedColumn[] = [
   { name: 'at', kind: 'integer' },
-  { name: 'goal', kind: 'text' },
+  { name: 'by', kind: 'text' },
   { name: 'outcome', kind: 'text' },
   { name: 'title', kind: 'text' },
   { name: 'says', kind: 'text' },
@@ -127,15 +133,11 @@ const shownColumns: readonly ProjectedColumn[] = [
 
 export const goalVerdictRows: KeyedProjection = {
   name: goalVerdictsName,
-  version: 3,
+  version: 4,
+  scopes: ['definition'],
   kinds: [assessmentsKind],
   types: ['goal_assessment_opened', 'goal_observed', 'goal_assessed'],
-  columns: [
-    { name: 'listed', kind: 'boolean' },
-    { name: 'by', kind: 'text' },
-    ...shownColumns,
-    { name: 'result_at', kind: 'integer' },
-  ],
+  columns: [{ name: 'listed', kind: 'boolean' }, ...shownColumns, { name: 'result_at', kind: 'integer' }],
   indexes: [
     { name: 'listed', columns: ['listed', 'at', 'row_key'] },
     { name: 'listed_by', columns: ['listed', 'by', 'at', 'row_key'] },
@@ -146,7 +148,8 @@ export const goalVerdictRows: KeyedProjection = {
 
 export const goalOverdueRows: KeyedProjection = {
   name: goalOverduesName,
-  version: 1,
+  version: 2,
+  scopes: ['definition'],
   kinds: [assessmentsKind],
   types: ['goal_assessment_opened', 'goal_observed', 'goal_overdue', 'goal_assessed', 'goal_assessment_ended'],
   columns: [{ name: 'open', kind: 'boolean' }, ...shownColumns],

@@ -3,7 +3,7 @@ import { Effect, Option, Result, Schema } from 'effect';
 
 import { experiments, textOf } from '../goals/goal-examples.ts';
 import { goalsDocumentOf } from '../goals/goals-check.ts';
-import { playbookGoalsSaved } from '../goals/goals-stream.ts';
+import { playbookGoalsSaved } from '../goals/goals-saved.ts';
 import { uncheckedPages } from '../testing/page-ports.ts';
 import { pageData, pageMappingOf, runsOfTheDayChart } from '../testing/pages.ts';
 

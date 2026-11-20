@@ -8,8 +8,12 @@ import {
   createdWithGoals,
   goalsText,
   goalsTextGaps,
+  leadGoalId,
+  plainGoalId,
   restatedGoalsText,
+  savedSourceOf,
   servingReasoningWithGoals,
+  versionsOf,
 } from '../../testing/settings/goals-kept.ts';
 
 const playbooks = '/v1/orgs/acme/playbooks';
@@ -47,9 +51,9 @@ function cuttingTheFirstGoalsWrite(ledger: Ledger['Service']): Ledger['Service']
   let cut = false;
   return Ledger.of({
     ...ledger,
-    execute: (stream, decider, command, lineage) => {
-      if (cut || !stream.endsWith('/goals/playbook')) {
-        return ledger.execute(stream, decider, command, lineage);
+    executeMultiStream: (decisions, lineage) => {
+      if (cut || !decisions.some(({ stream }) => stream.endsWith('/goals/goal'))) {
+        return ledger.executeMultiStream(decisions, lineage);
       }
       cut = true;
       return Effect.die(new Error('The ledger stopped before the goals were written'));
@@ -57,7 +61,11 @@ function cuttingTheFirstGoalsWrite(ledger: Ledger['Service']): Ledger['Service']
   });
 }
 
-const savedGoals = { source: goalsText, version: 1, gaps: goalsTextGaps };
+const savedGoals = {
+  source: savedSourceOf(goalsText),
+  versions: versionsOf([leadGoalId, 1], [plainGoalId, 1]),
+  gaps: goalsTextGaps,
+};
 
 describe('create_playbook on a server that keeps goals', () => {
   it('is refused without goals, with the question for the person, and creates nothing', async () => {
@@ -109,19 +117,14 @@ async function made(): Promise<ReasoningServer> {
 }
 
 describe('update_playbook on a server that keeps goals', () => {
-  it('saves the page and the goals together, as a new version of the goals', async () => {
+  it('saves the page and the goals together, the goal that changed at a new version and the other at its own', async () => {
     const { call } = await made();
 
     const updated = await call('PUT', alpha, { body: { name: 'Shop', page, goals: restatedGoalsText } });
 
-    expect(updated).toMatchObject({
-      status: 200,
-      body: {
-        name: 'Shop',
-        page: { source: page },
-        goals: { source: restatedGoalsText, version: 2, gaps: goalsTextGaps },
-      },
-    });
+    const versions = versionsOf([leadGoalId, 2], [plainGoalId, 1]);
+    const goals = { source: savedSourceOf(restatedGoalsText), versions, gaps: goalsTextGaps };
+    expect(updated).toMatchObject({ status: 200, body: { name: 'Shop', page: { source: page }, goals } });
   });
 
   it('changes nothing when the goals change a shape that cannot change', async () => {

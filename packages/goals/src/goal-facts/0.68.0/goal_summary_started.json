@@ -1,0 +1,16 @@
+{
+  "type": "goal_summary_started",
+  "data": {
+    "due": "2026-11-13T17:00:00.000Z",
+    "window": {
+      "from": "2026-11-06T17:00:00.000Z",
+      "to": "2026-11-13T17:00:00.000Z"
+    },
+    "run": "2f3e4d5c-6b7a-5980-9a1b-2c3d4e5f6a7b"
+  },
+  "context": {
+    "at": "2026-11-09T18:00:00.000Z",
+    "by": "playbook:alpha",
+    "definitionId": "019a8f00-0000-7000-8000-000000000001"
+  }
+}

@@ -1,4 +1,4 @@
-import { playbookCallerOf, type ProjectedKeyedRow } from '@on.auto/operations';
+import { addressOfTheRow, streamPrefixOfAddress, type ProjectedKeyedRow } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
 import type { ActivityKind, ActivityRow, GoalShown } from '../operations/activity-row.ts';
@@ -7,14 +7,13 @@ import { goalOverduesName, goalVerdictsName } from '../projections/goal-rows.ts'
 
 const shownColumns = {
   at: Schema.Int,
-  goal: Schema.String,
+  by: Schema.String,
   title: Schema.NullOr(Schema.String),
   says: Schema.NullOr(Schema.String),
 };
 
 const VerdictColumnsSchema = Schema.Struct({
   ...shownColumns,
-  by: Schema.String,
   outcome: Schema.Literals(['passed', 'failed']),
   result_at: Schema.Int,
 });
@@ -30,8 +29,12 @@ interface Judged extends GoalShown {
   readonly by: string;
 }
 
+function goalKeyOf(kept: ProjectedKeyedRow): string {
+  return streamPrefixOfAddress(addressOfTheRow(kept));
+}
+
 function goalRowOf(kind: ActivityKind, playbook: string, key: string, judged: Judged): ActivityRow {
-  const { at, by, goal, outcome, title, says, resultAt } = judged;
+  const { at, by, goalKey, outcome, title, says, resultAt } = judged;
   return {
     kind,
     form: 'assessment',
@@ -50,7 +53,7 @@ function goalRowOf(kind: ActivityKind, playbook: string, key: string, judged: Ju
     waits_on: null,
     expires_at: null,
     about: null,
-    goal: { goal, outcome, title, says, resultAt },
+    goal: { goalKey, outcome, title, says, resultAt },
   };
 }
 
@@ -65,9 +68,9 @@ export const goalVerdictTable: ActivityTable = {
   atColumn: 'at',
   seenByColumn: 'by',
   rowKeyOf: asKept,
-  rowsOf: (playbook, { key, row }: ProjectedKeyedRow) =>
-    Option.toArray(verdictColumnsOf(row)).map(({ result_at: resultAt, ...columns }) =>
-      goalRowOf('goal', playbook, key, { ...columns, resultAt }),
+  rowsOf: (playbook, kept: ProjectedKeyedRow) =>
+    Option.toArray(verdictColumnsOf(kept.row)).map(({ result_at: resultAt, ...columns }) =>
+      goalRowOf('goal', playbook, kept.key, { ...columns, goalKey: goalKeyOf(kept), resultAt }),
     ),
 };
 
@@ -76,15 +79,11 @@ const goalOverdueTable: ActivityTable = {
   projection: goalOverduesName,
   openColumn: 'open',
   atColumn: 'at',
-  seenByColumn: 'goal',
+  seenByColumn: 'by',
   rowKeyOf: asKept,
-  rowsOf: (playbook, { key, row }: ProjectedKeyedRow) =>
-    Option.toArray(overdueColumnsOf(row)).map((columns) =>
-      goalRowOf('goal_overdue', playbook, key, {
-        ...columns,
-        resultAt: columns.at,
-        by: playbookCallerOf({ org: '', playbook }).id,
-      }),
+  rowsOf: (playbook, kept: ProjectedKeyedRow) =>
+    Option.toArray(overdueColumnsOf(kept.row)).map((columns) =>
+      goalRowOf('goal_overdue', playbook, kept.key, { ...columns, goalKey: goalKeyOf(kept), resultAt: columns.at }),
     ),
 };
 

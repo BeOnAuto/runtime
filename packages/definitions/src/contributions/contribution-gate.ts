@@ -2,7 +2,7 @@ import { InvalidInput, type Notice, type PlaybookContext, type PlaybookReader } 
 import { Effect } from 'effect';
 
 import { workflowSaveNoticesIn } from '../goal-notices/setup-notices-in.ts';
-import { playbookGoalsIn } from '../goals/goals-stream.ts';
+import { playbookGoalsIn } from '../goals/playbook-goals.ts';
 import type { DefinitionContent } from '../registry/definition-events.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
 import { contributesIn } from './contributes-details.ts';

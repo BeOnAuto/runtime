@@ -10,6 +10,7 @@ import {
   ranOnItsSchedule,
   savedWorkflow,
 } from '../testing/goals/assessed-runs.ts';
+import { goalOf, goalRowsOf } from '../testing/goals/goal-identities.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { goalsText, plainGoalId } from '../testing/settings/goals-kept.ts';
@@ -96,9 +97,10 @@ function rowsHolding(assessed: Assessing, holds: (rows: Readonly<Record<string, 
   }, holds);
 }
 
-const mar41 = assessmentIdOf({ goal: 'paying-customers', per: 'MAR-41' });
-
-const mar60 = assessmentIdOf({ goal: 'paying-customers', per: 'MAR-60' });
+async function experimentsOf(assessed: Assessing): Promise<readonly [string, string]> {
+  const definition = await goalOf(assessed, 'paying-customers');
+  return [assessmentIdOf({ definition, per: 'MAR-41' }), assessmentIdOf({ definition, per: 'MAR-60' })];
+}
 const manyText = [
   '- id: many-things',
   '  statement: Every thing we track brings in at least one order.',
@@ -174,6 +176,7 @@ describe('trace B on a Node server, as far as the assessor reaches', () => {
   it('opens an experiment its schedule takes live, passes it on the crossing, counts what a person began and nothing begun as a test', async () => {
     const assessed = await served(goalsText);
     const { server } = assessed;
+    const [mar41, mar60] = await experimentsOf(assessed);
     expect(
       await savedWorkflow(server, 'go-live', [
         ...marksLive('/experiments'),
@@ -203,7 +206,7 @@ describe('trace B on a Node server, as far as the assessor reaches', () => {
     const rows = await rowsHolding(assessed, (held) => JSON.stringify(held[mar41]).includes('"verdict":"passed"'));
 
     expect(Object.keys(rows).toSorted()).toEqual([mar41, mar60].toSorted());
-    expect(rows[mar41]).toMatchObject({ per_id: 'MAR-41', verdict: 'passed', outcome: 'passed', goals_version: 1 });
+    expect(rows[mar41]).toMatchObject({ per_id: 'MAR-41', verdict: 'passed', outcome: 'passed', goal_version: 1 });
     expect(typeof rows[mar41]?.['window_opens']).toBe('number');
     const leftOut = await server.call('PUT', alpha, { body: { goals: plainGoalsOnly } });
     expect(leftOut.status).toBe(422);
@@ -222,7 +225,8 @@ describe('trace A on a Node server, as far as the assessor reaches', () => {
     const rows = await rowsHolding(assessed, (held) => JSON.stringify(held).includes('"verdict":"failed"'));
     const [failed] = Object.values(rows);
 
-    expect(day).toMatchObject({ goal: 'controls-hold', verdict: 'open' });
+    expect(day).toMatchObject({ verdict: 'open' });
+    expect(Object.keys(await goalRowsOf(assessed, 'goal_assessments', 'controls-hold'))).toEqual(Object.keys(open));
     expect(typeof day?.['window_opens']).toBe('number');
     expect(Object.keys(rows)).toEqual(Object.keys(open));
     expect(failed).toMatchObject({ verdict: 'failed', outcome: 'failed', window_opens: day?.['window_opens'] });
@@ -275,6 +279,6 @@ describe('the cost of the assessor on a Node server', () => {
     expect(new Set(ofBeta.filter((asked) => asked.startsWith('rows ')))).toEqual(
       new Set(['rows goal_clocks acme/beta', 'rows event_subscriptions acme/beta']),
     );
-    expect(ofBeta.filter((asked) => /goals\/playbook|assessments\/|goal-refusals\//u.test(asked))).toEqual([]);
+    expect(ofBeta.filter((asked) => /goals\/goal|assessments\/|goal-refusals\//u.test(asked))).toEqual([]);
   });
 });

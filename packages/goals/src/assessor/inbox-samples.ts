@@ -5,7 +5,7 @@ import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import type { ChainFact } from '../chain-origins/chain-origin.ts';
 import type { ChainReads } from '../chain-origins/chain-origins.ts';
 import { opened } from '../conditions/condition-samples.ts';
-import { bookOf, controls, experiments, finished, monday } from './assessor-ledger.ts';
+import { bookOf, controls, experiments, finished, goalIdentityOf, monday } from './assessor-ledger.ts';
 import { assessorOf } from './assessor.ts';
 import type { AssessorPorts } from './run-planner.ts';
 
@@ -23,7 +23,7 @@ const orders = {
   notify: { passed: 'quiet', failed: 'quiet' },
 };
 
-export const orderId = (order: string) => assessmentIdOf({ goal: orders.id, per: order });
+export const orderId = (order: string) => assessmentIdOf({ definition: goalIdentityOf(orders.id), per: order });
 
 export const hour = 3_600_000;
 

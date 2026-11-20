@@ -2,7 +2,7 @@ import { type GoalsPorts, summaryRunIdOf, windowOpeningAfter } from '@on.auto/go
 import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { assessment, noticeHeadline, passedRun, tellOwner } from '../../testing/goals/notice-facts.ts';
+import { noticeHeadline, tellOwner, type NoticedIds } from '../../testing/goals/notice-facts.ts';
 import { type NoticeServer, playbookToldBy, servingGoalNotices } from '../../testing/goals/notice-servers.ts';
 import { wokenClock, type WokenClock } from '../../testing/goals/woken-clock.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
@@ -15,16 +15,20 @@ const GapsSchema = Schema.Struct({
   goals: Schema.Array(Schema.Struct({ id: Schema.String, gaps: Schema.Array(Schema.Struct({ kind: Schema.String })) })),
 });
 
-const assessmentStream = `assessments/${assessment}`;
-
 const startedFacts = ['goal_assessment_opened', 'goal_assessed', 'goal_notice_started'];
 
-function noticeStartedIn(served: NoticeServer): Promise<readonly string[]> {
+function assessmentFactsOf(served: NoticeServer, { goal, assessment }: NoticedIds): Promise<readonly string[]> {
+  return served.factsOf(goal, `assessments/${assessment}`);
+}
+
+function noticeStartedIn(served: NoticeServer, ids: NoticedIds): Promise<readonly string[]> {
   return until(
-    () => served.factsOf(assessmentStream),
+    () => assessmentFactsOf(served, ids),
     (facts) => facts.includes('goal_notice_started'),
   );
 }
+
+const summaryStream = 'goal-summaries/summary';
 
 async function noticeGapsOf(served: NoticeServer): Promise<readonly string[]> {
   const read = Schema.decodeUnknownSync(GapsSchema)((await served.server.call('GET', `${alpha}/goals`)).body);
@@ -161,14 +165,14 @@ describe('a verdict the owner asked to hear of now, on a Node server that keeps 
   it('leads to exactly one delivered notice, with the words of the goal, which a second start does not repeat', async () => {
     const served = await servingGoalNotices();
     await playbookToldBy(served);
-    await served.assessed('now', Date.now());
+    const ids = await served.assessed('now', Date.now());
 
     const posted = await until(
       () => served.chat.chat.posted(),
       (messages) => messages.length > 0,
     );
-    const settled = await served.server.settled(passedRun);
-    const facts = await noticeStartedIn(served);
+    const settled = await served.server.settled(ids.passedRun);
+    const facts = await noticeStartedIn(served, ids);
     const { start } = await served.starting();
     await Effect.runPromise(
       start({
@@ -176,9 +180,9 @@ describe('a verdict the owner asked to hear of now, on a Node server that keeps 
         playbook: 'alpha',
         type: 'interaction',
         name: 'tell-owner',
-        runId: passedRun,
+        runId: ids.passedRun,
         input: { headline: 'Again' },
-        trigger: { kind: 'goal', reference: `goals/paying-customers/assessments/${assessment}` },
+        trigger: { kind: 'goal', reference: `goals/${ids.goal}/assessments/${ids.assessment}` },
       }),
     );
 
@@ -186,8 +190,8 @@ describe('a verdict the owner asked to hear of now, on a Node server that keeps 
     expect(settled).toMatchObject({ status: 'succeeded' });
     expect(facts).toEqual(startedFacts);
     expect(served.chat.chat.posted()).toHaveLength(1);
-    expect(await served.runs()).toEqual([passedRun]);
-    expect(await served.factsOf(assessmentStream)).toEqual(startedFacts);
+    expect(await served.runs()).toEqual([ids.passedRun]);
+    expect(await assessmentFactsOf(served, ids)).toEqual(startedFacts);
   });
 });
 
@@ -197,15 +201,15 @@ describe('a verdict told now when the server stops before its notice starts', ()
     onTestFinished(ledger.remove);
     const before = await servingGoalNotices({ ledger, notices: false });
     await playbookToldBy(before);
-    await before.assessed('now', Date.now());
+    const ids = await before.assessed('now', Date.now());
     const runsBefore = await before.runs();
     await before.server.stop();
     const after = await servingGoalNotices({ ledger });
 
     expect(runsBefore).toEqual([]);
-    expect(await noticeStartedIn(after)).toEqual(startedFacts);
-    expect(await after.server.settled(passedRun)).toMatchObject({ status: 'succeeded' });
-    expect(await after.runs()).toEqual([passedRun]);
+    expect(await noticeStartedIn(after, ids)).toEqual(startedFacts);
+    expect(await after.server.settled(ids.passedRun)).toMatchObject({ status: 'succeeded' });
+    expect(await after.runs()).toEqual([ids.passedRun]);
   });
 });
 
@@ -214,7 +218,7 @@ describe('a notice through a paused function, on a Node server that keeps goals'
     const served = await servingGoalNotices();
     await playbookToldBy(served);
     const paused = await served.server.call('POST', `${alpha}/definitions/interaction/tell-owner/pause`, { body: {} });
-    await served.assessed('now', Date.now());
+    const ids = await served.assessed('now', Date.now());
     const gaps = await until(
       () => noticeGapsOf(served),
       (kinds) => kinds.length > 0,
@@ -222,7 +226,7 @@ describe('a notice through a paused function, on a Node server that keeps goals'
 
     expect(paused.status).toBe(200);
     expect(gaps).toEqual(['notice_not_started']);
-    expect(await served.factsOf(assessmentStream)).toEqual([
+    expect(await assessmentFactsOf(served, ids)).toEqual([
       'goal_assessment_opened',
       'goal_assessed',
       'goal_notice_refused',
@@ -237,6 +241,7 @@ describe('the summary of a goal on a Node server that keeps goals', () => {
     const clock = wokenClock(Date.now());
     const served = await servingGoalNotices({ clock });
     await summarisingPlaybook(served);
+    const identity = await served.goalOf(goal);
     const friday = nextFridayAfter(Date.now());
     clock.moveTo(friday + 1000);
     const posted = await until(
@@ -244,16 +249,16 @@ describe('the summary of a goal on a Node server that keeps goals', () => {
       (messages) => messages.length > 0,
     );
     const facts = await until(
-      () => served.factsOf(`goal-summaries/${goal}`),
+      () => served.factsOf(identity, summaryStream),
       (types) => types.includes('goal_summary_started'),
     );
-    const settled = await served.server.settled(summaryRunIdOf(goal, friday));
+    const settled = await served.server.settled(summaryRunIdOf(identity, friday));
     await clock.quietAt(friday + 2 * 60_000, served.performs);
 
     expect(posted).toMatchObject([{ text: headline }]);
     expect(facts).toEqual(['goal_summary_started']);
     expect(settled).toMatchObject({ status: 'succeeded' });
-    expect(await served.runs()).toEqual([summaryRunIdOf(goal, friday)]);
+    expect(await served.runs()).toEqual([summaryRunIdOf(identity, friday)]);
     expect(served.chat.chat.posted()).toHaveLength(1);
     expect(served.performs()).toBe(1);
   });
@@ -272,7 +277,7 @@ describe('the summary of a goal on a Node server that keeps goals', () => {
 
     expect(paused.status).toBe(200);
     expect(gaps).toEqual(['notice_not_started']);
-    expect(await served.factsOf(`goal-summaries/${goal}`)).toEqual(['goal_notice_refused']);
+    expect(await served.factsOf(await served.goalOf(goal), summaryStream)).toEqual(['goal_notice_refused']);
     expect(await served.runs()).toEqual([]);
     expect(served.chat.chat.posted()).toEqual([]);
   });
@@ -302,7 +307,8 @@ describe('a retired playbook on a Node server whose goal has a daily window and 
     expect(postedWhileRetired).toBe(0);
     expect(restored.status).toBe(200);
     expect(posted).toHaveLength(1);
-    expect(await counted.served.runs()).toContain(summaryRunIdOf(goalRetiredGoals, resumedAt));
+    const identity = await counted.served.goalOf(goalRetiredGoals);
+    expect(await counted.served.runs()).toContain(summaryRunIdOf(identity, resumedAt));
   });
 });
 

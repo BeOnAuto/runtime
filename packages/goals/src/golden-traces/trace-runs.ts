@@ -16,17 +16,18 @@ export interface TracedRun {
 }
 
 export interface TracedGoal {
+  readonly definition: string;
   readonly goal: GoalRule;
-  readonly goalsVersion: number;
+  readonly goalVersion: number;
 }
 
 function grouped(
-  goal: GoalRule,
+  { definition, goal }: TracedGoal,
   observations: readonly Observation[],
 ): readonly (readonly [string, readonly Observation[]])[] {
   const groups = new Map<string, readonly Observation[]>();
   for (const observation of observations) {
-    const id = assessmentIdOf(identityOfObservation(goal, observation));
+    const id = assessmentIdOf(identityOfObservation(definition, goal, observation));
     groups.set(id, [...(groups.get(id) ?? []), observation]);
   }
   return [...groups];
@@ -54,12 +55,12 @@ export function appliedRun(
   run: TracedRun,
   extracted: Extracted,
 ): readonly Appended[] {
-  return grouped(traced.goal, extracted.observations).flatMap(([id, observations]) =>
+  return grouped(traced, extracted.observations).flatMap(([id, observations]) =>
     ledger.appended(
       id,
       factsObserving(ledger.stateOf(id), {
         goal: traced.goal,
-        goalsVersion: traced.goalsVersion,
+        goalVersion: traced.goalVersion,
         observations,
         now: run.at,
       }),

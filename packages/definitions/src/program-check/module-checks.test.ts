@@ -256,7 +256,7 @@ describe('the compiler', () => {
       'events/event-time.ts',
       'checking/given-values.ts',
       'goals.ts',
-      'identity/definition-names.ts',
+      'identity/names-of-a-playbook.ts',
       'importing.ts',
       'page.ts',
       'portable.ts',

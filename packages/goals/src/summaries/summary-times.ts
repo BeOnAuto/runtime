@@ -1,9 +1,9 @@
-import type { PlaybookAddress } from '@on.auto/operations';
+import type { PlaybookAddress, ProjectedAddress } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 
 import { retiredWakeAt } from '../clock/retired-day.ts';
 import type { Instant } from '../goal-rules/goal-rule.ts';
-import { clockKey, clocksName, goalClocksIn, type GoalClockEntry } from '../goal-tables/clock-rows.ts';
+import { clockKey, clocksName, goalClockIn, type GoalClockEntry } from '../goal-tables/clock-rows.ts';
 import { utcMidnightAtOrAfter } from '../goal-windows/goal-durations.ts';
 import type { NoticePorts } from '../notices/notice-ledger.ts';
 import { mostSeenWaitMs, seenWaitMs } from '../notices/notice-starts.ts';
@@ -40,58 +40,46 @@ export function summaryTimeOf(clock: GoalClockEntry, now: number): SummaryTime {
 
 export interface Summary {
   readonly address: PlaybookAddress;
+  readonly goal: { readonly org: string; readonly definition: string };
   readonly clock: GoalClockEntry;
   readonly due: Instant;
   readonly now: number;
 }
 
-type Waits = ReadonlyMap<string, Moment>;
-
-function earliestOf(moments: readonly (number | null)[]): number | null {
-  const kept = moments.filter((moment) => moment !== null);
-  return kept.length === 0 ? null : Math.min(...kept);
-}
-
 export interface Advancing {
-  readonly waits: Waits;
+  readonly wait?: Moment;
   readonly now: number;
   readonly retired?: boolean;
 }
 
-function nextOf(clocks: readonly GoalClockEntry[], { waits, now, retired }: Advancing, least: number): number | null {
-  return earliestOf(
-    clocks.map((clock) => {
-      const wait = waits.get(clock.id);
-      if (wait !== undefined && wait !== null) {
-        return wait;
-      }
-      const { next } = summaryTimeOf(clock, now);
-      return next === null
-        ? null
-        : retired === true
-          ? utcMidnightAtOrAfter(Math.max(next, least))
-          : Math.max(next, least);
-    }),
-  );
+function nextOf(clock: GoalClockEntry, { wait, now, retired }: Advancing, least: number): number | null {
+  if (wait !== undefined && wait !== null) {
+    return wait;
+  }
+  const { next } = summaryTimeOf(clock, now);
+  if (next === null) {
+    return null;
+  }
+  return retired === true ? utcMidnightAtOrAfter(Math.max(next, least)) : Math.max(next, least);
 }
 
-export function advancedPast(ports: NoticePorts, address: PlaybookAddress, advancing: Advancing) {
-  return Effect.flatMap(clockRowIn(ports.ledger, address), (fresh) => {
-    const goals = fresh?.['goals'];
-    if (typeof goals !== 'string') {
+export function advancedPast(ports: NoticePorts, at: ProjectedAddress, advancing: Advancing) {
+  return Effect.flatMap(clockRowIn(ports.ledger, at), (fresh) => {
+    const clock = goalClockIn(fresh);
+    if (clock === undefined) {
       return Effect.void;
     }
-    return ports.ledger.advanceRow(clocksName, address, clockKey, {
+    return ports.ledger.advanceRow(clocksName, at, clockKey, {
       set: {
         [summaryDueColumn]: nextOf(
-          goalClocksIn(fresh),
+          clock,
           advancing,
           advancing.retired === true ? retiredWakeAt(advancing.now, fresh) : advancing.now,
         ),
       },
       when: [
         { column: summaryDueColumn, before: advancing.now + 1 },
-        { column: 'goals', equals: goals },
+        { column: 'clock', equals: String(fresh?.['clock']) },
       ],
     });
   });

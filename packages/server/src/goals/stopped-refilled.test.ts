@@ -1,12 +1,14 @@
 import { assessmentIdOf, goalsLedger } from '@on.auto/goals';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
-import { ContextSchema, Ledger, type Decider } from '@on.auto/operations';
+import { ContextSchema, Ledger, streamPrefixOfDefinition, type Decider } from '@on.auto/operations';
 import { Effect, ManagedRuntime, Result, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 
-const studio = { org: 'acme', playbook: 'studio' };
+const goal = '019a8f00-0000-7000-8000-0000000c4a2e';
+
+const ofTheGoal = { org: 'acme', definition: goal };
 
 const FactSchema = Schema.Struct({ type: Schema.String, data: Schema.Json, context: ContextSchema });
 
@@ -29,9 +31,11 @@ const milestones = [
   { id: 'approved', label: 'Approved', by: 'person' },
 ];
 
-const letterhead = assessmentIdOf({ goal: 'change-requests', per: 'letterhead' });
+const letterhead = assessmentIdOf({ definition: goal, per: 'letterhead' });
 
-const byThePlaybook = (at: string) => ({ at, by: 'playbook:studio' });
+const letterheadStream = `${streamPrefixOfDefinition(ofTheGoal)}assessments/${letterhead}`;
+
+const byThePlaybook = (at: string) => ({ at, by: 'playbook:studio', definitionId: goal });
 
 const window = {
   opens: '2026-11-16T21:25:00.000Z',
@@ -43,8 +47,7 @@ const recordedBefore: readonly Fact[] = [
   {
     type: 'goal_assessment_opened',
     data: {
-      goal: 'change-requests',
-      goals_version: 1,
+      goal_version: 1,
       per: { id: 'letterhead' },
       rule: { settles: 'on_crossing', target: { at_least: 1 }, window: { after: 'found', for: 'P1D' } },
       milestones,
@@ -80,22 +83,18 @@ function ledgerOn(fileName: string, goalsKept: boolean) {
   return runtime.runPromise(Ledger);
 }
 
-describe('a store whose goal facts a release before stopped items recorded', () => {
-  it('opens with goal_assessments_3 filled from the facts, the letterhead request stopped by its run with its words, open until its due', async () => {
+describe('a store whose goal facts of a stopped item were recorded before its tables were kept', () => {
+  it('opens with goal_assessments_7 filled from the facts, the letterhead request stopped by its run with its words, open until its due', async () => {
     const file = temporaryLedger();
     onTestFinished(file.remove);
     const before = await ledgerOn(file.fileName, false);
     await Effect.runPromise(
-      Effect.forEach(
-        recordedBefore,
-        (fact) => before.execute(`playbook/acme/studio/assessments/${letterhead}`, verbatim, fact),
-        { discard: true },
-      ),
+      Effect.forEach(recordedBefore, (fact) => before.execute(letterheadStream, verbatim, fact), { discard: true }),
     );
 
     const after = await ledgerOn(file.fileName, true);
     const [kept] = await Effect.runPromise(
-      after.readProjectedRows('goal_assessments', studio, { where: [], orderBy: [], order: 'asc', limit: 5 }),
+      after.readProjectedRows('goal_assessments', ofTheGoal, { where: [], orderBy: [], order: 'asc', limit: 5 }),
     );
 
     expect(kept?.key).toBe(letterhead);
@@ -111,34 +110,31 @@ describe('a store whose goal facts a release before stopped items recorded', () 
   });
 });
 
-describe('a store whose goal facts hold a dismissal, opened by a release that keeps goal_assessments_5', () => {
-  it('fills goal_assessments_5 from the facts, the letterhead request dismissed by its owner and still open', async () => {
+describe('a store whose goal facts hold a dismissal recorded before its tables were kept', () => {
+  it('fills goal_assessments_7 from the facts, the letterhead request dismissed by its owner and still open', async () => {
     const file = temporaryLedger();
     onTestFinished(file.remove);
     const owner = { id: 'person:owner', name: 'Owner' };
     const dismissal: Fact = {
       type: 'goal_dismissed',
       data: {
-        goal: 'change-requests',
         per: 'letterhead',
         at: '2026-11-16T22:00:00.000Z',
         by: owner,
         requests: ['run-ask'],
       },
-      context: { at: '2026-11-16T22:00:00.000Z', by: owner.id },
+      context: { at: '2026-11-16T22:00:00.000Z', by: owner.id, definitionId: goal },
     };
     const before = await ledgerOn(file.fileName, false);
     await Effect.runPromise(
-      Effect.forEach(
-        [...recordedBefore, dismissal],
-        (fact) => before.execute(`playbook/acme/studio/assessments/${letterhead}`, verbatim, fact),
-        { discard: true },
-      ),
+      Effect.forEach([...recordedBefore, dismissal], (fact) => before.execute(letterheadStream, verbatim, fact), {
+        discard: true,
+      }),
     );
 
     const after = await ledgerOn(file.fileName, true);
     const [kept] = await Effect.runPromise(
-      after.readProjectedRows('goal_assessments', studio, {
+      after.readProjectedRows('goal_assessments', ofTheGoal, {
         where: [{ column: 'dismissed', equals: true }],
         orderBy: ['dismissed_at'],
         order: 'desc',
@@ -156,8 +152,8 @@ describe('a store whose goal facts hold a dismissal, opened by a release that ke
   });
 });
 
-describe('a store whose goal facts hold a final that came after the close, opened by a release that keeps goal_assessments_6', () => {
-  it('fills goal_assessments_6 from the facts, the letterhead request missed at its deadline with that final as its number', async () => {
+describe('a store whose goal facts hold a final that came after the close, recorded before its tables were kept', () => {
+  it('fills goal_assessments_7 from the facts, the letterhead request missed at its deadline with that final as its number', async () => {
     const file = temporaryLedger();
     onTestFinished(file.remove);
     const late: readonly Fact[] = [
@@ -181,14 +177,14 @@ describe('a store whose goal facts hold a final that came after the close, opene
     await Effect.runPromise(
       Effect.forEach(
         [...recordedBefore.slice(0, 2), ...late],
-        (fact) => before.execute(`playbook/acme/studio/assessments/${letterhead}`, verbatim, fact),
+        (fact) => before.execute(letterheadStream, verbatim, fact),
         { discard: true },
       ),
     );
 
     const after = await ledgerOn(file.fileName, true);
     const [kept] = await Effect.runPromise(
-      after.readProjectedRows('goal_assessments', studio, { where: [], orderBy: [], order: 'asc', limit: 5 }),
+      after.readProjectedRows('goal_assessments', ofTheGoal, { where: [], orderBy: [], order: 'asc', limit: 5 }),
     );
 
     expect(kept?.row).toMatchObject({ open: false, verdict: 'failed', outcome: 'failed' });

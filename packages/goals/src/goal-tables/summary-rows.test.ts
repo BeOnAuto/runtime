@@ -1,8 +1,8 @@
 import type { ProjectedMessage } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
+import { summariesStreamId } from '../goal-facts/goal-facts.ts';
 import { rowFoldedOf } from './folded-rows.ts';
-import { goalSummariesStreamIdOf } from './goal-streams.ts';
 import { summaryRows } from './summary-rows.ts';
 
 const messageOf = (type: string, data: unknown, at: string, position = 0): ProjectedMessage => ({
@@ -13,7 +13,7 @@ const messageOf = (type: string, data: unknown, at: string, position = 0): Proje
   context: { at, by: 'playbook:alpha' },
 });
 
-const summariesStream = { kind: 'goal-summaries', id: 'paying-customers' };
+const summariesStream = { kind: 'goal-summaries', id: 'summary' };
 
 const started = (due: string, run: string, position: number) =>
   messageOf('goal_summary_started', { due, window: { from: due, to: due }, run }, due, position);
@@ -45,7 +45,7 @@ describe('the summaries of a goal', () => {
         retry_at: null,
       },
     ]);
-    expect(summariesStream.id).toBe(goalSummariesStreamIdOf('paying-customers'));
+    expect(summariesStream.id).toBe(summariesStreamId);
   });
 });
 

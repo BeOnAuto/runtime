@@ -14,6 +14,7 @@ import {
   sales,
   type Book,
 } from '../assessor/assessor-ledger.ts';
+import { goalIdentityOf } from '../assessor/assessor-ledger.ts';
 import { assessorOf } from '../assessor/assessor.ts';
 import { observationGapsIn } from './observation-gaps.ts';
 
@@ -44,7 +45,7 @@ interface Ran {
 async function countingOf(workflow: string, savedVersion: number, contributes: Schema.Json) {
   const clock = { now: monday };
   const { book, ports } = await built(noReads, () => clock.now);
-  await book.goalsSaved([experiments, controls, visits], 2);
+  await book.goalsSaved([experiments, controls, visits]);
   await book.workflowSaved(workflow, savedVersion, contributes);
   const assessor = assessorOf(ports);
   const ranAt = async ({ index, version, output }: Omit<Ran, 'workflow'>) => {
@@ -75,7 +76,7 @@ function gapsNow(book: Book, version: number) {
   return Effect.runPromise(
     Effect.provideContext(
       observationGapsIn({
-        goals: [visits],
+        held: [{ definition: goalIdentityOf(visits.id), version: 1, goal: visits }],
         workflows: [{ name: 'counts', version, paused: false, contributes: visitsCounted }],
       }),
       playbookLedgerOf(book.ledger, sales),
@@ -84,7 +85,10 @@ function gapsNow(book: Book, version: number) {
 }
 
 async function observedNow(book: Book): Promise<number> {
-  const facts = await book.factsOf(`assessments/${assessmentIdOf({ goal: 'visits-grow' })}`);
+  const facts = await book.factsOf(
+    'visits-grow',
+    `assessments/${assessmentIdOf({ definition: goalIdentityOf('visits-grow') })}`,
+  );
   return facts.filter((type) => type === 'goal_observed').length;
 }
 
@@ -117,7 +121,7 @@ describe('a refusal for one goal of a workflow counted for another goal', () => 
       ),
     );
 
-    expect(await book.factsOf('goal-refusals/paying-customers.measure')).toEqual(['goal_observation_refused']);
+    expect(await book.factsOf('paying-customers', 'goal-refusals/measure')).toEqual(['goal_observation_refused']);
     expect(Object.values(await book.rows('goal_observations')).map(({ entry }) => entry)).toEqual([1]);
   });
 });

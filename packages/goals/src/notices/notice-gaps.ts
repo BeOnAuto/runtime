@@ -1,4 +1,4 @@
-import type { Goal } from '@on.auto/definitions/goals';
+import type { Goal, HeldGoal } from '@on.auto/definitions/goals';
 import { PlaybookReader } from '@on.auto/operations';
 import type { GoalGap } from '@on.auto/playbooks';
 import { Effect, Schema } from 'effect';
@@ -33,13 +33,10 @@ function standingRefusalOf(text: unknown): Refusal | undefined {
   return refusalsOfText(text).findLast(({ retry_at }) => retry_at === undefined);
 }
 
-function newestRowsOf(goal: Goal, column: string, limit: number) {
+function newestRowsOf({ definition }: HeldGoal, column: string, limit: number) {
   return PlaybookReader.use((reader) =>
-    reader.readProjectedRows(assessmentsName, {
-      where: [
-        { column: 'goal', equals: goal.id },
-        { column, after: 0 },
-      ],
+    reader.ofDefinition(definition).readProjectedRows(assessmentsName, {
+      where: [{ column, after: 0 }],
       orderBy: [column],
       order: 'desc',
       limit,
@@ -52,9 +49,10 @@ function latestNoticeAt(rows: readonly { readonly row: Readonly<Record<string, u
   return typeof at === 'number' ? at : 0;
 }
 
-function goalGapsIn(goal: Goal): Effect.Effect<readonly GoalGap[], never, PlaybookReader> {
-  return Effect.flatMap(newestRowsOf(goal, 'notice_refused_at', mostRefusedRowsRead), (refused) =>
-    Effect.flatMap(newestRowsOf(goal, 'noticed_at', 1), (noticed) => {
+function goalGapsIn(held: HeldGoal): Effect.Effect<readonly GoalGap[], never, PlaybookReader> {
+  const { goal } = held;
+  return Effect.flatMap(newestRowsOf(held, 'notice_refused_at', mostRefusedRowsRead), (refused) =>
+    Effect.flatMap(newestRowsOf(held, 'noticed_at', 1), (noticed) => {
       const startedAt = latestNoticeAt(noticed);
       const refusal = refused
         .map(({ row }) => standingRefusalOf(row['notice_refusals']))
@@ -68,10 +66,10 @@ function goalGapsIn(goal: Goal): Effect.Effect<readonly GoalGap[], never, Playbo
   );
 }
 
-export function noticeGapsIn(goals: readonly Goal[]): Effect.Effect<readonly GoalGap[], never, PlaybookReader> {
+export function noticeGapsIn(held: readonly HeldGoal[]): Effect.Effect<readonly GoalGap[], never, PlaybookReader> {
   return Effect.map(
     Effect.forEach(
-      goals.filter(({ retired }) => retired !== true),
+      held.filter(({ goal }) => goal.retired !== true),
       (goal) =>
         Effect.map(Effect.all([goalGapsIn(goal), summaryGapsIn(goal)]), (found: readonly (readonly GoalGap[])[]) =>
           found.flat(),

@@ -1,9 +1,10 @@
 import { goalsLedger } from '@on.auto/goals';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
-import { ContextSchema, Ledger, type Decider } from '@on.auto/operations';
+import { ContextSchema, Ledger, streamPrefixOfDefinition, type Decider } from '@on.auto/operations';
 import { Effect, ManagedRuntime, Result, Schema } from 'effect';
 import { afterAll, afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
+import { goalIdentityIn } from '../testing/goals/goal-identities.ts';
 import { onTheLedgerIn, tableDropped } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
@@ -40,7 +41,7 @@ const fact = (type: string, data: Schema.JsonObject, at: string): Fact => ({
 const opened = (at: string) =>
   fact(
     'goal_assessment_opened',
-    { goal: leadGoalId, goals_version: 1, rule: { settles: 'on_crossing', target: { at_least: 1 } }, milestones: [] },
+    { goal_version: 1, rule: { settles: 'on_crossing', target: { at_least: 1 } }, milestones: [] },
     at,
   );
 
@@ -72,10 +73,17 @@ async function recordedIn(fileName: string, facts: typeof history = history): Pr
   const runtime = ManagedRuntime.make(ledgerLayer({ fileName, projections: goalsLedger.projections }));
   await runtime.runPromise(
     Effect.flatMap(Effect.service(Ledger), (ledger) =>
-      Effect.forEach(
-        facts,
-        ([id, recorded]) => ledger.execute(`playbook/acme/alpha/assessments/${id}`, verbatim, recorded),
-        { discard: true },
+      Effect.flatMap(goalIdentityIn(ledger, leadGoalId), (definition) =>
+        Effect.forEach(
+          facts,
+          ([id, { type, data, context }]) =>
+            ledger.execute(`${streamPrefixOfDefinition({ org: 'acme', definition })}assessments/${id}`, verbatim, {
+              type,
+              data,
+              context: { ...context, definitionId: definition },
+            }),
+          { discard: true },
+        ),
       ),
     ),
   );
@@ -168,7 +176,7 @@ describe('the verdicts a Node server that keeps goals recorded in the same insta
     const listed = await on.call('GET', `${activity}?kind=goal`);
     const again = await on.call('GET', `${activity}?kind=goal`);
     await on.stop();
-    await onTheLedgerIn(own.fileName, (connection) => connection.write(tableDropped('activity_goals_3')));
+    await onTheLedgerIn(own.fileName, (connection) => connection.write(tableDropped('activity_goals_4')));
     const rebuilt = await (await ownServed()).call('GET', `${activity}?kind=goal`);
 
     expect(listed).toMatchObject({

@@ -1,16 +1,15 @@
-import {
-  streamPrefixOfPlaybook,
-  type Decided,
-  type Decider,
-  type Ledger,
-  type PlaybookAddress,
-} from '@on.auto/operations';
+import { type Decided, type Decider, type Ledger, type PlaybookAddress } from '@on.auto/operations';
 import type { StartFunction } from '@on.auto/workflow-host';
 import { Effect, Result } from 'effect';
 
 import type { NoticeChange } from '../assessments/assessment-identity.ts';
 import { assessmentAfter, unopened, type AssessmentState } from '../assessments/assessment-state.ts';
-import { AssessmentEventSchema, assessmentsKind, type RecordedAssessmentEvent } from '../goal-facts/goal-facts.ts';
+import {
+  AssessmentEventSchema,
+  assessmentStreamOf,
+  type GoalAddress,
+  type RecordedAssessmentEvent,
+} from '../goal-facts/goal-facts.ts';
 import {
   dayLimitDetail,
   noStartsMade,
@@ -68,17 +67,17 @@ function refusedFacts(command: NoticeRefused, state: AssessmentState): Decisions
   return [{ type: 'goal_notice_refused', data: { change, attempt, detail, ...retry } }];
 }
 
-const noticeDecider: Decider<AssessmentState, NoticeCommand, RecordedAssessmentEvent> = {
-  initialState: unopened,
-  evolve: assessmentAfter,
-  eventSchema: AssessmentEventSchema,
-  decide: (command, state) =>
-    Result.succeed(command.kind === 'seen' ? seenFacts(command, state) : refusedFacts(command, state)),
-  context: ({ at, by }) => ({ at, by }),
-};
-
-function assessmentStreamOf(address: PlaybookAddress, assessment: string): string {
-  return `${streamPrefixOfPlaybook(address)}${assessmentsKind}/${assessment}`;
+function noticeDeciderOf({
+  definition,
+}: GoalAddress): Decider<AssessmentState, NoticeCommand, RecordedAssessmentEvent> {
+  return {
+    initialState: unopened,
+    evolve: assessmentAfter,
+    eventSchema: AssessmentEventSchema,
+    decide: (command, state) =>
+      Result.succeed(command.kind === 'seen' ? seenFacts(command, state) : refusedFacts(command, state)),
+    context: ({ at, by }) => ({ at, by, definitionId: definition }),
+  };
 }
 
 export function actingOf({ playbook }: PlaybookAddress, now: number): Acting {
@@ -87,11 +86,11 @@ export function actingOf({ playbook }: PlaybookAddress, now: number): Acting {
 
 export function noticeRecorded(
   ledger: NoticeLedger,
-  address: PlaybookAddress,
+  goal: GoalAddress,
   assessment: string,
   command: NoticeCommand,
 ): Effect.Effect<void, unknown> {
-  return Effect.asVoid(ledger.execute(assessmentStreamOf(address, assessment), noticeDecider, command));
+  return Effect.asVoid(ledger.execute(assessmentStreamOf(goal, assessment), noticeDeciderOf(goal), command));
 }
 
 export function runStartedIn(ledger: NoticeLedger, address: PlaybookAddress, run: string): Effect.Effect<boolean> {

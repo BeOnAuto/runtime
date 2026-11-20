@@ -43,8 +43,9 @@ const SourceSchema = Schema.Struct({
 });
 
 const GoalAssessmentOpenedSchema = Schema.Struct({
-  goal: Schema.String,
-  goals_version: Schema.Int,
+  goal: Schema.optionalKey(Schema.String),
+  goals_version: Schema.optionalKey(Schema.Int),
+  goal_version: Schema.optionalKey(Schema.Int),
   per: Schema.optionalKey(Schema.Struct({ id: Schema.String })),
   window: Schema.optionalKey(WindowSpanSchema),
   rule: Schema.Struct({
@@ -100,7 +101,7 @@ const GoalStoppedSchema = Schema.Struct({ run: Schema.String, at: InstantText, r
 const GoalObservationRefusedSchema = Schema.Struct({ run: Schema.String, detail: Schema.String });
 
 const ThingOfTheGoal = {
-  goal: Schema.String,
+  goal: Schema.optionalKey(Schema.String),
   per: Schema.optionalKey(Schema.String),
 };
 

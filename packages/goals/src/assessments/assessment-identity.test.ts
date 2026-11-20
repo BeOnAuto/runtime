@@ -10,6 +10,7 @@ import {
   assessmentNamespace,
   identityOfObservation,
   noticeRunIdOf,
+  summaryRunIdOf,
 } from './assessment-identity.ts';
 
 const source = { record: 'r', run: 'run', workflow: 'w', version: 1, entry: 0 };
@@ -22,51 +23,65 @@ const daily: GoalRule = {
 };
 
 describe('the identity of an assessment', () => {
-  it('names the goal, the goal and thing, or the goal and the start of its window', () => {
+  it('names the identity of the goal, with its thing or with the start of its window', () => {
     expect([
-      assessmentNameOf({ goal: 'g-one' }),
-      assessmentNameOf({ goal: 'g-one', per: 'MAR/41' }),
-      assessmentNameOf({ goal: 'g-one', window_start: Date.UTC(2026, 10, 9) }),
+      assessmentNameOf({ definition: 'g-one' }),
+      assessmentNameOf({ definition: 'g-one', per: 'MAR/41' }),
+      assessmentNameOf({ definition: 'g-one', window_start: Date.UTC(2026, 10, 9) }),
     ]).toEqual(['goals/g-one', 'goals/g-one/per/MAR/41', 'goals/g-one/window/2026-11-09T00:00:00.000Z']);
   });
 
   it('is a UUIDv5 of that name under one fixed namespace, the same on every host', () => {
-    expect(assessmentIdOf({ goal: 'g-one' })).toBe(uuidV5(assessmentNamespace, 'goals/g-one'));
-    expect(assessmentIdOf({ goal: 'g-one', per: 'a' })).not.toBe(assessmentIdOf({ goal: 'g-one', per: 'b' }));
+    expect(assessmentIdOf({ definition: 'g-one' })).toBe(uuidV5(assessmentNamespace, 'goals/g-one'));
+    expect(assessmentIdOf({ definition: 'g-one', per: 'a' })).not.toBe(
+      assessmentIdOf({ definition: 'g-one', per: 'b' }),
+    );
   });
 
   it('gives a notice the UUIDv5 of its change under the assessment', () => {
-    const id = assessmentIdOf({ goal: 'g-one' });
+    const id = assessmentIdOf({ definition: 'g-one' });
 
     expect(noticeRunIdOf(id, 'passed')).toBe(uuidV5(id, 'passed'));
     expect(noticeRunIdOf(id, 'passed')).not.toBe(noticeRunIdOf(id, 'overdue'));
   });
 
+  it('gives a summary the UUIDv5 of the identity of its goal and its time, whatever the goal is named', () => {
+    const due = Date.UTC(2026, 10, 13, 9);
+
+    expect(summaryRunIdOf('g-one', due)).toBe(
+      uuidV5(assessmentNamespace, 'goals/g-one/summary/2026-11-13T09:00:00.000Z'),
+    );
+  });
+});
+
+describe('the assessment an observation belongs to', () => {
   it('puts an observation of a calendar goal in the window that holds its as_of, else the end of its run', () => {
     const at = Date.UTC(2026, 10, 10, 0, 30);
 
-    expect(identityOfObservation(daily, { goal: daily.id, source, at })).toEqual({
-      goal: 'daily-check',
+    expect(identityOfObservation('daily-check-goal', daily, { goal: daily.id, source, at })).toEqual({
+      definition: 'daily-check-goal',
       window_start: Date.UTC(2026, 10, 10),
     });
     expect(
-      identityOfObservation(daily, {
+      identityOfObservation('daily-check-goal', daily, {
         goal: daily.id,
         source,
         at,
         measurement: { value: 0, final: true, as_of: Date.UTC(2026, 10, 10) },
       }),
-    ).toEqual({ goal: 'daily-check', window_start: Date.UTC(2026, 10, 9) });
+    ).toEqual({ definition: 'daily-check-goal', window_start: Date.UTC(2026, 10, 9) });
   });
 
   it('puts an observation of another goal under its thing, or under the goal', () => {
     const whole = { ...daily, window: { after: 'live', for: 'P1D' } };
 
-    expect(identityOfObservation(whole, { goal: daily.id, source, at: 0, per: 'A' })).toEqual({
-      goal: 'daily-check',
+    expect(identityOfObservation('daily-check-goal', whole, { goal: daily.id, source, at: 0, per: 'A' })).toEqual({
+      definition: 'daily-check-goal',
       per: 'A',
     });
-    expect(identityOfObservation(whole, { goal: daily.id, source, at: 0 })).toEqual({ goal: 'daily-check' });
+    expect(identityOfObservation('daily-check-goal', whole, { goal: daily.id, source, at: 0 })).toEqual({
+      definition: 'daily-check-goal',
+    });
   });
 });
 

@@ -7,6 +7,7 @@ import { assessmentsName } from '../goal-tables/assessment-rows.ts';
 import { goalNoticesOf } from '../notices/goal-notices.ts';
 import {
   experiments,
+  experimentsGoal,
   monday,
   noticeBookOf,
   sales,
@@ -23,6 +24,8 @@ const atOnce = 16;
 
 const told = { ...experiments, notify: { ...experiments.notify, failed: 'now', summary: { cron: '0 9 * * 1' } } };
 
+const goalIn = (playbook: string) => (playbook === 'sales' ? experimentsGoal : `${playbook}-${told.id}`);
+
 async function judgedAll(book: NoticeBook, count: number, playbook = 'sales'): Promise<void> {
   const things = Array.from({ length: count }, (_, index) => `experiment-${String(index)}`);
   await Effect.runPromise(
@@ -30,15 +33,19 @@ async function judgedAll(book: NoticeBook, count: number, playbook = 'sales'): P
       things,
       (per) =>
         Effect.promise(async () => {
-          const stream = `playbook/acme/${playbook}/assessments/${assessmentIdOf({ goal: told.id, per })}`;
+          const definition = goalIn(playbook);
+          const stream = `definition/acme/${definition}/assessments/${assessmentIdOf({ definition, per })}`;
           const opened = {
-            goal: told.id,
-            goals_version: 1,
+            goal_version: 1,
             per: { id: per },
             rule: { settles: 'on_crossing', target: { at_least: 1 } },
             milestones: told.milestones,
           };
-          const context = { at: new Date(monday - minute).toISOString(), by: `playbook:${playbook}` };
+          const context = {
+            at: new Date(monday - minute).toISOString(),
+            by: `playbook:${playbook}`,
+            definitionId: definition,
+          };
           await book.appendAt(stream, 'goal_assessment_opened', opened, context);
           const verdict = { verdict: 'failed', at: context.at, by: 'crossing', told: 'now' };
           await book.appendAt(stream, 'goal_assessed', verdict, context);
@@ -92,7 +99,7 @@ describe('a burst of notices owed at one moment, none of whose starts is seen ye
 
     expect(seen.starts).toHaveLength(mostNoticesADay);
     expect(seen.starts.some(({ trigger }) => trigger.reference.includes('/summaries/'))).toBe(false);
-    expect(await book.factsOf(`goal-summaries/${told.id}`)).toEqual(['goal_notice_refused']);
+    expect(await book.factsOf('goal-summaries/summary')).toEqual(['goal_notice_refused']);
   });
 });
 
@@ -100,7 +107,7 @@ async function seenEarlier(book: NoticeBook, count: number): Promise<void> {
   const at = new Date(monday - 60 * minute).toISOString();
   await Promise.all(
     Array.from({ length: count }, (_, index) =>
-      book.append(
+      book.ofTheGoal(
         `goal-summaries/earlier-${String(index)}`,
         'goal_notice_started',
         { due: at, run: `earlier-${String(index)}` },
@@ -136,11 +143,12 @@ describe('the notices of two playbooks in one host', () => {
       description: 'North',
       created_by: { id: 'person:ada', name: 'Ada' },
     });
-    await book.appendAt('playbook/acme/north/goals/playbook', 'playbook_goals_saved', {
-      source: 'goals',
-      goals: [told],
-      version: 1,
-    });
+    await book.appendAt(
+      `definition/acme/${goalIn('north')}/goals/goal`,
+      'goal_created',
+      { playbook: 'north', position: 0, goal: told },
+      { definitionId: goalIn('north') },
+    );
     await judgedAll(book, mostNoticesADay, 'north');
     const parts = goalNoticesOf({
       ledger: book.ledger,

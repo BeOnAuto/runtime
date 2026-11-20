@@ -5,7 +5,7 @@ import { createPlaybook, mostGoalsBytes, playbookOperationsOf } from '../index.t
 import { acmeAdmin } from '../testing/callers.ts';
 import { goalsInMemory, noGoalGap } from '../testing/goals-in-memory.ts';
 import { firstMoment, harness, toOrg } from '../testing/harness.ts';
-import { createdWithGoals, goalsText } from '../testing/index.ts';
+import { createdWithGoals, goalsText, versionsOfBothAt } from '../testing/index.ts';
 import { pagesInMemory } from '../testing/playbook-pages.ts';
 
 const toAcme = toOrg('acme');
@@ -151,7 +151,7 @@ describe('the playbook operations with a goals port', () => {
     expect(outputOf(named('get_playbook').registration, 'PlaybookWithGoals')).toContain('goals');
     expect(outputOf(named('update_playbook').registration, 'UpdatedPlaybookWithGoals')).toContain('goals');
     expect(outputOf(named('list_playbooks').registration, 'Playbook')).not.toContain('goals');
-    expect(outputOf(named('get_playbook').registration, 'PlaybookGoals')).toEqual(['source', 'version', 'gaps']);
+    expect(outputOf(named('get_playbook').registration, 'PlaybookGoals')).toEqual(['source', 'versions', 'gaps']);
     expect(named('create_playbook').registration.reasons).toEqual(['conflict', 'invalid_input', 'unavailable']);
   });
 });
@@ -175,10 +175,14 @@ describe('the answers of the playbook operations with a goals port', () => {
 
     expect(await call(named('update_playbook'), toAcme(acmeAdmin, { playbook: 'alpha', page: '---\n---\n' }))).toEqual({
       status: 'succeeded',
-      output: { ...alpha, page: { source: '---\n---\n' }, goals: { source: goalsText, version: 1, gaps: [] } },
+      output: {
+        ...alpha,
+        page: { source: '---\n---\n' },
+        goals: { source: goalsText, versions: versionsOfBothAt(1), gaps: [] },
+      },
     });
     expect(await call(named('get_playbook'), toAcme(acmeAdmin, { playbook: 'alpha' }))).toMatchObject({
-      output: { page: { source: '---\n---\n' }, goals: { version: 1 } },
+      output: { page: { source: '---\n---\n' }, goals: { versions: versionsOfBothAt(1) } },
     });
   });
 });

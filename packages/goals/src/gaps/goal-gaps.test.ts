@@ -25,8 +25,9 @@ const none: ReadonlySet<string> = new Set();
 
 const told: ReadonlySet<string> = new Set(['tell-owner']);
 
-function standingOf(workflows: readonly StandingWorkflow[], notifiers = told, held = goals): GoalsStanding {
-  return { version: 1, source: goalsText, goals: held, workflows, notifiers };
+function standingOf(workflows: readonly StandingWorkflow[], notifiers = told, kept = goals): GoalsStanding {
+  const held = kept.map((goal, index) => ({ definition: `goal-${String(index)}`, version: 1, goal }));
+  return { source: goalsText, goals: kept, held, workflows, notifiers };
 }
 
 function workflowNamed(name: string, contributes: Contributes, paused = false): StandingWorkflow {
@@ -59,7 +60,7 @@ const lead = (kind: string) => ({ kind, goal: leadGoalId, workflow: undefined })
 
 describe('the gaps of a playbook with no goals', () => {
   it('are no_goal alone, the person’s', () => {
-    const older = { version: 0, goals: [], workflows: [workflowNamed('older', [])], notifiers: none };
+    const older = { goals: [], held: [], workflows: [workflowNamed('older', [])], notifiers: none };
 
     expect(goalsAnsweredOf(older)).toEqual({ gaps: [noGoalGap] });
   });
@@ -69,7 +70,13 @@ describe('the gaps of goals nothing serves yet', () => {
   it('name every measure, milestone, window and notification function, in the order of the goals', () => {
     const standing = standingOf([], none);
 
-    expect(goalsAnsweredOf(standing)).toMatchObject({ source: goalsText, version: 1 });
+    expect(goalsAnsweredOf(standing)).toMatchObject({
+      source: goalsText,
+      versions: [
+        { id: leadGoalId, version: 1 },
+        { id: plainGoalId, version: 1 },
+      ],
+    });
     expect(kindsOf(standing)).toEqual([
       lead('measure_unreported'),
       lead('milestone_unmarked'),

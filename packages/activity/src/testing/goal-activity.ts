@@ -1,13 +1,13 @@
+import { goalsDocumentOf, type Goal } from '@on.auto/definitions/goals';
 import type { PlaybookAddress } from '@on.auto/operations';
 import { goalsText, leadGoalId, plainGoalId } from '@on.auto/playbooks/testing';
-import { Effect, type Schema } from 'effect';
+import { Effect, Result, type Schema } from 'effect';
 
 import { activityOperationsKeepingGoals } from '../goal-activity/goal-operations.ts';
-import type { GoalsRead } from '../goal-activity/goal-set-aside.ts';
 import { listActivity } from '../operations/list-activity.ts';
 import { markActivitySeen } from '../operations/mark-activity-seen.ts';
 import { goalOverdueRows, goalVerdictRows } from '../projections/goal-rows.ts';
-import { activityHarness, ada, priya, type ActivityServed } from './harness.ts';
+import { activityHarness, ada, priya, type ActivityServed, type LedgerReads } from './harness.ts';
 import type { RecordedFact } from './recorded-facts.ts';
 
 export const passedHere = '6f1c7a2e-3b4d-5e6f-8a9b-0c1d2e3f4a5b';
@@ -28,10 +28,10 @@ const fact = (type: string, data: Schema.JsonObject, time: string): RecordedFact
   context: context(time),
 });
 
-export const opened = (goal: string, time: string) =>
+export const opened = (time: string) =>
   fact(
     'goal_assessment_opened',
-    { goal, goals_version: 1, rule: { settles: 'on_crossing', target: { at_least: 1 } }, milestones: [] },
+    { goal_version: 1, rule: { settles: 'on_crossing', target: { at_least: 1 } }, milestones: [] },
     time,
   );
 
@@ -52,9 +52,35 @@ export const assessed = (verdict: string, told: string, time: string) =>
 
 const overdue = (time: string) => fact('goal_overdue', { since: at(time), told: 'now' }, time);
 
-export const assessments = (playbook: string, id: string) => `playbook/acme/${playbook}/assessments/${id}`;
+const goalIdentityOf = (playbook: string, goal: string) => `${playbook}-${goal}`;
 
-export const goalsOfFinance: GoalsRead = {
+export const assessments = (playbook: string, goal: string, id: string) =>
+  `definition/acme/${goalIdentityOf(playbook, goal)}/assessments/${id}`;
+
+const { goals } = Result.getOrThrow(goalsDocumentOf(goalsText));
+
+const goalCreated = (playbook: string, goal: Goal): RecordedFact => ({
+  type: 'goal_created',
+  data: { playbook, position: goals.indexOf(goal), goal },
+  context: { at: at('09:30'), by: priya.id, definitionId: goalIdentityOf(playbook, goal.id) },
+});
+
+export async function goalsHeld(record: (stream: string, ...facts: readonly RecordedFact[]) => Promise<void>) {
+  const held = goals.flatMap((goal): readonly (readonly [string, Goal])[] =>
+    goal.id === leadGoalId
+      ? [['finance', goal]]
+      : [
+          ['finance', goal],
+          ['sales', goal],
+        ],
+  );
+  await held.reduce(async (before, [playbook, goal]) => {
+    await before;
+    await record(`definition/acme/${goalIdentityOf(playbook, goal.id)}/goals/goal`, goalCreated(playbook, goal));
+  }, Promise.resolve());
+}
+
+export const goalsOfFinance: Parameters<typeof activityOperationsKeepingGoals>[0] = {
   read: ({ playbook }: PlaybookAddress) =>
     playbook === 'finance'
       ? Effect.succeed({ goals: { source: goalsText, version: 1, gaps: [] } })
@@ -80,24 +106,26 @@ const nullFields = {
 
 export const projections = [goalVerdictRows, goalOverdueRows];
 
-async function activityOf(served: ActivityServed) {
-  const harness = activityHarness(undefined, served);
+async function activityOf(served: ActivityServed, reads?: LedgerReads) {
+  const harness = activityHarness(reads, served);
   const { created, record } = harness;
   await created(priya, 'finance', at('09:00'));
   await created(ada, 'sales', at('09:00'));
+  await goalsHeld(record);
   await record(
-    assessments('finance', passedHere),
-    opened(leadGoalId, '10:00'),
+    assessments('finance', leadGoalId, passedHere),
+    opened('10:00'),
     observed('10:30'),
     assessed('passed', 'now', '11:00'),
   );
-  await record(assessments('finance', overdueHere), opened(leadGoalId, '10:00'), overdue('12:00'));
-  await record(assessments('finance', quietHere), opened(plainGoalId, '10:00'), assessed('passed', 'quiet', '12:30'));
-  await record(assessments('sales', failedThere), opened(plainGoalId, '10:00'), assessed('failed', 'summary', '13:00'));
+  await record(assessments('finance', leadGoalId, overdueHere), opened('10:00'), overdue('12:00'));
+  await record(assessments('finance', plainGoalId, quietHere), opened('10:00'), assessed('passed', 'quiet', '12:30'));
+  await record(assessments('sales', plainGoalId, failedThere), opened('10:00'), assessed('failed', 'summary', '13:00'));
   return harness;
 }
 
-export const goalsKept = () => activityOf({ ...activityOperationsKeepingGoals(goalsOfFinance), projections });
+export const goalsKept = (reads?: LedgerReads) =>
+  activityOf({ ...activityOperationsKeepingGoals(goalsOfFinance), projections }, reads);
 
 export const goalsNotKept = () => activityOf({ listActivity, markActivitySeen, projections });
 

@@ -2,6 +2,7 @@ import type { PlaybookAddress, ProjectedCondition, ProjectedKeyedRow } from '@on
 import { Effect } from 'effect';
 
 import { unopened } from '../assessments/assessment-state.ts';
+import type { GoalAddress } from '../goal-facts/goal-facts.ts';
 import { assessmentStateOfText } from '../goal-tables/assessment-row-state.ts';
 import { assessmentsName } from '../goal-tables/assessment-rows.ts';
 import type { GoalLinkOf } from '../notice-links/goal-links.ts';
@@ -22,7 +23,8 @@ export interface Summarised {
 export interface SummaryReading {
   readonly ledger: NoticeLedger;
   readonly address: PlaybookAddress;
-  readonly goal: string;
+  readonly goal: GoalAddress;
+  readonly name: string;
   readonly window: SummaryWindow;
   readonly linkOf?: GoalLinkOf | undefined;
 }
@@ -34,13 +36,12 @@ function within(column: string, { from, to }: SummaryWindow): readonly Projected
   ];
 }
 
-function closedIn(goal: string, window: SummaryWindow): readonly ProjectedCondition[] {
-  return [{ column: 'goal', equals: goal }, { column: 'open', equals: false }, ...within('closed_recorded_at', window)];
+function closedIn(window: SummaryWindow): readonly ProjectedCondition[] {
+  return [{ column: 'open', equals: false }, ...within('closed_recorded_at', window)];
 }
 
-function overdueIn(goal: string, window: SummaryWindow): readonly ProjectedCondition[] {
+function overdueIn(window: SummaryWindow): readonly ProjectedCondition[] {
   return [
-    { column: 'goal', equals: goal },
     { column: 'open', equals: true },
     { column: 'overdue', equals: true },
     ...within('overdue_recorded_at', window),
@@ -65,7 +66,7 @@ function placedOf(reading: SummaryReading, { key, row }: ProjectedKeyedRow, as: 
   const state = assessmentStateOfText(row['state']) ?? unopened;
   const per = state.pinned?.per;
   const link =
-    per === undefined ? undefined : reading.linkOf?.({ playbook: reading.address.playbook, goal: reading.goal, per });
+    per === undefined ? undefined : reading.linkOf?.({ playbook: reading.address.playbook, goal: reading.name, per });
   return {
     summarised: { key, state, as, at: numberIn(row, at), ...(link === undefined ? {} : { link }) },
     starts: state.window?.opens ?? numberIn(row, 'opened_at'),
@@ -73,7 +74,7 @@ function placedOf(reading: SummaryReading, { key, row }: ProjectedKeyedRow, as: 
 }
 
 function rowsWhere(reading: SummaryReading, where: readonly ProjectedCondition[], orderedBy: string) {
-  return reading.ledger.readProjectedRows(assessmentsName, reading.address, {
+  return reading.ledger.readProjectedRows(assessmentsName, reading.goal, {
     where,
     orderBy: [orderedBy],
     order: 'asc',
@@ -82,17 +83,17 @@ function rowsWhere(reading: SummaryReading, where: readonly ProjectedCondition[]
 }
 
 function countWhere(reading: SummaryReading, where: readonly ProjectedCondition[]) {
-  return reading.ledger.countProjectedRows(assessmentsName, reading.address, where);
+  return reading.ledger.countProjectedRows(assessmentsName, reading.goal, where);
 }
 
 function countsIn(reading: SummaryReading): Effect.Effect<SummaryCounts> {
-  const closed = closedIn(reading.goal, reading.window);
+  const closed = closedIn(reading.window);
   return Effect.map(
     Effect.all([
       countWhere(reading, closed),
       countWhere(reading, [...closed, { column: 'outcome', equals: 'passed' }]),
       countWhere(reading, [...closed, { column: 'outcome', equals: 'failed' }]),
-      countWhere(reading, overdueIn(reading.goal, reading.window)),
+      countWhere(reading, overdueIn(reading.window)),
     ]),
     ([ended, passed, failed, overdue]: readonly [number, number, number, number]) => ({
       passed,
@@ -118,8 +119,8 @@ function byStart(left: Placed, right: Placed): number {
 export function summarisedIn(reading: SummaryReading): Effect.Effect<Summarised> {
   return Effect.map(
     Effect.all([
-      rowsWhere(reading, closedIn(reading.goal, reading.window), 'closed_recorded_at'),
-      rowsWhere(reading, overdueIn(reading.goal, reading.window), 'overdue_recorded_at'),
+      rowsWhere(reading, closedIn(reading.window), 'closed_recorded_at'),
+      rowsWhere(reading, overdueIn(reading.window), 'overdue_recorded_at'),
       countsIn(reading),
     ]),
     ([closed, overdue, counts]: readonly [

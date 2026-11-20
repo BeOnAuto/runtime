@@ -1,3 +1,4 @@
+import { goalFactTypes } from '@on.auto/definitions/goals';
 import { changeKindOf, changingOne, type ChangeNaming, type ChangesNamed } from '@on.auto/operations';
 
 import { goalRefusalsKind } from '../goal-facts/goal-facts.ts';
@@ -14,7 +15,7 @@ function goalChangeOf(streamKind: string, types: readonly string[]): ChangeNamin
 }
 
 export const goalChanges: readonly ChangeNaming[] = [
-  goalChangeOf('goals', ['playbook_goals_saved', 'playbook_goals_agreed']),
+  goalChangeOf('goals', goalFactTypes),
   goalChangeOf(goalRefusalsKind, refusalRows.types),
 ];
 

@@ -18,8 +18,7 @@ import { opensInRun } from './window-counting.ts';
 const recentSources = 32;
 
 export interface PinnedRule {
-  readonly goal: string;
-  readonly goalsVersion: number;
+  readonly goalVersion: number;
   readonly per?: string;
   readonly settles: Settles;
   readonly target: Target;
@@ -111,8 +110,7 @@ export function pinsMilestone(state: AssessmentState, milestone: string): boolea
 
 export function pinnedOf(data: AssessmentOpened): PinnedRule {
   return {
-    goal: data.goal,
-    goalsVersion: data.goals_version,
+    goalVersion: data.goal_version ?? 0,
     ...(data.per === undefined ? {} : { per: data.per.id }),
     settles: data.rule.settles,
     target: data.rule.target,

@@ -3,16 +3,17 @@ import { describe, expect, it } from 'vitest';
 
 import {
   afterSpan,
+  type AssessmentBook,
   assessmentBookOf,
   controlsGoal,
   day,
   daySpan,
   experimentsGoal,
   firstDay,
-  inTurn,
+  heldGoalOf,
   instantText,
+  inTurn,
   thingAt,
-  type AssessmentBook,
 } from './assessment-samples.ts';
 import { goalAssessmentsIn } from './goal-assessments.ts';
 
@@ -25,7 +26,7 @@ function indexes(length: number): readonly number[] {
 }
 
 function read(book: AssessmentBook, goal: Goal = experimentsGoal) {
-  return book.inThePlaybook(goalAssessmentsIn(goal));
+  return book.inThePlaybook(goalAssessmentsIn(heldGoalOf(goal)));
 }
 
 async function endedEachWay(book: AssessmentBook) {

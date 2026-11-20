@@ -122,7 +122,11 @@ export {
   type RecordedGoalSummaryEvent,
 } from './goal-facts/goal-facts.ts';
 export { goalBellProjections, goalsLedger } from './engine/goals-engine.ts';
-export { GoalAgreementsEventSchema, GoalsEventSchema } from '@on.auto/definitions/goals';
+export {
+  GoalEventSchema,
+  PlaybookGoalAgreementsEventSchema,
+  PlaybookGoalsEventSchema,
+} from '@on.auto/definitions/goals';
 export {
   goalsHostParts,
   goalsHostPartsWhere,
@@ -140,7 +144,7 @@ export {
   clockKey,
   clockRows,
   clocksName,
-  goalClocksIn,
+  goalClockIn,
   nextOpeningOf,
   nextSummaryOf,
   type GoalClockEntry,
@@ -154,12 +158,7 @@ export {
   observedEntryKeyOf,
   type ObservedEntry,
 } from './goal-tables/observation-rows.ts';
-export {
-  goalRefusalsStreamIdOf,
-  goalSummariesStreamIdOf,
-  refusedOfKey,
-  type RefusedOf,
-} from './goal-tables/goal-streams.ts';
+export { assessmentStreamOf, refusalsStreamOf, summariesStreamOf, type GoalAddress } from './goal-facts/goal-facts.ts';
 export { goalsAnsweredOf, goalsGapsOf, type GoalsStanding, type StandingWorkflow } from './gaps/goal-gaps.ts';
 export { noAssessments, AssessmentsSchema, AssessmentSchema, type Assessments } from './reads/assessments-schema.ts';
 export { GoalsReadSchema, type GoalRead, type GoalsRead } from './reads/goals-read-schema.ts';

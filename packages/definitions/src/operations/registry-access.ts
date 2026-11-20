@@ -48,19 +48,27 @@ function loadedDefinition(type: string, definition: string): Effect.Effect<Defin
   ).pipe(Effect.map(({ state }) => state));
 }
 
-export function loadEachHeld<State, Event extends Recorded>(
+export function loadEachHeldOn<State, Event extends Recorded>(
   type: string,
+  stream: string,
   foldOf: (definition: string) => Fold<State, Event>,
 ): Effect.Effect<readonly State[], never, PlaybookReader> {
   return Effect.flatMap(
     PlaybookReader.use((reader) => reader.namesHeldIn(type)),
     (held) =>
       Effect.forEach(definitionsHeldBy(held), (definition) =>
-        PlaybookReader.use((reader) =>
-          reader.ofDefinition(definition).load(definitionTypeStreamOf(type), foldOf(definition)),
-        ).pipe(Effect.map(({ state }) => state)),
+        PlaybookReader.use((reader) => reader.ofDefinition(definition).load(stream, foldOf(definition))).pipe(
+          Effect.map(({ state }) => state),
+        ),
       ),
   );
+}
+
+export function loadEachHeld<State, Event extends Recorded>(
+  type: string,
+  foldOf: (definition: string) => Fold<State, Event>,
+): Effect.Effect<readonly State[], never, PlaybookReader> {
+  return loadEachHeldOn(type, definitionTypeStreamOf(type), foldOf);
 }
 
 export function loadRegistry(type: string): Effect.Effect<DefinitionRegistry, never, PlaybookReader> {

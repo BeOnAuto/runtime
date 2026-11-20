@@ -14,7 +14,12 @@ import {
 } from '@on.auto/definitions';
 import { ImportEventSchema } from '@on.auto/definitions/importing';
 import { AssetEventSchema } from '@on.auto/generation';
-import { GoalAgreementsEventSchema, GoalsEventSchema, goalsLedger } from '@on.auto/goals';
+import {
+  GoalEventSchema,
+  goalsLedger,
+  PlaybookGoalAgreementsEventSchema,
+  PlaybookGoalsEventSchema,
+} from '@on.auto/goals';
 import { InteractionRunFactSchema } from '@on.auto/interaction';
 import { ConversationCallEventSchema, HandCallEventSchema } from '@on.auto/tool-servers';
 import { RunLogRecordSchema } from '@on.auto/workflow-engine';
@@ -26,8 +31,9 @@ export const knownFactSchemas = [
   ...orgFactSchemas,
   DefinitionEventSchema,
   PageEventSchema,
-  GoalsEventSchema,
-  GoalAgreementsEventSchema,
+  PlaybookGoalsEventSchema,
+  PlaybookGoalAgreementsEventSchema,
+  GoalEventSchema,
   ImportEventSchema,
   ...goalsLedger.factSchemas,
   RunEventSchema,

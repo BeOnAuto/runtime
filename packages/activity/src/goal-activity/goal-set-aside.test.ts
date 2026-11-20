@@ -28,7 +28,7 @@ const answered = runOf(4);
 const dismissal = { goal: leadGoalId, id: overdueHere, at: at('13:00'), by: priya.id };
 
 function standingOver(runs: readonly RunOf[]): StandingSetAside {
-  return (read) =>
+  return ({ read }) =>
     Effect.map(
       Effect.forEach(runs, ({ runId }) =>
         read(requestsName, { where: [{ column: 'row_key', equals: runId }], orderBy: [], order: 'asc', limit: 1 }),

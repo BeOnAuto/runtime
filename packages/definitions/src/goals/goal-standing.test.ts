@@ -8,7 +8,7 @@ import { acmeAdmin } from '../testing/callers.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
 import { experiments } from './goal-examples.ts';
-import { goalStandingIn } from './goals-stream.ts';
+import { goalStandingIn } from './playbook-goals.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -97,13 +97,13 @@ async function standingAfterSaves() {
 
 describe('what a playbook holds for its goals', () => {
   it('is nothing in a playbook that has saved nothing', async () => {
-    expect(await standingOf(harness())).toEqual({ version: 0, goals: [], workflows: [], notifiers: new Set() });
+    expect(await standingOf(harness())).toEqual({ goals: [], held: [], workflows: [], notifiers: new Set() });
   });
 
   it('is its goals, its workflows that are not retired with what they contribute, the notifications it can send, and when a workflow was last saved', async () => {
     const standing = await standingAfterSaves();
 
-    expect(standing).toMatchObject({ version: 1, source: savedGoals, goals: [{ id: experiments.id }] });
+    expect(standing).toMatchObject({ source: savedGoals, goals: [{ id: experiments.id }], held: [{ version: 1 }] });
     expect(standing.armedAt).toEqual(expect.any(Number));
     expect(standing.workflows).toEqual([
       { name: 'measuring', version: 1, paused: false, contributes: [measuring] },

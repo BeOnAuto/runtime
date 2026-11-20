@@ -294,9 +294,14 @@ describe('served tools with goals', () => {
       expect(tools.filter((tool) => isOutsideItsBounds(tool)).map(({ name }) => name)).toEqual([]);
     });
 
-    it('take the whole list of goals as an optional string of at most 16384 characters in create_playbook and update_playbook, and in no other tool', () => {
-      const takers = tools.filter((tool) => goalsArgumentOf(tool) !== undefined);
+    it('take the whole list of goals as an optional string of at most 16384 characters in create_playbook and update_playbook, and the goals agreed as a list in agree_playbook_goals', () => {
+      const takers = tools.filter((tool) => goalsArgumentOf(tool)?.['type'] === 'string');
 
+      expect(tools.filter((tool) => goalsArgumentOf(tool) !== undefined).map(({ name }) => name)).toEqual([
+        'create_playbook',
+        'update_playbook',
+        'agree_playbook_goals',
+      ]);
       expect(takers.map(({ name }) => name)).toEqual(['create_playbook', 'update_playbook']);
       expect(takers.map((tool) => goalsArgumentOf(tool))).toEqual([
         expect.objectContaining({ type: 'string', maxLength: 16_384 }),

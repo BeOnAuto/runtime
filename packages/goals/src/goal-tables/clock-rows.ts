@@ -1,8 +1,7 @@
-import { GoalsEventSchema, WeekdaySchema, type Goal, type RecordedGoalsEvent } from '@on.auto/definitions/goals';
+import { GoalEventSchema, WeekdaySchema, type Goal, type RecordedGoalEvent } from '@on.auto/definitions/goals';
 import { recordedDecoder, type KeyedProjection, type ProjectedMessage, type ProjectedRow } from '@on.auto/operations';
 import { Option, Result, Schema } from 'effect';
 
-import { summaryRunIdOf } from '../assessments/assessment-identity.ts';
 import { nextCalendarOpeningOf } from '../goal-clock/goal-clock.ts';
 import {
   AssessmentEventSchema,
@@ -29,28 +28,28 @@ const CalendarSchema = Schema.Struct({
 });
 
 const GoalClockSchema = Schema.Struct({
-  id: Schema.String,
   first_saved_at: Schema.Finite,
   retired: Schema.optionalKey(Schema.Boolean),
+  removed: Schema.optionalKey(Schema.Literal(true)),
   calendar: Schema.optionalKey(CalendarSchema),
   summary: Schema.optionalKey(Schema.Struct({ cron: Schema.String, time_zone: Schema.optionalKey(Schema.String) })),
   latest_opened: Schema.optionalKey(Schema.Finite),
   last_summary: Schema.optionalKey(Schema.Finite),
 });
 
-const GoalClocksSchema = Schema.fromJsonString(Schema.Array(GoalClockSchema));
+const GoalClockTextSchema = Schema.fromJsonString(GoalClockSchema);
 
 export type GoalClockEntry = typeof GoalClockSchema.Type;
 
-const clocksOfText = Schema.decodeUnknownOption(GoalClocksSchema);
+const clockOfText = Schema.decodeUnknownOption(GoalClockTextSchema);
 
-const textOfClocks = Schema.encodeSync(GoalClocksSchema);
+const textOfClock = Schema.encodeSync(GoalClockTextSchema);
 
-export function goalClocksIn(row: ProjectedRow | undefined): readonly GoalClockEntry[] {
-  return Option.getOrElse(clocksOfText(row?.['goals']), () => []);
+export function goalClockIn(row: ProjectedRow | undefined): GoalClockEntry | undefined {
+  return Option.getOrUndefined(clockOfText(row?.['clock']));
 }
 
-const goalsEventOf = recordedDecoder(GoalsEventSchema);
+const goalEventOf = recordedDecoder(GoalEventSchema);
 
 type Opening = Extract<RecordedAssessmentEvent, { readonly type: 'goal_assessment_opened' }>;
 
@@ -96,7 +95,6 @@ function keptOf(before: GoalClockEntry | undefined): Pick<GoalClockEntry, 'lates
 function clockOfGoal(goal: Goal, before: GoalClockEntry | undefined, savedAt: Instant): GoalClockEntry {
   const calendar = calendarOf(goal);
   return {
-    id: goal.id,
     first_saved_at: before?.first_saved_at ?? savedAt,
     ...(goal.retired === undefined ? {} : { retired: goal.retired }),
     ...(calendar === undefined ? {} : { calendar }),
@@ -105,67 +103,52 @@ function clockOfGoal(goal: Goal, before: GoalClockEntry | undefined, savedAt: In
   };
 }
 
-function savedAfter(clocks: readonly GoalClockEntry[], event: RecordedGoalsEvent): readonly GoalClockEntry[] {
-  const savedAt = Date.parse(event.context.at);
-  return event.data.goals.map((goal) =>
-    clockOfGoal(
-      goal,
-      clocks.find(({ id }) => id === goal.id),
-      savedAt,
-    ),
-  );
+function savedAfter(clock: GoalClockEntry | undefined, event: RecordedGoalEvent): GoalClockEntry | undefined {
+  if (event.type === 'goal_created') {
+    return clockOfGoal(event.data.goal, undefined, Date.parse(event.context.at));
+  }
+  if (clock === undefined || clock.removed === true) {
+    return undefined;
+  }
+  if (event.type === 'goal_updated') {
+    return clockOfGoal(event.data.goal, clock, Date.parse(event.context.at));
+  }
+  return event.type === 'goal_removed' ? { ...clock, removed: true } : undefined;
 }
 
-function changedOf(
-  clocks: readonly GoalClockEntry[],
-  moved: (clock: GoalClockEntry) => GoalClockEntry | undefined,
-): readonly GoalClockEntry[] {
-  const after = clocks.map((clock) => moved(clock) ?? clock);
-  return after.some((clock, index) => clock !== clocks[index]) ? after : clocks;
+function openedAfter(clock: GoalClockEntry, opens: Instant): GoalClockEntry | undefined {
+  return clock.calendar !== undefined && (clock.latest_opened ?? -Infinity) < opens
+    ? { ...clock, latest_opened: opens }
+    : undefined;
 }
 
-function openedAfter(clocks: readonly GoalClockEntry[], goal: string, opens: Instant): readonly GoalClockEntry[] {
-  return changedOf(clocks, (clock) =>
-    clock.id === goal && clock.calendar !== undefined && (clock.latest_opened ?? -Infinity) < opens
-      ? { ...clock, latest_opened: opens }
-      : undefined,
-  );
+function summarisedAfter(clock: GoalClockEntry, due: Instant): GoalClockEntry | undefined {
+  return (clock.last_summary ?? -Infinity) < due ? { ...clock, last_summary: due } : undefined;
 }
 
-function summarisedAfter(clocks: readonly GoalClockEntry[], due: Instant, run: string): readonly GoalClockEntry[] {
-  return changedOf(clocks, (clock) =>
-    summaryRunIdOf(clock.id, due) === run && (clock.last_summary ?? -Infinity) < due
-      ? { ...clock, last_summary: due }
-      : undefined,
-  );
-}
-
-interface ClocksMoved {
-  readonly clocks: readonly GoalClockEntry[];
+interface ClockMoved {
+  readonly clock: GoalClockEntry | undefined;
   readonly opens?: Instant;
 }
 
-function clocksAfter(clocks: readonly GoalClockEntry[], message: ProjectedMessage): ClocksMoved {
+function resultsAfter(clock: GoalClockEntry, message: ProjectedMessage): ClockMoved {
   const opened = openedEventOf(message);
   if (Option.isSome(opened) && opened.value.data.window !== undefined) {
     const opens = Date.parse(opened.value.data.window.opens);
-    return { clocks: openedAfter(clocks, opened.value.data.goal, opens), opens };
+    return { clock: openedAfter(clock, opens), opens };
   }
   const summarised = summaryStartOf(message);
   return {
-    clocks: Option.isSome(summarised)
-      ? summarisedAfter(clocks, Date.parse(summarised.value.data.due), summarised.value.data.run)
-      : clocks,
+    clock: Option.isSome(summarised) ? summarisedAfter(clock, Date.parse(summarised.value.data.due)) : undefined,
   };
 }
 
-function dueBeyond(row: ProjectedRow, opens: Instant | undefined): Instant | null {
-  const held = row['opens_at'];
-  return typeof held === 'number' && held !== opens ? held : null;
+function isRunning(clock: GoalClockEntry): boolean {
+  return clock.retired !== true && clock.removed !== true;
 }
 
 export function nextOpeningOf(clock: GoalClockEntry): Instant | null {
-  if (clock.retired === true || clock.calendar === undefined) {
+  if (!isRunning(clock) || clock.calendar === undefined) {
     return null;
   }
   return nextCalendarOpeningOf(clock.calendar, {
@@ -176,7 +159,7 @@ export function nextOpeningOf(clock: GoalClockEntry): Instant | null {
 
 export function nextSummaryOf(clock: GoalClockEntry): Instant | null {
   const { summary } = clock;
-  if (clock.retired === true || summary === undefined) {
+  if (!isRunning(clock) || summary === undefined) {
     return null;
   }
   const after = clock.last_summary ?? clock.first_saved_at;
@@ -199,39 +182,56 @@ function earliestOf(times: readonly (Instant | null)[]): Instant | null {
   return set.length === 0 ? null : Math.min(...set);
 }
 
-function retiringOf(clocks: readonly GoalClockEntry[], savedAt: Instant): ProjectedRow {
-  return clocks.some(({ retired }) => retired === true) ? { opens_at: savedAt } : {};
+function versionAfter(row: ProjectedRow | undefined, event: RecordedGoalEvent): number {
+  const held = Number(row?.['goal_version'] ?? 0);
+  if (event.type === 'goal_created') {
+    return 1;
+  }
+  return event.type === 'goal_updated' ? held + 1 : held;
 }
 
-function duesOf(clocks: readonly GoalClockEntry[], held: Instant | null = null): ProjectedRow {
+function duesOf(clock: GoalClockEntry, held: Instant | null): ProjectedRow {
   return {
-    goals: textOfClocks(clocks),
-    opens_at: earliestOf([...clocks.map((clock) => nextOpeningOf(clock)), held]),
-    summary_at: earliestOf(clocks.map((clock) => nextSummaryOf(clock))),
+    clock: textOfClock(clock),
+    opens_at: clock.removed === true ? null : earliestOf([nextOpeningOf(clock), held]),
+    summary_at: nextSummaryOf(clock),
   };
 }
 
+function retiringOf(clock: GoalClockEntry, event: RecordedGoalEvent): Instant | null {
+  return clock.retired === true && clock.removed !== true ? Date.parse(event.context.at) : null;
+}
+
+function heldBeyond(row: ProjectedRow, opens: Instant | undefined): Instant | null {
+  const held = row['opens_at'];
+  return typeof held === 'number' && held !== opens ? held : null;
+}
+
+function resultsRowOf(row: ProjectedRow, before: GoalClockEntry, message: ProjectedMessage): ProjectedRow | undefined {
+  const moved = resultsAfter(before, message);
+  return moved.clock === undefined ? undefined : { ...row, ...duesOf(moved.clock, heldBeyond(row, moved.opens)) };
+}
+
 function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): ProjectedRow | undefined {
-  return Option.match(goalsEventOf(message), {
+  const before = goalClockIn(row);
+  return Option.match(goalEventOf(message), {
     onSome: (event) => {
-      const clocks = savedAfter(goalClocksIn(row), event);
-      return {
-        goals_version: event.data.version,
-        ...duesOf(clocks),
-        ...retiringOf(clocks, Date.parse(event.context.at)),
-      };
-    },
-    onNone: () => {
-      const clocks = goalClocksIn(row);
-      const after = clocksAfter(clocks, message);
-      return row === undefined || after.clocks === clocks
+      const clock = savedAfter(before, event);
+      return clock === undefined
         ? undefined
-        : { ...row, ...duesOf(after.clocks, dueBeyond(row, after.opens)) };
+        : { goal_version: versionAfter(row, event), ...duesOf(clock, retiringOf(clock, event)) };
     },
+    onNone: () => (row === undefined || before === undefined ? undefined : resultsRowOf(row, before, message)),
   });
 }
 
-const goalClockTypes = ['playbook_goals_saved', 'goal_assessment_opened', 'goal_summary_started'];
+const goalClockTypes = [
+  'goal_created',
+  'goal_updated',
+  'goal_removed',
+  'goal_assessment_opened',
+  'goal_summary_started',
+];
 
 function keyOf({ type }: ProjectedMessage): string | undefined {
   return goalClockTypes.includes(type) ? clockKey : undefined;
@@ -239,12 +239,13 @@ function keyOf({ type }: ProjectedMessage): string | undefined {
 
 export const clockRows: KeyedProjection = {
   name: clocksName,
-  version: 1,
+  version: 2,
+  scopes: ['definition'],
   kinds: [goalsKind, assessmentsKind, goalSummariesKind],
   types: goalClockTypes,
   columns: [
-    { name: 'goals_version', kind: 'integer' },
-    { name: 'goals', kind: 'text' },
+    { name: 'clock', kind: 'text' },
+    { name: 'goal_version', kind: 'integer' },
     { name: 'opens_at', kind: 'integer' },
     { name: 'summary_at', kind: 'integer' },
   ],
@@ -254,8 +255,8 @@ export const clockRows: KeyedProjection = {
   ],
   keyOf,
   advanced: [
-    { column: 'opens_at', setBy: ['playbook_goals_saved', 'goal_assessment_opened'] },
-    { column: 'summary_at', setBy: ['playbook_goals_saved', 'goal_summary_started'] },
+    { column: 'opens_at', setBy: ['goal_created', 'goal_updated', 'goal_removed', 'goal_assessment_opened'] },
+    { column: 'summary_at', setBy: ['goal_created', 'goal_updated', 'goal_removed', 'goal_summary_started'] },
   ],
   rowAfter,
 };

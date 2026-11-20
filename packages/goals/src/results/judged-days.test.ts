@@ -2,7 +2,13 @@ import { Effect } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
-import { assessmentBookOf, experimentsGoal, instantText, type AssessmentBook } from '../reads/assessment-samples.ts';
+import {
+  type AssessmentBook,
+  assessmentBookOf,
+  experimentsGoal,
+  heldGoalOf,
+  instantText,
+} from '../reads/assessment-samples.ts';
 import { goalAssessmentsIn, type GoalsAsked } from '../reads/goal-assessments.ts';
 import { zoneDayOf } from './zone-days.ts';
 
@@ -55,7 +61,7 @@ function closedAsked(book: AssessmentBook, asked: GoalsAsked = {}, now = nov16 +
   return book.inThePlaybook(
     Effect.gen(function* () {
       yield* TestClock.setTime(now);
-      return (yield* goalAssessmentsIn(experimentsGoal, undefined, undefined, asked)).closed;
+      return (yield* goalAssessmentsIn(heldGoalOf(experimentsGoal), undefined, asked)).closed;
     }).pipe(Effect.provide(TestClock.layer())),
   );
 }

@@ -1,0 +1,11 @@
+{
+  "type": "goal_assessment_ended",
+  "data": {
+    "reason": "no_result"
+  },
+  "context": {
+    "at": "2026-11-09T18:00:00.000Z",
+    "by": "playbook:alpha",
+    "definitionId": "019a8f00-0000-7000-8000-000000000001"
+  }
+}

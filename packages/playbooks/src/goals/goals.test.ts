@@ -34,16 +34,22 @@ describe('goals kept in memory', () => {
   it('save a version at each change, nothing when the text is the same, and nothing over goals held when asked for none', async () => {
     const goals = goalsInMemory();
     const saving = (source: string, onlyIfNone = false) =>
-      settled(goals.save(alpha, { goals: { source, goals: [] }, onlyIfNone }));
+      settled(goals.save(alpha, { goals: { source, goals: [{ id: source }] }, onlyIfNone }));
 
     expect(await answered(goals.read(alpha))).toEqual({ goals: { gaps: [noGoalGap] } });
-    expect(await saving('one', true)).toMatchObject({ success: { outcome: 'saved', goals: { version: 1 } } });
-    expect(await saving('one')).toMatchObject({ success: { outcome: 'unchanged', goals: { version: 1 } } });
+    const one = { versions: [{ id: 'one', version: 1 }] };
+    expect(await saving('one', true)).toMatchObject({ success: { outcome: 'saved', goals: one } });
+    expect(await saving('one')).toMatchObject({ success: { outcome: 'unchanged', goals: one } });
     expect(await saving('two', true)).toMatchObject({ success: { outcome: 'already_held', goals: { source: 'one' } } });
-    expect(await answered(goals.save(alpha, { goals: { source: 'two', goals: [] } }))).toEqual({
+    const two = { source: 'two', goals: [{ id: 'one' }, { id: 'two' }] };
+    const versions = [
+      { id: 'one', version: 2 },
+      { id: 'two', version: 1 },
+    ];
+    expect(await answered(goals.save(alpha, { goals: two }))).toEqual({
       outcome: 'saved',
       awaiting: true,
-      goals: { source: 'two', version: 2, gaps: [] },
+      goals: { source: 'two', versions, gaps: [] },
     });
   });
 

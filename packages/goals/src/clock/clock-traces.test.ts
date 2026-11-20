@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import { controls } from '../assessor/assessor-ledger.ts';
+import { goalIdentityOf } from '../assessor/assessor-ledger.ts';
 import { assessmentsName } from '../goal-tables/assessment-rows.ts';
 import { clockHarnessOf, type ClockHarness } from './clock-harness.ts';
 
@@ -11,9 +12,10 @@ const checking = [
 ];
 
 const dayOf = (day: string) =>
-  assessmentIdOf({ goal: 'controls-hold', window_start: Date.parse(`${day}T00:00:00.000Z`) });
+  assessmentIdOf({ definition: goalIdentityOf('controls-hold'), window_start: Date.parse(`${day}T00:00:00.000Z`) });
 
-const factsOn = (harness: ClockHarness, day: string) => harness.book.factsOf(`assessments/${dayOf(day)}`);
+const factsOn = (harness: ClockHarness, day: string) =>
+  harness.book.factsOf('controls-hold', `assessments/${dayOf(day)}`);
 
 async function monitored(): Promise<ClockHarness> {
   const harness = clockHarnessOf('2026-11-08T07:00:00.000Z');

@@ -1,0 +1,68 @@
+{
+  "type": "goal_updated",
+  "data": {
+    "goal": {
+      "id": "paying-customers",
+      "statement": "Bring in paying customers through my experiments.",
+      "per": "experiment",
+      "window": {
+        "after": "live",
+        "for": "P7D",
+        "grace": "P1D"
+      },
+      "success": {
+        "label": "New paying customers traced to the experiment",
+        "settles": "on_crossing",
+        "target": {
+          "at_least": 1
+        },
+        "passed": "Brought a customer",
+        "failed": "Brought no customer"
+      },
+      "milestones": [
+        {
+          "id": "chosen",
+          "label": "Idea chosen",
+          "by": "person"
+        },
+        {
+          "id": "prepared",
+          "label": "Package prepared",
+          "by": "auto"
+        },
+        {
+          "id": "live",
+          "label": "Taken live",
+          "by": "person"
+        },
+        {
+          "id": "measured",
+          "label": "Measured",
+          "by": "auto"
+        },
+        {
+          "id": "concluded",
+          "label": "Lesson kept",
+          "by": "person"
+        }
+      ],
+      "notify": {
+        "passed": "now",
+        "failed": "now",
+        "overdue": "now",
+        "through": "tell-owner",
+        "summary": {
+          "cron": "0 9 * * 5",
+          "time_zone": "America/Los_Angeles",
+          "through": "weekly-note"
+        }
+      },
+      "retired": true
+    }
+  },
+  "context": {
+    "at": "2026-11-09T10:00:00.000Z",
+    "by": "key_7f3a",
+    "definitionId": "019a8f00-0000-7000-8000-000000000001"
+  }
+}

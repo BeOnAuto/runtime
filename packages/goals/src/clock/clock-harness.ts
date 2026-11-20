@@ -3,7 +3,7 @@ import type { Consumer, DueWork } from '@on.auto/workflow-host';
 import { Effect, Schema } from 'effect';
 
 import { noReads } from '../assessor/assessor-fixtures.ts';
-import { bookOf, deliveredAll, finished, sales, salesKey, type Book } from '../assessor/assessor-ledger.ts';
+import { bookOf, deliveredAll, finished, sales, type Book } from '../assessor/assessor-ledger.ts';
 import { assessorOf } from '../assessor/assessor.ts';
 import { opened } from '../conditions/condition-samples.ts';
 import type { Instant } from '../goal-rules/goal-rule.ts';
@@ -22,13 +22,13 @@ export interface ClockHarness {
   readonly wakes: readonly Wake[];
   readonly now: () => Instant;
   readonly movedTo: (at: Instant) => void;
-  readonly goalsSaved: (goals: Schema.Json, at: string, version?: number) => Promise<void>;
+  readonly goalsSaved: (goals: Schema.Json, at: string) => Promise<void>;
   readonly paused: (workflow: string, at: string) => Promise<void>;
   readonly statusIs: (status: PlaybookStatus) => void;
   readonly observed: (id: string, output: Schema.Json, at: string, workflow?: string) => Promise<readonly string[]>;
   readonly performedAt: (at: Instant) => Promise<number>;
   readonly until: (at: string) => Promise<void>;
-  readonly row: (table: string, key: string) => Promise<ProjectedRow | undefined>;
+  readonly row: (table: string, key: string, goal?: string) => Promise<ProjectedRow | undefined>;
   readonly rebuilt: () => Promise<ClockHarness>;
 }
 
@@ -109,7 +109,7 @@ function replayedInto(fresh: Book, book: Book) {
       const workflow = fact.context.definitionType === 'workflow' ? fact.context.definitionName : undefined;
       yield* Effect.promise(() =>
         workflow === undefined
-          ? fresh.append(fact.stream.slice(salesKey.length), fact.type, jsonOf(fact.data), fact.context)
+          ? fresh.appendWhole(fact.stream, fact.type, jsonOf(fact.data), fact.context)
           : fresh.workflowChanged(workflow, fact.type, jsonOf(fact.data), fact.context),
       );
     }
@@ -165,9 +165,9 @@ export function clockHarnessOf(start: string, book: Book = bookOf(), clockOf: Cl
     wakes: driven.wakes,
     now: moment.now,
     movedTo: moment.movedTo,
-    goalsSaved: async (goals, at, version = 1) => {
+    goalsSaved: async (goals, at) => {
       await until(at);
-      await book.append('goals/playbook', 'playbook_goals_saved', { source: 'goals', goals, version }, { at });
+      await book.goalsSaved(goals, at);
       await Effect.runPromise(performedAt(driven, Date.parse(at)));
     },
     paused: async (workflow, at) => {
@@ -182,7 +182,7 @@ export function clockHarnessOf(start: string, book: Book = bookOf(), clockOf: Cl
     },
     performedAt: (at) => Effect.runPromise(performedAt(driven, at)),
     until,
-    row: async (table, key) => (await book.rows(table))[key],
+    row: async (table, key, goal) => (await book.rows(table, goal))[key],
     rebuilt: async () => {
       const fresh = bookOf();
       await Effect.runPromise(replayedInto(fresh, book));

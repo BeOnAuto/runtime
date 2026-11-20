@@ -1,0 +1,22 @@
+{
+  "type": "goal_assessed",
+  "data": {
+    "verdict": "passed",
+    "at": "2026-11-09T09:00:00.000Z",
+    "by": "crossing",
+    "told": "now",
+    "source": {
+      "record": "0b9f1c2e-5d4a-4f7e-9a61-3c2d8e7f1a05",
+      "run": "6a1e2b3c-4d5e-4f60-8a71-92b3c4d5e6f7",
+      "workflow": "measure-experiments",
+      "version": 3,
+      "entry": 0,
+      "item": 2
+    }
+  },
+  "context": {
+    "at": "2026-11-09T18:00:00.000Z",
+    "by": "playbook:alpha",
+    "definitionId": "019a8f00-0000-7000-8000-000000000001"
+  }
+}

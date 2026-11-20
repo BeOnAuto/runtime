@@ -1,4 +1,4 @@
-import { playbookRowsOf, type PlaybookProjectedRow } from '@on.auto/operations';
+import { playbookRowsOf, streamPrefixOfAddress, type PlaybookProjectedRow } from '@on.auto/operations';
 import type { DueItem, DueWork } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
@@ -24,7 +24,7 @@ const dueTables: readonly DueTable[] = [
 
 function itemOf(ports: ClockPorts, table: DueTable, kept: PlaybookProjectedRow): DueItem {
   return {
-    key: `${kept.org}/${kept.playbook}/${table.name}/${kept.key}`,
+    key: `${streamPrefixOfAddress(kept)}${table.name}/${kept.key}`,
     callsOut: false,
     perform: (now) => Effect.suspend(() => table.performed(ports, kept, now)),
   };

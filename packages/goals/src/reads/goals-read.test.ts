@@ -1,4 +1,4 @@
-import { goalsDocumentOf, type Contributes, type Goal } from '@on.auto/definitions/goals';
+import { goalsDocumentOf, type Contributes } from '@on.auto/definitions/goals';
 import { goalsText, leadGoalId, plainGoalId } from '@on.auto/playbooks/testing';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -24,16 +24,17 @@ function workflowNamed(name: string, contributes: Contributes, paused = false): 
 }
 
 function standingOf(workflows: readonly StandingWorkflow[]): GoalsStanding {
-  return { version: 2, source: goalsText, goals, workflows, notifiers: new Set(['tell-owner']) };
+  const held = goals.map((goal, index) => ({ definition: `goal-${String(index)}`, version: 2, goal }));
+  return { source: goalsText, goals, held, workflows, notifiers: new Set(['tell-owner']) };
 }
 
 const encoded = Schema.encodeUnknownSync(GoalsReadSchema);
 
 describe('the goals read of a playbook with no goals', () => {
-  it('answers version 0, no goals and the gap no_goal among the playbook’s own', () => {
-    const read = goalsReadOf({ version: 0, goals: [], workflows: [], notifiers: new Set() });
+  it('answers no goals and the gap no_goal among the playbook’s own', () => {
+    const read = goalsReadOf({ goals: [], held: [], workflows: [], notifiers: new Set() });
 
-    expect(read).toEqual({ version: 0, gaps: [expect.objectContaining({ kind: 'no_goal' })], goals: [] });
+    expect(read).toEqual({ gaps: [expect.objectContaining({ kind: 'no_goal' })], goals: [] });
     expect(encoded(read)).toEqual(read);
   });
 });
@@ -50,7 +51,6 @@ describe('the goals read of a playbook with goals', () => {
   const [lead, plain] = read.goals;
 
   it('answers each goal as written, in order, with the milestones it has or none', () => {
-    expect(read.version).toBe(2);
     expect(lead).toMatchObject({
       id: leadGoalId,
       per: 'experiment',
@@ -118,47 +118,25 @@ describe('the goals read of a daily goal judged on weekdays', () => {
         failed: 'Under',
       },
     } as const;
-    const read = goalsReadOf({ version: 1, goals: [daily], workflows: [], notifiers: new Set() });
+    const read = goalsReadOf({ goals: [daily], held: [], workflows: [], notifiers: new Set() });
 
     expect(read.goals[0]?.window).toEqual(daily.window);
     expect(encoded(read)).toEqual(read);
   });
 });
 
-function goalAt(index: number): Goal {
-  const goal = goals[index];
-  if (goal === undefined) {
-    throw new Error(`The goals text holds no goal at ${String(index)}`);
-  }
-  return goal;
+function withTheLeadAgreed(standing: GoalsStanding, agreed: NonNullable<GoalsStanding['held'][number]['agreed']>) {
+  return { ...standing, held: standing.held.map((goal, index) => (index === 0 ? { ...goal, agreed } : goal)) };
 }
 
 describe('the yes to each goal on the goals read', () => {
-  const lead = goalAt(0);
-  const agreement = { goal: leadGoalId, version: 2, at: '2026-11-13T10:00:00.000Z', by: 'person:user_2ada' };
+  const agreed = { at: '2026-11-13T10:00:00.000Z', by: 'person:user_2ada', version: 2 };
 
-  it('is the yes recorded to a goal as it is saved now, and none for a goal with no yes', () => {
-    const read = goalsReadOf(standingOf([]), undefined, [], {
-      agreements: [{ ...agreement, content: { ...lead, retired: false } }],
-    });
+  it('is the yes standing on each goal as it is saved now, and none for a goal with no yes', () => {
+    const read = goalsReadOf(withTheLeadAgreed(standingOf([]), agreed));
 
-    expect(read.goals.map(({ agreed }) => agreed)).toEqual([
-      { at: '2026-11-13T10:00:00.000Z', by: 'person:user_2ada', version: 2 },
-      undefined,
-    ]);
+    expect(read.goals.map(({ agreed: yes }) => yes)).toEqual([agreed, undefined]);
     expect(read.goals[1]).not.toHaveProperty('agreed');
     expect(encoded(read)).toEqual(read);
-  });
-
-  it('is gone once the goal was saved with a change after the yes', () => {
-    const before = { ...lead, statement: 'An earlier statement.' };
-    const read = goalsReadOf(standingOf([]), undefined, [], {
-      agreements: [
-        { ...agreement, content: before },
-        { ...agreement, goal: plainGoalId, content: lead },
-      ],
-    });
-
-    expect(read.goals.map(({ agreed }) => agreed)).toEqual([undefined, undefined]);
   });
 });

@@ -913,6 +913,9 @@ importers:
       '@on.auto/operations':
         specifier: workspace:*
         version: link:../operations
+      '@on.auto/phrasing':
+        specifier: workspace:*
+        version: link:../phrasing
       '@on.auto/playbooks':
         specifier: workspace:*
         version: link:../playbooks

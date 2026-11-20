@@ -12,8 +12,9 @@ export interface GoalClock {
 }
 
 export interface ClockMoment extends GoalClock {
+  readonly definition: string;
   readonly goal: GoalRule | undefined;
-  readonly goalsVersion: number;
+  readonly goalVersion: number;
   readonly now: Instant;
   readonly reporting: boolean;
   readonly playbookRetired: boolean;
@@ -69,9 +70,9 @@ export function clockWorkAt(moment: ClockMoment): ClockWork {
   }
   return {
     open: {
-      assessment: assessmentIdOf({ goal: goal.id, window_start: span.opens }),
+      assessment: assessmentIdOf({ definition: moment.definition, window_start: span.opens }),
       opens: span.opens,
-      opened: openedData(goal, moment.goalsVersion, { window: span }),
+      opened: openedData(goal, moment.goalVersion, { window: span }),
     },
     nextAt,
   };

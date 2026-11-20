@@ -23,8 +23,7 @@ const source = {
 const opened = {
   type: 'goal_assessment_opened',
   data: {
-    goal: 'paying-customers',
-    goals_version: 2,
+    goal_version: 2,
     per: { id: 'experiment-7' },
     window,
     rule: { settles: 'at_close', target: { at_least: 1 }, window: { calendar: 'week' } },
@@ -77,10 +76,9 @@ const foldedOf = (facts: readonly Fact[], moment = '2026-11-09T18:00:00.000Z') =
   );
 
 describe('the row of an assessment', () => {
-  it('is kept from its opening, with its goal, its thing, its window and the milestones it pins', () => {
+  it('is kept from its opening, with the version of its goal, its thing, its window and the milestones it pins', () => {
     expect(foldedOf([opened])).toMatchObject({
-      goal: 'paying-customers',
-      goals_version: 2,
+      goal_version: 2,
       per_id: 'experiment-7',
       window_opens: at(window.opens),
       window_closes: at(window.closes),
@@ -214,11 +212,11 @@ describe('the row of an assessment closed', () => {
 });
 
 describe('the assessments of a goal by outcome', () => {
-  it('are kept in the order they ended, so a day, a last pass and a run of misses are each a range of one index', () => {
-    expect(assessmentRows.indexes.find(({ name }) => name === 'outcomes')).toEqual({
-      name: 'outcomes',
-      columns: ['goal', 'outcome', 'closed_at', 'row_key'],
-    });
+  it('are kept in the order they ended under the goal’s key, so a day, a last pass and a run of misses are each a range of one index', () => {
+    expect([assessmentRows.scopes, assessmentRows.indexes.find(({ name }) => name === 'outcomes')]).toEqual([
+      ['definition'],
+      { name: 'outcomes', columns: ['outcome', 'closed_at', 'row_key'] },
+    ]);
   });
 });
 
@@ -236,12 +234,12 @@ describe('the row of an assessment dismissed', () => {
 
   const dismissed = {
     type: 'goal_dismissed',
-    data: { goal: 'paying-customers', at: '2026-11-04T09:00:00.000Z', by: owner, requests: ['ask-1'] },
+    data: { at: '2026-11-04T09:00:00.000Z', by: owner, requests: ['ask-1'] },
   };
 
   const restored = {
     type: 'goal_restored',
-    data: { goal: 'paying-customers', at: '2026-11-04T10:00:00.000Z', by: owner },
+    data: { at: '2026-11-04T10:00:00.000Z', by: owner },
   };
 
   it('says it is dismissed, since when and by whom, from the latest of the two facts, and keeps what is due as it was', () => {
@@ -266,12 +264,12 @@ describe('the row of an assessment dismissed', () => {
     });
   });
 
-  it('is left out of what the core reads seek, and found by when it was dismissed across the playbook', () => {
+  it('is left out of what the core reads seek, and found by when it was dismissed', () => {
     expect(['in_flight', 'newest', 'waiting', 'stopped', 'dismissed'].map((name) => indexColumnsOf(name))).toEqual([
-      ['goal', 'open', 'dismissed', 'overdue', 'window_due', 'row_key'],
-      ['goal', 'open', 'dismissed', 'opened_at', 'row_key'],
-      ['goal', 'open', 'dismissed', 'next_milestone', 'row_key'],
-      ['goal', 'open', 'dismissed', 'stopped_at', 'row_key'],
+      ['open', 'dismissed', 'overdue', 'window_due', 'row_key'],
+      ['open', 'dismissed', 'opened_at', 'row_key'],
+      ['open', 'dismissed', 'next_milestone', 'row_key'],
+      ['open', 'dismissed', 'stopped_at', 'row_key'],
       ['dismissed', 'dismissed_at', 'row_key'],
     ]);
   });

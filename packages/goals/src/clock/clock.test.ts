@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import { bookOf, controls, sales } from '../assessor/assessor-ledger.ts';
+import { goalIdentityOf } from '../assessor/assessor-ledger.ts';
 import { assessmentsName } from '../goal-tables/assessment-rows.ts';
 import { clockKey, clocksName } from '../goal-tables/clock-rows.ts';
 import { type ClockHarness, clockHarnessOf } from './clock-harness.ts';
@@ -29,7 +30,7 @@ describe('the harness of the clock', () => {
     await harness.book.workflowSaved('check', 1, checking);
 
     await expect(harness.goalsSaved([controls], '2026-11-09T00:00:00.000Z')).rejects.toThrow(
-      `Rows left due at 2026-11-09T00:00:00.000Z: ${sales.org}/${sales.playbook}/${clocksName}/${clockKey}`,
+      `Rows left due at 2026-11-09T00:00:00.000Z: definition/${sales.org}/${goalIdentityOf('controls-hold')}/${clocksName}/${clockKey}`,
     );
   });
 });
@@ -113,7 +114,10 @@ describe('trace C, a weekly cost per lead in Los Angeles, through the clock', ()
     const harness = clockHarnessOf('2026-10-20T00:00:00.000Z');
     await harness.book.workflowSaved('cost', 1, costing);
     await harness.goalsSaved([costPerLead], '2026-10-25T12:00:00.000Z');
-    const week = assessmentIdOf({ goal: 'cost-per-lead', window_start: Date.parse('2026-10-26T07:00:00.000Z') });
+    const week = assessmentIdOf({
+      definition: goalIdentityOf('cost-per-lead'),
+      window_start: Date.parse('2026-10-26T07:00:00.000Z'),
+    });
     const progress = { cost: 70, final: false, through: '2026-10-28T00:00:00-07:00' };
     const closing = { cost: 42, final: true, through: '2026-11-02T00:00:00-08:00' };
 
@@ -153,7 +157,10 @@ describe('downtime across several windows', () => {
   it('opens only the current window and settles what fell due meanwhile in one wake', async () => {
     const harness = await checked(controls, '2026-11-08T12:00:00.000Z');
     await harness.until('2026-11-09T00:00:00.000Z');
-    const monday = assessmentIdOf({ goal: 'controls-hold', window_start: Date.parse('2026-11-09T00:00:00.000Z') });
+    const monday = assessmentIdOf({
+      definition: goalIdentityOf('controls-hold'),
+      window_start: Date.parse('2026-11-09T00:00:00.000Z'),
+    });
 
     const performs = await harness.performedAt(Date.parse('2026-11-12T12:00:00.000Z'));
 
@@ -162,7 +169,7 @@ describe('downtime across several windows', () => {
       '2026-11-09T00:00:00.000Z 2026-11-10T00:00:00.000Z 2026-11-10T01:00:00.000Z',
       '2026-11-12T00:00:00.000Z 2026-11-13T00:00:00.000Z 2026-11-13T01:00:00.000Z',
     ]);
-    expect(await harness.book.factsOf(`assessments/${monday}`)).toEqual([
+    expect(await harness.book.factsOf('controls-hold', `assessments/${monday}`)).toEqual([
       'goal_assessment_opened',
       'goal_overdue',
       'goal_assessed',

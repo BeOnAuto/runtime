@@ -11,7 +11,7 @@ export const activityKinds: readonly ActivityKind[] = ['needs_you', 'broken', 'n
 export const seenKinds: ReadonlySet<ActivityKind> = new Set(['new', 'comment']);
 
 export interface GoalShown {
-  readonly goal: string;
+  readonly goalKey: string;
   readonly outcome: 'passed' | 'failed' | 'overdue';
   readonly title: string | null;
   readonly says: string | null;

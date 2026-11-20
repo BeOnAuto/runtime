@@ -56,7 +56,7 @@ const observed = (run: string, parts: Partial<Observation>): Observation => ({
 });
 
 const observing = (goal: GoalRule, state: AssessmentState, ...observations: readonly Observation[]) =>
-  factsObserving(state, { goal, goalsVersion: 1, now: 0, observations });
+  factsObserving(state, { goal, goalVersion: 1, now: 0, observations });
 
 describe('the milestone an after window waits for', () => {
   it('is named by an after window and by no calendar window', () => {

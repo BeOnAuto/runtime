@@ -2,7 +2,11 @@ import { lineageAttributeNames } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import type { RecordedGoalAgreementsEvent, RecordedGoalsEvent } from '../goals/goals-facts.ts';
+import type {
+  RecordedGoalEvent,
+  RecordedPlaybookGoalAgreementsEvent,
+  RecordedPlaybookGoalsEvent,
+} from '../goals/goals-facts.ts';
 import type { RecordedPageEvent } from '../page/page-facts.ts';
 import type { DefinitionEvent } from '../registry/definition-events.ts';
 import { composedFactsOf, type CapabilityFacts } from '../run-work/declared-facts.ts';
@@ -19,8 +23,9 @@ export const callerSourcePrefix = '/callers/';
 type PlaybookFeedType =
   | DefinitionEvent['type']
   | RecordedPageEvent['type']
-  | RecordedGoalsEvent['type']
-  | RecordedGoalAgreementsEvent['type']
+  | RecordedPlaybookGoalsEvent['type']
+  | RecordedPlaybookGoalAgreementsEvent['type']
+  | RecordedGoalEvent['type']
   | 'playbook_import_started'
   | 'playbook_imported'
   | EventPublished['type']
@@ -38,6 +43,11 @@ const playbookFeedTypes: Readonly<Record<PlaybookFeedType, true>> = {
   playbook_page_saved: true,
   playbook_goals_saved: true,
   playbook_goals_agreed: true,
+  goal_created: true,
+  goal_updated: true,
+  goal_reordered: true,
+  goal_agreed: true,
+  goal_removed: true,
   playbook_import_started: true,
   playbook_imported: true,
   event_published: true,

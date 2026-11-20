@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { summaryRunIdOf } from '../assessments/assessment-identity.ts';
 import { noticeDaysName } from '../goal-tables/notice-days.ts';
 import { aDay } from '../goal-windows/goal-durations.ts';
-import { performedAt, sales } from '../notices/notice-samples.ts';
+import { experimentsGoal, performedAt, sales } from '../notices/notice-samples.ts';
 import { noticesSeenOf } from '../notices/notices-seen.ts';
 import {
   friday,
@@ -195,7 +195,7 @@ describe('an hourly summary started and not yet seen when the next hour comes', 
   it('records the earlier one seen when its run has started, and sends the next from its due in the same pass', async () => {
     const summary = await summaryBookOf({ goals: [hourly] });
     await performedAt(summary.work, friday);
-    await summary.book.runStarted(summaryRunIdOf(hourly.id, friday), reference(friday));
+    await summary.book.runStarted(summaryRunIdOf(experimentsGoal, friday), reference(friday));
     await performedAt(summary.work, friday + hour);
 
     expect(windowsOf(summary.starts)).toEqual([

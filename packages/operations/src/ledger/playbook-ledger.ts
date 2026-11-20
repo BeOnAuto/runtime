@@ -2,6 +2,7 @@ import { Context, Effect, Option } from 'effect';
 
 import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import {
+  definitionBoundProjectionReader,
   playbookBoundAppendedFactsReader,
   playbookBoundProjectionReader,
   playbookBoundRunOutcomesReader,
@@ -43,6 +44,7 @@ export function playbookReaderOf(ledger: LedgerPorts, address: PlaybookAddress):
     ofDefinition: (definition) => ({
       ...prefixedReader(ledger, definitionPrefix(definition)),
       ...prefixedAges(ledger, definitionPrefix(definition)),
+      ...definitionBoundProjectionReader(ledger, { org: address.org, definition }),
     }),
     holderOfName: (definitionType, name) => ledger.holderOfName({ playbookKey: prefix, definitionType, name }),
     nameHeldBy: (definition) =>

@@ -5,7 +5,7 @@ import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
-import { servingReasoningWithGoals } from '../testing/settings/goals-kept.ts';
+import { savedSourceOf, servingReasoningWithGoals } from '../testing/settings/goals-kept.ts';
 
 const goals = [
   '- id: first-customer',
@@ -96,7 +96,7 @@ async function aPlaybookWithItsMethod({ call }: ReasoningServer): Promise<void> 
 const exportedPackage = {
   format: 1,
   page,
-  goals,
+  goals: savedSourceOf(goals),
   definitions: [
     { type: 'reasoning', ...answer, paused: false },
     { type: 'reasoning', ...brief, paused: true },

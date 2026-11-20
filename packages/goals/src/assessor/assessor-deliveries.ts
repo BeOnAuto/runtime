@@ -1,6 +1,6 @@
 import {
   playbookCallerOf,
-  streamPrefixOfPlaybook,
+  type Context,
   type Decider,
   type Ledger,
   type PlaybookAddress,
@@ -14,15 +14,16 @@ import { factsObserving, type Observing } from '../assessments/observing.ts';
 import {
   AssessmentEventSchema,
   GoalRefusalEventSchema,
-  assessmentsKind,
-  goalRefusalsKind,
+  assessmentStreamOf,
+  refusalsStreamOf,
+  type GoalAddress,
   type RecordedAssessmentEvent,
   type RecordedGoalRefusalEvent,
 } from '../goal-facts/goal-facts.ts';
 import { observationsName, observedEntryKeyOf } from '../goal-tables/observation-rows.ts';
 import { refusalsName, refusalStatus } from '../goal-tables/refusal-rows.ts';
 import type { RefusedObservation } from '../observations/observation.ts';
-import { refusalStreamIdOf, type AssessmentPlanned, type RefusalPlanned } from './planned-runs.ts';
+import type { AssessmentPlanned, RefusalPlanned } from './planned-runs.ts';
 
 export interface DeliveryParts {
   readonly ledger: Ledger['Service'];
@@ -31,13 +32,14 @@ export interface DeliveryParts {
   readonly now: () => number;
 }
 
-interface Acting {
+export interface Acting {
   readonly by: string;
   readonly at: number;
+  readonly definition: string;
 }
 
-function contextOf({ by, at }: Acting) {
-  return { at: new Date(at).toISOString(), by };
+export function goalContextOf({ by, at, definition }: Acting): Context {
+  return { at: new Date(at).toISOString(), by, definitionId: definition };
 }
 
 function assessmentDecider(
@@ -52,7 +54,7 @@ function assessmentDecider(
       decided(facts.length > 0);
       return Result.succeed(facts);
     },
-    context: () => contextOf(acting),
+    context: () => goalContextOf(acting),
     eventSchema: AssessmentEventSchema,
   };
 }
@@ -62,7 +64,7 @@ function refusalDecider(acting: Acting): Decider<null, RefusedObservation, Recor
     initialState: null,
     evolve: () => null,
     decide: ({ run, detail }) => Result.succeed([{ type: 'goal_observation_refused', data: { run, detail } }]),
-    context: () => contextOf(acting),
+    context: () => goalContextOf(acting),
     eventSchema: GoalRefusalEventSchema,
   };
 }
@@ -71,14 +73,14 @@ function failedDelivery(cause: Cause.Cause<unknown>): DeliveryFailed {
   return new DeliveryFailed({ detail: String(Cause.squash(cause)) });
 }
 
-function actingNow({ playbook, now }: DeliveryParts): Acting {
-  return { by: playbookCallerOf(playbook).id, at: now() };
+function goalOf({ playbook }: DeliveryParts, definition: string): GoalAddress {
+  return { org: playbook.org, definition };
 }
 
-function refusalRowOf(parts: DeliveryParts, refusal: Pick<RefusedObservation, 'goal' | 'workflow'>) {
+function refusalRowOf(parts: DeliveryParts, goal: GoalAddress, workflow: string) {
   return Effect.map(
-    parts.ledger.readProjectedRows(refusalsName, parts.playbook, {
-      where: [{ column: 'row_key', equals: refusalStreamIdOf(refusal) }],
+    parts.ledger.readProjectedRows(refusalsName, goal, {
+      where: [{ column: 'row_key', equals: workflow }],
       orderBy: [],
       order: 'asc',
       limit: 1,
@@ -92,15 +94,28 @@ function refusedAtOf(row: ProjectedRow | undefined): number | undefined {
   return typeof at === 'number' ? at : undefined;
 }
 
-function clearingOf(parts: DeliveryParts, { goal, observations }: AssessmentPlanned) {
+function observedSinceIn(parts: DeliveryParts, goal: GoalAddress, observedKeys: readonly string[], at: unknown) {
+  return Effect.map(
+    Effect.forEach(observedKeys, (key) =>
+      parts.ledger.countProjectedRows(observationsName, goal, [
+        { column: 'row_key', equals: key },
+        { column: 'observed_at', after: Number(at) },
+      ]),
+    ),
+    (counts: readonly number[]) => counts.some((count) => count > 0),
+  );
+}
+
+function clearingOf(parts: DeliveryParts, { held, observations }: AssessmentPlanned) {
   return Effect.gen(function* () {
-    const refusedAt = refusedAtOf(yield* refusalRowOf(parts, { goal: goal.id, workflow: parts.workflow }));
+    const goal = goalOf(parts, held.definition);
+    const refusedAt = refusedAtOf(yield* refusalRowOf(parts, goal, parts.workflow));
     if (refusedAt === undefined) {
       return [];
     }
     const later = observations.filter(({ at }) => at > refusedAt);
     const clearing = yield* Effect.forEach(later, ({ source }) =>
-      Effect.map(observedSinceIn(parts, [observedEntryKeyOf(source)], refusedAt), (counted) =>
+      Effect.map(observedSinceIn(parts, goal, [observedEntryKeyOf(source)], refusedAt), (counted) =>
         counted ? [] : [source.record],
       ),
     );
@@ -110,16 +125,16 @@ function clearingOf(parts: DeliveryParts, { goal, observations }: AssessmentPlan
 
 function executedWith(parts: DeliveryParts, planned: AssessmentPlanned, clearing: readonly string[]) {
   return Effect.suspend(() => {
-    const acting = actingNow(parts);
+    const { assessment, held, observations } = planned;
+    const acting = { by: playbookCallerOf(parts.playbook).id, at: parts.now(), definition: held.definition };
     let appended = false;
-    const { assessment, goal, goalsVersion, observations } = planned;
     return Effect.map(
       parts.ledger.execute(
-        `${streamPrefixOfPlaybook(parts.playbook)}${assessmentsKind}/${assessment}`,
+        assessmentStreamOf(goalOf(parts, held.definition), assessment),
         assessmentDecider(acting, (decided) => {
           appended = decided;
         }),
-        { goal, goalsVersion, observations, now: acting.at, clearing },
+        { goal: held.goal, goalVersion: held.version, observations, now: acting.at, clearing },
       ),
       () => appended,
     );
@@ -138,35 +153,19 @@ function observed(parts: DeliveryParts, planned: AssessmentPlanned) {
   });
 }
 
-function observedSinceIn(parts: DeliveryParts, observedKeys: readonly string[], at: unknown) {
-  return Effect.map(
-    Effect.forEach(observedKeys, (key) =>
-      parts.ledger.countProjectedRows(observationsName, parts.playbook, [
-        { column: 'row_key', equals: key },
-        { column: 'observed_at', after: Number(at) },
-      ]),
-    ),
-    (counts: readonly number[]) => counts.some((count) => count > 0),
-  );
-}
-
-function refused(parts: DeliveryParts, { refused: refusal, endedAt, observedKeys }: RefusalPlanned) {
+function refused(parts: DeliveryParts, { definition, refused: refusal, endedAt, observedKeys }: RefusalPlanned) {
   return Effect.gen(function* () {
-    const acting = { by: playbookCallerOf(parts.playbook).id, at: endedAt };
-    const id = refusalStreamIdOf(refusal);
-    const kept = yield* refusalRowOf(parts, refusal);
+    const goal = goalOf(parts, definition);
+    const acting = { by: playbookCallerOf(parts.playbook).id, at: endedAt, definition };
+    const kept = yield* refusalRowOf(parts, goal, refusal.workflow);
     const status = refusalStatus(kept, refusal, endedAt);
     if (
       status === 'recorded' ||
-      (status === 'standing' && !(yield* observedSinceIn(parts, observedKeys, kept?.['at'])))
+      (status === 'standing' && !(yield* observedSinceIn(parts, goal, observedKeys, kept?.['at'])))
     ) {
       return;
     }
-    yield* parts.ledger.execute(
-      `${streamPrefixOfPlaybook(parts.playbook)}${goalRefusalsKind}/${id}`,
-      refusalDecider(acting),
-      refusal,
-    );
+    yield* parts.ledger.execute(refusalsStreamOf(goal, refusal.workflow), refusalDecider(acting), refusal);
   });
 }
 

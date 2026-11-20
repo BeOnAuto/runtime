@@ -1,4 +1,10 @@
-import type { PlaybookAddress, PlaybookProjectedRow, ProjectedCondition, ProjectedRow } from '@on.auto/operations';
+import {
+  addressOfTheRow,
+  type PlaybookAddress,
+  type PlaybookProjectedRow,
+  type ProjectedCondition,
+  type ProjectedRow,
+} from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { NoticeChange } from '../assessments/assessment-identity.ts';
@@ -53,8 +59,8 @@ function heldPast(next: number | null, { least, retired }: Required<Pick<Held, '
 export function advancedPast(ports: NoticePorts, owing: PlaybookProjectedRow, waits: Waits, at: Held) {
   const { now, least = now } = at;
   const holding = { ...at, least };
-  const { org, playbook, key } = owing;
-  const address = { org, playbook };
+  const { key } = owing;
+  const address = addressOfTheRow(owing);
   return Effect.flatMap(
     ports.ledger.readProjectedRows(assessmentsName, address, {
       where: [{ column: 'row_key', equals: key }],

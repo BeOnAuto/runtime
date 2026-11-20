@@ -2,7 +2,6 @@ import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { passedRun } from '../../testing/goals/notice-facts.ts';
 import { playbookToldBy, servingGoalNotices, type NoticeServer } from '../../testing/goals/notice-servers.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
 import { until } from '../../testing/waiting/until.ts';
@@ -61,7 +60,7 @@ describe('the link in a notice, on a Node server that keeps goals', () => {
   it('opens the goal and its thing in Studio on this runtime, with no request in progress, and reads delivered once sent', async () => {
     const served = await servingGoalNotices();
     await playbookToldBy(served);
-    await served.assessed('now', Date.now());
+    const { passedRun } = await served.assessed('now', Date.now());
     await until(
       () => served.runs(),
       (runs) => runs.includes(passedRun),
@@ -86,7 +85,7 @@ describe('a notice that was started and not delivered, on a Node server that kee
     const served = await servingGoalNotices({ clock });
     await playbookToldBy(served);
     await served.chat.close();
-    await served.assessed('now', at);
+    const { passedRun } = await served.assessed('now', at);
     await until(
       () => served.runs(),
       (runs) => runs.includes(passedRun),

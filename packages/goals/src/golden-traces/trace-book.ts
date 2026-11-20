@@ -58,7 +58,9 @@ function rung(
   return [...opened, ...judged];
 }
 
-export function traceBookOf(first: GoalRule, firstSavedAt: Instant): TraceBook {
+export const tracedGoalId = '019a8f00-0000-7000-8000-00000000a001';
+
+export function traceBookOf(first: GoalRule, firstSavedAt: Instant, definition = tracedGoalId): TraceBook {
   const ledger = traceLedgerOf();
   let latestOpened: Instant | undefined;
   const clock: Clock = {
@@ -69,11 +71,11 @@ export function traceBookOf(first: GoalRule, firstSavedAt: Instant): TraceBook {
     },
   };
   const refused: RefusedObservation[] = [];
-  let traced: TracedGoal = { goal: first, goalsVersion: 1 };
+  let traced: TracedGoal = { definition, goal: first, goalVersion: 1 };
   let records = 0;
   return {
     change: (goal) => {
-      traced = { goal, goalsVersion: traced.goalsVersion + 1 };
+      traced = { ...traced, goal, goalVersion: traced.goalVersion + 1 };
     },
     run: (run) => {
       records += 1;

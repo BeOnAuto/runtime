@@ -70,6 +70,8 @@ const fanningOut = [
   `  - fan: { set: { ${lists.map((list, index) => `${list}: ${thingsOf(index)}`).join(', ')} } }`,
 ];
 
+const goalsHeld = 3;
+
 const olderTally = [...everyMinute, 'do:', '  - count: { set: { orders: 3 } }'];
 
 function aLedger(): TemporaryLedger {
@@ -128,7 +130,7 @@ describe('the assessor on a Node server', () => {
     expect(await savedWorkflow(watched.server, 'tally', tallying(3))).toBe(201);
 
     await ranOnce(watched, 'tally');
-    const opened = await rowsHolding(watched, (rows) => rows.some(({ goal }) => goal === plainGoalId));
+    const opened = await rowsHolding(watched, (rows) => rows.length > 0, plainGoalId);
     expect(await savedWorkflow(watched.server, 'tally', tallying(30))).toBe(200);
     await ranOnce(watched, 'tally');
     await rowsHolding(watched, (rows) => rows.some(({ verdict }) => verdict === 'passed'));
@@ -142,15 +144,14 @@ describe('the assessor on a Node server', () => {
     const facts = plainFacts(goalFactsIn(ledger));
     const observed = ofType(facts, 'goal_observed').map(({ data }) => data);
 
-    expect(opened.find(({ goal }) => goal === plainGoalId)).toMatchObject({ verdict: 'open', open: true });
+    expect(opened[0]).toMatchObject({ verdict: 'open', open: true });
     expect(facts.map(({ type }) => type)).toEqual([
       'goal_assessment_opened',
       ...observed.map(() => 'goal_observed'),
       'goal_assessed',
     ]);
     expect(facts[0]?.data).toEqual({
-      goal: plainGoalId,
-      goals_version: 1,
+      goal_version: 1,
       rule: { settles: 'on_crossing', target: { at_least: 20 } },
       milestones: [],
     });
@@ -216,11 +217,13 @@ describe('the assessor on a Node server', () => {
     ).toEqual([800, 800, 800]);
     expect([watched.watch.sessions(), watched.watch.evaluations()]).toEqual([runs.settled, 800 * runs.settled]);
     expect(askedLike(asked, /^load .*definitions\/workflow$/u)).toHaveLength(1);
-    expect(askedLike(asked, /^load .*goals\/playbook$/u)).toHaveLength(runs.settled);
+    expect(askedLike(asked, /^load .*goals\/goal$/u)).toHaveLength(goalsHeld * runs.settled);
     expect(askedLike(asked, /^(chain|content|recorded)/u).length).toBeLessThanOrEqual(2 * runs.settled);
     expect([executed.length, new Set(executed).size]).toEqual([800 * runs.settled + failed, 800]);
     expect(passes).toBeGreaterThanOrEqual(8 * runs.settled);
-    expect(askedLike(asked, /^(load|execute|rows|count)/u).length).toBe(1 + runs.settled + executed.length + passes);
+    expect(askedLike(asked, /^(load|execute|rows|count)/u).length).toBe(
+      1 + goalsHeld * runs.settled + executed.length + passes,
+    );
   }, 240_000);
 });
 

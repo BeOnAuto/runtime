@@ -1,3 +1,4 @@
+import { goalType } from '@on.auto/definitions/goals';
 import {
   OrgReader,
   type BoundProjectionReader,
@@ -12,9 +13,17 @@ import { readsAtOnce } from '../operations/activity-tables.ts';
 import type { OpenRequestSetAside, RequestSetAside } from '../operations/needs-you.ts';
 import { requestsName } from '../projections/request-rows.ts';
 
-export type StandingSetAside = (
-  read: BoundProjectionReader['readProjectedRows'],
-) => Effect.Effect<ReadonlyMap<string, RequestSetAside>>;
+interface NamedGoal {
+  readonly definitionKey: string;
+  readonly name: string;
+}
+
+interface GoalRowsOfAPlaybook {
+  readonly read: BoundProjectionReader['readProjectedRows'];
+  readonly goalNames: Effect.Effect<readonly NamedGoal[]>;
+}
+
+export type StandingSetAside = (rows: GoalRowsOfAPlaybook) => Effect.Effect<ReadonlyMap<string, RequestSetAside>>;
 
 export interface GoalsRead {
   readonly read: PlaybookGoals['read'];
@@ -48,7 +57,10 @@ function openRequestsAmong(playbook: string, keys: readonly string[]) {
 function openSetAsideIn(playbook: string, standing: StandingSetAside) {
   return Effect.gen(function* () {
     const reader = yield* OrgReader;
-    const setAside = yield* standing((projection, query) => reader.readPlaybookRows(playbook, projection, query));
+    const setAside = yield* standing({
+      read: (projection, query) => reader.readPlaybookRows(playbook, projection, query),
+      goalNames: reader.namesHeldInPlaybook(playbook, goalType),
+    });
     const requests = setAside.size === 0 ? [] : yield* openRequestsAmong(playbook, [...setAside.keys()]);
     const kept = requests.flatMap(({ key, row }): readonly (readonly [string, OpenRequestSetAside])[] => {
       const mark = setAside.get(key);

@@ -5,13 +5,14 @@ import { describe, expect, it } from 'vitest';
 import { assessmentsName } from '../goal-tables/assessment-rows.ts';
 import {
   afterSpan,
+  type AssessmentBook,
   assessmentBookOf,
   day,
   experimentsGoal,
   firstDay,
+  heldGoalOf,
   instantText,
   thingAt,
-  type AssessmentBook,
 } from './assessment-samples.ts';
 import { goalAssessmentsIn } from './goal-assessments.ts';
 
@@ -25,7 +26,7 @@ function stoppedColumnsOf(book: AssessmentBook, id: string) {
   return book.inThePlaybook(
     PlaybookReader.use((reader) =>
       Effect.map(
-        reader.readProjectedRows(assessmentsName, {
+        reader.ofDefinition(heldGoalOf(experimentsGoal).definition).readProjectedRows(assessmentsName, {
           where: [{ column: 'row_key', equals: id }],
           orderBy: [],
           order: 'asc',
@@ -38,7 +39,7 @@ function stoppedColumnsOf(book: AssessmentBook, id: string) {
 }
 
 function read(book: AssessmentBook) {
-  return book.inThePlaybook(goalAssessmentsIn(experimentsGoal));
+  return book.inThePlaybook(goalAssessmentsIn(heldGoalOf(experimentsGoal)));
 }
 
 function liveThing(book: AssessmentBook, per: string): Promise<string> {

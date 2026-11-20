@@ -17,6 +17,7 @@ import { answerOf, fact, made, shared as namesShared, unbounded } from '../names
 import { PayloadOffloading, textBytesOf, textPayloadText } from '../payloads/payload-texts.ts';
 import { PayloadsShared, sharedPayloadsWithin } from '../payloads/shared-payloads.ts';
 import { remarkedContext, remarkFacts, RemarkFactSchema } from '../projections/remark-rows.ts';
+import { topicFacts, topicRows } from '../projections/topic-rows.ts';
 import { cursorOfParts } from '../reading/cursor-parts.ts';
 import { acmeAdmin, globexAdmin } from '../testing/callers.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
@@ -169,6 +170,30 @@ describe('the definitions of one playbook, for code that holds the whole ledger'
         definitionBoundStreamReader(ledger.service, { org: 'acme', definition: 'd1' }).load('notes', notebook),
       ),
     ).toMatchObject({ state: [{ name: 'anvil', text: 'heavy' }] });
+  });
+
+  it("reads and counts the rows a projection keeps under one definition's key alone", async () => {
+    const ledger = memoryLedger(undefined, [{ ...topicRows, scopes: ['definition'] }]);
+    const opened = (definition: string, topic: string) =>
+      Effect.runPromise(
+        ledger.service.execute(`definition/acme/${definition}/notes/n1`, topicFacts, [
+          { type: 'topic_opened', data: { topic, at: 0 } },
+        ]),
+      );
+    await opened('d1', 'spring');
+    await opened('d2', 'autumn');
+    const read = PlaybookReader.use((reader) =>
+      Effect.all([
+        reader.ofDefinition('d1').readProjectedRows('topics', { where: [], orderBy: [], order: 'asc', limit: 10 }),
+        reader.ofDefinition('d2').countProjectedRows('topics', []),
+      ]),
+    );
+
+    const [rows, counted] = await Effect.runPromise(
+      Effect.provideContext(read, playbookLedgerOf(ledger.service, { org: 'acme', playbook: 'alpha' })),
+    );
+
+    expect([rows.map(({ definition, key }) => [definition, key]), counted]).toEqual([[['d1', 'spring']], 1]);
   });
 
   it('decides on the streams of several of its definitions at once, each under its own key, and refuses a malformed stream', async () => {

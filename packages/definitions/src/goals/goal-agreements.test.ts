@@ -1,253 +1,150 @@
-import { Caller, playbookLedgerOf, type CallerIdentity } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
-import { Effect, Result } from 'effect';
+import type { CallerIdentity } from '@on.auto/operations';
+import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { acmeAdmin, adaOfAcme, savedIn } from '../testing/callers.ts';
-import {
-  agreementStanding,
-  goalAgreementsIn,
-  goalAgreementsStream,
-  isSameContent,
-  playbookGoalsAgreed,
-  type GoalsAgreeing,
-} from './goal-agreements.ts';
-import { changed, controls, experiments, oneOff, textOf } from './goal-examples.ts';
-import { goalsDocumentOf } from './goals-check.ts';
-import { GoalAgreementsEventSchema, type RecordedGoalAgreementsEvent } from './goals-facts.ts';
-import { playbookGoalsSaved } from './goals-stream.ts';
+import { acmeAdmin, adaOfAcme } from '../testing/callers.ts';
+import { goalsBook, goalsDocumentOfTheExamples as documentOf } from '../testing/goals-book.ts';
+import { playbookGoalsAgreed, type GoalSeen } from './goal-agreements.ts';
+import { changed, controls, experiments, oneOff } from './goal-examples.ts';
+import { playbookGoalsSaved } from './goals-saved.ts';
+import { goalVersionIn, playbookGoalsIn, type PlaybookGoals } from './playbook-goals.ts';
 
 const someWords: unknown = expect.any(String);
 
-function documentOf(goals: readonly unknown[]) {
-  return Result.getOrThrow(goalsDocumentOf(textOf(goals)));
-}
-
-type Goal = ReturnType<typeof documentOf>['goals'][number];
-
-const factsFold = {
-  initialState: [],
-  evolve: (seen: readonly RecordedGoalAgreementsEvent[], fact: RecordedGoalAgreementsEvent) => [...seen, fact],
-  eventSchema: GoalAgreementsEventSchema,
-};
-
-const as =
-  (caller: CallerIdentity) =>
-  <A, E>(effect: Effect.Effect<A, E, Caller>) =>
-    Effect.runPromise(Effect.result(effect.pipe(Effect.provideService(Caller, caller))));
-
 function inThePlaybook() {
-  const ledger = memoryLedger().service;
-  const context = playbookLedgerOf(ledger, savedIn);
+  const book = goalsBook();
+  const reading = async (): Promise<PlaybookGoals> => Result.getOrThrow(await book.as()(playbookGoalsIn));
   return {
+    ...book,
     saving: async (goals: readonly unknown[]) => {
-      const saved = await as(acmeAdmin)(
-        playbookGoalsSaved({ document: documentOf(goals), assessed: new Set() }).pipe(Effect.provide(context)),
-      );
-      return Result.getOrThrow(saved).goals.version;
+      await book.as()(playbookGoalsSaved({ document: documentOf(goals), assessed: new Set() }));
+      return reading();
     },
-    agreeing: (agreeing: GoalsAgreeing, caller = adaOfAcme) =>
-      as(caller)(playbookGoalsAgreed(agreeing).pipe(Effect.provide(context))),
-    reading: () => Effect.runPromise(goalAgreementsIn.pipe(Effect.provide(context))),
-    facts: () =>
-      Effect.runPromise(ledger.load(`playbook/${savedIn.org}/${savedIn.playbook}/${goalAgreementsStream}`, factsFold)),
+    agreeing: (goals: readonly GoalSeen[], caller: CallerIdentity = adaOfAcme) =>
+      book.as(caller)(playbookGoalsAgreed({ goals })),
+    agreedOf: async () =>
+      (await reading()).held.map(({ goal, agreed }) => ({ id: goal.id, version: agreed?.version, by: agreed?.by })),
   };
 }
 
-const [experimentsGoal, controlsGoal] = documentOf([experiments, controls]).goals;
-
-function goalOf(goal: Goal | undefined): Goal {
-  if (goal === undefined) {
-    throw new Error('The examples hold no such goal');
-  }
-  return goal;
+function seenIn(goals: PlaybookGoals, ...ids: readonly string[]): readonly GoalSeen[] {
+  return ids.map((id) => ({ id, version: goalVersionIn(goals, id) }));
 }
 
+const waiting = { version: undefined, by: undefined };
+
 describe('agreeing the goals of a playbook', () => {
-  it('records one fact with the yes to every goal that is not retired, at the version the person saw', async () => {
+  it('records goal_agreed on each goal named, at the version the person saw, and answers the goals with the yes on each', async () => {
     const book = inThePlaybook();
-    const version = await book.saving([experiments, controls, { ...oneOff, retired: true }]);
+    const saved = await book.saving([experiments, controls, oneOff]);
 
-    const agreed = await book.agreeing({ version });
-    const { state } = await book.facts();
+    const agreed = await book.agreeing(seenIn(saved, experiments.id, controls.id));
 
-    expect(Result.isSuccess(agreed)).toBe(true);
-    expect(state.map(({ type, context }) => ({ type, by: context.by }))).toEqual([
-      { type: 'playbook_goals_agreed', by: adaOfAcme.id },
+    expect(Result.getOrThrow(agreed).held.map(({ goal, agreed: yes }) => [goal.id, yes?.version])).toEqual([
+      [experiments.id, 1],
+      [controls.id, 1],
+      [oneOff.id, undefined],
     ]);
-    expect(state[0]?.data.agreements.map(({ goal, version: at, by, content }) => ({ goal, at, by, content }))).toEqual([
-      { goal: experiments.id, at: 1, by: adaOfAcme.id, content: experimentsGoal },
-      { goal: controls.id, at: 1, by: adaOfAcme.id, content: controlsGoal },
+    expect(
+      (await book.factsOf(controls.id)).map(({ type, data, context }) => ({ type, data, by: context.by })),
+    ).toEqual([
+      expect.objectContaining({ type: 'goal_created' }),
+      { type: 'goal_agreed', data: { version: 1 }, by: adaOfAcme.id },
     ]);
-    expect(Result.getOrThrow(agreed).agreements).toEqual(await book.reading());
-    expect(Result.getOrThrow(agreed).goals.version).toBe(1);
-  });
-});
-
-describe('agreeing some of the goals', () => {
-  it('records the yes to the goals named alone, and keeps the yes already given to the others', async () => {
-    const book = inThePlaybook();
-    const version = await book.saving([experiments, controls]);
-    await book.agreeing({ version, ids: [controls.id] });
-    const first = await book.reading();
-
-    await book.agreeing({ version, ids: [experiments.id] }, acmeAdmin);
-    const both = await book.reading();
-
-    expect(first.agreements.map(({ goal }) => goal)).toEqual([controls.id]);
-    expect(both.agreements.map(({ goal, by }) => ({ goal, by }))).toEqual([
-      { goal: experiments.id, by: acmeAdmin.id },
-      { goal: controls.id, by: adaOfAcme.id },
-    ]);
-    expect(both.agreements[1]).toEqual(first.agreements[0]);
+    expect((await book.factsOf(oneOff.id)).map(({ type }) => type)).toEqual(['goal_created']);
   });
 
-  it('appends nothing when every goal named is already agreed as it is saved', async () => {
+  it('keeps the yes already given to the others, records the yes to one named twice once, and nothing for a yes that stands', async () => {
     const book = inThePlaybook();
-    const version = await book.saving([experiments, controls]);
-    await book.agreeing({ version });
-    const before = await book.reading();
+    const saved = await book.saving([experiments, controls]);
+    await book.agreeing(seenIn(saved, controls.id));
 
-    const again = await book.agreeing({ version, ids: [experiments.id] });
+    await book.agreeing([...seenIn(saved, experiments.id), ...seenIn(saved, experiments.id)], acmeAdmin);
+    const again = await book.agreeing(seenIn(saved, experiments.id, controls.id));
 
-    expect(Result.getOrThrow(again).agreements).toEqual(before);
-    expect((await book.facts()).version).toBe(1);
+    expect(Result.isSuccess(again)).toBe(true);
+    expect(await book.agreedOf()).toEqual([
+      { id: experiments.id, version: 1, by: acmeAdmin.id },
+      { id: controls.id, version: 1, by: adaOfAcme.id },
+    ]);
+    expect((await book.factsOf(experiments.id)).map(({ type }) => type)).toEqual(['goal_created', 'goal_agreed']);
   });
 });
 
 describe('agreeing the goals after they change', () => {
-  it('asks for a new yes for a goal saved again with a change, and keeps the yes of a goal left as it was', async () => {
+  it('asks for a new yes for a goal saved again with a change, at its new version, and keeps the yes of a goal left as it was', async () => {
     const book = inThePlaybook();
-    await book.saving([experiments, controls]);
-    await book.agreeing({ version: 1 });
+    const first = await book.saving([experiments, controls]);
+    await book.agreeing(seenIn(first, experiments.id, controls.id));
     const restated = changed(experiments, ['statement'], 'Bring in paying customers through every experiment.');
-    const version = await book.saving([restated, controls]);
-    const [changedGoal, keptGoal] = documentOf([restated, controls]).goals;
-    const standing = await book.reading();
 
-    expect(agreementStanding(goalOf(changedGoal), standing)).toBeUndefined();
-    expect(agreementStanding(goalOf(keptGoal), standing)).toMatchObject({ goal: controls.id, version: 1 });
+    const second = await book.saving([restated, controls]);
 
-    await book.agreeing({ version });
-    const after = await book.reading();
-
-    expect(agreementStanding(goalOf(changedGoal), after)).toMatchObject({ goal: experiments.id, version: 2 });
-    expect(agreementStanding(goalOf(keptGoal), after)).toMatchObject({ goal: controls.id, version: 1 });
+    expect(await book.agreedOf()).toEqual([
+      { id: experiments.id, ...waiting },
+      { id: controls.id, version: 1, by: adaOfAcme.id },
+    ]);
+    await book.agreeing(seenIn(second, experiments.id));
+    expect(await book.agreedOf()).toEqual([
+      { id: experiments.id, version: 2, by: adaOfAcme.id },
+      { id: controls.id, version: 1, by: adaOfAcme.id },
+    ]);
   });
 
-  it('keeps the yes of a goal that is retired after it, and drops the yes of a goal left out of the goals', async () => {
+  it('keeps the yes of a goal retired after it and of a goal in a new place, and drops the yes of one left out', async () => {
     const book = inThePlaybook();
-    await book.saving([experiments, controls]);
-    await book.agreeing({ version: 1 });
-    const version = await book.saving([{ ...experiments, retired: true }, oneOff]);
-    await book.agreeing({ version });
-    const [retired, added] = documentOf([{ ...experiments, retired: true }, oneOff]).goals;
-    const after = await book.reading();
+    const first = await book.saving([experiments, controls]);
+    await book.agreeing(seenIn(first, experiments.id, controls.id));
 
-    expect(agreementStanding(goalOf(retired), after)).toMatchObject({ goal: experiments.id, version: 1 });
-    expect(agreementStanding(goalOf(added), after)).toMatchObject({ goal: oneOff.id, version: 2 });
-    expect(after.agreements.map(({ goal }) => goal)).toEqual([experiments.id, oneOff.id]);
-  });
+    await book.saving([oneOff, { ...experiments, retired: true }]);
+    await book.saving([oneOff, experiments, controls]);
 
-  it('is none before any yes is recorded', async () => {
-    expect(await inThePlaybook().reading()).toEqual({ agreements: [] });
+    expect(await book.agreedOf()).toEqual([
+      { id: oneOff.id, ...waiting },
+      { id: experiments.id, version: 1, by: adaOfAcme.id },
+      { id: controls.id, ...waiting },
+    ]);
   });
 });
 
 describe('a yes that cannot be recorded', () => {
   it('is refused for a playbook with no saved goals', async () => {
-    expect(await inThePlaybook().agreeing({ version: 0 })).toEqual(
-      Result.fail(
-        expect.objectContaining({
-          _tag: 'invalid_input',
-          detail: someWords,
-          issues: [],
-        }),
-      ),
+    expect(await inThePlaybook().agreeing([{ id: experiments.id, version: 1 }])).toEqual(
+      Result.fail(expect.objectContaining({ _tag: 'invalid_input', detail: someWords, issues: [] })),
     );
   });
-});
 
-describe('a yes to goals that changed or are gone', () => {
-  it('is refused at a version the goals have moved past, naming both versions, and records nothing', async () => {
+  it('is refused at a version a goal has moved past, naming the goal and both versions, and records nothing', async () => {
     const book = inThePlaybook();
-    await book.saving([experiments]);
-    await book.saving([experiments, controls]);
+    const first = await book.saving([experiments, controls]);
+    await book.saving([changed(experiments, ['statement'], 'Bring in customers.'), controls]);
 
-    expect(await book.agreeing({ version: 1 })).toEqual(
-      Result.fail(
-        expect.objectContaining({
-          _tag: 'conflict',
-          detail: someWords,
-        }),
-      ),
+    expect(await book.agreeing(seenIn(first, controls.id, experiments.id))).toEqual(
+      Result.fail(expect.objectContaining({ _tag: 'conflict', detail: someWords })),
     );
-    expect((await book.facts()).version).toBe(0);
+    expect(await book.agreedOf()).toEqual([
+      { id: experiments.id, ...waiting },
+      { id: controls.id, ...waiting },
+    ]);
   });
 
-  it('is refused for an id that names no saved goal, or a goal that is retired, pointing at each', async () => {
+  it('is refused for an id that names no saved goal, or a goal that is retired, pointing at each, and records nothing', async () => {
     const book = inThePlaybook();
-    const version = await book.saving([experiments, { ...controls, retired: true }]);
+    const saved = await book.saving([experiments, { ...controls, retired: true }]);
+    const named = [...seenIn(saved, experiments.id), { id: 'nobody-here', version: 1 }, ...seenIn(saved, controls.id)];
 
-    expect(await book.agreeing({ version, ids: [experiments.id, 'nobody-here', controls.id] })).toEqual(
+    expect(await book.agreeing(named)).toEqual(
       Result.fail(
         expect.objectContaining({
           _tag: 'invalid_input',
           detail: "A yes can't be recorded for these goals",
           issues: [
-            { pointer: '/ids/1', detail: 'This playbook has no saved goal with the id nobody-here' },
-            {
-              pointer: '/ids/2',
-              detail: `The goal ${controls.id} is retired; a yes is recorded only for goals that are not retired`,
-            },
+            { pointer: '/goals/1/id', detail: someWords },
+            { pointer: '/goals/2/id', detail: someWords },
           ],
         }),
       ),
     );
-    expect((await book.facts()).version).toBe(0);
-  });
-});
-
-describe('a yes when every goal is retired', () => {
-  it('is refused when every goal is retired', async () => {
-    const book = inThePlaybook();
-    const version = await book.saving([{ ...experiments, retired: true }]);
-
-    expect(await book.agreeing({ version })).toEqual(
-      Result.fail(
-        expect.objectContaining({
-          _tag: 'invalid_input',
-          detail: someWords,
-        }),
-      ),
-    );
-  });
-});
-
-describe('whether a goal is the one agreed', () => {
-  const agreed = goalOf(experimentsGoal);
-
-  it('compares every field the goal holds, whatever their order, and leaves retired out', () => {
-    const { id, ...rest } = agreed;
-    const reordered: Goal = { ...rest, id };
-
-    expect(isSameContent({ ...agreed }, agreed)).toBe(true);
-    expect(isSameContent(reordered, agreed)).toBe(true);
-    expect(isSameContent({ ...agreed, retired: true }, agreed)).toBe(true);
-    expect(isSameContent({ ...agreed, success: { ...agreed.success, target: { at_least: 2 } } }, agreed)).toBe(false);
-  });
-
-  it('counts a field it does not know by name, so a field added to goals later needs a new yes when it changes', () => {
-    const named = { ...agreed, name: 'Paying customers' };
-    const renamed = { ...agreed, name: 'Customers from experiments' };
-    const withName: Goal = named;
-    const withOtherName: Goal = renamed;
-    const nameFirst = { name: 'Paying customers', ...agreed };
-    const reorderedName: Goal = nameFirst;
-
-    expect(isSameContent(withName, withName)).toBe(true);
-    expect(isSameContent(reorderedName, withName)).toBe(true);
-    expect(isSameContent(withOtherName, withName)).toBe(false);
-    expect(isSameContent(agreed, withName)).toBe(false);
+    expect((await book.factsOf(experiments.id)).map(({ type }) => type)).toEqual(['goal_created']);
   });
 });

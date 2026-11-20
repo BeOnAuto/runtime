@@ -1,4 +1,10 @@
-import { playbookGoalsIn, withinDetailBytes, type Goal } from '@on.auto/definitions/goals';
+import {
+  heldGoalOfIdentity,
+  playbookGoalsIn,
+  withinDetailBytes,
+  type Goal,
+  type HeldGoal,
+} from '@on.auto/definitions/goals';
 import {
   playbookLedgerOf,
   playbookRowsOf,
@@ -37,6 +43,7 @@ export const mostSeenWaitMs = 86_400_000;
 
 interface Owing {
   readonly address: PlaybookAddress;
+  readonly held: HeldGoal;
   readonly assessment: string;
   readonly state: AssessmentState;
   readonly owed: OwedNotice;
@@ -51,7 +58,7 @@ interface Refusal {
 function refusedOnce(ports: NoticePorts, owing: Owing, detail: string): Effect.Effect<Moment, unknown> {
   const { address, assessment, owed, now } = owing;
   return Effect.as(
-    noticeRecorded(ports.ledger, address, assessment, {
+    noticeRecorded(ports.ledger, goalOf(owing), assessment, {
       kind: 'refused',
       change: owed.change,
       attempt: owed.attempt + 1,
@@ -60,6 +67,10 @@ function refusedOnce(ports: NoticePorts, owing: Owing, detail: string): Effect.E
     }),
     null,
   );
+}
+
+function goalOf({ address, held }: Pick<Owing, 'address' | 'held'>) {
+  return { org: address.org, definition: held.definition };
 }
 
 export function retryDelayOf(attempt: number): number {
@@ -74,7 +85,7 @@ function refusedForNow(ports: NoticePorts, owing: Owing, detail: string): Effect
   }
   const retryAt = now + retryDelayOf(attempt);
   return Effect.as(
-    noticeRecorded(ports.ledger, address, assessment, {
+    noticeRecorded(ports.ledger, goalOf(owing), assessment, {
       kind: 'refused',
       change: owed.change,
       attempt,
@@ -89,7 +100,7 @@ function refusedForNow(ports: NoticePorts, owing: Owing, detail: string): Effect
 function seenOnce(ports: NoticePorts, owing: Owing, run: string): Effect.Effect<Moment, unknown> {
   const { address, assessment, owed, now } = owing;
   return Effect.as(
-    noticeRecorded(ports.ledger, address, assessment, {
+    noticeRecorded(ports.ledger, goalOf(owing), assessment, {
       kind: 'seen',
       change: owed.change,
       run,
@@ -101,12 +112,6 @@ function seenOnce(ports: NoticePorts, owing: Owing, run: string): Effect.Effect<
 
 export function seenWaitOf({ owed, now }: Pick<Owing, 'owed' | 'now'>): number {
   return Math.min(Math.max(seenWaitMs, now - owed.due), mostSeenWaitMs);
-}
-
-function goalOf(ports: NoticePorts, address: PlaybookAddress, id: string): Effect.Effect<Goal | undefined> {
-  return Effect.map(Effect.provideContext(playbookGoalsIn, playbookLedgerOf(ports.ledger, address)), ({ goals }) =>
-    goals.find((goal) => goal.id === id && goal.retired !== true),
-  );
 }
 
 function startedNow(ports: CountedPorts, owing: Owing, goal: Goal, run: string): Effect.Effect<Moment, unknown> {
@@ -151,7 +156,7 @@ function startedUnderTheLimit(
     name: through,
     runId: run,
     input: { ...input },
-    trigger: { kind: 'goal', reference: `goals/${goal.id}/assessments/${assessment}` },
+    trigger: { kind: 'goal', reference: `goals/${owing.held.definition}/assessments/${assessment}` },
   });
   return started.pipe(
     Effect.as<Moment>(now + seenWaitOf(owing)),
@@ -166,18 +171,15 @@ function startedUnderTheLimit(
 }
 
 function noticeOwed(ports: CountedPorts, owing: Owing): Effect.Effect<Moment, unknown> {
-  const { address, assessment, state, owed } = owing;
+  const { address, assessment, held, owed } = owing;
   const run = noticeRunIdOf(assessment, owed.change);
   return Effect.flatMap(runStartedIn(ports.ledger, address, run), (seen) => {
     if (seen) {
       return seenOnce(ports, owing, run);
     }
-    const goal = state.pinned?.goal ?? '';
-    return Effect.flatMap(goalOf(ports, address, goal), (kept) =>
-      kept === undefined
-        ? refusedOnce(ports, owing, `The goal ${goal} is retired or gone, so it sends nothing`)
-        : startedNow(ports, owing, kept, run),
-    );
+    return held.goal.retired === true
+      ? refusedOnce(ports, owing, `The goal ${held.goal.id} is retired or gone, so it sends nothing`)
+      : startedNow(ports, owing, held.goal, run);
   });
 }
 
@@ -185,25 +187,37 @@ function changeAnswered(ports: CountedPorts, owing: Owing): Effect.Effect<readon
   return Effect.map(noticeOwed(ports, owing), (moment): readonly [NoticeChange, Moment] => [owing.owed.change, moment]);
 }
 
-function noticesPerformed(ports: CountedPorts, owing: PlaybookProjectedRow, now: number) {
-  const { org, playbook, key, row } = owing;
+function heldGoalOf(ports: CountedPorts, address: PlaybookAddress, definition: string | undefined) {
+  return Effect.map(Effect.provideContext(playbookGoalsIn, playbookLedgerOf(ports.ledger, address)), (goals) =>
+    heldGoalOfIdentity(goals, definition),
+  );
+}
+
+function owedAnswered(ports: CountedPorts, owing: PlaybookProjectedRow, owedNow: readonly OwedNotice[], now: number) {
+  const { org, playbook, key, row, definition } = owing;
   const address = { org, playbook };
-  const state = rowStateOf(row);
-  const owedNow = state.owed.filter(({ due }) => due <= now);
-  if (owedNow.length === 0) {
-    return advancedPast(ports, owing, new Map(), { now });
-  }
   return Effect.flatMap(ports.playbookOf(address), ({ status, owner }) =>
     status === 'active'
-      ? Effect.flatMap(
-          Effect.forEach(owedNow, (owed) =>
-            changeAnswered(ports, { address, assessment: key, state, owed, owner, now }),
-          ),
-          (answers: readonly (readonly [NoticeChange, Moment])[]) =>
-            advancedPast(ports, owing, new Map(answers), { now }),
+      ? Effect.flatMap(heldGoalOf(ports, address, definition), (held) =>
+          held === undefined
+            ? Effect.void
+            : Effect.flatMap(
+                Effect.forEach(owedNow, (owed) =>
+                  changeAnswered(ports, { address, held, assessment: key, state: rowStateOf(row), owed, owner, now }),
+                ),
+                (answers: readonly (readonly [NoticeChange, Moment])[]) =>
+                  advancedPast(ports, owing, new Map(answers), { now }),
+              ),
         )
       : retiredHeld(ports, owing, now),
   );
+}
+
+function noticesPerformed(ports: CountedPorts, owing: PlaybookProjectedRow, now: number) {
+  const owedNow = rowStateOf(owing.row).owed.filter(({ due }) => due <= now);
+  return owedNow.length === 0
+    ? advancedPast(ports, owing, new Map(), { now })
+    : owedAnswered(ports, owing, owedNow, now);
 }
 
 function itemOf(ports: CountedPorts, owing: PlaybookProjectedRow): DueItem {

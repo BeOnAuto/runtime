@@ -2,11 +2,13 @@ import type { FunctionStart } from '@on.auto/workflow-host';
 import { Effect, Schema } from 'effect';
 
 import { assessmentIdOf, summaryRunIdOf } from '../assessments/assessment-identity.ts';
+import { summariesStreamId } from '../goal-facts/goal-facts.ts';
 import { clockKey, clocksName } from '../goal-tables/clock-rows.ts';
 import { summariesName } from '../goal-tables/summary-rows.ts';
 import type { NoticePorts } from '../notices/notice-ledger.ts';
 import {
   experiments,
+  experimentsGoal,
   monday,
   noticeBookOf,
   sales,
@@ -31,7 +33,7 @@ export const weekly = {
 export const savedAt = monday - hour;
 
 export function fridayRun(due = friday): string {
-  return summaryRunIdOf(weekly.id, due);
+  return summaryRunIdOf(experimentsGoal, due);
 }
 
 export interface SummaryBook {
@@ -84,8 +86,8 @@ export async function summaryBookOf({
     ports,
     work: summariesDueOf(ports),
     summaryAt: async () => (await rowOf(book, clocksName, clockKey))?.['summary_at'],
-    summaryRow: () => rowOf(book, summariesName, weekly.id),
-    summaryFacts: () => book.factsOf(`goal-summaries/${weekly.id}`),
+    summaryRow: () => rowOf(book, summariesName, summariesStreamId),
+    summaryFacts: () => book.factsOf(`goal-summaries/${summariesStreamId}`),
   };
 }
 
@@ -100,7 +102,7 @@ export function iso(at: number): string {
 }
 
 export function summaryReference(due = friday): string {
-  return `goals/${weekly.id}/summaries/${iso(due)}`;
+  return `goals/${experimentsGoal}/summaries/${iso(due)}`;
 }
 
 export function inTurn<Item>(
@@ -116,10 +118,10 @@ export function inTurn<Item>(
 const byThePlaybook = (at: string) => ({ at, by: 'playbook:sales' });
 
 async function thingJudged({ book }: SummaryBook, per: string, index: number, count: number): Promise<void> {
-  const stream = `assessments/${assessmentIdOf({ goal: weekly.id, per })}`;
+  const stream = `assessments/${assessmentIdOf({ definition: experimentsGoal, per })}`;
   const at = iso(savedAt + hour + Math.min(index, count - 2) * minute);
-  const opened = { goal: weekly.id, goals_version: 1, per: { id: per }, rule: openRule, milestones: [] };
-  await book.append(
+  const opened = { goal_version: 1, per: { id: per }, rule: openRule, milestones: [] };
+  await book.ofTheGoal(
     stream,
     'goal_assessment_opened',
     opened,
@@ -128,11 +130,11 @@ async function thingJudged({ book }: SummaryBook, per: string, index: number, co
   const source = { record: `r-${per}`, run: `run-${per}`, workflow: 'measure', version: 1, entry: 0 };
   const titled = index === 0 ? { title: 'The spring trial' } : {};
   const measurement = { value: index % 2, final: true, as_of: at };
-  await book.append(stream, 'goal_observed', { source, at, measurement, ...titled }, byThePlaybook(at));
+  await book.ofTheGoal(stream, 'goal_observed', { source, at, measurement, ...titled }, byThePlaybook(at));
   const verdict = { verdict: index % 2 === 1 ? 'passed' : 'failed', at, by: 'crossing', told: 'summary' };
   await (index < count - 1
-    ? book.append(stream, 'goal_assessed', verdict, byThePlaybook(at))
-    : book.append(stream, 'goal_overdue', { since: at, told: 'summary' }, byThePlaybook(at)));
+    ? book.ofTheGoal(stream, 'goal_assessed', verdict, byThePlaybook(at))
+    : book.ofTheGoal(stream, 'goal_overdue', { since: at, told: 'summary' }, byThePlaybook(at)));
 }
 
 const openRule = { settles: 'on_crossing', target: { at_least: 1 } };
@@ -144,8 +146,7 @@ export function thingsJudged(summary: SummaryBook, count: number): Promise<void>
 
 function calendarOpened(window: Schema.Json, opens: string, closes: string): Schema.Json {
   return {
-    goal: weekly.id,
-    goals_version: 1,
+    goal_version: 1,
     window: { opens, closes, due: closes },
     rule: { settles: 'at_close', target: { at_least: 1 }, window },
     milestones: [],
@@ -167,8 +168,8 @@ const endedWindows: readonly (readonly [string, Schema.Json])[] = [
 
 export function windowsEnded({ book }: SummaryBook): Promise<void> {
   return inTurn(endedWindows, async ([name, data]) => {
-    await book.append(`assessments/${name}`, 'goal_assessment_opened', data, byThePlaybook(iso(savedAt)));
-    await book.append(
+    await book.ofTheGoal(`assessments/${name}`, 'goal_assessment_opened', data, byThePlaybook(iso(savedAt)));
+    await book.ofTheGoal(
       `assessments/${name}`,
       'goal_assessment_ended',
       { reason: 'playbook_retired' },
@@ -179,10 +180,11 @@ export function windowsEnded({ book }: SummaryBook): Promise<void> {
 
 export function clockRowPorts(
   ledger: NoticePorts['ledger'],
-  goals: string,
+  text: string,
   moved: (key: string, advance: unknown) => void,
+  definition = experimentsGoal,
 ) {
-  const clock = [{ org: 'acme', playbook: 'sales', key: 'clock', row: { goals } }];
+  const clock = [{ org: 'acme', playbook: 'sales', definition, key: 'clock', row: { clock: text } }];
   return (ports: NoticePorts): NoticePorts => ({
     ...ports,
     ledger: {

@@ -58,7 +58,7 @@ function succeededPlanOf<E>(parts: PlanParts<E>, { playbook, playbookKey, record
       return nothingPlanned;
     }
     const standing = yield* Effect.provideContext(playbookGoalsIn, ledger);
-    const known = knownEntriesOf(contributes, standing.goals);
+    const known = knownEntriesOf(contributes, standing.held);
     if (known.length === 0) {
       return nothingPlanned;
     }
@@ -76,7 +76,6 @@ function succeededPlanOf<E>(parts: PlanParts<E>, { playbook, playbookKey, record
       entries: conditionedOf(contributes, known),
     });
     return observedPlan(extractedOf(known, ended, verdicts), {
-      goalsVersion: standing.version,
       endedAt: ended.ended_at,
       observedKeysOf: keysOf,
     });

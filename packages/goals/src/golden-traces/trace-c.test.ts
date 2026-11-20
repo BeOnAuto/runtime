@@ -4,6 +4,7 @@ import { judgingDueOf } from '../assessments/assessment-dues.ts';
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import type { GoalRule } from '../goal-rules/goal-rule.ts';
 import { traceBookOf } from './trace-book.ts';
+import { tracedGoalId } from './trace-book.ts';
 import type { Appended } from './trace-ledger.ts';
 import { rowsAndCoreOf } from './trace-rows.ts';
 import { wordsOf } from './trace-words.ts';
@@ -17,7 +18,7 @@ const costPerLead: GoalRule = {
   notify: { passed: 'summary', failed: 'now', overdue: 'now' },
 };
 
-const weekOf = (opens: string) => assessmentIdOf({ goal: 'cost-per-lead', window_start: at(opens) });
+const weekOf = (opens: string) => assessmentIdOf({ definition: tracedGoalId, window_start: at(opens) });
 
 const names = {
   [weekOf('2026-11-02T08:00:00Z')]: 'first week',
@@ -88,7 +89,7 @@ it('makes each invoice its own assessment', () => {
   });
 
   expect(ledger.assessments()).toEqual(
-    ['INV-1', 'INV-2', 'INV-3'].map((per) => assessmentIdOf({ goal: 'invoices-paid', per })),
+    ['INV-1', 'INV-2', 'INV-3'].map((per) => assessmentIdOf({ definition: tracedGoalId, per })),
   );
 });
 
@@ -100,7 +101,7 @@ const oneOff: GoalRule = {
 
 it('passes a goal with no window on its crossing, and otherwise leaves it open with nothing due', () => {
   const ledger = traceBookOf(oneOff, 0);
-  const whole = assessmentIdOf({ goal: 'first-customer' });
+  const whole = assessmentIdOf({ definition: tracedGoalId });
   const measured = (when: string, customers: number) =>
     ledger
       .run({ at: at(when), entry: { measures: '/customers', final: true }, output: { customers } })

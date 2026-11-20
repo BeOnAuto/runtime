@@ -71,7 +71,7 @@ const ConnectionSchema = Schema.Struct({
 export const AgreedSchema = Schema.Struct({
   at: Schema.String.annotate({ description: 'When the yes was recorded' }),
   by: Schema.String.annotate({ description: 'The id of the caller that recorded it' }),
-  version: Schema.Int.annotate({ description: 'The version of the goals the person said yes to' }),
+  version: Schema.Int.annotate({ description: 'The version of the goal the person said yes to' }),
 }).annotate({ description: "The person's yes to the goal as it is saved now" });
 
 const GoalReadSchema = Schema.Struct({
@@ -109,9 +109,6 @@ const GoalReadSchema = Schema.Struct({
 });
 
 export const GoalsReadSchema = Schema.Struct({
-  version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).annotate({
-    description: 'The version of the goals, 0 when the playbook has none',
-  }),
   gaps: Schema.Array(GoalGapSchema).annotate({ description: 'What the playbook itself still lacks' }),
   goals: Schema.Array(GoalReadSchema).annotate({ description: 'The goals, in the order they were written' }),
   results: Schema.optionalKey(

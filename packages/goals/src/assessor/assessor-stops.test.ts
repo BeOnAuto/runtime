@@ -6,6 +6,7 @@ import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import { assessmentsName } from '../goal-tables/assessment-rows.ts';
 import { built, calledBy, experimentId, results, startedAs } from './assessor-fixtures.ts';
 import { controls, deliveredAll, experiments, finished, onSchedule } from './assessor-ledger.ts';
+import { goalIdentityOf } from './assessor-ledger.ts';
 import { assessorOf } from './assessor.ts';
 import { failedRunWords } from './run-observations.ts';
 
@@ -36,7 +37,7 @@ describe('a failed run of a contributing workflow whose chain reaches an open it
 
     expect([first.keys, again.keys]).toEqual([[`s:${experimentId('MAR-41')}`], [`s:${experimentId('MAR-41')}`]]);
     expect(rows[experimentId('MAR-41')]).toMatchObject({ open: true, verdict: 'open', stopped_run: 'run-failed' });
-    expect(await book.factsOf(`assessments/${experimentId('MAR-41')}`)).toEqual([
+    expect(await book.factsOf('paying-customers', `assessments/${experimentId('MAR-41')}`)).toEqual([
       'goal_assessment_opened',
       'goal_observed',
       'goal_stopped',
@@ -103,7 +104,7 @@ const requests = {
   notify: { passed: 'quiet', failed: 'quiet' },
 };
 
-const requestId = (id: string) => assessmentIdOf({ goal: requests.id, per: id });
+const requestId = (id: string) => assessmentIdOf({ definition: goalIdentityOf(requests.id), per: id });
 
 describe('a failed run that follows the run that found an item', () => {
   it('stops every open item that run marked, since the chain names the run and not the item', async () => {
@@ -117,7 +118,7 @@ describe('a failed run that follows the run that found an item', () => {
       'run-found',
     );
     const { book, ports } = await built(startedAs(found));
-    await book.goalsSaved([experiments, controls, requests], 2);
+    await book.goalsSaved([experiments, controls, requests]);
     await book.workflowSaved('find', 1, [
       { goal: requests.id, purpose: 'Finds the requests.', each: '/requests', per_id: '/id', marks: 'found' },
     ]);

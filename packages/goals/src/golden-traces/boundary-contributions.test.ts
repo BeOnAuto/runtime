@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import type { GoalRule } from '../goal-rules/goal-rule.ts';
 import { traceBookOf, type TraceBook } from './trace-book.ts';
+import { tracedGoalId } from './trace-book.ts';
 import { wordsOf } from './trace-words.ts';
 
 const day = (offset: number, hour = 0) => Date.UTC(2026, 10, 9 + offset, hour);
@@ -19,7 +20,7 @@ const checks: GoalRule = {
   notify: { passed: 'quiet', failed: 'now', overdue: 'now' },
 };
 
-const checkRun = assessmentIdOf({ goal: 'checks-pass', per: 'run-1' });
+const checkRun = assessmentIdOf({ definition: tracedGoalId, per: 'run-1' });
 
 const marking = { per_id: '/id', marks: 'started' } as const;
 

@@ -24,6 +24,7 @@ import {
   onSchedule,
   salesKey,
 } from './assessor-ledger.ts';
+import { goalIdentityOf } from './assessor-ledger.ts';
 import { assessorName, assessorOf } from './assessor.ts';
 import { mostVersionsKept } from './contributed-versions.ts';
 import { mostPlansKept } from './run-planner.ts';
@@ -75,7 +76,9 @@ describe('the entries the assessor reads', () => {
     expect(kept.keys).toEqual([`a:${experimentId('MAR-41')}`]);
     expect(orphaned.keys).toEqual([]);
   });
+});
 
+describe('the calendar entries the assessor reads', () => {
   it('open the calendar window that holds the run end, and judge it at once when delivered past its due', async () => {
     const daily = [{ goal: 'controls-hold', purpose: 'Checks every control.', measures: '/failed', final: '/all' }];
     const today = await built(noReads, () => monday + 60_000);
@@ -86,10 +89,16 @@ describe('the entries the assessor reads', () => {
 
     await deliveredAll(assessorOf(today.ports), run);
     await deliveredAll(assessorOf(tomorrow.ports), run);
-    const window = assessmentIdOf({ goal: 'controls-hold', window_start: Date.parse('2026-11-09T00:00:00.000Z') });
+    const window = assessmentIdOf({
+      definition: goalIdentityOf('controls-hold'),
+      window_start: Date.parse('2026-11-09T00:00:00.000Z'),
+    });
 
-    expect(await today.book.factsOf(`assessments/${window}`)).toEqual(['goal_assessment_opened', 'goal_observed']);
-    expect(await tomorrow.book.factsOf(`assessments/${window}`)).toEqual([
+    expect(await today.book.factsOf('controls-hold', `assessments/${window}`)).toEqual([
+      'goal_assessment_opened',
+      'goal_observed',
+    ]);
+    expect(await tomorrow.book.factsOf('controls-hold', `assessments/${window}`)).toEqual([
       'goal_assessment_opened',
       'goal_observed',
       'goal_assessed',
@@ -128,9 +137,9 @@ describe('a scheduled run of a contributing workflow', () => {
       failed: [],
       batches: 1,
     });
-    expect(rows[experimentId('MAR-41')]).toMatchObject({ goal: 'paying-customers', per_id: 'MAR-41', verdict: 'open' });
-    expect(rows[experimentId('MAR-42')]).toMatchObject({ per_id: 'MAR-42', verdict: 'passed', goals_version: 1 });
-    expect(await book.factsOf(`assessments/${experimentId('MAR-42')}`)).toEqual([
+    expect(rows[experimentId('MAR-41')]).toMatchObject({ goal_version: 1, per_id: 'MAR-41', verdict: 'open' });
+    expect(rows[experimentId('MAR-42')]).toMatchObject({ per_id: 'MAR-42', verdict: 'passed', goal_version: 1 });
+    expect(await book.factsOf('paying-customers', `assessments/${experimentId('MAR-42')}`)).toEqual([
       'goal_assessment_opened',
       'goal_observed',
       'goal_assessed',
@@ -175,7 +184,7 @@ describe('a run delivered twice, or in pages', () => {
 
     expect(paged).toMatchObject({ batches: 2, failed: [] });
     expect([paged.keys.length, again.keys.length]).toEqual([3, 3]);
-    expect(await book.factsOf(`assessments/${experimentId('MAR-43')}`)).toEqual([
+    expect(await book.factsOf('paying-customers', `assessments/${experimentId('MAR-43')}`)).toEqual([
       'goal_assessment_opened',
       'goal_observed',
     ]);

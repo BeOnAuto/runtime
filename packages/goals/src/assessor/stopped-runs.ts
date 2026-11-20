@@ -1,4 +1,4 @@
-import { playbookGoalsIn, type Goal } from '@on.auto/definitions/goals';
+import { playbookGoalsIn, type HeldGoal } from '@on.auto/definitions/goals';
 import {
   PlaybookReader,
   playbookLedgerOf,
@@ -51,7 +51,7 @@ function reachedThing<E>(acts: readonly ActOfARun[], { endedAt, chain, outside, 
     : sharesTheEvent(walks.began, acts, outside);
 }
 
-function reachedBy<E>(kept: ProjectedKeyedRow, failedInChain: FailedInChain<E>) {
+function reachedBy<E>(definition: string, kept: ProjectedKeyedRow, failedInChain: FailedInChain<E>) {
   const { key, row } = kept;
   const { failed, endedAt, walks } = failedInChain;
   const held = walks.unstoppedOnly && row['stopped_at'] !== null ? [] : heldAssessmentsOf(kept);
@@ -59,33 +59,42 @@ function reachedBy<E>(kept: ProjectedKeyedRow, failedInChain: FailedInChain<E>) 
     Effect.forEach(held, ({ state }) => reachedThing(actsOf(state), failedInChain)),
     (reached: readonly boolean[]): readonly StoppedPlanned[] =>
       reached.includes(true)
-        ? [{ key: `s:${key}`, stopped: { assessment: key, run: failed.run, at: endedAt, reason: failed.reason } }]
+        ? [
+            {
+              key: `s:${key}`,
+              stopped: { definition, assessment: key, run: failed.run, at: endedAt, reason: failed.reason },
+            },
+          ]
         : [],
   );
 }
 
-export function openItemsOf(ledger: Ledger['Service'], playbook: PlaybookAddress, { id }: Goal) {
-  return ledger.readProjectedRows(assessmentsName, playbook, {
-    where: [
-      { column: 'goal', equals: id },
-      { column: 'open', equals: true },
-    ],
-    orderBy: ['opened_at'],
-    order: 'desc',
-    limit: mostOpenItemsSearched,
-  });
+export function openItemsOf(ledger: Ledger['Service'], { org }: PlaybookAddress, { definition }: HeldGoal) {
+  return ledger.readProjectedRows(
+    assessmentsName,
+    { org, definition },
+    {
+      where: [{ column: 'open', equals: true }],
+      orderBy: ['opened_at'],
+      order: 'desc',
+      limit: mostOpenItemsSearched,
+    },
+  );
 }
 
 function stoppedThingsOf<E>(
   ledger: Ledger['Service'],
   playbook: PlaybookAddress,
-  goals: readonly Goal[],
+  goals: readonly HeldGoal[],
   failed: FailedInChain<E>,
 ): Effect.Effect<readonly StoppedPlanned[], E> {
   return Effect.gen(function* () {
-    const found = yield* Effect.forEach(goals, (goal) => openItemsOf(ledger, playbook, goal));
-    const reached = yield* Effect.forEach(found.flat(), (row) => reachedBy(row, failed));
-    return reached.flat();
+    const reached = yield* Effect.forEach(goals, (goal) =>
+      Effect.flatMap(openItemsOf(ledger, playbook, goal), (rows) =>
+        Effect.forEach(rows, (row) => reachedBy(goal.definition, row, failed)),
+      ),
+    );
+    return reached.flat(2);
   });
 }
 
@@ -114,7 +123,7 @@ export function stopsOf<E>(
       fact: { stream, context, causationId, correlationId },
     });
     const standing = yield* Effect.provideContext(playbookGoalsIn, ledger);
-    const goals = [...new Set(knownEntriesOf(contributes, standing.goals).map(({ goal }) => goal))];
+    const goals = [...new Set(knownEntriesOf(contributes, standing.held).map(({ held }) => held))];
     if (!originCounts(origin) || goals.length === 0) {
       return stoppedNothing;
     }

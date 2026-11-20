@@ -2,7 +2,7 @@ import type { Notice, PlaybookContext, PlaybookReader } from '@on.auto/operation
 import { Effect } from 'effect';
 
 import { contributesIn } from '../contributions/contributes-details.ts';
-import { playbookGoalsIn } from '../goals/goals-stream.ts';
+import { playbookGoalsIn } from '../goals/playbook-goals.ts';
 import { loadRegistry } from '../operations/registry-access.ts';
 import { isRetired, type StoredDefinition } from '../registry/definition.ts';
 import { namingDetailsOf } from '../used-by/definition-users.ts';

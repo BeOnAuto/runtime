@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 
 import { contributesIn } from '../contributions/contributes-details.ts';
 import type { Goal } from '../goals/goals-document.ts';
-import { playbookGoalsIn } from '../goals/goals-stream.ts';
+import { playbookGoalsIn } from '../goals/playbook-goals.ts';
 import { loadRegistry } from './registry-access.ts';
 
 export interface StartedByHand {

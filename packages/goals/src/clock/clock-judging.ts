@@ -1,6 +1,5 @@
 import {
   playbookCallerOf,
-  streamPrefixOfPlaybook,
   type Decider,
   type Ledger,
   type PlaybookAddress,
@@ -12,7 +11,12 @@ import type { AssessmentOpened } from '../assessments/assessment-facts.ts';
 import { assessmentAfter, unopened, type AssessmentState } from '../assessments/assessment-state.ts';
 import { factsAtMoment, type Judging } from '../assessments/judging.ts';
 import { openedFact } from '../assessments/opening.ts';
-import { AssessmentEventSchema, assessmentsKind, type RecordedAssessmentEvent } from '../goal-facts/goal-facts.ts';
+import {
+  AssessmentEventSchema,
+  assessmentStreamOf,
+  type GoalAddress,
+  type RecordedAssessmentEvent,
+} from '../goal-facts/goal-facts.ts';
 import type { Instant } from '../goal-rules/goal-rule.ts';
 
 export interface ClockPorts {
@@ -27,36 +31,40 @@ export interface Acting {
 
 function deciderOf<Command>(
   { address, now }: Acting,
+  { definition }: GoalAddress,
   decided: (command: Command, state: AssessmentState) => ReturnType<typeof factsAtMoment>,
 ): Decider<AssessmentState, Command, RecordedAssessmentEvent> {
   return {
     initialState: unopened,
     evolve: (state, fact) => assessmentAfter(state, fact),
     decide: (command, state) => Result.succeed(decided(command, state)),
-    context: () => ({ at: new Date(now).toISOString(), by: playbookCallerOf(address).id }),
+    context: () => ({ at: new Date(now).toISOString(), by: playbookCallerOf(address).id, definitionId: definition }),
     eventSchema: AssessmentEventSchema,
   };
 }
 
-function streamOf({ address }: Acting, assessment: string): string {
-  return `${streamPrefixOfPlaybook(address)}${assessmentsKind}/${assessment}`;
+export interface Judged {
+  readonly goal: GoalAddress;
+  readonly assessment: string;
 }
 
-export function judgedAt(ports: ClockPorts, acting: Acting, assessment: string, judging: Judging) {
+export function judgedAt(ports: ClockPorts, acting: Acting, { goal, assessment }: Judged, judging: Judging) {
   return Effect.map(
     ports.ledger.execute(
-      streamOf(acting, assessment),
-      deciderOf<Judging>(acting, (command, state) => factsAtMoment(state, command)),
+      assessmentStreamOf(goal, assessment),
+      deciderOf<Judging>(acting, goal, (command, state) => factsAtMoment(state, command)),
       judging,
     ),
     ({ state }) => state,
   );
 }
 
-export function openedAt(ports: ClockPorts, acting: Acting, assessment: string, opened: AssessmentOpened) {
+export function openedAt(ports: ClockPorts, acting: Acting, { goal, assessment }: Judged, opened: AssessmentOpened) {
   return ports.ledger.execute(
-    streamOf(acting, assessment),
-    deciderOf<AssessmentOpened>(acting, (command, state) => (state.pinned === undefined ? [openedFact(command)] : [])),
+    assessmentStreamOf(goal, assessment),
+    deciderOf<AssessmentOpened>(acting, goal, (command, state) =>
+      state.pinned === undefined ? [openedFact(command)] : [],
+    ),
     opened,
   );
 }

@@ -1,12 +1,13 @@
-import { assessmentIdOf, GoalsReadSchema } from '@on.auto/goals';
+import { assessmentIdOf, goalsLedger, GoalsReadSchema } from '@on.auto/goals';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
-import { ContextSchema, Ledger, type Decider } from '@on.auto/operations';
+import { ContextSchema, Ledger, streamPrefixOfDefinition, type Decider } from '@on.auto/operations';
 import { Effect, ManagedRuntime, Result, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { assessing } from '../../testing/goals/assessed-runs.ts';
-import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
+import { goalIdentityIn } from '../../testing/goals/goal-identities.ts';
+import { temporaryLedger, type TemporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
+import { createdWithGoals, servingReasoningWithGoals } from '../../testing/settings/goals-kept.ts';
 
 const checksText = [
   '- id: compliance-checks',
@@ -67,12 +68,11 @@ const endedBy = {
 
 const byThePlaybook = (at: string) => ({ at, by: 'playbook:alpha' });
 
-const recordedBefore: readonly Fact[] = [
+const judged: readonly Fact[] = [
   {
     type: 'goal_assessment_opened',
     data: {
-      goal: 'compliance-checks',
-      goals_version: 1,
+      goal_version: 1,
       per: { id: 'run-20261117-0320' },
       rule: {
         settles: 'on_crossing',
@@ -138,32 +138,42 @@ const recordedBefore: readonly Fact[] = [
   },
 ];
 
-const checkRun = assessmentIdOf({ goal: 'compliance-checks', per: 'run-20261117-0320' });
+async function theGoalSaved(ledger: TemporaryLedger): Promise<void> {
+  const server = await servingReasoningWithGoals([], {}, undefined, { ledger });
+  await createdWithGoals(server, { goals: checksText });
+  await server.stop();
+}
 
-async function recordedByAnEarlierRelease(fileName: string): Promise<void> {
-  const before = ManagedRuntime.make(ledgerLayer({ fileName, projections: [] }));
-  const ledger = await before.runPromise(Ledger);
+async function judgedWhileNoServerRan({ fileName }: TemporaryLedger): Promise<string> {
+  const kept = ManagedRuntime.make(ledgerLayer({ fileName, projections: goalsLedger.projections }));
+  const ledger = await kept.runPromise(Ledger);
+  const definition = await Effect.runPromise(goalIdentityIn(ledger, 'compliance-checks'));
+  const checkRun = assessmentIdOf({ definition, per: 'run-20261117-0320' });
+  const stream = `${streamPrefixOfDefinition({ org: 'acme', definition })}assessments/${checkRun}`;
   await Effect.runPromise(
     Effect.forEach(
-      recordedBefore,
-      (fact) => ledger.execute(`playbook/acme/alpha/assessments/${checkRun}`, verbatim, fact),
+      judged,
+      ({ type, data, context }) =>
+        ledger.execute(stream, verbatim, { type, data, context: { ...context, definitionId: definition } }),
       { discard: true },
     ),
   );
-  await before.dispose();
+  await kept.dispose();
+  return checkRun;
 }
 
 const exactly = Schema.decodeUnknownSync(GoalsReadSchema, { onExcessProperty: 'error' });
 
-describe('the goals read of a store whose check run a release before this one judged', () => {
+describe('the goals read of a store whose check run was judged when it went quiet', () => {
   it('serves the quiet run with the milestones it marked, when and by which run, and the sentence it was judged on, with nothing marked it did not mark', async () => {
     const ledger = temporaryLedger();
     onTestFinished(ledger.remove);
-    await recordedByAnEarlierRelease(ledger.fileName);
-    const assessed = await assessing({ ledger, goals: checksText });
-    onTestFinished(() => assessed.server.stop());
+    await theGoalSaved(ledger);
+    const checkRun = await judgedWhileNoServerRan(ledger);
+    const server = await servingReasoningWithGoals([], {}, undefined, { ledger });
+    onTestFinished(() => server.stop());
 
-    const { status, body } = await assessed.server.call('GET', `${alpha}/goals`);
+    const { status, body } = await server.call('GET', `${alpha}/goals`);
     const [checks] = exactly(body).goals;
 
     expect(status).toBe(200);

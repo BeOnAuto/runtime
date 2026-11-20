@@ -1,13 +1,13 @@
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { financePrefix, projected } from '../testing/projected.ts';
+import { aDefinition, definitionPrefix, projected } from '../testing/projected.ts';
 import type { RecordedFact } from '../testing/recorded-facts.ts';
 import { goalOverdueRows, goalVerdictRows } from './goal-rows.ts';
 
 const assessment = '6f1c7a2e-3b4d-5e6f-8a9b-0c1d2e3f4a5b';
 
-const stream = `${financePrefix}assessments/${assessment}`;
+const stream = `${definitionPrefix}assessments/${assessment}`;
 
 const key = `assessments/${assessment}`;
 
@@ -16,8 +16,7 @@ const context = { at: '2026-11-09T18:00:00.000Z', by: 'playbook:finance' };
 const fact = (type: string, data: Schema.JsonObject): RecordedFact => ({ type, data, context });
 
 const opened = fact('goal_assessment_opened', {
-  goal: 'paying-customers',
-  goals_version: 1,
+  goal_version: 1,
   rule: { settles: 'on_crossing', target: { at_least: 1 } },
   milestones: [],
 });
@@ -38,14 +37,20 @@ const assessed = (told: string) =>
 const ended = fact('goal_assessment_ended', { reason: 'no_result' });
 
 async function rowsAfter(...facts: readonly RecordedFact[]) {
-  const verdicts = projected(goalVerdictRows);
-  const overdues = projected(goalOverdueRows);
+  const verdicts = projected(goalVerdictRows, aDefinition);
+  const overdues = projected(goalOverdueRows, aDefinition);
   await verdicts.record(stream, ...facts);
   await overdues.record(stream, ...facts);
   return { verdict: (await verdicts.rows())[key], overdue: (await overdues.rows())[key] };
 }
 
-const shown = { goal: 'paying-customers', title: 'Webinar', says: 'Two customers' };
+const shown = { title: 'Webinar', says: 'Two customers' };
+
+describe('the bell’s rows of a goal', () => {
+  it('are kept under the goal’s own key, which names the goal they are of', () => {
+    expect([goalVerdictRows.scopes, goalOverdueRows.scopes]).toEqual([['definition'], ['definition']]);
+  });
+});
 
 describe('the bell’s rows of a verdict', () => {
   it('are kept from the opening under the assessment, and listed by whoever judged it once the verdict is one the owner is told of', async () => {
@@ -99,8 +104,8 @@ describe('the bell’s rows of an overdue', () => {
     );
 
     expect([before.overdue, after.overdue]).toEqual([
-      { open: true, at: Date.parse('2026-11-10T17:00:00.000Z'), outcome: 'overdue', ...shown },
-      { open: false, at: Date.parse('2026-11-10T17:00:00.000Z'), outcome: 'overdue', ...shown },
+      { open: true, at: Date.parse('2026-11-10T17:00:00.000Z'), by: 'playbook:finance', outcome: 'overdue', ...shown },
+      { open: false, at: Date.parse('2026-11-10T17:00:00.000Z'), by: 'playbook:finance', outcome: 'overdue', ...shown },
     ]);
     expect(after.verdict).toMatchObject({ listed: true, outcome: 'passed' });
   });

@@ -10,5 +10,17 @@
   "src/goal-facts/0.57.0/goal_summary_started.json": "e1583f1793bd92a7a81e6685d4b99f37601a2b50f6c17f6a6926951b4d5d3578",
   "src/goal-facts/0.59.0/goal_dismissed.json": "693bff4e8b8b4b45f8b9dbef7dfb0101de1ef01827626a488025895c8c3d5d73",
   "src/goal-facts/0.59.0/goal_restored.json": "bc3f22f6f6aabdec10cd09895582746fa8f72fc11be426d01f3e56a6bb20de48",
-  "src/goal-facts/0.63.0/goal_stopped.json": "7751ef67c23d020fe51ed59507d433fb2cb7d45f15e2bbf484254f1f7dce52da"
+  "src/goal-facts/0.63.0/goal_stopped.json": "7751ef67c23d020fe51ed59507d433fb2cb7d45f15e2bbf484254f1f7dce52da",
+  "src/goal-facts/0.68.0/goal_assessed.json": "7e7a1390c485b598c3c9c9bf79acc5f4931790eda609bcbb8f0079e18519abcf",
+  "src/goal-facts/0.68.0/goal_assessment_ended.json": "ad02d9730c6acd2fa73752866ac5ea055a7b8a203400bfc865f5782b2f6e348d",
+  "src/goal-facts/0.68.0/goal_assessment_opened.json": "389d5fd42f88b143b0203cb90cf5e8e5ee674ee95166900d6ff985ba3bc45c84",
+  "src/goal-facts/0.68.0/goal_dismissed.json": "d8cd1bf93b815b20e790d2d5a8e2c6d8932b9b42555715576e739df8a5c2f130",
+  "src/goal-facts/0.68.0/goal_notice_refused.json": "b31c2384d781a2d19361cbed3012059fe0f7ab01a9b6cd1522a12c80871662c5",
+  "src/goal-facts/0.68.0/goal_notice_started.json": "a685c56030c5e8c6dcde5cc8fb2348b9965861cf9c362e266bface6ab9d268e9",
+  "src/goal-facts/0.68.0/goal_observation_refused.json": "7a6183731589669085be0b0b051e489270291d2cc9edff1a13156f6845d2d5b3",
+  "src/goal-facts/0.68.0/goal_observed.json": "c361e5168527b65ba2779bdce5b494e2ae9cbbeac3cf7b638ae1c3d93fc0f438",
+  "src/goal-facts/0.68.0/goal_overdue.json": "fd34a4fba19c0fe064d653099529610a395ed275add968ebbf0cff517ece9d43",
+  "src/goal-facts/0.68.0/goal_restored.json": "ef0907d21e4e1cdc2821a6a0145f6879c7c32e1ded570664a91a9525d92f9f02",
+  "src/goal-facts/0.68.0/goal_stopped.json": "23c44d97829dd4e676936a1ada70d52cb9d85103fb279c97cfbe61ac97bfd820",
+  "src/goal-facts/0.68.0/goal_summary_started.json": "c67f2bdd57877df1537084354f21d13b114bd7d70861ec874670b37be2dceb8d"
 }

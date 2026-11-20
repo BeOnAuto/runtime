@@ -324,10 +324,28 @@
                           "type": "string",
                           "description": "The goals as they were saved"
                         },
-                        "version": {
-                          "type": "integer",
-                          "minimum": 1,
-                          "description": "The version of the goals, from 1"
+                        "versions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "The id of the goal"
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "The version of the goal now"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Each saved goal's `id` and `version`, in order"
                         },
                         "gaps": {
                           "type": "array",
@@ -786,10 +804,28 @@
                           "type": "string",
                           "description": "The goals as they were saved"
                         },
-                        "version": {
-                          "type": "integer",
-                          "minimum": 1,
-                          "description": "The version of the goals, from 1"
+                        "versions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "The id of the goal"
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "The version of the goal now"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Each saved goal's `id` and `version`, in order"
                         },
                         "gaps": {
                           "type": "array",
@@ -1086,10 +1122,28 @@
                           "type": "string",
                           "description": "The goals as they were saved"
                         },
-                        "version": {
-                          "type": "integer",
-                          "minimum": 1,
-                          "description": "The version of the goals, from 1"
+                        "versions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "The id of the goal"
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "The version of the goal now"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Each saved goal's `id` and `version`, in order"
                         },
                         "gaps": {
                           "type": "array",
@@ -15604,10 +15658,28 @@
                           "type": "string",
                           "description": "The goals as they were saved"
                         },
-                        "version": {
-                          "type": "integer",
-                          "minimum": 1,
-                          "description": "The version of the goals, from 1"
+                        "versions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "The id of the goal"
+                              },
+                              "version": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "The version of the goal now"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "version"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Each saved goal's `id` and `version`, in order"
                         },
                         "gaps": {
                           "type": "array",
@@ -26434,11 +26506,6 @@
                   "$id": "https://on.auto/schemas/runtime/get_playbook_goals/output",
                   "type": "object",
                   "properties": {
-                    "version": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "description": "The version of the goals, 0 when the playbook has none"
-                    },
                     "gaps": {
                       "type": "array",
                       "items": {
@@ -26459,7 +26526,6 @@
                     }
                   },
                   "required": [
-                    "version",
                     "gaps",
                     "goals"
                   ],
@@ -26830,7 +26896,7 @@
                         },
                         "goals_version": {
                           "type": "integer",
-                          "description": "The version of the goals it opened under"
+                          "description": "The version of the goal it opened under"
                         },
                         "notices": {
                           "type": "array",
@@ -27150,7 +27216,7 @@
                             },
                             "version": {
                               "type": "integer",
-                              "description": "The version of the goals the person said yes to"
+                              "description": "The version of the goal the person said yes to"
                             }
                           },
                           "required": [
@@ -27755,7 +27821,7 @@
       "post": {
         "operationId": "agree_playbook_goals",
         "summary": "Agree playbook goals",
-        "description": "Records the person's yes to the playbook's saved goals. Call it only after the person says yes in the conversation, and send the goals `version` they saw. Without `ids` it covers every goal that is not retired. A goal saved again with a change needs a new yes: show it, ask again, then call this again.",
+        "description": "Records the person's yes to the playbook's saved goals. Call it only after the person says yes in the conversation, and send each goal's `id` with the `version` they saw. Name every goal they said yes to; one you leave out keeps waiting for its yes. A goal saved again with a change needs a new yes: show it, ask again, then call this again.",
         "tags": [
           "goals"
         ],
@@ -27777,22 +27843,33 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
-                  "version": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "description": "The goals version the person saw, as create_playbook, update_playbook or get_playbook answered it"
-                  },
-                  "ids": {
+                  "goals": {
                     "type": "array",
                     "items": {
-                      "type": "string"
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the goal"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "The version of the goal the person saw"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version"
+                      ],
+                      "additionalProperties": false
                     },
                     "minItems": 1,
-                    "description": "The ids of the goals the person said yes to; leave it out for every goal that is not retired"
+                    "description": "The goals the person said yes to, each by its `id` and the `version` they saw, as create_playbook, update_playbook or get_playbook answered it"
                   }
                 },
                 "required": [
-                  "version"
+                  "goals"
                 ]
               }
             }
@@ -27808,10 +27885,6 @@
                   "$id": "https://on.auto/schemas/runtime/agree_playbook_goals/output",
                   "type": "object",
                   "properties": {
-                    "version": {
-                      "type": "integer",
-                      "description": "The version of the goals now"
-                    },
                     "goals": {
                       "type": "array",
                       "items": {
@@ -27820,6 +27893,10 @@
                           "id": {
                             "type": "string",
                             "description": "The id of the goal"
+                          },
+                          "version": {
+                            "type": "integer",
+                            "description": "The version of the goal now"
                           },
                           "agreed": {
                             "type": "object",
@@ -27834,7 +27911,7 @@
                               },
                               "version": {
                                 "type": "integer",
-                                "description": "The version of the goals the person said yes to"
+                                "description": "The version of the goal the person said yes to"
                               }
                             },
                             "required": [
@@ -27847,7 +27924,8 @@
                           }
                         },
                         "required": [
-                          "id"
+                          "id",
+                          "version"
                         ],
                         "additionalProperties": false
                       },
@@ -27859,7 +27937,6 @@
                     }
                   },
                   "required": [
-                    "version",
                     "goals"
                   ],
                   "additionalProperties": false,

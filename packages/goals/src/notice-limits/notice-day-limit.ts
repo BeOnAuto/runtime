@@ -1,3 +1,4 @@
+import { mostGoals } from '@on.auto/definitions/goals';
 import type { Ledger, PlaybookAddress } from '@on.auto/operations';
 import { Effect } from 'effect';
 
@@ -15,12 +16,9 @@ export function noticesStartedOn(
       where: [{ column: 'row_key', equals: noticeDayOf(now) }],
       orderBy: [],
       order: 'asc',
-      limit: 1,
+      limit: mostGoals,
     }),
-    ([day]) => {
-      const started = day?.row['started'];
-      return typeof started === 'number' ? started : 0;
-    },
+    (days) => days.reduce((sum, { row }) => sum + Number(row['started']), 0),
   );
 }
 

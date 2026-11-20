@@ -175,7 +175,7 @@ describe('the size of the goals read', () => {
       const text = widestGoalsText();
       const { goals } = Result.getOrThrow(goalsDocumentOf(text));
       const read = goalsReadOf(
-        { version: 1, source: text, goals, workflows: workflowsServing(goals), notifiers: new Set() },
+        { source: text, goals, held: [], workflows: workflowsServing(goals), notifiers: new Set() },
         (goal) => widestAssessmentsOf(goal, dismissed),
       );
       const bytes = Buffer.byteLength(JSON.stringify(Schema.encodeUnknownSync(GoalsReadSchema)(read)));

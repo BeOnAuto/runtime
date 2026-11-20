@@ -1,19 +1,19 @@
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { financePrefix, projected } from '../testing/projected.ts';
+import { aDefinition, definitionPrefix, projected } from '../testing/projected.ts';
 import type { RecordedFact } from '../testing/recorded-facts.ts';
 import { dismissalRows } from './dismissal-rows.ts';
 
 const assessment = '6f1c7a2e-3b4d-5e6f-8a9b-0c1d2e3f4a5b';
 
-const stream = `${financePrefix}assessments/${assessment}`;
+const stream = `${definitionPrefix}assessments/${assessment}`;
 
 const context = { at: '2026-11-09T18:00:00.000Z', by: 'person:user_2ada' };
 
 const fact = (type: string, data: Schema.JsonObject): RecordedFact => ({ type, data, context });
 
-const thing = { goal: 'orders', per: 'ORD-3', by: { id: 'person:user_2ada', name: 'Ada Lovelace' } };
+const thing = { per: 'ORD-3', by: { id: 'person:user_2ada', name: 'Ada Lovelace' } };
 
 const dismissed = (at: string, requests: readonly string[]) =>
   fact('goal_dismissed', { ...thing, at, requests: [...requests] });
@@ -21,17 +21,17 @@ const dismissed = (at: string, requests: readonly string[]) =>
 const restored = (at: string) => fact('goal_restored', { ...thing, at });
 
 async function rowAfter(...facts: readonly RecordedFact[]) {
-  const dismissals = projected(dismissalRows);
+  const dismissals = projected(dismissalRows, aDefinition);
   await dismissals.record(stream, ...facts);
   return (await dismissals.rows())[assessment];
 }
 
 describe('the row of a thing’s dismissals, under the thing’s id', () => {
-  it('stands while its latest dismissal fact is a dismissal, naming the goal, when, who and the requests it set aside', async () => {
+  it('stands under the goal’s key while its latest dismissal fact is a dismissal, with when, who and the requests it set aside', async () => {
+    expect(dismissalRows.scopes).toEqual(['definition']);
     expect(await rowAfter(dismissed('2026-11-09T18:00:00.000Z', ['run-1', 'run-2']))).toEqual({
       dismissed: true,
       at: Date.parse('2026-11-09T18:00:00.000Z'),
-      goal: 'orders',
       by: 'person:user_2ada',
       requests: JSON.stringify(['run-1', 'run-2']),
     });

@@ -143,6 +143,13 @@ function boundProjectionReader(ledger: ProjectionReader, address: ProjectedAddre
   };
 }
 
+export function definitionBoundProjectionReader(
+  ledger: ProjectionReader,
+  { org, definition }: DefinitionAddress,
+): BoundProjectionReader {
+  return boundProjectionReader(ledger, { org, definition });
+}
+
 export function playbookBoundProjectionReader(
   ledger: ProjectionReader,
   { org, playbook }: PlaybookAddress,

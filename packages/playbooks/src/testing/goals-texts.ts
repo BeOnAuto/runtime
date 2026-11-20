@@ -37,6 +37,10 @@ export const goalsText = [
 
 export const restatedGoalsText = goalsText.replace('through my experiments', 'through my launches');
 
+export function versionsOfBothAt(version: number) {
+  return [leadGoalId, plainGoalId].map((id) => ({ id, version }));
+}
+
 export const goalsTextGaps = [
   { kind: 'measure_unreported', goal: leadGoalId },
   { kind: 'milestone_unmarked', goal: leadGoalId },

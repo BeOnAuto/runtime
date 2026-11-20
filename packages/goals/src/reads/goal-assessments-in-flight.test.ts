@@ -8,6 +8,7 @@ import {
   day,
   experimentsGoal,
   firstDay,
+  heldGoalOf,
   inTurn,
   instantText,
   thingAt,
@@ -19,7 +20,7 @@ import type { NoticesDelivered } from './notices-delivered.ts';
 const hour = 3_600_000;
 
 function read(book: AssessmentBook) {
-  return book.inThePlaybook(goalAssessmentsIn(experimentsGoal));
+  return book.inThePlaybook(goalAssessmentsIn(heldGoalOf(experimentsGoal)));
 }
 
 interface Due {
@@ -189,7 +190,7 @@ describe('one assessment as the goals read answers it', () => {
     const live = firstDay + day;
     const id = await overdueExperiment(book, live);
 
-    const { in_flight: inFlight } = await book.inThePlaybook(goalAssessmentsIn(experimentsGoal, delivered));
+    const { in_flight: inFlight } = await book.inThePlaybook(goalAssessmentsIn(heldGoalOf(experimentsGoal), delivered));
 
     expect(inFlight).toEqual([overdueExperimentRead(id, live)]);
   });
@@ -208,19 +209,25 @@ describe('one assessment as the goals read answers it', () => {
   });
 });
 
-function countedIn(book: AssessmentBook, goalsVersion?: number) {
+function countedIn(book: AssessmentBook, version: number) {
   return book.inThePlaybook(
     Effect.gen(function* () {
       const reader = yield* PlaybookReader;
       const counted: string[] = [];
       const assessments = yield* Effect.provideService(
-        goalAssessmentsIn(experimentsGoal, undefined, goalsVersion),
+        goalAssessmentsIn(heldGoalOf(experimentsGoal, version)),
         PlaybookReader,
         {
           ...reader,
-          countProjectedRows: (name: string, where: readonly ProjectedCondition[]) => {
-            counted.push(where.map(({ column }) => column).join(' '));
-            return reader.countProjectedRows(name, where);
+          ofDefinition: (definition: string) => {
+            const ofIt = reader.ofDefinition(definition);
+            return {
+              ...ofIt,
+              countProjectedRows: (name: string, where: readonly ProjectedCondition[]) => {
+                counted.push(where.map(({ column }) => column).join(' '));
+                return ofIt.countProjectedRows(name, where);
+              },
+            };
           },
         },
       );
@@ -237,13 +244,13 @@ describe('the open assessments of a goal counted by milestone', () => {
     await thingAt(book, { per: 'MAR-41', at: firstDay, marked: ['chosen'], live: 0 });
     await thingAt(book, { per: 'MAR-42', at: firstDay + hour, marked: ['chosen', 'prepared'], live: 0 });
 
-    const [pinned, older, unknown] = [await countedIn(book, 1), await countedIn(book, 2), await countedIn(book)];
+    const [pinned, older] = [await countedIn(book, 1), await countedIn(book, 2)];
 
     expect(pinned.counts).toEqual([
       { chosen: 2, prepared: 1, live: 0, measured: 0 },
       { chosen: 0, prepared: 1, live: 1, measured: 0 },
     ]);
-    expect([older.counts, unknown.counts]).toEqual([pinned.counts, pinned.counts]);
-    expect([markCounts(pinned.counted), markCounts(older.counted), markCounts(unknown.counted)]).toEqual([4, 28, 28]);
+    expect(older.counts).toEqual(pinned.counts);
+    expect([markCounts(pinned.counted), markCounts(older.counted)]).toEqual([4, 28]);
   });
 });

@@ -1,14 +1,14 @@
 import type { Goal } from '@on.auto/definitions/goals';
-import { Effect } from 'effect';
+import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { unopened } from '../assessments/assessment-state.ts';
 import { dayLimitDetail } from '../notice-limits/notice-day-limit.ts';
-import { performedAt, sales } from '../notices/notice-samples.ts';
+import { experimentsGoal, performedAt, sales } from '../notices/notice-samples.ts';
 import { summaryNotStartedGap } from './summary-gaps.ts';
 import { summaryInputOf } from './summary-input.ts';
 import { summarisedIn } from './summary-lines.ts';
-import { clockRowPorts, friday, hour, savedAt, summaryBookOf } from './summary-samples.ts';
+import { clockRowPorts, friday, hour, savedAt, summaryBookOf, weekly } from './summary-samples.ts';
 
 const notify = { passed: 'summary', failed: 'summary', summary: { cron: '0 9 * * 5' } } as const;
 
@@ -19,13 +19,25 @@ const goal: Goal = {
   notify,
 };
 
-async function movedWith(goals: string) {
-  const summary = await summaryBookOf();
+async function movedWith(
+  clock: string,
+  {
+    definition = experimentsGoal,
+    goals = [weekly],
+  }: { readonly definition?: string; readonly goals?: Schema.Json } = {},
+) {
+  const summary = await summaryBookOf({ goals });
   const moved: unknown[] = [];
   const { work } = await summaryBookOf({
-    ports: clockRowPorts(summary.book.ledger, goals, (key, advance) => {
-      moved.push([key, advance]);
-    }),
+    goals,
+    ports: clockRowPorts(
+      summary.book.ledger,
+      clock,
+      (key, advance) => {
+        moved.push([key, advance]);
+      },
+      definition,
+    ),
   });
   await performedAt(work, friday);
   return moved;
@@ -110,7 +122,8 @@ describe('a row of assessments that holds no state or moments', () => {
           countProjectedRows: () => Effect.succeed(1),
         },
         address: sales,
-        goal: goal.id,
+        goal: { org: 'acme', definition: experimentsGoal },
+        name: goal.id,
         window: { from: savedAt, to: friday },
       }),
     );
@@ -122,25 +135,41 @@ describe('a row of assessments that holds no state or moments', () => {
   });
 });
 
-describe('a clock row that does not read as the goals do', () => {
-  it('moves past the present, starting nothing, when its goals are gone, retired, or have no schedule it can read', async () => {
-    const goals = JSON.stringify([
-      { id: 'gone', first_saved_at: savedAt, summary: { cron: '0 9 * * 5', time_zone: 'Europe/London' } },
-      { id: 'stopped', first_saved_at: savedAt, retired: true, summary: { cron: '0 9 * * 5' } },
-      { id: 'broken', first_saved_at: savedAt, summary: { cron: 'not a cron' } },
-    ]);
+describe('a clock row that does not read as its goal does', () => {
+  it('moves past the present, starting nothing, when the goal was retired since the row was read', async () => {
+    const clock = JSON.stringify({
+      first_saved_at: savedAt,
+      summary: { cron: '0 9 * * 5', time_zone: 'Europe/London' },
+    });
     const when = [
       { column: 'summary_at', before: friday + 1 },
-      { column: 'goals', equals: goals },
+      { column: 'clock', equals: clock },
     ];
 
-    expect(await movedWith(goals)).toEqual([['clock', { set: { summary_at: friday + 7 * 24 * hour }, when }]]);
+    expect(await movedWith(clock, { goals: [{ ...weekly, retired: true }] })).toEqual([
+      ['clock', { set: { summary_at: friday + 7 * 24 * hour }, when }],
+    ]);
   });
 
-  it('moves to no time at all when none of its goals can come due again', async () => {
-    const goals = JSON.stringify([{ id: 'broken', first_saved_at: savedAt, summary: { cron: 'not a cron' } }]);
+  it('moves to no time at all when the goal is retired or has no schedule that can come due again', async () => {
+    const retired = JSON.stringify({ first_saved_at: savedAt, retired: true, summary: { cron: '0 9 * * 5' } });
+    const broken = JSON.stringify({ first_saved_at: savedAt, summary: { cron: 'not a cron' } });
 
-    expect(await movedWith(goals)).toMatchObject([['clock', { set: { summary_at: null } }]]);
+    expect([await movedWith(retired), await movedWith(broken)]).toMatchObject([
+      [['clock', { set: { summary_at: null } }]],
+      [['clock', { set: { summary_at: null } }]],
+    ]);
+  });
+});
+
+describe('a clock row the summaries cannot work here', () => {
+  it('leaves the row of a goal another playbook holds now to that playbook, and a row it cannot read', async () => {
+    const clock = JSON.stringify({ first_saved_at: savedAt, summary: { cron: '0 9 * * 5' } });
+
+    expect([await movedWith(clock, { definition: 'goal-held-elsewhere' }), await movedWith('not a clock')]).toEqual([
+      [],
+      [],
+    ]);
   });
 
   it('moves nothing when no row is left to move', async () => {
@@ -148,7 +177,7 @@ describe('a clock row that does not read as the goals do', () => {
     const moved: unknown[] = [];
     const { work } = await summaryBookOf({
       ports: (ports) => {
-        const over = clockRowPorts(summary.book.ledger, '[]', (key) => {
+        const over = clockRowPorts(summary.book.ledger, '{}', (key) => {
           moved.push(key);
         })(ports);
         return { ...over, ledger: { ...over.ledger, readProjectedRows: () => Effect.succeed([]) } };

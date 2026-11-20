@@ -120,7 +120,7 @@ export const AssessmentSchema = Schema.Struct({
   ),
   stopped: Schema.optionalKey(StoppedSchema),
   dismissed: Schema.optionalKey(DismissedSchema),
-  goals_version: Schema.Int.annotate({ description: 'The version of the goals it opened under' }),
+  goals_version: Schema.Int.annotate({ description: 'The version of the goal it opened under' }),
   notices: Schema.Array(NoticeSchema).annotate({ description: 'The notices sent of it' }),
 }).annotate({ identifier: 'GoalAssessment', description: 'One judgement of a goal' });
 

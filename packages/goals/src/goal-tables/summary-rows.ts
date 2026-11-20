@@ -39,7 +39,8 @@ function summaryAfter(row: ProjectedRow | undefined, event: RecordedGoalSummaryE
 
 export const summaryRows: KeyedProjection = {
   name: summariesName,
-  version: 1,
+  version: 2,
+  scopes: ['definition'],
   kinds: [goalSummariesKind],
   types: ['goal_summary_started', 'goal_notice_refused'],
   columns: [

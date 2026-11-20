@@ -14,8 +14,7 @@ const owner = { id: 'person:owner', name: 'Owner' };
 const helper = { id: 'person:helper', name: 'Helper' };
 
 const byTheCalendar = {
-  goal: 'replies',
-  goals_version: 1,
+  goal_version: 1,
   rule: { settles: 'on_crossing', target: { at_least: 1 } },
   milestones: [{ id: 'answered', label: 'Answered', by: 'person' }],
 } as const;
@@ -27,7 +26,7 @@ const opened: AssessmentFact = {
 
 const open = assessmentOf([opened]);
 
-const thing = { goal: 'replies', per: 'request-7' };
+const thing = { per: 'request-7' };
 
 const after = (state: AssessmentState, facts: readonly AssessmentFact[]) =>
   facts.reduce((before, fact) => assessmentAfter(before, fact), state);
@@ -47,7 +46,7 @@ const restoring = (at: number, by: Dismissing['by'] = owner): Dismissing => ({
 });
 
 describe('dismissing a thing of a goal', () => {
-  it('records which thing of which goal, who dismissed it, when, and the questions it set aside, and keeps it dismissed', () => {
+  it('records which thing, who dismissed it, when, and the questions it set aside, and keeps it dismissed', () => {
     const facts = factsDismissing(open, dismissing(minute(0), owner, ['ask-2', 'ask-1']));
 
     expect(facts).toEqual([
@@ -56,13 +55,13 @@ describe('dismissing a thing of a goal', () => {
     expect(after(open, facts).dismissed).toEqual({ at: minute(0), by: owner, requests: ['ask-2', 'ask-1'] });
   });
 
-  it('records the goal alone for a thing with no per, such as a day judged by the calendar', () => {
+  it('records no thing for a thing with no per, such as a day judged by the calendar', () => {
     const day = assessmentOf([{ type: 'goal_assessment_opened', data: byTheCalendar }]);
     const dismissed = after(day, factsDismissing(day, dismissing(minute(0))));
 
     expect([factsDismissing(day, dismissing(minute(0))), factsDismissing(dismissed, restoring(minute(1)))]).toEqual([
-      [{ type: 'goal_dismissed', data: { goal: 'replies', at: iso(minute(0)), by: owner, requests: [] } }],
-      [{ type: 'goal_restored', data: { goal: 'replies', at: iso(minute(1)), by: owner } }],
+      [{ type: 'goal_dismissed', data: { at: iso(minute(0)), by: owner, requests: [] } }],
+      [{ type: 'goal_restored', data: { at: iso(minute(1)), by: owner } }],
     ]);
   });
 

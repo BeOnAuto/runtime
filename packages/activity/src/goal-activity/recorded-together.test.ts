@@ -1,7 +1,7 @@
 import { leadGoalId, plainGoalId } from '@on.auto/playbooks/testing';
 import { describe, expect, it } from 'vitest';
 
-import { assessed, assessments, at, goalsOfFinance, opened, projections } from '../testing/goal-activity.ts';
+import { assessed, assessments, at, goalsHeld, goalsOfFinance, opened, projections } from '../testing/goal-activity.ts';
 import { activityHarness, ada, listedOf, outputOf, priya } from '../testing/harness.ts';
 import type { RecordedFact } from '../testing/recorded-facts.ts';
 import { activityOperationsKeepingGoals } from './goal-operations.ts';
@@ -38,12 +38,13 @@ async function caughtUpTogether(inTurn: readonly Judged[]) {
   const harness = activityHarness(undefined, { ...activityOperationsKeepingGoals(goalsOfFinance), projections });
   await harness.created(priya, 'finance', at('08:00'));
   await harness.created(ada, 'sales', at('08:00'));
+  await goalsHeld(harness.record);
   await inTurn.reduce(
     (before, { playbook, id, names }) =>
       before.then(() =>
         harness.record(
-          assessments(playbook, id),
-          opened(playbook === 'finance' ? leadGoalId : plainGoalId, '08:30'),
+          assessments(playbook, playbook === 'finance' ? leadGoalId : plainGoalId, id),
+          opened('08:30'),
           judgedLate('passed', names),
         ),
       ),

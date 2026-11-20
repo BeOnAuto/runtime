@@ -5,8 +5,7 @@ import { assessmentStateText } from '../goal-tables/assessment-row-state.ts';
 import { heldAssessmentsOf, instantIn } from './assessment-read.ts';
 
 const pinned: PinnedRule = {
-  goal: 'first-sale',
-  goalsVersion: 2,
+  goalVersion: 2,
   settles: 'on_crossing',
   target: { at_least: 1 },
   milestones: [],

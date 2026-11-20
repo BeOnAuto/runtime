@@ -5,7 +5,14 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { workflowSource } from '../testing/servers/workflow-server.ts';
-import { goalsText, plainGoalId, servingReasoningWithGoals } from '../testing/settings/goals-kept.ts';
+import {
+  goalsText,
+  leadGoalId,
+  plainGoalId,
+  savedSourceOf,
+  servingReasoningWithGoals,
+  versionsOf,
+} from '../testing/settings/goals-kept.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const aMinuteAndASecond = 61_000;
@@ -89,7 +96,10 @@ describe('an older playbook on a Node server that now keeps goals', () => {
         body: { errors: [{ pointer: '' }] },
       });
       expect(functionSaved.status).toBe(201);
-      expect(goalsSent).toMatchObject({ status: 200, body: { goals: { source: goalsText, version: 1 } } });
+      expect(goalsSent).toMatchObject({
+        status: 200,
+        body: { goals: { source: savedSourceOf(goalsText), versions: versionsOf([leadGoalId, 1], [plainGoalId, 1]) } },
+      });
       expect(saved).toMatchObject({
         status: 200,
         body: { version: 2, details: { contributes: [{ goal: plainGoalId, measures: '/orders' }] } },

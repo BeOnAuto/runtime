@@ -39,7 +39,8 @@ function observationAfter(row: ProjectedRow | undefined, { data }: Observed): Pr
 
 export const observationRows: KeyedProjection = {
   name: observationsName,
-  version: 1,
+  version: 2,
+  scopes: ['definition'],
   kinds: [assessmentsKind],
   types: ['goal_observed'],
   columns: [

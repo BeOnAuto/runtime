@@ -44,7 +44,7 @@ export function factsDismissing(
   if (pinned === undefined || dismissed === (state.dismissed !== undefined)) {
     return [];
   }
-  const thing = { goal: pinned.goal, ...(pinned.per === undefined ? {} : { per: pinned.per }) };
+  const thing = pinned.per === undefined ? {} : { per: pinned.per };
   const when = new Date(at).toISOString();
   return dismissed
     ? [{ type: 'goal_dismissed', data: { ...thing, at: when, by, requests: requests.slice(0, mostRequestsSetAside) } }]

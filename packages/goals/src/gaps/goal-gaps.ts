@@ -1,4 +1,4 @@
-import type { Contributes, Goal, Goals } from '@on.auto/definitions/goals';
+import type { Contributes, Goal, Goals, HeldGoal } from '@on.auto/definitions/goals';
 import { noGoalGap, type GoalGap, type GoalsAnswer } from '@on.auto/playbooks';
 
 import {
@@ -22,9 +22,9 @@ export interface StandingWorkflow {
 }
 
 export interface GoalsStanding {
-  readonly version: number;
   readonly source?: string;
   readonly goals: Goals;
+  readonly held: readonly HeldGoal[];
   readonly workflows: readonly StandingWorkflow[];
   readonly notifiers: ReadonlySet<string>;
 }
@@ -145,6 +145,7 @@ export function goalsGapsOf({ goals, workflows, notifiers }: GoalsStanding): rea
 }
 
 export function goalsAnsweredOf(standing: GoalsStanding): GoalsAnswer {
-  const { source, version } = standing;
-  return source === undefined ? { gaps: [noGoalGap] } : { source, version, gaps: goalsGapsOf(standing) };
+  const { source, held } = standing;
+  const versions = held.map(({ goal, version }) => ({ id: goal.id, version }));
+  return source === undefined ? { gaps: [noGoalGap] } : { source, versions, gaps: goalsGapsOf(standing) };
 }

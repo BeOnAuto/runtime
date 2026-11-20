@@ -8,7 +8,6 @@ import {
   type RecordedEvent,
   PlaybookContext,
 } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { playbooksStreamOfOrg } from '@on.auto/playbooks';
 import {
   StartRefused,
@@ -20,7 +19,7 @@ import {
 import { Effect, Result, Schema } from 'effect';
 
 import { assessmentIdOf, noticeRunIdOf, type NoticeChange } from '../assessments/assessment-identity.ts';
-import { goalsLedger } from '../engine/goals-engine.ts';
+import { goalIdentityOf, goalsMemoryLedger, goalsSavedBy, type GoalsSaving } from '../assessor/assessor-ledger.ts';
 import { NoticeRefusalsSchema, type NoticeRefusals } from '../goal-tables/assessment-row-state.ts';
 import { assessmentsName } from '../goal-tables/assessment-rows.ts';
 import type { NoticeLedger } from './notice-ledger.ts';
@@ -48,7 +47,9 @@ export const experiments = {
   notify: { passed: 'now', failed: 'quiet', overdue: 'summary', through: 'tell-owner' },
 };
 
-export const assessment = assessmentIdOf({ goal: experiments.id, per: 'experiment-7' });
+export const experimentsGoal = goalIdentityOf(experiments.id);
+
+export const assessment = assessmentIdOf({ definition: experimentsGoal, per: 'experiment-7' });
 
 export function runOf(change: NoticeChange): string {
   return noticeRunIdOf(assessment, change);
@@ -67,8 +68,7 @@ const verbatim: Decider<null, Fact, Fact> = {
 };
 
 const opened = {
-  goal: experiments.id,
-  goals_version: 1,
+  goal_version: 1,
   per: { id: 'experiment-7' },
   rule: { settles: 'on_crossing', target: { at_least: 1 } },
   milestones: experiments.milestones,
@@ -103,7 +103,8 @@ export interface NoticeBook {
   readonly ledger: NoticeLedger;
   readonly append: (stream: string, type: string, data: Schema.Json, context?: Partial<Context>) => Promise<void>;
   readonly appendAt: (stream: string, type: string, data: Schema.Json, context?: Partial<Context>) => Promise<void>;
-  readonly goalsSaved: (goals: Schema.Json) => Promise<void>;
+  readonly ofTheGoal: (stream: string, type: string, data: Schema.Json, context?: Partial<Context>) => Promise<void>;
+  readonly goalsSaved: GoalsSaving;
   readonly playbookCreated: () => Promise<void>;
   readonly playbookRetired: () => Promise<void>;
   readonly playbookFact: (type: string, data: Schema.Json) => Promise<void>;
@@ -142,7 +143,7 @@ async function rowsOf(service: NoticeLedger): Promise<readonly ProjectedRow[]> {
 }
 
 export function noticeBookOf(): NoticeBook {
-  const { service } = memoryLedger(undefined, goalsLedger.projections);
+  const { service } = goalsMemoryLedger();
   const at = new Date(monday - 3_600_000).toISOString();
   const appendTo = (stream: string, type: string, data: Schema.Json, context: Partial<Context> = {}) =>
     Effect.runPromise(
@@ -150,12 +151,15 @@ export function noticeBookOf(): NoticeBook {
     );
   const append: NoticeBook['append'] = (stream, type, data, context) =>
     appendTo(`${salesKey}${stream}`, type, data, context);
-  const streamOfIt = `assessments/${assessment}`;
+  const streamOfIt = `definition/acme/${experimentsGoal}/assessments/${assessment}`;
+  const ofTheGoal = { definitionId: experimentsGoal };
   return {
     ledger: service,
     append,
     appendAt: appendTo,
-    goalsSaved: (goals) => append('goals/playbook', 'playbook_goals_saved', { source: 'goals', goals, version: 1 }),
+    ofTheGoal: (stream, type, data, context) =>
+      appendTo(`definition/acme/${experimentsGoal}/${stream}`, type, data, { ...context, ...ofTheGoal }),
+    goalsSaved: goalsSavedBy(appendTo, sales),
     playbookCreated: () =>
       appendTo(playbooksStreamOfOrg('acme'), 'playbook_created', {
         playbook: 'sales',
@@ -165,21 +169,22 @@ export function noticeBookOf(): NoticeBook {
       }),
     playbookRetired: () => appendTo(playbooksStreamOfOrg('acme'), 'playbook_retired', { playbook: 'sales' }),
     playbookFact: (type, data) => appendTo(playbooksStreamOfOrg('acme'), type, data),
-    opened: () => append(streamOfIt, 'goal_assessment_opened', opened, { by: 'playbook:sales' }),
+    opened: () => appendTo(streamOfIt, 'goal_assessment_opened', opened, { by: 'playbook:sales', ...ofTheGoal }),
     assessed: (verdict, told, when = monday) =>
-      append(
+      appendTo(
         streamOfIt,
         'goal_assessed',
         { verdict, at: new Date(when).toISOString(), by: 'crossing', told },
-        { by: 'playbook:sales' },
+        { by: 'playbook:sales', ...ofTheGoal },
       ),
-    runStarted: async (run, reference = `goals/${experiments.id}/assessments/${assessment}`) => {
+    runStarted: async (run, reference = `goals/${experimentsGoal}/assessments/${assessment}`) => {
       await append(`runs/${run}`, 'run_started', { input: {} }, { trigger: { kind: 'goal', reference } });
       return firstRecordOf(service, run);
     },
     column: async (name) => (await rowsOf(service)).map((row) => row[name])[0],
     refusals: async () => refusalsOfText((await rowsOf(service)).map((row) => row['notice_refusals'])[0]),
-    factsOf: async (stream) => (await Effect.runPromise(service.load(`${salesKey}${stream}`, typesFold))).state,
+    factsOf: async (stream) =>
+      (await Effect.runPromise(service.load(`definition/acme/${experimentsGoal}/${stream}`, typesFold))).state,
     inThePlaybook: (work) =>
       Effect.runPromise(
         Effect.provideContext(Effect.provideService(work, PlaybookContext, sales), playbookLedgerOf(service, sales)),

@@ -1,10 +1,10 @@
-import type { Contributes, Goal } from '@on.auto/definitions/goals';
+import type { Contributes, HeldGoal } from '@on.auto/definitions/goals';
 import type { RecordedEvent } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
 import type { ConditionedEntry, RunVerdicts } from '../conditions/run-conditions.ts';
 import { observedEntryKeyOf } from '../goal-tables/observation-rows.ts';
-import type { Contribution, ContributedRun, RefusedObservation } from '../observations/observation.ts';
+import type { Contribution, ContributedRun } from '../observations/observation.ts';
 import { observationsOf, outputGoneRefusal } from '../observations/observations.ts';
 import type { ExtractedOfGoal } from './planned-runs.ts';
 
@@ -15,7 +15,7 @@ interface FinishedRun {
 }
 
 interface KnownEntry {
-  readonly goal: Goal;
+  readonly held: HeldGoal;
   readonly entry: Contributes[number];
   readonly index: number;
 }
@@ -57,17 +57,22 @@ export function failedRunOf(record: Pick<RecordedEvent, 'type' | 'context' | 'da
   return ended === undefined ? undefined : { ...ended, reason: reasonOf(record) };
 }
 
-export function knownEntriesOf(contributes: Contributes, goals: readonly Goal[]): readonly KnownEntry[] {
+export function knownEntriesOf(contributes: Contributes, held: readonly HeldGoal[]): readonly KnownEntry[] {
   return contributes.flatMap((entry, index) => {
-    const goal = goals.find(({ id }) => id === entry.goal);
-    return goal === undefined ? [] : [{ goal, entry, index }];
+    const known = held.find(({ goal }) => goal.id === entry.goal);
+    return known === undefined ? [] : [{ held: known, entry, index }];
   });
 }
 
-export function observedKeysOf(known: readonly KnownEntry[], run: FinishedRun): (goal: string) => readonly string[] {
-  return (goal) =>
-    known.flatMap(({ goal: { id }, index }) =>
-      id === goal ? [observedEntryKeyOf({ workflow: run.name, version: run.version, entry: index })] : [],
+export function observedKeysOf(
+  known: readonly KnownEntry[],
+  run: FinishedRun,
+): (definition: string) => readonly string[] {
+  return (definition) =>
+    known.flatMap(({ held, index }) =>
+      held.definition === definition
+        ? [observedEntryKeyOf({ workflow: run.name, version: run.version, entry: index })]
+        : [],
     );
 }
 
@@ -94,11 +99,15 @@ export function contributedRunOf(
 }
 
 function contributionOf(known: KnownEntry, run: ContributedRun): Omit<Contribution, 'when'> {
-  return { goal: known.goal, entry: known.entry, entryIndex: known.index, run };
+  return { goal: known.held.goal, entry: known.entry, entryIndex: known.index, run };
 }
 
-export function goneRefusalsOf(known: readonly KnownEntry[], run: ContributedRun): readonly RefusedObservation[] {
-  return known.map((entry) => outputGoneRefusal(contributionOf(entry, run)));
+export function goneRefusalsOf(known: readonly KnownEntry[], run: ContributedRun): readonly ExtractedOfGoal[] {
+  return known.map((entry) => ({
+    held: entry.held,
+    observations: [],
+    refused: [outputGoneRefusal(contributionOf(entry, run))],
+  }));
 }
 
 export function extractedOf(
@@ -110,6 +119,6 @@ export function extractedOf(
     const when = verdicts[entry.index];
     const contribution = contributionOf(entry, run);
     const extracted = observationsOf(when === undefined ? contribution : { ...contribution, when });
-    return { goal: entry.goal, observations: extracted.observations, refused: extracted.refused };
+    return { held: entry.held, observations: extracted.observations, refused: extracted.refused };
   });
 }

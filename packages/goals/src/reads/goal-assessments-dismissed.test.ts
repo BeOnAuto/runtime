@@ -1,11 +1,13 @@
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { requestsSetAside } from '../dismissals/requests-set-aside.ts';
+import { requestsSetAside, requestsSetAsideBy } from '../dismissals/requests-set-aside.ts';
 import {
   assessmentBookOf,
   day,
   experimentsGoal,
   firstDay,
+  heldGoalOf,
   instantText,
   thingAt,
   type AssessmentBook,
@@ -19,7 +21,7 @@ const live = firstDay + day;
 const owner = 'person:owner';
 
 function read(book: AssessmentBook, asked: GoalsAsked = {}) {
-  return book.inThePlaybook(goalAssessmentsIn(experimentsGoal, undefined, 1, asked));
+  return book.inThePlaybook(goalAssessmentsIn(heldGoalOf(experimentsGoal), undefined, asked));
 }
 
 function liveThing(book: AssessmentBook, per: string, at = firstDay): Promise<string> {
@@ -136,5 +138,23 @@ describe('the requests the standing dismissals of a playbook set aside', () => {
     const ofOlder = { goal: experimentsGoal.id, id: older, at: instantText(live), by: owner };
     const ofNewer = { goal: experimentsGoal.id, id: newer, at: instantText(live + hour), by: 'person:other' };
     expect(Object.fromEntries(setAside)).toEqual({ 'ask-1': ofOlder, 'ask-2': ofNewer, 'ask-3': ofNewer });
+  });
+});
+
+describe('the requests a dismissal sets aside, of a goal the playbook no longer names', () => {
+  it('are none, since the goal they were set aside for is another playbook’s now', async () => {
+    const elsewhere = {
+      org: 'acme',
+      definition: 'goal-held-elsewhere',
+      playbook: 'sales',
+      key: 'thing-1',
+      row: { dismissed: true, at: live, by: owner, requests: JSON.stringify(['ask-1']) },
+    };
+
+    const setAside = await Effect.runPromise(
+      requestsSetAsideBy({ read: () => Effect.succeed([elsewhere]), goalNames: Effect.succeed([]) }),
+    );
+
+    expect(setAside.size).toBe(0);
   });
 });

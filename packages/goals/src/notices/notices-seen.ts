@@ -15,9 +15,10 @@ const changes: readonly NoticeChange[] = ['passed', 'failed', 'overdue'];
 
 const runStream = /(?:^|\/)runs\/([^/]+)$/u;
 
-const goalReference = /^goals\/[^/]+\/assessments\/([0-9a-f-]{36})$/u;
+const goalReference = /^goals\/([^/]+)\/assessments\/([0-9a-f-]{36})$/u;
 
 interface Seen {
+  readonly definition: string;
   readonly assessment: string;
   readonly change: NoticeChange;
   readonly run: string;
@@ -25,13 +26,13 @@ interface Seen {
 
 export function noticeSeenIn({ stream, context }: RecordedEvent): Seen | undefined {
   const { trigger } = context;
-  const assessment = trigger?.kind === 'goal' ? goalReference.exec(trigger.reference)?.[1] : undefined;
+  const [, definition, assessment] = (trigger?.kind === 'goal' ? goalReference.exec(trigger.reference) : null) ?? [];
   const run = runStream.exec(stream)?.[1];
-  if (assessment === undefined || run === undefined) {
+  if (definition === undefined || assessment === undefined || run === undefined) {
     return undefined;
   }
   const change = changes.find((asked) => noticeRunIdOf(assessment, asked) === run);
-  return change === undefined ? undefined : { assessment, change, run };
+  return change === undefined ? undefined : { definition, assessment, change, run };
 }
 
 interface NoticeDelivery {
@@ -51,7 +52,7 @@ function deliveryOf(
     key: record.id,
     workflow: record.context.definitionName ?? noticesSeenName,
     deliver: Effect.suspend(() =>
-      noticeRecorded(ledger, playbook, seen.assessment, {
+      noticeRecorded(ledger, { org: playbook.org, definition: seen.definition }, seen.assessment, {
         kind: 'seen',
         change: seen.change,
         run: seen.run,

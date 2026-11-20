@@ -10,7 +10,7 @@ import { built, calledBy, experimentId, measuring, noReads, results } from './as
 import { deliveredAll, finished, monday, onSchedule, salesKey } from './assessor-ledger.ts';
 import { assessorOf } from './assessor.ts';
 
-const refusedKey = 'r:paying-customers.measure';
+const refusedKey = 'r:goal-of-paying-customers/measure';
 
 const away = () => Effect.fail(new DatabaseFailed({ detail: 'The ledger is away' }));
 
@@ -44,11 +44,11 @@ describe('bad data in a run', () => {
     expect([gone, sameRun, within, later].map(({ keys, failed }) => ({ keys, failed }))).toEqual(
       [gone, sameRun, within, later].map(() => ({ keys: [refusedKey], failed: [] })),
     );
-    expect(await book.factsOf('goal-refusals/paying-customers.measure')).toEqual([
+    expect(await book.factsOf('paying-customers', 'goal-refusals/measure')).toEqual([
       'goal_observation_refused',
       'goal_observation_refused',
     ]);
-    expect((await book.rows(refusalsName))['paying-customers.measure']).toMatchObject({
+    expect((await book.rows(refusalsName))['measure']).toMatchObject({
       run: 'two',
       detail: '/contributes/0: each at /results is not a list',
       refusals: 2,
@@ -127,7 +127,7 @@ describe('a run whose observation was refused, delivered again', () => {
     );
 
     expect(again.map(({ failed }) => failed)).toEqual([[], []]);
-    expect(await book.factsOf('goal-refusals/paying-customers.measure')).toEqual(['goal_observation_refused']);
+    expect(await book.factsOf('paying-customers', 'goal-refusals/measure')).toEqual(['goal_observation_refused']);
   });
 });
 
@@ -145,7 +145,7 @@ describe('a workflow refused every minute for ten hours', () => {
         finished({ id: `m${String(index)}`, run: `run-${String(index)}`, at: clock.now, data }),
       );
     };
-    const factsNow = async () => (await book.factsOf('goal-refusals/paying-customers.measure')).length;
+    const factsNow = async () => (await book.factsOf('paying-customers', 'goal-refusals/measure')).length;
 
     await Effect.runPromise(
       Effect.forEach(
@@ -176,11 +176,11 @@ describe('a refusal after a counted run of the same workflow', () => {
     clock.now = monday + 5 * minute;
     await deliveredAll(assessor, finished({ id: 'n4', run: 'four', at: clock.now, data: null }));
 
-    expect(await book.factsOf('goal-refusals/paying-customers.measure')).toEqual([
+    expect(await book.factsOf('paying-customers', 'goal-refusals/measure')).toEqual([
       'goal_observation_refused',
       'goal_observation_refused',
     ]);
-    expect((await book.rows(refusalsName))['paying-customers.measure']).toMatchObject({
+    expect((await book.rows(refusalsName))['measure']).toMatchObject({
       run: 'three',
       at: monday + 4 * minute,
     });

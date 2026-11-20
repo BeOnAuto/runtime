@@ -5,6 +5,7 @@ import { retiredWakeAt } from '../clock/retired-day.ts';
 import {
   assessment,
   experiments,
+  experimentsGoal,
   monday,
   noticeBookOf,
   owner,
@@ -70,7 +71,7 @@ const expectedStart = {
     goal: { id: experiments.id, statement: experiments.statement },
     per: { id: 'experiment-7' },
   },
-  trigger: { kind: 'goal', reference: `goals/${experiments.id}/assessments/${assessment}` },
+  trigger: { kind: 'goal', reference: `goals/${experimentsGoal}/assessments/${assessment}` },
 };
 
 describe('a notice a verdict told now is owed', () => {
@@ -128,7 +129,7 @@ describe('a notice owed while another of its assessment is being recorded', () =
     await book.playbookCreated();
     await book.goalsSaved([experiments]);
     await book.opened();
-    await book.append(
+    await book.ofTheGoal(
       `assessments/${assessment}`,
       'goal_overdue',
       { since: new Date(monday).toISOString(), told: 'now' },

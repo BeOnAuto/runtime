@@ -4,6 +4,7 @@ import { judgingDueOf } from '../assessments/assessment-dues.ts';
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
 import type { GoalRule } from '../goal-rules/goal-rule.ts';
 import { traceBookOf, type TraceBook } from './trace-book.ts';
+import { tracedGoalId } from './trace-book.ts';
 import type { Appended } from './trace-ledger.ts';
 import { rowsAndCoreOf } from './trace-rows.ts';
 import { wordsOf } from './trace-words.ts';
@@ -17,7 +18,7 @@ const controls: GoalRule = {
   notify: { passed: 'quiet', failed: 'now', overdue: 'now' },
 };
 
-const windowOf = (offset: number) => assessmentIdOf({ goal: 'controls-hold', window_start: day(offset) });
+const windowOf = (offset: number) => assessmentIdOf({ definition: tracedGoalId, window_start: day(offset) });
 
 const names: Readonly<Record<string, string>> = {
   [windowOf(0)]: 'Monday',
@@ -92,7 +93,7 @@ it('ends with Monday passed, Tuesday and Thursday missed by their deadlines, and
 });
 
 it('keeps an unknown assessment unnamed in the words of a trace', () => {
-  const other: TraceBook = traceBookOf({ ...controls, id: 'another-goal' }, day(-1));
+  const other: TraceBook = traceBookOf({ ...controls, id: 'another-goal' }, day(-1), 'another-goal-of-the-playbook');
 
   expect(other.ring(day(0)).map((appended) => wordsOf(appended, names))).toEqual([
     `another assessment_opened due ${iso(day(1, 1))}`,

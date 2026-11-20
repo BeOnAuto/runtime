@@ -21,7 +21,9 @@ const showing = { streamPrefix: 'playbook/acme/alpha/', content: nothingKept, vi
 
 const { present, publicTypes, storedTypesOf } = presentationOf(goalPresenters(true));
 
-function recordOf(type: string, data: object): RecordedEvent {
+const named = { definitionId: '019a8f00-0000-7000-8000-000000000001', definitionName: 'paying-customers' };
+
+function recordOf(type: string, data: object, name: object = named): RecordedEvent {
   return {
     id: '5c6f1a43-0d6e-5b2a-9c1e-7e3f2a1b0c9d',
     cursor: 'c-1',
@@ -32,7 +34,7 @@ function recordOf(type: string, data: object): RecordedEvent {
     globalPosition: 9,
     type,
     data,
-    context: { at: '2026-11-09T11:00:00.000Z', by: robin.id },
+    context: { at: '2026-11-09T11:00:00.000Z', by: robin.id, ...name },
     recordedAt: '2026-11-09T11:00:00.000Z',
   };
 }
@@ -41,12 +43,10 @@ const utf8 = new TextEncoder();
 
 const inWords: unknown = expect.stringMatching(/\S/u);
 
-const ofTheGoal = { goal: 'paying-customers', per: 'experiment-7' };
-
-const dismissed = { ...ofTheGoal, at: '2026-11-09T11:00:00.000Z', by: robin, requests: ['ask-1', 'ask-2'] };
+const dismissed = { per: 'experiment-7', at: '2026-11-09T11:00:00.000Z', by: robin, requests: ['ask-1', 'ask-2'] };
 
 describe('the events of the things of a goal', () => {
-  it('are a dismissal and a restoring, each with the goal, the thing, who and, for a dismissal, the requests it set aside', () => {
+  it('are a dismissal and a restoring, each with the id its goal holds now, the thing, who and, for a dismissal, the requests it set aside', () => {
     expect(publicTypes).toEqual(['thing.dismissed', 'thing.restored']);
     expect(storedTypesOf('thing.dismissed')).toEqual(['goal_dismissed']);
     expect(present(recordOf('goal_dismissed', dismissed), showing)).toEqual([
@@ -56,11 +56,15 @@ describe('the events of the things of a goal', () => {
         data: { goal: 'paying-customers', id: thing, per: 'experiment-7', by: robin, requests: ['ask-1', 'ask-2'] },
       }),
     ]);
-    expect(
-      present(recordOf('goal_restored', { goal: 'paying-customers', at: dismissed.at, by: robin }), showing),
-    ).toEqual([
+    expect(present(recordOf('goal_restored', { at: dismissed.at, by: robin }), showing)).toEqual([
       expect.objectContaining({ type: 'thing.restored', data: { goal: 'paying-customers', id: thing, by: robin } }),
     ]);
+  });
+
+  it('show nothing of a dismissal no goal is named in, as one a release before this recorded under its playbook', () => {
+    const before = { goal: 'paying-customers', ...dismissed };
+
+    expect(present(recordOf('goal_dismissed', before, {}), showing)).toEqual([]);
   });
 
   it('show no other fact of a thing, carry who dismissed it cut to two hundred bytes, and no per where it has none', () => {
@@ -78,14 +82,16 @@ describe('the events of the things of a goal', () => {
 describe('the data of a dismissal event', () => {
   it('fits in the data of a public event at its widest', () => {
     const widest = {
-      goal: `g${'-'.repeat(47)}`,
       per: '\u0001'.repeat(200),
       at: dismissed.at,
       by: { id: `person:${'é'.repeat(300)}`, name: '\u0001'.repeat(mostNameBytes * 2) },
       requests: Array.from({ length: mostRequestsSetAside }, () => thing),
     };
 
-    const [shown] = present(recordOf('goal_dismissed', widest), showing);
+    const [shown] = present(
+      recordOf('goal_dismissed', widest, { ...named, definitionName: `g${'-'.repeat(47)}` }),
+      showing,
+    );
 
     expect(utf8.encode(JSON.stringify(shown?.data)).byteLength).toBeLessThanOrEqual(mostPublicEventDataBytes);
   });

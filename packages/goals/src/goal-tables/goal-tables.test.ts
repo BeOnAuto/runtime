@@ -1,11 +1,11 @@
-import { GoalsEventSchema } from '@on.auto/definitions/goals';
-import { factTypesOf, type ProjectedMessage } from '@on.auto/operations';
+import { GoalEventSchema } from '@on.auto/definitions/goals';
+import { factTypesOf, scopesOf, type ProjectedMessage } from '@on.auto/operations';
 import type { SchemaAST } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { goalsLedger } from '../engine/goals-engine.ts';
+import { assessmentStreamOf, refusalsStreamOf, summariesStreamOf } from '../goal-facts/goal-facts.ts';
 import { rowFoldedOf } from './folded-rows.ts';
-import { goalRefusalsStreamIdOf, goalSummariesStreamIdOf, refusedOfKey } from './goal-streams.ts';
 import { noticeDays, noticeDayOf } from './notice-days.ts';
 import { observationRows, observedEntryKeyOf } from './observation-rows.ts';
 import { refusalRows } from './refusal-rows.ts';
@@ -29,22 +29,44 @@ const observationStream = {
 describe('the tables of goals', () => {
   it('fold the facts of goals and nothing else', () => {
     const goalTypes = new Set(
-      [...goalsLedger.factSchemas, GoalsEventSchema].flatMap((schema: { readonly ast: SchemaAST.AST }) =>
+      [...goalsLedger.factSchemas, GoalEventSchema].flatMap((schema: { readonly ast: SchemaAST.AST }) =>
         factTypesOf(schema),
       ),
     );
 
     expect(goalsLedger.projections.flatMap(({ types }) => types).filter((type) => !goalTypes.has(type))).toEqual([]);
     expect(goalsLedger.projections.map(({ name, version }) => `${name}_${String(version)}`)).toEqual([
-      'goal_assessments_6',
-      'goal_clocks_1',
-      'goal_refusals_1',
-      'goal_notice_days_1',
-      'goal_summaries_1',
-      'goal_observations_1',
-      'activity_goals_3',
-      'activity_goal_overdues_1',
-      'activity_dismissals_1',
+      'goal_assessments_7',
+      'goal_clocks_2',
+      'goal_refusals_2',
+      'goal_notice_days_2',
+      'goal_summaries_2',
+      'goal_observations_2',
+      'activity_goals_4',
+      'activity_goal_overdues_2',
+      'activity_dismissals_2',
+    ]);
+  });
+
+  it('fold the streams kept under the key of a goal alone, never a playbook’s or the org’s', () => {
+    expect(new Set(goalsLedger.projections.map((projection) => scopesOf(projection).join(' ')))).toEqual(
+      new Set(['definition']),
+    );
+  });
+});
+
+describe('the streams of what a goal records', () => {
+  it('lie under the goal’s own key: each assessment, the refused observations of each workflow, and its summaries', () => {
+    const goal = { org: 'acme', definition: '019a8f00-0000-7000-8000-000000000001' };
+
+    expect([
+      assessmentStreamOf(goal, 'a1'),
+      refusalsStreamOf(goal, 'measure-experiments'),
+      summariesStreamOf(goal),
+    ]).toEqual([
+      'definition/acme/019a8f00-0000-7000-8000-000000000001/assessments/a1',
+      'definition/acme/019a8f00-0000-7000-8000-000000000001/goal-refusals/measure-experiments',
+      'definition/acme/019a8f00-0000-7000-8000-000000000001/goal-summaries/summary',
     ]);
   });
 });
@@ -58,22 +80,6 @@ describe('the refused observations of a goal and a workflow', () => {
         messageOf('goal_observation_refused', { detail: 'unreadable' }, '2026-11-09T10:02:00.000Z', 2),
       ]),
     ).toEqual({ run: 'run-2', detail: 'No title', at: Date.parse('2026-11-09T10:01:00.000Z'), refusals: 2 });
-  });
-
-  it('are kept under the goal and the workflow, which their key gives back', () => {
-    const key = goalRefusalsStreamIdOf({ goal: 'paying-customers', workflow: 'measure-experiments' });
-
-    expect([
-      key,
-      refusedOfKey(key),
-      refusedOfKey('paying-customers'),
-      goalSummariesStreamIdOf('paying-customers'),
-    ]).toEqual([
-      'paying-customers.measure-experiments',
-      { goal: 'paying-customers', workflow: 'measure-experiments' },
-      undefined,
-      'paying-customers',
-    ]);
   });
 });
 

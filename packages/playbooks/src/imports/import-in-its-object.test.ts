@@ -61,7 +61,7 @@ describe('import_playbook where the new playbook’s own object checks and write
         created_by: { id: 'acme-admin', name: 'acme-admin' },
         updated_at: firstMoment,
         page: { source: written.page },
-        goals: { source: goals, version: 1, gaps: [] },
+        goals: { source: goals, versions: [{ id: 'paying-customers', version: 1 }], gaps: [] },
         studio: 'studio:goal/alpha/paying-customers',
         models_not_offered: [],
       },
@@ -112,7 +112,10 @@ describe('import_playbook sent again where the new playbook’s own object check
     expect(await imported()).toMatchObject({ status: 'rejected', reason: 'unavailable' });
     expect([imports.copied(inAcme), imports.reservedFor(inAcme)]).toEqual([['first', 'second'], 'import-one']);
     expect(await imported({ ...importing, import_id: 'import-two' })).toMatchObject({ reason: 'conflict' });
-    expect(await imported()).toMatchObject({ status: 'succeeded', output: { goals: { version: 1 } } });
+    expect(await imported()).toMatchObject({
+      status: 'succeeded',
+      output: { goals: { versions: [{ id: 'paying-customers', version: 1 }] } },
+    });
     expect(await imported()).toMatchObject({
       status: 'succeeded',
       output: { id: 'alpha', studio: 'studio:goal/alpha/paying-customers' },

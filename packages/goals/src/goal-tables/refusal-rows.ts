@@ -39,7 +39,8 @@ export function refusalStatus(
 
 export const refusalRows: KeyedProjection = {
   name: refusalsName,
-  version: 1,
+  version: 2,
+  scopes: ['definition'],
   kinds: [goalRefusalsKind],
   types: ['goal_observation_refused'],
   columns: [

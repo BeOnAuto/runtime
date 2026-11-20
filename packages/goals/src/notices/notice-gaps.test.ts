@@ -3,6 +3,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { dayLimitDetail } from '../notice-limits/notice-day-limit.ts';
+import { heldGoalOf } from '../reads/assessment-samples.ts';
 import { noticeGapsIn, noticeNotStartedGap } from './notice-gaps.ts';
 import {
   assessment,
@@ -94,7 +95,7 @@ async function refusedBook(overdueToo = false) {
   await book.goalsSaved([experiments]);
   await book.opened();
   if (overdueToo) {
-    await book.append(`assessments/${assessment}`, 'goal_overdue', {
+    await book.ofTheGoal(`assessments/${assessment}`, 'goal_overdue', {
       since: new Date(monday).toISOString(),
       told: 'now',
     });
@@ -110,8 +111,8 @@ async function refusedBook(overdueToo = false) {
 describe('the gap of a notice that was not started', () => {
   it('shows for a goal whose newest notice was refused for good, and not for a retired goal', async () => {
     const book = await refusedBook();
-    const gaps = await book.inThePlaybook(noticeGapsIn(goals));
-    const retired = await book.inThePlaybook(noticeGapsIn(goals.map((goal) => ({ ...goal, retired: true }))));
+    const gaps = await book.inThePlaybook(noticeGapsIn(goals.map((goal) => heldGoalOf(goal))));
+    const retired = await book.inThePlaybook(noticeGapsIn(goals.map((goal) => heldGoalOf({ ...goal, retired: true }))));
 
     expect(gaps).toEqual([
       {
@@ -126,7 +127,7 @@ describe('the gap of a notice that was not started', () => {
 
   it('names the later of two refusals of one assessment', async () => {
     const book = await refusedBook(true);
-    const gaps = await book.inThePlaybook(noticeGapsIn(goals));
+    const gaps = await book.inThePlaybook(noticeGapsIn(goals.map((goal) => heldGoalOf(goal))));
 
     expect(gaps.map(({ detail }) => detail.slice(0, 60))).toEqual([
       'The message saying the goal paying-customers passed was not ',
@@ -137,7 +138,7 @@ describe('the gap of a notice that was not started', () => {
 describe('the gap of a notice that was not started, once one did', () => {
   it('goes once a later notice of the goal started', async () => {
     const book = await refusedBook();
-    await book.append(
+    await book.ofTheGoal(
       `assessments/${assessment}`,
       'goal_notice_started',
       { change: 'failed', run: runOf('failed') },
@@ -146,7 +147,7 @@ describe('the gap of a notice that was not started, once one did', () => {
       },
     );
 
-    expect(await book.inThePlaybook(noticeGapsIn(goals))).toEqual([]);
+    expect(await book.inThePlaybook(noticeGapsIn(goals.map((goal) => heldGoalOf(goal))))).toEqual([]);
   });
 });
 

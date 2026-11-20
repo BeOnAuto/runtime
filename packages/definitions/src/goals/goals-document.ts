@@ -1,4 +1,5 @@
 import { Schema } from 'effect';
+import { stringify } from 'yaml';
 
 export const goalIdPattern = /^[a-z][a-z0-9-]{2,47}$/u;
 
@@ -97,6 +98,10 @@ export type Goals = typeof GoalsSchema.Type;
 export interface GoalsDocument {
   readonly source: string;
   readonly goals: Goals;
+}
+
+export function goalsSourceOf(goals: Goals): string {
+  return stringify(goals, { aliasDuplicateObjects: false });
 }
 
 export function isCalendarWindow(window: GoalWindow): window is CalendarWindow {

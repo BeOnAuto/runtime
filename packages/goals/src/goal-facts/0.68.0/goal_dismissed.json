@@ -1,0 +1,21 @@
+{
+  "type": "goal_dismissed",
+  "data": {
+    "per": "experiment-7",
+    "at": "2026-11-09T11:00:00.000Z",
+    "by": {
+      "id": "person:user_2b7c4d9e1f",
+      "name": "Robin Park"
+    },
+    "requests": [
+      "019a8f2e-7b6c-7d5e-8f40-3a2b1c0d9e90",
+      "019a8f2e-7b6c-7d5e-8f40-3a2b1c0d9e91"
+    ]
+  },
+  "context": {
+    "at": "2026-11-09T11:00:00.000Z",
+    "by": "person:user_2b7c4d9e1f",
+    "definitionName": "paying-customers",
+    "definitionId": "019a8f00-0000-7000-8000-000000000001"
+  }
+}

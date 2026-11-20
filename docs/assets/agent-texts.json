@@ -3079,7 +3079,7 @@
       ]
     },
     {
-      "sha256": "491dc701aa0add9692ebbf5b6be1003a7572c17463e450dcdbb867498c61af2a",
+      "sha256": "9a5002aa9c70817551be764550dd2075b96a9ba129fd205ec8e93da68ea3c27d",
       "tier": 1,
       "received": [
         {
@@ -3092,15 +3092,15 @@
         }
       ],
       "lines": [
-        "Records the person's yes to the playbook's saved goals. Call it only after the person says yes in the conversation, and send the goals `version` they saw. Without `ids` it covers every goal that is not retired. A goal saved again with a change needs a new yes: show it, ask again, then call this again."
+        "Records the person's yes to the playbook's saved goals. Call it only after the person says yes in the conversation, and send each goal's `id` with the `version` they saw. Name every goal they said yes to; one you leave out keeps waiting for its yes. A goal saved again with a change needs a new yes: show it, ask again, then call this again."
       ]
     },
     {
-      "sha256": "4a8a89355f4c9dd672ead790edadec990e84af87bd3bcecb203dae1df9f71151",
+      "sha256": "44066128990a7b8a7c43f0a56de52eed6b02072d1b9d2cdbbd09e7d372a0ec4d",
       "tier": 1,
       "received": [
         {
-          "as": "tool agree_playbook_goals: argument version",
+          "as": "tool agree_playbook_goals: argument goals",
           "on": [
             "/mcp",
             "/orgs/{org}/playbooks/{playbook}/mcp",
@@ -3109,15 +3109,15 @@
         }
       ],
       "lines": [
-        "The goals version the person saw, as create_playbook, update_playbook or get_playbook answered it"
+        "The goals the person said yes to, each by its `id` and the `version` they saw, as create_playbook, update_playbook or get_playbook answered it"
       ]
     },
     {
-      "sha256": "cf86dda6e4aebd250b4c8f59d1a5d67e788bf14b606e011f4f1357088db4a214",
+      "sha256": "ac3cd0f0f285fc1ce2befe94a1672ee0acc0d25d8c4fb61ed1dcf56d33a105a6",
       "tier": 1,
       "received": [
         {
-          "as": "tool agree_playbook_goals: argument ids",
+          "as": "tool agree_playbook_goals: argument goals[].id",
           "on": [
             "/mcp",
             "/orgs/{org}/playbooks/{playbook}/mcp",
@@ -3126,7 +3126,24 @@
         }
       ],
       "lines": [
-        "The ids of the goals the person said yes to; leave it out for every goal that is not retired"
+        "The id of the goal"
+      ]
+    },
+    {
+      "sha256": "42c711252f992751c27e16f3f5a080cda7183e3bbdbc3bcafa2a5d292f795c65",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool agree_playbook_goals: argument goals[].version",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The version of the goal the person saw"
       ]
     },
     {
@@ -5853,7 +5870,7 @@
       ]
     },
     {
-      "sha256": "263563d26a773d30501d7994b856fae2155f29adb80ef84dff11af524808c4b4",
+      "sha256": "3e59b7a8ac046709417eef54734aac9ce8a6cff48e74f603f6b8477d504bf859",
       "tier": 3,
       "received": [
         {
@@ -5913,15 +5930,15 @@
         "",
         "## After the create, show the saved goals and record the yes",
         "",
-        "The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with their `version`. Give the person the link, so that they can see what was saved. When the saved goals are the ones they said yes to, unchanged, record that yes with agree_playbook_goals and the `version` saved, without asking again. When anything changed, show them what changed and the link in one message, and end it with the same question: Did I get all that right? Yes, or tell me what to change.",
+        "The answer of create_playbook holds `studio`, a link that opens the lead goal in Studio, and `goals`, the goals as saved with each goal's `version`. Give the person the link, so that they can see what was saved. When the saved goals are the ones they said yes to, unchanged, record that yes with agree_playbook_goals, naming each goal with its `version` as saved, without asking again. When anything changed, show them what changed and the link in one message, and end it with the same question: Did I get all that right? Yes, or tell me what to change.",
         "",
-        "Change the goals with update_playbook until they say yes. A save that changes them answers with a new `version`, and update_playbook's answer carries no `studio` link, so say the changed goals back in their words.",
+        "Change the goals with update_playbook until they say yes. A save that changes a goal answers with a new `version` for that goal, and update_playbook's answer carries no `studio` link, so say the changed goals back in their words.",
         "",
-        "agree_playbook_goals records their yes to every goal that is not retired; name goals by id in `ids` only when they said yes to some and not the others. Build nothing before that call: no function and no workflow.",
+        "agree_playbook_goals records their yes to the goals you name in `goals`; name every goal they said yes to, and leave out any they did not. Build nothing before that call: no function and no workflow.",
         "",
-        "A yes holds only for the goals as the person saw them. A save that changes a goal, its name included, drops the yes to that goal. So after the yes, put a change to the person first, save it as they agreed it, and call agree_playbook_goals again with the new version before you build on it. When the call answers that the goals changed since the version you gave, show the person the saved goals again and ask before you record a yes.",
+        "A yes holds only for the goals as the person saw them. A save that changes a goal, its name included, drops the yes to that goal. So after the yes, put a change to the person first, save it as they agreed it, and call agree_playbook_goals again with that goal's new version before you build on it. When the call answers that a goal changed since the version you gave, show the person that goal as it is saved and ask before you record a yes.",
         "",
-        "The answers of create_playbook, update_playbook and get_playbook carry `goals`: the text as saved, its version and its gaps. A gap is not a refusal. It says what the goals still lack before they can be judged, such as a measure that no workflow reports yet. Most gaps close as you save the workflows. [Gaps, and who fixes each](#gaps-and-who-fixes-each) lists them.",
+        "The answers of create_playbook, update_playbook and get_playbook carry `goals`: the text as saved, each goal's version and the gaps. A gap is not a refusal. It says what the goals still lack before they can be judged, such as a measure that no workflow reports yet. Most gaps close as you save the workflows. [Gaps, and who fixes each](#gaps-and-who-fixes-each) lists them.",
         "",
         "The answers of create_playbook, update_playbook, create_definition and update_definition can also carry `notices`: what to double-check in what you just saved, such as a `per` that is one of Auto's own words, and what the person will see. Read each before you go on: change what you saved, or carry on as `before_going_on` says.",
         "",
@@ -6127,7 +6144,7 @@
         "A playbook made before goals keeps running as it is. The next time you save one of its workflows, create_definition or update_definition refuses it with \"Ask the person: What should this playbook achieve for you, and how will you know it worked?\" Then:",
         "",
         "1. Learn the goals with the person, as above.",
-        "2. Send the goals with update_playbook once they say yes to the proposal, and record that yes with agree_playbook_goals and the version saved, as above. update_playbook's answer carries no `studio` link.",
+        "2. Send the goals with update_playbook once they say yes to the proposal, and record that yes with agree_playbook_goals, naming each goal with its `version` as saved, as above. update_playbook's answer carries no `studio` link.",
         "3. Save the workflow again, with its `contributes`.",
         "",
         "Its other workflows keep running, and each shows as a gap until you next save it with a contribution.",

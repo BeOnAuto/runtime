@@ -1,4 +1,4 @@
-import { playbookGoalsIn, type Goal } from '@on.auto/definitions/goals';
+import { playbookGoalsIn, type HeldGoal } from '@on.auto/definitions/goals';
 import {
   playbookLedgerOf,
   streamPrefixOfPlaybook,
@@ -23,7 +23,7 @@ export interface CatchUpParts<E> extends StopParts<E> {
   readonly now: () => number;
 }
 
-function oldestUnstoppedActOf(parts: CatchUpParts<unknown>, playbook: PlaybookAddress, goals: readonly Goal[]) {
+function oldestUnstoppedActOf(parts: CatchUpParts<unknown>, playbook: PlaybookAddress, goals: readonly HeldGoal[]) {
   return Effect.map(
     Effect.forEach(goals, (goal) => openItemsOf(parts.ledger, playbook, goal)),
     (found: readonly (readonly ProjectedKeyedRow[])[]) => {
@@ -63,7 +63,7 @@ function stoppedBy<E>(parts: CatchUpParts<E>, playbook: PlaybookAddress, record:
 export function caughtUp<E>(parts: CatchUpParts<E>, playbook: PlaybookAddress) {
   return Effect.gen(function* () {
     const standing = yield* Effect.provideContext(playbookGoalsIn, playbookLedgerOf(parts.ledger, playbook));
-    const goals = standing.goals.filter(({ retired }) => retired !== true);
+    const goals = standing.held.filter(({ goal }) => goal.retired !== true);
     const oldest = yield* oldestUnstoppedActOf(parts, playbook, goals);
     if (oldest === undefined) {
       return;

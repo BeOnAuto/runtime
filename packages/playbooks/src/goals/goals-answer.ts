@@ -32,10 +32,17 @@ export const GoalGapSchema = Schema.Struct({
 
 export type GoalGap = typeof GoalGapSchema.Type;
 
+const GoalVersionSchema = Schema.Struct({
+  id: Schema.String.annotate({ description: 'The id of the goal' }),
+  version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({ description: 'The version of the goal now' }),
+});
+
+type GoalVersion = typeof GoalVersionSchema.Type;
+
 export const GoalsAnswerSchema = Schema.Struct({
   source: Schema.optionalKey(Schema.String.annotate({ description: 'The goals as they were saved' })),
-  version: Schema.optionalKey(
-    Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({ description: 'The version of the goals, from 1' }),
+  versions: Schema.optionalKey(
+    Schema.Array(GoalVersionSchema).annotate({ description: "Each saved goal's `id` and `version`, in order" }),
   ),
   gaps: Schema.Array(GoalGapSchema).annotate({ description: 'What the playbook and its goals still lack' }),
 }).annotate({
@@ -47,9 +54,9 @@ export type GoalsAnswer = typeof GoalsAnswerSchema.Type;
 
 export interface GoalsKept {
   readonly source: string;
-  readonly version: number;
+  readonly versions: readonly GoalVersion[];
 }
 
 export function goalsAnswerOf(kept: GoalsKept | undefined): GoalsAnswer {
-  return kept === undefined ? { gaps: [noGoalGap] } : { source: kept.source, version: kept.version, gaps: [] };
+  return kept === undefined ? { gaps: [noGoalGap] } : { source: kept.source, versions: kept.versions, gaps: [] };
 }

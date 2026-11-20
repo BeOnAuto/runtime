@@ -3,9 +3,11 @@ import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { goalNoticesOf } from './goal-notices.ts';
+import { noticeRecorded } from './notice-ledger.ts';
 import {
   assessment,
   experiments,
+  experimentsGoal,
   monday,
   noticeBookOf,
   performedAt,
@@ -97,7 +99,7 @@ describe('what the consumer takes for a notice', () => {
     );
 
     expect(read.filter((seen) => seen !== undefined)).toEqual([
-      { assessment, change: 'overdue', run: runOf('overdue') },
+      { definition: experimentsGoal, assessment, change: 'overdue', run: runOf('overdue') },
     ]);
     expect(read).toHaveLength(5);
   });
@@ -151,7 +153,7 @@ describe('the due work of notices', () => {
 
   it('moves a row whose other notice is owed later past the present, so the host never spins', async () => {
     const { book, work } = await bookAssessed('now');
-    await book.append(`assessments/${assessment}`, 'goal_overdue', {
+    await book.ofTheGoal(`assessments/${assessment}`, 'goal_overdue', {
       since: new Date(monday + 10 * minute).toISOString(),
       told: 'now',
     });
@@ -163,7 +165,7 @@ describe('the due work of notices', () => {
 });
 
 describe('a row of notices the due work cannot read', () => {
-  it('moves a row whose kept state cannot be read, or names no goal, past the present', async () => {
+  it('moves a row whose kept state cannot be read past the present, and leaves a row of a goal the playbook does not hold to the playbook that holds it', async () => {
     const book = noticeBookOf();
     await book.playbookCreated();
     const owedState = JSON.stringify({
@@ -174,8 +176,8 @@ describe('a row of notices the due work cannot read', () => {
       started: [],
     });
     const rows = [
-      { org: 'acme', playbook: 'sales', key: 'unreadable', row: { state: 'not a state' } },
-      { org: 'acme', playbook: 'sales', key: 'unpinned', row: { state: owedState } },
+      { org: 'acme', playbook: 'sales', definition: experimentsGoal, key: 'unreadable', row: { state: 'not a state' } },
+      { org: 'acme', playbook: 'sales', definition: 'goal-held-elsewhere', key: 'unpinned', row: { state: owedState } },
     ];
     const advanced: unknown[] = [];
     const { starts, start } = startsAnswering(() => 'started');
@@ -191,10 +193,7 @@ describe('a row of notices the due work cannot read', () => {
     await performedAt(work, monday);
 
     expect(starts).toEqual([]);
-    expect(advanced).toEqual([
-      ['unreadable', { notice_due_at: null }],
-      ['unpinned', { notice_due_at: null }],
-    ]);
+    expect(advanced).toEqual([['unreadable', { notice_due_at: null }]]);
     expect(await book.factsOf('assessments/unpinned')).toEqual([]);
   });
 });
@@ -236,5 +235,25 @@ describe('the due work of notices in the engine', () => {
       parts.dueWork.map(({ name }) => name),
       parts.playbookOperations,
     ]).toEqual([['goal notices seen'], ['the notices of goals owed', 'the summaries of goals due'], []]);
+  });
+});
+
+describe('a refusal of a notice no longer owed', () => {
+  it('records nothing, as when the notice started on another host meanwhile', async () => {
+    const book = noticeBookOf();
+    await book.goalsSaved([experiments]);
+    await book.opened();
+    await Effect.runPromise(
+      noticeRecorded(book.ledger, { org: sales.org, definition: experimentsGoal }, assessment, {
+        kind: 'refused',
+        change: 'passed',
+        attempt: 1,
+        detail: 'The function tell-owner could not be started now',
+        at: new Date(monday).toISOString(),
+        by: 'playbook:sales',
+      }),
+    );
+
+    expect(await book.factsOf(`assessments/${assessment}`)).toEqual(['goal_assessment_opened']);
   });
 });

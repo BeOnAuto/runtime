@@ -6,7 +6,7 @@ import { goalsWantedWordsOf, playbookOperationsOf, retirePlaybook } from '../ind
 import { acmeAdmin, adaOfAcme } from '../testing/callers.ts';
 import { cutOnce, goalsInMemory, goalsRefusedAtSave, refusedGoals } from '../testing/goals-in-memory.ts';
 import { firstMoment, harness, toOrg } from '../testing/harness.ts';
-import { createdWithGoals, goalsText, leadGoalId, restatedGoalsText } from '../testing/index.ts';
+import { createdWithGoals, goalsText, leadGoalId, restatedGoalsText, versionsOfBothAt } from '../testing/index.ts';
 import { pagesInMemory, refusedPage } from '../testing/playbook-pages.ts';
 import { defineCreatePlaybookKeepingGoals } from './playbook-goals-operations.ts';
 
@@ -28,7 +28,7 @@ const alpha = {
   updated_at: firstMoment,
 };
 
-const savedGoals = { source: goalsText, version: 1, gaps: [] };
+const savedGoals = { source: goalsText, versions: versionsOfBothAt(1), gaps: [] };
 
 function keepingGoals(goalsOver: (goals: PlaybookGoals) => PlaybookGoals = (goals) => goals) {
   const pages = pagesInMemory();
@@ -187,7 +187,7 @@ describe('update_playbook where goals are kept', () => {
         ...alpha,
         name: 'Beta',
         page: { source: '---\n---\n' },
-        goals: { source: restatedGoalsText, version: 2, gaps: [] },
+        goals: { source: restatedGoalsText, versions: versionsOfBothAt(2), gaps: [] },
         before_building: untilTheYes,
       },
     });
@@ -199,7 +199,7 @@ describe('update_playbook where goals are kept', () => {
 
     expect(
       await call(named('update_playbook'), toAcme(acmeAdmin, { playbook: 'alpha', goals: restatedGoalsText })),
-    ).toMatchObject({ status: 'succeeded', output: { goals: { source: restatedGoalsText, version: 1 } } });
+    ).toMatchObject({ status: 'succeeded', output: { goals: { versions: versionsOfBothAt(1) } } });
   });
 
   it('renames without saving the page or the goals, and answers them as they stand', async () => {

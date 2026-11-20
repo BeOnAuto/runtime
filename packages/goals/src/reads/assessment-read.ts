@@ -147,7 +147,7 @@ export function assessmentReadOf(held: HeldAssessment): AssessmentRead {
     ...verdictOf(state),
     ...stoppedOf(state),
     ...dismissedOf(state),
-    goals_version: pinned.goalsVersion,
+    goals_version: pinned.goalVersion,
     notices,
   };
 }

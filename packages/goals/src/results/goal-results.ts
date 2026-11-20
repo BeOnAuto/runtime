@@ -1,4 +1,4 @@
-import { goalStandingIn } from '@on.auto/definitions/goals';
+import { heldGoalNamed, playbookGoalsIn } from '@on.auto/definitions/goals';
 import { defineHttpOperation, NotFound, PlaybookReader, type PlaybookContext } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
@@ -44,11 +44,11 @@ export function goalResultsIn({
   cursor,
 }: GoalResultsAsked): Effect.Effect<GoalResults, NotFound, PlaybookReader | PlaybookContext> {
   return Effect.gen(function* () {
-    const standing = yield* goalStandingIn;
-    if (!standing.goals.some(({ id }) => id === goal)) {
+    const held = heldGoalNamed(yield* playbookGoalsIn, goal);
+    if (held === undefined) {
       return yield* Effect.fail(new NotFound({ detail: `There is no goal ${goal} in this playbook` }));
     }
-    const rows = goalRowsOf(yield* PlaybookReader, { id: goal });
+    const rows = goalRowsOf(yield* PlaybookReader, held);
     return yield* resultsPageOf(rows, [endedThat(outcome)], cursor);
   });
 }

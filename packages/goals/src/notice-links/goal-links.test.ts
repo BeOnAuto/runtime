@@ -2,6 +2,7 @@ import type { StudioPage } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { assessmentIdOf } from '../assessments/assessment-identity.ts';
+import { goalIdentityOf } from '../assessor/assessor-ledger.ts';
 import { experiments, monday, noticeBookOf, performedAt, startsAnswering } from '../notices/notice-samples.ts';
 import { noticesOwedOf } from '../notices/notice-starts.ts';
 import { noticedPlaybookIn } from '../notices/noticed-playbooks.ts';
@@ -90,15 +91,15 @@ describe('the link in a notice of a goal judged as a whole', () => {
     const book = noticeBookOf();
     await book.playbookCreated();
     await book.goalsSaved([experiments]);
-    const whole = assessmentIdOf({ goal: experiments.id });
+    const whole = assessmentIdOf({ definition: goalIdentityOf(experiments.id) });
     const opened = {
       goal: experiments.id,
       goals_version: 1,
       rule: { settles: 'on_crossing', target: { at_least: 1 } },
       milestones: experiments.milestones,
     };
-    await book.append(`assessments/${whole}`, 'goal_assessment_opened', opened, { by: 'playbook:sales' });
-    await book.append(
+    await book.ofTheGoal(`assessments/${whole}`, 'goal_assessment_opened', opened, { by: 'playbook:sales' });
+    await book.ofTheGoal(
       `assessments/${whole}`,
       'goal_assessed',
       { verdict: 'passed', at: new Date(monday).toISOString(), by: 'crossing', told: 'now' },

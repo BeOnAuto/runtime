@@ -14,6 +14,7 @@ import {
   plainGoalId,
   restatedGoalsText,
   servingReasoningWithGoals,
+  versionsOf,
 } from '../../testing/settings/goals-kept.ts';
 
 let server: ReasoningServer | undefined;
@@ -56,7 +57,6 @@ const kindsOf = (gaps: readonly { readonly kind: string; readonly goal?: string 
   gaps.map(({ kind, goal }) => ({ kind, goal }));
 
 const GoalsReadBody = Schema.Struct({
-  version: Schema.Number,
   gaps: Schema.Array(Schema.Struct({ kind: Schema.String, goal: Schema.optionalKey(Schema.String) })),
   goals: Schema.Array(
     Schema.Struct({
@@ -104,7 +104,10 @@ async function beforeBuildingOf(goalsMessages: boolean) {
     const answers = [
       await session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha', goals: goalsText }),
       await session.callTool('update_playbook', { playbook: 'alpha', goals: restatedGoalsText }),
-      await session.callTool('agree_playbook_goals', { playbook: 'alpha', version: 2 }),
+      await session.callTool('agree_playbook_goals', {
+        playbook: 'alpha',
+        goals: versionsOf([leadGoalId, 2], [plainGoalId, 1]),
+      }),
       await session.callTool('update_playbook', { playbook: 'alpha', goals: restatedGoalsText }),
       await session.callTool('update_playbook', { playbook: 'alpha', name: 'Beta' }),
       await session.callTool('get_playbook', { playbook: 'alpha' }),
@@ -136,7 +139,6 @@ describe('goals read', () => {
 
       expect([before.status, save.status, after.status]).toEqual([200, 201, 200]);
       expect(before.body).toMatchObject({
-        version: 1,
         gaps: [],
         goals: [
           { id: leadGoalId, per: 'experiment', contributions: [], assessments: noAssessments },
@@ -162,7 +164,7 @@ describe('goals read', () => {
 
       expect(read).toMatchObject({
         status: 200,
-        body: { version: 0, gaps: [{ kind: 'no_goal', fixed_by: 'person' }], goals: [] },
+        body: { gaps: [{ kind: 'no_goal', fixed_by: 'person' }], goals: [] },
       });
     });
   });
