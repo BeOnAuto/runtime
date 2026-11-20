@@ -70,6 +70,31 @@ export const ofEachSubscription = {
   },
 };
 
+export const throughItsTools = {
+  type: 'webhook',
+  per: 'subscription',
+  topic: '{{ with.project }}',
+  subscribe: {
+    tool: 'create_hook',
+    with: { project: '{{ topic }}', url: '{{ webhook_url }}', secret: '{{ secret }}' },
+    subscribed: { id: '/id' },
+  },
+  unsubscribe: { tool: 'delete_hook', with: { project: '{{ topic }}', id: '{{ subscription.id }}' } },
+  verify: {
+    scheme: 'hmac',
+    secret: 'subscription',
+    hash: 'sha256',
+    signed_payload: '{payload}',
+    signature: '$request.header.X-Tracker-Signature',
+    prefix: 'sha256=',
+    encoding: 'hex',
+  },
+  filter: {
+    when: { '$request.header.X-Tracker-Event': ['comment'] },
+    subscription: '$request.header.X-Tracker-Hook',
+  },
+};
+
 export const ofTheApp = {
   type: 'webhook',
   per: 'app',

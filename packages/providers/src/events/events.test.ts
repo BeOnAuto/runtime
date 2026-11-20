@@ -80,7 +80,7 @@ describe('the secret of a subscription', () => {
     expect(sentBy({ ...ofEachSubscription, subscribe: { ...keptByTheService, subscribed: { id: '/id' } } })).toEqual([
       [
         `${destination}/subscribe`,
-        "Expected {{ secret }} in the call, or secret among what it answers, since the subscription's own secret proves its deliveries",
+        'Expected one secret here: write {{ secret }} in the call where the service takes a secret, or point subscribed.secret at the secret the call returns. Auto verifies the webhooks with that secret',
       ],
     ]);
   });

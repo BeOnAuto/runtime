@@ -7,6 +7,7 @@ import {
   readingEarlierShapes,
   type Decided,
 } from '@on.auto/operations';
+import { RecordedEventsSchema } from '@on.auto/providers';
 import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
@@ -98,6 +99,7 @@ export const ConnectionEventSchema = Schema.Union([
       document: Schema.optionalKey(ConnectionDocumentSchema),
       credential: CredentialSchema,
       says: Schema.Record(Schema.String, Schema.String),
+      events: Schema.optionalKey(RecordedEventsSchema),
       added_by: RecordedCallerSchema,
     }).check(Schema.makeFilter(additionIssuesOf)),
     ActedContextSchema,

@@ -30,6 +30,13 @@ export {
   type PresentedProof,
 } from './events/arrival-readings.ts';
 export type { Destination as EventDestination } from './events/destination-fields.ts';
+export {
+  EventsByHandSchema,
+  RecordedEventsSchema,
+  toolsNamedIn,
+  type EventsByHand,
+  type RecordedEvents,
+} from './events/events-by-hand.ts';
 export { provesTheBodyAndATime, provesWhatIsReadAt } from './events/event-proofs.ts';
 export { openedAndClosed, receivingOverASocket, type SocketListening } from './sockets/socket-listening.ts';
 export { socketKeyOf, socketStepsOf, stillRefused } from './sockets/socket-set.ts';

@@ -1,4 +1,5 @@
 import type { RecordedCaller } from '@on.auto/operations';
+import type { RecordedEvents } from '@on.auto/providers';
 import type { ClientSource } from '@on.auto/tool-servers';
 
 import type { ConnectionDocument, ConnectionEntry, ConnectionType } from './connection-entry.ts';
@@ -18,6 +19,7 @@ export interface ConnectionAddition {
   readonly document?: ConnectionDocument;
   readonly credential: Credential;
   readonly says: Readonly<Record<string, string>>;
+  readonly events?: RecordedEvents;
   readonly added_by: RecordedCaller;
   readonly link: OpenLink;
 }

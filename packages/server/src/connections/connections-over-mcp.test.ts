@@ -9,6 +9,7 @@ import {
 } from '@on.auto/api/testing';
 import { sha256Of } from '@on.auto/content';
 import { localDeveloper } from '@on.auto/identity/testing';
+import { throughItsTools } from '@on.auto/providers/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
@@ -38,6 +39,18 @@ function notes() {
 const AddedSchema = Schema.Struct({ connect: Schema.Struct({ url: Schema.String }) });
 
 const PageSchema = Schema.Struct({ connection: Schema.String, token: Schema.String });
+
+const ListedSchema = Schema.Struct({
+  structuredContent: Schema.Struct({
+    connections: Schema.Array(
+      Schema.Struct({
+        name: Schema.String,
+        provider: Schema.NullOr(Schema.String),
+        events: Schema.optionalKey(Schema.Unknown),
+      }),
+    ),
+  }),
+});
 
 function adding(name: string, opening: Partial<LinkOpening> = {}) {
   const connection = { url: `${server.origin}/mcp`, headers: {} };
@@ -117,6 +130,22 @@ describe('add_connection over MCP', () => {
     expect(plainTextIn(legacy.answer)).toBe(
       'Added the connection “notes-legacy”. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
     );
+  });
+});
+
+describe('a server given by hand that says how its service sends, over MCP', () => {
+  it('is added with its events, and list_connections answers them as add_connection was given them', async () => {
+    const events = { destinations: [throughItsTools] };
+    const connection = { url: `${server.origin}/mcp`, headers: {} };
+
+    const listed: unknown = await withMcpSession('current revision', connection, async (session) => {
+      await session.callTool('add_connection', { ...notes(), name: 'notes-hooked', events });
+      const answer: unknown = await session.callTool('list_connections', {});
+      return answer;
+    });
+
+    const { connections } = Schema.decodeUnknownSync(ListedSchema)(listed).structuredContent;
+    expect(connections.find(({ name }) => name === 'notes-hooked')).toMatchObject({ provider: null, events });
   });
 });
 

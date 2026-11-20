@@ -1,0 +1,74 @@
+{
+  "type": "connection_added",
+  "data": {
+    "connection": "connection-1",
+    "name": "tracker",
+    "server_type": "mcp",
+    "provider": null,
+    "placeholders": null,
+    "entry": {
+      "url": "https://mcp.tracker.example.com/mcp"
+    },
+    "credential": {
+      "kind": "secret",
+      "name": "Authorization",
+      "in": "header",
+      "scheme": "Bearer",
+      "instructions": "Make a key under [Settings, API keys](https://tracker.example.com/settings/keys).",
+      "key_page": "https://tracker.example.com/settings/keys"
+    },
+    "says": {},
+    "events": {
+      "destinations": [
+        {
+          "type": "webhook",
+          "per": "subscription",
+          "topic": "{{ with.project }}",
+          "subscribe": {
+            "tool": "create_hook",
+            "with": {
+              "project": "{{ topic }}",
+              "url": "{{ webhook_url }}",
+              "secret": "{{ secret }}"
+            },
+            "subscribed": {
+              "id": "/id"
+            }
+          },
+          "unsubscribe": {
+            "tool": "delete_hook",
+            "with": {
+              "project": "{{ topic }}",
+              "id": "{{ subscription.id }}"
+            }
+          },
+          "verify": {
+            "scheme": "hmac",
+            "secret": "subscription",
+            "hash": "sha256",
+            "signed_payload": "{payload}",
+            "signature": "$request.header.X-Tracker-Signature",
+            "prefix": "sha256=",
+            "encoding": "hex"
+          },
+          "filter": {
+            "when": {
+              "$request.header.X-Tracker-Event": [
+                "comment"
+              ]
+            },
+            "subscription": "$request.header.X-Tracker-Hook"
+          }
+        }
+      ]
+    },
+    "added_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

@@ -9,13 +9,13 @@ import {
 } from './destination-fields.ts';
 import { subscriptionIssuesOf } from './subscription-checks.ts';
 
-const DestinationSchema = DestinationFieldsSchema.check(
-  Schema.makeFilter((destination: Destination) => [
-    ...presenceIssuesOf(destination),
-    ...arrivalIssuesOf(destination),
-    ...subscriptionIssuesOf(destination),
-  ]),
-).annotate({ description: 'One way the service sends' });
+export function destinationIssuesOf(destination: Destination): readonly DestinationIssue[] {
+  return [...presenceIssuesOf(destination), ...arrivalIssuesOf(destination), ...subscriptionIssuesOf(destination)];
+}
+
+const DestinationSchema = DestinationFieldsSchema.check(Schema.makeFilter(destinationIssuesOf)).annotate({
+  description: 'One way the service sends',
+});
 
 const oneOfEachType =
   'Expected a type no earlier destination has, since an entry takes one destination of each type, in the order to try them';

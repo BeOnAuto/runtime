@@ -1,47 +1,30 @@
-import type { Decided, PlaybookAddress } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import { ofEachSubscription, overASocket, providersOf, tracker, trackerOverASocket } from '@on.auto/providers/testing';
-import { Effect, Option, Result } from 'effect';
+import { subscriptionLoopOf } from '@on.auto/providers';
+import {
+  ofEachSubscription,
+  overASocket,
+  providersOf,
+  throughItsTools,
+  tracker,
+  trackerOverASocket,
+} from '@on.auto/providers/testing';
+import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { ConnectionEventSchema, type RecordedConnectionEvent } from '../registry/connection-events.ts';
-import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
+import { addedFact, givenByHand, registryOf } from '../testing/loop-registries.ts';
 import { loopConnectionsOf } from './loop-connections.ts';
 import { subscriptionLoopPortsOf, type SubscriptionLoopParts } from './loop-ports.ts';
 import { deliveryDestinationOf } from './subscription-deliveries.ts';
+import { eventSubscriptions } from './subscription-rows.ts';
 
-const theSecret = {
-  kind: 'secret',
-  name: 'Authorization',
-  in: 'header',
-  instructions: 'Make a key under Settings.',
-  key_page: 'https://keys.example.com/settings/keys',
-} as const;
-
-function addedFact(connection: string, name: string, provider: string | null, playbooks?: readonly string[]) {
-  const entry = { url: `https://${name}.example.com/mcp` };
-  return {
-    type: 'connection_added',
-    data: {
-      connection,
-      name,
-      server_type: 'mcp',
-      provider,
-      placeholders: null,
-      entry: playbooks === undefined ? entry : { ...entry, playbooks },
-      credential: theSecret,
-      says: {},
-      added_by: { id: 'person:ada', name: 'Ada Lovelace' },
-    },
-  } as const;
-}
+const alpha = { org: 'acme', playbook: 'alpha' };
 
 const connectedAt = '2026-11-17T08:00:00.000Z';
 
 const added = [
   addedFact('connection-1', 'tracker', 'tracker'),
   addedFact('connection-2', 'notes', null),
-  addedFact('connection-3', 'sales-only', null, ['sales']),
+  addedFact('connection-3', 'sales-only', null, { playbooks: ['sales'] }),
   addedFact('connection-4', 'gone', null),
   { type: 'connection_removed', data: { connection: 'connection-4' } },
 ] as const;
@@ -53,26 +36,14 @@ const connected = [
   },
 ] as const;
 
-function recordedAt(at: string) {
-  return {
-    initialState: null,
-    evolve: () => null,
-    eventSchema: ConnectionEventSchema,
-    decide: (facts: readonly Decided<RecordedConnectionEvent>[]) => Result.succeed(facts),
-    context: () => ({ at, by: 'person:ada' }),
-  };
-}
-
 const providers = providersOf({ ...tracker, events: { destinations: [ofEachSubscription] } });
 
 const declared = providers.providers.flatMap(({ entry }) => entry.events?.destinations ?? []);
 
-async function aRegistry() {
-  const registry = memoryLedger().service;
-  const stream = connectionsStreamOfOrg('acme');
-  await Effect.runPromise(registry.execute(stream, recordedAt('2026-11-17T07:00:00.000Z'), added));
-  await Effect.runPromise(registry.execute(stream, recordedAt(connectedAt), connected));
-  return registry;
+const addedAt = '2026-11-17T07:00:00.000Z';
+
+function aRegistry() {
+  return registryOf([addedAt, added], [connectedAt, connected]);
 }
 
 async function connectionsOver() {
@@ -115,17 +86,14 @@ const withAnAppsEntry = providersOf(
 
 const addedBeside = [
   addedFact('connection-5', 'rooms', 'rooms'),
-  addedFact('connection-6', 'sales-tracker', 'tracker', ['sales']),
+  addedFact('connection-6', 'sales-tracker', 'tracker', { playbooks: ['sales'] }),
   addedFact('connection-7', 'gone-tracker', 'tracker'),
   { type: 'connection_removed', data: { connection: 'connection-7' } },
 ] as const;
 
 async function destinationsOver() {
-  const ledger = memoryLedger().service;
-  await Effect.runPromise(
-    ledger.execute(connectionsStreamOfOrg('acme'), recordedAt('2026-11-17T07:00:00.000Z'), [...added, ...addedBeside]),
-  );
-  const destinationOf = deliveryDestinationOf({ registry: ledger, providers: withAnAppsEntry });
+  const registry = await registryOf([addedAt, [...added, ...addedBeside]]);
+  const destinationOf = deliveryDestinationOf({ registry, providers: withAnAppsEntry });
   return (org: string, playbook: string, connection: string) =>
     Effect.runPromise(destinationOf({ org, playbook, connection }));
 }
@@ -155,8 +123,6 @@ describe('the destination a delivery to a connection’s events address is prove
     ).toEqual([undefined, undefined, undefined, undefined, undefined, undefined]);
   });
 });
-
-const alpha = { org: 'acme', playbook: 'alpha' };
 
 const place = { ...alpha, connection: 'tracker' };
 
@@ -235,8 +201,6 @@ const heldBy = (connection: string, appSecretIds: Readonly<Record<string, string
 
 describe('a socket among the destinations the loop arranges through', () => {
   it('is left out for a connection that holds no app credential it names, or holds it refused', async () => {
-    const registry = memoryLedger().service;
-    const stream = connectionsStreamOfOrg('acme');
     const facts = [
       addedFact('connection-1', 'holding', 'tracker'),
       addedFact('connection-2', 'without', 'tracker'),
@@ -249,7 +213,7 @@ describe('a socket among the destinations the loop arranges through', () => {
         data: { connection: 'connection-3', name: 'app_level_token', reason: 'refused' },
       },
     ] as const;
-    await Effect.runPromise(registry.execute(stream, recordedAt(connectedAt), facts));
+    const registry = await registryOf([connectedAt, facts]);
     const connectionsOf = loopConnectionsOf({ registry, providers: socketFirst });
 
     const types = (await Effect.runPromise(connectionsOf(alpha))).map(({ destinations }) =>
@@ -264,8 +228,8 @@ const waiting = [{ connection: 'tracker', with: { project: 'site' }, sent: { con
 
 describe('the ports of the loop', () => {
   it('read the connections of the playbook from the registry given, and the requests from the reader given', async () => {
-    const read: PlaybookAddress[] = [];
-    const reading = (playbook: PlaybookAddress) =>
+    const read: Readonly<typeof alpha>[] = [];
+    const reading = (playbook: Readonly<typeof alpha>) =>
       Effect.sync(() => {
         read.push(playbook);
         return waiting;
@@ -286,5 +250,39 @@ describe('the ports of the loop', () => {
 
   it('hold at most 8 subscriptions through a connection', () => {
     expect(subscriptionLoopPortsOf(partsOver()).mostPerConnection).toBe(8);
+  });
+});
+
+describe('a connection given by hand that says how its service sends', () => {
+  it('is arranged through as it says, whatever the entries declare, and a recorded description the checks of this release refuse loads and arranges nothing', async () => {
+    const parts = { registry: await givenByHand(), providers: providersOf(tracker) };
+    const connectionsOf = loopConnectionsOf(parts);
+    const at = (connection: string) => Effect.runPromise(deliveryDestinationOf(parts)({ ...alpha, connection }));
+
+    expect(
+      (await Effect.runPromise(connectionsOf(alpha))).map(({ connection, destinations }) => [connection, destinations]),
+    ).toEqual([
+      ['hooks', [throughItsTools]],
+      ['refused', []],
+      ['tracked', []],
+    ]);
+    expect([await at('hooks'), await at('refused')]).toEqual([throughItsTools, undefined]);
+  });
+
+  it('stays on the timer on a runtime that receives nothing over HTTP or gives no address: nothing is called, kept or recorded', async () => {
+    const registry = await givenByHand();
+    const request = { connection: 'hooks', with: { project: 'site' }, sent: { conversation: 'C0123', id: '1.1' } };
+    const roundOn = async (receiving: Pick<SubscriptionLoopParts, 'receivesOverHttp' | 'eventsAddressOf'>) => {
+      const ledger = memoryLedger(undefined, [eventSubscriptions]).service;
+      const parts = { ...partsOver(() => Effect.succeed([request])), ledger, registry, ...receiving };
+      const ports = subscriptionLoopPortsOf(parts);
+      return [
+        await Effect.runPromise(subscriptionLoopOf(ports)(alpha)),
+        await Effect.runPromise(ports.records.read(alpha)),
+      ];
+    };
+
+    expect(await roundOn({ receivesOverHttp: false, eventsAddressOf })).toEqual([{}, []]);
+    expect(await roundOn({ receivesOverHttp: true })).toEqual([{}, []]);
   });
 });

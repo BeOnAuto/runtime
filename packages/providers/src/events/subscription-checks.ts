@@ -62,7 +62,7 @@ const twoSecrets =
   "Expected one secret of the subscription, Auto's, placed as {{ secret }}, or the service's, which subscribed.secret points to, and not both";
 
 const noSecret =
-  "Expected {{ secret }} in the call, or secret among what it answers, since the subscription's own secret proves its deliveries";
+  'Expected one secret here: write {{ secret }} in the call where the service takes a secret, or point subscribed.secret at the secret the call returns. Auto verifies the webhooks with that secret';
 
 function subscriptionSecretIssueOf(subscribe: Destination['subscribe'], provenByIt: boolean): string | undefined {
   if (subscribe === undefined) {

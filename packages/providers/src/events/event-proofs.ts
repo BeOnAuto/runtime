@@ -90,21 +90,55 @@ const fieldsOfEachScheme: Readonly<Record<Scheme, TakenFields>> = {
 
 type ProofIssue = Schema.FilterIssue;
 
-function takenInWords({ required, optional }: TakenFields): string {
+function takenInWords(scheme: string, { required, optional }: TakenFields): string {
   const taken = [...required, ...optional];
-  return taken.length === 0 ? 'nothing but its secret, since the specification fixes the rest' : listed(taken);
+  const only = `with the ${scheme} scheme, verify takes only ${listed(['scheme', 'secret', ...taken])}`;
+  return taken.length === 0 ? `${only}, because the specification fixes the rest` : only;
+}
+
+const theHeaderThatCarriesIt =
+  'write the header that carries it, as $request.header.<name>, and give prefix too when something comes before it in that header';
+
+const theFieldThatHoldsIt = 'the header or the field of the body that holds it';
+
+const whatEachNeeds: Readonly<Record<Field, string>> = {
+  hash: 'write sha256, sha384 or sha512, whichever the service signs with',
+  signed_payload:
+    'write what the service signs. Use {payload} once for the body, and join {timestamp} or {id} to it where the service signs them too, as in v0:{timestamp}:{payload}',
+  signature: theHeaderThatCarriesIt,
+  prefix: 'what comes before the value in its header, such as sha256=',
+  encoding: 'write hex or base64, whichever the signature is written in',
+  timestamp: theFieldThatHoldsIt,
+  id: theFieldThatHoldsIt,
+  token: theHeaderThatCarriesIt,
+  alg: 'write HS256, HS384 or HS512, whichever the service signs the token with',
+};
+
+function wantedWords(field: Field, scheme: string): string {
+  return `Expected ${field}, which the ${scheme} scheme needs: ${whatEachNeeds[field]}`;
+}
+
+const proofFields: ReadonlySet<string> = new Set(['scheme', 'secret', ...everyField]);
+
+export function isAFieldOfAProof(key: string): boolean {
+  return proofFields.has(key);
+}
+
+export function proofFieldsInWords(scheme: Schema.Json | undefined): string | undefined {
+  const found = Object.entries(fieldsOfEachScheme).find(([name]: readonly [string, TakenFields]) => name === scheme);
+  return found === undefined ? undefined : takenInWords(found[0], found[1]);
 }
 
 function presenceIssuesOf(proof: Proof): readonly ProofIssue[] {
-  const taken = fieldsOfEachScheme[proof.scheme];
-  const noun = `the ${proof.scheme} proof`;
+  const { scheme } = proof;
+  const taken = fieldsOfEachScheme[scheme];
   return everyField.flatMap((field): readonly ProofIssue[] => {
     const given = proof[field] !== undefined;
     if (!given && taken.required.includes(field)) {
-      return [{ path: [field], issue: `Expected ${field}, which ${noun} takes` }];
+      return [{ path: [field], issue: wantedWords(field, scheme) }];
     }
     return given && !taken.required.includes(field) && !taken.optional.includes(field)
-      ? [{ path: [field], issue: `Expected no ${field}: ${noun} takes ${takenInWords(taken)}` }]
+      ? [{ path: [field], issue: `Expected no ${field}: ${takenInWords(scheme, taken)}` }]
       : [];
   });
 }

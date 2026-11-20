@@ -6,6 +6,7 @@ import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { heldAppCredentials } from '../testing/app-credential-facts.ts';
+import { givenItsEvents } from '../testing/event-facts.ts';
 import { connectedForItsAccount, throughAGateway } from '../testing/gateway-facts.ts';
 import { ConnectionEventSchema } from './connection-events.ts';
 
@@ -273,6 +274,7 @@ describe('the facts of the registry of connections', () => {
       '0.59.0': [...givenItsDocument, ...connectedForItsAccount],
       '0.60.0': throughAGateway,
       '0.67.0': heldAppCredentials,
+      '0.69.0': givenItsEvents,
     },
   });
 });

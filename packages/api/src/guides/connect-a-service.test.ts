@@ -93,7 +93,7 @@ describe('how the connect-a-service recipe finds a service, keeps what it read a
       'For an HTTP API whose document you wrote, read with one of its calls first and tell the person what came back: a call the document declares as GET or HEAD is marked reads, which query_connection calls; any other may change something, so call it with execute_connection, once the person agrees.',
     );
     expect(connectAService).toContain(
-      'Where the service answers that first read by saying a path or a parameter is wrong, correct the document: read the connection with list_connections, remove it with remove_connection, and add it again with what list_connections answered for it, its `name`, `type`, `credential` and its whole `entry`, with the document corrected in `document_text`; then tell the person they will approve it and paste the key once more, or make a new key where the service shows a key only once.',
+      'Where the service answers that first read by saying a path or a parameter is wrong, correct the document: read the connection with list_connections, remove it with remove_connection, and add it again with what list_connections answered for it, its `name`, `type`, `credential`, its whole `entry` and its `events`, with the document corrected in `document_text`, and with the new name in `events` if the correction renamed a tool that `events` uses; then tell the person they will approve it and paste the key once more, or make a new key where the service shows a key only once.',
     );
   });
 
@@ -107,6 +107,6 @@ describe('how the connect-a-service recipe finds a service, keeps what it read a
     expect(connectAService).toContain(
       'expect what they act on to be there already: a channel, a folder, a label, a field, the stages work moves through.',
     );
-    expect(connectAService).toContain('8. Keep the ids you read of what must exist, for the functions that use them.');
+    expect(connectAService).toContain('9. Keep the ids you read of what must exist, for the functions that use them.');
   });
 });

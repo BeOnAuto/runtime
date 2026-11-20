@@ -13,15 +13,15 @@ export const mostArgumentDescriptionCharacters = 300;
 export const mostToolsOnAConnection = 45;
 
 export const mostListingBytes: Readonly<Record<McpEndpoint, number>> = {
-  'own org': 72_400,
-  directory: 70_000,
-  org: 26_200,
+  'own org': 72_800,
+  directory: 70_400,
+  org: 26_600,
   playbook: 49_600,
 };
 
 export const mostGuideBytes = 65_536;
 
-export const mostRecipeBytes = 8192;
+export const mostRecipeBytes = 10_240;
 
 export function mostRecipeBytesWhere(goals: boolean): number {
   return goals ? mostRecipeBytes + 1024 : mostRecipeBytes;

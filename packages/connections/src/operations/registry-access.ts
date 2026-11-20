@@ -94,7 +94,7 @@ export const actedNow = Effect.gen(function* () {
 });
 
 export function additionOf(
-  { name, type, provider, placeholders, entry, document, credential, says = {} }: DescribedAddition,
+  { name, type, provider, placeholders, entry, document, credential, says = {}, events }: DescribedAddition,
   link: OpenLink,
   addedBy: RecordedCaller,
 ): ConnectionAddition {
@@ -109,6 +109,7 @@ export function additionOf(
     ...(document === undefined ? {} : { document }),
     credential,
     says,
+    ...(events === undefined ? {} : { events }),
     added_by: addedBy,
     link,
   };

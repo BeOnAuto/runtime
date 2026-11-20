@@ -78,6 +78,7 @@ function addedData({
   document,
   credential,
   says,
+  events,
   added_by: addedBy,
 }: Omit<ConnectionAddition, 'link'>) {
   return {
@@ -90,6 +91,7 @@ function addedData({
     ...(document === undefined ? {} : { document }),
     credential,
     says,
+    ...(events === undefined ? {} : { events }),
     added_by: addedBy,
   };
 }

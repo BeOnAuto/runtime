@@ -1,5 +1,11 @@
 import type { Conflict, Forbidden, InvalidInput, Issue } from '@on.auto/operations';
-import { additionOfProvider, providerNamed, type Provider, type ProviderList } from '@on.auto/providers';
+import {
+  additionOfProvider,
+  providerNamed,
+  type Provider,
+  type ProviderList,
+  type EventsByHand,
+} from '@on.auto/providers';
 import { Effect, Option, Result } from 'effect';
 
 import {
@@ -27,6 +33,7 @@ import { providingOf, type ProviderServices } from './provider-providing.ts';
 export interface GivenAddition extends AdditionInput {
   readonly placeholders: Readonly<Record<string, string>> | null;
   readonly says?: Readonly<Record<string, string>>;
+  readonly events?: EventsByHand;
 }
 
 type Checking = Omit<EntryChecking, 'providing'>;
@@ -41,6 +48,7 @@ const namedByTheServer: Credential = { kind: 'authorization' };
 
 function givenByHand(given: AdditionGiven): GivenAddition {
   const { document_text: documentText, ...entry } = Option.getOrThrow(Option.fromNullishOr(given.entry));
+  const { events } = given;
   return {
     name: Option.getOrThrow(Option.fromNullishOr(given.name)),
     type: Option.getOrThrow(Option.fromNullishOr(given.type)),
@@ -49,6 +57,7 @@ function givenByHand(given: AdditionGiven): GivenAddition {
     entry,
     ...(documentText === undefined ? {} : { documentText }),
     credential: given.credential ?? namedByTheServer,
+    ...(events === undefined ? {} : { events }),
   };
 }
 

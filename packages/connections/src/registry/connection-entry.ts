@@ -9,6 +9,8 @@ const neverASecret = 'never a secret or a reference';
 
 export const mostDocumentTextBytes = 16_384;
 
+export const mostEventsBytes = 4096;
+
 export const ConnectionTypeSchema = type.schema.pick(['mcp', 'openapi']).annotate({
   description: 'mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text',
 });

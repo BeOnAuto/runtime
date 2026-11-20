@@ -13,6 +13,7 @@ import { Effect, JsonPointer, Option } from 'effect';
 import type { GivenAddition } from '../providers/provider-additions.ts';
 import { connectionDocumentOf, type ConnectionDocument } from '../registry/connection-entry.ts';
 import { invalidAddition, settingsOfTheAddition, type EntryChecking } from './entry-checks.ts';
+import { undeclaredToolsIn } from './events-fields.ts';
 import { fetchingThrough, passingFailureOf, withoutFetchedValues, type Fetching } from './fetched-documents.ts';
 
 export interface DescribedAddition extends GivenAddition {
@@ -30,7 +31,7 @@ type DescribedApi = Extract<Linked, { readonly api: unknown }>;
 
 interface Read {
   readonly baseUrl: string;
-  readonly toolCount: number;
+  readonly tools: readonly string[];
   readonly leftOut: readonly LeftOutOperation[];
 }
 
@@ -124,8 +125,8 @@ function noToolWordsOf({ documentText }: GivenAddition, leftOut: readonly LeftOu
     : leftOut.map((each) => leftOutWordsOf(each));
 }
 
-function toolsRefusalOf(addition: GivenAddition, { toolCount, leftOut }: Read): InvalidInput | undefined {
-  if (toolCount === 0) {
+function toolsRefusalOf(addition: GivenAddition, { tools, leftOut }: Read): InvalidInput | undefined {
+  if (tools.length === 0) {
     return refusedFor(addition, noToolWordsOf(addition, leftOut));
   }
   return addition.documentText !== undefined && leftOut.length > 0
@@ -134,6 +135,13 @@ function toolsRefusalOf(addition: GivenAddition, { toolCount, leftOut }: Read): 
         leftOut.map((each) => leftOutWordsOf(each)),
       )
     : undefined;
+}
+
+function eventsRefusalOf({ events, entry }: GivenAddition, { tools }: Read): InvalidInput | undefined {
+  const { allowed } = entry;
+  const offered = allowed === undefined ? tools : tools.filter((tool) => allowed.includes(tool));
+  const issues = events === undefined ? [] : undeclaredToolsIn(events, offered);
+  return issues.length === 0 ? undefined : invalidAddition(issues);
 }
 
 function refusalOfTheDocument(
@@ -176,16 +184,16 @@ function readOf(settings: ServerSettings, addition: GivenAddition, { fetch, reac
     Effect.mapError(refusalOfTheDocument(addition, fetching)),
     Effect.map((servers): Read => {
       const { baseUrl, operations } = apiOf(servers);
-      return { baseUrl, toolCount: operations.length, leftOut };
+      return { baseUrl, tools: operations.map(({ tool }) => tool.name), leftOut };
     }),
   );
 }
 
-function describedOf(addition: GivenAddition, { baseUrl, toolCount }: Read): DescribedAddition {
+function describedOf(addition: GivenAddition, { baseUrl, tools }: Read): DescribedAddition {
   const { documentText, entry } = addition;
   return documentText === undefined
     ? { ...addition, entry: { ...entry, base_url: entry.base_url ?? baseUrl } }
-    : { ...addition, document: connectionDocumentOf(documentText, toolCount) };
+    : { ...addition, document: connectionDocumentOf(documentText, tools.length) };
 }
 
 export function describedAdditionOf(
@@ -203,7 +211,7 @@ export function describedAdditionOf(
     }
     const read = yield* readOf(settingsOfTheAddition(addition, checking), addition, { fetch, reaches });
     yield* reached(reaches, read.baseUrl, unresolvedWords.base);
-    const refusal = toolsRefusalOf(addition, read);
+    const refusal = toolsRefusalOf(addition, read) ?? eventsRefusalOf(addition, read);
     return refusal === undefined ? describedOf(addition, read) : yield* Effect.fail(refusal);
   });
 }

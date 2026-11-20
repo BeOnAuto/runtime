@@ -51,10 +51,14 @@ function needsIssuesOf(entry: WithEvents, events: Events): readonly EntryIssue[]
   });
 }
 
-function heldIssuesOf(events: Events): readonly EntryIssue[] {
-  return textsIn(asJson(events), '/events')
+export function credentialsHeldIn(events: Events, root: string, issue: string): readonly EntryIssue[] {
+  return textsIn(asJson(events), root)
     .filter(({ pointer, text }) => credentialProblems('', text, pointer).length > 0)
-    .map(({ pointer }) => ({ path: pathOf(pointer), issue: heldCredential }));
+    .map(({ pointer }) => ({ path: pathOf(pointer), issue }));
+}
+
+function heldIssuesOf(events: Events): readonly EntryIssue[] {
+  return credentialsHeldIn(events, '/events', heldCredential);
 }
 
 function isAKeySentAsABearerToken(way: Way): boolean {

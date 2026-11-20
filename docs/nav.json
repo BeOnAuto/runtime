@@ -143,6 +143,10 @@
         "link": "/reference/render-slack"
       },
       {
+        "text": "How a connection's service sends events",
+        "link": "/reference/connection-events-format"
+      },
+      {
         "text": "Prediction function format",
         "link": "/reference/prediction-format"
       },

@@ -5403,6 +5403,10 @@
                   "more": {
                     "type": "string",
                     "description": "A group of more the provider's way offers, by name, as search lists under providers; its scopes are asked on the page beside the first consent's. None when left out, and an addition by hand takes none"
+                  },
+                  "events": {
+                    "type": "object",
+                    "description": "Without a provider, give this when the service can send webhooks, so Auto knows at once when someone replies. Name the tools that register and remove Auto's webhook URL, and say how to verify webhooks and which ones are replies. The guide connect-a-service shows how. Never put a secret in it."
                   }
                 }
               }
@@ -5538,6 +5542,10 @@
                       ],
                       "additionalProperties": false,
                       "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
+                    },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
                     },
                     "credential": {
                       "type": "object",
@@ -6239,6 +6247,10 @@
                           "additionalProperties": false,
                           "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                         },
+                        "events": {
+                          "type": "object",
+                          "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
+                        },
                         "credential": {
                           "type": "object",
                           "properties": {
@@ -6917,6 +6929,10 @@
                       "additionalProperties": false,
                       "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
+                    },
                     "credential": {
                       "type": "object",
                       "properties": {
@@ -7591,6 +7607,10 @@
                       "additionalProperties": false,
                       "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
+                    },
                     "credential": {
                       "type": "object",
                       "properties": {
@@ -8260,6 +8280,10 @@
                       ],
                       "additionalProperties": false,
                       "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
+                    },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
                     },
                     "credential": {
                       "type": "object",
@@ -8982,6 +9006,10 @@
                       ],
                       "additionalProperties": false,
                       "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
+                    },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
                     },
                     "credential": {
                       "type": "object",
@@ -9920,6 +9948,10 @@
                       "additionalProperties": false,
                       "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
+                    },
                     "credential": {
                       "type": "object",
                       "properties": {
@@ -10767,6 +10799,10 @@
                       "additionalProperties": false,
                       "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
+                    },
                     "credential": {
                       "type": "object",
                       "properties": {
@@ -11490,6 +11526,10 @@
                       "additionalProperties": false,
                       "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
+                    },
                     "credential": {
                       "type": "object",
                       "properties": {
@@ -12183,6 +12223,10 @@
                       ],
                       "additionalProperties": false,
                       "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
+                    },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
                     },
                     "credential": {
                       "type": "object",
@@ -13070,6 +13114,10 @@
                       ],
                       "additionalProperties": false,
                       "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
+                    },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
                     },
                     "credential": {
                       "type": "object",

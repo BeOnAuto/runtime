@@ -162,20 +162,38 @@ describe('the fields of a proof', () => {
     expect(provenBy({ scheme: 'standard-webhooks', secret: 'app', hash: 'sha256' })).toEqual([
       [
         `${verify}/hash`,
-        'Expected no hash: the standard-webhooks proof takes nothing but its secret, since the specification fixes the rest',
+        'Expected no hash: with the standard-webhooks scheme, verify takes only scheme and secret, because the specification fixes the rest',
       ],
     ]);
     expect(provenBy({ scheme: 'jwt', secret: 'app', token: '$request.header.Authorization', encoding: 'hex' })).toEqual(
       [
-        [`${verify}/encoding`, 'Expected no encoding: the jwt proof takes token, alg, and prefix'],
-        [`${verify}/alg`, 'Expected alg, which the jwt proof takes'],
+        [
+          `${verify}/encoding`,
+          'Expected no encoding: with the jwt scheme, verify takes only scheme, secret, token, alg, and prefix',
+        ],
+        [
+          `${verify}/alg`,
+          'Expected alg, which the jwt scheme needs: write HS256, HS384 or HS512, whichever the service signs the token with',
+        ],
       ],
     );
     expect(provenBy({ scheme: 'hmac', secret: 'app' })).toEqual([
-      [`${verify}/hash`, 'Expected hash, which the hmac proof takes'],
-      [`${verify}/signed_payload`, 'Expected signed_payload, which the hmac proof takes'],
-      [`${verify}/signature`, 'Expected signature, which the hmac proof takes'],
-      [`${verify}/encoding`, 'Expected encoding, which the hmac proof takes'],
+      [
+        `${verify}/hash`,
+        'Expected hash, which the hmac scheme needs: write sha256, sha384 or sha512, whichever the service signs with',
+      ],
+      [
+        `${verify}/signed_payload`,
+        'Expected signed_payload, which the hmac scheme needs: write what the service signs. Use {payload} once for the body, and join {timestamp} or {id} to it where the service signs them too, as in v0:{timestamp}:{payload}',
+      ],
+      [
+        `${verify}/signature`,
+        'Expected signature, which the hmac scheme needs: write the header that carries it, as $request.header.<name>, and give prefix too when something comes before it in that header',
+      ],
+      [
+        `${verify}/encoding`,
+        'Expected encoding, which the hmac scheme needs: write hex or base64, whichever the signature is written in',
+      ],
     ]);
   });
 

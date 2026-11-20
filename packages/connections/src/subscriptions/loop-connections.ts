@@ -1,6 +1,6 @@
 import type { PlaybookAddress, StreamReader } from '@on.auto/operations';
-import { providerFoundBy, type LoopConnection, type ProviderList } from '@on.auto/providers';
-import { Effect } from 'effect';
+import { EventsByHandSchema, providerFoundBy, type LoopConnection, type ProviderList } from '@on.auto/providers';
+import { Effect, Option, Schema } from 'effect';
 
 import type { RecordedConnection } from '../registry/connection.ts';
 import { connectionsFoldOf, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
@@ -24,9 +24,19 @@ function takenThrough(connection: RecordedConnection, destinations: Destinations
   );
 }
 
+const asGivenByHand = Schema.decodeUnknownOption(EventsByHandSchema);
+
+function declaredFor(providers: ProviderList, { provider, events }: RecordedConnection): Destinations {
+  const entry = providerFoundBy(providers, provider)?.entry;
+  if (entry !== undefined) {
+    return entry.events?.destinations ?? [];
+  }
+  return Option.match(asGivenByHand(events), { onNone: () => [], onSome: ({ destinations }) => destinations });
+}
+
 function loopConnectionOf(providers: ProviderList, connection: RecordedConnection): LoopConnection {
-  const { name, provider, connected_at: connectedAt } = connection;
-  const destinations = takenThrough(connection, providerFoundBy(providers, provider)?.entry.events?.destinations ?? []);
+  const { name, connected_at: connectedAt } = connection;
+  const destinations = takenThrough(connection, declaredFor(providers, connection));
   return connectedAt === null
     ? { connection: name, destinations }
     : { connection: name, connected: connectedAt, destinations };

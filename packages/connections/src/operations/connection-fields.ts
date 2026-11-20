@@ -9,6 +9,7 @@ import {
 import { Schema } from 'effect';
 
 import { AddedEntrySchema, documentIssuesOf } from '../entries/document-fields.ts';
+import { AddedEventsSchema, eventsOfAProvider, unallowedToolsIn } from '../entries/events-fields.ts';
 import { ConnectionTypeSchema } from '../registry/connection-entry.ts';
 import { ConnectionSchema } from '../registry/connection.ts';
 import {
@@ -119,6 +120,7 @@ const AdditionFieldsSchema = Schema.Struct({
         "A group of more the provider's way offers, by name, as search lists under providers; its scopes are asked on the page beside the first consent's. None when left out, and an addition by hand takes none",
     }),
   ),
+  events: Schema.optionalKey(AddedEventsSchema),
 });
 
 export type AdditionGiven = typeof AdditionFieldsSchema.Type;
@@ -135,9 +137,10 @@ const placedByTheProvider = ['variable', 'name', 'in', 'scheme', 'issuer', 'scop
 
 const placedByTheServer = ['variable', 'name', 'in', 'scheme', 'issuer', 'scope', 'client_id'] as const;
 
-function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): readonly ModeIssue[] {
+function providerModeIssuesOf({ type, entry = {}, credential, events }: AdditionGiven): readonly ModeIssue[] {
   return [
     ...(type === undefined ? [] : [{ path: ['type'], issue: 'Expected no type: the provider gives it' }]),
+    ...(events === undefined ? [] : [eventsOfAProvider]),
     ...serverFields
       .filter((field) => entry[field] !== undefined)
       .map((field) => ({ path: ['entry', field], issue: givenByTheProvider(field) })),
@@ -226,6 +229,11 @@ function unexplainedKeyIssuesOf({ credential }: AdditionGiven): readonly ModeIss
     : [];
 }
 
+function unallowedEventsToolsOf({ events, entry }: AdditionGiven): readonly ModeIssue[] {
+  const allowed = entry?.allowed;
+  return events === undefined || allowed === undefined ? [] : unallowedToolsIn(events, allowed);
+}
+
 const moreOfAnAdditionByHand =
   'Expected no more without provider: an addition by hand offers no group of more, since only a provider names one';
 
@@ -246,6 +254,7 @@ function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
       : [{ path: ['credential', 'oauth_client'], issue: oauthClientOfAProvider }]),
     ...credentialIssuesOf(given),
     ...unexplainedKeyIssuesOf(given),
+    ...unallowedEventsToolsOf(given),
   ];
 }
 

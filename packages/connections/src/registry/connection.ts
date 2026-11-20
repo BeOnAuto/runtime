@@ -1,6 +1,6 @@
 import { RecordedCallerSchema } from '@on.auto/operations';
-import { scopesIn } from '@on.auto/providers';
-import { Schema } from 'effect';
+import { RecordedEventsSchema, scopesIn } from '@on.auto/providers';
+import { Schema, SchemaTransformation } from 'effect';
 
 import { ConnectionDocumentSchema, ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
 import { CredentialSchema } from './credential.ts';
@@ -70,6 +70,13 @@ const AppCredentialHeldSchema = Schema.Struct({
 
 export type AppCredentialHeld = typeof AppCredentialHeldSchema.Type;
 
+const EventsAsGivenSchema = Schema.Record(Schema.String, Schema.Json)
+  .annotate({
+    description:
+      'What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none.',
+  })
+  .pipe(Schema.decodeTo(RecordedEventsSchema, SchemaTransformation.passthroughSupertype()));
+
 export const ConnectionSchema = Schema.Struct({
   id: Schema.String.annotate({ description: 'The id of the connection, a UUIDv7' }),
   name: Schema.String.annotate({ description: 'The name a function gives the connection in server/tool' }),
@@ -82,6 +89,7 @@ export const ConnectionSchema = Schema.Struct({
   }),
   entry: ConnectionEntrySchema,
   document: Schema.optionalKey(ConnectionDocumentSchema),
+  events: Schema.optionalKey(EventsAsGivenSchema),
   credential: CredentialSchema,
   status: ConnectionStatusSchema.annotate({
     description: 'pending until it is approved and its credential given, connected, broken or removed',
