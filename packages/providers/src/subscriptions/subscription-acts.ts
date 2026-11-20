@@ -6,6 +6,7 @@ import type { Renewable, Step, Through } from './subscription-decisions.ts';
 import { failedBecause, type SubscriptionCallFailed } from './subscription-failed.ts';
 import type {
   HeldSubscription,
+  LoopConnection,
   MadeSubscription,
   Positions,
   RecordedSubscription,
@@ -29,6 +30,7 @@ export interface Round {
   readonly calls: SubscriptionCalls;
   readonly playbook: PlaybookAddress;
   readonly now: number;
+  readonly connections: ReadonlyMap<string, LoopConnection>;
 }
 
 export type Later = readonly number[];
@@ -64,6 +66,10 @@ function laterAt(time: number | undefined): Later {
 
 function placeOf({ playbook }: Round, { connection }: SubscriptionKey): SubscriptionPlace {
   return { ...playbook, connection };
+}
+
+function connectionIdOf({ connections }: Round, { connection }: SubscriptionKey): string {
+  return Option.getOrThrow(Option.fromNullishOr(connections.get(connection))).id;
 }
 
 function heldOf({ made, recorded }: Holding): HeldSubscription {
@@ -131,8 +137,10 @@ function subscribedThrough(round: Round, subscribing: Subscribing): Effect.Effec
   const { key, destination, held } = subscribing;
   const place = placeOf(round, key);
   return Effect.gen(function* () {
+    const connectionId = connectionIdOf(round, key);
     const { madeSecret, made } = yield* secretToPlace(round.ports.secrets, place, held);
-    const answered = yield* Effect.result(round.calls.subscribe({ destination, place, topic: key.topic, madeSecret }));
+    const asked = { destination, place, topic: key.topic, connectionId, madeSecret };
+    const answered = yield* Effect.result(round.calls.subscribe(asked));
     const madeId = Option.getOrUndefined(yield* made)?.id;
     if (Result.isFailure(answered)) {
       yield* forgottenSecret(round, key, madeId);

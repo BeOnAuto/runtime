@@ -20,7 +20,6 @@ import {
 } from '../testing/subscription-services.ts';
 import { subscriptionCallsOf } from './subscription-calls.ts';
 import type { HeldSubscription } from './subscription-ports.ts';
-import { topicOf } from './subscription-topics.ts';
 
 const at = '2026-10-07T09:00:00.000Z';
 
@@ -31,6 +30,10 @@ const madeText = 'made-by-auto-7f3a9c1e5b2d4f60';
 const madeSecret = Effect.succeed(Redacted.make(madeText));
 
 const ofTheTracker = { org: 'acme', playbook: 'alpha', server: 'tracker' };
+
+const theConnectionId = '019a8f3e-5b2c-7d41-9e60-3c7f2a1b8d05';
+
+const theAddress = `${theCallback}?connection_id=${theConnectionId}`;
 
 const answeringItsSecret = {
   type: 'webhook',
@@ -54,13 +57,12 @@ function onTheClock<A, E>(effect: Effect.Effect<A, E>): Promise<Result.Result<A,
   );
 }
 
-function subscribedBy(service: FakeService, destination: Destination, topic = 'alpha') {
-  const asked = {
-    destination: { ...destination, subscribe: declared(destination.subscribe) },
-    place,
-    topic,
-    madeSecret,
-  };
+function subscribingTo(destination: Destination, topic = 'alpha', connectionId = theConnectionId) {
+  return { destination: { ...destination, subscribe: declared(destination.subscribe) }, place, topic, connectionId };
+}
+
+function subscribedBy(service: FakeService, destination: Destination, topic = 'alpha', connectionId = theConnectionId) {
+  const asked = { ...subscribingTo(destination, topic, connectionId), madeSecret };
   return onTheClock(subscriptionCallsOf(service.ports).subscribe(asked));
 }
 
@@ -89,7 +91,7 @@ describe('a call by a request to the address the entry writes', () => {
         ...ofTheTracker,
         method: 'POST',
         url: 'https://api.tracker.example.com/projects/alpha/hooks',
-        body: { url: theCallback, secret: madeText, events: ['comment'] },
+        body: { url: theAddress, secret: madeText, events: ['comment'] },
       },
     ]);
     expect(service.callbacksAsked()).toEqual([[place, 'webhook']]);
@@ -120,6 +122,26 @@ describe('a call by a request to the address the entry writes', () => {
     const notText = { ...elsewhere, url: '{{ topic | size }}' };
     expect(await subscribedBy(service, { ...byRequest, subscribe: notText })).toEqual(notSent);
     expect(service.sent()).toEqual([]);
+  });
+});
+
+describe('the address a webhook is given', () => {
+  it('is the same for each subscribe through a connection, and another for one added again under its name', async () => {
+    const service = aServiceAnsweringRequests([requestedWith({ id: 42 })]);
+    const byRequest = destinationOf(ofEachSubscription);
+    const addedAgainId = '019a9c71-0e4d-7a23-8b19-6f2e5d3c4a70';
+
+    await subscribedBy(service, byRequest, 'alpha');
+    await subscribedBy(service, byRequest, 'alpha');
+    await subscribedBy(service, byRequest, 'beta');
+    await subscribedBy(service, byRequest, 'alpha', addedAgainId);
+
+    expect(sentWith(service)).toMatchObject([
+      { body: { url: theAddress } },
+      { body: { url: theAddress } },
+      { url: 'https://api.tracker.example.com/projects/beta/hooks', body: { url: theAddress } },
+      { body: { url: `${theCallback}?connection_id=${addedAgainId}` } },
+    ]);
   });
 });
 
@@ -189,17 +211,17 @@ describe('a secret the service answers', () => {
     const made = Result.getOrThrow(await subscribedBy(service, destinationOf(answeringItsSecret), 'board-1'));
     expect(made).toMatchObject({ id: '7', expiresAt: at });
     expect(answeredSecretOf(made)).toBe('service-key-1234');
-    expect(sentWith(service)).toEqual([{ board: 'board-1', callback: theCallback, seconds: 86_400 }]);
+    expect(sentWith(service)).toEqual([{ board: 'board-1', callback: theAddress, seconds: 86_400 }]);
   });
 });
 
 describe('what a destination needs to arrange a subscription', () => {
   const byRequest = destinationOf(ofEachSubscription);
   const byTool = destinationOf(intoAQueue, 'queue');
+  const asked = subscribingTo(byRequest);
 
   it('sends nothing, and makes no secret, where no address reaches the runtime', async () => {
     const service = aService([answeredWith({ id: 42 })], { callbacks: { queue: theQueue } });
-    const asked = { destination: { ...byRequest, subscribe: declared(byRequest.subscribe) }, place, topic: 'alpha' };
     const madeNone = Effect.die('a secret was made');
     expect(await onTheClock(subscriptionCallsOf(service.ports).subscribe({ ...asked, madeSecret: madeNone }))).toEqual(
       notSent,
@@ -220,7 +242,6 @@ describe('what a destination needs to arrange a subscription', () => {
 
   it('passes on a failure to make the secret, and sends nothing', async () => {
     const service = aService([answeredWith({ id: 42 })]);
-    const asked = { destination: { ...byRequest, subscribe: declared(byRequest.subscribe) }, place, topic: 'alpha' };
     const unkept = Effect.fail('the secret store is unavailable' as const);
     const made = await onTheClock(subscriptionCallsOf(service.ports).subscribe({ ...asked, madeSecret: unkept }));
     expect(made).toEqual(Result.fail('the secret store is unavailable'));
@@ -270,29 +291,9 @@ describe('the names a call reads', () => {
     expect(await renewedBy(service, destination, held)).toEqual(Result.succeed({}));
     expect(await unsubscribedBy(service, destination, held)).toEqual(Result.void);
     expect(sentWith(service)).toEqual([
-      { named: `C0123 ${theCallback} ${madeText} 259200 ${threeDaysLater}` },
+      { named: `C0123 ${theAddress} ${madeText} 259200 ${threeDaysLater}` },
       { named: `alpha sub-1 ${at} 259200 ${threeDaysLater}` },
       { named: `alpha sub-1 ${at}` },
     ]);
-  });
-});
-
-describe('the topic of a request', () => {
-  const placed = { with: { project: 'site', owner: 'acme' }, sent: { conversation: 'C0123', id: '1699.1' } };
-
-  const perSubscription = destinationOf(ofEachSubscription);
-
-  const renderedOf = (topic: string) => Effect.runPromise(topicOf({ ...perSubscription, topic }, placed));
-
-  it('is its destination’s topic, rendered over the arguments of the call that delivered it and where it was sent', async () => {
-    expect(await renderedOf('{{ with.owner }}/{{ with.project }}')).toBe('acme/site');
-    expect(await renderedOf('{{ sent.conversation }}:{{ sent.id }}')).toBe('C0123:1699.1');
-  });
-
-  it('is none where the destination declares no topic, the template does not render, or renders nothing or too much', async () => {
-    expect(await Effect.runPromise(topicOf(destinationOf(overASocket, 'websocket'), placed))).toBeUndefined();
-    expect(await renderedOf('{{ with.project')).toBeUndefined();
-    expect(await renderedOf('{{ with.missing }}')).toBeUndefined();
-    expect(await renderedOf(`{{ with.project }}${'x'.repeat(300)}`)).toBeUndefined();
   });
 });

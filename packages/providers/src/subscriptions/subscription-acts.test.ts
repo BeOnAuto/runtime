@@ -23,13 +23,15 @@ const halfAnHour = anHour / 2;
 
 const inAlpha: SubscriptionKey = { connection: 'tracker', topic: 'alpha' };
 
+const tracker = { id: 'id-of-tracker', connection: 'tracker' };
+
 function loopThrough(written: object, answering: AppAnswering = {}): Loop {
   const destinations = declaredDestinations(written);
-  return { ...loopOver([{ connection: 'tracker', connected, destinations }], [inAlpha]), app: anApp(answering) };
+  return { ...loopOver([{ ...tracker, connected, destinations }], [inAlpha]), app: anApp(answering) };
 }
 
 function reconnected(loop: Loop, destinations: readonly Destination[]) {
-  loop.connections.becomes({ connection: 'tracker', connected: '2026-10-08T08:00:00.000Z', destinations });
+  loop.connections.becomes({ ...tracker, connected: '2026-10-08T08:00:00.000Z', destinations });
 }
 
 async function twoRounds(loop: Loop, apart: number) {
@@ -97,7 +99,7 @@ describe('an entry that changes', () => {
     const loop = loopThrough(ofEachSubscription);
     const ports = portsOf(loop, {});
     await roundAt(ports, startedAt);
-    loop.connections.becomes({ connection: 'tracker', connected, destinations: declaredDestinations(moreEvents) });
+    loop.connections.becomes({ ...tracker, connected, destinations: declaredDestinations(moreEvents) });
     loop.app.fails('unreachable', 1);
     const { nextDueAt: retryAt = 0 } = await roundAt(ports, startedAt + anHour);
     await roundAt(ports, retryAt);
@@ -146,7 +148,7 @@ describe('a failure that will not pass by itself', () => {
     await roundAt(ports, startedAt);
     await roundAt(ports, startedAt + anHour);
     const changed = declaredDestinations(leasedWithoutRenewal);
-    loop.connections.becomes({ connection: 'tracker', connected, destinations: changed });
+    loop.connections.becomes({ ...tracker, connected, destinations: changed });
     await roundAt(ports, startedAt + 2 * anHour);
 
     expect(loop.app.acts()).toEqual([]);
@@ -252,7 +254,7 @@ describe('an entry that changes once a subscription has lapsed', () => {
     const ports = portsOf(loop, {});
     await roundAt(ports, startedAt);
     const longer = declaredDestinations({ ...intoAQueue, lease_seconds: 604_800 });
-    loop.connections.becomes({ connection: 'tracker', connected, destinations: longer });
+    loop.connections.becomes({ ...tracker, connected, destinations: longer });
     await roundAt(ports, startedAt + 4 * 24 * anHour);
 
     expect(loop.app.acts()).toEqual(['subscribe', 'subscribe']);

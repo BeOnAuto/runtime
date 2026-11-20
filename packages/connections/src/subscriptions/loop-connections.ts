@@ -35,11 +35,11 @@ function declaredFor(providers: ProviderList, { provider, events }: RecordedConn
 }
 
 function loopConnectionOf(providers: ProviderList, connection: RecordedConnection): LoopConnection {
-  const { name, connected_at: connectedAt } = connection;
+  const { id, name, connected_at: connectedAt } = connection;
   const destinations = takenThrough(connection, declaredFor(providers, connection));
   return connectedAt === null
-    ? { connection: name, destinations }
-    : { connection: name, connected: connectedAt, destinations };
+    ? { id, connection: name, destinations }
+    : { id, connection: name, connected: connectedAt, destinations };
 }
 
 export function loopConnectionsOf({

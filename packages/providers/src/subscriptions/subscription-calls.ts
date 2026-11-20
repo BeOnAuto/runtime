@@ -106,17 +106,29 @@ function topicIn({ topic: written }: Destination, rendered: string): TopicOfAReq
   return { written, rendered };
 }
 
-function addressOf(receiving: Receiving, callback: string, secret: Redacted.Redacted | undefined): Variables {
+function webhookAddressOf(callback: string, connectionId: string): string {
+  return `${callback}?${new URLSearchParams({ connection_id: connectionId }).toString()}`;
+}
+
+function addressOf(
+  receiving: Receiving,
+  callback: string,
+  connectionId: string,
+  secret: Redacted.Redacted | undefined,
+): Variables {
   if (receiving === 'queue') {
     return { queue_url: callback };
   }
-  return { webhook_url: callback, ...(secret === undefined ? {} : { secret: Redacted.value(secret) }) };
+  return {
+    webhook_url: webhookAddressOf(callback, connectionId),
+    ...(secret === undefined ? {} : { secret: Redacted.value(secret) }),
+  };
 }
 
 function subscribedOver<E, R>(
   ports: SubscriptionPorts,
   receiving: Receiving,
-  { destination, place, topic, madeSecret }: Subscribing<E, R>,
+  { destination, place, topic, connectionId, madeSecret }: Subscribing<E, R>,
 ): Effect.Effect<Subscribed, SubscriptionCallFailed | E, R> {
   const call = destination.subscribe;
   const placed = receiving === 'webhook' && placesTheSecret(call);
@@ -127,7 +139,7 @@ function subscribedOver<E, R>(
     }
     const secret = placed ? yield* madeSecret : undefined;
     const lease = yield* leaseOf(destination);
-    const variables = { topic, ...addressOf(receiving, callback, secret), ...lease };
+    const variables = { topic, ...addressOf(receiving, callback, connectionId, secret), ...lease };
     const document = yield* sentThrough(ports, { place, call, variables, topic: topicIn(destination, topic) });
     return yield* subscribedIn(document, call.subscribed, placed);
   });

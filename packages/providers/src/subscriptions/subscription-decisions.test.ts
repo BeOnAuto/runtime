@@ -108,6 +108,18 @@ describe('what is wanted and what is arranged', () => {
   });
 });
 
+describe('a subscription held and still wanted', () => {
+  it('is left as it was recorded, with no address in it, before and after a reconnection', () => {
+    const recorded = [held('alpha', { ...madeThrough(byRequest), secretId: 'secret-1' }, { failures: 0 })];
+    const reconnected = new Map([['tracker', { ...tracker, connected: '2026-10-06T08:00:00.000Z' }]]);
+    const situation = situationOf({ recorded, wanted: [wanted('alpha')] });
+    expect([decided(situation), decided({ ...situation, connections: reconnected })]).toEqual([
+      { steps: [] },
+      { steps: [] },
+    ]);
+  });
+});
+
 describe('a lease', () => {
   const lapsesAt = now + 2 * anHour;
 

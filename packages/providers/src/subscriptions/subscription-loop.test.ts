@@ -34,7 +34,7 @@ const inAlpha = { connection: 'tracker', topic: 'alpha' };
 const inC0123 = { connection: 'chat', topic: 'C0123' };
 
 function over(destinations: typeof byRequest, connection = 'tracker') {
-  return { connection, connected, destinations };
+  return { id: `id-of-${connection}`, connection, connected, destinations };
 }
 
 describe('the loop, from nothing arranged', () => {

@@ -55,6 +55,7 @@ function subscribing(service: FakeService, destination = intoTheQueue) {
   const asked = { destination: { ...destination, subscribe: declared(destination.subscribe) }, place, topic: 'alpha' };
   return subscriptionCallsOf(service.ports).subscribe({
     ...asked,
+    connectionId: 'id-of-tracker',
     madeSecret: Effect.succeed(Redacted.make(madeText)),
   });
 }

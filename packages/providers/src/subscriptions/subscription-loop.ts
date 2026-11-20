@@ -84,14 +84,16 @@ export function subscriptionLoopOf(
       const arranged = arrangedOf(ports, playbook, connections);
       const asked = yield* Effect.forEach(ports.askers, (asker) => asker({ ...playbook, arranged }));
       const recorded = yield* ports.records.read(playbook);
+      const byName = new Map(connections.map((each) => [each.connection, each]));
       const { steps, nextDueAt } = decided({
         now,
         mostPerConnection: ports.mostPerConnection,
-        connections: new Map(connections.map((each) => [each.connection, each])),
+        connections: byName,
         wanted: wantedIn(ports, arranged, asked.flat()),
         recorded,
       });
-      const { later, cutAt } = yield* actedOnBefore({ ports, calls, playbook, now }, steps, deadline);
+      const round = { ports, calls, playbook, now, connections: byName };
+      const { later, cutAt } = yield* actedOnBefore(round, steps, deadline);
       return reconciledOf(earliest(nextDueAt, cutAt, ...later), cutAt);
     });
 }

@@ -36,6 +36,7 @@ interface Asked<Act extends 'subscribe' | 'renew' | 'unsubscribe'> {
 }
 
 export interface Subscribing<E, R> extends Asked<'subscribe'> {
+  readonly connectionId: string;
   readonly madeSecret: Effect.Effect<Redacted.Redacted, E, R>;
 }
 
@@ -127,6 +128,7 @@ export interface SubscriptionSecrets {
 }
 
 export interface LoopConnection {
+  readonly id: string;
   readonly connection: string;
   readonly connected?: string;
   readonly destinations: readonly Destination[];

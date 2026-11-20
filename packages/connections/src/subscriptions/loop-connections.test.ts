@@ -52,12 +52,23 @@ async function connectionsOver() {
 }
 
 describe('the connections the loop arranges through', () => {
-  it('are those of the org not removed that serve the playbook, with when each was connected and what its entry declares', async () => {
+  it('are those of the org not removed that serve the playbook, with their id, when each was connected and what its entry declares', async () => {
     const connectionsOf = await connectionsOver();
 
     expect(await connectionsOf('acme', 'alpha')).toEqual([
-      { connection: 'tracker', connected: connectedAt, destinations: declared },
-      { connection: 'notes', destinations: [] },
+      { id: 'connection-1', connection: 'tracker', connected: connectedAt, destinations: declared },
+      { id: 'connection-2', connection: 'notes', destinations: [] },
+    ]);
+  });
+
+  it('keep the id of a connection connected again, and give one added again under a removed one’s name its own', async () => {
+    const again = ['2026-11-18T08:00:00.000Z', [...connected, addedFact('connection-9', 'gone', null)]] as const;
+    const registry = await registryOf([addedAt, added], [connectedAt, connected], again);
+
+    expect(await Effect.runPromise(loopConnectionsOf({ registry, providers })(alpha))).toEqual([
+      { id: 'connection-1', connection: 'tracker', connected: again[0], destinations: declared },
+      { id: 'connection-2', connection: 'notes', destinations: [] },
+      { id: 'connection-9', connection: 'gone', destinations: [] },
     ]);
   });
 
@@ -153,14 +164,10 @@ function eventsAddressOf({ connection }: { readonly connection: string }): strin
 
 describe('the address the ports of the loop name', () => {
   it('is none where none is given, and the runtime receives a webhook over HTTP alone, as it does', () => {
-    const ports = subscriptionLoopPortsOf(partsOver());
+    const { callbackOf, receives } = subscriptionLoopPortsOf(partsOver());
 
-    expect([ports.callbackOf(place, 'webhook'), ports.callbackOf(place, 'queue')]).toEqual([undefined, undefined]);
-    expect([ports.receives('webhook'), ports.receives('websocket'), ports.receives('queue')]).toEqual([
-      true,
-      false,
-      false,
-    ]);
+    expect([callbackOf(place, 'webhook'), callbackOf(place, 'queue')]).toEqual([undefined, undefined]);
+    expect([receives('webhook'), receives('websocket'), receives('queue')]).toEqual([true, false, false]);
   });
 
   it('is the address given, for a webhook while the runtime receives over HTTP, and none for a queue', () => {

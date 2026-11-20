@@ -17,6 +17,7 @@ import {
   theRoom,
   theWebhookUrl,
 } from '../testing/interaction-servers/room-events.ts';
+import { connectionsIn } from '../testing/servers/connected-servers.ts';
 import { connectionsAllowing } from '../testing/servers/loopback-connections.ts';
 import { alphaIn } from '../testing/servers/reasoning-server.ts';
 import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
@@ -54,12 +55,14 @@ async function tracedWithRooms() {
 }
 
 describe('a server that signs people in, given WEBHOOK_URL, whose request waits through a connection that declares a webhook per subscription', () => {
-  it('subscribes at its service with its events address, shows it among the playbook’s events, and takes a delivery the service signs with the secret it gave', async () => {
+  it('subscribes at its service with its events address, which ends with the connection’s id, shows it among the playbook’s events, and takes a delivery the service signs with the secret it gave at that address', async () => {
     const lines = loggedLines();
     const { receiver, rooms, server } = await tracedWithRooms();
     await server.ask('approve-brief');
 
     const hook = await hookMadeAt(rooms);
+    const roomsId = String(new URL(hook.callback).searchParams.get('connection_id'));
+    const listed = await server.call('GET', connectionsIn(defaultOrg));
     const taken = await takenOnceRecorded(server, hook);
     const arrived = await until(lines, (seen) => seen.some((line) => line.includes(arrivedLine)));
     const made = await server.call('GET', `${alpha}/events?type=event_subscription_made`);
@@ -70,7 +73,12 @@ describe('a server that signs people in, given WEBHOOK_URL, whose request waits 
     await server.stop();
     const exported = receiver.received();
 
-    expect(hook).toMatchObject({ room: theRoom, callback: `${theWebhookUrl}${eventsOf('alpha', 'rooms')}` });
+    expect(hook).toMatchObject({
+      room: theRoom,
+      callback: `${theWebhookUrl}${eventsOf('alpha', 'rooms')}?connection_id=${roomsId}`,
+    });
+    const roomsAmongThem: unknown = expect.arrayContaining([expect.objectContaining({ id: roomsId, name: 'rooms' })]);
+    expect(listed.body).toMatchObject({ connections: roomsAmongThem });
     expect(made).toMatchObject({
       status: 200,
       body: { events: [{ type: 'event_subscription_made', data: { connection: 'rooms', topic: theRoom } }] },

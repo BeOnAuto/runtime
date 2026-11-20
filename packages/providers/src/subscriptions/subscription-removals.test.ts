@@ -13,8 +13,11 @@ const inAlpha: SubscriptionKey = { connection: 'tracker', topic: 'alpha' };
 
 const inBeta: SubscriptionKey = { connection: 'tracker', topic: 'beta' };
 
+const trackerId = 'id-of-tracker';
+
 function loopThrough(written: object): Loop {
-  return loopOver([{ connection: 'tracker', connected, destinations: declaredDestinations(written) }], [inAlpha]);
+  const destinations = declaredDestinations(written);
+  return loopOver([{ id: trackerId, connection: 'tracker', connected, destinations }], [inAlpha]);
 }
 
 function factsOf(loop: Loop): readonly string[] {
@@ -90,6 +93,7 @@ describe('the removal of a subscription being replaced, answered that the app ha
     const ports = portsOf(loop, {});
     await roundAt(ports, startedAt);
     loop.connections.becomes({
+      id: trackerId,
       connection: 'tracker',
       connected,
       destinations: declaredDestinations({ ...ofEachSubscription, lease_seconds: 7200 }),

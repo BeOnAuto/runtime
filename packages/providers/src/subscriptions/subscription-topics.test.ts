@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { ofEachSubscription } from '../testing/event-destinations.ts';
+import { ofEachSubscription, overASocket } from '../testing/event-destinations.ts';
 import { declaredDestinations, postsOfEachRoom } from '../testing/subscription-apps.ts';
 import {
   aPostIn,
@@ -15,9 +15,11 @@ import {
   type Changing,
   type Loop,
 } from '../testing/subscription-loops.ts';
+import { destinationOf } from '../testing/subscription-services.ts';
 import type { SubscriptionLoopPorts } from './subscription-ports.ts';
 import {
   requestsAskerOf,
+  topicOf,
   triggersAskerOf,
   type ConnectionTrigger,
   type WaitingRequest,
@@ -81,7 +83,7 @@ interface Asked {
 }
 
 function askedOf(saved: readonly ConnectionTrigger[], waits: readonly WaitingRequest[] = []): Asked {
-  const loop = loopOver([{ connection: 'tracker', connected, destinations: postsOfEachRoom }]);
+  const loop = loopOver([{ id: 'id-of-tracker', connection: 'tracker', connected, destinations: postsOfEachRoom }]);
   const asked = { saved: changing(...saved), waits: changing(...waits) };
   const askers = [
     requestsAskerOf(() => Effect.sync(asked.waits.now)),
@@ -180,5 +182,25 @@ describe('the topics the triggers ask for', () => {
 
     expect(await Effect.runPromise(asker({ ...alpha, arranged: new Map() }))).toEqual([]);
     expect(reads.count).toBe(0);
+  });
+});
+
+describe('the topic of a request', () => {
+  const placed = { with: { project: 'site', owner: 'acme' }, sent: { conversation: 'C0123', id: '1699.1' } };
+
+  const perSubscription = destinationOf(ofEachSubscription);
+
+  const renderedOf = (topic: string) => Effect.runPromise(topicOf({ ...perSubscription, topic }, placed));
+
+  it('is its destination’s topic, rendered over the arguments of the call that delivered it and where it was sent', async () => {
+    expect(await renderedOf('{{ with.owner }}/{{ with.project }}')).toBe('acme/site');
+    expect(await renderedOf('{{ sent.conversation }}:{{ sent.id }}')).toBe('C0123:1699.1');
+  });
+
+  it('is none where the destination declares no topic, the template does not render, or renders nothing or too much', async () => {
+    expect(await Effect.runPromise(topicOf(destinationOf(overASocket, 'websocket'), placed))).toBeUndefined();
+    expect(await renderedOf('{{ with.project')).toBeUndefined();
+    expect(await renderedOf('{{ with.missing }}')).toBeUndefined();
+    expect(await renderedOf(`{{ with.project }}${'x'.repeat(300)}`)).toBeUndefined();
   });
 });

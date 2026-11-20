@@ -28,6 +28,7 @@ function subscribedThrough(service: FakeService) {
     destination: declaring,
     place,
     topic: 'alpha',
+    connectionId: 'id-of-tracker',
     madeSecret,
   });
   return Effect.runPromise(Effect.result(subscribed).pipe(Effect.provide(TestClock.layer())));

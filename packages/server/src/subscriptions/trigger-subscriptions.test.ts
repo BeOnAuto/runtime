@@ -73,7 +73,9 @@ function aServiceThatSubscribes() {
 
 function aConnectionOf(providers: ProviderList, name: string): readonly LoopConnection[] {
   return providers.providers.flatMap(({ entry }) =>
-    entry.name === name ? [{ connection: name, destinations: entry.events?.destinations ?? [] }] : [],
+    entry.name === name
+      ? [{ id: `id-of-${name}`, connection: name, destinations: entry.events?.destinations ?? [] }]
+      : [],
   );
 }
 

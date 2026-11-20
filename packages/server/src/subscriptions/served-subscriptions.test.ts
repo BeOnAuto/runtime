@@ -38,6 +38,8 @@ const declared: readonly EventDestination[] = trackerOfEachSubscription.provider
   ({ entry }) => entry.events?.destinations ?? [],
 );
 
+const theTracker: LoopConnection = { id: 'id-of-tracker', connection: 'tracker', destinations: declared };
+
 function aLedger() {
   return memoryLedger(undefined, [eventSubscriptions]).service;
 }
@@ -109,6 +111,7 @@ async function roundOverTheShippedEntries(webhookUrl?: string) {
     subscriptionLoopPartsOf(subscriptionsServingOf(ledger, { providers, receiving }, { tools, secrets })),
   );
   const connections: readonly LoopConnection[] = providers.providers.map(({ entry }) => ({
+    id: `id-of-${entry.name}`,
     connection: entry.name,
     connected: '2026-11-19T08:00:00.000Z',
     destinations: entry.events?.destinations ?? [],
@@ -158,7 +161,7 @@ describe('the entries the runtime ships', () => {
 function roundOfTheTracker(ledger: ReturnType<typeof aLedger>, asked: (connection: string) => void) {
   return subscriptionLoopOf({
     ...portsOfTheServerOver(ledger),
-    connectionsOf: () => Effect.succeed([{ connection: 'tracker', destinations: declared }]),
+    connectionsOf: () => Effect.succeed([theTracker]),
     askers: [
       ({ arranged }) =>
         Effect.sync(() => {
@@ -212,7 +215,7 @@ describe('a topic whose values would change the address its entry writes', () =>
     );
     const round = subscriptionLoopOf({
       ...subscriptionLoopPortsOf(subscriptionLoopPartsOf(serving)),
-      connectionsOf: () => Effect.succeed([{ connection: 'tracker', destinations: declared }]),
+      connectionsOf: () => Effect.succeed([theTracker]),
       askers: [() => Effect.succeed([{ connection: 'tracker', topic: '../../user' }])],
     });
     await Effect.runPromise(round(alpha));

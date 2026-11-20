@@ -180,8 +180,9 @@ export async function delivered(
 }
 
 export function takenOnceRecorded(server: Pick<InteractionServer, 'origin'>, hook: MadeHook): Promise<string> {
+  const { pathname, search } = new URL(hook.callback);
   return until(
-    () => delivered(server, new URL(hook.callback).pathname, signedWith(hook.secret)),
+    () => delivered(server, `${pathname}${search}`, signedWith(hook.secret)),
     (answer) => answer === '200 ',
   );
 }
