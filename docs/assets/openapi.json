@@ -15776,6 +15776,10 @@
                           "model": {
                             "type": "string"
                           },
+                          "name": {
+                            "type": "string",
+                            "description": "The name the provider gives the model"
+                          },
                           "kind": {
                             "type": "string",
                             "enum": [
@@ -16074,6 +16078,10 @@
                     "media_type": {
                       "type": "string",
                       "description": "The media type of the definition document, set by its runtime adapter"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "The title its document gives the definition, where it gives one"
                     },
                     "description": {
                       "type": "string",
@@ -16659,6 +16667,10 @@
                           "type": "string",
                           "description": "The media type of the definition document, set by its runtime adapter"
                         },
+                        "title": {
+                          "type": "string",
+                          "description": "The title its document gives the definition, where it gives one"
+                        },
                         "description": {
                           "type": "string",
                           "description": "What the definition does, as its document says"
@@ -17079,6 +17091,10 @@
                     "media_type": {
                       "type": "string",
                       "description": "The media type of the definition document, set by its runtime adapter"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "The title its document gives the definition, where it gives one"
                     },
                     "description": {
                       "type": "string",
@@ -17657,6 +17673,10 @@
                     "media_type": {
                       "type": "string",
                       "description": "The media type of the definition document, set by its runtime adapter"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "The title its document gives the definition, where it gives one"
                     },
                     "description": {
                       "type": "string",
@@ -18275,6 +18295,10 @@
                     "media_type": {
                       "type": "string",
                       "description": "The media type of the definition document, set by its runtime adapter"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "The title its document gives the definition, where it gives one"
                     },
                     "description": {
                       "type": "string",
@@ -18941,6 +18965,10 @@
                       "type": "string",
                       "description": "The media type of the definition document, set by its runtime adapter"
                     },
+                    "title": {
+                      "type": "string",
+                      "description": "The title its document gives the definition, where it gives one"
+                    },
                     "description": {
                       "type": "string",
                       "description": "What the definition does, as its document says"
@@ -19486,6 +19514,10 @@
                     "media_type": {
                       "type": "string",
                       "description": "The media type of the definition document, set by its runtime adapter"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "The title its document gives the definition, where it gives one"
                     },
                     "description": {
                       "type": "string",
@@ -20033,6 +20065,10 @@
                       "type": "string",
                       "description": "The media type of the definition document, set by its runtime adapter"
                     },
+                    "title": {
+                      "type": "string",
+                      "description": "The title its document gives the definition, where it gives one"
+                    },
                     "description": {
                       "type": "string",
                       "description": "What the definition does, as its document says"
@@ -20578,6 +20614,10 @@
                     "media_type": {
                       "type": "string",
                       "description": "The media type of the definition document, set by its runtime adapter"
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "The title its document gives the definition, where it gives one"
                     },
                     "description": {
                       "type": "string",
@@ -24584,6 +24624,10 @@
                         "media_type": {
                           "type": "string",
                           "description": "The media type of the definition document, set by its runtime adapter"
+                        },
+                        "title": {
+                          "type": "string",
+                          "description": "The title its document gives the definition, where it gives one"
                         },
                         "description": {
                           "type": "string",
@@ -32124,6 +32168,10 @@
                         "properties": {
                           "model": {
                             "type": "string"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "The name the provider gives the model"
                           },
                           "kind": {
                             "type": "string",

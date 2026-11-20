@@ -393,6 +393,25 @@ describe('workflows over http', () => {
     });
   });
 
+  describe('the title of a workflow, over HTTP', () => {
+    it('is in its entry of the list of workflows, as its read answers it', async () => {
+      server = await servingWorkflows([]);
+      await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+      const title = 'Set it done';
+      const source = workflowSource('setting', `  title: ${title}\ndo:\n  - done: { set: { done: true } }\n`);
+      await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'setting', source } });
+
+      expect(await server.call('GET', `${alpha}/definitions/workflow`)).toMatchObject({
+        status: 200,
+        body: { definitions: [{ name: 'setting', title }] },
+      });
+      expect(await server.call('GET', `${alpha}/definitions/workflow/setting`)).toMatchObject({
+        status: 200,
+        body: { title },
+      });
+    });
+  });
+
   describe('a nested definition that rejects its input, over HTTP', () => {
     it('is an error the workflow catches with try, and recovers from', async () => {
       await serving();

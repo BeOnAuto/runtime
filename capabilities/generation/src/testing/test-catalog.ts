@@ -15,6 +15,7 @@ export const shortFilm: CatalogEntry = {
 export const testEntries: readonly CatalogEntry[] = [
   {
     model: 'openai/gpt-image-2',
+    name: 'GPT Image 2',
     kind: 'image',
     media_types: ['image/png', 'image/jpeg', 'image/webp'],
     limits: {

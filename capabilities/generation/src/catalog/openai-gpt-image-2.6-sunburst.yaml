@@ -1,4 +1,5 @@
 model: openai/gpt-image-2.6-sunburst
+name: GPT Image 2.6 Sunburst
 kind: image
 media_types: [image/png, image/jpeg, image/webp]
 limits:

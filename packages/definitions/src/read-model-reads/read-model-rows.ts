@@ -24,6 +24,7 @@ const DefinitionRowSchema = Schema.Struct({
   name: Schema.String,
   version: Schema.Number,
   status: Schema.Literals(['active', 'paused', 'retired']),
+  title: Schema.optionalKey(Schema.NullOr(Schema.String)),
   description: Schema.NullOr(Schema.String),
   input_schema: Schema.NullOr(Schema.String),
   output_schema: Schema.NullOr(Schema.String),
@@ -43,9 +44,10 @@ const DefinitionRowSchema = Schema.Struct({
   saved_position: Schema.Number,
 });
 
-export type DefinitionRow = Omit<typeof DefinitionRowSchema.Type, 'contributes'> & {
+export type DefinitionRow = Omit<typeof DefinitionRowSchema.Type, 'contributes' | 'title'> & {
   readonly definition_id: string;
   readonly contributes: string | null;
+  readonly title: string | null;
 };
 
 const VersionRowSchema = Schema.Struct({
@@ -64,7 +66,9 @@ function definitionRowsIn({ definition, row }: ProjectedKeyedRow): readonly Defi
     return [];
   }
   const decoded = decodeDefinitionRow(row);
-  return [{ ...decoded, definition_id: definition, contributes: decoded.contributes ?? null }];
+  return [
+    { ...decoded, definition_id: definition, contributes: decoded.contributes ?? null, title: decoded.title ?? null },
+  ];
 }
 
 const decodeVersionRow = Schema.decodeUnknownSync(VersionRowSchema);

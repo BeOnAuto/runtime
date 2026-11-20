@@ -38,6 +38,10 @@ const everyFieldListedOf = Schema.decodeUnknownSync(
   }),
 );
 
+const namedModelsIn = Schema.decodeUnknownSync(
+  Schema.Struct({ data: Schema.Array(Schema.Struct({ name: Schema.String.check(Schema.isMinLength(1)) })) }),
+);
+
 let server: ReasoningServer;
 
 beforeEach(async () => {
@@ -70,6 +74,8 @@ function onMcpAs<T>(path: string, key: string, use: (session: McpSession) => Pro
 function namesListedOn(path: string, key: string): Promise<readonly string[]> {
   return onMcpAs(path, key, async (session) => toolNamesIn(await session.listTools()));
 }
+
+const aName: unknown = expect.stringMatching(/\S/u);
 
 const imageModels = [
   'openai/gpt-image-2',
@@ -106,7 +112,7 @@ describe('list_generation_models on the endpoint of one playbook', () => {
     expect(inThePlaybook.structuredContent).toMatchObject({
       object: 'list',
       gateways: ['images'],
-      data: imageModels.map((model) => ({ model })),
+      data: imageModels.map((model) => ({ model, name: aName })),
     });
   });
 
@@ -154,6 +160,7 @@ describe('list_generation_models of a playbook over HTTP', () => {
     ]);
 
     expect(ofTheOrg.status).toBe(200);
+    expect(namedModelsIn(ofTheOrg.body).data.length).toBeGreaterThan(imageModels.length);
     expect({ status: read.status, body: read.body }).toEqual({ status: 200, body: ofTheOrg.body });
     expect({ status: unpermitted.status, body: unpermitted.body }).toMatchObject({
       status: 403,

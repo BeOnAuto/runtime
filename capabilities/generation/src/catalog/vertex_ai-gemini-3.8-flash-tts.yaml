@@ -1,4 +1,5 @@
 model: vertex_ai/gemini-3.8-flash-tts
+name: Gemini 3.8 Flash TTS
 kind: audio
 media_types: []
 limits:

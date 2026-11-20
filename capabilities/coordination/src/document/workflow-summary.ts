@@ -59,16 +59,14 @@ function detailsOf(document: JsonObject, contributes: Contributes | undefined): 
   };
 }
 
-function descriptionOf(document: JsonObject): string | undefined {
-  const header = objectField(document, 'document') ?? {};
-  return textField(header, 'summary') ?? textField(header, 'title');
-}
-
 export function summaryOf(document: JsonObject, contributes?: Contributes): DefinitionSummary {
-  const description = descriptionOf(document);
+  const header = objectField(document, 'document') ?? {};
+  const title = textField(header, 'title');
+  const description = textField(header, 'summary') ?? title;
   const inputSchema = inlineSchemaOf(document, 'input');
   const triggers = triggersOfDocument(document);
   return {
+    ...(title === undefined ? {} : { title }),
     ...(description === undefined ? {} : { description }),
     ...(inputSchema === undefined ? {} : { inputSchema }),
     ...publishedOutputOf({

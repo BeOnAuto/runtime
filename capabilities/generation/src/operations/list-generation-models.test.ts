@@ -116,9 +116,10 @@ describe('list_generation_models', () => {
         { model: 'example/short-film' },
         { model: 'example/square-image' },
         { model: 'openai/gpt-4o-mini-tts' },
-        { model: 'openai/gpt-image-2' },
+        { model: 'openai/gpt-image-2', name: catalog.entryOf('openai/gpt-image-2')?.name },
       ],
     });
+    expect(catalog.entryOf('openai/gpt-image-2')?.name).toEqual(expect.any(String));
   });
 
   it('answers only the models of a kind when asked for one, and refuses a kind that is none', async () => {

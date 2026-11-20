@@ -80,9 +80,14 @@ const RetiredSchema = Schema.Struct({
   replacement: ModelIdSchema.annotate({ description: 'The model of the catalogue a definition names instead' }),
 });
 
+const NameSchema = Schema.String.check(Schema.isMinLength(1)).annotate({
+  description: 'The name the provider gives the model',
+});
+
 function entryOfKind<Kind extends GenerationKind, Limits extends Schema.Top>(kind: Kind, limits: Limits) {
   return Schema.Struct({
     model: ModelIdSchema,
+    name: Schema.optionalKey(NameSchema),
     kind: Schema.Literal(kind),
     media_types: Schema.Array(MediaTypeSchema).annotate({
       description: 'The media types of the assets the model takes as references, none where it takes none',

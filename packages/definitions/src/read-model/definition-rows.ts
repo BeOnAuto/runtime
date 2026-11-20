@@ -39,6 +39,7 @@ function jsonOf(value: unknown): string | null {
 
 function contentColumns(content: DefinitionContent): ProjectedRow {
   return {
+    title: content.title ?? null,
     description: content.description ?? null,
     input_schema: jsonOf(content.input_schema),
     output_schema: jsonOf(content.output_schema),
@@ -126,7 +127,7 @@ function definitionRowAfter(row: ProjectedRow | undefined, message: ProjectedMes
 
 export const definitionRows: KeyedProjection = {
   name: 'definitions',
-  version: 5,
+  version: 6,
   scopes: ['definition'],
   kinds: ['definitions'],
   types: [
@@ -143,6 +144,7 @@ export const definitionRows: KeyedProjection = {
     { name: 'name', kind: 'text' },
     { name: 'version', kind: 'integer' },
     { name: 'status', kind: 'text' },
+    { name: 'title', kind: 'text' },
     { name: 'description', kind: 'text' },
     { name: 'input_schema', kind: 'text' },
     { name: 'output_schema', kind: 'text' },

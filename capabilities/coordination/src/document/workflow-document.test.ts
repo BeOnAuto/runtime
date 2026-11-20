@@ -136,7 +136,7 @@ describe('a workflow document that nests too deeply', () => {
 });
 
 describe('the summary of a workflow definition', () => {
-  it('is the summary or title of the document and its inline input and output schemas', () => {
+  it('is the title of the document, its summary or title as its description, and its inline input and output schemas', () => {
     expect(
       summaryOf({
         document: { summary: 'Greets', title: 'Greeting' },
@@ -145,11 +145,16 @@ describe('the summary of a workflow definition', () => {
         do: [],
       }),
     ).toEqual({
+      title: 'Greeting',
       description: 'Greets',
       inputSchema: { type: 'object' },
       outputSchema: { type: 'string' },
     });
-    expect(summaryOf({ document: { title: 'Greeting' }, do: [] })).toEqual({ description: 'Greeting' });
+    expect(summaryOf({ document: { title: 'Greeting' }, do: [] })).toEqual({
+      title: 'Greeting',
+      description: 'Greeting',
+    });
+    expect(summaryOf({ document: { summary: 'Greets' }, do: [] })).toEqual({ description: 'Greets' });
     expect(summaryOf({ do: [] })).toEqual({});
   });
 

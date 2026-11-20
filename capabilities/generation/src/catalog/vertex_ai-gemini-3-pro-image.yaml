@@ -1,4 +1,5 @@
 model: vertex_ai/gemini-3-pro-image
+name: Gemini 3 Pro Image
 kind: image
 media_types: [image/png, image/jpeg, image/webp]
 limits:

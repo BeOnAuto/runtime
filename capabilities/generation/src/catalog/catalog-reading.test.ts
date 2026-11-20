@@ -59,6 +59,11 @@ describe('the reading of a catalogue of generation models', () => {
     );
   });
 
+  it('reads the name an entry gives its model, and refuses a name that is empty', async () => {
+    expect(await refusalOf({ 'example-voice.yaml': `name: Example Voice\n${tts}` })).toBe('read');
+    expect(await refusalOf({ 'example-voice.yaml': `name: ''\n${tts}` })).not.toBe('read');
+  });
+
   it('refuses an entry whose file is not named for its model, and a model named twice', async () => {
     expect(await refusalOf({ 'voice.yaml': tts })).toBe(
       `${said}test/models/voice.yaml:1:8 model: Expected the model the file is named for, as in example-voice.yaml`,

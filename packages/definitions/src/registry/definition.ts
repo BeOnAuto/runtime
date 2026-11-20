@@ -51,6 +51,9 @@ const listedDefinitionFields = {
   media_type: Schema.String.annotate({
     description: 'The media type of the definition document, set by its runtime adapter',
   }),
+  title: Schema.optionalKey(
+    Schema.String.annotate({ description: 'The title its document gives the definition, where it gives one' }),
+  ),
   description: Schema.optionalKey(
     Schema.String.annotate({ description: 'What the definition does, as its document says' }),
   ),

@@ -32,6 +32,7 @@ export {
 } from '../cancellation/cancelled-runs.ts';
 
 export interface DefinitionSummary {
+  readonly title?: string;
   readonly description?: string;
   readonly inputSchema?: Schema.JsonObject;
   readonly outputSchema?: Schema.JsonObject;

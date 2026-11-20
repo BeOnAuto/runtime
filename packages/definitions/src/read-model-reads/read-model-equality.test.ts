@@ -45,7 +45,7 @@ async function aLedgerOf(seed: number): Promise<MemoryLedger> {
   await executedIn(ledger.service, 'workflow', {
     type: 'create',
     name: 'contributing',
-    content: { source: '{}', details: { shape: 'table', contributes } },
+    content: { source: '{}', title: 'Keeps going', details: { shape: 'table', contributes } },
     created_by: aReader,
     definition_id: 'id-of-contributing',
   });
@@ -84,6 +84,7 @@ describe('the read model of the current definitions, over histories generated fr
 
       expect(definitions.length).toBeGreaterThan(3);
       expect(definitions.some((definition) => isAContributingWorkflow(definition))).toBe(true);
+      expect(read.flat()).toContainEqual(expect.objectContaining({ media_type: echo.mediaType, title: 'Keeps going' }));
       expect(read).toEqual(
         definitions.map(({ registered }) => [
           registered,

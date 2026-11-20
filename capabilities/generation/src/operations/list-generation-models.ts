@@ -26,6 +26,7 @@ const ValuesSchema = Schema.Array(Schema.String);
 
 const ListedEntrySchema = Schema.Struct({
   model: Schema.String,
+  name: Schema.optionalKey(Schema.String.annotate({ description: 'The name the provider gives the model' })),
   kind: GenerationKindSchema,
   media_types: ValuesSchema.annotate({ description: 'The media types of the assets it takes as references' }),
   limits: Schema.Struct({

@@ -11,6 +11,7 @@ const DefinitionContentSchema = withPayloads(
     ...payloadFields('source', Schema.String),
     ...payloadFields('overview', Schema.String),
     ...payloadFields('diagram', Schema.String),
+    title: Schema.optionalKey(Schema.String),
     description: Schema.optionalKey(Schema.String),
     input_schema: Schema.optionalKey(Schema.JsonObject),
     output_schema: Schema.optionalKey(Schema.JsonObject),

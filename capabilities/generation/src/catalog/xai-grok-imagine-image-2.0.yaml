@@ -1,4 +1,5 @@
 model: xai/grok-imagine-image-2.0
+name: Grok Imagine Image 2.0
 kind: image
 media_types: [image/png, image/jpeg, image/webp]
 limits:

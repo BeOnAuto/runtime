@@ -1,4 +1,5 @@
 model: openai/gpt-image-2.6-flare
+name: GPT Image 2.6 Flare
 kind: image
 media_types: [image/png, image/jpeg, image/webp]
 limits:

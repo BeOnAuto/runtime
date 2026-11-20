@@ -94,6 +94,7 @@ export function listedOfTheRow(
     definition_id: row.definition_id,
     version: row.version,
     status: row.status,
+    ...(row.title === null ? {} : { title: row.title }),
     ...(row.description === null ? {} : { description: row.description }),
     ...schemasOf(row),
     ...standingOf(row),

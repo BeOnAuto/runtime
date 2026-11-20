@@ -1,4 +1,5 @@
 model: openai/tts-1
+name: TTS-1
 kind: audio
 media_types: []
 limits:

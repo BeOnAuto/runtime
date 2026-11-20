@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "rows": {
     "definitions": [
       {
@@ -9,6 +9,7 @@
           "name": "follow-up-leads",
           "version": 2,
           "status": "retired",
+          "title": null,
           "description": "Follows up the leads of the day",
           "input_schema": null,
           "output_schema": null,
@@ -35,6 +36,7 @@
           "name": "check-totals",
           "version": 2,
           "status": "active",
+          "title": null,
           "description": null,
           "input_schema": null,
           "output_schema": null,
@@ -61,6 +63,7 @@
           "name": "close-the-month",
           "version": 2,
           "status": "paused",
+          "title": null,
           "description": null,
           "input_schema": null,
           "output_schema": null,
@@ -87,6 +90,7 @@
           "name": "greet-reasoning",
           "version": 2,
           "status": "paused",
+          "title": null,
           "description": "Greets each guest",
           "input_schema": "{\"type\":\"object\"}",
           "output_schema": "{\"type\":\"object\",\"properties\":{\"greeting\":{\"const\":\"Hello\"},\"input\":{\"type\":\"object\"}},\"required\":[\"greeting\",\"input\"]}",
@@ -113,6 +117,7 @@
           "name": "close-the-month",
           "version": 2,
           "status": "retired",
+          "title": null,
           "description": null,
           "input_schema": null,
           "output_schema": null,
@@ -139,6 +144,7 @@
           "name": "post-the-orders",
           "version": 1,
           "status": "paused",
+          "title": null,
           "description": null,
           "input_schema": null,
           "output_schema": null,

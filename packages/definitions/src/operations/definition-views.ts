@@ -97,14 +97,22 @@ function diagramChosen({ type }: Capability, { diagram }: WrittenDefinition): Ef
       );
 }
 
+function wordsFrom({ title, description }: DefinitionSummary): Pick<DefinitionContent, 'title' | 'description'> {
+  return {
+    ...(title === undefined ? {} : { title }),
+    ...(description === undefined ? {} : { description }),
+  };
+}
+
 function contentFrom(
   written: WrittenDefinition,
-  { description, inputSchema, outputSchema, warnings = [], triggers = [], details }: DefinitionSummary,
+  summary: DefinitionSummary,
   stripped: NonNullable<DefinitionContent['stripped']>,
 ): DefinitionContent {
+  const { inputSchema, outputSchema, warnings = [], triggers = [], details } = summary;
   return {
     ...textMembersOf(textsAsWritten(written)),
-    ...(description === undefined ? {} : { description }),
+    ...wordsFrom(summary),
     ...(inputSchema === undefined ? {} : { input_schema: inputSchema }),
     ...(outputSchema === undefined ? {} : { output_schema: outputSchema }),
     ...(warnings.length === 0 ? {} : { warnings }),

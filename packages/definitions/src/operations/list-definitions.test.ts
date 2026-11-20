@@ -161,6 +161,28 @@ function detailing(type: string): Capability {
   });
 }
 
+const TitledSchema = Schema.Struct({ title: Schema.optionalKey(Schema.String) });
+
+const decodeTitled = Schema.decodeUnknownEffect(Schema.fromJsonString(TitledSchema));
+
+const titling = defineCapability({
+  type: 'workflow',
+  title: 'workflow',
+  guide: { name: 'workflow' },
+  noun: { one: 'workflow', other: 'workflows' },
+  describeOutput: () => 'It answered.',
+  mediaType: 'application/json',
+  parse: (source: string) => Effect.orDie(decodeTitled(source)),
+  summarize: ({ title }: typeof TitledSchema.Type) => (title === undefined ? {} : { title }),
+  run: () => Effect.succeed({ output: null, record: {} }),
+});
+
+const {
+  createDefinition: createTitled,
+  getDefinition: getTitled,
+  listDefinitions: listTitled,
+} = definitionOperationsFor([titling]);
+
 const {
   createDefinition: createDefinitionInUsedBy,
   getDefinition,
@@ -218,6 +240,28 @@ describe('list_definitions', () => {
       detail: 'The input does not match the input schema',
       issues: [{ pointer: '/type', detail: someWords }],
     });
+  });
+});
+
+describe('the title of a listed definition', () => {
+  it('is the title its document gives, the one get_definition answers, and left out where its document gives none', async () => {
+    const { call } = harness();
+    const title = 'Weekly review';
+    await call(
+      createTitled,
+      toAlpha(acmeAdmin, { type: 'workflow', name: 'weekly-review', source: JSON.stringify({ title }) }),
+    );
+    await call(createTitled, toAlpha(acmeAdmin, { type: 'workflow', name: 'untitled', source: '{}' }));
+
+    const listedNow = await call(listTitled, toAlpha(acmeAdmin, { type: 'workflow' }));
+    const read = await call(getTitled, toAlpha(acmeAdmin, { type: 'workflow', name: 'weekly-review' }));
+
+    expect(listedNow).toMatchObject({
+      status: 'succeeded',
+      output: { definitions: [{ name: 'untitled' }, { name: 'weekly-review', title }] },
+    });
+    expect(listedNow).not.toHaveProperty('output.definitions.0.title');
+    expect(read).toMatchObject({ status: 'succeeded', output: { title } });
   });
 });
 

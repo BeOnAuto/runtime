@@ -14,6 +14,8 @@ function unknownFormatsOf(entry: CatalogEntry): readonly string[] {
   return entry.kind === 'audio' ? entry.limits.formats.filter((format) => !knownAudioFormats.includes(format)) : [];
 }
 
+const aName: unknown = expect.stringMatching(/\S/u);
+
 const files = readdirSync(new URL('.', import.meta.url)).filter((file) => file.endsWith('.yaml'));
 
 const shippedModels = [
@@ -66,6 +68,10 @@ describe('the catalogue of generation models the runtime ships', () => {
       kind: 'image',
       limits: { qualities: ['low', 'medium', 'high', 'xhigh', 'max', 'auto'] },
     });
+  });
+
+  it('gives every model the name its provider gives it', () => {
+    expect(shipped.entries.map(({ name }) => name)).toEqual(shipped.entries.map(() => aName));
   });
 
   it('finds each model by its name, and none it does not name', () => {
