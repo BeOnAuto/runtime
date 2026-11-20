@@ -1,7 +1,7 @@
 import { foldedBeforeItRuns, type HostDatabase } from '@on.auto/workflow-host';
 
 import { servedWithTheGoalsEngine, serverConnectedThrough } from '../goals/goals-engine-lists.ts';
-import { socketsOfTheServer } from '../sockets/sockets-of-the-server.ts';
+import { socketsOfTheServer, type SocketsServing } from '../sockets/sockets-of-the-server.ts';
 import type { WorkflowParts } from '../workflows/workflows.ts';
 import { factsComposedOf } from './composed-facts.ts';
 import type { ServedWiring } from './function-wiring.ts';
@@ -39,6 +39,19 @@ async function forecasterServedOn(
   const { capability, folders } = prediction.provided;
   await prediction.servedIn(runtime, database);
   return foldedBeforeItRuns({ capability, folders, database });
+}
+
+interface WakingParts extends SocketsServing {
+  readonly subscriptions: Awaited<ReturnType<typeof toolUsersServedBy>>['subscriptions'];
+}
+
+function wakeUpsOf(
+  runtime: ServingRuntime,
+  settings: ServedSettings,
+  { subscriptions, ...sockets }: WakingParts,
+): readonly ReturnType<typeof socketsOfTheServer>[] {
+  const following = subscriptions.wakeUpsOver({ streams: sockets.store.database.store });
+  return [socketsOfTheServer(runtime, settings, sockets), ...following];
 }
 
 export async function functionsServedBy(
@@ -83,7 +96,7 @@ export async function functionsServedBy(
       capabilityOperations: [generation],
       dueWork: lists.dueWork,
       consumers: [...lists.consumers, subscriptions.consumer],
-      wakeUps: [socketsOfTheServer(runtime, settings, { store: projections.store, secrets: tools.secrets, opens })],
+      wakeUps: wakeUpsOf(runtime, settings, { store: projections.store, secrets: tools.secrets, opens, subscriptions }),
       store: projections.store,
       projector: projections.projector,
       evaluations: computation.pool.evaluations,

@@ -89,7 +89,7 @@ There is no read model: each call folds the stream. A pure decider holds the rul
 
 ## The playbook registry port
 
-`ledgerPlaybookRegistry` is a `Layer` that provides the `PlaybookRegistry` port of `@on.auto/operations` from a `Ledger`. It answers the status of a playbook as the org's playbook registry holds it: `active` from its creation or its restoration, `retired` from its retirement, and `unknown` for an id the org never created. It names the stream with `streamPrefixOfOrg`, the prefix the org-bound ports put before `playbooks`, so it reads the very stream the operations write.
+`ledgerPlaybookRegistry` is a `Layer` that provides the `PlaybookRegistry` port of `@on.auto/operations` from a `Ledger`. It answers the status of a playbook as the org's playbook registry holds it: `active` from its creation or its restoration, `retired` from its retirement, and `unknown` for an id the org never created. It names the stream with `streamPrefixOfOrg`, the prefix the org-bound ports put before `playbooks`, so it reads the very stream the operations write. `activePlaybooksOf(ledger, org)` answers the org's active playbooks by the same one read of that stream, for the relay of `@on.auto/connections` that asks them for a subscription round.
 
 The dispatcher applies the status to every playbook-scoped operation. A retired playbook stays readable: every query runs on it, so what the playbook recorded survives its retirement. Every command on a retired playbook is refused with `conflict`, kind `retired`, and the detail `update_playbook` gives, such as `The playbook gamma is retired and cannot change until it is restored`. An unknown playbook is `not_found`.
 

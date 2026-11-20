@@ -18,7 +18,12 @@ export {
   type RequestPlace,
   type WaitingPlace,
 } from './wakes/request-places.ts';
-export { waitingRequestsOf, type WaitingParts, type WaitingRequest } from './wakes/waiting-requests.ts';
+export {
+  holdsASentRequest,
+  waitingRequestsOf,
+  type WaitingParts,
+  type WaitingRequest,
+} from './wakes/waiting-requests.ts';
 export type { InteractionFunctionDefinitionDocument } from './document/interaction-document.ts';
 export { requestsDue, type RequestsDue } from './schedule/due-requests.ts';
 export type { DeliveryParts } from './schedule/delivery-parts.ts';

@@ -7,7 +7,7 @@ import { answererId, chatHarness, type ChatHarness } from '../testing/chat-harne
 import { chatProjections } from '../testing/chat-projections.ts';
 import { alpha, ledgerHoldingRuns, type HarnessLedger } from '../testing/interaction-harness.ts';
 import { readOnce, theChannel } from '../testing/woken-conversations.ts';
-import { waitingRequestsOf } from './waiting-requests.ts';
+import { holdsASentRequest, waitingRequestsOf } from './waiting-requests.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7d';
 
@@ -46,6 +46,23 @@ describe('the requests that wait for replies in a conversation of a connection',
     await waiting.playbook.performReads(waiting.readAt + 60_000);
 
     expect(await waitingIn(waiting.playbook)).toEqual([]);
+  });
+});
+
+function holds(playbook: Pick<ChatHarness, 'ledger'>): Promise<boolean> {
+  return Effect.runPromise(holdsASentRequest(playbook.ledger.service, alpha));
+}
+
+describe('a playbook that holds a request sent through a connection', () => {
+  it('holds an open request whose message landed in a conversation, read as one row, and none before it lands or once answered', async () => {
+    const asked = await chatHarness();
+    await asked.askInThread(runId);
+    const waiting = await readOnce(runId);
+    const whileItWaits = await holds(waiting.playbook);
+    waiting.approve();
+    await waiting.playbook.performReads(waiting.readAt + 60_000);
+
+    expect([await holds(asked), whileItWaits, await holds(waiting.playbook)]).toEqual([false, true, false]);
   });
 });
 

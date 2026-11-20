@@ -98,6 +98,24 @@ function waitingIn(
   });
 }
 
+export function holdsASentRequest(
+  ledger: Pick<ProjectionReader, 'readProjectedRows'>,
+  playbook: PlaybookAddress,
+): Effect.Effect<boolean> {
+  return Effect.map(
+    ledger.readProjectedRows(openRequestsName, playbook, {
+      where: [
+        { column: 'open', equals: true },
+        { column: 'sent_conversation', after: '' },
+      ],
+      orderBy: [],
+      order: 'asc',
+      limit: 1,
+    }),
+    (rows) => rows.length > 0,
+  );
+}
+
 export function waitingRequestsOf(
   parts: WaitingParts,
   playbook: PlaybookAddress,

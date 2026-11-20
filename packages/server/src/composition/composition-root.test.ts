@@ -404,6 +404,19 @@ describe("the ledger the server hands its capabilities, over the runtime's own",
 
     expect(read).toEqual({ type: 'remark_made', data: { text: 'first' }, context: remarkedContext });
   });
+
+  it('reads the facts appended to a stream after a cursor, without their data, as the ledger reads them', async () => {
+    const runtime = await memoryRuntime();
+    const ledger = runtimeLedger(runtime);
+    const remarks = 'org/acme/remarks';
+    const scope = { kind: 'streams', streams: [remarks] } as const;
+    const now = await Effect.runPromise(ledger.readAppendedFacts(scope, { most: 1, dataOf: [] }));
+    await Effect.runPromise(ledger.execute(remarks, remarkFacts, [{ type: 'remark_made', data: { text: 'first' } }]));
+    const read = await Effect.runPromise(ledger.readAppendedFacts(scope, { after: now.cursor, most: 10, dataOf: [] }));
+    await runtime.dispose();
+
+    expect(read.facts.map(({ type, data }) => [type, data])).toEqual([['remark_made', undefined]]);
+  });
 });
 
 describe('the fact types the server gives the ledger to read', () => {

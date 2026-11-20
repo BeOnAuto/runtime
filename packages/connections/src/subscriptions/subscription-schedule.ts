@@ -2,6 +2,7 @@ import { addressOfTheRow, playbookRowsOf, type PlaybookAddress, type ProjectionR
 import { resyncedAfterMs, type Reconciled } from '@on.auto/providers';
 import { Effect, Schema } from 'effect';
 
+import type { SubscriptionLoopParts } from './loop-ports.ts';
 import { heldRowsOf, type SubscriptionLedger } from './subscription-records.ts';
 import { eventSubscriptionsName, reconcileDueColumn } from './subscription-rows.ts';
 
@@ -30,6 +31,25 @@ export function holdsASubscription(
       limit: 1,
     }),
     (rows) => rows.length > 0,
+  );
+}
+
+export interface ListeningParts {
+  readonly ledger: Pick<ProjectionReader, 'readProjectedRows'>;
+  readonly sentIn: (playbook: PlaybookAddress) => Effect.Effect<boolean>;
+  readonly triggersIn: SubscriptionLoopParts['triggersIn'];
+}
+
+function orElse(asked: Effect.Effect<boolean>, next: () => Effect.Effect<boolean>): Effect.Effect<boolean> {
+  return Effect.flatMap(asked, (yes) => (yes ? Effect.succeed(true) : next()));
+}
+
+export function listensThroughAConnection(
+  { ledger, sentIn, triggersIn }: ListeningParts,
+  playbook: PlaybookAddress,
+): Effect.Effect<boolean> {
+  return orElse(holdsASubscription(ledger, playbook), () =>
+    orElse(sentIn(playbook), () => Effect.map(triggersIn(playbook), (triggers) => triggers.length > 0)),
   );
 }
 

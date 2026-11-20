@@ -1,4 +1,4 @@
-export { ledgerPlaybookRegistry } from './registry/ledger-playbook-registry.ts';
+export { activePlaybooksOf, ledgerPlaybookRegistry } from './registry/ledger-playbook-registry.ts';
 export { playbookOperationsOf } from './operations/playbook-operations.ts';
 export { type PlaybookPage, type PlaybookPages } from './operations/playbook-pages.ts';
 export { createPlaybook } from './operations/create-playbook.ts';

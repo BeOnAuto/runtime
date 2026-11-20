@@ -9,7 +9,7 @@ import {
 } from '@on.auto/connections';
 import { connectionTriggersOf } from '@on.auto/definitions/connection-triggers';
 import { waitingRequestsOf, type WaitingParts } from '@on.auto/interaction';
-import type { DispatcherServices } from '@on.auto/operations';
+import type { DispatcherServices, Ledger } from '@on.auto/operations';
 import {
   subscriptionLoopOf,
   type ProviderList,
@@ -19,9 +19,13 @@ import {
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import type { Settings } from '../settings/settings.ts';
+import { connectionChangesWakeUpsOf, type ChangesListening, type WakeUpWith } from './connection-changes.ts';
 import { subscriptionRoundsOf, type SubscriptionRounds } from './subscription-rounds.ts';
 
-type SubscriptionsLedger = SubscriptionLedger & DueLedger & WaitingParts['ledger'];
+type SubscriptionsLedger = SubscriptionLedger &
+  DueLedger &
+  WaitingParts['ledger'] &
+  Pick<Ledger['Service'], 'readAppendedFacts'>;
 
 export interface SubscriptionsServing {
   readonly ledger: SubscriptionsLedger;
@@ -43,16 +47,22 @@ export function subscriptionLoopPartsOf(serving: SubscriptionsServing): Subscrip
   };
 }
 
-function subscriptionsServedBy(serving: SubscriptionsServing): SubscriptionRounds {
+export interface ServedSubscriptions extends SubscriptionRounds {
+  readonly wakeUpsOver: (listening: ChangesListening) => readonly WakeUpWith[];
+}
+
+export function subscriptionsServedBy(serving: SubscriptionsServing): ServedSubscriptions {
   const { ledger, receivesOverHttp, eventsAddressOf } = serving;
-  return subscriptionRoundsOf({
+  const arrangesAWay = receivesOverHttp && eventsAddressOf !== undefined;
+  const rounds = subscriptionRoundsOf({
     round: subscriptionRoundOf({
       loop: subscriptionLoopOf(subscriptionLoopPortsOf(subscriptionLoopPartsOf(serving))),
       ledger,
     }),
     ledger,
-    arrangesAWay: receivesOverHttp && eventsAddressOf !== undefined,
+    arrangesAWay,
   });
+  return { ...rounds, wakeUpsOver: connectionChangesWakeUpsOf({ ledger, asked: rounds.asked, arrangesAWay }) };
 }
 
 interface TheServersOwn {
@@ -78,6 +88,6 @@ export function subscriptionsOfTheServer(
   runtime: AppRuntime<DispatcherServices>,
   settings: ServedReceiving,
   own: TheServersOwn,
-): SubscriptionRounds {
+): ServedSubscriptions {
   return subscriptionsServedBy(subscriptionsServingOf(runtimeLedger(runtime), settings, own));
 }

@@ -9,6 +9,7 @@ import { subscriptionRecordsOf } from './subscription-records.ts';
 import { eventSubscriptions } from './subscription-rows.ts';
 import {
   holdsASubscription,
+  listensThroughAConnection,
   playbooksDueOf,
   reconcileDueAfter,
   reconcileDueSet,
@@ -38,7 +39,7 @@ function at<A>(time: number, effect: Effect.Effect<A>): Promise<A> {
   return Effect.runPromise(TestClock.setTime(time).pipe(Effect.andThen(effect), Effect.provide(TestClock.layer())));
 }
 
-function run<A>(effect: Effect.Effect<A>): Promise<A> {
+function run<A>(effect: Effect.Effect<A, unknown>): Promise<A> {
   return Effect.runPromise(effect);
 }
 
@@ -140,5 +141,36 @@ describe('a playbook that holds a subscription', () => {
     await at(nine, records.removed(alpha, chat));
 
     expect(await run(holdsASubscription(ledger, alpha))).toBe(false);
+  });
+});
+
+const gamma = { org: 'acme', playbook: 'gamma' };
+
+const delta = { org: 'acme', playbook: 'delta' };
+
+const everyOne: readonly PlaybookAddress[] = [alpha, beta, gamma, delta];
+
+const openingIssues = [{ connection: 'tracker', type: 'com.tracker.opened' }];
+
+function listeningOver(ledger: ReturnType<typeof recordsOver>['ledger']) {
+  return {
+    ledger,
+    sentIn: (playbook: PlaybookAddress) => Effect.succeed(playbook === beta),
+    triggersIn: (playbook: PlaybookAddress) => Effect.succeed(playbook === gamma ? openingIssues : []),
+  };
+}
+
+describe('a playbook that listens through a connection', () => {
+  it('holds a subscription, has a request sent through one, or a trigger that names one, and is no other', async () => {
+    const { ledger, records } = recordsOver();
+    await at(nine, records.made(alpha, chat, made));
+    const parts = listeningOver(ledger);
+
+    expect(await run(Effect.forEach(everyOne, (playbook) => listensThroughAConnection(parts, playbook)))).toEqual([
+      true,
+      true,
+      true,
+      false,
+    ]);
   });
 });

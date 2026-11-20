@@ -49,6 +49,7 @@ export interface SubscriptionRounds {
   readonly dueWork: DueWork;
   readonly consumer: FactsConsumer;
   readonly recording: (record: RecordWork) => RecordWork;
+  readonly asked: (playbook: PlaybookAddress) => void;
 }
 
 interface Owed {
@@ -180,5 +181,6 @@ export function subscriptionRoundsOf(parts: RoundsParts): SubscriptionRounds {
     dueWork: dueWorkOf(parts, owed),
     consumer: consumerOf(parts, owed),
     recording: parts.arrangesAWay ? recordingOf(owed) : recordedAsItIs,
+    asked: owed.ask,
   };
 }

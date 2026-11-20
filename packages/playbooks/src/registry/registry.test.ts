@@ -2,7 +2,7 @@ import { type CallerIdentity, defineCommand, defineQuery, makeDispatcher, Playbo
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { createPlaybook, ledgerPlaybookRegistry, retirePlaybook } from '../index.ts';
+import { activePlaybooksOf, createPlaybook, ledgerPlaybookRegistry, retirePlaybook } from '../index.ts';
 import { acmeAdmin, globexAdmin } from '../testing/callers.ts';
 import { harness, toOrg } from '../testing/harness.ts';
 import { playbookCreatedOf } from './created-playbooks.ts';
@@ -95,6 +95,16 @@ describe('the playbook registry on the ledger', () => {
     expect(await run(statusOf('acme', 'alpha'))).toBe('active');
     expect(await run(statusOf('globex', 'alpha'))).toBe('unknown');
     expect(await run(statusOf('acme', 'beta'))).toBe('unknown');
+  });
+
+  it('lists the active playbooks of an org, by one read of its registry, and neither a retired one nor another org’s', async () => {
+    const { call, ledger, run } = harness(ledgerPlaybookRegistry);
+    await call(createPlaybook, toAcme(acmeAdmin, { playbook: 'alpha', name: 'Alpha' }));
+    await call(createPlaybook, toAcme(acmeAdmin, { playbook: 'beta', name: 'Beta' }));
+    await call(retirePlaybook, toAcme(acmeAdmin, { playbook: 'beta' }));
+    await call(createPlaybook, toOrg('globex')(globexAdmin, { playbook: 'gamma', name: 'Gamma' }));
+
+    expect(await run(activePlaybooksOf(ledger.service, { org: 'acme' }))).toEqual([{ org: 'acme', playbook: 'alpha' }]);
   });
 });
 

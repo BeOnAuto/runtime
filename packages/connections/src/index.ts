@@ -56,9 +56,16 @@ export { subscriptionLoopPortsOf, type SubscriptionLoopParts } from './subscript
 export { deliveryDestinationOf, deliverySecretsOf } from './subscriptions/subscription-deliveries.ts';
 export {
   holdsASubscription,
+  listensThroughAConnection,
   playbooksDueOf,
   reconcileDueAfter,
   subscriptionRoundOf,
   type DueLedger,
+  type ListeningParts,
 } from './subscriptions/subscription-schedule.ts';
+export {
+  connectionChangesRelayed,
+  loopConnectionFacts,
+  type ChangesRelayed,
+} from './subscriptions/connection-changes.ts';
 export { subscriptionLayoutSteps } from './subscriptions/subscription-layout.ts';

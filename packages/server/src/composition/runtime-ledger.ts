@@ -7,7 +7,10 @@ import { Effect } from 'effect';
 import { inRuntime } from '../workflows/in-runtime.ts';
 
 interface RuntimeLedger
-  extends ConversationLedger, Pick<ProjectionReader, 'countProjectedRows'>, Pick<Ledger['Service'], 'removeUnheld'> {
+  extends
+    ConversationLedger,
+    Pick<ProjectionReader, 'countProjectedRows'>,
+    Pick<Ledger['Service'], 'removeUnheld' | 'readAppendedFacts'> {
   readonly content: Pick<RecordedContent, 'put' | 'get' | 'getHead' | 'getPart'>;
 }
 
@@ -21,6 +24,7 @@ export function runtimeLedger(runtime: AppRuntime<DispatcherServices>): RuntimeL
       viaLedger((ledger) => ledger.execute(stream, decider, command, lineage)),
     holderOfStream: (named) => viaLedger((ledger) => ledger.holderOfStream(named)),
     removeUnheld: (playbook, sha256) => viaLedger((ledger) => ledger.removeUnheld(playbook, sha256)),
+    readAppendedFacts: (scope, request) => viaLedger((ledger) => ledger.readAppendedFacts(scope, request)),
     readRecorded: (playbook, selection, page) => viaLedger((ledger) => ledger.readRecorded(playbook, selection, page)),
     readProjectedRows: (projection, playbook, query) =>
       viaLedger((ledger) => ledger.readProjectedRows(projection, playbook, query)),

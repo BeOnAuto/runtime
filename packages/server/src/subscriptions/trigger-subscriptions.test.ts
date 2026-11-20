@@ -1,5 +1,6 @@
 import { eventSubscriptions, subscriptionLoopPortsOf, subscriptionRecordsOf } from '@on.auto/connections';
 import { decidedIn, definitionNamesWith, definitionsReadModelOf } from '@on.auto/definitions/testing';
+import { openRequests } from '@on.auto/interaction';
 import { memoryLedgerWith } from '@on.auto/operations/testing';
 import {
   providersShippedRoots,
@@ -13,7 +14,13 @@ import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { subscriptionLoopPartsOf, subscriptionsServingOf } from './served-subscriptions.ts';
+import {
+  addedAndConnected,
+  connectionsRecorded,
+  followedBy,
+  playbooksCreated,
+} from '../testing/subscriptions/connections-followed.ts';
+import { subscriptionLoopPartsOf, subscriptionsServedBy, subscriptionsServingOf } from './served-subscriptions.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -37,7 +44,7 @@ const ada = { id: 'person:ada', name: 'Ada' };
 
 function aSavedTrigger() {
   const ledger = memoryLedgerWith({
-    projections: [...definitionsReadModelOf(['workflow']), eventSubscriptions],
+    projections: [...definitionsReadModelOf(['workflow']), eventSubscriptions, openRequests],
     definitionNames: definitionNamesWith([]),
   }).service;
   const saved = {
@@ -96,6 +103,61 @@ describe('a saved workflow whose trigger names a connection, on a runtime given 
     await Effect.runPromise(round(alpha));
 
     expect(sent).toEqual([`POST https://api.github.com/repos/${theRepository}/hooks`]);
+    expect(await Effect.runPromise(subscriptionRecordsOf(ledger).read(alpha))).toMatchObject([
+      { connection: 'github', topic: theRepository, made: { id: '480932108' } },
+    ]);
+  });
+});
+
+const nine = Date.parse('2026-11-20T09:00:00.000Z');
+
+const github = (connection: string) => addedAndConnected(connection, 'github', 'https://api.githubcopilot.com/mcp/');
+
+async function theServerOf(ledger: Awaited<ReturnType<typeof aSavedTrigger>>, webhookUrl?: string) {
+  const providers = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
+  const service = aServiceThatSubscribes();
+  const forgotten: string[] = [];
+  const secrets = { ...service.secrets, forget: (id: string) => Effect.sync(() => forgotten.push(id)) };
+  const receiving = { overHttp: true, webhookUrl };
+  const rounds = subscriptionsServedBy(
+    subscriptionsServingOf(ledger, { providers, receiving }, { ...service, secrets }),
+  );
+  return { rounds, sent: service.sent, forgotten, ...followedBy(rounds, ledger, 'acme') };
+}
+
+describe('the connections of the orgs, on a runtime that arranges no way', () => {
+  it('are followed by no wake-up, since nothing is subscribed per subscription there', async () => {
+    const ledger = await aSavedTrigger();
+    const streams = { orgStreams: () => Promise.resolve([]) };
+    const wakeUpsOf = async (webhookUrl?: string) =>
+      (await theServerOf(ledger, webhookUrl)).rounds.wakeUpsOver({ streams }).length;
+
+    expect([await wakeUpsOf(), await wakeUpsOf('https://events.example.com')]).toEqual([0, 1]);
+  });
+});
+
+describe('a saved workflow whose trigger names a connection that is removed, added again and connected', () => {
+  it('has the server forget its subscription as the connection is removed and subscribe once again as it is connected, with no other fact of the playbook', async () => {
+    const ledger = await aSavedTrigger();
+    await playbooksCreated(ledger, 'acme', [alpha.playbook]);
+    await connectionsRecorded(ledger, 'acme', github('connection-1'));
+    const server = await theServerOf(ledger, 'https://events.example.com');
+    const context = { at: '2026-11-20T09:00:00.000Z', by: ada.id, definitionType: 'workflow' };
+    const saved = { playbook: alpha, record: { id: 'fact-saved', type: 'definition_created', context } };
+    const { deliveries } = await Effect.runPromise(server.rounds.consumer.batchOf(saved, undefined, 100));
+    await Effect.runPromise(Effect.forEach(deliveries, ({ deliver }) => deliver));
+    await server.wokenAt(nine);
+    const subscribed = server.sent.length;
+
+    await server.changed([{ type: 'connection_removed', data: { connection: 'connection-1' } }]);
+    await server.wokenAt(nine + 1000);
+    const forgottenAtTheRemoval = [...server.forgotten];
+    await server.changed(github('connection-2'));
+    await server.wokenAt(nine + 2000);
+
+    const hooks = `POST https://api.github.com/repos/${theRepository}/hooks`;
+    expect([subscribed, forgottenAtTheRemoval]).toEqual([1, ['secret-1']]);
+    expect(server.sent).toEqual([hooks, hooks]);
     expect(await Effect.runPromise(subscriptionRecordsOf(ledger).read(alpha))).toMatchObject([
       { connection: 'github', topic: theRepository, made: { id: '480932108' } },
     ]);

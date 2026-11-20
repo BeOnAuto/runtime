@@ -1,4 +1,10 @@
-import { PlaybookRegistry, Ledger } from '@on.auto/operations';
+import {
+  Ledger,
+  PlaybookRegistry,
+  type OrgAddress,
+  type PlaybookAddress,
+  type StreamReader,
+} from '@on.auto/operations';
 import { Effect, Layer } from 'effect';
 
 import { playbooksStreamOfOrg } from './playbooks-stream.ts';
@@ -16,3 +22,12 @@ export const ledgerPlaybookRegistry: Layer.Layer<PlaybookRegistry, never, Ledger
     });
   }),
 );
+
+export function activePlaybooksOf(
+  ledger: Pick<StreamReader, 'load'>,
+  { org }: OrgAddress,
+): Effect.Effect<readonly PlaybookAddress[]> {
+  return Effect.map(ledger.load(playbooksStreamOfOrg(org), registryDecider), ({ state }) =>
+    [...state.values()].filter(({ status }) => status === 'active').map(({ id }) => ({ org, playbook: id })),
+  );
+}
