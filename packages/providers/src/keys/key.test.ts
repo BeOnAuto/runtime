@@ -1,18 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { matchesKeyPattern } from '../index.ts';
-import { problemsOf } from '../testing/entry-problems.ts';
+import { keyProblemsOf, problemsOf, refusedAt } from '../testing/entry-problems.ts';
 import { drive, ledgers, tracker } from '../testing/fixture-providers.ts';
 
 const [aKey] = tracker.credentials;
-
-function keyProblemsOf(way: Readonly<Record<string, unknown>>) {
-  return problemsOf({ ...tracker, credentials: [{ ...aKey, ...way }] });
-}
-
-function refusedAt(way: Readonly<Record<string, unknown>>): readonly string[] {
-  return keyProblemsOf(way).map(([path]) => path);
-}
 
 function marked(marks: Readonly<Record<string, readonly string[]>>): readonly string[] {
   return problemsOf({ ...tracker, marks, credentials: [{ ...aKey, test: { tool: 'viewer' } }] }).map(([path]) => path);

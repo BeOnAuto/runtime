@@ -13832,6 +13832,71 @@
                                 "type": "string",
                                 "description": "What a person reads of the way; for secret, the short name of the key, the label of the field it is given in, beside the instructions and the key page the connection's credential holds"
                               },
+                              "key_page_title": {
+                                "type": "string",
+                                "description": "For secret, the label of the button that opens the key page, where the entry gives one; left out otherwise"
+                              },
+                              "steps": {
+                                "type": "object",
+                                "properties": {
+                                  "key_page": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string",
+                                        "description": "The heading of the step"
+                                      },
+                                      "instructions": {
+                                        "type": "string",
+                                        "description": "What the person does in the step, in Markdown"
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "instructions"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "key": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string",
+                                        "description": "The heading of the step"
+                                      },
+                                      "instructions": {
+                                        "type": "string",
+                                        "description": "What the person does in the step, in Markdown"
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "instructions"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "connected": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string",
+                                        "description": "The heading of the step"
+                                      },
+                                      "instructions": {
+                                        "type": "string",
+                                        "description": "What the person does in the step, in Markdown"
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "instructions"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "additionalProperties": false,
+                                "description": "For secret, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; key, above the field of the key; connected, what the person does once the connection is connected"
+                              },
                               "app_credentials": {
                                 "type": "array",
                                 "items": {
@@ -13844,6 +13909,10 @@
                                     "description": {
                                       "type": "string",
                                       "description": "The label of the field it is given in"
+                                    },
+                                    "title": {
+                                      "type": "string",
+                                      "description": "The heading of its step, where the entry gives one"
                                     },
                                     "instructions": {
                                       "type": "string",

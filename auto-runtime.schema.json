@@ -1300,6 +1300,79 @@
                       "type": "string",
                       "description": "For secret, the https address of the page where a person makes the key"
                     },
+                    "key_page_title": {
+                      "type": "string",
+                      "description": "For secret, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters",
+                      "minLength": 1,
+                      "maxLength": 40
+                    },
+                    "steps": {
+                      "type": "object",
+                      "properties": {
+                        "key_page": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "description": "The heading of the step, in at most 60 characters",
+                              "minLength": 1,
+                              "maxLength": 60
+                            },
+                            "instructions": {
+                              "type": "string",
+                              "description": "What the person does in the step, in Markdown without HTML of at most 1,000 characters",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "required": ["title", "instructions"],
+                          "additionalProperties": false,
+                          "description": "The step of the page where the key is made, above the button to key_page"
+                        },
+                        "key": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "description": "The heading of the step, in at most 60 characters",
+                              "minLength": 1,
+                              "maxLength": 60
+                            },
+                            "instructions": {
+                              "type": "string",
+                              "description": "What the person does in the step, in Markdown without HTML of at most 1,000 characters",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "required": ["title", "instructions"],
+                          "additionalProperties": false,
+                          "description": "The step of the key, above its field; the page shows its instructions in place of the way's instructions"
+                        },
+                        "connected": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "description": "The heading of the step, in at most 60 characters",
+                              "minLength": 1,
+                              "maxLength": 60
+                            },
+                            "instructions": {
+                              "type": "string",
+                              "description": "What the person does in the step, in Markdown without HTML of at most 1,000 characters",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "required": ["title", "instructions"],
+                          "additionalProperties": false,
+                          "description": "What the person does once the connection is connected, shown after approving"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "For secret, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions"
+                    },
                     "example": {
                       "type": "string",
                       "description": "For secret, what a key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
@@ -1323,6 +1396,12 @@
                             "type": "string",
                             "minLength": 1,
                             "description": "What a person reads of it: the label of the field it is given in, beside the field of the key"
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "The heading of its step on the page where a person approves the connection, in at most 60 characters, above its instructions",
+                            "minLength": 1,
+                            "maxLength": 60
                           },
                           "instructions": {
                             "type": "string",

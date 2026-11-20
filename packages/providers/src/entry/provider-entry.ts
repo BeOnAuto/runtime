@@ -83,7 +83,15 @@ const ProviderEntryFieldsSchema = Schema.Struct({
   replaces: Schema.optionalKey(ReplacesSchema),
 });
 
-export const entryProse: readonly string[] = ['title', 'description', 'says', 'for', 'instructions', 'example'];
+export const entryProse: readonly string[] = [
+  'title',
+  'description',
+  'says',
+  'for',
+  'instructions',
+  'key_page_title',
+  'example',
+];
 
 export type ProviderEntry = typeof ProviderEntryFieldsSchema.Type;
 

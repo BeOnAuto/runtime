@@ -7,6 +7,8 @@ const mostInstructionsCharacters = 1000;
 
 const mostExampleCharacters = 100;
 
+const mostKeyPageTitleCharacters = 40;
+
 const ellipsis = '…';
 
 const htmlOpening = /<[A-Za-z/!?]/u;
@@ -45,6 +47,39 @@ export const keyFields = {
     described(description).check(Schema.makeFilter((pattern: string) => keyPatternIssueOf(pattern))),
 };
 
+const mostStepTitleCharacters = 60;
+
+function stepTitle(description: string) {
+  return described(description).check(Schema.isMinLength(1), Schema.isMaxLength(mostStepTitleCharacters));
+}
+
+const StepSchema = Schema.Struct({
+  title: stepTitle('The heading of the step, in at most 60 characters'),
+  instructions: keyFields.instructions(
+    'What the person does in the step, in Markdown without HTML of at most 1,000 characters',
+  ),
+});
+
+const StepsSchema = Schema.Struct({
+  key_page: Schema.optionalKey(
+    StepSchema.annotate({ description: 'The step of the page where the key is made, above the button to key_page' }),
+  ),
+  key: Schema.optionalKey(
+    StepSchema.annotate({
+      description:
+        "The step of the key, above its field; the page shows its instructions in place of the way's instructions",
+    }),
+  ),
+  connected: Schema.optionalKey(
+    StepSchema.annotate({
+      description: 'What the person does once the connection is connected, shown after approving',
+    }),
+  ),
+}).annotate({
+  description:
+    'For secret, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions',
+});
+
 export const ValueNameSchema = Schema.String.check(
   Schema.isPattern(/^[a-z][a-z0-9_]{0,63}$/u, {
     expected: 'the name of a value of the app, 1 to 64 lowercase letters, digits and underscores',
@@ -71,6 +106,11 @@ const AppCredentialSchema = Schema.Struct({
   description: Schema.String.check(Schema.isMinLength(1)).annotate({
     description: 'What a person reads of it: the label of the field it is given in, beside the field of the key',
   }),
+  title: Schema.optionalKey(
+    stepTitle(
+      'The heading of its step on the page where a person approves the connection, in at most 60 characters, above its instructions',
+    ),
+  ),
   instructions: keyFields.instructions(
     'How a person makes it, in Markdown without HTML of at most 1,000 characters, which its field shows',
   ),
@@ -107,6 +147,12 @@ export const keyWayFields = {
   key_page: Schema.optionalKey(
     keyFields.key_page('For secret, the https address of the page where a person makes the key'),
   ),
+  key_page_title: Schema.optionalKey(
+    described(
+      'For secret, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters',
+    ).check(Schema.isMinLength(1), Schema.isMaxLength(mostKeyPageTitleCharacters)),
+  ),
+  steps: Schema.optionalKey(StepsSchema),
   example: Schema.optionalKey(
     keyFields.example(
       'For secret, what a key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows',

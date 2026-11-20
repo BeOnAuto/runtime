@@ -11,6 +11,11 @@ const ListedScopesSchema = Schema.Array(
   }),
 );
 
+const ListedStepSchema = Schema.Struct({
+  title: Schema.String.annotate({ description: 'The heading of the step' }),
+  instructions: Schema.String.annotate({ description: 'What the person does in the step, in Markdown' }),
+});
+
 const OAuthClientChoiceSchema = Schema.Literals(['optional', 'required']);
 
 export type OAuthClientChoice = typeof OAuthClientChoiceSchema.Type;
@@ -55,6 +60,22 @@ const ListedWaySchema = Schema.Struct({
         "What a person reads of the way; for secret, the short name of the key, the label of the field it is given in, beside the instructions and the key page the connection's credential holds",
     }),
   ),
+  key_page_title: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'For secret, the label of the button that opens the key page, where the entry gives one; left out otherwise',
+    }),
+  ),
+  steps: Schema.optionalKey(
+    Schema.Struct({
+      key_page: Schema.optionalKey(ListedStepSchema),
+      key: Schema.optionalKey(ListedStepSchema),
+      connected: Schema.optionalKey(ListedStepSchema),
+    }).annotate({
+      description:
+        'For secret, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; key, above the field of the key; connected, what the person does once the connection is connected',
+    }),
+  ),
   app_credentials: Schema.optionalKey(
     Schema.Array(
       Schema.Struct({
@@ -62,6 +83,9 @@ const ListedWaySchema = Schema.Struct({
           description: "Its name, as give_credential's app_credentials takes it beside the value of the key",
         }),
         description: Schema.String.annotate({ description: 'The label of the field it is given in' }),
+        title: Schema.optionalKey(
+          Schema.String.annotate({ description: 'The heading of its step, where the entry gives one' }),
+        ),
         instructions: Schema.String.annotate({ description: 'How a person makes it, in Markdown' }),
         key_page: Schema.optionalKey(
           Schema.String.annotate({ description: 'The https address of the page where a person makes it' }),

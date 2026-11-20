@@ -4,6 +4,7 @@ import { Result, Schema, SchemaIssue } from 'effect';
 
 import { ProviderEntrySchema } from '../entry/provider-entry.ts';
 import { readProviders } from '../reading/shipped-providers.ts';
+import { tracker } from './fixture-providers.ts';
 
 const decodeEntry = Schema.decodeUnknownResult(ProviderEntrySchema, { errors: 'all', onExcessProperty: 'error' });
 
@@ -15,6 +16,16 @@ export function problemsOf(entry: unknown): readonly (readonly [string, string])
     onFailure: ({ issue }: { readonly issue: SchemaIssue.Issue }) =>
       formatIssues(issue).issues.map(({ message, path = [] }) => [`/${path.map(String).join('/')}`, message] as const),
   });
+}
+
+const [aKey] = tracker.credentials;
+
+export function keyProblemsOf(way: Readonly<Record<string, unknown>>) {
+  return problemsOf({ ...tracker, credentials: [{ ...aKey, ...way }] });
+}
+
+export function refusedAt(way: Readonly<Record<string, unknown>>): readonly string[] {
+  return keyProblemsOf(way).map(([path]) => path);
 }
 
 export function decodedEntry(entry: unknown) {

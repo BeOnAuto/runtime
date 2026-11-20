@@ -104,6 +104,8 @@ const everyField: readonly Field[] = [
   'gateway',
   'permissions',
   ...keyFieldNames,
+  'key_page_title',
+  'steps',
   'app_credentials',
   'test',
 ];
@@ -111,7 +113,7 @@ const everyField: readonly Field[] = [
 const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   secret: {
     required: ['in', 'name', 'instructions', 'key_page'],
-    optional: ['scheme', 'example', 'pattern', 'app_credentials', 'test'],
+    optional: ['key_page_title', 'steps', 'scheme', 'example', 'pattern', 'app_credentials', 'test'],
   },
   client_credentials: { required: ['issuer'], optional: ['scope', 'says'] },
   none: { required: [], optional: [] },

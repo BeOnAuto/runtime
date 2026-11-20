@@ -237,6 +237,18 @@ describe('the app credentials a way lists', () => {
     expect(ways.map((way) => way?.['app_credentials'])).toEqual([[appLevelToken], undefined, undefined]);
     expect(ways.map((way) => way?.['test'])).toEqual([undefined, undefined, undefined]);
   });
+
+  it('are listed with the heading of their step where the entry gives one', async () => {
+    const titledToken = { ...appLevelToken, title: 'Get replies at once' };
+    const titled = providersOf({
+      ...tracker,
+      credentials: [{ ...trackersKey, app_credentials: [titledToken] }, ...trackersOtherWays],
+      events: { destinations: [overASocket] },
+    });
+    const way = await firstWayListedWith({ sockets: fakeSockets({}), providers: titled });
+
+    expect(way?.['app_credentials']).toEqual([titledToken]);
+  });
 });
 
 describe('the hosts a connection reaches', () => {

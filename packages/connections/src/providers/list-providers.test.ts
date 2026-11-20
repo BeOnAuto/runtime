@@ -12,6 +12,7 @@ import {
   operationNamed,
   type HarnessOptions,
 } from '../testing/harness.ts';
+import { waysListedOf } from '../testing/listed-ways.ts';
 
 const acmeKey: CallerIdentity = { ...ada, id: 'acme-key' };
 
@@ -37,16 +38,6 @@ const ListedSchema = Schema.Struct({
 });
 
 const listedOf = Schema.decodeUnknownSync(ListedSchema);
-
-const waysOf = Schema.decodeUnknownSync(
-  Schema.Struct({
-    output: Schema.Struct({
-      providers: Schema.Array(
-        Schema.Struct({ credentials: Schema.Array(Schema.Record(Schema.String, Schema.Unknown)) }),
-      ),
-    }),
-  }),
-);
 
 const ledgersListed = {
   name: 'ledgers',
@@ -127,11 +118,6 @@ async function namesListedUnder(policy: ConnectionPolicyFields, loopbackAllowed 
     providers: providerListOf(intranetProvider, selfHostedProvider, loopbackProvider),
   });
   return listedOf(answer).output.providers.map(({ name }) => name);
-}
-
-async function waysListedOf(entry: unknown) {
-  const answer = await listing({ providers: providerListOf(providerOf(entry)) });
-  return waysOf(answer).output.providers.flatMap(({ credentials }) => credentials);
 }
 
 async function offeringsOf(name: string, options: HarnessOptions) {
