@@ -1,7 +1,6 @@
-import type { SigningKeys } from '@on.auto/api';
+import type { HeldSecret, SigningKeys } from '@on.auto/api';
 import type { Cancelled } from '@on.auto/operations';
 import type { EventDestination } from '@on.auto/providers';
-import type { Redacted } from 'effect';
 
 export function keysUnlessStopped(ran: Readonly<SigningKeys> | Cancelled | undefined): SigningKeys | undefined {
   return ran === undefined || 'status' in ran ? undefined : ran;
@@ -15,6 +14,6 @@ export function destinationUnlessStopped(ran: EventDestination | Cancelled | und
   return ran === undefined || 'status' in ran ? undefined : ran;
 }
 
-export function secretsUnlessStopped(ran: readonly Redacted.Redacted[] | Cancelled): readonly Redacted.Redacted[] {
+export function secretsUnlessStopped(ran: readonly HeldSecret[] | Cancelled): readonly HeldSecret[] {
   return 'status' in ran ? [] : ran;
 }

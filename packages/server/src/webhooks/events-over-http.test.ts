@@ -87,7 +87,7 @@ describe('a server that signs people in, given WEBHOOK_URL, whose request waits 
 });
 
 describe('a delivery to the events address that no subscription of the playbook proves', () => {
-  it('is refused alike, signed with another secret, for another playbook, through a connection holding no subscription or unknown', async () => {
+  it('is refused alike, signed with another secret, for another playbook, through a connection holding no subscription or unknown, or naming a subscription other than the one whose secret signs it', async () => {
     const { rooms, server } = await signingInWithRooms();
     await server.ask('approve-brief');
     const hook = await hookMadeAt(rooms);
@@ -99,6 +99,7 @@ describe('a delivery to the events address that no subscription of the playbook 
       await delivered(server, eventsOf('beta', 'rooms'), signedWith(hook.secret)),
       await delivered(server, eventsOf('alpha', 'boards'), boards),
       await delivered(server, eventsOf('alpha', 'billing'), signedWith(hook.secret)),
+      await delivered(server, eventsOf('alpha', 'rooms'), signedWith(hook.secret, 'hook-8')),
     ];
 
     expect(new Set(refused).size).toBe(1);

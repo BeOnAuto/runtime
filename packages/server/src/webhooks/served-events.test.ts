@@ -17,6 +17,7 @@ function arrivedReading(reading: ArrivedEvent['reading']): ArrivedEvent {
     reading,
     arrival: { transport: 'request', headers: {}, query: {} },
     provesTheBodyAndATime: false,
+    subscription: { topic: theChannel, id: 'hook-7' },
   };
 }
 
@@ -32,7 +33,7 @@ async function wokenAt(reading: ArrivedEvent['reading']) {
   return { before, after: await waiting.row(), readAt: waiting.readAt };
 }
 
-describe('a delivery the events address proves', () => {
+describe('a delivery the events address proves, tied to the subscription whose secret proves it', () => {
   it('makes the conversation it names, waiting through its connection, due the shortest wait of its reading after it arrives', async () => {
     const { before, after, readAt } = await wokenAt({ wake: { conversation: theChannel } });
 

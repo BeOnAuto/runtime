@@ -4,7 +4,7 @@ import { createHmac } from 'node:crypto';
 import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { checkedProof, type DeclaredProof, type ProofCheck } from '../index.ts';
+import { checkedProof, refusalAmong, type DeclaredProof, type ProofCheck } from '../index.ts';
 
 type Claims = Readonly<Record<string, unknown>>;
 
@@ -97,6 +97,15 @@ describe('the secret of a JSON Web Token', () => {
     await expect(checkOf(presented, inAHeader, ['another subscription’s secret'])).resolves.toBe('mismatched');
     await expect(checkOf(presented, inAHeader, ['another', publishedSecret])).resolves.toBe('proven');
     await expect(checkOf(presented, inAHeader, [])).resolves.toBe('mismatched');
+  });
+
+  it('checked under each of several secrets alone, none proving it, is refused as one check under them all refuses it', async () => {
+    const outOfItsTime = `Bearer ${signedWith('HS256', { exp: nowSeconds - 300 })}`;
+    const several = ['another subscription’s secret', publishedSecret];
+    const alone = await Promise.all(several.map((secret) => checkOf(outOfItsTime, inAHeader, [secret])));
+
+    expect(alone).toEqual(['mismatched', 'stale']);
+    expect(refusalAmong(alone)).toBe(await checkOf(outOfItsTime, inAHeader, several));
   });
 
   it('is mismatched for claims changed by one byte, or a signature cut short', async () => {

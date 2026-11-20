@@ -5,13 +5,22 @@ import { providersOf, tracker } from '@on.auto/providers/testing';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Option, Redacted, Result } from 'effect';
 
-import { deliveredEventRoutes, type ArrivedEvent, type EventServing, type HeardEvent } from '../index.ts';
+import {
+  deliveredEventRoutes,
+  type ArrivedEvent,
+  type EventServing,
+  type HeardEvent,
+  type HeldSecret,
+  type HeldSubscription,
+} from '../index.ts';
 import { deliveryBounds } from '../webhooks/delivery-bounds.ts';
 import { createTestHandler } from './api-calls.ts';
 
 export const nowSeconds = 1_794_318_120;
 
 export const ticketsSecret = 'a secret the tracker was given for hook-7';
+
+export const neighboursSecret = 'a secret the tracker was given for hook-8';
 
 export const roomsSecret = 'the signing secret of the rooms app';
 
@@ -103,17 +112,18 @@ interface Signing {
   readonly secret?: string;
   readonly event?: string;
   readonly timestamp?: number;
+  readonly hook?: string;
 }
 
 export function ticketHeaders(
   body: string | Readonly<Uint8Array>,
-  { secret = ticketsSecret, event = 'comment' }: Signing = {},
+  { secret = ticketsSecret, event = 'comment', hook = 'hook-7' }: Signing = {},
 ): Readonly<Record<string, string>> {
   const signed = typeof body === 'string' ? body : Uint8Array.from(body);
   return {
     'content-type': 'application/json',
     'x-tracker-event': event,
-    'x-tracker-hook': 'hook-7',
+    'x-tracker-hook': hook,
     'x-tracker-delivery': 'delivery-31',
     'x-tracker-signature': `sha256=${createHmac('sha256', secret).update(signed).digest('hex')}`,
   };
@@ -157,10 +167,19 @@ const destinations = new Map([
   ['github', githubs],
 ]);
 
+export const ticketsHook = { topic: 'project-3', id: 'hook-7' };
+
+export const neighboursHook = { topic: 'project-4', id: 'hook-8' };
+
+export function heldSecret(secret: string, subscription?: HeldSubscription): HeldSecret {
+  const held = { secret: Redacted.make(secret) };
+  return subscription === undefined ? held : { ...held, subscription };
+}
+
 const secretsOf = new Map([
-  ['tickets subscription', [ticketsSecret]],
-  ['rooms app', [roomsSecret]],
-  ['github subscription', [githubsCheckSecret]],
+  ['tickets subscription', [heldSecret(ticketsSecret, ticketsHook), heldSecret(neighboursSecret, neighboursHook)]],
+  ['rooms app', [heldSecret(roomsSecret)]],
+  ['github subscription', [heldSecret(githubsCheckSecret, { topic: 'octo-org/approvals', id: githubsHook })]],
 ]);
 
 export function eventsServedWith(changes: Partial<EventServing> = {}) {
@@ -172,7 +191,7 @@ export function eventsServedWith(changes: Partial<EventServing> = {}) {
     },
     secrets: ({ connection }, secret) => {
       served.asked.push(`secrets of ${connection} by ${secret}`);
-      return Promise.resolve((secretsOf.get(`${connection} ${secret}`) ?? []).map((text) => Redacted.make(text)));
+      return Promise.resolve(secretsOf.get(`${connection} ${secret}`) ?? []);
     },
     arrived: (event) => {
       served.arrived.push(event);

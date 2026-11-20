@@ -26,6 +26,14 @@ export interface Received {
 
 export type ProofCheck = 'proven' | WebhookRefusal | 'mismatched';
 
+type ProofRefusal = Exclude<ProofCheck, 'proven'>;
+
+const refusalsByPrecedence: readonly ProofRefusal[] = ['stale', 'unsigned', 'mismatched'];
+
+export function refusalAmong(checks: readonly ProofCheck[]): ProofRefusal {
+  return refusalsByPrecedence.find((refusal) => checks.includes(refusal)) ?? 'mismatched';
+}
+
 export interface ProofCase extends Received {
   readonly declared: DeclaredProof;
   readonly presented: PresentedProof;

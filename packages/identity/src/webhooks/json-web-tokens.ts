@@ -1,14 +1,12 @@
 import { Redacted, Result } from 'effect';
 import { decodeProtectedHeader, errors, jwtVerify } from 'jose';
 
-import { valueAfter, type DeclaredProof, type ProofCase, type ProofCheck } from './proof-parts.ts';
+import { refusalAmong, valueAfter, type DeclaredProof, type ProofCase, type ProofCheck } from './proof-parts.ts';
 import { webhookToleranceSeconds } from './standard-webhooks.ts';
 
 type Algorithm = NonNullable<DeclaredProof['alg']>;
 
 const utf8 = new TextEncoder();
-
-const byPrecedence: readonly ProofCheck[] = ['proven', 'stale', 'unsigned', 'mismatched'];
 
 function isSignedWith(token: string, alg: Algorithm): boolean {
   const header = Result.try(() => decodeProtectedHeader(token));
@@ -54,5 +52,5 @@ export async function jwtCheckOf({ declared, presented, secrets, nowMs }: ProofC
     return 'unsigned';
   }
   const checks = await Promise.all(secrets.map((secret) => checkUnder(token, alg, secret, nowMs)));
-  return byPrecedence.find((check) => checks.includes(check)) ?? 'mismatched';
+  return checks.includes('proven') ? 'proven' : refusalAmong(checks);
 }

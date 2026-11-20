@@ -6,10 +6,14 @@ import {
   eventsServedWith,
   githubHeaders,
   githubsHook,
+  heldSecret,
+  neighboursHook,
+  neighboursSecret,
   nowSeconds,
   roomHeaders,
   roomsSecret,
   ticketHeaders,
+  ticketsHook,
   ticketsSecret,
 } from '../testing/delivered-events.ts';
 import { deliveryBounds } from './delivery-bounds.ts';
@@ -55,6 +59,7 @@ describe('a delivery its connection’s service proves', () => {
         reading: { wake: { subscription: 'hook-7', conversation: 'thread-42' } },
         arrival: { transport: 'request', headers: theTrackersHeaders, query: {}, body: commentBody },
         provesTheBodyAndATime: false,
+        subscription: ticketsHook,
       },
       {
         address: { ...ticketsAddress, connection: 'rooms' },
@@ -79,6 +84,21 @@ describe('a delivery its connection’s service proves', () => {
     await ticket(handler);
 
     expect(served.arrived).toHaveLength(2);
+  });
+});
+
+describe('a delivery through a connection that holds several subscriptions, each with a secret of its own', () => {
+  it('belongs to the one whose own secret proves it, never a neighbour’s, and to none where that secret is held for two and it names neither', async () => {
+    const { handler, served } = eventsServedWith();
+    const heldTwice = [heldSecret(ticketsSecret, ticketsHook), heldSecret(ticketsSecret, neighboursHook)];
+    const twice = eventsServedWith({ secrets: () => Promise.resolve(heldTwice) });
+
+    await ticket(handler, ticketHeaders(comment, { secret: neighboursSecret, hook: 'hook-8' }));
+    await ticket(handler, ticketHeaders(comment, { secret: neighboursSecret, hook: '' }));
+    await ticket(twice.handler, ticketHeaders(comment, { hook: '' }));
+    const tied = [...served.arrived, ...twice.served.arrived].map(({ subscription }) => subscription);
+
+    expect(tied).toEqual([neighboursHook, neighboursHook, undefined]);
   });
 });
 
@@ -207,7 +227,7 @@ describe('the steps that read', () => {
 });
 
 describe('a delivery that is not proven', () => {
-  it('is answered the one refusal of the answer address, byte for byte, whatever failed, no secret yet among them', async () => {
+  it('is answered the one refusal of the answer address, byte for byte, whatever failed, no secret yet and a subscription its secret does not prove among them', async () => {
     const { handler, served } = eventsServedWith();
     const { 'x-tracker-signature': _, ...unsigned } = ticketHeaders(comment);
     const refusal = `401 ${await deliveryProblems.unsigned().text()}`;
@@ -221,6 +241,8 @@ describe('a delivery that is not proven', () => {
       await room(handler, roomHeaders(posted, { timestamp: nowSeconds - 301 })),
       await ticket(handler, ticketHeaders(comment, { secret: roomsSecret })),
       await delivered(handler, 'drafts', comment, ticketHeaders(comment)),
+      await ticket(handler, ticketHeaders(comment, { secret: neighboursSecret, hook: 'hook-7' })),
+      await ticket(handler, ticketHeaders(comment, { hook: 'hook-9' })),
     ];
 
     expect(new Set(answers.map(({ status, text }) => `${status} ${text}`))).toEqual(new Set([refusal]));
@@ -232,6 +254,8 @@ describe('a delivery that is not proven', () => {
       'unsigned',
       'unsigned',
       'stale',
+      'mismatched',
+      'mismatched',
       'mismatched',
       'mismatched',
     ]);

@@ -1,5 +1,4 @@
-import type { Received } from '@on.auto/identity';
-import type { Arrival, ArrivalReading, EventDestination, PresentedProof } from '@on.auto/providers';
+import type { Arrival, ArrivalReading, EventDestination } from '@on.auto/providers';
 import type { Redacted } from 'effect';
 
 import type { DeliveryBounds } from './delivery-bounds.ts';
@@ -11,11 +10,22 @@ export interface EventAddress {
   readonly connection: string;
 }
 
+export interface HeldSubscription {
+  readonly topic: string;
+  readonly id: string;
+}
+
+export interface HeldSecret {
+  readonly secret: Redacted.Redacted;
+  readonly subscription?: HeldSubscription;
+}
+
 export interface ArrivedEvent {
   readonly address: EventAddress;
   readonly reading: ArrivalReading;
   readonly arrival: Arrival;
   readonly provesTheBodyAndATime: boolean;
+  readonly subscription?: HeldSubscription;
 }
 
 export type EventOutcome =
@@ -41,7 +51,7 @@ type Verify = NonNullable<EventDestination['verify']>;
 
 export interface EventServing {
   readonly destination: (address: EventAddress) => Promise<EventDestination | undefined>;
-  readonly secrets: (address: EventAddress, secret: Verify['secret']) => Promise<readonly Redacted.Redacted[]>;
+  readonly secrets: (address: EventAddress, secret: Verify['secret']) => Promise<readonly HeldSecret[]>;
   readonly arrived: (event: ArrivedEvent) => Promise<void>;
   readonly heard: (event: HeardEvent) => void;
   readonly now?: () => number;
@@ -61,11 +71,11 @@ export interface DestinedDelivery {
   readonly body: Readonly<Uint8Array>;
   readonly destination: EventDestination;
   readonly arrival: Arrival;
+  readonly reading: ArrivalReading;
 }
 
 export interface Proven {
   readonly verify: Verify;
-  readonly presented: PresentedProof;
-  readonly secrets: readonly Redacted.Redacted[];
-  readonly received: Received;
+  readonly secret: Redacted.Redacted;
+  readonly subscription?: HeldSubscription;
 }

@@ -94,13 +94,13 @@ function heldBy() {
   const secretsOf = deliverySecretsOf({ ledger, secrets: kept });
   const read = async (playbook: string, connection: string, provenBy: 'subscription' | 'app' = 'subscription') =>
     (await Effect.runPromise(secretsOf({ org: 'acme', playbook, connection }, provenBy)))
-      .map((secret) => String(valueOf(secret)))
+      .map(({ subscription: { topic, id }, secret }) => `${topic} ${id} ${String(valueOf(secret))}`)
       .toSorted((one, other) => one.localeCompare(other));
   return { kept, records, made, read };
 }
 
 describe('the secrets a delivery to a connection’s events address is proven with', () => {
-  it('are those of the webhook subscriptions the playbook holds through that connection, and no other playbook’s or connection’s', async () => {
+  it('are those of the webhook subscriptions the playbook holds through that connection, each with its own topic and id, and no other playbook’s or connection’s', async () => {
     const { made, read } = heldBy();
     await made('alpha', 'C0123', 'whsec_alpha-C0123');
     await made('alpha', 'C0456', 'whsec_alpha-C0456');
@@ -109,8 +109,8 @@ describe('the secrets a delivery to a connection’s events address is proven wi
     await made('alpha', 'room-5', 'whsec_alpha-room-5');
 
     expect([await read('alpha', 'chat'), await read('beta', 'chat'), await read('alpha', 'notes')]).toEqual([
-      ['whsec_alpha-C0123', 'whsec_alpha-C0456'],
-      ['whsec_beta-C0123'],
+      ['C0123 hook-of-C0123 whsec_alpha-C0123', 'C0456 hook-of-C0456 whsec_alpha-C0456'],
+      ['C0123 hook-of-C0123 whsec_beta-C0123'],
       [],
     ]);
   });

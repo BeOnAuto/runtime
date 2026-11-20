@@ -23,7 +23,7 @@ describe('a delivery that reaches a server as it stops', () => {
 
   it('finds no destination and no secret at an events address once the server stopped reading them, so the door refuses it alike', () => {
     const destination = { type: 'webhook', filter: { when: { '$request.header.X-Event': ['comment'] } } } as const;
-    const secrets = [Redacted.make('whsec_held')];
+    const secrets = [{ secret: Redacted.make('whsec_held'), subscription: { topic: 'C0123', id: 'hook-7' } }];
 
     expect([destinationUnlessStopped(stopped), destinationUnlessStopped(destination)]).toEqual([
       undefined,

@@ -56,7 +56,11 @@ const signedOverTheBody = {
     prefix: 'sha256=',
     encoding: 'hex',
   },
-  filter: { when: { '$request.header.X-Rooms-Event': ['message'] }, conversation: '$request.body#/room' },
+  filter: {
+    when: { '$request.header.X-Rooms-Event': ['message'] },
+    subscription: '$request.header.X-Rooms-Hook',
+    conversation: '$request.body#/room',
+  },
 };
 
 const tokenInAHeader = {
@@ -152,9 +156,14 @@ export async function hookMadeAt(rooms: FakeMcpServer): Promise<MadeHook> {
 
 const said = JSON.stringify({ room: theRoom, text: 'approve' });
 
-export function signedWith(secret: string): Readonly<Record<string, string>> {
+export function signedWith(secret: string, hook = 'hook-7'): Readonly<Record<string, string>> {
   const signature = createHmac('sha256', secret).update(said).digest('hex');
-  return { 'content-type': 'application/json', 'x-rooms-event': 'message', 'x-rooms-signature': `sha256=${signature}` };
+  return {
+    'content-type': 'application/json',
+    'x-rooms-event': 'message',
+    'x-rooms-hook': hook,
+    'x-rooms-signature': `sha256=${signature}`,
+  };
 }
 
 export function eventsPathOf(playbook: string, connection: string, org = 'acme'): string {

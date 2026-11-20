@@ -1,11 +1,11 @@
 import { createHmac } from 'node:crypto';
 
-import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
   eventsPath,
   eventsServedWith,
+  heldSecret,
   nowSeconds,
   roomHeaders,
   rooms,
@@ -83,7 +83,7 @@ describe('a handshake its entry says comes before any secret', () => {
 describe('a handshake its entry says is signed', () => {
   it('is refused as any delivery is until it is proven, and answered once proven, its hmac made with the secret that proved it', async () => {
     const { handler, served } = eventsServedWith({
-      secrets: () => Promise.resolve([Redacted.make(ticketsSecret), Redacted.make(roomsSecret)]),
+      secrets: () => Promise.resolve([heldSecret(ticketsSecret), heldSecret(roomsSecret)]),
     });
     const proof = createHmac('sha256', roomsSecret).update('check-token-5').digest('base64');
 

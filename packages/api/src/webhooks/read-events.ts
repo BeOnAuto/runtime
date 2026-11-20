@@ -1,5 +1,5 @@
-import { checkedProof, hmacOf, type DeclaredProof } from '@on.auto/identity';
-import { arrivalReadingOf, provesTheBodyAndATime, provesWhatIsReadAt, type EventDestination } from '@on.auto/providers';
+import { hmacOf, type DeclaredProof } from '@on.auto/identity';
+import { provesTheBodyAndATime, provesWhatIsReadAt, type EventDestination } from '@on.auto/providers';
 import type { Redacted } from 'effect';
 
 import { deliveryProblems } from './delivery-problems.ts';
@@ -55,35 +55,33 @@ export function handshakeAnswered(
     : door.heard({ ...seen, outcome: 'handshake' }, answer);
 }
 
-async function macKeyOf({ when, challenge }: Handshake, proven: Proven): Promise<MacKey | undefined> {
-  const { verify, presented, secrets, received } = proven;
+function macKeyOf({ when, challenge }: Handshake, { verify, secret }: Proven): MacKey | undefined {
   const readForTheCheck = [...Object.keys(when), challenge];
-  if (!readForTheCheck.every((expression) => provesWhatIsReadAt(verify, expression))) {
-    return undefined;
-  }
-  const checks = await Promise.all(secrets.map((secret) => checkedProof(verify, presented, [secret], received)));
-  return secrets.filter((_, index) => checks[index] === 'proven').map((secret) => ({ declared: verify, secret }))[0];
+  return readForTheCheck.every((expression) => provesWhatIsReadAt(verify, expression))
+    ? { declared: verify, secret }
+    : undefined;
 }
 
 const handedOn = (): Response => new Response(null, { status: 200 });
 
 export async function eventRead(door: EventDoor, delivered: DestinedDelivery, proven: Proven): Promise<Response> {
-  const { address, destination, arrival, body } = delivered;
+  const { address, destination, arrival, body, reading } = delivered;
   const seen = { address, bytes: body.byteLength };
-  const reading = arrivalReadingOf(destination, arrival);
   const { handshake } = destination;
   if (handshake !== undefined && reading.handshake !== undefined) {
-    const answer = handshakeAnswerOf(handshake, reading.handshake.challenge, await macKeyOf(handshake, proven));
+    const answer = handshakeAnswerOf(handshake, reading.handshake.challenge, macKeyOf(handshake, proven));
     return handshakeAnswered(door, delivered, answer);
   }
   if (Object.keys(reading).length === 0) {
     return door.heard({ ...seen, outcome: 'passed_over' }, handedOn());
   }
+  const { verify, subscription } = proven;
   await door.serving.arrived({
     address,
     reading,
     arrival,
-    provesTheBodyAndATime: provesTheBodyAndATime(proven.verify),
+    provesTheBodyAndATime: provesTheBodyAndATime(verify),
+    ...(subscription === undefined ? {} : { subscription }),
   });
   return door.heard({ ...seen, outcome: 'arrived' }, handedOn());
 }
