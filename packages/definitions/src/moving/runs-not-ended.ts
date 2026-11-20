@@ -2,8 +2,9 @@ import { Conflict, PlaybookReader, defaultPageLimit, runStreamNameOf, type Recor
 import { Effect, Option } from 'effect';
 
 import { streamsOfRuns } from '../reading/list-runs.ts';
-import type { Member } from './move-members.ts';
 import { runsNotEndedWords, type Named } from './move-words.ts';
+
+type RunsNotEndedWords<Holder extends Named> = (holder: Holder, count: number, runId: string) => string;
 
 const mostRunsNamed = 10;
 
@@ -37,27 +38,35 @@ function runsNotEnded(started: readonly string[], { type, name }: Named) {
   return runIdsFrom(read, null, new Set());
 }
 
-function refusalOf(member: Member, runs: ReadonlySet<string>): Conflict | undefined {
+function refusalOf<Holder extends Named>(
+  member: Holder,
+  runs: ReadonlySet<string>,
+  wordsOf: RunsNotEndedWords<Holder>,
+): Conflict | undefined {
   const named = [...runs];
   const [first] = named;
   return first === undefined
     ? undefined
     : new Conflict({
-        detail: runsNotEndedWords(member, named.length, first),
+        detail: wordsOf(member, named.length, first),
         kind: 'runs_in_progress',
         record: { runs: named.slice(0, mostRunsNamed), count: named.length },
       });
 }
 
-export function runsInProgressRefused(
+export function runsInProgressRefused<Holder extends Named>(
   started: readonly string[],
-  members: readonly Member[],
+  members: readonly Holder[],
+  wordsOf: RunsNotEndedWords<Holder> = runsNotEndedWords,
 ): Effect.Effect<void, Conflict, PlaybookReader> {
   return Effect.forEach(
     members,
     (member) =>
       Effect.flatMap(runsNotEnded(started, member), (runs) =>
-        Option.match(Option.fromNullishOr(refusalOf(member, runs)), { onNone: () => Effect.void, onSome: Effect.fail }),
+        Option.match(Option.fromNullishOr(refusalOf(member, runs, wordsOf)), {
+          onNone: () => Effect.void,
+          onSome: Effect.fail,
+        }),
       ),
     { discard: true },
   );

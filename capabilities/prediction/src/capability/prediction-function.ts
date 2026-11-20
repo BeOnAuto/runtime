@@ -12,7 +12,7 @@ import { datasetsPortOn, type DatasetsPort } from '../dataset/datasets-port.ts';
 import { questionRunOn } from '../question/question-run.ts';
 import { predictionStanding } from '../standing/prediction-standing.ts';
 import { predictionBounds, predictionDefinitionType } from './prediction-bounds.ts';
-import { parse, summarize } from './prediction-definitions.ts';
+import { definitionsNamed, parse, summarize } from './prediction-definitions.ts';
 import { describeOutput } from './prediction-words.ts';
 
 export interface PredictionFunctionParts {
@@ -38,6 +38,7 @@ export function predictionFunctionOf({
     parse,
     check: predictionCheck(pool),
     summarize,
+    definitionsNamed,
     run: questionRunOn(database),
     longestAnyRunMs: predictionBounds.questionMs,
     mostActive: mostFunctions,

@@ -8,7 +8,7 @@ import { definitionWordsFor } from '../plain-language/definition-words.ts';
 import { runPlainLanguage } from '../plain-language/run-words.ts';
 import { RunDetailSchema } from '../runs/run.ts';
 import { RunIdInputField, InputField, DefinitionNameField } from './definition-fields.ts';
-import { startVersionOnce, versionToStart } from './start-once.ts';
+import { versionStartedOnce } from './version-by-identity.ts';
 
 const description = [
   'Starts a run of one version of a definition under a run id, once, or of its active version when no version is named: when the playbook has a run under that id,',
@@ -32,14 +32,18 @@ export function defineStartVersion(capabilities: readonly Capability[]) {
         version: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))),
         input: InputField,
         run_id: RunIdInputField,
+        definition_id: Schema.optionalKey(
+          Schema.String.annotate({
+            description: 'The id of the definition to start, under which its run is placed whatever it is named now',
+          }),
+        ),
       }),
       outputSchema: RunDetailSchema,
       reasons: ['not_found', 'conflict', 'invalid_input', 'unavailable', 'cancelled', 'unanswered'],
-      handle: Effect.fnUntraced(function* ({ type, name, version, input, run_id: id }) {
+      handle: Effect.fnUntraced(function* ({ type, name, version, input, run_id: id, definition_id: definition }) {
         const capability = yield* known.capabilityOfType(type);
-        const request = { definition_type: capability.type, name, version, input };
-        const run = yield* versionToStart(capability, request);
-        const started = startVersionOnce(capabilities, capability, id, { request, run });
+        const asked = { definition_type: capability.type, name, version, input };
+        const { run, started } = yield* versionStartedOnce(capabilities, capability, { id, asked, definition });
         const live = yield* Effect.serviceOption(LiveAttempts);
         return Option.isNone(live) || run.prepared.finishesLaterFor(input)
           ? yield* started

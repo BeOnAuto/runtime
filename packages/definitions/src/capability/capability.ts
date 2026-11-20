@@ -10,13 +10,26 @@ import type {
 import type { Noun } from '@on.auto/phrasing';
 import { Effect, type Schema } from 'effect';
 
-import type { CallEnd } from '../journal/call-numbering.ts';
+import {
+  cancelledAsAsked,
+  nothingToEnd,
+  type CancelDecision,
+  type CancelledAttempt,
+  type Resumption,
+} from '../cancellation/cancelled-runs.ts';
 import type { Trigger } from '../registry/definition-triggers.ts';
 import { noFacts, type CapabilityFacts } from '../run-work/declared-facts.ts';
-import type { CancelRequestKind, Settlement } from '../runs/run-events.ts';
-import type { RecordedAnswer, RecordedWork } from '../runs/run-state.ts';
+import type { DefinitionsNamed } from '../used-by/definitions-named.ts';
 import type { RunAttempt, RunContext } from './run-context.ts';
 import { noStrippedForms, type StrippedForms } from './stripped-forms.ts';
+
+export {
+  cancelledAsAsked,
+  type CancelDecision,
+  type CancelledAttempt,
+  type CancelledRun,
+  type Resumption,
+} from '../cancellation/cancelled-runs.ts';
 
 export interface DefinitionSummary {
   readonly description?: string;
@@ -52,29 +65,6 @@ export interface FinishesLater {
 export type CapabilityAnswer = Finished | FinishesLater;
 
 export type CapabilityRejection = InvalidInput | Unavailable | Conflict | RunCancelled;
-
-export interface CancelledRun {
-  readonly run: { readonly org: string; readonly playbook: string; readonly id: string };
-  readonly record: Schema.JsonObject;
-  readonly kind: CancelRequestKind;
-  readonly reason: string;
-  readonly answer: RecordedAnswer | null;
-  readonly work: readonly RecordedWork[];
-}
-
-export type CancelDecision = (run: CancelledRun) => Settlement;
-
-export interface CancelledAttempt {
-  readonly ends: readonly CallEnd[];
-  readonly record?: Schema.JsonObject;
-}
-
-export interface Resumption<Parsed> {
-  readonly afterMs: (parsed: Parsed) => number;
-  readonly cancelledAttempt: (parsed: Parsed, attempt: RunAttempt) => CancelledAttempt;
-}
-
-const nothingToEnd: CancelledAttempt = { ends: [] };
 
 export type GuideVariables = Readonly<Record<string, { readonly value: string; readonly default: string }>>;
 
@@ -113,6 +103,7 @@ export interface CapabilityDeclaration<Parsed> {
   ) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly notices?: (parsed: NoInfer<Parsed>, place: PlaybookAddress) => Effect.Effect<readonly Notice[]>;
   readonly summarize: (parsed: NoInfer<Parsed>) => DefinitionSummary;
+  readonly definitionsNamed?: (parsed: NoInfer<Parsed>) => DefinitionsNamed;
   readonly run: (
     parsed: NoInfer<Parsed>,
     input: Schema.Json,
@@ -142,6 +133,7 @@ export interface PreparedDefinition {
   readonly summary: DefinitionSummary;
   readonly check: (place: PlaybookAddress) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly notices?: (place: PlaybookAddress) => Effect.Effect<readonly Notice[]>;
+  readonly definitionsNamed?: DefinitionsNamed;
   readonly run: (input: Schema.Json, context: RunContext) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
   readonly whenCancelled: WhenCancelled;
   readonly cancelledAttempt: (attempt: RunAttempt) => CancelledAttempt;
@@ -162,10 +154,6 @@ function noDeferralShown(): undefined {
 }
 
 export const defaultRunWords: RunWords = { deferralType: 'run_deferred', deferral: noDeferralShown };
-
-export function cancelledAsAsked({ kind, reason }: CancelledRun): Settlement {
-  return { status: 'rejected', reason: 'cancelled', kind, detail: reason };
-}
 
 function standsAsSaved(): Effect.Effect<Schema.JsonObject | undefined> {
   return Effect.undefined;
@@ -195,7 +183,7 @@ export interface Capability {
   readonly prepare: (source: string, stripped?: StrippedForms) => Effect.Effect<PreparedDefinition, InvalidInput>;
 }
 
-export const capabilityContract = 7;
+export const capabilityContract = 8;
 
 export const earliestCapabilityContractServed = 2;
 
@@ -248,6 +236,13 @@ function noticesOf<Parsed>(
   return notices === undefined ? {} : { notices: (place) => Effect.suspend(() => notices(parsed, place)) };
 }
 
+function namedIn<Parsed>(
+  { definitionsNamed }: CapabilityDeclaration<Parsed>,
+  parsed: Parsed,
+): Pick<PreparedDefinition, 'definitionsNamed'> {
+  return definitionsNamed === undefined ? {} : { definitionsNamed: definitionsNamed(parsed) };
+}
+
 function declaredRuns<Parsed>(definition: CapabilityDeclaration<Parsed>, longestAnyRunMs: number) {
   return {
     check: definition.check ?? needsNoCheck,
@@ -281,6 +276,7 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
         summary: summarize(parsed),
         check: (place) => Effect.suspend(() => check(parsed, source, place)),
         ...noticesOf(definition, parsed),
+        ...namedIn(definition, parsed),
         run: (input, context) => run(parsed, input, context, stripped),
         whenCancelled,
         cancelledAttempt: (attempt) => resumption?.cancelledAttempt(parsed, attempt) ?? nothingToEnd,

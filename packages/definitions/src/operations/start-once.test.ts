@@ -1,4 +1,4 @@
-import { OrgMembership, playbookCallerOf, type PlaybookRequest } from '@on.auto/operations';
+import { Ledger, OrgMembership, playbookCallerOf, type PlaybookRequest } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -10,6 +10,7 @@ import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
 
 const {
   createDefinition,
+  getDefinition,
   updateDefinition,
   retireDefinition,
   restoreDefinition,
@@ -202,5 +203,68 @@ describe('a start that names no version, of a definition that cannot start', () 
     expect(again).toEqual(first);
     expect(another).toMatchObject({ status: 'rejected', reason: 'conflict', kind: 'retired' });
     expect((await runRecordsOf(definitions, secondRunId)).records).toEqual([]);
+  });
+});
+
+const greetById = (definition: string, version = 1, id = runId) => ({
+  ...toAlpha(thePlaybook, { type: 'echo', name: 'greet', version, input: {}, run_id: id, definition_id: definition }),
+  trigger: every,
+});
+
+async function renamedAndTakenAgain() {
+  const definitions = await savedByAdaThenByAKey();
+  const read = await definitions.call(getDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet' }));
+  const definition = String(Reflect.get(Reflect.get(read, 'output'), 'definition_id'));
+  await definitions.call(updateDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet', new_name: 'hail' }));
+  await definitions.call(
+    createDefinition,
+    toAlpha(acmeAdmin, { type: 'echo', name: 'greet', source: '{"greeting": "Yo"}' }),
+  );
+  return { definitions, definition };
+}
+
+function readingTheNameBeforeTheRename(definitions: Harness, stale: number) {
+  let reads = 0;
+  const service = definitions.ledger.service;
+  return Effect.provideService(Ledger, {
+    ...service,
+    nameHeldBy: (definitionKey: string) =>
+      Effect.map(service.nameHeldBy(definitionKey), (held) => {
+        reads += 1;
+        return held === undefined || reads > stale ? held : { ...held, name: 'greet' };
+      }),
+  });
+}
+
+describe('a start that names the definition by its id, as the host does', () => {
+  it('starts the definition it names under the name it holds now, whatever name the start carries', async () => {
+    const { definitions, definition } = await renamedAndTakenAgain();
+
+    expect([
+      await definitions.call(startVersion, greetById(definition, 2)),
+      await definitions.call(startVersion, greetById('id-of-nothing', 1, secondRunId)),
+      await definitions.call(startVersion, greetById(definition, 9, secondRunId)),
+    ]).toMatchObject([
+      { status: 'succeeded', output: { run_id: runId, name: 'hail', definition_version: 2 } },
+      { status: 'rejected', reason: 'not_found' },
+      { status: 'rejected', reason: 'not_found' },
+    ]);
+  });
+
+  it('starts nothing, and is tried again, when a rename lands between the read of its name and of its version', async () => {
+    const { definitions, definition } = await renamedAndTakenAgain();
+    const takenMeanwhile = await definitions.run(
+      definitions.dispatch(startVersion, greetById(definition)).pipe(readingTheNameBeforeTheRename(definitions, 1)),
+    );
+    await definitions.call(updateDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet', new_name: 'gone' }));
+    const freedMeanwhile = await definitions.run(
+      definitions.dispatch(startVersion, greetById(definition)).pipe(readingTheNameBeforeTheRename(definitions, 1)),
+    );
+
+    expect([takenMeanwhile, freedMeanwhile]).toMatchObject([
+      { status: 'rejected', reason: 'unavailable' },
+      { status: 'rejected', reason: 'unavailable' },
+    ]);
+    expect((await runRecordsOf(definitions, runId)).records).toEqual([]);
   });
 });

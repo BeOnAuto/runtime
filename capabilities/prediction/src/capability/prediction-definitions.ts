@@ -1,4 +1,4 @@
-import { publishedOutputOf, seriesShape, type DefinitionSummary } from '@on.auto/definitions';
+import { publishedOutputOf, seriesShape, type DefinitionSummary, type PreparedDefinition } from '@on.auto/definitions';
 import { issueText, type DocumentIssue } from '@on.auto/definitions/document';
 import { InvalidInput } from '@on.auto/operations';
 import { Effect, Result, type Schema } from 'effect';
@@ -34,4 +34,13 @@ export function summarize(document: PredictionFunctionDefinitionDocument): Defin
     inputSchema: schemas.input,
     ...publishedOutputOf({ shape: seriesShape, details: datasetDetailsOf(document) }),
   };
+}
+
+type DefinitionsNamed = NonNullable<PreparedDefinition['definitionsNamed']>;
+
+export function definitionsNamed({ data }: PredictionFunctionDefinitionDocument): DefinitionsNamed {
+  const subjects = data.events.flatMap(({ type, subject }, index) =>
+    typeof subject === 'string' ? [{ pointer: `/data/events/${index}/subject`, type, subject }] : [],
+  );
+  return { names: [], subjects, awaited: [] };
 }

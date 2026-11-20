@@ -1,8 +1,8 @@
 import type { EmitEvent } from '@on.auto/definitions';
 import type { StreamSignal } from '@on.auto/ledger';
-import type { Outcome, StartingTrigger } from '@on.auto/operations';
+import { definitionOfStreamPrefix, type Outcome, type StartingTrigger } from '@on.auto/operations';
 import type { FilterSandbox } from '@on.auto/workflow-engine';
-import { Data, Effect, type Schema } from 'effect';
+import { Data, Effect, Option, type Schema } from 'effect';
 
 import type { SpanReference } from '../runs/run-spans.ts';
 import { codesOf, type FailureDetail } from './refusals.ts';
@@ -20,6 +20,17 @@ export interface ReactionStart {
   readonly cause: string;
   readonly trigger: StartingTrigger;
   readonly trace?: SpanReference;
+}
+
+function definitionIdOf(definitionKey: string): { readonly definition_id?: string } {
+  return Option.match(definitionOfStreamPrefix(definitionKey), {
+    onNone: () => ({}),
+    onSome: ({ definition }) => ({ definition_id: definition }),
+  });
+}
+
+export function startedVersionOf({ definitionKey, workflow, version, input, runId }: ReactionStart): Schema.JsonObject {
+  return { type: 'workflow', name: workflow, version, input, run_id: runId, ...definitionIdOf(definitionKey) };
 }
 
 export interface GoalTrigger extends StartingTrigger {

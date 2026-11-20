@@ -165,7 +165,7 @@ These tools are listed on `/mcp` and a playbook endpoint. Their routes are relat
 
 #### Renaming a definition
 
-A definition's name is its id. To rename one, create it with `create_definition` under the new name and with the same document, and point every call and filter that names the old name at the new. Retire the old one at once with `retire_definition`, since until then a trigger the two share starts both. A renamed definition's runs so far stay under its old name.
+A definition's name can change and its id stays. `update_definition` with `new_name`, and no `source`, renames it: its versions, runs, page and schedule stay with it, and each definition that calls it, reads its runs or filters on them is saved again with the new name. A rename is refused while the definition, or a definition that calls it, reads its runs or waits for them in a `listen` task, has a run that has not ended; the refusal names the run, and the rename can be tried again once the run has ended or been cancelled.
 
 ### Runs
 

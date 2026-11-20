@@ -25,7 +25,7 @@ function atMostBytes(most: number, written: string) {
 
 export const definitionNamePattern = /^[a-z][a-z0-9-]{2,47}$/u;
 
-function definitionNameFieldOf(description: string) {
+export function definitionNameFieldOf(description: string) {
   return Schema.String.annotate({ description }).check(Schema.isPattern(definitionNamePattern));
 }
 
@@ -58,16 +58,20 @@ function isADiagramChoice(diagram: string): boolean {
   return diagram === noDiagram || startsAsAFlow.test(diagram);
 }
 
-export const DiagramField = Schema.String.annotate({
-  description:
-    'Required for a function, refused for a workflow: Mermaid source of a flowchart or a state diagram of how the function works, its first line flowchart, graph or stateDiagram, or the word none when a picture would add nothing',
-}).check(
-  Schema.makeFilter(isADiagramChoice, {
-    expected:
-      'Mermaid source of a flowchart or a state diagram, whose first line is flowchart, graph or stateDiagram, or the word none',
-  }),
-  atMostBytes(mostDiagramBytes, 'a diagram'),
-);
+const diagramChoice =
+  'Mermaid source of a flowchart or a state diagram of how the function works, its first line flowchart, graph or stateDiagram, or the word none when a picture would add nothing';
+
+export function diagramFieldOf(whenGiven: string) {
+  return Schema.String.annotate({ description: `${whenGiven}: ${diagramChoice}` }).check(
+    Schema.makeFilter(isADiagramChoice, {
+      expected:
+        'Mermaid source of a flowchart or a state diagram, whose first line is flowchart, graph or stateDiagram, or the word none',
+    }),
+    atMostBytes(mostDiagramBytes, 'a diagram'),
+  );
+}
+
+export const DiagramField = diagramFieldOf('Required for a function, refused for a workflow');
 
 export const RunIdInputField = Schema.String.annotate({
   description: "The run's id, a UUID in any case, kept in lowercase",

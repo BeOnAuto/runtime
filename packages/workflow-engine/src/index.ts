@@ -49,7 +49,7 @@ export { mostInputMs } from './dsl/evaluation.ts';
 export { enclosedBody } from './dsl/expressions.ts';
 export { oneLanguage, policyOf } from './dsl/policy.ts';
 export { forbidden, rejection, type Rejection } from './dsl/policy-checks.ts';
-export { runtimeNames } from './dsl/task-policy.ts';
+export { eventFiltersOf, runtimeNames, type LocatedFilter } from './dsl/task-policy.ts';
 export { holdsAnExpression, workflowExpressionsOf, type PlacedExpression } from './dsl/workflow-expressions.ts';
 export { describeError, type ErrorKind } from './dsl/raised-error.ts';
 export {

@@ -371,6 +371,34 @@ describe('forecast after a record', () => {
       expect(answers).toMatchObject(revenues.map((revenue) => ({ status: 'succeeded', output: { value: revenue } })));
     });
   });
+
+  describe('a workflow that records a week and forecasts from it, once the function that records it is renamed', () => {
+    it('forecasts from the week the renamed function recorded, its prediction function saved again with the new name', async () => {
+      const serverRenamed = await servingWeeks();
+
+      const renamed = await serverRenamed.call('PUT', `${alpha}/definitions/computation/record-week`, {
+        body: { new_name: 'record-a-week' },
+      });
+      const savedAgain = await until(async () => {
+        const { body } = await serverRenamed.call('GET', `${alpha}/definitions/prediction/weekly-revenue`);
+        expect(body).toMatchObject({
+          version: 2,
+          standing: { dataset: { phase: 'live', events_folded: weeksBefore } },
+        });
+        return body;
+      });
+      const answer = await lastObserved(serverRenamed, 50_000);
+
+      expect(renamed).toMatchObject({
+        status: 200,
+        body: { name: 'record-a-week', used_by: [{ type: 'workflow', name: 'close-and-forecast' }] },
+      });
+      expect(savedAgain).toMatchObject({
+        source: weeklyRevenue.replace('computation/record-week', 'computation/record-a-week'),
+      });
+      expect(answer).toMatchObject({ status: 'succeeded', output: { value: 50_000 } });
+    });
+  });
 });
 
 describe('prediction over mcp', () => {

@@ -4,6 +4,7 @@ import { playbookCallerOf, Ledger, type PlaybookRequest, type DispatcherServices
 import {
   functionStartAnswered,
   startAnswered,
+  startedVersionOf,
   type FunctionStart,
   type ReactionOptions,
   type ReactionStart,
@@ -18,22 +19,13 @@ import { inRuntime } from './in-runtime.ts';
 
 const workflows = 'workflow';
 
-function requestOf({
-  org,
-  playbook,
-  workflow,
-  version,
-  input,
-  runId,
-  depth,
-  cause,
-  trigger,
-}: ReactionStart): PlaybookRequest {
+function requestOf(start: ReactionStart): PlaybookRequest {
+  const { org, playbook, runId, depth, cause, trigger } = start;
   return {
     caller: playbookCallerOf({ org, playbook }),
     org,
     playbook,
-    input: { type: workflows, name: workflow, version, input, run_id: runId },
+    input: startedVersionOf(start),
     encoding: 'json',
     lineage: { causationId: cause, correlationId: runId },
     depth,

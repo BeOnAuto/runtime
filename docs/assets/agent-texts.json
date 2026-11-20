@@ -2066,14 +2066,6 @@
             "/orgs/{org}/playbooks/{playbook}/mcp",
             "/directory"
           ]
-        },
-        {
-          "as": "tool update_definition: argument diagram",
-          "on": [
-            "/mcp",
-            "/orgs/{org}/playbooks/{playbook}/mcp",
-            "/directory"
-          ]
         }
       ],
       "lines": [
@@ -2298,7 +2290,7 @@
       ]
     },
     {
-      "sha256": "07aead8559d98725b59cca8aef27cca735a37999c3bce18687b9c5d8df6c194f",
+      "sha256": "cbffecde075debc21ad7dd804c841e0efde4ef4e40c9d4c746a7e0e9d93fafd5",
       "tier": 1,
       "received": [
         {
@@ -2311,7 +2303,41 @@
         }
       ],
       "lines": [
-        "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time; a workflow takes none. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing."
+        "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes or renames a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` with each `source`; a workflow takes none. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing. `new_name`, given alone, renames it instead: its versions, runs, page and schedule stay, and each definition that uses it is saved again with the new name."
+      ]
+    },
+    {
+      "sha256": "8cefa2f94ef5345c0308362e51e756a397004b6cce94ef3e60e65cf2a6df526a",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool update_definition: argument new_name",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The name to give the definition: 3 to 48 lowercase letters, digits and hyphens, starting with a letter. Give it alone; its versions, runs, page and schedule stay with it"
+      ]
+    },
+    {
+      "sha256": "dd37a4e2add9923b94856ee8614e5bc2958dea187e63630a31e758d7dd4d150f",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool update_definition: argument diagram",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "Required for a function with `source`, refused for a workflow and with `new_name`: Mermaid source of a flowchart or a state diagram of how the function works, its first line flowchart, graph or stateDiagram, or the word none when a picture would add nothing"
       ]
     },
     {
@@ -9079,7 +9105,7 @@
       ]
     },
     {
-      "sha256": "f130dec5c4b96750b8fc10146658a7d3813cb499312e87d3d23e28d9c839c13a",
+      "sha256": "07c06c1ddb3aa1c81aaaa83dd905079de858d36480986ffd5fc6ea9d18e98088",
       "tier": 3,
       "received": [
         {
@@ -9394,7 +9420,7 @@
         "",
         "- A definition has at most one page. A document saved without `page`, or with `page: {}`, has none, and the summary of a workflow or a function saved so ends with `It has no page yet; the page guide says how to give it one.`, where its 400 characters have room for it.",
         "- Retiring a definition retires its page with it: the page renders nowhere and its views are no longer kept.",
-        "- A renamed definition's runs so far stay under its old name, so a page or a prediction function's data part that reads them keeps its filter on the old name, beside one on the new. [Renaming a definition](https://on.auto/docs/reference/mcp#renaming-a-definition) gives the steps.",
+        "- A definition renamed with `update_definition` keeps its runs, and each page and each prediction function's data part that filters on its runs is saved again with the new name.",
         "- The playbook's page is the same mapping, with `data` and `runs`. It has no `result`, since the playbook has no runs of its own. `update_playbook` saves it as YAML text in `page`, and `page: null` removes it. Each save is recorded as `playbook_page_saved`, which no fold sees.",
         "- Over MCP, `get_playbook` answers the source of the playbook's page and renders nothing; `render_playbook_page` renders it, over HTTP alone.",
         "- A page saved as a definition of its own, of the type `page`, is read as its subject's page, in the form of a `page` mapping, without the `of` line that named the subject. It counts only while the subject's document has no `page` key. For the playbook, a save or removal through `update_playbook`, `null` included, replaces it.",

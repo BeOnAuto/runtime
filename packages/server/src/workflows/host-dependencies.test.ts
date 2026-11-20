@@ -248,7 +248,7 @@ describe('the cancels the workflow host hands to the runtime of the server', () 
 });
 
 describe('a start of a workflow its trigger matched', () => {
-  it('is asked of the playbook as the playbook itself, once under the id it was given, caused by what it matched, with its trigger', async () => {
+  it('is asked of the playbook as the playbook itself, of the definition its key names, once under the id it was given, caused by what it matched, with its trigger', async () => {
     const { reactions, requests } = await reactingWith([]);
 
     await Effect.runPromise(reactions.start(start));
@@ -270,6 +270,7 @@ describe('a start of a workflow its trigger matched', () => {
           version: 2,
           input: start.input,
           run_id: start.runId,
+          definition_id: '0199a3c4-7d2e-7c1a-9b3f-00000000c105',
         },
         encoding: 'json',
         lineage: { causationId: 'record-1', correlationId: start.runId },

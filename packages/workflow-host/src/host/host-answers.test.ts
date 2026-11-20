@@ -231,6 +231,30 @@ interface ContractSeven extends Omit<ContractSix, 'runContext'> {
   };
 }
 
+type PreparedOfContractSeven = ContractSeven['prepared'];
+
+interface ContractEight extends Omit<ContractSeven, 'prepared'> {
+  readonly prepared: {
+    readonly summary: PreparedOfContractSeven['summary'];
+    readonly check: PreparedOfContractSeven['check'];
+    readonly notices?: NonNullable<PreparedOfContractSeven['notices']>;
+    readonly definitionsNamed?: {
+      readonly names: readonly { readonly pointer: string; readonly type: string; readonly name: string }[];
+      readonly subjects: readonly { readonly pointer: string; readonly type: string; readonly subject: string }[];
+      readonly awaited: readonly { readonly pointer: string; readonly type: string; readonly subject: string }[];
+    };
+    readonly run: PreparedOfContractSeven['run'];
+    readonly whenCancelled: PreparedOfContractSeven['whenCancelled'];
+    readonly cancelledAttempt: PreparedOfContractSeven['cancelledAttempt'];
+    readonly callsTools: PreparedOfContractSeven['callsTools'];
+    readonly finishesLaterFor: PreparedOfContractSeven['finishesLaterFor'];
+    readonly answersItsShapeFor: PreparedOfContractSeven['answersItsShapeFor'];
+    readonly longestRunMs: PreparedOfContractSeven['longestRunMs'];
+    readonly longestRunMsFor: PreparedOfContractSeven['longestRunMsFor'];
+    readonly resumesAfterMs: PreparedOfContractSeven['resumesAfterMs'];
+  };
+}
+
 interface TypesOfEachContract {
   readonly 1: ContractOne;
   readonly 2: ContractTwo;
@@ -239,6 +263,7 @@ interface TypesOfEachContract {
   readonly 5: ContractFive;
   readonly 6: ContractSix;
   readonly 7: ContractSeven;
+  readonly 8: ContractEight;
 }
 
 type ThisContract = TypesOfEachContract[typeof capabilityContract];
@@ -686,7 +711,7 @@ describe('the contract by which a capability is made and served', () => {
     expectTypeOf<DueWork>().toEqualTypeOf<ThisContract['dueWork']>();
     expectTypeOf<DueItem>().toEqualTypeOf<ThisContract['dueItem']>();
     expectTypeOf<PlaybookOperation>().toEqualTypeOf<ThisContract['playbookOperation']>();
-    expect(capabilityContract).toBe(7);
+    expect(capabilityContract).toBe(8);
   });
 
   it('hands the run of a capability built against any contract it serves every member of the run that contract named, unchanged', () => {
@@ -695,6 +720,7 @@ describe('the contract by which a capability is made and served', () => {
     expectTypeOf<RunContext>().toExtend<ContractFour['runContext']>();
     expectTypeOf<RunContext>().toExtend<ContractFive['runContext']>();
     expectTypeOf<RunContext>().toExtend<ContractSix['runContext']>();
+    expectTypeOf<RunContext>().toExtend<ContractSeven['runContext']>();
     expect(earliestCapabilityContractServed).toBe(2);
   });
 });

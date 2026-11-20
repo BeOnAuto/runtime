@@ -116,7 +116,7 @@ describe('the plain language of update_definition', () => {
   it('names the definition it tried to update', () => {
     expect([attemptOf('update_definition', greetInput), attemptOf('update_definition', {})]).toEqual([
       'update the greeting “greet”',
-      'update a greeting or probe',
+      'update or rename a greeting or probe',
     ]);
   });
 });

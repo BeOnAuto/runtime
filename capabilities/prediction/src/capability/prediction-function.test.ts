@@ -108,6 +108,25 @@ describe('the summary of a prediction function', () => {
 
     expect(predictionRuns().prepared(bare).summary.description).toBeUndefined();
   });
+
+  it('declares where a filter of its data part names the subject of the events it folds, with the type it names', () => {
+    const recorded = weeklyOrdersWith([
+      '    - type: order.placed',
+      '    - type: order.placed\n    - type: run_succeeded\n      subject: computation/record-week',
+    ]);
+
+    expect([
+      predictionRuns().prepared(recorded).definitionsNamed,
+      predictionRuns().prepared(weeklyOrders).definitionsNamed,
+    ]).toEqual([
+      {
+        names: [],
+        subjects: [{ pointer: '/data/events/1/subject', type: 'run_succeeded', subject: 'computation/record-week' }],
+        awaited: [],
+      },
+      { names: [], subjects: [], awaited: [] },
+    ]);
+  });
 });
 
 describe('a question to a prediction function whose dataset is not yet made', () => {

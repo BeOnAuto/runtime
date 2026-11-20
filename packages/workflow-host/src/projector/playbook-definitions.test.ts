@@ -86,6 +86,35 @@ describe('the definitions a playbook keeps through a rename', () => {
       [['runs', { version: 1, saved: Date.parse(savedAt), details: { fold } }]],
     ]);
   });
+
+  it('keeps the version a rename saves with it under the name it takes, as the rename records the two facts', () => {
+    const refolded = 'export function fold(view: number): number { return view + 2; }';
+    const savedWithIt = {
+      type: 'definition_updated',
+      data: { content: { source: 'the outcomes document', details: { fold: refolded } } },
+      context: {
+        by: 'acme-admin',
+        at: laterAt,
+        definitionType: 'view',
+        definitionName: 'outcomes',
+        definitionVersion: 2,
+      },
+    };
+
+    const renamed = definitionsAfter(
+      noDefinitions,
+      [
+        savedAs('runs', { source: 'the runs document', details: { fold } }),
+        { ...renamedTo('runs', 'outcomes'), context: savedWithIt.context },
+        savedWithIt,
+      ],
+      runnableDetailsOf,
+    );
+
+    expect([...renamed.functions]).toEqual([
+      ['outcomes', { version: 2, saved: Date.parse(laterAt), details: { fold: refolded } }],
+    ]);
+  });
 });
 
 describe('the definitions a playbook keeps through a retirement and a restoration', () => {

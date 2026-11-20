@@ -14,7 +14,7 @@ type UsersToday = Effect.Effect<readonly DefinitionUser[], never, PlaybookReader
 
 type Users = Effect.Effect<readonly DefinitionUser[], never, PlaybookReader | PlaybookContext>;
 
-function registriesOf(types: readonly string[]): Effect.Effect<PlaybookRegistries, never, PlaybookReader> {
+export function registriesOf(types: readonly string[]): Effect.Effect<PlaybookRegistries, never, PlaybookReader> {
   return Effect.map(
     Effect.forEach(types, (type) => Effect.map(loadRegistry(type), (loaded) => [type, loaded] as const)),
     (registries: readonly (readonly [string, DefinitionRegistry])[]) => new Map(registries),

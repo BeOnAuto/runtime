@@ -25,10 +25,10 @@ const decodeNamingDetails = Schema.decodeUnknownOption(NamingDetailsSchema);
 
 type Use = { readonly relation: 'calls'; readonly steps: readonly CallingStep[] } | { readonly relation: 'reads' };
 
-const byTypeThenName = Order.combineAll([
-  Order.mapInput(Order.Number, ({ type }: DefinitionUser) => definitionTypeRankOf(type)),
-  Order.mapInput(Order.String, ({ type }: DefinitionUser) => type),
-  Order.mapInput(Order.String, ({ name }: DefinitionUser) => name),
+export const byTypeThenName = Order.combineAll([
+  Order.mapInput(Order.Number, ({ type }: NamedDefinition) => definitionTypeRankOf(type)),
+  Order.mapInput(Order.String, ({ type }: NamedDefinition) => type),
+  Order.mapInput(Order.String, ({ name }: NamedDefinition) => name),
 ]);
 
 export function namingDetailsOf(details: StoredDefinition['details']): NamingDetails {

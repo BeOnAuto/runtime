@@ -115,10 +115,8 @@ export const runPrepared = Effect.fnUntraced(function* (
       const { messageId, startedAt, modelCallsBefore, fencingToken } = yield* startRecorded(
         id,
         startOf(written, starting),
-        {
-          causationId: given.lineage?.causationId ?? null,
-          correlationId,
-        },
+        run.definition.definition_id,
+        { causationId: given.lineage?.causationId ?? null, correlationId },
       );
       const lineage = { startId: messageId, correlationId };
       const context = yield* contextOf(id, run, given, {

@@ -2,7 +2,7 @@ import type { Outcome } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { functionStartAnswered, startAnswered, StartRefused } from './reaction-options.ts';
+import { functionStartAnswered, startAnswered, startedVersionOf, StartRefused } from './reaction-options.ts';
 import { reactionOfRun } from './run-attributes.ts';
 import { definitionsOfRuns } from './run-workflows.ts';
 import { StartRejected } from './start-rejected.ts';
@@ -126,5 +126,34 @@ describe('the definition of a run', () => {
 
     expect(definitions).toEqual([definitionKey, definitionKey, undefined, definitionKey, undefined, definitionKey]);
     expect(reads()).toEqual(['runs/r-close', 'runs/r-sum', 'runs/r-unknown', 'runs/r-other', 'runs/r-close']);
+  });
+});
+
+describe('the start a workflow version is asked for', () => {
+  it('names the definition by the id of the key it is filed under, and by its name alone where the key names none', () => {
+    const start = {
+      org: 'acme',
+      playbook: 'alpha',
+      definitionKey,
+      workflow: 'close',
+      version: 2,
+      runId: 'r-close',
+      input: { month: '2026-10' },
+      depth: 1,
+      cause: 'e-1',
+      trigger: { kind: 'event' as const, reference: '/schedule/on' },
+    };
+
+    expect([startedVersionOf(start), startedVersionOf({ ...start, definitionKey: playbookKey })]).toEqual([
+      {
+        type: 'workflow',
+        name: 'close',
+        version: 2,
+        input: { month: '2026-10' },
+        run_id: 'r-close',
+        definition_id: '0190a5b6-0000-7000-8000-000000000001',
+      },
+      { type: 'workflow', name: 'close', version: 2, input: { month: '2026-10' }, run_id: 'r-close' },
+    ]);
   });
 });

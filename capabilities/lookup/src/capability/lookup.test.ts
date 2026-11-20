@@ -226,6 +226,13 @@ describe('a lookup function that reads runs', () => {
     });
   });
 
+  it('declares where its document names the definition whose runs it reads, and a lookup that calls a tool names none', () => {
+    expect([prepared(runsDocument()).definitionsNamed, prepared(lookupDocument()).definitionsNamed]).toEqual([
+      { names: [{ pointer: '/runs/name', type: 'computation', name: 'campaign-pace' }], subjects: [], awaited: [] },
+      { names: [], subjects: [], awaited: [] },
+    ]);
+  });
+
   it('says how many runs it examined and answered with, and whether it left older ones unread', () => {
     expect([
       lookup.describeOutput({ runs: [{}, {}], more: false }, { examined: 5, through: '2026-10-01T09:00:00.000Z' }),

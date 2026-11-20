@@ -8,6 +8,7 @@ import type {
   DefinitionCommand,
   DefinitionCreation,
   DefinitionPause,
+  DefinitionRename,
   DefinitionRestoration,
   DefinitionResumption,
   DefinitionRetirement,
@@ -21,6 +22,22 @@ import { definitionNotFound } from './registry-lookup.ts';
 type Decision = Result.Result<readonly DefinitionEvent[], Rejection<'not_found' | 'conflict'>>;
 
 const nothingToRecord: Decision = Result.succeed([]);
+
+const changedMeanwhile = new Conflict({
+  detail: 'The state changed while the command was decided',
+  kind: 'concurrent_change',
+});
+
+export function retiredToChange(type: string, name: string): Conflict {
+  return new Conflict({
+    detail: `The ${definitionResourceLabel(type)} ${name} is retired; restore_definition brings it back, and then it can change`,
+    kind: 'retired',
+  });
+}
+
+function isReadAt({ expectedVersion }: { readonly expectedVersion?: number }, existing: StoredDefinition): boolean {
+  return expectedVersion === undefined || (existing.version === expectedVersion && !isRetired(existing));
+}
 
 function recording(event: DefinitionEvent): Decision {
   return Result.succeed([event]);
@@ -56,19 +73,18 @@ function decideCreation(
 
 function decideUpdate(
   type: string,
-  { name, content: given, blanksRefused }: DefinitionUpdate & CommandMetadata,
+  update: DefinitionUpdate & CommandMetadata,
   existing: StoredDefinition | undefined,
 ): Decision {
+  const { name, content: given, blanksRefused } = update;
   if (existing === undefined) {
     return Result.fail(definitionNotFound(type, name));
   }
+  if (!isReadAt(update, existing)) {
+    return Result.fail(changedMeanwhile);
+  }
   if (isRetired(existing)) {
-    return Result.fail(
-      new Conflict({
-        detail: `The ${definitionResourceLabel(type)} ${name} is retired; restore it to change it`,
-        kind: 'retired',
-      }),
-    );
+    return Result.fail(retiredToChange(type, name));
   }
   const blanked = blankRefusalWhere(blanksRefused === true && existing.status === 'active', given, 'update');
   if (blanked !== undefined) {
@@ -76,6 +92,23 @@ function decideUpdate(
   }
   const content = withTheSavedOverview(given, existing);
   return isAsSaved(content, existing) ? nothingToRecord : recording({ type: 'definition_updated', data: { content } });
+}
+
+function decideRename(type: string, rename: DefinitionRename, existing: StoredDefinition | undefined): Decision {
+  const { name, new_name: to, renamed_by: renamedBy, content } = rename;
+  if (existing === undefined) {
+    return Result.fail(definitionNotFound(type, name));
+  }
+  if (isRetired(existing)) {
+    return Result.fail(retiredToChange(type, name));
+  }
+  if (!isReadAt(rename, existing)) {
+    return Result.fail(changedMeanwhile);
+  }
+  const renamed: DefinitionEvent = { type: 'definition_renamed', data: { from: name, to, renamed_by: renamedBy } };
+  return Result.succeed(
+    content === undefined ? [renamed] : [renamed, { type: 'definition_updated', data: { content } }],
+  );
 }
 
 function decideRetirement(
@@ -160,7 +193,15 @@ function versionSaved(
   if (existing === undefined) {
     return {};
   }
-  return { definitionVersion: command.type === 'update' ? existing.version + 1 : existing.version };
+  return { definitionVersion: isASave(command) ? existing.version + 1 : existing.version };
+}
+
+function isASave(command: DefinitionCommand): boolean {
+  return command.type === 'update' || (command.type === 'rename' && command.content !== undefined);
+}
+
+function nameAfter(command: DefinitionCommand): string {
+  return command.type === 'rename' ? command.new_name : command.name;
 }
 
 export interface DefinitionsOf {
@@ -174,12 +215,12 @@ export function definitionContextOf(
   command: DefinitionCommand,
   existing: RegisteredDefinition | undefined,
 ): Context {
-  const { by, at, name } = command;
+  const { by, at } = command;
   return {
     at,
     by,
     definitionType: of.type,
-    definitionName: name,
+    definitionName: nameAfter(command),
     ...versionSaved(command, existing),
     definitionId: of.definition,
   };
@@ -196,6 +237,9 @@ export function decideOnDefinition(
   }
   if (command.type === 'update') {
     return decideUpdate(type, command, existing);
+  }
+  if (command.type === 'rename') {
+    return decideRename(type, command, existing);
   }
   if (command.type === 'pause') {
     return decidePause(type, command, existing);

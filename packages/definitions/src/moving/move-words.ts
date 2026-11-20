@@ -67,15 +67,32 @@ export function inUseWords({ type, name }: Named, users: readonly Named[]): stri
 export function takenWords(to: string, { type, name }: Named, retired: boolean): string {
   const label = definitionResourceLabel(type);
   return retired
-    ? `The playbook ${to} has a retired ${label} ${name}, which keeps its name while retired, and a definition keeps its name when it moves, so it cannot move there; tell the person, who can choose another playbook`
-    : `The playbook ${to} already has the ${label} ${name}, and a definition keeps its name when it moves, so it cannot move there; tell the person, who can choose another playbook`;
+    ? `The playbook ${to} has a retired ${label} ${name}, which keeps its name while retired, and a definition keeps its name when it moves, so it cannot move there; tell the person, who can choose another playbook, or rename the one you are moving with update_definition and then move it`
+    : `The playbook ${to} already has the ${label} ${name}, and a definition keeps its name when it moves, so it cannot move there; tell the person, who can choose another playbook, or rename it with update_definition and then move it`;
 }
 
-export function runsNotEndedWords({ type, name }: Named, count: number, runId: string): string {
-  const label = definitionResourceLabel(type);
+interface RunsNotEndedUse {
+  readonly relation: string;
+  readonly of: string;
+}
+
+interface RunsNotEndedOf {
+  readonly holder: Named;
+  readonly change: string;
+  readonly use?: RunsNotEndedUse;
+}
+
+export function runsNotEndedSentence({ holder, change, use }: RunsNotEndedOf, count: number, runId: string): string {
+  const { type, name } = holder;
+  const held = `The ${definitionResourceLabel(type)} ${name}${use === undefined ? '' : `, which ${use.relation} ${use.of},`}`;
+  const can = (opening: string) => `${use?.of ?? opening} can ${change}`;
   return count === 1
-    ? `The ${label} ${name} has a run that has not ended, ${runId}; it can move once that run has ended, or once cancel_run has cancelled it, if the person says to stop it`
-    : `The ${label} ${name} has ${count} runs that have not ended, ${runId} among them; list_runs with \`name\` ${name} and \`status\` started lists them. It can move once they have ended, or once cancel_run has cancelled each, if the person says to stop them`;
+    ? `${held} has a run that has not ended, ${runId}; ${can('it')} once that run has ended, or once cancel_run has cancelled it, if the person says to stop it`
+    : `${held} has ${count} runs that have not ended, ${runId} among them; list_runs with \`name\` ${name} and \`status\` started lists them. ${can('It')} once they have ended, or once cancel_run has cancelled each, if the person says to stop them`;
+}
+
+export function runsNotEndedWords(holder: Named, count: number, runId: string): string {
+  return runsNotEndedSentence({ holder, change: 'move' }, count, runId);
 }
 
 export function connectionNotAccessibleWords(to: string, connection: string, { type, name }: Named): string {

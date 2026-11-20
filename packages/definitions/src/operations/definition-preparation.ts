@@ -34,7 +34,7 @@ export const stoppedRefusalOf = Effect.fnUntraced(function* (type: string, name:
   return stopping === undefined ? undefined : refusalsToRun[stopping](definitionResourceLabel(type), name);
 });
 
-function unparseable(
+export function unparseable(
   type: string,
   { name, version }: Pick<StoredDefinition, 'name' | 'version'>,
 ): (rejection: Rejection) => Conflict {

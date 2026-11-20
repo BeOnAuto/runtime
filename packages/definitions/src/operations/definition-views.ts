@@ -143,17 +143,23 @@ function withItsPage(content: DefinitionContent, page: DefinitionContent['page']
   return page === undefined ? content : { ...content, page };
 }
 
-export function checkedContentOf(
+export function documentCheckedOf(
   capability: Capability,
   written: WrittenDefinition,
   pages: { readonly check: PageCheck },
   keepNotices?: KeepNotices,
 ): Effect.Effect<DefinitionContent, InvalidInput | Unavailable, PlaybookContext> {
   const writtenIn = writtenInOf(capability.type);
-  return diagramChosen(capability, written).pipe(
-    Effect.andThen(preparedContentOf(capability, written, writtenIn, keepNotices)),
-    Effect.flatMap((content) =>
-      Effect.map(pages.check(written.source, writtenIn), (page) => withItsPage(content, page)),
-    ),
+  return Effect.flatMap(preparedContentOf(capability, written, writtenIn, keepNotices), (content) =>
+    Effect.map(pages.check(written.source, writtenIn), (page) => withItsPage(content, page)),
   );
+}
+
+export function checkedContentOf(
+  capability: Capability,
+  written: WrittenDefinition,
+  pages: { readonly check: PageCheck },
+  keepNotices?: KeepNotices,
+): Effect.Effect<DefinitionContent, InvalidInput | Unavailable, PlaybookContext> {
+  return Effect.andThen(diagramChosen(capability, written), documentCheckedOf(capability, written, pages, keepNotices));
 }

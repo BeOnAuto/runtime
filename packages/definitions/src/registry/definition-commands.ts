@@ -19,10 +19,23 @@ export interface DefinitionCreation extends BlankRule {
   readonly definition_id: string;
 }
 
-export interface DefinitionUpdate extends BlankRule {
+interface ReadAt {
+  readonly expectedVersion?: number;
+}
+
+export interface DefinitionUpdate extends BlankRule, ReadAt {
   readonly type: 'update';
   readonly name: string;
   readonly content: DefinitionContent;
+}
+
+export interface DefinitionRename {
+  readonly type: 'rename';
+  readonly name: string;
+  readonly new_name: string;
+  readonly renamed_by: RecordedCaller;
+  readonly expectedVersion: number;
+  readonly content?: DefinitionContent;
 }
 
 export interface DefinitionRetirement {
@@ -50,7 +63,7 @@ export interface DefinitionRestoration {
 
 type DefinitionStandingChange = DefinitionRetirement | DefinitionPause | DefinitionResumption | DefinitionRestoration;
 
-export type DefinitionCommandData = DefinitionCreation | DefinitionUpdate | DefinitionStandingChange;
+export type DefinitionCommandData = DefinitionCreation | DefinitionUpdate | DefinitionRename | DefinitionStandingChange;
 
 export interface CommandMetadata {
   readonly by: string;

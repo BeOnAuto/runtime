@@ -13,6 +13,7 @@ import {
 import { Effect, Schema } from 'effect';
 
 import { DefinitionSchema, DefinitionWithGoalsSchema, type Definition } from '../registry/definition.ts';
+import { UpdatedDefinitionsField } from '../renaming/update-or-rename.ts';
 import { RunDetailSchema, type RunDetail } from '../runs/run.ts';
 import { countingNotices, type StartedByHand } from './counting-runs.ts';
 
@@ -37,6 +38,26 @@ export function savedDefinitionSchemaOf(
   goals: boolean,
 ): typeof SavedDefinitionSchema | typeof SavedDefinitionWithGoalsSchema {
   return goals ? SavedDefinitionWithGoalsSchema : SavedDefinitionSchema;
+}
+
+const UpdatedDefinitionSchema = Schema.Struct({
+  ...noticesFields(),
+  ...DefinitionSchema.fields,
+  updated_definitions: UpdatedDefinitionsField,
+  studio: studioLinkField('saved'),
+}).annotate(savedAnnotations);
+
+const UpdatedDefinitionWithGoalsSchema = Schema.Struct({
+  ...noticesFields(),
+  ...DefinitionWithGoalsSchema.fields,
+  updated_definitions: UpdatedDefinitionsField,
+  studio: studioLinkField('saved'),
+}).annotate(savedAnnotations);
+
+export function updatedDefinitionSchemaOf(
+  goals: boolean,
+): typeof UpdatedDefinitionSchema | typeof UpdatedDefinitionWithGoalsSchema {
+  return goals ? UpdatedDefinitionWithGoalsSchema : UpdatedDefinitionSchema;
 }
 
 export const RequestedRunSchema = Schema.Struct({

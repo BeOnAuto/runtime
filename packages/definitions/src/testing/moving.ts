@@ -1,28 +1,14 @@
-import { Effect, Schema } from 'effect';
+import { Effect } from 'effect';
 
-import { defineCapability } from '../capability/capability.ts';
 import { defineMoveDefinitions } from '../moving/move-definitions.ts';
 import { storedTypesByStatus } from '../reading/run-status.ts';
 import { composedFactsOf } from '../run-work/declared-facts.ts';
 import { asking } from './asking.ts';
 import { acmeAdmin } from './callers.ts';
-import { echo, echoDeclaration } from './capabilities/echo.ts';
+import { echo } from './capabilities/echo.ts';
+import { flow } from './capabilities/flow.ts';
 import { definitionOperationsFor } from './definition-operations.ts';
 import { toPlaybook, type Harness } from './harness.ts';
-
-const flowDocument = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Record(Schema.String, Schema.Json)));
-
-const flow = defineCapability({
-  type: 'workflow',
-  title: 'Flow',
-  guide: { name: 'flow' },
-  noun: { one: 'workflow', other: 'workflows' },
-  describeOutput: echoDeclaration.describeOutput,
-  mediaType: 'application/json',
-  parse: (source: string) => Effect.sync(() => flowDocument(source)),
-  summarize: (details) => ({ details }),
-  run: () => Effect.succeed({ output: { ran: true }, record: {} }),
-});
 
 export const movingCapabilities = [echo, asking, flow];
 

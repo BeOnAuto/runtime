@@ -166,6 +166,63 @@ describe('updating the overview of a definition', () => {
   });
 });
 
+function renamingGreet(expectedVersion: number, content?: DefinitionContent): DefinitionCommand {
+  const renamed = { type: 'rename' as const, name: 'greet', new_name: 'salute', renamed_by: recordedAdmin };
+  return { ...renamed, expectedVersion, ...(content === undefined ? {} : { content }), ...change };
+}
+
+const greetRenamed = { type: 'definition_renamed', data: { from: 'greet', to: 'salute', renamed_by: recordedAdmin } };
+describe('renaming a definition', () => {
+  it('records the rename at the version it holds, stamped with the new name, and then a new version when its own document changes', () => {
+    expect([
+      decided(renamingGreet(2), greetCreated, greetUpdated),
+      decided(renamingGreet(1, howdy), greetCreated),
+    ]).toStrictEqual([
+      Result.succeed([greetRenamed]),
+      Result.succeed([greetRenamed, { type: 'definition_updated', data: { content: howdy } }]),
+    ]);
+    expect([
+      contextOf(renamingGreet(2), greetCreated, greetUpdated),
+      contextOf(renamingGreet(1, howdy), greetCreated),
+    ]).toStrictEqual([
+      identified(ofTheDefinition('salute', change, 2)),
+      identified(ofTheDefinition('salute', change, 2)),
+    ]);
+  });
+
+  it('is refused for a definition not there, retired, or changed since the version its decision read', () => {
+    expect([
+      decided(renamingGreet(1)),
+      decided(renamingGreet(1), greetCreated, greetRetired),
+      decided(renamingGreet(1), greetCreated, greetUpdated),
+    ]).toEqual([
+      Result.fail(new NotFound({ detail: 'There is no echo definition greet in this playbook' })),
+      Result.fail(refused('conflict', { kind: 'retired' })),
+      Result.fail(refused('conflict', { kind: 'concurrent_change' })),
+    ]);
+  });
+
+  it('saves a definition that names it only at the version that was read, and while it is not retired', () => {
+    const atVersion = (expectedVersion: number): DefinitionCommand => ({
+      type: 'update',
+      name: 'greet',
+      content: howdy,
+      expectedVersion,
+      ...change,
+    });
+
+    expect([
+      decided(atVersion(1), greetCreated),
+      decided(atVersion(1), greetCreated, greetUpdated),
+      decided(atVersion(1), greetCreated, greetRetired),
+    ]).toEqual([
+      Result.succeed([{ type: 'definition_updated', data: { content: howdy } }]),
+      Result.fail(refused('conflict', { kind: 'concurrent_change' })),
+      Result.fail(refused('conflict', { kind: 'concurrent_change' })),
+    ]);
+  });
+});
+
 describe('retiring a definition', () => {
   it('records the retirement of an active definition, with the version it retires in its context', () => {
     expect(decided(retiringGreet, greetCreated)).toStrictEqual(

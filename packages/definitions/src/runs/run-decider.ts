@@ -1,6 +1,5 @@
 import {
   Conflict,
-  definitionOfStreamPrefix,
   PlaybookContext,
   PlaybookReader,
   PlaybookWriter,
@@ -17,7 +16,7 @@ import {
   type StreamWriter,
   runStreamNameOf,
 } from '@on.auto/operations';
-import { Effect, Equal, Option, Result } from 'effect';
+import { Effect, Equal, Result } from 'effect';
 
 import type { AdmitsFact } from '../run-work/work-decisions.ts';
 import type { RunCommand, RunSettlement } from './run-commands.ts';
@@ -144,17 +143,9 @@ export const placeOfRun = Effect.fnUntraced(function* (id: string) {
   return definition === undefined ? yield* noSuchRun : yield* runPlaceIn(definition, id);
 });
 
-export const placeToStart = Effect.fnUntraced(function* (id: string, definitionType: string, name: string) {
+export const placeToStart = Effect.fnUntraced(function* (id: string, definition: string) {
   const placed = yield* definitionOfRun(id);
-  if (placed !== undefined) {
-    return yield* runPlaceIn(placed, id);
-  }
-  const held = yield* (yield* PlaybookReader).holderOfName(definitionType, name);
-  const named = Option.fromNullishOr(held).pipe(
-    Option.flatMap(({ definitionKey }) => definitionOfStreamPrefix(definitionKey)),
-    Option.map((address) => address.definition),
-  );
-  return yield* runPlaceIn(yield* Effect.orDie(Effect.fromOption(named)), id);
+  return yield* runPlaceIn(placed ?? definition, id);
 });
 
 export function readerAt({ definition }: RunPlace): Effect.Effect<StreamReader & StreamAges, never, PlaybookReader> {

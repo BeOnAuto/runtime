@@ -8,11 +8,12 @@ import {
 } from '@on.auto/operations';
 import { Effect, Equal } from 'effect';
 
-import { cancelledAsAsked, type CancelledRun, type Capability } from '../capability/capability.ts';
+import type { Capability } from '../capability/capability.ts';
 import { isChangedSinceRead, runDeciderAsRead, runStreamIn, type RunPlacing } from '../runs/run-decider.ts';
 import { endedWithAnotherResult } from '../runs/run-decisions.ts';
 import { runSettlerAsRead, type RunStreamAddress, type Settlement } from '../runs/run-settler.ts';
 import { startedRunOf, takesSettlement } from '../runs/run-state.ts';
+import { cancelledAsAsked, type CancelledRun } from './cancelled-runs.ts';
 import type { CancelRequest } from './run-cancels.ts';
 
 export type SettleCancelled = (

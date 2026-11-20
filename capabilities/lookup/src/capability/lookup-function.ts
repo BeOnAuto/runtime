@@ -3,6 +3,7 @@ import {
   functionCategoryLabels,
   functionResourceLabels,
   type Capability,
+  type PreparedDefinition,
   type SucceededRunsReader,
 } from '@on.auto/definitions';
 import { callRunOf, longestCallRunMs } from '@on.auto/definitions/tool-blocks';
@@ -26,6 +27,16 @@ function callsTools({ kind }: LookupFunctionDefinitionDocument): boolean {
   return kind === 'call';
 }
 
+function definitionsNamed(
+  document: LookupFunctionDefinitionDocument,
+): NonNullable<PreparedDefinition['definitionsNamed']> {
+  if (document.kind === 'call') {
+    return { names: [], subjects: [], awaited: [] };
+  }
+  const { type, name } = document.runs;
+  return { names: [{ pointer: '/runs/name', type, name }], subjects: [], awaited: [] };
+}
+
 export function makeLookupFunctionAdapter({
   tools,
   runs,
@@ -44,6 +55,7 @@ export function makeLookupFunctionAdapter({
     parse: (source: string) => parse(source, tools),
     check: markCheck(tools),
     summarize,
+    definitionsNamed,
     run: (document, input, context) =>
       document.kind === 'call' ? callRun(document, input, context) : runsRunOf(document, input, context),
     whenCancelled: 'finish',

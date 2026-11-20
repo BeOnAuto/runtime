@@ -1,27 +1,38 @@
 import { defineCommand, withNotices } from '@on.auto/operations';
-import { Effect, Schema } from 'effect';
+import { Effect } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
-import { definitionWordsFor, pageWords, whatItDoes } from '../plain-language/definition-words.ts';
-import { DefinitionNameField, DiagramField, OverviewField, SourceField } from './definition-fields.ts';
+import { definitionRenamed, renamerOf } from '../renaming/rename-definition.ts';
+import {
+  changeAsked,
+  updateInputOf,
+  updatePlainLanguage,
+  withUpdatedDefinitions,
+} from '../renaming/update-or-rename.ts';
 import { answeredDefinition } from './definition-reading.ts';
 import { noGoalsKept, savedFrom } from './saved-content.ts';
-import { savedDefinitionSchemaOf, withDefinitionPageInStudio } from './studio-pages.ts';
+import { updatedDefinitionSchemaOf, withDefinitionPageInStudio } from './studio-pages.ts';
 
 const description = [
   'Replaces the document of an active definition and returns its new version, used from then on.',
-  'Use it when the person changes a saved definition; a retired one cannot change.',
+  'Use it when the person changes or renames a saved definition; a retired one cannot change.',
   '`type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays.',
-  'A function needs `diagram` each time; a workflow takes none.',
+  'A function needs `diagram` with each `source`; a workflow takes none.',
   'A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing.',
+  '`new_name`, given alone, renames it instead: its versions, runs, page and schedule stay, and each definition that uses it is saved again with the new name.',
 ].join(' ');
 
-export function defineUpdateDefinition(capabilities: readonly Capability[], pages: SubjectPages, kept = noGoalsKept) {
+export function defineUpdateDefinition(
+  capabilities: readonly Capability[],
+  pages: SubjectPages,
+  kept = noGoalsKept,
+  started?: readonly string[],
+) {
   const { goals, messages } = kept;
   const known = knownCapabilities(capabilities);
-  const words = definitionWordsFor(capabilities);
+  const renamer = renamerOf(capabilities, { pages }, started);
   return known.publish(
     defineCommand('playbook', {
       name: 'update_definition',
@@ -30,23 +41,23 @@ export function defineUpdateDefinition(capabilities: readonly Capability[], page
       repeatable: true,
       route: { method: 'PUT', path: '/definitions/{type}/{name}' },
       reachesOutside: known.reachesOutside,
-      inputSchema: Schema.Struct({
-        type: known.field,
-        name: DefinitionNameField,
-        source: SourceField,
-        overview: Schema.optionalKey(OverviewField),
-        diagram: Schema.optionalKey(DiagramField),
-      }),
-      outputSchema: savedDefinitionSchemaOf(goals),
+      inputSchema: updateInputOf(known.field),
+      outputSchema: updatedDefinitionSchemaOf(goals),
       reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
-      handle: Effect.fnUntraced(function* ({ type, name, ...written }) {
+      handle: Effect.fnUntraced(function* (asked) {
+        const { type, name, source: _source, new_name: _newName, ...texts } = asked;
         const capability = yield* known.capabilityOfType(type);
-        const updated = yield* savedFrom({ capability, pages, written, goals, messages }, (content) => ({
-          type: 'update',
-          name,
-          content,
-          blanksRefused: goals,
-        }));
+        const change = yield* changeAsked(asked);
+        const updated =
+          'rename' in change
+            ? yield* definitionRenamed(renamer, { type, from: name, to: change.rename })
+            : {
+                ...(yield* savedFrom(
+                  { capability, pages, written: { ...texts, ...change }, goals, messages },
+                  (content) => ({ type: 'update', name, content, blanksRefused: goals }),
+                )),
+                savedAgain: [],
+              };
         const linked = yield* withDefinitionPageInStudio(
           yield* answeredDefinition(capability, known.types, updated, {
             change: 'saved',
@@ -55,14 +66,9 @@ export function defineUpdateDefinition(capabilities: readonly Capability[], page
           }),
           updated.newVersion ? 'updated' : undefined,
         );
-        return withNotices(linked, updated.notices);
+        return withNotices(withUpdatedDefinitions(linked, updated.savedAgain), updated.notices);
       }),
-      plainLanguage: {
-        task: `update a ${words.kinds}`,
-        attempt: ({ type, name }) => `update ${words.named(type, name)}`,
-        outcome: (definition) =>
-          `Updated ${words.named(definition.type, definition.name)}.${whatItDoes(definition)} The change applies from its next run.${pageWords(definition)}`,
-      },
+      plainLanguage: updatePlainLanguage(capabilities),
     }),
   );
 }

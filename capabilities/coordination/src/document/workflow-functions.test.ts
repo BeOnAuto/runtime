@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { testPlaybookNames, testWorkflowPolicy as workflowPolicy } from '../testing/test-sandbox.ts';
 import { workflow } from '../testing/workflows.ts';
 import { workflowFunctionsOf } from './workflow-functions.ts';
-import { summaryOf } from './workflow-summary.ts';
+import { definitionsNamedIn, summaryOf } from './workflow-summary.ts';
 
 const workflowFunctions = workflowFunctionsOf(testPlaybookNames);
 
@@ -152,6 +152,47 @@ describe('the details of the summary of a workflow', () => {
       calls: [{ type: 'computation', name: 'campaign-pace', steps: [{ number: 1, name: 'pace' }] }],
     });
     expect(summaryOf(workflow('do:\n  - plain: { set: { done: true } }'))).not.toHaveProperty('details');
+  });
+});
+
+describe('the places a workflow names other definitions', () => {
+  it('are each literal name of a call of run_definition, each subject an event trigger names, and each subject a listen awaits, by pointer', () => {
+    const named = workflow(`do:
+  - first: { call: run_definition, with: { type: echo, name: greet } }
+  - chosen: { call: run_definition, with: { type: echo, name: '\${ $data.name }' } }
+  - answered:
+      listen:
+        to:
+          one: { with: { type: run_succeeded, subject: echo/greet } }
+  - either:
+      listen:
+        to:
+          any:
+            - with: { type: '\${ $data.type }', subject: echo/greet }
+            - with: { type: run_failed, subject: echo/greet }
+            - with: { type: com.acme.closed }
+  - plain: { set: { done: true } }
+schedule:
+  on:
+    any:
+      - with: { type: run_succeeded, subject: echo/greet }
+      - with: { type: com.acme.closed }
+`);
+
+    expect([
+      definitionsNamedIn(named),
+      definitionsNamedIn(workflow('do:\n  - plain: { set: { done: true } }\nschedule:\n  every: PT1H')),
+    ]).toEqual([
+      {
+        names: [{ pointer: '/do/0/first/with/name', type: 'echo', name: 'greet' }],
+        subjects: [{ pointer: '/schedule/on/any/0/with/subject', type: 'run_succeeded', subject: 'echo/greet' }],
+        awaited: [
+          { pointer: '/do/2/answered/listen/to/one/with/subject', type: 'run_succeeded', subject: 'echo/greet' },
+          { pointer: '/do/3/either/listen/to/any/1/with/subject', type: 'run_failed', subject: 'echo/greet' },
+        ],
+      },
+      { names: [], subjects: [], awaited: [] },
+    ]);
   });
 });
 

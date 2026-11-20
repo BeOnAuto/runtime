@@ -266,7 +266,7 @@ describe('an extension filling capability/prediction that a runtime refuses, so 
     [
       'built against a contract other than the release’s',
       ['@acme/forecasts', makingOnly(wholeCapability()), 1],
-      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 7',
+      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 8',
     ],
     [
       'whose implementation makes nothing',

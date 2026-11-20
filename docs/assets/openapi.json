@@ -16051,7 +16051,7 @@
                     },
                     "name": {
                       "type": "string",
-                      "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                      "description": "The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays"
                     },
                     "definition_id": {
                       "type": "string",
@@ -16635,7 +16635,7 @@
                         },
                         "name": {
                           "type": "string",
-                          "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                          "description": "The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays"
                         },
                         "definition_id": {
                           "type": "string",
@@ -17056,7 +17056,7 @@
                     },
                     "name": {
                       "type": "string",
-                      "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                      "description": "The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays"
                     },
                     "definition_id": {
                       "type": "string",
@@ -17530,7 +17530,7 @@
       "put": {
         "operationId": "update_definition",
         "summary": "Update definition",
-        "description": "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time; a workflow takes none. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing.",
+        "description": "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes or renames a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` with each `source`; a workflow takes none. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing. `new_name`, given alone, renames it instead: its versions, runs, page and schedule stay, and each definition that uses it is saved again with the new name.",
         "tags": [
           "definitions"
         ],
@@ -17571,7 +17571,7 @@
           }
         ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -17585,6 +17585,11 @@
                     "description": "The definition document in its type's format, at most 65536 bytes in UTF-8",
                     "maxLength": 65536
                   },
+                  "new_name": {
+                    "type": "string",
+                    "description": "The name to give the definition: 3 to 48 lowercase letters, digits and hyphens, starting with a letter. Give it alone; its versions, runs, page and schedule stay with it",
+                    "pattern": "^[a-z][a-z0-9-]{2,47}$"
+                  },
                   "overview": {
                     "type": "string",
                     "description": "Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs, with no diagram. Avoid invented benefits.",
@@ -17593,13 +17598,10 @@
                   },
                   "diagram": {
                     "type": "string",
-                    "description": "Required for a function, refused for a workflow: Mermaid source of a flowchart or a state diagram of how the function works, its first line flowchart, graph or stateDiagram, or the word none when a picture would add nothing",
+                    "description": "Required for a function with `source`, refused for a workflow and with `new_name`: Mermaid source of a flowchart or a state diagram of how the function works, its first line flowchart, graph or stateDiagram, or the word none when a picture would add nothing",
                     "maxLength": 8192
                   }
-                },
-                "required": [
-                  "source"
-                ]
+                }
               }
             }
           }
@@ -17632,7 +17634,7 @@
                     },
                     "name": {
                       "type": "string",
-                      "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                      "description": "The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays"
                     },
                     "definition_id": {
                       "type": "string",
@@ -18039,6 +18041,28 @@
                       },
                       "description": "The definitions of the playbook, active or paused, that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, and a lookup function that reads its runs"
                     },
+                    "updated_definitions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "The type of the definition saved again"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "The name of the definition saved again"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "On a rename, the definitions saved again with the new name, each by its `type` and `name`"
+                    },
                     "studio": {
                       "type": "string",
                       "description": "The page in Studio of what was saved"
@@ -18228,7 +18252,7 @@
                     },
                     "name": {
                       "type": "string",
-                      "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                      "description": "The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays"
                     },
                     "definition_id": {
                       "type": "string",
@@ -18893,7 +18917,7 @@
                     },
                     "name": {
                       "type": "string",
-                      "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                      "description": "The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays"
                     },
                     "definition_id": {
                       "type": "string",
@@ -19439,7 +19463,7 @@
                     },
                     "name": {
                       "type": "string",
-                      "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                      "description": "The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays"
                     },
                     "definition_id": {
                       "type": "string",
@@ -19985,7 +20009,7 @@
                     },
                     "name": {
                       "type": "string",
-                      "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                      "description": "The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays"
                     },
                     "definition_id": {
                       "type": "string",
@@ -20531,7 +20555,7 @@
                     },
                     "name": {
                       "type": "string",
-                      "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                      "description": "The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays"
                     },
                     "definition_id": {
                       "type": "string",
@@ -24537,7 +24561,7 @@
                         },
                         "name": {
                           "type": "string",
-                          "description": "The definition name, unique among definitions of its type in the playbook and never given to another, retired or not"
+                          "description": "The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays"
                         },
                         "definition_id": {
                           "type": "string",

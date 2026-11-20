@@ -10,7 +10,7 @@ import {
 } from '../testing/interaction-servers/system-calls.ts';
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { blocksInOrderOf } from '../testing/servers/tutorial-calls.ts';
-import { settledRun } from '../testing/servers/workflow-server.ts';
+import { runIdIn, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const withinItsCall =
@@ -72,6 +72,43 @@ function paced(input: Schema.Json, runId: string) {
   return server.call('POST', `${alpha}/definitions/computation/campaign-pace/run`, {
     body: { input, run_id: runId },
   });
+}
+
+const RunsAnswer = Schema.Struct({
+  output: Schema.Struct({ runs: Schema.Array(Schema.Struct({ run_id: Schema.String })) }),
+});
+
+const runsAnswered = Schema.decodeUnknownSync(RunsAnswer);
+
+function pacingWith(input: Schema.Json): string {
+  return workflowSource(
+    'pacing',
+    [
+      'do:',
+      `  - pace: { call: run_definition, with: { type: computation, name: campaign-pace, input: ${JSON.stringify(input)} } }`,
+      'page:',
+      '  data:',
+      '    language: typescript',
+      '    source:',
+      '      events:',
+      '        - type: run_succeeded',
+      '          subject: computation/campaign-pace',
+      '    views:',
+      '      paced: series',
+      '    module: |',
+      '      export function fold(view: View, event: Event): View {',
+      '        return view;',
+      '      }',
+      '  runs: |',
+      '    {{ views.paced | json }}',
+      '',
+    ].join('\n'),
+  );
+}
+
+async function ranPacing(): Promise<unknown> {
+  const started = await server.call('POST', `${alpha}/definitions/workflow/pacing/run`, { body: { input: {} } });
+  return (await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`)).body;
 }
 
 describe('a run of a lookup function whose session is gone', () => {
@@ -139,5 +176,55 @@ describe('reading runs', () => {
       expect(read.body).toMatchObject({ record: { examined: 2, through: aMoment } });
       expect(used.body).toMatchObject({ used_by: [{ type: 'lookup', name: 'pace-history', relation: 'reads' }] });
     });
+  });
+});
+describe('the runs of a function renamed with new_name, through the server', () => {
+  afterEach(async () => {
+    await server.stop();
+  });
+
+  it('are still called by the workflow and read by the lookup that use it, each saved again with the new name, and counted by its own page', async () => {
+    server = await servingReasoning([]);
+    await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+    await saved('computation', 'campaign-pace', pace);
+    await saved('lookup', 'pace-history', history);
+    await server.call('POST', `${alpha}/definitions/workflow`, {
+      body: { name: 'pacing', source: pacingWith(decodeJson(paceInput)) },
+    });
+    const before = await ranPacing();
+
+    const renamed = await server.call('PUT', `${alpha}/definitions/computation/campaign-pace`, {
+      body: { new_name: 'spend-pace' },
+    });
+    const after = await ranPacing();
+    const read = await server.call('POST', `${alpha}/definitions/lookup/pace-history/run`, {
+      body: { input: decodeJson(historyInput) },
+    });
+    const [pacing, reading] = [
+      await server.call('GET', `${alpha}/definitions/workflow/pacing`),
+      await server.call('GET', `${alpha}/definitions/lookup/pace-history`),
+    ];
+    const ownPage = await until(async () => {
+      const { body } = await server.call('GET', `${alpha}/definitions/computation/spend-pace`);
+      expect(body).toMatchObject({ page: { standing: { state: 'live', version: 2, folded: 2 } } });
+      return body;
+    });
+
+    expect(renamed).toMatchObject({
+      status: 200,
+      body: {
+        type: 'computation',
+        name: 'spend-pace',
+        version: 2,
+        used_by: [{ name: 'pace-history' }, { name: 'pacing' }],
+      },
+    });
+    expect([before, after]).toMatchObject([{ status: 'succeeded' }, { status: 'succeeded' }]);
+    expect(runsAnswered(read.body).output.runs).toHaveLength(2);
+    expect([pacing.body, reading.body]).toMatchObject([
+      { version: 2, source: pacingWith(decodeJson(paceInput)).replaceAll('campaign-pace', 'spend-pace') },
+      { version: 2, source: history.replace('campaign-pace', 'spend-pace') },
+    ]);
+    expect(ownPage).toMatchObject({ version: 2, source: pace.replace('campaign-pace', 'spend-pace') });
   });
 });

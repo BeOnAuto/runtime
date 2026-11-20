@@ -116,6 +116,7 @@ export {
   StartRefused,
   functionStartAnswered,
   startAnswered,
+  startedVersionOf,
   type FunctionStart,
   type GoalTrigger,
   type ReactionOptions,

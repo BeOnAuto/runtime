@@ -13,6 +13,7 @@ export function operationsOnDefinitions(
   capabilities: readonly Capability[],
   pages: SubjectPages,
   kept: NonNullable<Parameters<typeof defineCreateDefinition>[2]>,
+  started?: readonly string[],
 ) {
   const { goals } = kept;
   return [
@@ -20,7 +21,7 @@ export function operationsOnDefinitions(
     defineListDefinitions(capabilities, goals),
     defineGetDefinition(capabilities, pages, goals),
     ...pageRenderings(capabilities, pages, goals),
-    defineUpdateDefinition(capabilities, pages, kept),
+    defineUpdateDefinition(capabilities, pages, kept, started),
     ...standingChangesOf(capabilities, goals),
     defineRunDefinition(capabilities),
     defineGetRun(capabilities, pages),

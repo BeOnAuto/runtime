@@ -18,9 +18,13 @@ interface ServedOperation {
   readonly registration: RouteRegistration<'playbook'>;
 }
 
+function startedOf(capabilities: readonly Capability[], { facts = composedFactsOf(capabilities) }: RunReading) {
+  return storedTypesByStatus(facts.onRuns).started;
+}
+
 function movesServed(capabilities: readonly Capability[], reading: RunReading, goals: boolean) {
-  const { connections, facts = composedFactsOf(capabilities) } = reading;
-  const started = storedTypesByStatus(facts.onRuns).started;
+  const { connections } = reading;
+  const started = startedOf(capabilities, reading);
   return connections === undefined ? [] : [defineMoveDefinitions(capabilities, { goals, started, connections })];
 }
 
@@ -31,7 +35,7 @@ export function makeDefinitionOperations(
   kept: GoalsKeeping = noGoalsKept,
 ): readonly ServedOperation[] {
   return [
-    ...operationsOnDefinitions(capabilities, pages, kept),
+    ...operationsOnDefinitions(capabilities, pages, kept, startedOf(capabilities, reading)),
     ...runOperations(capabilities, reading),
     ...movesServed(capabilities, reading, kept.goals),
     ...(kept.goals ? [defineExportPlaybook(capabilities, pages)] : []),

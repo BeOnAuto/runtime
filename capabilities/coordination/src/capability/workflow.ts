@@ -13,7 +13,7 @@ import { Effect, type Schema } from 'effect';
 
 import { checkedExpressions, checkedWithoutGoals, type ExpressionCheck } from '../document/expression-check.ts';
 import { runnableDocument, workflowReaderOf, type ReadWorkflow } from '../document/workflow-document.ts';
-import { summaryOf } from '../document/workflow-summary.ts';
+import { definitionsNamedIn, summaryOf } from '../document/workflow-summary.ts';
 import { runPresenter } from '../presenting/run-presenter.ts';
 import { started, type WorkflowStarts } from '../runs/run-start.ts';
 import { guideVariablesOf } from './guide-variables.ts';
@@ -50,6 +50,7 @@ export function makeWorkflowAdapter(dependencies: WorkflowAdapterDependencies): 
       readWorkflowDocument(source, dependencies.mostDurationMs),
     check: goals ? checkedExpressions(dependencies.check) : checkedWithoutGoals(dependencies.check),
     summarize: ({ document, contributes }) => summaryOf(document, contributes),
+    definitionsNamed: ({ document }) => definitionsNamedIn(document),
     run: (read, input, run, stripped) =>
       Effect.flatMap(admittedInput(read, input, run), (admitted) =>
         started(dependencies, runnableDocument(read.document, stripped), admitted, run),

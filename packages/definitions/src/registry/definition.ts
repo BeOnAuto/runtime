@@ -36,7 +36,7 @@ const listedDefinitionFields = {
   }),
   name: Schema.String.annotate({
     description:
-      'The definition name, unique among definitions of its type in the playbook and never given to another, retired or not',
+      'The definition name, unique among the definitions of its type in the playbook, retired or not; update_definition can change it, and the id stays',
   }),
   definition_id: Schema.String.annotate({
     description: 'The id of the definition, given when it was created and never changed',

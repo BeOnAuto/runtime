@@ -25,7 +25,7 @@ interface Saving {
   readonly messages?: boolean;
 }
 
-function withTheTextsKept(content: DefinitionContent, written: WrittenDefinition) {
+export function withTheTextsKept(content: DefinitionContent, written: WrittenDefinition) {
   return Effect.map(textsWritten(written), ({ texts, inHand }) => ({
     content: { ...Struct.omit(content, textMemberNames), ...textMembersOf(texts) },
     inHand,

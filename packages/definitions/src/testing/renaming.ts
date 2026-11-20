@@ -10,7 +10,11 @@ import { Effect, Result } from 'effect';
 import { DefinitionEventSchema, type RecordedDefinitionEvent } from '../registry/definition-events.ts';
 import { definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { acmeAdmin } from './callers.ts';
-import { firstMoment, type Harness } from './harness.ts';
+import { echo } from './capabilities/echo.ts';
+import { probe } from './capabilities/probe.ts';
+import { definitionOperationsFor } from './definition-operations.ts';
+import { firstMoment, harness, type Harness } from './harness.ts';
+import { answerOf, inAlpha, operations, toAlpha, type Definitions } from './moving.ts';
 
 export interface Renamed {
   readonly type: string;
@@ -78,4 +82,40 @@ export function renamedIn(definitions: Harness, renamed: Renamed, at = firstMome
     Ledger.use((ledger) => renamedOn(ledger, { org: 'acme', playbook: 'alpha' }, renamed, at)),
     at,
   );
+}
+
+export function renaming(definitions: Definitions, asked: object) {
+  return definitions.call(operations.updateDefinition, toAlpha(acmeAdmin, asked));
+}
+
+export async function renamedWhereAWorkflowCallsIt(asked: object): Promise<Readonly<Record<string, unknown>>> {
+  const definitions = harness();
+  await inAlpha(definitions);
+  return answerOf(await renaming(definitions, asked));
+}
+
+export async function workflowsIn(
+  definitions: Definitions,
+  workflows: Readonly<Record<string, string>>,
+): Promise<void> {
+  await Promise.all(
+    Object.entries(workflows).map(([name, source]: readonly [string, string]) =>
+      definitions.call(operations.createDefinition, toAlpha(acmeAdmin, { type: 'workflow', name, source })),
+    ),
+  );
+}
+
+export async function renamedBesideADocumentThatNoLongerParses(): Promise<readonly object[]> {
+  const prober = probe();
+  const besideIt = definitionOperationsFor([echo, prober.capability]);
+  const definitions = harness();
+  const greet = { type: 'echo', name: 'greet' };
+  const plain = { type: 'probe', name: 'plain' };
+  await definitions.call(besideIt.createDefinition, toAlpha(acmeAdmin, { ...greet, source: '{"greeting":"Hello"}' }));
+  await definitions.call(besideIt.createDefinition, toAlpha(acmeAdmin, { ...plain, source: 'text' }));
+  prober.rejectEveryDocument();
+  return [
+    await definitions.call(besideIt.updateDefinition, toAlpha(acmeAdmin, { ...plain, new_name: 'other' })),
+    await definitions.call(besideIt.updateDefinition, toAlpha(acmeAdmin, { ...greet, new_name: 'salute' })),
+  ];
 }

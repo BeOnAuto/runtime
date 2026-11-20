@@ -308,7 +308,7 @@ Review this brief against the team's criteria: {{ input.brief }}
 
 - A definition has at most one page. A document saved without `page`, or with `page: {}`, has none, and the summary of a workflow or a function saved so ends with `It has no page yet; the page guide says how to give it one.`, where its 400 characters have room for it.
 - Retiring a definition retires its page with it: the page renders nowhere and its views are no longer kept.
-- A renamed definition's runs so far stay under its old name, so a page or a prediction function's data part that reads them keeps its filter on the old name, beside one on the new. [Renaming a definition](mcp.md#renaming-a-definition) gives the steps.
+- A definition renamed with `update_definition` keeps its runs, and each page and each prediction function's data part that filters on its runs is saved again with the new name.
 - The playbook's page is the same mapping, with `data` and `runs`. It has no `result`, since the playbook has no runs of its own. `update_playbook` saves it as YAML text in `page`, and `page: null` removes it. Each save is recorded as `playbook_page_saved`, which no fold sees.
 - Over MCP, `get_playbook` answers the source of the playbook's page and renders nothing; [`render_playbook_page`](#the-preview) renders it, over HTTP alone.
 - A page saved as a definition of its own, of the type `page`, is read as its subject's page, in the form of a `page` mapping, without the `of` line that named the subject. It counts only while the subject's document has no `page` key. For the playbook, a save or removal through `update_playbook`, `null` included, replaces it.

@@ -51,13 +51,13 @@ export function loadStartedRun(id: string) {
   return Effect.map(loadRunStream(id), (recorded) => ({ recorded, run: startedRunOf(recorded) }));
 }
 
-function placeToRecord(id: string, command: RunStart | RunFinish) {
-  return command.type === 'start' ? placeToStart(id, command.definition_type, command.name) : placeOfRun(id);
-}
-
-export const recordRun = Effect.fnUntraced(function* (id: string, command: RunStart | RunFinish, lineage: Lineage) {
+const recordedAt = Effect.fnUntraced(function* (
+  place: RunPlace,
+  id: string,
+  command: RunStart | RunFinish,
+  lineage: Lineage,
+) {
   const metadata = yield* commandMetadata;
-  const place = yield* placeToRecord(id, command);
   const { state, version } = yield* (yield* writerAt(place)).execute(
     runStreamNameOf(id),
     runDecider,
@@ -72,6 +72,14 @@ export const recordRun = Effect.fnUntraced(function* (id: string, command: RunSt
     modelCallsBefore: lastModelCallOf(recorded),
   };
 });
+
+export function recordRun(id: string, command: RunFinish, lineage: Lineage) {
+  return Effect.flatMap(placeOfRun(id), (place) => recordedAt(place, id, command, lineage));
+}
+
+export function recordStart(id: string, start: RunStart, definition: string, lineage: Lineage) {
+  return Effect.flatMap(placeToStart(id, definition), (place) => recordedAt(place, id, start, lineage));
+}
 
 export const answerAfterAnother = Effect.fnUntraced(function* (id: string) {
   const answer = yield* runAnswered(id, yield* loadRunStream(id));

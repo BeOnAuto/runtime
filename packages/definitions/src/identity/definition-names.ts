@@ -14,6 +14,7 @@ import { takenWords } from '../moving/move-words.ts';
 import { definitionFactOf } from '../read-model/definition-rows.ts';
 import { definitionFactTypes, type RecordedDefinitionEvent } from '../registry/definition-events.ts';
 import { hasTriggers } from '../registry/definition-triggers.ts';
+import { takenByARetiredOne } from '../renaming/rename-words.ts';
 
 export const mostReactingDefinitions = 1024;
 
@@ -114,27 +115,38 @@ function playbookMovedInto(
   return factTypes.includes(moved) ? playbookOfStreamPrefix(playbookKey) : Option.none();
 }
 
-function takenWhere(claimed: DefinitionName, holder: DefinitionName, factTypes: readonly string[]): string {
-  const label = definitionResourceLabel(claimed.definitionType);
+function renamedFrom(changedBy: readonly NamedMessage[]): string | undefined {
+  const facts = changedBy.map((message) => definitionFactOf(message));
+  return facts.find((fact) => fact?.type === 'definition_renamed')?.data.from;
+}
+
+function takenByTheRetired(held: { readonly type: string; readonly name: string }, changedBy: readonly NamedMessage[]) {
+  const from = renamedFrom(changedBy);
+  return from === undefined
+    ? `The ${definitionResourceLabel(held.type)} ${held.name} was retired and keeps its name; restore_definition brings it back`
+    : takenByARetiredOne(held, from);
+}
+
+function takenWhere(claimed: DefinitionName, holder: DefinitionName, changedBy: readonly NamedMessage[]): string {
+  const held = { type: claimed.definitionType, name: holder.name };
   const retired = holder.status === 'retired';
-  return Option.match(playbookMovedInto(claimed, factTypes), {
-    onNone: () =>
-      retired
-        ? `The ${label} ${holder.name} was retired and keeps its name; restore_definition brings it back`
-        : `The playbook already has the ${label} ${holder.name}`,
-    onSome: ({ playbook }) => takenWords(playbook, { type: claimed.definitionType, name: holder.name }, retired),
-  });
+  return Option.match(
+    playbookMovedInto(
+      claimed,
+      changedBy.map(({ type }) => type),
+    ),
+    {
+      onNone: () =>
+        retired
+          ? takenByTheRetired(held, changedBy)
+          : `The playbook already has the ${definitionResourceLabel(held.type)} ${held.name}`,
+      onSome: ({ playbook }) => takenWords(playbook, held, retired),
+    },
+  );
 }
 
 function takenBy(claimed: DefinitionName, holder: DefinitionName, changedBy: readonly NamedMessage[]): Conflict {
-  return new Conflict({
-    detail: takenWhere(
-      claimed,
-      holder,
-      changedBy.map(({ type }) => type),
-    ),
-    kind: 'taken',
-  });
+  return new Conflict({ detail: takenWhere(claimed, holder, changedBy), kind: 'taken' });
 }
 
 const checkedBy = ['definition_created', 'definition_updated', 'definition_restored', moved];
