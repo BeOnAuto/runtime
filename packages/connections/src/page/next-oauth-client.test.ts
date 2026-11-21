@@ -1,5 +1,5 @@
 import { keptTokensIn, type SecretReadingFailure } from '@on.auto/tool-servers';
-import { admitted, consentedAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { admitted, consentedAt, inProcessFetch, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Redacted, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -26,7 +26,7 @@ afterEach(async () => {
 const RegisteredSchema = Schema.Struct({ client_id: Schema.String, client_secret: Schema.String });
 
 async function anAppRegisteredAt(fake: FakeMcpServer) {
-  const answer = await fetch(`${fake.origin}/register`, {
+  const answer = await inProcessFetch(`${fake.origin}/register`, {
     method: 'POST',
     body: JSON.stringify({ redirect_uris: [studioReturn] }),
   });
@@ -46,7 +46,7 @@ function tokensKeptIn(h: Harness, secretId: string) {
 }
 
 async function connectedUnderTheOrgsOAuthClient(): Promise<Connected> {
-  const fake = await orgsOAuthClientFake({ dynamicRegistration: true });
+  const fake = orgsOAuthClientFake({ dynamicRegistration: true });
   closing.push(fake.close);
   const h = consentHarnessAt(fake);
   const link = await added(h, underTheOrgsOAuthClient);

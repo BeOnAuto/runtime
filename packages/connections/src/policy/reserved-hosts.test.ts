@@ -123,7 +123,7 @@ describe('a server of a connection on a local runtime', () => {
   it('is taken where the operator names its host, exactly or under a *. pattern', async () => {
     const exact = harness({
       ...answering,
-      policy: connectionPolicyOf({ allowed_hosts: ['10.1.2.3', '127.0.0.1', '[::1]'] }),
+      policy: connectionPolicyOf({ allowed_hosts: ['10.1.2.3', '127.0.0.1', '*.in-process.test', '[::1]'] }),
     });
     const under = harness({
       ...answering,

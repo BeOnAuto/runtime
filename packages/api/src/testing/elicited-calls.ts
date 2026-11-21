@@ -1,6 +1,7 @@
 import { Client, StreamableHTTPClientTransport, type ClientCapabilities } from '@modelcontextprotocol/client';
 import { Effect, Schema } from 'effect';
 
+import { fetchInProcess } from './in-process.ts';
 import { toolResultOf, type McpConnection, type ToolResult } from './mcp-clients.ts';
 
 interface ToolCall {
@@ -32,7 +33,12 @@ function negotiatedIn(revision: LinkOpening['revision']) {
 
 async function answeredBy(made: () => Client, { url, headers }: McpConnection, call: ToolCall): Promise<ToolResult> {
   const client = made();
-  await client.connect(new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: { ...headers } } }));
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(url), {
+      requestInit: { headers: { ...headers } },
+      fetch: fetchInProcess,
+    }),
+  );
   try {
     return toolResultOf(await client.callTool({ name: call.name, arguments: { ...call.arguments } }));
   } finally {
@@ -119,7 +125,12 @@ async function linkOpenerOn({ url, headers }: McpConnection, rounds: number): Pr
       inputRequired: { maxRounds: rounds },
     },
   );
-  await client.connect(new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: { ...headers } } }));
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(url), {
+      requestInit: { headers: { ...headers } },
+      fetch: fetchInProcess,
+    }),
+  );
   return client;
 }
 

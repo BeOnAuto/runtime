@@ -1,5 +1,3 @@
-import { setTimeout as delay } from 'node:timers/promises';
-
 import { Effect } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
@@ -56,14 +54,19 @@ describe('the list of a provider', () => {
   });
 
   it('is read once for calls that arrive while it is being read', async () => {
-    const catalog = await catalogFor(anthropic, async () => {
-      await delay(20);
-      return jsonResponse(anthropicModels);
+    const asked = Promise.withResolvers<void>();
+    const answering = Promise.withResolvers<Response>();
+    const catalog = await catalogFor(anthropic, () => {
+      asked.resolve();
+      return answering.promise;
     });
 
-    const lists = await Effect.runPromise(
+    const listing = Effect.runPromise(
       Effect.all([listOf(catalog), listOf(catalog), listOf(catalog)], { concurrency: 'unbounded' }),
     );
+    await asked.promise;
+    answering.resolve(jsonResponse(anthropicModels));
+    const lists = await listing;
 
     expect(catalog.requests()).toHaveLength(1);
     expect(lists.map((list) => idsIn(list).length)).toEqual([3, 3, 3]);

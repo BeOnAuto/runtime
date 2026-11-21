@@ -3,7 +3,7 @@ import { Effect, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { calledAnsweringForms, type FormAnswering } from '../testing/elicited-calls.ts';
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { problemIn } from '../testing/mcp-clients.ts';
 import { acmeAdmin, operationServer, type OperationServer } from '../testing/operation-server.ts';
 
@@ -49,7 +49,7 @@ let listening: Listening;
 
 beforeAll(async () => {
   server = await operationServer({ operations: [saveNote] });
-  listening = await listenOnLoopback(server.handler);
+  listening = listenInProcess(server.handler);
 });
 
 afterAll(async () => {

@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { routeTableOf } from '../operations/route-table.ts';
 import { httpAloneOperations } from '../testing/http-alone-operations.ts';
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
+import { fetchInProcess, listenInProcess, type Listening } from '../testing/listening.ts';
 import { withMcpSession } from '../testing/mcp-clients.ts';
 import { listNotesOfTheOrg, notebookOperations } from '../testing/notebook.ts';
 import { operationsIn, type DocumentedOperation } from '../testing/openapi/openapi-document.ts';
@@ -29,8 +29,8 @@ function listingOn(path: string): Promise<readonly ListedTool[]> {
 
 beforeAll(async () => {
   server = await operationServer({ operations });
-  listening = await listenOnLoopback(server.handler);
-  const document: unknown = await (await fetch(`${listening.origin}/v1/openapi.json`)).json();
+  listening = listenInProcess(server.handler);
+  const document: unknown = await (await fetchInProcess(`${listening.origin}/v1/openapi.json`)).json();
   documented = operationsIn(document);
   tools = {
     org: await listingOn('/orgs/acme/mcp'),

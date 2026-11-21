@@ -34,7 +34,7 @@ interface Connected extends ReportingAccess {
 type Files = (fake: ServedUnderTest) => Readonly<Record<string, unknown>>;
 
 async function connectedTo(underTest: ServerUnderTest, files: Files = () => ({})): Promise<Connected> {
-  const fake = await underTest.serve();
+  const fake = underTest.serve();
   onTestFinished(fake.close);
   const connections = fakeConnections();
   connections.connect('acme', { id: behaviourConnection, name: 'graph', entry: fake.entry, environment });

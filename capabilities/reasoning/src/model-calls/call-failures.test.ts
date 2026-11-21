@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { openAiResponse } from '../provider-testing/provider-replies.ts';
 import {
   abortedWith,
+  answeredPastTheDeadline,
   connectionFailure,
   jsonResponse,
   recordingFetch,
@@ -70,7 +71,7 @@ describe('a call that cannot reach the provider', () => {
 
 describe('a call that is stopped', () => {
   it('fails as timed_out when the provider does not answer in time', async () => {
-    const { failure } = await openAiFailure(({ signal }) => abortedWith(signal));
+    const { failure } = await openAiFailure(({ signal }) => answeredPastTheDeadline(signal));
 
     expect(failure).toMatchObject({ _tag: 'timed_out', provider: 'openai', timeout_ms: 50 });
   });

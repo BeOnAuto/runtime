@@ -2,6 +2,7 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import { Function } from 'effect';
 
 import { hearingFetch } from '../index.ts';
+import { fetchInProcess } from './in-process.ts';
 
 export interface AnswersHeard {
   readonly fetch: FetchLike;
@@ -30,7 +31,7 @@ export function answersHeard(): AnswersHeard {
       told();
       return promise;
     },
-    fetch: hearingFetch(fetch, () => ({
+    fetch: hearingFetch(fetchInProcess, () => ({
       piece: (piece) => {
         said.text += decoder.decode(piece, { stream: true });
         told();

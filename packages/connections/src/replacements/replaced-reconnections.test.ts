@@ -46,7 +46,7 @@ const kept = { playbooks: ['sales'], allowed: ['who_am_i'], record_content: fals
 
 describe('a connection whose provider another provider replaces, reconnected', () => {
   it('is removed and added again from the provider that replaces it, under the same name and for the same playbooks, its credential forgotten and its tokens revoked, in one decision', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const { h, after } = replacing;
     const old = await connectedFiles(replacing, { entry: kept });
     const before = (await h.facts()).length;
@@ -68,7 +68,7 @@ describe('a connection whose provider another provider replaces, reconnected', (
   });
 
   it('then connects through the provider that replaces it, as any connection of that provider does', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const { h, after, gateway } = replacing;
     const old = await connectedFiles(replacing);
     const moved = linkOf(await reconnecting(h, after, { id: old.id }));
@@ -82,7 +82,7 @@ describe('a connection whose provider another provider replaces, reconnected', (
 describe('a connection whose provider another provider replaces, added again', () => {
   it('carries the values of the placeholders the provider that replaces it declares, and no other', async () => {
     const placeholder = { description: 'The team.', pattern: '^[a-z]+$', example: 'eu', required: false };
-    const replacing = await replacingFiles({
+    const replacing = replacingFiles({
       files: {
         headers: { 'X-Team': '{team}', 'X-Region': '{region}' },
         placeholders: { team: placeholder, region: placeholder },
@@ -98,7 +98,7 @@ describe('a connection whose provider another provider replaces, added again', (
   });
 
   it('is refused to anyone but the person who added it, before anything is revoked or recorded', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const { h, after } = replacing;
     const old = await connectedFiles(replacing);
     const before = await h.facts();
@@ -113,7 +113,7 @@ describe('a connection whose provider another provider replaces, added again', (
   });
 
   it('is refused once removed, as any removed connection is', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const { h, after } = replacing;
     const { id } = await added(h, { provider: 'files' });
     await h.call(operationNamed(h.operations, 'remove_connection'), ada, { id });
@@ -127,7 +127,7 @@ describe('a connection whose provider another provider replaces, added again', (
 
 describe('the words of a connection added again from the provider that replaces its own', () => {
   it('ask the group of more it is given of the provider that replaces it, and say what happened', async () => {
-    const { h, after } = await replacingFilesBySignIn();
+    const { h, after } = replacingFilesBySignIn();
     const old = await connectedFiles({ h });
     const input = { id: old.id, more: 'share' };
 
@@ -140,7 +140,7 @@ describe('the words of a connection added again from the provider that replaces 
   });
 
   it('say that it was added again, where it was given no group of more', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const old = await connectedFiles(replacing);
     const input = { id: old.id };
 

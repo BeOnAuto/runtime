@@ -11,7 +11,7 @@ import { Effect, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { call } from '../testing/api-calls.ts';
-import { type Listening, listenOnLoopback } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { withMcpSession } from '../testing/mcp-clients.ts';
 import { addNote, getNote, latestNote, notebookOperationsAnnouncingWaits } from '../testing/notebook.ts';
 import { acmeAdmin, operationServer, type OperationServer } from '../testing/operation-server.ts';
@@ -324,7 +324,7 @@ describe('calls arrive through their credential', () => {
       operations: [keepNote, readNote],
       dispatcherOptions: { decidedBy: allowingEveryCall },
     });
-    listening = await listenOnLoopback(server.handler);
+    listening = listenInProcess(server.handler);
   });
 
   afterAll(async () => {

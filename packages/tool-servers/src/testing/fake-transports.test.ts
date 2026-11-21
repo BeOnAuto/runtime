@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { accessTo, apiKey, called, keyed } from '../api-testing/api-calls.ts';
+import { accessTo, apiKey, called, clientSecret, keyed } from '../api-testing/api-calls.ts';
 import { handedOverAt } from '../consent-testing/gateway-asking.ts';
 import {
   connectedThroughAuto,
@@ -9,6 +9,7 @@ import {
   fakeMcpInProcess,
   throughAutoInProcess,
   type AccessOptions,
+  type FakeApiOptions,
   type ThroughAuto,
 } from './index.ts';
 import { calledOnce, echoCall, oneCallAccess, oneCallKey } from './one-calls.ts';
@@ -29,12 +30,14 @@ const inProcessAccess: Pick<AccessOptions, 'fetch'> = {};
 
 const platformAccess: Pick<AccessOptions, 'fetch'> = { fetch: null };
 
+const keyedApi: FakeApiOptions = { key: apiKey };
+
 const forms = [
   {
     form: 'in process',
     accessing: inProcessAccess,
     mcp: () => Promise.resolve(fakeMcpInProcess({ bearer: oneCallKey })),
-    api: () => Promise.resolve(fakeApiInProcess({ key: apiKey })),
+    api: (options: FakeApiOptions = keyedApi) => Promise.resolve(fakeApiInProcess(options)),
     consents: (): Promise<ThroughAuto> => Promise.resolve(throughAutoInProcess()),
     gateway: () => Promise.resolve(fakeGatewayInProcess()),
   },
@@ -42,7 +45,7 @@ const forms = [
     form: 'over a loopback socket, through the platform’s own fetch',
     accessing: platformAccess,
     mcp: () => serveFakeMcp({ bearer: oneCallKey }),
-    api: () => serveFakeApi({ key: apiKey }),
+    api: (options: FakeApiOptions = keyedApi) => serveFakeApi(options),
     consents: () => servedThroughAuto(),
     gateway: () => serveFakeGateway(),
   },
@@ -69,6 +72,17 @@ describe.each(forms)('the fakes served $form, as the runtime reaches them', ({ a
       outcome: 'result',
     });
     expect(fake.received()).toEqual([]);
+  });
+
+  it('an HTTP API of client credentials answers a call made with a token its own issuer gave', async () => {
+    const fake = kept(await api({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } }));
+    const issuer = String(fake.issuing?.issuer);
+    const auth = { issuer, client_id: 'playbook', client_secret: '${GRAPH_CLIENT_SECRET}' };
+
+    expect(
+      await called(await accessTo({ document: fake.documentUrl, auth }, accessing), 'rows', { tag: ['open'] }),
+    ).toMatchObject({ kind: 'answered', outcome: 'result' });
+    expect(fake.issuing?.tokenRequests()).toBe(1);
   });
 
   it('an HTTP API answers the document the runtime reads and the operation it calls', async () => {

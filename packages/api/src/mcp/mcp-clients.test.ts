@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { instructionsActingAs, type RegisterRoutes } from '../index.ts';
 import { createTestHandler } from '../testing/api-calls.ts';
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import {
   expectedProtocolVersion,
   mcpClientKinds,
@@ -50,8 +50,8 @@ let advertising: Listening;
 
 beforeAll(async () => {
   server = await operationServer();
-  listening = await listenOnLoopback(server.handler);
-  advertising = await listenOnLoopback(createTestHandler({ routes: [advertisingAnOutputSchema] }).handler);
+  listening = listenInProcess(server.handler);
+  advertising = listenInProcess(createTestHandler({ routes: [advertisingAnOutputSchema] }).handler);
 });
 
 afterAll(async () => {

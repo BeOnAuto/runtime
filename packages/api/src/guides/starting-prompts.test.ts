@@ -7,7 +7,7 @@ import {
   servedWithEverythingAndGoals,
   servedWithEverythingAndGoalsUntold,
 } from '../testing/guide-shelves.ts';
-import { type Listening, listenOnLoopback } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { type McpClientKind, mcpClientKinds, type McpSession, withMcpSession } from '../testing/mcp-clients.ts';
 import { notebookOperations } from '../testing/notebook.ts';
 import { acmeAdmin, acmeReader, operationServer, type OperationServer } from '../testing/operation-server.ts';
@@ -154,7 +154,7 @@ async function servedWith(tools: readonly string[]): Promise<Served> {
   const server = await operationServer({
     operations: [...notebookOperations, ...tools.map((name) => commandNamed(name))],
   });
-  return { server, listening: await listenOnLoopback(server.handler) };
+  return { server, listening: listenInProcess(server.handler) };
 }
 
 beforeAll(async () => {

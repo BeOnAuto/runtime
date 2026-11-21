@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { call } from '../testing/api-calls.ts';
 import { findNotes } from '../testing/found-notes.ts';
-import { type Listening, listenOnLoopback } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { withMcpSession } from '../testing/mcp-clients.ts';
 import { notebookOperations } from '../testing/notebook.ts';
 import { acmeAdmin, acmeReader, operationServer, type OperationServer } from '../testing/operation-server.ts';
@@ -37,7 +37,7 @@ beforeAll(async () => {
     operations: [...notebookOperations, nameTheInvocation],
     callContext: (request) => Context.make(Invocation, request.headers.get('x-invocation') ?? 'unnamed'),
   });
-  listening = await listenOnLoopback(server.handler);
+  listening = listenInProcess(server.handler);
 });
 
 afterAll(async () => {

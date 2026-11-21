@@ -8,7 +8,7 @@ import { apiShippedRoots } from '../index.ts';
 import { recipesFollowedWith } from '../mcp/instructions.ts';
 import { servedWithCards, servedWithInteraction } from '../testing/guide-shelves.ts';
 import { testGuides, testRecipes, testShelf, testShelfWithGoals } from '../testing/guides.ts';
-import { type Listening, listenOnLoopback } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import {
   mcpClientKinds,
   type McpSession,
@@ -73,7 +73,7 @@ function page(path: string): string {
 describe('guides', () => {
   beforeAll(async () => {
     server = await operationServer();
-    listening = await listenOnLoopback(server.handler);
+    listening = listenInProcess(server.handler);
   });
 
   afterAll(async () => {

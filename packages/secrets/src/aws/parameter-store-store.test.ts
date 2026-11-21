@@ -2,14 +2,14 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
-import { serveFakeParameterStore } from '../fakes/fake-parameter-store.ts';
+import { fakeParameterStoreInProcess } from '../fakes/fake-parameter-store.ts';
 import type { TestKeepers } from '../fakes/memory-keeper.ts';
 import type { Holding } from '../rows/secret-rows.ts';
 import { keeperBehaviour } from '../testing/keeper-behaviour.ts';
 import { inMemoryEntry } from '../testing/secrets-entry.ts';
 import { parameterStoreKeeper } from './parameter-store-keeper.ts';
 
-const fake = await serveFakeParameterStore();
+const fake = fakeParameterStoreInProcess();
 
 afterAll(fake.close);
 
@@ -34,6 +34,7 @@ const onTheFake: TestKeepers = {
         proxy: { enabled: false, environment: {} },
         credentials: { accessKeyId: 'an-access-key', secretAccessKey: 'a-secret-access-key' },
         endpoint: fake.url,
+        requestHandlerOf: fake.requestHandlerOf,
       }),
     ),
   valueIn: (holding) => {

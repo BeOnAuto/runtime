@@ -64,7 +64,7 @@ export async function settledCall(
   policy: CallPolicy,
 ): Promise<SettledCall> {
   const calledAt = Date.now();
-  const deadline = deadlineOf(request);
+  const deadline = deadlineOf(request, policy.deadlineAfter);
   const signal = AbortSignal.any([interruption, ...Arr.fromNullishOr(deadline?.signal)]);
   const attempting = { request, signal, calledAt, policy, stopped: () => stoppedFailure(target.provider, deadline) };
   try {

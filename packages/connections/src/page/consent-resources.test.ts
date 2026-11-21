@@ -18,8 +18,8 @@ const declaredOrigin = 'https://api.tracker.example.com';
 
 const later = '2026-10-15T14:05:00.000Z';
 
-async function served(): Promise<FakeMcpServer> {
-  const fake = await consentFake();
+function served(): FakeMcpServer {
+  const fake = consentFake();
   closing.push(fake.close);
   return fake;
 }
@@ -49,7 +49,7 @@ async function signedIn(h: Harness, link: Added, operations = h.operations, at?:
 
 describe('the resources a sign-in asks for', () => {
   it("are its server's, then the origin its provider's requests are written out to, which its tokens record", async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake, { providers: declaringARequest(fake) });
 
     expect(await signedIn(h, await added(h, { provider: 'files' }))).toEqual({
@@ -60,7 +60,7 @@ describe('the resources a sign-in asks for', () => {
   });
 
   it("are its server's alone for a provider that declares no request, and are asked again by a reconnection once it declares one", async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await added(h, { provider: 'files' });
     const before = await signedIn(h, link);

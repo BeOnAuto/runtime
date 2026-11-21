@@ -2,6 +2,7 @@ import type { ProxySettings } from '@on.auto/outbound';
 import type { Telemetry } from 'ai';
 import type { Effect } from 'effect';
 
+import type { DeadlineAfter } from '../model-calls/stopped-call.ts';
 import type { CredentialSources } from './credential-sources.ts';
 import type { EntraIdentityLoader } from './entra-id.ts';
 import type { Fetch } from './sdk-model.ts';
@@ -39,4 +40,5 @@ export interface ModelAccessOptions {
   readonly reportOperatorHint?: ReportOperatorHint;
   readonly scrubProviderText?: (text: string) => string;
   readonly telemetry?: ModelTelemetry | undefined;
+  readonly deadlineAfter?: DeadlineAfter | undefined;
 }

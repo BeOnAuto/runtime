@@ -7,7 +7,7 @@ import { readDebugStyle, type DebugStyle } from '../debug/debug-style.ts';
 import { apiShippedRoots } from '../shipped-files/api-roots.ts';
 import { debugCatalog, debugOperations, directoryShelf } from './debug-operations.ts';
 import { testShelf } from './guides.ts';
-import { listenOnLoopback, type Listening } from './listening.ts';
+import { listenInProcess, type Listening } from './listening.ts';
 import { operationServer, testServerInfo, type OperationServer } from './operation-server.ts';
 
 interface Fetched {
@@ -44,7 +44,7 @@ export function debugStyleOnDisk(): Promise<DebugStyle> {
 export async function debugPageServer(): Promise<DebugPageServer> {
   const debug = debugRoutes(debugServing, await debugStyleOnDisk());
   const server = await operationServer({ operations: debugOperations, routes: [debug] });
-  const listening = await listenOnLoopback(server.handler);
+  const listening = listenInProcess(server.handler);
   const fetched = fetcherOf(server);
   return {
     listening,

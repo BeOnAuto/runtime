@@ -5,7 +5,12 @@ import { describe, expect, it } from 'vitest';
 import { describingGateway, gatewayModel, usageOfOneAnswer } from '../provider-testing/answers-in-turn.ts';
 import { generatedText, mockGeneration } from '../provider-testing/mock-models.ts';
 import { chatCompletion, openAiResponse } from '../provider-testing/provider-replies.ts';
-import { abortedWith, jsonResponse, recordingFetch, type Responder } from '../provider-testing/recording-fetch.ts';
+import {
+  answeredPastTheDeadline,
+  jsonResponse,
+  recordingFetch,
+  type Responder,
+} from '../provider-testing/recording-fetch.ts';
 import { accessFor, failed, jsonRequest, promptText, succeeded, textRequest } from '../testing/adapter-harness.ts';
 import { exposedText } from '../testing/exposure.ts';
 
@@ -23,7 +28,7 @@ function wrongThen(second: Responder) {
 
 const serverError: Responder = () => jsonResponse({ error: { message: 'down' } }, 500);
 
-const pastTheDeadline: Responder = ({ signal }) => abortedWith(signal);
+const pastTheDeadline: Responder = ({ signal }) => answeredPastTheDeadline(signal);
 
 function answeringThenThrowing(text: string, error: Readonly<Error>): MockLanguageModelV4 {
   const calls = { made: 0 };

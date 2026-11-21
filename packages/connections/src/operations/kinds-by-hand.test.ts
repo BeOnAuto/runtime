@@ -1,5 +1,5 @@
-import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { failingAt, hostOf, type ClientRegistration } from '@on.auto/tool-servers/testing';
+import type { FakeMcpOptions, FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { failingAt, fakeMcpInProcess, hostOf, type ClientRegistration } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -16,14 +16,14 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function consenting(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await consentFake(changes);
+function consenting(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = consentFake(changes);
   closing.push(fake.close);
   return fake;
 }
 
-async function serving(options: FakeMcpOptions = {}): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp(options);
+function serving(options: FakeMcpOptions = {}): FakeMcpServer {
+  const fake = fakeMcpInProcess(options);
   closing.push(fake.close);
   return fake;
 }
@@ -61,7 +61,7 @@ function namesNoWayAt({ url }: FakeMcpServer) {
 
 describe('an MCP server given by hand that names its authorization server', () => {
   it('is added with the way it names, the same record whether its credential is left out or of the kind authorization', async () => {
-    const fake = await consenting(signingIn);
+    const fake = consenting(signingIn);
     const h = harnessByHand();
     const credential = { kind: 'authorization', issuer: fake.origin, clients: ['dynamic'], scope: 'files.read' };
 
@@ -78,7 +78,7 @@ describe('an MCP server given by hand that names its authorization server', () =
   });
 
   it('refuses a secret or none at the kind, naming the authorization server and saying to leave the credential out, after asking the server once and recording nothing', async () => {
-    const fake = await consenting(signingIn);
+    const fake = consenting(signingIn);
     const h = harnessByHand();
 
     expect([
@@ -92,7 +92,7 @@ describe('an MCP server given by hand that names its authorization server', () =
 
 describe('the other kinds given for an MCP server given by hand that names its authorization server', () => {
   it('take client credentials as they are given, since they take their token from an authorization server too', async () => {
-    const fake = await consenting(signingIn);
+    const fake = consenting(signingIn);
     const credential = { kind: 'client_credentials', issuer: fake.origin, client_id: 'files' };
 
     expect(await adding(harnessByHand(), givenAt(fake, credential))).toMatchObject({
@@ -102,8 +102,8 @@ describe('the other kinds given for an MCP server given by hand that names its a
   });
 
   it('refuse a secret in the words of consent where the runtime cannot take the way the server names', async () => {
-    const closed = await consenting();
-    const malformed = await consenting({ dynamicRegistration: true, protectedScopes: ['files.read', ''] });
+    const closed = consenting();
+    const malformed = consenting({ dynamicRegistration: true, protectedScopes: ['files.read', ''] });
     const h = harnessByHand();
 
     expect([
@@ -122,9 +122,9 @@ describe('the other kinds given for an MCP server given by hand that names its a
 
 describe('an MCP server given by hand that names no way of its own', () => {
   it('keeps the kind given, where it asks no token, answers with a challenge that names no metadata and a client error at its well-known paths, or names the metadata of another resource', async () => {
-    const open = await serving();
-    const bare = await serving({ bearer: 'files-token' });
-    const elsewhere = await consenting({ protectedResource: 'https://elsewhere.example.com/mcp' });
+    const open = serving();
+    const bare = serving({ bearer: 'files-token' });
+    const elsewhere = consenting({ protectedResource: 'https://elsewhere.example.com/mcp' });
     const h = harnessByHand();
 
     expect([
@@ -140,8 +140,8 @@ describe('an MCP server given by hand that names no way of its own', () => {
   });
 
   it('refuses a credential left out at the credential, in words that say to say how it takes one', async () => {
-    const open = await serving();
-    const bare = await serving({ bearer: 'files-token' });
+    const open = serving();
+    const bare = serving({ bearer: 'files-token' });
     const h = harnessByHand();
 
     expect([issuesIn(await adding(h, leftOutAt(open))), issuesIn(await adding(h, leftOutAt(bare)))]).toEqual([
@@ -152,7 +152,7 @@ describe('an MCP server given by hand that names no way of its own', () => {
   });
 
   it('refuses a credential left out at the kind, in the words of consent, where its metadata is another resource’s', async () => {
-    const elsewhere = await consenting({ protectedResource: 'https://elsewhere.example.com/mcp' });
+    const elsewhere = consenting({ protectedResource: 'https://elsewhere.example.com/mcp' });
 
     expect(issuesIn(await adding(harnessByHand(), leftOutAt(elsewhere)))).toEqual(
       refusedKind(
@@ -164,11 +164,11 @@ describe('an MCP server given by hand that names no way of its own', () => {
 
 describe('an MCP server given by hand that does not answer how it authenticates', () => {
   it('is unavailable whatever the kind given, recording nothing', async () => {
-    const silent = await serving();
+    const silent = serving();
     silent.holdNextOf('ping');
     silent.holdNextOf('ping');
     silent.holdNextOf('ping');
-    const h = harnessByHand({ consenting: { requestMs: 50 } });
+    const h = harnessByHand({ consenting: { requestMs: 50, requestTimeout: () => AbortSignal.abort() } });
     const unavailable = {
       status: 'rejected',
       reason: 'unavailable',
@@ -184,8 +184,8 @@ describe('an MCP server given by hand that does not answer how it authenticates'
   });
 
   it('is unavailable whatever the kind given, where its well-known paths answer a server error, whether its challenge names its metadata or none', async () => {
-    const naming = await consenting(signingIn);
-    const bare = await serving({ bearer: 'files-token' });
+    const naming = consenting(signingIn);
+    const bare = serving({ bearer: 'files-token' });
     const h = harnessByHand({ consenting: { fetch: failingAt('/.well-known/oauth-protected-resource/mcp') } });
 
     expect([
@@ -225,9 +225,9 @@ describe('an MCP server given by hand on a host the rules refuse once it is aske
 
 describe('the rules over a credential left out', () => {
   it('judge it as the kind authorization, the one kind it is recorded as, before the server is asked anything', async () => {
-    const fake = await consenting(signingIn);
+    const fake = consenting(signingIn);
     const h = harnessByHand({
-      policy: connectionPolicyOf({ allowed_hosts: ['127.0.0.1'], credential_kinds: ['secret'] }),
+      policy: connectionPolicyOf({ allowed_hosts: ['127.0.0.1', '*.in-process.test'], credential_kinds: ['secret'] }),
     });
 
     expect(await adding(h, leftOutAt(fake))).toEqual({

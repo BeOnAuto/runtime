@@ -13,7 +13,7 @@ const anyWords: unknown = expect.any(String);
 
 const askingWho = { server: 'messages', tool: 'who_am_i', arguments: {} };
 
-const onTheLoopback = connectionPolicyOf({ allowed_hosts: ['127.0.0.1'] });
+const onTheLoopback = connectionPolicyOf({ allowed_hosts: ['127.0.0.1', '*.in-process.test'] });
 
 async function refusalOf(source: ReturnType<typeof sourceOver>, id: string): Promise<ConnectionUnready> {
   const { state } = await servedAs(source, id);
@@ -22,7 +22,7 @@ async function refusalOf(source: ReturnType<typeof sourceOver>, id: string): Pro
 
 describe('a call of a connection made through its gateway', () => {
   it('carries the connection’s key under the security scheme the document names, and no other credential', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     await connectedThrough(h, gateway);
     const [key = ''] = gateway.keys();
@@ -37,7 +37,7 @@ describe('a call of a connection made through its gateway', () => {
   });
 
   it('carries the key in whatever header the document’s scheme names, which the runtime itself never names', async () => {
-    const gateway = await gatewayServed({ keyHeader: 'X-Relay-Key' });
+    const gateway = gatewayServed({ keyHeader: 'X-Relay-Key' });
     const h = gatewayHarnessAt(gateway);
     await connectedThrough(h, gateway);
     const tools = await toolsThrough(h, askingThrough(), { providers: providersThrough(gateway) });
@@ -53,7 +53,7 @@ describe('a call of a connection made through its gateway', () => {
 
 describe('a connection made through its gateway whose key the gateway no longer takes', () => {
   it('is broken as one whose access ended', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     gateway.answering('call', 401, { error: 'invalid_token' });
@@ -76,7 +76,7 @@ describe('a connection made through its gateway whose key the gateway no longer 
 
 describe('a connection given by hand at the address of a gateway', () => {
   it('is refused when it is used, naming the provider that connects through it', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = harness({ policy: onTheLoopback });
     const { id, token } = await added(h, {
       name: 'relay',

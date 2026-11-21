@@ -39,8 +39,12 @@ function concretePathOf(path: string): string {
 }
 
 async function policiesAt(handler: ApiHandler, { method, path }: Asked): Promise<Policies> {
-  const signal = AbortSignal.timeout(500);
-  const answer = await handler.fetch(new Request(`http://localhost${path}`, { method, headers: asAdmin, signal }));
+  const leaving = new AbortController();
+  const answering = handler.fetch(
+    new Request(`http://localhost${path}`, { method, headers: asAdmin, signal: leaving.signal }),
+  );
+  leaving.abort();
+  const answer = await answering;
   await answer.body?.cancel();
   const directives = (answer.headers.get('content-security-policy') ?? '').split(';').map((each) => each.trim());
   return { resource: answer.headers.get('cross-origin-resource-policy'), sandboxed: directives.includes('sandbox') };

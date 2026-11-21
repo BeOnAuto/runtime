@@ -2,7 +2,8 @@ import type { SucceededRunsReader } from '@on.auto/definitions';
 import { keptArmOf } from '@on.auto/definitions/testing';
 import type { ContentKeeper, RecordedEvent, RecordedPageRequest } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import { Array, Effect, Option, type Schema } from 'effect';
+import { Array, Effect, Fiber, Option, type Schema } from 'effect';
+import { TestClock } from 'effect/testing';
 
 import { runsRead, type RunsAsked } from '../runs/runs-read.ts';
 
@@ -143,4 +144,22 @@ export function readingEachPageFor(reader: SucceededRunsReader, ms: number): Suc
     readRecorded: (playbook, selection, page) =>
       Effect.andThen(Effect.sleep(ms), reader.readRecorded(playbook, selection, page)),
   };
+}
+
+function onATestClock<A, E>(effect: Effect.Effect<A, E>, passingMs: number): Promise<A> {
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const running = yield* Effect.forkChild(effect);
+      yield* TestClock.adjust(passingMs);
+      return yield* Fiber.join(running);
+    }).pipe(Effect.provide(TestClock.layer())),
+  );
+}
+
+export function failedReadAfter(reader: SucceededRunsReader, mostMs: number, passingMs: number) {
+  return onATestClock(Effect.flip(runsRead(reader, asked, 10, mostMs)), passingMs);
+}
+
+export function readAfter(reader: SucceededRunsReader, mostPages: number, mostMs: number, passingMs: number) {
+  return onATestClock(runsRead(reader, asked, mostPages, mostMs), passingMs);
 }

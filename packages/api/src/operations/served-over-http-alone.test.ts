@@ -3,7 +3,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import type { ApiHandler } from '../index.ts';
 import { call } from '../testing/api-calls.ts';
 import { httpAloneOperations } from '../testing/http-alone-operations.ts';
-import { exchanged, listenOnLoopback } from '../testing/listening.ts';
+import { exchanged, listenInProcess } from '../testing/listening.ts';
 import { messagesIn, postMcp, requestOf } from '../testing/mcp-requests.ts';
 import { notebookOperations } from '../testing/notebook.ts';
 import { acmeAdmin, operationServer } from '../testing/operation-server.ts';
@@ -22,7 +22,7 @@ function withBlobs() {
 
 async function listeningWithBlobs() {
   const server = await withBlobs();
-  const listening = await listenOnLoopback(server.handler);
+  const listening = listenInProcess(server.handler);
   onTestFinished(() => listening.close());
   return { ...server, origin: listening.origin };
 }

@@ -2,8 +2,8 @@ import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { serveFakeApi, type FakeApiServer } from '@on.auto/tool-servers/served-fakes';
-import { describedAccess, patientTiming } from '@on.auto/tool-servers/testing';
+import type { FakeApiServer } from '@on.auto/tool-servers/served-fakes';
+import { describedAccess, fakeApiInProcess, patientTiming } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -60,7 +60,7 @@ const calls: readonly Called[] = [
 type Answered = Parameters<FakeApiServer['answerNextWith']>[0];
 
 async function calledAtTheFake({ tool, input }: Called, answered?: Answered) {
-  const fake = await serveFakeApi({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
+  const fake = fakeApiInProcess({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
   closing.push(fake.close);
   if (answered !== undefined) {
     fake.answerNextWith(answered);

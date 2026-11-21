@@ -1,4 +1,4 @@
-import { listenOnLoopback } from '../listening.ts';
+import { listenInProcess } from '../in-process.ts';
 import { acmeAdmin, acmeAdminActing, operationServer, type OperationServerOptions } from '../operation-server.ts';
 import { servedSurfaceAt, type FirstCall, type Reading, type ServedSurface } from './served-surface.ts';
 
@@ -18,7 +18,7 @@ export async function surfaceServedBy(
   firstCalls?: readonly FirstCall[],
 ): Promise<ServedSurface> {
   const server = await operationServer(options);
-  const listening = await listenOnLoopback(server.handler);
+  const listening = listenInProcess(server.handler);
   try {
     return await servedSurfaceAt(readingAt(listening.origin, firstCalls));
   } finally {

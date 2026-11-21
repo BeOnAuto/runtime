@@ -32,8 +32,8 @@ function callingOn(h: Harness, operation: string, input: unknown): Calling {
   return (caller) => h.call(operationNamed(h.operations, operation), caller, input);
 }
 
-async function consentServed(): Promise<FakeMcpServer> {
-  const fake = await consentFake();
+function consentServed(): FakeMcpServer {
+  const fake = consentFake();
   closing.push(fake.close);
   return fake;
 }
@@ -55,17 +55,17 @@ const openLinks: Readonly<Record<string, () => Promise<Calling>>> = {
     return callingOn(h, 'give_credential', { id, token, value: 'Bearer crm-0f3c' });
   },
   give_client: async () => {
-    const h = consentHarnessAt(await consentServed(), { access: 'local' });
+    const h = consentHarnessAt(consentServed(), { access: 'local' });
     const { id, token } = await added(h, underTheOrgsOAuthClient);
     return callingOn(h, 'give_client', { id, token, ...theOrgsOAuthClient });
   },
   start: async () => {
-    const h = consentHarnessAt(await consentServed(), { access: 'local' });
+    const h = consentHarnessAt(consentServed(), { access: 'local' });
     const { id, token } = await added(h, { provider: 'files' });
     return callingOn(h, 'start', { id, token });
   },
   finish: async () => {
-    const h = consentHarnessAt(await consentServed(), { access: 'local' });
+    const h = consentHarnessAt(consentServed(), { access: 'local' });
     const link = await added(h, { provider: 'files' });
     const { code, state, iss } = await consentedOf(h, link);
     return callingOn(h, 'finish', { id: link.id, token: link.token, code, state, iss });

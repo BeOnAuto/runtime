@@ -2,8 +2,8 @@ import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { serveFakeApi, type FakeApiServer } from '@on.auto/tool-servers/served-fakes';
-import { describedAccess, patientTiming } from '@on.auto/tool-servers/testing';
+import type { FakeApiServer } from '@on.auto/tool-servers/served-fakes';
+import { describedAccess, fakeApiInProcess, patientTiming } from '@on.auto/tool-servers/testing';
 import { Effect, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -107,7 +107,7 @@ interface Reached {
 }
 
 async function asTheBot(): Promise<Reached> {
-  const fake = await serveFakeApi({ key: botToken });
+  const fake = fakeApiInProcess({ key: botToken });
   closing.push(fake.close);
   const { access } = await describedAccess(
     {

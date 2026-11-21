@@ -29,8 +29,8 @@ const offered = [
   { name: 'delete', for: deleting.for },
 ];
 
-async function served(): Promise<FakeMcpServer> {
-  const fake = await consentFake({ dynamicRegistration: true });
+function served(): FakeMcpServer {
+  const fake = consentFake({ dynamicRegistration: true });
   closing.push(fake.close);
   return fake;
 }
@@ -49,7 +49,7 @@ async function connectedFor(h: Harness, more?: string): Promise<string> {
 
 describe('the groups of more list_connections offers a connection', () => {
   it('are each group its way names while it holds none of them, and those it does not hold once it was granted some', async () => {
-    const fake = await served();
+    const fake = served();
     const pending = consentHarnessAt(fake, { way: growingWay });
     const granted = consentHarnessAt(fake, { way: growingWay });
     await added(pending, { provider: 'files' });
@@ -62,7 +62,7 @@ describe('the groups of more list_connections offers a connection', () => {
   });
 
   it('are answered by get_connection too, and are none where the provider of the connection is gone', async () => {
-    const h = consentHarnessAt(await served(), { way: growingWay });
+    const h = consentHarnessAt(served(), { way: growingWay });
     const { id } = await added(h, { provider: 'files' });
     const gone = h.operationsWith({ providers: providerListOf() });
 
@@ -75,7 +75,7 @@ describe('the groups of more list_connections offers a connection', () => {
 
 describe('the groups of more list_connections offers no connection', () => {
   it('are none for a connection given by hand, one of a way that names none and one removed, and leave out a group no client covers', async () => {
-    const fake = await served();
+    const fake = served();
     const byHand = consentHarnessAt(fake, { way: growingWay, policy: loopbackAndCrmPolicy });
     const plain = consentHarnessAt(fake, { way: filesWay });
     const uncovered = consentHarnessAt(fake, {
@@ -107,7 +107,7 @@ describe('the groups of more list_connections offers no connection', () => {
   });
 
   it('ask the consent client for no client source where no connection may be granted a group', async () => {
-    const h = consentHarnessAt(await served(), { way: filesWay });
+    const h = consentHarnessAt(served(), { way: filesWay });
     const { id } = await added(h, { provider: 'files' });
     const unasked = h.operationsWith({
       consent: { ...h.consent, hadSources: () => Effect.die(new Error('The sources were asked for')) },
@@ -141,7 +141,7 @@ describe('the words of reconnecting a connection for more', () => {
       scope: 'files.everything',
       says: { 'files.everything': 'Do everything with the files of the account.' },
     };
-    const h = consentHarnessAt(await served(), { way: { ...filesWay, more: [longest] } });
+    const h = consentHarnessAt(served(), { way: { ...filesWay, more: [longest] } });
     const pending = await added(h, { provider: 'files', name: 'quarterly-files-archive-2' });
     const { url } = await startedAt(h, pending);
     await finishing(h, pending, await consentedAt(url));
@@ -154,7 +154,7 @@ describe('the words of reconnecting a connection for more', () => {
     ]);
   });
   it('say the link asks the person to allow the group as well, in the words of what it is for', async () => {
-    const h = consentHarnessAt(await served(), { way: growingWay });
+    const h = consentHarnessAt(served(), { way: growingWay });
     const { id } = await added(h, { provider: 'files' });
 
     expect(await wordsOfReconnectingFor(h, id, 'share')).toBe(
@@ -163,7 +163,7 @@ describe('the words of reconnecting a connection for more', () => {
   });
 
   it('say a connection connected stays connected until the person finishes on the page', async () => {
-    const h = consentHarnessAt(await served(), { way: growingWay });
+    const h = consentHarnessAt(served(), { way: growingWay });
     const id = await connectedFor(h);
 
     expect(await wordsOfReconnectingFor(h, id, 'delete')).toMatch(

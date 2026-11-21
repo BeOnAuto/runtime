@@ -10,6 +10,7 @@ import {
   type ReadOnceThrough,
   type ServerThrough,
 } from '@on.auto/tool-servers';
+import { inProcessFetch } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, Redacted } from 'effect';
 
 import type { SecretKeeping } from '../operations/connection-services.ts';
@@ -42,6 +43,10 @@ function answeredAsAServerTakingASecret({ method }: Readonly<Request>): Promise<
   );
 }
 
+function servedInTheTest(host: string): boolean {
+  return loopbackHostOf(host) || host.endsWith('.in-process.test');
+}
+
 export const serversTakingASecret: ConsentClientOptions['fetch'] = (...[address, init]: readonly [unknown, unknown?]) =>
   answeredAsAServerTakingASecret(new Request(String(address), Object.assign({}, init)));
 
@@ -49,8 +54,8 @@ export const serversOffTheLoopback: ConsentClientOptions['fetch'] = (
   ...[address, init]: readonly [unknown, unknown?]
 ) => {
   const request = new Request(String(address), Object.assign({}, init));
-  return loopbackHostOf(new URL(request.url).hostname)
-    ? globalThis.fetch(request)
+  return servedInTheTest(new URL(request.url).hostname)
+    ? inProcessFetch(request)
     : answeredAsAServerTakingASecret(request);
 };
 
@@ -85,8 +90,8 @@ function answeredOffTheLoopback({ url }: Readonly<Request>): Response {
 
 export const documentsOffTheLoopback: typeof globalThis.fetch = (...[address, init]: readonly [unknown, unknown?]) => {
   const request = new Request(String(address), Object.assign({}, init));
-  return loopbackHostOf(new URL(request.url).hostname)
-    ? globalThis.fetch(request)
+  return servedInTheTest(new URL(request.url).hostname)
+    ? inProcessFetch(request)
     : Promise.resolve(answeredOffTheLoopback(request));
 };
 

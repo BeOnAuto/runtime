@@ -1,6 +1,6 @@
 import type { PlaybookAddress } from '@on.auto/operations';
-import { serveFakeMcp, type FakeMcpServer, type FakeTool } from '@on.auto/tool-servers/served-fakes';
-import { noToolServers, refusedConnections } from '@on.auto/tool-servers/testing';
+import type { FakeMcpServer, FakeTool } from '@on.auto/tool-servers/served-fakes';
+import { fakeMcpInProcess, noToolServers, refusedConnections } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -24,14 +24,14 @@ function aTool(name: string, readOnlyHint: boolean): FakeTool {
 
 const reads = ['pull_request_read', 'search_code', 'get_file_contents'].map((name) => aTool(name, true));
 
-async function aGraphOf(tools: readonly FakeTool[]): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: graphKey, tools });
+function aGraphOf(tools: readonly FakeTool[]): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: graphKey, tools });
   onTestFinished(() => fake.close());
   return fake;
 }
 
 async function aGraphThatOnlyReads(): Promise<FakeMcpServer> {
-  const fake = await aGraphOf(reads);
+  const fake = aGraphOf(reads);
   const listing = await Effect.runPromise(graphAccessTo(fake.url).listServers(inAlpha, 'graph'));
   for (const { name } of listing.flatMap((server) => ('tools' in server ? server.tools : []))) {
     fake.annotateTool(name, { readOnlyHint: true });
@@ -58,7 +58,7 @@ const expectedDetail =
 
 describe('the notice of a reasoning function whose tools are all marked reads, at its save', () => {
   it('names each tool, says that choosing what to search, what to open or which hits to read is not exploring, how lookups take those reads, that only a search that depends on what was just read keeps them, asks to move them or tell the person what it searches for after a read, and points at its tools', async () => {
-    const fake = await aGraphOf(reads);
+    const fake = aGraphOf(reads);
 
     expect(await noticesAtSave(graphAccessTo(fake.url), naming('graph/search_code, graph/get_file_contents'))).toEqual([
       { kind: 'tools_only_read', detail: expectedDetail, at: '/tools', certainty: 'likely' },
@@ -76,7 +76,7 @@ describe('the notice of a reasoning function whose tools are all marked reads, a
 
 describe('no notice of tools marked reads, at a save', () => {
   it('is given when one tool it names may act, named or under server/*', async () => {
-    const fake = await aGraphOf([...reads, aTool('create_issue', false)]);
+    const fake = aGraphOf([...reads, aTool('create_issue', false)]);
     const access = graphAccessTo(fake.url);
 
     expect([
@@ -86,8 +86,8 @@ describe('no notice of tools marked reads, at a save', () => {
   });
 
   it('is given when what a tool is cannot be known: its server not configured, the tool not listed, or the server not answering', async () => {
-    const fake = await aGraphOf(reads);
-    const closed = await aGraphOf(reads);
+    const fake = aGraphOf(reads);
+    const closed = aGraphOf(reads);
     const network = refusedConnections();
     const closedAccess = graphAccessTo(closed.url, {}, network.fetch);
     await closed.close();
@@ -102,7 +102,7 @@ describe('no notice of tools marked reads, at a save', () => {
   });
 
   it('is given, and no server asked, for a function that names no tools', async () => {
-    const fake = await aGraphOf(reads);
+    const fake = aGraphOf(reads);
 
     expect(await noticesAtSave(graphAccessTo(fake.url), documentOf('model: anthropic/claude-sonnet-4-5'))).toEqual([]);
     expect(listingsOf(fake)).toBe(0);
@@ -111,7 +111,7 @@ describe('no notice of tools marked reads, at a save', () => {
 
 describe('the listing a save asks for the notice of tools marked reads', () => {
   it('lists each server once for a save, and not again while its listing is kept', async () => {
-    const fake = await aGraphOf(reads);
+    const fake = aGraphOf(reads);
     const access = graphAccessTo(fake.url);
     const source = naming('graph/pull_request_read, graph/search_code, graph/get_file_contents');
 

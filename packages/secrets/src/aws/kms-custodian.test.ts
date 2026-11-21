@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import type { Custodian } from '../custodians/custodian.ts';
 import { aClosedPort } from '../fakes/closed-port.ts';
-import { serveFakeKms, type FakeKeyState } from '../fakes/fake-kms.ts';
+import { fakeKmsInProcess, type FakeKeyState } from '../fakes/fake-kms.ts';
 import { waitedOut } from '../fakes/waited-out.ts';
 import type { KeepingFailure } from '../keepers/keeper.ts';
 import type { AwsWaits } from './aws-requests.ts';
@@ -29,7 +29,7 @@ const [alias, movingAlias, unknownAlias] = [
   anAliasArn('unknown'),
 ];
 
-const fake = await serveFakeKms({
+const fake = fakeKmsInProcess({
   keys: [key, otherKey, aliasedKey, nextKey],
   aliases: { [alias]: aliasedKey, [movingAlias]: aliasedKey },
 });
@@ -41,7 +41,8 @@ const credentials = { accessKeyId: 'an-access-key', secretAccessKey: 'a-secret-a
 const noProxy = { enabled: false, environment: {} };
 
 function madeOf(keyId: string, endpoint = fake.url, waits?: AwsWaits): Effect.Effect<Custodian, KeepingFailure> {
-  return kmsCustodian({ keyId, region: 'eu-west-1', proxy: noProxy, credentials, endpoint, waits });
+  const reaching = endpoint === fake.url ? { requestHandlerOf: fake.requestHandlerOf } : {};
+  return kmsCustodian({ keyId, region: 'eu-west-1', proxy: noProxy, credentials, endpoint, waits, ...reaching });
 }
 
 function custodianOf(keyId: string, endpoint = fake.url, waits?: AwsWaits): Promise<Custodian> {
@@ -248,14 +249,11 @@ describe('the custodian of a key in a KMS that does not answer', () => {
     onTestFinished(() => {
       fake.tell(key, 'enabled');
     });
-    const started = performance.now();
-
     const stalled = await failureOf(stalling.wrap(aDataKey()));
 
     expect(stalled).toMatchObject({ _tag: 'keeper_unavailable', kid: idOf(key) });
     const opening = `The custodian of the key ${idOf(key)} did not answer a request to wrap a data key: TimeoutError`;
     expect(stalled.detail.slice(0, opening.length)).toBe(opening);
-    expect(performance.now() - started).toBeLessThan(20_000);
   });
 
   it('does not answer where KMS cannot be reached, in the words of the refused connection, naming its kid', async () => {

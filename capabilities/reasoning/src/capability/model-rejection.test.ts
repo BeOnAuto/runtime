@@ -270,7 +270,7 @@ const noLongerAllowed: ScriptedReply = () =>
   );
 
 async function resumedAtTheStartOf(call: ScriptedCall, entry: Readonly<Record<string, unknown>> = {}) {
-  const tools = graphAccessTo((await aGraph()).url, entry);
+  const tools = graphAccessTo(aGraph().url, entry);
   const first = reasoningOf({ tools }, asking([call]), stopping);
   await first.running(withGraphTools);
   const attempt = attemptOf(upToTheFirst(first.journal.calls(), 'tool_call_started'));
@@ -630,7 +630,7 @@ describe('a run rejected after its model answered', () => {
 
 describe('a run that called tools, rejected however it ended', () => {
   it('records the spending of its model calls when its servers failed, its model timed out or was no longer allowed, a call had no known outcome or its content was gone', async () => {
-    const tools = graphAccessTo((await aGraph()).url);
+    const tools = graphAccessTo(aGraph().url);
     const runs = [
       await reasoningOf({ tools }, asking(broken)).running(withGraphTools),
       await reasoningOf({ tools }, asking([['graph__search', { query: 'acme' }]]), timedOut).running(withGraphTools),
@@ -653,7 +653,7 @@ describe('a run that called tools, rejected however it ended', () => {
 
 describe('a run whose answer no longer matches its schema once the secrets of its tool servers are scrubbed from it', () => {
   it('is unavailable as the answer of a model that did not match its schema, with its spending', async () => {
-    const tools = graphAccessTo((await aGraph()).url);
+    const tools = graphAccessTo(aGraph().url);
     const answer = JSON.stringify({ key: graphKey });
     const run = reasoningOf(
       { tools },

@@ -83,11 +83,13 @@ export const fixtureServing = {
   fetch: documentsOffTheLoopback,
 };
 
-export const loopbackPolicy = connectionPolicyOf({ allowed_hosts: ['127.0.0.1'] });
+export const loopbackPolicy = connectionPolicyOf({ allowed_hosts: ['127.0.0.1', '*.in-process.test'] });
 
 export const crmPolicy = connectionPolicyOf({ allowed_hosts: ['crm.example.com'] });
 
-export const loopbackAndCrmPolicy = connectionPolicyOf({ allowed_hosts: ['127.0.0.1', 'crm.example.com'] });
+export const loopbackAndCrmPolicy = connectionPolicyOf({
+  allowed_hosts: ['127.0.0.1', '*.in-process.test', 'crm.example.com'],
+});
 
 export const developerToken = 'metrics-developer-token-0123';
 

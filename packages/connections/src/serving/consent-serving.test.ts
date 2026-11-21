@@ -9,14 +9,15 @@ import type {
   ConsentCredential,
   OrgConnection,
 } from '@on.auto/tool-servers';
-import { fakeApiKey, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
+import { fakeApiKey } from '@on.auto/tool-servers/served-fakes';
 import {
   clockAt,
   describedAccess,
-  type FakeMcpServer,
+  fakeMcpInProcess,
   manualTimer,
   patientTiming,
   playbookToolCalls,
+  type FakeMcpServer,
 } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, Fiber, Function, Logger, Option, Redacted } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -33,7 +34,7 @@ import {
   finishing,
   studioReturn,
 } from '../testing/consents.ts';
-import { harness, type Harness, harnessPages, loopbackPolicy } from '../testing/harness.ts';
+import { fixtureServing, harness, type Harness, harnessPages, loopbackPolicy } from '../testing/harness.ts';
 import { connectedFiles, replacingFiles, replacingPolicy } from '../testing/replacements.ts';
 import { givenThrough, sealedIn, sourceLoggingInto } from '../testing/sealed-connections.ts';
 import { consentServedAs, servedAs, sourceOver } from '../testing/served-connections.ts';
@@ -56,14 +57,14 @@ const notTokens =
 const gone =
   'The credential of the connection files is no longer in the secret store, so the person who added it reconnects it';
 
-async function served(): Promise<FakeMcpServer> {
-  const fake = await consentFake();
+function served(): FakeMcpServer {
+  const fake = consentFake();
   closing.push(fake.close);
   return fake;
 }
 
 async function connectedByConsent(way?: Readonly<Record<string, unknown>>) {
-  const fake = await served();
+  const fake = served();
   const h = consentHarnessAt(fake, way === undefined ? {} : { way });
   const link = await added(h, { provider: 'files' });
   await finishing(h, link, await consentedOf(h, link));
@@ -75,6 +76,7 @@ function sourceOf(h: Harness) {
     registry: h.ledger.service,
     secrets: h.secrets,
     policy: loopbackPolicy,
+    resolve: fixtureServing.resolve,
     pages: harnessPages,
     variables: new Map(),
     modelProviders: [],
@@ -125,8 +127,8 @@ function replacedWords(name: string): string {
 
 const now = Effect.map(DateTime.now, DateTime.toEpochMillis);
 
-async function fakeServerAt(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+function fakeServerAt(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -278,7 +280,7 @@ describe('consent serving', () => {
 
   describe('a connection connected by consent from a provider that writes {client_id}', () => {
     it('records {client_id} as the provider writes it, and is served with the client it was made with in its place', async () => {
-      const fake = await served();
+      const fake = served();
       const h = consentHarnessAt(fake, { providers: providerListOf(audiencesAt(fake)) });
       const link = await added(h, { provider: 'audiences' });
 
@@ -297,7 +299,7 @@ describe('consent serving', () => {
     });
 
     it('holds neither the stand-in the addition read it with nor the placeholder, in its facts or its header', async () => {
-      const fake = await served();
+      const fake = served();
       const h = consentHarnessAt(fake, { providers: providerListOf(audiencesAt(fake)) });
       const link = await added(h, { provider: 'audiences' });
       await finishing(h, link, await consentedOf(h, link));
@@ -393,7 +395,7 @@ describe('consent endings', () => {
 
   describe('the ending codes of the way of consent of a provider', () => {
     it('are those its way names when a connection connected by consent is served, and none where it names none', async () => {
-      const fake = await consentFake();
+      const fake = consentFake();
       closing.push(fake.close);
       const h = consentHarnessAt(fake);
       const link = await added(h, { provider: 'files' });
@@ -416,7 +418,7 @@ describe('consent endings', () => {
 
 describe('a connection whose provider another provider replaces', () => {
   it('is served to no playbook, whether connected or not yet connected, as one to reconnect, saying how it is used again, and nothing records it broken', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const connected = await connectedFiles(replacing);
     const pending = await added(replacing.h, { provider: 'files', name: 'files-two' });
     const source = sourceOver(replacing.h, { providers: replacing.providers, policy: replacingPolicy });
@@ -441,7 +443,7 @@ describe('unreadable credentials', () => {
 
   describe('a connection whose credential the secret store cannot read now', () => {
     it('fails a tool call in words that name no key and no cause, records nothing and stays connected, logs the cause once, and is called once the custodian answers again', async () => {
-      const fake = await fakeServerAt();
+      const fake = fakeServerAt();
       const h = harness({ policy: loopbackPolicy });
       const { custodian, store } = sealedIn(memoryRows({ now }));
       const id = await givenThrough(h, store, graphAt(fake), fakeApiKey);
@@ -474,7 +476,7 @@ describe('unreadable credentials', () => {
 
   describe('the log of a credential that cannot be read now', () => {
     it('holds each cause once, by the failure and the key it names and not by its words, again when the cause changes, and again once a read succeeded between', async () => {
-      const fake = await fakeServerAt();
+      const fake = fakeServerAt();
       const h = harness({ policy: loopbackPolicy });
       const rows = memoryRows({ now });
       const { custodian, store } = sealedIn(rows);
@@ -516,7 +518,7 @@ describe('unreadable credentials', () => {
 
   describe('a connection whose custodian does not answer', () => {
     it('is unavailable once the store has waited 10 seconds, and never broken', async () => {
-      const fake = await fakeServerAt();
+      const fake = fakeServerAt();
       const h = harness({ policy: loopbackPolicy });
       const { custodian, store } = sealedIn(memoryRows({ now }));
       const id = await givenThrough(h, store, graphAt(fake), fakeApiKey);

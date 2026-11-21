@@ -3,7 +3,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { stoppedWords } from '../answer-streams/answers-at-stop.ts';
 import type { RegisterRoutes } from '../index.ts';
 import { createTestHandler } from '../testing/api-calls.ts';
-import { exchanged, listenOnLoopback } from '../testing/listening.ts';
+import { exchanged, listenInProcess } from '../testing/listening.ts';
 import { connectMcp, mcpClientKinds } from '../testing/mcp-clients.ts';
 import { initializeAt, jsonOf, messagesIn, postMcp, requestOf } from '../testing/mcp-requests.ts';
 import { notebookOperationsAnnouncingWaits } from '../testing/notebook.ts';
@@ -13,8 +13,8 @@ const anyWords: unknown = expect.any(String);
 
 const playbookEndpoint = '/orgs/acme/playbooks/alpha/mcp';
 
-async function listening(server: OperationServer): Promise<string> {
-  const served = await listenOnLoopback(server.handler);
+function listening(server: OperationServer): string {
+  const served = listenInProcess(server.handler);
   onTestFinished(async () => {
     await served.close();
     await server.runtime.dispose();
@@ -45,7 +45,7 @@ describe('closing the API with a call in flight on an MCP endpoint', () => {
     async (kind) => {
       const calling = Promise.withResolvers<void>();
       const server = await operationServer({ operations: notebookOperationsAnnouncingWaits(calling.resolve) });
-      const origin = await listening(server);
+      const origin = listening(server);
       const session = await connectMcp(kind, {
         url: `${origin}${playbookEndpoint}`,
         headers: { authorization: `Bearer ${acmeAdmin.key}` },
@@ -65,7 +65,7 @@ describe('closing the API with a call in flight on an MCP endpoint', () => {
 describe('closing the API before a request comes to an MCP endpoint', () => {
   it('turns away a request that comes once it closed with a 503 problem that says the server is stopping', async () => {
     const server = await operationServer();
-    const origin = await listening(server);
+    const origin = listening(server);
 
     await server.handler.close();
     const answer = await exchanged(origin, playbookEndpoint, {

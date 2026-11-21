@@ -1,8 +1,15 @@
 import { servedStudio } from '@on.auto/identity/testing';
 import type { Outcome } from '@on.auto/operations';
 import { keptTokensIn, type ConsentClientOptions, type KeptTokens, type ReturnKind } from '@on.auto/tool-servers';
-import { servedThroughAuto, type ThroughAuto } from '@on.auto/tool-servers/served-fakes';
-import { autoClientsOf, failingAt, handleOf, serviceCallsAt } from '@on.auto/tool-servers/testing';
+import type { ThroughAuto } from '@on.auto/tool-servers/served-fakes';
+import {
+  autoClientsOf,
+  failingAt,
+  handleOf,
+  inProcessFetch,
+  serviceCallsAt,
+  throughAutoInProcess,
+} from '@on.auto/tool-servers/testing';
 import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -25,7 +32,7 @@ interface Connecting {
 }
 
 async function throughAuto(consenting: Partial<ConsentClientOptions> = {}): Promise<Connecting> {
-  const serving = await servedThroughAuto();
+  const serving = throughAutoInProcess();
   closing.push(serving.close);
   const h = consentHarnessAt(serving.fake, {
     policy: loopbackAndCrmPolicy,
@@ -49,7 +56,7 @@ async function returnedOf({ serving, h, link }: Connecting) {
 }
 
 async function listingAnotherClient(...[address, init]: readonly [unknown, unknown?]): Promise<Response> {
-  const answer = await globalThis.fetch(String(address), Object.assign({}, init));
+  const answer = await inProcessFetch(String(address), Object.assign({}, init));
   const listing = new URL(String(address)).pathname === '/clients';
   return listing
     ? new Response((await answer.text()).replace('auto-runtime', 'a-client-listed-before'), answer)
@@ -92,7 +99,7 @@ describe('the start of a consent through Auto’s consent service', () => {
   });
 
   it('sends the service the base of the link exactly as the link opens it', async () => {
-    const serving = await servedThroughAuto();
+    const serving = throughAutoInProcess();
     closing.push(serving.close);
     const h = consentHarnessAt(serving.fake, {
       consenting: { autoClients: autoClientsOf(serving.service, 'loopback') },
@@ -242,7 +249,7 @@ describe('the removal of a connection connected through Auto’s consent service
 
 describe('a consent through a Studio neither Auto’s nor on this computer', () => {
   it('leaves Auto’s client out of the link and the start, which the source the way lists next serves, asking the service nothing', async () => {
-    const serving = await servedThroughAuto({ dynamicRegistration: true });
+    const serving = throughAutoInProcess({ dynamicRegistration: true });
     closing.push(serving.close);
     const h = consentHarnessAt(serving.fake, {
       way: { scope: 'files.read', clients: ['registered', 'dynamic'] },
@@ -258,7 +265,7 @@ describe('a consent through a Studio neither Auto’s nor on this computer', () 
   });
 
   it('leaves the source out of a link whose way no other source serves', async () => {
-    const serving = await servedThroughAuto();
+    const serving = throughAutoInProcess();
     closing.push(serving.close);
     const kinds: { now: ReturnKind } = { now: 'hosted' };
     const autoClients = { ...autoClientsOf(serving.service), returnKindOf: () => kinds.now };

@@ -2,7 +2,7 @@ import { Effect, Redacted } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { aClosedPort } from '../fakes/closed-port.ts';
-import { serveFakeParameterStore } from '../fakes/fake-parameter-store.ts';
+import { fakeParameterStoreInProcess } from '../fakes/fake-parameter-store.ts';
 import { waitedOut } from '../fakes/waited-out.ts';
 import type { Keeper } from '../keepers/keeper.ts';
 import type { Holding } from '../rows/secret-rows.ts';
@@ -11,7 +11,7 @@ import { parameterStoreKeeper } from './parameter-store-keeper.ts';
 
 const account = '111122223333';
 
-const fake = await serveFakeParameterStore({ region: 'eu-west-1', account });
+const fake = fakeParameterStoreInProcess({ region: 'eu-west-1', account });
 
 afterAll(fake.close);
 
@@ -26,7 +26,16 @@ function aPrefix(): string {
 }
 
 function keeperOn(prefix: string, endpoint = fake.url, waits?: AwsWaits): Keeper {
-  return parameterStoreKeeper({ prefix, region: 'eu-west-1', proxy: noProxy, credentials, endpoint, waits });
+  const reaching = endpoint === fake.url ? { requestHandlerOf: fake.requestHandlerOf } : {};
+  return parameterStoreKeeper({
+    prefix,
+    region: 'eu-west-1',
+    proxy: noProxy,
+    credentials,
+    endpoint,
+    waits,
+    ...reaching,
+  });
 }
 
 function held(keeper: Keeper, id: string, value: string): Promise<Holding> {
@@ -214,14 +223,11 @@ describe('the keeper of values in a Parameter Store that does not answer', () =>
     onTestFinished(() => {
       fake.tell('answering');
     });
-    const started = performance.now();
-
     const stalled = await failureOf(stalling.reveal(holding));
 
     expect(stalled).toMatchObject({ _tag: 'keeper_unavailable' });
     const opening = `AWS Parameter Store could not read the parameter ${holding.held}: TimeoutError`;
     expect(stalled.detail.slice(0, opening.length)).toBe(opening);
-    expect(performance.now() - started).toBeLessThan(20_000);
   });
 
   it('does not answer where the service faults or cannot be reached, as a keeper that does not answer, in the words of each', async () => {

@@ -1,7 +1,13 @@
 import type { Outcome } from '@on.auto/operations';
 import type { Placeholder, ProviderEntry } from '@on.auto/providers';
 import type { ConsentClientOptions, RegisteredClient } from '@on.auto/tool-servers';
-import { consentedAt, registeredAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import {
+  consentedAt,
+  inProcessFetch,
+  registeredAt,
+  type ClientRegistration,
+  type FakeMcpServer,
+} from '@on.auto/tool-servers/testing';
 import { Function } from 'effect';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -112,7 +118,7 @@ function answeredAsTheVendor(
     const asked = new URL(String(address));
     asking(asked.href);
     if (asked.origin === fake.origin) {
-      return globalThis.fetch(asked, Object.assign({}, init));
+      return inProcessFetch(asked, Object.assign({}, init));
     }
     const challenged = challenges.get(asked.href);
     if (challenged !== undefined) {
@@ -121,11 +127,11 @@ function answeredAsTheVendor(
     const path = pathsAtTheFake.get(asked.href);
     return path === undefined
       ? Promise.resolve(new Response(null, { status: unpublished }))
-      : globalThis.fetch(new URL(path, fake.origin), Object.assign({}, init));
+      : inProcessFetch(new URL(path, fake.origin), Object.assign({}, init));
   };
 }
 
-export function servedAsTheVendor(vendor: Vendor): Promise<FakeMcpServer> {
+export function servedAsTheVendor(vendor: Vendor): FakeMcpServer {
   return consentFake(vendor.metadata);
 }
 

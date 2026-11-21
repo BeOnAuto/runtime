@@ -21,7 +21,7 @@ function nestedIn(levels: number): Schema.Json {
 
 describe('a run that asks a system and cannot read what the tool answered', () => {
   it('is unworkable when the answer has no document, or nothing at read, in a structure or in a text', async () => {
-    const { run } = await callRuns();
+    const { run } = callRuns();
 
     expect([
       await run(callDocument({ tool: 'photo', read: null, with: [], output: anyOutput })),
@@ -35,7 +35,7 @@ describe('a run that asks a system and cannot read what the tool answered', () =
   });
 
   it('is unworkable when what it reads nests deeper than 512 levels, or does not match the output schema', async () => {
-    const { run } = await callRuns();
+    const { run } = callRuns();
     const deep = callDocument({
       tool: 'echo',
       read: null,
@@ -67,7 +67,7 @@ const countOutput = [
 
 describe('a run that asks a system whose tool answers a large part', () => {
   it('answers with the whole part, past what an answer of a person may take and within what a run may record', async () => {
-    const { run } = await callRuns();
+    const { run } = callRuns();
 
     const ran = await run(callDocument({ tool: 'large', read: null, with: ['    kib: 370'], output: anyOutput }));
 
@@ -77,7 +77,7 @@ describe('a run that asks a system whose tool answers a large part', () => {
 
 describe('a run that asks a system whose answer the playbook cannot use', () => {
   it('checks what a tool answered against its own output schema, whatever schema the tool declares', async () => {
-    const { fake, run } = await callRuns();
+    const { fake, run } = callRuns();
 
     expect(await run(callDocument({ tool: 'promised', read: null, with: [], output: countOutput }))).toEqual(
       unworkable('What the promised tool of chat answered does not match the output schema: /count: Expected number'),
@@ -86,7 +86,7 @@ describe('a run that asks a system whose answer the playbook cannot use', () => 
   });
 
   it('says that running it again calls the tool again when the tool may change something', async () => {
-    const { run } = await callRuns({ server: { hints: { thread: { readOnlyHint: false } } } });
+    const { run } = callRuns({ server: { hints: { thread: { readOnlyHint: false } } } });
 
     expect(await run(callDocument({ read: '/nothing' }))).toEqual(
       unworkable(
@@ -111,7 +111,7 @@ const asSystem = makeInteractionFunctionAdapter({
 
 describe('a run of an interaction function that asks a system', () => {
   it('calls the tool once and ends at once with the value at read as its output, recording the call on the run', async () => {
-    const { fake, journal, run } = await callRuns();
+    const { fake, journal, run } = callRuns();
 
     expect(await run(callDocument())).toEqual(
       Exit.succeed({ output: threadReplies, record: { server: 'chat', tool: 'thread', read: '/messages' } }),
@@ -143,7 +143,7 @@ describe('a run of an interaction function that asks a system', () => {
 
 describe('a run of an interaction function that asks a system with its input', () => {
   it('sends a value written alone in one {{ }} as the value it reads, and answers with the whole answer without read', async () => {
-    const { fake, run } = await callRuns();
+    const { fake, run } = callRuns();
     const echoing = callDocument({
       tool: 'echo',
       read: null,
@@ -165,7 +165,7 @@ describe('a run of an interaction function that asks a system with its input', (
 
 describe('what a run that asks a system answers with', () => {
   it('answers with a text that is not JSON as that text', async () => {
-    const { run } = await callRuns();
+    const { run } = callRuns();
     const searching = callDocument({
       tool: 'search',
       read: null,

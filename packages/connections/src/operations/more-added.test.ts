@@ -26,14 +26,14 @@ const bothSaid = [
   { name: 'files.share', says: sharing.says['files.share'] },
 ];
 
-async function served(): Promise<FakeMcpServer> {
-  const fake = await consentFake({ dynamicRegistration: true });
+function served(): FakeMcpServer {
+  const fake = consentFake({ dynamicRegistration: true });
   closing.push(fake.close);
   return fake;
 }
 
-async function sharingHarness(): Promise<Harness> {
-  return consentHarnessAt(await served(), { way: sharingWay });
+function sharingHarness(): Harness {
+  return consentHarnessAt(served(), { way: sharingWay });
 }
 
 function reading(h: Harness, { id, token }: Added): Promise<Outcome> {
@@ -68,8 +68,8 @@ async function wordsOfAdding(h: Harness, input: Readonly<Record<string, unknown>
   return addingWords(h).outcome('output' in outcome ? outcome.output : undefined, input);
 }
 
-async function harnessOf(way: Readonly<Record<string, unknown>>): Promise<Harness> {
-  return consentHarnessAt(await served(), { way });
+function harnessOf(way: Readonly<Record<string, unknown>>): Harness {
+  return consentHarnessAt(served(), { way });
 }
 
 function notNamedMoreRefused(names: string) {
@@ -90,7 +90,7 @@ describe('more added', () => {
 
   describe('a connection added with a group of more', () => {
     it('records the group on its link, and is read on the page with the group’s scopes and words beside the first consent’s', async () => {
-      const h = await sharingHarness();
+      const h = sharingHarness();
 
       const link = await added(h, sharingToo);
       const issued = (await h.facts()).at(-1);
@@ -109,7 +109,7 @@ describe('more added', () => {
     });
 
     it('asks both in its one consent, holds both among its asked_scopes once the consent starts, and connects granted both', async () => {
-      const h = await sharingHarness();
+      const h = sharingHarness();
       const link = await added(h, sharingToo);
 
       const { url } = await startedAt(h, link);
@@ -127,8 +127,8 @@ describe('more added', () => {
 
   describe('a connection added with a group of more it cannot ask', () => {
     it('is refused where its way names no such group, or none, and records nothing', async () => {
-      const growing = await sharingHarness();
-      const plain = consentHarnessAt(await served(), { way: filesWay });
+      const growing = sharingHarness();
+      const plain = consentHarnessAt(served(), { way: filesWay });
 
       expect([await adding(growing, { provider: 'files', more: 'delete' }), await adding(plain, sharingToo)]).toEqual([
         notNamed('“share”'),
@@ -138,7 +138,7 @@ describe('more added', () => {
     });
 
     it('is refused where no client set up here covers what its consent would ask', async () => {
-      const fake = await served();
+      const fake = served();
       const readingAlone = consentHarnessAt(fake, {
         way: sharingWay,
         consenting: { registeredClients: [registeredAt(fake.origin, { scopes: ['files.read'] })] },
@@ -163,7 +163,7 @@ describe('more added', () => {
 
   describe('the words of adding a connection with a group of more', () => {
     it('say its link asks the person to allow the group as well, in the words of what it is for', async () => {
-      expect(await wordsOfAdding(await sharingHarness(), sharingToo)).toBe(
+      expect(await wordsOfAdding(sharingHarness(), sharingToo)).toBe(
         'Added the connection “files”. Show the person who added the connection a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours. The link asks them to allow “share” as well: Share your files with other people.',
       );
     });
@@ -177,8 +177,8 @@ describe('more refused', () => {
 
   describe('reconnecting a connection for more', () => {
     it('refuses a group its way does not name, and any group of a way that names none', async () => {
-      const growing = await harnessOf(sharingWay);
-      const plain = await harnessOf(filesWay);
+      const growing = harnessOf(sharingWay);
+      const plain = harnessOf(filesWay);
       const [first, second] = [await added(growing, { provider: 'files' }), await added(plain, { provider: 'files' })];
 
       expect([
@@ -188,7 +188,7 @@ describe('more refused', () => {
     });
 
     it('refuses a group whose every scope the connection holds already', async () => {
-      const h = await harnessOf(sharingWay);
+      const h = harnessOf(sharingWay);
       const link = await added(h, { provider: 'files' });
       await connectedThrough(h, await reconnectedFor(h, link.id, 'share'));
 
@@ -202,8 +202,8 @@ describe('more refused', () => {
 
   describe('reconnecting a connection for more that cannot be asked here', () => {
     it('refuses a connection removed, and one no client set up here covers what a consent for the group would ask', async () => {
-      const h = await harnessOf(sharingWay);
-      const fake = await served();
+      const h = harnessOf(sharingWay);
+      const fake = served();
       const readingAlone = consentHarnessAt(fake, {
         way: sharingWay,
         consenting: { registeredClients: [registeredAt(fake.origin, { scopes: ['files.read'] })] },

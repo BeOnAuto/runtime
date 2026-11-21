@@ -56,7 +56,7 @@ interface Resuming {
 }
 
 async function resumedAfter({ source, reasoning, cut, first, again = [], readingAgain = reasoning.reading }: Resuming) {
-  const fake = await aGraph();
+  const fake = aGraph();
   const tools = graphAccessTo(fake.url);
   const recorded = await recordedBy(source, { ...reasoning, tools }, ...first);
   const sentBefore = fake.received().length;

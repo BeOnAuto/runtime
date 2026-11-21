@@ -23,7 +23,7 @@ function asking(tool: string): ScriptedReply {
 const record = { usage, duration_ms: 400 };
 
 async function cutOffAfterCalling(tool: string) {
-  const fake = await aGraph();
+  const fake = aGraph();
   const first = reasoningOf({ tools: graphAccessTo(fake.url) }, asking(tool), stopping);
   await first.running(withGraphTools);
   return { fake, first, attempt: attemptOf(first.journal.calls()) };

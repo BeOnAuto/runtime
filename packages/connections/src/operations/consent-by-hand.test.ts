@@ -1,10 +1,11 @@
-import { servedThroughAuto, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import {
   admitted,
   autoClientsOf,
   consentedAt,
   metadataWithdrawnFrom,
   registeredAt,
+  throughAutoInProcess,
   type ClientRegistration,
 } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
@@ -30,8 +31,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await consentFake(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = consentFake(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -40,7 +41,7 @@ const signingIn: Partial<ClientRegistration> = { dynamicRegistration: true, requ
 
 describe('an MCP server given by hand that signs people in itself', () => {
   it('is added pending with its link, its credential the issuer the server names, the client the runtime registers there and the scope the server asks, registering nothing yet', async () => {
-    const fake = await served(signingIn);
+    const fake = served(signingIn);
     const h = harnessByHand();
     const credential = { kind: 'authorization', issuer: fake.origin, clients: ['dynamic'], scope: 'files.read' };
 
@@ -58,7 +59,7 @@ describe('an MCP server given by hand that signs people in itself', () => {
 
 describe('the consent of an MCP server given by hand', () => {
   it('is read on its link with the client a start takes, started with a client registered there dynamically for the resource, finished, and served with its token', async () => {
-    const fake = await served(signingIn);
+    const fake = served(signingIn);
     const h = harnessByHand();
     const link = await added(h, byHandAt(fake));
 
@@ -91,8 +92,8 @@ describe('the consent of an MCP server given by hand', () => {
 
 describe('an MCP server given by hand whose issuer takes a client named by a metadata document', () => {
   it('takes a client registered there dynamically where the issuer offers it, and the document only where it registers none', async () => {
-    const both = await served({ clientMetadataDocuments: true, dynamicRegistration: true });
-    const documenting = await served({ clientMetadataDocuments: true });
+    const both = served({ clientMetadataDocuments: true, dynamicRegistration: true });
+    const documenting = served({ clientMetadataDocuments: true });
     const h = harnessByHand({ consenting: { publicUrl: 'https://runtime.example.com' } });
 
     const outcome = await adding(h, byHandAt(both));
@@ -108,7 +109,7 @@ describe('an MCP server given by hand whose issuer takes a client named by a met
 
 describe('an MCP server given by hand at an issuer where the runtime has clients of its way', () => {
   it('never takes the client registered there, nor Auto’s client, which a way that takes registered clients would', async () => {
-    const serving = await servedThroughAuto({ dynamicRegistration: true });
+    const serving = throughAutoInProcess({ dynamicRegistration: true });
     closing.push(serving.close);
     const { fake } = serving;
     const h = harnessByHand({
@@ -135,7 +136,7 @@ describe('an MCP server given by hand at an issuer where the runtime has clients
 
 describe('an MCP server given by hand that publishes its metadata only at the address its challenge names', () => {
   it('is added, started and finished with its resource on the authorization request and the token request', async () => {
-    const fake = await served({ ...signingIn, resourceMetadataPath: '/metadata/files' });
+    const fake = served({ ...signingIn, resourceMetadataPath: '/metadata/files' });
     const seen = tokenRequestsSeen();
     const h = harnessByHand({ consenting: { fetch: seen.fetch } });
     const link = await added(h, byHandAt(fake));
@@ -153,7 +154,7 @@ describe('an MCP server given by hand that publishes its metadata only at the ad
 const elsewhere = 'https://elsewhere.example.com';
 
 async function movedLater() {
-  const fake = await served(signingIn);
+  const fake = served(signingIn);
   const answers = rewrittenAnswers();
   const h = harnessByHand({ consenting: { fetch: answers.fetch } });
   return { fake, answers, h, link: await added(h, byHandAt(fake)) };
@@ -200,7 +201,7 @@ describe('the start and the finish of a server given by hand that no longer name
 });
 
 async function withdrawnLater() {
-  const fake = await served(signingIn);
+  const fake = served(signingIn);
   const withdrawn = metadataWithdrawnFrom(fake.url);
   const h = harnessByHand({ consenting: { fetch: withdrawn.fetch } });
   return { fake, withdrawn, h, link: await added(h, byHandAt(fake)) };

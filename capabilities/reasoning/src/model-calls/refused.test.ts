@@ -13,7 +13,12 @@ import {
   usageOfOneAnswer,
 } from '../provider-testing/answers-in-turn.ts';
 import { mockGeneration } from '../provider-testing/mock-models.ts';
-import { abortedWith, connectionFailure, jsonResponse, type Responder } from '../provider-testing/recording-fetch.ts';
+import {
+  answeredPastTheDeadline,
+  connectionFailure,
+  jsonResponse,
+  type Responder,
+} from '../provider-testing/recording-fetch.ts';
 import { failed, jsonRequest, succeeded, textRequest } from '../testing/adapter-harness.ts';
 import { exposedText } from '../testing/exposure.ts';
 
@@ -97,7 +102,7 @@ function openAiSaid(message: string): Responder {
   return () => jsonResponse({ error: { message, type: 'invalid_request_error', param: null, code: null } }, 400);
 }
 
-const pastTheDeadline: Responder = ({ signal }) => abortedWith(signal);
+const pastTheDeadline: Responder = ({ signal }) => answeredPastTheDeadline(signal);
 
 const untrusted: Responder = () => connectionFailure('SELF_SIGNED_CERT_IN_CHAIN');
 

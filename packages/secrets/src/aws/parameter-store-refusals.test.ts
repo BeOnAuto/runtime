@@ -2,7 +2,7 @@ import { Effect, Redacted } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import type { FakeParameterOperation } from '../fakes/fake-parameter-answers.ts';
-import { serveFakeParameterStore } from '../fakes/fake-parameter-store.ts';
+import { fakeParameterStoreInProcess } from '../fakes/fake-parameter-store.ts';
 import { keeperProbed } from '../keepers/keeper-probe.ts';
 import type { Keeper } from '../keepers/keeper.ts';
 import type { Holding } from '../rows/secret-rows.ts';
@@ -10,7 +10,7 @@ import { parameterStoreKeeper } from './parameter-store-keeper.ts';
 
 const account = '111122223333';
 
-const fake = await serveFakeParameterStore({ region: 'eu-west-1', account });
+const fake = fakeParameterStoreInProcess({ region: 'eu-west-1', account });
 
 afterAll(fake.close);
 
@@ -27,6 +27,7 @@ function keeperOn(prefix: string): Keeper {
     proxy: { enabled: false, environment: {} },
     credentials,
     endpoint: fake.url,
+    requestHandlerOf: fake.requestHandlerOf,
   });
 }
 

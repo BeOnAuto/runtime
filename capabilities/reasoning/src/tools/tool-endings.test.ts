@@ -1,6 +1,6 @@
 import { keptTextOf } from '@on.auto/content/testing';
-import { type FakeMcpServer, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
-import { reportingAccess } from '@on.auto/tool-servers/testing';
+import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { fakeMcpInProcess, reportingAccess } from '@on.auto/tool-servers/testing';
 import { Effect, Exit, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -29,8 +29,8 @@ const apiKey = 'graph-api-key-4f1d9a7c2b';
 
 const closing: (() => Promise<void>)[] = [];
 
-async function graphServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function graphServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -187,7 +187,7 @@ async function answerOf(run: ReasoningRun, content: Parameters<typeof keptTextOf
 }
 
 async function photographed(images?: KeepRunImage) {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   const { access, content } = reportingAccess(
     { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },
@@ -209,7 +209,7 @@ describe('tool endings', () => {
 
   describe('a run that called tools and could not answer', () => {
     it('is unavailable as unfinished because the model kept calling tools once they were withheld, and lets its session go', async () => {
-      const fake = await graphServer();
+      const fake = graphServer();
 
       expect(await toolRun(fake, asking(everyCall), asking(searched)).running(answeringAtItsLimit)).toEqual(
         unfinished(
@@ -221,7 +221,7 @@ describe('tool endings', () => {
     });
 
     it('is unavailable as unfinished because it reached its bound', async () => {
-      expect(await ending(await graphServer(), asking(searched), pastTheBound)).toEqual(
+      expect(await ending(graphServer(), asking(searched), pastTheBound)).toEqual(
         unfinished('run_bound', `${boundWords}, ${used}`),
       );
     });
@@ -229,13 +229,13 @@ describe('tool endings', () => {
 
   describe('a run that called tools and lost its model', () => {
     it('is unavailable as unfinished because the model stopped answering, never asking to try again', async () => {
-      expect(await ending(await graphServer(), ...callingTools(searched, timedOut))).toEqual(
+      expect(await ending(graphServer(), ...callingTools(searched, timedOut))).toEqual(
         unfinished('model_unavailable', `anthropic did not answer within 60000 ms, ${used}`),
       );
     });
 
     it('keeps a rejection that is not unavailable', async () => {
-      expect(await ending(await graphServer(), ...callingTools(searched, refused))).toEqual(
+      expect(await ending(graphServer(), ...callingTools(searched, refused))).toEqual(
         Exit.fail(expect.objectContaining({ _tag: 'invalid_input' })),
       );
     });
@@ -245,13 +245,13 @@ describe('tool endings', () => {
     it('is unavailable as unfinished because a tool server kept failing', async () => {
       const broken = [1, 2, 3, 4, 5].map((attempt): ScriptedCall => ['graph__broken', { attempt }]);
 
-      expect(await ending(await graphServer(), asking(broken))).toEqual(
+      expect(await ending(graphServer(), asking(broken))).toEqual(
         unfinished('server_failed', 'A tool server kept failing, after the run called the broken tool of graph'),
       );
     });
 
     it('is unavailable as unfinished because a tool server kept asking it to slow down', async () => {
-      const fake = await graphServer();
+      const fake = graphServer();
       const limited = ['a', 'b', 'c', 'd', 'e'].map((query): ScriptedCall => ['graph__search', { query }]);
       const limiting: ScriptedReply = (request) =>
         Effect.sync(() => {
@@ -266,13 +266,13 @@ describe('tool endings', () => {
 
   describe('a run that could not finish after calling a tool not marked reads', () => {
     it('is a conflict whose effect is unknown, with the because and detail it would have had, whether that tool came first or last', async () => {
-      expect(await ending(await graphServer(), ...callingTools([...searched, echoed], timedOut))).toEqual(
+      expect(await ending(graphServer(), ...callingTools([...searched, echoed], timedOut))).toEqual(
         unknown(
           'model_unavailable',
           'anthropic did not answer within 60000 ms, after the run called the search and echo tools of graph',
         ),
       );
-      expect(await ending(await graphServer(), ...callingTools([echoed, ...searched], timedOut))).toEqual(
+      expect(await ending(graphServer(), ...callingTools([echoed, ...searched], timedOut))).toEqual(
         unknown(
           'model_unavailable',
           'anthropic did not answer within 60000 ms, after the run called the echo and search tools of graph',
@@ -281,7 +281,7 @@ describe('tool endings', () => {
     });
 
     it('is a conflict whose effect is unknown when its run reached its bound', async () => {
-      expect(await ending(await graphServer(), asking([echoed]), pastTheBound)).toEqual(
+      expect(await ending(graphServer(), asking([echoed]), pastTheBound)).toEqual(
         unknown('run_bound', `${boundWords}, after the run called the echo tool of graph`),
       );
     });
@@ -289,7 +289,7 @@ describe('tool endings', () => {
 
   describe('a run that could not finish before it called a tool', () => {
     it('is unavailable as before, without saying that tools were called', async () => {
-      const fake = await graphServer();
+      const fake = graphServer();
 
       expect(await ending(fake, pastTheBound)).toEqual(
         Exit.fail(expect.objectContaining({ _tag: 'unavailable', detail: boundWords })),
@@ -309,7 +309,7 @@ describe('tool endings', () => {
     it('is unworkable, with the bytes the tools answered and the input tokens of the last turn, advising a page', async () => {
       const said = 'prompt is too long: 213456 tokens > 200000 maximum';
       const run = toolRun(
-        await graphServer(),
+        graphServer(),
         answers(toolCallsResult(searched, { ...byAnthropic, usage: counted })),
         refusedAsTooLong(said),
       );
@@ -323,10 +323,10 @@ describe('tool endings', () => {
     });
 
     it('names the bytes alone when the provider reported no input tokens, and the prompt when no tool answered', async () => {
-      const run = toolRun(await graphServer(), asking(searched), refusedAsTooLong());
+      const run = toolRun(graphServer(), asking(searched), refusedAsTooLong());
       const ran = await run.running(source);
 
-      expect([ran, await ending(await graphServer(), refusedAsTooLong())]).toEqual([
+      expect([ran, await ending(graphServer(), refusedAsTooLong())]).toEqual([
         tooLong(
           `${tooLongByStatus}; the tools of this run answered ${answeredBytesOf(run).join()} bytes, which the model reads whole, so ask the tools for a page of what they hold, or move each read into a lookup function, whose \`read\` keeps only the part the job needs`,
         ),
@@ -337,7 +337,7 @@ describe('tool endings', () => {
 
   describe('a run whose provider refuses its request without a signal of length', () => {
     it('is unworkable in the words it had, with no claim of length, whatever its message says', async () => {
-      expect(await ending(await graphServer(), asking(searched), refusedSaying('string too long'))).toEqual(
+      expect(await ending(graphServer(), asking(searched), refusedSaying('string too long'))).toEqual(
         tooLong(`${refusedAsInvalid}. The provider said: string too long`),
       );
     });

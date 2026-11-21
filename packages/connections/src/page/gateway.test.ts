@@ -12,7 +12,7 @@ const anyWords: unknown = expect.any(String);
 
 describe('a start through a gateway the gateway refuses or no gateway takes', () => {
   it('is refused in words that name the gateway, or that say this runtime has none, and the connection stays as it was', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const link = await added(h, { provider: 'messages' });
     const elsewhere = h.operationsWith({ consent: gatewayHarnessAt(gateway, { gateways: false }).consent });
@@ -50,7 +50,7 @@ describe('a start through a gateway the gateway refuses or no gateway takes', ()
 
 describe('a finish through a gateway given what the gateway does not take', () => {
   it('refuses a code where the consent began through the gateway, and a handle the gateway refuses, at the field', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const link = await added(h, { provider: 'messages' });
     const { state } = await allowedAt(h, gateway, link);
@@ -83,7 +83,7 @@ describe('a finish through a gateway given what the gateway does not take', () =
 
 describe('a finish whose gateway hands over a key with an account the runtime does not take', () => {
   it('ends the key it was handed, connects nothing, and keeps the account of no connection', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const link = await added(h, { provider: 'messages' });
     const returned = await allowedAt(h, gateway, link);
@@ -118,7 +118,7 @@ function unreadableAt(
 
 describe('a connection connected again through its gateway', () => {
   it('ends the key it held at the gateway only once the new key is recorded, and keeps working on the new one', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const [first = ''] = gateway.keys();
@@ -135,7 +135,7 @@ describe('a connection connected again through its gateway', () => {
   });
 
   it('tries three times to end the key it held, then logs at the error level and stays connected on the new key', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     gateway.answering('end', 503);
@@ -157,7 +157,7 @@ describe('a connection connected again through its gateway', () => {
 
 describe('a connection connected again whose earlier key the runtime cannot read or no longer holds', () => {
   it('logs at the error level that the earlier key was not ended, and stays connected on the new key', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const second = await connectedThrough(h, gateway, await added(h, { provider: 'messages', name: 'messages-two' }));
@@ -189,7 +189,7 @@ describe('a connection connected again whose earlier key the runtime cannot read
 
 describe('a finish through a gateway that fails after the hand-off', () => {
   it('ends the key it was just handed, and leaves the connection as it was', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const link = await added(h, { provider: 'messages' });
     const returned = await allowedAt(h, gateway, link);

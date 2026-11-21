@@ -18,7 +18,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { guideShelfOf, mcpRoutes } from '../index.ts';
 import { requestBodyLimit } from '../operations/request-body.ts';
 import { call, createTestHandler } from '../testing/api-calls.ts';
-import { type Listening, listenOnLoopback } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { type McpConnection, plainTextIn, problemIn, type ToolResult, withMcpSession } from '../testing/mcp-clients.ts';
 import { jsonOf, postMcp } from '../testing/mcp-requests.ts';
 import { notebookOperations } from '../testing/notebook.ts';
@@ -332,7 +332,7 @@ describe('an MCP endpoint once the MCP SDK runs', () => {
 describe('directory endpoint', () => {
   beforeAll(async () => {
     server = await operationServer({ operations: [inTheOrg, inAPlaybook] });
-    listening = await listenOnLoopback(server.handler);
+    listening = listenInProcess(server.handler);
   });
 
   afterAll(async () => {
@@ -354,7 +354,7 @@ describe('directory endpoint', () => {
 describe('mcp boundary', () => {
   beforeAll(async () => {
     server = await operationServer();
-    listening = await listenOnLoopback(server.handler);
+    listening = listenInProcess(server.handler);
   });
 
   afterAll(async () => {
@@ -365,7 +365,7 @@ describe('mcp boundary', () => {
   describe('a tool call that throws', () => {
     it('answers isError with an internal problem, and reports the error under its incident id', async () => {
       const { handler, reported } = createTestHandler({ routes: [brokenRuntime] });
-      const ownListening = await listenOnLoopback(handler);
+      const ownListening = listenInProcess(handler);
 
       const result = await withMcpSession(
         'current revision',
@@ -398,7 +398,7 @@ describe('mcp boundary', () => {
   describe('a tool call on /mcp that throws', () => {
     it('names in its words what was asked of an operation whose input has no field, given only its playbook', async () => {
       const { handler, reported } = createTestHandler({ routes: [brokenRuntime] });
-      const ownListening = await listenOnLoopback(handler);
+      const ownListening = listenInProcess(handler);
 
       const result = await withMcpSession(
         'current revision',
@@ -553,7 +553,7 @@ describe('mcp call permission', () => {
     server = await operationServer({
       callContext: () => Context.make(CallPermission, callPermissionDecidedBy(queriesAlone)),
     });
-    listening = await listenOnLoopback(server.handler);
+    listening = listenInProcess(server.handler);
   });
 
   afterAll(async () => {
@@ -624,7 +624,7 @@ describe('mcp sign in', () => {
 describe('operations served', () => {
   beforeAll(async () => {
     server = await operationServer({ operations: [keepNote, keepsNotesBeside] });
-    listening = await listenOnLoopback(server.handler);
+    listening = listenInProcess(server.handler);
   });
 
   afterAll(async () => {

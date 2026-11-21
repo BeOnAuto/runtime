@@ -30,6 +30,7 @@ export interface ParameterStoreKeeperOptions {
   readonly credentials: ParameterStoreCredentials;
   readonly endpoint?: string | undefined;
   readonly waits?: AwsWaits | undefined;
+  readonly requestHandlerOf?: (() => NonNullable<SSMClientConfig['requestHandler']>) | undefined;
 }
 
 const mostStandardBytes = 4096;
@@ -82,9 +83,10 @@ function ssmClientOf({
   credentials,
   endpoint,
   waits = awsWaits,
+  requestHandlerOf,
 }: ParameterStoreKeeperOptions): SSMClient {
   return new SSMClient({
-    requestHandler: requestHandlerWithin(proxy, waits),
+    requestHandler: requestHandlerOf === undefined ? requestHandlerWithin(proxy, waits) : requestHandlerOf(),
     retryMode: loadConfig(pacedUnlessToldOtherwise),
     credentials,
     region,

@@ -2,13 +2,14 @@ import type { Issue, Outcome, Settled } from '@on.auto/operations';
 import { providerListOf } from '@on.auto/providers/testing';
 import type { ConsentClientOptions } from '@on.auto/tool-servers';
 import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { describedAccess, patientTiming, playbookToolCalls } from '@on.auto/tool-servers/testing';
+import { describedAccess, inProcessFetch, patientTiming, playbookToolCalls } from '@on.auto/tool-servers/testing';
 import { Option, Schema } from 'effect';
 
 import { makeConnectionSource } from '../serving/connection-source.ts';
 import type { Added } from './additions.ts';
 import {
   acmeWriter,
+  fixtureServing,
   harness,
   harnessPages,
   operationNamed,
@@ -57,7 +58,7 @@ export function tokenRequestsSeen(): TokenRequestsSeen {
       if (new URL(request.url).pathname === '/token') {
         resources.push(new URLSearchParams(await request.clone().text()).get('resource'));
       }
-      return globalThis.fetch(request);
+      return inProcessFetch(request);
     },
     resources: () => [...resources],
   };
@@ -72,7 +73,7 @@ export function rewrittenAnswers(): RewrittenAnswers {
   const rewrites = new Map<string, string>();
   return {
     fetch: async (...[address, init]: readonly [unknown, unknown?]) => {
-      const answer = await globalThis.fetch(String(address), Object.assign({}, init));
+      const answer = await inProcessFetch(String(address), Object.assign({}, init));
       const written = await answer.text();
       const rewritten = [...rewrites].reduce(
         (text, [from, to]: readonly [string, string]) => text.replaceAll(from, to),
@@ -101,6 +102,7 @@ function sourceOf(h: Harness) {
     modelProviders: [],
     providers: providerListOf(),
     providerValues: new Map(),
+    resolve: fixtureServing.resolve,
   });
 }
 

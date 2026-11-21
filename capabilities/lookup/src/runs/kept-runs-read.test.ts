@@ -3,7 +3,16 @@ import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Struct } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { failedRead, pagedReader, read, readingEachPageFor, runOf, type RunShown } from '../testing/succeeded-pages.ts';
+import {
+  failedRead,
+  failedReadAfter,
+  pagedReader,
+  read,
+  readAfter,
+  readingEachPageFor,
+  runOf,
+  type RunShown,
+} from '../testing/succeeded-pages.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -50,16 +59,14 @@ describe('a read of runs whose outputs their playbook keeps outside them', () =>
     expect(watched.reads()).toBeLessThanOrEqual(12);
   });
 
-  it('is unavailable within its time, read on a real clock, where the store of its content never answers', async () => {
+  it('is unavailable once its time has passed, where the store of its content never answers', async () => {
     const hanging = { ...memoryLedger().service.content, get: () => Effect.never };
-    const started = Date.now();
     const notReadNow: unknown = expect.stringContaining('could not be read just now');
 
-    expect(await failedRead(pagedReader([{ runs: [fifth, third] }], hanging).reader, 200)).toMatchObject({
+    expect(await failedReadAfter(pagedReader([{ runs: [fifth, third] }], hanging).reader, 200, 200)).toMatchObject({
       _tag: 'unavailable',
       detail: notReadNow,
     });
-    expect(Date.now() - started).toBeLessThan(5000);
   });
 });
 
@@ -85,13 +92,11 @@ describe('a read of runs whose ledger answers slowly', () => {
     const days = [4, 3, 2, 1].map((day) => runOf(day, { note: `Day ${day}` }));
     const pages = Array.from({ length: days.length }, (_, index) => ({ runs: days.slice(index, index + 1) }));
     const slowly = readingEachPageFor(pagedReader(pages).reader, 60);
-    const started = Date.now();
 
-    expect(await read(slowly, 10, {}, 100)).toEqual({
+    expect(await readAfter(slowly, 10, 100, 240)).toEqual({
       output: { runs: days, more: false },
       record: { examined: 4, through: days[3]?.started_at },
     });
-    expect(Date.now() - started).toBeGreaterThanOrEqual(240);
   });
 });
 

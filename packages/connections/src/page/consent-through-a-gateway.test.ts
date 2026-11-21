@@ -13,7 +13,7 @@ const aState: unknown = expect.stringMatching(/^[A-Za-z0-9_-]{43}$/u);
 
 describe('the start of a connection made through its gateway', () => {
   it('goes to the gateway with the runtime’s own state, which the page reads back from the address it sends the person to', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const link = await added(h, { provider: 'messages' });
 
@@ -29,7 +29,7 @@ describe('the start of a connection made through its gateway', () => {
   });
 
   it('is answered on the connection’s link as one whose client the gateway is', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { id, token } = await added(h, { provider: 'messages' });
 
@@ -41,7 +41,7 @@ describe('the start of a connection made through its gateway', () => {
 
 describe('the finish of a connection made through its gateway', () => {
   it('connects it with the key it is handed, recording the account the gateway names and the scope it granted', async () => {
-    const gateway = await gatewayServed({ scope: grantedByTheGateway });
+    const gateway = gatewayServed({ scope: grantedByTheGateway });
     const h = gatewayHarnessAt(gateway);
 
     const { outcome } = await connectedThrough(h, gateway);
@@ -63,7 +63,7 @@ describe('the finish of a connection made through its gateway', () => {
   });
 
   it('keeps the key sealed, out of every answer, fact and log line', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link, outcome } = await connectedThrough(h, gateway);
     const [key = ''] = gateway.keys();
@@ -78,8 +78,8 @@ describe('the finish of a connection made through its gateway', () => {
 
 describe('the account on the connections a list answers', () => {
   it('is the one the gateway named, and none for a connection no gateway named', async () => {
-    const gateway = await gatewayServed({ account: { id: 'A0002' } });
-    const policy = connectionPolicyOf({ allowed_hosts: ['127.0.0.1', 'notes.example.com'] });
+    const gateway = gatewayServed({ account: { id: 'A0002' } });
+    const policy = connectionPolicyOf({ allowed_hosts: ['127.0.0.1', '*.in-process.test', 'notes.example.com'] });
     const h = gatewayHarnessAt(gateway, { policy });
     const { link } = await connectedThrough(h, gateway);
     const notes = {

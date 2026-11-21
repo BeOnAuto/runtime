@@ -1,7 +1,7 @@
 import { DateTime, Effect, Redacted } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { serveFakeParameterStore } from '../fakes/fake-parameter-store.ts';
+import { fakeParameterStoreInProcess } from '../fakes/fake-parameter-store.ts';
 import { sealedKeeper } from '../keepers/sealed-keeper.ts';
 import { sealedSecretStoreOn } from '../store/sealed-store.ts';
 import { secretStoreOn } from '../store/secret-store.ts';
@@ -9,7 +9,7 @@ import { memoryRows } from '../testing/memory-rows.ts';
 import { recordingCustodian } from '../testing/recording-custodian.ts';
 import { parameterStoreKeeper } from './parameter-store-keeper.ts';
 
-const fake = await serveFakeParameterStore();
+const fake = fakeParameterStoreInProcess();
 
 afterAll(fake.close);
 
@@ -21,6 +21,7 @@ const keeper = parameterStoreKeeper({
   proxy: { enabled: false, environment: {} },
   credentials: { accessKeyId: 'an-access-key', secretAccessKey: 'a-secret-access-key' },
   endpoint: fake.url,
+  requestHandlerOf: fake.requestHandlerOf,
 });
 
 describe('a move into a Parameter Store past the parameters its account keeps', () => {

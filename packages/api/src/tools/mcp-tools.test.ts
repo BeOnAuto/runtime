@@ -2,7 +2,7 @@ import { makeDefinitionOperations } from '@on.auto/definitions';
 import { echo, runContentHolders, uncheckedPages } from '@on.auto/definitions/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { withMcpSession, type McpConnection, type McpSession } from '../testing/mcp-clients.ts';
 import { notebookOperations } from '../testing/notebook.ts';
 import { acmeAdmin, operationServer, type OperationServer } from '../testing/operation-server.ts';
@@ -18,7 +18,7 @@ beforeAll(async () => {
   server = await operationServer({
     operations: [...orgOperations, ...makeDefinitionOperations([echo], uncheckedPages, { holders: runContentHolders })],
   });
-  listening = await listenOnLoopback(server.handler);
+  listening = listenInProcess(server.handler);
 });
 
 afterAll(async () => {

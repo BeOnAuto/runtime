@@ -352,7 +352,7 @@ describe('the hosts a connected connection reaches', () => {
 
 describe('an HTTP API given its document in document_text, once connected', () => {
   it('is served from the document its fact keeps, its calls going to base_url alone, asking no address for its document', async () => {
-    const fake = await served();
+    const fake = served();
     const h = harness({ policy: loopbackPolicy });
     const asking = askingThrough();
     await connected(h, fake, documentOf());
@@ -374,7 +374,7 @@ describe('an HTTP API given its document in document_text, once connected', () =
 
 describe('the calls of an HTTP API given its document in document_text', () => {
   it('follow no redirect its service answers a call with, sending nothing where it points', async () => {
-    const fake = await served();
+    const fake = served();
     const h = harness({ policy: loopbackPolicy });
     const asking = askingThrough();
     await connected(h, fake, documentOf());
@@ -399,7 +399,7 @@ describe('the calls of an HTTP API given its document in document_text', () => {
   });
 
   it('show a model their words cut to the bound of any tool', async () => {
-    const fake = await served();
+    const fake = served();
     const h = harness({ policy: loopbackPolicy });
     await connected(h, fake, documentOf({ description: 'The rows that match. '.repeat(400) }));
 
@@ -416,7 +416,7 @@ describe('the calls of an HTTP API given its document in document_text', () => {
 
 describe('an HTTP API whose document is not where its record names it', () => {
   it('answers as failing, with nothing sent to its service, and is prepared again at its next use', async () => {
-    const fake = await served();
+    const fake = served();
     const h = harness({ policy: loopbackPolicy });
     await connected(h, fake, documentOf());
     const losing = losingDocuments(h);
@@ -435,7 +435,7 @@ describe('an HTTP API whose document is not where its record names it', () => {
   });
 
   it('is never served with a document whose text is not the one its record names by its SHA-256 and size', async () => {
-    const fake = await served();
+    const fake = served();
     const h = harness({ policy: loopbackPolicy });
     const text = documentOf();
     const other = documentOf({ description: 'Another text kept where the first was named.' });
@@ -458,7 +458,7 @@ describe('an HTTP API whose document is not where its record names it', () => {
 
 describe('the run check, the calls and the listings of an HTTP API given its document in document_text', () => {
   it('read its record through the one source of connections, its document read once, as the connection is first prepared', async () => {
-    const fake = await served();
+    const fake = served();
     const ledger = watchedLedger();
     const h = harness({ policy: loopbackPolicy, ledger });
     const text = documentOf();

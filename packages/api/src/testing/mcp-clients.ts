@@ -9,6 +9,8 @@ import { StreamableHTTPClientTransport as PreviousMajorTransport } from '@modelc
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { Schema } from 'effect';
 
+import { fetchInProcess } from './in-process.ts';
+
 export type McpClientKind = 'current revision' | 'previous revision' | 'previous major';
 
 export const mcpClientKinds: readonly McpClientKind[] = ['current revision', 'previous revision', 'previous major'];
@@ -114,7 +116,7 @@ class PreviousMajorHttpTransport implements Transport {
   constructor({ url, headers, fetch }: McpConnection) {
     this.#inner = new PreviousMajorTransport(new URL(url), {
       requestInit: { headers: { ...headers } },
-      ...(fetch === undefined ? {} : { fetch }),
+      fetch: fetch ?? fetchInProcess,
     });
     this.send = this.#inner.send.bind(this.#inner);
     this.close = this.#inner.close.bind(this.#inner);
@@ -166,7 +168,7 @@ async function connectCurrentMajor(kind: McpClientKind, { url, headers, fetch }:
   await client.connect(
     new StreamableHTTPClientTransport(new URL(url), {
       requestInit: { headers: { ...headers } },
-      ...(fetch === undefined ? {} : { fetch }),
+      fetch: fetch ?? fetchInProcess,
     }),
   );
   return {

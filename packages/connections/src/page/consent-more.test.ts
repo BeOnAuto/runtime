@@ -1,7 +1,6 @@
 import type { Outcome } from '@on.auto/operations';
 import { providerListOf } from '@on.auto/providers/testing';
-import { servedThroughAuto } from '@on.auto/tool-servers/served-fakes';
-import { autoClientsOf, consentedAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { autoClientsOf, consentedAt, throughAutoInProcess, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -34,14 +33,14 @@ const bothSaid = [
 
 const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
 
-async function served(): Promise<FakeMcpServer> {
-  const fake = await consentFake({ dynamicRegistration: true });
+function served(): FakeMcpServer {
+  const fake = consentFake({ dynamicRegistration: true });
   closing.push(fake.close);
   return fake;
 }
 
-async function sharingHarness(): Promise<Harness> {
-  return consentHarnessAt(await served(), { way: sharingWay });
+function sharingHarness(): Harness {
+  return consentHarnessAt(served(), { way: sharingWay });
 }
 
 function reading(h: Harness, { id, token }: Added, at?: string): Promise<Outcome> {
@@ -50,7 +49,7 @@ function reading(h: Harness, { id, token }: Added, at?: string): Promise<Outcome
 
 describe('a consent that asks more of a connection still pending', () => {
   it('asks the scopes its credential asks with the group’s, with the parameters of the way, and connects it granted both', async () => {
-    const h = await sharingHarness();
+    const h = sharingHarness();
     const { id } = await added(h, { provider: 'files' });
 
     const link = await reconnectedFor(h, id, 'share');
@@ -74,7 +73,7 @@ describe('a consent that asks more of a connection still pending', () => {
   });
 
   it('is read on the page with the group it asks, and the scopes asked with the group’s beside them', async () => {
-    const h = await sharingHarness();
+    const h = sharingHarness();
     const { id } = await added(h, { provider: 'files' });
 
     const read = await reading(h, await reconnectedFor(h, id, 'share'));
@@ -93,7 +92,7 @@ describe('a consent that asks more of a connection still pending', () => {
 
 describe('a consent that asks more of a connection connected or broken', () => {
   it('asks what the connection asked and was granted with the group’s, and leaves it connected with both', async () => {
-    const h = await sharingHarness();
+    const h = sharingHarness();
     const first = await added(h, { provider: 'files' });
     await connectedThrough(h, first);
 
@@ -108,7 +107,7 @@ describe('a consent that asks more of a connection connected or broken', () => {
   });
 
   it('gives a broken connection a link, which asks what the connection was granted with the group’s', async () => {
-    const h = await sharingHarness();
+    const h = sharingHarness();
     const link = await added(h, { provider: 'files' });
     await connectedThrough(h, link);
     await Effect.runPromise(
@@ -127,7 +126,7 @@ describe('a consent that asks more of a connection connected or broken', () => {
 
 describe('a consent that asks more through Auto’s consent service', () => {
   it('asks the service for the scopes the connection was granted with the group’s, with the parameters of the way', async () => {
-    const serving = await servedThroughAuto();
+    const serving = throughAutoInProcess();
     closing.push(serving.close);
     const h = consentHarnessAt(serving.fake, {
       way: sharingWay,
@@ -151,7 +150,7 @@ describe('a consent that asks more through Auto’s consent service', () => {
 
 describe('a link given for a group its provider no longer names', () => {
   it('is refused on the page and at its start, in words that say to reconnect the connection, whether the way or the provider is gone', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake, { way: sharingWay });
     const { id } = await added(h, { provider: 'files' });
     const { token } = await reconnectedFor(h, id, 'share');

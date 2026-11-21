@@ -1,8 +1,9 @@
 import { once } from 'node:events';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import { Schema } from 'effect';
+import { Function, Schema } from 'effect';
 
+import { countedCalls } from './counted-calls.ts';
 import {
   answerNamed,
   heardAs,
@@ -12,6 +13,7 @@ import {
   type FakeParameterState,
   type Kept,
 } from './fake-parameter-answers.ts';
+import { inProcessHandler, type AwsAnswering, type AwsAsked, type InProcessRequestHandler } from './in-process-aws.ts';
 
 export interface FakeParameterStore {
   readonly url: string;
@@ -22,6 +24,7 @@ export interface FakeParameterStore {
   readonly remove: (name: string) => void;
   readonly parameter: (name: string) => FakeParameter | undefined;
   readonly calls: () => readonly FakeParameterCall[];
+  readonly asked: (count: number) => Promise<void>;
   readonly close: () => Promise<void>;
 }
 
@@ -58,11 +61,9 @@ function retryModeOf(userAgent: string | undefined): string | undefined {
     .find((mode) => mode !== undefined);
 }
 
-async function respond(request: IncomingMessage, response: ServerResponse, { kept, noted }: Serving): Promise<void> {
-  const { asked, answer } = heardAs(String(request.headers['x-amz-target']), await bodyOf(request), kept);
-  if (asked !== undefined) {
-    noted({ ...asked, answer: answerNamed(answer), retryMode: retryModeOf(request.headers['user-agent']) });
-  }
+async function respond(request: IncomingMessage, response: ServerResponse, serving: Serving): Promise<void> {
+  const target = String(request.headers['x-amz-target']);
+  const answer = answered(serving, { target, body: await bodyOf(request), userAgent: request.headers['user-agent'] });
   if (answer !== 'stalled') {
     response
       .writeHead(answer.status, { 'content-type': 'application/x-amz-json-1.1' })
@@ -102,48 +103,84 @@ function aStore({ region = 'eu-west-1', account = '111122223333' }: FakeParamete
   return { kept, parameters, states, failing, quota };
 }
 
-export async function serveFakeParameterStore(options: FakeParameterStoreOptions = {}): Promise<FakeParameterStore> {
+type Controls = Omit<FakeParameterStore, 'url' | 'close'>;
+
+interface Served {
+  readonly serving: Serving;
+  readonly controls: Controls;
+}
+
+function servedStore(options: FakeParameterStoreOptions): Served {
   const { kept, parameters, states, failing, quota } = aStore(options);
-  const calls: FakeParameterCall[] = [];
+  const counted = countedCalls<FakeParameterCall>();
+  return {
+    serving: {
+      kept,
+      noted: counted.note,
+    },
+    controls: {
+      tell: (state, operations = everyOperation) => {
+        for (const operation of operations) {
+          states.set(operation, state);
+        }
+      },
+      throttle: (writes = 1) => {
+        failing.type = 'ThrottlingException';
+        failing.writes = writes;
+      },
+      refuse: (type) => {
+        failing.type = type;
+        failing.writes = 1;
+      },
+      keepAtMost: (most) => {
+        quota.parameters = most;
+      },
+      remove: (name) => {
+        parameters.delete(name);
+      },
+      parameter: (name) => parameters.get(name),
+      calls: counted.calls,
+      asked: counted.asked,
+    },
+  };
+}
+
+function answered({ kept, noted }: Serving, { target, body, userAgent }: AwsAsked): AwsAnswering {
+  const { asked, answer } = heardAs(target, body, kept);
+  if (asked !== undefined) {
+    noted({ ...asked, answer: answerNamed(answer), retryMode: retryModeOf(userAgent) });
+  }
+  return answer;
+}
+
+export async function serveFakeParameterStore(options: FakeParameterStoreOptions = {}): Promise<FakeParameterStore> {
+  const { serving, controls } = servedStore(options);
   const server = createServer();
   server.on('request', (request: IncomingMessage, response: ServerResponse) => {
-    void respond(request, response, {
-      kept,
-      noted: (call) => {
-        calls.push(call);
-      },
-    });
+    void respond(request, response, serving);
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   return {
+    ...controls,
     url: `http://127.0.0.1:${String(decodeAddress(server.address()).port)}`,
-    tell: (state, operations = everyOperation) => {
-      for (const operation of operations) {
-        states.set(operation, state);
-      }
-    },
-    throttle: (writes = 1) => {
-      failing.type = 'ThrottlingException';
-      failing.writes = writes;
-    },
-    refuse: (type) => {
-      failing.type = type;
-      failing.writes = 1;
-    },
-    keepAtMost: (most) => {
-      quota.parameters = most;
-    },
-    remove: (name) => {
-      parameters.delete(name);
-    },
-    parameter: (name) => parameters.get(name),
-    calls: () => [...calls],
     close: async () => {
       const closed = once(server, 'close');
       server.close();
       server.closeAllConnections();
       await closed;
     },
+  };
+}
+
+export function fakeParameterStoreInProcess(
+  options: FakeParameterStoreOptions = {},
+): FakeParameterStore & { readonly requestHandlerOf: () => InProcessRequestHandler } {
+  const { serving, controls } = servedStore(options);
+  return {
+    ...controls,
+    url: 'https://ssm.in-process.test',
+    requestHandlerOf: Function.constant(inProcessHandler((asked) => answered(serving, asked))),
+    close: () => Promise.resolve(),
   };
 }

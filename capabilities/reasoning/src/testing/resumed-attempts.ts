@@ -1,6 +1,6 @@
 import type { RecordedCall, RunAttempt } from '@on.auto/definitions';
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { reportingAccess, type AccessOptions } from '@on.auto/tool-servers/testing';
+import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { fakeMcpInProcess, reportingAccess, type AccessOptions } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -14,8 +14,8 @@ export const withGraphTools = documentOf('model: anthropic/claude-sonnet-4-5\nto
 
 export const withoutTools = documentOf('model: anthropic/claude-sonnet-4-5', 'Summarize acme.');
 
-export async function aGraph(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: graphKey });
+export function aGraph(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: graphKey });
   onTestFinished(() => fake.close());
   return fake;
 }

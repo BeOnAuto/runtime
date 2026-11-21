@@ -6,7 +6,7 @@ import {
   type SourcedEntry,
   type SourceUnderTest,
 } from '@on.auto/tool-servers/served-fakes';
-import { describedAccess, fakeApiToolNames } from '@on.auto/tool-servers/testing';
+import { describedAccess, fakeApiToolNames, inProcessFetch } from '@on.auto/tool-servers/testing';
 import { Option, Predicate, Redacted, Schema } from 'effect';
 import { expect } from 'vitest';
 
@@ -18,7 +18,7 @@ import { makeConnectionSource } from './connection-source.ts';
 
 const variable = 'GRAPH_API_KEY';
 
-const policy = connectionPolicyOf({ variables: [variable], allowed_hosts: ['127.0.0.1'] });
+const policy = connectionPolicyOf({ variables: [variable], allowed_hosts: ['127.0.0.1', '*.in-process.test'] });
 
 type SentIn = Exclude<CredentialUnderTest, { readonly in: 'auth' }>;
 
@@ -100,7 +100,7 @@ function isOffered(operation: unknown): boolean {
 async function givenItsDocument({ bare }: SourcedEntry): Promise<Entry> {
   const { document, ...besideIt } = bare;
   const address = String(document);
-  const written = decodeDocument(await (await fetch(address)).text());
+  const written = decodeDocument(await (await inProcessFetch(address)).text());
   const offered = Object.entries(decodePaths(written['paths'])).filter(
     ([, item]: readonly [string, Readonly<Record<string, unknown>>]) =>
       Object.values(item).some((operation) => isOffered(operation)),

@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { call } from '../testing/api-calls.ts';
 import { testGuides, testRecipes } from '../testing/guides.ts';
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { withMcpSession } from '../testing/mcp-clients.ts';
 import { notebookOperations } from '../testing/notebook.ts';
 import { operationsIn, schemaErrorsIn } from '../testing/openapi/openapi-document.ts';
@@ -14,7 +14,7 @@ let listening: Listening;
 
 beforeAll(async () => {
   server = await operationServer();
-  listening = await listenOnLoopback(server.handler);
+  listening = listenInProcess(server.handler);
 });
 
 afterAll(async () => {

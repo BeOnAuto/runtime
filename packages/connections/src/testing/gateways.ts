@@ -1,14 +1,15 @@
 import type { Outcome } from '@on.auto/operations';
 import { messagesThrough, providerListOf, providerOf } from '@on.auto/providers/testing';
-import { serveFakeGateway, type FakeGateway, type FakeGatewayOptions } from '@on.auto/tool-servers/served-fakes';
+import type { FakeGateway, FakeGatewayOptions } from '@on.auto/tool-servers/served-fakes';
+import { fakeGatewayInProcess } from '@on.auto/tool-servers/testing';
 import { onTestFinished } from 'vitest';
 
 import { added, type Added } from './additions.ts';
 import { startedAt } from './consents.ts';
 import { ada, harness, loopbackPolicy, operationNamed, type Harness, type HarnessOptions } from './harness.ts';
 
-export async function gatewayServed(options: FakeGatewayOptions = {}): Promise<FakeGateway> {
-  const gateway = await serveFakeGateway(options);
+export function gatewayServed(options: FakeGatewayOptions = {}): FakeGateway {
+  const gateway = fakeGatewayInProcess(options);
   onTestFinished(gateway.close);
   return gateway;
 }

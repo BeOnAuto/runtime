@@ -1,7 +1,7 @@
 import { Schema } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { serveFakeKms } from './fake-kms.ts';
+import { serveFakeKms } from './fake-kms-server.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -128,5 +128,26 @@ describe('a request the fake KMS does not take', () => {
       { status: 400, body: { __type: 'SerializationException', message: 'The request is not one the fake KMS reads' } },
       { status: 400, body: { __type: 'SerializationException', message: 'The request is not one the fake KMS reads' } },
     ]);
+  });
+});
+
+describe('the fake KMS told to stall, served on a socket', () => {
+  it('leaves the requests for the key it is told unanswered until the client gives up on them', async () => {
+    fake.tell(key, 'stalling');
+    const leaving = new AbortController();
+    const before = fake.calls().length;
+
+    const asking = fetch(fake.url, {
+      method: 'POST',
+      headers: { 'x-amz-target': 'TrentService.DescribeKey', 'content-type': 'application/x-amz-json-1.1' },
+      body: JSON.stringify({ KeyId: key }),
+      signal: leaving.signal,
+    });
+    await fake.asked(before + 1);
+    leaving.abort();
+    fake.tell(key, 'enabled');
+
+    await expect(asking).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(fake.asked(before + 1)).resolves.toBeUndefined();
   });
 });

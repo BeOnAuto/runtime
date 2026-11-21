@@ -1,5 +1,5 @@
 import { messages, providerListOf, providerOf } from '@on.auto/providers/testing';
-import { consentClientWith } from '@on.auto/tool-servers/testing';
+import { consentClientWith, inProcessFetch } from '@on.auto/tool-servers/testing';
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -119,7 +119,7 @@ describe('the addition of a provider that connects through a gateway', () => {
   });
 
   it('is refused with the organization’s own OAuth client, which the gateway never takes', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
 
     expect(
@@ -137,7 +137,7 @@ describe('the addition of a provider that connects through a gateway', () => {
   });
 
   it('records the gateway as the source of its client, and the security scheme its key is sent under', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
 
     await adding(h, { provider: 'messages' });
@@ -175,7 +175,7 @@ describe('a server given by hand that names a gateway as the source of its clien
 
 describe('a server given by hand at the address of a gateway', () => {
   it('is refused as it is added, naming the provider that connects through it', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
 
     expect(
@@ -205,15 +205,15 @@ function documentNaming(server: string): typeof globalThis.fetch {
   return (...[address, init]: readonly [unknown, unknown?]) =>
     String(address) === servedElsewhere
       ? Promise.resolve(new Response(text, { headers: { 'content-type': 'application/json' } }))
-      : globalThis.fetch(String(address), Object.assign({}, init));
+      : inProcessFetch(String(address), Object.assign({}, init));
 }
 
 describe('an HTTP API given by hand whose document names a gateway as its server', () => {
   it('is refused as it is added, once its document is read, and nothing is recorded', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway, {
       fetch: documentNaming(`${gateway.origin}/api`),
-      policy: connectionPolicyOf({ allowed_hosts: ['127.0.0.1', 'docs.example.com'] }),
+      policy: connectionPolicyOf({ allowed_hosts: ['127.0.0.1', '*.in-process.test', 'docs.example.com'] }),
     });
 
     expect(

@@ -20,7 +20,7 @@ import {
   orgsOAuthClientFake,
   underTheOrgsOAuthClient,
 } from '../testing/consents.ts';
-import { harnessPages, loopbackPolicy, type Harness } from '../testing/harness.ts';
+import { fixtureServing, harnessPages, loopbackPolicy, type Harness } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
 
 const anyWords: unknown = expect.any(String);
@@ -32,7 +32,7 @@ afterEach(async () => {
 });
 
 async function connectedUnderTheOrgsOAuthClient() {
-  const fake: FakeMcpServer = await orgsOAuthClientFake();
+  const fake: FakeMcpServer = orgsOAuthClientFake();
   closing.push(fake.close);
   const h = consentHarnessAt(fake);
   const link = await added(h, underTheOrgsOAuthClient);
@@ -46,6 +46,7 @@ function sourceOf(h: Harness, secrets: Pick<SecretKeeping, 'read' | 'replace' | 
     registry: h.ledger.service,
     secrets,
     policy: loopbackPolicy,
+    resolve: fixtureServing.resolve,
     pages: harnessPages,
     variables: new Map(),
     modelProviders: [],

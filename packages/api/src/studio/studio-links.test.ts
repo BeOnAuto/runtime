@@ -4,7 +4,7 @@ import { Context, Effect, Option, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { call } from '../testing/api-calls.ts';
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { withMcpSession } from '../testing/mcp-clients.ts';
 import { acmeAdmin, operationServer, type OperationServerOptions } from '../testing/operation-server.ts';
 import { servedStudio } from '../testing/studios.ts';
@@ -44,7 +44,7 @@ afterEach(async () => {
 
 async function listeningWith(options: OperationServerOptions): Promise<Listening> {
   const server = await operationServer({ operations: [linkTheRun], ...options });
-  const listening = await listenOnLoopback(server.handler);
+  const listening = listenInProcess(server.handler);
   closings.push(async () => {
     await listening.close();
     await server.runtime.dispose();

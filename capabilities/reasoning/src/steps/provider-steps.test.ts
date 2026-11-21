@@ -1,4 +1,4 @@
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { fakeMcpInProcess, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Exit } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -107,8 +107,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function graphServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: fakeGraphKey });
+function graphServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: fakeGraphKey });
   closing.push(fake.close);
   return fake;
 }
@@ -152,7 +152,7 @@ describe.each(providers)('a run that calls tools with $name', (provider) => {
     const run = await providerRun({
       setup: provider,
       respond: thenAnswering(provider, provider.text('Acme has 2 rows.')),
-      fake: await graphServer(),
+      fake: graphServer(),
       source: textDefinition(provider.model),
     });
     const [first = '', second = ''] = run.bodies;
@@ -167,7 +167,7 @@ describe.each(providers)('a run that calls tools with $name', (provider) => {
     const run = await providerRun({
       setup: provider,
       respond: thenAnswering(provider, provider.text('Acme has 2 rows.')),
-      fake: await graphServer(),
+      fake: graphServer(),
       source: textDefinition(provider.model, answeringAtItsLimit),
       reading: { mostInputTokens: 30 },
     });
@@ -183,7 +183,7 @@ describe.each(providers)('a run that calls tools with $name', (provider) => {
     const run = await providerRun({
       setup: provider,
       respond: thenAnswering(provider, provider.json({ verdict: 'approve' })),
-      fake: await graphServer(),
+      fake: graphServer(),
       source: jsonDefinition(provider.model, answeringAtItsLimit),
       reading: { mostInputTokens: 30 },
     });
@@ -200,7 +200,7 @@ describe('a run that calls tools in more than one step', () => {
     const run = await providerRun({
       setup: anthropic,
       respond: searchingFor('acme 1', 'acme 2'),
-      fake: await graphServer(),
+      fake: graphServer(),
       source: textDefinition(anthropic.model),
     });
     const last = String(run.bodies.at(-1));
@@ -225,7 +225,7 @@ describe('the names of the tools a run offers its model', () => {
     const run = await providerRun({
       setup: bedrock,
       respond: () => jsonResponse(bedrock.json({ verdict: 'approve' })),
-      fake: await graphServer(),
+      fake: graphServer(),
       source: jsonDefinition(bedrock.model),
     });
     const names = toolNamesOf(String(run.bodies[0]));

@@ -22,7 +22,7 @@ interface Pressing extends Replacing {
 }
 
 export async function pressingWith(starts: ConnectionStarts): Promise<Pressing> {
-  const replacing = await replacingFiles();
+  const replacing = replacingFiles();
   const old = await connectedFiles(replacing, { entry: { playbooks: ['sales'] } });
   return { ...replacing, old, ops: replacing.h.operationsWith({ providers: replacing.providers, starts }) };
 }

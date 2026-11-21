@@ -1,7 +1,8 @@
 import { providerListOf } from '@on.auto/providers/testing';
 import type { ConsentClientOptions } from '@on.auto/tool-servers';
+import { inProcessFetch } from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, reconnected } from '../testing/additions.ts';
@@ -25,35 +26,37 @@ const unended =
   'The key of the connection messages could not be ended at its gateway, so the connection is not removed';
 
 const unreachedHost: unknown = expect.stringMatching(
-  /^The key of the connection messages could not be ended at its gateway, so the connection is not removed: A connection may not reach the host 127\.0\.0\.1/u,
+  /^The key of the connection messages could not be ended at its gateway, so the connection is not removed: A connection may not reach the host \S+/u,
 );
 
 interface GatedEnds {
   readonly fetch: ConsentClientOptions['fetch'];
-  readonly holding: () => boolean;
+  readonly held: () => Promise<void>;
   readonly release: () => void;
 }
 
 function firstEndHeld(): GatedEnds {
   const opened = Promise.withResolvers<void>();
+  const holding = Promise.withResolvers<void>();
   const held = { first: false };
   return {
     fetch: async (...[address, init]: readonly [unknown, unknown?]) => {
       const url = String(address);
       if (url.endsWith('/connections/remove') && !held.first) {
         held.first = true;
+        holding.resolve();
         await opened.promise;
       }
-      return globalThis.fetch(url, Object.assign({}, init));
+      return inProcessFetch(url, Object.assign({}, init));
     },
-    holding: () => held.first,
+    held: () => holding.promise,
     release: opened.resolve,
   };
 }
 
 describe('the removal of a connection made through its gateway', () => {
   it('ends its key at the gateway before it records the removal, and forgets the key', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const [key = ''] = gateway.keys();
@@ -67,7 +70,7 @@ describe('the removal of a connection made through its gateway', () => {
   });
 
   it('counts a key the gateway no longer knows as ended, so removing it twice removes it once', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     gateway.answering('end', 403, { refused: 'unknown_key' });
@@ -82,7 +85,7 @@ describe('the removal of a connection made through its gateway', () => {
   });
 
   it('ends nothing for a connection that was never connected', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { id } = await added(h, { provider: 'messages' });
 
@@ -93,7 +96,7 @@ describe('the removal of a connection made through its gateway', () => {
 
 describe('the removal of a connection whose gateway does not confirm the end of its key', () => {
   it('is not recorded, keeps the key, and is recorded once asked again', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     gateway.answering('end', 500);
@@ -115,7 +118,7 @@ describe('the removal of a connection whose gateway does not confirm the end of 
   });
 
   it('is refused in the rule’s words where the gateway’s host may no longer be reached', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const closed = h.operationsWith({ policy: connectionPolicyOf({ allowed_hosts: ['gateway.example.com'] }) });
@@ -128,7 +131,7 @@ describe('the removal of a connection whose gateway does not confirm the end of 
 
 describe('the removal of a connection whose key cannot be ended here', () => {
   it('is refused while the key cannot be read, naming the store’s words', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const unreadable = h.operationsWith({
@@ -144,7 +147,7 @@ describe('the removal of a connection whose key cannot be ended here', () => {
   });
 
   it('is refused as having no gateway here on a runtime where gateways are not switched on', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const elsewhere = gatewayHarnessAt(gateway, { gateways: false, ledger: h.ledger });
@@ -160,7 +163,7 @@ describe('the removal of a connection whose key cannot be ended here', () => {
 
 describe('the removal of a connection whose provider names no gateway any more while its key is held', () => {
   it('is refused, keeps the key and records nothing, and removes the connection once the provider names its gateway again', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const unnamed = h.operationsWith({ providers: providerListOf() });
@@ -182,7 +185,7 @@ describe('the removal of a connection whose provider names no gateway any more w
 
 describe('the removal of a connection whose key this runtime no longer holds', () => {
   it('removes the connection and logs at the error level, by the org and the connection, that its key was not ended', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const [secretId = ''] = [...h.secrets.values().keys()];
@@ -203,7 +206,7 @@ describe('the removal of a connection whose key this runtime no longer holds', (
 
 describe('a removal that a finish connecting the connection again overtakes', () => {
   it('ends the newer key too, so no key the connection held is left at the gateway', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const gate = firstEndHeld();
     const h = gatewayHarnessAt(gateway, { consenting: { fetch: gate.fetch } });
     const { link } = await connectedThrough(h, gateway);
@@ -212,9 +215,7 @@ describe('a removal that a finish connecting the connection again overtakes', ()
     const returned = await allowedAt(h, gateway, relinked);
 
     const removal = removing(h, link.id);
-    await vi.waitFor(() => {
-      expect(gate.holding()).toBe(true);
-    });
+    await gate.held();
     const reconnection = await finishingWith(h, relinked, returned);
     const [second = ''] = gateway.keys();
     gate.release();

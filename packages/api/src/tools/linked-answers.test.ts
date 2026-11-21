@@ -3,8 +3,9 @@ import { defineCommand, type OfferedLink, type Outcome } from '@on.auto/operatio
 import { Context, Effect, Redacted, Schema } from 'effect';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import type { ApiHandler } from '../index.ts';
 import { calledOpeningLinks, retriedWith, stateAskedBy, type LinkOpening } from '../testing/elicited-calls.ts';
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
+import { listenInProcess, listenOnLoopback, type Listening } from '../testing/listening.ts';
 import { plainTextIn } from '../testing/mcp-clients.ts';
 import {
   acmeAdmin,
@@ -63,7 +64,7 @@ let listening: Listening;
 
 beforeAll(async () => {
   server = await operationServer({ operations: [openPage] });
-  listening = await listenOnLoopback(server.handler);
+  listening = listenInProcess(server.handler);
 });
 
 afterAll(async () => {
@@ -199,8 +200,11 @@ afterAll(async () => {
   await Promise.all(servers.map((other) => other.close()));
 });
 
-async function anotherServer(options: OperationServerOptions = {}): Promise<string> {
-  const other = await listenOnLoopback((await operationServer({ operations: [openPage], ...options })).handler);
+async function anotherServer(
+  options: OperationServerOptions = {},
+  listen: (handler: ApiHandler) => Listening | Promise<Listening> = listenInProcess,
+): Promise<string> {
+  const other = await listen((await operationServer({ operations: [openPage], ...options })).handler);
   servers.push(other);
   return other.origin;
 }
@@ -236,7 +240,10 @@ describe('the retry of a tool that asked to open a link', () => {
   });
 
   it('is refused in another org to the same caller', async () => {
-    const local = await anotherServer({ authenticator: authenticatorFor({ host: '127.0.0.1', apiKeys: undefined }) });
+    const local = await anotherServer(
+      { authenticator: authenticatorFor({ host: '127.0.0.1', apiKeys: undefined }) },
+      listenOnLoopback,
+    );
     const inAcme = { url: `${local}/orgs/acme/mcp`, headers: {} };
     const state = await stateAskedBy(inAcme, openingThePage);
 

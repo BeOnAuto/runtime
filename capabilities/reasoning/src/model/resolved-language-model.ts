@@ -16,7 +16,7 @@ export function resolvedLanguageModel(
   status: ProviderStatus,
   options: ModelAccessOptions,
 ): LanguageModel['Service'] {
-  const { reportProviderMessage, reportOperatorHint, telemetry } = options;
+  const { reportProviderMessage, reportOperatorHint, telemetry, deadlineAfter } = options;
   const showing = providersShowingMessages(settings);
   return LanguageModel.of(
     generation(modelResolution(models, settings, status), {
@@ -27,6 +27,7 @@ export function resolvedLanguageModel(
       reportHint: reportOperatorHint ?? (() => Effect.void),
       admitsOptions: gatewayOptionsCheck(settings.gateways),
       telemetry,
+      deadlineAfter,
     }),
   );
 }

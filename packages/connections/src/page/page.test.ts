@@ -11,7 +11,7 @@ const anyWords: unknown = expect.any(String);
 
 describe('the consent of a connection whose provider another provider replaces', () => {
   it('is not started through a link that is still open, saying how it is connected again, and asks its authorization server nothing', async () => {
-    const { h, after, files } = await replacingFiles();
+    const { h, after, files } = replacingFiles();
     const { id, token } = await added(h, { provider: 'files' });
     const before = await h.facts();
 

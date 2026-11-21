@@ -145,7 +145,7 @@ const savedAgainLater: unknown = expect.stringContaining('save it again once cha
 describe('the check of a lookup function against its server', () => {
   it('reads the mark the server lists its tool with, and is unavailable once the server is gone', async () => {
     const network = refusedConnections();
-    const { fake, saved } = await lookupRuns({
+    const { fake, saved } = lookupRuns({
       server: { hints: { profile: { readOnlyHint: false } } },
       fetch: network.fetch,
     });

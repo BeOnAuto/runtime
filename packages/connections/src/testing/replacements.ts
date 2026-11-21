@@ -10,7 +10,9 @@ import { connectedThrough, consentFake, filesAt, sharingWay } from './consents.t
 import { gatewayServed } from './gateways.ts';
 import { harness, type Harness } from './harness.ts';
 
-export const replacingPolicy = connectionPolicyOf({ allowed_hosts: ['127.0.0.1', 'messages.example.com'] });
+export const replacingPolicy = connectionPolicyOf({
+  allowed_hosts: ['127.0.0.1', '*.in-process.test', 'messages.example.com'],
+});
 
 type Provider = ReturnType<typeof providerOf>;
 
@@ -48,15 +50,15 @@ function replacementHarness(files: FakeMcpServer, providers: ProviderList): Harn
   });
 }
 
-async function servedFiles(): Promise<FakeMcpServer> {
-  const files = await consentFake();
+function servedFiles(): FakeMcpServer {
+  const files = consentFake();
   onTestFinished(files.close);
   return files;
 }
 
-export async function replacingFiles({ files: filesChanges = {}, messages = {} }: ReplacingOptions = {}) {
-  const files = await servedFiles();
-  const gateway = await gatewayServed();
+export function replacingFiles({ files: filesChanges = {}, messages = {} }: ReplacingOptions = {}) {
+  const files = servedFiles();
+  const gateway = gatewayServed();
   const before = providerListOf(filesWith(files, filesChanges), messagesAt(gateway, messages));
   const h = replacementHarness(files, before);
   const providers = providerListOf(
@@ -73,8 +75,8 @@ export interface ReplacingBySignIn {
   readonly after: ConnectionOperations;
 }
 
-export async function replacingFilesBySignIn(): Promise<ReplacingBySignIn> {
-  const files = await servedFiles();
+export function replacingFilesBySignIn(): ReplacingBySignIn {
+  const files = servedFiles();
   const shared = { ...filesAt(files, sharingWay).entry, name: 'shared-files', title: 'Shared files' };
   const h = replacementHarness(files, providerListOf(filesAt(files), providerOf(shared)));
   const providers = providerListOf(filesAt(files), providerOf({ ...shared, replaces: ['files'] }));

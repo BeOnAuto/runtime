@@ -49,8 +49,8 @@ function sourced(fake: ServedUnderTest, entry: Readonly<Record<string, unknown>>
   return { type, credential, entry: { ...fake.entry, ...entry }, bare: { ...fake.bare, ...entry } };
 }
 
-async function served(underTest: ServerUnderTest, requestIdHeader?: string): Promise<ServedUnderTest> {
-  const fake = await underTest.serve(requestIdHeader);
+function served(underTest: ServerUnderTest, requestIdHeader?: string): ServedUnderTest {
+  const fake = underTest.serve(requestIdHeader);
   onTestFinished(fake.close);
   return fake;
 }
@@ -96,7 +96,7 @@ async function calledThrough(
 
 function keptAndScrubbed(underTest: ServerUnderTest, source: SourceUnderTest): void {
   it('records the start and the answer of a call with their sizes and digests, and keeps both whole, scrubbed of its secrets', async () => {
-    const fake = await served(underTest);
+    const fake = served(underTest);
     const input = fake.echoed({ note: `the key is ${behaviourKey}` });
     const scrubbed = JSON.stringify(input).replace(JSON.stringify(behaviourKey).slice(1, -1), '[redacted]');
     const started = {
@@ -126,7 +126,7 @@ function keptAndScrubbed(underTest: ServerUnderTest, source: SourceUnderTest): v
 
 function everyForm(underTest: ServerUnderTest, source: SourceUnderTest): void {
   it('keeps and answers nothing of its credential, in any form a call carries it', async () => {
-    const fake = await served(underTest);
+    const fake = served(underTest);
     const forms = carriedForms(behaviourKey);
 
     const { reply, facts, kept } = await calledThrough({ fake, source }, 'echo', fake.echoed({ forms }));
@@ -138,7 +138,7 @@ function everyForm(underTest: ServerUnderTest, source: SourceUnderTest): void {
   });
 
   it('keeps nothing of its credential in the start of a call recorded before the call is made', async () => {
-    const fake = await served(underTest);
+    const fake = served(underTest);
     const { access, content } = await source.accessTo(sourced(fake), { environment, timing });
     onTestFinished(access.close);
     const call = { ...alpha, reference: { server: 'graph', tool: 'echo' }, input: { note: behaviourKey }, meta: {} };
@@ -154,7 +154,7 @@ function everyForm(underTest: ServerUnderTest, source: SourceUnderTest): void {
 
 function sizesAlone(underTest: ServerUnderTest, source: SourceUnderTest): void {
   it('records the sizes alone of the calls of an entry that keeps no content', async () => {
-    const fake = await served(underTest);
+    const fake = served(underTest);
 
     const { facts } = await calledThrough({ fake, source, entry: { record_content: false } }, 'search', {
       query: 'acme',
@@ -167,7 +167,7 @@ function sizesAlone(underTest: ServerUnderTest, source: SourceUnderTest): void {
 
 function requestIds(underTest: ServerUnderTest, source: SourceUnderTest): void {
   it("records the server's own id of the request in the header its entry names", async () => {
-    const fake = await served(underTest, 'x-request-id');
+    const fake = served(underTest, 'x-request-id');
 
     const { facts } = await calledThrough({ fake, source, entry: { request_id: 'x-request-id' } }, 'search', {
       query: 'acme',
@@ -179,7 +179,7 @@ function requestIds(underTest: ServerUnderTest, source: SourceUnderTest): void {
 
 function denials(underTest: ServerUnderTest, source: SourceUnderTest): void {
   it('answers what the tool denied as a tool error, in its own words', async () => {
-    const fake = await served(underTest);
+    const fake = served(underTest);
 
     const { reply, facts } = await calledThrough({ fake, source }, 'denied', {});
 
@@ -190,7 +190,7 @@ function denials(underTest: ServerUnderTest, source: SourceUnderTest): void {
 
 function serverFailures(underTest: ServerUnderTest, source: SourceUnderTest): void {
   it('fails a call its server answers with HTTP 500 as a server failure, naming the server to the model', async () => {
-    const fake = await served(underTest);
+    const fake = served(underTest);
     fake.failNextCall(500);
 
     const { reply, facts } = await calledThrough({ fake, source }, 'search', { query: 'acme' });
@@ -203,7 +203,7 @@ function serverFailures(underTest: ServerUnderTest, source: SourceUnderTest): vo
   });
 
   it('waits out a 429 whose Retry-After fits the longest wait, and answers', async () => {
-    const fake = await served(underTest);
+    const fake = served(underTest);
     fake.failNextCall(429, { 'retry-after': '0' });
 
     const { reply } = await calledThrough({ fake, source }, 'search', { query: 'acme' });
@@ -221,7 +221,7 @@ const pastTheBound: unknown = expect.stringContaining('more than the 1 MiB a cal
 
 function argumentBounds(underTest: ServerUnderTest, source: SourceUnderTest): void {
   it('refuses arguments larger than the access may send, sending and recording nothing, in words of its bound', async () => {
-    const fake = await served(underTest);
+    const fake = served(underTest);
     const mostRequestBytes = toolBounds.handArgumentBytes;
     const input = fake.echoed({ note: 'x'.repeat(mostRequestBytes) });
 

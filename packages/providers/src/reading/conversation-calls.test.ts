@@ -4,8 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { renderedArguments, textAt } from '@on.auto/definitions/tool-blocks';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { answerDocument, toolBounds, type CalledOnce } from '@on.auto/tool-servers';
-import { serveFakeApi } from '@on.auto/tool-servers/served-fakes';
-import { describedAccess, patientTiming } from '@on.auto/tool-servers/testing';
+import { describedAccess, fakeApiInProcess, patientTiming } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Result, type Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -55,7 +54,7 @@ function schemeKeyOf({ credentials }: ProviderEntry): string | undefined {
 async function reachedThrough(name: string): Promise<Reached> {
   const { entry } = Result.getOrThrow(providerNamed(shipped, name));
   const scheme = schemeKeyOf(entry);
-  const fake = await serveFakeApi(
+  const fake = fakeApiInProcess(
     scheme === undefined ? { client: { clientId: name, clientSecret, expiresInSeconds: 3600 } } : { key: clientSecret },
   );
   closing.push(fake.close);

@@ -1,5 +1,12 @@
-import { serveFakeApi, type FakeApiServer } from '@on.auto/tool-servers/served-fakes';
-import { describedAccess, fakeApiDocument, patientTiming, playbookToolCalls } from '@on.auto/tool-servers/testing';
+import type { FakeApiServer } from '@on.auto/tool-servers/served-fakes';
+import {
+  describedAccess,
+  fakeApiDocument,
+  fakeApiInProcess,
+  inProcessFetch,
+  patientTiming,
+  playbookToolCalls,
+} from '@on.auto/tool-servers/testing';
 import { onTestFinished } from 'vitest';
 
 import type { ServingServices } from '../serving/serving-services.ts';
@@ -22,14 +29,14 @@ export function askingThrough(): Asking {
     fetch: (...[address, init]: readonly [unknown, unknown?]) => {
       const request = new Request(String(address), Object.assign({}, init));
       asked.push(request.url);
-      return globalThis.fetch(request);
+      return inProcessFetch(request);
     },
     asked: () => [...asked],
   };
 }
 
-export async function served(): Promise<FakeApiServer> {
-  const fake = await serveFakeApi({ key, declaresKey: false });
+export function served(): FakeApiServer {
+  const fake = fakeApiInProcess({ key, declaresKey: false });
   onTestFinished(fake.close);
   return fake;
 }

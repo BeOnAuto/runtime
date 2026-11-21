@@ -8,8 +8,8 @@ import {
 import { allPermissions } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
 import type { Timing } from '@on.auto/tool-servers';
-import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { reportingAccess, type AccessOptions } from '@on.auto/tool-servers/testing';
+import type { FakeMcpOptions, FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { fakeMcpInProcess, reportingAccess, type AccessOptions } from '@on.auto/tool-servers/testing';
 import { Effect, type Exit, type Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -50,8 +50,8 @@ function contextOf(journal: RecordingJournal): RunContext {
   };
 }
 
-export async function lookupRuns(options: LookupRunOptions = {}): Promise<LookupRuns> {
-  const fake = await serveFakeMcp({ bearer: chatKey, data: true, ...options.server });
+export function lookupRuns(options: LookupRunOptions = {}): LookupRuns {
+  const fake = fakeMcpInProcess({ bearer: chatKey, data: true, ...options.server });
   onTestFinished(fake.close);
   const chat = { url: fake.url, headers: { Authorization: 'Bearer ${CHAT_KEY}' }, org: 'acme', ...options.entry };
   const { access } = reportingAccess(

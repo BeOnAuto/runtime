@@ -1,7 +1,7 @@
 import type { RecordedCall } from '@on.auto/definitions';
 import { cancelledByAnother, recordingJournal } from '@on.auto/definitions/testing';
-import { type FakeTool, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
-import { reportingAccess } from '@on.auto/tool-servers/testing';
+import type { FakeTool } from '@on.auto/tool-servers/served-fakes';
+import { fakeMcpInProcess, reportingAccess } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, Exit, Schema, Struct } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
@@ -48,7 +48,7 @@ const limited: ScriptedReply = () =>
 const echoing = answers(toolCallsResult([['graph__echo', { said: 'acme' }]]));
 
 async function afterAnInterruptedEnd(laterEntry: Parameters<typeof graphAccessTo>[1] = {}) {
-  const fake = await aGraph();
+  const fake = aGraph();
   const tools = graphAccessTo(fake.url);
   const { calls, first } = await recordedBy(withGraphTools, { tools }, echoing, answers(textResult('Echoed.')));
   const cut = upToTheFirst(calls, 'tool_call_started');
@@ -145,8 +145,8 @@ const aSmallWindow: Reasoning['reading'] = {
 
 const shownInFormatOne = 'Read notes.md at 3f2a1c.\n[resource content, not shown]';
 
-async function toolsWithFiles() {
-  const fake = await serveFakeMcp({ bearer: graphKey, tools: [readsAFile] });
+function toolsWithFiles() {
+  const fake = fakeMcpInProcess({ bearer: graphKey, tools: [readsAFile] });
   onTestFinished(() => fake.close());
   const reporting = reportingAccess(
     { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },
@@ -183,7 +183,7 @@ function recordedBefore(calls: readonly RecordedCall[], shownBytes?: number): re
 }
 
 async function firstAttemptResumedEmbeddedResources(given: Pick<Reasoning, 'reading'>) {
-  const { access: tools, content } = await toolsWithFiles();
+  const { access: tools, content } = toolsWithFiles();
   const first = reasoningOf({ tools, content, ...given }, asking, answering);
   await first.running(withGraphTools);
   const calls = upToTheFirst(first.journal.calls(), 'tool_call_answered');
@@ -200,7 +200,7 @@ const naming = (tools: string) => documentOf(`model: anthropic/claude-sonnet-4-5
 const calledBy = { run_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b70', reference: '/do/0/judge', run: 1 };
 
 async function recordOf(source: string, given: { readonly calledBy?: Readonly<typeof calledBy> } = {}) {
-  const fake = await aGraph();
+  const fake = aGraph();
   const { languageModel } = scriptedLanguageModel(
     answers(toolCallsResult([['graph__profile', {}]])),
     answers(textResult('Record 7 is open, so it stays.')),
@@ -233,7 +233,7 @@ const record = { usage, duration_ms: 400 };
 
 describe('a run that goes on after a call of a tool that may change something was never answered', () => {
   it('is a conflict whose effect is unknown, because the outcome of that call is not known', async () => {
-    const tools = graphAccessTo((await aGraph()).url);
+    const tools = graphAccessTo(aGraph().url);
     const { calls, first } = await recordedBy(withGraphTools, { tools }, echoing, answers(textResult('Echoed.')));
     const again = reasoningOf({
       tools,
@@ -270,7 +270,7 @@ describe('a run that goes on after an attempt ended such a call as interrupted a
   });
 
   it('sends a call of a tool marked reads again, and goes on to its answer', async () => {
-    const fake = await aGraph();
+    const fake = aGraph();
     const tools = graphAccessTo(fake.url);
     const searching = answers(toolCallsResult([['graph__search', { query: 'acme' }]]));
     const { calls, first } = await recordedBy(withGraphTools, { tools }, searching, answers(textResult('Found.')));
@@ -293,7 +293,7 @@ describe('a run that goes on after an attempt ended such a call as interrupted a
 
 describe('a run that goes on after its server stopped offering a tool the model asked for', () => {
   it('tells the model the tool is no longer offered and goes on to its answer, sending nothing', async () => {
-    const fake = await aGraph();
+    const fake = aGraph();
     const { calls, first } = await recordedBy(
       withGraphTools,
       { tools: graphAccessTo(fake.url) },
@@ -511,7 +511,7 @@ describe('the record of a run the agent asked for, of a reasoning function whose
 
 describe('a run whose cancel another server recorded once its model asked for a tool', () => {
   it('starts no call after it and ends cancelled as asked, with the spending of its model call', async () => {
-    const graph = await aGraph();
+    const graph = aGraph();
     const run = reasoningOf({ tools: graphAccessTo(graph.url), cancelledAfter: 2 }, askingReadToolsRuns);
 
     expect(await run.running(withGraphTools)).toEqual(
@@ -525,7 +525,7 @@ describe('a run whose cancel another server recorded once its model asked for a 
 
 describe('a run whose cancel another server recorded once its tool answered', () => {
   it('makes no second model call and ends cancelled, the tool called once', async () => {
-    const graph = await aGraph();
+    const graph = aGraph();
     const run = reasoningOf(
       { tools: graphAccessTo(graph.url), cancelledAfter: 4 },
       askingReadToolsRuns,
@@ -547,7 +547,7 @@ describe('a run whose cancel another server recorded once its tool answered', ()
 
 describe('a run cancelled in its process while a call of it is in flight', () => {
   it('ends that call as interrupted, a tool call or the model call, with the spending of its model calls so far', async () => {
-    const graph = await aGraph();
+    const graph = aGraph();
     const first = reasoningOf({ tools: graphAccessTo(graph.url) }, askingReadToolsRuns, stopping);
     await first.running(withGraphTools);
     const calls = first.journal.calls();

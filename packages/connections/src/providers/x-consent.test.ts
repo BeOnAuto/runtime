@@ -41,8 +41,8 @@ const ConnectedSchema = Schema.Struct({
   }),
 });
 
-async function servedAsX() {
-  const fake = await servedAsTheVendor(xApi);
+function servedAsX() {
+  const fake = servedAsTheVendor(xApi);
   closing.push(fake.close);
   const asked: string[] = [];
   const h = harnessAtTheVendor(fake, xApi, {
@@ -56,7 +56,7 @@ async function servedAsX() {
 }
 
 async function connectedAtX() {
-  const { fake, h, asked: addressesAsked } = await servedAsX();
+  const { fake, h, asked: addressesAsked } = servedAsX();
   const { asked, finished } = await consentedAtTheVendor(
     h,
     { provider: 'x', placeholders: {}, orgsOAuthClient: theOrgsOAuthClient },
@@ -75,7 +75,7 @@ async function waysOfXListedBy(h: Harness) {
 
 describe('the provider x, whose consent runs under the organization’s own OAuth client alone', () => {
   it('is listed under the organization’s own OAuth client, offered where no client here covers it, and added by its name alone under that client', async () => {
-    const { h } = await servedAsX();
+    const { h } = servedAsX();
 
     const ways = await waysOfXListedBy(h);
     const added = await h.call(operationNamed(h.operations, 'add_connection'), ada, { provider: 'x' });

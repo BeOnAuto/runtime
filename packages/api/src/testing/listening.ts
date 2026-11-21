@@ -4,6 +4,9 @@ import { createServer, request, type IncomingHttpHeaders } from 'node:http';
 import { Schema } from 'effect';
 
 import type { ApiHandler } from '../index.ts';
+import { fetchInProcess, servedInProcess } from './in-process.ts';
+
+export { fetchInProcess, listenInProcess } from './in-process.ts';
 
 export interface Listening {
   readonly origin: string;
@@ -43,7 +46,20 @@ export interface Received {
   readonly body: string;
 }
 
-export function exchanged(origin: string, path: string, { method = 'GET', headers, body }: Sent): Promise<Received> {
+export function exchanged(origin: string, path: string, sent: Sent): Promise<Received> {
+  return servedInProcess(origin) ? exchangedInProcess(origin, path, sent) : exchangedOverHttp(origin, path, sent);
+}
+
+async function exchangedInProcess(
+  origin: string,
+  path: string,
+  { method = 'GET', headers, body }: Sent,
+): Promise<Received> {
+  const answer = await fetchInProcess(`${origin}${path}`, { method, headers, ...(body === undefined ? {} : { body }) });
+  return { status: answer.status, headers: Object.fromEntries(answer.headers), body: await answer.text() };
+}
+
+function exchangedOverHttp(origin: string, path: string, { method = 'GET', headers, body }: Sent): Promise<Received> {
   return new Promise((resolve) => {
     const sent = request(`${origin}${path}`, { method, headers }, (response) => {
       let text = '';

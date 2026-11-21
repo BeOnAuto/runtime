@@ -1,4 +1,4 @@
-import { clearTimeout, setTimeout } from 'node:timers';
+import { Function } from 'effect';
 
 import type { ModelFailure } from '../failure/model-failure.ts';
 import { TimedOut } from '../failure/timed-out.ts';
@@ -10,9 +10,14 @@ export interface Deadline {
   readonly ended: () => void;
 }
 
-export function deadlineOf({ timeout_ms: ms }: ModelRequest): Deadline | undefined {
+export type DeadlineAfter = (ms: number) => AbortSignal;
+
+export function deadlineOf({ timeout_ms: ms }: ModelRequest, deadlineAfter?: DeadlineAfter): Deadline | undefined {
   if (ms === undefined) {
     return undefined;
+  }
+  if (deadlineAfter !== undefined) {
+    return { signal: deadlineAfter(ms), ms, ended: Function.constVoid };
   }
   const missed = new AbortController();
   const timer = setTimeout(() => {

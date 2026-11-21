@@ -11,8 +11,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(): Promise<FakeMcpServer> {
-  const fake = await consentFake();
+function served(): FakeMcpServer {
+  const fake = consentFake();
   closing.push(fake.close);
   return fake;
 }
@@ -87,7 +87,7 @@ describe('giving the credential of a connection with the playbooks that may use 
 
 describe('starting the consent of a connection with the playbooks that may use it', () => {
   it('records them with the start, so the link reads them before the person signs in', async () => {
-    const h = consentHarnessAt(await served());
+    const h = consentHarnessAt(served());
     const { id, token } = await added(h, { provider: 'files' });
 
     const started = await calling(h, 'start', { id, token, playbooks: ['support'] });
@@ -102,7 +102,7 @@ describe('starting the consent of a connection with the playbooks that may use i
 describe('an approval with playbooks refused', () => {
   it('refuses an empty list at its place on each approving call, and records nothing', async () => {
     const h = harness();
-    const byConsent = consentHarnessAt(await served());
+    const byConsent = consentHarnessAt(served());
     const none = await added(h, notes);
     const secret = await added(h, crm);
     const consent = await added(byConsent, { provider: 'files' });
@@ -131,7 +131,7 @@ describe('an approval with playbooks refused', () => {
 describe('an approval by a caller that may access only some playbooks of the org', () => {
   it('is refused where it gives playbooks, on each approving call, and records nothing', async () => {
     const h = harness();
-    const byConsent = consentHarnessAt(await served());
+    const byConsent = consentHarnessAt(served());
     const none = await added(h, notesForSales);
     const secret = await added(h, crm);
     const consent = await added(byConsent, { provider: 'files' });

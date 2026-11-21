@@ -1,7 +1,7 @@
 import { readProviders, providersShippedRoots, requestOriginsOf } from '@on.auto/providers';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { keptTokensIn } from '@on.auto/tool-servers';
-import { clockAt, manualTimer } from '@on.auto/tool-servers/testing';
+import { clockAt, inProcessFetch, manualTimer } from '@on.auto/tool-servers/testing';
 import { Function, Option, Redacted, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -89,7 +89,7 @@ function parametersAsked(
 
 async function consentOf({ name, placeholders, issuer, oauthClient, vendor }: WayOfConsent, registered: boolean) {
   const theVendor = Option.getOrThrow(Option.fromNullishOr(vendor));
-  const fake = await servedAsTheVendor(theVendor);
+  const fake = servedAsTheVendor(theVendor);
   closing.push(fake.close);
   const h = harnessAtTheVendor(fake, theVendor, {
     providers: shipped,
@@ -225,13 +225,13 @@ const consentEnded =
 const refusedByLinkedIn = {
   response: new Response(null, { status: 401 }),
   serverUrl: new URL('https://api.linkedin.com'),
-  fetchFn: globalThis.fetch,
+  fetchFn: inProcessFetch,
 };
 
 async function connectedAtLinkedIn() {
   const way = Option.getOrThrow(Option.fromNullishOr(waysOfConsent.find(({ name }) => name === 'linkedin')));
   const vendor = Option.getOrThrow(Option.fromNullishOr(way.vendor));
-  const fake = await servedAsTheVendor(vendor);
+  const fake = servedAsTheVendor(vendor);
   closing.push(fake.close);
   const h = harnessAtTheVendor(fake, vendor, { providers: shipped, registeredIssuer: way.issuer });
   const { asked, finished } = await consentedAtTheVendor(

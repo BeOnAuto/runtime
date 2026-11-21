@@ -75,7 +75,7 @@ describe('the words of adding a connection', () => {
 
 describe('the words of adding an MCP server given by hand that signs people in itself', () => {
   it('name the host of its issuer, in the words and in the message of the link', async () => {
-    const fake = await consentFake({ dynamicRegistration: true });
+    const fake = consentFake({ dynamicRegistration: true });
     closing.push(fake.close);
     const h = harness({ policy: loopbackPolicy });
     const byHand = { name: 'files', type: 'mcp', entry: { url: fake.url }, credential: { kind: 'authorization' } };

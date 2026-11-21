@@ -2,13 +2,13 @@ import { beforeGoingOnOf, unsuccessfulWords, type Notice } from '@on.auto/operat
 import { describe, expect, it } from 'vitest';
 
 import { asking, sentencesOf } from '../testing/asking-operation.ts';
-import { listenOnLoopback } from '../testing/listening.ts';
+import { listenInProcess } from '../testing/listening.ts';
 import { plainTextIn, withMcpSession, type ToolResult } from '../testing/mcp-clients.ts';
 import { acmeAdmin, operationServer } from '../testing/operation-server.ts';
 
 async function resultOf(operation: ReturnType<typeof asking>, question?: string): Promise<ToolResult> {
   const server = await operationServer({ operations: [operation] });
-  const listening = await listenOnLoopback(server.handler);
+  const listening = listenInProcess(server.handler);
   const result: ToolResult = await withMcpSession(
     'current revision',
     { url: `${listening.origin}/orgs/acme/playbooks/alpha/mcp`, headers: { authorization: `Bearer ${acmeAdmin.key}` } },

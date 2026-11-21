@@ -1,5 +1,12 @@
 import type { Outcome } from '@on.auto/operations';
-import { admitted, consentedAt, hostOf, registeredAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import {
+  admitted,
+  consentedAt,
+  hostOf,
+  inProcessFetch,
+  registeredAt,
+  type FakeMcpServer,
+} from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -33,8 +40,8 @@ function revocationsAt(fake: FakeMcpServer): number {
   return fake.heard().filter(({ path }) => path === '/revoke').length;
 }
 
-async function served(): Promise<FakeMcpServer> {
-  const fake = await consentFake({ dynamicRegistration: true });
+function served(): FakeMcpServer {
+  const fake = consentFake({ dynamicRegistration: true });
   closing.push(fake.close);
   return fake;
 }
@@ -52,7 +59,7 @@ async function connectedOnce(h: Harness): Promise<{ readonly link: Added; readon
 
 describe('reconnecting a connection connected by consent with the client it was made with', () => {
   it('forgets the tokens it held without revoking them, since the authorization server may end the new grant with them', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake, { consenting: { registeredClients: [registeredAt(fake.origin)] } });
     const { link: first, tokens: before } = await connectedOnce(h);
 
@@ -72,7 +79,7 @@ describe('reconnecting a connection connected by consent with the client it was 
 
 describe('reconnecting a connection connected by consent with another client', () => {
   it('revokes the tokens it held with the client they were given to, once the new ones are kept', async () => {
-    const fake = await served();
+    const fake = served();
     const way = { ...filesWay, clients: ['registered', 'dynamic'] };
     const h = consentHarnessAt(fake, { way, consenting: { registeredClients: [] } });
     const { link: first, tokens: before } = await connectedOnce(h);
@@ -115,12 +122,12 @@ function unansweringItsMetadata(retryAfter: string) {
   return (...[address, init]: readonly [unknown, unknown?]): Promise<Response> =>
     new URL(String(address)).pathname === '/.well-known/oauth-authorization-server'
       ? Promise.resolve(new Response('busy', { status: 503, headers: { 'retry-after': retryAfter } }))
-      : globalThis.fetch(String(address), Object.assign({}, init));
+      : inProcessFetch(String(address), Object.assign({}, init));
 }
 
 describe('a start of a connection connected by consent, at a server that registers a client once in a while', () => {
   it('takes the client the runtime registered for the first consent, so the server is asked to register once', async () => {
-    const fake = await consentFake(registeringOnceInAWhile);
+    const fake = consentFake(registeringOnceInAWhile);
     closing.push(fake.close);
     const h = consentHarnessAt(fake, { way: dynamicWay, consenting: { registeredClients: [] } });
     const { link: first } = await connectedOnce(h);
@@ -137,7 +144,7 @@ describe('a start of a connection connected by consent, at a server that registe
   });
 
   it('is refused in words that say the connection stays connected and name the host, the step, the status and the wait', async () => {
-    const fake = await consentFake(registeringOnceInAWhile);
+    const fake = consentFake(registeringOnceInAWhile);
     closing.push(fake.close);
     const h = consentHarnessAt(fake, { way: dynamicWay, consenting: { registeredClients: [] } });
     const { link: first } = await connectedOnce(h);
@@ -159,7 +166,7 @@ describe('a start of a connection connected by consent, at a server that registe
 
 describe('a start of a connection connected by consent, refused for another reason', () => {
   it('is refused in its own words, saying the connection stays connected too', async () => {
-    const fake = await consentFake(registeringOnceInAWhile);
+    const fake = consentFake(registeringOnceInAWhile);
     closing.push(fake.close);
     const h = consentHarnessAt(fake, { way: dynamicWay, consenting: { registeredClients: [] } });
     const { link: first } = await connectedOnce(h);
@@ -170,15 +177,14 @@ describe('a start of a connection connected by consent, refused for another reas
 
     expect(refused).toMatchObject({
       reason: 'forbidden',
-      detail:
-        'A connection may not reach the host 127.0.0.1 on this runtime, which allows crm.example.com; the connection files stays connected as it was',
+      detail: `A connection may not reach the host ${new URL(fake.url).hostname} on this runtime, which allows crm.example.com; the connection files stays connected as it was`,
     });
   });
 });
 
 describe('a finish of a connection connected by consent, given what its start does not answer', () => {
   it('is refused at the handle, saying the connection stays connected', async () => {
-    const fake = await consentFake(registeringOnceInAWhile);
+    const fake = consentFake(registeringOnceInAWhile);
     closing.push(fake.close);
     const h = consentHarnessAt(fake, { way: dynamicWay, consenting: { registeredClients: [] } });
     const { link: first } = await connectedOnce(h);

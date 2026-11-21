@@ -26,7 +26,7 @@ const replacedHere = 'The provider drive is replaced here by messages, which a c
 
 describe('a provider another replaces by a name it had before, which its entry declares as another of its names', () => {
   it('is the provider replaced, listed under its name now, which the one that replaces it names too', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
 
     const listings = await Promise.all(
       namesOfDrive.map((replaced) =>
@@ -47,7 +47,7 @@ describe('a provider another replaces by a name it had before, which its entry d
   });
 
   it('is not added from by either of its names, refused at the provider under its name now, recording nothing', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const after = afterReplacing(replacing, 'files');
 
     const outcomes = await Promise.all(
@@ -63,7 +63,7 @@ describe('a provider another replaces by a name it had before, which its entry d
 
 describe('the connections of a provider another replaces by a name it had before', () => {
   it('replaces the connections added under either of its names, which are served to no playbook until reconnected', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const connected = await connectedFiles(replacing);
     const detail =
       'The connection files was added from the provider drive, which messages replaces here, so no playbook may use it until it is reconnected, which adds it again from messages under the same name';
@@ -83,7 +83,7 @@ describe('the connections of a provider another replaces by a name it had before
   it('adds such a connection again, reconnected, from the provider that replaces it under the same name', async () => {
     const outcomes = await Promise.all(
       namesOfDrive.map(async (replaced) => {
-        const replacing = await replacingFiles();
+        const replacing = replacingFiles();
         const connected = await connectedFiles(replacing);
         const after = afterReplacing(replacing, replaced);
         return replacing.h.call(operationNamed(after, 'reconnect_connection'), ada, { id: connected.id });
@@ -96,7 +96,7 @@ describe('the connections of a provider another replaces by a name it had before
   });
 
   it('does not sign in again a connection added under its name before, through a link still open', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const { id, token } = await added(replacing.h, { provider: 'files' });
 
     const outcome = await replacing.h.call(operationNamed(afterReplacing(replacing, 'drive'), 'start'), ada, {
@@ -114,7 +114,7 @@ describe('the connections of a provider another replaces by a name it had before
 
 describe('Connect again, where only an admin connects the provider that replaces one by a name it had before', () => {
   it('is pressed by an admin, the host asked of the provider that replaces it by its name, and adds it again from that one', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const old = await connectedFiles(replacing);
     const heard = startedByAdminsOf('messages', [grace.id]);
     const ops = replacing.h.operationsWith({ providers: renamedBeside(replacing, 'files'), starts: heard.starts });
@@ -127,7 +127,7 @@ describe('Connect again, where only an admin connects the provider that replaces
   });
 
   it('is offered by list_providers to an admin alone, beside the provider it replaces under its name now', async () => {
-    const replacing = await replacingFiles();
+    const replacing = replacingFiles();
     const { starts } = startedByAdminsOf('messages', [grace.id]);
     const ops = replacing.h.operationsWith({ providers: renamedBeside(replacing, 'files'), starts });
     const listing = operationNamed(ops, 'list_providers');

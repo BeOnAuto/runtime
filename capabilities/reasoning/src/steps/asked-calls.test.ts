@@ -1,17 +1,20 @@
-import { setTimeout } from 'node:timers/promises';
-
 import { actingCallsCount } from '@on.auto/tool-servers/policy';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { anthropicMessage, chatCompletion } from '../provider-testing/provider-replies.ts';
-import { abortedWith, jsonResponse, recordingFetch, type Responder } from '../provider-testing/recording-fetch.ts';
+import {
+  answeredPastTheDeadline,
+  jsonResponse,
+  recordingFetch,
+  type Responder,
+} from '../provider-testing/recording-fetch.ts';
 import { anthropicToolCall } from '../provider-testing/tool-call-replies.ts';
 import { accessFor, promptText } from '../testing/adapter-harness.ts';
 import { budgetOf } from '../testing/input-budgets.ts';
 import { type ScriptedCall, textResult, toolCallsResult } from '../testing/model-results.ts';
 import { answers } from '../testing/scripted-language-model.ts';
-import { answeredWith, defaultBounds, foundRows, stepsOf, stepToolBytes, toolOf } from '../testing/step-runs.ts';
+import { defaultBounds, stepsOf, stepToolBytes, toolOf } from '../testing/step-runs.ts';
 import { noAsking, notAnObject } from './asked-calls.ts';
 import { admittedAgain } from './call-admission.ts';
 import type { StepTool } from './step-run.ts';
@@ -41,8 +44,6 @@ function searchingThen(then: Responder): Responder {
   return (request, attempt) =>
     attempt === 1 ? jsonResponse(anthropicToolCall('graph__search', { query: 'acme' })) : then(request, attempt);
 }
-
-const slowly = () => Effect.promise(() => setTimeout(300, answeredWith(foundRows)));
 
 const searchSharedRoom: StepTool = {
   name: 'graph__search',
@@ -230,14 +231,20 @@ describe('a call its run sent of a tool it no longer offers, admitted again', ()
 describe('the model calls of a run that calls tools', () => {
   it('have each their own deadline, which the time of the tools does not count against', async () => {
     const recording = recordingFetch(searchingThen(() => jsonResponse(anthropicMessage('Done.'))));
-    const { languageModel } = await accessFor({ ANTHROPIC_API_KEY: 'k' }, { fetch: recording.fetch });
-    const steps = stepsOf({ languageModel, tools: [search], send: slowly, timeoutMs: 200 });
+    const deadlines: number[] = [];
+    const deadlineAfter = (ms: number) => {
+      deadlines.push(ms);
+      return new AbortController().signal;
+    };
+    const { languageModel } = await accessFor({ ANTHROPIC_API_KEY: 'k' }, { fetch: recording.fetch, deadlineAfter });
+    const steps = stepsOf({ languageModel, tools: [search], timeoutMs: 200 });
 
     expect(await Effect.runPromise(steps.stepping)).toMatchObject({ ending: { type: 'answered' } });
+    expect(deadlines).toEqual([200, 200]);
   });
 
   it('end one that misses its deadline as timed out, and give the provider up', async () => {
-    const recording = recordingFetch(searchingThen(({ signal }) => abortedWith(signal)));
+    const recording = recordingFetch(searchingThen(({ signal }) => answeredPastTheDeadline(signal)));
     const { languageModel } = await accessFor({ ANTHROPIC_API_KEY: 'k' }, { fetch: recording.fetch });
     const steps = stepsOf({ languageModel, tools: [search], timeoutMs: 100 });
 

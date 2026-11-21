@@ -32,8 +32,8 @@ type Way = Readonly<Record<string, unknown>>;
 
 const writingWay = { ...filesWay, scope: 'files.read files.write' };
 
-async function consentingWith(way: Way, changes: Partial<ClientRegistration> = {}) {
-  const fake = await consentFake({ dynamicRegistration: true, ...changes });
+function consentingWith(way: Way, changes: Partial<ClientRegistration> = {}) {
+  const fake = consentFake({ dynamicRegistration: true, ...changes });
   closing.push(fake.close);
   return { fake, h: consentHarnessAt(fake, { way }) };
 }
@@ -91,7 +91,7 @@ function readingAlone(fake: FakeMcpServer, h: Harness) {
 
 describe('a plain link of a connection granted a group of more', () => {
   it('asks the scope its provider’s way asks with the group’s, so the person keeps what they allowed, and offers it no more', async () => {
-    const { h } = await sharingAt();
+    const { h } = sharingAt();
     const id = await grantedTheGroup(h);
 
     const listed = await h.call(operationNamed(h.operations, 'list_connections'), ada, {}, stillLater);
@@ -102,7 +102,7 @@ describe('a plain link of a connection granted a group of more', () => {
   });
 
   it('asks the scope its provider’s way asks alone where no client set up here covers the group’s too', async () => {
-    const { fake, h } = await sharingAt();
+    const { fake, h } = sharingAt();
     const id = await grantedTheGroup(h);
     const narrower = readingAlone(fake, h);
 
@@ -119,7 +119,7 @@ describe('a plain link of a connection granted a group of more', () => {
 
 describe('a group of more the person started and abandoned', () => {
   it('is not asked again by a plain link, and is still offered', async () => {
-    const { h } = await sharingAt();
+    const { h } = sharingAt();
     const { id } = await connected(h);
     await scopeAskedAt(h, await reconnectedFor(h, id, 'share', later), later);
 
@@ -133,7 +133,7 @@ describe('a group of more the person started and abandoned', () => {
 
 describe('a connection whose authorization server granted a scope it did not ask', () => {
   it('asks again only what it asked and was granted, by a link for more and by a plain link', async () => {
-    const { h } = await sharingAt({ grantedScope: 'files.read calendar.read' });
+    const { h } = sharingAt({ grantedScope: 'files.read calendar.read' });
     const { id } = await connected(h);
 
     const forMore = await scopeAskedAt(h, await reconnectedFor(h, id, 'share', later), later);
@@ -145,7 +145,7 @@ describe('a connection whose authorization server granted a scope it did not ask
 
 describe('a connection whose authorization server lists offline_access', () => {
   it('records the scope it asks without the offline_access the runtime adds to every request once', async () => {
-    const { h } = await sharingAt({ scopesSupported: ['offline_access'] });
+    const { h } = sharingAt({ scopesSupported: ['offline_access'] });
     const { id } = await connected(h);
 
     const forMore = await scopeAskedAt(h, await reconnectedFor(h, id, 'share', later), later);
@@ -159,7 +159,7 @@ describe('a connection whose authorization server lists offline_access', () => {
 
 describe('a scope the provider dropped from its way after the connection was added', () => {
   it('is not asked by a link, nor shown on its page, and the connection records what the server granted', async () => {
-    const { fake, h } = await consentingWith(writingWay);
+    const { fake, h } = consentingWith(writingWay);
     const { id } = await connected(h);
     const narrowed = withTheWay(fake, h, filesWay);
 
@@ -179,7 +179,7 @@ describe('a scope the provider dropped from its way after the connection was add
 
 describe('a group of more the connection holds, after its provider changed its way', () => {
   it('is asked by a plain link while the way still offers it, beside the scopes the way asks now', async () => {
-    const { fake, h } = await consentingWith({ ...writingWay, more: [sharing] });
+    const { fake, h } = consentingWith({ ...writingWay, more: [sharing] });
     const { id } = await connected(h);
     await connectedThrough(h, await reconnectedFor(h, id, 'share', later), later);
     const narrowed = withTheWay(fake, h, sharingWay);
@@ -190,7 +190,7 @@ describe('a group of more the connection holds, after its provider changed its w
   });
 
   it('is not asked by a plain link once the way no longer offers it', async () => {
-    const { fake, h } = await sharingAt();
+    const { fake, h } = sharingAt();
     const id = await grantedTheGroup(h);
     const withoutTheGroup = withTheWay(fake, h, filesWay);
 
@@ -200,7 +200,7 @@ describe('a group of more the connection holds, after its provider changed its w
   });
 
   it('is asked by its link beside what the connection holds that the way still asks, and nothing the way dropped', async () => {
-    const { fake, h } = await consentingWith({ ...writingWay, more: [sharing] });
+    const { fake, h } = consentingWith({ ...writingWay, more: [sharing] });
     const { id } = await connected(h);
     const narrowed = withTheWay(fake, h, sharingWay);
 
@@ -212,7 +212,7 @@ describe('a group of more the connection holds, after its provider changed its w
 
 describe('a scope the provider added to its way after the connection was added', () => {
   it('is asked by a link, and shown on its page with the words the way says of it', async () => {
-    const { fake, h } = await consentingWith(filesWay);
+    const { fake, h } = consentingWith(filesWay);
     const { id } = await connected(h);
     const widened = withTheWay(fake, h, writingWay);
 
@@ -234,7 +234,7 @@ describe('a scope the provider added to its way after the connection was added',
 
 describe('a link of a connection whose provider asks what it asked when the connection was added', () => {
   it('asks exactly what it asked before, and records the start as before', async () => {
-    const { h } = await consentingWith(filesWay);
+    const { h } = consentingWith(filesWay);
     const { id } = await connected(h);
 
     const scope = await scopeAskedAt(h, await reconnected(h, id, later), later);

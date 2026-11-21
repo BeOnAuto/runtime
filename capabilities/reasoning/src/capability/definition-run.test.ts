@@ -1,9 +1,7 @@
-import { setTimeout } from 'node:timers/promises';
-
 import { recordingJournal, shapeNamed } from '@on.auto/definitions/testing';
 import { heldForATest, keptForATest } from '@on.auto/operations/testing';
-import { type FakeMcpServer, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
-import { noToolServers, reportingAccess } from '@on.auto/tool-servers/testing';
+import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { fakeMcpInProcess, noToolServers, reportingAccess } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, Exit, Fiber, type Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -131,18 +129,14 @@ const apiKey = 'graph-api-key-4f1d9a7c2b';
 
 const closing: (() => Promise<void>)[] = [];
 
-async function sleepingGraph(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey, hints: { sleep: { idempotentHint: true } } });
+function sleepingGraph(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey, hints: { sleep: { idempotentHint: true } } });
   closing.push(fake.close);
   return fake;
 }
 
-async function calledOnce(fake: FakeMcpServer): Promise<void> {
-  if (fake.received().length > 0) {
-    return;
-  }
-  await setTimeout(5);
-  await calledOnce(fake);
+function calledOnce(fake: FakeMcpServer): Promise<void> {
+  return fake.once(() => fake.received().length > 0);
 }
 
 const source = documentOf('model: anthropic/claude-sonnet-4-5\ntools: [graph/sleep]', 'Wait for acme.');
@@ -349,7 +343,7 @@ describe('run bound', () => {
 
   describe('a run whose bound passes while a call of a tool that may change something is in flight', () => {
     it('gives the call up and is a conflict whose effect is unknown, because of its bound', async () => {
-      const fake = await sleepingGraph();
+      const fake = sleepingGraph();
       const { access } = reportingAccess(
         { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },
         { environment: { GRAPH_API_KEY: apiKey } },

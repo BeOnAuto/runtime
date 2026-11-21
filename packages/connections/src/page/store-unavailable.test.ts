@@ -2,7 +2,7 @@ import { SecretRefused, type SecretStore } from '@on.auto/secrets';
 import { custodianRefusal } from '@on.auto/secrets/testing';
 import { consentedAt, gatedRequests, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect, Schema } from 'effect';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm } from '../testing/additions.ts';
 import { consentFake } from '../testing/consents.ts';
@@ -16,8 +16,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Parameters<typeof consentFake>[0] = {}): Promise<FakeMcpServer> {
-  const fake = await consentFake(changes);
+function served(changes: Parameters<typeof consentFake>[0] = {}): FakeMcpServer {
+  const fake = consentFake(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -48,7 +48,7 @@ async function typesOfTheFacts({ h }: SealedHarness): Promise<readonly string[]>
 
 describe('a start whose verifier the secret store cannot keep now', () => {
   it('answers unavailable in the words of the store, records no start and keeps nothing', async () => {
-    const sealed = sealedConsentAt(await served());
+    const sealed = sealedConsentAt(served());
     const link = await added(sealed.h, { provider: 'files' });
 
     sealed.custodian.refuse();
@@ -66,7 +66,7 @@ describe('a start whose verifier the secret store cannot keep now', () => {
 
 describe('a start whose client registration the secret store cannot read now', () => {
   it('answers unavailable in the words of the store, before the person is sent anywhere', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const sealed = sealedConsentAt(fake, { way: { clients: ['dynamic'] }, consenting: { registeredClients: [] } });
     const link = await added(sealed.h, { provider: 'files' });
     await calledThrough(sealed, 'start', linkOf(link));
@@ -89,7 +89,7 @@ function refusingToKeep(store: SecretStore): SecretStore {
 
 describe('a start whose client registration the secret store refuses to keep', () => {
   it('answers conflict in the words of the refusal, since the registration will never be kept', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const sealed = sealedConsentAt(fake, {
       way: { clients: ['dynamic'] },
       consenting: { registeredClients: [] },
@@ -110,7 +110,7 @@ describe('a start whose client registration the secret store refuses to keep', (
 
 describe('a finish whose verifier the secret store cannot read now', () => {
   it('answers unavailable in the words of the store and redeems nothing, so the same code finishes it once the store reads it again', async () => {
-    const fake = await served();
+    const fake = served();
     const sealed = sealedConsentAt(fake);
     const finishing = await consentedThrough(sealed, await added(sealed.h, { provider: 'files' }));
 
@@ -131,15 +131,13 @@ describe('a finish whose verifier the secret store cannot read now', () => {
 
 describe('a finish whose tokens the secret store cannot keep now, once the code is redeemed', () => {
   it('answers unavailable in the words of the store, says the person starts again, revokes the tokens and connects nothing', async () => {
-    const fake = await served();
+    const fake = served();
     const gate = gatedRequests();
     const sealed = sealedConsentAt(fake, { consenting: { fetch: gate.fetch } });
     const finishing = await consentedThrough(sealed, await added(sealed.h, { provider: 'files' }));
 
     const refusing = calledThrough(sealed, 'finish', finishing);
-    await vi.waitFor(() => {
-      expect(gate.holding()).toBe(1);
-    });
+    await gate.held(1);
     sealed.custodian.refuse();
     gate.release();
     const refused = await refusing;

@@ -52,7 +52,7 @@ const recordsAllItRead: unknown = expect.objectContaining({ usage: usageOfBothSt
 const anyLimit: unknown = expect.anything();
 
 async function ranAs(source: string, ...after: readonly ScriptedReply[]) {
-  const fake = await aGraph();
+  const fake = aGraph();
   const run = reasoningOf(
     { tools: graphAccessTo(fake.url), reading: threeHundredThousandByDefault },
     firstStep,
@@ -139,7 +139,7 @@ async function ranWith(
   reading: NonNullable<Reasoning['reading']>,
   ...replies: readonly ScriptedReply[]
 ) {
-  const fake = await aGraph();
+  const fake = aGraph();
   const run = reasoningOf({ tools: graphAccessTo(fake.url), reading }, ...replies);
   const exit = await run.running(source);
   return { exit, sent: fake.received().length };

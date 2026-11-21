@@ -1,5 +1,10 @@
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { refusedConnections, reportingAccess, type AccessOptions } from '@on.auto/tool-servers/testing';
+import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import {
+  fakeMcpInProcess,
+  refusedConnections,
+  reportingAccess,
+  type AccessOptions,
+} from '@on.auto/tool-servers/testing';
 import { Effect, Exit } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -20,8 +25,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function graphServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function graphServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -50,7 +55,7 @@ describe('the tools key of a reasoning function', () => {
 
 describe('a reasoning function that names tools', () => {
   it('runs with the tools it names, under their model-facing names, and lets their session go', async () => {
-    const fake = await graphServer();
+    const fake = graphServer();
     const run = reasoningWithTools(
       accessTo(fake),
       ...callingTools([['graph__search', { query: 'acme' }]], answers(textResult('Acme has 2 rows.'))),
@@ -74,8 +79,8 @@ describe('a reasoning function that names tools', () => {
     expect(fake.endedSessions()).toBe(1);
   });
 
-  it('says it may change something outside when tool servers are configured', async () => {
-    const run = reasoningWithTools(accessTo(await graphServer()));
+  it('says it may change something outside when tool servers are configured', () => {
+    const run = reasoningWithTools(accessTo(graphServer()));
 
     expect(run.capability.mayChangeOutside).toBe(true);
     expect(reasoningWith().capability.mayChangeOutside).toBe(false);
@@ -90,7 +95,7 @@ describe('the reading of a reasoning function that names tools', () => {
     );
     const capability = reasoningAdapter({
       languageModel: scripted.languageModel,
-      tools: accessTo(await graphServer()),
+      tools: accessTo(graphServer()),
       reading: {
         defaultInputTokens: 500_000,
         mostInputTokens: 500_000,
@@ -110,7 +115,7 @@ describe('the reading of a reasoning function that names tools', () => {
 
 describe('a tool a reasoning function names that is not offered', () => {
   it('rejects the run as unavailable when no server of that name is configured for its playbook', async () => {
-    const run = reasoningWithTools(accessTo(await graphServer(), 'globex'));
+    const run = reasoningWithTools(accessTo(graphServer(), 'globex'));
 
     expect(await run.running(naming('graph/search'))).toEqual(
       Exit.fail(
@@ -136,7 +141,7 @@ describe('a tool a reasoning function names that is not offered', () => {
   });
 
   it('rejects the run as unavailable when its server cannot be used', async () => {
-    const fake = await serveFakeMcp();
+    const fake = fakeMcpInProcess();
     await fake.close();
     const run = reasoningWithTools(accessTo(fake, 'acme', refusedConnections([fake.origin]).fetch));
 
@@ -148,7 +153,7 @@ describe('a tool a reasoning function names that is not offered', () => {
 
 describe('a reasoning function with tools whose model is not offered', () => {
   it('is rejected before its tools are opened, so it reaches no server and starts no process', async () => {
-    const fake = await graphServer();
+    const fake = graphServer();
     const { languageModel } = await accessFor({ OPENAI_API_KEY: 'k' }, {});
     const capability = reasoningAdapter({
       languageModel,

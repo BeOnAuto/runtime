@@ -2,7 +2,7 @@ import { authenticatorFor } from '@on.auto/identity';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { call } from '../testing/api-calls.ts';
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { mcpClientKinds, plainTextIn, problemIn, withMcpSession, type McpSession } from '../testing/mcp-clients.ts';
 import { initializeAt, messagesIn, postMcp, requestOf } from '../testing/mcp-requests.ts';
 import {
@@ -36,7 +36,7 @@ let listening: Listening;
 
 beforeAll(async () => {
   server = await operationServer();
-  listening = await listenOnLoopback(server.handler);
+  listening = listenInProcess(server.handler);
 });
 
 afterAll(async () => {

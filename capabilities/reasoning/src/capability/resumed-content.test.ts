@@ -46,7 +46,7 @@ describe('a run that goes on from facts whose content it cannot read', () => {
   });
 
   it('is unfinished for a run whose servers keep no content, once it called a tool, every open call ended', async () => {
-    const tools = graphAccessTo((await aGraph()).url, { record_content: false });
+    const tools = graphAccessTo(aGraph().url, { record_content: false });
     const asking = answers(toolCallsResult([['graph__search', { query: 'acme' }]]));
     const { calls } = await recordedBy(withGraphTools, { tools }, asking, stopping);
     const again = reasoningOf({ tools, attempt: attemptOf(calls.slice(0, -2)) });
@@ -68,7 +68,7 @@ describe('a run that goes on from facts whose content it cannot read', () => {
 
 describe('a run that goes on from content it kept that it cannot use', () => {
   it('is unfinished when what it kept after its prompt is gone, every open call ended', async () => {
-    const tools = graphAccessTo((await aGraph()).url);
+    const tools = graphAccessTo(aGraph().url);
     const asking = answers(toolCallsResult([['graph__search', { query: 'acme' }]]));
     const { calls } = await recordedBy(withGraphTools, { tools }, asking, stopping);
     const onlyThePrompt = memoryRecordedContent();

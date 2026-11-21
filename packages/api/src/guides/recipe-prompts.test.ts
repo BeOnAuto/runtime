@@ -2,7 +2,7 @@ import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { connectRecipe, notebookGuide, noteRecipe, testDefinitionTypes, testGuides } from '../testing/guides.ts';
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { mcpClientKinds, withMcpSession, type McpSession } from '../testing/mcp-clients.ts';
 import { messagesIn, postMcp, requestOf } from '../testing/mcp-requests.ts';
 import { acmeAdmin, acmeReader, operationServer, type OperationServer } from '../testing/operation-server.ts';
@@ -13,7 +13,7 @@ let listening: Listening;
 
 beforeAll(async () => {
   server = await operationServer();
-  listening = await listenOnLoopback(server.handler);
+  listening = listenInProcess(server.handler);
 });
 
 afterAll(async () => {
@@ -136,7 +136,7 @@ describe('a recipe that names no format guide', () => {
     const connecting = await operationServer({
       shelf: guideShelfOf(testGuides, [noteRecipe, connectRecipe], testDefinitionTypes),
     });
-    const serving = await listenOnLoopback(connecting.handler);
+    const serving = listenInProcess(connecting.handler);
     const answer = await withMcpSession(
       'current revision',
       { url: `${serving.origin}/mcp`, headers: { authorization: `Bearer ${acmeAdmin.key}` } },

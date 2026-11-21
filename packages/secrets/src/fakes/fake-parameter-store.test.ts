@@ -18,11 +18,6 @@ const clientSettings = {
 
 const client = new SSMClient(clientSettings);
 
-const clientGivingUpAt200Ms = new SSMClient({
-  ...clientSettings,
-  requestHandler: { requestTimeout: 200, throwOnRequestTimeout: true },
-});
-
 interface Written {
   readonly Name: string;
   readonly Value: string;
@@ -162,22 +157,29 @@ describe('the fake Parameter Store told how to answer', () => {
   });
 });
 
-describe('the fake Parameter Store told to stall', () => {
-  it('leaves the operations it is told unanswered, so a client with a request timeout of 200 ms, the bound this test is about, gives up on them', async () => {
-    await written({ Name: '/fake/stalled', Value: 'first' });
+describe('the fake Parameter Store told to stall, served on a socket', () => {
+  it('leaves the operations it is told unanswered until the client gives up on them', async () => {
+    await written({ Name: '/fake/held', Value: 'first' });
     fake.tell('stalling', ['PutParameter']);
     onTestFinished(() => {
       fake.tell('answering');
     });
+    const leaving = new AbortController();
+    const before = fake.calls().length;
 
-    const stalled = await refusalOf(() =>
-      clientGivingUpAt200Ms.send(
-        new PutParameterCommand({ Type: 'SecureString', Name: '/fake/stalled', Value: 'second', Overwrite: true }),
+    const stalled = refusalOf(() =>
+      client.send(
+        new PutParameterCommand({ Type: 'SecureString', Name: '/fake/held', Value: 'second', Overwrite: true }),
+        {
+          abortSignal: leaving.signal,
+        },
       ),
     );
+    await fake.asked(before + 1);
+    leaving.abort();
 
-    expect(stalled).toMatch(/^TimeoutError/u);
-    expect(fake.parameter('/fake/stalled')?.versions).toEqual(['first']);
+    expect(await stalled).toMatch(/Abort/u);
+    expect(fake.parameter('/fake/held')?.versions).toEqual(['first']);
   });
 });
 

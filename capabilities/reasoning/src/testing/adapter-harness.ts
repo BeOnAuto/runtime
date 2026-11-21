@@ -3,6 +3,7 @@ import { Effect, Result, type Exit } from 'effect';
 import type { ModelFailure } from '../failure/model-failure.ts';
 import type { ModelRequest } from '../model/model-request.ts';
 import type { ModelResult } from '../model/model-result.ts';
+import { deadlineCutByTheProvider } from '../provider-testing/recording-fetch.ts';
 import type { ModelAccessOptions } from '../providers/model-access-options.ts';
 import { makeModelAccess, type ModelAccess } from '../providers/model-access.ts';
 import { compileAnswerSchema, type AnswerSchema } from '../schema/answer-schema.ts';
@@ -38,7 +39,9 @@ export function jsonRequest(model: string, overrides: Partial<ModelRequest> = {}
 
 export function accessFor(environment: Environment, options: ModelAccessOptions): Promise<ModelAccess> {
   return Effect.runPromise(
-    readModelSettings(environment).pipe(Effect.flatMap((settings) => makeModelAccess(settings, options))),
+    readModelSettings(environment).pipe(
+      Effect.flatMap((settings) => makeModelAccess(settings, { deadlineAfter: deadlineCutByTheProvider, ...options })),
+    ),
   );
 }
 

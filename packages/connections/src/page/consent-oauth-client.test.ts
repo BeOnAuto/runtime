@@ -1,6 +1,12 @@
 import { keptTokensIn, type ConsentClient } from '@on.auto/tool-servers';
-import { servedThroughAuto, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { admitted, autoClientsOf, consentedAt, type ClientRegistration } from '@on.auto/tool-servers/testing';
+import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import {
+  admitted,
+  autoClientsOf,
+  consentedAt,
+  throughAutoInProcess,
+  type ClientRegistration,
+} from '@on.auto/tool-servers/testing';
 import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -28,8 +34,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await orgsOAuthClientFake(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = orgsOAuthClientFake(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -43,7 +49,7 @@ interface UnderTheOrgsOAuthClient {
 async function givenUnderTheOrgsOAuthClient(
   changes: Partial<ClientRegistration> = {},
 ): Promise<UnderTheOrgsOAuthClient> {
-  const fake = await served(changes);
+  const fake = served(changes);
   const h = consentHarnessAt(fake);
   const link = await added(h, underTheOrgsOAuthClient);
   await givingTheClient(h, link);
@@ -81,7 +87,7 @@ const clientGone =
 
 describe('the consent of a connection under the organization’s own OAuth client', () => {
   it('is refused until the organization’s own OAuth client is given on the page, and nothing is started', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await added(h, underTheOrgsOAuthClient);
 
@@ -122,7 +128,7 @@ describe('the consent of a connection under the organization’s own OAuth clien
 
 describe('the consent of a connection under the organization’s own OAuth client, where Auto’s clients are on', () => {
   it('never begins through Auto’s consent service, though Auto has a client at the provider', async () => {
-    const serving = await servedThroughAuto({ clientId: theOrgsOAuthClient.client_id, clientSecret: orgsClientSecret });
+    const serving = throughAutoInProcess({ clientId: theOrgsOAuthClient.client_id, clientSecret: orgsClientSecret });
     closing.push(serving.close);
     const h = consentHarnessAt(serving.fake, {
       policy: loopbackAndCrmPolicy,
@@ -143,7 +149,7 @@ describe('the consent of a connection under the organization’s own OAuth clien
   });
 
   it('asks for the client sources the runtime has only as it is added, since the org’s client is its one source after', async () => {
-    const harnessed = consentHarnessAt(await served());
+    const harnessed = consentHarnessAt(served());
     const counting = sourcesCounted(harnessed.consent);
     const h: Harness = { ...harnessed, operations: harnessed.operationsWith({ consent: counting.consent }) };
     const link = await added(h, underTheOrgsOAuthClient);
@@ -162,7 +168,7 @@ describe('the consent of a connection under the organization’s own OAuth clien
 
 describe('the consent of a connection under the organization’s own OAuth client whose client secret is not had', () => {
   it('is unavailable where the client secret cannot be read now, and nothing is started', async () => {
-    const sealed = sealedConsentAt(await served());
+    const sealed = sealedConsentAt(served());
     const link = await added(sealed.h, underTheOrgsOAuthClient);
     await calledThrough(sealed, 'give_client', { id: link.id, token: link.token, ...theOrgsOAuthClient });
 

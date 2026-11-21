@@ -131,7 +131,7 @@ function relayThrough(gateway: { readonly url: string; readonly document: string
 
 describe('a connection made through its gateway while its provider had another name', () => {
   it('is served under its provider’s name now, through that gateway with its key', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const [key = ''] = gateway.keys();
@@ -151,7 +151,7 @@ describe('a connection made through its gateway while its provider had another n
   });
 
   it('is reconnected through that gateway under its own name, recording no addition', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const later = under(h, relayThrough(gateway));
@@ -167,7 +167,7 @@ describe('a connection made through its gateway while its provider had another n
   });
 
   it('is removed with its key ended at that gateway', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const h = gatewayHarnessAt(gateway);
     const { link } = await connectedThrough(h, gateway);
     const [key = ''] = gateway.keys();

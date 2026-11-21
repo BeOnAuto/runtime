@@ -1,6 +1,7 @@
 import type { ModelRequest } from '../model/model-request.ts';
 import type { ModelTelemetry, ReportOperatorHint, ReportProviderMessage } from '../providers/model-access-options.ts';
 import type { ProviderOptionsCheck } from '../settings/gateway-options.ts';
+import type { DeadlineAfter } from './stopped-call.ts';
 
 export interface CallPolicy {
   readonly configured: readonly string[];
@@ -10,6 +11,7 @@ export interface CallPolicy {
   readonly reportHint: ReportOperatorHint;
   readonly admitsOptions: ProviderOptionsCheck;
   readonly telemetry?: ModelTelemetry | undefined;
+  readonly deadlineAfter?: DeadlineAfter | undefined;
 }
 
 const leastQuotedCharacters = 8;

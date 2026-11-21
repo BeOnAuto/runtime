@@ -14,8 +14,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await consentFake(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = consentFake(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -24,7 +24,7 @@ const dynamicWay = { clients: ['dynamic'] };
 
 describe('the client a connection is connected with', () => {
   it('is registered dynamically once at its issuer, recorded in a stream of the runtime, and used again by a later connection', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const h = consentHarnessAt(fake, { way: dynamicWay });
     const first = await added(h, { provider: 'files' });
     const second = await added(h, { provider: 'files', name: 'files-again' });
@@ -40,7 +40,7 @@ describe('the client a connection is connected with', () => {
   });
 
   it('is gone where the registration it was made with is no longer kept, and the finish says so', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const h = consentHarnessAt(fake, { way: dynamicWay });
     const link = await added(h, { provider: 'files' });
     const consented = await consentedOf(h, link);
@@ -56,7 +56,7 @@ describe('the client a connection is connected with', () => {
 
 describe('a connection of an HTTP API whose way gives its endpoints', () => {
   it('is connected through a server that publishes no metadata, with no scope where none was asked or granted', async () => {
-    const fake = await served({ publishesMetadata: false });
+    const fake = served({ publishesMetadata: false });
     const h = consentHarnessAt(fake, { providers: providerListOf(filesApiAt(fake)) });
     const link = await added(h, { provider: 'files-api' });
 
@@ -69,7 +69,7 @@ describe('a connection of an HTTP API whose way gives its endpoints', () => {
 
 describe('a connection connected by consent', () => {
   it('forgets the verifier of an open start when it is removed while pending', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await added(h, { provider: 'files' });
     await startedAt(h, link);
@@ -121,7 +121,7 @@ async function connectedAndRemoved(h: Harness, provider: string) {
 
 describe('a connection of an MCP server whose way gives its endpoints at a tenant of a multi-tenant issuer', () => {
   it('connects at an address with a query and no metadata, through the client registered at its issuer’s template, and is removed without a revocation', async () => {
-    const fake = await served({ publishesMetadata: false });
+    const fake = served({ publishesMetadata: false });
     const h = consentHarnessAt(fake, {
       providers: providerListOf(tenantAt(fake, 'common'), tenantAt(fake, 'organizations')),
       consenting: { registeredClients: [registeredAt(`${fake.origin}/{tenant}/v2.0`)] },

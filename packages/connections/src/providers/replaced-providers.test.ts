@@ -11,7 +11,7 @@ const replacedHere = 'The provider files is replaced here by messages, which a c
 
 describe('a provider another provider of the list replaces', () => {
   it('is listed with no way offered, saying which provider replaces it, beside the one that replaces it, which names it', async () => {
-    const { h, after } = await replacingFiles();
+    const { h, after } = replacingFiles();
 
     const listed = await h.call(operationNamed(after, 'list_providers'), ada);
 
@@ -26,7 +26,7 @@ describe('a provider another provider of the list replaces', () => {
   });
 
   it('is left out of the providers a person may connect, which search offers', async () => {
-    const { h, providers } = await replacingFiles();
+    const { h, providers } = replacingFiles();
     const services = connectionServicesWith({ providers, policy: replacingPolicy, consent: h.consent });
 
     const offered = await Effect.runPromise(makeProviderOffering(services)(ada));
@@ -35,7 +35,7 @@ describe('a provider another provider of the list replaces', () => {
   });
 
   it('is not added from: the addition is refused at the provider, naming the one that replaces it, and records nothing', async () => {
-    const { h, after } = await replacingFiles();
+    const { h, after } = replacingFiles();
 
     const outcome = await h.call(operationNamed(after, 'add_connection'), ada, { provider: 'files' });
 
@@ -46,7 +46,7 @@ describe('a provider another provider of the list replaces', () => {
 
 describe('the provider that replaces another, as list_providers answers it to each caller', () => {
   it('tells, where only an admin connects it, an admin they may reconnect the connections made from the one it replaces, and anyone else why not', async () => {
-    const { h, providers } = await replacingFiles();
+    const { h, providers } = replacingFiles();
     const listing = operationNamed(
       h.operationsWith({ providers, starts: startedByAdminsOf('messages', [grace.id]).starts }),
       'list_providers',
@@ -62,7 +62,7 @@ describe('the provider that replaces another, as list_providers answers it to ea
   });
 
   it('says nothing of who reconnects where whoever added a connection reconnects it, or where the host cannot say just now', async () => {
-    const { h, providers } = await replacingFiles();
+    const { h, providers } = replacingFiles();
     const listedBy = async (starts: Parameters<typeof h.operationsWith>[0]['starts']) => {
       const outcome = await h.call(operationNamed(h.operationsWith({ providers, starts }), 'list_providers'), ada);
       return JSON.stringify(outcome);

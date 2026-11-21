@@ -25,14 +25,14 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(): Promise<FakeMcpServer> {
-  const fake = await orgsOAuthClientFake();
+function served(): FakeMcpServer {
+  const fake = orgsOAuthClientFake();
   closing.push(fake.close);
   return fake;
 }
 
 async function underTheOrgsOAuthClientAt(options: Parameters<typeof consentHarnessAt>[1] = {}) {
-  const h = consentHarnessAt(await served(), options);
+  const h = consentHarnessAt(served(), options);
   return { h, link: await added(h, underTheOrgsOAuthClient) };
 }
 
@@ -140,7 +140,7 @@ describe('the person who gives the organization’s own OAuth client', () => {
 
 describe('a client given for a connection that does not run under the organization’s own OAuth client', () => {
   it('is refused, and nothing is kept', async () => {
-    const h = consentHarnessAt(await served(), { policy: loopbackAndCrmPolicy });
+    const h = consentHarnessAt(served(), { policy: loopbackAndCrmPolicy });
     const byAutosClient = await added(h, { provider: 'files' });
     const bySecret = await added(h, crm);
 
@@ -176,7 +176,7 @@ describe('the organization’s own OAuth client whose secret the secret store do
   });
 
   it('is answered unavailable in the words of the store where it cannot keep the secret now, keeping nothing', async () => {
-    const sealed = sealedConsentAt(await served());
+    const sealed = sealedConsentAt(served());
     const link = await added(sealed.h, underTheOrgsOAuthClient);
 
     sealed.custodian.refuse();

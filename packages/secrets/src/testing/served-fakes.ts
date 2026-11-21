@@ -1,5 +1,5 @@
+export { serveFakeKms } from '../fakes/fake-kms-server.ts';
 export {
-  serveFakeKms,
   type FakeKeyState,
   type FakeKms,
   type FakeKmsCall,

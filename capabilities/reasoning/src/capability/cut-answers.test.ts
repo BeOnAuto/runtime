@@ -1,5 +1,5 @@
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { reportingAccess } from '@on.auto/tool-servers/testing';
+import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { fakeMcpInProcess, reportingAccess } from '@on.auto/tool-servers/testing';
 import { Effect, Exit } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -16,8 +16,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function servedAs(server: string): Promise<{ readonly fake: FakeMcpServer; readonly server: string }> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function servedAs(server: string): { readonly fake: FakeMcpServer; readonly server: string } {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return { fake, server };
 }
@@ -34,8 +34,8 @@ const cut: ScriptedReply = () =>
     }),
   );
 
-async function cutAfterCalling(server: string, tools: readonly string[]): Promise<unknown> {
-  const { fake } = await servedAs(server);
+function cutAfterCalling(server: string, tools: readonly string[]): Promise<unknown> {
+  const { fake } = servedAs(server);
   const { access } = reportingAccess(
     { [server]: { url: fake.url, headers: { Authorization: 'Bearer ${RECORDS_API_KEY}' }, org: 'acme' } },
     { environment: { RECORDS_API_KEY: apiKey } },

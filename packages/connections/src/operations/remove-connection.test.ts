@@ -1,6 +1,13 @@
 import { custodianRefusal } from '@on.auto/secrets/testing';
 import type { ConsentClientOptions } from '@on.auto/tool-servers';
-import { admitted, consentedAt, hostRefusedAt, registeredAt, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import {
+  admitted,
+  consentedAt,
+  hostRefusedAt,
+  inProcessFetch,
+  registeredAt,
+  type FakeMcpServer,
+} from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -42,7 +49,7 @@ interface Sending {
 
 function revocationsAnswering(answer: () => Promise<Response>): ConsentClientOptions['fetch'] {
   return (...[address, init]: readonly [unknown, unknown?]) =>
-    String(address).endsWith('/revoke') ? answer() : globalThis.fetch(String(address), Object.assign({}, init));
+    String(address).endsWith('/revoke') ? answer() : inProcessFetch(String(address), Object.assign({}, init));
 }
 
 function failingWhileSending(sending: Readonly<Sending>): () => Promise<Response> {
@@ -59,8 +66,8 @@ async function loggedRemovalOf(h: Harness, id: string): Promise<string> {
 const unanswered =
   'The authorization server of the connection files did not answer the revocation of its tokens, so they end on their own';
 
-async function consentServed(): Promise<FakeMcpServer> {
-  const fake = await consentFake();
+function consentServed(): FakeMcpServer {
+  const fake = consentFake();
   closing.push(fake.close);
   return fake;
 }
@@ -104,7 +111,7 @@ describe('removing a connection', () => {
 
 describe('removing a connection connected by consent', () => {
   it('revokes its tokens with the client it was made with, then forgets their row', async () => {
-    const fake = await consentServed();
+    const fake = consentServed();
     const { h, id, tokens } = await connectedByConsentAt(fake);
 
     const removed = await removing(h, id);
@@ -116,7 +123,7 @@ describe('removing a connection connected by consent', () => {
   });
 
   it('revokes nothing more when it is removed again, nor for a connection still pending', async () => {
-    const fake = await consentServed();
+    const fake = consentServed();
     const { h, id } = await connectedByConsentAt(fake);
     const pending = await added(h, { provider: 'files', name: 'drafts' });
 
@@ -130,7 +137,7 @@ describe('removing a connection connected by consent', () => {
 
 describe('a removal whose revocation does not happen', () => {
   it('goes on to forget the row where the request fails, and logs that it was not answered in words that hold no token', async () => {
-    const fake = await consentServed();
+    const fake = consentServed();
     const sending: Sending = { token: '' };
     const { h, id, tokens } = await connectedByConsentAt(fake, {
       fetch: revocationsAnswering(failingWhileSending(sending)),
@@ -144,8 +151,8 @@ describe('a removal whose revocation does not happen', () => {
   });
 
   it('goes on where the authorization server does not answer at all, or refuses the revocation', async () => {
-    const gone = await consentFake();
-    const refusing = await consentServed();
+    const gone = consentFake();
+    const refusing = consentServed();
     const network = consentFetchRefusing();
     const unanswering = await connectedByConsentAt(gone, { fetch: network.fetch });
     const refused = await connectedByConsentAt(refusing, {
@@ -166,7 +173,7 @@ describe('a removal whose revocation does not happen', () => {
 
 describe('a removal whose revocation cannot be made', () => {
   it('goes on where the rules refuse the host it reaches, or the client the connection was made with is gone', async () => {
-    const fake = await consentServed();
+    const fake = consentServed();
     const rule = 'The rules of whoever runs Auto do not allow the host 127.0.0.1';
     const registered = [registeredAt(fake.origin)];
     const refusedItsHost = await connectedByConsentAt(fake, {
@@ -198,7 +205,7 @@ async function connectedThrough(sealed: SealedHarness): Promise<string> {
 
 describe('a removal whose tokens the secret store cannot read now', () => {
   it('logs in the words of the store that they were not revoked, and goes on to forget their row', async () => {
-    const fake = await consentServed();
+    const fake = consentServed();
     const sealed = sealedConsentAt(fake);
     const id = await connectedThrough(sealed);
 
@@ -216,7 +223,7 @@ describe('a removal whose tokens the secret store cannot read now', () => {
 
 describe('a removal whose client registration the secret store cannot read now', () => {
   it('logs in the words of the store that the tokens were not revoked, and goes on to forget their row', async () => {
-    const fake = await consentFake({ dynamicRegistration: true });
+    const fake = consentFake({ dynamicRegistration: true });
     closing.push(fake.close);
     const registrations = sealedInMemory();
     const sealed = sealedConsentAt(fake, {

@@ -1,5 +1,7 @@
 import { Predicate } from 'effect';
 
+import type { DeadlineAfter } from '../model-calls/stopped-call.ts';
+
 interface RecordedRequest {
   readonly url: string;
   readonly method: string;
@@ -79,4 +81,16 @@ export function abortedWith(signal: Readonly<AbortSignal>): Promise<Response> {
 export function connectionFailure(code: string): Promise<Response> {
   const cause = Object.assign(new Error(`connect failed with ${code}`), { code });
   return Promise.reject(new TypeError('fetch failed', { cause }));
+}
+
+const latest = { deadline: new AbortController() };
+
+export const deadlineCutByTheProvider: DeadlineAfter = () => {
+  latest.deadline = new AbortController();
+  return latest.deadline.signal;
+};
+
+export function answeredPastTheDeadline(signal: Readonly<AbortSignal>): Promise<Response> {
+  latest.deadline.abort();
+  return abortedWith(signal);
 }

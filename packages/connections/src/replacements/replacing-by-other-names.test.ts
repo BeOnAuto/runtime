@@ -21,15 +21,15 @@ function replacingAsMessages(gateway: FakeGateway) {
   return providerListOf(providerOf({ ...through(gateway), aliases: ['relay'], replaces: ['files'] }));
 }
 
-async function relayed() {
-  const gateway = await gatewayServed();
+function relayed() {
+  const gateway = gatewayServed();
   const h = gatewayHarnessAt(gateway, { providers: namedRelay(gateway) });
   return { gateway, h, providers: replacingAsMessages(gateway) };
 }
 
 describe('a connection added under a name the provider that replaces another had before', () => {
   it('is that provider’s own: listed and served under its name now, and reconnected with a new link, not added again', async () => {
-    const { gateway, h, providers } = await relayed();
+    const { gateway, h, providers } = relayed();
     const { link } = await connectedThrough(h, gateway, await added(h, { provider: 'relay' }));
     const after = h.operationsWith({ providers });
     const before = (await h.facts()).length;
@@ -47,7 +47,7 @@ describe('a connection added under a name the provider that replaces another had
   });
 
   it('left waiting, where only an admin connects that provider, is added again by another admin from it under its name now', async () => {
-    const { h, providers } = await relayed();
+    const { h, providers } = relayed();
     const left = await added(h, { provider: 'relay' });
     const heard = startedByAdminsOf('messages', [ada.id, grace.id]);
     const ops = h.operationsWith({ providers, starts: heard.starts });

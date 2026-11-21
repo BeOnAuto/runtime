@@ -1,7 +1,12 @@
 import { adverts, drive, providersOf } from '@on.auto/providers/testing';
 import type { ConsentClientOptions, ReturnKind } from '@on.auto/tool-servers';
-import { serveFakeConsentService, type FakeConsentService } from '@on.auto/tool-servers/served-fakes';
-import { autoClientsOf, clockAt, consentClientWith, registeredAt } from '@on.auto/tool-servers/testing';
+import {
+  autoClientsOf,
+  consentClientWith,
+  fakeConsentServiceInProcess,
+  registeredAt,
+  type FakeConsentService,
+} from '@on.auto/tool-servers/testing';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -9,8 +14,8 @@ import { makeProviderOffering } from '../index.ts';
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
 import { added, adding } from '../testing/additions.ts';
 import {
-  connectionServicesWith,
   ada,
+  connectionServicesWith,
   harness,
   harnessPages,
   operationNamed,
@@ -232,10 +237,10 @@ describe('the providers search offers a caller who may add', () => {
   });
 });
 
-async function serviceOfDrive(): Promise<FakeConsentService> {
-  const service = await serveFakeConsentService({
+function serviceOfDrive(): FakeConsentService {
+  const service = fakeConsentServiceInProcess({
     vendor: { origin: 'https://accounts.drive.example.com' },
-    now: clockAt(0).now,
+    now: () => 0,
   });
   closing.push(service.close);
   return service;
@@ -252,7 +257,7 @@ const unservedBy = [
 
 describe('a provider whose way is consent where Auto’s consent service serves its issuer', () => {
   it('is listed offered, added and offered to search, where whoever runs Auto registered no client', async () => {
-    const service = await serviceOfDrive();
+    const service = serviceOfDrive();
     const h = harness({ providers: consentProviders, consenting: switchedOf(service, true) });
 
     expect([
@@ -269,7 +274,7 @@ describe('a provider whose way is consent where Auto’s consent service serves 
   it.each(unservedBy)(
     'is added under the organization’s own OAuth client alone, and the service asked nothing, where %s',
     async (_, enabled, kind) => {
-      const service = await serviceOfDrive();
+      const service = serviceOfDrive();
       const consenting = switchedOf(service, enabled, kind);
       const h = harness({ providers: consentProviders, consenting });
 

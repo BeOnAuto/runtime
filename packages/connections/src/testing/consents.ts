@@ -3,6 +3,7 @@ import { audiences, providerListOf, providerOf } from '@on.auto/providers/testin
 import { servedForConsent, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import {
   consentedAt,
+  forConsentInProcess,
   refusedConnections,
   registeredAt,
   type ClientRegistration,
@@ -27,7 +28,11 @@ const StartedSchema = Schema.Struct({
   output: Schema.Struct({ authorize: Schema.Struct({ url: Schema.String, expires_at: Schema.String }) }),
 });
 
-export function consentFake(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
+export function consentFake(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  return forConsentInProcess({ redirectUris: [studioReturn], ...changes });
+}
+
+export function consentFakeOnLoopback(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
   return servedForConsent({ redirectUris: [studioReturn], ...changes });
 }
 
@@ -40,7 +45,7 @@ export const underTheOrgsOAuthClient = {
   credential: { kind: 'authorization', oauth_client: 'own' },
 };
 
-export function orgsOAuthClientFake(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
+export function orgsOAuthClientFake(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
   return consentFake({ clientId: theOrgsOAuthClient.client_id, clientSecret: orgsClientSecret, ...changes });
 }
 

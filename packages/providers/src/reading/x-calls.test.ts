@@ -2,8 +2,7 @@ import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { serveFakeApi } from '@on.auto/tool-servers/served-fakes';
-import { describedAccess, patientTiming } from '@on.auto/tool-servers/testing';
+import { describedAccess, fakeApiInProcess, patientTiming } from '@on.auto/tool-servers/testing';
 import { Effect, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -30,7 +29,7 @@ afterEach(async () => {
 });
 
 async function accessAtTheFake() {
-  const fake = await serveFakeApi({ client: { clientId: 'org-app', clientSecret, expiresInSeconds: 7200 } });
+  const fake = fakeApiInProcess({ client: { clientId: 'org-app', clientSecret, expiresInSeconds: 7200 } });
   closing.push(fake.close);
   const { access } = await describedAccess(
     {

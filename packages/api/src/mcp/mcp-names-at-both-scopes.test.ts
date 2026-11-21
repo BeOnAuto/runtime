@@ -2,7 +2,7 @@ import { defineQuery } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { listenOnLoopback, type Listening } from '../testing/listening.ts';
+import { listenInProcess, type Listening } from '../testing/listening.ts';
 import { withMcpSession, type McpSession } from '../testing/mcp-clients.ts';
 import { NoteSchema, listNotesOfTheOrg, notebookOperations, plainly } from '../testing/notebook.ts';
 import { acmeAdmin, operationServer, type OperationServer } from '../testing/operation-server.ts';
@@ -73,11 +73,11 @@ beforeAll(async () => {
   everyScope = await operationServer({
     operations: [...notebookOperations, countShapesInTheOrg, countShapesInAPlaybook],
   });
-  [listening, listeningAlone, listeningEveryScope] = await Promise.all([
-    listenOnLoopback(server.handler),
-    listenOnLoopback(alone.handler),
-    listenOnLoopback(everyScope.handler),
-  ]);
+  [listening, listeningAlone, listeningEveryScope] = [
+    listenInProcess(server.handler),
+    listenInProcess(alone.handler),
+    listenInProcess(everyScope.handler),
+  ];
 });
 
 afterAll(async () => {

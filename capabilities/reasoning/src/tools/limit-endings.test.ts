@@ -46,7 +46,7 @@ function countingAll(most: number, exitBehavior = 'error'): string {
 }
 
 async function ranWith(source: string, reasoning: Omit<Reasoning, 'tools'>, ...replies: readonly ScriptedReply[]) {
-  const fake = await aGraph();
+  const fake = aGraph();
   const run = reasoningOf({ ...reasoning, tools: graphAccessTo(fake.url) }, ...replies);
   const exit = await run.running(source);
   const offered = run.requests().map(({ tools = [] }) => tools.length > 0);

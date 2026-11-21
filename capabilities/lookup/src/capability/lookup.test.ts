@@ -28,7 +28,7 @@ function rejectedWith(fields: Readonly<Record<string, unknown>>) {
 
 describe('a run of a lookup function', () => {
   it('calls its tool once and ends at once with the value at read, recording the call on the run', async () => {
-    const { fake, journal, run } = await lookupRuns();
+    const { fake, journal, run } = lookupRuns();
 
     expect(await run(lookupDocument())).toEqual(
       Exit.succeed({ output: threadReplies, record: { server: 'chat', tool: 'thread', read: '/messages' } }),
@@ -58,7 +58,7 @@ describe('a run of a lookup function', () => {
   });
 
   it('checks what it read against its output schema', async () => {
-    const { run } = await lookupRuns();
+    const { run } = lookupRuns();
 
     expect(await run(lookupDocument({ output: ['output:', '  schema: { type: string }'] }))).toEqual(
       rejectedWith({
@@ -73,7 +73,7 @@ describe('a run of a lookup function', () => {
 
 describe('a run of a lookup function whose tool is no longer marked reads', () => {
   it('is unavailable, sends nothing and records no call, whether its server marks it acts now or leaves it unmarked', async () => {
-    const { fake, journal, run } = await lookupRuns({ server: { hints: { thread: { readOnlyHint: false } } } });
+    const { fake, journal, run } = lookupRuns({ server: { hints: { thread: { readOnlyHint: false } } } });
     const acting = await run(lookupDocument());
     fake.annotateTool('thread', {});
     const unmarked = await run(lookupDocument());
@@ -96,8 +96,8 @@ describe('a run of a lookup function whose tool is no longer marked reads', () =
 
 describe('a run of a lookup function that could not finish', () => {
   it('is unfinished and safe to try again, after a tool error, a server failure or a call past its bound', async () => {
-    const { run } = await lookupRuns();
-    const hurried = await lookupRuns({ timing: { ...patientTiming, callMs: 300 } });
+    const { run } = lookupRuns();
+    const hurried = lookupRuns({ timing: { ...patientTiming, callMs: 300, deadlineAfter: () => AbortSignal.abort() } });
 
     expect([
       await run(reading('denied')),
@@ -121,9 +121,9 @@ describe('a run of a lookup function that could not finish', () => {
   });
 
   it('is unavailable, sending nothing, when its server does not serve the playbook or cannot be reached', async () => {
-    const elsewhere = await lookupRuns({ entry: { org: 'globex' } });
+    const elsewhere = lookupRuns({ entry: { org: 'globex' } });
     const network = refusedConnections();
-    const { fake, run } = await lookupRuns({ fetch: network.fetch });
+    const { fake, run } = lookupRuns({ fetch: network.fetch });
     await fake.close();
     network.refuse(fake.origin);
 

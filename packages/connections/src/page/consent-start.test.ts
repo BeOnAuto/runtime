@@ -2,11 +2,16 @@ import { createHash } from 'node:crypto';
 
 import { servedStudio } from '@on.auto/identity/testing';
 import type { ReturnKind } from '@on.auto/tool-servers';
-import { servedThroughAuto, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { autoClientsOf, consentedAt, hostOf, type ClientRegistration } from '@on.auto/tool-servers/testing';
+import {
+  autoClientsOf,
+  consentedAt,
+  hostOf,
+  throughAutoInProcess,
+  type ClientRegistration,
+  type FakeMcpServer,
+} from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added, crm } from '../testing/additions.ts';
 import { consentFake, consentHarnessAt, finishing, startedAt, starting, studioReturn } from '../testing/consents.ts';
 import { acmeWriter, grace, harness, operationNamed, loopbackAndCrmPolicy } from '../testing/harness.ts';
@@ -19,8 +24,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await consentFake(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = consentFake(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -36,7 +41,7 @@ function digestOf(text: string): string {
 
 describe('the start of a consent', () => {
   it('answers the page the person signs in at, records the start with the digest of its state, and keeps its verifier sealed', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await added(h, { provider: 'files' });
 
@@ -71,7 +76,7 @@ describe('the start of a consent', () => {
 describe('the return address a consent is started and finished with', () => {
   it('is connect-return at the root of the Studio host, where the runtime serves no Studio', async () => {
     const studioHost = { origin: 'https://studio.example.com', served: false };
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake, { pages: { studio: studioHost, runtime: () => 'https://runtime.example.com' } });
 
     const { url } = await startedAt(h, await added(h, { provider: 'files' }));
@@ -82,7 +87,7 @@ describe('the return address a consent is started and finished with', () => {
   it("is connect-return under the runtime's own /studio/ where it serves Studio, and the finish redeems with it", async () => {
     const runtime = 'http://127.0.0.1:5555';
     const servedReturn = `${runtime}/studio/connect-return`;
-    const fake = await served({ redirectUris: [servedReturn] });
+    const fake = served({ redirectUris: [servedReturn] });
     const h = consentHarnessAt(fake, { pages: { studio: servedStudio, runtime: () => runtime } });
     const link = await added(h, { provider: 'files' });
 
@@ -96,7 +101,7 @@ describe('the return address a consent is started and finished with', () => {
 
 describe('the start of a consent, as the link shows it', () => {
   it('is shown on the link while it is open', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await added(h, { provider: 'files' });
     const reading = () =>
@@ -116,7 +121,7 @@ describe('the start of a consent, as the link shows it', () => {
   });
 
   it('replaces a start that is open and forgets its verifier', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await added(h, { provider: 'files' });
     await startedAt(h, link);
@@ -131,7 +136,7 @@ describe('the start of a consent, as the link shows it', () => {
 
 describe('a start refused by its link', () => {
   it('is refused for a token unknown or expired, to another person, and for a connection that takes no consent', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake, { policy: loopbackAndCrmPolicy });
     const link = await added(h, { provider: 'files' });
     const secret = await added(h, crm);
@@ -153,7 +158,7 @@ describe('a start refused by its link', () => {
   });
 
   it('forgets the verifier it kept where the start cannot be recorded, as when the connection was removed meanwhile', async () => {
-    const fake = await served();
+    const fake = served();
     const removal: { run: () => Promise<unknown> } = { run: () => Promise.resolve() };
     const h = consentHarnessAt(fake, { beforeKeeping: () => removal.run() });
     const link = await added(h, { provider: 'files' });
@@ -166,8 +171,8 @@ describe('a start refused by its link', () => {
 
 describe('a start refused for its authorization server', () => {
   it('is refused where the server names another authorization server, or where the metadata of its authorization server names another issuer', async () => {
-    const another = await served({ authorizationServers: ['https://elsewhere.example.com'] });
-    const echoing = await served({ issuer: 'https://elsewhere.example.com' });
+    const another = served({ authorizationServers: ['https://elsewhere.example.com'] });
+    const echoing = served({ issuer: 'https://elsewhere.example.com' });
 
     expect([await startedThrough(another), await startedThrough(echoing)]).toMatchObject([
       {
@@ -182,10 +187,10 @@ describe('a start refused for its authorization server', () => {
   });
 
   it('is refused where the server names another resource, takes no S256 challenge, publishes no metadata or takes no client the runtime has', async () => {
-    const elsewhere = await served({ protectedResource: 'https://elsewhere.example.com/mcp' });
-    const plain = await served({ challengeMethods: ['plain'] });
-    const silent = await served({ publishesMetadata: false });
-    const dynamicLess = await served();
+    const elsewhere = served({ protectedResource: 'https://elsewhere.example.com/mcp' });
+    const plain = served({ challengeMethods: ['plain'] });
+    const silent = served({ publishesMetadata: false });
+    const dynamicLess = served();
 
     expect([
       await startedThrough(elsewhere),
@@ -214,8 +219,8 @@ describe('a start refused for its authorization server', () => {
 
 describe('a start refused where the server cannot proceed', () => {
   it('is refused where the server takes none of the clients of the way, or where it does not answer', async () => {
-    const fake = await served();
-    const gone = await consentFake();
+    const fake = served();
+    const gone = consentFake();
     await gone.close();
     const h = consentHarnessAt(fake, { way: { clients: ['dynamic'] } });
     const unanswering = consentHarnessAt(gone, { refusedAt: [gone.origin] });
@@ -236,7 +241,7 @@ describe('a start refused where the server cannot proceed', () => {
   });
 
   it('is refused where the authorization server refuses to register a client, in words that say so and ask for no wait', async () => {
-    const refusing = await served({ dynamicRegistration: true, refusesRegistration: true });
+    const refusing = served({ dynamicRegistration: true, refusesRegistration: true });
     const h = consentHarnessAt(refusing, { way: { clients: ['dynamic'] } });
 
     expect(await starting(h, await added(h, { provider: 'files' }))).toEqual({
@@ -247,8 +252,8 @@ describe('a start refused where the server cannot proceed', () => {
   });
 
   it('is refused for a host the rules do not allow among the endpoints of the metadata, before the person is sent anywhere', async () => {
-    const fake = await served({ endpointHost: 'localhost' });
-    const h = consentHarnessAt(fake, { policy: connectionPolicyOf({ allowed_hosts: ['127.0.0.1'] }) });
+    const fake = served({ endpointHost: 'localhost' });
+    const h = consentHarnessAt(fake);
 
     expect(await starting(h, await added(h, { provider: 'files' }))).toEqual({
       status: 'rejected',
@@ -261,7 +266,7 @@ describe('a start refused where the server cannot proceed', () => {
 
 describe('a start through Auto’s consent service for a Studio neither hosted nor on this computer', () => {
   it('is refused before the person is sent anywhere where no other source remains, saying whoever runs the runtime registers a client', async () => {
-    const serving = await servedThroughAuto();
+    const serving = throughAutoInProcess();
     closing.push(serving.close);
     const kinds: { now: ReturnKind } = { now: 'hosted' };
     const autoClients = { ...autoClientsOf(serving.service), returnKindOf: () => kinds.now };
@@ -279,7 +284,7 @@ describe('a start through Auto’s consent service for a Studio neither hosted n
 
 describe('a start through Auto’s consent service from a Studio host the service does not send people back to', () => {
   it('is refused by the service before the person is sent anywhere, saying whoever runs the runtime registers a client', async () => {
-    const serving = await servedThroughAuto();
+    const serving = throughAutoInProcess();
     closing.push(serving.close);
     const h = consentHarnessAt(serving.fake, { consenting: { autoClients: autoClientsOf(serving.service) } });
 

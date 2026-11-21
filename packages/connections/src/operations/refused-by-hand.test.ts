@@ -1,11 +1,17 @@
-import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { failingAt, hostOf, type ClientRegistration } from '@on.auto/tool-servers/testing';
+import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import {
+  failingAt,
+  fakeMcpInProcess,
+  hostOf,
+  inProcessFetch,
+  type ClientRegistration,
+} from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { adding, issuesIn } from '../testing/additions.ts';
 import { byHandAt, harnessByHand, refusedKind } from '../testing/by-hand.ts';
-import { consentFake } from '../testing/consents.ts';
+import { consentFake, consentFakeOnLoopback } from '../testing/consents.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -13,8 +19,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await consentFake(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = consentFake(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -32,7 +38,7 @@ const givenBesideTheKind = {
 
 describe('a credential of consent given by hand', () => {
   it('takes its kind alone, every other field refused at its place, before the server is asked anything', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
 
     const outcome = await adding(harnessByHand(), { ...byHandAt(fake), credential: givenBesideTheKind });
 
@@ -63,7 +69,7 @@ describe('a credential of consent given by hand', () => {
 
 describe('the rules of the runtime over a server given by hand that signs people in', () => {
   it('refuse it before the server is asked anything', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const closed = harnessByHand({ policy: connectionPolicyOf({ people_may_add: false }) });
     const unkind = harnessByHand({ policy: connectionPolicyOf({ credential_kinds: ['secret'] }) });
 
@@ -75,22 +81,23 @@ describe('the rules of the runtime over a server given by hand that signs people
   });
 
   it('forbid it in the words of the rule where an endpoint of its authorization server is on a host they refuse', async () => {
-    const fake = await served({ dynamicRegistration: true, endpointHost: 'localhost' });
-    const h = harnessByHand({ policy: connectionPolicyOf({ allowed_hosts: ['127.0.0.1'] }) });
+    const fake = served({ dynamicRegistration: true, endpointHost: 'localhost' });
+    const h = harnessByHand({ policy: connectionPolicyOf({ allowed_hosts: ['127.0.0.1', '*.in-process.test'] }) });
 
     expect(await adding(h, byHandAt(fake))).toEqual({
       status: 'rejected',
       reason: 'forbidden',
-      detail: 'A connection may not reach the host localhost on this runtime, which allows 127.0.0.1',
+      detail:
+        'A connection may not reach the host localhost on this runtime, which allows 127.0.0.1 and *.in-process.test',
     });
   });
 });
 
 describe('a server given by hand whose way of consent the runtime cannot take for what the server says', () => {
   it('is refused at the kind, in words that name the server, recording nothing', async () => {
-    const silent = await served({ publishesMetadata: false });
-    const elsewhere = await served({ protectedResource: 'https://elsewhere.example.com/mcp' });
-    const malformed = await served({ dynamicRegistration: true, protectedScopes: ['files.read', ''] });
+    const silent = served({ publishesMetadata: false });
+    const elsewhere = served({ protectedResource: 'https://elsewhere.example.com/mcp' });
+    const malformed = served({ dynamicRegistration: true, protectedScopes: ['files.read', ''] });
     const h = harnessByHand();
 
     expect([
@@ -118,11 +125,12 @@ function atTheIssuer({ url }: FakeMcpServer, issuer: string, words: string) {
 
 describe('a server given by hand whose way of consent the runtime cannot take for what its issuer says', () => {
   it('is refused at the kind, in words that name the issuer and the server', async () => {
-    const offHttps = await served({ authorizationServers: ['http://auth.example.com'] });
-    const echoing = await served({ issuer: 'https://elsewhere.example.com' });
-    const plain = await served({ dynamicRegistration: true, challengeMethods: ['plain'] });
-    const plaintext = await served({ dynamicRegistration: true, endpointHost: 'endpoints.example.com' });
-    const closed = await served();
+    const offHttps = served({ authorizationServers: ['http://auth.example.com'] });
+    const echoing = served({ issuer: 'https://elsewhere.example.com' });
+    const plain = served({ dynamicRegistration: true, challengeMethods: ['plain'] });
+    const plaintext = await consentFakeOnLoopback({ dynamicRegistration: true, endpointHost: 'endpoints.example.com' });
+    closing.push(plaintext.close);
+    const closed = served();
     const h = harnessByHand();
 
     expect([
@@ -163,11 +171,11 @@ describe('a server given by hand whose way of consent the runtime cannot take fo
 
 describe('a server given by hand that does not answer', () => {
   it('is unavailable, in words that name the server, where the server or its authorization server does not answer', async () => {
-    const silent = await serveFakeMcp();
+    const silent = fakeMcpInProcess();
     closing.push(silent.close);
     silent.holdNextOf('ping');
-    const failing = await served({ dynamicRegistration: true });
-    const bounded = harnessByHand({ consenting: { requestMs: 50 } });
+    const failing = served({ dynamicRegistration: true });
+    const bounded = harnessByHand({ consenting: { requestMs: 50, requestTimeout: () => AbortSignal.abort() } });
     const unread = harnessByHand({ consenting: { fetch: failingAt('/.well-known/oauth-authorization-server') } });
 
     expect([await adding(bounded, byHandAt(silent)), await adding(unread, byHandAt(failing))]).toEqual([
@@ -188,12 +196,12 @@ describe('a server given by hand that does not answer', () => {
 function resourceMetadataRefused(...[address, init]: readonly [unknown, unknown?]): Promise<Response> {
   return new URL(String(address)).pathname.startsWith('/.well-known/oauth-protected-resource')
     ? Promise.resolve(Response.json({ error: 'access_denied' }, { status: 403 }))
-    : globalThis.fetch(String(address), Object.assign({}, init));
+    : inProcessFetch(String(address), Object.assign({}, init));
 }
 
 describe('a server given by hand that refuses a read of the metadata its challenge names', () => {
   it('is unavailable, in words that say it does not serve it and may take an API key, and name no wait', async () => {
-    const refusing = await served({ dynamicRegistration: true });
+    const refusing = served({ dynamicRegistration: true });
     const h = harnessByHand({ consenting: { fetch: resourceMetadataRefused } });
 
     expect(await adding(h, byHandAt(refusing))).toEqual({

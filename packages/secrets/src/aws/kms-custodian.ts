@@ -26,6 +26,7 @@ export interface KmsCustodianOptions {
   readonly credentials: KmsCredentials;
   readonly endpoint?: string | undefined;
   readonly waits?: AwsWaits | undefined;
+  readonly requestHandlerOf?: (() => NonNullable<KMSClientConfig['requestHandler']>) | undefined;
 }
 
 export const encryptionContext: Readonly<Record<string, string>> = { 'on.auto/runtime': 'secret data key' };
@@ -70,9 +71,16 @@ function aliasFailureOf(alias: string, failure: unknown): KeepingFailure {
       });
 }
 
-function kmsClientOf({ region, proxy, credentials, endpoint, waits = awsWaits }: KmsCustodianOptions): KMSClient {
+function kmsClientOf({
+  region,
+  proxy,
+  credentials,
+  endpoint,
+  waits = awsWaits,
+  requestHandlerOf,
+}: KmsCustodianOptions): KMSClient {
   return new KMSClient({
-    requestHandler: requestHandlerWithin(proxy, waits),
+    requestHandler: requestHandlerOf === undefined ? requestHandlerWithin(proxy, waits) : requestHandlerOf(),
     credentials,
     region,
     ...(endpoint === undefined ? {} : { endpoint }),

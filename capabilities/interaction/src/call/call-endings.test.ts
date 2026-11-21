@@ -28,8 +28,8 @@ function rejectedWith(fields: Readonly<Record<string, unknown>>) {
 
 describe('a run that asks a system and sends nothing', () => {
   it('is unavailable when its server does not serve the playbook, or its operator does not allow the tool, whether its server lists it or not', async () => {
-    const elsewhere = await callRuns({ entry: { org: 'globex' } });
-    const narrow = await callRuns({ entry: { allowed: ['search'] } });
+    const elsewhere = callRuns({ entry: { org: 'globex' } });
+    const narrow = callRuns({ entry: { allowed: ['search'] } });
 
     expect([
       await elsewhere.run(callDocument()),
@@ -45,7 +45,7 @@ describe('a run that asks a system and sends nothing', () => {
 
   it('is unavailable when its server does not list the tool or cannot be reached, and records no call', async () => {
     const network = refusedConnections();
-    const { fake, journal, run } = await callRuns({ fetch: network.fetch });
+    const { fake, journal, run } = callRuns({ fetch: network.fetch });
     const unlisted = await run(callDocument({ tool: 'gone', read: null }));
     await fake.close();
     network.refuse(fake.origin);
@@ -62,7 +62,7 @@ describe('a run that asks a system and sends nothing', () => {
   });
 
   it('dies, sending nothing, when its run records no start', async () => {
-    const { fake, run } = await callRuns({ journal: recordingJournal(() => true) });
+    const { fake, run } = callRuns({ journal: recordingJournal(() => true) });
 
     const ended = await run(callDocument());
 
@@ -75,7 +75,7 @@ describe('a run that asks a system and sends nothing', () => {
 
 describe('a run that asks a system with arguments it cannot render', () => {
   it('rejects an input that does not match, or lacks what an argument reads, or that a filter refuses', async () => {
-    const { fake, run } = await callRuns();
+    const { fake, run } = callRuns();
     const reading = callDocument({ input: ['input:', '  schema: { type: object }'] });
     const filtered = callDocument({ with: ["    channel: '{{ input.channel | divided_by: 0 }}'"] });
 
@@ -98,7 +98,7 @@ describe('a run that asks a system with arguments it cannot render', () => {
   });
 
   it('is unworkable when an argument renders a structure among text, or the arguments take more than their server may be sent', async () => {
-    const { run } = await callRuns();
+    const { run } = callRuns();
     const open = ['input:', '  schema: { type: object }'];
     const among = callDocument({ with: ["    channel: 'In {{ input.channel }}'"], input: open });
     const whole = callDocument({ with: ["    a: '{{ input.a }}'", "    b: '{{ input.a }}'"], input: open });
@@ -121,8 +121,8 @@ describe('a run that asks a system with arguments it cannot render', () => {
 
 describe('a run whose call was sent and could not finish', () => {
   it('is unavailable, safe to try again, when its server marks the tool read-only, and a conflict whose effect is unknown when not', async () => {
-    const readOnly = await callRuns();
-    const writing = await callRuns({ server: { hints: { denied: { readOnlyHint: false }, broken: {} } } });
+    const readOnly = callRuns();
+    const writing = callRuns({ server: { hints: { denied: { readOnlyHint: false }, broken: {} } } });
 
     expect([
       await readOnly.run(asking('denied')),
@@ -148,8 +148,8 @@ describe('a run whose call was sent and could not finish', () => {
   });
 
   it('keeps the wait a 429 asked for past the longest a run waits, and ends a call that took too long', async () => {
-    const throttled = await callRuns({ timing: patientTiming });
-    const hurried = await callRuns({ timing: { ...patientTiming, callMs: 300 } });
+    const throttled = callRuns({ timing: patientTiming });
+    const hurried = callRuns({ timing: { ...patientTiming, callMs: 300, deadlineAfter: () => AbortSignal.abort() } });
     throttled.fake.answerNextOf('tools/call', 429, 1, { 'retry-after': '20' });
 
     expect([
@@ -168,7 +168,7 @@ describe('a run whose call was sent and could not finish', () => {
 
 describe('a run whose tool refused its arguments', () => {
   it('is unworkable, which trying again would meet again', async () => {
-    const { run } = await callRuns();
+    const { run } = callRuns();
 
     expect(await run(asking('strict', ["    limit: '15'"]))).toEqual(
       rejectedWith({

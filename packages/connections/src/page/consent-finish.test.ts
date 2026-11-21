@@ -14,8 +14,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await consentFake(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = consentFake(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -34,7 +34,7 @@ function filesOf(h: Harness): Promise<Added> {
 
 describe('the finish of a consent', () => {
   it('redeems the code, keeps the tokens sealed, forgets the verifier, and records the approval and the connection in one write', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await filesOf(h);
     const consented = await consentedOf(h, link);
@@ -78,7 +78,7 @@ describe('the finish of a consent', () => {
 
 describe('the scope of a finish', () => {
   it('records the scope the server granted beside the scope asked, which the credential keeps, where it is narrower', async () => {
-    const fake = await served({ grantedScope: 'files.read' });
+    const fake = served({ grantedScope: 'files.read' });
     const h = consentHarnessAt(fake, { way: { scope: 'files.read files.write' } });
     const link = await filesOf(h);
 
@@ -98,7 +98,7 @@ describe('the scope of a finish', () => {
   });
 
   it('says each scope granted in the words of the way, and names bare a scope the way does not ask', async () => {
-    const fake = await served({ grantedScope: 'files.read offline_access' });
+    const fake = served({ grantedScope: 'files.read offline_access' });
     const h = consentHarnessAt(fake);
     const link = await filesOf(h);
 
@@ -114,7 +114,7 @@ describe('the scope of a finish', () => {
   });
 
   it('is bound to its start and not to the 24 hours of the link, and closes the link', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await filesOf(h);
     const consented = await consentedOf(h, link, '2026-10-16T13:55:00.000Z');
@@ -128,7 +128,7 @@ describe('the scope of a finish', () => {
 
 describe('a scope the server grants', () => {
   it('is recorded with its scopes separated by single spaces, and the org lists its connections after', async () => {
-    const fake = await served({ grantedScope: 'files.read  files.list' });
+    const fake = served({ grantedScope: 'files.read  files.list' });
     const h = consentHarnessAt(fake, { way: { scope: 'files.read files.list' } });
     const link = await filesOf(h);
 
@@ -139,7 +139,7 @@ describe('a scope the server grants', () => {
   });
 
   it('is refused where it is empty, after the tokens are revoked, and the org lists its connections after', async () => {
-    const fake = await served({ grantedScope: '' });
+    const fake = served({ grantedScope: '' });
     const h = consentHarnessAt(fake);
     const link = await filesOf(h);
 
@@ -154,7 +154,7 @@ describe('a scope the server grants', () => {
 
 describe('a scope the server grants that is not one, or that answers a way asking none', () => {
   it('is refused in its own words where it is not a scope, after the tokens are revoked', async () => {
-    const fake = await served({ grantedScope: 'files."read"' });
+    const fake = served({ grantedScope: 'files."read"' });
     const h = consentHarnessAt(fake);
     const link = await filesOf(h);
 
@@ -167,7 +167,7 @@ describe('a scope the server grants that is not one, or that answers a way askin
   });
 
   it('records no scope where it is empty and the way asks none, and the connection is connected', async () => {
-    const fake = await served({ grantedScope: '' });
+    const fake = served({ grantedScope: '' });
     const h = consentHarnessAt(fake, { way: {} });
     const link = await filesOf(h);
 
@@ -181,7 +181,7 @@ describe('a scope the server grants that is not one, or that answers a way askin
 
 describe('a finish refused before the code is redeemed', () => {
   it('is refused for a state the consent was not started with, and for an issuer that is not the server’s', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await filesOf(h);
     const consented = await consentedOf(h, link);
@@ -208,7 +208,7 @@ describe('a finish refused before the code is redeemed', () => {
   });
 
   it('is refused as not found where no consent was started or its ten minutes are over, and forgets an ended one', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const unstarted = await filesOf(h);
     const consented = { code: 'code', state: 'state', iss: fake.origin };
@@ -225,7 +225,7 @@ describe('a finish refused before the code is redeemed', () => {
 
 describe('a finish whose verifier is gone', () => {
   it('is refused as not found', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await filesOf(h);
     const consented = await consentedOf(h, link);
@@ -237,7 +237,7 @@ describe('a finish whose verifier is gone', () => {
 
 describe('a finish whose code is refused', () => {
   it('answers the refusal at the code in the runtime’s words, and leaves the start open for another code', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake);
     const link = await filesOf(h);
     const { url } = await startedAt(h, link);
@@ -255,7 +255,7 @@ describe('a finish whose code is refused', () => {
 
 describe('a finish refused after the tokens exist', () => {
   it('revokes the tokens and forgets their row where the record is refused, as when the connection was removed meanwhile', async () => {
-    const fake = await served();
+    const fake = served();
     const removal: { run: () => Promise<unknown> } = { run: () => Promise.resolve() };
     const h = consentHarnessAt(fake, { beforeKeeping: () => removal.run() });
     const link = await filesOf(h);
@@ -268,7 +268,7 @@ describe('a finish refused after the tokens exist', () => {
   });
 
   it('revokes the tokens where their value is past the bound of the store, in the words of the store', async () => {
-    const fake = await served();
+    const fake = served();
     const h = consentHarnessAt(fake, { mostSecretCharacters: 100 });
     const link = await filesOf(h);
 
@@ -281,7 +281,7 @@ describe('a finish refused after the tokens exist', () => {
   });
 
   it('revokes the tokens where keeping them dies rather than fails', async () => {
-    const fake = await served();
+    const fake = served();
     const keeping: { run: () => Promise<unknown> } = { run: () => Promise.resolve() };
     const h = consentHarnessAt(fake, { beforeKeeping: () => keeping.run() });
     const link = await filesOf(h);

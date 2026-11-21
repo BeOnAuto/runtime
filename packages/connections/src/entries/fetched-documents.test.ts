@@ -46,6 +46,7 @@ const answeringUntilAborted: typeof globalThis.fetch = (...[address, init]: read
   const { signal } = new Request(String(address), Object.assign({}, init));
   const body = new ReadableStream({
     start: (controller) => {
+      signal.throwIfAborted();
       signal.addEventListener('abort', () => {
         controller.error(signal.reason);
       });
@@ -72,8 +73,9 @@ describe('a document by its address that its service cannot give now', () => {
   });
 
   it('is unavailable where its document does not arrive whole within the time a document is read in', async () => {
-    const timeout = AbortSignal.timeout.bind(AbortSignal);
-    vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => timeout(1));
+    vi.spyOn(AbortSignal, 'timeout').mockImplementation(() =>
+      AbortSignal.abort(new DOMException('timed out', 'TimeoutError')),
+    );
     onTestFinished(() => {
       vi.restoreAllMocks();
     });
