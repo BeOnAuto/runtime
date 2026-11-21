@@ -1,4 +1,6 @@
-import type { Timer } from '../clients/http-client.ts';
+import { Function } from 'effect';
+
+import type { Timer } from '../bounds/timers.ts';
 
 export interface Wait {
   readonly ms: number;
@@ -22,5 +24,26 @@ export function recordingTimer(): RecordingTimer {
       },
     },
     waits: () => [...waits],
+  };
+}
+
+export interface EndingPauses {
+  readonly timer: Timer;
+  readonly pauses: () => readonly number[];
+}
+
+export function pausesEndingAt(ms: number): EndingPauses {
+  const pauses: number[] = [];
+  return {
+    timer: {
+      after: (asked, expire) => {
+        if (asked === ms) {
+          pauses.push(asked);
+          queueMicrotask(expire);
+        }
+        return Function.constVoid;
+      },
+    },
+    pauses: () => [...pauses],
   };
 }

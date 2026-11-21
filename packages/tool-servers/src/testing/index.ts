@@ -17,7 +17,7 @@ export {
 } from '../api-testing/fake-api-answers.ts';
 export type { FailedRequest, FetchHandler, HeardRequest, LoopbackServer } from './fetch-handler.ts';
 export { arrivals, type Arrivals } from './arrivals.ts';
-export { inProcessFetch, serveInProcess, type InProcessFetch, type InProcessServer } from './in-process.ts';
+export { inProcessFetch, serveInProcess, whenServed, type InProcessFetch, type InProcessServer } from './in-process.ts';
 export {
   fakeApiInProcess,
   fakeConsentServiceInProcess,
@@ -44,7 +44,13 @@ export {
 } from '../mcp-testing/fake-tools.ts';
 export { brokenPromise, threadReplies } from '../mcp-testing/fake-data-tools.ts';
 export { fetchWithDeletion } from '../mcp-testing/deleting-fetch.ts';
-export { recordingTimer, type RecordingTimer, type Wait } from './recording-timer.ts';
+export {
+  pausesEndingAt,
+  recordingTimer,
+  type EndingPauses,
+  type RecordingTimer,
+  type Wait,
+} from './recording-timer.ts';
 export { refusedConnections, type RefusedConnections } from './refused-connections.ts';
 export { pendingWords } from './fake-connections.ts';
 export {

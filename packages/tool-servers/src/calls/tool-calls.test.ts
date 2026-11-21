@@ -130,9 +130,12 @@ describe('the size a reader meets of an answer', () => {
 
 describe('the calls a run may make', () => {
   it('makes the calls of one step at once, recording each', async () => {
-    const { call, journal } = await runWith(['sleep']);
+    const { call, fake, journal } = await runWith(['sleep']);
 
-    const replies = await Promise.all(Array.from({ length: 10 }, (_, index) => call('sleep', { ms: 0, index })));
+    const replying = Promise.all(Array.from({ length: 10 }, (_, index) => call('sleep', { ms: 50, index })));
+    await fake.sleepers.waited(10);
+    fake.sleepers.fire();
+    const replies = await replying;
 
     expect(replies).toMatchObject(Array.from({ length: 10 }, () => ({ text: 'Slept.', isError: false })));
     expect(journal.facts()).toHaveLength(20);

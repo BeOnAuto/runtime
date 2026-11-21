@@ -33,7 +33,7 @@ export async function openedFor(
   listing: Listing,
 ): Promise<Opened | UnopenedOnce> {
   const { openMs } = listing.timing;
-  const taken = await takenWithin(link, openMs);
+  const taken = await takenWithin(link, listing.timing);
   if ('late' in taken) {
     const message = `The tool server did not open a connection within ${openMs} ms`;
     return refusedOnce(serverFailed(link, { kind: 'timed_out', message }, listing.secrets));
@@ -41,7 +41,7 @@ export async function openedFor(
   if ('failure' in taken) {
     return refusedOnce(serverFailed(link, taken.failure, listing.secrets));
   }
-  const bounded = boundedSlot(taken.slot, openMs);
+  const bounded = boundedSlot(taken.slot, listing.timing);
   const exited = await restartedIfExited(bounded);
   if (exited !== undefined) {
     await bounded.release();

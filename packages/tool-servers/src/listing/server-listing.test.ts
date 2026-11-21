@@ -3,9 +3,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { defaultTiming } from '../bounds/call-bounds.ts';
 import type { LoopbackServer } from '../testing/fetch-handler.ts';
-import { fakeMcpInProcess, inProcessFetch, recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
+import {
+  fakeMcpInProcess,
+  inProcessFetch,
+  manualTimer,
+  recordingCallJournal,
+  reportingAccess,
+  toolRun,
+} from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
-import { longerThanTheTestMs } from '../testing/until.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -47,15 +53,19 @@ async function silentOnListing(): Promise<LoopbackServer> {
 describe('listing the tools of a server as a run opens them', () => {
   it('takes at most the bound of opening a client, not the bound of a call, which is longer than the test', async () => {
     const server = await silentOnListing();
+    const bound = manualTimer();
     const { access } = reportingAccess(
       { graph: { url: `${server.origin}/mcp`, org: 'acme' } },
-      { timing: { ...defaultTiming, openMs: 300, callMs: longerThanTheTestMs } },
+      { timing: { ...defaultTiming, openMs: 300, timer: bound.timer } },
     );
     closing.push(access.close);
 
-    const opened = await Effect.runPromise(
+    const opening = Effect.runPromise(
       Effect.result(access.open(toolRun(recordingCallJournal()), [{ server: 'graph', tool: 'search' }])),
     );
+    await bound.waited(2);
+    bound.fire();
+    const opened = await opening;
 
     expect(Option.getOrUndefined(Result.getFailure(opened))).toMatchObject({
       _tag: 'tool_server_failed',

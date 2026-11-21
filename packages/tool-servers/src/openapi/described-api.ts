@@ -24,6 +24,7 @@ export interface ToolServers {
 export interface Describing {
   readonly fetch?: FetchLike;
   readonly readMs?: number;
+  readonly readTimeout?: (ms: number) => AbortSignal;
   readonly reportLeftOut: (server: string, leftOut: LeftOutOperation) => void;
 }
 

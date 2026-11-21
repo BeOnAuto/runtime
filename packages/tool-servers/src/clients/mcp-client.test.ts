@@ -1,9 +1,10 @@
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { defaultTiming } from '../bounds/call-bounds.ts';
+import { systemTimer } from '../bounds/timers.ts';
 import type { McpServerSettings } from '../settings/server-settings.ts';
 import { fakeMcpInProcess, inProcessFetch, testClientInfo } from '../testing/index.ts';
-import { openHttp, systemTimer, type HttpOpening } from './http-client.ts';
+import { openHttp, type HttpOpening } from './http-client.ts';
 
 function httpSettings(url: string): McpServerSettings {
   return {

@@ -2,7 +2,7 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import type { Reaches } from '@on.auto/outbound';
 import type { Effect, Redacted } from 'effect';
 
-import type { Timer } from '../clients/http-client.ts';
+import type { Timer } from '../bounds/timers.ts';
 import type { ConsentTokenSources } from '../clients/token-source.ts';
 import type { AutoClients, ThroughAuto } from '../consent-through-auto/auto-clients.ts';
 import type { KeptTokens, TokenHolding } from '../consent-tokens/kept-tokens.ts';

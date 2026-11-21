@@ -1,5 +1,3 @@
-import { setTimeout as delay } from 'node:timers/promises';
-
 import {
   parseJSONRPCMessage,
   StreamableHTTPClientTransport,
@@ -9,6 +7,7 @@ import {
 } from '@modelcontextprotocol/client';
 import { Redacted } from 'effect';
 
+import { longestSdkTimeoutMs, pausedFor, withinBound, type Timer } from '../bounds/timers.ts';
 import { splicingFetch } from '../sent-assets/spliced-bodies.ts';
 import type { McpServerSettings } from '../settings/server-settings.ts';
 import { ignored } from './ignored.ts';
@@ -16,19 +15,6 @@ import { observingFetch, openingClient, serverClientOver, type ClientInfo } from
 import { posting, type Observations } from './observed-requests.ts';
 import type { ServedClient } from './server-client.ts';
 import { failureOf } from './server-failures.ts';
-
-export interface Timer {
-  readonly after: (ms: number, expire: () => void) => () => void;
-}
-
-export const systemTimer: Timer = {
-  after: (ms, expire) => {
-    const timeout = setTimeout(expire, ms);
-    return () => {
-      clearTimeout(timeout);
-    };
-  },
-};
 
 export interface HttpOpening {
   readonly clientInfo: ClientInfo;
@@ -83,7 +69,9 @@ async function openedOnce(settings: McpServerSettings, opening: HttpOpening): Pr
   const sdk = openingClient(opening.clientInfo, settings.request_id, opening.reportError);
   const transport = new ObservedHttpTransport(settings, opening, sdk.observations);
   try {
-    await sdk.client.connect(transport, { timeout: opening.timeoutMs });
+    await withinBound(opening.timer, opening.timeoutMs, (signal) =>
+      sdk.client.connect(transport, { signal, timeout: longestSdkTimeoutMs }),
+    );
   } catch (failure) {
     await sdk.client.close();
     if (failureOf(failure).kind === 'rate_limited') {
@@ -91,7 +79,7 @@ async function openedOnce(settings: McpServerSettings, opening: HttpOpening): Pr
     }
     throw failure;
   }
-  return serverClientOver(sdk.client, sdk.observations, sdk.closed, async () => {
+  return serverClientOver(sdk, opening.timer, async () => {
     const expired = Promise.withResolvers<void>();
     const stopWaiting = opening.timer.after(opening.timeoutMs, expired.resolve);
     try {
@@ -116,7 +104,7 @@ export async function openHttp(settings: McpServerSettings, opening: HttpOpening
   if (retryAfterMs === null || retryAfterMs > opening.longestRetryWaitMs) {
     throw failure;
   }
-  await delay(retryAfterMs);
+  await pausedFor(opening.timer, retryAfterMs);
   const second = await openedOnce(settings, opening);
   if (isLimited(second)) {
     throw second.failure;

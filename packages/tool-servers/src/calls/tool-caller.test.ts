@@ -1,11 +1,9 @@
-import { getEventListeners } from 'node:events';
-
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { controlledSignals, fakeMcpInProcess, reportingAccess, toolRun } from '../testing/index.ts';
+import { defaultTiming } from '../bounds/call-bounds.ts';
+import { controlledSignals, fakeMcpInProcess, manualTimer, reportingAccess, toolRun } from '../testing/index.ts';
 import { fakeApiKey, openFakeToolRun } from '../testing/served-fakes.ts';
-import { until } from '../testing/until.ts';
 import type { CallJournal } from './recorded-calls.ts';
 
 const anyText: unknown = expect.any(String);
@@ -16,8 +14,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function runWith(tools: readonly string[]) {
-  const run = await openFakeToolRun(tools);
+async function runWith(tools: readonly string[], timing = defaultTiming) {
+  const run = await openFakeToolRun(tools, timing);
   closing.push(run.close);
   return run;
 }
@@ -105,17 +103,20 @@ describe('a run that ends while it calls', () => {
   });
 
   it('stops waiting out a 429 when the run ends', async () => {
-    const { call, fake, journal } = await runWith(['search']);
+    const pause = manualTimer();
+    const { call, fake, journal } = await runWith(['search'], { ...defaultTiming, timer: pause.timer });
     const signals = controlledSignals();
+    const armedBefore = pause.waits().length;
 
     fake.answerNextOf('tools/call', 429, 1, { 'retry-after': '5' });
     const replied = call('search', { query: 'waiting' }, signals);
-    await until(() => getEventListeners(signals.signal, 'abort').length > 0);
+    await pause.waited(armedBefore + 1);
     signals.end();
 
     expect(await replied).toMatchObject({ isError: true });
     expect(journal.facts().at(-1)).toMatchObject({ type: 'tool_call_failed', data: { because: 'cancelled' } });
     expect(fake.received()).toEqual([]);
+    expect(pause.waits().at(-1)).toBe(5000);
   });
 });
 

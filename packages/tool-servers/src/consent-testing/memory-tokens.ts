@@ -1,7 +1,7 @@
 import { valuesInTheClear, type ValueInTheClear } from '@on.auto/secrets/testing';
 import { Effect, Function, Option, type Redacted } from 'effect';
 
-import type { Timer } from '../clients/http-client.ts';
+import type { Timer } from '../bounds/timers.ts';
 import { keptTokensIn, type KeptTokens } from '../consent-tokens/kept-tokens.ts';
 import type {
   ChosenClient,

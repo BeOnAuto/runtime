@@ -20,7 +20,7 @@ export interface Fetching {
 }
 
 export function fakeMcpInProcess(options: FakeMcpOptions = {}): FakeMcpServer & Fetching {
-  const { handlerAt, ...answers } = fakeMcpAnswers(options);
+  const { handlerAt, ...answers } = fakeMcpAnswers({ realSleep: false, ...options });
   const served = serveInProcess(handlerAt, 'mcp');
   return {
     ...answers,

@@ -4,8 +4,7 @@ import { Function, Option, Schema } from 'effect';
 
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import { arrivals } from '../testing/arrivals.ts';
-import { inProcessFetch } from '../testing/in-process.ts';
-import { until } from '../testing/until.ts';
+import { inProcessFetch, whenServed } from '../testing/in-process.ts';
 
 export interface GatedRequests {
   readonly fetch: FetchLike;
@@ -62,7 +61,7 @@ export function cuttingTimeouts(): CuttingTimeouts {
     },
     cut,
     cutWhen: async (holds) => {
-      await until(holds);
+      await whenServed(holds);
       cut();
     },
     cuts: () => [...cuts],

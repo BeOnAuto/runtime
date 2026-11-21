@@ -80,7 +80,7 @@ describe('the clients Auto’s consent service lists', () => {
     const bounds: number[] = [];
     const requestTimeout = (ms: number) => {
       bounds.push(ms);
-      return AbortSignal.timeout(ms);
+      return new AbortController().signal;
     };
     const client = consentClientWith({ autoClients: autoClientsOf(service), requestTimeout });
 

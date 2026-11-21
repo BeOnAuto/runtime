@@ -1,4 +1,4 @@
-import { Option } from 'effect';
+import { Function, Option } from 'effect';
 import { expect } from 'vitest';
 
 import { type FakeApiServer } from '../api-testing/fake-api-answers.ts';
@@ -24,7 +24,7 @@ export interface ServedUnderTest {
   readonly failNextCall: (status: number, headers?: Readonly<Record<string, string>>) => void;
   readonly calls: () => number;
   readonly requests: () => number;
-  readonly sessionsOpen: () => number;
+  readonly noSessionOpen: () => Promise<void>;
   readonly jsonrpcId: unknown;
   readonly close: () => Promise<void>;
 }
@@ -56,7 +56,7 @@ function mcpServed(fake: FakeMcpServer, credentialled: Pick<ServedUnderTest, 'en
     },
     calls: () => fake.seen().filter(({ rpc }) => rpc === 'tools/call').length,
     requests: () => fake.seen().length,
-    sessionsOpen: fake.openSessions,
+    noSessionOpen: () => fake.once(() => fake.openSessions() === 0),
     jsonrpcId: expect.any(Number),
     close: fake.close,
   };
@@ -74,7 +74,7 @@ function apiServed(fake: FakeApiServer, credentialled: Pick<ServedUnderTest, 'en
     },
     calls: () => fake.seen().filter(({ path }) => path.startsWith(new URL(fake.baseUrl).pathname)).length,
     requests: () => fake.seen().length + fake.documentReads(),
-    sessionsOpen: () => 0,
+    noSessionOpen: Function.constant(Promise.resolve()),
     jsonrpcId: null,
     close: fake.close,
   };

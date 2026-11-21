@@ -6,7 +6,7 @@ import { Effect, Exit, Function, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
-import { refusedConnections, reportingAccess } from '../testing/index.ts';
+import { manualTimer, refusedConnections, reportingAccess } from '../testing/index.ts';
 import {
   calledOnce,
   closedAfter,
@@ -17,7 +17,6 @@ import {
   failedWith,
   unopenedWith,
 } from '../testing/one-calls.ts';
-import { longerThanTheTestMs } from '../testing/until.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -143,16 +142,18 @@ describe('one call to a server whose client never opens', () => {
       await once(silent, 'close');
     });
 
-    const ended = await calledOnce(
+    const bound = manualTimer();
+
+    const ending = calledOnce(
       oneCallAccess(
         `http://127.0.0.1:${String(portOf(silent.address()).port)}/mcp`,
         {},
-        {
-          openMs: 300,
-          callMs: longerThanTheTestMs,
-        },
+        { openMs: 300, timer: bound.timer },
       ),
     );
+    await bound.waited(2);
+    bound.fire();
+    const ended = await ending;
 
     expect(ended).toEqual(
       unopenedWith(
@@ -168,8 +169,13 @@ describe('one call to a server that does not list its tools in time', () => {
   it('fails at the open bound, as unreachable, with nothing sent, under a call bound longer than the test', async () => {
     const fake = oneCallServer();
     fake.holdNextOf('tools/list');
+    const bound = manualTimer();
 
-    expect(await calledOnce(oneCallAccess(fake.url, {}, { openMs: 300, callMs: longerThanTheTestMs }))).toEqual(
+    const ending = calledOnce(oneCallAccess(fake.url, {}, { openMs: 300, timer: bound.timer }));
+    await fake.once(() => fake.seen().some(({ rpc }) => rpc === 'tools/list'));
+    bound.fire();
+
+    expect(await ending).toEqual(
       unopenedWith('tool_server_failed', 'unreachable', `${couldNotBeUsed}The tool server did not answer in time`),
     );
     expect(fake.received()).toEqual([]);

@@ -7,7 +7,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { CallJournal } from '../calls/recorded-calls.ts';
-import { recordingCallJournal, refusedConnections } from '../testing/index.ts';
+import { pausesEndingAt, recordingCallJournal, refusedConnections } from '../testing/index.ts';
 import { calledOnce, echoCall, oneCallAccess, oneCallServer, unopenedWith } from '../testing/one-calls.ts';
 
 const anyText: unknown = expect.any(String);
@@ -265,7 +265,8 @@ describe('a call that needs its tool marked reads, to a tool marked otherwise', 
 describe('the wait a 429 asks for in one call', () => {
   it('is waited out within the wait its caller gives, and handed on when its caller gives none', async () => {
     const fake = oneCallServer();
-    const access = oneCallAccess(fake.url);
+    const pausing = pausesEndingAt(1000);
+    const access = oneCallAccess(fake.url, {}, { timer: pausing.timer });
     const waiting = { ...echoCall, longestRetryWaitMs: 10_000 };
 
     fake.answerNextOf('tools/call', 429, 1, { 'retry-after': '1' });
@@ -277,5 +278,6 @@ describe('the wait a 429 asks for in one call', () => {
       { outcome: 'result' },
       { outcome: 'server_failure', detail: 'The tool server answered HTTP 429', retryAfterMs: 1000 },
     ]);
+    expect(pausing.pauses()).toEqual([1000]);
   });
 });

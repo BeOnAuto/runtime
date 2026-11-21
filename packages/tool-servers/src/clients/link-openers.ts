@@ -1,10 +1,10 @@
 import type { FetchOfACall } from '@on.auto/operations';
 
-import type { Timing } from '../bounds/call-bounds.ts';
+import { timerOf, type Timing } from '../bounds/call-bounds.ts';
 import type { Secrets } from '../bounds/secrets.ts';
 import { apiClient, type ApiOpening } from '../openapi/api-client.ts';
 import type { LinkedServerSettings } from '../openapi/described-api.ts';
-import { openHttp, systemTimer, type Timer } from './http-client.ts';
+import { openHttp } from './http-client.ts';
 import {
   boundedReport,
   errorsNoLongerReported,
@@ -30,6 +30,8 @@ export interface LinkOptions {
   readonly reportMarkUnlisted: (server: string, tool: string) => void;
   readonly traceMeta?: TraceMeta;
 }
+
+type Timer = ReturnType<typeof timerOf>;
 
 interface Remote {
   readonly settings: Extract<LinkedServerSettings, { readonly auth: unknown }>;
@@ -74,7 +76,7 @@ function tracedOpener(open: () => Promise<ServedClient>, traceMeta?: TraceMeta):
 }
 
 function linkingOf(linkOptions: LinkOptions): Linking {
-  return { ...linkOptions, timer: linkOptions.timer ?? systemTimer };
+  return { ...linkOptions, timer: linkOptions.timer ?? timerOf(linkOptions.timing) };
 }
 
 export function tokensOfTheLink(settings: LinkedServerSettings, linkOptions: LinkOptions): TokenSource | undefined {
@@ -109,6 +111,7 @@ export function openerOf(
           timeoutMs: options.timing.openMs,
           stopMs: options.timing.stopMs,
           output,
+          timer: options.timer,
         }),
       options.traceMeta,
     );

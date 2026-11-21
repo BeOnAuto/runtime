@@ -1,9 +1,8 @@
-import { setTimeout } from 'node:timers/promises';
-
 import { McpServer, ProtocolError, ProtocolErrorCode, type CallToolResult } from '@modelcontextprotocol/server';
 
 import type { FakeChat } from './fake-chat.ts';
 import { dataTools } from './fake-data-tools.ts';
+import type { Sleep } from './fake-sleepers.ts';
 
 export interface ReceivedCall {
   readonly tool: string;
@@ -22,6 +21,7 @@ export interface FakeToolState {
   readonly data: boolean;
   readonly tools?: readonly FakeTool[];
   readonly exit: () => void;
+  readonly sleep: Sleep;
 }
 
 interface Answering {
@@ -153,8 +153,8 @@ const troubleTools: readonly FakeTool[] = [
     description: 'Answers after the milliseconds it is given, unless it is cancelled first.',
     inputSchema: { type: 'object', properties: { ms: { type: 'number' } }, required: ['ms'] },
     annotations: { readOnlyHint: true, idempotentHint: true },
-    answer: async (input, { signal }) => {
-      await setTimeout(Number(argument(input, 'ms')), undefined, { signal });
+    answer: async (input, { signal, state }) => {
+      await state.sleep(Number(argument(input, 'ms')), signal);
       return text('Slept.');
     },
   },

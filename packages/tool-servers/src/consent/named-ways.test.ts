@@ -271,7 +271,9 @@ describe('the naming of a way that cannot ask the server', () => {
     const silent = await serveOnLoopback(() => () => Promise.withResolvers<Response>().promise);
     closing.push(silent.close);
 
-    expect(await refused({ url: `${silent.origin}/mcp`, reaches: everyHost }, { requestMs: 50 })).toEqual({
+    const cut = { requestMs: 50, requestTimeout: () => AbortSignal.abort() };
+
+    expect(await refused({ url: `${silent.origin}/mcp`, reaches: everyHost }, cut)).toEqual({
       refused: 'unanswered',
       call: { step: 'ping', host: hostOf(silent), answer: { failed: 'timed_out' } },
     });

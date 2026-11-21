@@ -252,9 +252,9 @@ describe('a start that cannot ask the server', () => {
     const fake = served();
     const asked: StartAsked = { ...startAskedAt(fake), server: { type: 'mcp', url: `${silent.origin}/mcp` } };
 
-    expect(await refused(consentClientWith({ requestMs: 50 }), asked)).toEqual(
-      unansweredCall('ping', silent, { failed: 'timed_out' }),
-    );
+    expect(
+      await refused(consentClientWith({ requestMs: 50, requestTimeout: () => AbortSignal.abort() }), asked),
+    ).toEqual(unansweredCall('ping', silent, { failed: 'timed_out' }));
   });
 });
 

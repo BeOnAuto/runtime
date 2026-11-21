@@ -21,6 +21,7 @@ export interface DocumentReading {
   readonly entry: string;
   readonly fetch: FetchLike;
   readonly readMs: number;
+  readonly readTimeout?: ((ms: number) => AbortSignal) | undefined;
 }
 
 type Read = Result.Result<unknown, DocumentUnread | DocumentRefused>;
@@ -88,8 +89,8 @@ function boundedParse(text: string, entry: string): Read {
   );
 }
 
-async function textAt(url: string, { entry, fetch, readMs }: DocumentReading): Promise<Text> {
-  const signal = AbortSignal.timeout(readMs);
+async function textAt(url: string, { entry, fetch, readMs, readTimeout }: DocumentReading): Promise<Text> {
+  const signal = readTimeout === undefined ? AbortSignal.timeout(readMs) : readTimeout(readMs);
   let overflowed = false;
   try {
     const response = await fetch(url, { headers: { accept: accepted }, redirect: 'manual', signal });

@@ -256,7 +256,7 @@ describe('an http session that ends before the deadline', () => {
     await link.release();
 
     await expect(client.closed).resolves.toBeUndefined();
-    expect(waits()).toEqual([{ ms: timing.openMs, stopped: true }]);
+    expect(waits()).toEqual([1, 2].map(() => ({ ms: timing.openMs, stopped: true })));
   });
 });
 

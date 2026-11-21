@@ -2,6 +2,7 @@ import { Client } from '@modelcontextprotocol/client';
 import { Predicate } from 'effect';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
+import { longestSdkTimeoutMs, withinBound, type Timer } from '../bounds/timers.ts';
 import { decodeListedTools, decodeToolResult, type ToolResult } from '../bounds/tool-results.ts';
 import { argumentsSent, sendingWith } from '../sent-assets/spliced-bodies.ts';
 import { observations, postedId, type Observations } from './observed-requests.ts';
@@ -95,14 +96,19 @@ export function tracedClient(client: ServedClient, traceMeta: TraceMeta): Served
   };
 }
 
+interface OpenedSdk {
+  readonly client: ToolClient;
+  readonly observations: Observations;
+  readonly closed: Promise<void>;
+}
+
 export function serverClientOver(
-  client: ToolClient,
-  observed: Observations,
-  closed: Promise<void>,
+  { client, observations: observed, closed }: OpenedSdk,
+  timer: Timer,
   end: () => Promise<void>,
 ): ServedClient {
   return {
-    call: async ({ tool, input, assets = [], meta, signal, timeoutMs }) => {
+    call: async ({ tool, input, assets = [], meta, signal }) => {
       const marker = observed.mark();
       const tooLarge = new AbortController();
       observed.whenTooLarge(marker, () => {
@@ -112,13 +118,19 @@ export function serverClientOver(
       const settled = await sendingWith(sent.splices, () =>
         client.request(
           { method: 'tools/call', params: { name: tool, arguments: { ...sent.input }, [metaField]: { ...meta } } },
-          { signal: AbortSignal.any([signal, tooLarge.signal]), timeout: timeoutMs, onresumptiontoken: marker },
+          {
+            signal: AbortSignal.any([signal, tooLarge.signal]),
+            timeout: longestSdkTimeoutMs,
+            onresumptiontoken: marker,
+          },
         ),
       ).then(settledOf, (error: unknown) => ({ error }));
       return { ...settled, observed: observed.take(marker) };
     },
     listTools: async (timeoutMs) => {
-      const listing: unknown = await client.listTools(undefined, { timeout: timeoutMs, cacheMode: 'refresh' });
+      const listing: unknown = await withinBound(timer, timeoutMs, (signal) =>
+        client.listTools(undefined, { signal, timeout: longestSdkTimeoutMs, cacheMode: 'refresh' }),
+      );
       return decodeListedTools(listing).tools;
     },
     closed,

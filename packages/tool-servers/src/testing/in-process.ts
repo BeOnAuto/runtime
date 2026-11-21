@@ -1,5 +1,6 @@
 import { Function } from 'effect';
 
+import { watchedChanges } from '../mcp-testing/next-answers.ts';
 import type { FailedRequest, FetchHandler, HeardRequest, LoopbackServer } from './fetch-handler.ts';
 
 export type InProcessFetch = (...asked: readonly [unknown, unknown?]) => Promise<Response>;
@@ -14,6 +15,12 @@ interface Records {
 }
 
 const answering = new Map<string, FetchHandler>();
+
+const served = watchedChanges();
+
+export const whenServed: (holds: () => boolean) => Promise<void> = served.once;
+
+export const servedChanged: () => void = served.changed;
 
 const named = { served: 0 };
 
@@ -131,12 +138,15 @@ function recording(handle: FetchHandler, { hear, fail }: Records): FetchHandler 
   return async (request) => {
     const seen = heardOf(request);
     hear(seen);
+    served.changed();
     try {
       return await handle(request);
     } catch (error) {
       const failed = { method: seen.method, path: seen.path, error: String(error) };
       fail(failed);
       return new Response(failed.error, { status: 500 });
+    } finally {
+      served.changed();
     }
   };
 }

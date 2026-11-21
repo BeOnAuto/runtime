@@ -67,6 +67,7 @@ export async function describedApi(
     entry: settings.name,
     fetch: describing.fetch ?? globalThis.fetch,
     readMs: describing.readMs ?? documentBounds.readMs,
+    readTimeout: describing.readTimeout,
   });
   if (Result.isFailure(read)) {
     return Result.fail(read.failure);

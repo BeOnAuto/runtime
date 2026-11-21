@@ -4,6 +4,7 @@ import { parseArgs } from 'node:util';
 
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
+import { realSleep } from './fake-sleepers.ts';
 import { fakeToolServer, type ReceivedCall } from './fake-tools.ts';
 
 const exitCode = 3;
@@ -53,6 +54,7 @@ const server = fakeToolServer({
   exit: () => {
     process.exit(exitCode);
   },
+  sleep: realSleep,
 });
 
 await server.connect(new StdioServerTransport());

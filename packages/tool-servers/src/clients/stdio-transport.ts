@@ -1,10 +1,10 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { once } from 'node:events';
-import { setTimeout } from 'node:timers/promises';
 
 import { ReadBuffer, type JSONRPCMessage, type Transport } from '@modelcontextprotocol/client';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
+import { raceAgainst, type Timer } from '../bounds/timers.ts';
 import { splicedBody, splicesInFlight } from '../sent-assets/spliced-bodies.ts';
 import { ignored } from './ignored.ts';
 import { boundedReport, type OutputReport } from './mcp-client.ts';
@@ -15,6 +15,7 @@ export interface StdioParameters {
   readonly args: readonly string[];
   readonly env: Readonly<Record<string, string>>;
   readonly stopMs: number;
+  readonly timer: Timer;
 }
 
 const mostPendingCharacters = 65_536;
@@ -45,6 +46,7 @@ export class StdioProcessTransport implements Transport {
   readonly #spawned: Promise<unknown>;
   readonly #closed: Promise<unknown>;
   readonly #stopMs: number;
+  readonly #timer: Timer;
   #writing: Promise<void> = Promise.resolve();
   #pending = 0;
 
@@ -56,6 +58,7 @@ export class StdioProcessTransport implements Transport {
     });
     this.#child = child;
     this.#stopMs = parameters.stopMs;
+    this.#timer = parameters.timer;
     this.#observations = observed;
     this.#spawned = once(child, 'spawn');
     this.#closed = new Promise((resolve) => {
@@ -148,7 +151,12 @@ export class StdioProcessTransport implements Transport {
       return;
     }
     child.stdin.end();
-    const stopped = await Promise.race([this.#closed.then(() => true), setTimeout(this.#stopMs, false)]);
+    const stopped = await raceAgainst(
+      this.#timer,
+      this.#stopMs,
+      this.#closed.then(() => true),
+      false,
+    );
     if (!stopped) {
       child.kill('SIGKILL');
       await this.#closed;

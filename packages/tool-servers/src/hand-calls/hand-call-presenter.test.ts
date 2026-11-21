@@ -5,10 +5,12 @@ import type { KeptContent, RecordedEvent } from '@on.auto/operations';
 import { nothingKept } from '@on.auto/operations/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { Timing } from '../bounds/call-bounds.ts';
 import {
   fakeMcpInProcess,
   fakeRequestIdKey,
   inTurn,
+  cuttingTimeouts,
   patientTiming,
   playbookToolCalls,
   reportingAccess,
@@ -28,14 +30,11 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 
 const digestFields = ['arguments_sha256', 'result_sha256'];
 
-async function recordedCalls(entry: Readonly<Record<string, unknown>>, callMs: number, ...called: readonly unknown[]) {
+async function recordedCalls(entry: Readonly<Record<string, unknown>>, timing: Timing, ...called: readonly unknown[]) {
   const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry };
-  const { access, content } = reportingAccess(
-    { graph },
-    { timing: { ...patientTiming, callMs }, environment: { GRAPH_API_KEY: fakeApiKey } },
-  );
+  const { access, content } = reportingAccess({ graph }, { timing, environment: { GRAPH_API_KEY: fakeApiKey } });
   closing.push(access.close);
   const { call, recorded } = playbookToolCalls(access);
   await inTurn(called, (input) => call('execute_connection', input));
@@ -62,8 +61,14 @@ function shown(records: readonly RecordedEvent[], content: KeptContent = nothing
 
 describe('the events of a call made by hand, as the playbook shows them', () => {
   it('say which tool of which server was called by hand and how it answered, in the words of a run’s calls', async () => {
-    const answered = await recordedCalls({}, patientTiming.callMs, ...answering);
-    const givenUp = await recordedCalls({}, givenUpAfterMs, sleeping);
+    const answered = await recordedCalls({}, patientTiming, ...answering);
+    const deadline = cuttingTimeouts();
+    deadline.cut();
+    const givenUp = await recordedCalls(
+      {},
+      { ...patientTiming, callMs: givenUpAfterMs, deadlineAfter: deadline.requestTimeout },
+      sleeping,
+    );
     const records = [...answered.records, ...givenUp.records];
 
     expect(shown(records).map(({ type, summary }) => `${type}: ${summary}`)).toEqual([
@@ -80,7 +85,7 @@ describe('the events of a call made by hand, as the playbook shows them', () => 
   });
 
   it('show the arguments and the answer the call kept, and the server’s own id of the request', async () => {
-    const { records, content } = await recordedCalls({ request_id: fakeRequestIdKey }, patientTiming.callMs, {
+    const { records, content } = await recordedCalls({ request_id: fakeRequestIdKey }, patientTiming, {
       server: 'graph',
       tool: 'echo',
       arguments: { said: 'hello' },

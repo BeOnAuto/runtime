@@ -1,6 +1,5 @@
-import { setTimeout } from 'node:timers/promises';
-
 import { toolBounds } from '../bounds/call-bounds.ts';
+import { pausedFor, systemTimer, type Timer } from '../bounds/timers.ts';
 import { metaValueOf, type ToolAnswer, type ToolResult } from '../bounds/tool-results.ts';
 import { ignored } from '../clients/ignored.ts';
 import type { Observed } from '../clients/observed-requests.ts';
@@ -22,6 +21,7 @@ export interface Forwarding {
   readonly longestRetryWaitMs: number;
   readonly signal: Readonly<AbortSignal>;
   readonly deadlineAfter?: (ms: number) => AbortSignal;
+  readonly timer?: Timer;
 }
 
 interface ForwardedCall {
@@ -139,7 +139,7 @@ async function retried(
 ): Promise<Attempt | undefined> {
   const waitMs = observed.response?.retryAfterMs ?? Number.POSITIVE_INFINITY;
   if (kind === 'rate_limited' && attempt.waitedMs + waitMs <= forwarding.longestRetryWaitMs) {
-    await setTimeout(waitMs, undefined, { signal: forwarding.signal }).catch(ignored);
+    await pausedFor(forwarding.timer ?? systemTimer, waitMs, forwarding.signal);
     return { ...attempt, waitedMs: attempt.waitedMs + waitMs };
   }
   return kind === 'forgotten' && (await forwarding.slot.reopenOnce().catch(ignored)) === true ? attempt : undefined;

@@ -11,8 +11,8 @@ import {
   forConsentInProcess,
   hostOf,
   inProcessFetch,
+  serveInProcess,
 } from '../testing/index.ts';
-import { serveOnLoopback } from '../testing/loopback-server.ts';
 import type { ConsentClientOptions } from './consent-client.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -70,7 +70,7 @@ describe('a server given by hand whose answer names no protected resource metada
 
   it('is unanswered where its well-known paths answer a server error, fail on the network or do not answer in time', async () => {
     const bearing = await kept(fakeMcpInProcess({ bearer: 'files-token' }));
-    const silent = await kept(serveOnLoopback(silentAtTheWellKnownPaths));
+    const silent = await kept(serveInProcess(silentAtTheWellKnownPaths));
     const { requestTimeout, cutWhen } = cuttingTimeouts();
     const failing = await refused(bearing.url, { fetch: failingAt(wellKnownPath) });
     const unreachable = await refused(bearing.url, { fetch: unreachableAtTheWellKnownPaths });

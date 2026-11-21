@@ -6,13 +6,15 @@ import {
   resourceMetadataPathOf,
   type FakeAuthorization,
 } from '../authorization-testing/fake-authorization.ts';
-import type { ClientRegistration } from '../authorization-testing/fake-clients.ts';
 import type { FetchHandler, LoopbackServer } from '../testing/fetch-handler.ts';
 import { fakeChat, type FakeChat } from './fake-chat.ts';
 import { fakeSessions, type FakeSessions, type SessionsServed } from './fake-sessions.ts';
+import { manualSleepers, realSleep, type Sleepers } from './fake-sleepers.ts';
 import { fakeToolChanges } from './fake-tool-changes.ts';
 import type { FakeHints, FakeTool, ReceivedCall } from './fake-tools.ts';
 import { nextAnswers, watchedChanges, type NextAnswers } from './next-answers.ts';
+
+type ClientRegistration = Parameters<typeof fakeAuthorization>[1];
 
 export interface FakeMcpOptions extends SessionsServed {
   readonly bearer?: string;
@@ -24,6 +26,7 @@ export interface FakeMcpOptions extends SessionsServed {
   readonly data?: boolean;
   readonly echoes?: string;
   readonly tools?: readonly FakeTool[];
+  readonly realSleep?: boolean;
 }
 
 const SeenClientInfoSchema = Schema.Struct({ name: Schema.String, version: Schema.String });
@@ -61,6 +64,7 @@ export interface FakeMcpServer extends LoopbackServer {
   readonly annotateTool: (name: string, hints: Readonly<Record<string, boolean>>) => void;
   readonly notifyToolsChanged: () => void;
   readonly once: (holds: () => boolean) => Promise<void>;
+  readonly sleepers: Pick<Sleepers, 'fire' | 'waited'>;
 }
 
 export interface FakeMcpAnswers extends Omit<FakeMcpServer, keyof LoopbackServer | 'url'> {
@@ -190,8 +194,14 @@ function guarded(
   return (request) => authorization?.answer(request) ?? checked(request);
 }
 
-function recordsOf(options: FakeMcpOptions, removed: ReadonlySet<string>, chat: FakeChat, hints: FakeHints) {
+interface Changed {
+  readonly removed: ReadonlySet<string>;
+  readonly hints: FakeHints;
+}
+
+function recordsOf(options: FakeMcpOptions, { removed, hints }: Changed, chat: FakeChat, sleepers: Sleepers) {
   return {
+    sleep: options.realSleep === false ? sleepers.sleep : realSleep,
     isRemoved: (tool: string) => removed.has(tool),
     annotated: options.annotated ?? true,
     hints,
@@ -227,7 +237,8 @@ export function fakeMcpAnswers(options: FakeMcpOptions = {}): FakeMcpAnswers {
   const changes = fakeToolChanges(options.hints);
   const authorizations: FakeAuthorization[] = [];
   const chat = fakeChat(options.echoes);
-  const records = recordsOf(options, changes.removed, chat, changes.hints);
+  const sleepers = manualSleepers();
+  const records = recordsOf(options, changes, chat, sleepers);
   const watching = watchedChanges();
   const sessions = fakeSessions(
     { ...records, receive: told((call: ReceivedCall) => received.push(call), watching.changed) },
@@ -262,5 +273,6 @@ export function fakeMcpAnswers(options: FakeMcpOptions = {}): FakeMcpAnswers {
     annotateTool: changes.annotateTool,
     notifyToolsChanged: sessions.notifyToolsChanged,
     once: watching.once,
+    sleepers,
   };
 }

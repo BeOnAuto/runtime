@@ -31,6 +31,10 @@ function refusedIn(directory: string) {
   return (document: string) => refusalOf({ graph: { document, org: 'acme' } }, documentsIn(directory));
 }
 
+function cutAtOnce(): AbortSignal {
+  return AbortSignal.abort();
+}
+
 describe('a document refused at start because its URL', () => {
   it('answers an error, cannot be reached or does not answer in time', async () => {
     const missing = servedDocumentAt(() => Promise.resolve(new Response('gone', { status: 404 })));
@@ -47,7 +51,7 @@ describe('a document refused at start because its URL', () => {
         { fetch: refusedConnections([gone.origin]).fetch },
       ),
     ).toBe(documentProblem('The document could not be read: fetch failed'));
-    expect(await refusalOf({ graph: { document: silent, org: 'acme' } }, { readMs: 50 })).toBe(
+    expect(await refusalOf({ graph: { document: silent, org: 'acme' } }, { readMs: 50, readTimeout: cutAtOnce })).toBe(
       documentProblem('The document was not read within 50 ms'),
     );
   });

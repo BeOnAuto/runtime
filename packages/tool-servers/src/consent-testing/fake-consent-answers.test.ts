@@ -43,7 +43,7 @@ function servedOn(studioBase: string) {
     fetch: routed.fetch,
     url: serviceOrigin,
     requestMs: 5000,
-    requestTimeout: (ms) => AbortSignal.timeout(ms),
+    requestTimeout: () => new AbortController().signal,
   });
   const start = calls.start({
     issuer: vendorOrigin,

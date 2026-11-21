@@ -2,13 +2,15 @@ import { Function, Redacted, Schema } from 'effect';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { secretsOf } from '../bounds/secrets.ts';
-import { consentClientWith, testClientInfo } from '../testing/index.ts';
+import { consentClientWith, manualTimer, testClientInfo } from '../testing/index.ts';
 import { fakeStdioServerPath } from '../testing/served-fakes.ts';
 import { errorsNoLongerReported } from './mcp-client.ts';
 import { observations } from './observed-requests.ts';
 import { failureOf } from './server-failures.ts';
 import { serverLink } from './server-links.ts';
 import { outputNoLongerReported, StdioProcessTransport } from './stdio-transport.ts';
+
+type Timer = ReturnType<typeof manualTimer>['timer'];
 
 type ServerClient = Awaited<ReturnType<ReturnType<typeof serverLink>['take']>>;
 
@@ -51,7 +53,7 @@ function stdioSettings(args: readonly string[], changes: Partial<StdioServerSett
   };
 }
 
-function linkTo(settings: StdioServerSettings, openMs = patientMs, stopMs?: number) {
+function linkTo(settings: StdioServerSettings, openMs = patientMs, stopMs?: number, timer?: Timer) {
   const lines: string[] = [];
   const link = serverLink(settings, {
     clientInfo: testClientInfo,
@@ -64,12 +66,13 @@ function linkTo(settings: StdioServerSettings, openMs = patientMs, stopMs?: numb
       lines.push(`${server}: ${line}`);
     },
     reportMarkUnlisted: Function.constVoid,
+    ...(timer === undefined ? {} : { timer }),
   });
   return { link, lines };
 }
 
-function linked(settings: StdioServerSettings, openMs = patientMs, stopMs?: number) {
-  const made = linkTo(settings, openMs, stopMs);
+function linked(settings: StdioServerSettings, openMs = patientMs, stopMs?: number, timer?: Timer) {
+  const made = linkTo(settings, openMs, stopMs, timer);
   closing.push(made.link.stop);
   return made;
 }
@@ -197,6 +200,7 @@ describe('draining the stdio transport', () => {
         args: ['--eval', `process.stdout.write(${batch}.repeat(20000))`],
         env: {},
         stopMs: 100,
+        timer: manualTimer().timer,
       },
       observations(null, Infinity),
       {
@@ -243,22 +247,39 @@ describe('a stdio server that does not start or stop', () => {
   });
 
   it('kills a process that does not answer in time, nor end when its input does', async () => {
-    const { link } = linked(stdioSettings([], { args: ['--eval', 'setInterval(() => {}, 1000)'] }), 200, 100);
+    const bound = manualTimer();
+    const { link } = linked(
+      stdioSettings([], { args: ['--eval', 'setInterval(() => {}, 1000)'] }),
+      200,
+      100,
+      bound.timer,
+    );
 
-    expect(await failureOfTaking(link)).toEqual({
-      kind: 'timed_out',
-      message: 'The tool server did not answer in time',
-    });
+    const taking = failureOfTaking(link);
+    await bound.waited(1);
+    bound.fire();
+    await bound.waited(2);
+    bound.fire();
+
+    expect(await taking).toEqual({ kind: 'timed_out', message: 'The tool server did not answer in time' });
+    expect(bound.waits().slice(0, 2)).toEqual([200, 100]);
   });
 
   it('kills a process that does not end when its input does, once it has been patient', async () => {
-    const { link } = linked(stdioSettings(['--linger-ms', '60000']), patientMs, 300);
+    const patience = manualTimer();
+    const { link } = linked(stdioSettings(['--linger-ms', '60000']), patientMs, 300, patience.timer);
     const client = await link.take();
+    const ended: string[] = [];
+    void client.closed.then(() => ended.push('closed'));
 
-    const began = performance.now();
-    await link.stop();
+    const stopping = link.stop();
+    await patience.waited(2);
+    ended.push('patience ran out');
+    patience.fire();
+    await stopping;
     await client.closed;
 
-    expect(performance.now() - began).toBeGreaterThanOrEqual(290);
+    expect(patience.waits()).toEqual([patientMs, 300]);
+    expect(ended).toEqual(['patience ran out', 'closed']);
   });
 });

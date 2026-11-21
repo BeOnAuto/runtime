@@ -5,7 +5,6 @@ import type { ToolAccess } from '../access/tool-access.ts';
 import { fakeConnections, pendingWords, refusedWords, type FakeConnections } from '../testing/fake-connections.ts';
 import { describedAccess, type ReportingAccess } from '../testing/reporting-access.ts';
 import { controlledSignals, recordingCallJournal, toolRun } from '../testing/tool-runs.ts';
-import { until } from '../testing/until.ts';
 import { behaviourKey, type ServedUnderTest, type ServerUnderTest } from './servers-under-test.ts';
 import { behaviourConnection } from './sources-under-test.ts';
 
@@ -170,7 +169,7 @@ function removal(underTest: ServerUnderTest): void {
     connections.remove(behaviourConnection);
 
     expect(await listed(access)).toEqual([]);
-    await until(() => fake.sessionsOpen() === 0);
+    await fake.noSessionOpen();
     expect(await Effect.runPromise(access.callOnce(oneCallOf('graph')))).toMatchObject({
       because: 'tool_server_not_configured',
     });

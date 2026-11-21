@@ -1,6 +1,7 @@
 import { Option, Schema } from 'effect';
 
 import type { FetchHandler } from '../testing/fetch-handler.ts';
+import { servedChanged } from '../testing/in-process.ts';
 import {
   answer,
   client,
@@ -227,6 +228,7 @@ export function fakeConsentServiceAnswers(options: FakeConsentServiceOptions): F
     const text = await request.text();
     const { method } = request;
     calls.push({ method, path: url.pathname, body: bodyOf(text), authorization: request.headers.get('authorization') });
+    servedChanged();
     if (stalling.now) {
       return Promise.withResolvers<Response>().promise;
     }

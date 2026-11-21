@@ -6,6 +6,7 @@ import type { CallsEndedBecause } from '../access/tool-server-failed.ts';
 import type { ServerSettings } from '../settings/server-settings.ts';
 import { cutWhereValid } from './structural-cut.ts';
 import { bytesOf, canonicalJson, cutAtCodePoint } from './text-bytes.ts';
+import { systemTimer, type Timer } from './timers.ts';
 
 export const toolBounds = {
   actingCallsInRun: 25,
@@ -32,6 +33,11 @@ export interface Timing {
   readonly longestRetryWaitMs: number;
   readonly stopMs?: number;
   readonly deadlineAfter?: (ms: number) => AbortSignal;
+  readonly timer?: Timer;
+}
+
+export function timerOf({ timer }: Pick<Timing, 'timer'>): Timer {
+  return timer ?? systemTimer;
 }
 
 export const defaultTiming: Timing = {

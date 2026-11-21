@@ -1,5 +1,6 @@
 import { Redacted } from 'effect';
 
+import { longestSdkTimeoutMs, withinBound, type Timer } from '../bounds/timers.ts';
 import type { StdioServerSettings } from '../settings/server-settings.ts';
 import {
   boundedReport,
@@ -17,6 +18,7 @@ export interface StdioOpening {
   readonly timeoutMs: number;
   readonly stopMs: number | undefined;
   readonly output: OutputReport;
+  readonly timer: Timer;
 }
 
 function environmentOf({ env }: StdioServerSettings): Readonly<Record<string, string>> {
@@ -37,15 +39,18 @@ export async function openStdio(settings: StdioServerSettings, opening: StdioOpe
       args: settings.args,
       env: environmentOf(settings),
       stopMs: opening.stopMs ?? stopPatienceMs,
+      timer: opening.timer,
     },
     sdk.observations,
     opening.output,
   );
   try {
-    await sdk.client.connect(transport, { timeout: opening.timeoutMs });
+    await withinBound(opening.timer, opening.timeoutMs, (signal) =>
+      sdk.client.connect(transport, { signal, timeout: longestSdkTimeoutMs }),
+    );
   } catch (failure) {
     await transport.close();
     throw failure;
   }
-  return serverClientOver(sdk.client, sdk.observations, sdk.closed, () => sdk.client.close());
+  return serverClientOver(sdk, opening.timer, () => sdk.client.close());
 }
