@@ -57,11 +57,39 @@ Run one package's gate with `pnpm turbo run lint typecheck test --filter @on.aut
 
 ## Tests
 
-Every test file pays a fixed cost before its first test runs: its imports, its environment and often a server start. These rules keep that cost down.
+Every test file pays a fixed cost before its first test runs: its imports, its environment and often a server start. These rules keep that cost down and keep each test's result its own.
 
+### What a test proves
+
+- Prove each rule in a unit test, in the package where the rule lives, with no I/O: no server, socket, database file, disk, network, child process, worker thread or browser. Use stubs, mocks and fakes. Parameterize over the values that matter, such as sizes, thresholds and states, with `it.each`.
+- Then test units together, still with fakes at the edges. Do not test the whole stack to prove a rule. One wiring test for each outer layer a rule passes through, such as HTTP, MCP or a child process for signals, is enough, and it proves the wiring, not the rule.
+- A limit is a parameter. Prove "at most N" with a small N, such as 2 or 3, and with one more than N, never by doing the real number of things, such as hundreds of requests, thousands of files or megabytes of payload. Add one case that the shipped default is the figure that ships. If the limit is a hard-coded constant, make it a parameter with that default.
+- Start a real process, thread, server, store or browser only when that thing is the subject of the test, and let the test's name say why. Never run a child process synchronously in a test, with `execFileSync` or `spawnSync`: it freezes the worker, so no timeout can fire. Await it.
+- A store's own contract (its SQL, migrations, locks and concurrency) runs on the real store, on each database, PostgreSQL included. Everything else runs on memory. A server test over HTTP that needs a database runs on SQLite only.
 - Add a case to the topic's existing test file. A new test file needs a reason, such as a new topic; a new file for each pull request is the pattern to stop.
-- Never wait on a real clock or a real timeout. Use Effect's `TestClock` or Vitest's fake timers, or make the limit injectable and pass a small one.
 - Do not test text. Do not assert the wording a person or an agent reads, exact copy, or the character or byte count of prose. Assert what the code does: codes, keys, roles and length caps. Wording is judged by reading it, as the rule on text an agent reads sets out, never by a test.
-- Test a rule once, where it lives, plus one wiring test for each outer layer it passes through, such as the server over HTTP or MCP. Do not prove a rule again through a server when unit tests already prove it.
-- Run logic on one store, SQLite or memory. Only a store's own contract (its SQL, migrations, locks and concurrency) runs on each database, PostgreSQL included. A server test over HTTP runs on SQLite only.
-- Share a server or a fixture across a file with `beforeAll` where the tests do not interfere with each other.
+
+### Fakes
+
+- Trust a fake of a stable interface without a contract suite: SQL, and a file or object store.
+- A fake of one of our own services or of an outside system gets one contract suite: the same cases run on the fake and on the real thing.
+- A fake is never looser than what it stands for. When a rule depends on something only the real thing does, such as a limit on bound values, an input gate or a listing order, teach the fake to do the same once, with a unit test of the fake, and prove the rule on the fake.
+- A package's shared fakes live in its testing entry, `src/testing/index.ts`. Extend them rather than writing another.
+
+### Time
+
+- No test waits on a real clock, wiring tests included: no sleep, no polling on an interval, no timeout that must run out and no assertion on elapsed time. Use Effect's `TestClock`, Vitest's fake timers or an injected clock or timer, and await a signal that the code or the fake gives when something happens. Assert the order of events or a count of work, not a duration.
+- Code that sleeps or sets a deadline takes its clock or timer as a parameter, the real one by default, so a test can step it. A host handed a clock sleeps only on that clock.
+- Do not lengthen a timeout to make a slow test pass. Find what the time is spent on: work that should be smaller, or a wait that should be a signal.
+
+### Independence
+
+- A test passes alone, in any order, and in a process shared with other files. It restores what it sets (environment, globals, timers, module hooks), leaves nothing running, and shares no ledger, store or server state with another test unless the test is about that sharing.
+- Share a server or a fixture across a file with `beforeAll` where the tests do not interfere with each other: each test makes and reads its own state on it.
+- Do not assert on what an earlier test may or may not have loaded. Do not spy on the global `setTimeout` on top of fake timers: it leaves a wrapper behind that stops the next file's timers.
+- Before reporting a package done, run its tests at one worker in a shuffled file order, `--maxWorkers=1 --sequence.shuffle.files`, so a test that leans on another file fails on your machine and not in CI.
+
+### Fixing a failing test
+
+- Reproduce a failure before fixing it. If it cannot be reproduced, reproduce the flaw behind it in a small test that fails for the same reason, and say plainly which of the two you did. Do not land a fix reasoned from the code alone.
+- A test that fails by chance is a defect to fix at its cause, such as a real clock, real work under load or shared state. Do not rerun it until it passes.
