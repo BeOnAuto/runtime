@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 import type { HostDatabase } from '../database/host-database.ts';
 
 export const notTakenReasons = [
+  'playbook_retired',
   'no_trigger',
   'topic_mismatch',
   'invalid_event',
@@ -17,7 +18,7 @@ export type NotTakenReason = (typeof notTakenReasons)[number];
 export interface TriggerOutcome {
   readonly definitionKey: string;
   readonly reference: string;
-  readonly reason: NotTakenReason;
+  readonly reason: Exclude<NotTakenReason, 'playbook_retired'>;
 }
 
 export const triggerOutcomeTables: readonly Statement[] = [
@@ -32,7 +33,7 @@ export const triggerOutcomeTables: readonly Statement[] = [
   )`,
 ];
 
-export function beforeAnyTrigger(reason: NotTakenReason): TriggerOutcome {
+export function beforeAnyTrigger(reason: TriggerOutcome['reason']): TriggerOutcome {
   return { definitionKey: '', reference: '', reason };
 }
 

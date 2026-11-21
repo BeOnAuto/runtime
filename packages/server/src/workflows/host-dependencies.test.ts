@@ -32,7 +32,12 @@ import { decisionPointServing } from '../composition/served-access-control.ts';
 import { ledgerConnectionIn } from '../database/ledger-database.ts';
 import { shippedRoots } from '../server-options/shipped-roots.ts';
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
-import { addedAndConnected, connectionsRecorded } from '../testing/subscriptions/connections-followed.ts';
+import {
+  addedAndConnected,
+  connectionsRecorded,
+  playbooksCreated,
+  playbooksRetired,
+} from '../testing/subscriptions/connections-followed.ts';
 import { connectionIntakeServedBy } from './connection-intake.ts';
 import { type HostDispatch, hostDispatchesOf, hostOperationsOf, hostRegistrationsOf } from './host-operations.ts';
 import { hostReports } from './host-reports.ts';
@@ -352,24 +357,26 @@ describe('an event a workflow emits', () => {
   });
 });
 
+async function anIntakeOfTheServer() {
+  const runtime = await makeAppRuntime(applicationLayer(memoryLedgerHostDependencies));
+  onTestFinished(() => runtime.dispose());
+  const store = await openWorkflowStore(await ledgerConnectionIn(runtime), []);
+  const ledger = await Effect.runPromise(inRuntime(runtime, Effect.service(Ledger)));
+  await connectionsRecorded(ledger, 'acme', addedAndConnected('connection-1', 'github', 'https://api.example.com/mcp'));
+  const takeIn = connectionIntakeServedBy(runtime, {
+    store,
+    filters: filterSandboxOf(freshInstances(sandboxModule)),
+    providers: Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots()))),
+    now: () => Date.parse('2026-11-20T09:00:00.000Z'),
+  });
+  return { ledger, takeIn };
+}
+
 describe('an event a connection reports, taken in through the ports the server gives the intake', () => {
+  const event = { type: 'com.example.ticket.opened', id: 'T-1', data: {} };
+
   it('is refused for a connection the org does not hold, and counted where one serves the playbook and no trigger names it', async () => {
-    const runtime = await makeAppRuntime(applicationLayer(memoryLedgerHostDependencies));
-    onTestFinished(() => runtime.dispose());
-    const store = await openWorkflowStore(await ledgerConnectionIn(runtime), []);
-    const ledger = await Effect.runPromise(inRuntime(runtime, Effect.service(Ledger)));
-    await connectionsRecorded(
-      ledger,
-      'acme',
-      addedAndConnected('connection-1', 'github', 'https://api.example.com/mcp'),
-    );
-    const takeIn = connectionIntakeServedBy(runtime, {
-      store,
-      filters: filterSandboxOf(freshInstances(sandboxModule)),
-      providers: Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots()))),
-      now: () => Date.parse('2026-11-20T09:00:00.000Z'),
-    });
-    const event = { type: 'com.example.ticket.opened', id: 'T-1', data: {} };
+    const { takeIn } = await anIntakeOfTheServer();
 
     const answers = await Effect.runPromise(
       Effect.all([
@@ -379,5 +386,17 @@ describe('an event a connection reports, taken in through the ports the server g
     );
 
     expect(answers).toEqual([{ outcome: 'refused' }, { outcome: 'not_taken', reasons: ['no_trigger'] }]);
+  });
+
+  it('is not taken for a playbook the org retired, as the registry the dispatcher reads holds it', async () => {
+    const { ledger, takeIn } = await anIntakeOfTheServer();
+    await playbooksCreated(ledger, 'acme', ['alpha']);
+    await playbooksRetired(ledger, 'acme', ['alpha']);
+
+    const answer = await Effect.runPromise(
+      takeIn({ playbook: { org: 'acme', playbook: 'alpha' }, connection: 'github', event }),
+    );
+
+    expect(answer).toEqual({ outcome: 'not_taken', reasons: ['playbook_retired'] });
   });
 });

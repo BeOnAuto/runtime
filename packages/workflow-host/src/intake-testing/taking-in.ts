@@ -1,6 +1,7 @@
 import { connectionEventRecorder, type ReportedEvent } from '@on.auto/definitions/connection-events';
 import { savedTriggersOf } from '@on.auto/definitions/connection-triggers';
 import { streamPortsOf } from '@on.auto/ledger';
+import type { PlaybookRegistry } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { filterSandboxOf, freshInstances, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import { Effect } from 'effect';
@@ -27,16 +28,20 @@ export function servedWithTopics(...topics: readonly string[]): ServedConnection
   return { topicsOf: () => Effect.succeed(topics) };
 }
 
+type Registry = PlaybookRegistry['Service'];
+
 const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots()));
 
 export async function anIntake(
   served: ServedConnection | 'not served' = servedWithTopics(),
   savedTriggersRead: typeof savedTriggersOf = savedTriggersOf,
+  registryOver: (ofTheLedger: Registry) => Registry = (ofTheLedger) => ofTheLedger,
 ) {
-  const { database, ledger, workflows } = await aPlaybookBesideItsLedger();
+  const { database, ledger, registry, workflows, playbook } = await aPlaybookBesideItsLedger();
   const ports = {
     database,
     servedConnection: () => Effect.succeed(served === 'not served' ? undefined : served),
+    registry: registryOver(registry),
     savedTriggers: savedTriggersRead(ledger),
     record: connectionEventRecorder(streamPortsOf(database.store)),
     now: () => takenAt,
@@ -46,6 +51,7 @@ export async function anIntake(
   return {
     database,
     workflows,
+    playbook,
     takenIn: (arrival: ConnectionArrival) => Effect.runPromise(scripted(arrival)),
     takenInASandbox: (arrival: ConnectionArrival) => Effect.runPromise(sandboxed(arrival)),
     failureOf: (arrival: ConnectionArrival) => Effect.runPromise(Effect.flip(Effect.sandbox(scripted(arrival)))),

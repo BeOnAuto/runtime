@@ -1,7 +1,8 @@
 import { definitionsReadModel, type StrippedForms } from '@on.auto/definitions';
 import { decidedIn } from '@on.auto/definitions/testing';
-import type { Ledger } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { Ledger, PlaybookRegistry } from '@on.auto/operations';
+import { ledgerPlaybookRegistry, playbooksStreamOfOrg } from '@on.auto/playbooks';
+import { Effect, Layer } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import {
@@ -10,6 +11,8 @@ import {
   definitionIdNamed,
   definitionKeyNamed,
   eventTrigger,
+  playbookCreated,
+  recorded,
   type TriggerFilter,
 } from '../reaction-testing/playbook-writes.ts';
 import { zoneClockOf } from '../schedules/zone-clock.ts';
@@ -58,12 +61,25 @@ function workflowsSavedIn(ledger: Ledger['Service']): WorkflowsSaved {
   };
 }
 
+function registryOn(ledger: Ledger['Service']): Promise<PlaybookRegistry['Service']> {
+  return Effect.runPromise(
+    Effect.provide(
+      Effect.service(PlaybookRegistry),
+      ledgerPlaybookRegistry.pipe(Layer.provide(Layer.succeed(Ledger, ledger))),
+    ),
+  );
+}
+
 export async function aPlaybookBesideItsLedger() {
   const { database, ledger } = await openedBesideItsLedger({
     ...(await onSQLite()),
     projections: definitionsReadModel,
   });
-  return { database, ledger, workflows: workflowsSavedIn(ledger) };
+  await playbookCreated(database.store, 'alpha');
+  const statusRecorded = (type: 'playbook_retired' | 'playbook_restored') => () =>
+    recorded(database.store, playbooksStreamOfOrg('acme'), { type, data: { playbook: 'alpha' } });
+  const playbook = { retired: statusRecorded('playbook_retired'), restored: statusRecorded('playbook_restored') };
+  return { database, ledger, registry: await registryOn(ledger), workflows: workflowsSavedIn(ledger), playbook };
 }
 
 export function followedTo(database: HostDatabase, name: string, ...filters: readonly TriggerFilter[]): Promise<void> {

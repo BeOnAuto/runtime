@@ -19,14 +19,31 @@ const asGiven = {
 
 const versionRead = { initialState: null, evolve: () => null, eventSchema: ConnectionEventSchema };
 
-function createdOf(playbook: string): Decided<typeof PlaybookEventSchema.Type> {
+type PlaybookFact = Decided<typeof PlaybookEventSchema.Type>;
+
+function createdOf(playbook: string): PlaybookFact {
   return { type: 'playbook_created', data: { playbook, name: playbook, description: '', created_by: ada } };
 }
 
-export function playbooksCreated(ledger: Ledger['Service'], org: string, playbooks: readonly string[]): Promise<void> {
-  const created = playbooks.map((playbook) => createdOf(playbook));
+function playbookFactsRecorded(ledger: Ledger['Service'], org: string, facts: readonly PlaybookFact[]): Promise<void> {
   const decider = { ...asGiven, eventSchema: PlaybookEventSchema };
-  return Effect.runPromise(Effect.asVoid(Effect.orDie(ledger.execute(playbooksStreamOfOrg(org), decider, created))));
+  return Effect.runPromise(Effect.asVoid(Effect.orDie(ledger.execute(playbooksStreamOfOrg(org), decider, facts))));
+}
+
+export function playbooksCreated(ledger: Ledger['Service'], org: string, playbooks: readonly string[]): Promise<void> {
+  return playbookFactsRecorded(
+    ledger,
+    org,
+    playbooks.map((playbook) => createdOf(playbook)),
+  );
+}
+
+export function playbooksRetired(ledger: Ledger['Service'], org: string, playbooks: readonly string[]): Promise<void> {
+  return playbookFactsRecorded(
+    ledger,
+    org,
+    playbooks.map((playbook) => ({ type: 'playbook_retired', data: { playbook } })),
+  );
 }
 
 export function connectionsRecorded(

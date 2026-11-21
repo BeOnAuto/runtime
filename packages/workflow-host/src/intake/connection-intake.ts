@@ -9,6 +9,7 @@ import {
   streamPrefixOfPlaybook,
   type Conflict,
   type PlaybookAddress,
+  type PlaybookRegistry,
 } from '@on.auto/operations';
 import type { FilterSandbox } from '@on.auto/workflow-engine';
 import { Effect } from 'effect';
@@ -40,6 +41,7 @@ export interface IntakePorts {
     playbook: PlaybookAddress,
     connection: string,
   ) => Effect.Effect<ServedConnection | undefined>;
+  readonly registry: PlaybookRegistry['Service'];
   readonly savedTriggers: ReadSavedTriggers;
   readonly record: RecordConnectionEvent;
 }
@@ -68,6 +70,8 @@ export type TakeIn = (arrival: ConnectionArrival) => Effect.Effect<IntakeAnswer,
 const taken: IntakeAnswer = { outcome: 'taken' };
 
 const refused: IntakeAnswer = { outcome: 'refused' };
+
+const playbookRetired: IntakeAnswer = { outcome: 'not_taken', reasons: ['playbook_retired'] };
 
 function reasonsOf(outcomes: readonly TriggerOutcome[]): readonly NotTakenReason[] {
   return notTakenReasons.filter((reason) => outcomes.some((outcome) => outcome.reason === reason));
@@ -105,13 +109,16 @@ function isOutOfItsTopic(served: ServedConnection, { event, topic }: ConnectionA
 }
 
 export function intakeMatching(parts: MatchingParts): TakeIn {
-  const { database, servedConnection, savedTriggers, record, match } = parts;
+  const { database, servedConnection, registry, savedTriggers, record, match } = parts;
   return (arrival) =>
     Effect.gen(function* () {
       const { playbook, connection, event } = arrival;
       const served = yield* servedConnection(playbook, connection);
       if (served === undefined) {
         return refused;
+      }
+      if ((yield* registry.status(playbook)) === 'retired') {
+        return playbookRetired;
       }
       const now = parts.now();
       const at = new Date(now).toISOString();
