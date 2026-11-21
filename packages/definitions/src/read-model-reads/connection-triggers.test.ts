@@ -1,12 +1,19 @@
+import type { ProjectedKeyedRow, ProjectedRowsQuery, RowsAddress } from '@on.auto/operations';
 import type { MemoryLedger } from '@on.auto/operations/testing';
-import { Effect } from 'effect';
+import { Effect, Struct } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { aReader, executedIn } from '../read-model-testing/read-model-histories.ts';
 import { readModelLedgerOf } from '../read-model-testing/read-model-ledger.ts';
-import { definitionFactTypes } from '../registry/definition-events.ts';
-import type { Trigger } from '../registry/definition-triggers.ts';
-import { changesConnectionTriggers, connectionTriggerFacts, connectionTriggersOf } from './connection-triggers.ts';
+import { definitionFactTypes, type DefinitionContent } from '../registry/definition-events.ts';
+import type { Trigger, TriggerFilter } from '../registry/definition-triggers.ts';
+import {
+  changesConnectionTriggers,
+  connectionTriggerFacts,
+  connectionTriggersOf,
+  savedTriggersOf,
+} from './connection-triggers.ts';
+import { pointerDisagrees } from './read-model-rows.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -89,6 +96,75 @@ describe('the triggers of a playbook that name a connection', () => {
 
     const tracker = [{ connection: 'tracker', type: posted }];
     expect(read).toEqual([[], tracker, [], [], tracker, []]);
+  });
+});
+
+const namesTheTracker = (filter: TriggerFilter) => filter.attributes['source'] === '/connections/tracker';
+
+const totals = {
+  reference: '/schedule/on/any/0',
+  type: posted,
+  attributes: { type: posted, source: '/connections/tracker', data: '${ $data.total as number > 1 }' },
+};
+
+const savedToRun: DefinitionContent = {
+  source: 'totals',
+  triggers: [
+    { kind: 'event', reference: '/schedule/on', filters: [totals] },
+    {
+      kind: 'event',
+      reference: '/schedule/on/chat',
+      filters: [filterOf('/schedule/on/chat/0', { source: '/connections/chat' })],
+    },
+    { kind: 'cron', reference: '/schedule/cron', expression: '0 9 * * 1' },
+  ],
+  stripped: { expressions: { ' $data.total as number > 1 ': ' $data.total           > 1 ' } },
+};
+
+function savedIn(ledger: Pick<MemoryLedger, 'service'>) {
+  return Effect.runPromise(savedTriggersOf(ledger.service)(alpha, namesTheTracker));
+}
+
+describe('the saved triggers of a playbook that a filter chosen names', () => {
+  it('are the event triggers of its active workflows with such a filter, in the forms their save keeps to run', async () => {
+    const ledger = aLedger();
+    const creation = { type: 'create', name: 'totals', content: savedToRun, created_by: aReader } as const;
+    await executedIn(ledger.service, 'workflow', { ...creation, definition_id: 'totals-id' });
+    await created(ledger, 'quiet');
+    await created(ledger, 'greeter', fromTheTracker, { type: 'echo' });
+    await created(ledger, 'elsewhere', fromTheTracker, { playbook: 'beta' });
+    await created(ledger, 'resting', fromTheTracker);
+    await executedIn(ledger.service, 'workflow', { type: 'pause', name: 'resting', paused_by: aReader });
+
+    expect(await savedIn(ledger)).toEqual([
+      {
+        definition: 'totals-id',
+        reference: '/schedule/on',
+        filters: [{ ...totals, attributes: { ...totals.attributes, data: '${ $data.total           > 1 }' } }],
+      },
+    ]);
+  });
+
+  it('are none of a row that names no definition, and refused where a row names no save of its version', async () => {
+    const ledger = aLedger();
+    await created(ledger, 'triage', fromTheTracker);
+    const rowsAltered = (alter: (row: ProjectedKeyedRow) => ProjectedKeyedRow) => ({
+      service: {
+        ...ledger.service,
+        readProjectedRows: (projection: string, address: RowsAddress, query: ProjectedRowsQuery) =>
+          Effect.map(ledger.service.readProjectedRows(projection, address, query), (rows) =>
+            rows.map((row) => alter(row)),
+          ),
+      },
+    });
+
+    const unplaced = await savedIn(rowsAltered((row) => Struct.omit(row, ['definition'])));
+    const moved = rowsAltered((row) => ({ ...row, row: { ...row.row, version: 2 } }));
+
+    expect(unplaced).toEqual([]);
+    expect(await Effect.runPromise(Effect.flip(savedTriggersOf(moved.service)(alpha, namesTheTracker)))).toEqual(
+      pointerDisagrees,
+    );
   });
 });
 

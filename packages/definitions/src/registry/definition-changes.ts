@@ -65,7 +65,10 @@ function standingChangeOf(event: Exclude<RecordedDefinitionEvent, DefinitionWith
   return event.type === 'definition_resumed' ? { kind: 'resumed', name, at } : { kind: 'retired', name };
 }
 
-function runnableTriggersOf({ triggers = [], stripped = noStrippedForms }: DefinitionWithContent['data']['content']) {
+export function runnableTriggersOf({
+  triggers = [],
+  stripped = noStrippedForms,
+}: DefinitionWithContent['data']['content']): readonly Trigger[] {
   return triggers.map((each) => runnableTrigger(each, stripped));
 }
 

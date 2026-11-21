@@ -1,6 +1,7 @@
 import type { AppRuntime } from '@on.auto/api';
 import { servedConnectionOf } from '@on.auto/connections';
 import { connectionEventRecorder } from '@on.auto/definitions/connection-events';
+import { savedTriggersOf } from '@on.auto/definitions/connection-triggers';
 import type { DispatcherServices } from '@on.auto/operations';
 import type { ProviderList } from '@on.auto/providers';
 import type { FilterSandbox } from '@on.auto/workflow-engine';
@@ -26,6 +27,7 @@ export function connectionIntakeServedBy(
     filters,
     now,
     servedConnection: (playbook, connection) => servedOf({ ...playbook, connection }),
+    savedTriggers: savedTriggersOf(ledger),
     record: connectionEventRecorder(ledger),
   });
 }

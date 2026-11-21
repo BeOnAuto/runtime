@@ -9,9 +9,11 @@ import { expect, onTestFinished } from 'vitest';
 
 import { oneRowOf, rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
 import {
+  hostBesideItsLedgerOn,
   hostDatabaseOpenedOn,
   ledgerConnectedOn,
   type DatabaseSettings,
+  type HostBesideItsLedger,
 } from '../ledger-testing/ledger-connections.ts';
 import { until } from './until.ts';
 
@@ -51,6 +53,12 @@ export async function openedOn(settings: DatabaseSettings, tables: readonly Stat
   const database = await hostDatabaseOpenedOn(settings, tables);
   onTestFinished(database.close);
   return database;
+}
+
+export async function openedBesideItsLedger(settings: DatabaseSettings): Promise<HostBesideItsLedger> {
+  const opened = await hostBesideItsLedgerOn(settings);
+  onTestFinished(opened.database.close);
+  return opened;
 }
 
 export function leaseOn(database: HostDatabase): Promise<Lease> {

@@ -23,9 +23,13 @@ const definitionsOfTheTests = '9b2f6c1e-4d3a-5e7b-8c90-1a2b3c4d5e6f';
 
 const namesOfKeys = new Map<string, string>();
 
+export function definitionIdNamed(name: string, type = 'workflow', playbookKey = alpha): string {
+  return uuidV5(definitionsOfTheTests, JSON.stringify([playbookKey, type, name]));
+}
+
 export function definitionKeyOfType(type: string, name: string, playbookKey = alpha): string {
   const [, org = ''] = playbookKey.split('/');
-  const definitionKey = `definition/${org}/${uuidV5(definitionsOfTheTests, JSON.stringify([playbookKey, type, name]))}/`;
+  const definitionKey = `definition/${org}/${definitionIdNamed(name, type, playbookKey)}/`;
   namesOfKeys.set(definitionKey, name);
   return definitionKey;
 }

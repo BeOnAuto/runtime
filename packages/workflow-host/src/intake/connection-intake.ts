@@ -3,13 +3,19 @@ import {
   type RecordConnectionEvent,
   type ReportedEvent,
 } from '@on.auto/definitions/connection-events';
-import { streamPrefixOfPlaybook, type Conflict, type PlaybookAddress } from '@on.auto/operations';
+import type { ReadSavedTriggers, SavedEventTrigger } from '@on.auto/definitions/connection-triggers';
+import {
+  streamPrefixOfDefinition,
+  streamPrefixOfPlaybook,
+  type Conflict,
+  type PlaybookAddress,
+} from '@on.auto/operations';
 import type { FilterSandbox } from '@on.auto/workflow-engine';
 import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import { filterMatchingOf, type MatchFilters } from '../filtering/filter-matching.ts';
-import { judgementOf, triggersOfItsType, type Judging } from './trigger-judgements.ts';
+import { judgementOf, namingTheConnection, type JudgedTrigger, type Judging } from './trigger-judgements.ts';
 import {
   beforeAnyTrigger,
   notTakenReasons,
@@ -34,6 +40,7 @@ export interface IntakePorts {
     playbook: PlaybookAddress,
     connection: string,
   ) => Effect.Effect<ServedConnection | undefined>;
+  readonly savedTriggers: ReadSavedTriggers;
   readonly record: RecordConnectionEvent;
 }
 
@@ -54,7 +61,9 @@ export type IntakeAnswer =
   | { readonly outcome: 'not_taken'; readonly reasons: readonly NotTakenReason[] }
   | { readonly outcome: 'refused' };
 
-export type TakeIn = (arrival: ConnectionArrival) => Effect.Effect<IntakeAnswer, Conflict>;
+type SavedTriggersRefused = Effect.Error<ReturnType<ReadSavedTriggers>>;
+
+export type TakeIn = (arrival: ConnectionArrival) => Effect.Effect<IntakeAnswer, Conflict | SavedTriggersRefused>;
 
 const taken: IntakeAnswer = { outcome: 'taken' };
 
@@ -64,17 +73,26 @@ function reasonsOf(outcomes: readonly TriggerOutcome[]): readonly NotTakenReason
   return notTakenReasons.filter((reason) => outcomes.some((outcome) => outcome.reason === reason));
 }
 
-function outcomesOfTheTriggers(judging: Judging): Effect.Effect<readonly TriggerOutcome[] | 'taken'> {
+function judgedIn(playbook: PlaybookAddress, saved: readonly SavedEventTrigger[]): readonly JudgedTrigger[] {
+  return saved.map(({ definition, reference, filters }) => ({
+    definitionKey: streamPrefixOfDefinition({ org: playbook.org, definition }),
+    reference,
+    filters,
+  }));
+}
+
+function outcomesOfTheTriggers(
+  judging: Judging,
+  triggers: readonly JudgedTrigger[],
+): Effect.Effect<readonly TriggerOutcome[] | 'taken'> {
   return Effect.gen(function* () {
     const outcomes: TriggerOutcome[] = [];
-    for (const trigger of yield* triggersOfItsType(judging)) {
+    for (const trigger of triggers) {
       const judgement = yield* judgementOf(judging, trigger);
       if (judgement === 'takes') {
         return 'taken' as const;
       }
-      if (judgement !== 'not_named') {
-        outcomes.push(judgement);
-      }
+      outcomes.push(judgement);
     }
     return outcomes.length === 0 ? [beforeAnyTrigger('no_trigger')] : outcomes;
   });
@@ -87,7 +105,7 @@ function isOutOfItsTopic(served: ServedConnection, { event, topic }: ConnectionA
 }
 
 export function intakeMatching(parts: MatchingParts): TakeIn {
-  const { database, servedConnection, record, match } = parts;
+  const { database, servedConnection, savedTriggers, record, match } = parts;
   return (arrival) =>
     Effect.gen(function* () {
       const { playbook, connection, event } = arrival;
@@ -111,8 +129,9 @@ export function intakeMatching(parts: MatchingParts): TakeIn {
         return yield* notTaken([beforeAnyTrigger('invalid_event')]);
       }
       const { event: judged } = publication;
-      const judging = { database, match, playbookKey, type: judged.type, event: judged, now };
-      const outcomes = yield* outcomesOfTheTriggers(judging);
+      const naming = namingTheConnection(judged.type, judged);
+      const triggers = judgedIn(playbook, yield* savedTriggers(playbook, naming));
+      const outcomes = yield* outcomesOfTheTriggers({ match, naming, event: judged, now }, triggers);
       if (outcomes === 'taken') {
         yield* record(playbook, publication, at);
         return taken;

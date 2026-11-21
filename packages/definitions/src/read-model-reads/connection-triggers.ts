@@ -1,15 +1,19 @@
-import type {
-  PlaybookAddress,
-  ProjectedCondition,
-  ProjectedKeyedRow,
-  ProjectedRowsQuery,
-  ProjectionReader,
+import {
+  definitionBoundStreamReader,
+  type PlaybookAddress,
+  type ProjectedCondition,
+  type ProjectedKeyedRow,
+  type ProjectedRowsQuery,
+  type ProjectionReader,
+  type StreamReader,
 } from '@on.auto/operations';
-import { Effect, Option, Schema } from 'effect';
+import { Array as Arr, Effect, Option, Schema } from 'effect';
 
 import { definitionRows } from '../read-model/definition-rows.ts';
-import { TriggerSchema, type TriggerFilter } from '../registry/definition-triggers.ts';
-import { everyRowOf } from './read-model-rows.ts';
+import { runnableTriggersOf } from '../registry/definition-changes.ts';
+import { TriggerSchema, type EventTrigger, type Trigger, type TriggerFilter } from '../registry/definition-triggers.ts';
+import type { ReadModelRefused } from './read-model-refused.ts';
+import { everyRowOf, saveOfTheRow, type ReadModelReader } from './read-model-rows.ts';
 
 interface ConnectionTrigger {
   readonly connection: string;
@@ -65,14 +69,72 @@ function connectionTriggersIn({ row }: ProjectedKeyedRow): readonly ConnectionTr
   );
 }
 
+function rowsOfThePlaybook(ledger: Pick<ProjectionReader, 'readProjectedRows'>, playbook: PlaybookAddress) {
+  return {
+    readProjectedRows: (table: string, query: ProjectedRowsQuery) => ledger.readProjectedRows(table, playbook, query),
+  };
+}
+
 export function connectionTriggersOf(
   ledger: Pick<ProjectionReader, 'readProjectedRows'>,
   playbook: PlaybookAddress,
 ): Effect.Effect<readonly ConnectionTrigger[]> {
-  const inThePlaybook = {
-    readProjectedRows: (table: string, query: ProjectedRowsQuery) => ledger.readProjectedRows(table, playbook, query),
-  };
-  return Effect.map(everyRowOf(inThePlaybook, definitionRows.name, activeWithTriggers), (rows) =>
+  return Effect.map(everyRowOf(rowsOfThePlaybook(ledger, playbook), definitionRows.name, activeWithTriggers), (rows) =>
     rows.flatMap((row) => connectionTriggersIn(row)),
   );
+}
+
+export interface SavedEventTrigger {
+  readonly definition: string;
+  readonly reference: string;
+  readonly filters: readonly TriggerFilter[];
+}
+
+export type ChosenFilter = (filter: TriggerFilter) => boolean;
+
+export type ReadSavedTriggers = (
+  playbook: PlaybookAddress,
+  chosen: ChosenFilter,
+) => Effect.Effect<readonly SavedEventTrigger[], ReadModelRefused>;
+
+const SavedRowSchema = Schema.Struct({
+  version: Schema.Number,
+  saved_position: Schema.Number,
+  triggers: Schema.NullOr(Schema.fromJsonString(Schema.Array(TriggerSchema))),
+});
+
+const savedRowOf = Schema.decodeUnknownEffect(SavedRowSchema);
+
+function eventTriggersChosen(triggers: readonly Trigger[], chosen: ChosenFilter): readonly EventTrigger[] {
+  return triggers.flatMap((trigger) => (trigger.kind === 'event' && trigger.filters.some(chosen) ? [trigger] : []));
+}
+
+function savedTriggersIn(
+  reader: Pick<ReadModelReader, 'ofDefinition'>,
+  chosen: ChosenFilter,
+): (row: ProjectedKeyedRow) => Effect.Effect<readonly SavedEventTrigger[], ReadModelRefused> {
+  return ({ definition, row }) =>
+    Effect.flatMap(Effect.orDie(savedRowOf(row)), (saved) =>
+      definition === undefined || eventTriggersChosen(saved.triggers ?? [], chosen).length === 0
+        ? Effect.succeed([])
+        : Effect.map(saveOfTheRow(reader, typeWithTriggers, definition, saved), ({ data }) =>
+            eventTriggersChosen(runnableTriggersOf(data.content), chosen).map(({ reference, filters }) => ({
+              definition,
+              reference,
+              filters,
+            })),
+          ),
+    );
+}
+
+export function savedTriggersOf(ledger: Pick<ProjectionReader, 'readProjectedRows'> & StreamReader): ReadSavedTriggers {
+  return (playbook, chosen) => {
+    const reader = {
+      ofDefinition: (definition: string) => definitionBoundStreamReader(ledger, { org: playbook.org, definition }),
+    };
+    return everyRowOf(rowsOfThePlaybook(ledger, playbook), definitionRows.name, activeWithTriggers).pipe(
+      Effect.flatMap((rows) => Effect.forEach(rows, savedTriggersIn(reader, chosen))),
+      Effect.map(Arr.flatten),
+    );
+  };
 }

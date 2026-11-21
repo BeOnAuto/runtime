@@ -1,14 +1,45 @@
-import { publishedEventOf } from '@on.auto/definitions';
+import { definitionsReadModel, publishedEventOf } from '@on.auto/definitions';
 import { statement, statementOf } from '@on.auto/ledger';
+import { projectedTableOf } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { alpha, definitionKeyNamed } from '../reaction-testing/playbook-writes.ts';
-import { triggersPaused } from '../triggers/trigger-rows.ts';
+import {
+  alpha,
+  definitionIdNamed,
+  definitionKeyNamed,
+  definitionStreamNamed,
+} from '../reaction-testing/playbook-writes.ts';
 import { takenAt } from './taking-in.ts';
 
-export function paused(database: HostDatabase, name: string): Promise<void> {
-  return Effect.runPromise(triggersPaused(database, { playbookKey: alpha, definitionKey: definitionKeyNamed(name) }));
+export function rowNamingAnotherVersion(database: HostDatabase, name: string): Promise<void> {
+  const tables = definitionsReadModel
+    .filter((projection) => projection.name === 'definitions')
+    .map((projection) => projectedTableOf(projection));
+  return Effect.runPromise(
+    Effect.forEach(
+      tables,
+      (table) =>
+        database.write(
+          statementOf(
+            [`UPDATE "${table}" SET version = version + 1 WHERE row_key = `, ''],
+            [`workflow/${definitionIdNamed(name)}`],
+          ),
+        ),
+      { discard: true },
+    ),
+  );
+}
+
+export function saveNoLongerRead(database: HostDatabase, name: string): Promise<void> {
+  return Effect.runPromise(
+    Effect.asVoid(
+      database.write(
+        statement`UPDATE emt_messages SET message_data = ${'{}'}
+          WHERE stream_id = ${definitionStreamNamed(name)} AND stream_position = ${1}`,
+      ),
+    ),
+  );
 }
 
 const StreamRow = Schema.Struct({ stream_id: Schema.String });

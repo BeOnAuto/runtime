@@ -1,4 +1,5 @@
 import { connectionEventRecorder, type ReportedEvent } from '@on.auto/definitions/connection-events';
+import { savedTriggersOf } from '@on.auto/definitions/connection-triggers';
 import { streamPortsOf } from '@on.auto/ledger';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { filterSandboxOf, freshInstances, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
@@ -11,7 +12,7 @@ import {
   type ServedConnection,
 } from '../intake/connection-intake.ts';
 import { countingMatches } from '../reaction-testing/trigger-starting.ts';
-import { onSQLite, openedOn } from '../testing/host-files.ts';
+import { aPlaybookBesideItsLedger } from './saved-workflows.ts';
 
 export const takenAt = Date.parse('2026-11-20T09:00:00.000Z');
 
@@ -28,11 +29,15 @@ export function servedWithTopics(...topics: readonly string[]): ServedConnection
 
 const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots()));
 
-export async function anIntake(served: ServedConnection | 'not served' = servedWithTopics()) {
-  const database = await openedOn(await onSQLite());
+export async function anIntake(
+  served: ServedConnection | 'not served' = servedWithTopics(),
+  savedTriggersRead: typeof savedTriggersOf = savedTriggersOf,
+) {
+  const { database, ledger, workflows } = await aPlaybookBesideItsLedger();
   const ports = {
     database,
     servedConnection: () => Effect.succeed(served === 'not served' ? undefined : served),
+    savedTriggers: savedTriggersRead(ledger),
     record: connectionEventRecorder(streamPortsOf(database.store)),
     now: () => takenAt,
   };
@@ -40,7 +45,9 @@ export async function anIntake(served: ServedConnection | 'not served' = servedW
   const sandboxed = connectionEventIntakeOf({ ...ports, filters: filterSandboxOf(freshInstances(sandboxModule)) });
   return {
     database,
+    workflows,
     takenIn: (arrival: ConnectionArrival) => Effect.runPromise(scripted(arrival)),
     takenInASandbox: (arrival: ConnectionArrival) => Effect.runPromise(sandboxed(arrival)),
+    failureOf: (arrival: ConnectionArrival) => Effect.runPromise(Effect.flip(Effect.sandbox(scripted(arrival)))),
   };
 }

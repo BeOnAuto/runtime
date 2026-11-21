@@ -194,7 +194,7 @@ function versionRowOf(
 export const pointerDisagrees = new ReadModelRefused({ because: 'pointer_disagrees' });
 
 function savedAt(
-  reader: ReadModelReader,
+  reader: Pick<ReadModelReader, 'ofDefinition'>,
   type: string,
   definition: string,
   position: number,
@@ -217,14 +217,23 @@ export interface RowAndSave {
   readonly saved: DefinitionSaved;
 }
 
+export function saveOfTheRow(
+  reader: Pick<ReadModelReader, 'ofDefinition'>,
+  type: string,
+  definition: string,
+  row: Pick<DefinitionRow, 'version' | 'saved_position'>,
+): Read<DefinitionSaved> {
+  return Effect.flatMap(savedAt(reader, type, definition, row.saved_position), (saved) =>
+    isTheSave(row, saved) ? Effect.succeed(saved) : Effect.fail(pointerDisagrees),
+  );
+}
+
 export function rowAndSaveOf(type: string, name: string): ReadInThePlaybook<RowAndSave | undefined> {
   return inThePlaybookOf((reader) =>
     Effect.flatMap(definitionRowOf(reader, type, name), (row) =>
       row === undefined
         ? Effect.undefined
-        : Effect.flatMap(savedAt(reader, type, row.definition_id, row.saved_position), (saved) =>
-            isTheSave(row, saved) ? Effect.succeed({ row, saved }) : Effect.fail(pointerDisagrees),
-          ),
+        : Effect.map(saveOfTheRow(reader, type, row.definition_id, row), (saved) => ({ row, saved })),
     ),
   );
 }
