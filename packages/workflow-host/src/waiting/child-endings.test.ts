@@ -9,7 +9,6 @@ import type { BoundConsumer, CallConsumer } from '../follower/consumers.ts';
 import { movedClock } from '../reaction-testing/moved-clock.ts';
 import { alpha, at, childStarted, childStreamOf, recorded } from '../reaction-testing/playbook-writes.ts';
 import { faultyDatabase } from '../testing/faulty-database.ts';
-import { until } from '../testing/until.ts';
 import { readingMeasured } from '../waiting-testing/measured-reads.ts';
 import { recordedWaiting, resultOfEnding } from '../waiting-testing/recorded-waiting.ts';
 import { parentId, parentRun, waitingParent } from '../waiting-testing/waiting-parent.ts';
@@ -81,7 +80,7 @@ describe('the ending of a run that answers a call', () => {
       ofTheChild,
     );
     await settled(parentId);
-    await until(
+    await hosted.whenRead(
       (): readonly string[] => mapped,
       (types) => types.includes('run_failed'),
     );

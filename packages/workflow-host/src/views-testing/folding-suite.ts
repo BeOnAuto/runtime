@@ -39,7 +39,7 @@ function reviewsTests(settingsOf: SettingsOf): void {
     await views.ran('reasoning/other', { campaign: 'spring', verdict: 'reject' }, { at: '2026-10-06T10:00:05.000Z' });
     views.start();
 
-    const kept = await views.until('reviews', foldedAll(5));
+    const kept = await views.folded('reviews', foldedAll(5));
 
     expect(kept).toMatchObject({ name: 'reviews', version: 1, phase: 'live', folded: 5 });
     expect(kept.view).toEqual({
@@ -63,9 +63,9 @@ function checkpointTests(settingsOf: SettingsOf): void {
     await views.ran('reasoning/other', 'nothing to fold');
     views.start();
 
-    const caught = await views.until('quiet', liveFromSomewhere);
+    const caught = await views.folded('quiet', liveFromSomewhere);
     await views.ran('reasoning/other', 'still nothing');
-    const moved = await views.until('quiet', ({ checkpoint }) => checkpoint !== caught.checkpoint);
+    const moved = await views.folded('quiet', ({ checkpoint }) => checkpoint !== caught.checkpoint);
 
     expect([caught.view, caught.folded, moved.view, moved.folded]).toEqual([0, 0, 0, 0]);
   });
@@ -77,7 +77,7 @@ function checkpointTests(settingsOf: SettingsOf): void {
     await views.ranInOneStream('reasoning/count', outputs);
     views.start();
 
-    const kept = await views.until('count', foldedAll(outputs.length));
+    const kept = await views.folded('count', foldedAll(outputs.length));
 
     expect(kept.view).toEqual(outputs);
   });
@@ -88,7 +88,7 @@ function checkpointTests(settingsOf: SettingsOf): void {
     await views.ranEach('reasoning/slow', [1, 2, 3, 4]);
     views.start({ folding: { ...foldingOf(), pageBudgetMs: 0 } });
 
-    const kept = await views.until('slow', foldedAll(4));
+    const kept = await views.folded('slow', foldedAll(4));
 
     expect(kept).toMatchObject({ phase: 'live', view: 4 });
     expect(kept).not.toHaveProperty('stall');
@@ -109,7 +109,7 @@ function sourceTests(settingsOf: SettingsOf): void {
     await views.ran('view/self', 'its own answer again');
     views.start();
 
-    const kept = await views.until('self', foldedAll(3));
+    const kept = await views.folded('self', foldedAll(3));
 
     expect([kept.view, kept.folded]).toEqual([3, 3]);
   });
@@ -126,7 +126,7 @@ function sourceTests(settingsOf: SettingsOf): void {
     await views.published(month('m-12', { revenue: 140 }));
     views.start();
 
-    const kept = await views.until('months', foldedAll(2));
+    const kept = await views.folded('months', foldedAll(2));
 
     expect(kept.view).toEqual([
       { id: 'm-08', subject: 'm-08', time: '2026-10-01T09:00:00Z' },
@@ -145,7 +145,7 @@ function recordTests(settingsOf: SettingsOf): void {
     const run = await views.ran('reasoning/ids', 'answered');
     views.start();
 
-    const kept = await views.until('ids', foldedAll(1));
+    const kept = await views.folded('ids', foldedAll(1));
 
     expect(kept.view).toEqual([{ id: anyText, causationid: null, correlationid: null }]);
     expect(kept.lastEvent?.id).not.toContain(run);
@@ -183,8 +183,8 @@ function passedOverTests(settingsOf: SettingsOf): void {
     await views.ran('reasoning/count', 'two');
     views.start();
 
-    const kept = await views.until('count', foldedAll(2));
-    await views.until('count', () => views.reports.notes().length >= 3);
+    const kept = await views.folded('count', foldedAll(2));
+    await views.folded('count', () => views.reports.notes().length >= 3);
 
     expect(kept.view).toBe(2);
     expect(views.reports.notes()).toEqual([

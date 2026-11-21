@@ -31,7 +31,6 @@ import {
 } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
 import type { DefinitionRecord } from './definition-records.ts';
 import { triggerChangesOf } from './trigger-changes.ts';
 
@@ -318,7 +317,7 @@ describe('the triggers of a playbook made again, past the records of its definit
 
     const reacting = await reactingHost({ settings, clock: movedClock(activatedAt + 1000) });
     await untilTriggersAt(reacting.database, 'tick', 1);
-    const notes = await until(
+    const notes = await reacting.whenRead(
       () => Promise.resolve(reacting.notes()),
       (found) => found.length >= 2,
     );

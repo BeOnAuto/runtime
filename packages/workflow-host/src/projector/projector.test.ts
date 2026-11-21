@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { onSQLite } from '../testing/host-files.ts';
 import { steppedClock } from '../testing/stepped-clock.ts';
-import { until } from '../testing/until.ts';
 import { watchedClock } from '../testing/watched-clock.ts';
 import { failingOnce } from '../views-testing/pool-faults.ts';
 import { counting, foldedAll, liveWith } from '../views-testing/view-documents.ts';
@@ -31,10 +30,10 @@ describe('the records a projector reports', () => {
     await views.ran('reasoning/runs', 1);
     await views.append('playbook/acme/alpha/runs/broken', [{ type: 'run_succeeded', data: { type: 'run_succeeded' } }]);
     views.start();
-    await views.until('first', liveWith(1));
+    await views.folded('first', liveWith(1));
 
     await views.saved('second', counting);
-    await views.until('second', liveWith(1));
+    await views.folded('second', liveWith(1));
 
     expect(views.reports.notes()).toEqual([
       { kind: 'record_passed_over', playbook: 'playbook/acme/alpha/', record: anyText, reason: 'unreadable' },
@@ -50,9 +49,9 @@ describe('a projector that fails', () => {
     views.failingDiscovery(true);
     views.start({ sweepEveryMs: 20 });
 
-    const troubles = await until(views.reports.troubles, (reported) => reported.length > 0);
+    const troubles = await views.reports.when(views.reports.troubles, (reported) => reported.length > 0);
     views.failingDiscovery(false);
-    const kept = await views.until('runs', foldedAll(1));
+    const kept = await views.folded('runs', foldedAll(1));
 
     expect(troubles[0]).toBe('A sweep of the views failed; the next sweep tries again');
     expect(kept).toMatchObject({ phase: 'live', view: 1 });
@@ -65,7 +64,7 @@ describe('a projector that fails', () => {
     const clock = watchedClock(steppedClock(Date.now()));
     views.start({ sweepEveryMs: 1000, clock });
 
-    const asked = await until(clock.asked, (sleeps) => sleeps.length > 0);
+    const asked = await clock.when(clock.asked, (sleeps) => sleeps.length > 0);
 
     expect([asked, views.reports.troubles()]).toEqual([
       [1000],
@@ -79,7 +78,7 @@ describe('a projector that fails', () => {
     await views.ran('reasoning/runs', 1);
     views.start({ sweepEveryMs: 20, pool: failingOnce(views.pool).pool });
 
-    const kept = await views.until('runs', foldedAll(1));
+    const kept = await views.folded('runs', foldedAll(1));
 
     expect(views.reports.troubles()).toEqual(['A pass of the views of a playbook failed; the next sweep tries again']);
     expect(kept).toMatchObject({ phase: 'live', view: 1 });

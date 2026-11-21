@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
+import { databaseTracking } from '../views-testing/database-tracking.ts';
 import { cancelledCall } from './call-cancels.ts';
 import { callRowOf } from './call-rows.ts';
 import { hostExecutor } from './host-executor.ts';
@@ -145,44 +145,92 @@ function isCountOfOpenCalls({ strings }: Statement): boolean {
   return strings.join('').includes('COUNT(*) AS open');
 }
 
-function countsThatMeet(database: HostDatabase): HostDatabase {
-  const met = Deferred.makeUnsafe<void>();
+interface HeldCounts {
+  readonly database: HostDatabase;
+  readonly arrived: () => number;
+  readonly release: () => void;
+  readonly when: ReturnType<typeof databaseTracking>['when'];
+  readonly changed: () => void;
+  readonly busy: () => number;
+}
+
+/**
+ * The database of the test, where each count of the open calls of a tree is held at a gate the test opens, and every
+ * read and write is tracked, so the test can see when nothing but the held count is under way.
+ */
+function countsHeldAtAGate(database: HostDatabase): HeldCounts {
+  const gate = Deferred.makeUnsafe<void>();
   const arrivals = { count: 0 };
-  const meeting = Effect.suspend(() => {
-    arrivals.count += 1;
-    return arrivals.count >= 2 ? Deferred.done(met, Exit.void) : Effect.void;
-  }).pipe(Effect.andThen(Effect.race(Deferred.await(met), Effect.sleep('200 millis'))));
-  return {
+  const tracking = databaseTracking();
+  const held: HostDatabase = {
     ...database,
     read: (query) =>
-      isCountOfOpenCalls(query) ? Effect.tap(database.read(query), () => meeting) : database.read(query),
+      isCountOfOpenCalls(query)
+        ? Effect.suspend(() => {
+            arrivals.count += 1;
+            tracking.changed();
+            return Effect.andThen(Deferred.await(gate), database.read(query));
+          })
+        : database.read(query),
+  };
+  return {
+    database: tracking.over(held),
+    arrived: () => arrivals.count,
+    release: () => {
+      Effect.runSync(Deferred.done(gate, Exit.void));
+    },
+    when: tracking.when,
+    changed: tracking.changed,
+    busy: tracking.busy,
   };
 }
 
 const States = Schema.Array(Schema.Struct({ state: Schema.String }));
 
+interface WhileHeld {
+  readonly arrived: number;
+  readonly busy: number;
+}
+
+/**
+ * The count of one call is held and nothing else reads or writes, so the other call waits for it; or both counts
+ * arrived, which the bound should never allow.
+ */
+function onlyOneHeldOrBoth({ arrived, busy }: WhileHeld): boolean {
+  return (arrived > 0 && busy === 1) || arrived > 1;
+}
+
+/** An executor that lets one call of a tree be open at a time, its calls never answered, its answers kept. */
+function oneOpenCallOn(counts: HeldCounts, answered: (result: CallAnsweredResult) => void) {
+  return hostExecutor({
+    now: Date.now,
+    database: counts.database,
+    perform: () => Effect.never,
+    deliver: (_key, result) =>
+      Effect.sync(() => {
+        answered(result);
+        counts.changed();
+      }),
+    trouble: () => Effect.void,
+    mostAtOnce: 4,
+    mostOpen: 1,
+    childOf: () => null,
+    childAnswerOf: () => Effect.undefined,
+    cancelChild: () => Effect.succeed('requested'),
+  });
+}
+
 describe('the open calls of runs of one tree that start at the same moment', () => {
   it('are counted and recorded one run after another, so only as many begin as the bound allows', async () => {
-    const database = countsThatMeet(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
+    const counts = countsHeldAtAGate(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
+    const { database } = counts;
     const answered: CallAnsweredResult[] = [];
-    const executor = hostExecutor({
-      now: Date.now,
-      database,
-      perform: () => Effect.never,
-      deliver: (_key, result) =>
-        Effect.sync(() => {
-          answered.push(result);
-        }),
-      trouble: () => Effect.void,
-      mostAtOnce: 4,
-      mostOpen: 1,
-      childOf: () => null,
-      childAnswerOf: () => Effect.undefined,
-      cancelChild: () => Effect.succeed('requested'),
+    const executor = oneOpenCallOn(counts, (result) => {
+      answered.push(result);
     });
     const [first, second] = [runOf('1'), runOf('2')];
 
-    await Effect.runPromise(
+    const starting = Effect.runPromise(
       Effect.all(
         [
           executor.executor.start(callOf(first.runId), first, origin),
@@ -193,7 +241,13 @@ describe('the open calls of runs of one tree that start at the same moment', () 
         },
       ),
     );
-    await until(
+    const whileHeld = await counts.when(
+      (): WhileHeld => ({ arrived: counts.arrived(), busy: counts.busy() }),
+      onlyOneHeldOrBoth,
+    );
+    counts.release();
+    await starting;
+    await counts.when(
       (): readonly CallAnsweredResult[] => answered,
       (answers) => answers.length > 0,
     );
@@ -202,6 +256,7 @@ describe('the open calls of runs of one tree that start at the same moment', () 
     );
     await Effect.runPromise(executor.stop());
 
+    expect(whileHeld).toEqual({ arrived: 1, busy: 1 });
     expect(states).toEqual([{ state: 'answered' }, { state: 'running' }]);
     expect(answered).toMatchObject([{ status: 'rejected', reason: 'conflict' }]);
   });

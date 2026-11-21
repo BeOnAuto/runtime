@@ -89,14 +89,16 @@ interface DeliveredAll extends Delivered {
   readonly made: boolean;
 }
 
+/** Delivers a record to its consumers, at most `perPass` deliveries in one pass, the rest left for the next. */
 export function deliveredAll(
   consumers: readonly BoundConsumer[],
   progress: Progress,
   mode: Mode,
+  perPass: number = deliveriesOfARecordInAPass,
 ): Effect.Effect<DeliveredAll> {
   return Effect.gen(function* () {
     const { first, after: resumedAfter } = resumptionOf(consumers, progress.delivered);
-    let current: Delivered & { readonly budget: number } = { progress, budget: deliveriesOfARecordInAPass };
+    let current: Delivered & { readonly budget: number } = { progress, budget: perPass };
     for (const [offset, consumer] of consumers.slice(first).entries()) {
       const after = offset === 0 ? resumedAfter : undefined;
       current = yield* deliveredByConsumer(mode, consumer, { ...current, after });
@@ -105,11 +107,11 @@ export function deliveredAll(
         return {
           progress: reached,
           end,
-          made: budget < deliveriesOfARecordInAPass,
+          made: budget < perPass,
           ...(held === undefined ? {} : { held }),
         };
       }
     }
-    return { progress: current.progress, made: current.budget < deliveriesOfARecordInAPass };
+    return { progress: current.progress, made: current.budget < perPass };
   });
 }

@@ -5,7 +5,13 @@ import type { HostDatabase } from '../database/host-database.ts';
 import { openWorkflowHost, type HostOptions, type WorkflowHost } from '../host/workflow-host.ts';
 import { testMachine } from '../testing/host-documents.ts';
 import { aSQLiteFile, connectedOn, openedOn, type DatabaseSettings } from '../testing/host-files.ts';
-import { recordingReports, recordingSettlements, type RecordingReports } from '../testing/recording-reports.ts';
+import {
+  recordingReports,
+  recordingSettlements,
+  type RecordingReports,
+  restingOn,
+  signals,
+} from '../testing/recording-reports.ts';
 import { recordedWaiting } from '../waiting-testing/recorded-waiting.ts';
 import { testDefinitionsPlaced } from './playbook-writes.ts';
 import { recordedReactions, type FailingStart, type RecordedReactions } from './recorded-reactions.ts';
@@ -17,6 +23,9 @@ export interface ReactingHost {
   readonly database: HostDatabase;
   readonly reactions: RecordedReactions;
   readonly notes: RecordingReports['notes'];
+  readonly when: RecordingReports['when'];
+  /** Answers once a read that answers later holds, read again after each report and each time the host rests. */
+  readonly whenRead: ReturnType<typeof signals>['whenRead'];
   readonly settings: DatabaseSettings;
 }
 
@@ -46,7 +55,8 @@ function givenOptionsOf({
 
 export async function reactingHost(options: ReactingOptions = {}): Promise<ReactingHost> {
   const settings = options.settings ?? { store: 'sqlite', file: aSQLiteFile() };
-  const reports = recordingReports();
+  const seen = signals();
+  const reports = recordingReports(seen);
   const reactions = recordedReactions({ failure: options.failure ?? startsEveryTime });
   const host = await openWorkflowHost({
     database: await connectedOn(settings),
@@ -64,9 +74,10 @@ export async function reactingHost(options: ReactingOptions = {}): Promise<React
     },
     waiting: recordedWaiting().options,
     ...givenOptionsOf(options),
+    clock: restingOn(seen, options.clock),
   });
   onTestFinished(() => host.stop());
   const database = await openedOn(settings);
   await testDefinitionsPlaced(database.store);
-  return { host, database, reactions, notes: reports.notes, settings };
+  return { host, database, reactions, notes: reports.notes, when: reports.when, whenRead: seen.whenRead, settings };
 }

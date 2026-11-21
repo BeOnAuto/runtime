@@ -4,7 +4,6 @@ import { expect, it } from 'vitest';
 
 import { rowsOf, WholeNumber } from '../database/host-database.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
-import { until } from '../testing/until.ts';
 import { movedClock, type MovedClock } from './moved-clock.ts';
 import {
   at,
@@ -73,7 +72,7 @@ function scheduleReaching(
   holds: (row: ScheduleState) => boolean,
 ) {
   clock.moveTo(minutesIn(minutes));
-  return until(
+  return reacting.whenRead(
     async () => {
       const [row] = await Effect.runPromise(
         rowsOf(
@@ -90,7 +89,7 @@ function scheduleReaching(
 }
 
 async function startsOf({ reacting }: Readonly<Ticking>) {
-  const starts = await until(
+  const starts = await reacting.whenRead(
     () => Promise.resolve(reacting.reactions.starts()),
     (found) => found.length > 0,
   );
@@ -213,7 +212,7 @@ function heldPastSeveralDueTimes(settingsOf: SettingsOf) {
     await scheduleReaching(ticking, 5, (row) => row.held_due !== null);
 
     const heldAgain = await scheduleReaching(ticking, 17, (row) => row.held_due === minutesIn(15));
-    const said = await until(
+    const said = await ticking.reacting.whenRead(
       () => refusalsOf(ticking),
       (rows) => rows.some(({ count }) => count === 2),
     );
@@ -259,7 +258,7 @@ function heldBesideAHeldEventStart(settingsOf: SettingsOf) {
     unread.now = false;
     await scheduleReaching(ticking, 6, (row) => row.held_due === null);
     ticking.clock.moveTo(minutesIn(7));
-    const starts = await until(
+    const starts = await ticking.reacting.whenRead(
       () => Promise.resolve(ticking.reacting.reactions.starts()),
       (found) => found.length === 2,
     );

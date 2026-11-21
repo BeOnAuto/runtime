@@ -24,7 +24,6 @@ import {
   recorded,
 } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost } from '../reaction-testing/reacting-host.ts';
-import { until } from '../testing/until.ts';
 
 const createdAt = Date.parse(at);
 
@@ -104,7 +103,7 @@ describe('a workflow created paused, its source saved again while it is paused',
       triggers: [everyTrigger(aMinute)],
       when: isoAt(0.5),
     });
-    const rows = await until(
+    const rows = await reacting.whenRead(
       async () => (await triggerRowsOf(reacting.database)).filter(({ workflow }) => workflow === 'imported'),
       (kept: readonly { readonly version: number }[]) => kept.map(({ version }) => version).join() === '2',
     );

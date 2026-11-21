@@ -16,7 +16,6 @@ import {
 import { definitionKeyOfTheTests, runAt, startOf, testMachine, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, onSQLite, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
-import { until } from '../testing/until.ts';
 import { followedHost, followedThroughTheLatest, settledIn } from '../waiting-testing/followed-host.ts';
 import { recordedWaiting } from '../waiting-testing/recorded-waiting.ts';
 import { resumedWith } from '../waiting-testing/resumed-cancels.ts';
@@ -165,13 +164,13 @@ describe('a cancel request on a workflow run', () => {
 describe('a cancel request on a run of another capability', () => {
   it('is handed to the capability’s cancel, caused by the request', async () => {
     const waiting = recordedWaiting();
-    const { database } = await followedHost({ waiting: waiting.options });
+    const { database, hosted } = await followedHost({ waiting: waiting.options });
 
     await recordedWith(database.store, requestStream, askedToCancel, {
       context: runOf('interaction'),
       lineage: { causationId: null, correlationId: 'root-1' },
     });
-    const handed = await until(waiting.deferredCancels, (cancels) => cancels.length > 0);
+    const handed = await hosted.whenRead(waiting.deferredCancels, (cancels) => cancels.length > 0);
 
     expect(handed).toEqual([
       {
@@ -301,7 +300,7 @@ describe('a host that died after it marked a call waiting and before it read the
     first.know(parentId);
     await Effect.runPromise(first.host.start(runAt(parentId), startOf(asking)));
     await recorded(database.store, await childStarted(database.store, child), ending, ofTheChild);
-    await followedThroughTheLatest(database);
+    await followedThroughTheLatest(database, first);
     await first.host.stop();
     await Effect.runPromise(waitingRow(database, key, { child, at: Date.now() }));
 

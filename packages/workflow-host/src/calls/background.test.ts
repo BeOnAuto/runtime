@@ -67,20 +67,31 @@ describe('the work a host does in the background', () => {
 interface Later {
   readonly done: () => readonly string[];
   readonly work: (name: string) => Effect.Effect<void>;
+  readonly finish: (name: string) => void;
 }
 
+/** Work that is done once the test lets it finish, and is still under way until then. */
 function doneLater(): Later {
   const done: string[] = [];
+  const gates = new Map<string, Deferred.Deferred<void>>();
+  const gateOf = (name: string): Deferred.Deferred<void> => {
+    const gate = gates.get(name) ?? Deferred.makeUnsafe<void>();
+    gates.set(name, gate);
+    return gate;
+  };
   return {
-    done: () => done,
+    done: () => [...done],
     work: (name) =>
-      Effect.sleep('20 millis').pipe(
+      Deferred.await(gateOf(name)).pipe(
         Effect.andThen(
           Effect.sync(() => {
             done.push(name);
           }),
         ),
       ),
+    finish: (name) => {
+      Deferred.doneUnsafe(gateOf(name), Exit.void);
+    },
   };
 }
 
@@ -93,12 +104,24 @@ describe('the waits and the stops of the work a host does in the background', ()
     const interrupted = running.interrupt('interrupted');
 
     running.run('idle', later.work('idle'));
-    await Effect.runPromise(idle);
+    const idling = Effect.runPromise(idle);
+    later.finish('idle');
+    await idling;
+    const doneWhenIdle = later.done();
     running.run('awaited', later.work('awaited'));
-    await Effect.runPromise(awaited);
+    const awaiting = Effect.runPromise(awaited);
+    later.finish('awaited');
+    await awaiting;
+    const doneWhenAwaited = later.done();
     running.run('interrupted', later.work('interrupted'));
     await Effect.runPromise(interrupted);
+    later.finish('interrupted');
 
-    expect([later.done(), running.size()]).toEqual([['idle', 'awaited'], 0]);
+    expect([doneWhenIdle, doneWhenAwaited, later.done(), running.size()]).toEqual([
+      ['idle'],
+      ['idle', 'awaited'],
+      ['idle', 'awaited'],
+      0,
+    ]);
   });
 });

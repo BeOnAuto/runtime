@@ -74,7 +74,7 @@ function savedAsDefinitionsTests(settingsOf: SettingsOf): void {
     expect(rows.map(({ name, version, phase, details }) => [name, version, phase, details.foldLine])).toEqual([
       [morning, 1, 'live', 9],
     ]);
-    expect((await views.until(morning, foldedAll(2))).view).toEqual(postsOf(42));
+    expect((await views.folded(morning, foldedAll(2))).view).toEqual(postsOf(42));
     expect(await views.viewOf('morning-posts')).toBeUndefined();
   });
 
@@ -85,7 +85,7 @@ function savedAsDefinitionsTests(settingsOf: SettingsOf): void {
     await views.ranEach(morning, [1, 2]);
     startedOnPages(views);
 
-    expect((await views.until(morning, foldedAll(2))).view).toEqual(postsOf(2));
+    expect((await views.folded(morning, foldedAll(2))).view).toEqual(postsOf(2));
     expect(await views.gone('morning-posts')).toBe(true);
   });
 }
@@ -113,8 +113,8 @@ function givingWayTests(settingsOf: SettingsOf): void {
     await views.ran(morning, 1);
     startedOnPages(views);
 
-    expect(await views.until(morning, liveAt(2))).toMatchObject({ version: 2 });
-    expect(await views.until('reasoning/noon', foldedAll(1))).toMatchObject({ version: 1 });
+    expect(await views.folded(morning, liveAt(2))).toMatchObject({ version: 2 });
+    expect(await views.folded('reasoning/noon', foldedAll(1))).toMatchObject({ version: 1 });
     expect(await views.viewOf('reasoning/evening')).toBeUndefined();
   });
 }

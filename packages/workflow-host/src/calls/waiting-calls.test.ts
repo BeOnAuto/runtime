@@ -4,8 +4,8 @@ import type { CallAnsweredResult, StartCall } from '@on.auto/workflow-engine';
 import { Deferred, Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { signals } from '../testing/signals.ts';
 import { faultyWithARun, logRecordOf, runKeyAt } from '../testing/started-runs.ts';
-import { until } from '../testing/until.ts';
 import type { ChildCancel, ChildReceipt } from './call-cancels.ts';
 import { hostExecutor, type CallAnswer } from './host-executor.ts';
 
@@ -63,6 +63,7 @@ async function executing(
   const counts = { performed: 0 };
   const answered: CallAnsweredResult[] = [];
   const cancels: ChildCancel[] = [];
+  const seen = signals();
   const executor = hostExecutor({
     now: Date.now,
     database,
@@ -74,6 +75,7 @@ async function executing(
     deliver: (_key, result) =>
       Effect.sync(() => {
         answered.push(result);
+        seen.changed();
       }),
     trouble: () => Effect.void,
     mostAtOnce: 1,
@@ -97,6 +99,7 @@ async function executing(
     performed: () => counts.performed,
     answered: (): readonly CallAnsweredResult[] => answered,
     cancels: () => cancels,
+    when: seen.when,
   };
 }
 
@@ -125,7 +128,7 @@ describe('a call whose run ended before the call was marked waiting', () => {
     });
 
     await Effect.runPromise(calls.executor.executor.start(callAt('/do/0/a'), run, origin));
-    await until(calls.answered, (answered) => answered.length > 0);
+    await calls.when(calls.answered, (answered) => answered.length > 0);
 
     expect(calls.answered()).toEqual([{ status: 'succeeded', output: 'done' }]);
     expect(await calls.rows()).toEqual([{ state: 'answered', child }]);
@@ -143,9 +146,9 @@ describe('the open calls under one run at the top of a tree', () => {
     const another = await Effect.runPromise(
       calls.executor.executor.start(callAt('/do/0/d', 'acme/alpha/other'), elsewhere, origin),
     );
-    await until(calls.answered, (answered) => answered.length > 0);
+    await calls.when(calls.answered, (answered) => answered.length > 0);
     const refusedAgain = await Effect.runPromise(calls.executor.executor.start(callAt('/do/0/c'), run, origin));
-    await until(calls.answered, (answered) => answered.length > 1);
+    await calls.when(calls.answered, (answered) => answered.length > 1);
 
     expect([refused, another, refusedAgain]).toEqual(['started', 'started', 'answered_again']);
     expect((await calls.rows()).map(({ state }) => state)).toEqual(['running', 'running', 'answered', 'running']);
@@ -199,7 +202,7 @@ describe('a cancel of a running call', () => {
     const finishing = Deferred.makeUnsafe<CallAnswer>();
     const calls = await executing(heldAtTheFirst(Deferred.await(finishing)));
     await Effect.runPromise(calls.executor.executor.start(callAt('/do/0/b'), run, origin));
-    await until(calls.answered, (answered) => answered.length > 0);
+    await calls.when(calls.answered, (answered) => answered.length > 0);
     await Effect.runPromise(calls.executor.executor.start(callAt('/do/0/a'), run, origin));
     const cancelOf = (reference: string) =>
       calls.executor.executor.cancel(

@@ -21,7 +21,6 @@ import {
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
 import { mostStartsAMinute } from '../reactions/start-rates.ts';
-import { until } from '../testing/until.ts';
 
 const activatedAt = Date.parse(at);
 
@@ -145,7 +144,7 @@ describe('the start rate of a workflow with several triggers', () => {
       { id: 'e2', type: 'com.acme.closed' },
     ]);
     const starts = await startsReaching(reacting.reactions.starts, 2);
-    const waiting = await until(
+    const waiting = await reacting.whenRead(
       () => Effect.runPromise(reacting.database.read(statement`SELECT run_id FROM workflow_reaction_backlog`)),
       (rows) => rows.length > 0,
     );

@@ -14,7 +14,6 @@ import { reactingHost } from '../reaction-testing/reacting-host.ts';
 import { runLogStreamOf } from '../runs/run-address.ts';
 import { definitionOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
 import { ledgerEmitter } from './ledger-emitter.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7c';
@@ -76,7 +75,7 @@ describe('a workflow run by the host that emits an event', () => {
     const attributes = { ...start.attributes, definition: { name: 'close', version: 3 }, caller: { id: 'acme-admin' } };
 
     await Effect.runPromise(reacting.host.start(runAt(runId), { ...start, attributes }));
-    const emissions = await until(
+    const emissions = await reacting.whenRead(
       () => Promise.resolve(reacting.reactions.emissions()),
       (found) => found.length > 0,
     );
@@ -117,7 +116,7 @@ describe('the same event emitted in each turn of a loop by a workflow the host r
     });
 
     await Effect.runPromise(reacting.host.start(runAt(runId), startOf(ticking)));
-    const starts = await until(
+    const starts = await reacting.whenRead(
       () => Promise.resolve(reacting.reactions.starts()),
       (found) => found.length >= 2,
     );

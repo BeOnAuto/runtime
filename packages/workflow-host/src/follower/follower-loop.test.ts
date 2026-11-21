@@ -5,7 +5,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { firstRoundRetryMs } from '../loop/failed-rounds.ts';
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import type { Sweep } from '../sweeps/org-sweeps.ts';
-import { until } from '../testing/until.ts';
+import { signals, type Signals } from '../testing/signals.ts';
 import { startFollower } from './follower-loop.ts';
 import type { Upkeep } from './follower-wake-up.ts';
 import type { PassEnd } from './record-steps.ts';
@@ -21,6 +21,7 @@ interface Watched {
   readonly raise: (stream: string) => void;
   readonly log: () => readonly string[];
   readonly asked: () => readonly number[];
+  readonly when: Signals['when'];
 }
 
 interface Following {
@@ -43,11 +44,12 @@ interface Paced {
   readonly passed: (milliseconds: number) => void;
 }
 
-function pacedFrom(startsAt: number | undefined): Paced {
+function pacedFrom(startsAt: number | undefined, seen: Signals): Paced {
   const asked: number[] = [];
   const time = { now: startsAt ?? 0 };
   const recorded = (milliseconds: number): void => {
     asked.push(milliseconds);
+    seen.changed();
   };
   const stepped: HostClock = {
     now: () => time.now,
@@ -135,14 +137,16 @@ function passesLogging(
 
 function followerWith(following: Following = {}): Watched {
   const log: string[] = [];
+  const seen = signals();
   const logged = (line: string) =>
     Effect.sync(() => {
       log.push(line);
+      seen.changed();
     });
   const appended = streamSignalOf();
   const passEnd = inTurn<PassEnd | 'fails'>(following.passEnds ?? [], 'caught_up');
   const sweep = inTurn(following.sweeps ?? [], nothingToSweep);
-  const { pace, asked, passed } = pacedFrom(following.startsAt);
+  const { pace, asked, passed } = pacedFrom(following.startsAt, seen);
   const sweptAfter = (): Sweep => {
     passed(following.sweepTakesMs ?? 0);
     return sweep();
@@ -158,6 +162,7 @@ function followerWith(following: Following = {}): Watched {
       next: failingFirst(following.sweepsFailing ?? 0, Effect.sync(sweptAfter)),
       passAgain: (org) => {
         log.push(`handed back ${org}`);
+        seen.changed();
       },
     },
     upkeep: upkeepOf(following, logged),
@@ -169,12 +174,12 @@ function followerWith(following: Following = {}): Watched {
     trouble: (what) => logged(what),
   });
   onTestFinished(() => follower.stop());
-  return { raise: appended.raise, log: () => log, asked };
+  return { raise: appended.raise, log: () => log, asked, when: seen.when };
 }
 
 function logReaching(watched: Watched, length: number) {
-  return until(
-    () => Promise.resolve<readonly string[]>([...watched.log()]),
+  return watched.when(
+    (): readonly string[] => [...watched.log()],
     (log) => log.length >= length,
   );
 }
@@ -283,7 +288,7 @@ describe('the follower of the playbooks, between its sweeps', () => {
     const more: Sweep = { ...nothingToSweep, again: true };
     const watched = followerWith({ sweeps: [more], startsAt: 1_000_000, sweepTakesMs: 100 });
 
-    const asked = await until(watched.asked, (sleeps) => sleeps.length >= 2);
+    const asked = await watched.when(watched.asked, (sleeps) => sleeps.length >= 2);
 
     expect([asked.slice(0, 2), watched.log().filter((line) => line === 'sweep')]).toEqual([
       [0, anHour - 200],
@@ -294,7 +299,7 @@ describe('the follower of the playbooks, between its sweeps', () => {
   it('wakes again within a minute after a round that failed before its sweep, though the schedule it failed to fire is still due, leaving the sweep to the next interval rather than sweeping again at once', async () => {
     const watched = followerWith({ firesFailing: 1, scheduleDueAt: 1_000_000 - 60_000, startsAt: 1_000_000 });
 
-    const asked = await until(watched.asked, (sleeps) => sleeps.length > 0);
+    const asked = await watched.when(watched.asked, (sleeps) => sleeps.length > 0);
 
     expect([asked, watched.log()]).toEqual([[firstRoundRetryMs], ['anchored', 'start', failedRound]]);
   });

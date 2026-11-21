@@ -48,7 +48,7 @@ import {
   type WorkflowStore,
 } from '../index.ts';
 import type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
-import { skippingClock } from '../loop/host-clock.ts';
+import { skippingClock, systemClock } from '../loop/host-clock.ts';
 import { someFolder } from '../projector/folder.ts';
 import { heldStart, type HeldStart } from '../reaction-testing/held-start.ts';
 import {
@@ -62,11 +62,13 @@ import { settleAttemptsBeforeBackingOff, settleBackOffMs } from '../settlement/s
 import { definitionOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, connectedOn, leaseHoldersOn, onSQLite, openedOn } from '../testing/host-files.ts';
 import { hostedOn, recordedOptionsOf } from '../testing/host-runs.ts';
+import { signals } from '../testing/signals.ts';
+import { endingsToldOf } from '../testing/span-endings.ts';
 import { steppedClock } from '../testing/stepped-clock.ts';
-import { until } from '../testing/until.ts';
-import { watchedClock, watchedSystemClock } from '../testing/watched-clock.ts';
+import { watchedClock } from '../testing/watched-clock.ts';
+import { databaseTracking } from '../views-testing/database-tracking.ts';
 import { counting } from '../views-testing/view-documents.ts';
-import { viewHarness } from '../views-testing/view-harness.ts';
+import { viewHarnessOnTheThread } from '../views-testing/view-harness.ts';
 import { HostStopped } from './host-gate.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -184,8 +186,13 @@ const waitingForARun = (): Effect.Effect<CallAnswer> => Effect.succeed({ status:
 async function partsAnswering(answer: () => Effect.Effect<CallAnswer>) {
   const clock = steppedClock(Date.now());
   const store = await openWorkflowStore(await connectedOn({ store: 'sqlite', file: aSQLiteFile() }), []);
+  const tracking = databaseTracking();
   const recorded = recordedOptionsOf({ answer });
-  const parts = openHostParts(store, { ...recorded.options, clock }, Function.constVoid);
+  const parts = openHostParts(
+    { database: tracking.over(store.database) },
+    { ...recorded.options, clock },
+    Function.constVoid,
+  );
   recorded.know(runId);
   await runOfTheTestsStarted(store.database.store, runId);
   await Effect.runPromise(
@@ -193,8 +200,10 @@ async function partsAnswering(answer: () => Effect.Effect<CallAnswer>) {
   );
   const callStates = () =>
     Effect.runPromise(rowsOf(CallState, store.database.read(statement`SELECT state, delivered FROM workflow_calls`)));
-  const waiting = () => until(callStates, (calls) => calls.some(({ state }) => state === 'waiting'));
-  return { clock, parts, recorded, callStates, waiting };
+  const written = (holds: (calls: readonly (typeof CallState.Type)[]) => boolean) =>
+    tracking.whenRead(callStates, holds);
+  const waiting = () => written((calls) => calls.some(({ state }) => state === 'waiting'));
+  return { clock, parts, recorded, callStates, written, waiting };
 }
 
 const pausedASecond = workflow('do:\n  - pause: { wait: PT1S }');
@@ -357,7 +366,7 @@ describe('the host reporting to its operator', () => {
 
     await Effect.runPromise(hosted.host.start(run, startOf(listening)));
     await Effect.runPromise(hosted.host.deliver(run, approved));
-    const troubles = await until(hosted.troubles, (reported) => reported.length > 0);
+    const troubles = await hosted.when(hosted.troubles, (reported) => reported.length > 0);
 
     expect(troubles).toEqual([`${runId} unknown_run`]);
   });
@@ -369,7 +378,7 @@ describe('the host reporting to its operator', () => {
     );
 
     await Effect.runPromise(hosted.host.start(run, startOf(notifying)));
-    const troubles = await until(hosted.troubles, (reported) => reported.length > 0);
+    const troubles = await hosted.when(hosted.troubles, (reported) => reported.length > 0);
 
     expect(troubles).toEqual(['A call could not record its answer']);
   });
@@ -479,9 +488,9 @@ describe('the host asked to start a run whose settlement is pending', () => {
     hosted.know(runId);
 
     await Effect.runPromise(hosted.host.start(run, startOf(ending)));
-    await until(hosted.notes, (notes) => notes.length > 0);
+    await hosted.when(hosted.notes, (notes) => notes.length > 0);
     const startedAgain = await Effect.runPromise(hosted.host.start(run, startOf(ending)));
-    const settled = await until(hosted.settlements, (settlements) => settlements.size > 0);
+    const settled = await hosted.when(hosted.settlements, (settlements) => settlements.size > 0);
 
     expect(startedAgain).toBe('going');
     expect([...settled.keys()]).toEqual([runId]);
@@ -505,7 +514,7 @@ describe('the host whose ledger cannot be reached for two minutes', () => {
     outage.endsAt = clock.now() + outageMs;
 
     await Effect.runPromise(hosted.host.start(run, startOf(ending)));
-    const notes = await until(hosted.notes, (noted) => noted.length > 1);
+    const notes = await hosted.when(hosted.notes, (noted) => noted.length > 1);
 
     expect(notes.map(({ kind }) => kind)).toEqual(['settle_backing_off', 'settled_after_back_off']);
     expect([...hosted.settlements().keys()]).toEqual([runId]);
@@ -535,11 +544,7 @@ describe('a reaction starting a run while its host stops serving', () => {
     await hostedOn(settings, { holder: 'ahead', clock: { now: () => Date.now() + anHourMs, sleep: Effect.sleep } });
     await standingBy.promise;
     held.release(reacting.host);
-    const notes = await until(() => {
-      const noted = reacting.notes();
-      expect(noted).not.toHaveLength(0);
-      return noted;
-    });
+    const notes = await reacting.when(reacting.notes, (noted) => noted.length > 0);
 
     expect(held.exits()).toEqual([Exit.succeed('started')]);
     expect(notes).toMatchObject([{ kind: 'standing_by', holder: 'ahead' }]);
@@ -549,15 +554,15 @@ describe('a reaction starting a run while its host stops serving', () => {
 describe('a host given a store and the settings of its projector', () => {
   it('keeps the views on that store while it serves, and stops keeping them when it stops', async () => {
     const settings = await onSQLite();
-    const views = await viewHarness(settings);
+    const views = await viewHarnessOnTheThread(settings);
     await views.saved('runs', counting);
     await views.ran('reasoning/runs', 1);
     const projector = views.settingsOf();
     const store = await openWorkflowStore(await connectedOn(settings), projector.folders);
 
-    const clock = watchedSystemClock();
+    const clock = watchedClock(views.restingOn(systemClock));
     const hosted = await hostedOn(store, { projector, clock });
-    const kept = await views.until('runs', ({ folded }) => folded === 1);
+    const kept = await views.folded('runs', ({ folded }) => folded === 1);
     await hosted.host.stop();
 
     expect([kept.phase, kept.view]).toEqual(['live', 1]);
@@ -587,8 +592,8 @@ describe('a call that waits for a run the shell learns the answer of, though tha
     await waiting();
 
     const took = await Effect.runPromise(parts.waitingCallAnswered(playbook, calledBy, answeredByTheShell));
-    const settled = await until(
-      () => Promise.resolve(recorded.settlements().get(runId)),
+    const settled = await recorded.when(
+      () => recorded.settlements().get(runId),
       (settlement) => settlement !== undefined,
     );
     const tookAgain = await Effect.runPromise(parts.waitingCallAnswered(playbook, calledBy, answeredAgain));
@@ -603,8 +608,8 @@ describe('a call that waits for a run the shell learns the answer of, though tha
   });
 
   it('takes no answer while it is still running, its wait not yet recorded, and appends nothing', async () => {
-    const { parts, recorded, callStates } = await partsAnswering(() => Effect.never);
-    await until(callStates, (calls) => calls.length > 0);
+    const { parts, recorded, callStates, written } = await partsAnswering(() => Effect.never);
+    await written((calls) => calls.length > 0);
 
     const took = await Effect.runPromise(parts.waitingCallAnswered(playbook, calledBy, answeredByTheShell));
     const calls = await callStates();
@@ -626,10 +631,7 @@ describe('a call that waits for a run, answered by the shell as an admission ref
     const beforeItsRetry = recorded.calls().length;
     clock.step(60_000);
     await Effect.runPromise(wakeUp.wakeUp({ now: clock.now(), sweep: false }));
-    const called = await until(
-      () => Promise.resolve(recorded.calls()),
-      (calls) => calls.length > 1,
-    );
+    const called = await recorded.when(recorded.calls, (calls) => calls.length > 1);
     await Effect.runPromise(wakeUp.stop());
     await closeHostParts(parts);
 
@@ -650,7 +652,7 @@ describe('a host opened whole', () => {
 
     const started = await Effect.runPromise(hosted.host.start(runAt(runId), startOf(pausedASecond)));
     clock.step(1000);
-    const settled = await until(hosted.settlements, (settlements) => settlements.size > 0);
+    const settled = await hosted.when(hosted.settlements, (settlements) => settlements.size > 0);
     await hosted.host.stop();
 
     expect([holdersWhileOpen, started, [...settled.keys()], await leaseHoldersOn(leases)]).toEqual([
@@ -665,14 +667,16 @@ describe('a host opened whole', () => {
 describe('the host given the context of its server', () => {
   it('traces a start as its input, with the call it makes, the answer and the settlement each beneath the last', async () => {
     const recording = recordingTracer();
+    const ended = signals();
+    const tracer = endingsToldOf(recording.tracer, ended.changed);
     const hosted = await hostedOn(
       { store: 'sqlite', file: aSQLiteFile() },
-      { context: Context.make(Tracer.Tracer, recording.tracer) },
+      { context: Context.make(Tracer.Tracer, tracer) },
     );
     hosted.know(runId);
 
-    await Effect.runPromise(Effect.withTracer(hosted.host.start(run, startOf(notifying)), recording.tracer));
-    const spans = await until(recording.spans, settledIn);
+    await Effect.runPromise(Effect.withTracer(hosted.host.start(run, startOf(notifying)), tracer));
+    const spans = await ended.when(recording.spans, settledIn);
     const started = named(spans, 'started');
     const call = named(spans, 'call notify');
     const answered = named(spans, 'call_answered');

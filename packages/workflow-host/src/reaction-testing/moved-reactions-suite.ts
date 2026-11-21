@@ -3,7 +3,6 @@ import { expect, it } from 'vitest';
 
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
 import type { SettingsOf } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
 import { movedClock } from './moved-clock.ts';
 import {
   at,
@@ -31,8 +30,8 @@ function definitionRenamed(store: LedgerStreams, from: string, to: string, versi
   return recorded(store, definitionStreamNamed(from), renamed, context);
 }
 
-function startsBeyond({ reactions }: ReactingHost, count: number) {
-  return until(
+function startsBeyond({ reactions, whenRead }: ReactingHost, count: number) {
+  return whenRead(
     () => Promise.resolve(reactions.starts()),
     (found) => found.length > count,
   );

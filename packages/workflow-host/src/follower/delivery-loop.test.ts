@@ -22,10 +22,16 @@ import {
 import { reactingHost } from '../reaction-testing/reacting-host.ts';
 import type { Sweep } from '../sweeps/org-sweeps.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
-import { until } from '../testing/until.ts';
-import { followedThroughTheLatest } from '../waiting-testing/followed-host.ts';
+import { followedThroughTheLatest, type Resting } from '../waiting-testing/followed-host.ts';
 import { parentId, waitingParent } from '../waiting-testing/waiting-parent.ts';
-import { boundTo, type Consumer, type Delivery, DeliveryFailed, type RecordConsumer } from './consumers.ts';
+import {
+  type BoundConsumer,
+  boundTo,
+  type Consumer,
+  type Delivery,
+  DeliveryFailed,
+  type RecordConsumer,
+} from './consumers.ts';
 import { deliveredAll } from './delivery-loop.ts';
 import { followedOrgsOn, type HeldPlaybook, type Progress } from './followed-orgs.ts';
 import { followerWakeUpOf, type FollowerWork, type Upkeep } from './follower-wake-up.ts';
@@ -119,21 +125,21 @@ const ofTheChild = {
   calledBy: { runId: parentId, reference: '/do/0/ask', run: 1 },
 };
 
-async function deliveredAgain(database: Parameters<typeof followedOrgsOn>[0], again: () => boolean): Promise<void> {
-  let nudges = 0;
-  await until(async () => {
-    await followedThroughTheLatest(database);
-    if (again()) {
-      return true;
-    }
-    await Effect.runPromise(
-      followedOrgsOn(database).save('acme', { cursor: null, delivered: null, attempts: 0, waiting: false }),
-    );
-    nudges += 1;
-    await published(database.store, { id: `nudge-${nudges}`, type: 'com.acme.c' });
-    await followedThroughTheLatest(database);
-    return again();
-  }, Boolean);
+async function deliveredAgain(
+  database: Parameters<typeof followedOrgsOn>[0],
+  host: Resting,
+  again: () => boolean,
+  nudges = 0,
+): Promise<void> {
+  await followedThroughTheLatest(database, host);
+  if (again()) {
+    return;
+  }
+  await Effect.runPromise(
+    followedOrgsOn(database).save('acme', { cursor: null, delivered: null, attempts: 0, waiting: false }),
+  );
+  await published(database.store, { id: `nudge-${nudges + 1}`, type: 'com.acme.c' });
+  await deliveredAgain(database, host, again, nudges + 1);
 }
 
 const handingOutAcme: Sweep = { orgs: [{ org: 'acme', known: undefined }], again: false };
@@ -437,6 +443,24 @@ describe('the deliveries of one record', () => {
     expect(listeners.delivered().slice(99, 101)).toEqual(['listeners 0099', 'listeners 0100']);
   });
 
+  it('ask each consumer, an assessor among them, for a batch of at most 100 unless the pass is given another figure', async () => {
+    const asked: number[] = [];
+    const assessor: BoundConsumer = {
+      name: 'assessor',
+      skippedAfterSweeps: 20,
+      batchOf: (_after, most) =>
+        Effect.sync(() => {
+          asked.push(most);
+          return { deliveries: [], through: undefined, more: false };
+        }),
+    };
+
+    await Effect.runPromise(deliveredAll([assessor], fresh, 'signal'));
+    await Effect.runPromise(deliveredAll([assessor], fresh, 'signal', 3));
+
+    expect(asked).toEqual([100, 3]);
+  });
+
   it('try a delivery that keeps failing on 20 sweeps, holding the record, then skip it and say so', async () => {
     const starts = counted('starts', 3, { failing: new Set(['0001']) });
     const swept = (progress: Progress) => deliveredAll(boundAll(starts.consumer), progress, 'sweep');
@@ -513,15 +537,15 @@ describe('a record the follower delivers twice, as a pass that goes on from the 
       'do:\n  - both: { listen: { to: { all: [{ with: { type: com.acme.a } }, { with: { type: com.acme.b } }] } } }';
     await Effect.runPromise(reacting.host.start(runAt(waiting), startOf(workflow(both))));
     await published(store, { id: 'e1', type: 'com.acme.a', data: 'first' });
-    await until(
+    await reacting.whenRead(
       () => Effect.runPromise(reacting.host.stateOf(runAt(waiting))),
       (state) => state.inbox.received === 1,
     );
 
-    await deliveredAgain(reacting.database, () => reacting.reactions.starts().length > 1);
+    await deliveredAgain(reacting.database, reacting, () => reacting.reactions.starts().length > 1);
     const between = await Effect.runPromise(reacting.host.stateOf(runAt(waiting)));
     await published(store, { id: 'e3', type: 'com.acme.b', data: 'second' });
-    const state = await until(
+    const state = await reacting.whenRead(
       () => Effect.runPromise(reacting.host.stateOf(runAt(waiting))),
       (found) => found.status === 'ended',
     );
@@ -550,7 +574,7 @@ describe('a run ending the follower delivers twice', () => {
     );
     await settled(parentId);
 
-    await deliveredAgain(database, () => handings() > 1);
+    await deliveredAgain(database, hosted, () => handings() > 1);
 
     expect(await answeredCalls()).toEqual([{ state: 'answered', delivered: 1 }]);
     expect(hosted.settlements().get(parentId)).toEqual({ status: 'succeeded', output: 'checked' });
@@ -876,7 +900,7 @@ describe('a record of a playbook the follower cannot read', () => {
     );
 
     await published(store, { id: 's1', type: 'com.acme.sentinel' });
-    await until(
+    await reacting.whenRead(
       () => Promise.resolve(reacting.reactions.starts()),
       (starts) => starts.some(({ cause }) => cause === messageIdOf(`${alpha}events/s1`, 1)),
     );
@@ -903,7 +927,7 @@ describe('a record the consumers of waiting calls cannot read', () => {
     await recorded(store, stream, { type: 'run_succeeded', data: { output: null, record: {} } });
 
     await published(store, { id: 's1', type: 'com.acme.sentinel' });
-    await until(
+    await reacting.whenRead(
       () => Promise.resolve(reacting.reactions.starts()),
       (starts) => starts.some(({ cause }) => cause === messageIdOf(`${alpha}events/s1`, 1)),
     );
@@ -940,7 +964,7 @@ describe('a consumer the host is given', () => {
     await published(reacting.database.store, { id: 'e1', type: 'com.acme.noted' });
     await published(reacting.database.store, { id: 'e2', type: 'com.acme.other' });
     await published(reacting.database.store, { id: 'e3', type: 'com.acme.noted' });
-    const delivered = await until(
+    const delivered = await reacting.whenRead(
       () => Promise.resolve<readonly string[]>([...received]),
       (ids) => ids.length >= 2,
     );

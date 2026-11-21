@@ -83,13 +83,13 @@ describe('the share of a projector', () => {
     const views = await viewHarness(await onSQLite());
     await viewsInEveryPlaybook(views);
     const tracking = databaseTracking();
-    const reads = heldReads(tracking.over(views.store.database));
+    const reads = heldReads(tracking.over(views.store.database), tracking.changed);
     views.start({ through: () => reads.gated, playbooksAtOnce: 2 });
 
     await untilOnlyTheHeldWait(reads.waiting, tracking, 2);
     const most = reads.most();
     reads.open();
-    await Promise.all(playbooks.map((playbook) => views.until('runs', liveWith(1), playbook)));
+    await Promise.all(playbooks.map((playbook) => views.folded('runs', liveWith(1), playbook)));
 
     expect(most).toBe(2);
   });
@@ -98,13 +98,13 @@ describe('the share of a projector', () => {
     const views = await viewHarness(await onSQLite());
     await viewsInEveryPlaybook(views);
     const tracking = databaseTracking();
-    const folds = heldFolds(views.pool);
+    const folds = heldFolds(views.pool, tracking.changed);
     views.start({ pool: folds.gated, through: tracking.over });
 
     await untilOnlyTheHeldWait(folds.waiting, tracking, 2);
     const most = folds.most();
     folds.open();
-    await Promise.all(playbooks.map((playbook) => views.until('runs', liveWith(1), playbook)));
+    await Promise.all(playbooks.map((playbook) => views.folded('runs', liveWith(1), playbook)));
 
     expect([views.pool.workers, most]).toEqual([4, 2]);
   });
@@ -117,12 +117,12 @@ describe('a fold that ran past its deadline', () => {
     await views.saved('slow', detailsOf(overrunningFold, succeeded, { initial: 0 }));
     await views.saved('quick', counting);
     views.start({ folding: overrunningFolding(), clock, sweepEveryMs: 10_000 });
-    await Promise.all([views.until('slow', isLive), views.until('quick', isLive)]);
+    await Promise.all([views.folded('slow', isLive), views.folded('quick', isLive)]);
 
     await views.ran('reasoning/runs', overrunsItsDeadline);
     await untilTried(views, 'slow', 1);
     await views.ran('reasoning/runs', 'quick');
-    await views.until('quick', foldedAll(2));
+    await views.folded('quick', foldedAll(2));
     const beforeTheSweep = await overtimesOf(views, 'slow');
     clock.step(10_000);
     await untilTried(views, 'slow', 2);

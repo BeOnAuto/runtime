@@ -3,7 +3,6 @@ import { expect, it } from 'vitest';
 
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import type { SettingsOf } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
 import { firstFollowSuite } from './first-follow-suite.ts';
 import { movedClock } from './moved-clock.ts';
 import { at, cronTrigger, eventTrigger, everyTrigger, published, definitionRecorded } from './playbook-writes.ts';
@@ -23,7 +22,7 @@ export function reactionSuite(settings: SettingsOf): void {
     await definitionRecorded(reacting.database.store, { name: 'close', version: 1, triggers: [trigger] });
 
     await published(reacting.database.store, { id: 'e1', type: 'com.acme.closed' });
-    const starts = await until(
+    const starts = await reacting.whenRead(
       () => Promise.resolve(reacting.reactions.starts()),
       (found) => found.length > 0,
     );
@@ -36,7 +35,7 @@ export function reactionSuite(settings: SettingsOf): void {
     await Effect.runPromise(reacting.host.start(runAt(waiting), startOf(listening)));
 
     await published(reacting.database.store, { id: 'e1', type: 'com.acme.decided', data: 'decided' });
-    const state = await until(
+    const state = await reacting.whenRead(
       () => Effect.runPromise(reacting.host.stateOf(runAt(waiting))),
       (found) => found.status === 'ended',
     );
@@ -56,7 +55,7 @@ function scheduleSuite(settings: SettingsOf): void {
     await definitionRecorded(reacting.database.store, { name: 'tick', version: 1, triggers: [everyTrigger(60_000)] });
 
     clock.moveTo(activatedAt + 60_000);
-    const starts = await until(
+    const starts = await reacting.whenRead(
       () => Promise.resolve(reacting.reactions.starts()),
       (found) => found.length > 0,
     );
@@ -72,12 +71,12 @@ function scheduleSuite(settings: SettingsOf): void {
     await definitionRecorded(reacting.database.store, { name: 'close', version: 1, triggers });
 
     await published(reacting.database.store, { id: 'e1', type: 'com.acme.closed' });
-    await until(
+    await reacting.whenRead(
       () => Promise.resolve(reacting.reactions.starts()),
       (found) => found.length > 0,
     );
     clock.moveTo(activatedAt + 3_600_000);
-    const starts = await until(
+    const starts = await reacting.whenRead(
       () => Promise.resolve(reacting.reactions.starts()),
       (found) => found.length > 2,
     );

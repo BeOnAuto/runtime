@@ -17,13 +17,16 @@ export interface ProjectingOptions {
   readonly clock?: HostClock;
 }
 
-export type WhenFolded = <A>(read: () => Promise<A>, holds: (value: A) => boolean) => Promise<A>;
+export interface WhenFolded {
+  <A, B extends A>(read: () => Promise<A>, holds: (value: A) => value is B): Promise<B>;
+  <A>(read: () => Promise<A>, holds: (value: A) => boolean): Promise<A>;
+}
 
 function asItIs(database: HostDatabase): HostDatabase {
   return database;
 }
 
-interface Folding {
+export interface Folding {
   readonly whenFolded: WhenFolded;
   readonly rested: () => void;
 }
@@ -33,21 +36,24 @@ export function folding(): Folding {
   const checked = (check: () => Promise<boolean>) => {
     void check().then((done) => (done ? waiting.delete(check) : false));
   };
+  function whenFolded<A, B extends A>(read: () => Promise<A>, holds: (value: A) => value is B): Promise<B>;
+  function whenFolded<A>(read: () => Promise<A>, holds: (value: A) => boolean): Promise<A>;
+  function whenFolded<A>(read: () => Promise<A>, holds: (value: A) => boolean): Promise<A> {
+    const { promise, resolve } = Promise.withResolvers<A>();
+    const check = async (): Promise<boolean> => {
+      const value = await read();
+      if (!holds(value)) {
+        return false;
+      }
+      resolve(value);
+      return true;
+    };
+    waiting.add(check);
+    checked(check);
+    return promise;
+  }
   return {
-    whenFolded: (read, holds) => {
-      const { promise, resolve } = Promise.withResolvers<Awaited<ReturnType<typeof read>>>();
-      const check = async (): Promise<boolean> => {
-        const value = await read();
-        if (!holds(value)) {
-          return false;
-        }
-        resolve(value);
-        return true;
-      };
-      waiting.add(check);
-      checked(check);
-      return promise;
-    },
+    whenFolded,
     rested: () => {
       for (const check of waiting) {
         checked(check);
@@ -56,7 +62,7 @@ export function folding(): Folding {
   };
 }
 
-function restingOn(clock: HostClock, rested: () => void): HostClock {
+export function restingOn(clock: HostClock, rested: () => void): HostClock {
   return {
     now: clock.now,
     sleep: (milliseconds) => Effect.andThen(Effect.sync(rested), clock.sleep(milliseconds)),

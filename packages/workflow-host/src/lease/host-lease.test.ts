@@ -9,7 +9,7 @@ import { hostLease, leaseMsFor, shortestLeaseMs } from './host-lease.ts';
 const anHourMs = 3_600_000;
 
 function clockAt(now: number): HostClock {
-  return { now: () => now, sleep: (milliseconds) => Effect.sleep(milliseconds) };
+  return { now: () => now, sleep: () => Effect.never };
 }
 
 interface SharedClock {

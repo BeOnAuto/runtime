@@ -15,7 +15,7 @@ import {
   type DatabaseSettings,
   type HostBesideItsLedger,
 } from '../ledger-testing/ledger-connections.ts';
-import { until } from './until.ts';
+import { restsOfTheHosts } from './signals.ts';
 
 export type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 
@@ -72,7 +72,7 @@ export async function leaseHoldersOn(database: HostDatabase): Promise<readonly s
 
 export async function untilRenewedBy(database: HostDatabase, { holder }: Lease, renewals: number): Promise<void> {
   const expiries = new Set<number>();
-  const renewed = await until(
+  const renewed = await restsOfTheHosts.whenRead(
     async () => {
       const lease = await leaseOn(database);
       expiries.add(lease.expires_at);

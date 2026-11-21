@@ -8,7 +8,6 @@ import { aSQLiteFile } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { signals } from '../testing/signals.ts';
 import { steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
-import { until } from '../testing/until.ts';
 import { type Chore, choreWork } from './due-chores.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
 import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce, type DueWork } from './due-work.ts';
@@ -207,7 +206,7 @@ describe('due rows in flight', () => {
     }
 
     await dueLooping(rows);
-    const performed = await until(rows.performed, (done) => done.length === dueInOneWakeUp + 20);
+    const performed = await rows.when(rows.performed, (done) => done.length === dueInOneWakeUp + 20);
 
     expect(performed).toHaveLength(dueInOneWakeUp + 20);
   });
@@ -277,7 +276,7 @@ describe('due rows that cannot be read', () => {
     rows.failReads(2);
 
     const looping = await dueLooping(rows, systemClock, 20);
-    const performed = await until(rows.performed, (done) => done.length > 0);
+    const performed = await rows.when(rows.performed, (done) => done.length > 0);
 
     expect([performed.length, new Set(looping.troubles())]).toEqual([
       1,
@@ -410,10 +409,10 @@ describe('the due rows of a projection, across hosts of one database', () => {
     await hostedOn(database, { sweepEveryMs: 50, holder: 'second', dueWork: [rows.work('second')] });
 
     rows.add('before', Date.now());
-    await until(rows.performed, (performed) => performed.length === 1);
+    await rows.when(rows.performed, (performed) => performed.length === 1);
     await first.host.stop();
     rows.add('after', Date.now());
-    await until(rows.performed, (performed) => performed.length === 2);
+    await rows.when(rows.performed, (performed) => performed.length === 2);
 
     expect(rows.performed().map(({ key, by }) => [key, by])).toEqual([
       ['before', 'first'],

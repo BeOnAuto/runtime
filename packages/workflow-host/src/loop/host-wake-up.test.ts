@@ -4,7 +4,6 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { fakeDueWork, type FakeDueWork } from '../due-work/fake-due-work.ts';
 import { steppedClock } from '../testing/stepped-clock.ts';
-import { until } from '../testing/until.ts';
 import type { DueTimer, TimerTable } from '../timers/sql-timers.ts';
 import { hostWakeUp, type NextWake, type Woken } from './host-wake-up.ts';
 
@@ -198,7 +197,7 @@ describe('a wake-up of the host, performing due rows', () => {
     await host.wakeUp({ now, sweep: false });
     const raisedOnAnswering = host.raised();
     rows.release();
-    await until(rows.performed, (performed) => performed.length === 1);
+    await rows.when(rows.performed, (performed) => performed.length === 1);
 
     expect([raisedOnAnswering, host.raised()]).toEqual([0, 1]);
   });
@@ -210,7 +209,7 @@ describe('a wake-up of the host, performing due rows', () => {
     rows.hanging('delivery');
     const host = waking(now, { rows });
     await host.wakeUp({ now, sweep: false });
-    await until(rows.attempts, (made) => made.length === 1);
+    await rows.when(rows.attempts, (made) => made.length === 1);
 
     await host.stop();
 

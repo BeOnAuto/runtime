@@ -2,7 +2,6 @@ import { messageIdOf } from '@on.auto/operations';
 import { expect, it } from 'vitest';
 
 import type { SettingsOf } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
 import {
   causesOf,
   heldUntil,
@@ -127,7 +126,7 @@ function keptThroughARestart(settingsOf: SettingsOf) {
     const startsWhileHeld = causesOf(second);
     first.clock.moveTo(heldUntil(held));
     const lifted = await holdReaching(second, (state) => state.holds === 0);
-    const delivered = await until(
+    const delivered = await reacting.whenRead(
       () => Promise.resolve(causesOf(second)),
       (causes) => causes.length === 3,
     );

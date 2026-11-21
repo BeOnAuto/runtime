@@ -95,18 +95,19 @@ export function secondFoldWithBudget(pool: ProgramPool, pageBudgetMs: number): P
   };
 }
 
-function held<Gated>(gate: (wait: () => Promise<void>) => Gated): Held<Gated> {
+function held<Gated>(gate: (passed: () => Promise<void>) => Gated, changed: () => void): Held<Gated> {
   const opened = Promise.withResolvers<void>();
   const counts = { waiting: 0, most: 0, total: 0 };
-  const wait = async (): Promise<void> => {
+  const passed = async (): Promise<void> => {
     counts.total += 1;
     counts.waiting += 1;
     counts.most = Math.max(counts.most, counts.waiting);
+    changed();
     await opened.promise;
     counts.waiting -= 1;
   };
   return {
-    gated: gate(wait),
+    gated: gate(passed),
     waiting: () => counts.waiting,
     most: () => counts.most,
     total: () => counts.total,
@@ -116,25 +117,33 @@ function held<Gated>(gate: (wait: () => Promise<void>) => Gated): Held<Gated> {
   };
 }
 
-export function heldReads(database: HostDatabase): Held<HostDatabase> {
-  return held((wait) => ({
-    ...database,
-    store: {
-      ...database.store,
-      readRecordedOfKeys: async (keys, selection, page) => {
-        await wait();
-        return database.store.readRecordedOfKeys(keys, selection, page);
+function nothingToTell(): void {}
+
+export function heldReads(database: HostDatabase, changed: () => void = nothingToTell): Held<HostDatabase> {
+  return held(
+    (passed) => ({
+      ...database,
+      store: {
+        ...database.store,
+        readRecordedOfKeys: async (keys, selection, page) => {
+          await passed();
+          return database.store.readRecordedOfKeys(keys, selection, page);
+        },
       },
-    },
-  }));
+    }),
+    changed,
+  );
 }
 
-export function heldFolds(pool: ProgramPool): Held<ProgramPool> {
-  return held((wait) => ({
-    ...pool,
-    fold: async (request, signal) => {
-      await wait();
-      return pool.fold(request, signal);
-    },
-  }));
+export function heldFolds(pool: ProgramPool, changed: () => void = nothingToTell): Held<ProgramPool> {
+  return held(
+    (passed) => ({
+      ...pool,
+      fold: async (request, signal) => {
+        await passed();
+        return pool.fold(request, signal);
+      },
+    }),
+    changed,
+  );
 }

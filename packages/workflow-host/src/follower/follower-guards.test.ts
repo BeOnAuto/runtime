@@ -13,7 +13,6 @@ import {
   runRecorded,
 } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
-import { until } from '../testing/until.ts';
 
 const succeeded = { type: 'run_succeeded' };
 
@@ -25,7 +24,7 @@ async function startsOnceTheSentinelPassed(reacting: ReactingHost) {
   const sentinel = eventTrigger({ type: 'com.acme.sentinel' });
   await definitionRecorded(reacting.database.store, { name: 'watch', version: 1, triggers: [sentinel] });
   await published(reacting.database.store, { id: 'sentinel', type: 'com.acme.sentinel' });
-  return until(
+  return reacting.whenRead(
     () => Promise.resolve(reacting.reactions.starts()),
     (starts) => starts.some(({ workflow }) => workflow === 'watch'),
   );
@@ -38,7 +37,7 @@ describe('a workflow that reacts to the facts of the playbook', () => {
     await definitionRecorded(store, { name: 'follow', version: 1, triggers: [eventTrigger(succeeded)] });
 
     await runRecorded(store, { runId: 'r-sum', type: 'reasoning', name: 'sum', depth: 2 }, 'run_succeeded');
-    const starts = await until(
+    const starts = await reacting.whenRead(
       () => Promise.resolve(reacting.reactions.starts()),
       (found) => found.length > 0,
     );
@@ -117,7 +116,7 @@ describe('a playbook whose run log holds a record its dispatch never covers', ()
     await recorded(store, `${alpha}run-logs/r-stuck`, { type: 'input_applied', data: { input: {} } });
     await published(store, { id: 'closed', type: 'com.acme.closed' });
 
-    const starts = await until(
+    const starts = await reacting.whenRead(
       () => Promise.resolve(reacting.reactions.starts()),
       (found) => found.length > 0,
     );

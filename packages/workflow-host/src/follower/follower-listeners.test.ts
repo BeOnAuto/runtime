@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 import { emittedContext, published, publishedInTurn } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
-import { until } from '../testing/until.ts';
 
 const waiting = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -18,7 +17,7 @@ function stateOf({ host }: ReactingHost, runId = waiting) {
 }
 
 function ended(reacting: ReactingHost, runId = waiting) {
-  return until(
+  return reacting.whenRead(
     () => stateOf(reacting, runId),
     (state) => state.status === 'ended',
   );
@@ -87,7 +86,7 @@ describe('a run that listened before the host kept its listeners', () => {
   it('is listened for again when the host next starts, and takes the event', async () => {
     const first = await reactingHost();
     await Effect.runPromise(first.host.start(runAt(waiting), listening('{ type: com.acme.decided }')));
-    await until(
+    await first.whenRead(
       () => Effect.runPromise(first.database.read(statement`SELECT run_key FROM workflow_listeners`)),
       (rows) => rows.length > 0,
     );

@@ -1,9 +1,8 @@
 import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 
-import { oneRowOf, WholeNumber } from '../database/host-database.ts';
+import { oneRowOf, rowsOf, WholeNumber } from '../database/host-database.ts';
 import type { HostNote } from '../host/host-reports.ts';
-import { until } from '../testing/until.ts';
 import type { MovedClock } from './moved-clock.ts';
 import { alpha } from './playbook-writes.ts';
 import type { ReactingHost } from './reacting-host.ts';
@@ -24,23 +23,31 @@ export interface Holding {
   readonly clock: MovedClock;
 }
 
-export function holdStateOf({ reacting }: Holding): Promise<HoldState> {
-  return Effect.runPromise(
-    oneRowOf(
-      HoldRow,
-      reacting.database.read(
-        statement`SELECT held.held_since, held.held_until, COALESCE(held.holds, 0) AS holds, held.held_for,
-            COALESCE(held.attempts, 0) AS attempts, followed.cursor AS place
-          FROM workflow_followed_orgs AS followed
-          LEFT JOIN workflow_held_playbooks AS held ON held.playbook_key = ${alpha}
-          WHERE followed.org = 'acme'`,
-      ),
-    ),
+function holdRead({ reacting }: Holding) {
+  return reacting.database.read(
+    statement`SELECT held.held_since, held.held_until, COALESCE(held.holds, 0) AS holds, held.held_for,
+        COALESCE(held.attempts, 0) AS attempts, followed.cursor AS place
+      FROM workflow_followed_orgs AS followed
+      LEFT JOIN workflow_held_playbooks AS held ON held.playbook_key = ${alpha}
+      WHERE followed.org = 'acme'`,
   );
 }
 
+export function holdStateOf(holding: Holding): Promise<HoldState> {
+  return Effect.runPromise(oneRowOf(HoldRow, holdRead(holding)));
+}
+
+/** The hold of the playbook, or null while the follower has not yet placed the org. */
+async function holdStateOnceFollowed(holding: Holding): Promise<HoldState | null> {
+  const [state] = await Effect.runPromise(rowsOf(HoldRow, holdRead(holding)));
+  return state ?? null;
+}
+
 export function holdReaching(holding: Holding, reached: (state: HoldState) => boolean): Promise<HoldState> {
-  return until(() => holdStateOf(holding), reached);
+  return holding.reacting.whenRead(
+    () => holdStateOnceFollowed(holding),
+    (found): found is HoldState => found !== null && reached(found),
+  );
 }
 
 export function heldUntil(state: HoldState): number {
@@ -60,7 +67,7 @@ export function notesOf({ reacting }: Holding, kind: HostNote['kind']): readonly
 }
 
 export function notesReaching(holding: Holding, kind: HostNote['kind'], count: number): Promise<readonly HostNote[]> {
-  return until(
+  return holding.reacting.when(
     () => notesOf(holding, kind),
     (notes) => notes.length >= count,
   );

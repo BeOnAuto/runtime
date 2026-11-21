@@ -4,7 +4,6 @@ import type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 import { someFolder } from '../projector/folder.ts';
 import { definitionStreamOf } from '../projector/playbook-definitions.ts';
 import type { Projector } from '../projector/projector.ts';
-import { until } from '../testing/until.ts';
 import { alphaKey } from '../views-testing/view-documents.ts';
 import { viewHarness, type ViewHarness } from '../views-testing/view-harness.ts';
 import {
@@ -102,19 +101,16 @@ export async function tallyHarness(settings: DatabaseSettings): Promise<TallyHar
     tallies,
     outputs: () => Effect.runPromise(talliedOutputsOf(views.store.database, alphaKey)),
     untilTally: (details, holds) =>
-      until(async () => {
-        const row = await named(details);
-        if (row === undefined || !holds(row)) {
-          throw new Error(`The tally of ${tallyOf(details)} does not hold yet: ${JSON.stringify(row)}`);
-        }
-        return row;
-      }),
-    goneTally: (details) =>
-      until(async () => {
-        if ((await named(details)) !== undefined) {
-          throw new Error(`The tally of ${tallyOf(details)} is still kept`);
-        }
-      }),
+      views.whenFolded(
+        () => named(details),
+        (row): row is TallyRow => row !== undefined && holds(row),
+      ),
+    goneTally: async (details) => {
+      await views.whenFolded(
+        () => named(details),
+        (row) => row === undefined,
+      );
+    },
     startWithTallies: (more = {}, rebuildsAtOnce = rebuildsByDefault) =>
       views.start({ ...more, besides: [someFolder(tallyFolderOf(rebuildsAtOnce))] }),
     watchingTallies,

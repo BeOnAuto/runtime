@@ -7,6 +7,7 @@ import {
   type ProgramPool,
 } from '@on.auto/workflow-engine/dsl';
 import { moduleOfSource } from '@on.auto/workflow-engine/testing';
+import { threadPool } from '@on.auto/workflow-engine/thread-pool';
 
 export const breaksTheWorker = 'breaks the worker';
 
@@ -62,6 +63,15 @@ export const breakingFoldWorker = foldingWorker({
   serving: 'serveJobs({ fold });',
 });
 
+function foldPoolSettingsOf(settings: Partial<PoolSettings>): PoolSettings {
+  return { workers: 4, heapMegabytes: 64, ...measuredPoolSettings, ...settings };
+}
+
 export function testFoldPoolOf(settings: Partial<PoolSettings>): ProgramPool {
-  return programPool({ workers: 4, heapMegabytes: 64, ...measuredPoolSettings, ...settings });
+  return programPool(foldPoolSettingsOf(settings));
+}
+
+/** The pool of `testFoldPoolOf`, serving its folds on the thread of the test, for a test that breaks no worker. */
+export function testFoldThreadPoolOf(settings: Partial<PoolSettings>): ProgramPool {
+  return threadPool(foldPoolSettingsOf(settings));
 }

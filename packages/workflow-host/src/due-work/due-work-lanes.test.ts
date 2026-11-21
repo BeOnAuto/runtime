@@ -2,7 +2,6 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { steppedClock } from '../testing/stepped-clock.ts';
-import { until } from '../testing/until.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
 import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce } from './due-work.ts';
 import { fakeDueWork } from './fake-due-work.ts';
@@ -19,7 +18,7 @@ describe('a due row that calls out nowhere, behind more deliveries than one read
     rows.local('expiry');
 
     await dueLooping(rows);
-    const [performed] = await until(rows.performed, (done) => done.length > 0);
+    const [performed] = await rows.when(rows.performed, (done) => done.length > 0);
 
     expect(performed?.key).toBe('expiry');
   });
@@ -39,7 +38,7 @@ describe('a delivery that waits for a place while deliveries hang', () => {
     rows.endsAt('delivery-19', endsAt);
 
     await dueLooping(rows);
-    const [performed] = await until(rows.performed, (done) => done.length > 0);
+    const [performed] = await rows.when(rows.performed, (done) => done.length > 0);
 
     expect(performed?.key).toBe('delivery-19');
     expect(rows.attempts().filter(({ key }) => key !== 'delivery-19')).toHaveLength(duePerformedAtOnce);
@@ -60,7 +59,7 @@ describe('a due row whose ending falls due while a wake-up waits for the rows it
     rows.endsAt('delivery-19', endsAt);
 
     await dueLooping(rows);
-    const [performed] = await until(rows.performed, (done) => done.length > 0);
+    const [performed] = await rows.when(rows.performed, (done) => done.length > 0);
 
     expect(performed?.key).toBe('delivery-19');
   });
@@ -75,7 +74,7 @@ describe('due rows that end while the loop reads when to wake next', () => {
     }
 
     await dueLooping(rows);
-    const performed = await until(rows.performed, (done) => done.length === duePerformedAtOnce + 1);
+    const performed = await rows.when(rows.performed, (done) => done.length === duePerformedAtOnce + 1);
 
     expect(performed).toHaveLength(duePerformedAtOnce + 1);
   });

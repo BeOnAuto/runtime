@@ -12,7 +12,6 @@ import {
 } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
-import { until } from '../testing/until.ts';
 
 interface InNewYork {
   readonly reacting: ReactingHost;
@@ -98,7 +97,7 @@ async function aRoundWithSchedulesThatCannotBeComputed() {
   await published(database.store, { id: 'closed-1', type: 'closed' });
   const started = await startsReaching(reacting.reactions.starts, 2);
   const refused = await refusalsSaid(database, 2);
-  const rows = await until(
+  const rows = await reacting.whenRead(
     () => triggerRowsOf(database),
     (found) => found.filter(({ next_due: nextDue }) => nextDue === null).length >= 3,
   );

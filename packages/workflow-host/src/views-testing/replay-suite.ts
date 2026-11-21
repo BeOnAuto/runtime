@@ -52,7 +52,7 @@ function replayTests(settingsOf: SettingsOf): void {
     const views = await viewHarness(await settingsOf());
     const [first, second, third] = await threeRuns(views);
     startedOnPages(views);
-    const kept = await views.until(morning, foldedAll(3));
+    const kept = await views.folded(morning, foldedAll(3));
     const replayed = asOf(views);
 
     expect(await replayed(String(first))).toMatchObject({ phase: 'live', view: postsOf(1), folded: 1 });
@@ -67,7 +67,7 @@ function replayTests(settingsOf: SettingsOf): void {
     const views = await viewHarness(await settingsOf());
     const [, second] = await threeRuns(views);
     startedOnPages(views);
-    await views.until(morning, foldedAll(3));
+    await views.folded(morning, foldedAll(3));
 
     const replayed = asOf(views, { database: inPagesOf(views.store.database, 1) });
 
@@ -78,7 +78,7 @@ function replayTests(settingsOf: SettingsOf): void {
     const views = await viewHarness(await settingsOf());
     const [, , third] = await threeRuns(views);
     startedOnPages(views);
-    await views.until(morning, foldedAll(3));
+    await views.folded(morning, foldedAll(3));
 
     const replayed = asOf(views, { folding: { pageBudgetMs: 0 } });
 
@@ -89,7 +89,7 @@ function replayTests(settingsOf: SettingsOf): void {
     const views = await viewHarness(await settingsOf());
     const [first] = await threeRuns(views);
     startedOnPages(views);
-    await views.until(morning, foldedAll(3));
+    await views.folded(morning, foldedAll(3));
     await views.stopProjectors();
     await views.pageSaved(morning, 2, pageDetails(folds('{ by_channel: { unit: "posts", values: [] } }')));
 
@@ -106,7 +106,7 @@ function endingTests(settingsOf: SettingsOf): void {
     await views.ran(morning, 2);
     const third = await views.ran(morning, 3);
     startedOnPages(views);
-    await views.until(morning, isStalled);
+    await views.folded(morning, isStalled);
     const replayed = asOf(views);
 
     expect(await replayed(first)).toMatchObject({ phase: 'live', view: postsOf(1) });
@@ -121,7 +121,7 @@ function endingTests(settingsOf: SettingsOf): void {
     const views = await viewHarness(await settingsOf());
     const [, , third] = await threeRuns(views);
     startedOnPages(views);
-    await views.until(morning, foldedAll(3));
+    await views.folded(morning, foldedAll(3));
     const database = inPagesOf(views.store.database, 1);
 
     expect(await asOf(views, { database, pages: 2 })(String(third))).toEqual({
@@ -142,7 +142,7 @@ function reachTests(settingsOf: SettingsOf): void {
     const views = await viewHarness(await settingsOf());
     const [first] = await threeRuns(views);
     startedOnPages(views);
-    await views.until(morning, foldedAll(3));
+    await views.folded(morning, foldedAll(3));
     const { pool } = busyOnce(views.pool);
 
     expect(await asOf(views, { pool })(String(first))).toMatchObject({ phase: 'out_of_reach' });
@@ -153,7 +153,7 @@ function reachTests(settingsOf: SettingsOf): void {
     const [first] = await threeRuns(views);
     const replayed = asOf(views);
     startedOnPages(views);
-    await views.until(morning, foldedAll(3));
+    await views.folded(morning, foldedAll(3));
 
     expect(await replayed(String(first), 'workflow/missing')).toBeUndefined();
     expect(await replayed('d3f7e6a0-0000-4000-8000-000000000001')).toBeUndefined();
@@ -190,7 +190,7 @@ function keptOutputTests(settingsOf: SettingsOf): void {
     const views = await viewHarness(await settingsOf());
     const [first] = await threeRuns(views);
     startedOnPages(views);
-    await views.until(morning, foldedAll(3));
+    await views.folded(morning, foldedAll(3));
 
     const replayed = asOf(views, { database: keptAndUnreadable(views.store.database) });
 

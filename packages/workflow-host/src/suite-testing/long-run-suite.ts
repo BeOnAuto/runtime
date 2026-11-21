@@ -8,7 +8,6 @@ import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { runKeyAt } from '../testing/started-runs.ts';
-import { until } from '../testing/until.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-000000003000';
 
@@ -31,7 +30,7 @@ export function longRunSuite(settings: SettingsOf): void {
     hosted.know(runId);
 
     await Effect.runPromise(hosted.host.start(runAt(runId), startOf(ticking)));
-    await until(hosted.settlements, (settled) => settled.size > 0);
+    await hosted.when(hosted.settlements, (settled) => settled.size > 0);
     await hosted.host.stop();
     const runStore = ledgerRunLogStore(await openedOn(database));
     const stored = await Effect.runPromise(runStore.load(runKeyAt(runId)));

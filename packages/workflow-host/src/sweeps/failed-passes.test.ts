@@ -7,7 +7,7 @@ import { startFollower } from '../follower/follower-loop.ts';
 import type { Upkeep } from '../follower/follower-wake-up.ts';
 import type { PassEnd } from '../follower/record-steps.ts';
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
-import { until } from '../testing/until.ts';
+import { signals } from '../testing/signals.ts';
 import { orgSweepsOn } from './org-sweeps.ts';
 
 const alpha = 'playbook/acme/alpha/';
@@ -55,6 +55,9 @@ interface Followed {
   readonly stop: () => Promise<void>;
 }
 
+/** Each wait the follower of a test asks for: it has rested from its round, so what a test waits on is read again. */
+const rested = signals();
+
 function recordingWaits(sweeps: () => number): { readonly pace: HostClock; readonly waits: () => readonly Wait[] } {
   const waits: Wait[] = [];
   return {
@@ -62,6 +65,7 @@ function recordingWaits(sweeps: () => number): { readonly pace: HostClock; reado
       now: systemClock.now,
       sleep: (milliseconds) => {
         waits.push({ milliseconds, sweptBefore: sweeps() });
+        rested.changed();
         return systemClock.sleep(milliseconds);
       },
     },
@@ -134,8 +138,8 @@ function passesFailingFirstFor(failing: string, passed: (playbookKey: string) =>
 }
 
 function passedReaching(passes: readonly string[], count: number) {
-  return until(
-    () => Promise.resolve<readonly string[]>([...passes]),
+  return rested.when(
+    (): readonly string[] => [...passes],
     (playbooks) => playbooks.length >= count,
   );
 }
@@ -206,7 +210,7 @@ describe('a sweep in which more orgs fail than it has room for', () => {
       pass: () => Effect.die(new Error('The ledger could not be read')),
     });
 
-    const waits = await until(watched.waits, (asked) => asked.some(({ milliseconds }) => milliseconds > 0));
+    const waits = await rested.when(watched.waits, (asked) => asked.some(({ milliseconds }) => milliseconds > 0));
     const firstWait = waits.find(({ milliseconds }) => milliseconds > 0);
 
     expect(firstWait?.sweptBefore).toBeLessThanOrEqual(2);

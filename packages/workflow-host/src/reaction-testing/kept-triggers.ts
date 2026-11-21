@@ -3,7 +3,7 @@ import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
 import type { ReactionStart } from '../reactions/reaction-options.ts';
-import { until } from '../testing/until.ts';
+import { restsOfTheHosts } from '../testing/signals.ts';
 import { nameOfKey } from './playbook-writes.ts';
 
 const TriggerRow = Schema.Struct({
@@ -65,7 +65,7 @@ export async function pausesOf(database: HostDatabase): Promise<readonly (string
 }
 
 export function untilPaused(database: HostDatabase, paused: readonly string[]) {
-  return until(
+  return restsOfTheHosts.whenRead(
     () => pausesOf(database),
     (found) => found.join() === paused.join(),
   );
@@ -78,21 +78,21 @@ export function refusalsOf(database: HostDatabase) {
 }
 
 export function untilTriggersAt(database: HostDatabase, workflow: string, version: number) {
-  return until(
+  return restsOfTheHosts.whenRead(
     () => triggerRowsOf(database),
     (rows) => rows.some((row) => row.workflow === workflow && row.version === version),
   );
 }
 
 export function untilScheduleRuns(database: HostDatabase, reference: string) {
-  return until(
+  return restsOfTheHosts.whenRead(
     () => triggerRowsOf(database),
     (rows) => rows.some((row) => row.reference === reference && row.running !== null),
   );
 }
 
 export function refusalsSaid(database: HostDatabase, count = 1) {
-  return until(
+  return restsOfTheHosts.whenRead(
     () =>
       Effect.runPromise(
         rowsOf(RefusalRow, database.read(statement`SELECT workflow, reason FROM workflow_reaction_refusals`)),
@@ -105,7 +105,7 @@ export function startsReaching<Start extends ReactionStart>(
   starts: () => readonly Start[],
   count: number,
 ): Promise<readonly Start[]> {
-  return until(
+  return restsOfTheHosts.whenRead(
     () => Promise.resolve<readonly Start[]>([...starts()]),
     (found) => found.length >= count,
   );

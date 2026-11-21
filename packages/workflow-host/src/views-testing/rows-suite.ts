@@ -232,7 +232,7 @@ function racingTests(settingsOf: SettingsOf): void {
     };
     views.start({ pool: racingOnce(views.pool, renewedElsewhere) });
 
-    const kept = await views.until('runs', liveAt(2));
+    const kept = await views.folded('runs', liveAt(2));
 
     expect(kept).toMatchObject({ view: 2, folded: 2 });
   });

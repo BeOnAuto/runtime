@@ -22,7 +22,7 @@ function foldingTests(settingsOf: SettingsOf): void {
     await views.ranEach(morning, [1, 2]);
     startedOnPages(views);
 
-    const page = await views.until(morning, foldedAll(2));
+    const page = await views.folded(morning, foldedAll(2));
 
     expect(page.view).toEqual(postsOf(2));
   });
@@ -32,12 +32,12 @@ function foldingTests(settingsOf: SettingsOf): void {
     await views.pageSaved(morning, 1, pageDetails(countingPosts));
     await views.ran(morning, 1);
     startedOnPages(views);
-    await views.until(morning, foldedAll(1));
+    await views.folded(morning, foldedAll(1));
 
     await views.subjectPaused(morning);
     await views.ran(morning, 2);
 
-    expect((await views.until(morning, foldedAll(2))).view).toEqual(postsOf(2));
+    expect((await views.folded(morning, foldedAll(2))).view).toEqual(postsOf(2));
   });
 
   it('are kept for the playbook’s page under the playbook’s name', async () => {
@@ -46,7 +46,7 @@ function foldingTests(settingsOf: SettingsOf): void {
     await views.ranEach(morning, [1]);
     startedOnPages(views);
 
-    expect((await views.until('playbook/alpha', foldedAll(1))).view).toEqual(postsOf(1));
+    expect((await views.folded('playbook/alpha', foldedAll(1))).view).toEqual(postsOf(1));
   });
 }
 
@@ -59,8 +59,8 @@ function shapeAndOrderTests(settingsOf: SettingsOf): void {
     startedOnPages(views);
 
     const [wrong, undeclared] = await Promise.all([
-      views.until('workflow/wrong-shape', isStalled),
-      views.until('workflow/undeclared', isStalled),
+      views.folded('workflow/wrong-shape', isStalled),
+      views.folded('workflow/undeclared', isStalled),
     ]);
 
     expect([wrong.stall?.kind, String(wrong.stall?.message).startsWith('/by_channel')]).toEqual(['shape', true]);
@@ -90,7 +90,7 @@ function versionTests(settingsOf: SettingsOf): void {
     await views.pageSaved(morning, 1, pageDetails(countingPosts));
     await views.ran(morning, 1);
     startedOnPages(views);
-    await views.until(morning, foldedAll(1));
+    await views.folded(morning, foldedAll(1));
 
     await views.pageSaved(morning, 2, pageDetails(countingPosts));
     expect((await reconciledPages(views)).map(({ name, version, phase }) => [name, version, phase])).toEqual([
@@ -99,7 +99,9 @@ function versionTests(settingsOf: SettingsOf): void {
 
     await views.pageSaved(morning, 3, pageDetails(folds("{ by_channel: { values: [{ name: 'X', value: 9 }] } }")));
 
-    expect((await views.until(morning, liveAt(3))).view).toEqual({ by_channel: { values: [{ name: 'X', value: 9 }] } });
+    expect((await views.folded(morning, liveAt(3))).view).toEqual({
+      by_channel: { values: [{ name: 'X', value: 9 }] },
+    });
   });
 
   it('are dropped when the page keeps no data, is removed, or its subject is retired', async () => {
@@ -110,7 +112,7 @@ function versionTests(settingsOf: SettingsOf): void {
     await views.playbookPageSaved(pageDetails(countingPosts));
     await views.ran(morning, 1);
     startedOnPages(views);
-    await views.until(morning, foldedAll(1));
+    await views.folded(morning, foldedAll(1));
 
     await views.pageSaved(morning, 2, {});
     await views.pageRemoved('reasoning/evening-posts', 2);
@@ -131,12 +133,12 @@ function movedTests(settingsOf: SettingsOf): void {
     await views.pageSaved(morning, 1, pageDetails(countingPosts));
     await views.ran(morning, 1, { underTheSubject: true });
     startedOnPages(views);
-    await views.until(morning, foldedAll(1));
+    await views.folded(morning, foldedAll(1));
 
     await views.subjectMoved(morning, beta);
 
     expect(await views.gone(morning)).toBe(true);
-    expect((await views.until(morning, foldedAll(1), beta)).view).toEqual(postsOf(1));
+    expect((await views.folded(morning, foldedAll(1), beta)).view).toEqual(postsOf(1));
   });
 
   it('are dropped under the name their subject held, and made under its new name from its own runs', async () => {
@@ -144,12 +146,12 @@ function movedTests(settingsOf: SettingsOf): void {
     await views.pageSaved(morning, 1, pageDetails(countingPosts));
     await views.ran(morning, 1, { underTheSubject: true });
     startedOnPages(views);
-    await views.until(morning, foldedAll(1));
+    await views.folded(morning, foldedAll(1));
 
     await views.subjectRenamed(morning, 'evening-social-content');
 
     expect(await views.gone(morning)).toBe(true);
-    expect((await views.until('workflow/evening-social-content', foldedAll(1))).view).toEqual(postsOf(1));
+    expect((await views.folded('workflow/evening-social-content', foldedAll(1))).view).toEqual(postsOf(1));
   });
 }
 

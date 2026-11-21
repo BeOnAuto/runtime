@@ -32,7 +32,6 @@ import {
 import { recordedReactions } from '../reaction-testing/recorded-reactions.ts';
 import { aSQLiteFile, connectedOn, onSQLite, openedOn } from '../testing/host-files.ts';
 import { recordedOptionsOf } from '../testing/host-runs.ts';
-import { until } from '../testing/until.ts';
 import { type MeasuredReads, readingMeasured } from '../waiting-testing/measured-reads.ts';
 import { reactionConsumersOf } from './reaction-consumers.ts';
 import { type ReactionStart, type StartReaction, StartRefused } from './reaction-options.ts';
@@ -257,6 +256,15 @@ function subscriptionStartsOn(database: MeasuredReads['database']) {
   return starts;
 }
 
+/** Wakes the follower, one wake after another, until what it has done holds; each wake is a step, not a wait. */
+async function wokenUntil<A>(woken: () => Promise<A>, holds: (value: A) => boolean, wakes = 100): Promise<A> {
+  const value = await woken();
+  if (holds(value) || wakes <= 1) {
+    return value;
+  }
+  return wokenUntil(woken, holds, wakes - 1);
+}
+
 describe('the follower of a host composed by a clock of its own', () => {
   it('starts a workflow its trigger matches when it is woken, over parts opened alone, with no loop and no claim', async () => {
     const store = await openWorkflowStore(await connectedOn({ store: 'sqlite', file: aSQLiteFile() }), []);
@@ -288,7 +296,7 @@ describe('the follower of a host composed by a clock of its own', () => {
       triggers: [eventTrigger({ type: 'com.acme.closed' })],
     });
     await published(store.database.store, { id: 'e1', type: 'com.acme.closed' });
-    const starts = await until(
+    const starts = await wokenUntil(
       async () => {
         await wakeUp(false);
         return reactions.starts();
@@ -366,7 +374,7 @@ describe('the consumers a shell gives the follower', () => {
     });
 
     await published(store.database.store, { id: 'e1', type: 'com.acme.closed' });
-    const handed = await until(
+    const handed = await wokenUntil(
       async () => {
         await Effect.runPromise(follower.wakeUp({ now: Date.now(), sweep: false }));
         return names;

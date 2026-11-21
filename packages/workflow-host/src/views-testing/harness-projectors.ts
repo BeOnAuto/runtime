@@ -1,4 +1,5 @@
 import type { HostDatabase } from '../database/host-database.ts';
+import { folding, restingOn, type WhenFolded } from '../folder-testing/folding-projector.ts';
 import type { HostReports } from '../host/host-reports.ts';
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import { startProjector, type Projector } from '../projector/projector.ts';
@@ -50,6 +51,8 @@ export interface HarnessProjectors {
   readonly reads: () => number;
   readonly failingDiscovery: (fails: boolean) => void;
   readonly stopProjectors: () => Promise<unknown>;
+  readonly whenFolded: WhenFolded;
+  readonly restingOn: (clock: HostClock) => HostClock;
 }
 
 export interface ProjectorsOf {
@@ -61,6 +64,7 @@ export interface ProjectorsOf {
 export function harnessProjectors({ database, reports, settingsOf }: ProjectorsOf): HarnessProjectors {
   const counting = countingDatabase(database);
   const projectors: Projector[] = [];
+  const folded = folding();
   return {
     reads: counting.reads,
     failingDiscovery: counting.failingDiscovery,
@@ -70,11 +74,14 @@ export function harnessProjectors({ database, reports, settingsOf }: ProjectorsO
         settings: settingsOf(more),
         reports,
         clock,
+        pace: restingOn(clock, folded.rested),
         sweepEveryMs,
       });
       projectors.push(projector);
       return projector;
     },
     stopProjectors: () => Promise.all(projectors.map((projector) => projector.stop())),
+    whenFolded: folded.whenFolded,
+    restingOn: (clock) => restingOn(clock, folded.rested),
   };
 }

@@ -73,7 +73,7 @@ function stoppingTests(settingsOf: SettingsOf): void {
       await threeRuns(views);
       views.start();
 
-      const kept = await views.until('runs', isStalled);
+      const kept = await views.folded('runs', isStalled);
 
       expect(kept).toMatchObject({ view: 1, folded: 1, stall: { ...stall, event: { type: 'run_succeeded' } } });
       expect(kept.stall?.event.id).toEqual(anyText);
@@ -91,7 +91,7 @@ function stoppingTests(settingsOf: SettingsOf): void {
     await threeRuns(views);
     views.start();
 
-    const kept = await views.until('runs', isStalled);
+    const kept = await views.folded('runs', isStalled);
 
     expect(kept).toMatchObject({ view: ['good'], folded: 1, stall: { kind: 'schema', line: null } });
     expect(kept.stall?.message).toMatch(/^the view: Expected a value with a length of at most 1/u);
@@ -106,9 +106,9 @@ function afterTheStallTests(settingsOf: SettingsOf): void {
     await threeRuns(views);
     views.start();
 
-    await views.until('stalling', isStalled);
+    await views.folded('stalling', isStalled);
     await views.ran('reasoning/runs', 'after the stall');
-    const kept = await views.until('counting', foldedAll(4));
+    const kept = await views.folded('counting', foldedAll(4));
     const stalling = await views.viewOf('stalling');
 
     expect([kept.view, stalling?.folded, stalling?.phase]).toEqual([4, 1, 'stalled']);
@@ -125,7 +125,7 @@ function afterTheStallTests(settingsOf: SettingsOf): void {
     clock.step(sweepMs);
     await untilTried(views, 'runs', 2);
     clock.step(sweepMs);
-    const kept = await views.until('runs', isStalled);
+    const kept = await views.folded('runs', isStalled);
 
     expect(kept).toMatchObject({ view: 1, folded: 1, stall: { kind: 'time', line: null } });
     expect(kept.stall?.message).toBe('The fold was stopped by its deadline of 10000 ms 3 times');
@@ -139,7 +139,7 @@ function lostPageTests(settingsOf: SettingsOf): void {
     await views.ranEach('reasoning/runs', [1, 2, breaksTheWorker]);
     views.start({ overtimesBeforeStall: 2, sweepEveryMs: 20 });
 
-    const kept = await views.until('outputs', isStalled);
+    const kept = await views.folded('outputs', isStalled);
 
     expect(kept).toMatchObject({
       view: [1, 2],
@@ -159,7 +159,7 @@ function lostPageTests(settingsOf: SettingsOf): void {
     const pool = secondFoldWithBudget(views.pool, 0);
     views.start({ pool, overtimesBeforeStall: 2, sweepEveryMs: 20 });
 
-    const kept = await views.until('outputs', isStalled);
+    const kept = await views.folded('outputs', isStalled);
 
     expect(kept).toMatchObject({
       view: [1, 2],
@@ -178,10 +178,10 @@ function neighbourTests(settingsOf: SettingsOf): void {
       Promise.resolve(),
     );
     views.start({ folding: delayingFolding(), clock: steppedClock(sweptFrom), overtimesBeforeStall: 1 });
-    await Promise.all(names.map((name) => views.until(name, isLive)));
+    await Promise.all(names.map((name) => views.folded(name, isLive)));
 
     await views.ran('reasoning/runs', takesItsNeighboursTime);
-    const kept = await Promise.all(names.map((name) => views.until(name, liveWith(1))));
+    const kept = await Promise.all(names.map((name) => views.folded(name, liveWith(1))));
 
     expect(kept.map(({ phase, view }) => [phase, view])).toEqual(names.map(() => ['live', 1]));
   });

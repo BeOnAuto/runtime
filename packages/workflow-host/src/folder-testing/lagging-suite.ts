@@ -28,7 +28,7 @@ export function laggingSuite(settingsOf: SettingsOf): void {
       await tallies.savedTally('succeeded', succeeded);
       await tallies.ran('reasoning/runs', 1);
       tallies.startWithTallies({ pool: overrunning.pool, clock: watched, sweepEveryMs: sweepMs });
-      await tallies.until('runs', liveWith(1));
+      await tallies.folded('runs', liveWith(1));
       await tallies.untilTally(succeeded, liveCounting(1));
       overrunning.overrunNext();
       await tallies.ran('reasoning/runs', 2);
@@ -42,11 +42,11 @@ export function laggingSuite(settingsOf: SettingsOf): void {
       const resting = await tallies.viewOf('runs');
       const apart = await readsWhile(tallies, watched, async () => {
         clock.step(sweepMs);
-        await tallies.until('runs', liveWith(3));
+        await tallies.folded('runs', liveWith(3));
       });
       const together = await readsWhile(tallies, watched, async () => {
         await tallies.ran('reasoning/runs', 4);
-        await tallies.until('runs', foldedAll(4));
+        await tallies.folded('runs', foldedAll(4));
         await tallies.untilTally(succeeded, liveCounting(4));
       });
 

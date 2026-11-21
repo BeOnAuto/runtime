@@ -1,11 +1,13 @@
 import { Effect } from 'effect';
 
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
-import { until } from './until.ts';
+import { signals, type Signals } from './signals.ts';
 
 export interface WatchedClock extends HostClock {
   readonly asked: () => readonly number[];
   readonly sleeping: () => number;
+  /** Answers once a read of the clock holds, read again each time a sleep is asked for or ends. */
+  readonly when: Signals['when'];
 }
 
 interface Reading {
@@ -20,22 +22,26 @@ interface Sleeps {
 export function watchedClock(clock: HostClock): WatchedClock {
   const asked: number[] = [];
   const counts = { sleeping: 0 };
+  const seen = signals();
   return {
     now: clock.now,
     sleep: (milliseconds) =>
       Effect.suspend(() => {
         asked.push(milliseconds);
         counts.sleeping += 1;
+        seen.changed();
         return clock.sleep(milliseconds);
       }).pipe(
         Effect.ensuring(
           Effect.sync(() => {
             counts.sleeping -= 1;
+            seen.changed();
           }),
         ),
       ),
     asked: () => [...asked],
     sleeping: () => counts.sleeping,
+    when: seen.when,
   };
 }
 
@@ -44,7 +50,7 @@ export function watchedSystemClock(): WatchedClock {
 }
 
 async function untilAsleepOnceAsked(clock: WatchedClock, sleeps: number): Promise<void> {
-  await until(
+  await clock.when(
     (): Sleeps => ({ asked: clock.asked().length, sleeping: clock.sleeping() }),
     ({ asked, sleeping }) => asked >= sleeps && sleeping > 0,
   );

@@ -70,19 +70,21 @@ describe('the reads of the host database in one snapshot, on SQLite in memory', 
   it('hold the one connection of a private database, so a write asked meanwhile lands once they end', async () => {
     const database = await withOneRow(() => Promise.resolve({ store: 'sqlite', file: ':memory:' }));
     const firstRead = Promise.withResolvers<void>();
+    const writeAsked = Promise.withResolvers<void>();
 
     const reading = Effect.runPromise(
       database.readConsistently((read) =>
         Effect.gen(function* () {
           const before = yield* figuresOf(read);
           firstRead.resolve();
-          yield* Effect.sleep(50);
+          yield* Effect.promise(() => writeAsked.promise);
           return [...before, ...(yield* figuresOf(read))];
         }),
       ),
     );
     await firstRead.promise;
     const writing = Effect.runPromise(database.write(raised));
+    writeAsked.resolve();
     const read = await reading;
     await writing;
 

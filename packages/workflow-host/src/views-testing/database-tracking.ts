@@ -1,15 +1,19 @@
 import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import { until } from '../testing/until.ts';
+import { signals, type Signals } from '../testing/signals.ts';
 
 export interface DatabaseTracking {
   readonly over: (database: HostDatabase) => HostDatabase;
   readonly busy: () => number;
+  readonly changed: Signals['changed'];
+  readonly when: Signals['when'];
+  readonly whenRead: Signals['whenRead'];
 }
 
 export function databaseTracking(): DatabaseTracking {
   const counts = { busy: 0 };
+  const seen = signals();
   const busyWhile = <A, E>(work: Effect.Effect<A, E>): Effect.Effect<A, E> =>
     Effect.suspend(() => {
       counts.busy += 1;
@@ -18,6 +22,7 @@ export function databaseTracking(): DatabaseTracking {
       Effect.ensuring(
         Effect.sync(() => {
           counts.busy -= 1;
+          seen.changed();
         }),
       ),
     );
@@ -34,11 +39,13 @@ export function databaseTracking(): DatabaseTracking {
             return await database.store.readRecordedOfKeys(keys, selection, page);
           } finally {
             counts.busy -= 1;
+            seen.changed();
           }
         },
       },
     }),
     busy: () => counts.busy,
+    ...seen,
   };
 }
 
@@ -52,7 +59,7 @@ export function untilOnlyTheHeldWait(
   tracking: DatabaseTracking,
   held: number,
 ): Promise<unknown> {
-  return until(
+  return tracking.when(
     (): Holding => ({ waiting: waiting(), busy: tracking.busy() }),
     (now) => now.waiting === held && now.busy === 0,
   );

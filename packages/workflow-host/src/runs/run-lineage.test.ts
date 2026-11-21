@@ -8,7 +8,6 @@ import { insertedListener } from '../listeners/listener-rows.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
-import { until } from '../testing/until.ts';
 import { runKeyOf, runLogStreamOf } from './run-address.ts';
 import { lineageOfRecord } from './run-lineage.ts';
 
@@ -54,7 +53,7 @@ describe('the lineage the host writes with each record of a run', () => {
     hosted.know(runId);
     const document = workflow('do:\n  - pause: { wait: PT0.05S }');
     await Effect.runPromise(hosted.host.start(run, { ...startOf(document), attributes: given }));
-    await until(hosted.settlements, (settled) => settled.size > 0);
+    await hosted.when(hosted.settlements, (settled) => settled.size > 0);
 
     expect(await lineagesOf(file)).toEqual([
       { id: messageIdOf(stream, 1), causationId: start, correlationId: 'root' },
@@ -73,7 +72,7 @@ describe('the lineage of the fire of a timer', () => {
     await first.host.stop();
     const second = await hostedOn({ store: 'sqlite', file });
     second.know(runId);
-    await until(second.settlements, (settled) => settled.size > 0);
+    await second.when(second.settlements, (settled) => settled.size > 0);
 
     expect(await lineagesOf(file)).toEqual([
       { id: messageIdOf(stream, 1), causationId: null, correlationId: runId },
@@ -96,7 +95,7 @@ describe('the lineage of a record nothing waited for', () => {
         (index) => hosted.host.deliver(run, { id: `e${index}`, type: 'nobody listens' }),
       ),
     );
-    await until(hosted.settlements, (settled) => settled.size > 0);
+    await hosted.when(hosted.settlements, (settled) => settled.size > 0);
     const lineages = await lineagesOf(file);
 
     expect([lineages[1], lineages.length]).toEqual([

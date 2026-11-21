@@ -15,7 +15,6 @@ import {
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { refusedWhile, rejectedWith, type FailingStart } from '../reaction-testing/recorded-reactions.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
-import { until } from '../testing/until.ts';
 
 const activatedAt = Date.parse(at);
 
@@ -54,7 +53,7 @@ async function ticking(failure?: FailingStart): Promise<Ticking> {
 }
 
 async function startsReaching(reacting: ReactingHost, count: number) {
-  const starts = await until(
+  const starts = await reacting.whenRead(
     () => Promise.resolve(reacting.reactions.starts()),
     (found) => found.length >= count,
   );
@@ -62,7 +61,7 @@ async function startsReaching(reacting: ReactingHost, count: number) {
 }
 
 function refusalsOf(reacting: ReactingHost) {
-  return until(
+  return reacting.whenRead(
     () =>
       Effect.runPromise(
         rowsOf(
@@ -232,7 +231,7 @@ describe('a schedule whose workflow holds no name in the ledger', () => {
       ),
     );
     clock.moveTo(activatedAt + aMinute);
-    const rows = await until(
+    const rows = await reacting.whenRead(
       () =>
         Effect.runPromise(
           rowsOf(

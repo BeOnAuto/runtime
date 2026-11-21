@@ -5,7 +5,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
+import { signals, type Signals } from '../testing/signals.ts';
 import { type WatchedClock, watchedSystemClock } from '../testing/watched-clock.ts';
 import { type DueTimer, sqlTimers, type TimerTable } from '../timers/sql-timers.ts';
 import { type FailedRounds, failedRoundsInMemory, failedRoundsOn } from './failed-rounds.ts';
@@ -23,6 +23,7 @@ interface Looping {
   readonly fired: () => readonly string[];
   readonly troubles: () => readonly string[];
   readonly sweeps: () => number;
+  readonly when: Signals['when'];
 }
 
 interface TimerReadsFailing {
@@ -72,6 +73,7 @@ async function looping(options: LoopingOptions): Promise<Looping> {
   const fired: string[] = [];
   const troubles: string[] = [];
   const counts = { sweeps: 0 };
+  const seen = signals();
   const clock = watchedSystemClock();
   const alarm: { armed: (dueAt: number) => void } = { armed: Function.constVoid };
   const timers = sqlTimers(database, (dueAt) => {
@@ -86,16 +88,24 @@ async function looping(options: LoopingOptions): Promise<Looping> {
       sweep: () =>
         Effect.suspend(() => {
           counts.sweeps += 1;
+          seen.changed();
           return sweep();
         }).pipe(Effect.as({ runs: 0, timersArmedAgain: 0 })),
     },
     fire: (timer) =>
       Effect.andThen(
         fire(timer),
-        Effect.sync(() => fired.push(timer.timerId)),
+        Effect.sync(() => {
+          fired.push(timer.timerId);
+          seen.changed();
+        }),
       ),
     resume: () => Effect.succeed(0),
-    trouble: (what) => Effect.sync(() => troubles.push(what)),
+    trouble: (what) =>
+      Effect.sync(() => {
+        troubles.push(what);
+        seen.changed();
+      }),
     sweepEveryMs,
   };
   const loop = startLoop(parts, (signal) => hostWakeUp(parts, signal));
@@ -113,6 +123,7 @@ async function looping(options: LoopingOptions): Promise<Looping> {
     fired: () => fired,
     troubles: () => troubles,
     sweeps: () => counts.sweeps,
+    when: seen.when,
   };
 }
 
@@ -265,10 +276,10 @@ const anError: unknown = expect.any(Error);
 describe('the loop of the host, firing timers', () => {
   it('fires a timer when it is due, woken from a long wait by the timer being armed', async () => {
     const loop = await looping({ sweepEveryMs: 3_600_000 });
-    await until(loop.clock.asked, (asked) => asked.some((milliseconds) => milliseconds > 60_000));
+    await loop.clock.when(loop.clock.asked, (asked) => asked.some((milliseconds) => milliseconds > 60_000));
 
     const dueAt = await loop.arm('1', 30);
-    const fired = await until(loop.fired, (timers) => timers.length > 0);
+    const fired = await loop.when(loop.fired, (timers) => timers.length > 0);
 
     expect([fired, Date.now() >= dueAt, loop.sweeps()]).toEqual([['1'], true, 1]);
   });
@@ -277,7 +288,7 @@ describe('the loop of the host, firing timers', () => {
     const loop = await looping({ sweepEveryMs: 40, fire: failingOnce() });
 
     await loop.arm('1', 0);
-    const fired = await until(loop.fired, (timers) => timers.length > 0);
+    const fired = await loop.when(loop.fired, (timers) => timers.length > 0);
 
     expect([fired, loop.troubles()]).toEqual([
       ['1'],
@@ -290,7 +301,7 @@ describe('the loop of the host, sweeping and stopping', () => {
   it('reports a sweep that failed, and sweeps again at the next interval', async () => {
     const loop = await looping({ sweepEveryMs: 20, sweep: () => Effect.die(new Error('The ledger is down')) });
 
-    await until(loop.sweeps, (sweeps) => sweeps >= 2);
+    await loop.when(loop.sweeps, (sweeps) => sweeps >= 2);
 
     expect(new Set(loop.troubles())).toEqual(new Set(['A sweep of the runs failed; the next sweep tries again']));
   });
@@ -299,7 +310,7 @@ describe('the loop of the host, sweeping and stopping', () => {
     const loop = await looping({ sweepEveryMs: 20, readsFailing: { due: 1, next: 1 } });
 
     await loop.arm('1', 0);
-    const fired = await until(loop.fired, (timers) => timers.length > 0);
+    const fired = await loop.when(loop.fired, (timers) => timers.length > 0);
 
     expect([fired, new Set(loop.troubles())]).toEqual([
       ['1'],
@@ -483,10 +494,10 @@ describe('a wake-up of the host whose round failed', () => {
 
   it('puts the loop of the server to sleep until the retry, not woken again at once while a timer is due', async () => {
     const loop = await looping({ sweepEveryMs: 3_600_000, readsFailing: { due: Number.POSITIVE_INFINITY, next: 0 } });
-    await until(loop.clock.asked, (asked) => asked.length > 0);
+    await loop.clock.when(loop.clock.asked, (asked) => asked.length > 0);
 
     await loop.arm('1', 0);
-    const asked = await until(loop.clock.asked, (sleeps) => sleeps.length > 1);
+    const asked = await loop.clock.when(loop.clock.asked, (sleeps) => sleeps.length > 1);
 
     expect(asked.slice(0, 2).map((milliseconds) => Math.round(milliseconds / 60_000))).toEqual([1, 2]);
     expect(loop.fired()).toEqual([]);

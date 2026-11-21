@@ -9,7 +9,6 @@ import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, leaseOn, openedOn, untilRenewedBy } from '../testing/host-files.ts';
 import { databaseSettingsOf, hostIn, type ProcessDatabasesOf } from '../testing/host-processes.ts';
 import { hostedOn } from '../testing/host-runs.ts';
-import { until } from '../testing/until.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -68,7 +67,7 @@ export function leaseSuite(databases: ProcessDatabasesOf): void {
     await untilRenewedBy(leases, held, 3);
     const performedWhileBothRan = second.calls().length;
     await first.killed();
-    const settled = await until(second.settlements, (settlements) => settlements.size > 0);
+    const settled = await second.when(second.settlements, (settlements) => settlements.size > 0);
 
     expect(refused).toBeInstanceOf(HostElsewhere);
     expect(performedWhileBothRan).toBe(0);
@@ -83,7 +82,7 @@ export function leaseSuite(databases: ProcessDatabasesOf): void {
     const second = await hostedOn(databaseSettingsOf(database), { sweepEveryMs, holder: 'second' });
 
     await first.host.stop();
-    const notes = await until(second.notes, (noted) => noted.length > 1);
+    const notes = await second.when(second.notes, (noted) => noted.length > 1);
 
     expect(notes).toMatchObject([
       { kind: 'standing_by', holder: 'first' },
@@ -133,12 +132,22 @@ function furtherWakeUpsSuite(databases: ProcessDatabasesOf): void {
       holder: 'first',
       wakeUps: [ofTheFirst.wakeUpWith],
     });
-    await until(ofTheFirst.told, (told) => told.includes('woken'));
-    await hostedOn(databaseSettingsOf(database), { sweepEveryMs, holder: 'second', wakeUps: [ofTheSecond.wakeUpWith] });
+    await first.whenRead(
+      () => ofTheFirst.told(),
+      (told) => told.includes('woken'),
+    );
+    const second = await hostedOn(databaseSettingsOf(database), {
+      sweepEveryMs,
+      holder: 'second',
+      wakeUps: [ofTheSecond.wakeUpWith],
+    });
     const whileTheFirstHeld = ofTheSecond.told();
 
     await first.host.stop();
-    await until(ofTheSecond.told, (told) => told.includes('woken'));
+    await second.whenRead(
+      () => ofTheSecond.told(),
+      (told) => told.includes('woken'),
+    );
 
     expect([ofTheFirst.told(), whileTheFirstHeld, ofTheSecond.told()]).toEqual([
       ['made', 'woken', 'stopped'],

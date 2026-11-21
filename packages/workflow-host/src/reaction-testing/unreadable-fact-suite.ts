@@ -4,7 +4,6 @@ import { Context } from 'effect';
 import { expect, it } from 'vitest';
 
 import type { SettingsOf } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
 import {
   causesOf,
   heldUntil,
@@ -78,7 +77,7 @@ function passedWhileKeptInline(settingsOf: SettingsOf) {
   it('passes a fact this release cannot read over, said, as before, while payloads are kept inline', async () => {
     const holding = await unreadableBefore(settingsOf, false);
 
-    const started = await until(
+    const started = await holding.reacting.whenRead(
       () => Promise.resolve(causesOf(holding)),
       (causes) => causes.length === 1,
     );
@@ -112,7 +111,7 @@ function passedWhenItsTypeIsUnknown(settingsOf: SettingsOf) {
     );
     await published(store, { id: 's1', type: 'com.acme.sentinel' });
 
-    const started = await until(
+    const started = await holding.reacting.whenRead(
       () => Promise.resolve(causesOf(holding)),
       (causes) => causes.length === 1,
     );

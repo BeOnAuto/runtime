@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { at, playbookCreated, recorded, testDefinitionsPlaced } from '../reaction-testing/playbook-writes.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
-import { until } from '../testing/until.ts';
 import { pendingCancelRowsAfter } from '../waiting/pending-cancel-rows.ts';
 import { startedByAHostThatDied } from './crashed-host.ts';
 import { followedThroughTheLatest, settledIn, untilFollowed } from './followed-host.ts';
@@ -45,9 +44,9 @@ function diedAfterTheStart(settingsOf: SettingsOf): void {
       await playbookCreated(database.store, 'alpha');
       await testDefinitionsPlaced(database.store);
       const first = await hostedOn(settings);
-      await untilFollowed(database);
+      await untilFollowed(database, first);
       await startedThenCancelled(database);
-      await followedThroughTheLatest(database);
+      await followedThroughTheLatest(database, first);
       await first.host.stop();
       await startedByAHostThatDied(await lostRunPlaced(database), lostRunKey, lostStart);
 
@@ -74,21 +73,21 @@ function endedWithoutStarting(settingsOf: SettingsOf): void {
       await playbookCreated(database.store, 'alpha');
       await testDefinitionsPlaced(database.store);
       const first = await hostedOn(settings);
-      await untilFollowed(database);
+      await untilFollowed(database, first);
       const pending = () => Effect.runPromise(pendingCancelRowsAfter(database, '', 10));
       await startedThenCancelled(database);
       await recorded(database.store, filedRunOf(strandedId).stream, strandedCancel, {
         ...ofTheRun,
         runId: strandedId,
       });
-      const kept = await until(pending, (rows) => rows.length === 2);
+      const kept = await first.whenRead(pending, (rows) => rows.length === 2);
       await recorded(database.store, lostStream, rejectedUnstarted, { ...ofTheRun, runId: lostRunId });
-      await followedThroughTheLatest(database);
+      await followedThroughTheLatest(database, first);
       const keptAfterTheEnding = await pending();
       await first.host.stop();
 
-      await hostedOn(settings);
-      const left = await until(pending, (rows) => rows.length === 1);
+      const next = await hostedOn(settings);
+      const left = await next.whenRead(pending, (rows) => rows.length === 1);
 
       expect(kept.find(({ runKey }) => runKey === lostRunKey)).toEqual({
         runKey: lostRunKey,

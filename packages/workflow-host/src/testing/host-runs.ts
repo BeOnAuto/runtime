@@ -8,7 +8,14 @@ import { storeSettingsOf, type HostedDatabase } from '../ledger-testing/hosted-d
 import { recordedReactions } from '../reaction-testing/recorded-reactions.ts';
 import { recordedWaiting } from '../waiting-testing/recorded-waiting.ts';
 import { testMachine } from './host-documents.ts';
-import { recordingReports, recordingSettlements, type RecordingReports } from './recording-reports.ts';
+import {
+  recordingReports,
+  recordingSettlements,
+  type RecordingReports,
+  restingOn,
+  signals,
+  type Signals,
+} from './recording-reports.ts';
 
 interface HostRecords {
   readonly calls: () => readonly StartCall[];
@@ -18,6 +25,10 @@ interface HostRecords {
   readonly troubles: () => readonly string[];
   readonly notes: RecordingReports['notes'];
   readonly know: (runId: string) => void;
+  /** Answers once a read of what the host called, settled or reported holds, read again after each record. */
+  readonly when: Signals['when'];
+  /** Answers once a read that answers later holds, read again after each record and each time the host rests. */
+  readonly whenRead: Signals['whenRead'];
 }
 
 export interface HostedRuns extends HostRecords {
@@ -68,14 +79,16 @@ function passedThrough(options: HostedOptions): PassedThrough {
 
 export function recordedOptionsOf(options: HostedOptions = {}): RecordedOptions {
   const performed: StartCall[] = [];
-  const recorded = recordingReports();
-  const settling = recordingSettlements(options.ledgerDown ?? ledgerUp);
+  const seen = signals();
+  const recorded = recordingReports(seen);
+  const settling = recordingSettlements(options.ledgerDown ?? ledgerUp, seen);
   return {
     options: {
       machine: testMachine,
       perform: (call) =>
         Effect.suspend(() => {
           performed.push(call);
+          seen.changed();
           return (options.answer ?? answeredWithNull)(call);
         }),
       settle: settling.settle,
@@ -85,6 +98,7 @@ export function recordedOptionsOf(options: HostedOptions = {}): RecordedOptions 
       reactions: options.reactions ?? recordedReactions().options,
       waiting: options.waiting ?? recordedWaiting().options,
       ...passedThrough(options),
+      clock: restingOn(seen, options.clock),
     },
     calls: () => performed,
     settlements: settling.settlements,
@@ -93,6 +107,8 @@ export function recordedOptionsOf(options: HostedOptions = {}): RecordedOptions 
     troubles: recorded.troubles,
     notes: recorded.notes,
     know: settling.know,
+    when: seen.when,
+    whenRead: seen.whenRead,
   };
 }
 

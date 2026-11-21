@@ -8,7 +8,6 @@ import { systemClock } from '../loop/host-clock.ts';
 import { startOf, workflow } from '../testing/host-documents.ts';
 import { recordedOptionsOf } from '../testing/host-runs.ts';
 import { openedWithRuns, runKeyAt, runLogAt } from '../testing/started-runs.ts';
-import { until } from '../testing/until.ts';
 
 const calling = workflow('do:\n  - notify: { call: notify, with: { to: ada } }');
 
@@ -72,8 +71,8 @@ export async function ranOn(calls: readonly string[], paused: readonly string[] 
       Effect.forEach(paused, (runId) => started(runId, pausing), { discard: true }),
     ),
   );
-  await until(
-    () => Promise.resolve(recorded.settleAttempts()),
+  await recorded.when(
+    () => recorded.settleAttempts(),
     (attempts) => attempts >= calls.length,
   );
   await Effect.runPromise(parts.executor.idle());

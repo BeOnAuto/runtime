@@ -6,25 +6,43 @@ import { connectedOn, type DatabaseSettings } from '../testing/host-files.ts';
 import { recordingReports, type RecordingReports } from '../testing/recording-reports.ts';
 import { harnessProjectors, type HarnessProjectors } from './harness-projectors.ts';
 import { playbookAppends, type PlaybookAppends } from './playbook-appends.ts';
-import { testFoldPoolOf } from './test-fold-workers.ts';
-import { settingsOver, type ViewSettingsOf, type ViewsProjecting } from './view-documents.ts';
+import { testFoldPoolOf, testFoldThreadPoolOf } from './test-fold-workers.ts';
+import { settingsOver, type Playbook, type ViewSettingsOf, type ViewsProjecting } from './view-documents.ts';
 import { viewReadingOf, type ViewReading } from './view-reading.ts';
+
+type ProgramPool = ReturnType<typeof testFoldPoolOf>;
+
+type KeptView = NonNullable<Awaited<ReturnType<ViewReading['viewOf']>>>;
 
 export interface ViewHarness extends PlaybookAppends, ViewReading, HarnessProjectors {
   readonly store: WorkflowStore;
   readonly reports: RecordingReports;
-  readonly pool: ReturnType<typeof testFoldPoolOf>;
+  readonly pool: ProgramPool;
   readonly appends: AppendSignal;
   readonly settingsOf: ViewSettingsOf;
+  readonly folded: (name: string, holds: (view: KeptView) => boolean, playbook?: Playbook) => Promise<KeptView>;
+  readonly gone: (name: string) => Promise<boolean>;
 }
 
-export async function viewHarness(
+export function viewHarness(
   settings: DatabaseSettings,
   poolSettings: Parameters<typeof testFoldPoolOf>[0] = {},
   besides: ViewsProjecting['besides'] = [],
 ): Promise<ViewHarness> {
+  return viewHarnessOver(settings, testFoldPoolOf(poolSettings), besides);
+}
+
+/** The harness of `viewHarness`, its folds served on the thread of the test, for a test that breaks no worker. */
+export function viewHarnessOnTheThread(settings: DatabaseSettings): Promise<ViewHarness> {
+  return viewHarnessOver(settings, testFoldThreadPoolOf({}), []);
+}
+
+async function viewHarnessOver(
+  settings: DatabaseSettings,
+  pool: ProgramPool,
+  besides: ViewsProjecting['besides'],
+): Promise<ViewHarness> {
   const reports = recordingReports();
-  const pool = testFoldPoolOf(poolSettings);
   const appends = appendSignal();
   const settingsOf = settingsOver(pool, appends);
   const store = await openWorkflowStore(await connectedOn(settings), settingsOf({ besides }).folders);
@@ -33,9 +51,22 @@ export async function viewHarness(
     await projectors.stopProjectors();
     await pool.close();
   });
+  const reading = viewReadingOf(store.database);
   return {
     ...playbookAppends(store.database.store, appends),
-    ...viewReadingOf(store.database),
+    ...reading,
+    folded: (name, holds, playbook) =>
+      projectors.whenFolded(
+        () => reading.viewOf(name, playbook),
+        (read): read is KeptView => read !== undefined && holds(read),
+      ),
+    gone: async (name) => {
+      await projectors.whenFolded(
+        () => reading.viewOf(name),
+        (read) => read === undefined,
+      );
+      return true;
+    },
     ...projectors,
     store,
     reports,

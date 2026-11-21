@@ -59,12 +59,12 @@ function sharingTests(settingsOf: SettingsOf): void {
     await tallies.ranEach('reasoning/runs', [1, 2]);
     const clock = watchedSystemClock();
     tallies.startWithTallies({ sweepEveryMs: 60_000, clock });
-    await tallies.until('runs', liveWith(2));
+    await tallies.folded('runs', liveWith(2));
     await tallies.untilTally(succeeded, liveCounting(2));
 
     const shared = await readsWhile(tallies, clock, async () => {
       await tallies.ran('reasoning/runs', 3);
-      await tallies.until('runs', foldedAll(3));
+      await tallies.folded('runs', foldedAll(3));
       await tallies.untilTally(succeeded, liveCounting(3));
     });
 

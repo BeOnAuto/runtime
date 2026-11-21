@@ -6,7 +6,6 @@ import { startOf, workflow } from '../testing/host-documents.ts';
 import { connectedOn, type SettingsOf } from '../testing/host-files.ts';
 import { recordedOptionsOf, type RecordedOptions } from '../testing/host-runs.ts';
 import { steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
-import { until } from '../testing/until.ts';
 import { recordedWaiting } from '../waiting-testing/recorded-waiting.ts';
 import { closingHostOver, runKey, runId, type ClosingHost, type End } from './closing-host.ts';
 
@@ -38,8 +37,8 @@ function endedBy(host: ClosingHost, clock: SteppedClock, recorded: RecordedOptio
     const started: Started = { ...twoCalls, kind: 'started', runId: runKey, at: clock.now() };
     await host.placed();
     await Effect.runPromise(host.parts().submitted(started));
-    await until(
-      () => Promise.resolve(recorded.settleAttempts()),
+    await recorded.when(
+      () => recorded.settleAttempts(),
       (attempts) => attempts > 0,
     );
     await Effect.runPromise(host.parts().executor.idle());

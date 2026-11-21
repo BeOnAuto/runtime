@@ -12,7 +12,6 @@ import {
 } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
 import { orgSweepsOn, orgsInASweep, waitingInASweep, type Sweep } from './org-sweeps.ts';
 
 interface Swept {
@@ -214,7 +213,7 @@ const beta = 'playbook/acme/beta/';
 const closed = eventTrigger({ type: 'com.acme.closed' });
 
 function startsReaching(reacting: ReactingHost, count: number) {
-  return until(
+  return reacting.whenRead(
     () => Promise.resolve(reacting.reactions.starts()),
     (starts) => starts.length >= count,
   );

@@ -1,7 +1,4 @@
 import { Effect } from 'effect';
-import { expect } from 'vitest';
-
-import { until } from '../testing/until.ts';
 
 export { steppedClock } from '../testing/stepped-clock.ts';
 import { rowsOfPlaybook } from '../views/view-reconciling.ts';
@@ -52,8 +49,9 @@ export async function overtimesOf(views: ViewHarness, name: string): Promise<num
   return rows.find((row) => row.name === name)?.overtimes;
 }
 
-export function untilTried(views: ViewHarness, name: string, overtimes: number): Promise<void> {
-  return until(async () => {
-    expect(await overtimesOf(views, name)).toBe(overtimes);
-  });
+export async function untilTried(views: ViewHarness, name: string, overtimes: number): Promise<void> {
+  await views.whenFolded(
+    () => overtimesOf(views, name),
+    (tried) => tried === overtimes,
+  );
 }

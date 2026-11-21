@@ -46,14 +46,14 @@ describeOnPostgreSQL('the views of the projector', (aDatabase) => {
       await views.saved('outputs', collecting);
       const clock = watchedSystemClock();
       views.start({ clock });
-      await views.until('outputs', isLive);
+      await views.folded('outputs', isLive);
       const open = await aRunLeftOpen(connectionString, 'late');
 
       await views.ran('reasoning/after', 'after');
       await untilAWholeWakeHasPassed(clock);
       const held = await views.viewOf('outputs');
       await open.query('COMMIT');
-      const folded = await views.until('outputs', foldedAll(2));
+      const folded = await views.folded('outputs', foldedAll(2));
 
       expect([held?.view, folded.view]).toEqual([[], ['late', 'after']]);
     });

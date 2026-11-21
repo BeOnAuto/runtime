@@ -2,7 +2,6 @@ import { moduleOfSource } from '@on.auto/workflow-engine/testing';
 import { describe, expect, it } from 'vitest';
 
 import { onSQLite } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
 import { busyOnce } from '../views-testing/pool-faults.ts';
 import { foldingWorker } from '../views-testing/test-fold-workers.ts';
 import {
@@ -101,7 +100,7 @@ describe('a page of folds the pool cannot finish', () => {
       await views.ran('reasoning/runs', 1);
       views.start(triesWithADeadlineOf(foldDeadlineMs));
 
-      const kept = await views.until('runs', isStalled);
+      const kept = await views.folded('runs', isStalled);
 
       expect(kept).toMatchObject({ view: 0, folded: 0, stall: { ...stall, line: null } });
     },
@@ -115,7 +114,7 @@ describe('a page of folds the pool cannot finish', () => {
       await views.ran('reasoning/runs', 1);
       views.start(triesWithADeadlineOf(foldDeadlineMs));
 
-      const troubles = await until(views.reports.troubles, (reported) => reported.length > 1);
+      const troubles = await views.reports.when(views.reports.troubles, (reported) => reported.length > 1);
       const kept = await views.viewOf('runs');
 
       expect(kept).toMatchObject({ phase: 'rebuilding', folded: 0 });
@@ -130,7 +129,7 @@ describe('a page of folds the pool cannot finish', () => {
     const busy = busyOnce(views.pool);
     views.start({ pool: busy.pool });
 
-    const kept = await views.until('runs', foldedAll(1));
+    const kept = await views.folded('runs', foldedAll(1));
 
     expect([kept.view, busy.folds(), views.reports.troubles()]).toEqual([1, 2, []]);
   });
@@ -144,7 +143,7 @@ describe('a page of folds lost twice', () => {
     await views.ranEach('reasoning/runs', [1, 2]);
     views.start(triesWithADeadlineOf(aDeadlineNoFoldReaches));
 
-    const kept = await views.until('runs', isStalled);
+    const kept = await views.folded('runs', isStalled);
 
     expect(kept).toMatchObject({
       view: 0,
@@ -172,7 +171,7 @@ describe('a projector stopped while it folds', () => {
 
     const second = await viewHarness(settings);
     second.start();
-    const kept = await second.until('outputs', foldedAll(3));
+    const kept = await second.folded('outputs', foldedAll(3));
 
     expect(interrupted?.folded).toBeLessThan(3);
     expect(kept.view).toEqual([1, 2, 3]);

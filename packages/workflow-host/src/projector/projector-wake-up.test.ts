@@ -6,7 +6,6 @@ import { projectorWakeUp, someFolder, type HostDatabase, type NextWake } from '.
 import { onSQLite } from '../testing/host-files.ts';
 import { projectedFolders, type ProjectedFolders } from '../testing/index.ts';
 import { recordingReports } from '../testing/recording-reports.ts';
-import { until } from '../testing/until.ts';
 
 const alpha = 'playbook/acme/alpha/';
 
@@ -77,12 +76,15 @@ async function talliedRunOf({ append }: ProjectedFolders): Promise<void> {
   );
 }
 
-function liveAfterWaking({ wakeUp, store }: WokenProjector): Promise<unknown> {
-  return until(async () => {
-    await wakeUp(false);
-    const [row] = await Effect.runPromise(talliesOf(store.database, alpha));
-    expect([row?.phase, row?.counted]).toEqual(['live', 1]);
-  });
+/** Wakes the projector, one wake after another, until its row is live; each wake is a step, not a wait. */
+async function liveAfterWaking(projector: WokenProjector, wakes = 100): Promise<void> {
+  await projector.wakeUp(false);
+  const [row] = await Effect.runPromise(talliesOf(projector.store.database, alpha));
+  if ((row?.phase !== 'live' || row.counted !== 1) && wakes > 1) {
+    await liveAfterWaking(projector, wakes - 1);
+    return;
+  }
+  expect([row?.phase, row?.counted]).toEqual(['live', 1]);
 }
 
 describe('the projector of a host composed by a clock of its own', () => {

@@ -16,7 +16,6 @@ import {
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { refusedWhile, rejectedFor } from '../reaction-testing/recorded-reactions.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
-import { until } from '../testing/until.ts';
 
 const closed = eventTrigger({ type: 'com.acme.closed' });
 
@@ -29,7 +28,7 @@ function startedWorkflows({ reactions }: ReactingHost): readonly string[] {
 }
 
 function startsReaching(reacting: ReactingHost, count: number) {
-  return until(
+  return reacting.whenRead(
     () => Promise.resolve(reacting.reactions.starts()),
     (starts) => starts.length >= count,
   );
@@ -37,7 +36,7 @@ function startsReaching(reacting: ReactingHost, count: number) {
 
 async function sentinelPassed(reacting: ReactingHost, id: string): Promise<void> {
   await published(reacting.database.store, { id, type: 'com.acme.sentinel' });
-  await until(
+  await reacting.whenRead(
     () => Promise.resolve(startedWorkflows(reacting)),
     (workflows) => workflows.includes('watch'),
   );
@@ -172,7 +171,7 @@ describe('a start the playbook keeps refusing', () => {
     await definitionRecorded(store, { name: 'close', version: 1, triggers: [closed] });
     await published(store, { id: 'e1', type: 'com.acme.closed' });
 
-    const refusals = await until(
+    const refusals = await reacting.whenRead(
       () =>
         Effect.runPromise(
           rowsOf(RefusalRow, reacting.database.read(statement`SELECT reason FROM workflow_reaction_refusals`)),

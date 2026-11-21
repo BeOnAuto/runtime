@@ -18,18 +18,18 @@ function joiningTests(settingsOf: SettingsOf): void {
     await views.ran('reasoning/b', 1);
     const clock = watchedSystemClock();
     views.start({ sweepEveryMs: 60_000, clock });
-    await views.until('a', liveWith(1));
-    await views.until('b', liveWith(1));
+    await views.folded('a', liveWith(1));
+    await views.folded('b', liveWith(1));
 
     const sharedRead = await readsWhile(views, clock, async () => {
       await views.ran('reasoning/a', 2);
-      await views.until('a', foldedAll(2));
+      await views.folded('a', foldedAll(2));
     });
     await views.saved('c', countingRunsOf('reasoning/a'));
-    await views.until('c', isLive);
+    await views.folded('c', isLive);
     const afterJoining = await readsWhile(views, clock, async () => {
       await views.ran('reasoning/b', 2);
-      await views.until('b', foldedAll(2));
+      await views.folded('b', foldedAll(2));
     });
     const folded = await Promise.all(['a', 'b', 'c'].map(async (name) => (await views.viewOf(name))?.view));
 
@@ -47,11 +47,11 @@ function slotTests(settingsOf: SettingsOf): void {
       Array.from({ length: 1500 }, (_, run) => run),
     );
     views.start({ pagesPerWake: 2, rebuildsAtOnce: 2 });
-    await views.until('live', isLive);
+    await views.folded('live', isLive);
 
     await views.saved('second', counting);
     await views.saved('third', counting);
-    const kept = await Promise.all(['live', 'second', 'third'].map((name) => views.until(name, liveWith(1500))));
+    const kept = await Promise.all(['live', 'second', 'third'].map((name) => views.folded(name, liveWith(1500))));
 
     expect(kept.map(({ view }) => view)).toEqual([1500, 1500, 1500]);
   });

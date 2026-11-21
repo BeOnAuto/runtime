@@ -10,10 +10,10 @@ function rebuildTests(settingsOf: SettingsOf): void {
     await views.saved('runs', counting);
     await views.ranEach('reasoning/runs', [1, 2]);
     views.start();
-    const first = await views.until('runs', foldedAll(2));
+    const first = await views.folded('runs', foldedAll(2));
 
     await views.saved('runs', detailsOf(foldOf('return view + 10;'), succeeded, { initial: 0 }));
-    const second = await views.until('runs', liveAt(2));
+    const second = await views.folded('runs', liveAt(2));
     await views.retired('runs');
     const retired = await views.gone('runs');
 
@@ -25,10 +25,10 @@ function rebuildTests(settingsOf: SettingsOf): void {
     await views.saved('runs', detailsOf(foldOf('throw new Error("version one");'), succeeded, { initial: 0 }));
     await views.ran('reasoning/runs', 1);
     views.start();
-    await views.until('runs', isStalled);
+    await views.folded('runs', isStalled);
 
     await views.saved('runs', counting);
-    const repaired = await views.until('runs', liveAt(2));
+    const repaired = await views.folded('runs', liveAt(2));
 
     expect(repaired).toMatchObject({ view: 1, folded: 1 });
     expect(repaired).not.toHaveProperty('stall');
@@ -46,8 +46,8 @@ function discoveryTests(settingsOf: SettingsOf): void {
     await views.saved('runs', counting, beta);
     await views.ran('reasoning/runs', 1, { playbook: beta });
     const [inAlpha, inBeta] = await Promise.all([
-      views.until('runs', foldedAll(1), alpha),
-      views.until('runs', foldedAll(1), beta),
+      views.folded('runs', foldedAll(1), alpha),
+      views.folded('runs', foldedAll(1), beta),
     ]);
 
     expect([inAlpha.view, inBeta.view]).toEqual([1, 1]);

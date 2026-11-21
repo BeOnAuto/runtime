@@ -6,7 +6,6 @@ import { runOfTheTestsStarted } from '../reaction-testing/playbook-writes.ts';
 import { runKeyOf } from '../runs/run-address.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import type { HostedOptions } from '../testing/host-runs.ts';
-import { until } from '../testing/until.ts';
 import { followedHost, type FollowedHost } from './followed-host.ts';
 
 export const parentId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -33,7 +32,7 @@ export async function waitingParent(child: string, options: HostedOptions = {}):
   await Effect.runPromise(
     hosted.host.start(runAt(parentId), startOf(workflow('do:\n  - ask: { call: notify, with: { to: ada } }'))),
   );
-  await until(
+  await hosted.whenRead(
     () => Effect.runPromise(waitingCallsOf(database, parentRun)),
     (waiting) => waiting.length === 1,
   );
@@ -44,6 +43,6 @@ export async function waitingParent(child: string, options: HostedOptions = {}):
   return {
     ...followed,
     callStates,
-    answeredCalls: () => until(callStates, (states) => states.every(({ delivered }) => delivered === 1)),
+    answeredCalls: () => hosted.whenRead(callStates, (states) => states.every(({ delivered }) => delivered === 1)),
   };
 }
