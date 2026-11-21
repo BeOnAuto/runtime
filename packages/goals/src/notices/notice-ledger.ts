@@ -122,6 +122,6 @@ export function dayStartReleased(ports: CountedPorts, start: DayStart): Effect.E
 
 export function dayLimitRefusalIn(ports: CountedPorts, start: DayStart): Effect.Effect<string | undefined, unknown> {
   return Effect.map(startReservedUnderTheLimit(ports.ledger, ports.starts, start), (reserved) =>
-    reserved ? undefined : dayLimitDetail(start.address, start.now),
+    reserved ? undefined : dayLimitDetail(start.address, start.now, ports.starts.mostADay),
   );
 }

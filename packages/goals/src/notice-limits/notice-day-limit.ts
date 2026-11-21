@@ -23,12 +23,13 @@ export function noticesStartedOn(
 }
 
 export interface StartsMade {
+  readonly mostADay: number;
   readonly made: Map<string, ReadonlySet<string>>;
   readonly seenFirst: Map<string, number>;
 }
 
-export function noStartsMade(): StartsMade {
-  return { made: new Map(), seenFirst: new Map() };
+export function noStartsMade(mostADay = mostNoticesADay): StartsMade {
+  return { mostADay, made: new Map(), seenFirst: new Map() };
 }
 
 function dayKeyOf({ org, playbook }: PlaybookAddress, now: number): string {
@@ -68,7 +69,7 @@ export function startReservedUnderTheLimit(
     if (made.has(run)) {
       return true;
     }
-    if (startedToday(starts, key, seen, made) >= mostNoticesADay) {
+    if (startedToday(starts, key, seen, made) >= starts.mostADay) {
       return false;
     }
     starts.made.set(key, new Set([...made, run]));
@@ -84,14 +85,16 @@ export function startReleased(starts: StartsMade, { address, run, now }: DayStar
   }
 }
 
-const dayLimitWords = ` reached its limit of ${String(mostNoticesADay)} messages and summaries on `;
+const dayLimitWords = (most: number) => ` reached its limit of ${String(most)} messages and summaries on `;
 
-export function dayLimitDetail({ playbook }: PlaybookAddress, now: number): string {
-  return `The playbook ${playbook}${dayLimitWords}${noticeDayOf(now)} (UTC)`;
+const dayLimitShape = /^The playbook .+ reached its limit of \d+ messages and summaries on /u;
+
+export function dayLimitDetail({ playbook }: PlaybookAddress, now: number, most = mostNoticesADay): string {
+  return `The playbook ${playbook}${dayLimitWords(most)}${noticeDayOf(now)} (UTC)`;
 }
 
 export function isDayLimitDetail(detail: string): boolean {
-  return detail.startsWith('The playbook ') && detail.includes(dayLimitWords);
+  return dayLimitShape.test(detail);
 }
 
 export function lowered(detail: string): string {

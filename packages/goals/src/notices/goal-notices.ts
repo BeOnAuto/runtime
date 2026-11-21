@@ -7,10 +7,11 @@ import { noticesSeenOf } from './notices-seen.ts';
 
 export interface GoalNoticePorts extends NoticePorts {
   readonly now: () => number;
+  readonly mostADay?: number;
 }
 
-export function goalNoticesOf({ now, ...ports }: GoalNoticePorts): GoalsHostParts {
-  const starts = noStartsMade();
+export function goalNoticesOf({ now, mostADay, ...ports }: GoalNoticePorts): GoalsHostParts {
+  const starts = noStartsMade(mostADay);
   return {
     consumers: [noticesSeenOf(ports.ledger, now)],
     dueWork: [noticesOwedOf(ports, starts), summariesDueOf(ports, starts)],

@@ -16,7 +16,9 @@ import {
 } from '../notices/notice-samples.ts';
 import { noticesOwedOf } from '../notices/notice-starts.ts';
 import { noticedPlaybookIn } from '../notices/noticed-playbooks.ts';
-import { dayLimitDetail, mostNoticesADay } from './notice-day-limit.ts';
+import { dayLimitDetail, noStartsMade } from './notice-day-limit.ts';
+
+const mostADay = 5;
 
 const minute = 60_000;
 
@@ -77,27 +79,38 @@ async function burstOf(count: number) {
 }
 
 describe('a burst of notices owed at one moment, none of whose starts is seen yet', () => {
-  it('starts at most the most a day, counting each start as it is made, and refuses the rest', async () => {
-    const { book, seen } = await burstOf(250);
-    const work = noticesOwedOf({ ledger: book.ledger, start: seen.start, playbookOf: noticedPlaybookIn(book.ledger) });
-    await performedTogether([work], monday);
-    await performedTogether([work], monday + 2 * minute);
+  it.each([
+    [8, 5],
+    [5, 5],
+    [4, 4],
+  ])(
+    'of %i starts at most the most a day, %i, counting each start as it is made, and refuses the rest',
+    async (owed, started) => {
+      const { book, seen } = await burstOf(owed);
+      const work = noticesOwedOf(
+        { ledger: book.ledger, start: seen.start, playbookOf: noticedPlaybookIn(book.ledger) },
+        noStartsMade(mostADay),
+      );
+      await performedTogether([work], monday);
+      await performedTogether([work], monday + 2 * minute);
 
-    expect(new Set(seen.starts.map(({ runId }) => runId)).size).toBe(mostNoticesADay);
-    expect(await refusedFor(book, dayLimitDetail(sales, monday))).toBe(250 - mostNoticesADay);
-  });
+      expect(new Set(seen.starts.map(({ runId }) => runId)).size).toBe(started);
+      expect(await refusedFor(book, dayLimitDetail(sales, monday, mostADay))).toBe(owed - started);
+    },
+  );
 
   it('counts the starts of notices and summaries of one playbook together', async () => {
-    const { book, seen } = await burstOf(mostNoticesADay);
+    const { book, seen } = await burstOf(mostADay);
     const parts = goalNoticesOf({
       ledger: book.ledger,
       start: seen.start,
       playbookOf: noticedPlaybookIn(book.ledger),
       now: () => monday,
+      mostADay,
     });
     await performedTogether(parts.dueWork, monday);
 
-    expect(seen.starts).toHaveLength(mostNoticesADay);
+    expect(seen.starts).toHaveLength(mostADay);
     expect(seen.starts.some(({ trigger }) => trigger.reference.includes('/summaries/'))).toBe(false);
     expect(await book.factsOf('goal-summaries/summary')).toEqual(['goal_notice_refused']);
   });
@@ -118,25 +131,24 @@ async function seenEarlier(book: NoticeBook, count: number): Promise<void> {
 }
 
 describe('a burst owed after a restart, with starts already seen that day', () => {
-  it('counts the starts seen and the starts made since, so 150 seen and 250 owed start 50', async () => {
-    const { book, seen } = await burstOf(250);
-    await seenEarlier(book, 150);
-    const restarted = noticesOwedOf({
-      ledger: book.ledger,
-      start: seen.start,
-      playbookOf: noticedPlaybookIn(book.ledger),
-    });
+  it('counts the starts seen and the starts made since, so 3 seen and 5 owed start the 2 left of 5', async () => {
+    const { book, seen } = await burstOf(5);
+    await seenEarlier(book, 3);
+    const restarted = noticesOwedOf(
+      { ledger: book.ledger, start: seen.start, playbookOf: noticedPlaybookIn(book.ledger) },
+      noStartsMade(mostADay),
+    );
     await performedTogether([restarted], monday);
     await performedTogether([restarted], monday + 2 * minute);
 
-    expect(new Set(seen.starts.map(({ runId }) => runId)).size).toBe(mostNoticesADay - 150);
-    expect(await refusedFor(book, dayLimitDetail(sales, monday))).toBe(250 - (mostNoticesADay - 150));
+    expect(new Set(seen.starts.map(({ runId }) => runId)).size).toBe(2);
+    expect(await refusedFor(book, dayLimitDetail(sales, monday, mostADay))).toBe(3);
   });
 });
 
 describe('the notices of two playbooks in one host', () => {
-  it('keeps the count of each playbook apart, so two playbooks in one host owing 200 each start 200 each', async () => {
-    const { book, seen } = await burstOf(mostNoticesADay);
+  it('keeps the count of each playbook apart, so two playbooks in one host owing the most each start the most each', async () => {
+    const { book, seen } = await burstOf(mostADay);
     await book.playbookFact('playbook_created', {
       playbook: 'north',
       name: 'North',
@@ -149,18 +161,19 @@ describe('the notices of two playbooks in one host', () => {
       { playbook: 'north', position: 0, goal: told },
       { definitionId: goalIn('north') },
     );
-    await judgedAll(book, mostNoticesADay, 'north');
+    await judgedAll(book, mostADay, 'north');
     const parts = goalNoticesOf({
       ledger: book.ledger,
       start: seen.start,
       playbookOf: noticedPlaybookIn(book.ledger),
       now: () => monday,
+      mostADay,
     });
     await performedTogether(parts.dueWork.slice(0, 1), monday);
     await performedTogether(parts.dueWork.slice(0, 1), monday);
 
     expect(
       ['sales', 'north'].map((playbook) => seen.starts.filter((start) => start.playbook === playbook).length),
-    ).toEqual([mostNoticesADay, mostNoticesADay]);
+    ).toEqual([mostADay, mostADay]);
   });
 });

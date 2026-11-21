@@ -15,6 +15,7 @@ import { noticesOwedOf } from '../notices/notice-starts.ts';
 import { noticedPlaybookIn } from '../notices/noticed-playbooks.ts';
 import {
   dayLimitDetail,
+  isDayLimitDetail,
   mostNoticesADay,
   noStartsMade,
   noticesStartedOn,
@@ -26,7 +27,7 @@ const hour = 3_600_000;
 
 const anotherGoal = 'goal-of-replies';
 
-async function bookWithStarts(earlier: number, at = monday - hour) {
+async function bookWithStarts(earlier: number, at = monday - hour, mostADay = mostNoticesADay) {
   const book = noticeBookOf();
   await book.playbookCreated();
   await book.goalsSaved([experiments]);
@@ -49,7 +50,10 @@ async function bookWithStarts(earlier: number, at = monday - hour) {
     ),
   );
   const seen = startsAnswering(() => 'started');
-  const work = noticesOwedOf({ ledger: book.ledger, start: seen.start, playbookOf: noticedPlaybookIn(book.ledger) });
+  const work = noticesOwedOf(
+    { ledger: book.ledger, start: seen.start, playbookOf: noticedPlaybookIn(book.ledger) },
+    noStartsMade(mostADay),
+  );
   return { book, work, starts: seen.starts };
 }
 
@@ -63,38 +67,53 @@ describe('the most notices and summaries a playbook sends in a UTC day', () => {
     ]).toEqual([3, 0]);
   });
 
-  it('starts a notice while the day has seen fewer than the most', async () => {
-    const { book, work, starts } = await bookWithStarts(mostNoticesADay - 1);
+  it.each([
+    [3, 2],
+    [1, 0],
+  ])('starts a notice while the day has seen fewer than the most of %i (%i seen)', async (mostADay, earlier) => {
+    const { book, work, starts } = await bookWithStarts(earlier, monday - hour, mostADay);
     await performedAt(work, monday);
 
     expect(starts).toHaveLength(1);
     expect(await book.refusals()).toEqual([]);
   });
 
-  it('refuses the notice past the most for good, saying why, and starts nothing', async () => {
-    const { book, work, starts } = await bookWithStarts(mostNoticesADay);
-    await performedAt(work, monday);
+  it.each([
+    [3, 3],
+    [3, 4],
+    [1, 1],
+  ])(
+    'refuses the notice past the most of %i (%i seen) for good, saying why, and starts nothing',
+    async (mostADay, earlier) => {
+      const { book, work, starts } = await bookWithStarts(earlier, monday - hour, mostADay);
+      await performedAt(work, monday);
 
-    expect(starts).toEqual([]);
-    expect(await book.refusals()).toEqual([
-      {
-        change: 'passed',
-        attempt: 1,
-        detail: dayLimitDetail(sales, monday),
-        at: new Date(monday).toISOString(),
-      },
-    ]);
-    expect(dayLimitDetail(sales, monday)).toBe(
-      'The playbook sales reached its limit of 200 messages and summaries on 2026-11-09 (UTC)',
-    );
-    expect(await book.column('notice_due_at')).toBeNull();
-  });
+      expect(starts).toEqual([]);
+      expect(await book.refusals()).toEqual([
+        {
+          change: 'passed',
+          attempt: 1,
+          detail: dayLimitDetail(sales, monday, mostADay),
+          at: new Date(monday).toISOString(),
+        },
+      ]);
+      expect(isDayLimitDetail(dayLimitDetail(sales, monday, mostADay))).toBe(true);
+      expect(await book.column('notice_due_at')).toBeNull();
+    },
+  );
+});
 
+describe('the day and the most it counts to', () => {
   it('starts it again on the next UTC day, since the day before counts nothing', async () => {
-    const { work, starts } = await bookWithStarts(mostNoticesADay, monday - 24 * hour);
+    const { work, starts } = await bookWithStarts(3, monday - 24 * hour, 3);
     await performedAt(work, monday);
 
     expect(starts).toHaveLength(1);
+  });
+
+  it('is 200 a day unless a host names its own most', () => {
+    expect([mostNoticesADay, noStartsMade().mostADay, noStartsMade(3).mostADay]).toEqual([200, 200, 3]);
+    expect(dayLimitDetail(sales, monday)).toBe(dayLimitDetail(sales, monday, 200));
   });
 });
 
