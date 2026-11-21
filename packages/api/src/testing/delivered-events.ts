@@ -15,6 +15,7 @@ import {
 } from '../index.ts';
 import { deliveryBounds } from '../webhooks/delivery-bounds.ts';
 import { createTestHandler } from './api-calls.ts';
+import { anOpenedTicket, boardsEntry, boardsHook, boardsSecret, byATokenOf, ticketOpened } from './carried-events.ts';
 
 export const nowSeconds = 1_794_318_120;
 
@@ -86,8 +87,12 @@ const ofTheApp = {
 };
 
 const entries = providersOf(
-  { ...tracker, events: { destinations: [ofEachSubscription] } },
+  {
+    ...tracker,
+    events: { types: [ticketOpened], destinations: [{ ...ofEachSubscription, events: [anOpenedTicket] }] },
+  },
   { ...tracker, name: 'rooms', title: 'Rooms', events: { destinations: [ofTheApp] } },
+  boardsEntry,
 );
 
 function destinationOf(provider: string): EventDestination {
@@ -97,6 +102,8 @@ function destinationOf(provider: string): EventDestination {
 export const tickets = destinationOf('tracker');
 
 export const rooms = destinationOf('rooms');
+
+const boards = destinationOf('boards');
 
 const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
 
@@ -165,6 +172,8 @@ const destinations = new Map([
   ['rooms', rooms],
   ['drafts', tickets],
   ['github', githubs],
+  ['boards', boards],
+  ['tokens', byATokenOf(boards)],
 ]);
 
 export const ticketsHook = { topic: 'project-3', id: 'hook-7' };
@@ -180,6 +189,8 @@ const secretsOf = new Map([
   ['tickets subscription', [heldSecret(ticketsSecret, ticketsHook), heldSecret(neighboursSecret, neighboursHook)]],
   ['rooms app', [heldSecret(roomsSecret)]],
   ['github subscription', [heldSecret(githubsCheckSecret, { topic: 'octo-org/approvals', id: githubsHook })]],
+  ['boards subscription', [heldSecret(boardsSecret, boardsHook)]],
+  ['tokens subscription', [heldSecret(boardsSecret, boardsHook)]],
 ]);
 
 export function eventsServedWith(changes: Partial<EventServing> = {}) {

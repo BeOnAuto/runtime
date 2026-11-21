@@ -1,9 +1,15 @@
 import { hmacOf, type DeclaredProof } from '@on.auto/identity';
-import { provesTheBodyAndATime, provesWhatIsReadAt, type EventDestination } from '@on.auto/providers';
+import {
+  provesTheBody,
+  provesTheBodyAndATime,
+  provesWhatIsReadAt,
+  type ArrivalReading,
+  type EventDestination,
+} from '@on.auto/providers';
 import type { Redacted } from 'effect';
 
 import { deliveryProblems } from './delivery-problems.ts';
-import type { DestinedDelivery, EventDoor, Proven } from './event-ports.ts';
+import type { CarriedEvent, DestinedDelivery, EventDoor, Proven } from './event-ports.ts';
 
 type Handshake = NonNullable<EventDestination['handshake']>;
 
@@ -64,6 +70,12 @@ function macKeyOf({ when, challenge }: Handshake, { verify, secret }: Proven): M
 
 const handedOn = (): Response => new Response(null, { status: 200 });
 
+function carriedIn({ event }: ArrivalReading, { verify, subscription }: Proven): CarriedEvent | undefined {
+  return event === undefined || subscription === undefined || !provesTheBody(verify)
+    ? undefined
+    : { event, topic: subscription.topic };
+}
+
 export async function eventRead(door: EventDoor, delivered: DestinedDelivery, proven: Proven): Promise<Response> {
   const { address, destination, arrival, body, reading } = delivered;
   const seen = { address, bytes: body.byteLength };
@@ -76,12 +88,14 @@ export async function eventRead(door: EventDoor, delivered: DestinedDelivery, pr
     return door.heard({ ...seen, outcome: 'passed_over' }, handedOn());
   }
   const { verify, subscription } = proven;
+  const carried = carriedIn(reading, proven);
   await door.serving.arrived({
     address,
     reading,
     arrival,
     provesTheBodyAndATime: provesTheBodyAndATime(verify),
     ...(subscription === undefined ? {} : { subscription }),
+    ...(carried === undefined ? {} : { carried }),
   });
   return door.heard({ ...seen, outcome: 'arrived' }, handedOn());
 }

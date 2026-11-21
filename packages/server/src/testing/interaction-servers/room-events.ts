@@ -11,7 +11,7 @@ import { until } from '../waiting/until.ts';
 import { flatReading } from './chat-readings.ts';
 import { servingInteractions, type InteractionServer } from './interaction-server.ts';
 
-const roomsKey = 'rooms-api-key-7c2d41e9';
+export const roomsKey = 'rooms-api-key-7c2d41e9';
 
 export const theWebhookUrl = 'https://events.example.com';
 
@@ -44,7 +44,7 @@ const subscribedByTool = {
   unsubscribe: { tool: 'delete_hook', with: { id: '{{ subscription.id }}' } },
 };
 
-const signedOverTheBody = {
+export const signedOverTheBody = {
   type: 'webhook',
   ...subscribedByTool,
   verify: {
@@ -75,7 +75,7 @@ const tokenInAHeader = {
   filter: { when: { '$request.header.X-Boards-Event': ['card'] }, subscription: '$request.header.X-Boards-Hook' },
 };
 
-function entryOf(name: string, url: string, destination: object) {
+export function entryOf(name: string, url: string, destination: object) {
   return {
     name,
     title: name,
@@ -156,8 +156,8 @@ export async function hookMadeAt(rooms: FakeMcpServer): Promise<MadeHook> {
 
 const said = JSON.stringify({ room: theRoom, text: 'approve' });
 
-export function signedWith(secret: string, hook = 'hook-7'): Readonly<Record<string, string>> {
-  const signature = createHmac('sha256', secret).update(said).digest('hex');
+export function signedWith(secret: string, hook = 'hook-7', body = said): Readonly<Record<string, string>> {
+  const signature = createHmac('sha256', secret).update(body).digest('hex');
   return {
     'content-type': 'application/json',
     'x-rooms-event': 'message',
@@ -174,15 +174,20 @@ export async function delivered(
   server: Pick<InteractionServer, 'origin'>,
   path: string,
   headers: Readonly<Record<string, string>>,
+  body = said,
 ): Promise<string> {
-  const answer = await fetch(`${server.origin}${path}`, { method: 'POST', headers, body: said });
+  const answer = await fetch(`${server.origin}${path}`, { method: 'POST', headers, body });
   return `${answer.status} ${await answer.text()}`;
 }
 
-export function takenOnceRecorded(server: Pick<InteractionServer, 'origin'>, hook: MadeHook): Promise<string> {
+export function takenOnceRecorded(
+  server: Pick<InteractionServer, 'origin'>,
+  hook: MadeHook,
+  body = said,
+): Promise<string> {
   const { pathname, search } = new URL(hook.callback);
   return until(
-    () => delivered(server, `${pathname}${search}`, signedWith(hook.secret)),
+    () => delivered(server, `${pathname}${search}`, signedWith(hook.secret, 'hook-7', body), body),
     (answer) => answer === '200 ',
   );
 }

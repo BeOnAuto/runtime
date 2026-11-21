@@ -20,12 +20,18 @@ export interface HeldSecret {
   readonly subscription?: HeldSubscription;
 }
 
+export interface CarriedEvent {
+  readonly event: NonNullable<ArrivalReading['event']>;
+  readonly topic: string;
+}
+
 export interface ArrivedEvent {
   readonly address: EventAddress;
   readonly reading: ArrivalReading;
   readonly arrival: Arrival;
   readonly provesTheBodyAndATime: boolean;
   readonly subscription?: HeldSubscription;
+  readonly carried?: CarriedEvent;
 }
 
 export type EventOutcome =

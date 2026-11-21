@@ -17,15 +17,15 @@ import {
   theRoom,
   theWebhookUrl,
 } from '../testing/interaction-servers/room-events.ts';
+import { postedInARoom, servedListeningInTheRoom } from '../testing/interaction-servers/shipped-rooms.ts';
 import { connectionsIn } from '../testing/servers/connected-servers.ts';
 import { connectionsAllowing } from '../testing/servers/loopback-connections.ts';
-import { alphaIn } from '../testing/servers/reasoning-server.ts';
 import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const arrivedLine = '"outcome":"arrived"';
 
-const alpha = alphaIn(defaultOrg);
+const alpha = `/v1/orgs/${defaultOrg}/playbooks/alpha`;
 
 const eventsOf = (playbook: string, connection: string) => eventsPathOf(playbook, connection, defaultOrg);
 
@@ -91,6 +91,39 @@ describe('a server that signs people in, given WEBHOOK_URL, whose request waits 
     expect(
       [...kept, ...lines(), ...exported.map(({ text }) => text)].filter((text) => text.includes(hook.secret)),
     ).toEqual([]);
+  });
+});
+
+describe('a server given WEBHOOK_URL whose workflow’s trigger names a connection that reports events', () => {
+  it('subscribes for the place the trigger names, takes in once the event a delivery proven by that subscription carries, and records nothing of it sent again', async () => {
+    const lines = loggedLines();
+    const rooms = await roomsServer();
+    const { signingIn, asThePerson } = await signingPeopleIn();
+    const server = await servedListeningInTheRoom(rooms.url, signingIn, asThePerson, defaultOrg);
+    const hook = await hookMadeAt(rooms);
+    const text = 'a post no line of the log may hold';
+    const posted = JSON.stringify({ kind: 'posted', room: theRoom, id: 'm-1', text });
+
+    const taken = await takenOnceRecorded(server, hook, posted);
+    const { pathname, search } = new URL(hook.callback);
+    const sentAgain = await delivered(
+      server,
+      `${pathname}${search}`,
+      signedWith(hook.secret, 'hook-7', posted),
+      posted,
+    );
+    const recorded = await server.call('GET', `${alpha}/events?type=event_published`);
+
+    expect(hook.room).toBe(theRoom);
+    expect([taken, sentAgain]).toEqual(['200 ', '200 ']);
+    expect(lines().filter((line) => line.includes(text))).toEqual([]);
+    const theEvent = { event_type: postedInARoom, event_id: '%23approvals-ada/m-1', source: '/connections/rooms' };
+    expect(recorded).toMatchObject({
+      status: 200,
+      body: {
+        events: [{ type: 'event_published', data: { ...theEvent, subject: theRoom, data: { text } } }],
+      },
+    });
   });
 });
 

@@ -17,3 +17,13 @@ export function destinationUnlessStopped(ran: EventDestination | Cancelled | und
 export function secretsUnlessStopped(ran: readonly HeldSecret[] | Cancelled): readonly HeldSecret[] {
   return 'status' in ran ? [] : ran;
 }
+
+export type IntakeDecision = 'decided' | { readonly undecided: string };
+
+export function decidedUnlessStopped(ran: IntakeDecision | Cancelled): void {
+  if (ran === 'decided') {
+    return;
+  }
+  const because = 'undecided' in ran ? ran.undecided : 'stopped';
+  throw new Error(`The intake could not decide on the event a delivery carries: ${because}`);
+}

@@ -2,11 +2,11 @@ import type { AppRuntime, RegisterRoutes } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
 
 import { answersServedBy, type AnswerStores } from './served-answers.ts';
-import { eventsServedBy, type EventStores } from './served-events.ts';
+import { eventsServedBy, type EventsTakenIn } from './served-events.ts';
 
 export interface DeliveryStores {
   readonly answerStores?: AnswerStores | undefined;
-  readonly eventStores?: EventStores | undefined;
+  readonly eventStores?: EventsTakenIn | undefined;
 }
 
 export function deliveryRoutesOf(

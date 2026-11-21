@@ -20,6 +20,7 @@ import {
 import { accessControlServing } from '../composition/served-access-control.ts';
 import { routesFor, type ServedCatalog } from '../composition/served-routes.ts';
 import type { Served } from '../server-options/server-options.ts';
+import { connectionIntakeServedBy } from './connection-intake.ts';
 import { openedHost, type HostParts, type HostRuntime } from './host-dependencies.ts';
 import { hostDispatchesOf, hostOnceOpened, hostOperationsOf } from './host-operations.ts';
 
@@ -47,8 +48,24 @@ export interface WorkflowParts
   readonly retryStateKeys: ServedCatalog['retryStateKeys'];
   readonly contentAddressKey: ServedCatalog['contentAddressKey'];
   readonly answerStores?: ServedCatalog['answerStores'];
-  readonly eventStores?: ServedCatalog['eventStores'];
+  readonly eventStores?: Omit<NonNullable<ServedCatalog['eventStores']>, 'takeIn'> | undefined;
   readonly shippedFiles: ServedCatalog['shippedFiles'];
+}
+
+function eventsTakenInBy(runtime: HostRuntime, parts: WorkflowParts): ServedCatalog['eventStores'] {
+  const { eventStores, store, evaluations, clock } = parts;
+  const now = clock?.now ?? Date.now;
+  return eventStores === undefined
+    ? undefined
+    : {
+        ...eventStores,
+        takeIn: connectionIntakeServedBy(runtime, {
+          store,
+          filters: evaluations.filters,
+          providers: eventStores.providers,
+          now,
+        }),
+      };
 }
 
 function isOrgOperation(operation: PlaybookOperation | OrgOperation): operation is OrgOperation {
@@ -116,7 +133,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     { names },
   );
   opened(host);
-  const { authorizationServer, retryStateKeys, contentAddressKey, answerStores, eventStores } = parts;
+  const { authorizationServer, retryStateKeys, contentAddressKey, answerStores } = parts;
   const served = {
     catalog,
     directoryCatalog,
@@ -129,7 +146,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     retryStateKeys,
     contentAddressKey,
     answerStores,
-    eventStores,
+    eventStores: eventsTakenInBy(runtime, parts),
     shippedFiles,
   };
   return { routes: await routesFor(runtime, served), stopWork: host.stop, callContext };

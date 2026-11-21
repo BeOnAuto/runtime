@@ -2,6 +2,7 @@ import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  decidedUnlessStopped,
   destinationUnlessStopped,
   holderUnlessStopped,
   keysUnlessStopped,
@@ -30,5 +31,17 @@ describe('a delivery that reaches a server as it stops', () => {
       destination,
     ]);
     expect([secretsUnlessStopped(stopped), secretsUnlessStopped(secrets)]).toEqual([[], secrets]);
+  });
+
+  it('fails a delivery whose event the intake did not decide, as it failed or as the server stopped, so a service that sends again does', () => {
+    expect(() => {
+      decidedUnlessStopped('decided');
+    }).not.toThrow();
+    expect(() => {
+      decidedUnlessStopped({ undecided: 'conflict' });
+    }).toThrow(Error);
+    expect(() => {
+      decidedUnlessStopped(stopped);
+    }).toThrow(Error);
   });
 });

@@ -32,7 +32,7 @@ export {
   type EventsByHand,
   type RecordedEvents,
 } from './events/events-by-hand.ts';
-export { provesTheBodyAndATime, provesWhatIsReadAt } from './events/event-proofs.ts';
+export { provesTheBody, provesTheBodyAndATime, provesWhatIsReadAt } from './events/event-proofs.ts';
 export { openedAndClosed, receivingOverASocket, type SocketListening } from './sockets/socket-listening.ts';
 export { socketKeyOf, socketStepsOf, stillRefused } from './sockets/socket-set.ts';
 export { opensAsDeclared, type OpeningWays } from './sockets/socket-openings.ts';
