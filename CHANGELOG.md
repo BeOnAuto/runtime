@@ -1,5 +1,88 @@
 # Changelog
 
+## [0.59.0](https://github.com/BeOnAuto/runtime/compare/v0.58.0...v0.59.0) (2026-11-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **goals:** a goal keeps its own record and results
+* **server:** a server that signs people in now decides every call by the role each person holds. The first person to sign in is the admin, and everyone who signs in after them is a viewer, who can read and comment but cannot run or change anything until an admin gives them another role. A person who no longer holds a role is refused every call at once. The server also loads its access policies as it starts, so their memory, about 100 to 130 MiB, is taken from start, and it does not start if it cannot load them.
+* **server:** IDENTITY_ISSUER, IDENTITY_JWKS and IDENTITY_JWKS_URL are no longer supported: a runtime given one of them stops at start and names it, so remove it. The OpenAPI document names the openIdConnect scheme only where the runtime signs people in, with the runtime's own OpenID Connect metadata, and names the permissions each operation needs as roles of its bearer requirement. The members of a runtime with PUBLIC_URL and no OIDC_ISSUER now act in the org default. Before, each acted in an org whose id was their Auto organization's id, and the playbooks kept there are reached only with an API key of that org. OIDC_SCOPES or OIDC_TOKEN_ENDPOINT_AUTH_METHOD set without OIDC_ISSUER now stops such a runtime at start, so remove them.
+* **server:** A runtime with PUBLIC_URL and no OIDC_ISSUER signs its members in itself, with their Auto accounts, as its own OAuth 2.1 authorization server, and no longer admits the access tokens of the identity service IDENTITY_ISSUER names. Its PUBLIC_URL must be an https URL; a runtime that only its own computer reaches sets ACCESS_MODE=local instead.
+* **connections:** in a provider entry, a websocket destination's `credential` names an app credential of the entry's secret way, which the way declares in `app_credentials`. An entry you added whose websocket destination names a `credential` its secret way does not declare there is refused when the runtime starts: declare it under `app_credentials` of the secret way.
+* **global:** a ledger a release before this one made, of layout 25 or earlier, is refused as the server opens it, left as it was, and needs a new install. definitions are filed under the definition's key; no reader of the earlier filing is kept. runs are filed under the definition's key; no reader of the earlier filing is kept.
+* **definitions:** a run's output past 1 MiB is now kept in part as assets of its playbook, recorded with the kind text and made by function_output. Once such an asset is kept, do not roll back to 0.57.0 or an earlier release until it expires (ASSET_RETENTION_DAYS, 90 by default): 0.57.0 reads the asset but hands it on to the next function or tool as its description rather than its content, and an earlier release cannot read it. A computation may now return up to an eighth of its sandbox's memory as JSON.
+
+### Features
+
+* **activity:** a comment on a function or workflow follows it when it moves or is renamed ([d185bc0](https://github.com/BeOnAuto/runtime/commit/d185bc046c662b04b669df4499ac9ab1e98f05fc))
+* **activity:** a comment's row in the activity list names its address as it is now ([d265429](https://github.com/BeOnAuto/runtime/commit/d265429e6902d5afd5fc4b2664ff6647126e9476))
+* **api:** a proven delivery hands on the event it carries ([6155886](https://github.com/BeOnAuto/runtime/commit/61558868918bc8ebd0e6f31460e006a6ba7a61bb))
+* **connections:** a connection's change asks its playbooks for a subscription round ([1cb3be9](https://github.com/BeOnAuto/runtime/commit/1cb3be90ae5ba1813f51d61a47b2168bb88bd62f))
+* **connections:** a key is tested through the tool its way names before it is kept ([07544bd](https://github.com/BeOnAuto/runtime/commit/07544bdc9faf1e997c1c68e6f6bee0ece0bf5355))
+* **connections:** a playbook's events show each subscription made, failed or removed at a service ([080bebb](https://github.com/BeOnAuto/runtime/commit/080bebb740a87946018be58e6690bfd9e1832f14))
+* **connections:** a saved trigger asks for its subscription ([b708381](https://github.com/BeOnAuto/runtime/commit/b70838170593ffeefcdf8c89681eb93ba25a5531))
+* **connections:** a server given by hand says how its service sends ([b3856c7](https://github.com/BeOnAuto/runtime/commit/b3856c7240f5862548af4c0de64f688e5a4b6b94))
+* **connections:** the subscription loop's connection carries the account it was connected in ([4a256af](https://github.com/BeOnAuto/runtime/commit/4a256aff4e8abdbb21bdb9cd73628f4b8b02c63e))
+* **connections:** the subscriptions of a playbook are recorded and kept, at ledger layout 28 ([4a8e452](https://github.com/BeOnAuto/runtime/commit/4a8e45201bddcb4bed6cc752f25e95ff8dbe3559))
+* **definitions:** a function's output past 1 MiB keeps its largest members as files ([c356618](https://github.com/BeOnAuto/runtime/commit/c35661846c70a0fb6cfc7756ffb757f6eb350563))
+* **definitions:** move_definitions moves functions and workflows to another playbook ([26cbbaa](https://github.com/BeOnAuto/runtime/commit/26cbbaaaa53698558a8f503501315d53c7db6cee))
+* **definitions:** sources under /connections/ are kept for the runtime ([fc84bcf](https://github.com/BeOnAuto/runtime/commit/fc84bcf153481f2dbda0598fe168cc508336ed73))
+* **definitions:** update_definition renames a function or workflow with new_name ([f27f397](https://github.com/BeOnAuto/runtime/commit/f27f39780e3ea39fb732c9157d0c3f8581413e6a))
+* **global:** runs are filed under their definition, and stores move to ledger layout 27 ([942fe7a](https://github.com/BeOnAuto/runtime/commit/942fe7aa08f0afaf31694c0476354ef770389088))
+* **goals:** a goal keeps its own record and results ([4652053](https://github.com/BeOnAuto/runtime/commit/4652053d8eef63da2ac1947443edbff9c36b7411))
+* **goals:** a goal's id can be changed, and its workflows follow ([e54b842](https://github.com/BeOnAuto/runtime/commit/e54b8424d6a462040df0ce93c97fe456bb6e63de))
+* **goals:** a person can dismiss a thing of a goal for everyone, and restore it ([74bbd35](https://github.com/BeOnAuto/runtime/commit/74bbd35c5592bf1e0d555a781fac6fa0e4dd298d))
+* **interaction:** a message a connection shows as a card is written as one, laid out by the guide ([f5e0444](https://github.com/BeOnAuto/runtime/commit/f5e0444abe34518d4d0b97895e47aa3db623a882))
+* **interaction:** replies are read with the run's input, and from an answer that is the list ([9af4098](https://github.com/BeOnAuto/runtime/commit/9af4098d1558d4b28b335fb7f08eea5d800c9887))
+* **ledger:** a host may give the catch-up of projection tables a budget ([1642b48](https://github.com/BeOnAuto/runtime/commit/1642b48d0c48b36ac1286f2a602879b1571d95f3))
+* **ledger:** a projection table is filled in pages, each committed with its checkpoint ([62d006a](https://github.com/BeOnAuto/runtime/commit/62d006aff807cc2fa8dbc489faa7b9a384102b08))
+* **providers:** an entry declares the events its service reports ([1c249af](https://github.com/BeOnAuto/runtime/commit/1c249afc949d0d899d72b96ca882ef291c8cfb41))
+* **providers:** an entry gives the steps of the page where a person approves its key ([65baf32](https://github.com/BeOnAuto/runtime/commit/65baf32a99edb4a03f26bac7e36af60670a76bf0))
+* **providers:** slack-bot makes its app from a link, checks its token and takes an app-level token ([2f6cd6b](https://github.com/BeOnAuto/runtime/commit/2f6cd6b4e9d24254b20636d417cddcdddb6df57b))
+* **providers:** the GitHub entry tells Auto as soon as someone answers ([8123687](https://github.com/BeOnAuto/runtime/commit/8123687aebf51655c6bc20956d75803825bbdaa5))
+* **server:** a server that signs people in decides each call by the role each person holds ([1844932](https://github.com/BeOnAuto/runtime/commit/1844932645f616a214be0985bfe1e62ef0e62f95))
+* **server:** a server that signs people in manages its members and invites people by link ([492139b](https://github.com/BeOnAuto/runtime/commit/492139bb39d258e28a6ee346836411b3819a75db))
+* **server:** a sign-in must carry the claim OIDC_REQUIRED_CLAIM names, with exactly its value ([346794b](https://github.com/BeOnAuto/runtime/commit/346794b620123dabfd92a40dd88edbf4386c5693))
+* **server:** a subscription's deliveries are received at the runtime's address ([20b3bf8](https://github.com/BeOnAuto/runtime/commit/20b3bf81f0c80c0b711b51a1c0002096513fb116))
+* **server:** admin grant-admin, reset-setup and register-client for whoever runs the server ([9c8c120](https://github.com/BeOnAuto/runtime/commit/9c8c120b07c749fd8fa842ab343f70667fce5d43))
+* **server:** an admin sets how people join and the role they join with ([9f8d30c](https://github.com/BeOnAuto/runtime/commit/9f8d30c34e79b4576fdb7fdadf2a31efbc00961f))
+* **server:** at sign-in, the name is read from UserInfo and an unasked refresh token handed back ([9c8c120](https://github.com/BeOnAuto/runtime/commit/9c8c120b07c749fd8fa842ab343f70667fce5d43))
+* **server:** people and agents sign in through the runtime's own authorization server ([782ae9c](https://github.com/BeOnAuto/runtime/commit/782ae9c66520486367b93bbc083ee01e67c03832))
+* **server:** people sign in through their company's own identity provider ([62d006a](https://github.com/BeOnAuto/runtime/commit/62d006aff807cc2fa8dbc489faa7b9a384102b08))
+* **server:** the API takes the session of a person who signed in at their company's provider ([62d006a](https://github.com/BeOnAuto/runtime/commit/62d006aff807cc2fa8dbc489faa7b9a384102b08))
+* **server:** the definitions list carries each title and generation models carry a name ([964004b](https://github.com/BeOnAuto/runtime/commit/964004ba57f6e4530ebf3d4456296f8bf1d5c080))
+* **server:** the first person to sign in is recorded as the admin, each newcomer as a viewer ([773ed6d](https://github.com/BeOnAuto/runtime/commit/773ed6d7ca91782b821e0b296acd2a50189e3e7a))
+* **server:** the first sign-in sets the value of the required claim every later sign-in must carry ([9c8c120](https://github.com/BeOnAuto/runtime/commit/9c8c120b07c749fd8fa842ab343f70667fce5d43))
+* **server:** the runtime no longer supports IDENTITY_ISSUER, IDENTITY_JWKS and IDENTITY_JWKS_URL ([9c8c120](https://github.com/BeOnAuto/runtime/commit/9c8c120b07c749fd8fa842ab343f70667fce5d43))
+* **server:** the server keeps a socket for each app credential its connections hold ([b29e5f9](https://github.com/BeOnAuto/runtime/commit/b29e5f918f1d349f8e69272745417df96b22177e))
+* **server:** with OIDC_ISSUER and no client, the server registers itself with the identity provider ([fb2bbe7](https://github.com/BeOnAuto/runtime/commit/fb2bbe7712b7d0aa2450e3efa7fa42ec1cb3841f))
+* **server:** with PUBLIC_URL and no OIDC_ISSUER, people sign in at the default identity provider ([9c8c120](https://github.com/BeOnAuto/runtime/commit/9c8c120b07c749fd8fa842ab343f70667fce5d43))
+* **tool-servers:** a sign-in asks for each address its provider's requests go to ([d7d8509](https://github.com/BeOnAuto/runtime/commit/d7d8509d04e1a3f82e3b13dbbc8c0c0638454895))
+* **workflow-host:** a connection's event is taken in for the triggers that name it ([8f9bbde](https://github.com/BeOnAuto/runtime/commit/8f9bbde05670994cbc35a60ca97e74f405ecff2c))
+
+
+### Bug Fixes
+
+* **access-control:** a request reads the caller's roles once and decides all its tools together ([09f7264](https://github.com/BeOnAuto/runtime/commit/09f7264d7d0938dda1f1e9e0961fa7dc1698bf7c))
+* **api:** a delivery is proven by the secret of its own subscription ([e8e9e77](https://github.com/BeOnAuto/runtime/commit/e8e9e778f7191ea690caebd2ac5b573244c7aa86))
+* **definitions:** a value given as JSON text is taken as the value it holds, by one rule ([67bc99d](https://github.com/BeOnAuto/runtime/commit/67bc99d12e24efeab48e3437a92fcd374a780102))
+* **deps:** hono 4.13.18 and its Node adapter 2.1.7 close published advisories ([62d006a](https://github.com/BeOnAuto/runtime/commit/62d006aff807cc2fa8dbc489faa7b9a384102b08))
+* **generation:** what a generation function makes keeps its address ([9f8d30c](https://github.com/BeOnAuto/runtime/commit/9f8d30c34e79b4576fdb7fdadf2a31efbc00961f))
+* **goals:** a result that arrives late keeps its measure ([0704628](https://github.com/BeOnAuto/runtime/commit/070462854d23e55bbb9d450a5d892b8b2f841ca3))
+* **interaction:** a reply in a request's Slack thread answers it ([0704628](https://github.com/BeOnAuto/runtime/commit/070462854d23e55bbb9d450a5d892b8b2f841ca3))
+* **interaction:** a reply to a request sent to a person counts from that person alone ([0cdee48](https://github.com/BeOnAuto/runtime/commit/0cdee487ad920990ce672e3eba25ffa21904c8a0))
+* **interaction:** an answer sent as JSON text is taken as the value it holds ([a2af01f](https://github.com/BeOnAuto/runtime/commit/a2af01fe6ae85e7076da0768b409af5d9306e51e))
+* **interaction:** notices naming no conversation read a connection no faster than one conversation ([93a9106](https://github.com/BeOnAuto/runtime/commit/93a9106189e3a87183b5a495491f1116229cfdce))
+* **operations:** an argument given as JSON text is taken as the value it holds, for every tool ([587e205](https://github.com/BeOnAuto/runtime/commit/587e205ae8af82d9e404c58c748f254ac63aafdd))
+* **providers:** a connection added again is given a webhook address of its own ([5249301](https://github.com/BeOnAuto/runtime/commit/5249301ed0adb18764191d529dfe873f426c7983))
+* **providers:** a request to a service refuses an address its values changed ([975a5c3](https://github.com/BeOnAuto/runtime/commit/975a5c3b49db96d1deb0a21856f0d134370c9869))
+* **providers:** the Slack Bot entry declares its socket's heartbeat ([7baf80c](https://github.com/BeOnAuto/runtime/commit/7baf80cd2f35d2948dcd7d45ce114c06205e63c6))
+* **providers:** the Slack Bot key's instructions follow the page where a person approves it ([32faf62](https://github.com/BeOnAuto/runtime/commit/32faf6293f3aee7f650e910b17947d8d66ce4a5b))
+* **workflow-host:** a host handed a clock sleeps on it alone ([38fd4e8](https://github.com/BeOnAuto/runtime/commit/38fd4e87655cd58af4c636fd990e2b5dfe6881d8))
+* **workflow-host:** a retired playbook takes no event of a connection ([60cd6d1](https://github.com/BeOnAuto/runtime/commit/60cd6d147378f1b238188be40a136052555c06ee))
+* **workflow-host:** the intake judges a playbook's triggers as they were saved ([0e7f47f](https://github.com/BeOnAuto/runtime/commit/0e7f47fe18160195d1f68308b915685bcff74959))
+
 ## [0.58.0](https://github.com/BeOnAuto/runtime/compare/v0.57.0...v0.58.0) (2026-11-18)
 
 
