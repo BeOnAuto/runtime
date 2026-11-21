@@ -55,6 +55,7 @@ const headingsWithout = [
   '### A goal judged thing by thing, with milestones',
   '### A goal judged on a calendar',
   '### Choosing settles',
+  '## Renaming a goal',
   '## What a workflow contributes',
   '### final and as_of',
   '### The contributions for the experiments',
@@ -67,7 +68,7 @@ const headingsWithout = [
 describe('the goals guide', () => {
   it('goes from the conversation to the format, in the order an agent needs it, with the notification function only where messages are on', () => {
     expect(headingsOf(withoutMessages)).toEqual(headingsWithout);
-    expect(headingsOf(withMessages)).toEqual(headingsWithout.toSpliced(11, 0, '## The notification function'));
+    expect(headingsOf(withMessages)).toEqual(headingsWithout.toSpliced(12, 0, '## The notification function'));
   });
 });
 

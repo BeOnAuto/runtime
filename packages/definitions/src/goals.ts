@@ -32,5 +32,7 @@ export {
   type RecordedPlaybookGoalsEvent,
 } from './goals/goals-facts.ts';
 export { playbookGoalsAgreed, type GoalsAgreeing } from './goals/goal-agreements.ts';
+export { playbookGoalRenamed } from './renaming/goal-renamed.ts';
+export { goalRenamerOf, type GoalRenamer } from './renaming/goal-servers.ts';
 export { mostCallDepth, workflowServersIn } from './goals/workflow-servers.ts';
 export { goalsSaveNoticesIn } from './goal-notices/setup-notices-in.ts';

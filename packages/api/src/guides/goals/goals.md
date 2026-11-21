@@ -153,6 +153,7 @@ The goals argument is text: the list of goals alone, with no key around it, writ
 
 - At most 8 goals and 16,384 bytes. One goal is often enough. The first is the lead goal: it orders the person's cards and leads the link.
 - A goal that has been judged cannot be left out. Stop it with `retired: true`, which keeps its id and record and can be undone. A goal that was never judged may simply be left out.
+- A goal's `id` is not changed in the list: an id the playbook does not have is a new goal. Give a goal a new id with `rename_goal`; see [Renaming a goal](#renaming-a-goal).
 - A goal's `per`, the kind of its window, a calendar window's unit and time zone, and `settles` cannot change once saved under that id. A different shape is a new goal with a new id. Anything else may change, and a change applies to judgings that open afterward.
 
 <!-- with messages -->
@@ -321,6 +322,10 @@ How a judging ends:
 - A verdict is final. Later measurements never change it, though milestones are still marked.
 
 <!-- end -->
+
+## Renaming a goal
+
+To change what a goal is called for the person, change its `name` in the list and ask for their yes, as for any change. To change its `id`, call update_playbook with `rename_goal` alone: the `id` it has and the `new_id`. The goal keeps its results and the person's yes, and each workflow that serves it gets a new version that names the new id, so write the new id in `contributes` from then on. A rename is refused while one of those workflows has a run that has not ended. Change an `id` when the person asks for it, or when a move was refused because the other playbook already has a goal of that id.
 
 ## What a workflow contributes
 

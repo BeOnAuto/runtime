@@ -1,5 +1,5 @@
 import { InvalidInput } from '@on.auto/operations';
-import { counted, type Noun } from '@on.auto/phrasing';
+import { capitalized, counted, listed, quoted, type Noun } from '@on.auto/phrasing';
 
 import type { GoalGap } from '../goals/goals-answer.ts';
 import type { Playbook } from '../registry/playbook.ts';
@@ -138,4 +138,31 @@ interface Updating {
 export function updatedWithGoalsWordsOf(messages: boolean): (playbook: AnsweredWithGoals, input: Updating) => string {
   return (playbook, { goals }) =>
     `Updated ${playbookNamed(playbook)}.${goals === undefined ? '' : goalsSavedWordsOf(messages)}${purposeOf(playbook, ' It has no description now.')}${goalsStandingOf(playbook.goals.gaps, messages)}`;
+}
+
+export interface GoalRenameAsked {
+  readonly id: string;
+  readonly new_id: string;
+}
+
+export function goalRenameAttempt({ id, new_id: to }: GoalRenameAsked): string {
+  return `rename the goal ${id} to ${quoted(to)}`;
+}
+
+interface SavedAgain {
+  readonly name: string;
+}
+
+function savedAgainWords(savedAgain: readonly SavedAgain[]): string {
+  if (savedAgain.length === 0) {
+    return '';
+  }
+  const named = capitalized(listed(savedAgain.map(({ name }) => `the workflow ${name}`)));
+  return savedAgain.length === 1
+    ? ` ${named} has a new version with the new id.`
+    : ` ${named} each have a new version with the new id.`;
+}
+
+export function goalRenamedWords({ id, new_id: to }: GoalRenameAsked, savedAgain: readonly SavedAgain[]): string {
+  return `Renamed the goal ${id} to ${quoted(to)}. Its results stay with it, and so does the person's yes if they gave one.${savedAgainWords(savedAgain)}`;
 }

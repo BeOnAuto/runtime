@@ -80,3 +80,18 @@ export function takenByARetiredOne({ type, name }: NamedDefinition, from: string
 export function tooManyUsersWords({ type, name }: NamedDefinition, users: number, most: number): string {
   return `The ${definitionResourceLabel(type)} ${name} is used by ${users} definitions, and a rename saves at most ${most} of them again at once, so it cannot be renamed; tell the person`;
 }
+
+export function runsNotEndedOfAServer(goal: string) {
+  return (holder: NamedDefinition, count: number, runId: string): string =>
+    runsNotEndedSentence({ holder, change: renamedChange, use: { relation: 'serves', of: goal } }, count, runId);
+}
+
+export function tooManyServersWords(goal: string, servers: number, most: number): string {
+  return `The goal ${goal} is served by ${servers} workflows, and a rename saves at most ${most} of them again at once, so it cannot be renamed; tell the person`;
+}
+
+export function goalIdTakenWords(taken: string, from: string, retired: boolean): string {
+  return retired
+    ? `The playbook has a retired goal ${taken}, which keeps its id while retired, so ${from} cannot take it; tell the person, who can choose another id`
+    : `The playbook already has a goal ${taken}; tell the person, who can choose another id`;
+}

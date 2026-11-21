@@ -161,9 +161,22 @@ async function promptOf(session: McpSession, listed: ListedPrompt): Promise<Serv
   return { ...listed, messages: answered.messages.map((message) => messageOf(message)) };
 }
 
+/**
+ * Each call is asked on its own: every request builds its server again, listing a tool, and the prompts
+ * of the recipes that call it, only where the policy decision point allows it within its second. Asked
+ * all at once, the requests keep each other's decisions waiting past that second, so a prompt listed by
+ * one request is not found by the next.
+ */
+function oneAfterAnother<T, A>(items: readonly T[], each: (item: T) => Promise<A>): Promise<readonly A[]> {
+  return items.reduce(
+    async (before: Promise<readonly A[]>, item) => [...(await before), await each(item)],
+    Promise.resolve([]),
+  );
+}
+
 async function promptsOf(session: McpSession): Promise<readonly ServedPrompt[]> {
   const { prompts } = Schema.decodeUnknownSync(PromptsSchema)(await session.listPrompts());
-  return Promise.all(prompts.map((listed) => promptOf(session, listed)));
+  return oneAfterAnother(prompts, (listed) => promptOf(session, listed));
 }
 
 function guideNamesIn(tools: readonly ServedTool[]): readonly string[] {
@@ -173,12 +186,10 @@ function guideNamesIn(tools: readonly ServedTool[]): readonly string[] {
 }
 
 function guidesOf(session: McpSession, tools: readonly ServedTool[]): Promise<readonly ServedGuide[]> {
-  return Promise.all(
-    guideNamesIn(tools).map(async (name) => ({
-      name,
-      text: textOf(await session.callTool(guideToolName, { guide: name })),
-    })),
-  );
+  return oneAfterAnother(guideNamesIn(tools), async (name) => ({
+    name,
+    text: textOf(await session.callTool(guideToolName, { guide: name })),
+  }));
 }
 
 function connectionRead(reading: Reading, shown: ShownEndpoint): Promise<ServedConnection> {
@@ -214,7 +225,7 @@ function answersRead(reading: Reading, { path }: ShownEndpoint): Promise<readonl
 }
 
 export async function servedSurfaceAt(reading: Reading): Promise<ServedSurface> {
-  const answers = await Promise.all(shownEndpoints.slice(0, 1).map((first) => answersRead(reading, first)));
-  const connections = await Promise.all(shownEndpoints.map((shown) => connectionRead(reading, shown)));
+  const answers = await oneAfterAnother(shownEndpoints.slice(0, 1), (first) => answersRead(reading, first));
+  const connections = await oneAfterAnother(shownEndpoints, (shown) => connectionRead(reading, shown));
   return { connections, answers: answers.flat() };
 }

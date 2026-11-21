@@ -64,6 +64,11 @@ describe('the facts of a goal', () => {
         { type: 'goal_reordered', data: { position: 1 }, context: ofTheGoal },
         { type: 'goal_agreed', data: { version: 2 }, context: ofTheGoalByThePerson },
         { type: 'goal_removed', data: {}, context: ofTheGoal },
+        {
+          type: 'goal_renamed',
+          data: { from: goal.id, to: 'leads-per-week', renamed_by: { id: ofThePerson.by, name: 'Ada' } },
+          context: ofTheGoalByThePerson,
+        },
       ],
     },
   });

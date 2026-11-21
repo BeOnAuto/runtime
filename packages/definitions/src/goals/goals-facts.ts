@@ -1,4 +1,4 @@
-import { ActedContextSchema, factOf } from '@on.auto/operations';
+import { ActedContextSchema, factOf, RecordedCallerSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { GoalsSchema } from './goals-document.ts';
@@ -45,6 +45,11 @@ export const GoalEventSchema = Schema.Union([
   factOf('goal_reordered', Schema.Struct({ position: Position }), GoalContextSchema),
   factOf('goal_agreed', Schema.Struct({ version: Schema.Int }), GoalContextSchema),
   factOf('goal_removed', Schema.Struct({}), GoalContextSchema),
+  factOf(
+    'goal_renamed',
+    Schema.Struct({ from: Schema.String, to: Schema.String, renamed_by: RecordedCallerSchema }),
+    GoalContextSchema,
+  ),
 ]);
 
 export type RecordedGoalEvent = typeof GoalEventSchema.Type;
@@ -55,4 +60,5 @@ export const goalFactTypes: readonly RecordedGoalEvent['type'][] = [
   'goal_reordered',
   'goal_agreed',
   'goal_removed',
+  'goal_renamed',
 ];

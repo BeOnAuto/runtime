@@ -41,8 +41,30 @@ export const PlaybookWithGoalsSchema = Schema.Struct({
 
 export type PlaybookWithGoals = typeof PlaybookWithGoalsSchema.Type;
 
+const goalIdPattern = /^[a-z][a-z0-9-]{2,47}$/u;
+
+export const GoalRenameField = Schema.Struct({
+  id: Schema.String.annotate({ description: 'The id the goal has now' }),
+  new_id: Schema.String.annotate({
+    description: 'The id to give it: 3 to 48 lowercase letters, digits and hyphens, starting with a letter',
+  }).check(Schema.isPattern(goalIdPattern)),
+}).annotate({
+  description:
+    "Gives one goal a new id; give it alone. To change what the goal is called, change its `name` in `goals` instead. The goal keeps its results and the person's yes, and each workflow that serves it is saved again with the new id",
+});
+
+const DefinitionSavedAgainSchema = Schema.Struct({
+  type: Schema.String.annotate({ description: 'The type of the definition saved again' }),
+  name: Schema.String.annotate({ description: 'The name of the definition saved again' }),
+});
+
 export const UpdatedPlaybookWithGoalsSchema = Schema.Struct({
   ...PlaybookWithGoalsSchema.fields,
+  updated_definitions: Schema.optionalKey(
+    Schema.Array(DefinitionSavedAgainSchema).annotate({
+      description: "On a goal's rename, the workflows saved again with the new id, each by its `type` and `name`",
+    }),
+  ),
   ...noticesFields(),
 }).annotate({
   identifier: 'UpdatedPlaybookWithGoals',

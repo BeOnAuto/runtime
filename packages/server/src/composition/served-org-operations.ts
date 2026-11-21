@@ -4,7 +4,7 @@ import { connectionChanges } from '@on.auto/connections';
 import { requestsSetAsideBy } from '@on.auto/goals';
 import { defineListOrgChanges, playbookChanges, playbookOperationsOf } from '@on.auto/playbooks';
 
-import { playbookGoalsServedBy } from '../goals/reads/served-playbook-goals.ts';
+import { playbookGoalsReadBy, playbookGoalsServedBy } from '../goals/reads/served-playbook-goals.ts';
 import { importOperationsOf } from '../importing/import-operations.ts';
 import type {
   ServedConnectionAccess,
@@ -19,15 +19,23 @@ const orgChanges = defineListOrgChanges([playbookChanges, connectionChanges, com
 
 type ServingRuntime = Parameters<typeof importOperationsOf>[0];
 
-function orgOperationsOfPlaybooks(
-  runtime: ServingRuntime,
-  served: ServedPages & Pick<ServedGoals, 'goals' | 'messages'>,
-) {
-  const goals = served.goals ? playbookGoalsServedBy(runtime, served.pages, served.messages) : undefined;
+type Capabilities = Parameters<ReturnType<typeof importOperationsOf>>[0];
+
+type ServedPlaybooks = ServedPages & Pick<ServedGoals, 'goals' | 'messages'>;
+
+function playbookOperationsOver(runtime: ServingRuntime, served: ServedPlaybooks) {
+  return (capabilities: Capabilities) =>
+    playbookOperationsOf(
+      playbookPagesServedBy(runtime, served.pages),
+      served.goals ? playbookGoalsServedBy(runtime, served.pages, served.messages, capabilities) : undefined,
+    );
+}
+
+function orgOperationsOfPlaybooks(runtime: ServingRuntime, served: ServedPlaybooks) {
+  const read = served.goals ? playbookGoalsReadBy(runtime, served.pages) : undefined;
   return [
-    ...playbookOperationsOf(playbookPagesServedBy(runtime, served.pages), goals),
     orgChanges,
-    ...activityOperationsOf(goals === undefined ? undefined : { read: goals.read, setAside: requestsSetAsideBy }),
+    ...activityOperationsOf(read === undefined ? undefined : { read, setAside: requestsSetAsideBy }),
     ...orgCommentOperations,
     ...roleAssignmentOperations,
     getCaller,
@@ -42,8 +50,13 @@ export function orgPartsServedBy<Operation>(
   inOrg: readonly Operation[],
 ) {
   const { listModels, getVoice, transcribe } = served;
+  const playbooksOver = playbookOperationsOver(runtime, served);
+  const importsOver = importOperationsOf(runtime, served);
   return {
-    importsOver: importOperationsOf(runtime, served),
+    playbooksOver: (capabilities: Capabilities) => ({
+      playbooks: playbooksOver(capabilities),
+      imports: importsOver(capabilities),
+    }),
     connections: served.connections,
     connectionEvents: served.connectionEvents,
     orgOperations: [...orgOperationsOfPlaybooks(runtime, served), listModels, getVoice, transcribe, ...inOrg],

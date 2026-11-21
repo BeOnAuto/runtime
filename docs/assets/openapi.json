@@ -888,7 +888,7 @@
       "put": {
         "operationId": "update_playbook",
         "summary": "Update playbook",
-        "description": "Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack. Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says. Once the person's yes to the goals is recorded, change them only after their yes to the change, and never change how success is judged to suit what you built. Use it too when the person renames a playbook, changes what it is for or gives it a dashboard. An argument you leave out keeps its saved value. `goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`.",
+        "description": "Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack. Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says. Once the person's yes to the goals is recorded, change them only after their yes to the change, and never change how success is judged to suit what you built. Use it too when the person renames a playbook, changes what it is for or gives it a dashboard. An argument you leave out keeps its saved value. `goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`. `rename_goal`, given alone, gives one goal a new id.",
         "tags": [
           "playbooks"
         ],
@@ -944,6 +944,26 @@
                     "type": "string",
                     "maxLength": 16384,
                     "description": "The whole list of the playbook's goals as YAML text, as the goals guide says, in the person's words: what it should achieve and how success is judged"
+                  },
+                  "rename_goal": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "The id the goal has now"
+                      },
+                      "new_id": {
+                        "type": "string",
+                        "description": "The id to give it: 3 to 48 lowercase letters, digits and hyphens, starting with a letter",
+                        "pattern": "^[a-z][a-z0-9-]{2,47}$"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "new_id"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Gives one goal a new id; give it alone. To change what the goal is called, change its `name` in `goals` instead. The goal keeps its results and the person's yes, and each workflow that serves it is saved again with the new id"
                   }
                 }
               }
@@ -1032,6 +1052,28 @@
                     "before_building": {
                       "type": "string",
                       "description": "What you must do before you build anything more, in words; present only when there is something to do"
+                    },
+                    "updated_definitions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "The type of the definition saved again"
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "The name of the definition saved again"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "On a goal's rename, the workflows saved again with the new id, each by its `type` and `name`"
                     },
                     "notices": {
                       "type": "array",

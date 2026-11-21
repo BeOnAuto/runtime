@@ -19,11 +19,13 @@ export { playbookChanges } from './registry/playbook-changes.ts';
 export {
   type CheckedGoal,
   type CheckedGoals,
+  type GoalRenaming,
   type GoalsNaming,
   type GoalsSaveOutcome,
   type GoalsSaving,
   type PlaybookGoals,
   type PlaybookHeld,
+  type PlaybookHeldRenamed,
   type PlaybookHeldSaved,
 } from './goals/playbook-goals.ts';
 export {

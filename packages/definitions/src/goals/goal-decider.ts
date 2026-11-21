@@ -6,6 +6,7 @@ import {
   type Decider,
   type Fold,
   type Issue,
+  type RecordedCaller,
 } from '@on.auto/operations';
 import { Result } from 'effect';
 
@@ -55,7 +56,14 @@ interface GoalAgreeing extends Acting {
   readonly seen: readonly number[];
 }
 
-export type GoalCommand = GoalSaving | GoalRemoval | GoalAgreeing;
+interface GoalRenaming extends Acting {
+  readonly type: 'rename';
+  readonly from: string;
+  readonly to: string;
+  readonly renamed_by: RecordedCaller;
+}
+
+export type GoalCommand = GoalSaving | GoalRemoval | GoalAgreeing | GoalRenaming;
 
 type Rejected = InvalidInput | Conflict;
 
@@ -158,6 +166,16 @@ function changedSince(id: string, seen: number, now: number): string {
   ].join(' ');
 }
 
+export const theIdItHas = '`new_id` is the id it has; give another id';
+
+export function noGoalWithTheId(id: string): string {
+  return `This playbook has no goal with the id ${id}`;
+}
+
+export function refusedAt(pointer: string, detail: string): InvalidInput {
+  return new InvalidInput({ detail, issues: [{ pointer, detail }] });
+}
+
 function isHeldIn(state: GoalState | undefined, playbook: string): state is GoalState {
   return state !== undefined && !state.removed && state.playbook === playbook;
 }
@@ -200,11 +218,26 @@ function decidedYes({ playbook, seen }: GoalAgreeing, state: GoalState | undefin
     : Result.succeed([]);
 }
 
+function decidedRename(
+  { playbook, from, to, renamed_by: renamedBy }: GoalRenaming,
+  state: GoalState | undefined,
+): Decision {
+  if (!isHeldIn(state, playbook) || state.name !== from) {
+    return Result.fail(refusedAt('/rename_goal/id', noGoalWithTheId(from)));
+  }
+  return to === from
+    ? Result.fail(refusedAt('/rename_goal/new_id', theIdItHas))
+    : Result.succeed([{ type: 'goal_renamed', data: { from, to, renamed_by: renamedBy } }]);
+}
+
 export function decidedOnAGoal(command: GoalCommand, state: GoalState | undefined): Decision {
   if (command.type === 'save') {
     return decidedSave(command, state);
   }
-  return command.type === 'remove' ? decidedRemoval(command, state) : decidedYes(command, state);
+  if (command.type === 'remove') {
+    return decidedRemoval(command, state);
+  }
+  return command.type === 'agree' ? decidedYes(command, state) : decidedRename(command, state);
 }
 
 function createdBy(definition: string, fact: Extract<RecordedGoalEvent, { type: 'goal_created' }>): GoalState {
@@ -222,6 +255,10 @@ function heldAfter(held: GoalState, fact: Exclude<RecordedGoalEvent, { type: 'go
   if (fact.type === 'goal_agreed') {
     const { at, by } = fact.context;
     return { ...held, agreed: { version: fact.data.version, at, by, content: held.goal } };
+  }
+  if (fact.type === 'goal_renamed') {
+    const { to } = fact.data;
+    return { ...held, name: to, goal: { ...held.goal, id: to } };
   }
   return { ...held, removed: true };
 }

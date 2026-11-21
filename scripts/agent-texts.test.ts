@@ -188,8 +188,8 @@ await test('the command prints what an agent reads that changed between the reco
   });
 });
 
-await test('the committed list is what a throwaway server of this release serves', () => {
-  execFileSync(process.execPath, [resolve(import.meta.dirname, 'agent-texts.ts'), '--check']);
+await test('the committed list is what a throwaway server of this release serves', async () => {
+  checkAgentTexts(resolve(import.meta.dirname, '../docs/assets/agent-texts.json'), await servedDocument());
 });
 
 await test('the command prints the changes on its standard output, as Markdown to post', () => {

@@ -8,7 +8,13 @@ import type { RegisteredDefinition } from '../registry/definition-registry.ts';
 import { retiredToChange } from '../registry/registry-decisions.ts';
 import { composedFactsOf } from '../run-work/declared-facts.ts';
 import type { RenameMember } from './rename-members.ts';
-import { runsNotEndedOfAUser, runsNotEndedOfTheRenamed, tooManyUsersWords } from './rename-words.ts';
+import {
+  runsNotEndedOfAServer,
+  runsNotEndedOfAUser,
+  runsNotEndedOfTheRenamed,
+  tooManyServersWords,
+  tooManyUsersWords,
+} from './rename-words.ts';
 
 export const mostFactsInARename = 64;
 
@@ -36,4 +42,23 @@ export function boundRefused(renamed: RenameMember, saved: readonly RenameMember
   const others = saved.filter((member) => member !== renamed).length;
   const most = mostFactsInARename - 1 - (saved.length - others);
   return others > most ? Effect.fail(new Conflict({ detail: tooManyUsersWords(renamed, others, most) })) : Effect.void;
+}
+
+interface Server {
+  readonly type: string;
+  readonly name: string;
+}
+
+export function goalRenameRefused(
+  started: readonly string[],
+  servers: readonly Server[],
+  goal: string,
+): Effect.Effect<void, Conflict, PlaybookReader> {
+  const most = mostFactsInARename - 1;
+  return Effect.andThen(
+    runsInProgressRefused(started, servers, runsNotEndedOfAServer(goal)),
+    servers.length > most
+      ? Effect.fail(new Conflict({ detail: tooManyServersWords(goal, servers.length, most) }))
+      : Effect.void,
+  );
 }

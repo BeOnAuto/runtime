@@ -1,5 +1,14 @@
 import type { AppRuntime } from '@on.auto/api';
-import { goalsSaveNoticesIn, goalStandingIn, playbookGoalsSaved, type GoalsDocument } from '@on.auto/definitions/goals';
+import type { Capability } from '@on.auto/definitions';
+import {
+  goalRenamerOf,
+  goalsSaveNoticesIn,
+  goalStandingIn,
+  playbookGoalRenamed,
+  playbookGoalsSaved,
+  type GoalRenamer,
+  type GoalsDocument,
+} from '@on.auto/definitions/goals';
 import type { SubjectPages } from '@on.auto/definitions/page';
 import {
   goalsAnsweredOf,
@@ -8,8 +17,8 @@ import {
   goalsCheckedWhere,
   savedGoalsRefusalOf,
 } from '@on.auto/goals';
-import { Caller, type DispatcherServices } from '@on.auto/operations';
-import type { GoalsSaving, PlaybookGoals, PlaybookHeld } from '@on.auto/playbooks';
+import { Caller, type DispatcherServices, type PlaybookAddress } from '@on.auto/operations';
+import type { GoalRenaming, GoalsSaving, PlaybookGoals, PlaybookHeld } from '@on.auto/playbooks';
 import { Effect, flow } from 'effect';
 
 import { inThePlaybookOf, pageSavingOf, shownOf } from '../../composition/served-playbook-pages.ts';
@@ -53,21 +62,39 @@ function savedIn(pages: SubjectPages, { page, goals, onlyIfNone = false }: Goals
   });
 }
 
+function renamedIn(pages: SubjectPages, renamer: GoalRenamer, renaming: GoalRenaming) {
+  return Effect.gen(function* () {
+    const { savedAgain } = yield* playbookGoalRenamed(renamer, renaming);
+    return { ...(yield* heldIn(pages)), savedAgain };
+  });
+}
+
+export function playbookGoalsReadBy(runtime: AppRuntime<DispatcherServices>, pages: SubjectPages) {
+  const inThePlaybook = inThePlaybookOf(runtime);
+  return (address: PlaybookAddress) => inThePlaybook(address, heldIn(pages));
+}
+
 export function playbookGoalsServedBy(
   runtime: AppRuntime<DispatcherServices>,
   pages: SubjectPages,
   messages: boolean,
+  capabilities: readonly Capability[],
 ): PlaybookGoals<GoalsDocument> {
   const inThePlaybook = inThePlaybookOf(runtime);
+  const renamer = goalRenamerOf(capabilities, { pages });
   return {
     messages,
     check: goalsCheckedWhere(messages),
-    read: (address) => inThePlaybook(address, heldIn(pages)),
+    read: playbookGoalsReadBy(runtime, pages),
     save: (address, saving) =>
       Effect.gen(function* () {
         const saved = yield* savedIn(pages, saving);
         const caller = yield* Caller;
         return yield* inThePlaybook(address, Effect.provideService(saved, Caller, caller));
       }),
+    rename: (address, renaming) =>
+      Effect.flatMap(Caller, (caller) =>
+        inThePlaybook(address, Effect.provideService(renamedIn(pages, renamer, renaming), Caller, caller)),
+      ),
   };
 }

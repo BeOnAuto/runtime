@@ -135,6 +135,7 @@ const reserved = [
   'goal_reordered',
   'goal_agreed',
   'goal_removed',
+  'goal_renamed',
   'playbook_import_started',
   'playbook_imported',
   'event_published',

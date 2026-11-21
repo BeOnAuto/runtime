@@ -13,8 +13,15 @@ const at = { by: 'acme-admin', at: '2026-11-20T09:00:00.000Z' };
 
 const theGoal = Option.getOrThrow(Option.fromNullishOr(goalsDocumentOfTheExamples([experiments]).goals[0]));
 
-function created(definition: string, id = theGoal.id) {
-  const command = { type: 'save' as const, goal: { ...theGoal, id }, position: 0, playbook: 'alpha', ...at };
+function created(definition: string, id = theGoal.id, retired = false) {
+  const command = { type: 'save' as const, goal: { ...theGoal, id, retired }, position: 0, playbook: 'alpha', ...at };
+  return { definition, stream: goalStream, decider: goalDecider(definition), command };
+}
+
+const renamedBy = { id: at.by, name: at.by };
+
+function renamed(definition: string, from: string, to: string) {
+  const command = { type: 'rename' as const, from, to, renamed_by: renamedBy, playbook: 'alpha', ...at };
   return { definition, stream: goalStream, decider: goalDecider(definition), command };
 }
 
@@ -27,9 +34,23 @@ function namesKept() {
           writer.executeOnDefinitions(goals.map(([definition, id]) => created(definition, id))),
         ),
       ),
+    retired: (definition: string, id: string) =>
+      book.as()(PlaybookWriter.use((writer) => writer.executeOnDefinitions([created(definition, id, true)]))),
+    renamed: (...renames: readonly (readonly [string, string, string])[]) =>
+      book.as()(
+        PlaybookWriter.use((writer) =>
+          writer.executeOnDefinitions(renames.map(([definition, from, to]) => renamed(definition, from, to))),
+        ),
+      ),
     held: () => book.goalNames().map(({ definitionKey, name, status }) => [definitionKey, name, status]),
   };
 }
+
+function byKey(one: readonly string[], other: readonly string[]): number {
+  return String(one[0]).localeCompare(String(other[0]));
+}
+
+const takenWithItsWords = Result.fail(expect.objectContaining({ _tag: 'conflict', kind: 'taken' }));
 
 describe('the names of goals, kept in the append', () => {
   it('hold each goal id of a playbook under the key of the goal', async () => {
@@ -85,6 +106,48 @@ function messageOf(type: string, data: object) {
   return { ...createdMessage, type, data };
 }
 
+describe('the names of goals, renamed in the append', () => {
+  it('free the id a rename gives up and claim the one it takes, which another goal may claim in turn', async () => {
+    const names = namesKept();
+    await names.appended(['goal-1', 'weekly-leads'], ['goal-2', 'reply-time']);
+
+    expect(Result.isSuccess(await names.renamed(['goal-1', 'weekly-leads', 'leads-per-week']))).toBe(true);
+    expect(Result.isSuccess(await names.renamed(['goal-2', 'reply-time', 'weekly-leads']))).toBe(true);
+    expect(names.held().toSorted(byKey)).toEqual([
+      ['definition/acme/goal-1/', 'leads-per-week', 'active'],
+      ['definition/acme/goal-2/', 'weekly-leads', 'active'],
+    ]);
+  });
+
+  it('refuse an id another goal of the playbook holds, retired or not, as taken, keeping both ids', async () => {
+    const names = namesKept();
+    await names.appended(['goal-1', 'weekly-leads'], ['goal-2', 'reply-time']);
+
+    const active = await names.renamed(['goal-1', 'weekly-leads', 'reply-time']);
+    await names.retired('goal-2', 'reply-time');
+    const retired = await names.renamed(['goal-1', 'weekly-leads', 'reply-time']);
+
+    expect([active, retired]).toEqual([takenWithItsWords, takenWithItsWords]);
+    expect(names.held().toSorted(byKey)).toEqual([
+      ['definition/acme/goal-1/', 'weekly-leads', 'active'],
+      ['definition/acme/goal-2/', 'reply-time', 'retired'],
+    ]);
+  });
+
+  it(`take a rename in a playbook that keeps ${String(mostGoals)} goals, since the count does not change`, async () => {
+    const names = namesKept();
+    await names.appended(
+      ...Array.from(
+        { length: mostGoals },
+        (_, index) => [`goal-${String(index)}`, `goal-number-${String(index)}`] as const,
+      ),
+    );
+
+    expect(Result.isSuccess(await names.renamed(['goal-0', 'goal-number-0', 'goal-number-zero']))).toBe(true);
+    expect(names.held()).toHaveLength(mostGoals);
+  });
+});
+
 describe('the facts the names of goals read', () => {
   it('name the goal a creation claims, retired or not, and nothing of a stream that is not a goal own or a fact it does not read', () => {
     expect([
@@ -102,6 +165,17 @@ describe('the facts the names of goals read', () => {
       goalNames.nameAfter(undefined, messageOf('goal_updated', { goal: theGoal })),
       goalNames.nameAfter(held, messageOf('goal_reordered', { position: 2 })),
       goalNames.nameAfter(held, messageOf('goal_removed', {})),
-    ]).toEqual([{ ...held, status: 'retired' }, undefined, undefined, undefined, 'released']);
+      goalNames.nameAfter(
+        held,
+        messageOf('goal_renamed', { from: theGoal.id, to: 'leads-per-week', renamed_by: renamedBy }),
+      ),
+    ]).toEqual([
+      { ...held, status: 'retired' },
+      undefined,
+      undefined,
+      undefined,
+      'released',
+      { ...held, name: 'leads-per-week' },
+    ]);
   });
 });

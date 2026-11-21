@@ -5,6 +5,7 @@ import { goalsAnswerOf, type GoalsKept } from '../goals/goals-answer.ts';
 import type {
   CheckedGoal,
   CheckedGoals,
+  GoalRenaming,
   GoalsSaveOutcome,
   GoalsSaving,
   PlaybookGoals,
@@ -30,6 +31,11 @@ const savedGoalsRefusal = new InvalidInput({
   issues: [{ pointer: '', detail: 'The goal left-out has been judged and cannot be left out' }],
 });
 
+function noGoalOf(id: string): InvalidInput {
+  const detail = `This playbook has no goal with the id ${id}`;
+  return new InvalidInput({ detail, issues: [{ pointer: '/rename_goal/id', detail }] });
+}
+
 function keyOf({ org, playbook }: PlaybookAddress): string {
   return `${org}/${playbook}`;
 }
@@ -45,6 +51,24 @@ function goalIdsOf(source: string): readonly CheckedGoal[] {
 function versionsAfter(before: GoalsKept | undefined, { goals }: CheckedGoals): GoalsKept['versions'] {
   const versionBefore = new Map(before?.versions.map(({ id, version }) => [id, version]));
   return goals.map(({ id }) => ({ id, version: (versionBefore.get(id) ?? 0) + 1 }));
+}
+
+function goalRenamedIn(
+  kept: Map<string, GoalsKept>,
+  read: (address: PlaybookAddress) => Effect.Effect<PlaybookHeld>,
+): PlaybookGoals['rename'] {
+  return (address, { from, to }: GoalRenaming) =>
+    Effect.gen(function* () {
+      const before = kept.get(keyOf(address)) ?? { source: '', versions: [] };
+      if (!before.versions.some(({ id }) => id === from)) {
+        return yield* noGoalOf(from);
+      }
+      kept.set(keyOf(address), {
+        source: before.source.replace(`${goalIdLine}${from}\n`, `${goalIdLine}${to}\n`),
+        versions: before.versions.map(({ id, version }) => ({ id: id === from ? to : id, version })),
+      });
+      return { ...(yield* read(address)), savedAgain: [] };
+    });
 }
 
 export function goalsInMemory(
@@ -75,6 +99,7 @@ export function goalsInMemory(
     });
   return {
     messages,
+    rename: goalRenamedIn(kept, read),
     check: (source) =>
       source === refusedGoals ? Effect.fail(goalsRefusal) : Effect.succeed({ source, goals: goalIdsOf(source) }),
     read,

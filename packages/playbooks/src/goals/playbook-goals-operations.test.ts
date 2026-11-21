@@ -87,6 +87,7 @@ describe('the descriptions of the playbook operations with a goals port', () => 
       'Use it too when the person renames a playbook, changes what it is for or gives it a dashboard.',
       'An argument you leave out keeps its saved value.',
       '`goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`.',
+      '`rename_goal`, given alone, gives one goal a new id.',
     ]);
   });
 
@@ -138,7 +139,7 @@ describe('the playbook operations with a goals port', () => {
     const update = named('update_playbook').registration;
 
     expect(inputOf(create)).toEqual(['playbook', 'name', 'description', 'goals']);
-    expect(inputOf(update)).toEqual(['playbook', 'name', 'description', 'page', 'goals']);
+    expect(inputOf(update)).toEqual(['playbook', 'name', 'description', 'page', 'goals', 'rename_goal']);
     expect(create.input.schema['required']).toEqual(['playbook', 'name']);
     expect(update.input.schema['required']).toEqual(['playbook']);
     expect(JSON.stringify(create.input)).toContain(`"maxLength":${String(mostGoalsBytes)}`);

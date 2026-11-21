@@ -1,8 +1,12 @@
+import { GoalsReadSchema } from '@on.auto/goals';
 import { Ledger } from '@on.auto/operations';
 import { goalsWantedWordsOf } from '@on.auto/playbooks';
-import { Effect } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { Effect, Schema } from 'effect';
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
+import { savedWorkflow } from '../../testing/goals/assessed-runs.ts';
+import { movingUntil, servedWatched, type WatchedServer } from '../../testing/goals/watched-goals.ts';
+import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha, type ReasoningServer } from '../../testing/servers/reasoning-server.ts';
 import {
   createdWithGoals,
@@ -172,4 +176,99 @@ describe('a refused page on a server that keeps goals', () => {
     expect(read).toMatchObject({ status: 200, body: { name: 'Alpha', goals: savedGoals } });
     expect(read.body).not.toHaveProperty('page');
   });
+});
+
+const changeRequests = [
+  '- id: change-requests',
+  '  statement: Every client change request becomes a revised asset, ready for review.',
+  '  per: change request',
+  '  window: { after: found, for: P1D }',
+  '  success:',
+  '    label: Revisions ready for review',
+  '    settles: on_crossing',
+  '    target: { at_least: 1 }',
+  '    passed: Ready for review',
+  '    failed: Not ready in time',
+  '  milestones:',
+  '    - { id: found, label: Request found, by: auto }',
+  '    - { id: revised, label: Revision made, by: auto }',
+  '    - { id: approved, label: Approved, by: person }',
+  '  notify: { passed: quiet, failed: quiet, overdue: quiet }',
+  '',
+].join('\n');
+
+const findRequests = [
+  'contributes:',
+  '  - goal: change-requests',
+  '    purpose: Finds each change request.',
+  '    each: /requests',
+  '    per_id: /id',
+  '    marks: found',
+  'do:',
+  "  - found: { set: { requests: [{ id: '${ $input.id }' }] } }",
+];
+
+const prepareRevisions = [
+  'contributes:',
+  '  - goal: change-requests',
+  '    purpose: Says whether the revision is ready.',
+  '    per_id: /id',
+  '    measures: /ready',
+  '    final: true',
+  'do:',
+  '  - revised: { set: { id: letterhead, ready: 1 } }',
+];
+
+const decodeGoalsRead = Schema.decodeUnknownSync(GoalsReadSchema);
+
+async function judgedGoalOf(watched: WatchedServer) {
+  const [goal] = decodeGoalsRead((await watched.server.call('GET', `${alpha}/goals`)).body).goals;
+  return goal;
+}
+
+function ranBy(watched: WatchedServer, name: string, input: object) {
+  return watched.server.call('POST', `${alpha}/definitions/workflow/${name}/run`, { body: { input } });
+}
+
+describe('a goal renamed on a server that keeps goals', () => {
+  it('is judged on the next run of a workflow that serves it under its new id, the item it had open carried on', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    const watched = await servedWatched(ledger);
+    onTestFinished(watched.server.stop);
+    await createdWithGoals(watched.server, { goals: changeRequests });
+    await savedWorkflow(watched.server, 'find-requests', findRequests);
+    await savedWorkflow(watched.server, 'prepare-revisions', prepareRevisions);
+    await ranBy(watched, 'find-requests', { id: 'letterhead' });
+    const opened = await movingUntil(
+      watched,
+      () => judgedGoalOf(watched),
+      (goal) => goal?.assessments.open_count === 1,
+    );
+
+    const renamed = await watched.server.call('PUT', alpha, {
+      body: { rename_goal: { id: 'change-requests', new_id: 'client-changes' } },
+    });
+    await ranBy(watched, 'prepare-revisions', {});
+    const judged = await movingUntil(
+      watched,
+      () => judgedGoalOf(watched),
+      (goal) => goal?.assessments.closed.passed === 1,
+    );
+
+    expect(renamed).toMatchObject({
+      status: 200,
+      body: {
+        goals: { versions: [{ id: 'client-changes', version: 1 }] },
+        updated_definitions: [
+          { type: 'workflow', name: 'find-requests' },
+          { type: 'workflow', name: 'prepare-revisions' },
+        ],
+      },
+    });
+    expect(judged?.id).toBe('client-changes');
+    expect(judged?.assessments.closed.latest.map(({ id }) => id)).toEqual(
+      opened?.assessments.in_flight.map(({ id }) => id),
+    );
+  }, 60_000);
 });

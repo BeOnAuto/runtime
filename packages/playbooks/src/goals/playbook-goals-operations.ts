@@ -3,10 +3,16 @@ import { Schema } from 'effect';
 
 import { createPlaybookFields, createPlaybookSentences, createPlaybookWords } from '../operations/create-playbook.ts';
 import { updatePlaybookFields, updatePlaybookWords } from '../operations/update-playbook.ts';
-import { createdWithGoalsWordsOf, updatedWithGoalsWordsOf } from '../plain-language/goals-words.ts';
+import {
+  createdWithGoalsWordsOf,
+  goalRenameAttempt,
+  goalRenamedWords,
+  updatedWithGoalsWordsOf,
+} from '../plain-language/goals-words.ts';
 import { playbookCreatedWithGoals } from './goals-created.ts';
 import {
   CreatedPlaybookWithGoalsSchema,
+  GoalRenameField,
   playbookGoalsFieldOf,
   UpdatedPlaybookWithGoalsSchema,
 } from './goals-fields.ts';
@@ -38,6 +44,27 @@ function wordsWhere(words: { readonly told: string; readonly untold: string }, m
   return messages ? words.told : words.untold;
 }
 
+type UpdatedAnswer = typeof UpdatedPlaybookWithGoalsSchema.Type;
+
+interface UpdateAsked {
+  readonly playbook: string;
+  readonly goals?: string;
+  readonly rename_goal?: typeof GoalRenameField.Type;
+}
+
+function updatedOrRenamedWordsOf(messages: boolean) {
+  const updated = updatedWithGoalsWordsOf(messages);
+  return {
+    task: updatePlaybookWords.task,
+    attempt: (asked: UpdateAsked) =>
+      asked.rename_goal === undefined ? updatePlaybookWords.attempt(asked) : goalRenameAttempt(asked.rename_goal),
+    outcome: (answer: UpdatedAnswer, asked: UpdateAsked) =>
+      asked.rename_goal === undefined
+        ? updated(answer, asked)
+        : goalRenamedWords(asked.rename_goal, answer.updated_definitions ?? []),
+  };
+}
+
 export function defineCreatePlaybookKeepingGoals<Checked extends CheckedGoals>(goals: PlaybookGoals<Checked>) {
   const { messages } = goals;
   return defineCommand('org', {
@@ -66,13 +93,18 @@ export function defineUpdatePlaybookKeepingGoals<Checked extends CheckedGoals>(g
       'Use it too when the person renames a playbook, changes what it is for or gives it a dashboard.',
       'An argument you leave out keeps its saved value.',
       '`goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`.',
+      '`rename_goal`, given alone, gives one goal a new id.',
     ].join(' '),
     repeatable: true,
     route: { method: 'PUT', path: '/playbooks/{playbook}' },
-    inputSchema: Schema.Struct({ ...updatePlaybookFields, goals: Schema.optionalKey(playbookGoalsFieldOf(messages)) }),
+    inputSchema: Schema.Struct({
+      ...updatePlaybookFields,
+      goals: Schema.optionalKey(playbookGoalsFieldOf(messages)),
+      rename_goal: Schema.optionalKey(GoalRenameField),
+    }),
     outputSchema: UpdatedPlaybookWithGoalsSchema,
     reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
     handle: (input) => playbookUpdatedWithGoals(goals, input),
-    plainLanguage: { ...updatePlaybookWords, outcome: updatedWithGoalsWordsOf(messages) },
+    plainLanguage: updatedOrRenamedWordsOf(messages),
   });
 }

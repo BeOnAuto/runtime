@@ -299,7 +299,7 @@
       ]
     },
     {
-      "sha256": "b82a46a8669348de2919a0d35e4f6441472dad0558327ca7c7e76735b4945368",
+      "sha256": "128a7c7703efe42dc2ae44d7427c80e259a5ce96e667ace3ca90465e0b088f21",
       "tier": 1,
       "received": [
         {
@@ -312,7 +312,7 @@
         }
       ],
       "lines": [
-        "Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack. Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says. Once the person's yes to the goals is recorded, change them only after their yes to the change, and never change how success is judged to suit what you built. Use it too when the person renames a playbook, changes what it is for or gives it a dashboard. An argument you leave out keeps its saved value. `goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`."
+        "Changes the goals, the name, the description or the page of an active playbook and returns it with what its goals still lack. Send `goals` to a playbook with none before saving a workflow in it, and change them with the person until they say yes, as the goals guide says. Once the person's yes to the goals is recorded, change them only after their yes to the change, and never change how success is judged to suit what you built. Use it too when the person renames a playbook, changes what it is for or gives it a dashboard. An argument you leave out keeps its saved value. `goals` is always the whole list: a goal missing from it is removed, and one that has been judged must stay, with `retired: true`. `rename_goal`, given alone, gives one goal a new id."
       ]
     },
     {
@@ -330,6 +330,57 @@
       ],
       "lines": [
         "Its page as YAML, data and runs, as the page guide says; null removes it"
+      ]
+    },
+    {
+      "sha256": "cb90a829e584b80345e9c9b1666ea062f615abe08e9473c7061802b5d4f8e6c1",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool update_playbook: argument rename_goal",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "Gives one goal a new id; give it alone. To change what the goal is called, change its `name` in `goals` instead. The goal keeps its results and the person's yes, and each workflow that serves it is saved again with the new id"
+      ]
+    },
+    {
+      "sha256": "c6fe8fc98f8f6e7e03d3ce8f1fd02eaafc04a9ab1474b3ff886ad576846c4f6d",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool update_playbook: argument rename_goal.id",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The id the goal has now"
+      ]
+    },
+    {
+      "sha256": "1927b3c9a16ee3a739a04266a9650c171211013ad2cc2936d2306abcaa774c9b",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool update_playbook: argument rename_goal.new_id",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The id to give it: 3 to 48 lowercase letters, digits and hyphens, starting with a letter"
       ]
     },
     {
@@ -5870,7 +5921,7 @@
       ]
     },
     {
-      "sha256": "3e59b7a8ac046709417eef54734aac9ce8a6cff48e74f603f6b8477d504bf859",
+      "sha256": "9d915830585224ab26072058c3d89be778276306c854dc985b30bc192cb54c31",
       "tier": 3,
       "received": [
         {
@@ -5950,6 +6001,7 @@
         "",
         "- At most 8 goals and 16,384 bytes. One goal is often enough. The first is the lead goal: it orders the person's cards and leads the link.",
         "- A goal that has been judged cannot be left out. Stop it with `retired: true`, which keeps its id and record and can be undone. A goal that was never judged may simply be left out.",
+        "- A goal's `id` is not changed in the list: an id the playbook does not have is a new goal. Give a goal a new id with `rename_goal`; see [Renaming a goal](#renaming-a-goal).",
         "- A goal's `per`, the kind of its window, a calendar window's unit and time zone, and `settles` cannot change once saved under that id. A different shape is a new goal with a new id. Anything else may change, and a change applies to judgings that open afterward.",
         "",
         "| Key               | Required                        | What it holds                                                                                                                                     |",
@@ -6033,6 +6085,10 @@
         "- A final measurement whose `as_of` lies after the close is late. A late one that misses the target fails the judging with that number once the close and its grace have passed: a reply that took 23 hours against at most 8 is a miss that reads 23. A late one that meets the target never makes a pass: the judging stays overdue and keeps it as its number.",
         "- A judging still overdue one more window later fails, since its deadline passed with nothing that counts. A final measurement that arrives after that becomes its number, and it stays a miss. So tell the person that a thing nothing measured, such as one waiting on an answer that never came, shows overdue once its close and grace pass, and is missed only one window later.",
         "- A verdict is final. Later measurements never change it, though milestones are still marked.",
+        "",
+        "## Renaming a goal",
+        "",
+        "To change what a goal is called for the person, change its `name` in the list and ask for their yes, as for any change. To change its `id`, call update_playbook with `rename_goal` alone: the `id` it has and the `new_id`. The goal keeps its results and the person's yes, and each workflow that serves it gets a new version that names the new id, so write the new id in `contributes` from then on. A rename is refused while one of those workflows has a run that has not ended. Change an `id` when the person asks for it, or when a move was refused because the other playbook already has a goal of that id.",
         "",
         "## What a workflow contributes",
         "",

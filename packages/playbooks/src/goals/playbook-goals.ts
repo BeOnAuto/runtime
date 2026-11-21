@@ -37,6 +37,20 @@ export interface PlaybookHeldSaved extends PlaybookHeld {
   readonly notices?: readonly Notice[];
 }
 
+export interface GoalRenaming {
+  readonly from: string;
+  readonly to: string;
+}
+
+export interface DefinitionSavedAgain {
+  readonly type: string;
+  readonly name: string;
+}
+
+export interface PlaybookHeldRenamed extends PlaybookHeld {
+  readonly savedAgain: readonly DefinitionSavedAgain[];
+}
+
 export interface PlaybookGoals<Checked extends CheckedGoals = CheckedGoals> {
   readonly messages: boolean;
   readonly check: (source: string, naming: GoalsNaming) => Effect.Effect<Checked, InvalidInput>;
@@ -45,4 +59,8 @@ export interface PlaybookGoals<Checked extends CheckedGoals = CheckedGoals> {
     playbook: PlaybookAddress,
     saving: GoalsSaving<Checked>,
   ) => Effect.Effect<PlaybookHeldSaved, InvalidInput | Unavailable | Conflict, Caller>;
+  readonly rename: (
+    playbook: PlaybookAddress,
+    renaming: GoalRenaming,
+  ) => Effect.Effect<PlaybookHeldRenamed, InvalidInput | Unavailable | Conflict, Caller>;
 }

@@ -33,7 +33,10 @@ interface PlaybookOperation {
 
 export interface WorkflowParts
   extends HostParts, ServedPages, ServedGoals, ServedConnectionAccess, ServedConnectionEvents {
-  readonly importsOver: (capabilities: readonly Capability[]) => readonly OrgOperation[];
+  readonly playbooksOver: (capabilities: readonly Capability[]) => {
+    readonly playbooks: readonly OrgOperation[];
+    readonly imports: readonly OrgOperation[];
+  };
   readonly orgOperations: readonly OrgOperation[];
   readonly playbookOperations: readonly PlaybookOperation[];
   readonly capabilityOperations: readonly CapabilityOperations<PlaybookOperation | OrgOperation>[];
@@ -60,15 +63,16 @@ function catalogsOf(
   parts: WorkflowParts,
   capabilities: readonly Capability[],
   sendRunEvent: ReturnType<typeof defineSendRunEvent>,
-  imported: readonly OrgOperation[],
 ) {
+  const { playbooks, imports } = parts.playbooksOver(capabilities);
   const catalogOf = (
     definitionOperations: ReturnType<typeof playbookOperationsServing>,
     capabilityOperations: readonly (PlaybookOperation | OrgOperation)[],
   ) =>
     makeCatalog([
+      ...playbooks,
       ...parts.orgOperations,
-      ...imported,
+      ...imports,
       ...capabilityOperations.filter((operation) => isOrgOperation(operation)),
       ...definitionOperations,
       ...parts.playbookOperations,
@@ -101,12 +105,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
   });
   const capabilities = [...parts.capabilities, workflow];
   const hostOperations = hostOperationsOf(capabilities);
-  const { catalog, directoryCatalog } = catalogsOf(
-    parts,
-    capabilities,
-    defineSendRunEvent(runs, names),
-    parts.importsOver(capabilities),
-  );
+  const { catalog, directoryCatalog } = catalogsOf(parts, capabilities, defineSendRunEvent(runs, names));
   const dispatched = { catalogs: [catalog, directoryCatalog], host: hostOperations };
   const { decisionPoint, callContext } = await accessControlServing(runtime, dispatched, shippedFiles);
   const dispatcher = makeDispatcher([], { decidedBy: decisionPoint });

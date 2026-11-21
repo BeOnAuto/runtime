@@ -36,6 +36,7 @@ const feedTypes: Readonly<Record<PlaybookFeedType, true>> = {
   goal_reordered: true,
   goal_agreed: true,
   goal_removed: true,
+  goal_renamed: true,
   playbook_import_started: true,
   playbook_imported: true,
   event_published: true,

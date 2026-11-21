@@ -1,0 +1,16 @@
+{
+  "type": "goal_renamed",
+  "data": {
+    "from": "paying-customers",
+    "to": "leads-per-week",
+    "renamed_by": {
+      "id": "person:user_2ada",
+      "name": "Ada"
+    }
+  },
+  "context": {
+    "at": "2026-11-13T10:00:00.000Z",
+    "by": "person:user_2ada",
+    "definitionId": "019a8f00-0000-7000-8000-000000000001"
+  }
+}

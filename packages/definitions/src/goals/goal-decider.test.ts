@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest';
 
 import { changedMeanwhile } from '../registry/registry-decisions.ts';
 import { goalsDocumentOfTheExamples } from '../testing/goals-book.ts';
-import { decidedOnAGoal, goalFoldOf, isSameContent, type GoalCommand, type GoalState } from './goal-decider.ts';
+import {
+  decidedOnAGoal,
+  goalFoldOf,
+  isSameContent,
+  standingYesOf,
+  type GoalCommand,
+  type GoalState,
+} from './goal-decider.ts';
 import { controls, experiments } from './goal-examples.ts';
 import type { Goal } from './goals-document.ts';
 import type { RecordedGoalEvent } from './goals-facts.ts';
@@ -61,6 +68,67 @@ describe("a goal's decisions", () => {
       Result.fail(expect.objectContaining({ _tag: 'conflict', detail: someWords })),
       Result.fail(changedMeanwhile),
       Result.fail(expect.objectContaining({ _tag: 'invalid_input', detail: someWords, issues: [] })),
+      Result.succeed([]),
+    ]);
+  });
+});
+
+const leadsPerWeek = 'leads-per-week';
+
+const rename: GoalCommand = {
+  type: 'rename',
+  from: experiments.id,
+  to: leadsPerWeek,
+  renamed_by: { id: acting.by, name: 'Ada' },
+  ...acting,
+};
+
+function refusedAt(pointer: string): unknown {
+  return Result.fail(expect.objectContaining({ _tag: 'invalid_input', issues: [{ pointer, detail: someWords }] }));
+}
+
+describe("a goal's rename, decided", () => {
+  it('records the new id of a goal held in the playbook by the id it has, and refuses one gone, elsewhere, of another id, or to the id it has', () => {
+    const noGoal = refusedAt('/rename_goal/id');
+
+    expect([
+      decidedOnAGoal(rename, held),
+      decidedOnAGoal(rename, goalFoldOf('goal-1').initialState),
+      decidedOnAGoal(rename, { ...held, removed: true }),
+      decidedOnAGoal(rename, { ...held, playbook: 'beta' }),
+      decidedOnAGoal(rename, { ...held, name: controls.id }),
+      decidedOnAGoal({ ...rename, to: experiments.id }, held),
+    ]).toEqual([
+      Result.succeed([
+        {
+          type: 'goal_renamed',
+          data: { from: experiments.id, to: leadsPerWeek, renamed_by: { id: acting.by, name: 'Ada' } },
+        },
+      ]),
+      noGoal,
+      noGoal,
+      noGoal,
+      noGoal,
+      refusedAt('/rename_goal/new_id'),
+    ]);
+  });
+
+  it("folds into the goal's name and id at the version it had, with the person's yes standing, and a save of the old id refused", () => {
+    const fold = goalFoldOf('goal-1');
+    const agreed = { version: 3, at: acting.at, by: acting.by, content: theGoal };
+    const renamed: RecordedGoalEvent = {
+      type: 'goal_renamed',
+      data: { from: experiments.id, to: leadsPerWeek, renamed_by: { id: acting.by, name: 'Ada' } },
+      context: { at: acting.at, by: acting.by, definitionId: 'goal-1' },
+    };
+
+    const after = Option.getOrThrow(Option.fromNullishOr(fold.evolve({ ...held, agreed }, renamed)));
+    const saving = (id: string): GoalCommand => ({ type: 'save', goal: { ...theGoal, id }, position: 0, ...acting });
+
+    expect([after.name, after.goal.id, after.version]).toEqual([leadsPerWeek, leadsPerWeek, 3]);
+    expect(standingYesOf(after)).toEqual(agreed);
+    expect([decidedOnAGoal(saving(experiments.id), after), decidedOnAGoal(saving(leadsPerWeek), after)]).toEqual([
+      Result.fail(changedMeanwhile),
       Result.succeed([]),
     ]);
   });

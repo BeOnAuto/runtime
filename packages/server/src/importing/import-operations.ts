@@ -34,7 +34,7 @@ export function importOperationsOf(
     goals
       ? [
           defineImportPlaybook(
-            playbookGoalsServedBy(runtime, pages, messages),
+            playbookGoalsServedBy(runtime, pages, messages, capabilities),
             playbookImportsServedBy(runtime, { capabilities, pages, servers, offers }),
           ),
         ]
