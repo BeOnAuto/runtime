@@ -9,6 +9,7 @@ import { editorRoleForEveryPerson, type RoleAssignments, type ScopeReference } f
 import {
   builtIn,
   cedarOnDisk,
+  countingReads,
   declaredOperations,
   decidedBy,
   filesOnDisk,
@@ -30,6 +31,10 @@ const acme: ScopeReference = { type: 'org', id: 'acme' };
 const alpha: ResourceReference = { type: 'playbook', id: 'alpha', org: 'acme' };
 
 const theOrg: ResourceReference = { type: 'org', id: 'acme' };
+
+const elsewhere: ResourceReference = { type: 'playbook', id: 'alpha', org: 'globex' };
+
+const notDeclared = { ...getDefinition, name: 'not_declared' };
 
 const people = rolesHeld({
   admin: [builtIn('admin', acme)],
@@ -98,10 +103,9 @@ describe('the policy decision point', () => {
     const loadsBefore = loads.count;
 
     await Effect.runPromise(
-      Effect.all(
-        [1, 2, 3].map(() => decisionPoint.decide(readingAlpha)),
-        { concurrency: 'unbounded' },
-      ).pipe(Effect.provide(logs.layer)),
+      Effect.all([decisionPoint.decide(readingAlpha), decisionPoint.decideBatch([readingAlpha, readingAlpha])], {
+        concurrency: 'unbounded',
+      }).pipe(Effect.provide(logs.layer)),
     );
 
     expect(loads.count - loadsBefore).toBe(1);
@@ -146,16 +150,18 @@ describe('a policy decision point loaded before its first request', () => {
     );
     const loggedAsItLoaded = logs.logged();
     const onFirstUse = cedarDecisionPoint({ ...parts, module: cedarOnDisk });
-    const [decided, decidedOnFirstUse] = await Effect.runPromise(
+    const [decided, decidedOnFirstUse, decidedTogether] = await Effect.runPromise(
       Effect.all([
         Effect.forEach(everyRoleAsksEveryOperation, (request) => loaded.decide(request)),
         Effect.forEach(everyRoleAsksEveryOperation, (request) => onFirstUse.decide(request)),
+        loaded.decideBatch(everyRoleAsksEveryOperation),
       ]),
     );
 
     expect(loads.count - loadsBefore).toBe(1);
     expect(loggedAsItLoaded).toEqual([saidOnceLoaded]);
     expect(decided.map((each) => inAnyOrder(each))).toEqual(decidedOnFirstUse.map((each) => inAnyOrder(each)));
+    expect(decidedTogether.map((each) => inAnyOrder(each))).toEqual(decided.map((each) => inAnyOrder(each)));
     expect(new Set(decided.map(({ decision }) => decision))).toEqual(new Set(['allow', 'deny']));
   });
 
@@ -187,7 +193,7 @@ describe('a request the policy decision point cannot decide', () => {
     const decided = await decidedBy(editorRoleForEveryPerson)(
       requestOf({
         principal: { type: 'person', id: 'ada' },
-        operation: { ...getDefinition, name: 'not_declared' },
+        operation: notDeclared,
         resource: alpha,
       }),
     );
@@ -207,6 +213,35 @@ describe('a request the policy decision point cannot decide', () => {
   });
 });
 
+const peopleOneUnreadable: RoleAssignments = {
+  heldBy: (principal, org) =>
+    principal.id === 'unreadable' ? Effect.die(new Error('the read model is closed')) : people.heldBy(principal, org),
+};
+
+const askedTogether = [
+  ...everyRoleAsksEveryOperation,
+  requestOf({ principal: { type: 'person', id: 'admin' }, operation: getDefinition, resource: elsewhere }),
+  requestOf({ principal: { type: 'person', id: 'editor' }, operation: notDeclared, resource: alpha }),
+  requestOf({ principal: { type: 'person', id: 'unreadable' }, operation: getDefinition, resource: alpha }),
+];
+
+describe('a batch the policy decision point is asked', () => {
+  it('is decided request by request exactly as each request is decided alone, the roles of each principal read once in each org, and nothing decided for one whose roles cannot be read', async () => {
+    const counted = countingReads(peopleOneUnreadable);
+    const parts = { files: filesOnDisk, operations: declaredOperations, roles: counted.roles };
+    const decisionPoint = cedarDecisionPoint({ ...parts, module: cedarOnDisk });
+
+    const alone = await Effect.runPromise(Effect.forEach(askedTogether, (request) => decisionPoint.decide(request)));
+    const readAlone = counted.reads();
+    const together = await Effect.runPromise(decisionPoint.decideBatch(askedTogether));
+
+    expect(together.map((each) => inAnyOrder(each))).toEqual(alone.map((each) => inAnyOrder(each)));
+    expect([readAlone, counted.reads() - readAlone]).toEqual([askedTogether.length, 6]);
+    expect(together.at(-1)).toEqual({ decision: 'deny', determiningPolicies: [], errors: [unreadRoles] });
+    expect(new Set(together.map(({ decision }) => decision))).toEqual(new Set(['allow', 'deny']));
+  });
+});
+
 describe('a policy decision point that cannot load', () => {
   it('denies every request once its engine cannot be loaded, and logs why once', async () => {
     const decisionPoint = cedarDecisionPoint({
@@ -218,13 +253,17 @@ describe('a policy decision point that cannot load', () => {
     const logs = capturedLogs();
 
     const decided = await Effect.runPromise(
-      Effect.all([decisionPoint.decide(readingAlpha), decisionPoint.decide(readingAlpha)]).pipe(
+      Effect.all([decisionPoint.decide(readingAlpha), decisionPoint.decideBatch([readingAlpha, readingAlpha])]).pipe(
         Effect.provide(logs.layer),
       ),
     );
 
-    expect(decided).toEqual(
-      [1, 2].map(() => ({ decision: 'deny', determiningPolicies: [], errors: ['the engine is not where it was put'] })),
+    expect(decided.flat()).toEqual(
+      [1, 2, 3].map(() => ({
+        decision: 'deny',
+        determiningPolicies: [],
+        errors: ['the engine is not where it was put'],
+      })),
     );
     expect(logs.logged()).toEqual([
       { message: unloadedMessage, level: 'ERROR', annotations: { because: 'the engine is not where it was put' } },

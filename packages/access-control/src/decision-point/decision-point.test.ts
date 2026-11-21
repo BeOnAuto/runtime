@@ -2,7 +2,10 @@ import {
   type AccessRequest,
   allPermissions,
   type ArrivedVia,
+  callAdmittedBy,
+  type CallAsked,
   type CallerIdentity,
+  callPermissionDecidedBy,
   type Outcome,
   type Permission,
   type PolicyDecisionPoint,
@@ -24,6 +27,7 @@ import { accessSchemaOf } from '../schema/access-schema.ts';
 import {
   builtIn,
   cedarOnDisk,
+  countingReads,
   createPlaybook,
   decidedBy,
   filesOnDisk,
@@ -35,6 +39,7 @@ import {
 } from '../testing/access-testing.ts';
 import { pinnedTableBehaviour } from '../testing/pinned-table-behaviour.ts';
 import {
+  agreementOperations,
   askedInReportOnly,
   calls,
   callsOf,
@@ -44,7 +49,15 @@ import {
   keysPlaybooksAndTheLocalDeveloper,
   person,
 } from '../testing/report-only-agreement-calls.ts';
-import { ada, roleAssignmentCalls } from '../testing/role-assignment-calls.ts';
+import {
+  ada,
+  adasAgent,
+  ciKey,
+  dana,
+  localDeveloper,
+  priya,
+  roleAssignmentCalls,
+} from '../testing/role-assignment-calls.ts';
 import { cedarDecisionPoint, loadedMessage } from './cedar-decision-point.ts';
 
 const moduleOfABundle = cedarModuleBundled(async () => ({ default: await cedarOnDisk() }));
@@ -143,10 +156,14 @@ function grantedEverything(request: AccessRequest): AccessRequest {
   return { ...request, context: { ...context, granted: { ...context.granted, permissions: allPermissions } } };
 }
 
+function withAnUncutGrant(request: AccessRequest): AccessRequest {
+  return request.principal.type === 'person' ? grantedEverything(request) : request;
+}
+
 function decidingOnAnUncutGrant(decisionPoint: PolicyDecisionPoint): PolicyDecisionPoint {
   return {
-    decide: (request) =>
-      decisionPoint.decide(request.principal.type === 'person' ? grantedEverything(request) : request),
+    decide: (request) => decisionPoint.decide(withAnUncutGrant(request)),
+    decideBatch: (requests) => decisionPoint.decideBatch(requests.map((request) => withAnUncutGrant(request))),
   };
 }
 
@@ -264,6 +281,63 @@ describe('the decision point over the read model of role assignments', () => {
       ['allow', 'allow', 'allow', 'allow'],
       ['allow', 'allow', 'allow', 'allow'],
     ]);
+  });
+});
+
+const listedCallers: readonly CallerIdentity[] = [ada, adasAgent, priya, dana, ciKey, localDeveloper];
+
+function listingsOf(caller: CallerIdentity): readonly (readonly CallAsked[])[] {
+  return [
+    agreementOperations.map((operation) => ({ operation, caller, org: 'acme' })),
+    agreementOperations.map((operation) => ({ operation, caller, org: 'acme', playbook: 'alpha' })),
+  ];
+}
+
+function admitted(
+  decisionPoint: PolicyDecisionPoint,
+  listing: readonly CallAsked[],
+): Effect.Effect<readonly boolean[]> {
+  return Effect.forEach(listing, (each) =>
+    Effect.match(callAdmittedBy(decisionPoint)(each), { onFailure: () => false, onSuccess: () => true }),
+  );
+}
+
+interface Listed {
+  readonly listed: readonly boolean[];
+  readonly reads: number;
+}
+
+function listedCountingReads(
+  decisionPoint: PolicyDecisionPoint,
+  reads: () => number,
+  listing: readonly CallAsked[],
+): Effect.Effect<Listed> {
+  return Effect.suspend(() => {
+    const before = reads();
+    return Effect.map(callPermissionDecidedBy(decisionPoint)(listing), (listed) => ({
+      listed,
+      reads: reads() - before,
+    }));
+  });
+}
+
+describe('the operations a caller is listed, decided over the read model of role assignments', () => {
+  it('read the caller’s roles once for each listing, and list exactly the operations each call of theirs would be let through', async () => {
+    const { imported, call, ledger } = roleAssignmentCalls();
+    await imported(['user_ada', 'admin'], ['user_priya', 'editor']);
+    await call(assignRole, ada, { person: 'user_priya', role: 'viewer' });
+    const counted = countingReads(roleAssignmentsRecordedIn(ledger.service));
+    const decisionPoint = decisionPointOver(counted.roles);
+    const listings = listedCallers.flatMap((caller) => listingsOf(caller));
+
+    const listed = await Effect.runPromise(
+      Effect.forEach(listings, (listing) => listedCountingReads(decisionPoint, counted.reads, listing)),
+    );
+    const letThrough = await Effect.runPromise(Effect.forEach(listings, (listing) => admitted(decisionPoint, listing)));
+
+    expect(listed.map((each) => each.listed)).toEqual(letThrough);
+    expect(listed.map((each) => each.reads)).toEqual(listings.map(() => 1));
+    expect(new Set(letThrough.flat())).toEqual(new Set([true, false]));
   });
 });
 

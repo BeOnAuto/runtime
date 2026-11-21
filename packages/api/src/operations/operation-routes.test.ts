@@ -7,6 +7,7 @@ import {
   type makeCatalog,
   type PolicyDecisionPoint,
 } from '@on.auto/operations';
+import { decidingEach } from '@on.auto/operations/testing';
 import { Effect, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -65,13 +66,12 @@ const asked: AccessRequest[] = [];
 
 const allowed: AccessDecision = { decision: 'allow', determiningPolicies: ['every-call'], errors: [] };
 
-const allowingEveryCall: PolicyDecisionPoint = {
-  decide: (request) =>
-    Effect.sync(() => {
-      asked.push(request);
-      return allowed;
-    }),
-};
+const allowingEveryCall: PolicyDecisionPoint = decidingEach((request) =>
+  Effect.sync(() => {
+    asked.push(request);
+    return allowed;
+  }),
+);
 
 let server: OperationServer;
 

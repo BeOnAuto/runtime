@@ -7,6 +7,7 @@ import {
   playbookCallerOf,
   type CallerIdentity,
   type DispatcherServices,
+  type OperationDeclaration,
   type Outcome,
   type PolicyDecisionPoint,
   type Runnable,
@@ -128,6 +129,8 @@ const playbookOperations: readonly Runnable<'playbook'>[] = [
   commentOnThing.registration,
 ];
 
+export const agreementOperations: readonly OperationDeclaration[] = [...orgOperations, ...playbookOperations];
+
 export function person(org: string, permissions: CallerIdentity['permissions'], client = false): CallerIdentity {
   return {
     id: `person:user-of-${org}`,
@@ -224,6 +227,7 @@ function countingAsked(decisionPoint: PolicyDecisionPoint): {
   const asked = { count: 0 };
   return {
     decisionPoint: {
+      ...decisionPoint,
       decide: (request) =>
         Effect.suspend(() => {
           asked.count += 1;
@@ -251,12 +255,7 @@ interface Agreement {
 }
 
 export function decisionPointOver(roles: RoleAssignments): PolicyDecisionPoint {
-  return cedarDecisionPoint({
-    module: cedarOnDisk,
-    files: filesOnDisk,
-    operations: [...orgOperations, ...playbookOperations],
-    roles,
-  });
+  return cedarDecisionPoint({ module: cedarOnDisk, files: filesOnDisk, operations: agreementOperations, roles });
 }
 
 export async function askedInReportOnly(

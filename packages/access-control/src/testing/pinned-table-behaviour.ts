@@ -8,12 +8,19 @@ import type {
   PrincipalReference,
   ResourceReference,
 } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { Array as Arr, Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { RoleAssignments } from '../roles/role-assignments.ts';
 import type { DeclaredAction } from '../schema/access-schema.ts';
-import { builtIn, declaredOperations, requestOf, rolesHeld, type TestOperation } from './access-testing.ts';
+import {
+  builtIn,
+  countingReads,
+  declaredOperations,
+  requestOf,
+  rolesHeld,
+  type TestOperation,
+} from './access-testing.ts';
 
 interface PinnedTableParts {
   readonly operations: readonly DeclaredAction[];
@@ -99,22 +106,42 @@ const rolesOfTheTable = rolesHeld({
   'editor-of-globex': [builtIn('editor', { type: 'org', id: 'globex' })],
 });
 
+interface AskedOfAKind {
+  readonly operation: TestOperation;
+  readonly label: string;
+  readonly request: AccessRequest;
+}
+
+function askedOf(kind: CallerKind): readonly AskedOfAKind[] {
+  return declaredOperations.flatMap((operation) =>
+    thingsOf(operation).map(([label, resource]) => ({
+      operation,
+      label,
+      request: requestOf({ ...kind, operation, resource }),
+    })),
+  );
+}
+
+function allowedIn(asked: readonly AskedOfAKind[], decided: readonly AccessDecision[]): readonly string[] {
+  const allowed = Arr.zip(asked, decided)
+    .filter(([, { decision }]: readonly [AskedOfAKind, AccessDecision]) => decision === 'allow')
+    .map(([each]: readonly [AskedOfAKind, AccessDecision]) => each);
+  return declaredOperations.flatMap((operation) => {
+    const on = allowed.filter((each) => each.operation === operation).map(({ label }) => label);
+    return on.length === 0 ? [] : [`${operation.name} on ${on.join(', ')}`];
+  });
+}
+
 type Decide = (request: AccessRequest) => Promise<AccessDecision>;
 
 async function allowedTo(decide: Decide, kind: CallerKind): Promise<readonly string[]> {
-  const allowed = await Promise.all(
-    declaredOperations.map(async (operation) => {
-      const decided = await Promise.all(
-        thingsOf(operation).map(async ([label, resource]) => {
-          const { decision } = await decide(requestOf({ ...kind, operation, resource }));
-          return decision === 'allow' ? [label] : [];
-        }),
-      );
-      const on = decided.flat();
-      return on.length === 0 ? [] : [`${operation.name} on ${on.join(', ')}`];
-    }),
-  );
-  return allowed.flat();
+  const asked = askedOf(kind);
+  return allowedIn(asked, await Promise.all(asked.map(({ request }) => decide(request))));
+}
+
+async function allowedInOneBatchTo(decisionPoint: PolicyDecisionPoint, kind: CallerKind): Promise<readonly string[]> {
+  const asked = askedOf(kind);
+  return allowedIn(asked, await Effect.runPromise(decisionPoint.decideBatch(asked.map(({ request }) => request))));
 }
 
 const everythingButWhatManagesOrEnrols = [
@@ -198,6 +225,21 @@ export function pinnedTableBehaviour(engine: string, decisionPointOf: DecisionPo
       );
 
       expect(table).toEqual(pinned);
+    });
+
+    it('is the same table where each kind of caller is asked about everything in one batch, which reads its roles once', async () => {
+      const counted = countingReads(rolesOfTheTable);
+      const decisionPoint = decisionPointOf({ operations: declaredOperations, roles: counted.roles });
+
+      const table = await Promise.all(
+        callerKinds.map(async (kind) => ({
+          caller: kind.caller,
+          allowed: await allowedInOneBatchTo(decisionPoint, kind),
+        })),
+      );
+
+      expect(table).toEqual(pinned);
+      expect(counted.reads()).toBe(callerKinds.length);
     });
   });
 }

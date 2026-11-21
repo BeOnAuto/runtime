@@ -1,11 +1,11 @@
 import { capitalized } from '@on.auto/phrasing';
-import { Effect } from 'effect';
+import { Array as Arr, Effect } from 'effect';
 
 import { allPermissions } from '../caller/permission.ts';
 import type { ForbiddenKind } from '../outcome/forbidden.ts';
 import { rejected, type Rejected } from '../outcome/outcome.ts';
 import { roleRefusal, tokenTypeRefusal, type Explanation } from '../plain-language/plain-language.ts';
-import { askedInTime } from './asked-in-time.ts';
+import { askedInTime, batchAskedInTime } from './asked-in-time.ts';
 import type { AccessDecision, AccessRequest, PolicyDecisionPoint, ResourceReference } from './policy-decision-point.ts';
 import type { AskedCall } from './report-only.ts';
 
@@ -113,6 +113,25 @@ export function enforcedDecisionOf(
       return Effect.succeed(allowed);
     }
     return request.context.via === 'run' ? Effect.succeed(deniedByTheGrant) : causeOfTheDenial(decisionPoint, request);
+  });
+}
+
+function isAllowed(decided: AccessDecision): boolean {
+  return indeterminateOf(decided) === undefined && decided.decision === 'allow';
+}
+
+export function allowedEachOf(
+  decisionPoint: PolicyDecisionPoint,
+  requests: readonly (AccessRequest | undefined)[],
+): Effect.Effect<readonly boolean[]> {
+  const asked = requests.filter((request) => request !== undefined);
+  return Effect.map(batchAskedInTime(decisionPoint, asked), (decided) => {
+    const permitted = new Set(
+      Arr.zip(asked, decided)
+        .filter(([, decision]: readonly [AccessRequest, AccessDecision]) => isAllowed(decision))
+        .map(([request]: readonly [AccessRequest, AccessDecision]) => request),
+    );
+    return requests.map((request) => request !== undefined && permitted.has(request));
   });
 }
 

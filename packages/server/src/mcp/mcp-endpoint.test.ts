@@ -240,6 +240,18 @@ describe('mcp endpoint', () => {
       expect(schemas.map((schema) => schema['type'])).toEqual(schemas.map(() => 'object'));
       expect(schemas.flatMap((schema) => danglingReferencesIn(schema))).toEqual([]);
     });
+
+    it('are the same in every one of sixty listings asked at once, each deciding who may call them in one round', async () => {
+      server = await servingReasoning([]);
+      const alone = toolNamesIn(await onMcp('/mcp', (session) => session.listTools()));
+
+      const together = await onMcp('/mcp', (session) =>
+        Promise.all(Array.from({ length: 60 }, async () => toolNamesIn(await session.listTools()))),
+      );
+
+      expect(alone).toHaveLength(42);
+      expect(new Set(together.map((names) => names.join(' ')))).toEqual(new Set([alone.join(' ')]));
+    });
   });
 
   describe('the instructions an agent receives when it connects', () => {

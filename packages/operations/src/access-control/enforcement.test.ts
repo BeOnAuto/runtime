@@ -11,7 +11,7 @@ import {
   type PolicyDecisionPoint,
 } from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
-import { allowedByTheTest, deniedByTheTest, recordingDecisionPoint } from '../testing/decision-points.ts';
+import { allowedByTheTest, decidingEach, deniedByTheTest, recordingDecisionPoint } from '../testing/decision-points.ts';
 import { harness, toOrg } from '../testing/harness.ts';
 import { addNote } from '../testing/notes.ts';
 import { labelPlaybook, listPlaybookLabels } from '../testing/playbook-labels.ts';
@@ -23,13 +23,12 @@ const mailer: CallerIdentity = { ...acmeAdmin, id: 'service:mailer', name: 'The 
 
 function deniedThenAllowed(): PolicyDecisionPoint {
   let asked = 0;
-  return {
-    decide: () =>
-      Effect.sync(() => {
-        asked += 1;
-        return asked === 1 ? deniedByTheTest : allowedByTheTest;
-      }),
-  };
+  return decidingEach(() =>
+    Effect.sync(() => {
+      asked += 1;
+      return asked === 1 ? deniedByTheTest : allowedByTheTest;
+    }),
+  );
 }
 
 function grantedEverything({ context: { granted } }: AccessRequest): boolean {

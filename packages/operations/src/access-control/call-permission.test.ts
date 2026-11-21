@@ -12,6 +12,7 @@ import {
   roleRefusalDetail,
   tokenTypeRefusalDetail,
   mayCall,
+  mayCallEach,
   type AccessDecision,
   type AccessRequest,
   type CallAsked,
@@ -21,7 +22,7 @@ import {
 } from '../index.ts';
 import { acmeAlphaReader } from '../testing/callers.ts';
 import { capturedLogs } from '../testing/captured-logs.ts';
-import { allowedByTheTest, deniedByTheTest, recordingDecisionPoint } from '../testing/decision-points.ts';
+import { allowedByTheTest, decidingEach, deniedByTheTest, recordingDecisionPoint } from '../testing/decision-points.ts';
 import { harness } from '../testing/harness.ts';
 import { addNote, getNote } from '../testing/notes.ts';
 import { labelPlaybook, listPlaybookLabels } from '../testing/playbook-labels.ts';
@@ -47,8 +48,6 @@ function askedOf(caller: CallerIdentity): CallAsked {
   return { operation: addNote.registration, caller, org: 'acme', playbook: 'alpha' };
 }
 
-const withAnError: AccessDecision = { decision: 'allow', determiningPolicies: [], errors: ['no roles'] };
-
 const askedOfAcmeAlphaReader: readonly CallAsked[] = [
   { operation: getNote.registration, caller: acmeAlphaReader, org: 'acme', playbook: 'alpha' },
   { operation: getNote.registration, caller: acmeAlphaReader, org: 'acme' },
@@ -60,29 +59,52 @@ const askedOfAcmeAlphaReader: readonly CallAsked[] = [
 describe('whether a caller may call an operation, where no decision point decides', () => {
   it('is what the credential grants: any one of the permissions the operation declares', async () => {
     const answers = await Effect.runPromise(
-      Effect.forEach([ada, adaReading, acmeAlphaReader], (caller) => mayCall(askedOf(caller))),
+      mayCallEach([ada, adaReading, acmeAlphaReader].map((caller) => askedOf(caller))),
     );
 
     expect(answers).toEqual([true, false, false]);
   });
 });
 
+const mailer: CallerIdentity = { ...ada, id: 'service:mailer', name: 'The mailer' };
+
+function deniedAddingNotes({ action }: AccessRequest): AccessDecision {
+  return action.name === 'add_note' ? deniedByTheTest : allowedByTheTest;
+}
+
 describe('whether a caller may call an operation, where a decision point decides', () => {
-  it('is that the decision point allows it, and never so where it denies or cannot decide', async () => {
+  it('is that the decision point allows it, asked once about every operation asked together, and never again to find why one is denied', async () => {
+    const asking = recordingDecisionPoint(deniedAddingNotes);
+
     const answers = await Effect.runPromise(
-      Effect.forEach([allowedByTheTest, deniedByTheTest, withAnError], (decision) =>
-        callPermissionDecidedBy(answering(decision))(askedOf(adaReading)),
-      ),
+      callPermissionDecidedBy(asking.decisionPoint)(askedOfAcmeAlphaReader.concat(askedOf(ada))),
     );
 
-    expect(answers).toEqual([true, false, false]);
+    expect(answers).toEqual([true, true, true, true, true, false]);
+    expect(asking.batches()).toEqual([
+      ['get_note', 'get_note', 'label_playbook', 'label_playbook', 'list_playbook_labels', 'add_note'],
+    ]);
+    expect(asking.asked()).toHaveLength(6);
   });
 
+  it('allows a caller whose id names no kind of principal nothing, and leaves it out of what it asks', async () => {
+    const asking = recordingDecisionPoint(() => allowedByTheTest);
+
+    const answers = await Effect.runPromise(
+      callPermissionDecidedBy(asking.decisionPoint)([askedOf(mailer), askedOf(ada)]),
+    );
+
+    expect(answers).toEqual([false, true]);
+    expect(asking.batches()).toEqual([['add_note']]);
+  });
+});
+
+describe('what the decision point is asked about whether a caller may call an operation', () => {
   it('asks about the playbook named, with the credential as it is, and about the org where none is named, as of a credential that names whichever playbook the call will', async () => {
     const asking = recordingDecisionPoint(() => allowedByTheTest);
     const decided = callPermissionDecidedBy(asking.decisionPoint);
 
-    await Effect.runPromise(Effect.forEach(askedOfAcmeAlphaReader, (each) => decided(each)));
+    await Effect.runPromise(decided(askedOfAcmeAlphaReader));
 
     expect(
       asking.asked().map(({ action, resource, context }) => [action.name, resource, context.granted.playbooks]),
@@ -101,8 +123,8 @@ describe('whether a caller may call an operation, where a decision point decides
     const decided = callPermissionDecidedBy(asking.decisionPoint);
 
     await Effect.runPromise(
-      Effect.forEach([ada, adasAgent], (caller) => decided(askedOf(caller))).pipe(
-        Effect.andThen(Effect.provideService(decided(askedOf(adasAgent)), InAConversation, true)),
+      decided([askedOf(ada), askedOf(adasAgent)]).pipe(
+        Effect.andThen(Effect.provideService(decided([askedOf(adasAgent)]), InAConversation, true)),
       ),
     );
 
@@ -128,10 +150,7 @@ async function reportedOf(decision: AccessDecision, asked: readonly CallAsked[])
   const logs = capturedLogs();
   const reported = callPermissionReportedTo(asking.decisionPoint);
   const answers = await Effect.runPromise(
-    Effect.forEach(asked, (each) => reported(each)).pipe(
-      Effect.provideService(InAConversation, true),
-      Effect.provide(logs.layer),
-    ),
+    reported(asked).pipe(Effect.provideService(InAConversation, true), Effect.provide(logs.layer)),
   );
   return { answers, asked: asking.asked(), logged: logs.logged() };
 }
@@ -182,11 +201,11 @@ describe('whether a caller may call an operation, where a decision point is aske
   it('answers as the credential does whatever the decision point does, dying or throwing among it', async () => {
     const answers = await Effect.runPromise(
       Effect.forEach([dying, throwing], (decisionPoint) =>
-        callPermissionReportedTo(decisionPoint)({ operation: askAuto, caller: ada, org: 'acme' }),
+        callPermissionReportedTo(decisionPoint)([{ operation: askAuto, caller: ada, org: 'acme' }]),
       ).pipe(Effect.provide(capturedLogs().layer)),
     );
 
-    expect(answers).toEqual([true, true]);
+    expect(answers).toEqual([[true], [true]]);
   });
 });
 
@@ -209,7 +228,7 @@ describe('an operation that asks whether its caller may call another', () => {
       status: 'succeeded',
       output: { may: true },
     });
-    expect(await answeredBy({ decidedBy: { decide: denyingNotesAlone } }, ada)).toEqual({
+    expect(await answeredBy({ decidedBy: decidingEach(denyingNotesAlone) }, ada)).toEqual({
       status: 'succeeded',
       output: { may: false },
     });

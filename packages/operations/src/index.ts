@@ -133,7 +133,7 @@ export { reportedDifferenceMessage } from './access-control/report-only.ts';
 export { enforcedDecisionOf, undecidedMessage } from './access-control/enforcement.ts';
 export { roleRefusalDetail, roleRefusalKind, tokenTypeRefusalDetail } from './access-control/enforcement.ts';
 export { CallPermission, callPermissionDecidedBy, callPermissionReportedTo } from './access-control/call-permission.ts';
-export { callAdmittedBy, mayCall, type CallAsked } from './access-control/call-permission.ts';
+export { callAdmittedBy, mayCall, mayCallEach, type CallAsked } from './access-control/call-permission.ts';
 export { InAConversation, type OperationDeclaration } from './access-control/access-request-of-a-call.ts';
 export { deniedFor, type AccessContext, type AccessDecision } from './access-control/policy-decision-point.ts';
 export type { AccessRequest, ActionReference, ArrivedVia } from './access-control/policy-decision-point.ts';

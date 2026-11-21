@@ -20,3 +20,32 @@ export function askedInTime(decisionPoint: PolicyDecisionPoint, request: AccessR
     Effect.catchCauseIf(Predicate.not(Cause.hasInterruptsOnly), () => Effect.succeed(deniedFor([failedToAnswer]))),
   );
 }
+
+function eachDeniedFor(requests: readonly AccessRequest[], error: string): readonly AccessDecision[] {
+  return requests.map(() => deniedFor([error]));
+}
+
+function answeredFor(
+  requests: readonly AccessRequest[],
+  decided: readonly AccessDecision[],
+): readonly AccessDecision[] {
+  return decided.length === requests.length ? decided : eachDeniedFor(requests, failedToAnswer);
+}
+
+export function batchAskedInTime(
+  decisionPoint: PolicyDecisionPoint,
+  requests: readonly AccessRequest[],
+): Effect.Effect<readonly AccessDecision[]> {
+  return Effect.suspend(() => decisionPoint.decideBatch(requests)).pipe(
+    Effect.timeoutOption(decisionPointPatience),
+    Effect.map(
+      Option.match({
+        onNone: () => eachDeniedFor(requests, unansweredInTime),
+        onSome: (decided) => answeredFor(requests, decided),
+      }),
+    ),
+    Effect.catchCauseIf(Predicate.not(Cause.hasInterruptsOnly), () =>
+      Effect.succeed(eachDeniedFor(requests, failedToAnswer)),
+    ),
+  );
+}

@@ -3,6 +3,7 @@ export { memoryLedger, memoryLedgerWith, type MemoryLedger, type MemoryLedgerOpt
 export { nothingKept } from '../reading/kept-content.ts';
 export { recordingReporter, type RecordingReporter, type ReportedIncident } from './recording-reporter.ts';
 export { capturedLogs, type CapturedLog, type CapturedLogs } from './captured-logs.ts';
+export { decidingEach } from './decision-points.ts';
 export { recordingTracer, type RecordedSpan, type RecordingTracer } from './recording-tracer.ts';
 export { runFacts, runTallies, talliedContext, type RunFact } from '../run-outcomes/run-tallies.ts';
 export { runTallyRows, tallyDueAfterMs, tallyRowsOf } from '../projections/tally-rows.ts';

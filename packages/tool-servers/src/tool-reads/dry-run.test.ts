@@ -1,4 +1,5 @@
 import type { AccessDecision, AccessRequest, CallerIdentity, PolicyDecisionPoint } from '@on.auto/operations';
+import { decidingEach } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -55,7 +56,7 @@ function decidingExecuteConnection(decision: AccessDecision['decision']): Policy
     request.action.name === 'execute_connection'
       ? { decision, determiningPolicies: [], errors: [] }
       : decidedNothingElse;
-  return { decide: (request) => Effect.succeed(decided(request)) };
+  return decidingEach((request) => Effect.succeed(decided(request)));
 }
 
 const reached = { reachable: 'yes' };

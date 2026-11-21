@@ -5,14 +5,16 @@ import { describe, expect, it } from 'vitest';
 import {
   type AccessDecision,
   type AccessRequest,
+  type CallAsked,
   type CallerIdentity,
+  callPermissionDecidedBy,
   defineCommand,
   makeDispatcher,
   type PolicyDecisionPoint,
   undecidedMessage,
 } from '../index.ts';
 import { capturedLogs } from '../testing/captured-logs.ts';
-import { allowedByTheTest, deniedByTheTest, recordingDecisionPoint } from '../testing/decision-points.ts';
+import { allowedByTheTest, decidingEach, deniedByTheTest, recordingDecisionPoint } from '../testing/decision-points.ts';
 import { harness, toOrg } from '../testing/harness.ts';
 import { memoryLedger, memoryPlaybookRegistry, recordingReporter } from '../testing/index.ts';
 import { addNote, getNote } from '../testing/notes.ts';
@@ -68,7 +70,7 @@ function liftedWithAnError({ context: { granted } }: AccessRequest): AccessDecis
 
 const undecidingPoints: readonly PolicyDecisionPoint[] = [
   answering(withAnError),
-  { decide: (request) => Effect.succeed(liftedWithAnError(request)) },
+  decidingEach((request) => Effect.succeed(liftedWithAnError(request))),
   dying,
   throwing,
 ];
@@ -110,7 +112,7 @@ describe('a call the decision point cannot decide', () => {
   });
 
   it('is refused as unavailable when the decision point does not answer within a second', async () => {
-    const silent: PolicyDecisionPoint = { decide: () => Effect.never };
+    const silent: PolicyDecisionPoint = { decide: () => Effect.never, decideBatch: () => Effect.never };
     const services = Layer.mergeAll(
       memoryLedger().layer,
       memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
@@ -129,5 +131,40 @@ describe('a call the decision point cannot decide', () => {
     });
 
     expect(await Effect.runPromise(watched.pipe(Effect.provide(services)))).toEqual(undecided);
+  });
+});
+
+const answeringShort: PolicyDecisionPoint = {
+  ...answering(allowedByTheTest),
+  decideBatch: (requests) => Effect.succeed(requests.slice(1).map(() => allowedByTheTest)),
+};
+
+const askedOfAda: readonly CallAsked[] = [ada, adaReading].map((caller) => ({
+  operation: addNote.registration,
+  caller,
+  org: 'acme',
+  playbook: 'alpha',
+}));
+
+describe('whether a caller may call operations, where the decision point cannot decide them', () => {
+  it('is never so, where it answers with an error, dies, throws, or answers another number of decisions than it was asked', async () => {
+    const decisionPoints = [answering(withAnError), dying, throwing, answeringShort];
+
+    const answers = await Effect.runPromise(
+      Effect.forEach(decisionPoints, (decisionPoint) => callPermissionDecidedBy(decisionPoint)(askedOfAda)),
+    );
+
+    expect(answers).toEqual(decisionPoints.map(() => [false, false]));
+  });
+
+  it('is never so, where it does not answer within a second, which the whole batch is given', async () => {
+    const silent: PolicyDecisionPoint = { decide: () => Effect.never, decideBatch: () => Effect.never };
+    const watched = Effect.gen(function* () {
+      const asked = yield* Effect.forkChild(callPermissionDecidedBy(silent)(askedOfAda));
+      yield* TestClock.adjust('1 second');
+      return yield* Fiber.join(asked);
+    });
+
+    expect(await Effect.runPromise(watched.pipe(Effect.provide(TestClock.layer())))).toEqual([false, false]);
   });
 });

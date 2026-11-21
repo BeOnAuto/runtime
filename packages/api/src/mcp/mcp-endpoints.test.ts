@@ -2,6 +2,7 @@ import { Client, ClientCredentialsProvider, StreamableHTTPClientTransport } from
 import { authenticatorFor } from '@on.auto/identity';
 import {
   type AccessDecision,
+  type AccessRequest,
   CallPermission,
   callPermissionDecidedBy,
   defineCommand,
@@ -143,8 +144,23 @@ const allowed: AccessDecision = { decision: 'allow', determiningPolicies: ['by-t
 
 const denied: AccessDecision = { decision: 'deny', determiningPolicies: [], errors: [] };
 
+function decidedForQueriesAlone(request: AccessRequest): AccessDecision {
+  return request.context.operation.kind === 'query' ? allowed : denied;
+}
+
+const asked: { decisions: number; readonly batches: number[] } = { decisions: 0, batches: [] };
+
 const queriesAlone: PolicyDecisionPoint = {
-  decide: (request) => Effect.succeed(request.context.operation.kind === 'query' ? allowed : denied),
+  decide: (request) =>
+    Effect.sync(() => {
+      asked.decisions += 1;
+      return decidedForQueriesAlone(request);
+    }),
+  decideBatch: (requests) =>
+    Effect.sync(() => {
+      asked.batches.push(requests.length);
+      return requests.map((request) => decidedForQueriesAlone(request));
+    }),
 };
 
 function listedOn(path: string): Promise<readonly string[]> {
@@ -562,7 +578,7 @@ describe('mcp call permission', () => {
   });
 
   describe('the tools an endpoint lists, where the context of the call says a decision point decides who may call what', () => {
-    it('are those the decision point allows the caller, asked once for each tool, whatever the credential grants', async () => {
+    it('are those the decision point allows the caller, asked in one batch for each listing, whatever the credential grants', async () => {
       expect({
         playbook: await listedOn('/orgs/acme/playbooks/alpha/mcp'),
         org: await listedOn('/orgs/acme/mcp'),
@@ -572,6 +588,10 @@ describe('mcp call permission', () => {
         org: ['list_labels', guideToolName],
         ownOrg: ['list_labels', 'list_notes', 'get_note', 'latest_note', 'break_down', 'wait_forever', guideToolName],
       });
+      const [playbook = 0, , org = 0, , ownOrg = 0] = asked.batches;
+      expect(asked.decisions).toBe(0);
+      expect(asked.batches).toEqual([playbook, playbook, org, org, ownOrg, ownOrg]);
+      expect(ownOrg).toBe(playbook + org);
     });
   });
 });

@@ -71,52 +71,106 @@ function loadedLine({ cedar, policies }: PreparedPolicies, operations: number): 
   );
 }
 
+type DecidedByTheRolesRead = (request: AccessRequest) => AccessDecision;
+
+function decidingByTheRolesOf(
+  roles: RoleAssignments,
+  prepared: PreparedPolicies,
+  { principal, resource }: AccessRequest,
+): Effect.Effect<DecidedByTheRolesRead> {
+  return roles.heldBy(principal, orgOfResource(resource)).pipe(
+    Effect.map(
+      (assignments): DecidedByTheRolesRead =>
+        (request) =>
+          decidedWith(prepared, request, assignments),
+    ),
+    Effect.catchCauseIf(Predicate.not(Cause.hasInterruptsOnly), () =>
+      Effect.succeed((): AccessDecision => deniedFor([unreadRoles])),
+    ),
+  );
+}
+
 function decidedAsked(
   roles: RoleAssignments,
   prepared: PreparedPolicies,
   request: AccessRequest,
 ): Effect.Effect<AccessDecision> {
-  return roles.heldBy(request.principal, orgOfResource(request.resource)).pipe(
-    Effect.map((assignments) => decidedWith(prepared, request, assignments)),
-    Effect.catchCauseIf(Predicate.not(Cause.hasInterruptsOnly), () => Effect.succeed(deniedFor([unreadRoles]))),
-  );
+  return Effect.map(decidingByTheRolesOf(roles, prepared, request), (decided) => decided(request));
+}
+
+function holderOf({ principal, resource }: AccessRequest): string {
+  return JSON.stringify([principal.type, principal.id, orgOfResource(resource)]);
+}
+
+function decidedTogether(
+  roles: RoleAssignments,
+  prepared: PreparedPolicies,
+  requests: readonly AccessRequest[],
+): Effect.Effect<readonly AccessDecision[]> {
+  return Effect.gen(function* () {
+    const decidingFor = new Map<string, DecidedByTheRolesRead>();
+    const decisions: AccessDecision[] = [];
+    for (const request of requests) {
+      const holder = holderOf(request);
+      const decided = decidingFor.get(holder) ?? (yield* decidingByTheRolesOf(roles, prepared, request));
+      decidingFor.set(holder, decided);
+      decisions.push(decided(request));
+    }
+    return decisions;
+  });
+}
+
+function decidingWith(roles: RoleAssignments, prepared: PreparedPolicies): PolicyDecisionPoint {
+  return {
+    decide: (request) => decidedAsked(roles, prepared, request),
+    decideBatch: (requests) => decidedTogether(roles, prepared, requests),
+  };
 }
 
 export function cedarDecisionPointLoaded(parts: CedarDecisionPointParts): Effect.Effect<PolicyDecisionPoint, string> {
   return Effect.tryPromise({ try: () => loaded(parts), catch: messageOf }).pipe(
     Effect.tap((prepared) => loadedLine(prepared, parts.operations.length)),
-    Effect.map((prepared): PolicyDecisionPoint => ({
-      decide: (request) => decidedAsked(parts.roles, prepared, request),
-    })),
+    Effect.map((prepared) => decidingWith(parts.roles, prepared)),
   );
 }
 
 export function cedarDecisionPoint(parts: CedarDecisionPointParts): PolicyDecisionPoint {
   const preparing = onceStarted(() => loaded(parts));
   const said = { loaded: false, unloaded: false };
-  const deniedUnloaded = (message: string) =>
+  const saidUnloaded = (message: string) =>
     Effect.gen(function* () {
       if (!said.unloaded) {
         said.unloaded = true;
         yield* Effect.logError(unloadedMessage).pipe(Effect.annotateLogs({ because: message }));
       }
-      return deniedFor([message]);
     });
-  const decidedOnce = (prepared: PreparedPolicies, request: AccessRequest) =>
+  const saidLoaded = (prepared: PreparedPolicies) =>
     Effect.gen(function* () {
       if (!said.loaded) {
         said.loaded = true;
         yield* loadedLine(prepared, parts.operations.length);
       }
-      return yield* decidedAsked(parts.roles, prepared, request);
     });
+  const onceLoaded = <A>(
+    decided: (deciding: PolicyDecisionPoint) => Effect.Effect<A>,
+    deniedUnloaded: (message: string) => A,
+  ): Effect.Effect<A> =>
+    Effect.tryPromise({ try: preparing, catch: messageOf }).pipe(
+      Effect.matchEffect({
+        onFailure: (message) => Effect.as(saidUnloaded(message), deniedUnloaded(message)),
+        onSuccess: (prepared) => Effect.andThen(saidLoaded(prepared), decided(decidingWith(parts.roles, prepared))),
+      }),
+    );
   return {
     decide: (request) =>
-      Effect.tryPromise({ try: preparing, catch: messageOf }).pipe(
-        Effect.matchEffect({
-          onFailure: deniedUnloaded,
-          onSuccess: (prepared) => decidedOnce(prepared, request),
-        }),
+      onceLoaded(
+        (deciding) => deciding.decide(request),
+        (message) => deniedFor([message]),
+      ),
+    decideBatch: (requests) =>
+      onceLoaded(
+        (deciding) => deciding.decideBatch(requests),
+        (message) => requests.map(() => deniedFor([message])),
       ),
   };
 }

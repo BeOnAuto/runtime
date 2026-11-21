@@ -61,6 +61,7 @@ export interface AccessDecision {
 
 export interface PolicyDecisionPoint {
   readonly decide: (request: AccessRequest) => Effect.Effect<AccessDecision>;
+  readonly decideBatch: (requests: readonly AccessRequest[]) => Effect.Effect<readonly AccessDecision[]>;
 }
 
 export function deniedFor(errors: readonly string[]): AccessDecision {

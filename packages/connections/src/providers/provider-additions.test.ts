@@ -8,6 +8,7 @@ import {
   type PolicyDecisionPoint,
   roleRefusalDetail,
 } from '@on.auto/operations';
+import { decidingEach } from '@on.auto/operations/testing';
 import { drive, providersOf, regions, tracker } from '@on.auto/providers/testing';
 import { shippedDocumentOf } from '@on.auto/tool-servers';
 import { consentClientWith, fakeApiDocument, registeredAt } from '@on.auto/tool-servers/testing';
@@ -66,7 +67,7 @@ const denied: AccessDecision = { decision: 'deny', determiningPolicies: [], erro
 
 function decidedOf(addingDecided: AccessDecision): PolicyDecisionPoint {
   const decided = (request: AccessRequest) => (request.action.name === 'add_connection' ? addingDecided : allowed);
-  return { decide: (request) => Effect.succeed(decided(request)) };
+  return decidingEach((request) => Effect.succeed(decided(request)));
 }
 
 const AddingSchema = Schema.Struct({

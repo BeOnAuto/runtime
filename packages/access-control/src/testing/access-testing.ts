@@ -94,6 +94,25 @@ export function rolesHeld(byPrincipal: Readonly<Record<string, readonly RoleAssi
   return { heldBy: (principal) => Effect.succeed(byPrincipal[principal.id] ?? []) };
 }
 
+interface CountingReads {
+  readonly roles: RoleAssignments;
+  readonly reads: () => number;
+}
+
+export function countingReads(roles: RoleAssignments): CountingReads {
+  const counted = { reads: 0 };
+  return {
+    roles: {
+      heldBy: (principal, org) =>
+        Effect.suspend(() => {
+          counted.reads += 1;
+          return roles.heldBy(principal, org);
+        }),
+    },
+    reads: () => counted.reads,
+  };
+}
+
 interface Asked {
   readonly principal: PrincipalReference;
   readonly operation: TestOperation;

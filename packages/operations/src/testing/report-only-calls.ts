@@ -12,6 +12,7 @@ import {
 } from '../index.ts';
 import { acmeAdmin, acmeAlphaReader } from './callers.ts';
 import { capturedLogs, type CapturedLog } from './captured-logs.ts';
+import { decidingEach } from './decision-points.ts';
 import { harness, toOrg, toPlaybook } from './harness.ts';
 import { addNote, getNote } from './notes.ts';
 import { labelPlaybook } from './playbook-labels.ts';
@@ -65,16 +66,19 @@ export async function answeredWith(reportOnly?: PolicyDecisionPoint, dispatched 
 }
 
 export function answering(decision: AccessDecision): PolicyDecisionPoint {
-  return { decide: () => Effect.succeed(decision) };
+  return decidingEach(() => Effect.succeed(decision));
 }
 
-export const dying: PolicyDecisionPoint = { decide: () => Effect.die(new Error('the engine broke')) };
-
-export const throwing: PolicyDecisionPoint = {
-  decide: () => {
-    throw new Error('the engine threw');
-  },
+export const dying: PolicyDecisionPoint = {
+  decide: () => Effect.die(new Error('the engine broke')),
+  decideBatch: () => Effect.die(new Error('the engine broke')),
 };
+
+function threw(): never {
+  throw new Error('the engine threw');
+}
+
+export const throwing: PolicyDecisionPoint = { decide: threw, decideBatch: threw };
 
 export function differenceOf(annotations: Readonly<Record<string, unknown>>) {
   return { message: reportedDifferenceMessage, level: 'WARN', annotations };

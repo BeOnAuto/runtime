@@ -20,7 +20,7 @@ import {
   throwing,
 } from '../testing/report-only-calls.ts';
 
-const silent: PolicyDecisionPoint = { decide: () => Effect.never };
+const silent: PolicyDecisionPoint = { decide: () => Effect.never, decideBatch: () => Effect.never };
 
 const noteAnvilMissing = { status: 'rejected', reason: 'not_found', detail: 'There is no note anvil' };
 

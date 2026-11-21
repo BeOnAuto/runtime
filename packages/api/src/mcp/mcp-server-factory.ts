@@ -5,9 +5,9 @@ import {
   type Registration,
   type RouteRegistration,
   OperationsServed,
-  mayCall,
+  mayCallEach,
 } from '@on.auto/operations';
-import { Context, Effect } from 'effect';
+import { Array as Arr, Context, Effect } from 'effect';
 
 import { playbookCallOf, orgCallOf, type HandedOff, type OrgCall } from '../hand-off/caller-hand-off.ts';
 import { toolCallbackOf, type AnsweringServing } from '../tools/linked-answers.ts';
@@ -73,24 +73,40 @@ function servedAsTools<S extends OperationScope>(
   return registrations.filter((registration) => registration.servedOverHttpAlone === undefined);
 }
 
-function permittedTo<R extends Registration>(
+function mayCallEachOf(
   { caller, org, context }: OrgCall,
+  offers: readonly Offered<Registration>[],
+  playbook?: string,
+): Promise<readonly boolean[]> {
+  const named = playbook === undefined ? {} : { playbook };
+  const asked = offers.map((offer) => ({ operation: offer.registration, caller, org, ...named }));
+  return Effect.runPromise(mayCallEach(asked).pipe(Effect.provideContext(context)));
+}
+
+function mayBeCalled<R extends Registration>(
+  offers: readonly Offered<R>[],
+  answers: readonly boolean[],
+): readonly Offered<R>[] {
+  return Arr.zip(offers, answers)
+    .filter(([, may]: readonly [Offered<R>, boolean]) => may)
+    .map(([offer]: readonly [Offered<R>, boolean]) => offer);
+}
+
+async function permittedTo<R extends Registration>(
+  call: OrgCall,
   offers: readonly Offered<R>[],
   playbook?: string,
 ): Promise<readonly Offered<R>[]> {
-  const named = playbook === undefined ? {} : { playbook };
-  const permitted = Effect.forEach(
-    offers,
-    (offer) =>
-      Effect.map(mayCall({ operation: offer.registration, caller, org, ...named }), (may) => (may ? [offer] : [])),
-    { concurrency: 'unbounded' },
-  );
-  return Effect.runPromise(
-    permitted.pipe(
-      Effect.map((each: readonly (readonly Offered<R>[])[]) => each.flat()),
-      Effect.provideContext(context),
-    ),
-  );
+  return mayBeCalled(offers, await mayCallEachOf(call, offers, playbook));
+}
+
+async function permittedInOrgAndPlaybooks(
+  call: OrgCall,
+  orgOffers: readonly Offered<Registration<'org'>>[],
+  playbookOffers: readonly Offered<Registration<'playbook'>>[],
+): Promise<readonly [readonly Offered<Registration<'org'>>[], readonly Offered<Registration<'playbook'>>[]]> {
+  const answers = await mayCallEachOf(call, [...orgOffers, ...playbookOffers]);
+  return [mayBeCalled(orgOffers, answers), mayBeCalled(playbookOffers, answers.slice(orgOffers.length))];
 }
 
 function namesOf(offers: readonly Offered<Registration>[]): readonly string[] {
@@ -230,10 +246,7 @@ function ownOrgServerFactory(
   const connection = connectionOf(endpoint, serving, everyToolOf(orgOffers, playbookOffers));
   return async (context) => {
     const call = orgCallOf(context);
-    const [listedInOrg, listedInPlaybook] = await Promise.all([
-      permittedTo(call, orgOffers),
-      permittedTo(call, playbookOffers),
-    ]);
+    const [listedInOrg, listedInPlaybook] = await permittedInOrgAndPlaybooks(call, orgOffers, playbookOffers);
     const tools = [
       ...toolsOf(listedInOrg, orgDispatchOf(serving.dispatcher, call, twins, listed), orgInputBeside(twins)),
       ...toolsOf(listedInPlaybook, playbookArgumentDispatchOf(serving.dispatcher, call, listed), withoutThePlaybook),
